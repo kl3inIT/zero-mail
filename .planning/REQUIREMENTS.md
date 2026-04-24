@@ -138,17 +138,79 @@ Explicitly excluded. Documented to prevent scope creep and silent re-addition.
 
 ## Traceability
 
-Populated during roadmap creation. Each v1 requirement maps to exactly one phase.
+Each v1 requirement maps to exactly one phase.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| _(filled by roadmapper)_ | — | Pending |
+| AUTH-01 | Phase 1 | Pending |
+| AUTH-02 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Pending |
+| AUTH-04 | Phase 1 | Pending |
+| AUTH-05 | Phase 1 | Pending |
+| AUTH-06 | Phase 1 | Pending |
+| FND-01 | Phase 1 | Pending |
+| FND-02 | Phase 1 | Pending |
+| FND-03 | Phase 1 | Pending |
+| FND-04 | Phase 1 | Pending |
+| FND-05 | Phase 1 | Pending |
+| FND-06 | Phase 1 | Pending |
+| FND-07 | Phase 1 | Pending |
+| MAIL-01 | Phase 2A | Pending |
+| MAIL-02 | Phase 2A | Pending |
+| MAIL-03 | Phase 2A | Pending |
+| MAIL-04 | Phase 2A | Pending |
+| MAIL-05 | Phase 2A | Pending |
+| MAIL-06 | Phase 2A | Pending |
+| BILL-01 | Phase 2B | Pending |
+| BILL-02 | Phase 2B | Pending |
+| BILL-03 | Phase 2B | Pending |
+| BILL-04 | Phase 2B | Pending |
+| BILL-05 | Phase 2B | Pending |
+| BILL-06 | Phase 2B | Pending |
+| BILL-07 | Phase 2B | Pending |
+| LLM-01 | Phase 2C | Pending |
+| LLM-02 | Phase 2C | Pending |
+| LLM-03 | Phase 2C | Pending |
+| LLM-04 | Phase 2C | Pending |
+| LLM-05 | Phase 2C | Pending |
+| LLM-06 | Phase 2C | Pending |
+| LLM-07 | Phase 2C | Pending |
+| LLM-08 | Phase 2C | Pending |
+| LLM-09 | Phase 2C | Pending |
+| LLM-10 | Phase 2C | Pending |
+| LLM-11 | Phase 2C | Pending |
+| RULE-01 | Phase 3 | Pending |
+| RULE-02 | Phase 3 | Pending |
+| RULE-03 | Phase 3 | Pending |
+| RULE-04 | Phase 3 | Pending |
+| RULE-05 | Phase 3 | Pending |
+| RULE-06 | Phase 3 | Pending |
+| RULE-07 | Phase 3 | Pending |
+| TRG-01 | Phase 4 | Pending |
+| TRG-02 | Phase 4 | Pending |
+| TRG-03 | Phase 4 | Pending |
+| TRG-04 | Phase 4 | Pending |
+| TRG-05 | Phase 4 | Pending |
+| TRG-06 | Phase 4 | Pending |
+| TRG-07 | Phase 4 | Pending |
+| TRG-08 | Phase 4 | Pending |
+| DRFT-01 | Phase 5 | Pending |
+| DRFT-02 | Phase 5 | Pending |
+| DRFT-03 | Phase 5 | Pending |
+| DRFT-04 | Phase 5 | Pending |
+| ANL-01 | Phase 5 | Pending |
+| ANL-02 | Phase 5 | Pending |
+| ANL-03 | Phase 5 | Pending |
+| WEB-01 | Phase 5 | Pending |
+| WEB-02 | Phase 5 | Pending |
+| WEB-03 | Phase 5 | Pending |
+| WEB-04 | Phase 5 | Pending |
 
 **Coverage:**
 - v1 requirements: 61 total
-- Mapped to phases: 0 (pending roadmapper)
-- Unmapped: 61 ⚠️ (resolved by roadmap step)
+- Mapped to phases: 61
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-24*
-*Last updated: 2026-04-24 after initial definition*
+*Last updated: 2026-04-24 — traceability populated by roadmapper (8 phases, 0 unmapped)*
