@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: zeromail-api
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/zeromail}
+    username: ${DB_USER:zeromail}
+    password: ${DB_PASSWORD:zeromail}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  session:
+    store-type: redis
+    timeout: 30m
+server:
+  port: 8080
+  servlet:
+    session:
+      cookie:
+        name: ZEROMAIL_SESSION
+        http-only: true
+        secure: false  # dev; true in prod profile
+        same-site: lax
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
