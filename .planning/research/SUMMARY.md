@@ -4,11 +4,12 @@ Synthesis of `STACK.md`, `FEATURES.md`, `ARCHITECTURE.md`, `PITFALLS.md`. Consum
 
 ## Key Stack (pinned, non-negotiable)
 
-- Java 25 LTS · Spring Boot 4.0.6 · Spring AI 1.1.x GA (abstract behind `LlmGateway`; 2.0 lands May 28 2026)
-- spring-cloud-gcp 8.0.2 (first line that resolves on Spring Boot 4)
-- Gradle 9 + Kotlin DSL · Postgres 17 + Flyway 11 + JPA · Redis 7.4 (cache / session / rate-limit only — not in billing critical path)
+- Java 25 LTS · Spring Boot 4.0.6 · Spring AI **2.0.0-M4** behind `LlmGateway`
+- spring-cloud-gcp 8.0.2 for **Secret Manager**; Gmail Pub/Sub push receiver stays a plain HTTP controller
+- Gradle 9.4.1 + Kotlin DSL · Cloud SQL Postgres 17.6 + Liquibase 5.0.2 (YAML) + JPA · Memorystore Redis 7.2 (cache / session / rate-limit only — not in billing critical path)
+- Monorepo layout locked to `apps/web` + `backend/core` + `backend/api` + `backend/worker`; internal backend boundaries enforced in `backend/core` via Spring Modulith + architecture tests
 - Cloud Run + Cloud SQL + Memorystore + Secret Manager
-- Next.js 15 / React 19 / Tailwind 4 / shadcn/ui / TanStack Query 5 / openapi-typescript; pnpm + Turborepo **outside Gradle**
+- Next.js 16.2.4 / React 19.2.5 / Tailwind 4.2.4 / shadcn/ui / TanStack Query 5.100.1 / openapi-typescript 7.13.0; pnpm 10.33.2 + Turborepo 2.9.6 **outside Gradle**
 - Cookie session (not JWT) · Virtual threads ON · **Scoped Values, never ThreadLocal** · no Lombok (Java records + pattern matching)
 
 ## v1 Feature Set
@@ -57,23 +58,22 @@ Phase 6 — Polish + CASA-verified launch
 
 ## Open Decisions (defer — do not lock in roadmap)
 
-1. Final `zm-domain-*` / `zm-adapter-*` module names (topology recommended, names fluid).
-2. Credit unit economics — price per classify / draft / preview, and refund matrix per failure mode.
-3. Tokenizer choice — model-family tokenizer vs. char heuristic; decide in Phase 2C.
-4. **Vector DB stays out of v1** — privacy-incompatible; revisit only if stylometry feature (D2) later requires persistent derived features.
-5. Observability vendor (Grafana Cloud recommended, not pinned).
-6. Payment provider — Stripe vs. LemonSqueezy; pick in Phase 2B.
-7. CASA tier — Tier 2 vs Tier 3, depends on whether any flow ever needs full `gmail` scope (v1 says no).
-8. Spring AI 2.0 (May 28 2026) upgrade window placement — likely between Phase 4 and Phase 5.
+1. Credit unit economics — price per classify / draft / preview, and refund matrix per failure mode.
+2. Tokenizer choice — model-family tokenizer vs. char heuristic; decide in Phase 2C.
+3. **Vector DB stays out of v1** — privacy-incompatible; revisit only if stylometry feature (D2) later requires persistent derived features.
+4. Observability vendor (Grafana Cloud recommended, not pinned).
+5. Payment provider — Stripe vs. LemonSqueezy; pick in Phase 2B.
+6. CASA tier — Tier 2 vs Tier 3, depends on whether any flow ever needs full `gmail` scope (v1 says no).
+7. Managed-platform drift: Cloud SQL PostgreSQL 18 is still Preview and Memorystore tops out at Redis 7.2; revisit if you want community-latest engines instead of GCP-managed defaults.
 
 ## Research Flags for Roadmapper
 
 - **Needs `/gsd-research-phase` before planning:**
   - Phase 2A — Gmail watch/history-id edge cases and OIDC push verification
-  - Phase 2C — Spring AI 1.1.x exact builder API for per-request key + tokenizer strategy
+  - Phase 2C — Spring AI 2.0.0-M4 exact builder API for per-request key + tokenizer strategy
   - Phase 5A — privacy-safe stylometry (only if D2 tone-matching is in scope)
 - **Standard patterns — no extra research:** Phases 1, 2B, 3, 5B, 5C.
 
 ## Confidence
 
-Stack: **HIGH** · Features: **MEDIUM-HIGH** · Architecture: **MEDIUM-HIGH** (Spring AI BYOK builder API needs in-code verification) · Pitfalls: **HIGH**. **Overall MEDIUM-HIGH — ready to define requirements and generate the roadmap.**
+Stack: **MEDIUM-HIGH** · Features: **MEDIUM-HIGH** · Architecture: **MEDIUM-HIGH** (Spring AI 2.0.0-M4 BYOK builder API still needs in-code verification) · Pitfalls: **HIGH**. **Overall MEDIUM-HIGH — ready to define requirements and generate the roadmap, with one explicit review item around GCP-managed Postgres/Redis lag versus community-latest releases.**

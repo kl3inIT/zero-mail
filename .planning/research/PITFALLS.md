@@ -592,32 +592,33 @@ Aggressive defaults, no cold-start caution, no confidence threshold.
 
 ---
 
-### Pitfall 23: Spring AI pre-1.0 churn → 1.0/1.1 GA now, but watch 2.0
+### Pitfall 23: Spring AI milestone churn when pinning 2.0.0-M4 early
 
 **What goes wrong:**
-If code was written against Spring AI M5/M6/M7 RC patterns, it already needs migration. Spring AI **1.0 GA shipped May 20, 2025**, **1.0.1 in Aug 2025**, **1.1.0 GA in Nov 2025**. Spring AI **2.0 GA is scheduled for May 28, 2026** and **requires Spring Boot 4.0 as a hard dependency**. If you're on Spring Boot 4 with Spring AI 1.1, you'll be on the upgrade path to 2.0 soon.
+The project is intentionally pinned to **Spring AI 2.0.0-M4** (released on **March 26, 2026**) so it lines up with Spring Boot 4 now instead of waiting for 2.0 GA. That is defensible, but it means the LLM adapter is sitting on a moving API surface. A seemingly harmless upgrade from `2.0.0-M4` to the eventual `2.0.0` GA can still break option builders, observation wiring, or provider-specific request overrides.
 
-Concrete breaking changes seen in 1.0 GA that re-surface on any upgrade:
-- Vector store package restructuring (`MilvusVectorStore` moved out of the generic `vectorstore` package).
-- Chat memory component renaming (`*Repository` suffix standardization).
-- ChatClient API changes.
+Concrete breakages to expect on any milestone -> GA jump:
+- `ChatClient` / request-option builder signatures move.
+- Provider-specific request override hooks (`base-url`, per-request headers, model options) get renamed or reshaped.
+- Observation / tracing properties move as Micrometer / OTel integration settles.
 
 **Why it happens:**
 AI library APIs are still rapidly evolving in 2025–2026.
 
 **How to avoid:**
-- Pin to **Spring AI 1.1.x** (latest GA as of Nov 2025) at project start. Don't chase milestones.
-- Use Spring AI's provided **OpenRewrite recipes** for upgrades (1.0 GA shipped one; 2.0 GA will likely ship one).
-- Wrap Spring AI types behind a thin internal abstraction (`LlmGateway`, `ChatSession`) so 2.0's inevitable changes touch one module, not 50.
-- Monitor Spring AI release notes monthly; treat major/minor upgrades as P2 work, not ambient maintenance.
+- Pin to **exactly `2.0.0-M4`**. No `2.0.+`, no floating milestone ranges.
+- Wrap Spring AI types behind a thin internal abstraction (`LlmGateway`, `ChatSession`) so the M4 -> GA migration touches one module, not 50.
+- Budget an explicit post-GA upgrade pass once Spring AI 2.0 final ships. Do not let that happen as "ambient dependency maintenance."
+- Monitor Spring AI release notes weekly while on a milestone, not monthly.
 
 **Warning signs:**
 - Direct use of Spring AI classes scattered across business logic
 - No internal LLM abstraction layer
+- Build files float to newer milestones or RCs without a dedicated compatibility pass
 
 **Phase to address:** `LLM Gateway` (foundation)
 
-Sources: [Spring AI 1.0 GA blog](https://spring.io/blog/2025/05/20/spring-ai-1-0-GA-released/), [Spring AI 1.0.1](https://spring.io/blog/2025/08/08/spring-ai-1/), [Spring AI 1.1 GA](https://spring.io/blog/2025/11/12/spring-ai-1-1-GA-released/), [Spring AI 2.0 coming May 28, 2026 (HeroDevs)](https://www.herodevs.com/blog-posts/spring-ai-2-0-is-coming-may-28-here-is-why-that-makes-the-june-30-deadline-more-urgent-not-less).
+Sources: [Spring AI 2.0.0-M4 release](https://github.com/spring-projects/spring-ai/releases/tag/v2.0.0-M4), [Spring AI releases on GitHub](https://github.com/spring-projects/spring-ai/releases), [Spring AI getting started](https://docs.spring.io/spring-ai/reference/getting-started.html), [HeroDevs: Spring AI 2.0 coming May 28, 2026](https://www.herodevs.com/blog-posts/spring-ai-2-0-is-coming-may-28-here-is-why-that-makes-the-june-30-deadline-more-urgent-not-less).
 
 ---
 
@@ -694,7 +695,7 @@ Teams rely on "it's an internal URL" — but Pub/Sub push endpoints are public b
 | **Gmail draft threading** | Set only `threadId` | Set `threadId` + `In-Reply-To` + `References` |
 | **OpenRouter model routing** | Accept fallbacks and variants | Pin exact slug, disable fallbacks, compare returned model |
 | **BYOK keys** | Pass through as-is | Envelope-encrypt at rest; opaque `ByokKey` wrapper in code |
-| **Spring AI** | Use 1.0.0-Mx milestones | Pin 1.1.x GA; abstract behind `LlmGateway` |
+| **Spring AI** | Float across milestones or wire Spring AI types into domain code | Pin exact `2.0.0-M4`; abstract behind `LlmGateway`; schedule an explicit M4 -> GA upgrade pass |
 | **Google Cloud KMS / Secret Manager** | One key for all tenants | Envelope per tenant or per key-purpose; rotate quarterly |
 
 ---
@@ -812,7 +813,7 @@ Teams rely on "it's an internal URL" — but Pub/Sub push endpoints are public b
 | 20 | AI drafts sound generic | `Draft Replies` | User-study check; tone-signal extraction present in prompt |
 | 21 | No audit trail / no undo | `Triage Engine` / `UX/Product` | Audit row per action; UI undo verified for every action type |
 | 22 | First bad auto-action | `UX/Product` / `Triage Engine` | Shadow-mode feature flag default ON for new tenants |
-| 23 | Spring AI version churn | `LLM Gateway` | `LlmGateway` abstraction exists; pinned to Spring AI 1.1.x GA |
+| 23 | Spring AI version churn | `LLM Gateway` | `LlmGateway` abstraction exists; pinned to exact Spring AI `2.0.0-M4`; M4 -> GA pass is planned |
 | 24 | Tool-call loops | `LLM Gateway` / `Triage Engine` | Max-iteration cap; per-action max-count |
 | 25 | Push webhook authentication | `Pub/Sub Ingestion` / `Auth/OAuth` | Forged-push test returns 401 |
 
@@ -845,10 +846,9 @@ Teams rely on "it's an internal URL" — but Pub/Sub push endpoints are public b
 - [HackerOne: Invisible Prompt Injection disclosure](https://hackerone.com/reports/2372363)
 
 **Spring AI / Spring Boot / Java 25:**
-- [Spring AI 1.0 GA release (May 20, 2025)](https://spring.io/blog/2025/05/20/spring-ai-1-0-GA-released/)
-- [Spring AI 1.0.1 release (Aug 2025)](https://spring.io/blog/2025/08/08/spring-ai-1/)
-- [Spring AI 1.1 GA release (Nov 12, 2025)](https://spring.io/blog/2025/11/12/spring-ai-1-1-GA-released/)
+- [Spring AI 2.0.0-M4 release](https://github.com/spring-projects/spring-ai/releases/tag/v2.0.0-M4)
 - [Spring AI releases on GitHub](https://github.com/spring-projects/spring-ai/releases)
+- [Spring AI getting started](https://docs.spring.io/spring-ai/reference/getting-started.html)
 - [HeroDevs: Spring AI 2.0 coming May 28, 2026 (requires Spring Boot 4)](https://www.herodevs.com/blog-posts/spring-ai-2-0-is-coming-may-28-here-is-why-that-makes-the-june-30-deadline-more-urgent-not-less)
 - [Scoped Values vs ThreadLocal in Java 25](https://www.springjavalab.com/2025/12/scoped-values-vs-threadlocal-java-25.html)
 - [Java 25 Virtual Threads benchmarks & pitfalls](https://www.springjavalab.com/2025/12/java-25-virtual-threads-benchmarks-pitfalls.html)

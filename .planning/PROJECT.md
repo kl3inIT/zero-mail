@@ -102,9 +102,10 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 - **Language/runtime**: Java 25 — locked by user directive.
 - **Framework**: Spring Boot 4 — locked by user directive.
-- **Build**: Gradle with Kotlin DSL — locked by user directive.
-- **AI**: Spring AI for LLM orchestration (model abstraction, prompts, tool calls) — locked by user directive.
-- **Structure**: Monorepo / multi-module Gradle project — locked by user directive. Exact module topology (domain-driven vs hexagonal vs layered) will be decided during roadmap/research phase.
+- **Build**: Gradle 9.x with Kotlin DSL — locked by user directive.
+- **Versioning policy**: Prefer the latest stable versions compatible with the chosen deployment platform. Only use a pre-release when explicitly pinned by the user. Current exception: **Spring AI 2.0.0-M4**.
+- **AI**: Spring AI **2.0.0-M4** for LLM orchestration (model abstraction, prompts, tool calls) — locked by user directive.
+- **Structure**: Monorepo / multi-module Gradle project — locked by user directive. Backend topology is now locked to **`backend/core` + `backend/api` + `backend/worker`**, with `apps/web` as the separate frontend module. Internal backend boundaries stay package-based inside `backend/core`, enforced by Spring Modulith verification and architectural tests.
 - **Frontend**: Next.js / React as a separate module inside the monorepo — locked by product decision.
 - **Mail provider (v1)**: Gmail / Google Workspace only, via Gmail API + Google Pub/Sub push — locked by product decision.
 - **Distribution (v1)**: Cloud SaaS, multi-tenant — locked by product decision.
@@ -112,22 +113,23 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Billing model**: Prepaid credits, pay-as-you-go; unit economics TBD — locked direction, details deferred.
 - **Privacy**: No long-term storage of raw email bodies, LLM prompts/completions, or embeddings. Content always sanitized + truncated + prompt-injection-hardened before hitting any LLM — locked.
 - **Write actions allowed in v1**: label, archive (skip inbox), save Gmail draft. **Auto-send is forbidden.**
-- **Primary datastore**: PostgreSQL (confirmed). Redis / vector DB additions deferred to roadmapper/research decision.
+- **Primary datastore**: PostgreSQL on Cloud SQL (confirmed). Redis remains cache / session / rate-limit infrastructure only; vector DB is deferred.
+- **Schema migrations**: Liquibase with YAML changelogs — locked by user directive.
 - **Timeline**: Exploratory project — learning-oriented, no hard ship deadline. Favor architectural quality and defensibility over speed.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Gmail-only in v1 | One provider halves mail-integration scope; Gmail covers the busy-pro/founder target; Outlook is a separate effort | — Pending |
-| Pub/Sub push over polling | User expects near-real-time triage; polling would cap responsiveness and still cost API quota | — Pending |
-| OpenRouter default + BYOK | Matches Inbox Zero's flexibility, lets us switch models without code change, and gives users cost control | — Pending |
-| No auto-send in v1 | A single bad auto-sent reply is a trust-ending event; draft-only keeps safety floor high | — Pending |
-| Prepaid credits, pay-as-you-go | Aligns revenue with actual LLM cost; avoids the freemium abuse surface | — Pending |
-| No long-term storage of email bodies / LLM I/O / embeddings | Privacy is the #1 blocker to installing an AI mail agent; makes the trust story simple to explain | — Pending |
-| Next.js frontend, separate module | Keeps frontend talent pool open; backend stays a clean API boundary; matches Inbox Zero DX | — Pending |
-| Monorepo module layout — deferred | Topology depends on bounded contexts that will be clearer after feature research; roadmapper picks | — Pending |
-| Name "Zero Mail" — placeholder | Directory-derived; final brand will be chosen before public launch to avoid rework | — Pending |
+| Gmail-only in v1 | One provider halves mail-integration scope; Gmail covers the busy-pro/founder target; Outlook is a separate effort | Chosen |
+| Pub/Sub push over polling | User expects near-real-time triage; polling would cap responsiveness and still cost API quota | Chosen |
+| OpenRouter default + BYOK | Matches Inbox Zero's flexibility, lets us switch models without code change, and gives users cost control | Chosen |
+| No auto-send in v1 | A single bad auto-sent reply is a trust-ending event; draft-only keeps safety floor high | Chosen |
+| Prepaid credits, pay-as-you-go | Aligns revenue with actual LLM cost; avoids the freemium abuse surface | Chosen |
+| No long-term storage of email bodies / LLM I/O / embeddings | Privacy is the #1 blocker to installing an AI mail agent; makes the trust story simple to explain | Chosen |
+| Next.js frontend, separate module | Keeps frontend talent pool open; backend stays a clean API boundary; matches Inbox Zero DX | Chosen |
+| Monorepo module layout | Keep the build simple for v1 while still separating HTTP edge from async workers | Chosen — `apps/web` + `backend/core` + `backend/api` + `backend/worker` |
+| Name "Zero Mail" — placeholder | Directory-derived; final brand will be chosen before public launch to avoid rework | Pending rename before launch |
 
 ## Evolution
 
