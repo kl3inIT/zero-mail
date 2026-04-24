@@ -32,7 +32,16 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
   3. Attempting to log an email body, LLM prompt, or LLM completion is blocked at build time by ArchUnit and at runtime by the Logback scrub filter — a reviewer can grep application logs during a synthetic traffic run and find zero body/prompt/completion content.
   4. A tenant whose OAuth grant is revoked externally is surfaced as `DISCONNECTED` in the UI with a reconnect prompt on the next request.
   5. The skeleton OpenAPI spec is published from `backend/api` and the `apps/web` module successfully generates its typed client via `openapi-typescript`, and a CASA restricted-scope verification submission has been filed with the external lab.
-**Plans**: TBD
+**Plans**: 9 plans
+- [ ] 01-01-PLAN.md — Gradle multi-project scaffold, buildSrc conventions, runnable Spring Boot shells
+- [ ] 01-02-PLAN.md — Tenant isolation primitives (ScopedValue, Hibernate resolver, TenantAwareTaskScope, Modulith packages, ArchUnit ThreadLocal/virtual-thread/native-SQL bans)
+- [ ] 01-03-PLAN.md — Log safety contract (Sensitive<T> wrapper, Jackson module, Logback scrub filter, ArchUnit rules d + e)
+- [ ] 01-04-PLAN.md — Liquibase YAML baseline + JPA entities + Testcontainers schema push (BLOCKING)
+- [ ] 01-05-PLAN.md — Spring Security OAuth2 dual registration, Spring Session Redis, TenantBindingFilter, invalid_grant detection, FND-05 leak test
+- [ ] 01-06-PLAN.md — AES-GCM refresh-token envelope cipher + GCP Secret Manager wiring
+- [ ] 01-07-PLAN.md — backend/api skeleton OpenAPI + Phase 1 controllers + delete-cascade + onboarding state machine
+- [ ] 01-08-PLAN.md — apps/web Next.js 16 scaffold + typed client codegen + /login, /onboarding, /settings routes
+- [ ] 01-09-PLAN.md — FND-03 log-scrub synthetic-traffic test + CASA submission package + actuator probes
 **UI hint**: yes
 
 ### Phase 2A: Mail Ingestion
