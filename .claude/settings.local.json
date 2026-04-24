@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -f .git/index.lock)",
+      "Bash(gsd-sdk commit *)"
+    ]
+  }
+}
