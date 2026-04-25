@@ -5,15 +5,14 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.client.RestClient;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,17 +25,15 @@ import com.zeromail.core.persistence.UserRepository;
 import com.zeromail.core.tenant.TenantContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 
 /**
  * End-to-end coverage of the locale-resolution backend half (REQ-2 + REQ-3 backend slice).
  *
- * <p>Drives the live Spring MVC stack via MockMvc against the Testcontainers Postgres set
- * up by {@link ApiPostgresTestBase}, with the test auth shim {@link TestSessionSupport}
- * minting headers that populate both {@code SecurityContext} and the tenant
- * {@code ScopedValue}. Each test seeds its own tenant + user rows so they can run in any
- * order and never share state.
+ * <p>Drives a live Tomcat via {@code RestClient} against the random local port — this is the
+ * existing pattern Phase 1 established for tests that need the {@link TenantContext} ScopedValue
+ * bound by {@link TestSessionSupport}'s servlet filter (the filter only runs through the real
+ * filter chain, not via MockMvc's standalone setup). Each test seeds its own tenant + user rows
+ * so they can run in any order and never share state.
  *
  * <h2>Invariants asserted</h2>
  * <ol>
@@ -62,19 +59,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @Import(TestSessionSupport.class)
 class MeLanguageIntegrationTest extends ApiPostgresTestBase {
 
-    @Autowired WebApplicationContext context;
+    @LocalServerPort int port;
     @Autowired TenantRepository tenants;
     @Autowired UserRepository users;
     @Autowired TestSessionSupport.TestSessionMinter minter;
     @Autowired JdbcTemplate jdbc;
 
-    private MockMvc mvc;
-
-    private MockMvc mvc() {
-        if (mvc == null) {
-            mvc = MockMvcBuilders.webAppContextSetup(context).build();
-        }
-        return mvc;
+    private RestClient client() {
+        return RestClient.create("http://localhost:" + port);
     }
 
     private record Seed(UUID tenantId, UUID userId, String googleSubject, String email) {}
@@ -96,13 +88,15 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
     void getMe_returnsPreferredLanguageDefaultVi() throws Exception {
         Seed s = seedUser("getme-default-vi");
 
-        MvcResult res = mvc().perform(get("/me")
-                        .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
-                        .header(TestSessionSupport.HEADER_EMAIL, s.email()))
-                .andReturn();
+        ResponseEntity<String> res = client().get()
+                .uri("/me")
+                .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
+                .header(TestSessionSupport.HEADER_EMAIL, s.email())
+                .retrieve()
+                .toEntity(String.class);
 
-        assertThat(res.getResponse().getStatus()).isEqualTo(200);
-        JsonNode json = new ObjectMapper().readTree(res.getResponse().getContentAsString());
+        assertThat(res.getStatusCode().value()).isEqualTo(200);
+        JsonNode json = new ObjectMapper().readTree(res.getBody());
         assertThat(json.path("preferredLanguage").asText()).isEqualTo("vi");
         assertThat(json.path("email").asText()).isEqualTo(s.email());
     }
@@ -112,22 +106,26 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
     void patchMeLanguage_persistsToDb_andReturnsUpdated() throws Exception {
         Seed s = seedUser("patch-persists");
 
-        MvcResult patchRes = mvc().perform(patch("/me/language")
-                        .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
-                        .header(TestSessionSupport.HEADER_EMAIL, s.email())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"language\":\"en\"}"))
-                .andReturn();
+        ResponseEntity<String> patchRes = client().patch()
+                .uri("/me/language")
+                .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
+                .header(TestSessionSupport.HEADER_EMAIL, s.email())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"language\":\"en\"}")
+                .retrieve()
+                .toEntity(String.class);
 
-        assertThat(patchRes.getResponse().getStatus()).isEqualTo(200);
-        JsonNode patched = new ObjectMapper().readTree(patchRes.getResponse().getContentAsString());
+        assertThat(patchRes.getStatusCode().value()).isEqualTo(200);
+        JsonNode patched = new ObjectMapper().readTree(patchRes.getBody());
         assertThat(patched.path("preferredLanguage").asText()).isEqualTo("en");
 
-        MvcResult getRes = mvc().perform(get("/me")
-                        .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
-                        .header(TestSessionSupport.HEADER_EMAIL, s.email()))
-                .andReturn();
-        JsonNode reloaded = new ObjectMapper().readTree(getRes.getResponse().getContentAsString());
+        ResponseEntity<String> getRes = client().get()
+                .uri("/me")
+                .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
+                .header(TestSessionSupport.HEADER_EMAIL, s.email())
+                .retrieve()
+                .toEntity(String.class);
+        JsonNode reloaded = new ObjectMapper().readTree(getRes.getBody());
         assertThat(reloaded.path("preferredLanguage").asText()).isEqualTo("en");
 
         // Direct DB assertion — bypasses the application stack to prove the column was actually written.
@@ -143,17 +141,21 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
     void patchMeLanguage_invalidValue_returns400_with_validation_code_and_fieldError() throws Exception {
         Seed s = seedUser("patch-invalid");
 
-        MvcResult res = mvc().perform(patch("/me/language")
-                        .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
-                        .header(TestSessionSupport.HEADER_EMAIL, s.email())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"language\":\"zz\"}"))
-                .andReturn();
+        ResponseEntity<String> res = client().patch()
+                .uri("/me/language")
+                .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
+                .header(TestSessionSupport.HEADER_EMAIL, s.email())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"language\":\"zz\"}")
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (req, resp) -> { /* let it through */ })
+                .toEntity(String.class);
 
-        assertThat(res.getResponse().getStatus()).isEqualTo(HttpStatus.BAD_REQUEST.value());
-        assertThat(res.getResponse().getContentType()).startsWith("application/problem+json");
+        assertThat(res.getStatusCode().value()).isEqualTo(400);
+        assertThat(res.getHeaders().getContentType()).isNotNull();
+        assertThat(res.getHeaders().getContentType().toString()).startsWith("application/problem+json");
 
-        String body = res.getResponse().getContentAsString();
+        String body = res.getBody();
 
         // Privacy / T-1.1.04-04: response must NOT echo Java exception class names or framework prefixes.
         assertThat(body)
@@ -189,14 +191,16 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
         Seed b = seedUser("tenant-b");
 
         // Authenticate as tenant A only and PATCH.
-        MvcResult res = mvc().perform(patch("/me/language")
-                        .header(TestSessionSupport.HEADER_SUBJECT, a.googleSubject())
-                        .header(TestSessionSupport.HEADER_EMAIL, a.email())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"language\":\"en\"}"))
-                .andReturn();
+        ResponseEntity<String> res = client().patch()
+                .uri("/me/language")
+                .header(TestSessionSupport.HEADER_SUBJECT, a.googleSubject())
+                .header(TestSessionSupport.HEADER_EMAIL, a.email())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"language\":\"en\"}")
+                .retrieve()
+                .toEntity(String.class);
 
-        assertThat(res.getResponse().getStatus()).isEqualTo(200);
+        assertThat(res.getStatusCode().value()).isEqualTo(200);
 
         String aLang = jdbc.queryForObject(
                 "SELECT preferred_language FROM users WHERE id = ?",
