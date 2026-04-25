@@ -11,7 +11,8 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - Sub-phases (2A, 2B, 2C): Parallel tracks that must all complete before Phase 3 — executable concurrently post-Phase 1
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED) — none yet
 
-- [ ] **Phase 1: Foundation & Safety Infrastructure** - Scoped Values, `@Sensitive`, Logback scrub, ArchUnit bans, multi-tenant leak test, Google OAuth, skeleton OpenAPI, CASA kickoff
+- [x] **Phase 1: Foundation & Safety Infrastructure** - Scoped Values, `@Sensitive`, Logback scrub, ArchUnit bans, multi-tenant leak test, Google OAuth, skeleton OpenAPI, CASA kickoff (CASA external filing pending — tracked outside the phase as a parallel external dependency)
+- [ ] **Phase 1.1: Vietnamese-first i18n and error-handling foundation (INSERTED)** - Default language Vietnamese, secondary English, user-facing language switcher; stable API error contracts that are frontend-localizable; reference local JHipster project patterns where appropriate; preserve all Phase 1 privacy/safety constraints
 - [ ] **Phase 2A: Mail Ingestion** - Gmail `users.watch` + Pub/Sub push + OIDC verification + idempotent history processing + global pause
 - [ ] **Phase 2B: Billing (Prepaid Credits)** - Double-entry Postgres ledger, reserve/settle/release, credit-hold watchdog, balance UI hooks
 - [ ] **Phase 2C: LLM Gateway** - Spring AI 2.0.0-M4 `LlmGateway` with sanitize → Unicode strip → structured tool-call + allow-list → BYOK per-request options → daily spend cap → drift detection
@@ -42,6 +43,19 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [ ] 01-07-PLAN.md — backend/api skeleton OpenAPI + Phase 1 controllers + delete-cascade + onboarding state machine
 - [ ] 01-08-PLAN.md — apps/web Next.js 16 scaffold + typed client codegen + /login, /onboarding, /settings routes
 - [ ] 01-09-PLAN.md — FND-03 log-scrub synthetic-traffic test + CASA submission package + actuator probes
+**UI hint**: yes
+
+### Phase 1.1: Vietnamese-first i18n and error-handling foundation (INSERTED)
+**Goal**: Establish a Vietnamese-default, English-secondary i18n architecture across `backend/api`, `backend/core`, and `apps/web`, with a user-facing language switcher and a stable, frontend-localizable API error contract — referencing the local JHipster project's proven patterns where they fit Spring Boot 4 / Next.js 16. All Phase 1 privacy/safety constraints (no body/prompt/completion in logs, no PII in error payloads, tenant isolation via Scoped Values, ArchUnit bans) must remain intact.
+**Depends on**: Phase 1 (needs OpenAPI skeleton, Spring Security session cookie, log-scrub contract, and `apps/web` scaffold to land first)
+**Requirements**: TBD (derived during /gsd-spec-phase or /gsd-discuss-phase)
+**Success Criteria** (what must be TRUE):
+  1. Default UI language is Vietnamese; English is selectable via a persistent in-product language switcher; preference is stored per user and survives session.
+  2. Backend error responses follow a stable contract (machine-readable code + parameters) that the frontend localizes — no human-readable Vietnamese/English strings are constructed server-side for user-facing errors.
+  3. Both Vietnamese and English message bundles cover every user-facing string in scope (auth, onboarding, settings, errors); a CI check fails the build on missing keys.
+  4. ArchUnit and log-scrub guarantees from Phase 1 still pass; no localized error message contains PII, email body, prompt, or completion content.
+  5. The JHipster reference patterns adopted are documented in CONTEXT.md with a clear "what we kept / what we adapted / what we rejected" note (Spring Boot 4 / Spring AI 2.0.0-M4 / Next.js 16 fit).
+**Plans**: TBD
 **UI hint**: yes
 
 ### Phase 2A: Mail Ingestion
@@ -147,7 +161,7 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Safety Infrastructure | 0/TBD | Not started | - |
+| 1. Foundation & Safety Infrastructure | 9/9 | Complete (CASA filing pending external) | 2026-04-25 |
 | 2A. Mail Ingestion | 0/TBD | Not started | - |
 | 2B. Billing (Prepaid Credits) | 0/TBD | Not started | - |
 | 2C. LLM Gateway | 0/TBD | Not started | - |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 1 context gathered
-last_updated: "2026-04-25T05:27:04.886Z"
-last_activity: 2026-04-25 -- Phase 01 execution started
+stopped_at: Phase 1 complete (CASA external filing pending)
+last_updated: "2026-04-25T23:59:00.000Z"
+last_activity: 2026-04-25 -- Phase 01 marked complete; Phase 1.1 (i18n) inserted
 progress:
-  total_phases: 8
-  completed_phases: 0
+  total_phases: 9
+  completed_phases: 1
   total_plans: 9
-  completed_plans: 1
+  completed_plans: 9
   percent: 11
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 01 — foundation-safety-infrastructure
+**Current focus:** Phase 1.1 — vietnamese-first-i18n-and-error-handling-foundation (next, not yet planned)
 
 ## Current Position
 
-Phase: 01 (foundation-safety-infrastructure) — EXECUTING
-Plan: 1 of 9
-Status: Executing Phase 01
-Last activity: 2026-04-25 -- Phase 01 execution started
+Phase: 01 (foundation-safety-infrastructure) — COMPLETE (CASA external filing pending; tracked as external parallel dependency)
+Plan: 9 of 9
+Status: Phase 01 complete; ready to plan Phase 1.1
+Last activity: 2026-04-25 -- Phase 01 marked complete; Phase 1.1 (i18n) inserted
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 11%
 
 ## Performance Metrics
 
@@ -64,6 +64,10 @@ Recent decisions affecting current work:
 - Roadmap: Phase 2C (LLM Gateway) hard-gated by Phase 1 safety infrastructure — prompt injection + log bleed are product-killing
 - Roadmap: Phase 4 (Triage) hard-gated by Phase 2C — no triage without sanitization, Unicode strip, allow-list
 - Roadmap: CASA restricted-scope verification tracked as external parallel track, initiated in Phase 1 (FND-07), closed before Phase 6 launch
+
+### Roadmap Evolution
+
+- Phase 1.1 inserted after Phase 1: Vietnamese-first i18n and error-handling foundation — default Vietnamese / secondary English, language switcher, stable frontend-localizable API error contract; references local JHipster patterns; preserves all Phase 1 privacy/safety constraints (URGENT)
 
 ### Pending Todos
 
