@@ -2,6 +2,7 @@ plugins {
     id("zeromail.spring-boot-conventions")
     id("zeromail.archunit-conventions")
     id("zeromail.modulith-conventions")
+    id("zeromail.sensitive-log-guard")
 }
 
 dependencies {
