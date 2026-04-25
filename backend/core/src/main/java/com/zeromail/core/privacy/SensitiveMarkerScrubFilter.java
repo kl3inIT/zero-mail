@@ -1,46 +1,71 @@
 package com.zeromail.core.privacy;
 
-import org.slf4j.MDC;
-import org.slf4j.Marker;
-import org.slf4j.helpers.MessageFormatter;
+import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.turbo.TurboFilter;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.classic.spi.LoggingEvent;
+import ch.qos.logback.core.filter.Filter;
 import ch.qos.logback.core.spi.FilterReply;
 
 /**
  * Defense-in-depth catch for stray {@code Sensitive(...)} tokens that bypassed
  * {@link Sensitive#toString()} (e.g. a custom formatter that printed the underlying record
- * components, or a literal string). When detected, stamps {@code scrubbed=true} and
- * {@code scrub_reason=sensitive_marker} on MDC so the JSON encoder includes those keys on the
- * emitted event, giving SOC alerting a structured signal.
+ * components, or a literal string).
  *
- * Why MDC-only and not message rewrite: Logback dispatches single-arg log calls
- * ({@code logger.info(format, arg)}) through a TurboFilter using a transient one-shot
- * argument array; mutating that array does not propagate to the LoggingEvent that the
- * encoder later renders. The primary redaction contract is therefore delivered by
- * {@link Sensitive#toString()} returning {@code ***REDACTED***}; this filter is the
- * observable signal that something slipped past that contract.
+ * <p><b>Per-event, NOT MDC-sticky.</b> The previous TurboFilter implementation wrote
+ * {@code scrubbed=true} into thread-local MDC, which then bled into subsequent (clean) log
+ * events on the same execution path — producing false audit signals. This implementation
+ * is registered as an appender-level {@link Filter} over already-built {@link ILoggingEvent}
+ * instances, so the {@code scrubbed} marker is attached only to the offending event's own
+ * MDC snapshot and never persists into thread state.
  *
- * Does NOT re-log from within the filter (avoids TurboFilter recursion); returns NEUTRAL.
+ * <p>The primary redaction contract is still delivered by {@link Sensitive#toString()}
+ * returning {@code ***REDACTED***}; this filter is the structured signal that something
+ * slipped past that contract so SOC alerting can fire on it.
+ *
+ * <p>This filter never blocks events — it always returns {@link FilterReply#NEUTRAL}.
  */
-public class SensitiveMarkerScrubFilter extends TurboFilter {
+public class SensitiveMarkerScrubFilter extends Filter<ILoggingEvent> {
 
     private static final String TOKEN = "Sensitive(";
 
     @Override
-    public FilterReply decide(Marker marker, Logger logger, Level level,
-                              String format, Object[] params, Throwable t) {
-        if (format == null) {
+    public FilterReply decide(ILoggingEvent event) {
+        if (event == null) {
             return FilterReply.NEUTRAL;
         }
-        String rendered = MessageFormatter.arrayFormat(format, params).getMessage();
-        if (rendered == null || !rendered.contains(TOKEN)) {
+        String message = event.getFormattedMessage();
+        if (message == null || !message.contains(TOKEN)) {
             return FilterReply.NEUTRAL;
         }
-        MDC.put("scrubbed", "true");
-        MDC.put("scrub_reason", "sensitive_marker");
+        stampScrubbed(event);
         return FilterReply.NEUTRAL;
+    }
+
+    private static void stampScrubbed(ILoggingEvent event) {
+        // We copy-on-write: build a new map containing the existing MDC snapshot plus the
+        // scrubbed/scrub_reason markers, then install it as the event's mdcPropertyMap.
+        // Logback's public LoggingEvent#setMDCPropertyMap rejects re-assignment after the
+        // event captured MDC, so we set the field reflectively. This mutation applies ONLY
+        // to this event and never touches thread-local MDC, so subsequent events stay clean.
+        if (!(event instanceof LoggingEvent classic)) {
+            return;
+        }
+        Map<String, String> existing = classic.getMDCPropertyMap();
+        Map<String, String> copy = existing == null ? new HashMap<>() : new HashMap<>(existing);
+        copy.put("scrubbed", "true");
+        copy.put("scrub_reason", "sensitive_marker");
+        try {
+            Field f = LoggingEvent.class.getDeclaredField("mdcPropertyMap");
+            f.setAccessible(true);
+            f.set(classic, copy);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            // If the Logback layout ever changes the field name we want to know about it
+            // loudly during tests/CI, but never break a production log emission for it.
+            throw new IllegalStateException(
+                    "Logback LoggingEvent layout changed; SensitiveMarkerScrubFilter needs update", e);
+        }
     }
 }

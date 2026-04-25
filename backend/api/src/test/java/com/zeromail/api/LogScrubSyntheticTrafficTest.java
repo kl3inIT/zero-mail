@@ -27,6 +27,7 @@ import com.zeromail.core.persistence.TenantRepository;
 import com.zeromail.core.persistence.UserEntity;
 import com.zeromail.core.persistence.UserRepository;
 import com.zeromail.core.privacy.Sensitive;
+import com.zeromail.core.privacy.SensitiveMarkerScrubFilter;
 import com.zeromail.core.tenant.TenantContext;
 
 import ch.qos.logback.classic.Logger;
@@ -65,6 +66,10 @@ class LogScrubSyntheticTrafficTest extends ApiPostgresTestBase {
     void setUp() {
         root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
         appender = new ListAppender<>();
+        // The per-event SensitiveMarkerScrubFilter is wired on the application's STDOUT
+        // appender via logback-spring.xml. Tests capture events on their own ListAppender,
+        // so we attach the same filter here to observe the per-event MDC enrichment.
+        appender.addFilter(new SensitiveMarkerScrubFilter());
         appender.start();
         root.addAppender(appender);
     }
