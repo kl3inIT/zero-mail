@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 1.1 UI-SPEC approved
-last_updated: "2026-04-25T19:02:50.652Z"
-last_activity: 2026-04-25 -- Phase 1.1 planning complete
+last_updated: "2026-04-25T19:23:44.431Z"
+last_activity: 2026-04-25 -- Phase 1.1 execution started
 progress:
   total_phases: 9
   completed_phases: 1
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 1.1 — vietnamese-first-i18n-and-error-handling-foundation (UI-SPEC approved, ready to plan)
+**Current focus:** Phase 1.1 — Vietnamese-first i18n and error-handling foundation (INSERTED)
 
 ## Current Position
 
-Phase: 01 (foundation-safety-infrastructure) — COMPLETE (CASA external filing pending; tracked as external parallel dependency)
-Plan: 9 of 9
-Status: Ready to execute
-Last activity: 2026-04-25 -- Phase 1.1 planning complete
+Phase: 1.1 (Vietnamese-first i18n and error-handling foundation (INSERTED)) — EXECUTING
+Plan: 1 of 8
+Status: Executing Phase 1.1
+Last activity: 2026-04-25 -- Phase 1.1 execution started
 
 Progress: [█░░░░░░░░░] 11%
 
