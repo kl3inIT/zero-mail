@@ -1,0 +1,140 @@
+{
+  "common": {
+    "app": {
+      "title": "Zero Mail",
+      "description": "Reach inbox zero without giving up control."
+    },
+    "loading": "Loading...",
+    "loadingApp": "Loading setup...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "retry": "Try action again",
+    "savingLanguage": "Updating language preference..."
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "headline": "Reach inbox zero without giving up control.",
+      "body": "Zero Mail connects to Gmail so you can set safe, reviewable automation rules. This phase only stores your account, connection, and onboarding choices.",
+      "googleButton": "Sign in with Google",
+      "safety": {
+        "noAutoSend": "No auto-send",
+        "noLongTermStorage": "No long-term email body storage",
+        "revokeAnytime": "You can revoke access anytime"
+      }
+    },
+    "errors": {
+      "oauth": {
+        "cancelled": "Google sign-in was cancelled. Try again when you are ready.",
+        "failed": "Google sign-in could not finish. Please try again."
+      }
+    }
+  },
+  "onboarding": {
+    "loading": "Loading setup...",
+    "connect": {
+      "heading": "Connect Gmail to finish setup",
+      "body": "Zero Mail needs a Gmail grant before later phases can watch, label, archive, or draft. You can revoke access anytime.",
+      "cta": "Connect Gmail"
+    },
+    "template": {
+      "heading": "Choose a starter template",
+      "body": "A starter template helps Zero Mail understand how you want your inbox handled. You can change it later in Settings.",
+      "saveCta": "Save starter template"
+    },
+    "completion": {
+      "heading": "You're ready. Open Settings to review your choices.",
+      "cta": "Continue to settings"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "account": {
+      "heading": "Account"
+    },
+    "gmailConnection": {
+      "heading": "Gmail connection",
+      "disconnectCta": "Disconnect Gmail",
+      "reconnectCta": "Reconnect Gmail"
+    },
+    "language": {
+      "label": "Language",
+      "helper": "This language preference applies to your account on every device.",
+      "vi": "Tiếng Việt",
+      "en": "English",
+      "saveCta": "Update language preference"
+    },
+    "privacy": {
+      "heading": "Privacy and safety",
+      "noAutoSend": "No auto-send",
+      "noBodyStorage": "No long-term storage of email bodies, prompts, or AI completions",
+      "revokeAnytime": "You can revoke access anytime",
+      "byokPlanned": "Coming soon: you can bring your own API key (BYOK)"
+    },
+    "dangerZone": {
+      "heading": "Danger zone"
+    },
+    "deleteAccount": {
+      "cta": "Delete account and data",
+      "confirmPhrase": "delete my data"
+    }
+  },
+  "templates": {
+    "receipts": {
+      "title": "Receipts and invoices",
+      "description": "Label invoices, receipts, and order confirmations so they're easy to find later."
+    },
+    "newsletters": {
+      "title": "Newsletters",
+      "description": "Auto-label newsletters so the primary inbox stays clean."
+    },
+    "calendarInvites": {
+      "title": "Calendar invites",
+      "description": "Flag meeting invitations so you don't miss them."
+    }
+  },
+  "connectionHealth": {
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "notConnected": "Not connected",
+    "reconnectPrompt": "Google access was revoked or expired. Reconnect Gmail to continue setup."
+  },
+  "deleteAccount": {
+    "title": "Delete your account and data?",
+    "body": "This removes your tenant, Gmail connection, onboarding selections, sessions, and encrypted tokens. This cannot be undone.",
+    "confirmInputLabel": "Type 'delete my data' to confirm",
+    "confirmInputPlaceholder": "delete my data",
+    "confirmCta": "Delete account and data",
+    "cancelCta": "Cancel",
+    "success": "Your account and data have been deleted."
+  },
+  "errors": {
+    "unknown": "An unknown error occurred. Try again or sign in again.",
+    "fallback": "The action could not finish. Refresh the page, then try again.",
+    "fieldFallback": "This value is invalid. Check it and try again.",
+    "auth": {
+      "unauthorized": "Your session expired. Sign in with Google again.",
+      "forbidden": "You do not have permission to perform this action.",
+      "currentUserNotFound": "The current account could not be found. Sign in again."
+    },
+    "validation": {
+      "generic": "One or more fields are invalid. Please check them and try again.",
+      "field": {
+        "language": {
+          "Pattern": "This language is not supported. Choose Vietnamese or English."
+        },
+        "preferredLanguage": {
+          "invalid": "This language is not supported. Choose Vietnamese or English."
+        }
+      }
+    },
+    "gmail": {
+      "disconnected": "Google access was revoked or expired. Reconnect Gmail."
+    },
+    "conflict": "The data changed before the action finished. Reload the page and try again.",
+    "dataIntegrity": "The change could not be saved because the data is invalid.",
+    "badRequest": "The request is invalid. Check it and try again.",
+    "schemaMismatch": "This page needs a newer API contract. Regenerate the typed client before continuing."
+  }
+}

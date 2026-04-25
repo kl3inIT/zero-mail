@@ -1,0 +1,140 @@
+{
+  "common": {
+    "app": {
+      "title": "Zero Mail",
+      "description": "Dọn hộp thư về zero mà vẫn giữ quyền kiểm soát."
+    },
+    "loading": "Đang tải...",
+    "loadingApp": "Đang tải thiết lập...",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "close": "Đóng",
+    "retry": "Thử lại thao tác",
+    "savingLanguage": "Đang cập nhật ngôn ngữ..."
+  },
+  "auth": {
+    "login": {
+      "title": "Đăng nhập",
+      "headline": "Dọn hộp thư về zero mà vẫn giữ quyền kiểm soát.",
+      "body": "Zero Mail kết nối với Gmail để bạn thiết lập các quy tắc tự động hóa an toàn và có thể kiểm tra. Giai đoạn này chỉ lưu tài khoản, kết nối và lựa chọn khởi đầu của bạn.",
+      "googleButton": "Đăng nhập bằng Google",
+      "safety": {
+        "noAutoSend": "Không tự động gửi email",
+        "noLongTermStorage": "Không lưu lâu dài nội dung email",
+        "revokeAnytime": "Bạn có thể thu hồi quyền truy cập bất cứ lúc nào"
+      }
+    },
+    "errors": {
+      "oauth": {
+        "cancelled": "Bạn đã hủy đăng nhập Google. Hãy thử lại khi sẵn sàng.",
+        "failed": "Không thể hoàn tất đăng nhập Google. Hãy thử lại."
+      }
+    }
+  },
+  "onboarding": {
+    "loading": "Đang tải thiết lập...",
+    "connect": {
+      "heading": "Kết nối Gmail để hoàn tất thiết lập",
+      "body": "Zero Mail cần quyền Gmail trước khi các giai đoạn sau có thể theo dõi, gắn nhãn, lưu trữ hoặc tạo bản nháp. Bạn có thể thu hồi quyền bất cứ lúc nào.",
+      "cta": "Kết nối Gmail"
+    },
+    "template": {
+      "heading": "Chọn mẫu khởi đầu",
+      "body": "Mẫu khởi đầu giúp Zero Mail hiểu cách bạn muốn xử lý hộp thư. Bạn có thể đổi mẫu sau trong phần Cài đặt.",
+      "saveCta": "Lưu mẫu khởi đầu"
+    },
+    "completion": {
+      "heading": "Đã sẵn sàng. Mở phần Cài đặt để xem lại lựa chọn của bạn.",
+      "cta": "Mở cài đặt"
+    }
+  },
+  "settings": {
+    "title": "Cài đặt",
+    "account": {
+      "heading": "Tài khoản"
+    },
+    "gmailConnection": {
+      "heading": "Kết nối Gmail",
+      "disconnectCta": "Ngắt kết nối Gmail",
+      "reconnectCta": "Kết nối lại Gmail"
+    },
+    "language": {
+      "label": "Ngôn ngữ",
+      "helper": "Lựa chọn ngôn ngữ này áp dụng cho tài khoản của bạn ở mọi thiết bị.",
+      "vi": "Tiếng Việt",
+      "en": "English",
+      "saveCta": "Cập nhật ngôn ngữ"
+    },
+    "privacy": {
+      "heading": "Quyền riêng tư và an toàn",
+      "noAutoSend": "Không tự động gửi email",
+      "noBodyStorage": "Không lưu lâu dài nội dung email, lời nhắc hay phản hồi từ AI",
+      "revokeAnytime": "Bạn có thể thu hồi quyền truy cập bất cứ lúc nào",
+      "byokPlanned": "Sắp tới: bạn có thể tự cung cấp khóa API (BYOK)"
+    },
+    "dangerZone": {
+      "heading": "Vùng nguy hiểm"
+    },
+    "deleteAccount": {
+      "cta": "Xóa tài khoản và dữ liệu",
+      "confirmPhrase": "delete my data"
+    }
+  },
+  "templates": {
+    "receipts": {
+      "title": "Hóa đơn và biên lai",
+      "description": "Gắn nhãn các email hóa đơn, biên lai, xác nhận đặt hàng để dễ tra cứu sau này."
+    },
+    "newsletters": {
+      "title": "Bản tin",
+      "description": "Tự động gắn nhãn bản tin để hộp thư chính luôn gọn gàng."
+    },
+    "calendarInvites": {
+      "title": "Lời mời lịch",
+      "description": "Đánh dấu các email mời họp để bạn không bỏ sót lịch."
+    }
+  },
+  "connectionHealth": {
+    "connected": "Đã kết nối",
+    "disconnected": "Mất kết nối",
+    "notConnected": "Chưa kết nối",
+    "reconnectPrompt": "Quyền truy cập Google đã bị thu hồi hoặc hết hạn. Hãy kết nối lại Gmail để tiếp tục thiết lập."
+  },
+  "deleteAccount": {
+    "title": "Xóa tài khoản và dữ liệu?",
+    "body": "Thao tác này xóa tenant, kết nối Gmail, lựa chọn khởi đầu, phiên đăng nhập và token đã mã hóa. Không thể hoàn tác.",
+    "confirmInputLabel": "Nhập 'delete my data' để xác nhận",
+    "confirmInputPlaceholder": "delete my data",
+    "confirmCta": "Xóa tài khoản và dữ liệu",
+    "cancelCta": "Hủy",
+    "success": "Đã xóa tài khoản và dữ liệu của bạn."
+  },
+  "errors": {
+    "unknown": "Đã xảy ra lỗi chưa xác định. Hãy thử lại hoặc đăng nhập lại.",
+    "fallback": "Không thể hoàn tất thao tác. Hãy làm mới trang rồi thử lại.",
+    "fieldFallback": "Giá trị này không hợp lệ. Hãy kiểm tra lại.",
+    "auth": {
+      "unauthorized": "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại bằng Google.",
+      "forbidden": "Bạn không có quyền thực hiện thao tác này.",
+      "currentUserNotFound": "Không tìm thấy tài khoản hiện tại. Hãy đăng nhập lại."
+    },
+    "validation": {
+      "generic": "Một hoặc nhiều trường không hợp lệ. Hãy kiểm tra lại.",
+      "field": {
+        "language": {
+          "Pattern": "Ngôn ngữ này chưa được hỗ trợ. Hãy chọn Tiếng Việt hoặc English."
+        },
+        "preferredLanguage": {
+          "invalid": "Ngôn ngữ này chưa được hỗ trợ. Hãy chọn Tiếng Việt hoặc English."
+        }
+      }
+    },
+    "gmail": {
+      "disconnected": "Quyền truy cập Google đã bị thu hồi hoặc hết hạn. Hãy kết nối lại Gmail."
+    },
+    "conflict": "Dữ liệu đã thay đổi trước khi thao tác hoàn tất. Hãy tải lại trang rồi thử lại.",
+    "dataIntegrity": "Không thể lưu thay đổi vì dữ liệu không hợp lệ.",
+    "badRequest": "Yêu cầu không hợp lệ. Hãy kiểm tra lại và thử lần nữa.",
+    "schemaMismatch": "Trang này cần hợp đồng API mới hơn. Hãy tạo lại typed client trước khi tiếp tục."
+  }
+}
