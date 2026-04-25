@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 1.1 context gathered
-last_updated: "2026-04-25T18:00:23.326Z"
-last_activity: 2026-04-25 -- Phase 01 marked complete; Phase 1.1 (i18n) inserted
+stopped_at: Phase 1.1 UI-SPEC approved
+last_updated: "2026-04-26T01:12:52.6123984+07:00"
+last_activity: 2026-04-26 -- Phase 1.1 UI design contract approved
 progress:
   total_phases: 9
   completed_phases: 1
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 1.1 — vietnamese-first-i18n-and-error-handling-foundation (next, not yet planned)
+**Current focus:** Phase 1.1 — vietnamese-first-i18n-and-error-handling-foundation (UI-SPEC approved, ready to plan)
 
 ## Current Position
 
 Phase: 01 (foundation-safety-infrastructure) — COMPLETE (CASA external filing pending; tracked as external parallel dependency)
 Plan: 9 of 9
-Status: Phase 01 complete; ready to plan Phase 1.1
-Last activity: 2026-04-25 -- Phase 01 marked complete; Phase 1.1 (i18n) inserted
+Status: Phase 01 complete; Phase 1.1 UI-SPEC approved; ready to plan Phase 1.1
+Last activity: 2026-04-26 -- Phase 1.1 UI design contract approved
 
 Progress: [█░░░░░░░░░] 11%
 
@@ -93,6 +93,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-25T18:00:23.315Z
-Stopped at: Phase 1.1 context gathered
-Resume file: .planning/phases/1.1-vietnamese-first-i18n-and-error-handling-foundation/01.1-CONTEXT.md
+Last session: 2026-04-26T01:12:52.6123984+07:00
+Stopped at: Phase 1.1 UI-SPEC approved
+Resume file: .planning/phases/1.1-vietnamese-first-i18n-and-error-handling-foundation/01.1-UI-SPEC.md
