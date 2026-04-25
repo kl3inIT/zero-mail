@@ -38,5 +38,9 @@ public abstract class PostgresContainerTest {
         r.add("spring.autoconfigure.exclude", () ->
                 "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,"
                         + "org.springframework.boot.autoconfigure.session.SessionAutoConfiguration");
+        // Test-only AES-256 key (32 zero bytes, base64-encoded). RefreshTokenCryptoConfig
+        // requires this to construct the cipher bean during context boot.
+        r.add("zeromail.crypto.refresh-token-key-base64",
+                () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
     }
 }
