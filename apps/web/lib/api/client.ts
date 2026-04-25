@@ -26,3 +26,12 @@ export function xsrfHeader(): HeadersInit {
     const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
     return match ? { "X-XSRF-TOKEN": decodeURIComponent(match[1]) } : {};
 }
+
+// Re-export FE error-localization helpers (Plan 06) so call sites can import
+// from one path. Keep the typedApi wrapper above untouched.
+export {
+    useLocalizedApiError,
+    useLocalizedFieldError,
+    type ApiError,
+    type FieldError,
+} from "./errors";

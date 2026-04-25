@@ -21,16 +21,20 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: refreshSpy, push: vi.fn(), replace: vi.fn() }),
 }));
 
-vi.mock('@/lib/api/client', () => ({
-  api: {
-    PATCH: (...args: unknown[]) => patchSpy(...args),
-    GET: vi.fn(),
-    POST: vi.fn(),
-    PUT: vi.fn(),
-    DELETE: vi.fn(),
-  },
-  xsrfHeader: () => ({ 'X-XSRF-TOKEN': 'test-token' }),
-}));
+vi.mock('@/lib/api/client', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    api: {
+      PATCH: (...args: unknown[]) => patchSpy(...args),
+      GET: vi.fn(),
+      POST: vi.fn(),
+      PUT: vi.fn(),
+      DELETE: vi.fn(),
+    },
+    xsrfHeader: () => ({ 'X-XSRF-TOKEN': 'test-token' }),
+  };
+});
 
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 

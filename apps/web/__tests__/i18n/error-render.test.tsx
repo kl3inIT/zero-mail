@@ -8,7 +8,7 @@
 //  - never renders raw ProblemDetail title/detail, exception class names, SQL state,
 //    or stack frame patterns
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import * as React from 'react';
@@ -37,15 +37,13 @@ function renderWithLocale(node: React.ReactNode, locale: 'vi' | 'en') {
 }
 
 describe('error code -> localized message rendering (Plan 06 GREEN)', () => {
-  const originalEnv = process.env.NODE_ENV;
-
   beforeEach(() => {
     // Default to a non-production env so the [MISSING:] sentinel surfaces.
-    process.env.NODE_ENV = 'development';
+    vi.stubEnv('NODE_ENV', 'development');
   });
 
   afterEach(() => {
-    process.env.NODE_ENV = originalEnv;
+    vi.unstubAllEnvs();
   });
 
   it('renders Vietnamese for error.auth.unauthorized when locale=vi', () => {
@@ -59,13 +57,13 @@ describe('error code -> localized message rendering (Plan 06 GREEN)', () => {
   });
 
   it('renders [MISSING:<code>] sentinel in dev for unknown code (NOT silent English fallback)', () => {
-    process.env.NODE_ENV = 'development';
+    vi.stubEnv('NODE_ENV', 'development');
     renderWithLocale(<Harness err={{ code: 'does.not.exist' } as ApiError} />, 'vi');
     expect(screen.getByTestId('message')).toHaveTextContent('[MISSING:does.not.exist]');
   });
 
   it('renders localized errors.unknown fallback in production for unknown code', () => {
-    process.env.NODE_ENV = 'production';
+    vi.stubEnv('NODE_ENV', 'production');
     renderWithLocale(<Harness err={{ code: 'totally.unknown.code' } as ApiError} />, 'vi');
     expect(screen.getByTestId('message')).toHaveTextContent(viMessages.errors.unknown);
     // Sentinel must NEVER leak into production output
@@ -113,7 +111,7 @@ describe('error code -> localized message rendering (Plan 06 GREEN)', () => {
   });
 
   it('field error renders [MISSING:<code>] sentinel in dev for unknown field code', () => {
-    process.env.NODE_ENV = 'development';
+    vi.stubEnv('NODE_ENV', 'development');
     renderWithLocale(<FieldHarness field="x" code="not.a.real.code" />, 'vi');
     expect(screen.getByTestId('message')).toHaveTextContent('[MISSING:not.a.real.code]');
   });
