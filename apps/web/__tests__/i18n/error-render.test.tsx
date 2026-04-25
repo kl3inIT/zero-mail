@@ -1,25 +1,120 @@
-import { describe, it } from 'vitest';
+// Plan 06 Task 1 — flipped from RED stub to GREEN.
+//
+// Locks the FE error-localization display contract (CONTEXT.md decision D-D5
+// + threat_model T-1.1.06-01/02):
+//  - default locale vi -> Vietnamese localized string for known error codes
+//  - locale switch to en -> English localized string for the same code
+//  - unknown error code -> [MISSING:<code>] sentinel in dev, errors.unknown in prod
+//  - never renders raw ProblemDetail title/detail, exception class names, SQL state,
+//    or stack frame patterns
 
-/**
- * Wave 0 RED stub — Plan 06 turns this GREEN.
- *
- * Locks the FE error-localization display contract (CONTEXT.md decision D-D5):
- *   - default locale vi -> renders Vietnamese localized string for known error codes
- *   - locale switch to en -> renders English localized string for the same code
- *   - unknown error code -> renders localized errors.unknown fallback
- *   - never renders raw ProblemDetail title/detail, exception class names, or SQL
- *     constraint names (security_threat_model #6 — missing-key sentinel rendering)
- *
- * Plan 06 will mock openapi-fetch failure responses and render a route component
- * inside next-intl's NextIntlClientProvider; assertions use @testing-library/react
- * + the matchers loaded by __tests__/setup.ts.
- */
-describe('error code -> localized message rendering (Wave 0 stub — implemented by Plan 06)', () => {
-  it.skip('renders Vietnamese for error.auth.unauthorized when locale=vi', () => {});
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { NextIntlClientProvider } from 'next-intl';
+import * as React from 'react';
 
-  it.skip('renders English for error.auth.unauthorized when locale=en', () => {});
+import viMessages from '@/messages/vi.json';
+import enMessages from '@/messages/en.json';
+import { useLocalizedApiError, useLocalizedFieldError, type ApiError } from '@/lib/api/errors';
 
-  it.skip('renders localized errors.unknown fallback for unknown code', () => {});
+function Harness({ err }: { err: ApiError | undefined }) {
+  const t = useLocalizedApiError();
+  return <p data-testid="message">{t(err)}</p>;
+}
 
-  it.skip('never renders raw title/detail/exception names/SQL constraint names', () => {});
+function FieldHarness({ field, code }: { field: string; code: string }) {
+  const t = useLocalizedFieldError();
+  return <p data-testid="message">{t({ field, code } as never)}</p>;
+}
+
+function renderWithLocale(node: React.ReactNode, locale: 'vi' | 'en') {
+  const messages = locale === 'vi' ? viMessages : enMessages;
+  return render(
+    <NextIntlClientProvider locale={locale} messages={messages}>
+      {node}
+    </NextIntlClientProvider>,
+  );
+}
+
+describe('error code -> localized message rendering (Plan 06 GREEN)', () => {
+  const originalEnv = process.env.NODE_ENV;
+
+  beforeEach(() => {
+    // Default to a non-production env so the [MISSING:] sentinel surfaces.
+    process.env.NODE_ENV = 'development';
+  });
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalEnv;
+  });
+
+  it('renders Vietnamese for error.auth.unauthorized when locale=vi', () => {
+    renderWithLocale(<Harness err={{ code: 'auth.unauthorized' } as ApiError} />, 'vi');
+    expect(screen.getByTestId('message')).toHaveTextContent(viMessages.errors.auth.unauthorized);
+  });
+
+  it('renders English for error.auth.unauthorized when locale=en', () => {
+    renderWithLocale(<Harness err={{ code: 'auth.unauthorized' } as ApiError} />, 'en');
+    expect(screen.getByTestId('message')).toHaveTextContent(enMessages.errors.auth.unauthorized);
+  });
+
+  it('renders [MISSING:<code>] sentinel in dev for unknown code (NOT silent English fallback)', () => {
+    process.env.NODE_ENV = 'development';
+    renderWithLocale(<Harness err={{ code: 'does.not.exist' } as ApiError} />, 'vi');
+    expect(screen.getByTestId('message')).toHaveTextContent('[MISSING:does.not.exist]');
+  });
+
+  it('renders localized errors.unknown fallback in production for unknown code', () => {
+    process.env.NODE_ENV = 'production';
+    renderWithLocale(<Harness err={{ code: 'totally.unknown.code' } as ApiError} />, 'vi');
+    expect(screen.getByTestId('message')).toHaveTextContent(viMessages.errors.unknown);
+    // Sentinel must NEVER leak into production output
+    expect(screen.getByTestId('message').textContent ?? '').not.toMatch(/\[MISSING:/);
+  });
+
+  it('strips the legacy `error.` prefix from server codes when looking up bundle keys', () => {
+    // Backend ErrorCodes constants are dotted with "error." prefix; the FE bundle
+    // namespaces under "errors.*" so the hook strips that prefix.
+    renderWithLocale(<Harness err={{ code: 'error.auth.unauthorized' } as ApiError} />, 'vi');
+    expect(screen.getByTestId('message')).toHaveTextContent(viMessages.errors.auth.unauthorized);
+  });
+
+  it('uses errors.unknown when err is undefined', () => {
+    renderWithLocale(<Harness err={undefined} />, 'vi');
+    expect(screen.getByTestId('message')).toHaveTextContent(viMessages.errors.unknown);
+  });
+
+  it('never renders raw title / detail / exception names / SQL state / stack frame patterns', () => {
+    // Even when the server-provided ApiError carries diagnostics, the hook must
+    // never surface them — it switches on `code` only.
+    const noisy = {
+      code: 'auth.unauthorized',
+      title: 'Internal Server Error',
+      detail: 'org.hibernate.exception.ConstraintViolationException: ERROR: duplicate key value violates unique constraint "users_email_key"',
+      // synthetic shape for completeness
+      stack: 'at com.zeromail.core.account.AccountService.requireCurrentUser(AccountService.java:42)',
+    } as unknown as ApiError;
+    renderWithLocale(<Harness err={noisy} />, 'vi');
+    const text = screen.getByTestId('message').textContent ?? '';
+    expect(text).toBe(viMessages.errors.auth.unauthorized);
+    expect(text).not.toMatch(/Internal Server Error/);
+    expect(text).not.toMatch(/org\.hibernate/);
+    expect(text).not.toMatch(/ConstraintViolationException/);
+    expect(text).not.toMatch(/users_email_key/);
+    expect(text).not.toMatch(/at com\.zeromail/);
+    expect(text).not.toMatch(/\d{5}/); // SQL state shape (e.g. 23505)
+  });
+
+  it('renders localized field error when FieldError.code maps into errors.validation.field.*', () => {
+    renderWithLocale(<FieldHarness field="language" code="validation.field.language.Pattern" />, 'vi');
+    expect(screen.getByTestId('message')).toHaveTextContent(
+      viMessages.errors.validation.field.language.Pattern,
+    );
+  });
+
+  it('field error renders [MISSING:<code>] sentinel in dev for unknown field code', () => {
+    process.env.NODE_ENV = 'development';
+    renderWithLocale(<FieldHarness field="x" code="not.a.real.code" />, 'vi');
+    expect(screen.getByTestId('message')).toHaveTextContent('[MISSING:not.a.real.code]');
+  });
 });
