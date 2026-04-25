@@ -64,6 +64,15 @@ server:
         http-only: true
         secure: false  # dev; true in prod profile
         same-site: lax
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+    version: openapi_3_1
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+  packages-to-scan: com.zeromail.api.controllers
 management:
   endpoints:
     web:
