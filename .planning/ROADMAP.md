@@ -61,8 +61,8 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] 01.1-02-PLAN.md — Backend error contract: ErrorCodes, ApiError, FieldErrorDto, AllowedParamScalars, GlobalExceptionHandler upgrade (extends ResponseEntityExceptionHandler)
 - [x] 01.1-03-PLAN.md — springdoc GlobalOpenApiCustomizer registering ApiError schema + default 4xx/5xx responses
 - [x] 01.1-04-PLAN.md — Backend locale endpoint: PATCH /me/language with @Valid + tenant-scoped service + integration tests
-- [ ] 01.1-05-PLAN.md — Frontend i18n bootstrap: next-intl 4.x, routing/request/middleware, vi+en bundles, async layout, regenerated typed client
-- [ ] 01.1-06-PLAN.md — LanguageSwitcher + useLocalizedApiError hook + replace hard-coded English in Phase 1 pages/components
+- [x] 01.1-05-PLAN.md — Frontend i18n bootstrap: next-intl 4.x, routing/request/middleware, vi+en bundles, async layout, regenerated typed client
+- [x] 01.1-06-PLAN.md — LanguageSwitcher + useLocalizedApiError hook + replace hard-coded English in Phase 1 pages/components
 - [ ] 01.1-07-PLAN.md — CI key-coverage gate (parity + EN scanner + backend code coverage) + Playwright switcher persistence smoke
 - [ ] 01.1-08-PLAN.md — ArchUnit hardening + sentinel-sweep safety tests + JHipster keep/adapt/reject verification
 **UI hint**: yes
