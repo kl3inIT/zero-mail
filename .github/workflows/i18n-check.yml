@@ -1,0 +1,38 @@
+name: i18n key coverage
+
+on:
+  pull_request:
+    paths:
+      - 'apps/web/messages/**'
+      - 'apps/web/app/**'
+      - 'apps/web/components/**'
+      - 'apps/web/scripts/check-i18n.ts'
+      - 'backend/api/src/main/java/com/zeromail/api/error/ErrorCodes.java'
+      - 'tools/i18n-key-coverage/**'
+      - '.github/workflows/i18n-check.yml'
+  push:
+    branches: [main]
+
+jobs:
+  i18n-key-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run i18n key coverage gate
+        run: node tools/i18n-key-coverage/index.mjs

@@ -17,13 +17,27 @@ import { routing } from './i18n/routing';
  * preserved when we either pass the response through or replace it with a
  * redirect (NextResponse.redirect intentionally drops the i18n rewrite headers
  * because the user is being sent to /login anyway).
+ *
+ * Plan 07 deviation note (Rule 3 — Blocking): pnpm hoists `next` to BOTH
+ * `apps/web/node_modules/next` AND the workspace root because Next.js declares
+ * `@playwright/test` as an optional peer dep. Once `@playwright/test` exists at
+ * root (Plan 07 Task 2), pnpm creates a second peer-permutation of `next` and
+ * physical paths diverge. TypeScript then sees `NextResponse` from
+ * `next-intl/middleware` (resolved through root's `next`) as a different type
+ * from `NextResponse` declared at the proxy boundary (resolved through
+ * apps/web's `next`). Runtime behavior is identical — both are the same Next
+ * implementation. We bridge the type identity with an `as unknown as` cast at
+ * the function-result boundary; the cast is type-only, not a structural check.
  */
 const handleI18n = createIntlMiddleware(routing);
 
 const PROTECTED = ['/onboarding', '/settings'];
 
 export default function proxy(request: NextRequest): NextResponse {
-  const intlResponse = handleI18n(request);
+  // See deviation note above re: duplicate-`next` peer-permutations under
+  // pnpm. Cast through unknown to bridge the two structurally-identical
+  // NextRequest / NextResponse type identities.
+  const intlResponse = handleI18n(request as unknown as Parameters<typeof handleI18n>[0]) as unknown as NextResponse;
 
   const needsAuth = PROTECTED.some((p) => request.nextUrl.pathname.startsWith(p));
   if (needsAuth) {

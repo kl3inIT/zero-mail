@@ -35,6 +35,10 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     include: ['__tests__/**/*.{test,spec}.{ts,tsx}'],
+    // Plan 07: Playwright spec lives under __tests__/e2e/ and uses its own
+    // runner. Vitest must NOT try to load it (Playwright's `test()` throws
+    // when called outside its runner).
+    exclude: ['**/node_modules/**', '__tests__/e2e/**'],
     setupFiles: ['__tests__/setup.ts'],
   },
   resolve: {

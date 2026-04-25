@@ -11,7 +11,7 @@
     "i18n:check": "tsx scripts/check-i18n.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "node ../../node_modules/@playwright/test/cli.js test"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
