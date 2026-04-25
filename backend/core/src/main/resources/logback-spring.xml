@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <!--
+          SensitiveMarkerScrubFilter is per-event (operates on ILoggingEvent), NOT a TurboFilter.
+          A TurboFilter that stamped MDC made the marker thread-sticky and produced false
+          audit signals on subsequent clean events. As an appender filter, the marker is
+          attached only to the offending event's own MDC snapshot.
+        -->
+        <filter class="com.zeromail.core.privacy.SensitiveMarkerScrubFilter"/>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdcKeyName>scrubbed</includeMdcKeyName>
+            <includeMdcKeyName>scrub_reason</includeMdcKeyName>
+        </encoder>
+    </appender>
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>

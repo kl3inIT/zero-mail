@@ -1,0 +1,24 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-gmail-connections
+      author: zeromail
+      changes:
+        - createTable:
+            tableName: gmail_connections
+            columns:
+              - column: { name: id, type: uuid, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: tenant_id, type: uuid, constraints: { nullable: false } }
+              - column: { name: google_email, type: varchar(320), constraints: { nullable: false } }
+              - column: { name: status, type: varchar(32), constraints: { nullable: false } }
+              - column: { name: refresh_token_encrypted, type: bytea, constraints: { nullable: true } }
+              - column: { name: scopes_granted, type: text }
+              - column: { name: connected_at, type: timestamptz }
+              - column: { name: disconnected_at, type: timestamptz }
+        - addUniqueConstraint:
+            tableName: gmail_connections
+            columnNames: tenant_id
+            constraintName: uq_gmail_connections_tenant_id
+        - createIndex:
+            indexName: idx_gmail_conn_status
+            tableName: gmail_connections
+            columns: [{ column: { name: status } }]

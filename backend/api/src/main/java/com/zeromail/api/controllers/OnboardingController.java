@@ -1,0 +1,35 @@
+package com.zeromail.api.controllers;
+
+import java.util.UUID;
+
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.zeromail.api.dto.SelectTemplateRequest;
+import com.zeromail.core.account.OnboardingService;
+import com.zeromail.core.tenant.TenantContext;
+
+import jakarta.validation.Valid;
+
+@RestController
+public class OnboardingController {
+
+    private final OnboardingService onboardingService;
+
+    public OnboardingController(OnboardingService onboardingService) {
+        this.onboardingService = onboardingService;
+    }
+
+    @PostMapping("/onboarding/select-template")
+    public void selectTemplate(@Valid @RequestBody SelectTemplateRequest req) {
+        UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+        onboardingService.selectTemplate(tenantId, req.templateKey());
+    }
+
+    @PostMapping("/onboarding/complete")
+    public void complete() {
+        UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+        onboardingService.complete(tenantId);
+    }
+}

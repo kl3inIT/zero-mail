@@ -1,0 +1,9 @@
+.gradle/
+build/
+.env
+node_modules/
+.idea/
+*.iml
+out/
+apps/web/.next/
+apps/web/node_modules/

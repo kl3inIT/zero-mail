@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-users
+      author: zeromail
+      changes:
+        - createTable:
+            tableName: users
+            columns:
+              - column: { name: id, type: uuid, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: tenant_id, type: uuid, constraints: { nullable: false, foreignKeyName: fk_users_tenant, referencedTableName: tenants, referencedColumnNames: id } }
+              - column: { name: google_subject, type: varchar(100), constraints: { nullable: false, unique: true } }
+              - column: { name: email, type: varchar(320), constraints: { nullable: false } }
+              - column: { name: onboarding_step, type: varchar(32), constraints: { nullable: false }, defaultValue: "SIGNED_IN" }
+              - column: { name: created_at, type: timestamptz, constraints: { nullable: false }, defaultValueComputed: now() }
+        - createIndex:
+            indexName: idx_users_tenant_id
+            tableName: users
+            columns: [{ column: { name: tenant_id } }]

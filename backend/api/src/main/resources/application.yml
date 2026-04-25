@@ -1,0 +1,87 @@
+spring:
+  application:
+    name: zeromail-api
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/zeromail}
+    username: ${DB_USER:zeromail}
+    password: ${DB_PASSWORD:zeromail}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
+            client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}
+            scope: openid, profile, email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+          google-gmail:
+            provider: google
+            client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
+            client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}
+            scope: https://www.googleapis.com/auth/gmail.modify
+            redirect-uri: "{baseUrl}/oauth2/callback/gmail"
+            authorization-grant-type: authorization_code
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+  session:
+    store-type: redis
+    timeout: 30m
+    redis:
+      namespace: zeromail:session
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+  cloud:
+    gcp:
+      secretmanager:
+        enabled: ${GCP_SECRET_MANAGER_ENABLED:false}
+zeromail:
+  crypto:
+    # Prefer Secret Manager in deployed environments; fall back to local env var in dev/test.
+    refresh-token-key-base64: ${REFRESH_TOKEN_KEY_BASE64:${sm://oauth-refresh-token-key-v1/versions/1:}}
+server:
+  port: 8080
+  servlet:
+    session:
+      cookie:
+        name: ZEROMAIL_SESSION
+        http-only: true
+        secure: false  # dev; true in prod profile
+        same-site: lax
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+    version: openapi_3_1
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+  packages-to-scan: com.zeromail.api.controllers
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    enable:
+      all: true
