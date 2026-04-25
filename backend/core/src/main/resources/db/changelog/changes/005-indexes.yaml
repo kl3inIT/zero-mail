@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-indexes
+      author: zeromail
+      changes:
+        - createIndex:
+            indexName: idx_gmail_conn_tenant_id
+            tableName: gmail_connections
+            columns: [{ column: { name: tenant_id } }]
+        - createIndex:
+            indexName: idx_onboarding_tenant_id
+            tableName: onboarding_selections
+            columns: [{ column: { name: tenant_id } }]

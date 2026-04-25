@@ -1,0 +1,11 @@
+services:
+  postgres:
+    image: postgres:17.6
+    environment:
+      POSTGRES_DB: zeromail
+      POSTGRES_USER: zeromail
+      POSTGRES_PASSWORD: zeromail
+    ports: ["5432:5432"]
+  redis:
+    image: redis:7.2
+    ports: ["6379:6379"]

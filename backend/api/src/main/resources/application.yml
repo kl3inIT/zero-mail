@@ -15,6 +15,15 @@ spring:
   session:
     store-type: redis
     timeout: 30m
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
 server:
   port: 8080
   servlet:

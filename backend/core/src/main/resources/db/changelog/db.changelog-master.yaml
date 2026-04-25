@@ -1,0 +1,5 @@
+databaseChangeLog:
+  - includeAll:
+      path: classpath:db/changelog/changes/
+      relativeToChangelogFile: false
+      errorIfMissingOrEmpty: true

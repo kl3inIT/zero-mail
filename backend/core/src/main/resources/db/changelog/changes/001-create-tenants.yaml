@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-tenants
+      author: zeromail
+      changes:
+        - createTable:
+            tableName: tenants
+            columns:
+              - column: { name: id, type: uuid, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: display_name, type: varchar(255), constraints: { nullable: false } }
+              - column: { name: created_at, type: timestamptz, constraints: { nullable: false }, defaultValueComputed: now() }

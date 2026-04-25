@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-create-onboarding-selections
+      author: zeromail
+      changes:
+        - createTable:
+            tableName: onboarding_selections
+            columns:
+              - column: { name: id, type: uuid, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: tenant_id, type: uuid, constraints: { nullable: false } }
+              - column: { name: template_key, type: varchar(64), constraints: { nullable: false } }
+              - column: { name: enabled, type: boolean, constraints: { nullable: false }, defaultValueBoolean: true }
+              - column: { name: created_at, type: timestamptz, constraints: { nullable: false }, defaultValueComputed: now() }
+        - addUniqueConstraint:
+            tableName: onboarding_selections
+            columnNames: tenant_id, template_key
+            constraintName: uq_onboarding_selection
