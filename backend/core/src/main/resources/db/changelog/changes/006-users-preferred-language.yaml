@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-users-preferred-language
+      author: zeromail
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: preferred_language
+                  type: varchar(2)
+                  defaultValue: vi
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE users ADD CONSTRAINT users_preferred_language_check CHECK (preferred_language IN ('vi','en'))
+            dbms: postgresql
+      rollback:
+        - dropColumn:
+            tableName: users
+            columnName: preferred_language

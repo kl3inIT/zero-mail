@@ -47,7 +47,8 @@ public class AccountService {
                 user.getId(),
                 tenantId,
                 user.getEmail(),
-                user.getOnboardingStep().name());
+                user.getOnboardingStep().name(),
+                user.getPreferredLanguage());
     }
 
     /**

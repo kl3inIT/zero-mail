@@ -27,6 +27,7 @@ public class MeController {
                 user.userId().toString(),
                 user.tenantId().toString(),
                 user.email(),
-                user.onboardingStep());
+                user.onboardingStep(),
+                null);
     }
 }

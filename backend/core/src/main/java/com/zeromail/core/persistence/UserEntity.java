@@ -33,6 +33,9 @@ public class UserEntity {
     @Column(name = "onboarding_step", nullable = false)
     private OnboardingStep onboardingStep = OnboardingStep.SIGNED_IN;
 
+    @Column(name = "preferred_language", length = 2, nullable = false)
+    private String preferredLanguage = "vi";
+
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private Instant createdAt;
 
@@ -50,6 +53,8 @@ public class UserEntity {
     public String getGoogleSubject() { return googleSubject; }
     public String getEmail() { return email; }
     public OnboardingStep getOnboardingStep() { return onboardingStep; }
+    public String getPreferredLanguage() { return preferredLanguage; }
+    public void setPreferredLanguage(String preferredLanguage) { this.preferredLanguage = preferredLanguage; }
     public Instant getCreatedAt() { return createdAt; }
 
     public void advanceTo(OnboardingStep next) {
