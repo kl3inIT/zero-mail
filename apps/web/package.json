@@ -8,8 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "generate:api": "tsx scripts/generate-api.ts",
+    "i18n:check": "tsx scripts/check-i18n.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
