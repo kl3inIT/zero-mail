@@ -1,0 +1,13 @@
+{
+  "name": "zero-mail",
+  "private": true,
+  "packageManager": "pnpm@10.33.2",
+  "scripts": {
+    "web:dev": "pnpm --filter zeromail-web dev",
+    "web:build": "pnpm --filter zeromail-web build",
+    "generate:api": "pnpm --filter zeromail-web generate:api"
+  },
+  "devDependencies": {
+    "turbo": "2.9.6"
+  }
+}
