@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 1.1 UI-SPEC approved
-last_updated: "2026-04-25T19:23:44.431Z"
-last_activity: 2026-04-25 -- Phase 1.1 execution started
+last_updated: "2026-04-25T20:18:46.193Z"
+last_activity: 2026-04-25
 progress:
-  total_phases: 9
+  total_phases: 10
   completed_phases: 1
   total_plans: 17
-  completed_plans: 9
-  percent: 53
+  completed_plans: 13
+  percent: 76
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 ## Current Position
 
 Phase: 1.1 (Vietnamese-first i18n and error-handling foundation (INSERTED)) — EXECUTING
-Plan: 1 of 8
-Status: Executing Phase 1.1
-Last activity: 2026-04-25 -- Phase 1.1 execution started
+Plan: 2 of 8
+Status: Ready to execute
+Last activity: 2026-04-25
 
 Progress: [█░░░░░░░░░] 11%
 
@@ -52,6 +52,7 @@ Progress: [█░░░░░░░░░] 11%
 - Trend: —
 
 *Updated after each plan completion*
+| Phase 01.1 P04 | 30min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -64,10 +65,12 @@ Recent decisions affecting current work:
 - Roadmap: Phase 2C (LLM Gateway) hard-gated by Phase 1 safety infrastructure — prompt injection + log bleed are product-killing
 - Roadmap: Phase 4 (Triage) hard-gated by Phase 2C — no triage without sanitization, Unicode strip, allow-list
 - Roadmap: CASA restricted-scope verification tracked as external parallel track, initiated in Phase 1 (FND-07), closed before Phase 6 launch
+- [Phase ?]: Use RestClient + LocalServerPort (not MockMvc.webAppContextSetup) for backend tests requiring TenantContext ScopedValue — MockMvc skips servlet filters and the test auth filter never binds the ScopedValue
 
 ### Roadmap Evolution
 
 - Phase 1.1 inserted after Phase 1: Vietnamese-first i18n and error-handling foundation — default Vietnamese / secondary English, language switcher, stable frontend-localizable API error contract; references local JHipster patterns; preserves all Phase 1 privacy/safety constraints (URGENT)
+- Phase 1.2 inserted after Phase 1.1: Domain-owned persistence restructuring — refactor `backend/core` into domain-owned service/persistence/model packages; add a small shared package for stable cross-cutting infrastructure; preserve schema and safety constraints; enforce boundaries with Modulith or ArchUnit (URGENT)
 
 ### Pending Todos
 
@@ -93,6 +96,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-26T01:12:52.6123984+07:00
+Last session: 2026-04-25T20:18:32.852Z
 Stopped at: Phase 1.1 UI-SPEC approved
-Resume file: .planning/phases/1.1-vietnamese-first-i18n-and-error-handling-foundation/01.1-UI-SPEC.md
+Resume file: None

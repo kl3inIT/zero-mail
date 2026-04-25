@@ -9,10 +9,11 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 **Phase Numbering:**
 - Integer phases (1, 3, 4, 6): Planned milestone work
 - Sub-phases (2A, 2B, 2C): Parallel tracks that must all complete before Phase 3 — executable concurrently post-Phase 1
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED) — none yet
+- Decimal phases (1.1, 1.2, 2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: Foundation & Safety Infrastructure** - Scoped Values, `@Sensitive`, Logback scrub, ArchUnit bans, multi-tenant leak test, Google OAuth, skeleton OpenAPI, CASA kickoff (CASA external filing pending — tracked outside the phase as a parallel external dependency)
 - [ ] **Phase 1.1: Vietnamese-first i18n and error-handling foundation (INSERTED)** - Default language Vietnamese, secondary English, user-facing language switcher; stable API error contracts that are frontend-localizable; reference local JHipster project patterns where appropriate; preserve all Phase 1 privacy/safety constraints
+- [ ] **Phase 1.2: Domain-owned persistence restructuring (INSERTED)** - Refactor `backend/core` into domain-owned service/persistence/model packages, add a small shared package for stable cross-cutting infrastructure, preserve schema and safety constraints, and enforce boundaries with Modulith or ArchUnit
 - [ ] **Phase 2A: Mail Ingestion** - Gmail `users.watch` + Pub/Sub push + OIDC verification + idempotent history processing + global pause
 - [ ] **Phase 2B: Billing (Prepaid Credits)** - Double-entry Postgres ledger, reserve/settle/release, credit-hold watchdog, balance UI hooks
 - [ ] **Phase 2C: LLM Gateway** - Spring AI 2.0.0-M4 `LlmGateway` with sanitize → Unicode strip → structured tool-call + allow-list → BYOK per-request options → daily spend cap → drift detection
@@ -56,15 +57,27 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
   4. ArchUnit and log-scrub guarantees from Phase 1 still pass; no localized error message contains PII, email body, prompt, or completion content.
   5. The JHipster reference patterns adopted are documented in CONTEXT.md with a clear "what we kept / what we adapted / what we rejected" note (Spring Boot 4 / Spring AI 2.0.0-M4 / Next.js 16 fit).
 **Plans**: 8 plans
-- [ ] 01.1-01-PLAN.md — [BLOCKING] Wave 0 test scaffolding + Liquibase changelog 006-users-preferred-language + JPA field + Vitest config
-- [ ] 01.1-02-PLAN.md — Backend error contract: ErrorCodes, ApiError, FieldErrorDto, AllowedParamScalars, GlobalExceptionHandler upgrade (extends ResponseEntityExceptionHandler)
-- [ ] 01.1-03-PLAN.md — springdoc GlobalOpenApiCustomizer registering ApiError schema + default 4xx/5xx responses
-- [ ] 01.1-04-PLAN.md — Backend locale endpoint: PATCH /me/language with @Valid + tenant-scoped service + integration tests
+- [x] 01.1-01-PLAN.md — [BLOCKING] Wave 0 test scaffolding + Liquibase changelog 006-users-preferred-language + JPA field + Vitest config
+- [x] 01.1-02-PLAN.md — Backend error contract: ErrorCodes, ApiError, FieldErrorDto, AllowedParamScalars, GlobalExceptionHandler upgrade (extends ResponseEntityExceptionHandler)
+- [x] 01.1-03-PLAN.md — springdoc GlobalOpenApiCustomizer registering ApiError schema + default 4xx/5xx responses
+- [x] 01.1-04-PLAN.md — Backend locale endpoint: PATCH /me/language with @Valid + tenant-scoped service + integration tests
 - [ ] 01.1-05-PLAN.md — Frontend i18n bootstrap: next-intl 4.x, routing/request/middleware, vi+en bundles, async layout, regenerated typed client
 - [ ] 01.1-06-PLAN.md — LanguageSwitcher + useLocalizedApiError hook + replace hard-coded English in Phase 1 pages/components
 - [ ] 01.1-07-PLAN.md — CI key-coverage gate (parity + EN scanner + backend code coverage) + Playwright switcher persistence smoke
 - [ ] 01.1-08-PLAN.md — ArchUnit hardening + sentinel-sweep safety tests + JHipster keep/adapt/reject verification
 **UI hint**: yes
+
+### Phase 1.2: Domain-owned persistence restructuring (INSERTED)
+**Goal**: Refactor `backend/core` away from a global persistence bucket into domain-owned `service`, `persistence`, and `model` packages, with a small `shared` package reserved only for stable cross-cutting infrastructure. Preserve the existing database schema and Phase 1 privacy/safety constraints while making module boundaries explicit and enforceable.
+**Depends on**: Phase 1.1 (keeps the i18n/error-contract additions in the final package layout)
+**Requirements**: _(architecture restructuring; no new product requirements yet)_
+**Success Criteria** (what must be TRUE):
+  1. Account, onboarding, Gmail connection, tenant, privacy, and crypto code are organized by domain ownership rather than a single global `core.persistence` package.
+  2. Entities and repositories live under their owning domain's `persistence` subpackage unless they are genuinely shared infrastructure.
+  3. A small `shared` package exists only for stable cross-cutting infrastructure; it does not become a business-logic dumping ground.
+  4. Existing table names, Liquibase changelog semantics, tenant isolation, log-scrub rules, and API behavior are preserved.
+  5. Modulith and/or ArchUnit tests enforce the new boundaries, including restrictions on cross-domain access to persistence internals.
+**Plans**: TBD
 
 ### Phase 2A: Mail Ingestion
 **Goal**: Receive Gmail push notifications reliably, keep `users.watch` alive, and process every history delivery idempotently with a tenant-visible global pause.
