@@ -30,7 +30,7 @@ class MultiTenantLeakIntegrationTest extends ApiPostgresTestBase {
     @Autowired UserRepository users;
     @Autowired TestSessionSupport.TestSessionMinter minter;
 
-    record Seed(UUID tenantId, String googleSub, String sessionCookie) {}
+    record Seed(UUID tenantId, String googleSub, String email) {}
 
     @Test
     void concurrent_virtual_thread_requests_never_cross_tenant() throws Exception {
@@ -58,14 +58,16 @@ class MultiTenantLeakIntegrationTest extends ApiPostgresTestBase {
         var user = ScopedValue.where(TenantContext.TENANT, tenantId.toString())
                 .call(() -> users.save(new UserEntity(
                         UUID.randomUUID(), tenantId, "sub-" + label, label + "@example.com")));
-        String cookie = minter.mint(user.getGoogleSubject(), user.getEmail());
-        return new Seed(tenantId, user.getGoogleSubject(), cookie);
+        // Register the seed so TestSessionSupport's auth filter picks up the headers below.
+        minter.mint(user.getGoogleSubject(), user.getEmail());
+        return new Seed(tenantId, user.getGoogleSubject(), user.getEmail());
     }
 
     private String fetchTenantEcho(RestClient client, Seed s) {
         return client.get()
                 .uri("/debug/tenant-echo")
-                .header("Cookie", s.sessionCookie())
+                .header(TestSessionSupport.HEADER_SUBJECT, s.googleSub())
+                .header(TestSessionSupport.HEADER_EMAIL, s.email())
                 .retrieve()
                 .body(String.class);
     }

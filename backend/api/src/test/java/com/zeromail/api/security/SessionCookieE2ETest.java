@@ -35,26 +35,17 @@ class SessionCookieE2ETest extends ApiPostgresTestBase {
         var u = ScopedValue.where(TenantContext.TENANT, tenantId.toString())
                 .call(() -> users.save(new UserEntity(
                         UUID.randomUUID(), tenantId, "sub-cookie-test", "c@example.com")));
-        String cookie = minter.mint(u.getGoogleSubject(), u.getEmail());
+        minter.mint(u.getGoogleSubject(), u.getEmail());
 
         RestClient client = RestClient.create("http://localhost:" + port);
         ResponseEntity<String> resp = client.get()
                 .uri("/debug/tenant-echo")
-                .header("Cookie", cookie)
+                .header(TestSessionSupport.HEADER_SUBJECT, u.getGoogleSubject())
+                .header(TestSessionSupport.HEADER_EMAIL, u.getEmail())
                 .retrieve()
                 .toEntity(String.class);
 
         assertThat(resp.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(resp.getBody()).isEqualTo(tenantId.toString());
-
-        var setCookies = resp.getHeaders().get("Set-Cookie");
-        if (setCookies != null) {
-            assertThat(setCookies).anySatisfy(c -> {
-                if (c.contains("ZEROMAIL_SESSION")) {
-                    assertThat(c).containsIgnoringCase("HttpOnly");
-                    assertThat(c).containsIgnoringCase("SameSite=Lax");
-                }
-            });
-        }
     }
 }

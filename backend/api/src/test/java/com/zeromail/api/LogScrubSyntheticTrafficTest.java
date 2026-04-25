@@ -90,19 +90,24 @@ class LogScrubSyntheticTrafficTest extends ApiPostgresTestBase {
             conns.save(gc);
         });
 
-        String cookie = minter.mint(LEAK_PROBE_SUBJECT, LEAK_PROBE_EMAIL);
+        minter.mint(LEAK_PROBE_SUBJECT, LEAK_PROBE_EMAIL);
         RestClient client = RestClient.create("http://localhost:" + port);
 
-        client.get().uri("/me").header("Cookie", cookie)
+        client.get().uri("/me")
+                .header(TestSessionSupport.HEADER_SUBJECT, LEAK_PROBE_SUBJECT)
+                .header(TestSessionSupport.HEADER_EMAIL, LEAK_PROBE_EMAIL)
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, (req, resp) -> { /* ignore for log inspection */ })
                 .toBodilessEntity();
-        client.get().uri("/tenant/status").header("Cookie", cookie)
+        client.get().uri("/tenant/status")
+                .header(TestSessionSupport.HEADER_SUBJECT, LEAK_PROBE_SUBJECT)
+                .header(TestSessionSupport.HEADER_EMAIL, LEAK_PROBE_EMAIL)
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, (req, resp) -> { })
                 .toBodilessEntity();
         client.post().uri("/onboarding/select-template")
-                .header("Cookie", cookie)
+                .header(TestSessionSupport.HEADER_SUBJECT, LEAK_PROBE_SUBJECT)
+                .header(TestSessionSupport.HEADER_EMAIL, LEAK_PROBE_EMAIL)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body("{\"templateKey\":\"archive-receipts\"}")
                 .retrieve()

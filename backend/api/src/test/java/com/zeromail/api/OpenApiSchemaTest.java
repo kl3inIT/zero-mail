@@ -2,16 +2,19 @@ package com.zeromail.api;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.RestClient;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zeromail.api.security.TestSessionSupport;
 import com.zeromail.api.support.ApiPostgresTestBase;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @ActiveProfiles("test")
+@Import(TestSessionSupport.class)
 class OpenApiSchemaTest extends ApiPostgresTestBase {
 
     @LocalServerPort int port;
