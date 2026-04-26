@@ -43,7 +43,7 @@ public class UserEntity extends AbstractTenantOwnedEntity {
     public void setPreferredLanguage(String preferredLanguage) { this.preferredLanguage = preferredLanguage; }
 
     public void advanceTo(OnboardingStep next) {
-        if (next.ordinal() < this.onboardingStep.ordinal()) {
+        if (next.weight() < this.onboardingStep.weight()) {
             throw new IllegalStateException("Onboarding state is forward-only");
         }
         this.onboardingStep = next;
