@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 01.2.1 Plan 01 complete (3-tier shared base entity hierarchy + JpaAuditingConfig + Liquibase changeset 007 audit columns; FND-05 + ApplicationModulesTest + AccountDeletionE2ETest all green)
-last_updated: "2026-04-26T12:58:18Z"
-last_activity: 2026-04-26 -- Phase 01.2.1 Plan 01 complete
+stopped_at: Phase 01.2.1 Plan 02 complete (core.shared.lang Modulith leaf module — IdentifiedEnum + OrderedEnum interface contract; documents D-C2 id()==name() invariant + D-C3 AttributeConverter migration trigger; check green)
+last_updated: "2026-04-26T13:08:00Z"
+last_activity: 2026-04-26 -- Phase 01.2.1 Plan 02 complete
 progress:
   total_phases: 12
   completed_phases: 3
   total_plans: 35
-  completed_plans: 26
-  percent: 74
+  completed_plans: 27
+  percent: 77
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 ## Current Position
 
 Phase: 01.2.1 (shared-base-entity-and-enum-standard) — EXECUTING
-Plan: 2 of 4
-Status: Executing Phase 01.2.1 — Plan 01 complete; Plan 02 next
-Last activity: 2026-04-26 -- Phase 01.2.1 Plan 01 complete (shared-base-entity hierarchy + Liquibase 007 audit columns)
+Plan: 3 of 4
+Status: Executing Phase 01.2.1 — Plan 02 complete; Plan 03 next
+Last activity: 2026-04-26 -- Phase 01.2.1 Plan 02 complete (core.shared.lang Modulith leaf module — IdentifiedEnum + OrderedEnum)
 
-Progress: [████████████] 1/4 plans of Phase 01.2.1 (26/35 total plans = 74%)
+Progress: [█████████████] 2/4 plans of Phase 01.2.1 (27/35 total plans = 77%)
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [████████████] 1/4 plans of Phase 01.2.1 (26/3
 | Phase 01.3 P01 | 6min | 2 tasks | 6 files |
 | Phase 01.3 P02 | 6min | 2 tasks | 7 files |
 | Phase 01.2.1 P01 | 14min | 3 tasks | 15 files |
+| Phase 01.2.1 P02 | 5min | 1 task | 3 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,8 @@ Recent decisions affecting current work:
 - [Phase 01.2.1]: Plan 01 — 3-tier @MappedSuperclass hierarchy (AbstractEntity → AbstractAuditableEntity → AbstractTenantOwnedEntity) landed in core.shared.persistence with @EntityListeners(AuditingEntityListener.class) on Tier 2. JpaAuditingConfig wires Clock-bean → DateTimeProvider → @EnableJpaAuditing. FND-05 MultiTenantLeakIntegrationTest still passes (PROVES @TenantId binding survives @MappedSuperclass relocation in Hibernate 7).
 - [Phase 01.2.1]: Plan 01 — Liquibase changeset 007 deviation captured: gmail_connections table (created in changeset 003) was missing created_at column. Fix prepended to changeset 007: addColumn created_at + backfill from COALESCE(connected_at, NOW()) + promote NOT NULL. Pattern locked: defaultValueComputed: now() on all new audit columns (created_at, updated_at) so raw-SQL inserts in tests still pass NOT NULL constraint; AuditingEntityListener still wins for entity-managed paths.
 - [Phase 01.2.1]: Plan 01 — UserEntity.advanceTo() retains ordinal()-based body. Plan 03 swaps to weight() once OrderedEnum lands in Plan 02 (per CONTEXT D-B5 + WR-02).
+- [Phase 01.2.1]: Plan 02 — core.shared.lang Modulith leaf module landed (IdentifiedEnum + OrderedEnum interfaces + package-info @ApplicationModule(displayName="Lang", allowedDependencies={})). Pure interface introduction, zero consumers; Plan 03 wires OnboardingStep (implements OrderedEnum, weights 10/20/30/40) and GmailConnectionStatus (implements IdentifiedEnum, no weight per D-B5). Locks D-B1 two-interface split, D-B2 String id type, D-B3 labelKey default = `<ClassSimpleName>.<id>`, D-B4 fromId fail-loud (NoSuchElementException not IllegalArgumentException). Documents D-C2 id()==name() invariant (enforced via convention + @Enumerated(STRING) + Plan 03 OnboardingStepPersistenceTest; ArchTest enforcement OUT of scope) and D-C3 AttributeConverter migration trigger (deferred to first per-enum decoupling need).
+- [Phase 01.2.1]: Plan 02 — JetBrains MCP file-problem check unavailable in sequential-executor agent tool set (upstream issue anthropics/claude-code#13898). Fallback: `./gradlew :backend:core:check :backend:api:check` BUILD SUCCESSFUL is a strict superset for pure-interface files (javac + ArchUnit + ApplicationModulesTest covers correctness). Documented in 01.2.1-02-SUMMARY.md as tooling deviation; no code deviation.
 
 ### Roadmap Evolution
 
@@ -140,6 +143,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-26T12:58:18Z
-Stopped at: Phase 01.2.1 Plan 01 complete (3-tier shared base entity hierarchy + JpaAuditingConfig + Liquibase changeset 007 audit columns; FND-05 + ApplicationModulesTest + AccountDeletionE2ETest all green)
+Last session: 2026-04-26T13:08:00Z
+Stopped at: Phase 01.2.1 Plan 02 complete (core.shared.lang Modulith leaf module — IdentifiedEnum + OrderedEnum interfaces; check green; Plan 03 next will apply interfaces to OnboardingStep + GmailConnectionStatus)
 Resume file: None

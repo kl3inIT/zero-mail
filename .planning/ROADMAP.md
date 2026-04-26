@@ -229,7 +229,7 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 1. Foundation & Safety Infrastructure | 9/9 | Complete (CASA filing pending external) | 2026-04-25 |
 | 1.1. Vietnamese-first i18n and error-handling foundation (INSERTED) | 8/8 | Complete | 2026-04-26 |
 | 1.2. Domain-owned persistence restructuring (INSERTED) | 6/6 | Complete | 2026-04-26 |
-| 1.2.1. Shared base entity + IdentifiedEnum standard + DTO group-by-domain (INSERTED) | 0/TBD | Not started | - |
+| 1.2.1. Shared base entity + IdentifiedEnum standard + DTO group-by-domain (INSERTED) | 2/4 | Executing | - |
 | 1.3. Frontend Architecture Refactor and Public Content Foundation (INSERTED) | 0/TBD | Not started | - |
 | 2A. Mail Ingestion | 0/TBD | Not started | - |
 | 2B. Billing (Prepaid Credits) | 0/TBD | Not started | - |
