@@ -24,7 +24,8 @@ class OpenApiSchemaTest extends ApiPostgresTestBase {
         RestClient client = RestClient.create("http://localhost:" + port);
         String body = client.get().uri("/v3/api-docs").retrieve().body(String.class);
         JsonNode root = new ObjectMapper().readTree(body);
-        assertThat(root.path("info").path("version").asText()).isEqualTo("0.1.0");
+        // Phase 1.1 Plan 03 bumped this from 0.1.0 to 0.1.1 to signal the new ApiError contract.
+        assertThat(root.path("info").path("version").asText()).isEqualTo("0.1.1");
         JsonNode paths = root.path("paths");
         assertThat(paths.has("/me")).isTrue();
         assertThat(paths.has("/tenant/status")).isTrue();

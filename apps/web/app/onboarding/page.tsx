@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { TemplateCard } from "@/components/TemplateCard";
@@ -10,27 +11,15 @@ import { api, xsrfHeader } from "@/lib/api/client";
 
 type TemplateKey = "archive-receipts" | "label-newsletters" | "pin-calendar";
 
-const templates: { key: TemplateKey; title: string; desc: string }[] = [
-    {
-        key: "archive-receipts",
-        title: "Archive receipts automatically",
-        desc: "Start with a rule idea for receipts from services like Stripe, stores, and vendors.",
-    },
-    {
-        key: "label-newsletters",
-        title: "Label newsletters as Newsletters and skip inbox",
-        desc: "Keep reading material grouped without letting it interrupt your inbox.",
-    },
-    {
-        key: "pin-calendar",
-        title: "Keep calendar invites and meeting notes on top",
-        desc: "Prioritize scheduling and meeting context while later phases add real rule execution.",
-    },
-];
-
 type MeData = { onboardingStep: string };
 
+/**
+ * /onboarding (client). Plan 06 Task 2 — pull every prose literal through
+ * `useTranslations`. TemplateCard remains a presentational component (props-down
+ * pattern); the call site below resolves translations and passes them down.
+ */
 export default function OnboardingPage() {
+    const t = useTranslations();
     const qc = useQueryClient();
     const me = useQuery<MeData | undefined>({
         queryKey: ["me"],
@@ -57,58 +46,76 @@ export default function OnboardingPage() {
     });
     const [selected, setSelected] = useState<TemplateKey | null>(null);
 
-    if (!me.data) return <p className="p-6">Loading…</p>;
+    if (!me.data) return <p className="p-6">{t("onboarding.loading")}</p>;
 
     const step = me.data.onboardingStep;
     const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "";
 
+    const templates: { key: TemplateKey; titleKey: string; descKey: string }[] = [
+        {
+            key: "archive-receipts",
+            titleKey: "templates.receipts.title",
+            descKey: "templates.receipts.description",
+        },
+        {
+            key: "label-newsletters",
+            titleKey: "templates.newsletters.title",
+            descKey: "templates.newsletters.description",
+        },
+        {
+            key: "pin-calendar",
+            titleKey: "templates.calendarInvites.title",
+            descKey: "templates.calendarInvites.description",
+        },
+    ];
+
     return (
         <main className="max-w-3xl mx-auto p-6">
-            <p className="text-sm text-stone-600">Step {step === "SIGNED_IN" ? "1" : "2"} of 2</p>
+            <p className="text-sm text-stone-600">
+                {t("common.loadingApp")}
+            </p>
             {step === "SIGNED_IN" && (
                 <Card className="p-6 mt-4">
-                    <h2 className="text-xl font-semibold">Connect Gmail</h2>
-                    <p className="mt-2">
-                        We need Gmail access to later label, archive, and draft replies. You can
-                        revoke any time.
-                    </p>
+                    <h2 className="text-xl font-semibold">{t("onboarding.connect.heading")}</h2>
+                    <p className="mt-2">{t("onboarding.connect.body")}</p>
                     <form method="post" action={`${apiBase}/tenant/connect-gmail`} className="mt-4">
-                        <Button type="submit">Connect Gmail</Button>
+                        <Button type="submit">{t("onboarding.connect.cta")}</Button>
                     </form>
                 </Card>
             )}
             {step === "GMAIL_CONNECTED" && (
                 <div className="grid gap-4 mt-4">
-                    {templates.map((t) => (
+                    <h2 className="text-xl font-semibold">{t("onboarding.template.heading")}</h2>
+                    <p className="text-sm text-stone-600">{t("onboarding.template.body")}</p>
+                    {templates.map((tpl) => (
                         <TemplateCard
-                            key={t.key}
-                            templateKey={t.key}
-                            title={t.title}
-                            description={t.desc}
-                            selected={selected === t.key}
-                            onSelect={() => setSelected(t.key)}
+                            key={tpl.key}
+                            templateKey={tpl.key}
+                            title={t(tpl.titleKey as never)}
+                            description={t(tpl.descKey as never)}
+                            selected={selected === tpl.key}
+                            onSelect={() => setSelected(tpl.key)}
                         />
                     ))}
                     <Button
                         disabled={!selected || selectMut.isPending}
                         onClick={() => selected && selectMut.mutate(selected)}
                     >
-                        {selectMut.isPending ? "Saving starter template…" : "Save starter template"}
+                        {selectMut.isPending
+                            ? t("common.loading")
+                            : t("onboarding.template.saveCta")}
                     </Button>
-                    <p className="text-sm text-stone-600">
-                        We&apos;ll save this as your starter preference for the rules phase.
-                    </p>
                 </div>
             )}
             {step === "TEMPLATE_SELECTED" && (
                 <Card className="p-6 mt-4">
-                    <h2 className="text-xl font-semibold">All set</h2>
+                    <h2 className="text-xl font-semibold">{t("onboarding.completion.heading")}</h2>
                     <Button onClick={() => completeMut.mutate()} className="mt-4">
-                        Continue to settings
+                        {t("onboarding.completion.cta")}
                     </Button>
                 </Card>
             )}
-            {step === "COMPLETE" && <p>Redirecting…</p>}
+            {step === "COMPLETE" && <p>{t("onboarding.loading")}</p>}
         </main>
     );
 }
