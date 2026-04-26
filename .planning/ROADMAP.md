@@ -14,6 +14,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] **Phase 1: Foundation & Safety Infrastructure** - Scoped Values, `@Sensitive`, Logback scrub, ArchUnit bans, multi-tenant leak test, Google OAuth, skeleton OpenAPI, CASA kickoff (CASA external filing pending — tracked outside the phase as a parallel external dependency)
 - [x] **Phase 1.1: Vietnamese-first i18n and error-handling foundation (INSERTED)** _(completed 2026-04-26)_ - Default language Vietnamese, secondary English, user-facing language switcher; stable API error contracts that are frontend-localizable; reference local JHipster project patterns where appropriate; preserve all Phase 1 privacy/safety constraints
 - [x] **Phase 1.2: Domain-owned persistence restructuring (INSERTED)** _(completed 2026-04-26)_ - Refactor `backend/core` into domain-owned service/persistence/model packages, add a small shared package for stable cross-cutting infrastructure, preserve schema and safety constraints, and enforce boundaries with Modulith or ArchUnit
+- [ ] **Phase 1.2.1: Shared base entity + IdentifiedEnum standard + DTO group-by-domain (INSERTED)** - Introduce `core.shared.persistence` abstract entity hierarchy (`AbstractEntity`, `AbstractAuditableEntity`, `AbstractTenantOwnedEntity`); introduce `core.shared.lang.IdentifiedEnum` interface (id/weight/labelKey) and apply to `OnboardingStep` + `GmailConnectionStatus`; reorganize `backend/api/dto/` group-by-domain (account/, gmail/, onboarding/) and rename `TenantStatusResponse` → `GmailConnectionStatusResponse`; close code review WR-01 (Pitfall 5 real persistence test), WR-02 (replace ordinal() with weight()), WR-03 (bulk delete query)
 - [ ] **Phase 1.3: Frontend Architecture Refactor and Public Content Foundation (INSERTED)** - Reorganize `apps/web` around route groups, feature folders, typed OpenAPI boundaries, frontend quality gates, and public landing/docs scaffolding without implementing the final landing/docs design yet
 - [ ] **Phase 2A: Mail Ingestion** - Gmail `users.watch` + Pub/Sub push + OIDC verification + idempotent history processing + global pause
 - [ ] **Phase 2B: Billing (Prepaid Credits)** - Double-entry Postgres ledger, reserve/settle/release, credit-hold watchdog, balance UI hooks
@@ -85,6 +86,19 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] 01.2-04-PLAN.md — Move onboarding domain (entity/repo/enum/service); add OnboardingService.deleteSelectionsForCurrentTenant; flip UserEntity OnboardingStep import; Wave 0 OnboardingStepEnumPersistenceTest _(completed 2026-04-26)_
 - [x] 01.2-05-PLAN.md — Move gmail domain + crypto; rename TenantConnectionService→GmailConnectionService; add TenantService.deleteCurrentTenant; collapse @EntityScan to single root; delete core.crypto + core.persistence packages _(completed 2026-04-26)_
 - [x] 01.2-06-PLAN.md — DomainBoundaryArchTests (4 rules); TenantIsolationArchTests regex update; TenantStatusController toResponse(view) helper (D-B5); finalize AccountDeletionController Pattern 8; ./gradlew clean check
+
+### Phase 1.2.1: Shared base entity + IdentifiedEnum standard + DTO group-by-domain (INSERTED)
+**Goal**: Close out the structural-cleanup gaps that Phase 1.2 intentionally deferred so domain entities, enums, and HTTP DTOs all follow project-wide standards. Specifically: introduce `core.shared.persistence.*` abstract entity hierarchy to DRY the four entity declarations and enforce multi-tenant ownership at the type level; introduce `core.shared.lang.IdentifiedEnum` interface (id + weight + labelKey) so domain enums no longer rely on `name()` for storage or `ordinal()` for ordering; reorganize `backend/api/dto/` group-by-domain to align with the Phase 1.2 domain-owned invariant; and close the three Phase 1.2 code-review warnings (WR-01 enum persistence test must hit real DB; WR-02 forward-only invariant must use explicit weight; WR-03 bulk delete must avoid N+1).
+**Depends on**: Phase 1.2 (the shared `core.shared.*` parent package and per-domain `model/` + `persistence/` tiers must already exist)
+**Requirements**: _(architecture polish; no new product requirements yet)_
+**Success Criteria** (what must be TRUE):
+  1. `core.shared.persistence.AbstractEntity`, `AbstractAuditableEntity`, and `AbstractTenantOwnedEntity` exist; the 4 concrete entities (`TenantEntity`, `UserEntity`, `OnboardingSelectionEntity`, `GmailConnectionEntity`) extend the appropriate base; `MultiTenantLeakIntegrationTest` (FND-05) still passes after the refactor.
+  2. `core.shared.lang.IdentifiedEnum` exists; `OnboardingStep` and `GmailConnectionStatus` implement it with stable `id()` + explicit `weight()`; `UserEntity.advanceTo` uses `weight()`-based comparison instead of `ordinal()`.
+  3. `OnboardingStepPersistenceTest` is upgraded to a `@DataJpaTest` that round-trips through real Hibernate and asserts the storage form is the id string, defending Pitfall 5 against an `EnumType.STRING → ORDINAL` switch.
+  4. `backend/api/dto/` is reorganized into `account/`, `gmail/`, `onboarding/` sub-packages mirroring the `core.<domain>` layout; `TenantStatusResponse` is renamed to `GmailConnectionStatusResponse` (D-A4 follow-through).
+  5. `OnboardingService.deleteSelectionsForCurrentTenant` uses a bulk JPQL `@Modifying @Query` instead of find-then-delete (closes WR-03).
+  6. Database schema is preserved byte-identical (no Liquibase changes); full `./gradlew clean check` stays green; `ApplicationModulesTest` + `DomainBoundaryArchTests` + `AccountDeletionE2ETest` all pass.
+**Plans**: TBD (run `/gsd-discuss-phase 1.2.1` then `/gsd-plan-phase 1.2.1`)
 
 ### Phase 1.3: Frontend Architecture Refactor and Public Content Foundation (INSERTED)
 **Goal**: Refactor `apps/web` into a scalable Next.js App Router structure using route groups `app/(public)`, `app/(auth)`, and `app/(protected)`; introduce feature folders with `api/`, `components/`, and `hooks/` subfolders for TanStack Query hooks and feature-specific UI; keep shared primitives in `components/ui` and shared infrastructure in `lib/`; clean duplicate workspace artifacts; add Prettier, Husky, and lint-staged quality gates; clarify typed OpenAPI client boundaries; and scaffold public landing plus multi-page docs architecture without implementing the final landing/docs content design yet.
@@ -215,6 +229,7 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 1. Foundation & Safety Infrastructure | 9/9 | Complete (CASA filing pending external) | 2026-04-25 |
 | 1.1. Vietnamese-first i18n and error-handling foundation (INSERTED) | 8/8 | Complete | 2026-04-26 |
 | 1.2. Domain-owned persistence restructuring (INSERTED) | 6/6 | Complete | 2026-04-26 |
+| 1.2.1. Shared base entity + IdentifiedEnum standard + DTO group-by-domain (INSERTED) | 0/TBD | Not started | - |
 | 1.3. Frontend Architecture Refactor and Public Content Foundation (INSERTED) | 0/TBD | Not started | - |
 | 2A. Mail Ingestion | 0/TBD | Not started | - |
 | 2B. Billing (Prepaid Credits) | 0/TBD | Not started | - |
