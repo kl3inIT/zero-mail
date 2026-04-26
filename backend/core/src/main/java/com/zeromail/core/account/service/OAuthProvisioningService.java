@@ -13,8 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.tenant.TenantContext;
-import com.zeromail.core.tenant.persistence.TenantEntity;
-import com.zeromail.core.tenant.persistence.TenantRepository;
+import com.zeromail.core.tenant.service.TenantService;
 
 /**
  * Atomic provisioning for the OAuth first-login flow. Wraps tenant + user creation in a single
@@ -38,14 +37,14 @@ public class OAuthProvisioningService {
     private static final Logger log = LoggerFactory.getLogger(OAuthProvisioningService.class);
 
     private final UserRepository users;
-    private final TenantRepository tenants;
+    private final TenantService tenantService;
     private final OAuthProvisioningService self;
 
     public OAuthProvisioningService(UserRepository users,
-                                    TenantRepository tenants,
+                                    TenantService tenantService,
                                     @Lazy OAuthProvisioningService self) {
         this.users = users;
-        this.tenants = tenants;
+        this.tenantService = tenantService;
         this.self = self;
     }
 
@@ -80,7 +79,7 @@ public class OAuthProvisioningService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public UserEntity createTenantAndUser(String googleSubject, String email) {
         UUID tenantId = UUID.randomUUID();
-        tenants.save(new TenantEntity(tenantId, email));
+        tenantService.createTenant(tenantId, email);
         return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
                 .call(() -> users.save(new UserEntity(
                         UUID.randomUUID(), tenantId, googleSubject, email)));

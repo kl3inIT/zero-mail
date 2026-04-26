@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.zeromail.core.account.model.CurrentUserNotFoundException;
 import com.zeromail.core.account.model.CurrentUserView;
 import com.zeromail.core.account.persistence.UserRepository;
+import com.zeromail.core.onboarding.model.OnboardingStep;
 
 /**
  * Owns tenant-scoped account state transitions that controllers used to perform inline.
@@ -87,5 +88,22 @@ public class AccountService {
     @Transactional
     public void deleteCurrentUser(UUID tenantId) {
         users.findFirstByTenantId(tenantId).ifPresent(users::delete);
+    }
+
+    /**
+     * Advances the onboarding state machine for the current tenant's user.
+     * Exposed so {@code OnboardingService} (the {@code onboarding} domain) does NOT
+     * have to inject the cross-domain {@link UserRepository} (D-D1 — enforced by
+     * {@code DomainBoundaryArchTests}). The state-machine forward-only invariant is
+     * enforced inside {@code UserEntity#advanceTo}.
+     *
+     * @throws CurrentUserNotFoundException if no user row exists for the tenant
+     */
+    @Transactional
+    public void advanceOnboardingStep(UUID tenantId, OnboardingStep next) {
+        var user = users.findFirstByTenantId(tenantId)
+                .orElseThrow(() -> new CurrentUserNotFoundException(tenantId));
+        user.advanceTo(next);
+        // No explicit save() — managed entity flushes on commit.
     }
 }

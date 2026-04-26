@@ -31,7 +31,7 @@ public class TenantIsolationArchTests {
 
     @ArchTest
     static final ArchRule no_native_sql = noClasses()
-            .that().resideOutsideOfPackage("..core.persistence.lowlevel..")
+            .that().resideOutsideOfPackage("..persistence.lowlevel..")
             .should().callMethodWhere(new DescribedPredicate<JavaMethodCall>(
                     "EntityManager.createNativeQuery(...)") {
                 @Override
