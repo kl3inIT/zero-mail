@@ -4,11 +4,11 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
@@ -22,8 +22,10 @@ import com.zeromail.core.tenant.service.TenantService;
  * <p>Without this, the previous handler could orphan a tenant if the user insert failed,
  * or could create two tenants for the same Google subject under contention.
  *
- * <p>Implementation note: the create path runs in a {@code REQUIRES_NEW} transaction so that a
- * unique-constraint race (caught as {@link DataIntegrityViolationException}) rolls back the
+ * <p>Implementation note: the create path binds {@link TenantContext} before opening a
+ * {@code REQUIRES_NEW} transaction. Hibernate captures the current tenant when the JPA session
+ * opens; opening the tx first would capture the bootstrap tenant and reject the user insert.
+ * A unique-constraint race (caught as {@link DataIntegrityViolationException}) rolls back the
  * inner tx (including the freshly created tenant row, avoiding orphans) while leaving the
  * outer caller free to re-read the existing user.
  *
@@ -38,14 +40,15 @@ public class OAuthProvisioningService {
 
     private final UserRepository users;
     private final TenantService tenantService;
-    private final OAuthProvisioningService self;
+    private final TransactionTemplate provisioningTx;
 
     public OAuthProvisioningService(UserRepository users,
                                     TenantService tenantService,
-                                    @Lazy OAuthProvisioningService self) {
+                                    PlatformTransactionManager txManager) {
         this.users = users;
         this.tenantService = tenantService;
-        this.self = self;
+        this.provisioningTx = new TransactionTemplate(txManager);
+        this.provisioningTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     /**
@@ -61,7 +64,7 @@ public class OAuthProvisioningService {
 
     private UserEntity tryCreateOrReadAfterRace(String googleSubject, String email) {
         try {
-            return self.createTenantAndUser(googleSubject, email);
+            return createTenantAndUser(googleSubject, email);
         } catch (DataIntegrityViolationException race) {
             // Concurrent first-login from the same Google subject lost the race. The inner
             // REQUIRES_NEW transaction rolled back, so no orphan tenant remains.
@@ -72,16 +75,13 @@ public class OAuthProvisioningService {
         }
     }
 
-    /**
-     * Creates the tenant and user in a single new transaction. Public so the Spring proxy can
-     * apply {@link Transactional}; the lazy self-reference re-enters through the proxy.
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public UserEntity createTenantAndUser(String googleSubject, String email) {
+    private UserEntity createTenantAndUser(String googleSubject, String email) {
         UUID tenantId = UUID.randomUUID();
-        tenantService.createTenant(tenantId, email);
         return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                .call(() -> users.save(new UserEntity(
-                        UUID.randomUUID(), tenantId, googleSubject, email)));
+                .call(() -> provisioningTx.execute(status -> {
+                    tenantService.createTenant(tenantId, email);
+                    return users.save(new UserEntity(
+                            UUID.randomUUID(), tenantId, googleSubject, email));
+                }));
     }
 }

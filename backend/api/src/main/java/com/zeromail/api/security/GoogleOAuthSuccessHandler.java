@@ -2,6 +2,7 @@ package com.zeromail.api.security;
 
 import java.io.IOException;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -25,9 +26,15 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
     private final OAuthProvisioningService provisioning;
 
-    public GoogleOAuthSuccessHandler(OAuthProvisioningService provisioning) {
+    public GoogleOAuthSuccessHandler(
+            OAuthProvisioningService provisioning,
+            @Value("${zeromail.web.base-url:http://localhost:3000}") String webBaseUrl) {
         this.provisioning = provisioning;
-        setDefaultTargetUrl("/onboarding");
+        setDefaultTargetUrl(stripTrailingSlash(webBaseUrl) + "/onboarding");
+    }
+
+    private static String stripTrailingSlash(String value) {
+        return value.replaceAll("/+$", "");
     }
 
     @Override

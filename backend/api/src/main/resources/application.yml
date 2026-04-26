@@ -59,6 +59,8 @@ spring:
       secretmanager:
         enabled: ${GCP_SECRET_MANAGER_ENABLED:false}
 zeromail:
+  web:
+    base-url: ${ZEROMAIL_WEB_BASE_URL:http://localhost:3000}
   crypto:
     # Prefer Secret Manager in deployed environments; fall back to local env var in dev/test.
     refresh-token-key-base64: ${REFRESH_TOKEN_KEY_BASE64:${sm://oauth-refresh-token-key-v1/versions/1:}}
