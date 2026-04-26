@@ -40,21 +40,25 @@ class GmailConnectionServiceUpsertTest extends PostgresContainerTest {
         seedTenant(tenantId);
 
         byte[] envelope = new byte[]{1, 2, 3, 4};
-        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() ->
-                service.upsert(
-                        tenantId,
-                        "alpha@example.com",
-                        "https://www.googleapis.com/auth/gmail.modify",
-                        envelope));
+        // Hibernate @TenantId filter applies on every JPA read — bind ScopedValue around
+        // BOTH the upsert call AND the assertion-side findByTenantId so the discriminator
+        // matches (Pitfall 6 / FND-05). Plan 02 SUMMARY documented this scaffold-repair need.
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() -> {
+            service.upsert(
+                    tenantId,
+                    "alpha@example.com",
+                    "https://www.googleapis.com/auth/gmail.modify",
+                    envelope);
 
-        var saved = repo.findByTenantId(tenantId);
-        assertThat(saved).isPresent();
-        GmailConnectionEntity row = saved.get();
-        assertThat(row.getStatus()).isEqualTo(GmailConnectionStatus.CONNECTED);
-        assertThat(row.getGoogleEmail()).isEqualTo("alpha@example.com");
-        assertThat(row.getRefreshTokenEncrypted()).containsExactly(1, 2, 3, 4);
-        assertThat(row.getScopesGranted()).isEqualTo("https://www.googleapis.com/auth/gmail.modify");
-        assertThat(row.getConnectedAt()).isNotNull();
+            var saved = repo.findByTenantId(tenantId);
+            assertThat(saved).isPresent();
+            GmailConnectionEntity row = saved.get();
+            assertThat(row.getStatus()).isEqualTo(GmailConnectionStatus.CONNECTED);
+            assertThat(row.getGoogleEmail()).isEqualTo("alpha@example.com");
+            assertThat(row.getRefreshTokenEncrypted()).containsExactly(1, 2, 3, 4);
+            assertThat(row.getScopesGranted()).isEqualTo("https://www.googleapis.com/auth/gmail.modify");
+            assertThat(row.getConnectedAt()).isNotNull();
+        });
     }
 
     @Test
@@ -62,6 +66,8 @@ class GmailConnectionServiceUpsertTest extends PostgresContainerTest {
         UUID tenantId = UUID.randomUUID();
         seedTenant(tenantId);
 
+        // Wrap both upserts AND assertion-side reads inside ScopedValue so the @TenantId
+        // filter resolves correctly on every JPA query path.
         ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() -> {
             service.upsert(
                     tenantId,
@@ -73,20 +79,20 @@ class GmailConnectionServiceUpsertTest extends PostgresContainerTest {
                     "beta@example.com",
                     "https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.labels",
                     new byte[]{8, 8, 8});
+
+            assertThat(repo.findAll())
+                    .as("Single-row-per-tenant invariant — second upsert MUST update in place")
+                    .hasSize(1);
+
+            GmailConnectionEntity row = repo.findByTenantId(tenantId).orElseThrow();
+            assertThat(row.getRefreshTokenEncrypted()).containsExactly(8, 8, 8);
+            assertThat(row.getScopesGranted())
+                    .contains("gmail.modify")
+                    .contains("gmail.labels");
+            assertThat(row.getVersion())
+                    .as("Optimistic locking version must increment on update")
+                    .isGreaterThan(0);
         });
-
-        assertThat(repo.findAll())
-                .as("Single-row-per-tenant invariant — second upsert MUST update in place")
-                .hasSize(1);
-
-        GmailConnectionEntity row = repo.findByTenantId(tenantId).orElseThrow();
-        assertThat(row.getRefreshTokenEncrypted()).containsExactly(8, 8, 8);
-        assertThat(row.getScopesGranted())
-                .contains("gmail.modify")
-                .contains("gmail.labels");
-        assertThat(row.getVersion())
-                .as("Optimistic locking version must increment on update")
-                .isGreaterThan(0);
     }
 
     @Test
@@ -101,25 +107,24 @@ class GmailConnectionServiceUpsertTest extends PostgresContainerTest {
                     "https://www.googleapis.com/auth/gmail.modify",
                     new byte[]{1});
             service.disconnect(tenantId);
+
+            GmailConnectionEntity afterDisconnect = repo.findByTenantId(tenantId).orElseThrow();
+            assertThat(afterDisconnect.getStatus()).isEqualTo(GmailConnectionStatus.DISCONNECTED);
+            assertThat(afterDisconnect.getDisconnectedAt()).isNotNull();
+
+            // Re-grant.
+            service.upsert(
+                    tenantId,
+                    "gamma@example.com",
+                    "https://www.googleapis.com/auth/gmail.modify",
+                    new byte[]{2});
+
+            GmailConnectionEntity afterReGrant = repo.findByTenantId(tenantId).orElseThrow();
+            assertThat(afterReGrant.getStatus()).isEqualTo(GmailConnectionStatus.CONNECTED);
+            assertThat(afterReGrant.getDisconnectedAt())
+                    .as("D-A4: re-grant must clear disconnectedAt so status reflects the new CONNECTED state")
+                    .isNull();
         });
-
-        GmailConnectionEntity afterDisconnect = repo.findByTenantId(tenantId).orElseThrow();
-        assertThat(afterDisconnect.getStatus()).isEqualTo(GmailConnectionStatus.DISCONNECTED);
-        assertThat(afterDisconnect.getDisconnectedAt()).isNotNull();
-
-        // Re-grant.
-        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() ->
-                service.upsert(
-                        tenantId,
-                        "gamma@example.com",
-                        "https://www.googleapis.com/auth/gmail.modify",
-                        new byte[]{2}));
-
-        GmailConnectionEntity afterReGrant = repo.findByTenantId(tenantId).orElseThrow();
-        assertThat(afterReGrant.getStatus()).isEqualTo(GmailConnectionStatus.CONNECTED);
-        assertThat(afterReGrant.getDisconnectedAt())
-                .as("D-A4: re-grant must clear disconnectedAt so status reflects the new CONNECTED state")
-                .isNull();
     }
 
     private void seedTenant(UUID tenantId) {

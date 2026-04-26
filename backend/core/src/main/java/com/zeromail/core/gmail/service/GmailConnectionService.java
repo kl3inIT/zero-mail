@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.zeromail.core.gmail.model.GmailConnectionStatus;
 import com.zeromail.core.gmail.model.GmailConnectionView;
+import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 
 /**
@@ -59,21 +60,40 @@ public class GmailConnectionService {
     }
 
     /**
-     * Idempotent upsert for the leg-2 Gmail OAuth success path (D-A4).
+     * Idempotent upsert cho leg-2 Gmail OAuth success path (D-A4). Single-row-per-tenant
+     * invariant: nếu row đã tồn tại cho {@code tenantId}, UPDATE in-place; nếu chưa,
+     * INSERT row mới.
      *
-     * <p><b>Forward declaration only — Plan 01.4-03 lands the body.</b> This signature
-     * exists in Plan 01.4-02 so {@code GmailOAuthSuccessHandler} compiles cleanly while
-     * Plan 03 fills in the implementation in the same wave. Calling this method before
-     * Plan 03 lands will throw {@link UnsupportedOperationException}.
+     * <p>Trên cả hai nhánh, các trường: {@code status=CONNECTED},
+     * {@code refreshTokenEncrypted}, {@code scopesGranted}, {@code connectedAt=now},
+     * và {@code disconnectedAt=null} đều được set. Việc reset {@code disconnectedAt}
+     * về {@code null} là yêu cầu rõ ràng của D-A4 — re-grant sau disconnect phải xóa
+     * timestamp đã disconnect cũ để view-state phản ánh đúng CONNECTED.
      *
-     * <p>Contract (locked by D-A4): if a row exists for {@code tenantId}, update
-     * {@code googleEmail}, {@code scopesGranted}, {@code refreshTokenEncrypted},
-     * {@code status=CONNECTED}, {@code connectedAt=now}, and reset
-     * {@code disconnectedAt=null}; otherwise insert a new row. Single-row-per-tenant
-     * invariant preserved.
+     * <p>{@code googleEmail} chỉ được set ở constructor (path INSERT). Trên path UPDATE
+     * không write lại — subject check trong {@code GmailOAuthSuccessHandler} (Plan 02)
+     * đã guarantee email equality nên defensive write là dư thừa (RESEARCH Q4 / D-A4
+     * "defensive — should always equal stored value post-A1 check").
+     *
+     * <p>Caller (typically {@code GmailOAuthSuccessHandler}) phải bind
+     * {@code TenantContext.TENANT} ScopedValue TRƯỚC khi gọi method này; method dùng
+     * default propagation (REQUIRED) nên join transaction của caller — JPA session
+     * sẽ capture đúng tenant tại điểm caller mở tx (Pitfall 6 / FND-05).
+     *
+     * <p>Privacy: KHÔNG log {@code googleEmail}, {@code scopesGranted}, hoặc
+     * {@code refreshTokenEncrypted} (T-1.4-03-token-leak / D-E1). Auditing listener
+     * (Phase 1.2.1) tự động cập nhật {@code version} + {@code updated_at} qua save.
      */
     @Transactional
     public void upsert(UUID tenantId, String googleEmail, String scopesGranted, byte[] refreshTokenEncrypted) {
-        throw new UnsupportedOperationException("Plan 01.4-03 lands implementation");
+        GmailConnectionEntity row = connections.findByTenantId(tenantId)
+                .orElseGet(() -> new GmailConnectionEntity(
+                        UUID.randomUUID(), tenantId, googleEmail, GmailConnectionStatus.CONNECTED));
+        row.setStatus(GmailConnectionStatus.CONNECTED);
+        row.setRefreshTokenEncrypted(refreshTokenEncrypted);
+        row.setScopesGranted(scopesGranted);
+        row.setConnectedAt(Instant.now());
+        row.setDisconnectedAt(null);
+        connections.save(row);
     }
 }
