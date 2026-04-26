@@ -83,7 +83,11 @@ describe('Phase 1.3 — MDX docs pipeline (D-D1..D-D5)', () => {
 
   it('docs slug page enforces slug regex ^[a-z0-9-]+$ (Pitfall 4 path traversal)', () => {
     const src = readFileSync(DOCS_SLUG, 'utf8');
-    expect(src).toMatch(/\/\^\[a-z0-9-\]\+\$\//);
+    expect(src).toMatch(/SLUG_RE\.test\(slug\)/);
+    expect(src).toMatch(/notFound\(\)/);
+
+    const loaderSrc = readFileSync(DOCS_LOADER, 'utf8');
+    expect(loaderSrc).toMatch(/export const SLUG_RE\s*=\s*\/\^\[a-z0-9-\]\+\$\/;/);
   });
 
   // REVIEWS Revision 6 (OpenCode MEDIUM, Codex LOW)
