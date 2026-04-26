@@ -7,8 +7,8 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.zeromail.core.account.service.AccountService;
+import com.zeromail.core.onboarding.service.OnboardingService;
 import com.zeromail.core.persistence.GmailConnectionRepository;
-import com.zeromail.core.persistence.OnboardingSelectionRepository;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.persistence.TenantRepository;
 
@@ -22,7 +22,7 @@ import com.zeromail.core.tenant.persistence.TenantRepository;
  * this is permissible at the API tier (the boundary it would violate — repos in core
  * services — is honored).
  *
- * <p>Plan 04 replaces the OnboardingSelectionRepository call with OnboardingService.
+ * <p>Plan 04 replaced the OnboardingSelectionRepository call with OnboardingService (done).
  * Plan 05 replaces the GmailConnectionRepository call with GmailConnectionService and
  * the TenantRepository call with TenantService.
  * Plan 06 cleans up the remaining repository imports + adds final orchestration shape.
@@ -30,16 +30,16 @@ import com.zeromail.core.tenant.persistence.TenantRepository;
 @RestController
 public class AccountDeletionController {
 
-    private final OnboardingSelectionRepository onboardingRepo;
+    private final OnboardingService onboardingService;
     private final GmailConnectionRepository gmailRepo;
     private final AccountService accountService;
     private final TenantRepository tenantRepo;
 
-    public AccountDeletionController(OnboardingSelectionRepository onboardingRepo,
+    public AccountDeletionController(OnboardingService onboardingService,
                                      GmailConnectionRepository gmailRepo,
                                      AccountService accountService,
                                      TenantRepository tenantRepo) {
-        this.onboardingRepo = onboardingRepo;
+        this.onboardingService = onboardingService;
         this.gmailRepo = gmailRepo;
         this.accountService = accountService;
         this.tenantRepo = tenantRepo;
@@ -49,7 +49,7 @@ public class AccountDeletionController {
     @Transactional
     public void deleteAccount() {
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
-        onboardingRepo.deleteAll(onboardingRepo.findByTenantId(tenantId));
+        onboardingService.deleteSelectionsForCurrentTenant(tenantId);
         gmailRepo.findByTenantId(tenantId).ifPresent(gmailRepo::delete);
         accountService.deleteCurrentUser(tenantId);
         tenantRepo.findById(tenantId).ifPresent(tenantRepo::delete);

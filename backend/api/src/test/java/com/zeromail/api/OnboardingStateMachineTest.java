@@ -11,7 +11,7 @@ import com.zeromail.api.dto.SelectTemplateRequest;
 import com.zeromail.api.support.ApiPostgresTestBase;
 import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
-import com.zeromail.core.persistence.OnboardingStep;
+import com.zeromail.core.onboarding.model.OnboardingStep;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.persistence.TenantEntity;
 import com.zeromail.core.tenant.persistence.TenantRepository;
