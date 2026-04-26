@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 01.4-02-PLAN.md
-last_updated: "2026-04-26T20:57:58.154Z"
+last_updated: "2026-04-26T21:18:50.099Z"
 last_activity: 2026-04-26
 progress:
   total_phases: 13
   completed_phases: 5
   total_plans: 41
-  completed_plans: 37
-  percent: 90
+  completed_plans: 38
+  percent: 93
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 ## Current Position
 
 Phase: 01.4 (gmail-identity-semantics-permission-ux-and-ui-consistency) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-04-26
 
-Progress: [█████████░] 90%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -77,6 +77,7 @@ Progress: [█████████░] 90%
 | Phase 01.3 P08 | 15min | 1 task (Task 2 = checkpoint:human-verify deferred per autonomous=false) | 0 code + 3 .planning artifacts |
 | Phase 01.4 P01 | 23m | - tasks | - files |
 | Phase 01.4 P02 | 10min | 3 tasks | 10 files |
+| Phase 01.4 P03 | 15m | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -140,6 +141,8 @@ Recent decisions affecting current work:
 - [Phase 01.4]: Plan 01.4-02: Single AuthorizedClient load tại đầu callback (Issue 3 mitigation) — captured accessTokenForRevoke local tái sử dụng ở 2 throw-site mismatch để failure handler revoke được sau khi removeAuthorizedClient — Pitfall 2 + Issue 3 từ checker; one OAuth callback => one AuthorizedClient lookup
 - [Phase 01.4]: Plan 01.4-02: Forward-decl GmailConnectionService.upsert signature throws UnsupportedOperationException trong Plan 02 — Plan 03 fill body. Pattern locked cho cross-plan compilation seam — Giữ ./gradlew compileJava GREEN xuyên suốt wave thay vì để Plan 02 ship intentional compile-RED
 - [Phase 01.4]: Plan 01.4-02: Dispatcher failure-side route theo thrown-exception type (không phải registration id — AuthenticationException không carry registration reliably). GmailIdentityMismatchException + OAuth2AuthenticationException(access_denied) cả hai route tới GmailOAuthFailureHandler — Spring AuthenticationException surface không expose source registration; type-based dispatch là Spring-idiomatic
+- [Phase ?]: Plan 03: GmailConnectionService.upsert KHÔNG ghi googleEmail trên path UPDATE — subject check ở Plan 02 đã guarantee equality (D-A4 + RESEARCH Q4)
+- [Phase ?]: Plan 03: login_hint inject pattern matching qua OAuth2AuthenticationToken→OidcUser→email; silent omit cho mọi mismatch (D-A2 graceful-degrade)
 
 ### Roadmap Evolution
 
@@ -180,6 +183,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-26T20:57:58.133Z
+Last session: 2026-04-26T21:18:23.393Z
 Stopped at: Completed 01.4-02-PLAN.md
 Resume file: None
