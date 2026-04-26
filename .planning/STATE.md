@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 01.2.1 Plan 02 complete (core.shared.lang Modulith leaf module — IdentifiedEnum + OrderedEnum interface contract; documents D-C2 id()==name() invariant + D-C3 AttributeConverter migration trigger; check green)
-last_updated: "2026-04-26T13:08:00Z"
-last_activity: 2026-04-26 -- Phase 01.2.1 Plan 02 complete
+stopped_at: Phase 01.2.1 Plan 02 complete (core.shared.lang Modulith leaf module — IdentifiedEnum + OrderedEnum interfaces; check green; Plan 03 next will apply interfaces to OnboardingStep + GmailConnectionStatus)
+last_updated: "2026-04-26T13:22:18.265Z"
+last_activity: 2026-04-26
 progress:
   total_phases: 12
   completed_phases: 3
   total_plans: 35
-  completed_plans: 27
-  percent: 77
+  completed_plans: 29
+  percent: 83
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 ## Current Position
 
 Phase: 01.2.1 (shared-base-entity-and-enum-standard) — EXECUTING
-Plan: 3 of 4
-Status: Executing Phase 01.2.1 — Plan 02 complete; Plan 03 next
-Last activity: 2026-04-26 -- Phase 01.2.1 Plan 02 complete (core.shared.lang Modulith leaf module — IdentifiedEnum + OrderedEnum)
+Plan: 4 of 4
+Status: Ready to execute
+Last activity: 2026-04-26
 
 Progress: [█████████████] 2/4 plans of Phase 01.2.1 (27/35 total plans = 77%)
 
@@ -68,6 +68,7 @@ Progress: [█████████████] 2/4 plans of Phase 01.2.1 (2
 | Phase 01.2.1 P01 | 14min | 3 tasks | 15 files |
 | Phase 01.2.1 P02 | 5min | 1 task | 3 files |
 | Phase 01.3 P03 | 5min | 2 tasks (T2 deferred) | 3 files |
+| Phase 01.2.1 P03 | 18 | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -106,6 +107,8 @@ Recent decisions affecting current work:
 - [Phase 01.2.1]: Plan 01 — UserEntity.advanceTo() retains ordinal()-based body. Plan 03 swaps to weight() once OrderedEnum lands in Plan 02 (per CONTEXT D-B5 + WR-02).
 - [Phase 01.2.1]: Plan 02 — core.shared.lang Modulith leaf module landed (IdentifiedEnum + OrderedEnum interfaces + package-info @ApplicationModule(displayName="Lang", allowedDependencies={})). Pure interface introduction, zero consumers; Plan 03 wires OnboardingStep (implements OrderedEnum, weights 10/20/30/40) and GmailConnectionStatus (implements IdentifiedEnum, no weight per D-B5). Locks D-B1 two-interface split, D-B2 String id type, D-B3 labelKey default = `<ClassSimpleName>.<id>`, D-B4 fromId fail-loud (NoSuchElementException not IllegalArgumentException). Documents D-C2 id()==name() invariant (enforced via convention + @Enumerated(STRING) + Plan 03 OnboardingStepPersistenceTest; ArchTest enforcement OUT of scope) and D-C3 AttributeConverter migration trigger (deferred to first per-enum decoupling need).
 - [Phase 01.2.1]: Plan 02 — JetBrains MCP file-problem check unavailable in sequential-executor agent tool set (upstream issue anthropics/claude-code#13898). Fallback: `./gradlew :backend:core:check :backend:api:check` BUILD SUCCESSFUL is a strict superset for pure-interface files (javac + ArchUnit + ApplicationModulesTest covers correctness). Documented in 01.2.1-02-SUMMARY.md as tooling deviation; no code deviation.
+- [Phase ?]: [Phase 01.2.1]: Plan 03 — WR-01/WR-02/WR-03 closure complete. OnboardingStep implements OrderedEnum (10/20/30/40); GmailConnectionStatus implements IdentifiedEnum (unordered per D-B5); UserEntity.advanceTo uses weight() not ordinal(); OnboardingSelectionRepository.deleteByTenantId is bulk @Modifying @Query with explicit WHERE :tenantId (T-01.2.1-07 mitigation); OnboardingStepPersistenceTest extends PostgresContainerTest with @ParameterizedTest @EnumSource — 4 real-DB round-trips + raw column data_type assert. Modulith allowedDependencies for account/onboarding/gmail gained literal 'shared.lang'.
+- [Phase ?]: [Phase 01.2.1]: Plan 03 — Rule 3 fix: TestJpaAuditingConfig added to backend/core test sources. Production JpaAuditingConfig (com.zeromail.api.config) is outside CoreTestApplication scan base; @CreatedDate/@LastModifiedDate fields were bound to NULL by Hibernate (defaultValueComputed: now() on DB column does NOT apply when INSERT binds NULL). Test-side mirror is the smallest correct surface — same wiring seen only by tests.
 
 ### Roadmap Evolution
 
@@ -144,6 +147,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-26T13:08:00Z
+Last session: 2026-04-26T13:22:18.259Z
 Stopped at: Phase 01.2.1 Plan 02 complete (core.shared.lang Modulith leaf module — IdentifiedEnum + OrderedEnum interfaces; check green; Plan 03 next will apply interfaces to OnboardingStep + GmailConnectionStatus)
 Resume file: None

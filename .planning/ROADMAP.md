@@ -98,7 +98,11 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
   4. `backend/api/dto/` is reorganized into `account/`, `gmail/`, `onboarding/` sub-packages mirroring the `core.<domain>` layout; `TenantStatusResponse` is renamed to `GmailConnectionStatusResponse` (D-A4 follow-through).
   5. `OnboardingService.deleteSelectionsForCurrentTenant` uses a bulk JPQL `@Modifying @Query` instead of find-then-delete (closes WR-03).
   6. Database schema additions limited to audit columns (`updated_at`, `version`); no destructive or semantic-changing migrations. Full `./gradlew clean check` stays green; `ApplicationModulesTest` + `DomainBoundaryArchTests` + `AccountDeletionE2ETest` + `OnboardingStepPersistenceTest` all pass.
-**Plans**: TBD (run `/gsd-discuss-phase 1.2.1` then `/gsd-plan-phase 1.2.1`)
+**Plans**:
+- [x] 01.2.1-01-PLAN.md — Shared base entity hierarchy (AbstractEntity → AbstractAuditableEntity → AbstractTenantOwnedEntity) + JpaAuditingConfig + Liquibase 007 audit-columns + 4 entities refactored _(completed 2026-04-26)_
+- [x] 01.2.1-02-PLAN.md — core.shared.lang Modulith leaf module (IdentifiedEnum + OrderedEnum interfaces, package-info) _(completed 2026-04-26)_
+- [x] 01.2.1-03-PLAN.md — Apply enum interfaces to OnboardingStep + GmailConnectionStatus; UserEntity.advanceTo weight() swap (WR-02); OnboardingSelectionRepository bulk JPQL deleteByTenantId (WR-03); OnboardingStepPersistenceTest real-DB round-trip (WR-01) + TestJpaAuditingConfig fix; Modulith allowedDependencies updates _(completed 2026-04-26)_
+- [ ] 01.2.1-04-PLAN.md — DTO group-by-domain reorg + TenantStatusResponse → GmailConnectionStatusResponse rename + frontend follow-through
 
 ### Phase 1.3: Frontend Architecture Refactor and Public Content Foundation (INSERTED)
 **Goal**: Refactor `apps/web` into a scalable Next.js App Router structure using route groups `app/(public)`, `app/(auth)`, and `app/(protected)`; introduce feature folders with `api/`, `components/`, and `hooks/` subfolders for TanStack Query hooks and feature-specific UI; keep shared primitives in `components/ui` and shared infrastructure in `lib/`; clean duplicate workspace artifacts; add Prettier, Husky, and lint-staged quality gates; clarify typed OpenAPI client boundaries; and scaffold public landing plus multi-page docs architecture without implementing the final landing/docs content design yet.
