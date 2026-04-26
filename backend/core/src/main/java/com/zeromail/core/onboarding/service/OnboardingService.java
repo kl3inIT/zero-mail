@@ -1,4 +1,4 @@
-package com.zeromail.core.account;
+package com.zeromail.core.onboarding.service;
 
 import java.util.UUID;
 
@@ -8,9 +8,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.zeromail.core.account.model.CurrentUserNotFoundException;
 import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
-import com.zeromail.core.persistence.OnboardingSelectionEntity;
-import com.zeromail.core.persistence.OnboardingSelectionRepository;
-import com.zeromail.core.persistence.OnboardingStep;
+import com.zeromail.core.onboarding.model.OnboardingStep;
+import com.zeromail.core.onboarding.persistence.OnboardingSelectionEntity;
+import com.zeromail.core.onboarding.persistence.OnboardingSelectionRepository;
 
 /**
  * Onboarding state-machine application service.
@@ -44,5 +44,15 @@ public class OnboardingService {
         UserEntity user = users.findFirstByTenantId(tenantId)
                 .orElseThrow(() -> new CurrentUserNotFoundException(tenantId));
         user.advanceTo(OnboardingStep.COMPLETE);
+    }
+
+    /**
+     * Deletes all onboarding selections for the given tenant.
+     * Single-domain delete only — orchestration of cross-domain cascade lives in
+     * {@code AccountDeletionController} per CL-2 + D-D1.
+     */
+    @Transactional
+    public void deleteSelectionsForCurrentTenant(UUID tenantId) {
+        onboarding.deleteAll(onboarding.findByTenantId(tenantId));
     }
 }

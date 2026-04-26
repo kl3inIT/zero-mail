@@ -1,4 +1,4 @@
-package com.zeromail.core.persistence;
+package com.zeromail.core.onboarding.persistence;
 
 import java.util.List;
 import java.util.UUID;
