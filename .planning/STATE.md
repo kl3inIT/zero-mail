@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
+status: verifying
 stopped_at: Phase 01.2.1 Plan 02 complete (core.shared.lang Modulith leaf module — IdentifiedEnum + OrderedEnum interfaces; check green; Plan 03 next will apply interfaces to OnboardingStep + GmailConnectionStatus)
-last_updated: "2026-04-26T13:22:18.265Z"
+last_updated: "2026-04-26T14:15:22.604Z"
 last_activity: 2026-04-26
 progress:
   total_phases: 12
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 35
-  completed_plans: 29
-  percent: 83
+  completed_plans: 32
+  percent: 91
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 
 Phase: 01.2.1 (shared-base-entity-and-enum-standard) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-26
 
 Progress: [█████████████] 2/4 plans of Phase 01.2.1 (27/35 total plans = 77%)
@@ -71,6 +71,7 @@ Progress: [█████████████] 2/4 plans of Phase 01.2.1 (2
 | Phase 01.2.1 P03 | 18 | 3 tasks | 10 files |
 | Phase 01.3 P04 | 10min | 4 tasks | 22 created + 9 modified + 5 relocated |
 | Phase 01.3 P05 | 12min | 5 tasks | 5 created + 1 modified + 3 relocated + 5 deleted |
+| Phase 01.2.1 P04 | 38min | 5 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -121,6 +122,8 @@ Recent decisions affecting current work:
 - [Phase 1.3]: Plan 05 — Landing CTA pattern locked: <Link className={buttonVariants()}> NOT <Button asChild> (REVIEWS Rev 2 #3). Local Button wraps @base-ui/react/button which does not support asChild. buttonVariants exported from @/components/ui/button. Auth-aware CTA via getCurrentUser({ headers: { cookie } }) silent-fallback to /login.
 - [Phase 1.3]: Plan 05 — next-intl typed-namespace bypass via cast-to-never: (public)/{layout,page}.tsx use `t("namespace.key" as never)` until Plan 07 lands the keys. Runtime returns key path as fallback. Pattern locked for any future "ship UI before its i18n namespace" plan.
 - [Phase 1.3]: Plan 05 — Playwright route-smoke env-blocked in sandbox (port 3000 held by stale process returning 500). Spec committed as durable gate; CI / fresh dev runs cleanly. Route-smoke pattern locked for future [locale]-style mirror-tree deletions.
+- [Phase ?]: Phase 01.2.1 Plan 04 — DTO group-by-domain reorg (4 DTOs into 3 sub-packages, 4 root files DELETED) + GmailConnectionStatusResponse rename across Java + URL + @Tag(name=gmail) + frontend; @NamedInterface re-exposure pattern locked for nested sub-packages of auto-detected modulith modules; springdoc-openapi-gradle-plugin 1.9.0 wired for hermetic spec emit (port 58080, dummy creds) — replaces bootRun&+kill per W3 closure.
+- [Phase ?]: Phase 01.2.1 Plan 04 deviation: concurrent user activity (commits 3e13e05 / e367d67) auto-staged executor's pending Java edits + a phase-01.3 e2e scaffold file into commits with mixed phase prefixes — same race condition documented for Phase 1.2 P05 commits 03b5652+eabbdca. Documented in 01.2.1-04-SUMMARY.md §Deviations §4+§5. No code-quality or scope-creep impact; only commit-subject attribution drift.
 
 ### Roadmap Evolution
 
@@ -159,6 +162,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-26T13:22:18.259Z
+Last session: 2026-04-26T14:15:11.683Z
 Stopped at: Phase 01.2.1 Plan 02 complete (core.shared.lang Modulith leaf module — IdentifiedEnum + OrderedEnum interfaces; check green; Plan 03 next will apply interfaces to OnboardingStep + GmailConnectionStatus)
 Resume file: None
