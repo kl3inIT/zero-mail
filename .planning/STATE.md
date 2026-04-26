@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 1.2 Plan 06 complete (DomainBoundaryArchTests + 2 cross-domain decompositions + canonical Pattern 8 cleanup; full ./gradlew clean check green)
-last_updated: "2026-04-26T11:01:41.496Z"
-last_activity: 2026-04-26 -- Phase 1.3 planning complete
+last_updated: "2026-04-26T11:13:30.999Z"
+last_activity: 2026-04-26
 progress:
   total_phases: 12
   completed_phases: 3
   total_plans: 31
-  completed_plans: 23
-  percent: 74
+  completed_plans: 24
+  percent: 77
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 1.2.1 — Shared base entity + IdentifiedEnum standard + DTO group-by-domain (INSERTED)
+**Current focus:** Phase 01.3 — frontend-architecture-refactor-and-public-content-foundation
 
 ## Current Position
 
-Phase: 1.2.1 (Shared base entity + IdentifiedEnum standard + DTO group-by-domain (INSERTED)) — CONTEXT GATHERED
-Plan: — (CONTEXT.md written, awaiting /gsd-plan-phase 1.2.1)
+Phase: 01.3 (frontend-architecture-refactor-and-public-content-foundation) — EXECUTING
+Plan: 2 of 8
 Status: Ready to execute
-Last activity: 2026-04-26 -- Phase 1.3 planning complete
+Last activity: 2026-04-26
 
 Progress: [████████████] 100% of Phase 1.2 (24/30 total plans = 80%)
 
@@ -63,6 +63,7 @@ Progress: [████████████] 100% of Phase 1.2 (24/30 total 
 | Phase 1.2 P04 | 6min | 3 tasks | 18 files |
 | Phase 1.2 P05 | 11min | 3 tasks | 30 files |
 | Phase 01.2 P06 | 25min | 3 tasks | 9 files |
+| Phase 01.3 P01 | 6min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,7 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 1.2]: Plan 06 closed Wave 0 ArchUnit gap with DomainBoundaryArchTests (4 explicit per-domain rules). Predicate composition pattern locked at DescribedPredicate level (DSL-level .and() chain unsupported in ArchUnit 1.4.x — confirmed via sources jar). Pattern documented in class-level JavaDoc for future-domain authors.
 - [Phase ?]: [Phase 1.2]: Plan 06 caught + decomposed 2 lingering cross-domain repo injections that Plans 03/04 silently shipped (T-01.2-H regression). Pattern: extend CL-2 service-to-service primitive shape to non-delete writes — TenantService.createTenant + AccountService.advanceOnboardingStep mirror the delete-cascade primitives. ArchUnit threat-test-as-defect-finder confirmed working on first execution.
 - [Phase ?]: [Phase 1.2]: Phase 1.2 structurally complete. Source tree contains exactly {account, gmail, onboarding, shared, tenant} per RESEARCH.md target. Full ./gradlew clean check green: 115 tests / 30 classes / 0 failures. Byte-identical contract preserved (zero diff in db/changelog, libs.versions.toml, apps/web/openapi).
+- [Phase ?]: [Phase 1.3]: Plan 01 — Wave 0 architecture/cleanup test spine landed (6 vitest files, 56 assertions: 45 RED + 10 GREEN + 1 SKIP). Static existsSync predicate at module load (REVIEWS Revision 4) replaces broken beforeAll+skipIf permanent-skip pattern. Non-literal dynamic-import spec defers Vite import-analysis to runtime — fixes ERR_MODULE_NOT_FOUND that @vite-ignore alone does not solve. Pattern locked: pure-fs/regex Wave 0 tests with no @/features/ runtime imports survive every refactor wave.
 
 ### Roadmap Evolution
 
@@ -131,6 +133,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-26T09:54:10.379Z
+Last session: 2026-04-26T11:13:06.608Z
 Stopped at: Phase 1.2 Plan 06 complete (DomainBoundaryArchTests + 2 cross-domain decompositions + canonical Pattern 8 cleanup; full ./gradlew clean check green)
 Resume file: None

@@ -113,7 +113,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
   6. The base `openapi-fetch` client stays in `lib/api`, while endpoint-specific calls move into feature `api` modules without regressing typed OpenAPI generation.
   7. Public landing and multi-page docs scaffolding exists at `app/(public)/page.tsx`, `app/(public)/docs/page.tsx`, `app/(public)/docs/[slug]/page.tsx`, and `content/docs/*.mdx`, with final visual design/content explicitly deferred.
 **Plans**: 8 plans
-- [ ] 01.3-01-PLAN.md — [BLOCKING] Wave 0 architecture/cleanup test scaffolding (5 vitest files)
+- [x] 01.3-01-PLAN.md — [BLOCKING] Wave 0 architecture/cleanup test scaffolding (6 vitest files / 56 assertions; RED-by-design verification spine for Plans 02-07) _(completed 2026-04-26)_
 - [ ] 01.3-02-PLAN.md — Tooling foundation: Husky 9 + lint-staged + Prettier 3 + tailwindcss plugin at root; ESLint flat-config Prettier integration; next.config.ts transpilePackages
 - [ ] 01.3-03-PLAN.md — Workspace cleanup: delete apps/web/pnpm-lock.yaml + apps/web/pnpm-workspace.yaml; migrate ignoredBuiltDependencies to root; verify proxy.ts cast still compiles
 - [ ] 01.3-04-PLAN.md — Feature folders skeleton + 5 component relocations + isomorphic features/account/api/me.ts + accountKeys factory + 2 hooks; refactor proxy.ts + app/layout.tsx to import getCurrentUser
