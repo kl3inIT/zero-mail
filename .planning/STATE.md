@@ -70,6 +70,7 @@ Progress: [█████████████] 2/4 plans of Phase 01.2.1 (2
 | Phase 01.3 P03 | 5min | 2 tasks (T2 deferred) | 3 files |
 | Phase 01.2.1 P03 | 18 | 3 tasks | 10 files |
 | Phase 01.3 P04 | 10min | 4 tasks | 22 created + 9 modified + 5 relocated |
+| Phase 01.3 P05 | 12min | 5 tasks | 5 created + 1 modified + 3 relocated + 5 deleted |
 
 ## Accumulated Context
 
@@ -115,6 +116,11 @@ Recent decisions affecting current work:
 - [Phase 1.3]: Plan 04 — Isomorphic getCurrentUser({ fetcher?, signal?, headers? }) at features/account/api/me.ts is the single source of truth for /me. proxy.ts:reconcileLocaleCookie + app/layout.tsx:reassertServerLocale + features/account/hooks/useCurrentUser all consume it. as unknown as cast in proxy.ts preserved (D-E5).
 - [Phase 1.3]: Plan 04 — All endpoint-specific calls moved to feature/api/ + hooks (REVIEWS Revision 1, Codex HIGH #1). 7 new feature/api/ modules + 5 new hooks (useTenantStatus + useDisconnectGmail + useSelectTemplate + useCompleteOnboarding + useDeleteAccount). Settings + onboarding pages call feature hooks; zero inline api.GET/POST/DELETE for moved endpoints. ROADMAP success criterion #6 fully satisfied.
 - [Phase 1.3]: Plan 04 — Pattern locked: per-feature TanStack Query key factories (accountKeys/gmailKeys/onboardingKeys); explicit cross-feature invalidation via queryClient.invalidateQueries({ queryKey: featureKeys.X() }); NO barrel index.ts at any features/<name>/ root; deep imports only.
+- [Phase 1.3]: Plan 05 — Wave 3 route topology landed: app/(public)/, app/(auth)/, app/(protected)/ each with their own layout.tsx; Light skeleton landing at (public)/page.tsx replaces app/page.tsx → redirect('/login'); 4 dead app/[locale]/* re-exports deleted; Wave 0 route-groups vitest spec fully GREEN (6/6).
+- [Phase 1.3]: Plan 05 — Chrome ownership decided exactly once (REVIEWS Rev 2 #4): (public)/layout.tsx owns header+main+footer; (auth)/layout.tsx is minimal passthrough (login page keeps inline <main> + LanguageSwitcher); (protected)/layout.tsx is bare passthrough (ProtectedHeader lazy until Phase 5). No nested <main>.
+- [Phase 1.3]: Plan 05 — Landing CTA pattern locked: <Link className={buttonVariants()}> NOT <Button asChild> (REVIEWS Rev 2 #3). Local Button wraps @base-ui/react/button which does not support asChild. buttonVariants exported from @/components/ui/button. Auth-aware CTA via getCurrentUser({ headers: { cookie } }) silent-fallback to /login.
+- [Phase 1.3]: Plan 05 — next-intl typed-namespace bypass via cast-to-never: (public)/{layout,page}.tsx use `t("namespace.key" as never)` until Plan 07 lands the keys. Runtime returns key path as fallback. Pattern locked for any future "ship UI before its i18n namespace" plan.
+- [Phase 1.3]: Plan 05 — Playwright route-smoke env-blocked in sandbox (port 3000 held by stale process returning 500). Spec committed as durable gate; CI / fresh dev runs cleanly. Route-smoke pattern locked for future [locale]-style mirror-tree deletions.
 
 ### Roadmap Evolution
 

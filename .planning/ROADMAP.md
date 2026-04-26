@@ -121,7 +121,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] 01.3-02-PLAN.md — Tooling foundation: Husky 9 + lint-staged + Prettier 3 + tailwindcss plugin at root; ESLint flat-config Prettier integration; next.config.ts transpilePackages _(completed 2026-04-26)_
 - [x] 01.3-03-PLAN.md — Workspace cleanup: delete apps/web/pnpm-lock.yaml + apps/web/pnpm-workspace.yaml; migrate ignoredBuiltDependencies to root; verify proxy.ts cast still compiles _(completed 2026-04-26 — Playwright e2e gate Task 2 deferred to user)_
 - [x] 01.3-04-PLAN.md — Feature folders skeleton + 5 component relocations + isomorphic features/account/api/me.ts + accountKeys factory + hooks; refactor proxy.ts + app/layout.tsx to import getCurrentUser; REVIEWS Revision 1 expansion (lib/api/client.ts split + ALL endpoint-specific calls moved to feature/api/ + hooks; settings + onboarding pages use feature hooks) _(completed 2026-04-26)_
-- [ ] 01.3-05-PLAN.md — Route group migration (public/auth/protected) + 3 group layouts + Light skeleton landing + delete app/[locale]/ mirror tree
+- [x] 01.3-05-PLAN.md — Route group migration (public/auth/protected) + 3 group layouts + Light skeleton landing + delete app/[locale]/ mirror tree _(completed 2026-04-26)_
 - [ ] 01.3-06-PLAN.md — MDX docs pipeline: install next-mdx-remote@6.0.0 + gray-matter; (public)/docs/page.tsx + [slug]/page.tsx + loading.tsx; 4 sample MDX files
 - [ ] 01.3-07-PLAN.md — Locale dictionary additions: landing.* + docs.* + common.{nav,loading} mirrored to vi.json + en.json; update EN_SCAN_FILES in scripts/check-i18n.ts
 - [ ] 01.3-08-PLAN.md — Final verification: full automated suite + manual checkpoints (Husky hook, Tailwind sort, visual); flip VALIDATION.md nyquist_compliant + wave_0_complete
