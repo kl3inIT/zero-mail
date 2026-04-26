@@ -1,4 +1,4 @@
-package com.zeromail.core.account;
+package com.zeromail.core.account.service;
 
 import java.util.UUID;
 
@@ -8,31 +8,25 @@ import org.springframework.transaction.annotation.Transactional;
 import com.zeromail.core.account.model.CurrentUserNotFoundException;
 import com.zeromail.core.account.model.CurrentUserView;
 import com.zeromail.core.account.persistence.UserRepository;
-import com.zeromail.core.persistence.GmailConnectionRepository;
-import com.zeromail.core.persistence.OnboardingSelectionRepository;
-import com.zeromail.core.tenant.persistence.TenantRepository;
 
 /**
  * Owns tenant-scoped account state transitions that controllers used to perform inline.
  * Centralizing this here gives us one place to enforce tenant invariants, transaction
  * boundaries, and (later) audit logging — and lets controllers stay transport-only.
+ *
+ * <p>Phase 1.2 reshape (CL-2 + D-D1): the previous incarnation injected four
+ * cross-domain repositories (gmail, onboarding, user, tenant) to perform a cascading
+ * delete inline. After Phase 1.2 only {@link UserRepository} remains — the multi-domain
+ * delete orchestration moves to {@code AccountDeletionController} (transitional bridge
+ * during Plans 03–05; finalized in Plan 06 as a chain of per-domain service calls).
  */
 @Service
 public class AccountService {
 
-    private final OnboardingSelectionRepository onboarding;
-    private final GmailConnectionRepository connections;
     private final UserRepository users;
-    private final TenantRepository tenants;
 
-    public AccountService(OnboardingSelectionRepository onboarding,
-                          GmailConnectionRepository connections,
-                          UserRepository users,
-                          TenantRepository tenants) {
-        this.onboarding = onboarding;
-        this.connections = connections;
+    public AccountService(UserRepository users) {
         this.users = users;
-        this.tenants = tenants;
     }
 
     /**
@@ -59,7 +53,8 @@ public class AccountService {
      * on {@code UpdateLanguageRequest}); this method does NOT re-validate the allow-list,
      * because controller-side validation is the single source of truth for that contract.
      *
-     * <p>Goes through JPA dirty-tracking on the managed {@link com.zeromail.core.persistence.UserEntity}
+     * <p>Goes through JPA dirty-tracking on the managed
+     * {@link com.zeromail.core.account.persistence.UserEntity}
      * — no raw JDBC, no native UPDATE — so Hibernate's {@code @TenantId} filter and the
      * shared-schema multi-tenant invariants stay honored end-to-end. Cross-tenant writes
      * are impossible: the lookup itself is tenant-scoped via {@code findFirstByTenantId}.
@@ -85,14 +80,12 @@ public class AccountService {
     }
 
     /**
-     * Cascading delete of every row owned by the tenant, then the tenant itself.
-     * Order matters: dependents first, parent last.
+     * Deletes the User row for the current tenant. Single-domain delete only —
+     * the multi-domain orchestration (gmail connection, onboarding selections, tenant)
+     * lives in AccountDeletionController per CL-2 + D-D1.
      */
     @Transactional
-    public void deleteCurrentTenantAccount(UUID tenantId) {
-        onboarding.deleteAll(onboarding.findByTenantId(tenantId));
-        connections.findByTenantId(tenantId).ifPresent(connections::delete);
+    public void deleteCurrentUser(UUID tenantId) {
         users.findFirstByTenantId(tenantId).ifPresent(users::delete);
-        tenants.findById(tenantId).ifPresent(tenants::delete);
     }
 }

@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.zeromail.api.dto.MeResponse;
 import com.zeromail.api.dto.UpdateLanguageRequest;
-import com.zeromail.core.account.AccountService;
 import com.zeromail.core.account.model.CurrentUserView;
+import com.zeromail.core.account.service.AccountService;
 import com.zeromail.core.tenant.TenantContext;
 
 import jakarta.validation.Valid;
