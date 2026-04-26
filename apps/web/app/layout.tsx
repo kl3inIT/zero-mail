@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
@@ -36,21 +36,23 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * Server-side "source of truth" overwrite for NEXT_LOCALE (Plan 06 + CONTEXT.md
+ * Server-side "source of truth" READ for NEXT_LOCALE (Plan 06 + CONTEXT.md
  * §Specifics + threat_model T-1.1.06-03):
  *  - When the user is authenticated AND `users.preferred_language` differs from
- *    the cookie, set the cookie to the server preference BEFORE rendering. This
- *    is what makes "device A → device B" sync work.
+ *    the cookie, return the server preference so this render uses it. The
+ *    persistent cookie write itself happens in `proxy.ts` (a response-capable
+ *    boundary) — Server Components cannot reliably mutate response cookies, and
+ *    silent failures there were producing a stale cookie + correct render
+ *    split that broke "device A -> device B" sync. (WR-02.)
  *  - When unauthenticated, leave the cookie alone (the LanguageSwitcher's
  *    optimistic write is the only persistence).
  *
  * Implementation note: we proxy the incoming auth cookies to the API so the
  * /me call has the user's session. If the call fails (unauthenticated, server
- * down) we silently leave the cookie alone — never block layout rendering.
- * Privacy: we never log the response or correlate locale with email.
+ * down) we silently fall back to the incoming cookie — never block layout
+ * rendering. Privacy: we never log the response or correlate locale with email.
  */
 async function reassertServerLocale(currentLocale: string): Promise<string> {
-  const cookieStore = await cookies();
   const headerStore = await headers();
   const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "";
   if (!apiBase) return currentLocale;
@@ -67,17 +69,9 @@ async function reassertServerLocale(currentLocale: string): Promise<string> {
     if (!res.ok) return currentLocale;
     const data = (await res.json()) as { preferredLanguage?: string };
     const preferred = data.preferredLanguage;
-    if (
-      preferred &&
-      (preferred === "vi" || preferred === "en") &&
-      preferred !== currentLocale
-    ) {
-      cookieStore.set("NEXT_LOCALE", preferred, {
-        maxAge: 60 * 60 * 24 * 365,
-        sameSite: "lax",
-        secure: true,
-        path: "/",
-      });
+    if (preferred === "vi" || preferred === "en") {
+      // Read-only: the cookie write is owned by proxy.ts where response
+      // headers are reliably mutable.
       return preferred;
     }
   } catch {
