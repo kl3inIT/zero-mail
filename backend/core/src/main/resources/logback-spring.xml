@@ -11,7 +11,7 @@
 
     <springProfile name="!prod &amp; !production">
         <appender name="DEV_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-            <filter class="com.zeromail.core.privacy.SensitiveMarkerScrubFilter"/>
+            <filter class="com.zeromail.core.shared.privacy.SensitiveMarkerScrubFilter"/>
             <encoder>
                 <pattern>${CONSOLE_LOG_PATTERN}</pattern>
                 <charset>${CONSOLE_LOG_CHARSET}</charset>
@@ -24,7 +24,7 @@
 
     <springProfile name="prod | production">
         <appender name="JSON_STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-            <filter class="com.zeromail.core.privacy.SensitiveMarkerScrubFilter"/>
+            <filter class="com.zeromail.core.shared.privacy.SensitiveMarkerScrubFilter"/>
             <encoder class="net.logstash.logback.encoder.LogstashEncoder">
                 <includeMdcKeyName>scrubbed</includeMdcKeyName>
                 <includeMdcKeyName>scrub_reason</includeMdcKeyName>

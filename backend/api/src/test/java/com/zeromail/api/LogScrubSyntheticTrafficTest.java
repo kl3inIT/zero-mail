@@ -26,8 +26,8 @@ import com.zeromail.core.persistence.TenantEntity;
 import com.zeromail.core.persistence.TenantRepository;
 import com.zeromail.core.persistence.UserEntity;
 import com.zeromail.core.persistence.UserRepository;
-import com.zeromail.core.privacy.Sensitive;
-import com.zeromail.core.privacy.SensitiveMarkerScrubFilter;
+import com.zeromail.core.shared.privacy.Sensitive;
+import com.zeromail.core.shared.privacy.SensitiveMarkerScrubFilter;
 import com.zeromail.core.tenant.TenantContext;
 
 import ch.qos.logback.classic.Logger;

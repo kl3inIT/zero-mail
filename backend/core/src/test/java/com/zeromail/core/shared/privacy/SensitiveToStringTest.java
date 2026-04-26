@@ -1,4 +1,4 @@
-package com.zeromail.core.privacy;
+package com.zeromail.core.shared.privacy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

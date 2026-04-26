@@ -17,7 +17,7 @@ import com.tngtech.archunit.lang.SimpleConditionEvent;
 @AnalyzeClasses(packages = "com.zeromail", importOptions = ImportOption.DoNotIncludeTests.class)
 public class SafetyContractArchTests {
 
-    private static final String SENSITIVE = "com.zeromail.core.privacy.Sensitive";
+    private static final String SENSITIVE = "com.zeromail.core.shared.privacy.Sensitive";
     private static final Set<String> DENY = Set.of(
             "body", "bodyText", "prompt", "completion", "rawContent", "refreshToken", "accessToken");
     private static final String DENY_REGEX = String.join("|", DENY);

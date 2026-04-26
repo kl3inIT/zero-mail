@@ -7,7 +7,7 @@ plugins {
  * deny-listed sensitive identifiers (`body`, `bodyText`, `prompt`, `completion`, `rawContent`,
  * `refreshToken`, `accessToken`, `authorizationCode`, `idToken`, `gmailMessagePayload`) or
  * `Sensitive` references outside the approved scrubber package
- * (`com.zeromail.core.privacy`). Fails the build on detection.
+ * (`com.zeromail.core.shared.privacy`). Fails the build on detection.
  *
  * Two tasks:
  *   - `sensitiveLogGuard` — scans `src/main/java`. Wired into `check`.
@@ -89,7 +89,7 @@ abstract class SensitiveLogGuardTask : org.gradle.api.DefaultTask() {
     }
 }
 
-val approvedPkg = "com.zeromail.core.privacy"
+val approvedPkg = "com.zeromail.core.shared.privacy"
 
 val sensitiveLogGuard = tasks.register<SensitiveLogGuardTask>("sensitiveLogGuard") {
     group = "verification"
