@@ -14,11 +14,11 @@ import com.zeromail.core.persistence.GmailConnectionRepository;
 import com.zeromail.core.persistence.GmailConnectionStatus;
 import com.zeromail.core.persistence.OnboardingSelectionEntity;
 import com.zeromail.core.persistence.OnboardingSelectionRepository;
-import com.zeromail.core.persistence.TenantEntity;
-import com.zeromail.core.persistence.TenantRepository;
 import com.zeromail.core.persistence.UserEntity;
 import com.zeromail.core.persistence.UserRepository;
 import com.zeromail.core.tenant.TenantContext;
+import com.zeromail.core.tenant.persistence.TenantEntity;
+import com.zeromail.core.tenant.persistence.TenantRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

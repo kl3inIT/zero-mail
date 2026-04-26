@@ -12,9 +12,9 @@ import com.zeromail.api.support.ApiPostgresTestBase;
 import com.zeromail.core.persistence.GmailConnectionEntity;
 import com.zeromail.core.persistence.GmailConnectionRepository;
 import com.zeromail.core.persistence.GmailConnectionStatus;
-import com.zeromail.core.persistence.TenantEntity;
-import com.zeromail.core.persistence.TenantRepository;
 import com.zeromail.core.tenant.TenantContext;
+import com.zeromail.core.tenant.persistence.TenantEntity;
+import com.zeromail.core.tenant.persistence.TenantRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

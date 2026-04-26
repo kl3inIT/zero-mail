@@ -22,13 +22,13 @@ import com.zeromail.api.support.ApiPostgresTestBase;
 import com.zeromail.core.persistence.GmailConnectionEntity;
 import com.zeromail.core.persistence.GmailConnectionRepository;
 import com.zeromail.core.persistence.GmailConnectionStatus;
-import com.zeromail.core.persistence.TenantEntity;
-import com.zeromail.core.persistence.TenantRepository;
 import com.zeromail.core.persistence.UserEntity;
 import com.zeromail.core.persistence.UserRepository;
 import com.zeromail.core.shared.privacy.Sensitive;
 import com.zeromail.core.shared.privacy.SensitiveMarkerScrubFilter;
 import com.zeromail.core.tenant.TenantContext;
+import com.zeromail.core.tenant.persistence.TenantEntity;
+import com.zeromail.core.tenant.persistence.TenantRepository;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;

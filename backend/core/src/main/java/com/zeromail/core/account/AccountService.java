@@ -7,8 +7,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.zeromail.core.persistence.GmailConnectionRepository;
 import com.zeromail.core.persistence.OnboardingSelectionRepository;
-import com.zeromail.core.persistence.TenantRepository;
 import com.zeromail.core.persistence.UserRepository;
+import com.zeromail.core.tenant.persistence.TenantRepository;
 
 /**
  * Owns tenant-scoped account state transitions that controllers used to perform inline.
