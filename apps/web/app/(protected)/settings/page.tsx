@@ -13,6 +13,7 @@ import { useDeleteAccount } from '@/features/account/hooks/useDeleteAccount';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { getApiUrl } from '@/lib/api/base-url';
 
 import type { AppLocale } from '@/i18n/routing';
 
@@ -23,7 +24,6 @@ import type { AppLocale } from '@/i18n/routing';
  */
 export default function SettingsPage() {
   const t = useTranslations();
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? '';
   const me = useCurrentUser();
   const status = useTenantStatus();
   const disconnect = useDisconnectGmail();
@@ -35,7 +35,7 @@ export default function SettingsPage() {
   // on first authenticated SSR (see app/layout.tsx).
   const preferredLanguage = (me.data?.preferredLanguage === 'en' ? 'en' : 'vi') as AppLocale;
   const reconnect = () => {
-    window.location.href = `${apiBase}/tenant/connect-gmail`;
+    window.location.href = getApiUrl('/tenant/connect-gmail');
   };
 
   return (
@@ -60,7 +60,7 @@ export default function SettingsPage() {
           </div>
         )}
         {connStatus === 'NOT_CONNECTED' && (
-          <form method="post" action={`${apiBase}/tenant/connect-gmail`} className="mt-3">
+          <form method="post" action={getApiUrl('/tenant/connect-gmail')} className="mt-3">
             <Button type="submit">{t('onboarding.connect.cta')}</Button>
           </form>
         )}

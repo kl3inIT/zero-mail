@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { LanguageSwitcher } from '@/features/i18n/components/LanguageSwitcher';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { getApiUrl } from '@/lib/api/base-url';
 
 import type { AppLocale } from '@/i18n/routing';
 
@@ -15,7 +16,6 @@ import type { AppLocale } from '@/i18n/routing';
 export default async function LoginPage() {
   const t = await getTranslations('auth.login');
   const locale = (await getLocale()) as AppLocale;
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? '';
 
   return (
     <main className="flex min-h-dvh items-center justify-center p-6">
@@ -30,7 +30,7 @@ export default async function LoginPage() {
           <li>{t('safety.noLongTermStorage')}</li>
           <li>{t('safety.revokeAnytime')}</li>
         </ul>
-        <a href={`${apiBase}/oauth2/authorization/google`}>
+        <a href={getApiUrl('/oauth2/authorization/google')}>
           <Button className="mt-6 w-full">{t('googleButton')}</Button>
         </a>
       </Card>

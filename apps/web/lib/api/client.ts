@@ -1,9 +1,10 @@
 import createClient from 'openapi-fetch';
 
+import { getApiBase } from './base-url';
 import type { paths } from './schema';
 
 const typedApi = createClient<paths>({
-  baseUrl: process.env.NEXT_PUBLIC_API_BASE ?? 'http://localhost:8080',
+  baseUrl: getApiBase(),
   credentials: 'include',
 });
 

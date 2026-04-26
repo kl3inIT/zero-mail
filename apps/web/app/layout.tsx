@@ -8,6 +8,7 @@ import { QueryProvider } from '@/lib/query-client';
 
 import { getCurrentUser } from '@/features/account/api/me';
 import { routing } from '@/i18n/routing';
+import { getApiBase } from '@/lib/api/base-url';
 
 import './globals.css';
 
@@ -55,7 +56,7 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 async function reassertServerLocale(currentLocale: string): Promise<string> {
   const headerStore = await headers();
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? '';
+  const apiBase = getApiBase();
   if (!apiBase) return currentLocale;
 
   // Forward cookies so the API can identify the user.

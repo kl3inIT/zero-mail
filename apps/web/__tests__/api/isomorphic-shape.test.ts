@@ -48,8 +48,11 @@ describe('Phase 1.3 — Isomorphic /me API shape (D-B1, D-B4)', () => {
     expect(src).toMatch(/from\s+['"]@\/features\/account\/api\/me['"]/);
   });
 
-  it('proxy.ts preserves the as unknown as cast (D-E5)', () => {
+  it('proxy.ts avoids next-intl middleware rewrite and no longer needs the cast bridge', () => {
     const src = readFileSync(PROXY_FILE, 'utf8');
-    expect(src).toMatch(/as\s+unknown\s+as/);
+    expect(src).not.toMatch(/next-intl\/middleware/);
+    expect(src).not.toMatch(/createIntlMiddleware/);
+    expect(src).not.toMatch(/as\s+unknown\s+as/);
+    expect(src).toMatch(/NextResponse\.next\(\)/);
   });
 });

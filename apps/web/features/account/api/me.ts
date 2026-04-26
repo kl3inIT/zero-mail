@@ -1,4 +1,5 @@
 import { api } from '@/lib/api/client';
+import { getApiUrl } from '@/lib/api/base-url';
 
 export interface CurrentUser {
   id: string;
@@ -28,8 +29,7 @@ export interface GetCurrentUserOptions {
 export async function getCurrentUser(opts: GetCurrentUserOptions = {}): Promise<CurrentUser> {
   const { fetcher, signal, headers } = opts;
   if (fetcher || headers) {
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? '';
-    const res = await (fetcher ?? fetch)(`${apiBase}/me`, {
+    const res = await (fetcher ?? fetch)(getApiUrl('/me'), {
       headers,
       cache: 'no-store',
       signal,

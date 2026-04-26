@@ -9,6 +9,7 @@ import { useSelectTemplate } from '@/features/onboarding/hooks/useSelectTemplate
 import { useCompleteOnboarding } from '@/features/onboarding/hooks/useCompleteOnboarding';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { getApiUrl } from '@/lib/api/base-url';
 
 type TemplateKey = 'archive-receipts' | 'label-newsletters' | 'pin-calendar';
 
@@ -27,7 +28,6 @@ export default function OnboardingPage() {
   if (!me.data) return <p className="p-6">{t('onboarding.loading')}</p>;
 
   const step = me.data.onboardingStep;
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? '';
 
   const templates: { key: TemplateKey; titleKey: string; descKey: string }[] = [
     {
@@ -54,7 +54,7 @@ export default function OnboardingPage() {
         <Card className="mt-4 p-6">
           <h2 className="text-xl font-semibold">{t('onboarding.connect.heading')}</h2>
           <p className="mt-2">{t('onboarding.connect.body')}</p>
-          <form method="post" action={`${apiBase}/tenant/connect-gmail`} className="mt-4">
+          <form method="post" action={getApiUrl('/tenant/connect-gmail')} className="mt-4">
             <Button type="submit">{t('onboarding.connect.cta')}</Button>
           </form>
         </Card>

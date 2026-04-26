@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { getCurrentUser } from '@/features/account/api/me';
+import { getApiBase } from '@/lib/api/base-url';
 import { LOCALE_COOKIE_MAX_AGE, NEXT_LOCALE_COOKIE, routing } from './i18n/routing';
 
 /**
@@ -54,7 +55,7 @@ async function reconcileLocaleCookie(request: NextRequest, response: NextRespons
   const session = request.cookies.get('ZEROMAIL_SESSION');
   if (!session) return; // unauthenticated — cookie owner is the LanguageSwitcher
 
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? '';
+  const apiBase = getApiBase();
   if (!apiBase) return;
 
   const cookieHeader = request.headers.get('cookie');
