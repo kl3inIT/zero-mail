@@ -3,27 +3,18 @@ package com.zeromail.core.gmail.persistence;
 import java.time.Instant;
 import java.util.UUID;
 
-import org.hibernate.annotations.TenantId;
-
 import com.zeromail.core.gmail.model.GmailConnectionStatus;
+import com.zeromail.core.shared.persistence.AbstractTenantOwnedEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "gmail_connections")
-public class GmailConnectionEntity {
-
-    @Id
-    private UUID id;
-
-    @TenantId
-    @Column(name = "tenant_id", nullable = false)
-    private UUID tenantId;
+public class GmailConnectionEntity extends AbstractTenantOwnedEntity {
 
     @Column(name = "google_email", nullable = false)
     private String googleEmail;
@@ -53,14 +44,11 @@ public class GmailConnectionEntity {
     protected GmailConnectionEntity() {}
 
     public GmailConnectionEntity(UUID id, UUID tenantId, String googleEmail, GmailConnectionStatus status) {
-        this.id = id;
-        this.tenantId = tenantId;
+        super(id, tenantId);
         this.googleEmail = googleEmail;
         this.status = status;
     }
 
-    public UUID getId() { return id; }
-    public UUID getTenantId() { return tenantId; }
     public String getGoogleEmail() { return googleEmail; }
     public GmailConnectionStatus getStatus() { return status; }
     public byte[] getRefreshTokenEncrypted() { return refreshTokenEncrypted; }

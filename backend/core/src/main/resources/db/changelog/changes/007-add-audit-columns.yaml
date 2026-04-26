@@ -3,17 +3,41 @@ databaseChangeLog:
       id: 007-add-audit-columns
       author: zeromail
       comment: >-
-        Phase 1.2.1 D-A3 — add updated_at + version columns to the three
+        Phase 1.2.1 D-A3 — add created_at (gmail_connections only — table 003
+        was created without it) + updated_at + version columns to the three
         tenant-owned tables so AbstractAuditableEntity (Spring Data JPA auditing
         + Hibernate optimistic locking) can map to them. tenants is intentionally
         out of scope: TenantEntity extends AbstractEntity (id only) per D-A1.
+
+        Note: created_at + updated_at carry defaultValueComputed: now() to
+        match users.created_at (changeset 002), so legacy raw-SQL inserts that
+        bypass the AuditingEntityListener still satisfy the NOT NULL constraint.
+        The Spring Data JPA listener writes deterministic values from the Clock
+        bean for entity-managed inserts and overrides any DB default.
       changes:
+        - addColumn:
+            tableName: gmail_connections
+            columns:
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: true
+        - sql:
+            sql: UPDATE gmail_connections SET created_at = COALESCE(connected_at, NOW()) WHERE created_at IS NULL
+            dbms: postgresql
+        - addNotNullConstraint:
+            tableName: gmail_connections
+            columnName: created_at
+            columnDataType: timestamptz
         - addColumn:
             tableName: users
             columns:
               - column:
                   name: updated_at
                   type: timestamptz
+                  defaultValueComputed: now()
                   constraints:
                     nullable: true
               - column:
@@ -28,6 +52,7 @@ databaseChangeLog:
               - column:
                   name: updated_at
                   type: timestamptz
+                  defaultValueComputed: now()
                   constraints:
                     nullable: true
               - column:
@@ -42,6 +67,7 @@ databaseChangeLog:
               - column:
                   name: updated_at
                   type: timestamptz
+                  defaultValueComputed: now()
                   constraints:
                     nullable: true
               - column:
@@ -90,3 +116,6 @@ databaseChangeLog:
         - dropColumn:
             tableName: gmail_connections
             columnName: version
+        - dropColumn:
+            tableName: gmail_connections
+            columnName: created_at
