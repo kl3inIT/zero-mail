@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.zeromail.api.controllers.OnboardingController;
-import com.zeromail.api.dto.SelectTemplateRequest;
+import com.zeromail.api.dto.onboarding.SelectTemplateRequest;
 import com.zeromail.api.support.ApiPostgresTestBase;
 import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;

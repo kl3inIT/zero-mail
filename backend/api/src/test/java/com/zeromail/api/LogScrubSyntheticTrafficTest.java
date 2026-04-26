@@ -39,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * FND-03 runtime grep-for-bodies verification, driven through real authenticated requests
  * against Phase 1 endpoints. Seeds sentinel values (subject, email, refresh-token plaintext)
- * onto persistent rows, then drives /me, /tenant/status, and /onboarding/select-template via
+ * onto persistent rows, then drives /me, /gmail/connection/status, and /onboarding/select-template via
  * an HTTP client. Captures every emitted log line through a ROOT-logger ListAppender and
  * asserts: (1) zero sentinel occurrences in the captured stream, (2) the SensitiveMarkerScrubFilter
  * actually fires when a Sensitive(...) marker is emitted (proves the plan-03 TurboFilter is wired
@@ -104,7 +104,7 @@ class LogScrubSyntheticTrafficTest extends ApiPostgresTestBase {
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, (req, resp) -> { /* ignore for log inspection */ })
                 .toBodilessEntity();
-        client.get().uri("/tenant/status")
+        client.get().uri("/gmail/connection/status")
                 .header(TestSessionSupport.HEADER_SUBJECT, LEAK_PROBE_SUBJECT)
                 .header(TestSessionSupport.HEADER_EMAIL, LEAK_PROBE_EMAIL)
                 .retrieve()

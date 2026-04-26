@@ -36,7 +36,7 @@ vi.mock('@/lib/api/client', async (importOriginal) => {
   };
 });
 
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { LanguageSwitcher } from '@/features/i18n/components/LanguageSwitcher';
 
 function clearAllCookies() {
   if (typeof document === 'undefined') return;
