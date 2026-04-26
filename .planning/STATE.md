@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 1.3 Plan 02 complete (Husky 9 + lint-staged + Prettier 3 monorepo-root tooling foundation; hook empirically fired on both task commits)
-last_updated: "2026-04-26T12:45:01.735Z"
-last_activity: 2026-04-26 -- Phase 01.2.1 execution started
+stopped_at: Phase 01.2.1 Plan 01 complete (3-tier shared base entity hierarchy + JpaAuditingConfig + Liquibase changeset 007 audit columns; FND-05 + ApplicationModulesTest + AccountDeletionE2ETest all green)
+last_updated: "2026-04-26T12:58:18Z"
+last_activity: 2026-04-26 -- Phase 01.2.1 Plan 01 complete
 progress:
   total_phases: 12
   completed_phases: 3
   total_plans: 35
-  completed_plans: 25
-  percent: 71
+  completed_plans: 26
+  percent: 74
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 ## Current Position
 
 Phase: 01.2.1 (shared-base-entity-and-enum-standard) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 01.2.1
-Last activity: 2026-04-26 -- Phase 01.2.1 execution started
+Plan: 2 of 4
+Status: Executing Phase 01.2.1 — Plan 01 complete; Plan 02 next
+Last activity: 2026-04-26 -- Phase 01.2.1 Plan 01 complete (shared-base-entity hierarchy + Liquibase 007 audit columns)
 
-Progress: [████████████] 100% of Phase 1.2 (24/30 total plans = 80%)
+Progress: [████████████] 1/4 plans of Phase 01.2.1 (26/35 total plans = 74%)
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Progress: [████████████] 100% of Phase 1.2 (24/30 total 
 | Phase 01.2 P06 | 25min | 3 tasks | 9 files |
 | Phase 01.3 P01 | 6min | 2 tasks | 6 files |
 | Phase 01.3 P02 | 6min | 2 tasks | 7 files |
+| Phase 01.2.1 P01 | 14min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,9 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 1.3]: Plan 01 — Wave 0 architecture/cleanup test spine landed (6 vitest files, 56 assertions: 45 RED + 10 GREEN + 1 SKIP). Static existsSync predicate at module load (REVIEWS Revision 4) replaces broken beforeAll+skipIf permanent-skip pattern. Non-literal dynamic-import spec defers Vite import-analysis to runtime — fixes ERR_MODULE_NOT_FOUND that @vite-ignore alone does not solve. Pattern locked: pure-fs/regex Wave 0 tests with no @/features/ runtime imports survive every refactor wave.
 - [Phase ?]: [Phase 1.3]: Plan 02 — pre-commit gate live (Husky 9 + lint-staged + Prettier 3 root-level). Empirically verified: hooks fired on Task 1 + Task 2 commits. lint-staged in WARN-ONLY i18n:check mode (`|| true`) until Plan 07 final task; `!(messages)` extglob de-duplicates Prettier across overlapping globs (REVIEWS Revisions 3 + 5).
 - [Phase ?]: [Phase 1.3]: Plan 02 — `transpilePackages: ['next-mdx-remote']` pre-declared in apps/web/next.config.ts. Pattern locked: pre-declare Turbopack-transpile entries when the runtime dep lands in a future plan; entry is a no-op until first import (Pitfall 6 mitigation, Plan 06 activates).
+- [Phase 01.2.1]: Plan 01 — 3-tier @MappedSuperclass hierarchy (AbstractEntity → AbstractAuditableEntity → AbstractTenantOwnedEntity) landed in core.shared.persistence with @EntityListeners(AuditingEntityListener.class) on Tier 2. JpaAuditingConfig wires Clock-bean → DateTimeProvider → @EnableJpaAuditing. FND-05 MultiTenantLeakIntegrationTest still passes (PROVES @TenantId binding survives @MappedSuperclass relocation in Hibernate 7).
+- [Phase 01.2.1]: Plan 01 — Liquibase changeset 007 deviation captured: gmail_connections table (created in changeset 003) was missing created_at column. Fix prepended to changeset 007: addColumn created_at + backfill from COALESCE(connected_at, NOW()) + promote NOT NULL. Pattern locked: defaultValueComputed: now() on all new audit columns (created_at, updated_at) so raw-SQL inserts in tests still pass NOT NULL constraint; AuditingEntityListener still wins for entity-managed paths.
+- [Phase 01.2.1]: Plan 01 — UserEntity.advanceTo() retains ordinal()-based body. Plan 03 swaps to weight() once OrderedEnum lands in Plan 02 (per CONTEXT D-B5 + WR-02).
 
 ### Roadmap Evolution
 
@@ -136,6 +140,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-26T11:24:36.846Z
-Stopped at: Phase 1.3 Plan 02 complete (Husky 9 + lint-staged + Prettier 3 monorepo-root tooling foundation; hook empirically fired on both task commits)
+Last session: 2026-04-26T12:58:18Z
+Stopped at: Phase 01.2.1 Plan 01 complete (3-tier shared base entity hierarchy + JpaAuditingConfig + Liquibase changeset 007 audit columns; FND-05 + ApplicationModulesTest + AccountDeletionE2ETest all green)
 Resume file: None
