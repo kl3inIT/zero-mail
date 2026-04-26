@@ -57,4 +57,23 @@ public class GmailConnectionService {
     public void deleteForCurrentTenant(UUID tenantId) {
         connections.findByTenantId(tenantId).ifPresent(connections::delete);
     }
+
+    /**
+     * Idempotent upsert for the leg-2 Gmail OAuth success path (D-A4).
+     *
+     * <p><b>Forward declaration only — Plan 01.4-03 lands the body.</b> This signature
+     * exists in Plan 01.4-02 so {@code GmailOAuthSuccessHandler} compiles cleanly while
+     * Plan 03 fills in the implementation in the same wave. Calling this method before
+     * Plan 03 lands will throw {@link UnsupportedOperationException}.
+     *
+     * <p>Contract (locked by D-A4): if a row exists for {@code tenantId}, update
+     * {@code googleEmail}, {@code scopesGranted}, {@code refreshTokenEncrypted},
+     * {@code status=CONNECTED}, {@code connectedAt=now}, and reset
+     * {@code disconnectedAt=null}; otherwise insert a new row. Single-row-per-tenant
+     * invariant preserved.
+     */
+    @Transactional
+    public void upsert(UUID tenantId, String googleEmail, String scopesGranted, byte[] refreshTokenEncrypted) {
+        throw new UnsupportedOperationException("Plan 01.4-03 lands implementation");
+    }
 }
