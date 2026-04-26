@@ -33,7 +33,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zeromail.api.security.TestSessionSupport;
 import com.zeromail.api.support.ApiPostgresTestBase;
-import com.zeromail.core.account.CurrentUserNotFoundException;
+import com.zeromail.core.account.model.CurrentUserNotFoundException;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;

@@ -1,4 +1,4 @@
-package com.zeromail.core.account;
+package com.zeromail.core.account.model;
 
 import java.util.UUID;
 

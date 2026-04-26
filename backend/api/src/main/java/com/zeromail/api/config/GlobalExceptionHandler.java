@@ -22,7 +22,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import com.zeromail.api.error.AllowedParamScalars;
 import com.zeromail.api.error.ErrorCodes;
 import com.zeromail.api.error.FieldErrorDto;
-import com.zeromail.core.account.CurrentUserNotFoundException;
+import com.zeromail.core.account.model.CurrentUserNotFoundException;
 
 import jakarta.validation.ConstraintViolationException;
 

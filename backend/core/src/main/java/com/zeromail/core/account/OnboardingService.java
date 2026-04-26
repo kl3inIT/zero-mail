@@ -5,11 +5,12 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.zeromail.core.account.model.CurrentUserNotFoundException;
+import com.zeromail.core.account.persistence.UserEntity;
+import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.persistence.OnboardingSelectionEntity;
 import com.zeromail.core.persistence.OnboardingSelectionRepository;
 import com.zeromail.core.persistence.OnboardingStep;
-import com.zeromail.core.persistence.UserEntity;
-import com.zeromail.core.persistence.UserRepository;
 
 /**
  * Onboarding state-machine application service.

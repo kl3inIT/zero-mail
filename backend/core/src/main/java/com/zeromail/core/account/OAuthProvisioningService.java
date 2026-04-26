@@ -10,8 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.zeromail.core.persistence.UserEntity;
-import com.zeromail.core.persistence.UserRepository;
+import com.zeromail.core.account.persistence.UserEntity;
+import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.persistence.TenantEntity;
 import com.zeromail.core.tenant.persistence.TenantRepository;

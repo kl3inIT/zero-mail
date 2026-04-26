@@ -1,9 +1,11 @@
-package com.zeromail.core.persistence;
+package com.zeromail.core.account.persistence;
 
 import java.time.Instant;
 import java.util.UUID;
 
 import org.hibernate.annotations.TenantId;
+
+import com.zeromail.core.persistence.OnboardingStep;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

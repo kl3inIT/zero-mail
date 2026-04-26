@@ -7,7 +7,7 @@ import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.zeromail.core.persistence.UserRepository;
+import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.tenant.TenantContext;
 
 import jakarta.servlet.FilterChain;

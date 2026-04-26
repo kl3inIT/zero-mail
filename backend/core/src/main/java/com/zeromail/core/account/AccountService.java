@@ -5,9 +5,11 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.zeromail.core.account.model.CurrentUserNotFoundException;
+import com.zeromail.core.account.model.CurrentUserView;
+import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.persistence.GmailConnectionRepository;
 import com.zeromail.core.persistence.OnboardingSelectionRepository;
-import com.zeromail.core.persistence.UserRepository;
 import com.zeromail.core.tenant.persistence.TenantRepository;
 
 /**
