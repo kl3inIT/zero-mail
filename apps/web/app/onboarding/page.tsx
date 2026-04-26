@@ -1,49 +1,27 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
 import { TemplateCard } from '@/features/onboarding/components/TemplateCard';
+import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
+import { useSelectTemplate } from '@/features/onboarding/hooks/useSelectTemplate';
+import { useCompleteOnboarding } from '@/features/onboarding/hooks/useCompleteOnboarding';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { api, xsrfHeader } from '@/lib/api/client';
 
 type TemplateKey = 'archive-receipts' | 'label-newsletters' | 'pin-calendar';
 
-type MeData = { onboardingStep: string };
-
 /**
- * /onboarding (client). Plan 06 Task 2 — pull every prose literal through
- * `useTranslations`. TemplateCard remains a presentational component (props-down
- * pattern); the call site below resolves translations and passes them down.
+ * /onboarding (client). Plan 04 Task 3 — all endpoint-specific calls moved to
+ * features/<name>/api + hooks (REVIEWS Revision 1, Codex HIGH #1). Inline
+ * api.GET/POST removed; JSX/copy preserved.
  */
 export default function OnboardingPage() {
   const t = useTranslations();
-  const qc = useQueryClient();
-  const me = useQuery<MeData | undefined>({
-    queryKey: ['me'],
-    queryFn: async () => (await api.GET('/me', {})).data as MeData | undefined,
-  });
-  const selectMut = useMutation({
-    mutationFn: async (templateKey: TemplateKey) =>
-      (
-        await api.POST('/onboarding/select-template', {
-          body: { templateKey },
-          headers: xsrfHeader(),
-        })
-      ).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['me'] }),
-  });
-  const completeMut = useMutation({
-    mutationFn: async () =>
-      (
-        await api.POST('/onboarding/complete', {
-          headers: xsrfHeader(),
-        })
-      ).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['me'] }),
-  });
+  const me = useCurrentUser();
+  const selectMut = useSelectTemplate();
+  const completeMut = useCompleteOnboarding();
   const [selected, setSelected] = useState<TemplateKey | null>(null);
 
   if (!me.data) return <p className="p-6">{t('onboarding.loading')}</p>;
@@ -97,7 +75,7 @@ export default function OnboardingPage() {
           ))}
           <Button
             disabled={!selected || selectMut.isPending}
-            onClick={() => selected && selectMut.mutate(selected)}
+            onClick={() => selected && selectMut.mutate({ templateKey: selected })}
           >
             {selectMut.isPending ? t('common.loading') : t('onboarding.template.saveCta')}
           </Button>

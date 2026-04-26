@@ -1,61 +1,33 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
 import { ConnectionHealthBadge } from '@/features/gmail/components/ConnectionHealthBadge';
 import { DeleteAccountDialog } from '@/features/account/components/DeleteAccountDialog';
 import { LanguageSwitcher } from '@/features/i18n/components/LanguageSwitcher';
 import { ReconnectPrompt } from '@/features/gmail/components/ReconnectPrompt';
+import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
+import { useTenantStatus } from '@/features/gmail/hooks/useTenantStatus';
+import { useDisconnectGmail } from '@/features/gmail/hooks/useDisconnectGmail';
+import { useDeleteAccount } from '@/features/account/hooks/useDeleteAccount';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { api, xsrfHeader } from '@/lib/api/client';
 
 import type { AppLocale } from '@/i18n/routing';
 
-type MeData = { email?: string; preferredLanguage?: string };
-type StatusData = { connectionStatus: 'CONNECTED' | 'DISCONNECTED' | 'NOT_CONNECTED' | 'PENDING' };
-
 /**
- * /settings (client). Plan 06 Task 2 — every prose literal flows through
- * `useTranslations`. The explicit "Language" row at the top mounts the
- * full LanguageSwitcher (variant="row") per UI-SPEC §"Language Switcher
- * Contract"; preferredLanguage flows from /me (TanStack Query) so that the
- * server-side preference is the source of truth on first authenticated SSR.
+ * /settings (client). Plan 04 Task 3 — endpoint-specific calls fully moved into
+ * features/<name>/api + hooks (REVIEWS Revision 1, Codex HIGH #1). All
+ * inline api.GET/POST/DELETE removed; UI/JSX/copy preserved.
  */
 export default function SettingsPage() {
   const t = useTranslations();
-  const qc = useQueryClient();
   const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? '';
-  const me = useQuery<MeData | undefined>({
-    queryKey: ['me'],
-    queryFn: async () => (await api.GET('/me', {})).data as MeData | undefined,
-  });
-  const status = useQuery<StatusData | undefined>({
-    queryKey: ['status'],
-    queryFn: async () => (await api.GET('/tenant/status', {})).data as StatusData | undefined,
-  });
-  const disconnect = useMutation({
-    mutationFn: async () =>
-      (
-        await api.POST('/tenant/disconnect', {
-          headers: xsrfHeader(),
-        })
-      ).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['status'] }),
-  });
-  const del = useMutation({
-    mutationFn: async () =>
-      (
-        await api.DELETE('/me/account', {
-          headers: xsrfHeader(),
-        })
-      ).data,
-    onSuccess: () => {
-      window.location.href = '/login';
-    },
-  });
+  const me = useCurrentUser();
+  const status = useTenantStatus();
+  const disconnect = useDisconnectGmail();
+  const del = useDeleteAccount();
 
   const connStatus = status.data?.connectionStatus ?? 'NOT_CONNECTED';
   // Source of truth for the switcher: /me.preferredLanguage. Cookie is the
@@ -115,6 +87,7 @@ export default function SettingsPage() {
           <DeleteAccountDialog
             onConfirm={async () => {
               await del.mutateAsync();
+              window.location.href = '/login';
             }}
           />
         </div>
