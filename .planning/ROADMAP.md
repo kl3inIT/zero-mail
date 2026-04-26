@@ -13,7 +13,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 
 - [x] **Phase 1: Foundation & Safety Infrastructure** - Scoped Values, `@Sensitive`, Logback scrub, ArchUnit bans, multi-tenant leak test, Google OAuth, skeleton OpenAPI, CASA kickoff (CASA external filing pending — tracked outside the phase as a parallel external dependency)
 - [x] **Phase 1.1: Vietnamese-first i18n and error-handling foundation (INSERTED)** _(completed 2026-04-26)_ - Default language Vietnamese, secondary English, user-facing language switcher; stable API error contracts that are frontend-localizable; reference local JHipster project patterns where appropriate; preserve all Phase 1 privacy/safety constraints
-- [ ] **Phase 1.2: Domain-owned persistence restructuring (INSERTED)** - Refactor `backend/core` into domain-owned service/persistence/model packages, add a small shared package for stable cross-cutting infrastructure, preserve schema and safety constraints, and enforce boundaries with Modulith or ArchUnit
+- [x] **Phase 1.2: Domain-owned persistence restructuring (INSERTED)** _(completed 2026-04-26)_ - Refactor `backend/core` into domain-owned service/persistence/model packages, add a small shared package for stable cross-cutting infrastructure, preserve schema and safety constraints, and enforce boundaries with Modulith or ArchUnit
 - [ ] **Phase 1.3: Frontend Architecture Refactor and Public Content Foundation (INSERTED)** - Reorganize `apps/web` around route groups, feature folders, typed OpenAPI boundaries, frontend quality gates, and public landing/docs scaffolding without implementing the final landing/docs design yet
 - [ ] **Phase 2A: Mail Ingestion** - Gmail `users.watch` + Pub/Sub push + OIDC verification + idempotent history processing + global pause
 - [ ] **Phase 2B: Billing (Prepaid Credits)** - Double-entry Postgres ledger, reserve/settle/release, credit-hold watchdog, balance UI hooks
@@ -98,7 +98,15 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
   5. Prettier, Husky, and lint-staged are configured with scripts that fit the existing pnpm/Turbo workspace.
   6. The base `openapi-fetch` client stays in `lib/api`, while endpoint-specific calls move into feature `api` modules without regressing typed OpenAPI generation.
   7. Public landing and multi-page docs scaffolding exists at `app/(public)/page.tsx`, `app/(public)/docs/page.tsx`, `app/(public)/docs/[slug]/page.tsx`, and `content/docs/*.mdx`, with final visual design/content explicitly deferred.
-**Plans**: TBD
+**Plans**: 8 plans
+- [ ] 01.3-01-PLAN.md — [BLOCKING] Wave 0 architecture/cleanup test scaffolding (5 vitest files)
+- [ ] 01.3-02-PLAN.md — Tooling foundation: Husky 9 + lint-staged + Prettier 3 + tailwindcss plugin at root; ESLint flat-config Prettier integration; next.config.ts transpilePackages
+- [ ] 01.3-03-PLAN.md — Workspace cleanup: delete apps/web/pnpm-lock.yaml + apps/web/pnpm-workspace.yaml; migrate ignoredBuiltDependencies to root; verify proxy.ts cast still compiles
+- [ ] 01.3-04-PLAN.md — Feature folders skeleton + 5 component relocations + isomorphic features/account/api/me.ts + accountKeys factory + 2 hooks; refactor proxy.ts + app/layout.tsx to import getCurrentUser
+- [ ] 01.3-05-PLAN.md — Route group migration (public/auth/protected) + 3 group layouts + Light skeleton landing + delete app/[locale]/ mirror tree
+- [ ] 01.3-06-PLAN.md — MDX docs pipeline: install next-mdx-remote@6.0.0 + gray-matter; (public)/docs/page.tsx + [slug]/page.tsx + loading.tsx; 4 sample MDX files
+- [ ] 01.3-07-PLAN.md — Locale dictionary additions: landing.* + docs.* + common.{nav,loading} mirrored to vi.json + en.json; update EN_SCAN_FILES in scripts/check-i18n.ts
+- [ ] 01.3-08-PLAN.md — Final verification: full automated suite + manual checkpoints (Husky hook, Tailwind sort, visual); flip VALIDATION.md nyquist_compliant + wave_0_complete
 **UI hint**: yes
 
 ### Phase 2A: Mail Ingestion
@@ -206,7 +214,7 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 |-------|----------------|--------|-----------|
 | 1. Foundation & Safety Infrastructure | 9/9 | Complete (CASA filing pending external) | 2026-04-25 |
 | 1.1. Vietnamese-first i18n and error-handling foundation (INSERTED) | 8/8 | Complete | 2026-04-26 |
-| 1.2. Domain-owned persistence restructuring (INSERTED) | 4/6 | In Progress|  |
+| 1.2. Domain-owned persistence restructuring (INSERTED) | 6/6 | Complete | 2026-04-26 |
 | 1.3. Frontend Architecture Refactor and Public Content Foundation (INSERTED) | 0/TBD | Not started | - |
 | 2A. Mail Ingestion | 0/TBD | Not started | - |
 | 2B. Billing (Prepaid Credits) | 0/TBD | Not started | - |
