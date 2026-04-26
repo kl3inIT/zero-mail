@@ -69,6 +69,7 @@ Progress: [█████████████] 2/4 plans of Phase 01.2.1 (2
 | Phase 01.2.1 P02 | 5min | 1 task | 3 files |
 | Phase 01.3 P03 | 5min | 2 tasks (T2 deferred) | 3 files |
 | Phase 01.2.1 P03 | 18 | 3 tasks | 10 files |
+| Phase 01.3 P04 | 10min | 4 tasks | 22 created + 9 modified + 5 relocated |
 
 ## Accumulated Context
 
@@ -109,6 +110,11 @@ Recent decisions affecting current work:
 - [Phase 01.2.1]: Plan 02 — JetBrains MCP file-problem check unavailable in sequential-executor agent tool set (upstream issue anthropics/claude-code#13898). Fallback: `./gradlew :backend:core:check :backend:api:check` BUILD SUCCESSFUL is a strict superset for pure-interface files (javac + ArchUnit + ApplicationModulesTest covers correctness). Documented in 01.2.1-02-SUMMARY.md as tooling deviation; no code deviation.
 - [Phase ?]: [Phase 01.2.1]: Plan 03 — WR-01/WR-02/WR-03 closure complete. OnboardingStep implements OrderedEnum (10/20/30/40); GmailConnectionStatus implements IdentifiedEnum (unordered per D-B5); UserEntity.advanceTo uses weight() not ordinal(); OnboardingSelectionRepository.deleteByTenantId is bulk @Modifying @Query with explicit WHERE :tenantId (T-01.2.1-07 mitigation); OnboardingStepPersistenceTest extends PostgresContainerTest with @ParameterizedTest @EnumSource — 4 real-DB round-trips + raw column data_type assert. Modulith allowedDependencies for account/onboarding/gmail gained literal 'shared.lang'.
 - [Phase ?]: [Phase 01.2.1]: Plan 03 — Rule 3 fix: TestJpaAuditingConfig added to backend/core test sources. Production JpaAuditingConfig (com.zeromail.api.config) is outside CoreTestApplication scan base; @CreatedDate/@LastModifiedDate fields were bound to NULL by Hibernate (defaultValueComputed: now() on DB column does NOT apply when INSERT binds NULL). Test-side mirror is the smallest correct surface — same wiring seen only by tests.
+- [Phase 1.3]: Plan 04 — Server-safe lib/api/client.ts split landed (REVIEWS Revision 1, Codex HIGH #2). Re-export of ./errors removed; client-only callers import directly from @/lib/api/errors. RSC + edge code paths no longer pull use-client + next-intl hook code through the import graph. Wave 0 server-safe-client.test.ts is the durable guard.
+- [Phase 1.3]: Plan 04 — Five feature folders fully populated: features/{auth,account,onboarding,gmail,i18n}/{api,components,hooks}. 5 components relocated via git mv (LanguageSwitcher → i18n, ConnectionHealthBadge + ReconnectPrompt → gmail, DeleteAccountDialog → account, TemplateCard → onboarding). EN_SCAN_FILES in scripts/check-i18n.ts updated in same commit so scanner does not silently lose coverage (Phase 1.1 D-D3).
+- [Phase 1.3]: Plan 04 — Isomorphic getCurrentUser({ fetcher?, signal?, headers? }) at features/account/api/me.ts is the single source of truth for /me. proxy.ts:reconcileLocaleCookie + app/layout.tsx:reassertServerLocale + features/account/hooks/useCurrentUser all consume it. as unknown as cast in proxy.ts preserved (D-E5).
+- [Phase 1.3]: Plan 04 — All endpoint-specific calls moved to feature/api/ + hooks (REVIEWS Revision 1, Codex HIGH #1). 7 new feature/api/ modules + 5 new hooks (useTenantStatus + useDisconnectGmail + useSelectTemplate + useCompleteOnboarding + useDeleteAccount). Settings + onboarding pages call feature hooks; zero inline api.GET/POST/DELETE for moved endpoints. ROADMAP success criterion #6 fully satisfied.
+- [Phase 1.3]: Plan 04 — Pattern locked: per-feature TanStack Query key factories (accountKeys/gmailKeys/onboardingKeys); explicit cross-feature invalidation via queryClient.invalidateQueries({ queryKey: featureKeys.X() }); NO barrel index.ts at any features/<name>/ root; deep imports only.
 
 ### Roadmap Evolution
 
