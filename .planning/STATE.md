@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 01.4-05-PLAN.md
-last_updated: "2026-04-27T05:00:00.000Z"
+status: verifying
+stopped_at: Completed 01.4-06-PLAN.md (Phase 01.4 ready for verification)
+last_updated: "2026-04-27T05:15:00.000Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 13
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 41
-  completed_plans: 39
-  percent: 95
+  completed_plans: 41
+  percent: 100
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 
 ## Current Position
 
-Phase: 01.4 (gmail-identity-semantics-permission-ux-and-ui-consistency) — EXECUTING
-Plan: 6 of 6
-Status: Ready to execute
+Phase: 01.4 (gmail-identity-semantics-permission-ux-and-ui-consistency) — VERIFYING
+Plan: 6 of 6 (complete)
+Status: Phase ready for /gsd-verify-work
 Last activity: 2026-04-27
 
-Progress: [██████████] 95%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -79,6 +79,8 @@ Progress: [██████████] 95%
 | Phase 01.4 P02 | 10min | 3 tasks | 10 files |
 | Phase 01.4 P03 | 15m | 3 tasks | 4 files |
 | Phase 01.4 P04 | 25min | 2 tasks | 5 files |
+| Phase 01.4 P05 | 38min | 2 tasks | 5 created + 5 modified |
+| Phase 01.4 P06 | 28min | 2 tasks | 9 modified |
 
 ## Accumulated Context
 
@@ -146,6 +148,12 @@ Recent decisions affecting current work:
 - [Phase ?]: Plan 03: login_hint inject pattern matching qua OAuth2AuthenticationToken→OidcUser→email; silent omit cho mọi mismatch (D-A2 graceful-degrade)
 - [Phase ?]: Plan 04: Inline SVG icons + plain DOM elements (a/button) thay lucide-react/next-link/Button vì vitest React-dedupe boundary không xuyên qua transitive imports từ next/lucide/@base-ui
 - [Phase ?]: Plan 04: 5 UI primitives compose existing shadcn — không cài primitive mới, không sửa globals.css (tokens layer đã đủ taxonomy)
+- [Phase 01.4]: Plan 05: 5 boundary files (global-error + not-found + 3 segment error.tsx) — `unstable_retry` thay `reset` (RESEARCH §Pitfall 3 — `reset` chỉ re-render stale data, `unstable_retry` re-fetch). Option A safety net: try { unstable_retry() } catch { window.location.reload() } chỉ trong global-error.tsx. Static-source assertion cho jsdom-stripped <html>/<body>; vi.stubEnv thay Object.defineProperty (Node 24 reject)
+- [Phase 01.4]: Plan 06: Closed-enum `?error=` mapping với type-guard `isKnownError` — Threat T-error-param-tamper mitigated; arbitrary URL values resolve `null` baseKey + render no alert. handleRetry fire cả `router.replace('/onboarding')` (URL hygiene trước) lẫn `window.location.href` (re-trigger OAuth full-page nav). Wave 0 onboarding-error.test.tsx 5/5 GREEN
+- [Phase 01.4]: Plan 06: Plain `<button className={cn(buttonVariants())}>` thay `<Button>` trong onboarding — vitest @base-ui/react useRef null-dispatcher (cùng root cause Plan 04 StatusAlert/EmptyState). Pattern locked cho mọi page client-render-tested under vitest
+- [Phase 01.4]: Plan 06: Settings narrows max-w-4xl → max-w-3xl — UI-SPEC §Spacing locks app variant; design contract takes precedence over historical width
+- [Phase 01.4]: Plan 06: ReconnectPrompt collapse từ 18-line hand-crafted Alert (border-amber-500 bg-amber-50 + Button) → 12-line StatusAlert variant=warn wrapper. Pattern: bất kỳ existing Alert ad-hoc nào trong repo có thể refactor cùng cách miễn là single i18n key resolves to one-line string
+- [Phase 01.4]: Plan 06: TemplateCard ring-blue-600 → ring-ring (KHÔNG ring-primary). UI-SPEC Color reservation list không name selection-ring là accent slot; ring-ring là structural focus token, đúng choice cho selected-state visual
 
 ### Roadmap Evolution
 
@@ -186,6 +194,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-26T21:34:58.738Z
-Stopped at: Completed 01.4-02-PLAN.md
+Last session: 2026-04-27T05:15:00.000Z
+Stopped at: Completed 01.4-06-PLAN.md (Phase 01.4 ready for verification — all 6 plans complete, every Wave 0 RED scaffold GREEN)
 Resume file: None
