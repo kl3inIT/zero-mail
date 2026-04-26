@@ -1,0 +1,169 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-04-26T21:51:54.8620399+07:00",
+  "context": "default",
+  "phase": null,
+  "phase_name": null,
+  "phase_dir": ".planning",
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "paused",
+  "branch": "gsd/phase-01.3-frontend-architecture-refactor-and-public-content-foundation",
+  "head": "782b745",
+  "completed_tasks": [
+    {
+      "id": "phase-1",
+      "name": "Foundation & Safety Infrastructure",
+      "status": "done",
+      "completed": "2026-04-25"
+    },
+    {
+      "id": "phase-1.1",
+      "name": "Vietnamese-first i18n and error-handling foundation",
+      "status": "done",
+      "completed": "2026-04-26"
+    },
+    {
+      "id": "phase-1.2",
+      "name": "Domain-owned persistence restructuring",
+      "status": "done",
+      "completed": "2026-04-26"
+    },
+    {
+      "id": "phase-1.2.1",
+      "name": "Shared base entity + IdentifiedEnum standard + DTO group-by-domain",
+      "status": "done",
+      "completed": "2026-04-26"
+    },
+    {
+      "id": "phase-1.3",
+      "name": "Frontend Architecture Refactor and Public Content Foundation",
+      "status": "done",
+      "commit": "782b745",
+      "completed": "2026-04-26"
+    },
+    {
+      "id": "quick-260426-a5s",
+      "name": "Add Spring Boot Docker Compose dev support",
+      "status": "done",
+      "commit": "1219ec8",
+      "notes": "Commit exists in all-history, with follow-up fixes 19be826 and 91b6088 also visible by docker-compose grep."
+    }
+  ],
+  "remaining_tasks": [
+    {
+      "id": "phase-2A",
+      "name": "Mail Ingestion",
+      "status": "not_started",
+      "next": "Run research before planning; Gmail users.watch/history and Pub/Sub OIDC verification need current-library lookup."
+    },
+    {
+      "id": "phase-2B",
+      "name": "Billing (Prepaid Credits)",
+      "status": "not_started"
+    },
+    {
+      "id": "phase-2C",
+      "name": "LLM Gateway",
+      "status": "not_started",
+      "next": "Run research before planning; verify Spring AI 2.0.0-M4 per-request BYOK APIs and tokenizer choice."
+    },
+    {
+      "id": "phase-3",
+      "name": "Rules Engine",
+      "status": "not_started",
+      "depends_on": ["phase-2A", "phase-2B", "phase-2C"]
+    },
+    {
+      "id": "phase-4",
+      "name": "Triage Convergence",
+      "status": "not_started",
+      "depends_on": ["phase-3", "phase-2C"]
+    },
+    {
+      "id": "phase-5",
+      "name": "User Surface - Drafts, Analytics, Web UI",
+      "status": "not_started",
+      "depends_on": ["phase-4", "phase-2A", "phase-2B"]
+    },
+    {
+      "id": "phase-6",
+      "name": "Polish & CASA-Verified Launch",
+      "status": "not_started",
+      "depends_on": ["phase-5", "external-casa"]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Phase 01.3 Playwright e2e and visual smoke remain deferred because local Next dev processes are occupying ports 3000 and 3001.",
+      "type": "human_action",
+      "workaround": "Kill the stale Next processes, then run the replay commands in 01.3-VALIDATION.md."
+    },
+    {
+      "description": "Live generate:api round-trip remains deferred because backend/api is not running on localhost:8080; port 8080 is currently owned by an unrelated Jmix process.",
+      "type": "external",
+      "workaround": "Free port 8080, start ./gradlew :backend:api:bootRun, then run cd apps/web && pnpm run generate:api && git diff --stat lib/api/schema.d.ts."
+    },
+    {
+      "description": "Quick task 260426-a5s Docker Desktop validation is still a human checkpoint.",
+      "type": "human_action",
+      "workaround": "Follow the eight-step checklist in .planning/quick/260426-a5s-add-spring-boot-docker-compose-support-t/260426-a5s-SUMMARY.md."
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "Run Phase 01.3 Playwright e2e and visual smoke checks after freeing ports 3000/3001.",
+      "context": "Final validation marked these as deferred manual gates with fallback evidence.",
+      "blocking": false
+    },
+    {
+      "action": "Run live generate:api round-trip once backend/api is serving on localhost:8080.",
+      "context": "Schema drift was already proven absent by git history, but the live round-trip is still listed as replayable manual evidence.",
+      "blocking": false
+    },
+    {
+      "action": "Run Docker Compose bootRun validation for quick task 260426-a5s.",
+      "context": "Task 2 requires Docker Desktop and confirms start_only semantics, actuator health, production jar isolation, and opt-out behavior.",
+      "blocking": false
+    },
+    {
+      "action": "Track CASA restricted-scope verification externally.",
+      "context": "CASA filing remains a launch dependency and external clock, not an active code blocker.",
+      "blocking": false
+    }
+  ],
+  "decisions": [
+    {
+      "decision": "Next work should start with Phase 2A or Phase 2C research before planning.",
+      "rationale": "ROADMAP and STATE both flag Gmail push/OIDC details and Spring AI 2.0.0-M4 BYOK/tokenizer details as current-doc dependent."
+    },
+    {
+      "decision": "Phase 01.3 is closed with nyquist_compliant=true and wave_0_complete=true.",
+      "rationale": "Automated gates were green: tsc, vitest 80/80, i18n:check 87 keys, ESLint; schema-diff gate passed by source-control proof."
+    },
+    {
+      "decision": "Keep Context7 current-doc lookup for library/framework/API questions.",
+      "rationale": "AGENTS.md requires Context7 MCP for library, framework, SDK, API, CLI, and cloud-service documentation."
+    },
+    {
+      "decision": "Keep project privacy invariants central.",
+      "rationale": "No long-term raw email bodies, prompts, completions, or embeddings; no auto-send; Gmail write actions limited to label, archive, and save draft."
+    }
+  ],
+  "uncommitted_files": [
+    ".claude/skills/context7-mcp/SKILL.md",
+    ".npmrc",
+    ".nvmrc",
+    "AGENTS.md",
+    "apps/web/test-results/.last-run.json"
+  ],
+  "background_processes": [
+    "Docker containers are running: zero-mail-postgres-1 on 5432 and zero-mail-redis-1 on 6379.",
+    "Next start-server processes are listening on 3000 (PID 6512) and 3001 (PID 24616).",
+    "Port 8080 is occupied by an unrelated Jmix Java process (PID 14712), not Zero Mail backend/api."
+  ],
+  "placeholder_scan": "rg found expected placeholder/TBD references in historical plans, ROADMAP future phase plan counts, Phase 1 CASA placeholders, and Phase 01.3 Light skeleton docs. No active phase summary appears to require immediate completion before Phase 2 research.",
+  "next_action": "Run /gsd-research-phase for Phase 2A Mail Ingestion, or /gsd-research-phase for Phase 2C LLM Gateway if choosing the LLM track first.",
+  "context_notes": "This is a project-level pause capture after Phase 01.3 closure, not an in-progress phase handoff. The branch name still references Phase 01.3, but ROADMAP marks phases 1, 1.1, 1.2, 1.2.1, and 1.3 complete. Remaining work starts at Phase 2 parallel tracks."
+}
