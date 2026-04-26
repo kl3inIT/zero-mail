@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 
 import { ConnectionHealthBadge } from '@/features/gmail/components/ConnectionHealthBadge';
 import { DeleteAccountDialog } from '@/features/account/components/DeleteAccountDialog';
-import { LanguageSwitcher } from '@/features/i18n/components/LanguageSwitcher';
+import { LanguageSwitcher } from '@/i18n/components/LanguageSwitcher';
 import { ReconnectPrompt } from '@/features/gmail/components/ReconnectPrompt';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useTenantStatus } from '@/features/gmail/hooks/useTenantStatus';

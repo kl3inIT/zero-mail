@@ -17,7 +17,7 @@ import {
 /**
  * Docs index (Phase 1.3 Plan 06 — D-D3, D-D4).
  *
- * Reads apps/web/content/docs/ via the deterministic resolver in
+ * Reads apps/web/docs/ via the deterministic resolver in
  * @/lib/docs/loader (REVIEWS Revision 6, OpenCode MEDIUM). Filename listing
  * flows through fs.readdir inside loader.listDocFilenames; gray-matter parses
  * the frontmatter; FrontmatterSchema.safeParse validates each entry and SKIPS

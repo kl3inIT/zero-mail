@@ -1,6 +1,6 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 
-import { LanguageSwitcher } from '@/features/i18n/components/LanguageSwitcher';
+import { LanguageSwitcher } from '@/i18n/components/LanguageSwitcher';
 import { PageShell } from '@/components/ui/PageShell';
 import { buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';

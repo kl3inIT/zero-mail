@@ -1,5 +1,5 @@
 import type { routing } from './i18n/routing';
-import type messages from './messages/en.json';
+import type messages from './i18n/messages/en.json';
 
 /**
  * Augments next-intl's AppConfig so `useTranslations`, `getTranslations`, and

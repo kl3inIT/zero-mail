@@ -5,7 +5,8 @@ import { describe, it, expect } from 'vitest';
 const APP_WEB = resolve(__dirname, '../..');
 const FEATURES_DIR = resolve(APP_WEB, 'features');
 const COMPONENTS_DIR = resolve(APP_WEB, 'components');
-const FEATURE_ROOTS = ['auth', 'account', 'onboarding', 'gmail', 'i18n'] as const;
+const I18N_DIR = resolve(APP_WEB, 'i18n');
+const FEATURE_ROOTS = ['auth', 'account', 'onboarding', 'gmail'] as const;
 const SUBDIRS = ['api', 'components', 'hooks'] as const;
 
 // Reviews Revision 1: route page locations after Plan 05 route-group migration.
@@ -43,7 +44,7 @@ describe('Phase 1.3 — Feature folder architecture', () => {
     expect(existsSync(resolve(FEATURES_DIR, feature, 'index.tsx'))).toBe(false);
   });
 
-  it('5 components relocated to feature owners (old paths gone)', () => {
+  it('relocated components no longer live at legacy shared roots', () => {
     expect(existsSync(resolve(COMPONENTS_DIR, 'LanguageSwitcher.tsx'))).toBe(false);
     expect(existsSync(resolve(COMPONENTS_DIR, 'ConnectionHealthBadge.tsx'))).toBe(false);
     expect(existsSync(resolve(COMPONENTS_DIR, 'ReconnectPrompt.tsx'))).toBe(false);
@@ -51,11 +52,17 @@ describe('Phase 1.3 — Feature folder architecture', () => {
     expect(existsSync(resolve(COMPONENTS_DIR, 'TemplateCard.tsx'))).toBe(false);
   });
 
-  it('5 components exist at new feature paths', () => {
-    expect(existsSync(resolve(FEATURES_DIR, 'i18n/components/LanguageSwitcher.tsx'))).toBe(true);
-    expect(existsSync(resolve(FEATURES_DIR, 'gmail/components/ConnectionHealthBadge.tsx'))).toBe(true);
+  it('feature components and i18n chrome exist at their owner paths', () => {
+    expect(existsSync(resolve(I18N_DIR, 'components/LanguageSwitcher.tsx'))).toBe(true);
+    expect(existsSync(resolve(I18N_DIR, 'messages/vi.json'))).toBe(true);
+    expect(existsSync(resolve(I18N_DIR, 'messages/en.json'))).toBe(true);
+    expect(existsSync(resolve(FEATURES_DIR, 'gmail/components/ConnectionHealthBadge.tsx'))).toBe(
+      true,
+    );
     expect(existsSync(resolve(FEATURES_DIR, 'gmail/components/ReconnectPrompt.tsx'))).toBe(true);
-    expect(existsSync(resolve(FEATURES_DIR, 'account/components/DeleteAccountDialog.tsx'))).toBe(true);
+    expect(existsSync(resolve(FEATURES_DIR, 'account/components/DeleteAccountDialog.tsx'))).toBe(
+      true,
+    );
     expect(existsSync(resolve(FEATURES_DIR, 'onboarding/components/TemplateCard.tsx'))).toBe(true);
   });
 
@@ -86,7 +93,9 @@ describe('Phase 1.3 — Feature folder architecture', () => {
     expect(existsSync(complete)).toBe(true);
     expect(existsSync(keys)).toBe(true);
     expect(readFileSync(select, 'utf8')).toMatch(/export\s+async\s+function\s+selectTemplate/);
-    expect(readFileSync(complete, 'utf8')).toMatch(/export\s+async\s+function\s+completeOnboarding/);
+    expect(readFileSync(complete, 'utf8')).toMatch(
+      /export\s+async\s+function\s+completeOnboarding/,
+    );
     expect(readFileSync(keys, 'utf8')).toMatch(/export\s+const\s+onboardingKeys/);
   });
 

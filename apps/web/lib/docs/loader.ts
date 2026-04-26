@@ -9,8 +9,8 @@ import { z } from 'zod';
  * REVIEWS Revision 6 (OpenCode MEDIUM):
  *  - Anchor on this module's file location via __dirname (CJS) or
  *    fileURLToPath(import.meta.url) (ESM, the Next 16 default). From this file
- *    (apps/web/lib/docs/loader.ts) the docs dir is at ../../content/docs
- *    (apps/web/content/docs). Resolution is independent of the caller's working
+ *    (apps/web/lib/docs/loader.ts) the docs dir is at ../../docs
+ *    (apps/web/docs). Resolution is independent of the caller's working
  *    directory, so deployments that change cwd (Cloud Run, Vercel) stay correct.
  *  - Replace `as Frontmatter` TS cast with runtime zod validation
  *    (FrontmatterSchema.safeParse). Fail-closed → caller invokes notFound().
@@ -20,7 +20,7 @@ import { z } from 'zod';
 const HERE =
   typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
-export const DOCS_DIR = path.resolve(HERE, '../../content/docs');
+export const DOCS_DIR = path.resolve(HERE, '../../docs');
 
 export const FrontmatterSchema = z.object({
   title: z.string().min(1),

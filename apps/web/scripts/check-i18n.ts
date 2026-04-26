@@ -29,8 +29,8 @@ import { resolve } from 'node:path';
 
 const REPO_ROOT = resolve(__dirname, '..', '..', '..');
 const WEB_ROOT = resolve(__dirname, '..');
-const VI_PATH = resolve(WEB_ROOT, 'messages/vi.json');
-const EN_PATH = resolve(WEB_ROOT, 'messages/en.json');
+const VI_PATH = resolve(WEB_ROOT, 'i18n/messages/vi.json');
+const EN_PATH = resolve(WEB_ROOT, 'i18n/messages/en.json');
 const ERROR_CODES_JAVA = resolve(
   REPO_ROOT,
   'backend/api/src/main/java/com/zeromail/api/error/ErrorCodes.java',
@@ -68,7 +68,7 @@ const EN_SCAN_FILES = [
   'features/gmail/components/ConnectionHealthBadge.tsx',
   'features/gmail/components/ReconnectPrompt.tsx',
   'features/account/components/DeleteAccountDialog.tsx',
-  'features/i18n/components/LanguageSwitcher.tsx',
+  'i18n/components/LanguageSwitcher.tsx',
 ];
 
 // -----------------------------------------------------------------------------

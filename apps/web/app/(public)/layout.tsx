@@ -1,7 +1,7 @@
 import { getLocale, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 
-import { LanguageSwitcher } from '@/features/i18n/components/LanguageSwitcher';
+import { LanguageSwitcher } from '@/i18n/components/LanguageSwitcher';
 
 import type { AppLocale } from '@/i18n/routing';
 

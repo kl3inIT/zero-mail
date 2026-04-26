@@ -13,8 +13,8 @@ import { render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import * as React from 'react';
 
-import viMessages from '@/messages/vi.json';
-import enMessages from '@/messages/en.json';
+import viMessages from '@/i18n/messages/vi.json';
+import enMessages from '@/i18n/messages/en.json';
 import { useLocalizedApiError, useLocalizedFieldError, type ApiError } from '@/lib/api/errors';
 
 function Harness({ err }: { err: ApiError | undefined }) {
@@ -88,9 +88,11 @@ describe('error code -> localized message rendering (Plan 06 GREEN)', () => {
     const noisy = {
       code: 'auth.unauthorized',
       title: 'Internal Server Error',
-      detail: 'org.hibernate.exception.ConstraintViolationException: ERROR: duplicate key value violates unique constraint "users_email_key"',
+      detail:
+        'org.hibernate.exception.ConstraintViolationException: ERROR: duplicate key value violates unique constraint "users_email_key"',
       // synthetic shape for completeness
-      stack: 'at com.zeromail.core.account.AccountService.requireCurrentUser(AccountService.java:42)',
+      stack:
+        'at com.zeromail.core.account.AccountService.requireCurrentUser(AccountService.java:42)',
     } as unknown as ApiError;
     renderWithLocale(<Harness err={noisy} />, 'vi');
     const text = screen.getByTestId('message').textContent ?? '';
@@ -104,7 +106,10 @@ describe('error code -> localized message rendering (Plan 06 GREEN)', () => {
   });
 
   it('renders localized field error when FieldError.code maps into errors.validation.field.*', () => {
-    renderWithLocale(<FieldHarness field="language" code="validation.field.language.Pattern" />, 'vi');
+    renderWithLocale(
+      <FieldHarness field="language" code="validation.field.language.Pattern" />,
+      'vi',
+    );
     expect(screen.getByTestId('message')).toHaveTextContent(
       viMessages.errors.validation.field.language.Pattern,
     );
@@ -124,15 +129,11 @@ describe('error code -> localized message rendering (Plan 06 GREEN)', () => {
   // errors.unknown in prod, which loses the localized validation prompt.
   it('renders Vietnamese validation.generic for top-level error.validation code (vi)', () => {
     renderWithLocale(<Harness err={{ code: 'error.validation' } as ApiError} />, 'vi');
-    expect(screen.getByTestId('message')).toHaveTextContent(
-      viMessages.errors.validation.generic,
-    );
+    expect(screen.getByTestId('message')).toHaveTextContent(viMessages.errors.validation.generic);
   });
 
   it('renders English validation.generic for top-level error.validation code (en)', () => {
     renderWithLocale(<Harness err={{ code: 'error.validation' } as ApiError} />, 'en');
-    expect(screen.getByTestId('message')).toHaveTextContent(
-      enMessages.errors.validation.generic,
-    );
+    expect(screen.getByTestId('message')).toHaveTextContent(enMessages.errors.validation.generic);
   });
 });

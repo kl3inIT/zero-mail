@@ -11,8 +11,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 
-import viMessages from '@/messages/vi.json';
-import enMessages from '@/messages/en.json';
+import viMessages from '@/i18n/messages/vi.json';
+import enMessages from '@/i18n/messages/en.json';
 
 const refreshSpy = vi.fn();
 const patchSpy = vi.fn();
@@ -36,7 +36,7 @@ vi.mock('@/lib/api/client', async (importOriginal) => {
   };
 });
 
-import { LanguageSwitcher } from '@/features/i18n/components/LanguageSwitcher';
+import { LanguageSwitcher } from '@/i18n/components/LanguageSwitcher';
 
 function clearAllCookies() {
   if (typeof document === 'undefined') return;

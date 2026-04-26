@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 /**
  * Frontend error-localization helpers (Plan 06 — REQ-4 + threat_model T-1.1.06-01/02).
@@ -23,21 +23,21 @@
  *   pass either shape (`error.auth.unauthorized` or `auth.unauthorized`).
  */
 
-import { useTranslations, useMessages } from "next-intl";
+import { useTranslations, useMessages } from 'next-intl';
 
-import type { components } from "./schema";
+import type { components } from './schema';
 
-export type ApiError = components["schemas"]["ApiError"];
-export type FieldError = components["schemas"]["FieldErrorDto"];
+export type ApiError = components['schemas']['ApiError'];
+export type FieldError = components['schemas']['FieldErrorDto'];
 
 /** Strip the legacy `error.` prefix from server-provided codes. */
 function normalizeCode(code: string): string {
-  return code.startsWith("error.") ? code.slice("error.".length) : code;
+  return code.startsWith('error.') ? code.slice('error.'.length) : code;
 }
 
 /**
  * Map a normalized server code to the bundle key that actually exists in
- * `messages/<locale>.json`. Most codes are 1:1 (e.g. `auth.unauthorized` ->
+ * `i18n/messages/<locale>.json`. Most codes are 1:1 (e.g. `auth.unauthorized` ->
  * `errors.auth.unauthorized`), but a handful of top-level codes resolve to an
  * object in the bundle (e.g. `errors.validation` is a namespace, not a leaf
  * string). For those, we redirect to the generic localized leaf so the hook
@@ -49,24 +49,24 @@ function bundleKeyForCode(normalized: string): string {
   // MethodArgumentNotValid + ConstraintViolation failures (see ErrorCodes.VALIDATION
   // and GlobalExceptionHandler). The FE bundle nests `errors.validation.*`, so the
   // string leaf is at `errors.validation.generic`.
-  if (normalized === "validation") return "validation.generic";
+  if (normalized === 'validation') return 'validation.generic';
   return normalized;
 }
 
 /** Walk a dotted path and confirm the leaf is a string. */
 function hasNestedKey(messages: unknown, dottedKey: string): boolean {
   let cur: unknown = messages;
-  for (const part of dottedKey.split(".")) {
-    if (cur == null || typeof cur !== "object" || !(part in (cur as Record<string, unknown>))) {
+  for (const part of dottedKey.split('.')) {
+    if (cur == null || typeof cur !== 'object' || !(part in (cur as Record<string, unknown>))) {
       return false;
     }
     cur = (cur as Record<string, unknown>)[part];
   }
-  return typeof cur === "string";
+  return typeof cur === 'string';
 }
 
 function isProduction(): boolean {
-  return process.env.NODE_ENV === "production";
+  return process.env.NODE_ENV === 'production';
 }
 
 /**
@@ -74,17 +74,17 @@ function isProduction(): boolean {
  * user-facing message. Switches on err.code only; never reads title/detail.
  */
 export function useLocalizedApiError() {
-  const t = useTranslations("errors");
+  const t = useTranslations('errors');
   const messages = useMessages() as Record<string, unknown>;
   const errorsBundle = (messages as { errors?: unknown }).errors;
 
   return (err: ApiError | undefined): string => {
-    if (!err?.code) return t("unknown");
+    if (!err?.code) return t('unknown');
     const code = bundleKeyForCode(normalizeCode(err.code));
 
     // Missing-key sentinel rendering (threat_model T-1.1.06-02).
     if (!hasNestedKey(errorsBundle, code)) {
-      return isProduction() ? t("unknown") : `[MISSING:${code}]`;
+      return isProduction() ? t('unknown') : `[MISSING:${code}]`;
     }
 
     // ICU placeholders are auto-escaped by next-intl; backend's
@@ -94,7 +94,7 @@ export function useLocalizedApiError() {
       // never because the runtime shape is validated by hasNestedKey above.
       return t(code as never, (err.params ?? {}) as never);
     } catch {
-      return isProduction() ? t("unknown") : `[MISSING:${code}]`;
+      return isProduction() ? t('unknown') : `[MISSING:${code}]`;
     }
   };
 }
@@ -104,22 +104,22 @@ export function useLocalizedApiError() {
  * field-level message. Same code-only invariant as useLocalizedApiError.
  */
 export function useLocalizedFieldError() {
-  const t = useTranslations("errors");
+  const t = useTranslations('errors');
   const messages = useMessages() as Record<string, unknown>;
   const errorsBundle = (messages as { errors?: unknown }).errors;
 
   return (fe: FieldError | undefined): string => {
-    if (!fe?.code) return t("fieldFallback");
+    if (!fe?.code) return t('fieldFallback');
     const code = normalizeCode(fe.code);
 
     if (!hasNestedKey(errorsBundle, code)) {
-      return isProduction() ? t("fieldFallback") : `[MISSING:${code}]`;
+      return isProduction() ? t('fieldFallback') : `[MISSING:${code}]`;
     }
 
     try {
       return t(code as never, (fe.params ?? {}) as never);
     } catch {
-      return isProduction() ? t("fieldFallback") : `[MISSING:${code}]`;
+      return isProduction() ? t('fieldFallback') : `[MISSING:${code}]`;
     }
   };
 }

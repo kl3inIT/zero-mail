@@ -13,7 +13,7 @@ import { test, expect } from '@playwright/test';
  *   - /onboarding, /settings → anonymous users end at /login
  *   - "no nested <main>" → exactly one <main> per page (REVIEWS Rev 2 #4)
  *
- * Plan 06 shipped the docs scaffold (apps/web/content/docs/*.mdx + the (public)
+ * Plan 06 shipped the docs scaffold (apps/web/docs/*.mdx + the (public)
  * docs index/[slug]/loading routes), so /docs and /docs/getting-started are now
  * runnable. The route-smoke runs them as ordinary tests; CI / fresh dev env
  * gives them the empirical signal we lacked in Plan 05's sandbox.

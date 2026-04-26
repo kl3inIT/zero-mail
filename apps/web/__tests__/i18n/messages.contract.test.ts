@@ -7,7 +7,8 @@ import { describe, it, expect } from 'vitest';
  * Plan 05 Wave 4 — flipped from RED stub to GREEN.
  *
  * Locks the vi/en dictionary parity contract:
- *  - every leaf key in messages/vi.json exists in messages/en.json (and vice versa)
+ *  - every leaf key in i18n/messages/vi.json exists in i18n/messages/en.json
+ *    (and vice versa)
  *  - the "errors" namespace mirrors the backend ErrorCodes 1:1 (Plan 02 — 8 dotted codes)
  *  - the locked validation banner key path `errors.validation.generic` exists in both
  *  - bundles use ICU `{var}` placeholders only, never Mustache `{{ var }}`
@@ -19,7 +20,7 @@ import { describe, it, expect } from 'vitest';
 type JsonObject = { [key: string]: unknown };
 
 function loadBundle(file: string): JsonObject {
-  const path = resolve(__dirname, '..', '..', 'messages', file);
+  const path = resolve(__dirname, '..', '..', 'i18n/messages', file);
   return JSON.parse(readFileSync(path, 'utf8')) as JsonObject;
 }
 
@@ -46,7 +47,7 @@ const vi = loadBundle('vi.json');
 const en = loadBundle('en.json');
 
 describe('vi/en key parity (Plan 05 GREEN)', () => {
-  it('every leaf key in messages/vi.json exists in messages/en.json and vice versa', () => {
+  it('every leaf key in feature message bundles exists in the other locale', () => {
     const viKeys = flatten(vi).sort();
     const enKeys = flatten(en).sort();
     const viOnly = viKeys.filter((k) => !enKeys.includes(k));
@@ -66,14 +67,14 @@ describe('vi/en key parity (Plan 05 GREEN)', () => {
     // ErrorCodes constants → messages key paths (drop the "error." prefix when looking
     // up in the dictionary because next-intl namespaces under `errors.*`):
     const requiredErrorKeys = [
-      'errors.auth.unauthorized',           // ErrorCodes.AUTH_UNAUTHORIZED        = error.auth.unauthorized
-      'errors.auth.forbidden',              // ErrorCodes.AUTH_FORBIDDEN           = error.auth.forbidden
-      'errors.auth.currentUserNotFound',    // ErrorCodes.AUTH_CURRENT_USER_NOT_FOUND
-      'errors.validation.generic',          // ErrorCodes.VALIDATION (top-level)
-      'errors.dataIntegrity',               // ErrorCodes.DATA_INTEGRITY
-      'errors.conflict',                    // ErrorCodes.CONFLICT
-      'errors.badRequest',                  // ErrorCodes.BAD_REQUEST
-      'errors.gmail.disconnected',          // ErrorCodes.GMAIL_DISCONNECTED
+      'errors.auth.unauthorized', // ErrorCodes.AUTH_UNAUTHORIZED        = error.auth.unauthorized
+      'errors.auth.forbidden', // ErrorCodes.AUTH_FORBIDDEN           = error.auth.forbidden
+      'errors.auth.currentUserNotFound', // ErrorCodes.AUTH_CURRENT_USER_NOT_FOUND
+      'errors.validation.generic', // ErrorCodes.VALIDATION (top-level)
+      'errors.dataIntegrity', // ErrorCodes.DATA_INTEGRITY
+      'errors.conflict', // ErrorCodes.CONFLICT
+      'errors.badRequest', // ErrorCodes.BAD_REQUEST
+      'errors.gmail.disconnected', // ErrorCodes.GMAIL_DISCONNECTED
     ];
     for (const key of requiredErrorKeys) {
       expect(typeof getDeep(vi, key), `vi.${key}`).toBe('string');
@@ -89,15 +90,15 @@ describe('vi/en key parity (Plan 05 GREEN)', () => {
   });
 
   it('bundles do not use Mustache {{ var }} placeholders (ICU `{var}` only)', () => {
-    const viRaw = readFileSync(resolve(__dirname, '..', '..', 'messages', 'vi.json'), 'utf8');
-    const enRaw = readFileSync(resolve(__dirname, '..', '..', 'messages', 'en.json'), 'utf8');
+    const viRaw = readFileSync(resolve(__dirname, '..', '..', 'i18n/messages', 'vi.json'), 'utf8');
+    const enRaw = readFileSync(resolve(__dirname, '..', '..', 'i18n/messages', 'en.json'), 'utf8');
     expect(viRaw).not.toMatch(/\{\{/);
     expect(enRaw).not.toMatch(/\{\{/);
   });
 
   it('bundles do not contain the rejected `validation_` shape from CONTEXT.md', () => {
-    const viRaw = readFileSync(resolve(__dirname, '..', '..', 'messages', 'vi.json'), 'utf8');
-    const enRaw = readFileSync(resolve(__dirname, '..', '..', 'messages', 'en.json'), 'utf8');
+    const viRaw = readFileSync(resolve(__dirname, '..', '..', 'i18n/messages', 'vi.json'), 'utf8');
+    const enRaw = readFileSync(resolve(__dirname, '..', '..', 'i18n/messages', 'en.json'), 'utf8');
     expect(viRaw).not.toMatch(/validation_/);
     expect(enRaw).not.toMatch(/validation_/);
   });

@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
 const APP_WEB = resolve(__dirname, '../..');
-const CONTENT_DIR = resolve(APP_WEB, 'content/docs');
+const DOCS_DIR = resolve(APP_WEB, 'docs');
 const DOCS_INDEX = resolve(APP_WEB, 'app/(public)/docs/page.tsx');
 const DOCS_SLUG = resolve(APP_WEB, 'app/(public)/docs/[slug]/page.tsx');
 const DOCS_LOADING = resolve(APP_WEB, 'app/(public)/docs/[slug]/loading.tsx');
@@ -23,14 +23,14 @@ const grayMatterInstalled =
   existsSync(resolve(process.cwd(), '../../node_modules/gray-matter/package.json'));
 
 describe('Phase 1.3 — MDX docs pipeline (D-D1..D-D5)', () => {
-  it('content/docs/ exists with at least 4 MDX files (2 slugs x 2 locales)', () => {
-    expect(existsSync(CONTENT_DIR)).toBe(true);
-    const entries = readdirSync(CONTENT_DIR).filter((n) => n.endsWith('.mdx'));
+  it('docs/ exists with at least 4 MDX files (2 slugs x 2 locales)', () => {
+    expect(existsSync(DOCS_DIR)).toBe(true);
+    const entries = readdirSync(DOCS_DIR).filter((n) => n.endsWith('.mdx'));
     expect(entries.length).toBeGreaterThanOrEqual(4);
   });
 
   it('every MDX filename matches <slug>.<locale>.mdx (D-D5)', () => {
-    const entries = readdirSync(CONTENT_DIR).filter((n) => n.endsWith('.mdx'));
+    const entries = readdirSync(DOCS_DIR).filter((n) => n.endsWith('.mdx'));
     for (const name of entries) {
       expect(name).toMatch(FILENAME_RE);
     }
@@ -49,9 +49,9 @@ describe('Phase 1.3 — MDX docs pipeline (D-D1..D-D5)', () => {
         // body only runs when the dependency is present (Plan 06 installs it).
         const moduleId = ['gray', 'matter'].join('-');
         const matter = (await import(moduleId)).default;
-        const entries = readdirSync(CONTENT_DIR).filter((n) => n.endsWith('.mdx'));
+        const entries = readdirSync(DOCS_DIR).filter((n) => n.endsWith('.mdx'));
         for (const name of entries) {
-          const raw = readFileSync(resolve(CONTENT_DIR, name), 'utf8');
+          const raw = readFileSync(resolve(DOCS_DIR, name), 'utf8');
           const { data } = matter(raw);
           expect(typeof data.title).toBe('string');
           expect(typeof data.slug).toBe('string');

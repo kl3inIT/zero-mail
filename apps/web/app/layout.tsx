@@ -92,7 +92,7 @@ export default async function RootLayout({
   const messages =
     locale === cookieLocale
       ? await getMessages()
-      : ((await import(`../messages/${locale}.json`)).default as Record<string, unknown>);
+      : ((await import(`../i18n/messages/${locale}.json`)).default as Record<string, unknown>);
 
   // Defensive guard: ensure routing.locales contains the resolved locale before
   // rendering (prevents "<html lang=invalid>" if /me ever returns a bad value).
