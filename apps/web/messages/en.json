@@ -4,6 +4,10 @@
       "title": "Zero Mail",
       "description": "Reach inbox zero without giving up control."
     },
+    "nav": {
+      "docs": "Docs",
+      "signIn": "Sign in"
+    },
     "loading": "Loading...",
     "loadingApp": "Loading setup...",
     "save": "Save",
@@ -11,6 +15,23 @@
     "close": "Close",
     "retry": "Try action again",
     "savingLanguage": "Updating language preference..."
+  },
+  "landing": {
+    "heading": "Zero Mail",
+    "tagline": "AI auto-triage for Gmail. This page is being finalized.",
+    "primaryCta": "Sign in",
+    "continueSetupCta": "Continue setup"
+  },
+  "docs": {
+    "indexHeading": "Docs",
+    "backToList": "Back to docs",
+    "empty": {
+      "heading": "No docs yet",
+      "body": "Docs are being prepared. Check back later."
+    },
+    "notFound": {
+      "body": "This document could not be found. Return to the docs list."
+    }
   },
   "auth": {
     "login": {
