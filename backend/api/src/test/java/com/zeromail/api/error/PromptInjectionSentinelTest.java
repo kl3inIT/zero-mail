@@ -123,7 +123,7 @@ class PromptInjectionSentinelTest extends ApiPostgresTestBase {
         // Boolean, or String matching [a-zA-Z0-9_.\-]{1,64}. The corpus entries all fail
         // the regex (whitespace, angle brackets, backticks, colons, brackets, zero-width
         // space) so none of them should survive into params.
-        params.fields().forEachRemaining(entry -> {
+        params.properties().forEach(entry -> {
             JsonNode v = entry.getValue();
             if (v.isTextual()) {
                 String s = v.asText();

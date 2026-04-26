@@ -238,7 +238,7 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
         // — this is the AllowedParamScalars contract translated into a JSON-side check.
         JsonNode params = json.path("params");
         assertThat(params.isObject()).isTrue();
-        params.fields().forEachRemaining(entry -> {
+        params.properties().forEach(entry -> {
             JsonNode v = entry.getValue();
             if (v.isTextual()) {
                 assertThat(v.asText())
