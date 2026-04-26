@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 /**
  * LanguageSwitcher (Plan 06 — REQ-2 + threat_model T-1.1.06-05).
@@ -26,13 +26,14 @@
  * Privacy: never logs the user's locale alongside identifying context.
  */
 
-import * as React from "react";
-import { useRouter } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import * as React from 'react';
+import { useRouter } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { api, useLocalizedApiError, xsrfHeader, type ApiError } from "@/lib/api/client";
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { api, xsrfHeader } from '@/lib/api/client';
+import { useLocalizedApiError, type ApiError } from '@/lib/api/errors';
 
 // Inline SVG icons to avoid lucide-react's separate React module instance
 // (its useContext call hits a null dispatcher in vitest's transform graph).
@@ -93,22 +94,22 @@ function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-type Locale = "vi" | "en";
+type Locale = 'vi' | 'en';
 
 type Props = {
   currentLocale: Locale;
   authenticated: boolean;
   /** `compact` for chrome (icon + abbreviated label); `row` for /settings (full label + helper). */
-  variant?: "compact" | "row";
+  variant?: 'compact' | 'row';
   onSettled?: () => void;
 };
 
 /** Locale-cookie config — MUST stay in sync with i18n/routing.ts (RESEARCH.md Pitfall 4). */
-const NEXT_LOCALE_COOKIE = "NEXT_LOCALE";
+const NEXT_LOCALE_COOKIE = 'NEXT_LOCALE';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year — REQ-2 persistence
 
 function writeLocaleCookie(value: Locale) {
-  if (typeof document === "undefined") return;
+  if (typeof document === 'undefined') return;
   // Build the cookie string explicitly so the literals match Plan 06 acceptance
   // grep (max-age=31536000 + samesite=lax + secure).
   document.cookie = `${NEXT_LOCALE_COOKIE}=${value}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax; secure`;
@@ -119,13 +120,13 @@ function writeLocaleCookie(value: Locale) {
 type LooseTranslator = (key: string) => string;
 
 function localeLabel(t: LooseTranslator, locale: Locale): string {
-  return locale === "vi" ? t("settings.language.vi") : t("settings.language.en");
+  return locale === 'vi' ? t('settings.language.vi') : t('settings.language.en');
 }
 
 export function LanguageSwitcher({
   currentLocale,
   authenticated,
-  variant = "compact",
+  variant = 'compact',
   onSettled,
 }: Props) {
   const router = useRouter();
@@ -133,7 +134,7 @@ export function LanguageSwitcher({
   // Use the next-intl runtime locale when it disagrees with the prop (RSC hydration
   // race); the prop remains the rollback target for failed PATCH calls.
   const displayLocale: Locale =
-    intlLocale === "vi" || intlLocale === "en" ? intlLocale : currentLocale;
+    intlLocale === 'vi' || intlLocale === 'en' ? intlLocale : currentLocale;
   const tRoot = useTranslations() as unknown as LooseTranslator;
   const localizedError = useLocalizedApiError();
   const [isPending, startTransition] = React.useTransition();
@@ -154,13 +155,13 @@ export function LanguageSwitcher({
       }
     }
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setIsOpen(false);
+      if (e.key === 'Escape') setIsOpen(false);
     }
-    document.addEventListener("mousedown", onDocClick);
-    document.addEventListener("keydown", onKey);
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
     return () => {
-      document.removeEventListener("mousedown", onDocClick);
-      document.removeEventListener("keydown", onKey);
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onKey);
     };
   }, [isOpen]);
 
@@ -182,9 +183,9 @@ export function LanguageSwitcher({
           // even though the server preference was never persisted, producing a
           // client/server language split that masks the failure from the user.
           try {
-            const res = await api.PATCH("/me/language", {
+            const res = await api.PATCH('/me/language', {
               body: { language: selected },
-              headers: { "Content-Type": "application/json", ...xsrfHeader() },
+              headers: { 'Content-Type': 'application/json', ...xsrfHeader() },
             });
             if (res.error) {
               // Roll back to the prop's currentLocale (server-side truth).
@@ -215,16 +216,16 @@ export function LanguageSwitcher({
     [authenticated, currentLocale, displayLocale, localizedError, onSettled, router],
   );
 
-  const ariaLabel = tRoot("settings.language.label");
-  const helper = tRoot("settings.language.helper");
+  const ariaLabel = tRoot('settings.language.label');
+  const helper = tRoot('settings.language.helper');
   const triggerLabel = localeLabel(tRoot, displayLocale);
 
   return (
-    <div className={variant === "row" ? "flex flex-col gap-2" : "relative inline-block"}>
-      {variant === "row" && (
+    <div className={variant === 'row' ? 'flex flex-col gap-2' : 'relative inline-block'}>
+      {variant === 'row' && (
         <div className="flex flex-col gap-1">
           <span className="text-sm font-medium">{ariaLabel}</span>
-          <span className="text-sm text-muted-foreground">{helper}</span>
+          <span className="text-muted-foreground text-sm">{helper}</span>
         </div>
       )}
 
@@ -238,9 +239,9 @@ export function LanguageSwitcher({
           disabled={isPending}
           onClick={() => setIsOpen((v) => !v)}
           className={cn(
-            buttonVariants({ variant: variant === "row" ? "outline" : "ghost" }),
-            "min-h-[44px] gap-2",
-            variant === "compact" ? "h-11 px-3" : "w-full justify-between",
+            buttonVariants({ variant: variant === 'row' ? 'outline' : 'ghost' }),
+            'min-h-[44px] gap-2',
+            variant === 'compact' ? 'h-11 px-3' : 'w-full justify-between',
           )}
         >
           <LanguagesIcon />
@@ -254,10 +255,10 @@ export function LanguageSwitcher({
             role="menu"
             aria-label={ariaLabel}
             className={cn(
-              "absolute left-0 top-full z-50 mt-1 min-w-[10rem] rounded-md border bg-popover p-1 text-popover-foreground shadow-md",
+              'bg-popover text-popover-foreground absolute top-full left-0 z-50 mt-1 min-w-[10rem] rounded-md border p-1 shadow-md',
             )}
           >
-            {(["vi", "en"] as const).map((loc) => {
+            {(['vi', 'en'] as const).map((loc) => {
               const checked = displayLocale === loc;
               return (
                 <button
@@ -268,9 +269,9 @@ export function LanguageSwitcher({
                   aria-label={localeLabel(tRoot, loc)}
                   onClick={() => handleSelect(loc)}
                   className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 text-sm cursor-pointer outline-none",
-                    "hover:bg-muted hover:text-foreground",
-                    "focus-visible:ring-2 focus-visible:ring-ring",
+                    'flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-sm outline-none',
+                    'hover:bg-muted hover:text-foreground',
+                    'focus-visible:ring-ring focus-visible:ring-2',
                   )}
                 >
                   <span className="inline-flex w-4 justify-center">
@@ -285,7 +286,7 @@ export function LanguageSwitcher({
       </div>
 
       {errorMessage && (
-        <div role="alert" className="text-sm text-destructive">
+        <div role="alert" className="text-destructive text-sm">
           {errorMessage}
         </div>
       )}
