@@ -40,12 +40,20 @@ const ERROR_CODES_JAVA = resolve(
 // Plan 1.3-05 Task 1 — pages relocated into route groups; paths updated
 // in lockstep so the scanner does not silently lose coverage (Phase 1.1 D-D3).
 // Plan 1.3-05 Task 3 — landing page added under (public)/page.tsx.
+// Plan 1.3-07 Task 2 — docs scaffolding (Plan 06) + (auth)/layout.tsx added.
 const EN_SCAN_FILES = [
+  // Auth + protected pages (moved into route groups; clean URLs unchanged)
   'app/(auth)/login/page.tsx',
   'app/(protected)/onboarding/page.tsx',
   'app/(protected)/settings/page.tsx',
+  // Public surface (Phase 1.3 Plan 05 + Plan 06)
   'app/(public)/page.tsx',
   'app/(public)/layout.tsx',
+  'app/(public)/docs/page.tsx',
+  'app/(public)/docs/[slug]/page.tsx',
+  'app/(public)/docs/[slug]/loading.tsx',
+  'app/(auth)/layout.tsx',
+  // Relocated feature components
   'features/onboarding/components/TemplateCard.tsx',
   'features/gmail/components/ConnectionHealthBadge.tsx',
   'features/gmail/components/ReconnectPrompt.tsx',

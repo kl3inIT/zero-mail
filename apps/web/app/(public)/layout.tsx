@@ -20,11 +20,10 @@ import type { AppLocale } from '@/i18n/routing';
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
   const t = await getTranslations();
   const locale = (await getLocale()) as AppLocale;
-  // Plan 07 will add `common.nav.docs` / `common.nav.signIn`. Cast to `never`
-  // to bypass next-intl's compile-time key check; runtime returns the key
-  // path itself as a safe fallback.
-  const docsLabel = t('common.nav.docs' as never);
-  const signInLabel = t('common.nav.signIn' as never);
+  // Plan 07 landed `common.nav.docs` / `common.nav.signIn` in vi.json + en.json,
+  // so next-intl's typed-key check now resolves these directly (cast bypass removed).
+  const docsLabel = t('common.nav.docs');
+  const signInLabel = t('common.nav.signIn');
   return (
     <div className="flex min-h-full flex-col">
       <header className="bg-secondary border-b">

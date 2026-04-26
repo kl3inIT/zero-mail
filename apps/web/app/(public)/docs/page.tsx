@@ -47,11 +47,11 @@ export default async function DocsIndexPage() {
 
   return (
     <section className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-semibold">{t('docs.indexHeading' as never)}</h1>
+      <h1 className="mb-6 text-2xl font-semibold">{t('docs.indexHeading')}</h1>
       {docs.length === 0 ? (
         <div>
-          <p className="text-base font-semibold">{t('docs.empty.heading' as never)}</p>
-          <p className="text-muted-foreground text-sm">{t('docs.empty.body' as never)}</p>
+          <p className="text-base font-semibold">{t('docs.empty.heading')}</p>
+          <p className="text-muted-foreground text-sm">{t('docs.empty.body')}</p>
         </div>
       ) : (
         <ul className="space-y-2">

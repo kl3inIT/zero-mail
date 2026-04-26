@@ -47,11 +47,11 @@ export default async function LandingPage() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-16">
-      <h1 className="text-2xl font-semibold">{t('landing.heading' as never)}</h1>
-      <p className="text-muted-foreground text-base">{t('landing.tagline' as never)}</p>
+      <h1 className="text-2xl font-semibold">{t('landing.heading')}</h1>
+      <p className="text-muted-foreground text-base">{t('landing.tagline')}</p>
       <div>
         <Link href={ctaHref} className={buttonVariants()}>
-          {t(ctaKey as never)}
+          {t(ctaKey)}
         </Link>
       </div>
     </div>

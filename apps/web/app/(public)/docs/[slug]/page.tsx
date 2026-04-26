@@ -57,7 +57,7 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
       {content}
       <p className="mt-8">
         <Link href="/docs" className="text-primary underline">
-          {t('docs.backToList' as never)}
+          {t('docs.backToList')}
         </Link>
       </p>
     </article>
