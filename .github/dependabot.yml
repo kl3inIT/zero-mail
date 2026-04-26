@@ -1,0 +1,62 @@
+version: 2
+
+updates:
+  - package-ecosystem: 'gradle'
+    directories:
+      - '/'
+      - '/buildSrc'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'Asia/Bangkok'
+    open-pull-requests-limit: 5
+    labels:
+      - 'dependencies'
+      - 'backend'
+    commit-message:
+      prefix: 'deps(gradle)'
+    groups:
+      gradle-minor-patch:
+        applies-to: 'version-updates'
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:30'
+      timezone: 'Asia/Bangkok'
+    open-pull-requests-limit: 5
+    labels:
+      - 'dependencies'
+      - 'frontend'
+    commit-message:
+      prefix: 'deps(web)'
+    groups:
+      web-minor-patch:
+        applies-to: 'version-updates'
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '10:00'
+      timezone: 'Asia/Bangkok'
+    open-pull-requests-limit: 3
+    labels:
+      - 'dependencies'
+      - 'github-actions'
+    commit-message:
+      prefix: 'deps(actions)'
