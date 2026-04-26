@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 1.3 context gathered
-last_updated: "2026-04-26T09:15:12.460Z"
+stopped_at: Phase 1.2 Plan 04 complete (onboarding domain moved + Pitfall 5 closed)
+last_updated: "2026-04-26T09:17:32Z"
 last_activity: 2026-04-26
 progress:
   total_phases: 11
   completed_phases: 2
   total_plans: 23
-  completed_plans: 20
-  percent: 87
+  completed_plans: 21
+  percent: 91
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 ## Current Position
 
 Phase: 1.2 (Domain-owned persistence restructuring (INSERTED)) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-04-26
 
-Progress: [████████░░] 83%
+Progress: [█████████░] 91%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [████████░░] 83%
 | Phase 1.2 P01 | 9min | 3 tasks | 11 files |
 | Phase 1.2 P02 | 17min | 2 tasks | 16 files |
 | Phase 1.2 PP03 | 9min | 3 tasks | 27 files |
+| Phase 1.2 P04 | 6min | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,8 @@ Recent decisions affecting current work:
 - [Phase 1.2]: Plan 02 sweep folded 10 stale-import sites (2 production, 8 test) into the same commit as the `git mv` — no fix-up commit needed (vs Plan 01's `9769dd7`). Discipline: Edit the working tree of renamed files BEFORE staging, never after the first commit.
 - [Phase ?]: [Phase 1.2]: Plan 03 confirmed CL-2 reshape pattern — AccountService dropped 4 cross-domain repos, kept only UserRepository; new deleteCurrentUser is single-domain. Multi-domain orchestration moves to AccountDeletionController as transitional bridge across Plans 03→06.
 - [Phase ?]: [Phase 1.2]: Forward-decl deferral protocol locked: never declare a Modulith allowedDependencies edge to a non-existent module. core.account/package-info.java declares {tenant, shared.privacy} now; Plan 04 amends to add 'onboarding' once that module exists on disk.
+- [Phase 1.2]: Plan 04 closed Pitfall 5 (enum-name persistence drift) via OnboardingStepEnumPersistenceTest — pure-JVM unit test asserting OnboardingStep.{...}.name() match stable strings. Pattern: when relocating @Enumerated(EnumType.STRING) enums, ship a name() literal-assert test in the same plan.
+- [Phase 1.2]: Plan 04 confirmed atomic bidirectional Modulith edge protocol: when introducing a new module that an existing module already depends on, declare BOTH edges in the same commit as the new package-info.java (account ↔ onboarding both landed in commit 2f25214).
 
 ### Roadmap Evolution
 
@@ -118,6 +121,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-26T09:15:12.453Z
-Stopped at: Phase 1.3 context gathered
-Resume file: .planning/phases/01.3-frontend-architecture-refactor-and-public-content-foundation/01.3-CONTEXT.md
+Last session: 2026-04-26T09:17:32Z
+Stopped at: Phase 1.2 Plan 04 complete (onboarding domain moved + Pitfall 5 closed)
+Resume file: .planning/phases/01.2-domain-owned-persistence-restructuring/01.2-05-PLAN.md
