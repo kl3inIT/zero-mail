@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 1.2 Plan 05 complete (gmail domain moved + entity-scan collapsed + AccountDeletionController bridge final)
-last_updated: "2026-04-26T09:34:40Z"
+stopped_at: Phase 1.2 Plan 06 complete (DomainBoundaryArchTests + 2 cross-domain decompositions + canonical Pattern 8 cleanup; full ./gradlew clean check green)
+last_updated: "2026-04-26T09:54:10.386Z"
 last_activity: 2026-04-26
 progress:
   total_phases: 11
-  completed_phases: 2
-  total_plans: 23
-  completed_plans: 22
-  percent: 95
+  completed_phases: 3
+  total_plans: 30
+  completed_plans: 23
+  percent: 77
 ---
 
 # Project State
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 ## Current Position
 
 Phase: 1.2 (Domain-owned persistence restructuring (INSERTED)) — EXECUTING
-Plan: 5 of 6
-Status: Ready to execute Plan 06 (final ArchUnit + cleanup)
+Plan: 6 of 6
+Status: Ready to execute
 Last activity: 2026-04-26
 
 Progress: [█████████▌] 95%
@@ -62,6 +62,7 @@ Progress: [█████████▌] 95%
 | Phase 1.2 PP03 | 9min | 3 tasks | 27 files |
 | Phase 1.2 P04 | 6min | 3 tasks | 18 files |
 | Phase 1.2 P05 | 11min | 3 tasks | 30 files |
+| Phase 01.2 P06 | 25min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -89,6 +90,9 @@ Recent decisions affecting current work:
 - [Phase 1.2]: Plan 05 collapsed @EntityScan to single root "com.zeromail.core" in both Application.java + CoreTestApplication.java per RESEARCH.md primary recommendation. Forward-compatible for Phase 2A/2B/2C/3/4 — no further entity-scan edits needed.
 - [Phase 1.2]: Plan 05 honored D-D4 explicitly: gmail/package-info.java allowedDependencies = {tenant, shared.privacy} — NO account edge. Verified by ApplicationModulesTest.
 - [Phase 1.2]: Plan 05 deviation captured: concurrent user activity on STATE.md/01.3 docs auto-staged executor's pending Java edits into commits 03b5652 + eabbdca. No functional impact (all tests pass), but Task 3's Java work appears in those commits rather than a dedicated executor commit. Documented in 01.2-05-SUMMARY.md.
+- [Phase ?]: [Phase 1.2]: Plan 06 closed Wave 0 ArchUnit gap with DomainBoundaryArchTests (4 explicit per-domain rules). Predicate composition pattern locked at DescribedPredicate level (DSL-level .and() chain unsupported in ArchUnit 1.4.x — confirmed via sources jar). Pattern documented in class-level JavaDoc for future-domain authors.
+- [Phase ?]: [Phase 1.2]: Plan 06 caught + decomposed 2 lingering cross-domain repo injections that Plans 03/04 silently shipped (T-01.2-H regression). Pattern: extend CL-2 service-to-service primitive shape to non-delete writes — TenantService.createTenant + AccountService.advanceOnboardingStep mirror the delete-cascade primitives. ArchUnit threat-test-as-defect-finder confirmed working on first execution.
+- [Phase ?]: [Phase 1.2]: Phase 1.2 structurally complete. Source tree contains exactly {account, gmail, onboarding, shared, tenant} per RESEARCH.md target. Full ./gradlew clean check green: 115 tests / 30 classes / 0 failures. Byte-identical contract preserved (zero diff in db/changelog, libs.versions.toml, apps/web/openapi).
 
 ### Roadmap Evolution
 
@@ -126,6 +130,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-26T09:34:40Z
-Stopped at: Phase 1.2 Plan 05 complete (gmail domain moved + entity-scan collapsed + AccountDeletionController bridge final)
-Resume file: .planning/phases/01.2-domain-owned-persistence-restructuring/01.2-06-PLAN.md
+Last session: 2026-04-26T09:54:10.379Z
+Stopped at: Phase 1.2 Plan 06 complete (DomainBoundaryArchTests + 2 cross-domain decompositions + canonical Pattern 8 cleanup; full ./gradlew clean check green)
+Resume file: None
