@@ -35,6 +35,24 @@ function normalizeCode(code: string): string {
   return code.startsWith("error.") ? code.slice("error.".length) : code;
 }
 
+/**
+ * Map a normalized server code to the bundle key that actually exists in
+ * `messages/<locale>.json`. Most codes are 1:1 (e.g. `auth.unauthorized` ->
+ * `errors.auth.unauthorized`), but a handful of top-level codes resolve to an
+ * object in the bundle (e.g. `errors.validation` is a namespace, not a leaf
+ * string). For those, we redirect to the generic localized leaf so the hook
+ * never falls through to the [MISSING:] sentinel for a contractually-known
+ * server code. (WR-01.)
+ */
+function bundleKeyForCode(normalized: string): string {
+  // Top-level validation: backend emits `error.validation` for body-level
+  // MethodArgumentNotValid + ConstraintViolation failures (see ErrorCodes.VALIDATION
+  // and GlobalExceptionHandler). The FE bundle nests `errors.validation.*`, so the
+  // string leaf is at `errors.validation.generic`.
+  if (normalized === "validation") return "validation.generic";
+  return normalized;
+}
+
 /** Walk a dotted path and confirm the leaf is a string. */
 function hasNestedKey(messages: unknown, dottedKey: string): boolean {
   let cur: unknown = messages;
@@ -62,7 +80,7 @@ export function useLocalizedApiError() {
 
   return (err: ApiError | undefined): string => {
     if (!err?.code) return t("unknown");
-    const code = normalizeCode(err.code);
+    const code = bundleKeyForCode(normalizeCode(err.code));
 
     // Missing-key sentinel rendering (threat_model T-1.1.06-02).
     if (!hasNestedKey(errorsBundle, code)) {

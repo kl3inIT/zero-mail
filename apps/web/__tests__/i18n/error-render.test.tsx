@@ -115,4 +115,24 @@ describe('error code -> localized message rendering (Plan 06 GREEN)', () => {
     renderWithLocale(<FieldHarness field="x" code="not.a.real.code" />, 'vi');
     expect(screen.getByTestId('message')).toHaveTextContent('[MISSING:not.a.real.code]');
   });
+
+  // WR-01: backend emits top-level body validation as `error.validation`
+  // (ErrorCodes.VALIDATION). The FE bundle namespaces under
+  // `errors.validation.*`, so the string leaf is at `errors.validation.generic`.
+  // The hook must redirect the bare `validation` namespace to the generic leaf
+  // — otherwise it falls through to [MISSING:validation] in dev and
+  // errors.unknown in prod, which loses the localized validation prompt.
+  it('renders Vietnamese validation.generic for top-level error.validation code (vi)', () => {
+    renderWithLocale(<Harness err={{ code: 'error.validation' } as ApiError} />, 'vi');
+    expect(screen.getByTestId('message')).toHaveTextContent(
+      viMessages.errors.validation.generic,
+    );
+  });
+
+  it('renders English validation.generic for top-level error.validation code (en)', () => {
+    renderWithLocale(<Harness err={{ code: 'error.validation' } as ApiError} />, 'en');
+    expect(screen.getByTestId('message')).toHaveTextContent(
+      enMessages.errors.validation.generic,
+    );
+  });
 });
