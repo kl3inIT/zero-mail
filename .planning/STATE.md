@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 01.4 UI-SPEC approved
-last_updated: "2026-04-26T20:36:04.212Z"
+stopped_at: Completed 01.4-02-PLAN.md
+last_updated: "2026-04-26T20:57:58.154Z"
 last_activity: 2026-04-26
 progress:
   total_phases: 13
   completed_phases: 5
   total_plans: 41
-  completed_plans: 36
-  percent: 88
+  completed_plans: 37
+  percent: 90
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 ## Current Position
 
 Phase: 01.4 (gmail-identity-semantics-permission-ux-and-ui-consistency) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-04-26
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -76,6 +76,7 @@ Progress: [█████████░] 88%
 | Phase 01.3 P07 | 5min | 3 tasks | 1 created + 8 modified |
 | Phase 01.3 P08 | 15min | 1 task (Task 2 = checkpoint:human-verify deferred per autonomous=false) | 0 code + 3 .planning artifacts |
 | Phase 01.4 P01 | 23m | - tasks | - files |
+| Phase 01.4 P02 | 10min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -135,6 +136,10 @@ Recent decisions affecting current work:
 - [Phase 1.3]: Plan 07 — REVIEWS Revision 3 closed: lint-staged i18n:check flipped from warn-only (`|| true` since Plan 02) to STRICT. Empirically verified on disposable temp branch — deliberate vi.json key delete → `git commit` → husky exit 1 + lint-staged auto-revert + `[parity] vi.json and en.json leaf-key sets differ: en-only: landing.continueSetupCta` in stderr. Pattern locked: flip strict BEFORE temp-branch verification so the temp branch inherits strict config.
 - [Phase 1.3]: Plan 08 — Phase 01.3 closure-ready. All 4 automated gates GREEN (tsc, vitest 80/80 across 9 files, i18n:check 87 keys, ESLint). All 6 Wave 0 files GREEN with 56/56 assertions zero-RED zero-SKIP. proxy.ts `as unknown as` cast preserved (3 occurrences ≥ 2). Schema-diff REVIEWS Revision 7 gate PASSED via source-control proof: `git log e367d67..HEAD -- apps/web/lib/api/schema.d.ts` returns 0 commits — Phase 1.3 is frontend-only by definition, schema.d.ts byte-identical to Phase 01.2.1 baseline. VALIDATION.md flipped `nyquist_compliant: true` + `wave_0_complete: true`. Two manual gates deferred to user with replay commands: Playwright e2e (port 3000 held by stale `next dev` PID 24616 — same Plan 03/05 env-block) and live `generate:api` round-trip (backend not running on localhost:8080).
 - [Phase ?]: Wave 0 RED-by-design test scaffolds locked: 5 backend tests + 1 fixture + 9 frontend tests reference future production classes/components/files; compile and import errors form the acceptance contract Waves 1-2 must satisfy
+- [Phase 01.4]: Plan 01.4-02: GmailIdentityMismatchException extends OAuth2AuthenticationException — Spring Security route automatic qua failureHandler thay vì non-OAuth RuntimeException bypass thành 500 — RESEARCH Q2 recommendation; native Spring routing eliminates custom mapping
+- [Phase 01.4]: Plan 01.4-02: Single AuthorizedClient load tại đầu callback (Issue 3 mitigation) — captured accessTokenForRevoke local tái sử dụng ở 2 throw-site mismatch để failure handler revoke được sau khi removeAuthorizedClient — Pitfall 2 + Issue 3 từ checker; one OAuth callback => one AuthorizedClient lookup
+- [Phase 01.4]: Plan 01.4-02: Forward-decl GmailConnectionService.upsert signature throws UnsupportedOperationException trong Plan 02 — Plan 03 fill body. Pattern locked cho cross-plan compilation seam — Giữ ./gradlew compileJava GREEN xuyên suốt wave thay vì để Plan 02 ship intentional compile-RED
+- [Phase 01.4]: Plan 01.4-02: Dispatcher failure-side route theo thrown-exception type (không phải registration id — AuthenticationException không carry registration reliably). GmailIdentityMismatchException + OAuth2AuthenticationException(access_denied) cả hai route tới GmailOAuthFailureHandler — Spring AuthenticationException surface không expose source registration; type-based dispatch là Spring-idiomatic
 
 ### Roadmap Evolution
 
@@ -175,6 +180,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-26T20:32:51.814Z
-Stopped at: Phase 01.4 UI-SPEC approved
+Last session: 2026-04-26T20:57:58.133Z
+Stopped at: Completed 01.4-02-PLAN.md
 Resume file: None
