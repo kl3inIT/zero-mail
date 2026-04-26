@@ -67,26 +67,28 @@ describe('(protected)/error.tsx boundary', () => {
   });
 
   it('console.error is called when NODE_ENV !== "production"', () => {
+    // Plan 05 deviation: Object.defineProperty on process.env throws
+    // ERR_INVALID_OBJECT_DEFINE_PROPERTY on modern Node when NODE_ENV is
+    // already a non-configurable property (Vitest 4 + Node 24). vi.stubEnv
+    // is the supported API and survives across Node versions.
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const original = process.env.NODE_ENV;
-    Object.defineProperty(process.env, 'NODE_ENV', { value: 'test', configurable: true });
+    vi.stubEnv('NODE_ENV', 'test');
     try {
       renderBoundary({ error: new Error('dev-only-log'), unstable_retry: vi.fn() });
       expect(consoleSpy).toHaveBeenCalled();
     } finally {
-      Object.defineProperty(process.env, 'NODE_ENV', { value: original, configurable: true });
+      vi.unstubAllEnvs();
     }
   });
 
   it('console.error is NOT called when NODE_ENV === "production"', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const original = process.env.NODE_ENV;
-    Object.defineProperty(process.env, 'NODE_ENV', { value: 'production', configurable: true });
+    vi.stubEnv('NODE_ENV', 'production');
     try {
       renderBoundary({ error: new Error('prod-silent'), unstable_retry: vi.fn() });
       expect(consoleSpy).not.toHaveBeenCalled();
     } finally {
-      Object.defineProperty(process.env, 'NODE_ENV', { value: original, configurable: true });
+      vi.unstubAllEnvs();
     }
   });
 });
