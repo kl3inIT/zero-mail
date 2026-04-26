@@ -9,8 +9,11 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -56,8 +59,27 @@ import static org.mockito.Mockito.when;
  * {@code google-subject-test-*} and {@code fake-refresh-token-*} per threat T-1.4-W0-01.
  */
 @ActiveProfiles("test")
-@Import(TestSessionSupport.class)
+@Import({TestSessionSupport.class, GmailOAuthSuccessHandlerIntegrationTest.MockAuthorizedClientServiceConfig.class})
 class GmailOAuthSuccessHandlerIntegrationTest extends ApiPostgresTestBase {
+
+    /**
+     * Test scaffold repair (Plan 03): Spring Boot's auto-configured
+     * {@code InMemoryOAuth2AuthorizedClientService} would normally back the handler bean,
+     * but we need to stub {@code loadAuthorizedClient(...)} per-test so the handler reads
+     * a fake refresh token + scopes without round-tripping through a real OAuth2 dance.
+     *
+     * <p>Pattern: expose a {@code @Primary} Mockito mock so it wins the autowire over the
+     * default bean. Each test method then programs the mock via
+     * {@link #stubAuthorizedClient(Seed, OAuth2AuthenticationToken, String, java.util.Set)}.
+     */
+    @TestConfiguration
+    static class MockAuthorizedClientServiceConfig {
+        @Bean
+        @Primary
+        OAuth2AuthorizedClientService mockAuthorizedClientService() {
+            return mock(OAuth2AuthorizedClientService.class);
+        }
+    }
 
     private static final String GMAIL_REGISTRATION_ID = "google-gmail";
     private static final String FAKE_REFRESH_TOKEN_V1 = "fake-refresh-token-do-not-use-v1";
@@ -110,21 +132,25 @@ class GmailOAuthSuccessHandlerIntegrationTest extends ApiPostgresTestBase {
                     }
                 });
 
-        var saved = connections.findByTenantId(seed.tenantId());
-        assertThat(saved).isPresent();
-        GmailConnectionEntity row = saved.get();
-        assertThat(row.getStatus()).isEqualTo(GmailConnectionStatus.CONNECTED);
-        assertThat(row.getGoogleEmail()).isEqualTo(seed.email());
+        // Plan 03 scaffold repair: assertion-side JPA reads run under @TenantId filter,
+        // bind ScopedValue so the discriminator matches.
+        ScopedValue.where(TenantContext.TENANT, seed.tenantId().toString()).run(() -> {
+            var saved = connections.findByTenantId(seed.tenantId());
+            assertThat(saved).isPresent();
+            GmailConnectionEntity row = saved.get();
+            assertThat(row.getStatus()).isEqualTo(GmailConnectionStatus.CONNECTED);
+            assertThat(row.getGoogleEmail()).isEqualTo(seed.email());
 
-        byte[] decrypted = cipher.decrypt(row.getRefreshTokenEncrypted(), seed.tenantId().toString());
-        assertThat(new String(decrypted, StandardCharsets.UTF_8)).isEqualTo(FAKE_REFRESH_TOKEN_V1);
+            byte[] decrypted = cipher.decrypt(row.getRefreshTokenEncrypted(), seed.tenantId().toString());
+            assertThat(new String(decrypted, StandardCharsets.UTF_8)).isEqualTo(FAKE_REFRESH_TOKEN_V1);
 
-        // Specifics: scopes column stores leg-2 gmail-prefix-only scopes. openid/profile/email
-        // are filtered out per CONTEXT.md §Specifics.
-        assertThat(row.getScopesGranted()).isEqualTo("https://www.googleapis.com/auth/gmail.modify");
+            // Specifics: scopes column stores leg-2 gmail-prefix-only scopes. openid/profile/email
+            // are filtered out per CONTEXT.md §Specifics.
+            assertThat(row.getScopesGranted()).isEqualTo("https://www.googleapis.com/auth/gmail.modify");
 
-        var refreshedUser = users.findById(seed.userId()).orElseThrow();
-        assertThat(refreshedUser.getOnboardingStep()).isEqualTo(OnboardingStep.GMAIL_CONNECTED);
+            var refreshedUser = users.findById(seed.userId()).orElseThrow();
+            assertThat(refreshedUser.getOnboardingStep()).isEqualTo(OnboardingStep.GMAIL_CONNECTED);
+        });
     }
 
     @Test
@@ -149,10 +175,18 @@ class GmailOAuthSuccessHandlerIntegrationTest extends ApiPostgresTestBase {
                     }
                 });
 
-        GmailConnectionEntity firstRow = connections.findByTenantId(seed.tenantId()).orElseThrow();
-        UUID firstId = firstRow.getId();
-        Integer firstVersion = firstRow.getVersion();
-        Instant firstConnectedAt = firstRow.getConnectedAt();
+        // Plan 03 scaffold repair: capture first-grant state under bound tenant, then
+        // re-bind for the second grant + assertion. Use single-element arrays as carriers
+        // because lambda-captured locals must be effectively final.
+        UUID[] firstIdHolder = new UUID[1];
+        Integer[] firstVersionHolder = new Integer[1];
+        Instant[] firstConnectedAtHolder = new Instant[1];
+        ScopedValue.where(TenantContext.TENANT, seed.tenantId().toString()).run(() -> {
+            GmailConnectionEntity firstRow = connections.findByTenantId(seed.tenantId()).orElseThrow();
+            firstIdHolder[0] = firstRow.getId();
+            firstVersionHolder[0] = firstRow.getVersion();
+            firstConnectedAtHolder[0] = firstRow.getConnectedAt();
+        });
 
         // Second grant with a fresh token.
         stubAuthorizedClient(seed, token, FAKE_REFRESH_TOKEN_V2,
@@ -169,19 +203,21 @@ class GmailOAuthSuccessHandlerIntegrationTest extends ApiPostgresTestBase {
                     }
                 });
 
-        assertThat(connections.findAll())
-                .as("Single-row-per-tenant invariant must hold across re-grants")
-                .hasSize(1);
+        ScopedValue.where(TenantContext.TENANT, seed.tenantId().toString()).run(() -> {
+            assertThat(connections.findAll())
+                    .as("Single-row-per-tenant invariant must hold across re-grants")
+                    .hasSize(1);
 
-        GmailConnectionEntity secondRow = connections.findByTenantId(seed.tenantId()).orElseThrow();
-        assertThat(secondRow.getId()).isEqualTo(firstId);
-        assertThat(secondRow.getVersion()).isGreaterThan(firstVersion);
+            GmailConnectionEntity secondRow = connections.findByTenantId(seed.tenantId()).orElseThrow();
+            assertThat(secondRow.getId()).isEqualTo(firstIdHolder[0]);
+            assertThat(secondRow.getVersion()).isGreaterThan(firstVersionHolder[0]);
 
-        byte[] decrypted = cipher.decrypt(secondRow.getRefreshTokenEncrypted(), seed.tenantId().toString());
-        assertThat(new String(decrypted, StandardCharsets.UTF_8)).isEqualTo(FAKE_REFRESH_TOKEN_V2);
+            byte[] decrypted = cipher.decrypt(secondRow.getRefreshTokenEncrypted(), seed.tenantId().toString());
+            assertThat(new String(decrypted, StandardCharsets.UTF_8)).isEqualTo(FAKE_REFRESH_TOKEN_V2);
 
-        // connectedAt should have been bumped on re-grant (D-A4 sets connectedAt=now on every upsert).
-        assertThat(secondRow.getConnectedAt()).isAfterOrEqualTo(firstConnectedAt);
+            // connectedAt should have been bumped on re-grant (D-A4 sets connectedAt=now on every upsert).
+            assertThat(secondRow.getConnectedAt()).isAfterOrEqualTo(firstConnectedAtHolder[0]);
+        });
     }
 
     @Test
@@ -207,11 +243,17 @@ class GmailOAuthSuccessHandlerIntegrationTest extends ApiPostgresTestBase {
                 }))
                 .isInstanceOf(GmailIdentityMismatchException.class);
 
-        // No row written; onboarding step still SIGNED_IN — D-A1 fail-fast contract.
-        assertThat(connections.count()).isZero();
+        // Plan 03 scaffold repair: post-throw assertions go through JPA so they MUST run
+        // inside ScopedValue.where(TENANT, ...) — Hibernate @TenantId filter on
+        // GmailConnectionEntity / UserEntity rejects rows whose tenant_id doesn't match
+        // the bound tenant. Plan 02 SUMMARY flagged this as a Plan 01 scaffold bug.
+        ScopedValue.where(TenantContext.TENANT, seed.tenantId().toString()).run(() -> {
+            // No row written; onboarding step still SIGNED_IN — D-A1 fail-fast contract.
+            assertThat(connections.count()).isZero();
 
-        var refreshedUser = users.findById(seed.userId()).orElseThrow();
-        assertThat(refreshedUser.getOnboardingStep()).isEqualTo(OnboardingStep.SIGNED_IN);
+            var refreshedUser = users.findById(seed.userId()).orElseThrow();
+            assertThat(refreshedUser.getOnboardingStep()).isEqualTo(OnboardingStep.SIGNED_IN);
+        });
     }
 
     private Seed seedUser(String label) {
@@ -263,11 +305,9 @@ class GmailOAuthSuccessHandlerIntegrationTest extends ApiPostgresTestBase {
         OAuth2AuthorizedClient client = new OAuth2AuthorizedClient(
                 registration, token.getName(), accessToken, refreshToken);
 
-        OAuth2AuthorizedClientService stub = mock(OAuth2AuthorizedClientService.class);
-        when(stub.loadAuthorizedClient(GMAIL_REGISTRATION_ID, token.getName())).thenReturn(client);
-        // Wave 1 implementation reads via the autowired bean; the mock above is a future-looking
-        // hook so the test can override per-call. The wave 0 test is RED until the handler
-        // exists, so this stub is informational; Plan 02 will replace authorizedClientService
-        // with the right injection.
+        // Plan 03 scaffold repair: program the @Primary autowired mock so the handler
+        // bean's loadAuthorizedClient(...) call resolves to the synthetic client above.
+        when(authorizedClientService.loadAuthorizedClient(GMAIL_REGISTRATION_ID, token.getName()))
+                .thenReturn(client);
     }
 }
