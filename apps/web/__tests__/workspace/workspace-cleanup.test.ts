@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { describe, it, expect } from 'vitest';
 
 const APP_WEB = resolve(__dirname, '../..');
@@ -33,6 +34,11 @@ describe('Phase 1.3 — Workspace cleanup (D-E1..D-E4)', () => {
     expect(existsSync(hookPath)).toBe(true);
     const hook = readFileSync(hookPath, 'utf8');
     expect(hook).toMatch(/pnpm\s+exec\s+lint-staged/);
+    const indexEntry = execFileSync('git', ['ls-files', '--stage', '.husky/pre-commit'], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+    });
+    expect(indexEntry).toMatch(/^100755\s/);
     // Husky 9: no shebang, no husky.sh source line (Pitfall 7)
     expect(hook).not.toMatch(/husky\.sh/);
   });
