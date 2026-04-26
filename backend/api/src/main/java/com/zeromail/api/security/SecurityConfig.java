@@ -16,7 +16,8 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain chain(HttpSecurity http,
                               TenantBindingFilter tenantFilter,
-                              GoogleOAuthSuccessHandler successHandler,
+                              OAuth2LoginDispatchingSuccessHandler dispatchSuccess,
+                              OAuth2LoginDispatchingFailureHandler dispatchFailure,
                               GmailScopeRequestResolver gmailResolver) throws Exception {
         http
             .cors(Customizer.withDefaults())
@@ -25,7 +26,8 @@ public class SecurityConfig {
                                  "/login/oauth2/**", "/oauth2/**").permitAll()
                 .anyRequest().authenticated())
             .oauth2Login(o -> o
-                .successHandler(successHandler)
+                .successHandler(dispatchSuccess)
+                .failureHandler(dispatchFailure)
                 .authorizationEndpoint(a -> a.authorizationRequestResolver(gmailResolver)))
             .csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
