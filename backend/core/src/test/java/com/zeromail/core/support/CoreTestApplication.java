@@ -15,8 +15,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
  * a sibling package; relying on Boot's auto-config default base package is not enough.
  */
 @SpringBootApplication(scanBasePackages = "com.zeromail.core")
-@EntityScan(basePackages = {"com.zeromail.core.persistence", "com.zeromail.core.tenant.persistence", "com.zeromail.core.account.persistence", "com.zeromail.core.onboarding.persistence"})
-@EnableJpaRepositories(basePackages = {"com.zeromail.core.persistence", "com.zeromail.core.tenant.persistence", "com.zeromail.core.account.persistence", "com.zeromail.core.onboarding.persistence"})
+@EntityScan(basePackages = "com.zeromail.core")
+@EnableJpaRepositories(basePackages = "com.zeromail.core")
 public class CoreTestApplication {
     public static void main(String[] args) {
         SpringApplication.run(CoreTestApplication.class, args);

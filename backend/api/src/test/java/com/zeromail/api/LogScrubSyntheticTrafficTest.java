@@ -19,9 +19,9 @@ import org.springframework.web.client.RestClient;
 
 import com.zeromail.api.security.TestSessionSupport;
 import com.zeromail.api.support.ApiPostgresTestBase;
-import com.zeromail.core.persistence.GmailConnectionEntity;
-import com.zeromail.core.persistence.GmailConnectionRepository;
-import com.zeromail.core.persistence.GmailConnectionStatus;
+import com.zeromail.core.gmail.model.GmailConnectionStatus;
+import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
+import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.shared.privacy.Sensitive;

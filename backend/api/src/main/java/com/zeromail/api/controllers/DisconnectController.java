@@ -5,15 +5,15 @@ import java.util.UUID;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.zeromail.core.account.TenantConnectionService;
+import com.zeromail.core.gmail.service.GmailConnectionService;
 import com.zeromail.core.tenant.TenantContext;
 
 @RestController
 public class DisconnectController {
 
-    private final TenantConnectionService connectionService;
+    private final GmailConnectionService connectionService;
 
-    public DisconnectController(TenantConnectionService connectionService) {
+    public DisconnectController(GmailConnectionService connectionService) {
         this.connectionService = connectionService;
     }
 

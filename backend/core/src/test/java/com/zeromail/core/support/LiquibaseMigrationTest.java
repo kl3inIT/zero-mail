@@ -1,4 +1,4 @@
-package com.zeromail.core.persistence;
+package com.zeromail.core.support;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
