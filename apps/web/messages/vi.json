@@ -77,7 +77,8 @@
     "gmailConnection": {
       "heading": "Kết nối Gmail",
       "disconnectCta": "Ngắt kết nối Gmail",
-      "reconnectCta": "Kết nối lại Gmail"
+      "reconnectCta": "Kết nối lại Gmail",
+      "singleAccountNote": "Zero Mail v1 hỗ trợ một tài khoản Gmail — chính là email bạn đã đăng nhập. Hỗ trợ nhiều tài khoản đang nằm trong roadmap."
     },
     "language": {
       "label": "Ngôn ngữ",
@@ -130,7 +131,33 @@
     "cancelCta": "Hủy",
     "success": "Đã xóa tài khoản và dữ liệu của bạn."
   },
+  "gmail": {
+    "identity": {
+      "mismatch": {
+        "title": "Tài khoản Gmail không khớp",
+        "body": "Bạn cần cấp quyền cho cùng tài khoản Gmail mà bạn đã đăng nhập. Vui lòng thử lại và chọn đúng tài khoản.",
+        "cta": "Thử lại"
+      }
+    },
+    "consent": {
+      "denied": {
+        "title": "Bạn đã từ chối quyền truy cập Gmail",
+        "body": "Để Zero Mail có thể phân loại email tự động, chúng tôi cần quyền truy cập hộp thư của bạn.",
+        "cta": "Cấp quyền"
+      }
+    }
+  },
   "errors": {
+    "boundary": {
+      "title": "Đã xảy ra lỗi",
+      "body": "Vui lòng thử lại. Nếu lỗi tiếp tục xảy ra, hãy tải lại trang hoặc đăng nhập lại.",
+      "reset": "Thử lại"
+    },
+    "notFound": {
+      "title": "Không tìm thấy trang",
+      "body": "Trang bạn đang tìm không tồn tại hoặc đã bị di chuyển.",
+      "backHome": "Về trang chủ"
+    },
     "unknown": "Đã xảy ra lỗi chưa xác định. Hãy thử lại hoặc đăng nhập lại.",
     "fallback": "Không thể hoàn tất thao tác. Hãy làm mới trang rồi thử lại.",
     "fieldFallback": "Giá trị này không hợp lệ. Hãy kiểm tra lại.",
@@ -151,7 +178,13 @@
       }
     },
     "gmail": {
-      "disconnected": "Quyền truy cập Google đã bị thu hồi hoặc hết hạn. Hãy kết nối lại Gmail."
+      "disconnected": "Quyền truy cập Google đã bị thu hồi hoặc hết hạn. Hãy kết nối lại Gmail.",
+      "identity": {
+        "mismatch": "Tài khoản Gmail không khớp với tài khoản bạn đã đăng nhập. Hãy thử lại với đúng tài khoản."
+      },
+      "consent": {
+        "denied": "Bạn đã từ chối quyền truy cập Gmail. Hãy cấp quyền để Zero Mail tiếp tục thiết lập."
+      }
     },
     "conflict": "Dữ liệu đã thay đổi trước khi thao tác hoàn tất. Hãy tải lại trang rồi thử lại.",
     "dataIntegrity": "Không thể lưu thay đổi vì dữ liệu không hợp lệ.",

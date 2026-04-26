@@ -77,7 +77,8 @@
     "gmailConnection": {
       "heading": "Gmail connection",
       "disconnectCta": "Disconnect Gmail",
-      "reconnectCta": "Reconnect Gmail"
+      "reconnectCta": "Reconnect Gmail",
+      "singleAccountNote": "Zero Mail v1 supports one Gmail account, the email you logged in with. Multi-account support is on the roadmap."
     },
     "language": {
       "label": "Language",
@@ -130,7 +131,33 @@
     "cancelCta": "Cancel",
     "success": "Your account and data have been deleted."
   },
+  "gmail": {
+    "identity": {
+      "mismatch": {
+        "title": "Gmail account doesn't match",
+        "body": "Please grant Gmail access using the same Google account you logged in with. Try again and select the matching account.",
+        "cta": "Try again"
+      }
+    },
+    "consent": {
+      "denied": {
+        "title": "Gmail access was declined",
+        "body": "To use auto-triage, Zero Mail needs access to your inbox.",
+        "cta": "Grant access"
+      }
+    }
+  },
   "errors": {
+    "boundary": {
+      "title": "Something went wrong",
+      "body": "Please try again. If the problem persists, reload the page or sign in again.",
+      "reset": "Try again"
+    },
+    "notFound": {
+      "title": "Page not found",
+      "body": "The page you're looking for doesn't exist or has been moved.",
+      "backHome": "Back home"
+    },
     "unknown": "An unknown error occurred. Try again or sign in again.",
     "fallback": "The action could not finish. Refresh the page, then try again.",
     "fieldFallback": "This value is invalid. Check it and try again.",
@@ -151,7 +178,13 @@
       }
     },
     "gmail": {
-      "disconnected": "Google access was revoked or expired. Reconnect Gmail."
+      "disconnected": "Google access was revoked or expired. Reconnect Gmail.",
+      "identity": {
+        "mismatch": "The Gmail account doesn't match the one you logged in with. Please try again with the matching account."
+      },
+      "consent": {
+        "denied": "Gmail access was declined. Please grant access so Zero Mail can continue setup."
+      }
     },
     "conflict": "The data changed before the action finished. Reload the page and try again.",
     "dataIntegrity": "The change could not be saved because the data is invalid.",

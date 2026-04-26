@@ -53,6 +53,16 @@ const EN_SCAN_FILES = [
   'app/(public)/docs/[slug]/page.tsx',
   'app/(public)/docs/[slug]/loading.tsx',
   'app/(auth)/layout.tsx',
+  // Phase 01.4 Plan 05 — Next.js App Router error-boundary baseline.
+  // global-error.tsx contains inline English fallback (CONTEXT.md D-D3:
+  // next-intl provider unavailable at root replacement). Each prose
+  // literal is annotated with `// i18n-allow` so the scanner accepts it.
+  // The four other boundary files use next-intl keys exclusively.
+  'app/global-error.tsx',
+  'app/not-found.tsx',
+  'app/(public)/error.tsx',
+  'app/(auth)/error.tsx',
+  'app/(protected)/error.tsx',
   // Relocated feature components
   'features/onboarding/components/TemplateCard.tsx',
   'features/gmail/components/ConnectionHealthBadge.tsx',
