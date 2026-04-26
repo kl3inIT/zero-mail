@@ -84,22 +84,6 @@ export interface paths {
         patch: operations["updateLanguage"];
         trace?: never;
     };
-    "/tenant/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["status"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/me": {
         parameters: {
             query?: never;
@@ -108,6 +92,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/gmail/connection/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["status"];
         put?: never;
         post?: never;
         delete?: never;
@@ -149,7 +149,7 @@ export interface components {
             onboardingStep?: string;
             preferredLanguage?: string;
         };
-        TenantStatusResponse: {
+        GmailConnectionStatusResponse: {
             connectionStatus?: string;
             googleEmail?: string;
         };
@@ -578,7 +578,7 @@ export interface operations {
             };
         };
     };
-    status: {
+    me: {
         parameters: {
             query?: never;
             header?: never;
@@ -593,7 +593,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["TenantStatusResponse"];
+                    "*/*": components["schemas"]["MeResponse"];
                 };
             };
             /** @description Bad Request */
@@ -652,7 +652,7 @@ export interface operations {
             };
         };
     };
-    me: {
+    status: {
         parameters: {
             query?: never;
             header?: never;
@@ -667,7 +667,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["MeResponse"];
+                    "*/*": components["schemas"]["GmailConnectionStatusResponse"];
                 };
             };
             /** @description Bad Request */
