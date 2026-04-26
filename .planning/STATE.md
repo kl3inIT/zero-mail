@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 1.2 Plan 04 complete (onboarding domain moved + Pitfall 5 closed)
-last_updated: "2026-04-26T09:17:32Z"
+stopped_at: Phase 1.3 UI-SPEC approved
+last_updated: "2026-04-26T09:22:50.042Z"
 last_activity: 2026-04-26
 progress:
   total_phases: 11
@@ -121,6 +121,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-26T09:17:32Z
-Stopped at: Phase 1.2 Plan 04 complete (onboarding domain moved + Pitfall 5 closed)
-Resume file: .planning/phases/01.2-domain-owned-persistence-restructuring/01.2-05-PLAN.md
+Last session: 2026-04-26T09:22:50.036Z
+Stopped at: Phase 1.3 UI-SPEC approved
+Resume file: .planning/phases/01.3-frontend-architecture-refactor-and-public-content-foundation/01.3-UI-SPEC.md
