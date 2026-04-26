@@ -1,4 +1,4 @@
-package com.zeromail.api.dto;
+package com.zeromail.api.dto.account;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
