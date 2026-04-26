@@ -128,6 +128,19 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] 01.3-08-PLAN.md — Final verification: full automated suite GREEN (tsc + vitest 80/80 + i18n:check 87 keys STRICT + ESLint); 6 Wave 0 files GREEN 56/56 assertions; proxy.ts `as unknown as` cast preserved (3 occurrences); schema-diff REVIEWS Revision 7 gate PASSED via source-control proof (zero commits to schema.d.ts in 01.3 range); VALIDATION.md flipped `nyquist_compliant: true` + `wave_0_complete: true`; Playwright e2e + live `generate:api` round-trip deferred to user with replay commands _(completed 2026-04-26)_
 **UI hint**: yes
 
+### Phase 1.4: Gmail Identity Semantics, Permission UX, and UI Consistency (INSERTED)
+**Goal**: Align v1 Gmail identity semantics so the Google login account is the first managed Gmail account, convert the incremental `gmail.modify` OAuth grant into the durable Gmail connection record, and run a bounded frontend UI consistency sweep across the current app without finalizing the Phase 5 brand identity.
+**Depends on**: Phase 1.3 (keeps the frontend route-group and feature-folder structure stable before the consistency sweep)
+**Requirements**: _(no new product requirements; tightens AUTH-01/AUTH-02 behavior and closes frontend polish/error-boundary gaps)_
+**Success Criteria** (what must be TRUE):
+  1. The second OAuth leg for `google-gmail` rejects any Google account whose OIDC subject does not match the logged-in user's stored Google subject; no Gmail connection is persisted on mismatch.
+  2. A matching Gmail grant idempotently upserts the tenant's single `GmailConnectionEntity`, encrypts the refresh token with the existing AES-GCM envelope, stores granted scopes, marks status `CONNECTED`, and advances onboarding from `SIGNED_IN` to `GMAIL_CONNECTED`.
+  3. Gmail permission UX uses `login_hint` for the current user email, distinguishes identity mismatch from consent denied, redirects back to `/onboarding` with machine-readable error codes, and localizes both states in Vietnamese and English without exposing subjects, tokens, or stack traces.
+  4. Current frontend surfaces share a Tailwind 4 token layer and five reusable primitives (`PageShell`, `SectionCard`, `StatusAlert`, `EmptyState`, `LoadingState`), with hard-coded ad-hoc styling replaced across login, onboarding, settings, landing, docs, and existing shared components.
+  5. Next.js App Router error fallbacks exist for root, public, auth, protected, and 404 states; they use the new primitives where provider context allows, never render raw exception details, and pass the existing frontend i18n/type/lint checks.
+**Plans**: TBD
+**UI hint**: yes
+
 ### Phase 2A: Mail Ingestion
 **Goal**: Receive Gmail push notifications reliably, keep `users.watch` alive, and process every history delivery idempotently with a tenant-visible global pause.
 **Depends on**: Phase 1
