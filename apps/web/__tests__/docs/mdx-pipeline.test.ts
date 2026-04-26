@@ -16,9 +16,11 @@ const FILENAME_RE = /^([a-z0-9-]+)\.(vi|en)\.mdx$/;
 // means skipIf is decided correctly at test-define time. The dynamic import inside the
 // it body is fine — it only runs when not skipped, and only after gray-matter is
 // installed by Plan 06.
-const grayMatterInstalled = existsSync(
-  resolve(process.cwd(), 'node_modules/gray-matter/package.json'),
-);
+// pnpm hoist may place gray-matter under apps/web/node_modules/ OR the workspace
+// root node_modules/. Check both so the gate flips correctly under either layout.
+const grayMatterInstalled =
+  existsSync(resolve(process.cwd(), 'node_modules/gray-matter/package.json')) ||
+  existsSync(resolve(process.cwd(), '../../node_modules/gray-matter/package.json'));
 
 describe('Phase 1.3 — MDX docs pipeline (D-D1..D-D5)', () => {
   it('content/docs/ exists with at least 4 MDX files (2 slugs x 2 locales)', () => {
@@ -111,8 +113,7 @@ describe('Phase 1.3 — MDX docs pipeline (D-D1..D-D5)', () => {
     const src = readFileSync(DOCS_LOADER, 'utf8');
     // Must use either path.resolve(__dirname, ...) OR fileURLToPath(import.meta.url)
     const deterministic =
-      /path\.resolve\(\s*__dirname/.test(src) ||
-      /fileURLToPath\(\s*import\.meta\.url/.test(src);
+      /path\.resolve\(\s*__dirname/.test(src) || /fileURLToPath\(\s*import\.meta\.url/.test(src);
     expect(deterministic).toBe(true);
     // Must NOT use process.cwd() for the docs dir resolution
     expect(src).not.toMatch(/process\.cwd\(\)/);
