@@ -13,19 +13,14 @@ import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.service.TenantService;
 
 /**
- * TRANSITIONAL ORCHESTRATION (Plan 01.2-03 through 01.2-05).
+ * Orchestrates the cross-domain delete cascade for the current tenant. Each domain
+ * service performs only its own single-domain delete (D-D1 / CL-2). Order matters:
+ * children (onboarding selections, gmail connections) → user → tenant is FK-safe
+ * and prevents orphan rows.
  *
- * <p>AccountService no longer holds cross-domain repository injections (D-D1 + CL-2).
- * Until Plan 01.2-06 finalizes the orchestration shape, this controller bridges the
- * cross-domain delete cascade by chaining four single-domain service calls in
- * FK-safe order. backend/api transitively depends on every core domain, so this
- * orchestration is permissible at the API tier (the boundary it would violate —
- * repos in core services — is honored).
- *
- * <p>Plan 04 replaced the OnboardingSelectionRepository call with OnboardingService (done).
- * Plan 05 replaced the GmailConnectionRepository call with GmailConnectionService and
- * the TenantRepository call with TenantService (done).
- * Plan 06 cleans up the remaining JavaDoc + adds final orchestration shape.
+ * <p>Controller-level {@code @Transactional} provides atomicity across the four calls;
+ * each delegated service method is itself {@code @Transactional} so propagation joins
+ * the controller's transaction (Spring default {@code REQUIRED}).
  */
 @RestController
 public class AccountDeletionController {
