@@ -1,26 +1,27 @@
-import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { Geist, Geist_Mono } from "next/font/google";
-import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import type { Metadata } from 'next';
+import { headers } from 'next/headers';
+import { Geist, Geist_Mono } from 'next/font/google';
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 
-import { QueryProvider } from "@/lib/query-client";
+import { QueryProvider } from '@/lib/query-client';
 
-import { routing } from "@/i18n/routing";
+import { getCurrentUser } from '@/features/account/api/me';
+import { routing } from '@/i18n/routing';
 
-import "./globals.css";
+import './globals.css';
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
+  variable: '--font-geist-sans',
   // Vietnamese diacritics render via the Latin Extended block, which the
   // "latin" + "latin-ext" subsets cover (Geist does not expose a "vietnamese"
   // subset directly). Accessibility contract: see UI-SPEC §"Bilingual copy".
-  subsets: ["latin", "latin-ext"],
+  subsets: ['latin', 'latin-ext'],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
 });
 
 /**
@@ -28,10 +29,10 @@ const geistMono = Geist_Mono({
  * behavior" — `generateMetadata` localizes Phase 1 route title/description).
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("common.app");
+  const t = await getTranslations('common.app');
   return {
-    title: t("title"),
-    description: t("description"),
+    title: t('title'),
+    description: t('description'),
   };
 }
 
@@ -54,22 +55,20 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 async function reassertServerLocale(currentLocale: string): Promise<string> {
   const headerStore = await headers();
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "";
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? '';
   if (!apiBase) return currentLocale;
 
   // Forward cookies so the API can identify the user.
-  const cookieHeader = headerStore.get("cookie");
+  const cookieHeader = headerStore.get('cookie');
   if (!cookieHeader) return currentLocale;
 
   try {
-    const res = await fetch(`${apiBase}/me`, {
-      headers: { cookie: cookieHeader },
-      cache: "no-store",
-    });
-    if (!res.ok) return currentLocale;
-    const data = (await res.json()) as { preferredLanguage?: string };
-    const preferred = data.preferredLanguage;
-    if (preferred === "vi" || preferred === "en") {
+    // Plan 04 Task 2 (D-B4): isomorphic /me consolidation — same function
+    // backs proxy.ts (write side) and this layout (read side). RSC fetch
+    // does NOT auto-forward Cookie; we pass it explicitly.
+    const user = await getCurrentUser({ headers: { cookie: cookieHeader } });
+    const preferred = user.preferredLanguage;
+    if (preferred === 'vi' || preferred === 'en') {
       // Read-only: the cookie write is owned by proxy.ts where response
       // headers are reliably mutable.
       return preferred;
@@ -96,17 +95,18 @@ export default async function RootLayout({
 
   // Defensive guard: ensure routing.locales contains the resolved locale before
   // rendering (prevents "<html lang=invalid>" if /me ever returns a bad value).
-  const safeLocale: (typeof routing.locales)[number] =
-    (routing.locales as readonly string[]).includes(locale)
-      ? (locale as (typeof routing.locales)[number])
-      : routing.defaultLocale;
+  const safeLocale: (typeof routing.locales)[number] = (
+    routing.locales as readonly string[]
+  ).includes(locale)
+    ? (locale as (typeof routing.locales)[number])
+    : routing.defaultLocale;
 
   return (
     <html
       lang={safeLocale}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="flex min-h-full flex-col">
         <NextIntlClientProvider locale={safeLocale} messages={messages}>
           <QueryProvider>{children}</QueryProvider>
         </NextIntlClientProvider>

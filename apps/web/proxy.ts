@@ -1,6 +1,7 @@
 import createIntlMiddleware from 'next-intl/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { getCurrentUser } from '@/features/account/api/me';
 import { routing } from './i18n/routing';
 
 /**
@@ -51,10 +52,7 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year — REQ-2 persistence
  * NEXT_LOCALE cookie wins. Privacy: no response payload is logged, no locale
  * is correlated with the user's identity.
  */
-async function reconcileLocaleCookie(
-  request: NextRequest,
-  response: NextResponse,
-): Promise<void> {
+async function reconcileLocaleCookie(request: NextRequest, response: NextResponse): Promise<void> {
   const session = request.cookies.get('ZEROMAIL_SESSION');
   if (!session) return; // unauthenticated — cookie owner is the LanguageSwitcher
 
@@ -65,13 +63,11 @@ async function reconcileLocaleCookie(
   if (!cookieHeader) return;
 
   try {
-    const res = await fetch(`${apiBase}/me`, {
-      headers: { cookie: cookieHeader },
-      cache: 'no-store',
-    });
-    if (!res.ok) return;
-    const data = (await res.json()) as { preferredLanguage?: string };
-    const preferred = data.preferredLanguage;
+    // Plan 04 Task 2 (D-B4): isomorphic /me consolidation. The same function
+    // backs proxy.ts, app/layout.tsx, and CSR hooks — single source of truth
+    // for the "/me requires explicit cookie forwarding" invariant.
+    const user = await getCurrentUser({ headers: { cookie: cookieHeader } });
+    const preferred = user.preferredLanguage;
     if (preferred !== 'vi' && preferred !== 'en') return;
 
     const current = request.cookies.get(NEXT_LOCALE_COOKIE)?.value;
@@ -92,7 +88,9 @@ export default async function proxy(request: NextRequest): Promise<NextResponse>
   // See deviation note above re: duplicate-`next` peer-permutations under
   // pnpm. Cast through unknown to bridge the two structurally-identical
   // NextRequest / NextResponse type identities.
-  const intlResponse = handleI18n(request as unknown as Parameters<typeof handleI18n>[0]) as unknown as NextResponse;
+  const intlResponse = handleI18n(
+    request as unknown as Parameters<typeof handleI18n>[0],
+  ) as unknown as NextResponse;
 
   const needsAuth = PROTECTED.some((p) => request.nextUrl.pathname.startsWith(p));
   if (needsAuth) {
