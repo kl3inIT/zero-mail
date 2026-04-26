@@ -2,6 +2,7 @@ import { headers } from 'next/headers';
 import { getLocale, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 
+import { PageShell } from '@/components/ui/PageShell';
 import { buttonVariants } from '@/components/ui/button';
 import { getCurrentUser } from '@/features/account/api/me';
 
@@ -46,14 +47,16 @@ export default async function LandingPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-16">
-      <h1 className="text-2xl font-semibold">{t('landing.heading')}</h1>
-      <p className="text-muted-foreground text-base">{t('landing.tagline')}</p>
-      <div>
-        <Link href={ctaHref} className={buttonVariants()}>
-          {t(ctaKey)}
-        </Link>
+    <PageShell variant="marketing">
+      <div className="flex flex-col gap-8">
+        <h1 className="text-3xl font-semibold tracking-tight">{t('landing.heading')}</h1>
+        <p className="text-muted-foreground text-base">{t('landing.tagline')}</p>
+        <div>
+          <Link href={ctaHref} className={buttonVariants()}>
+            {t(ctaKey)}
+          </Link>
+        </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

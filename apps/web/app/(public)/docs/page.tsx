@@ -4,6 +4,8 @@ import matter from 'gray-matter';
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 
+import { EmptyState } from '@/components/ui/EmptyState';
+import { PageShell } from '@/components/ui/PageShell';
 import {
   DOCS_DIR,
   FILENAME_RE,
@@ -46,13 +48,10 @@ export default async function DocsIndexPage() {
   docs.sort((a, b) => a.order - b.order);
 
   return (
-    <section className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-semibold">{t('docs.indexHeading')}</h1>
+    <PageShell variant="docs">
+      <h1 className="mb-6 text-3xl font-semibold tracking-tight">{t('docs.indexHeading')}</h1>
       {docs.length === 0 ? (
-        <div>
-          <p className="text-base font-semibold">{t('docs.empty.heading')}</p>
-          <p className="text-muted-foreground text-sm">{t('docs.empty.body')}</p>
-        </div>
+        <EmptyState title={t('docs.empty.heading')} body={t('docs.empty.body')} />
       ) : (
         <ul className="space-y-2">
           {docs.map((d) => (
@@ -64,6 +63,6 @@ export default async function DocsIndexPage() {
           ))}
         </ul>
       )}
-    </section>
+    </PageShell>
   );
 }

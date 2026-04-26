@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { compileMDX } from 'next-mdx-remote/rsc';
 import { getLocale, getTranslations } from 'next-intl/server';
 
+import { PageShell } from '@/components/ui/PageShell';
 import { FrontmatterSchema, SLUG_RE, buildDocPath } from '@/lib/docs/loader';
 
 /**
@@ -52,14 +53,16 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
   if (fm.data.slug !== slug || fm.data.locale !== locale) notFound();
 
   return (
-    <article className="prose mx-auto max-w-3xl px-4 py-8">
-      <h1>{fm.data.title}</h1>
-      {content}
-      <p className="mt-8">
-        <Link href="/docs" className="text-primary underline">
-          {t('docs.backToList')}
-        </Link>
-      </p>
-    </article>
+    <PageShell variant="docs">
+      <article className="prose">
+        <h1>{fm.data.title}</h1>
+        {content}
+        <p className="mt-8">
+          <Link href="/docs" className="text-primary underline">
+            {t('docs.backToList')}
+          </Link>
+        </p>
+      </article>
+    </PageShell>
   );
 }
