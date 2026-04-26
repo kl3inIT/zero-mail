@@ -22,6 +22,8 @@ public final class ErrorCodes {
     public static final String CONFLICT                     = "error.conflict";
     public static final String BAD_REQUEST                  = "error.badRequest";
     public static final String GMAIL_DISCONNECTED           = "error.gmail.disconnected";
+    public static final String GMAIL_IDENTITY_MISMATCH      = "error.gmail.identity.mismatch";
+    public static final String GMAIL_CONSENT_DENIED         = "error.gmail.consent.denied";
 
     private ErrorCodes() {}
 }
