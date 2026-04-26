@@ -96,8 +96,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ProblemDetail> onDataIntegrity(DataIntegrityViolationException ex) {
         // Do NOT echo SQL state, constraint names, or raw exception messages to the client —
-        // those can leak schema details. Log server-side instead.
-        log.warn("Data integrity violation translated to 409", ex);
+        // those can leak schema details. We also deliberately do NOT pass the throwable
+        // itself to the logger: Logback would render the full stack trace and the wrapped
+        // SQLException's message + SQL state into the appender output, which violates the
+        // Phase 1.1 "no SQL internals / PII in logs" invariant. Log only the exception
+        // class name on the server side. (CR-01.)
+        log.warn("Data integrity violation translated to 409: {}", ex.getClass().getSimpleName());
         return problem(HttpStatus.CONFLICT,
                 "Conflict",
                 "The request could not be persisted because a data integrity rule was violated.",

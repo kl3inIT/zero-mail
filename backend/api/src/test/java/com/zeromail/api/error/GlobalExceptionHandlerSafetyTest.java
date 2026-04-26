@@ -189,6 +189,25 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
                 .as("sentinel '%s' must not appear in any Logback event during request", sentinel)
                 .doesNotContain(sentinel);
 
+        // CR-01: also assert that translated events emitted by GlobalExceptionHandler do
+        // NOT carry a Throwable proxy. Logback would render the full stack trace +
+        // wrapped-cause messages (e.g. SQLException's SQL state / constraint name) into
+        // the appender output if a throwable were passed — which is exactly the leak the
+        // formatted-message+MDC check above misses. We scope the assertion to events
+        // originating from the GlobalExceptionHandler logger so unrelated framework
+        // events (which legitimately attach throwables for operator triage) are ignored.
+        for (ILoggingEvent ev : probe.events()) {
+            if (!"com.zeromail.api.config.GlobalExceptionHandler".equals(ev.getLoggerName())) {
+                continue;
+            }
+            assertThat(ev.getThrowableProxy())
+                    .as("translated event from GlobalExceptionHandler must not carry a "
+                            + "Throwable proxy (would render stack trace + cause messages "
+                            + "containing SQL internals / sentinels) — message='%s'",
+                            ev.getFormattedMessage())
+                    .isNull();
+        }
+
         // Generic title/detail invariants — don't leak Java type / framework / SQL state into
         // the prose, even if the underlying exception carried them.
         JsonNode json = new ObjectMapper().readTree(probe.body());
