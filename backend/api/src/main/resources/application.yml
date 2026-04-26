@@ -4,6 +4,9 @@ spring:
   threads:
     virtual:
       enabled: true
+  docker:
+    compose:
+      lifecycle-management: start_only
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/zeromail}
     username: ${DB_USER:zeromail}
