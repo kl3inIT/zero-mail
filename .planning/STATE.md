@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 1.2 Plan 06 complete (DomainBoundaryArchTests + 2 cross-domain decompositions + canonical Pattern 8 cleanup; full ./gradlew clean check green)
-last_updated: "2026-04-26T10:12:58.249Z"
-last_activity: 2026-04-26 -- Phase 1.3 planning complete
+stopped_at: Phase 1.2.1 context gathered (18 decisions across 4 areas — see 01.2.1-CONTEXT.md)
+last_updated: "2026-04-26T11:00:00.000Z"
+last_activity: 2026-04-26 -- Phase 1.2.1 context gathered (18 decisions); resume at .planning/phases/01.2.1-shared-base-entity-and-enum-standard/01.2.1-CONTEXT.md
 progress:
   total_phases: 11
   completed_phases: 3
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 1.3 — Frontend Architecture Refactor and Public Content Foundation (INSERTED)
+**Current focus:** Phase 1.2.1 — Shared base entity + IdentifiedEnum standard + DTO group-by-domain (INSERTED)
 
 ## Current Position
 
-Phase: 1.3 (Frontend Architecture Refactor and Public Content Foundation (INSERTED)) — READY
-Plan: — (Phase 1.2 complete; awaiting Phase 1.3 plan/discuss)
-Status: Ready to execute
-Last activity: 2026-04-26 -- Phase 1.3 planning complete
+Phase: 1.2.1 (Shared base entity + IdentifiedEnum standard + DTO group-by-domain (INSERTED)) — CONTEXT GATHERED
+Plan: — (CONTEXT.md written, awaiting /gsd-plan-phase 1.2.1)
+Status: Ready to plan; 18 decisions captured across 4 areas (entity hierarchy / enum interface / enum persistence / DTO grouping)
+Last activity: 2026-04-26 -- Phase 1.2.1 discuss-phase complete
 
 Progress: [████████████] 100% of Phase 1.2 (24/30 total plans = 80%)
 
