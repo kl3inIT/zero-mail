@@ -139,7 +139,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
   4. Current frontend surfaces share a Tailwind 4 token layer and five reusable primitives (`PageShell`, `SectionCard`, `StatusAlert`, `EmptyState`, `LoadingState`), with hard-coded ad-hoc styling replaced across login, onboarding, settings, landing, docs, and existing shared components.
   5. Next.js App Router error fallbacks exist for root, public, auth, protected, and 404 states; they use the new primitives where provider context allows, never render raw exception details, and pass the existing frontend i18n/type/lint checks.
 **Plans**: 6 plans
-- [ ] 01.4-01-PLAN.md — [BLOCKING] Wave 0 test scaffolds (5 backend + 9 frontend Vitest, MockGoogleRevocationServer fixture)
+- [x] 01.4-01-PLAN.md — [BLOCKING] Wave 0 test scaffolds (5 backend + 9 frontend Vitest, MockGoogleRevocationServer fixture)
 - [ ] 01.4-02-PLAN.md — Backend OAuth2 dispatcher: GmailIdentityMismatchException + Success/Failure handlers + Dispatching beans + GoogleTokenRevocationClient + ErrorCodes + SecurityConfig wiring
 - [ ] 01.4-03-PLAN.md — Backend extensions: GmailConnectionService.upsert(...) idempotent + GmailScopeRequestResolver login_hint graceful-degrade
 - [ ] 01.4-04-PLAN.md — Frontend primitives: PageShell + SectionCard + StatusAlert + EmptyState + LoadingState (compose existing shadcn, no new installs)

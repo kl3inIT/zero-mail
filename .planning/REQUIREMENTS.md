@@ -9,8 +9,8 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 
 ### Auth & Onboarding
 
-- [ ] **AUTH-01**: User can sign up and sign in via Google OAuth with Gmail scopes
-- [ ] **AUTH-02**: User can connect exactly one Gmail / Google Workspace account
+- [x] **AUTH-01**: User can sign up and sign in via Google OAuth with Gmail scopes
+- [x] **AUTH-02**: User can connect exactly one Gmail / Google Workspace account
 - [ ] **AUTH-03**: User can revoke Gmail access and delete their account + all stored data
 - [ ] **AUTH-04**: User session persists via cookie-based session (not JWT)
 - [ ] **AUTH-05**: Disconnected tenants (`invalid_grant`) enter a DISCONNECTED state with user-visible recovery prompt
@@ -142,8 +142,8 @@ Each v1 requirement maps to exactly one phase.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 1 | Pending |
-| AUTH-02 | Phase 1 | Pending |
+| AUTH-01 | Phase 1 | Complete |
+| AUTH-02 | Phase 1 | Complete |
 | AUTH-03 | Phase 1 | Pending |
 | AUTH-04 | Phase 1 | Pending |
 | AUTH-05 | Phase 1 | Pending |
