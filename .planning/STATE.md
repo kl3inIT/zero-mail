@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 01.4-06-PLAN.md (Phase 01.4 ready for verification)
-last_updated: "2026-04-27T05:15:00.000Z"
+stopped_at: Completed quick task 260427-8xs: project-wide JetBrains problem sweep
+last_updated: "2026-04-26T23:52:26.000Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 13
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 Phase: 01.4 (gmail-identity-semantics-permission-ux-and-ui-consistency) — VERIFYING
 Plan: 6 of 6 (complete)
 Status: Phase ready for /gsd-verify-work
-Last activity: 2026-04-27 - Completed quick task 260427-8sw: Phase 1.5 folder restructure
+Last activity: 2026-04-27 - Completed quick task 260427-8xs: project-wide JetBrains problem sweep
 
 Progress: [██████████] 100%
 
@@ -184,6 +184,7 @@ None yet.
 | 260427-02m | Refactor @Value application properties into @ConfigurationProperties | 2026-04-27 | fec9201 | [260427-02m-refactor-value-application-properties-in](./quick/260427-02m-refactor-value-application-properties-in/) |
 | 260427-8qe | Phase 1.5 quick cleanup: font fix and low-risk frontend/backend review findings | 2026-04-27 | 91117fd | [260427-8qe-phase-1-5-quick-cleanup-font-fix-and-low](./quick/260427-8qe-phase-1-5-quick-cleanup-font-fix-and-low/) |
 | 260427-8sw | Phase 1.5 folder restructure for web docs and i18n messages | 2026-04-27 | 576f671 | [260427-8sw-phase-1-5-folder-restructure-for-web-doc](./quick/260427-8sw-phase-1-5-folder-restructure-for-web-doc/) |
+| 260427-8xs | Project-wide JetBrains problem sweep for backend and frontend | 2026-04-27 | 8944e0c | [260427-8xs-project-wide-problem-sweep-for-backend-a](./quick/260427-8xs-project-wide-problem-sweep-for-backend-a/) |
 | 260426-a5s | Add Spring Boot Docker Compose support to backend/api so dev startup auto-launches Postgres + Redis from docker-compose.yml | 2026-04-26 | 1219ec8 | [260426-a5s-add-spring-boot-docker-compose-support-t](./quick/260426-a5s-add-spring-boot-docker-compose-support-t/) |
 
 ## Deferred Items
@@ -196,6 +197,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-27T05:15:00.000Z
-Stopped at: Completed 01.4-06-PLAN.md (Phase 01.4 ready for verification — all 6 plans complete, every Wave 0 RED scaffold GREEN)
+Last session: 2026-04-26T23:52:26.000Z
+Stopped at: Completed quick task 260427-8xs: project-wide JetBrains problem sweep
 Resume file: None
