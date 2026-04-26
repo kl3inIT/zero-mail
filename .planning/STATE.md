@@ -72,6 +72,7 @@ Progress: [█████████████] 2/4 plans of Phase 01.2.1 (2
 | Phase 01.3 P04 | 10min | 4 tasks | 22 created + 9 modified + 5 relocated |
 | Phase 01.3 P05 | 12min | 5 tasks | 5 created + 1 modified + 3 relocated + 5 deleted |
 | Phase 01.2.1 P04 | 38min | 5 tasks | 17 files |
+| Phase 01.3 P06 | 9min | 2 tasks | 8 created + 3 modified |
 
 ## Accumulated Context
 
@@ -124,6 +125,9 @@ Recent decisions affecting current work:
 - [Phase 1.3]: Plan 05 — Playwright route-smoke env-blocked in sandbox (port 3000 held by stale process returning 500). Spec committed as durable gate; CI / fresh dev runs cleanly. Route-smoke pattern locked for future [locale]-style mirror-tree deletions.
 - [Phase ?]: Phase 01.2.1 Plan 04 — DTO group-by-domain reorg (4 DTOs into 3 sub-packages, 4 root files DELETED) + GmailConnectionStatusResponse rename across Java + URL + @Tag(name=gmail) + frontend; @NamedInterface re-exposure pattern locked for nested sub-packages of auto-detected modulith modules; springdoc-openapi-gradle-plugin 1.9.0 wired for hermetic spec emit (port 58080, dummy creds) — replaces bootRun&+kill per W3 closure.
 - [Phase ?]: Phase 01.2.1 Plan 04 deviation: concurrent user activity (commits 3e13e05 / e367d67) auto-staged executor's pending Java edits + a phase-01.3 e2e scaffold file into commits with mixed phase prefixes — same race condition documented for Phase 1.2 P05 commits 03b5652+eabbdca. Documented in 01.2.1-04-SUMMARY.md §Deviations §4+§5. No code-quality or scope-creep impact; only commit-subject attribution drift.
+- [Phase 1.3]: Plan 06 — Wave 4 docs/MDX pipeline landed. apps/web/lib/docs/loader.ts is the deterministic resolver + zod FrontmatterSchema (REVIEWS Revision 6, OpenCode MEDIUM): anchored on path.dirname(fileURLToPath(import.meta.url)) (or __dirname when defined), never the caller's working directory. Index page parses content/docs/*.mdx with gray-matter + safeParse and silently skips malformed entries; dynamic [slug] page uses compileMDX from next-mdx-remote/rsc with await params + SLUG_RE BEFORE path.join + safeParse + slug/locale consistency check (fm.data.slug !== slug || fm.data.locale !== locale → notFound()). 4 sample MDX files (vi + en, getting-started + privacy). next-mdx-remote v6 security defaults preserved (no override of blockJS / blockDangerousJS). Wave 0 mdx-pipeline.test.ts FULLY GREEN (10/10, 0 skipped).
+- [Phase 1.3]: Plan 06 — Pattern locked: when a Wave 0 negative-substring regex (e.g. /process\.cwd\(\)/) tests source bytes for forbidden tokens, prose comments must paraphrase the token rather than mention it literally. Useful guard, but conflates source bytes with semantics — name the trade-off in the comment when paraphrasing.
+- [Phase 1.3]: Plan 06 — Pattern locked: Wave 0 availability gates that read existsSync('node_modules/<pkg>/package.json') under pnpm workspaces MUST OR-check workspace-root node_modules (pnpm hoists shared deps to root); the Plan 01 mdx-pipeline gate was widened in this plan and the inline note explains the pnpm-hoist intent for future agents.
 
 ### Roadmap Evolution
 
