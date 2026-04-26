@@ -1,5 +1,8 @@
 import { defineRouting } from 'next-intl/routing';
 
+export const NEXT_LOCALE_COOKIE = 'NEXT_LOCALE';
+export const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year (REQ-2 persistence)
+
 /**
  * next-intl routing configuration for Zero Mail (Phase 1.1).
  *
@@ -18,8 +21,8 @@ export const routing = defineRouting({
   defaultLocale: 'vi',
   localePrefix: 'never',
   localeCookie: {
-    name: 'NEXT_LOCALE',
-    maxAge: 60 * 60 * 24 * 365, // 1 year (REQ-2 persistence)
+    name: NEXT_LOCALE_COOKIE,
+    maxAge: LOCALE_COOKIE_MAX_AGE,
     sameSite: 'lax',
     secure: true,
   },

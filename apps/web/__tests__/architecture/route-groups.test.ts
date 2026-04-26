@@ -1,4 +1,4 @@
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
@@ -14,7 +14,7 @@ describe('Phase 1.3 — Route group architecture', () => {
     expect(statSync(resolve(APP_DIR, '(protected)')).isDirectory()).toBe(true);
   });
 
-  it('app/[locale]/ mirror tree is deleted (D-C1)', () => {
+  it('app/[locale]/ mirror tree is absent (locale is cookie data, not route structure)', () => {
     expect(existsSync(resolve(APP_DIR, '[locale]'))).toBe(false);
   });
 
@@ -40,5 +40,12 @@ describe('Phase 1.3 — Route group architecture', () => {
 
   it('root app/layout.tsx is preserved', () => {
     expect(existsSync(resolve(APP_DIR, 'layout.tsx'))).toBe(true);
+  });
+
+  it('proxy does not use next-intl routing middleware rewrite', () => {
+    const proxy = readFileSync(resolve(APP_DIR, '../proxy.ts'), 'utf8');
+    expect(proxy).not.toMatch(/next-intl\/middleware/);
+    expect(proxy).not.toMatch(/createIntlMiddleware/);
+    expect(proxy).toMatch(/NextResponse\.next\(\)/);
   });
 });

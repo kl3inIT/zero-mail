@@ -3,10 +3,10 @@ import { test, expect } from '@playwright/test';
 /**
  * Phase 1.3 Plan 05 Task 4 — Route smoke (REVIEWS Revision 2 — Codex HIGH #5).
  *
- * Gates the deletion of `app/[locale]/` (Task 5). Context7 next-intl docs warn
- * that `localePrefix: 'never'` may still rely on a [locale] segment for some
- * rewrite paths; PATTERNS.md asserts the mirror files are dead but empirical
- * confirmation against `next dev` is mandatory before deletion.
+ * Runtime guard for clean URLs without an `app/[locale]` mirror. next-intl's
+ * routing middleware rewrites `localePrefix: 'never'` requests to hidden
+ * `/vi/...` paths; this app deliberately avoids that middleware and reads
+ * NEXT_LOCALE directly from the cookie instead.
  *
  * Coverage:
  *   - / , /login, /docs, /docs/getting-started → 200 (anonymous)
