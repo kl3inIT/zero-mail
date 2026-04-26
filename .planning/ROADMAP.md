@@ -12,7 +12,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - Decimal phases (1.1, 1.2, 2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: Foundation & Safety Infrastructure** - Scoped Values, `@Sensitive`, Logback scrub, ArchUnit bans, multi-tenant leak test, Google OAuth, skeleton OpenAPI, CASA kickoff (CASA external filing pending — tracked outside the phase as a parallel external dependency)
-- [ ] **Phase 1.1: Vietnamese-first i18n and error-handling foundation (INSERTED)** - Default language Vietnamese, secondary English, user-facing language switcher; stable API error contracts that are frontend-localizable; reference local JHipster project patterns where appropriate; preserve all Phase 1 privacy/safety constraints
+- [x] **Phase 1.1: Vietnamese-first i18n and error-handling foundation (INSERTED)** _(completed 2026-04-26)_ - Default language Vietnamese, secondary English, user-facing language switcher; stable API error contracts that are frontend-localizable; reference local JHipster project patterns where appropriate; preserve all Phase 1 privacy/safety constraints
 - [ ] **Phase 1.2: Domain-owned persistence restructuring (INSERTED)** - Refactor `backend/core` into domain-owned service/persistence/model packages, add a small shared package for stable cross-cutting infrastructure, preserve schema and safety constraints, and enforce boundaries with Modulith or ArchUnit
 - [ ] **Phase 2A: Mail Ingestion** - Gmail `users.watch` + Pub/Sub push + OIDC verification + idempotent history processing + global pause
 - [ ] **Phase 2B: Billing (Prepaid Credits)** - Double-entry Postgres ledger, reserve/settle/release, credit-hold watchdog, balance UI hooks
@@ -189,6 +189,8 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Safety Infrastructure | 9/9 | Complete (CASA filing pending external) | 2026-04-25 |
+| 1.1. Vietnamese-first i18n and error-handling foundation (INSERTED) | 8/8 | Complete | 2026-04-26 |
+| 1.2. Domain-owned persistence restructuring (INSERTED) | 0/6 | In progress | - |
 | 2A. Mail Ingestion | 0/TBD | Not started | - |
 | 2B. Billing (Prepaid Credits) | 0/TBD | Not started | - |
 | 2C. LLM Gateway | 0/TBD | Not started | - |

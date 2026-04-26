@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 1.2 context gathered
-last_updated: "2026-04-26T05:06:45.732Z"
-last_activity: 2026-04-26 -- Phase 01.2 planning complete
+stopped_at: Phase 1.2 ready to execute
+last_updated: "2026-04-26T05:30:00.000Z"
+last_activity: 2026-04-26 -- Phase 01.1 marked complete; starting phase 01.2 execution
 progress:
   total_phases: 10
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 23
   completed_plans: 17
   percent: 74
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 1.1 — Vietnamese-first i18n and error-handling foundation (INSERTED)
+**Current focus:** Phase 1.2 — Domain-owned persistence restructuring (INSERTED)
 
 ## Current Position
 
-Phase: 1.1 (Vietnamese-first i18n and error-handling foundation (INSERTED)) — EXECUTING
-Plan: 8 of 8
+Phase: 1.2 (Domain-owned persistence restructuring (INSERTED)) — EXECUTING
+Plan: 0 of 6
 Status: Ready to execute
-Last activity: 2026-04-26 -- Phase 01.2 planning complete
+Last activity: 2026-04-26 -- Phase 01.1 marked complete; starting phase 01.2 execution
 
 Progress: [████░░░░░░] 38%
 
