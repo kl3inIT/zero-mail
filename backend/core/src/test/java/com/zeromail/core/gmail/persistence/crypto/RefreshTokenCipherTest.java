@@ -1,4 +1,4 @@
-package com.zeromail.core.crypto;
+package com.zeromail.core.gmail.persistence.crypto;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

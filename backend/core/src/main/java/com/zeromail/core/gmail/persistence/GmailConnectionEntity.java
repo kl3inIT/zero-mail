@@ -1,9 +1,11 @@
-package com.zeromail.core.persistence;
+package com.zeromail.core.gmail.persistence;
 
 import java.time.Instant;
 import java.util.UUID;
 
 import org.hibernate.annotations.TenantId;
+
+import com.zeromail.core.gmail.model.GmailConnectionStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

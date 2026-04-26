@@ -1,4 +1,4 @@
-package com.zeromail.core.crypto;
+package com.zeromail.core.gmail.persistence.crypto;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;

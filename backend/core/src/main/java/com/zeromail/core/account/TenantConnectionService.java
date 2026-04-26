@@ -6,8 +6,8 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.zeromail.core.persistence.GmailConnectionRepository;
-import com.zeromail.core.persistence.GmailConnectionStatus;
+import com.zeromail.core.gmail.model.GmailConnectionStatus;
+import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 
 /**
  * Owns Gmail connection state transitions for the current tenant.
