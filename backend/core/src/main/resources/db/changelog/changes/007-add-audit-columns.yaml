@@ -1,0 +1,92 @@
+databaseChangeLog:
+  - changeSet:
+      id: 007-add-audit-columns
+      author: zeromail
+      comment: >-
+        Phase 1.2.1 D-A3 — add updated_at + version columns to the three
+        tenant-owned tables so AbstractAuditableEntity (Spring Data JPA auditing
+        + Hibernate optimistic locking) can map to them. tenants is intentionally
+        out of scope: TenantEntity extends AbstractEntity (id only) per D-A1.
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: true
+              - column:
+                  name: version
+                  type: integer
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: onboarding_selections
+            columns:
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: true
+              - column:
+                  name: version
+                  type: integer
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: gmail_connections
+            columns:
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: true
+              - column:
+                  name: version
+                  type: integer
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: UPDATE users SET updated_at = created_at WHERE updated_at IS NULL
+            dbms: postgresql
+        - sql:
+            sql: UPDATE onboarding_selections SET updated_at = created_at WHERE updated_at IS NULL
+            dbms: postgresql
+        - sql:
+            sql: UPDATE gmail_connections SET updated_at = created_at WHERE updated_at IS NULL
+            dbms: postgresql
+        - addNotNullConstraint:
+            tableName: users
+            columnName: updated_at
+            columnDataType: timestamptz
+        - addNotNullConstraint:
+            tableName: onboarding_selections
+            columnName: updated_at
+            columnDataType: timestamptz
+        - addNotNullConstraint:
+            tableName: gmail_connections
+            columnName: updated_at
+            columnDataType: timestamptz
+      rollback:
+        - dropColumn:
+            tableName: users
+            columnName: updated_at
+        - dropColumn:
+            tableName: users
+            columnName: version
+        - dropColumn:
+            tableName: onboarding_selections
+            columnName: updated_at
+        - dropColumn:
+            tableName: onboarding_selections
+            columnName: version
+        - dropColumn:
+            tableName: gmail_connections
+            columnName: updated_at
+        - dropColumn:
+            tableName: gmail_connections
+            columnName: version

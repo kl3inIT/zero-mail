@@ -94,10 +94,10 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 **Success Criteria** (what must be TRUE):
   1. `core.shared.persistence.AbstractEntity`, `AbstractAuditableEntity`, and `AbstractTenantOwnedEntity` exist; the 4 concrete entities (`TenantEntity`, `UserEntity`, `OnboardingSelectionEntity`, `GmailConnectionEntity`) extend the appropriate base; `MultiTenantLeakIntegrationTest` (FND-05) still passes after the refactor.
   2. `core.shared.lang.IdentifiedEnum` exists; `OnboardingStep` and `GmailConnectionStatus` implement it with stable `id()` + explicit `weight()`; `UserEntity.advanceTo` uses `weight()`-based comparison instead of `ordinal()`.
-  3. `OnboardingStepPersistenceTest` is upgraded to a `@DataJpaTest` that round-trips through real Hibernate and asserts the storage form is the id string, defending Pitfall 5 against an `EnumType.STRING → ORDINAL` switch.
+  3. `OnboardingStepPersistenceTest` is upgraded to a `PostgresContainerTest`-based round-trip that persists via Hibernate and asserts the storage form is the id string via `JdbcTemplate`, defending Pitfall 5 against an `EnumType.STRING → ORDINAL` switch.
   4. `backend/api/dto/` is reorganized into `account/`, `gmail/`, `onboarding/` sub-packages mirroring the `core.<domain>` layout; `TenantStatusResponse` is renamed to `GmailConnectionStatusResponse` (D-A4 follow-through).
   5. `OnboardingService.deleteSelectionsForCurrentTenant` uses a bulk JPQL `@Modifying @Query` instead of find-then-delete (closes WR-03).
-  6. Database schema is preserved byte-identical (no Liquibase changes); full `./gradlew clean check` stays green; `ApplicationModulesTest` + `DomainBoundaryArchTests` + `AccountDeletionE2ETest` all pass.
+  6. Database schema additions limited to audit columns (`updated_at`, `version`); no destructive or semantic-changing migrations. Full `./gradlew clean check` stays green; `ApplicationModulesTest` + `DomainBoundaryArchTests` + `AccountDeletionE2ETest` + `OnboardingStepPersistenceTest` all pass.
 **Plans**: TBD (run `/gsd-discuss-phase 1.2.1` then `/gsd-plan-phase 1.2.1`)
 
 ### Phase 1.3: Frontend Architecture Refactor and Public Content Foundation (INSERTED)
