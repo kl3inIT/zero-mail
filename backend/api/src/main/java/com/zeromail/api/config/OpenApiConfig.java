@@ -10,10 +10,12 @@ import org.springframework.context.annotation.Configuration;
 
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.media.ArraySchema;
+import io.swagger.v3.oas.models.media.BooleanSchema;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.IntegerSchema;
 import io.swagger.v3.oas.models.media.MapSchema;
 import io.swagger.v3.oas.models.media.MediaType;
+import io.swagger.v3.oas.models.media.NumberSchema;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
@@ -79,6 +81,22 @@ public class OpenApiConfig {
     @Bean
     GlobalOpenApiCustomizer apiErrorCustomizer() {
         return openApi -> {
+            // WR-04: scalar union schema for `params` map values. The backend's
+            // AllowedParamScalars filter only emits String/Number/Boolean (it drops
+            // anything else before it reaches the wire), so the wire shape is
+            // `{ [k: string]: string | number | boolean }` — not the previous
+            // `{ [k: string]: object }` which openapi-typescript materialized as
+            // `Record<string, never>` and broke generated-client safety for ICU
+            // parameter use. Cite: AllowedParamScalars, REVIEW.md WR-04.
+            Schema<?> safeParamScalar = new Schema<>()
+                    .oneOf(List.of(
+                            new StringSchema(),
+                            new IntegerSchema(),
+                            new NumberSchema(),
+                            new BooleanSchema()))
+                    .description("Allow-listed scalar value: string, integer, number, or boolean. "
+                            + "Filtered through AllowedParamScalars before serialization.");
+
             // --- 1. Register FieldErrorDto schema (referenced by ApiError.fieldErrors[]) ---
             Schema<?> fieldErrorDto = new ObjectSchema()
                     .description("Per-field validation error. CONTEXT.md decision D-C2: "
@@ -91,7 +109,7 @@ public class OpenApiConfig {
                     .addProperty("code", new StringSchema()
                             .description("Dotted hierarchical key inside the errors.field.* namespace."))
                     .addProperty("params", new MapSchema()
-                            .additionalProperties(new ObjectSchema())
+                            .additionalProperties(safeParamScalar)
                             .description("Allow-listed scalars (numbers, booleans, dotted keys, "
                                     + "short resource identifiers). Never raw user content."))
                     .required(List.of("field", "code"));
@@ -120,7 +138,7 @@ public class OpenApiConfig {
                                     + "Frontend localizes via the errors.* dictionary. "
                                     + "ALWAYS PRESENT."))
                     .addProperty("params", new MapSchema()
-                            .additionalProperties(new ObjectSchema())
+                            .additionalProperties(safeParamScalar)
                             .description("Allow-listed ICU placeholder scalars for the FE error message. "
                                     + "Filtered through AllowedParamScalars; never carries raw user content, "
                                     + "Gmail body fragments, SQL constraint names, or exception class names."))

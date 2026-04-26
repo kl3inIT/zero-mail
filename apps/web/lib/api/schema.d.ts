@@ -178,7 +178,7 @@ export interface components {
             code: string;
             /** @description Allow-listed ICU placeholder scalars for the FE error message. Filtered through AllowedParamScalars; never carries raw user content, Gmail body fragments, SQL constraint names, or exception class names. */
             params?: {
-                [key: string]: Record<string, never>;
+                [key: string]: string | number | boolean;
             };
             /** @description Per-field validation errors. Present only on validation failures. */
             fieldErrors?: components["schemas"]["FieldErrorDto"][];
@@ -196,7 +196,7 @@ export interface components {
             code: string;
             /** @description Allow-listed scalars (numbers, booleans, dotted keys, short resource identifiers). Never raw user content. */
             params?: {
-                [key: string]: Record<string, never>;
+                [key: string]: string | number | boolean;
             };
         };
     };

@@ -105,6 +105,47 @@ class ApiErrorSchemaTest extends ApiPostgresTestBase {
         assertThat(root.path("info").path("version").asText()).isEqualTo("0.1.1");
     }
 
+    /**
+     * WR-04: ApiError.params (and FieldErrorDto.params) additionalProperties must
+     * be a oneOf of scalar primitives — string, integer, number, boolean — not the
+     * previous {@code object} schema. Without this, openapi-typescript materializes
+     * the params map values as {@code Record<string, never>}, which makes the
+     * generated client unable to construct any concrete params payload and causes
+     * the documented contract to diverge from the wire shape produced by
+     * AllowedParamScalars.
+     */
+    @Test
+    void api_error_params_additional_properties_are_scalar_union() throws Exception {
+        JsonNode root = fetchApiDocs();
+        JsonNode apiError = root.path("components").path("schemas").path("ApiError");
+        JsonNode addl = apiError.path("properties").path("params").path("additionalProperties");
+        assertScalarUnion(addl, "ApiError.params");
+
+        JsonNode fieldErrorDto = root.path("components").path("schemas").path("FieldErrorDto");
+        JsonNode fieldAddl = fieldErrorDto.path("properties").path("params").path("additionalProperties");
+        assertScalarUnion(fieldAddl, "FieldErrorDto.params");
+    }
+
+    private void assertScalarUnion(JsonNode addl, String label) {
+        assertThat(addl.isMissingNode())
+                .as("%s.additionalProperties must be present", label)
+                .isFalse();
+        JsonNode oneOf = addl.path("oneOf");
+        assertThat(oneOf.isArray())
+                .as("%s.additionalProperties.oneOf must be an array of scalar primitives", label)
+                .isTrue();
+        java.util.Set<String> types = new java.util.HashSet<>();
+        for (JsonNode opt : oneOf) {
+            types.add(opt.path("type").asText());
+        }
+        assertThat(types)
+                .as("%s.additionalProperties.oneOf must include string, integer, number, boolean", label)
+                .contains("string", "integer", "number", "boolean");
+        assertThat(types)
+                .as("%s.additionalProperties.oneOf must NOT include 'object' (the broken pre-WR-04 shape)", label)
+                .doesNotContain("object");
+    }
+
     private JsonNode fetchApiDocs() throws Exception {
         RestClient client = RestClient.create("http://localhost:" + port);
         String body = client.get().uri("/v3/api-docs").retrieve().body(String.class);
