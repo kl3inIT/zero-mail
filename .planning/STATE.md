@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 Phase: 01.4 (gmail-identity-semantics-permission-ux-and-ui-consistency) — VERIFYING
 Plan: 6 of 6 (complete)
 Status: Phase ready for /gsd-verify-work
-Last activity: 2026-04-27 - Completed quick task 260427-8qe: Phase 1.5 quick cleanup
+Last activity: 2026-04-27 - Completed quick task 260427-8sw: Phase 1.5 folder restructure
 
 Progress: [██████████] 100%
 
@@ -183,6 +183,7 @@ None yet.
 |---|-------------|------|--------|-----------|
 | 260427-02m | Refactor @Value application properties into @ConfigurationProperties | 2026-04-27 | fec9201 | [260427-02m-refactor-value-application-properties-in](./quick/260427-02m-refactor-value-application-properties-in/) |
 | 260427-8qe | Phase 1.5 quick cleanup: font fix and low-risk frontend/backend review findings | 2026-04-27 | 91117fd | [260427-8qe-phase-1-5-quick-cleanup-font-fix-and-low](./quick/260427-8qe-phase-1-5-quick-cleanup-font-fix-and-low/) |
+| 260427-8sw | Phase 1.5 folder restructure for web docs and i18n messages | 2026-04-27 | 576f671 | [260427-8sw-phase-1-5-folder-restructure-for-web-doc](./quick/260427-8sw-phase-1-5-folder-restructure-for-web-doc/) |
 | 260426-a5s | Add Spring Boot Docker Compose support to backend/api so dev startup auto-launches Postgres + Redis from docker-compose.yml | 2026-04-26 | 1219ec8 | [260426-a5s-add-spring-boot-docker-compose-support-t](./quick/260426-a5s-add-spring-boot-docker-compose-support-t/) |
 
 ## Deferred Items
