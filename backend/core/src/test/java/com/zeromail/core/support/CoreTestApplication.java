@@ -2,6 +2,7 @@ package com.zeromail.core.support;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
@@ -15,6 +16,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
  * a sibling package; relying on Boot's auto-config default base package is not enough.
  */
 @SpringBootApplication(scanBasePackages = "com.zeromail.core")
+@ConfigurationPropertiesScan(basePackages = "com.zeromail.core")
 @EntityScan(basePackages = "com.zeromail.core")
 @EnableJpaRepositories(basePackages = "com.zeromail.core")
 public class CoreTestApplication {

@@ -13,6 +13,7 @@ dependencies {
     api("org.springframework.boot:spring-boot-starter-liquibase")
     api("org.liquibase:liquibase-core:5.0.2")
     api("net.logstash.logback:logstash-logback-encoder:8.0")
+    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
     runtimeOnly("org.postgresql:postgresql")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.testcontainers:postgresql:1.21.3")

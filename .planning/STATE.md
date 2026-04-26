@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: complete
 stopped_at: Phase 01.2.1 complete and verified (4/4 plans + VERIFICATION.md PASSED — 6/6 ROADMAP criteria + 17/17 CONTEXT decisions + 20/20 spot-checks). Branch gsd/phase-01.3-* will carry both 1.2.1 and 1.3 commits to a single PR.
-last_updated: "2026-04-26T14:30:00.000Z"
-last_activity: 2026-04-26
+last_updated: "2026-04-27T00:20:00.000+07:00"
+last_activity: 2026-04-27
 progress:
   total_phases: 12
   completed_phases: 5
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 Phase: 01.2.1 (shared-base-entity-and-enum-standard) — COMPLETE
 Plan: 4 of 4
 Status: VERIFICATION.md PASSED — 6/6 ROADMAP criteria + 17/17 CONTEXT decisions + 20/20 spot-checks. Closed on branch gsd/phase-01.3-*; will merge as part of the 1.3 PR.
-Last activity: 2026-04-26
+Last activity: 2026-04-27 - Completed quick task 260427-02m: Refactor @Value application properties into @ConfigurationProperties
 
 Progress: [█████████████] 4/4 plans of Phase 01.2.1 (34/35 total plans = 97%)
 
@@ -159,6 +159,7 @@ None yet.
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260427-02m | Refactor @Value application properties into @ConfigurationProperties | 2026-04-27 | uncommitted | [260427-02m-refactor-value-application-properties-in](./quick/260427-02m-refactor-value-application-properties-in/) |
 | 260426-a5s | Add Spring Boot Docker Compose support to backend/api so dev startup auto-launches Postgres + Redis from docker-compose.yml | 2026-04-26 | 1219ec8 | [260426-a5s-add-spring-boot-docker-compose-support-t](./quick/260426-a5s-add-spring-boot-docker-compose-support-t/) |
 
 ## Deferred Items

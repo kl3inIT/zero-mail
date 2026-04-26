@@ -19,6 +19,7 @@ public class SecurityConfig {
                               GoogleOAuthSuccessHandler successHandler,
                               GmailScopeRequestResolver gmailResolver) throws Exception {
         http
+            .cors(Customizer.withDefaults())
             .authorizeHttpRequests(a -> a
                 .requestMatchers("/login", "/actuator/health", "/v3/api-docs/**", "/swagger-ui/**",
                                  "/login/oauth2/**", "/oauth2/**").permitAll()

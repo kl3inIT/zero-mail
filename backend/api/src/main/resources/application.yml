@@ -61,6 +61,15 @@ spring:
 zeromail:
   web:
     base-url: ${ZEROMAIL_WEB_BASE_URL:http://localhost:3000}
+  cors:
+    # JHipster-style dev CORS config for separated frontend/API ports.
+    allowed-origins: "${ZEROMAIL_CORS_ALLOWED_ORIGINS:http://localhost:3000}"
+    allowed-origin-patterns: "${ZEROMAIL_CORS_ALLOWED_ORIGIN_PATTERNS:}"
+    allowed-methods: "${ZEROMAIL_CORS_ALLOWED_METHODS:GET,POST,PUT,PATCH,DELETE,OPTIONS}"
+    allowed-headers: "${ZEROMAIL_CORS_ALLOWED_HEADERS:*}"
+    exposed-headers: "${ZEROMAIL_CORS_EXPOSED_HEADERS:XSRF-TOKEN}"
+    allow-credentials: ${ZEROMAIL_CORS_ALLOW_CREDENTIALS:true}
+    max-age: ${ZEROMAIL_CORS_MAX_AGE:1800}
   crypto:
     # Prefer Secret Manager in deployed environments; fall back to local env var in dev/test.
     refresh-token-key-base64: ${REFRESH_TOKEN_KEY_BASE64:${sm://oauth-refresh-token-key-v1/versions/1:}}
