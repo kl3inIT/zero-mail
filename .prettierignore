@@ -1,0 +1,9 @@
+**/node_modules/**
+**/.next/**
+**/build/**
+**/dist/**
+**/out/**
+apps/web/lib/api/schema.d.ts
+pnpm-lock.yaml
+backend/**/*.java
+backend/**/build/**

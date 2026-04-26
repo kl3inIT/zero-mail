@@ -5,15 +5,38 @@
   "scripts": {
     "web:dev": "pnpm --filter zeromail-web dev",
     "web:build": "pnpm --filter zeromail-web build",
-    "generate:api": "pnpm --filter zeromail-web generate:api"
+    "generate:api": "pnpm --filter zeromail-web generate:api",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
+    "husky": "9.1.7",
+    "lint-staged": "16.4.0",
+    "prettier": "3.8.3",
+    "prettier-plugin-tailwindcss": "0.7.3",
     "turbo": "2.9.6"
   },
   "pnpm": {
     "peerDependencyRules": {
-      "ignoreMissing": ["@playwright/test"]
+      "ignoreMissing": [
+        "@playwright/test"
+      ]
     }
+  },
+  "lint-staged": {
+    "apps/web/**/*.{ts,tsx,js,jsx}": [
+      "pnpm --filter zeromail-web exec eslint --fix",
+      "pnpm --filter zeromail-web exec prettier --write"
+    ],
+    "apps/web/messages/*.json": [
+      "pnpm --filter zeromail-web exec prettier --write",
+      "pnpm --filter zeromail-web run i18n:check || true"
+    ],
+    "apps/web/!(messages)/**/*.{md,mdx,json,css}": [
+      "pnpm --filter zeromail-web exec prettier --write"
+    ],
+    "apps/web/*.{md,json,css}": [
+      "pnpm --filter zeromail-web exec prettier --write"
+    ]
   }
 }
