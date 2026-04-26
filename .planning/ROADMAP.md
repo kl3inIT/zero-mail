@@ -81,7 +81,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 **Plans**: 6 plans
 - [x] 01.2-01-PLAN.md — Move privacy module to core.shared.privacy + CL-3 Modulith naming probe + logback FQN update _(completed 2026-04-26)_
 - [x] 01.2-02-PLAN.md — Move TenantEntity/Repository to core.tenant.persistence; create per-domain lowlevel/ marker _(completed 2026-04-26)_
-- [ ] 01.2-03-PLAN.md — Move User entity/repo + 2 model types + 2 services to core.account; reshape AccountService (CL-2 deleteCurrentUser); transitional AccountDeletionController bridge
+- [x] 01.2-03-PLAN.md — Move User entity/repo + 2 model types + 2 services to core.account; reshape AccountService (CL-2 deleteCurrentUser); transitional AccountDeletionController bridge
 - [ ] 01.2-04-PLAN.md — Move onboarding domain (entity/repo/enum/service); add OnboardingService.deleteSelectionsForCurrentTenant; flip UserEntity OnboardingStep import; Wave 0 OnboardingStepEnumPersistenceTest
 - [ ] 01.2-05-PLAN.md — Move gmail domain + crypto; rename TenantConnectionService→GmailConnectionService; add TenantService.deleteCurrentTenant; collapse @EntityScan to single root; delete core.crypto + core.persistence packages
 - [ ] 01.2-06-PLAN.md — DomainBoundaryArchTests (4 rules); TenantIsolationArchTests regex update; TenantStatusController toResponse(view) helper (D-B5); finalize AccountDeletionController Pattern 8; ./gradlew clean check
@@ -206,7 +206,7 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 |-------|----------------|--------|-----------|
 | 1. Foundation & Safety Infrastructure | 9/9 | Complete (CASA filing pending external) | 2026-04-25 |
 | 1.1. Vietnamese-first i18n and error-handling foundation (INSERTED) | 8/8 | Complete | 2026-04-26 |
-| 1.2. Domain-owned persistence restructuring (INSERTED) | 2/6 | In progress | - |
+| 1.2. Domain-owned persistence restructuring (INSERTED) | 3/6 | In Progress|  |
 | 1.3. Frontend Architecture Refactor and Public Content Foundation (INSERTED) | 0/TBD | Not started | - |
 | 2A. Mail Ingestion | 0/TBD | Not started | - |
 | 2B. Billing (Prepaid Credits) | 0/TBD | Not started | - |

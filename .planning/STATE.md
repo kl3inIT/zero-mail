@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 1.2 plan 02 complete; plan 03 (account domain move) ready
-last_updated: "2026-04-26T08:51:00.000Z"
-last_activity: 2026-04-26 -- Plan 01.2-02 complete; tenant persistence relocated, FND-05 + Modulith verify both green
+stopped_at: Plan 01.2-02 complete; ready for Plan 01.2-03 (account domain move + AccountService CL-2 reshape)
+last_updated: "2026-04-26T09:08:31.186Z"
+last_activity: 2026-04-26
 progress:
   total_phases: 11
-  completed_phases: 3
+  completed_phases: 2
   total_plans: 23
-  completed_plans: 19
-  percent: 83
+  completed_plans: 20
+  percent: 87
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 ## Current Position
 
 Phase: 1.2 (Domain-owned persistence restructuring (INSERTED)) — EXECUTING
-Plan: 2 of 6
-Status: Plans 01-02 complete; ready for Plan 03
-Last activity: 2026-04-26 -- Plan 01.2-02 complete; TenantEntity/Repository relocated to core.tenant.persistence; FND-05 leak gate green
+Plan: 3 of 6
+Status: Ready to execute
+Last activity: 2026-04-26
 
 Progress: [████████░░] 83%
 
@@ -59,6 +59,7 @@ Progress: [████████░░] 83%
 | Phase 1.1 P8 | 14min | 4 tasks | 5 files |
 | Phase 1.2 P01 | 9min | 3 tasks | 11 files |
 | Phase 1.2 P02 | 17min | 2 tasks | 16 files |
+| Phase 1.2 PP03 | 9min | 3 tasks | 27 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,8 @@ Recent decisions affecting current work:
 - [Phase 1.2]: Pitfall 1 closure protocol confirmed in practice — every string-typed FQN reference (logback XML `<filter class="..."/>`, ArchUnit literal constants, build-script `approvedPkg`, integration-test imports) MUST update in the same plan as Java class moves. Surface scan via `grep -rn 'old.fqn' backend/ apps/ buildSrc/` is the verification gate.
 - [Phase 1.2]: Plan 02 confirmed the per-domain `persistence/` + `persistence/lowlevel/` shape (intra-domain marker, no `@ApplicationModule`); Plans 03/04/05 reuse this exact shape for account/onboarding/gmail. The proactive `lowlevel/` package-info marker prevents Plan 06's regex-update from silent-no-oping.
 - [Phase 1.2]: Plan 02 sweep folded 10 stale-import sites (2 production, 8 test) into the same commit as the `git mv` — no fix-up commit needed (vs Plan 01's `9769dd7`). Discipline: Edit the working tree of renamed files BEFORE staging, never after the first commit.
+- [Phase ?]: [Phase 1.2]: Plan 03 confirmed CL-2 reshape pattern — AccountService dropped 4 cross-domain repos, kept only UserRepository; new deleteCurrentUser is single-domain. Multi-domain orchestration moves to AccountDeletionController as transitional bridge across Plans 03→06.
+- [Phase ?]: [Phase 1.2]: Forward-decl deferral protocol locked: never declare a Modulith allowedDependencies edge to a non-existent module. core.account/package-info.java declares {tenant, shared.privacy} now; Plan 04 amends to add 'onboarding' once that module exists on disk.
 
 ### Roadmap Evolution
 
@@ -115,6 +118,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-26T08:51:00.000Z
+Last session: 2026-04-26T09:08:03.327Z
 Stopped at: Plan 01.2-02 complete; ready for Plan 01.2-03 (account domain move + AccountService CL-2 reshape)
-Resume file: .planning/phases/01.2-domain-owned-persistence-restructuring/01.2-03-PLAN.md
+Resume file: None
