@@ -23,6 +23,10 @@ public class TenantStatusController {
     public TenantStatusResponse status() {
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
         GmailConnectionView view = connectionService.currentStatus(tenantId);
+        return toResponse(view);
+    }
+
+    private static TenantStatusResponse toResponse(GmailConnectionView view) {
         return new TenantStatusResponse(view.status(), view.googleEmail());
     }
 }
