@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 1.3 Plan 02 complete (Husky 9 + lint-staged + Prettier 3 monorepo-root tooling foundation; hook empirically fired on both task commits)
-last_updated: "2026-04-26T12:34:08.224Z"
-last_activity: 2026-04-26 -- Phase 01.2.1 planning complete
+last_updated: "2026-04-26T12:45:01.735Z"
+last_activity: 2026-04-26 -- Phase 01.2.1 execution started
 progress:
   total_phases: 12
   completed_phases: 3
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 01.3 — frontend-architecture-refactor-and-public-content-foundation
+**Current focus:** Phase 01.2.1 — shared-base-entity-and-enum-standard
 
 ## Current Position
 
-Phase: 01.3 (frontend-architecture-refactor-and-public-content-foundation) — EXECUTING
-Plan: 3 of 8
-Status: Ready to execute
-Last activity: 2026-04-26 -- Phase 01.2.1 planning complete
+Phase: 01.2.1 (shared-base-entity-and-enum-standard) — EXECUTING
+Plan: 1 of 4
+Status: Executing Phase 01.2.1
+Last activity: 2026-04-26 -- Phase 01.2.1 execution started
 
 Progress: [████████████] 100% of Phase 1.2 (24/30 total plans = 80%)
 
