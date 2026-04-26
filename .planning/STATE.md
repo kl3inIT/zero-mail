@@ -74,6 +74,7 @@ Progress: [█████████████] 4/4 plans of Phase 01.2.1 (3
 | Phase 01.2.1 P04 | 38min | 5 tasks | 17 files |
 | Phase 01.3 P06 | 9min | 2 tasks | 8 created + 3 modified |
 | Phase 01.3 P07 | 5min | 3 tasks | 1 created + 8 modified |
+| Phase 01.3 P08 | 15min | 1 task (Task 2 = checkpoint:human-verify deferred per autonomous=false) | 0 code + 3 .planning artifacts |
 
 ## Accumulated Context
 
@@ -131,6 +132,7 @@ Recent decisions affecting current work:
 - [Phase 1.3]: Plan 06 — Pattern locked: Wave 0 availability gates that read existsSync('node_modules/<pkg>/package.json') under pnpm workspaces MUST OR-check workspace-root node_modules (pnpm hoists shared deps to root); the Plan 01 mdx-pipeline gate was widened in this plan and the inline note explains the pnpm-hoist intent for future agents.
 - [Phase 1.3]: Plan 07 — Wave 5 i18n closure landed: 11 new leaf keys (87 total) mirrored across vi/en bundles (common.nav.{docs,signIn} + landing.{heading,tagline,primaryCta,continueSetupCta} + docs.{indexHeading,backToList,empty.{heading,body},notFound.body}); EN_SCAN_FILES expanded 10 → 14 entries (added (public)/docs/page.tsx + [slug]/page.tsx + [slug]/loading.tsx + (auth)/layout.tsx); 8 `t(... as never)` cast bypasses across 4 source files removed (next-intl typed-key check re-engaged for Plan 04/05/06 surfaces). UI-SPEC §Copywriting Contract copy used verbatim.
 - [Phase 1.3]: Plan 07 — REVIEWS Revision 3 closed: lint-staged i18n:check flipped from warn-only (`|| true` since Plan 02) to STRICT. Empirically verified on disposable temp branch — deliberate vi.json key delete → `git commit` → husky exit 1 + lint-staged auto-revert + `[parity] vi.json and en.json leaf-key sets differ: en-only: landing.continueSetupCta` in stderr. Pattern locked: flip strict BEFORE temp-branch verification so the temp branch inherits strict config.
+- [Phase 1.3]: Plan 08 — Phase 01.3 closure-ready. All 4 automated gates GREEN (tsc, vitest 80/80 across 9 files, i18n:check 87 keys, ESLint). All 6 Wave 0 files GREEN with 56/56 assertions zero-RED zero-SKIP. proxy.ts `as unknown as` cast preserved (3 occurrences ≥ 2). Schema-diff REVIEWS Revision 7 gate PASSED via source-control proof: `git log e367d67..HEAD -- apps/web/lib/api/schema.d.ts` returns 0 commits — Phase 1.3 is frontend-only by definition, schema.d.ts byte-identical to Phase 01.2.1 baseline. VALIDATION.md flipped `nyquist_compliant: true` + `wave_0_complete: true`. Two manual gates deferred to user with replay commands: Playwright e2e (port 3000 held by stale `next dev` PID 24616 — same Plan 03/05 env-block) and live `generate:api` round-trip (backend not running on localhost:8080).
 
 ### Roadmap Evolution
 
