@@ -37,10 +37,15 @@ const ERROR_CODES_JAVA = resolve(
 );
 
 // Files in scope for the EN-prose scanner. Mirrors PLAN <task1.behavior>.
+// Plan 1.3-05 Task 1 — pages relocated into route groups; paths updated
+// in lockstep so the scanner does not silently lose coverage (Phase 1.1 D-D3).
+// Plan 1.3-05 Task 3 — landing page added under (public)/page.tsx.
 const EN_SCAN_FILES = [
-  'app/login/page.tsx',
-  'app/onboarding/page.tsx',
-  'app/settings/page.tsx',
+  'app/(auth)/login/page.tsx',
+  'app/(protected)/onboarding/page.tsx',
+  'app/(protected)/settings/page.tsx',
+  'app/(public)/page.tsx',
+  'app/(public)/layout.tsx',
   'features/onboarding/components/TemplateCard.tsx',
   'features/gmail/components/ConnectionHealthBadge.tsx',
   'features/gmail/components/ReconnectPrompt.tsx',
