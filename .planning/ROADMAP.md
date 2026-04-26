@@ -83,7 +83,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] 01.2-02-PLAN.md — Move TenantEntity/Repository to core.tenant.persistence; create per-domain lowlevel/ marker _(completed 2026-04-26)_
 - [x] 01.2-03-PLAN.md — Move User entity/repo + 2 model types + 2 services to core.account; reshape AccountService (CL-2 deleteCurrentUser); transitional AccountDeletionController bridge _(completed 2026-04-26)_
 - [x] 01.2-04-PLAN.md — Move onboarding domain (entity/repo/enum/service); add OnboardingService.deleteSelectionsForCurrentTenant; flip UserEntity OnboardingStep import; Wave 0 OnboardingStepEnumPersistenceTest _(completed 2026-04-26)_
-- [ ] 01.2-05-PLAN.md — Move gmail domain + crypto; rename TenantConnectionService→GmailConnectionService; add TenantService.deleteCurrentTenant; collapse @EntityScan to single root; delete core.crypto + core.persistence packages
+- [x] 01.2-05-PLAN.md — Move gmail domain + crypto; rename TenantConnectionService→GmailConnectionService; add TenantService.deleteCurrentTenant; collapse @EntityScan to single root; delete core.crypto + core.persistence packages _(completed 2026-04-26)_
 - [ ] 01.2-06-PLAN.md — DomainBoundaryArchTests (4 rules); TenantIsolationArchTests regex update; TenantStatusController toResponse(view) helper (D-B5); finalize AccountDeletionController Pattern 8; ./gradlew clean check
 
 ### Phase 1.3: Frontend Architecture Refactor and Public Content Foundation (INSERTED)
