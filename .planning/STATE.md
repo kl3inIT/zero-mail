@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 1.2 plan 01 complete; plan 02 (tenant persistence move) ready
-last_updated: "2026-04-26T07:58:00.000Z"
-last_activity: 2026-04-26 -- Plan 01.2-01 complete; CL-3 Modulith form locked = "shared.privacy"
+stopped_at: Phase 1.2 plan 02 complete; plan 03 (account domain move) ready
+last_updated: "2026-04-26T08:51:00.000Z"
+last_activity: 2026-04-26 -- Plan 01.2-02 complete; tenant persistence relocated, FND-05 + Modulith verify both green
 progress:
-  total_phases: 10
+  total_phases: 11
   completed_phases: 3
   total_plans: 23
-  completed_plans: 18
-  percent: 78
+  completed_plans: 19
+  percent: 83
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 ## Current Position
 
 Phase: 1.2 (Domain-owned persistence restructuring (INSERTED)) — EXECUTING
-Plan: 1 of 6
-Status: Plan 01 complete; ready for Plan 02
-Last activity: 2026-04-26 -- Plan 01.2-01 complete; CL-3 Modulith form locked = "shared.privacy"
+Plan: 2 of 6
+Status: Plans 01-02 complete; ready for Plan 03
+Last activity: 2026-04-26 -- Plan 01.2-02 complete; TenantEntity/Repository relocated to core.tenant.persistence; FND-05 leak gate green
 
-Progress: [████████░░] 78%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [████████░░] 78%
 | Phase 1.1 P07 | 45min | 2 tasks | 11 files |
 | Phase 1.1 P8 | 14min | 4 tasks | 5 files |
 | Phase 1.2 P01 | 9min | 3 tasks | 11 files |
+| Phase 1.2 P02 | 17min | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -75,11 +76,14 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 1.1 P07: Playwright must live at workspace root because Next.js declares @playwright/test as an optional peer dep — installing under apps/web doubles the next install on disk and breaks tsc at the next-intl/middleware boundary
 - [Phase 1.2]: CL-3 Spring Modulith naming form locked = `"shared.privacy"` (dotted-nested literal). Probe A passed first try in `core.tenant/package-info.java`; Probes B (`"privacy"`) and C (`"shared :: privacy"`) not run. Plans 02-05 MUST use this exact literal in `allowedDependencies`. Documented in `core/shared/privacy/package-info.java` JavaDoc.
 - [Phase 1.2]: Pitfall 1 closure protocol confirmed in practice — every string-typed FQN reference (logback XML `<filter class="..."/>`, ArchUnit literal constants, build-script `approvedPkg`, integration-test imports) MUST update in the same plan as Java class moves. Surface scan via `grep -rn 'old.fqn' backend/ apps/ buildSrc/` is the verification gate.
+- [Phase 1.2]: Plan 02 confirmed the per-domain `persistence/` + `persistence/lowlevel/` shape (intra-domain marker, no `@ApplicationModule`); Plans 03/04/05 reuse this exact shape for account/onboarding/gmail. The proactive `lowlevel/` package-info marker prevents Plan 06's regex-update from silent-no-oping.
+- [Phase 1.2]: Plan 02 sweep folded 10 stale-import sites (2 production, 8 test) into the same commit as the `git mv` — no fix-up commit needed (vs Plan 01's `9769dd7`). Discipline: Edit the working tree of renamed files BEFORE staging, never after the first commit.
 
 ### Roadmap Evolution
 
 - Phase 1.1 inserted after Phase 1: Vietnamese-first i18n and error-handling foundation — default Vietnamese / secondary English, language switcher, stable frontend-localizable API error contract; references local JHipster patterns; preserves all Phase 1 privacy/safety constraints (URGENT)
 - Phase 1.2 inserted after Phase 1.1: Domain-owned persistence restructuring — refactor `backend/core` into domain-owned service/persistence/model packages; add a small shared package for stable cross-cutting infrastructure; preserve schema and safety constraints; enforce boundaries with Modulith or ArchUnit (URGENT)
+- Phase 1.3 inserted after Phase 1.2: Frontend Architecture Refactor and Public Content Foundation — reorganize `apps/web` with Next.js route groups, feature folders (`api/`, `components/`, `hooks/`), typed OpenAPI boundaries, workspace cleanup, Prettier/Husky/lint-staged gates, and landing/docs scaffolding without final content design (URGENT)
 
 ### Pending Todos
 
@@ -111,6 +115,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-26T07:58:00.000Z
-Stopped at: Plan 01.2-01 complete; ready for Plan 01.2-02 (tenant persistence move)
-Resume file: .planning/phases/01.2-domain-owned-persistence-restructuring/01.2-02-PLAN.md
+Last session: 2026-04-26T08:51:00.000Z
+Stopped at: Plan 01.2-02 complete; ready for Plan 01.2-03 (account domain move + AccountService CL-2 reshape)
+Resume file: .planning/phases/01.2-domain-owned-persistence-restructuring/01.2-03-PLAN.md
