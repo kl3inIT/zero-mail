@@ -33,7 +33,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zeromail.api.security.TestSessionSupport;
 import com.zeromail.api.support.ApiPostgresTestBase;
-import com.zeromail.core.account.CurrentUserNotFoundException;
+import com.zeromail.core.account.model.CurrentUserNotFoundException;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -189,6 +189,25 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
                 .as("sentinel '%s' must not appear in any Logback event during request", sentinel)
                 .doesNotContain(sentinel);
 
+        // CR-01: also assert that translated events emitted by GlobalExceptionHandler do
+        // NOT carry a Throwable proxy. Logback would render the full stack trace +
+        // wrapped-cause messages (e.g. SQLException's SQL state / constraint name) into
+        // the appender output if a throwable were passed — which is exactly the leak the
+        // formatted-message+MDC check above misses. We scope the assertion to events
+        // originating from the GlobalExceptionHandler logger so unrelated framework
+        // events (which legitimately attach throwables for operator triage) are ignored.
+        for (ILoggingEvent ev : probe.events()) {
+            if (!"com.zeromail.api.config.GlobalExceptionHandler".equals(ev.getLoggerName())) {
+                continue;
+            }
+            assertThat(ev.getThrowableProxy())
+                    .as("translated event from GlobalExceptionHandler must not carry a "
+                            + "Throwable proxy (would render stack trace + cause messages "
+                            + "containing SQL internals / sentinels) — message='%s'",
+                            ev.getFormattedMessage())
+                    .isNull();
+        }
+
         // Generic title/detail invariants — don't leak Java type / framework / SQL state into
         // the prose, even if the underlying exception carried them.
         JsonNode json = new ObjectMapper().readTree(probe.body());
@@ -219,7 +238,7 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
         // — this is the AllowedParamScalars contract translated into a JSON-side check.
         JsonNode params = json.path("params");
         assertThat(params.isObject()).isTrue();
-        params.fields().forEachRemaining(entry -> {
+        params.properties().forEach(entry -> {
             JsonNode v = entry.getValue();
             if (v.isTextual()) {
                 assertThat(v.asText())

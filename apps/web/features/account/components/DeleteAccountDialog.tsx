@@ -1,0 +1,65 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
+
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+
+// The literal confirmation phrase ("delete my data") is a typed-confirmation
+// token, NOT user-facing prose, per UI-SPEC §"Destructive Confirmations".
+// It stays hard-coded; the user-visible label/placeholder uses translation keys
+// that explain "Type X to confirm" in vi/en.
+const CONFIRM_PHRASE = 'delete my data';
+
+export function DeleteAccountDialog({ onConfirm }: { onConfirm: () => Promise<void> }) {
+  const t = useTranslations();
+  const [v, setV] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <Dialog>
+      <DialogTrigger
+        render={(props) => (
+          <Button {...props} variant="destructive">
+            {t('settings.deleteAccount.cta')}
+          </Button>
+        )}
+      />
+
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t('deleteAccount.title')}</DialogTitle>
+        </DialogHeader>
+        <p>{t('deleteAccount.body')}</p>
+        <Input
+          value={v}
+          onChange={(e) => setV(e.target.value)}
+          placeholder={t('deleteAccount.confirmInputPlaceholder')}
+          aria-label={t('deleteAccount.confirmInputLabel')}
+        />
+        <Button
+          variant="destructive"
+          disabled={v !== CONFIRM_PHRASE || busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              await onConfirm();
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? t('common.loading') : t('deleteAccount.confirmCta')}
+        </Button>
+      </DialogContent>
+    </Dialog>
+  );
+}

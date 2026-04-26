@@ -36,7 +36,7 @@ vi.mock('@/lib/api/client', async (importOriginal) => {
   };
 });
 
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { LanguageSwitcher } from '@/features/i18n/components/LanguageSwitcher';
 
 function clearAllCookies() {
   if (typeof document === 'undefined') return;
@@ -165,6 +165,34 @@ describe('LanguageSwitcher', () => {
       if (desc) Object.defineProperty(document, 'cookie', desc);
       void proto;
     }
+  });
+
+  // WR-03: network-level rejection (fetch throws because API is unreachable,
+  // request is blocked, or JSON parsing fails). The optimistic cookie must be
+  // rolled back and a localized fallback error rendered — without the
+  // try/catch around api.PATCH, the cookie stayed changed and the user saw
+  // no failure indication.
+  it('rolls back NEXT_LOCALE cookie when authenticated PATCH rejects (network failure)', async () => {
+    patchSpy.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    renderWithIntl(<LanguageSwitcher currentLocale="vi" authenticated={true} />);
+    fireEvent.click(screen.getByRole('button', { name: viMessages.settings.language.label }));
+    const enItem = await screen.findByRole('menuitemradio', { name: /English/i });
+    fireEvent.click(enItem);
+
+    await waitFor(() => {
+      expect(patchSpy).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      // After rejection, cookie must be restored to vi
+      expect(document.cookie).toMatch(/NEXT_LOCALE=vi/);
+    });
+    expect(document.cookie).not.toMatch(/NEXT_LOCALE=en/);
+    // Localized fallback error (errors.unknown) is rendered — never the raw
+    // exception message.
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(viMessages.errors.unknown);
+    });
+    expect(screen.getByRole('alert').textContent ?? '').not.toMatch(/Failed to fetch/);
   });
 
   it('no-ops (no PATCH, no refresh) when selected locale equals current', async () => {

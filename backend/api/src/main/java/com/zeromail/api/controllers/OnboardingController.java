@@ -6,8 +6,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.zeromail.api.dto.SelectTemplateRequest;
-import com.zeromail.core.account.OnboardingService;
+import com.zeromail.api.dto.onboarding.SelectTemplateRequest;
+import com.zeromail.core.onboarding.service.OnboardingService;
 import com.zeromail.core.tenant.TenantContext;
 
 import jakarta.validation.Valid;

@@ -3,6 +3,7 @@ plugins {
     id("zeromail.archunit-conventions")
     id("zeromail.modulith-conventions")
     id("org.springframework.boot")
+    id("org.springdoc.openapi-gradle-plugin") version "1.9.0"
 }
 
 dependencies {
@@ -15,8 +16,54 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6")
     implementation("com.google.cloud:spring-cloud-gcp-starter-secretmanager")
+    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+    developmentOnly("org.springframework.boot:spring-boot-docker-compose")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation("org.testcontainers:postgresql:1.21.3")
     testImplementation("org.testcontainers:junit-jupiter:1.21.3")
+}
+
+tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+    workingDir = rootProject.projectDir
+}
+
+openApi {
+    // Phase 1.2.1 D-D5 + W3 closure: emit the full /v3/api-docs spec at
+    // apps/web/openapi/openapi.json so the frontend codegen step does not
+    // need a live backend. The plugin starts Spring context, writes the spec,
+    // and shuts down — hermetic and Windows-compatible (no PID files / kill).
+    //
+    // Bind to an unusual port (58080) so the emit task never collides with a
+    // dev `bootRun` (8080) or any other local service the developer is running.
+    customBootRun {
+        // Pass the docker-compose file as an absolute path so the working
+        // directory of the forked JVM does not matter (setting workingDir
+        // makes Gradle 9 try to hash the entire repo root as a task input,
+        // which fails on locked .gradle/ files). The path is resolved here
+        // at configuration time from the rootProject layout.
+        args.set(
+            listOf(
+                "--server.port=58080",
+                "--spring.docker.compose.file=" + rootProject.file("docker-compose.yml").absolutePath,
+                // Dummy OAuth2 + crypto credentials so the boot succeeds without real env
+                // vars. The spec emit only needs the controllers/DTOs introspected — runtime
+                // OAuth and crypto are never exercised. These literals are NEVER committed
+                // anywhere except this build script and never reach a deployed environment.
+                "--spring.security.oauth2.client.registration.google.client-id=openapi-emit",
+                "--spring.security.oauth2.client.registration.google.client-secret=openapi-emit",
+                "--spring.security.oauth2.client.registration.google-gmail.client-id=openapi-emit",
+                "--spring.security.oauth2.client.registration.google-gmail.client-secret=openapi-emit",
+                // Skip Secret Manager entirely (no GCP project in CI/dev).
+                "--spring.cloud.gcp.secretmanager.enabled=false",
+                // Provide a 32-byte AES-GCM key (base64) so RefreshTokenCipher beans
+                // initialize without contacting Secret Manager.
+                "--zeromail.crypto.refresh-token-key-base64=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+            )
+        )
+    }
+    apiDocsUrl.set("http://localhost:58080/v3/api-docs")
+    outputDir.set(rootProject.file("apps/web/openapi"))
+    outputFileName.set("openapi.json")
+    waitTimeInSeconds.set(180)
 }

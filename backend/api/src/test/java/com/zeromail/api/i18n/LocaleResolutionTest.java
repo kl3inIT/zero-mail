@@ -18,11 +18,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zeromail.api.security.TestSessionSupport;
 import com.zeromail.api.support.ApiPostgresTestBase;
-import com.zeromail.core.persistence.TenantEntity;
-import com.zeromail.core.persistence.TenantRepository;
-import com.zeromail.core.persistence.UserEntity;
-import com.zeromail.core.persistence.UserRepository;
+import com.zeromail.core.account.persistence.UserEntity;
+import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.tenant.TenantContext;
+import com.zeromail.core.tenant.persistence.TenantEntity;
+import com.zeromail.core.tenant.persistence.TenantRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

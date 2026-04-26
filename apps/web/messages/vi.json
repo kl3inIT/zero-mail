@@ -4,6 +4,10 @@
       "title": "Zero Mail",
       "description": "Dọn hộp thư về zero mà vẫn giữ quyền kiểm soát."
     },
+    "nav": {
+      "docs": "Tài liệu",
+      "signIn": "Đăng nhập"
+    },
     "loading": "Đang tải...",
     "loadingApp": "Đang tải thiết lập...",
     "save": "Lưu",
@@ -11,6 +15,23 @@
     "close": "Đóng",
     "retry": "Thử lại thao tác",
     "savingLanguage": "Đang cập nhật ngôn ngữ..."
+  },
+  "landing": {
+    "heading": "Zero Mail",
+    "tagline": "AI auto-triage cho Gmail. Trang đang được hoàn thiện.",
+    "primaryCta": "Đăng nhập",
+    "continueSetupCta": "Tiếp tục thiết lập"
+  },
+  "docs": {
+    "indexHeading": "Tài liệu",
+    "backToList": "Quay lại danh sách tài liệu",
+    "empty": {
+      "heading": "Chưa có tài liệu",
+      "body": "Nội dung đang được chuẩn bị. Hãy quay lại sau."
+    },
+    "notFound": {
+      "body": "Không tìm thấy tài liệu này. Quay lại danh sách tài liệu."
+    }
   },
   "auth": {
     "login": {

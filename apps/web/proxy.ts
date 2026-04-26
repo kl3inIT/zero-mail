@@ -1,53 +1,101 @@
-import createIntlMiddleware from 'next-intl/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { routing } from './i18n/routing';
+import { getCurrentUser } from '@/features/account/api/me';
+import { getApiBase } from '@/lib/api/base-url';
+import { LOCALE_COOKIE_MAX_AGE, NEXT_LOCALE_COOKIE, routing } from './i18n/routing';
 
 /**
  * Next.js 16 proxy.ts (formerly middleware.ts).
  *
  * Composes two responsibilities (CONTEXT.md D-B4):
- *  1. next-intl locale negotiation — runs first so the NEXT_LOCALE cookie is
- *     read/written and `<html lang>` resolves correctly via getLocale() in the
- *     async root layout. Configuration lives in `i18n/routing.ts`.
+ *  1. NEXT_LOCALE cookie upkeep without next-intl's routing middleware. With
+ *     `localePrefix: 'never'`, that middleware rewrites `/login` to hidden
+ *     `/vi/login` internally, which requires an `app/[locale]` mirror tree.
+ *     Phase 1.3 keeps clean route groups instead, so i18n/request.ts reads the
+ *     cookie directly and this proxy only maintains the cookie value.
  *  2. Phase 1 auth gate — keeps the existing `/onboarding` + `/settings`
  *     redirect-to-/login behavior when the ZEROMAIL_SESSION cookie is missing.
  *
- * Order matters: i18n must run first so its locale-cookie response headers are
- * preserved when we either pass the response through or replace it with a
- * redirect (NextResponse.redirect intentionally drops the i18n rewrite headers
- * because the user is being sent to /login anyway).
- *
- * Plan 07 deviation note (Rule 3 — Blocking): pnpm hoists `next` to BOTH
- * `apps/web/node_modules/next` AND the workspace root because Next.js declares
- * `@playwright/test` as an optional peer dep. Once `@playwright/test` exists at
- * root (Plan 07 Task 2), pnpm creates a second peer-permutation of `next` and
- * physical paths diverge. TypeScript then sees `NextResponse` from
- * `next-intl/middleware` (resolved through root's `next`) as a different type
- * from `NextResponse` declared at the proxy boundary (resolved through
- * apps/web's `next`). Runtime behavior is identical — both are the same Next
- * implementation. We bridge the type identity with an `as unknown as` cast at
- * the function-result boundary; the cast is type-only, not a structural check.
+ * NO next-intl middleware here. This is deliberate: locale is data, not route
+ * structure, in this app.
  */
-const handleI18n = createIntlMiddleware(routing);
-
 const PROTECTED = ['/onboarding', '/settings'];
 
-export default function proxy(request: NextRequest): NextResponse {
-  // See deviation note above re: duplicate-`next` peer-permutations under
-  // pnpm. Cast through unknown to bridge the two structurally-identical
-  // NextRequest / NextResponse type identities.
-  const intlResponse = handleI18n(request as unknown as Parameters<typeof handleI18n>[0]) as unknown as NextResponse;
+function setLocaleCookie(response: NextResponse, value: (typeof routing.locales)[number]) {
+  response.cookies.set(NEXT_LOCALE_COOKIE, value, {
+    maxAge: LOCALE_COOKIE_MAX_AGE,
+    sameSite: 'lax',
+    secure: true,
+    path: '/',
+  });
+}
 
+function ensureLocaleCookie(request: NextRequest, response: NextResponse): void {
+  const current = request.cookies.get(NEXT_LOCALE_COOKIE)?.value;
+  if ((routing.locales as readonly string[]).includes(current ?? '')) return;
+  setLocaleCookie(response, routing.defaultLocale);
+}
+
+/**
+ * WR-02: persist the authenticated user's server-side preferredLanguage into
+ * NEXT_LOCALE on the response.
+ *
+ * Why here and not in the root layout: Server Components cannot reliably mutate
+ * response cookies during render — `cookies().set(...)` from a layout is
+ * silently rejected in many code paths, leaving a stale cookie + correct render
+ * split that breaks "device A -> device B" language sync. The proxy boundary
+ * (formerly middleware.ts) owns response headers unambiguously, so the cookie
+ * write here is durable.
+ *
+ * Failure mode is "silent fall-through": if /me is unreachable, the existing
+ * NEXT_LOCALE cookie wins. Privacy: no response payload is logged, no locale
+ * is correlated with the user's identity.
+ */
+async function reconcileLocaleCookie(request: NextRequest, response: NextResponse): Promise<void> {
+  const session = request.cookies.get('ZEROMAIL_SESSION');
+  if (!session) return; // unauthenticated — cookie owner is the LanguageSwitcher
+
+  const apiBase = getApiBase();
+  if (!apiBase) return;
+
+  const cookieHeader = request.headers.get('cookie');
+  if (!cookieHeader) return;
+
+  try {
+    // Plan 04 Task 2 (D-B4): isomorphic /me consolidation. The same function
+    // backs proxy.ts, app/layout.tsx, and CSR hooks — single source of truth
+    // for the "/me requires explicit cookie forwarding" invariant.
+    const user = await getCurrentUser({ headers: { cookie: cookieHeader } });
+    const preferred = user.preferredLanguage;
+    if (preferred !== 'vi' && preferred !== 'en') return;
+
+    const current = request.cookies.get(NEXT_LOCALE_COOKIE)?.value;
+    if (current === preferred) return;
+
+    setLocaleCookie(response, preferred);
+  } catch {
+    // Silent — never block navigation on a /me failure. Stale cookie wins.
+  }
+}
+
+export default async function proxy(request: NextRequest): Promise<NextResponse> {
   const needsAuth = PROTECTED.some((p) => request.nextUrl.pathname.startsWith(p));
   if (needsAuth) {
     const session = request.cookies.get('ZEROMAIL_SESSION');
     if (!session) {
-      return NextResponse.redirect(new URL('/login', request.url));
+      const redirect = NextResponse.redirect(new URL('/login', request.url));
+      ensureLocaleCookie(request, redirect);
+      return redirect;
     }
   }
 
-  return intlResponse;
+  const response = NextResponse.next();
+  ensureLocaleCookie(request, response);
+
+  // Reconcile NEXT_LOCALE with the server preference (authenticated users only).
+  await reconcileLocaleCookie(request, response);
+
+  return response;
 }
 
 export const config = {

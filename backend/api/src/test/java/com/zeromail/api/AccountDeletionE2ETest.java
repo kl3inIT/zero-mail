@@ -9,16 +9,16 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.zeromail.api.controllers.AccountDeletionController;
 import com.zeromail.api.support.ApiPostgresTestBase;
-import com.zeromail.core.persistence.GmailConnectionEntity;
-import com.zeromail.core.persistence.GmailConnectionRepository;
-import com.zeromail.core.persistence.GmailConnectionStatus;
-import com.zeromail.core.persistence.OnboardingSelectionEntity;
-import com.zeromail.core.persistence.OnboardingSelectionRepository;
-import com.zeromail.core.persistence.TenantEntity;
-import com.zeromail.core.persistence.TenantRepository;
-import com.zeromail.core.persistence.UserEntity;
-import com.zeromail.core.persistence.UserRepository;
+import com.zeromail.core.gmail.model.GmailConnectionStatus;
+import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
+import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
+import com.zeromail.core.onboarding.persistence.OnboardingSelectionEntity;
+import com.zeromail.core.onboarding.persistence.OnboardingSelectionRepository;
+import com.zeromail.core.account.persistence.UserEntity;
+import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.tenant.TenantContext;
+import com.zeromail.core.tenant.persistence.TenantEntity;
+import com.zeromail.core.tenant.persistence.TenantRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

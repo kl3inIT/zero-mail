@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Phase 1.1 ready for verification
-last_updated: "2026-04-26T00:12:54.784Z"
-last_activity: 2026-04-26
+status: shipped
+stopped_at: Phase 01.3 shipped in PR #3 with carried Phase 01.2/01.2.1 commits on branch gsd/phase-01.3-frontend-architecture-refactor-and-public-content-foundation.
+last_updated: "2026-04-27T00:27:58.065+07:00"
+last_activity: 2026-04-27
 progress:
-  total_phases: 10
-  completed_phases: 2
-  total_plans: 17
-  completed_plans: 17
-  percent: 100
+  total_phases: 12
+  completed_phases: 5
+  total_plans: 35
+  completed_plans: 34
+  percent: 97
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 1.1 — Vietnamese-first i18n and error-handling foundation (INSERTED)
+**Current focus:** Phase 01.3 shipped — PR #3 open from `gsd/phase-01.3-frontend-architecture-refactor-and-public-content-foundation` to `main`; includes carried Phase 01.2/01.2.1 commits as requested.
 
 ## Current Position
 
-Phase: 1.1 (Vietnamese-first i18n and error-handling foundation (INSERTED)) — EXECUTING
+Phase: 01.3 (frontend-architecture-refactor-and-public-content-foundation) — SHIPPED
 Plan: 8 of 8
-Status: Phase complete — ready for verification
-Last activity: 2026-04-26
+Status: PR #3 open and mergeable against `main`; latest GitHub check `i18n-key-coverage` is in progress. Branch also carries completed Phase 01.2/01.2.1 commits.
+Last activity: 2026-04-27 - Shipped Phase 01.3 + carried Phase 01.2/01.2.1 commits in PR #3.
 
-Progress: [████░░░░░░] 38%
+Progress: [█████████████] 4/4 plans of Phase 01.2.1 (34/35 total plans = 97%)
 
 ## Performance Metrics
 
@@ -57,6 +57,24 @@ Progress: [████░░░░░░] 38%
 | Phase 1.1 P06 | 24min | 2 tasks | 13 files |
 | Phase 1.1 P07 | 45min | 2 tasks | 11 files |
 | Phase 1.1 P8 | 14min | 4 tasks | 5 files |
+| Phase 1.2 P01 | 9min | 3 tasks | 11 files |
+| Phase 1.2 P02 | 17min | 2 tasks | 16 files |
+| Phase 1.2 PP03 | 9min | 3 tasks | 27 files |
+| Phase 1.2 P04 | 6min | 3 tasks | 18 files |
+| Phase 1.2 P05 | 11min | 3 tasks | 30 files |
+| Phase 01.2 P06 | 25min | 3 tasks | 9 files |
+| Phase 01.3 P01 | 6min | 2 tasks | 6 files |
+| Phase 01.3 P02 | 6min | 2 tasks | 7 files |
+| Phase 01.2.1 P01 | 14min | 3 tasks | 15 files |
+| Phase 01.2.1 P02 | 5min | 1 task | 3 files |
+| Phase 01.3 P03 | 5min | 2 tasks (T2 deferred) | 3 files |
+| Phase 01.2.1 P03 | 18 | 3 tasks | 10 files |
+| Phase 01.3 P04 | 10min | 4 tasks | 22 created + 9 modified + 5 relocated |
+| Phase 01.3 P05 | 12min | 5 tasks | 5 created + 1 modified + 3 relocated + 5 deleted |
+| Phase 01.2.1 P04 | 38min | 5 tasks | 17 files |
+| Phase 01.3 P06 | 9min | 2 tasks | 8 created + 3 modified |
+| Phase 01.3 P07 | 5min | 3 tasks | 1 created + 8 modified |
+| Phase 01.3 P08 | 15min | 1 task (Task 2 = checkpoint:human-verify deferred per autonomous=false) | 0 code + 3 .planning artifacts |
 
 ## Accumulated Context
 
@@ -72,11 +90,56 @@ Recent decisions affecting current work:
 - [Phase ?]: Use RestClient + LocalServerPort (not MockMvc.webAppContextSetup) for backend tests requiring TenantContext ScopedValue — MockMvc skips servlet filters and the test auth filter never binds the ScopedValue
 - [Phase ?]: Phase 1.1 P06: Vitest dedupes react/react-dom + LanguageSwitcher inlines SVG/native button to escape pnpm's duplicate React install
 - [Phase ?]: Phase 1.1 P07: Playwright must live at workspace root because Next.js declares @playwright/test as an optional peer dep — installing under apps/web doubles the next install on disk and breaks tsc at the next-intl/middleware boundary
+- [Phase 1.2]: CL-3 Spring Modulith naming form locked = `"shared.privacy"` (dotted-nested literal). Probe A passed first try in `core.tenant/package-info.java`; Probes B (`"privacy"`) and C (`"shared :: privacy"`) not run. Plans 02-05 MUST use this exact literal in `allowedDependencies`. Documented in `core/shared/privacy/package-info.java` JavaDoc.
+- [Phase 1.2]: Pitfall 1 closure protocol confirmed in practice — every string-typed FQN reference (logback XML `<filter class="..."/>`, ArchUnit literal constants, build-script `approvedPkg`, integration-test imports) MUST update in the same plan as Java class moves. Surface scan via `grep -rn 'old.fqn' backend/ apps/ buildSrc/` is the verification gate.
+- [Phase 1.2]: Plan 02 confirmed the per-domain `persistence/` + `persistence/lowlevel/` shape (intra-domain marker, no `@ApplicationModule`); Plans 03/04/05 reuse this exact shape for account/onboarding/gmail. The proactive `lowlevel/` package-info marker prevents Plan 06's regex-update from silent-no-oping.
+- [Phase 1.2]: Plan 02 sweep folded 10 stale-import sites (2 production, 8 test) into the same commit as the `git mv` — no fix-up commit needed (vs Plan 01's `9769dd7`). Discipline: Edit the working tree of renamed files BEFORE staging, never after the first commit.
+- [Phase ?]: [Phase 1.2]: Plan 03 confirmed CL-2 reshape pattern — AccountService dropped 4 cross-domain repos, kept only UserRepository; new deleteCurrentUser is single-domain. Multi-domain orchestration moves to AccountDeletionController as transitional bridge across Plans 03→06.
+- [Phase ?]: [Phase 1.2]: Forward-decl deferral protocol locked: never declare a Modulith allowedDependencies edge to a non-existent module. core.account/package-info.java declares {tenant, shared.privacy} now; Plan 04 amends to add 'onboarding' once that module exists on disk.
+- [Phase 1.2]: Plan 04 closed Pitfall 5 (enum-name persistence drift) via OnboardingStepEnumPersistenceTest — pure-JVM unit test asserting OnboardingStep.{...}.name() match stable strings. Pattern: when relocating @Enumerated(EnumType.STRING) enums, ship a name() literal-assert test in the same plan.
+- [Phase 1.2]: Plan 04 confirmed atomic bidirectional Modulith edge protocol: when introducing a new module that an existing module already depends on, declare BOTH edges in the same commit as the new package-info.java (account ↔ onboarding both landed in commit 2f25214).
+- [Phase 1.2]: Plan 05 completed CL-2 single-domain delete pattern across all 4 domains: GmailConnectionService.deleteForCurrentTenant + new TenantService.deleteCurrentTenant (first occupant of core.tenant.service). AccountDeletionController bridge now FK-safe 4-call orchestration with zero direct repo injections.
+- [Phase 1.2]: Plan 05 collapsed @EntityScan to single root "com.zeromail.core" in both Application.java + CoreTestApplication.java per RESEARCH.md primary recommendation. Forward-compatible for Phase 2A/2B/2C/3/4 — no further entity-scan edits needed.
+- [Phase 1.2]: Plan 05 honored D-D4 explicitly: gmail/package-info.java allowedDependencies = {tenant, shared.privacy} — NO account edge. Verified by ApplicationModulesTest.
+- [Phase 1.2]: Plan 05 deviation captured: concurrent user activity on STATE.md/01.3 docs auto-staged executor's pending Java edits into commits 03b5652 + eabbdca. No functional impact (all tests pass), but Task 3's Java work appears in those commits rather than a dedicated executor commit. Documented in 01.2-05-SUMMARY.md.
+- [Phase ?]: [Phase 1.2]: Plan 06 closed Wave 0 ArchUnit gap with DomainBoundaryArchTests (4 explicit per-domain rules). Predicate composition pattern locked at DescribedPredicate level (DSL-level .and() chain unsupported in ArchUnit 1.4.x — confirmed via sources jar). Pattern documented in class-level JavaDoc for future-domain authors.
+- [Phase ?]: [Phase 1.2]: Plan 06 caught + decomposed 2 lingering cross-domain repo injections that Plans 03/04 silently shipped (T-01.2-H regression). Pattern: extend CL-2 service-to-service primitive shape to non-delete writes — TenantService.createTenant + AccountService.advanceOnboardingStep mirror the delete-cascade primitives. ArchUnit threat-test-as-defect-finder confirmed working on first execution.
+- [Phase ?]: [Phase 1.2]: Phase 1.2 structurally complete. Source tree contains exactly {account, gmail, onboarding, shared, tenant} per RESEARCH.md target. Full ./gradlew clean check green: 115 tests / 30 classes / 0 failures. Byte-identical contract preserved (zero diff in db/changelog, libs.versions.toml, apps/web/openapi).
+- [Phase ?]: [Phase 1.3]: Plan 01 — Wave 0 architecture/cleanup test spine landed (6 vitest files, 56 assertions: 45 RED + 10 GREEN + 1 SKIP). Static existsSync predicate at module load (REVIEWS Revision 4) replaces broken beforeAll+skipIf permanent-skip pattern. Non-literal dynamic-import spec defers Vite import-analysis to runtime — fixes ERR_MODULE_NOT_FOUND that @vite-ignore alone does not solve. Pattern locked: pure-fs/regex Wave 0 tests with no @/features/ runtime imports survive every refactor wave.
+- [Phase ?]: [Phase 1.3]: Plan 02 — pre-commit gate live (Husky 9 + lint-staged + Prettier 3 root-level). Empirically verified: hooks fired on Task 1 + Task 2 commits. lint-staged in WARN-ONLY i18n:check mode (`|| true`) until Plan 07 final task; `!(messages)` extglob de-duplicates Prettier across overlapping globs (REVIEWS Revisions 3 + 5).
+- [Phase ?]: [Phase 1.3]: Plan 02 — `transpilePackages: ['next-mdx-remote']` pre-declared in apps/web/next.config.ts. Pattern locked: pre-declare Turbopack-transpile entries when the runtime dep lands in a future plan; entry is a no-op until first import (Pitfall 6 mitigation, Plan 06 activates).
+- [Phase 01.2.1]: Plan 01 — 3-tier @MappedSuperclass hierarchy (AbstractEntity → AbstractAuditableEntity → AbstractTenantOwnedEntity) landed in core.shared.persistence with @EntityListeners(AuditingEntityListener.class) on Tier 2. JpaAuditingConfig wires Clock-bean → DateTimeProvider → @EnableJpaAuditing. FND-05 MultiTenantLeakIntegrationTest still passes (PROVES @TenantId binding survives @MappedSuperclass relocation in Hibernate 7).
+- [Phase 01.2.1]: Plan 01 — Liquibase changeset 007 deviation captured: gmail_connections table (created in changeset 003) was missing created_at column. Fix prepended to changeset 007: addColumn created_at + backfill from COALESCE(connected_at, NOW()) + promote NOT NULL. Pattern locked: defaultValueComputed: now() on all new audit columns (created_at, updated_at) so raw-SQL inserts in tests still pass NOT NULL constraint; AuditingEntityListener still wins for entity-managed paths.
+- [Phase 01.2.1]: Plan 01 — UserEntity.advanceTo() retains ordinal()-based body. Plan 03 swaps to weight() once OrderedEnum lands in Plan 02 (per CONTEXT D-B5 + WR-02).
+- [Phase 01.2.1]: Plan 02 — core.shared.lang Modulith leaf module landed (IdentifiedEnum + OrderedEnum interfaces + package-info @ApplicationModule(displayName="Lang", allowedDependencies={})). Pure interface introduction, zero consumers; Plan 03 wires OnboardingStep (implements OrderedEnum, weights 10/20/30/40) and GmailConnectionStatus (implements IdentifiedEnum, no weight per D-B5). Locks D-B1 two-interface split, D-B2 String id type, D-B3 labelKey default = `<ClassSimpleName>.<id>`, D-B4 fromId fail-loud (NoSuchElementException not IllegalArgumentException). Documents D-C2 id()==name() invariant (enforced via convention + @Enumerated(STRING) + Plan 03 OnboardingStepPersistenceTest; ArchTest enforcement OUT of scope) and D-C3 AttributeConverter migration trigger (deferred to first per-enum decoupling need).
+- [Phase 01.2.1]: Plan 02 — JetBrains MCP file-problem check unavailable in sequential-executor agent tool set (upstream issue anthropics/claude-code#13898). Fallback: `./gradlew :backend:core:check :backend:api:check` BUILD SUCCESSFUL is a strict superset for pure-interface files (javac + ArchUnit + ApplicationModulesTest covers correctness). Documented in 01.2.1-02-SUMMARY.md as tooling deviation; no code deviation.
+- [Phase ?]: [Phase 01.2.1]: Plan 03 — WR-01/WR-02/WR-03 closure complete. OnboardingStep implements OrderedEnum (10/20/30/40); GmailConnectionStatus implements IdentifiedEnum (unordered per D-B5); UserEntity.advanceTo uses weight() not ordinal(); OnboardingSelectionRepository.deleteByTenantId is bulk @Modifying @Query with explicit WHERE :tenantId (T-01.2.1-07 mitigation); OnboardingStepPersistenceTest extends PostgresContainerTest with @ParameterizedTest @EnumSource — 4 real-DB round-trips + raw column data_type assert. Modulith allowedDependencies for account/onboarding/gmail gained literal 'shared.lang'.
+- [Phase ?]: [Phase 01.2.1]: Plan 03 — Rule 3 fix: TestJpaAuditingConfig added to backend/core test sources. Production JpaAuditingConfig (com.zeromail.api.config) is outside CoreTestApplication scan base; @CreatedDate/@LastModifiedDate fields were bound to NULL by Hibernate (defaultValueComputed: now() on DB column does NOT apply when INSERT binds NULL). Test-side mirror is the smallest correct surface — same wiring seen only by tests.
+- [Phase 1.3]: Plan 04 — Server-safe lib/api/client.ts split landed (REVIEWS Revision 1, Codex HIGH #2). Re-export of ./errors removed; client-only callers import directly from @/lib/api/errors. RSC + edge code paths no longer pull use-client + next-intl hook code through the import graph. Wave 0 server-safe-client.test.ts is the durable guard.
+- [Phase 1.3]: Plan 04 — Five feature folders fully populated: features/{auth,account,onboarding,gmail,i18n}/{api,components,hooks}. 5 components relocated via git mv (LanguageSwitcher → i18n, ConnectionHealthBadge + ReconnectPrompt → gmail, DeleteAccountDialog → account, TemplateCard → onboarding). EN_SCAN_FILES in scripts/check-i18n.ts updated in same commit so scanner does not silently lose coverage (Phase 1.1 D-D3).
+- [Phase 1.3]: Plan 04 — Isomorphic getCurrentUser({ fetcher?, signal?, headers? }) at features/account/api/me.ts is the single source of truth for /me. proxy.ts:reconcileLocaleCookie + app/layout.tsx:reassertServerLocale + features/account/hooks/useCurrentUser all consume it. as unknown as cast in proxy.ts preserved (D-E5).
+- [Phase 1.3]: Plan 04 — All endpoint-specific calls moved to feature/api/ + hooks (REVIEWS Revision 1, Codex HIGH #1). 7 new feature/api/ modules + 5 new hooks (useTenantStatus + useDisconnectGmail + useSelectTemplate + useCompleteOnboarding + useDeleteAccount). Settings + onboarding pages call feature hooks; zero inline api.GET/POST/DELETE for moved endpoints. ROADMAP success criterion #6 fully satisfied.
+- [Phase 1.3]: Plan 04 — Pattern locked: per-feature TanStack Query key factories (accountKeys/gmailKeys/onboardingKeys); explicit cross-feature invalidation via queryClient.invalidateQueries({ queryKey: featureKeys.X() }); NO barrel index.ts at any features/<name>/ root; deep imports only.
+- [Phase 1.3]: Plan 05 — Wave 3 route topology landed: app/(public)/, app/(auth)/, app/(protected)/ each with their own layout.tsx; Light skeleton landing at (public)/page.tsx replaces app/page.tsx → redirect('/login'); 4 dead app/[locale]/* re-exports deleted; Wave 0 route-groups vitest spec fully GREEN (6/6).
+- [Phase 1.3]: Plan 05 — Chrome ownership decided exactly once (REVIEWS Rev 2 #4): (public)/layout.tsx owns header+main+footer; (auth)/layout.tsx is minimal passthrough (login page keeps inline <main> + LanguageSwitcher); (protected)/layout.tsx is bare passthrough (ProtectedHeader lazy until Phase 5). No nested <main>.
+- [Phase 1.3]: Plan 05 — Landing CTA pattern locked: <Link className={buttonVariants()}> NOT <Button asChild> (REVIEWS Rev 2 #3). Local Button wraps @base-ui/react/button which does not support asChild. buttonVariants exported from @/components/ui/button. Auth-aware CTA via getCurrentUser({ headers: { cookie } }) silent-fallback to /login.
+- [Phase 1.3]: Plan 05 — next-intl typed-namespace bypass via cast-to-never: (public)/{layout,page}.tsx use `t("namespace.key" as never)` until Plan 07 lands the keys. Runtime returns key path as fallback. Pattern locked for any future "ship UI before its i18n namespace" plan.
+- [Phase 1.3]: Plan 05 — Playwright route-smoke env-blocked in sandbox (port 3000 held by stale process returning 500). Spec committed as durable gate; CI / fresh dev runs cleanly. Route-smoke pattern locked for future [locale]-style mirror-tree deletions.
+- [Phase ?]: Phase 01.2.1 Plan 04 — DTO group-by-domain reorg (4 DTOs into 3 sub-packages, 4 root files DELETED) + GmailConnectionStatusResponse rename across Java + URL + @Tag(name=gmail) + frontend; @NamedInterface re-exposure pattern locked for nested sub-packages of auto-detected modulith modules; springdoc-openapi-gradle-plugin 1.9.0 wired for hermetic spec emit (port 58080, dummy creds) — replaces bootRun&+kill per W3 closure.
+- [Phase ?]: Phase 01.2.1 Plan 04 deviation: concurrent user activity (commits 3e13e05 / e367d67) auto-staged executor's pending Java edits + a phase-01.3 e2e scaffold file into commits with mixed phase prefixes — same race condition documented for Phase 1.2 P05 commits 03b5652+eabbdca. Documented in 01.2.1-04-SUMMARY.md §Deviations §4+§5. No code-quality or scope-creep impact; only commit-subject attribution drift.
+- [Phase 1.3]: Plan 06 — Wave 4 docs/MDX pipeline landed. apps/web/lib/docs/loader.ts is the deterministic resolver + zod FrontmatterSchema (REVIEWS Revision 6, OpenCode MEDIUM): anchored on path.dirname(fileURLToPath(import.meta.url)) (or __dirname when defined), never the caller's working directory. Index page parses content/docs/*.mdx with gray-matter + safeParse and silently skips malformed entries; dynamic [slug] page uses compileMDX from next-mdx-remote/rsc with await params + SLUG_RE BEFORE path.join + safeParse + slug/locale consistency check (fm.data.slug !== slug || fm.data.locale !== locale → notFound()). 4 sample MDX files (vi + en, getting-started + privacy). next-mdx-remote v6 security defaults preserved (no override of blockJS / blockDangerousJS). Wave 0 mdx-pipeline.test.ts FULLY GREEN (10/10, 0 skipped).
+- [Phase 1.3]: Plan 06 — Pattern locked: when a Wave 0 negative-substring regex (e.g. /process\.cwd\(\)/) tests source bytes for forbidden tokens, prose comments must paraphrase the token rather than mention it literally. Useful guard, but conflates source bytes with semantics — name the trade-off in the comment when paraphrasing.
+- [Phase 1.3]: Plan 06 — Pattern locked: Wave 0 availability gates that read existsSync('node_modules/<pkg>/package.json') under pnpm workspaces MUST OR-check workspace-root node_modules (pnpm hoists shared deps to root); the Plan 01 mdx-pipeline gate was widened in this plan and the inline note explains the pnpm-hoist intent for future agents.
+- [Phase 1.3]: Plan 07 — Wave 5 i18n closure landed: 11 new leaf keys (87 total) mirrored across vi/en bundles (common.nav.{docs,signIn} + landing.{heading,tagline,primaryCta,continueSetupCta} + docs.{indexHeading,backToList,empty.{heading,body},notFound.body}); EN_SCAN_FILES expanded 10 → 14 entries (added (public)/docs/page.tsx + [slug]/page.tsx + [slug]/loading.tsx + (auth)/layout.tsx); 8 `t(... as never)` cast bypasses across 4 source files removed (next-intl typed-key check re-engaged for Plan 04/05/06 surfaces). UI-SPEC §Copywriting Contract copy used verbatim.
+- [Phase 1.3]: Plan 07 — REVIEWS Revision 3 closed: lint-staged i18n:check flipped from warn-only (`|| true` since Plan 02) to STRICT. Empirically verified on disposable temp branch — deliberate vi.json key delete → `git commit` → husky exit 1 + lint-staged auto-revert + `[parity] vi.json and en.json leaf-key sets differ: en-only: landing.continueSetupCta` in stderr. Pattern locked: flip strict BEFORE temp-branch verification so the temp branch inherits strict config.
+- [Phase 1.3]: Plan 08 — Phase 01.3 closure-ready. All 4 automated gates GREEN (tsc, vitest 80/80 across 9 files, i18n:check 87 keys, ESLint). All 6 Wave 0 files GREEN with 56/56 assertions zero-RED zero-SKIP. proxy.ts `as unknown as` cast preserved (3 occurrences ≥ 2). Schema-diff REVIEWS Revision 7 gate PASSED via source-control proof: `git log e367d67..HEAD -- apps/web/lib/api/schema.d.ts` returns 0 commits — Phase 1.3 is frontend-only by definition, schema.d.ts byte-identical to Phase 01.2.1 baseline. VALIDATION.md flipped `nyquist_compliant: true` + `wave_0_complete: true`. Two manual gates deferred to user with replay commands: Playwright e2e (port 3000 held by stale `next dev` PID 24616 — same Plan 03/05 env-block) and live `generate:api` round-trip (backend not running on localhost:8080).
 
 ### Roadmap Evolution
 
 - Phase 1.1 inserted after Phase 1: Vietnamese-first i18n and error-handling foundation — default Vietnamese / secondary English, language switcher, stable frontend-localizable API error contract; references local JHipster patterns; preserves all Phase 1 privacy/safety constraints (URGENT)
 - Phase 1.2 inserted after Phase 1.1: Domain-owned persistence restructuring — refactor `backend/core` into domain-owned service/persistence/model packages; add a small shared package for stable cross-cutting infrastructure; preserve schema and safety constraints; enforce boundaries with Modulith or ArchUnit (URGENT)
+- Phase 1.3 inserted after Phase 1.2: Frontend Architecture Refactor and Public Content Foundation — reorganize `apps/web` with Next.js route groups, feature folders (`api/`, `components/`, `hooks/`), typed OpenAPI boundaries, workspace cleanup, Prettier/Husky/lint-staged gates, and landing/docs scaffolding without final content design (URGENT)
+- Phase 1.2.1 inserted after Phase 1.2: Shared base entity hierarchy (`AbstractEntity`/`AbstractAuditableEntity`/`AbstractTenantOwnedEntity` in `core.shared.persistence`) + `IdentifiedEnum` standard (id/weight/labelKey, applied to `OnboardingStep` + `GmailConnectionStatus`) + `backend/api/dto/` group-by-domain (with `TenantStatusResponse` → `GmailConnectionStatusResponse` rename) + close code-review WR-01/WR-02/WR-03; closes structural-cleanup gaps Phase 1.2 intentionally deferred (URGENT)
 
 ### Pending Todos
 
@@ -92,6 +155,13 @@ None yet.
 - CASA verification is a 4–12 week external clock — must be initiated during Phase 1 execution, not deferred.
 - Open decisions deferred to phase execution: credit unit economics (Phase 2B), tokenizer choice (Phase 2C), payment provider Stripe vs LemonSqueezy (Phase 2B), observability vendor (any), CASA tier (Phase 1/6).
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260427-02m | Refactor @Value application properties into @ConfigurationProperties | 2026-04-27 | fec9201 | [260427-02m-refactor-value-application-properties-in](./quick/260427-02m-refactor-value-application-properties-in/) |
+| 260426-a5s | Add Spring Boot Docker Compose support to backend/api so dev startup auto-launches Postgres + Redis from docker-compose.yml | 2026-04-26 | 1219ec8 | [260426-a5s-add-spring-boot-docker-compose-support-t](./quick/260426-a5s-add-spring-boot-docker-compose-support-t/) |
+
 ## Deferred Items
 
 Items acknowledged and carried forward from previous milestone close:
@@ -102,6 +172,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-25T21:56:30.759Z
-Stopped at: Phase 1.1 ready for verification
+Last session: 2026-04-26T14:15:11.683Z
+Stopped at: Phase 01.2.1 Plan 02 complete (core.shared.lang Modulith leaf module — IdentifiedEnum + OrderedEnum interfaces; check green; Plan 03 next will apply interfaces to OnboardingStep + GmailConnectionStatus)
 Resume file: None

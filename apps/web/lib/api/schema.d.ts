@@ -84,22 +84,6 @@ export interface paths {
         patch: operations["updateLanguage"];
         trace?: never;
     };
-    "/tenant/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["status"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/me": {
         parameters: {
             query?: never;
@@ -108,6 +92,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/gmail/connection/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["status"];
         put?: never;
         post?: never;
         delete?: never;
@@ -149,7 +149,7 @@ export interface components {
             onboardingStep?: string;
             preferredLanguage?: string;
         };
-        TenantStatusResponse: {
+        GmailConnectionStatusResponse: {
             connectionStatus?: string;
             googleEmail?: string;
         };
@@ -178,7 +178,7 @@ export interface components {
             code: string;
             /** @description Allow-listed ICU placeholder scalars for the FE error message. Filtered through AllowedParamScalars; never carries raw user content, Gmail body fragments, SQL constraint names, or exception class names. */
             params?: {
-                [key: string]: Record<string, never>;
+                [key: string]: string | number | boolean;
             };
             /** @description Per-field validation errors. Present only on validation failures. */
             fieldErrors?: components["schemas"]["FieldErrorDto"][];
@@ -196,7 +196,7 @@ export interface components {
             code: string;
             /** @description Allow-listed scalars (numbers, booleans, dotted keys, short resource identifiers). Never raw user content. */
             params?: {
-                [key: string]: Record<string, never>;
+                [key: string]: string | number | boolean;
             };
         };
     };
@@ -578,7 +578,7 @@ export interface operations {
             };
         };
     };
-    status: {
+    me: {
         parameters: {
             query?: never;
             header?: never;
@@ -593,7 +593,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["TenantStatusResponse"];
+                    "*/*": components["schemas"]["MeResponse"];
                 };
             };
             /** @description Bad Request */
@@ -652,7 +652,7 @@ export interface operations {
             };
         };
     };
-    me: {
+    status: {
         parameters: {
             query?: never;
             header?: never;
@@ -667,7 +667,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["MeResponse"];
+                    "*/*": components["schemas"]["GmailConnectionStatusResponse"];
                 };
             };
             /** @description Bad Request */

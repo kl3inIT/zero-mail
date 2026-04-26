@@ -28,7 +28,7 @@ class OpenApiSchemaTest extends ApiPostgresTestBase {
         assertThat(root.path("info").path("version").asText()).isEqualTo("0.1.1");
         JsonNode paths = root.path("paths");
         assertThat(paths.has("/me")).isTrue();
-        assertThat(paths.has("/tenant/status")).isTrue();
+        assertThat(paths.has("/gmail/connection/status")).isTrue();
         assertThat(paths.has("/tenant/connect-gmail")).isTrue();
         assertThat(paths.has("/tenant/disconnect")).isTrue();
         assertThat(paths.has("/me/account")).isTrue();
