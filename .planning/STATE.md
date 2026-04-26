@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 1.2 ready to execute
-last_updated: "2026-04-26T05:30:00.000Z"
-last_activity: 2026-04-26 -- Phase 01.1 marked complete; starting phase 01.2 execution
+stopped_at: Phase 1.2 plan 01 complete; plan 02 (tenant persistence move) ready
+last_updated: "2026-04-26T07:58:00.000Z"
+last_activity: 2026-04-26 -- Plan 01.2-01 complete; CL-3 Modulith form locked = "shared.privacy"
 progress:
   total_phases: 10
   completed_phases: 3
   total_plans: 23
-  completed_plans: 17
-  percent: 74
+  completed_plans: 18
+  percent: 78
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 ## Current Position
 
 Phase: 1.2 (Domain-owned persistence restructuring (INSERTED)) — EXECUTING
-Plan: 0 of 6
-Status: Ready to execute
-Last activity: 2026-04-26 -- Phase 01.1 marked complete; starting phase 01.2 execution
+Plan: 1 of 6
+Status: Plan 01 complete; ready for Plan 02
+Last activity: 2026-04-26 -- Plan 01.2-01 complete; CL-3 Modulith form locked = "shared.privacy"
 
-Progress: [████░░░░░░] 38%
+Progress: [████████░░] 78%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [████░░░░░░] 38%
 | Phase 1.1 P06 | 24min | 2 tasks | 13 files |
 | Phase 1.1 P07 | 45min | 2 tasks | 11 files |
 | Phase 1.1 P8 | 14min | 4 tasks | 5 files |
+| Phase 1.2 P01 | 9min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Use RestClient + LocalServerPort (not MockMvc.webAppContextSetup) for backend tests requiring TenantContext ScopedValue — MockMvc skips servlet filters and the test auth filter never binds the ScopedValue
 - [Phase ?]: Phase 1.1 P06: Vitest dedupes react/react-dom + LanguageSwitcher inlines SVG/native button to escape pnpm's duplicate React install
 - [Phase ?]: Phase 1.1 P07: Playwright must live at workspace root because Next.js declares @playwright/test as an optional peer dep — installing under apps/web doubles the next install on disk and breaks tsc at the next-intl/middleware boundary
+- [Phase 1.2]: CL-3 Spring Modulith naming form locked = `"shared.privacy"` (dotted-nested literal). Probe A passed first try in `core.tenant/package-info.java`; Probes B (`"privacy"`) and C (`"shared :: privacy"`) not run. Plans 02-05 MUST use this exact literal in `allowedDependencies`. Documented in `core/shared/privacy/package-info.java` JavaDoc.
+- [Phase 1.2]: Pitfall 1 closure protocol confirmed in practice — every string-typed FQN reference (logback XML `<filter class="..."/>`, ArchUnit literal constants, build-script `approvedPkg`, integration-test imports) MUST update in the same plan as Java class moves. Surface scan via `grep -rn 'old.fqn' backend/ apps/ buildSrc/` is the verification gate.
 
 ### Roadmap Evolution
 
@@ -108,6 +111,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-26T01:05:40.209Z
-Stopped at: Phase 1.2 context gathered
-Resume file: .planning/phases/01.2-domain-owned-persistence-restructuring/01.2-CONTEXT.md
+Last session: 2026-04-26T07:58:00.000Z
+Stopped at: Plan 01.2-01 complete; ready for Plan 01.2-02 (tenant persistence move)
+Resume file: .planning/phases/01.2-domain-owned-persistence-restructuring/01.2-02-PLAN.md
