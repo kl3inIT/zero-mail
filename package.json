@@ -30,7 +30,7 @@
     ],
     "apps/web/messages/*.json": [
       "pnpm --filter zeromail-web exec prettier --write",
-      "pnpm --filter zeromail-web run i18n:check || true"
+      "pnpm --filter zeromail-web run i18n:check"
     ],
     "apps/web/!(messages)/**/*.{md,mdx,json,css}": [
       "pnpm --filter zeromail-web exec prettier --write"
