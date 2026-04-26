@@ -48,12 +48,20 @@ public class OnboardingService {
     }
 
     /**
-     * Deletes all onboarding selections for the given tenant.
-     * Single-domain delete only — orchestration of cross-domain cascade lives in
+     * Deletes all onboarding selections for the given tenant via a single bulk JPQL DELETE
+     * (closes REVIEW WR-03 — previous incarnation issued 1 SELECT + N DELETEs).
+     *
+     * <p>Single-domain delete only — orchestration of cross-domain cascade lives in
      * {@code AccountDeletionController} per CL-2 + D-D1.
+     *
+     * <p><b>Caller contract:</b> {@code tenantId} MUST be the resolved current-tenant id
+     * from {@code TenantContext}. The bulk JPQL bypasses Hibernate's {@code @TenantId}
+     * discriminator filter (D-A5 caveat), so the explicit
+     * {@code WHERE o.tenantId = :tenantId} in the repository query is the only tenant
+     * isolation gate.
      */
     @Transactional
     public void deleteSelectionsForCurrentTenant(UUID tenantId) {
-        onboarding.deleteAll(onboarding.findByTenantId(tenantId));
+        onboarding.deleteByTenantId(tenantId);
     }
 }
