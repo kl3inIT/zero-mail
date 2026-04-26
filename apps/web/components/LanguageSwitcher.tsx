@@ -176,19 +176,32 @@ export function LanguageSwitcher({
       // 2. Authenticated server persistence
       if (authenticated) {
         startTransition(async () => {
-          const res = await api.PATCH("/me/language", {
-            body: { language: selected },
-            headers: { "Content-Type": "application/json", ...xsrfHeader() },
-          });
-          if (res.error) {
-            // Roll back to the prop's currentLocale (server-side truth).
+          // WR-03: also catch network-level rejections (fetch throws when the
+          // API is unreachable, the request is blocked, or JSON parsing fails).
+          // Without this catch the optimistic NEXT_LOCALE cookie stays changed
+          // even though the server preference was never persisted, producing a
+          // client/server language split that masks the failure from the user.
+          try {
+            const res = await api.PATCH("/me/language", {
+              body: { language: selected },
+              headers: { "Content-Type": "application/json", ...xsrfHeader() },
+            });
+            if (res.error) {
+              // Roll back to the prop's currentLocale (server-side truth).
+              writeLocaleCookie(currentLocale);
+              setErrorMessage(localizedError(res.error as ApiError));
+              return;
+            }
+            router.refresh();
+          } catch {
+            // Network / parse failure: roll back the optimistic cookie and
+            // surface the localized fallback (errors.unknown) — never echo the
+            // raw exception, never leave the client/server split in place.
             writeLocaleCookie(currentLocale);
-            setErrorMessage(localizedError(res.error as ApiError));
+            setErrorMessage(localizedError(undefined));
+          } finally {
             onSettled?.();
-            return;
           }
-          router.refresh();
-          onSettled?.();
         });
         return;
       }
