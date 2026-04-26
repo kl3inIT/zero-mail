@@ -1,6 +1,7 @@
 package com.zeromail.api.security;
 
 import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -55,6 +56,6 @@ public class GmailScopeRequestResolver implements OAuth2AuthorizationRequestReso
                 && !oidc.getEmail().isBlank()) {
             extra.put("login_hint", oidc.getEmail());
         }
-        return OAuth2AuthorizationRequest.from(r).additionalParameters(extra).build();
+        return OAuth2AuthorizationRequest.from(r).additionalParameters(Map.copyOf(extra)).build();
     }
 }

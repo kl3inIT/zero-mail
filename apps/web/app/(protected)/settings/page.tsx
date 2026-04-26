@@ -99,6 +99,7 @@ export default function SettingsPage() {
             {t('settings.gmailConnection.disconnectCta')}
           </Button>
           <DeleteAccountDialog
+            isPending={del.isPending}
             onConfirm={async () => {
               await del.mutateAsync();
               window.location.href = '/login';

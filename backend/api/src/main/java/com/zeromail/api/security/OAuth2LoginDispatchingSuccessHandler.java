@@ -23,7 +23,7 @@ import jakarta.servlet.http.HttpServletResponse;
  *       (Phase 1.1 invariants preserved).</li>
  *   <li>{@code "google-gmail"} — incremental Gmail grant leg → new
  *       {@link GmailOAuthSuccessHandler}.</li>
- *   <li>anything else / non-OAuth2 token — fall through to default redirect (no-op).</li>
+ *   <li>anything else — fail loudly; it means OAuth registration config drifted.</li>
  * </ul>
  */
 @Component
@@ -46,7 +46,8 @@ public class OAuth2LoginDispatchingSuccessHandler extends SimpleUrlAuthenticatio
             switch (token.getAuthorizedClientRegistrationId()) {
                 case "google" -> googleHandler.onAuthenticationSuccess(req, res, auth);
                 case "google-gmail" -> gmailHandler.onAuthenticationSuccess(req, res, auth);
-                default -> super.onAuthenticationSuccess(req, res, auth);
+                default -> throw new IllegalStateException(
+                        "Unsupported OAuth registration: " + token.getAuthorizedClientRegistrationId());
             }
         } else {
             super.onAuthenticationSuccess(req, res, auth);

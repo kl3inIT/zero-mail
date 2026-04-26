@@ -19,10 +19,15 @@ import { Input } from '@/components/ui/input';
 // that explain "Type X to confirm" in vi/en.
 const CONFIRM_PHRASE = 'delete my data';
 
-export function DeleteAccountDialog({ onConfirm }: { onConfirm: () => Promise<void> }) {
+export function DeleteAccountDialog({
+  onConfirm,
+  isPending = false,
+}: {
+  onConfirm: () => Promise<void>;
+  isPending?: boolean;
+}) {
   const t = useTranslations();
   const [v, setV] = useState('');
-  const [busy, setBusy] = useState(false);
 
   return (
     <Dialog>
@@ -47,17 +52,10 @@ export function DeleteAccountDialog({ onConfirm }: { onConfirm: () => Promise<vo
         />
         <Button
           variant="destructive"
-          disabled={v !== CONFIRM_PHRASE || busy}
-          onClick={async () => {
-            setBusy(true);
-            try {
-              await onConfirm();
-            } finally {
-              setBusy(false);
-            }
-          }}
+          disabled={v !== CONFIRM_PHRASE || isPending}
+          onClick={onConfirm}
         >
-          {busy ? t('common.loading') : t('deleteAccount.confirmCta')}
+          {isPending ? t('common.loading') : t('deleteAccount.confirmCta')}
         </Button>
       </DialogContent>
     </Dialog>
