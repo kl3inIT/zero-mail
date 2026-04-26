@@ -14,9 +14,7 @@
   "paths": {
     "/tenant/disconnect": {
       "post": {
-        "tags": [
-          "disconnect-controller"
-        ],
+        "tags": ["disconnect-controller"],
         "operationId": "disconnect",
         "responses": {
           "200": {
@@ -87,9 +85,7 @@
     },
     "/tenant/connect-gmail": {
       "post": {
-        "tags": [
-          "connect-gmail-controller"
-        ],
+        "tags": ["connect-gmail-controller"],
         "operationId": "connect",
         "responses": {
           "200": {
@@ -160,9 +156,7 @@
     },
     "/onboarding/select-template": {
       "post": {
-        "tags": [
-          "onboarding-controller"
-        ],
+        "tags": ["onboarding-controller"],
         "operationId": "selectTemplate",
         "requestBody": {
           "content": {
@@ -243,9 +237,7 @@
     },
     "/onboarding/complete": {
       "post": {
-        "tags": [
-          "onboarding-controller"
-        ],
+        "tags": ["onboarding-controller"],
         "operationId": "complete",
         "responses": {
           "200": {
@@ -316,9 +308,7 @@
     },
     "/me/language": {
       "patch": {
-        "tags": [
-          "me-controller"
-        ],
+        "tags": ["me-controller"],
         "operationId": "updateLanguage",
         "requestBody": {
           "content": {
@@ -406,9 +396,7 @@
     },
     "/me": {
       "get": {
-        "tags": [
-          "me-controller"
-        ],
+        "tags": ["me-controller"],
         "operationId": "me",
         "responses": {
           "200": {
@@ -486,9 +474,7 @@
     },
     "/gmail/connection/status": {
       "get": {
-        "tags": [
-          "gmail"
-        ],
+        "tags": ["gmail"],
         "operationId": "status",
         "responses": {
           "200": {
@@ -566,9 +552,7 @@
     },
     "/me/account": {
       "delete": {
-        "tags": [
-          "account-deletion-controller"
-        ],
+        "tags": ["account-deletion-controller"],
         "operationId": "deleteAccount",
         "responses": {
           "200": {
@@ -757,9 +741,7 @@
             "description": "Transitional alias of `code`, kept for one phase per CONTEXT.md decision D-C1. Prefer `code`."
           }
         },
-        "required": [
-          "code"
-        ]
+        "required": ["code"]
       },
       "FieldErrorDto": {
         "type": "object",
@@ -796,10 +778,7 @@
             "description": "Allow-listed scalars (numbers, booleans, dotted keys, short resource identifiers). Never raw user content."
           }
         },
-        "required": [
-          "field",
-          "code"
-        ]
+        "required": ["field", "code"]
       }
     }
   }
