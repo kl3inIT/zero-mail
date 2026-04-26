@@ -1,4 +1,4 @@
-package com.zeromail.core.privacy;
+package com.zeromail.core.shared.privacy;
 
 import java.lang.reflect.Field;
 import java.util.HashMap;
