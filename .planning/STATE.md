@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 1.2 Plan 06 complete (DomainBoundaryArchTests + 2 cross-domain decompositions + canonical Pattern 8 cleanup; full ./gradlew clean check green)
-last_updated: "2026-04-26T11:13:30.999Z"
+stopped_at: Phase 1.3 Plan 02 complete (Husky 9 + lint-staged + Prettier 3 monorepo-root tooling foundation; hook empirically fired on both task commits)
+last_updated: "2026-04-26T11:24:36.853Z"
 last_activity: 2026-04-26
 progress:
   total_phases: 12
   completed_phases: 3
-  total_plans: 31
-  completed_plans: 24
-  percent: 77
+  total_plans: 34
+  completed_plans: 25
+  percent: 74
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 ## Current Position
 
 Phase: 01.3 (frontend-architecture-refactor-and-public-content-foundation) — EXECUTING
-Plan: 2 of 8
+Plan: 3 of 8
 Status: Ready to execute
 Last activity: 2026-04-26
 
@@ -64,6 +64,7 @@ Progress: [████████████] 100% of Phase 1.2 (24/30 total 
 | Phase 1.2 P05 | 11min | 3 tasks | 30 files |
 | Phase 01.2 P06 | 25min | 3 tasks | 9 files |
 | Phase 01.3 P01 | 6min | 2 tasks | 6 files |
+| Phase 01.3 P02 | 6min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,8 @@ Recent decisions affecting current work:
 - [Phase ?]: [Phase 1.2]: Plan 06 caught + decomposed 2 lingering cross-domain repo injections that Plans 03/04 silently shipped (T-01.2-H regression). Pattern: extend CL-2 service-to-service primitive shape to non-delete writes — TenantService.createTenant + AccountService.advanceOnboardingStep mirror the delete-cascade primitives. ArchUnit threat-test-as-defect-finder confirmed working on first execution.
 - [Phase ?]: [Phase 1.2]: Phase 1.2 structurally complete. Source tree contains exactly {account, gmail, onboarding, shared, tenant} per RESEARCH.md target. Full ./gradlew clean check green: 115 tests / 30 classes / 0 failures. Byte-identical contract preserved (zero diff in db/changelog, libs.versions.toml, apps/web/openapi).
 - [Phase ?]: [Phase 1.3]: Plan 01 — Wave 0 architecture/cleanup test spine landed (6 vitest files, 56 assertions: 45 RED + 10 GREEN + 1 SKIP). Static existsSync predicate at module load (REVIEWS Revision 4) replaces broken beforeAll+skipIf permanent-skip pattern. Non-literal dynamic-import spec defers Vite import-analysis to runtime — fixes ERR_MODULE_NOT_FOUND that @vite-ignore alone does not solve. Pattern locked: pure-fs/regex Wave 0 tests with no @/features/ runtime imports survive every refactor wave.
+- [Phase ?]: [Phase 1.3]: Plan 02 — pre-commit gate live (Husky 9 + lint-staged + Prettier 3 root-level). Empirically verified: hooks fired on Task 1 + Task 2 commits. lint-staged in WARN-ONLY i18n:check mode (`|| true`) until Plan 07 final task; `!(messages)` extglob de-duplicates Prettier across overlapping globs (REVIEWS Revisions 3 + 5).
+- [Phase ?]: [Phase 1.3]: Plan 02 — `transpilePackages: ['next-mdx-remote']` pre-declared in apps/web/next.config.ts. Pattern locked: pre-declare Turbopack-transpile entries when the runtime dep lands in a future plan; entry is a no-op until first import (Pitfall 6 mitigation, Plan 06 activates).
 
 ### Roadmap Evolution
 
@@ -133,6 +136,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-26T11:13:06.608Z
-Stopped at: Phase 1.2 Plan 06 complete (DomainBoundaryArchTests + 2 cross-domain decompositions + canonical Pattern 8 cleanup; full ./gradlew clean check green)
+Last session: 2026-04-26T11:24:36.846Z
+Stopped at: Phase 1.3 Plan 02 complete (Husky 9 + lint-staged + Prettier 3 monorepo-root tooling foundation; hook empirically fired on both task commits)
 Resume file: None
