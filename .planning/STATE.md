@@ -73,6 +73,7 @@ Progress: [█████████████] 2/4 plans of Phase 01.2.1 (2
 | Phase 01.3 P05 | 12min | 5 tasks | 5 created + 1 modified + 3 relocated + 5 deleted |
 | Phase 01.2.1 P04 | 38min | 5 tasks | 17 files |
 | Phase 01.3 P06 | 9min | 2 tasks | 8 created + 3 modified |
+| Phase 01.3 P07 | 5min | 3 tasks | 1 created + 8 modified |
 
 ## Accumulated Context
 
@@ -128,6 +129,8 @@ Recent decisions affecting current work:
 - [Phase 1.3]: Plan 06 — Wave 4 docs/MDX pipeline landed. apps/web/lib/docs/loader.ts is the deterministic resolver + zod FrontmatterSchema (REVIEWS Revision 6, OpenCode MEDIUM): anchored on path.dirname(fileURLToPath(import.meta.url)) (or __dirname when defined), never the caller's working directory. Index page parses content/docs/*.mdx with gray-matter + safeParse and silently skips malformed entries; dynamic [slug] page uses compileMDX from next-mdx-remote/rsc with await params + SLUG_RE BEFORE path.join + safeParse + slug/locale consistency check (fm.data.slug !== slug || fm.data.locale !== locale → notFound()). 4 sample MDX files (vi + en, getting-started + privacy). next-mdx-remote v6 security defaults preserved (no override of blockJS / blockDangerousJS). Wave 0 mdx-pipeline.test.ts FULLY GREEN (10/10, 0 skipped).
 - [Phase 1.3]: Plan 06 — Pattern locked: when a Wave 0 negative-substring regex (e.g. /process\.cwd\(\)/) tests source bytes for forbidden tokens, prose comments must paraphrase the token rather than mention it literally. Useful guard, but conflates source bytes with semantics — name the trade-off in the comment when paraphrasing.
 - [Phase 1.3]: Plan 06 — Pattern locked: Wave 0 availability gates that read existsSync('node_modules/<pkg>/package.json') under pnpm workspaces MUST OR-check workspace-root node_modules (pnpm hoists shared deps to root); the Plan 01 mdx-pipeline gate was widened in this plan and the inline note explains the pnpm-hoist intent for future agents.
+- [Phase 1.3]: Plan 07 — Wave 5 i18n closure landed: 11 new leaf keys (87 total) mirrored across vi/en bundles (common.nav.{docs,signIn} + landing.{heading,tagline,primaryCta,continueSetupCta} + docs.{indexHeading,backToList,empty.{heading,body},notFound.body}); EN_SCAN_FILES expanded 10 → 14 entries (added (public)/docs/page.tsx + [slug]/page.tsx + [slug]/loading.tsx + (auth)/layout.tsx); 8 `t(... as never)` cast bypasses across 4 source files removed (next-intl typed-key check re-engaged for Plan 04/05/06 surfaces). UI-SPEC §Copywriting Contract copy used verbatim.
+- [Phase 1.3]: Plan 07 — REVIEWS Revision 3 closed: lint-staged i18n:check flipped from warn-only (`|| true` since Plan 02) to STRICT. Empirically verified on disposable temp branch — deliberate vi.json key delete → `git commit` → husky exit 1 + lint-staged auto-revert + `[parity] vi.json and en.json leaf-key sets differ: en-only: landing.continueSetupCta` in stderr. Pattern locked: flip strict BEFORE temp-branch verification so the temp branch inherits strict config.
 
 ### Roadmap Evolution
 
