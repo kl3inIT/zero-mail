@@ -18,7 +18,7 @@
  * {@code @CreatedDate} / {@code @LastModifiedDate} from the {@code DateTimeProvider} bean named
  * {@code "appDateTimeProvider"}, which delegates to the project {@code Clock} bean
  * (production: {@code Clock.systemUTC()}; tests override with {@code Clock.fixed(...)}).
- * See {@link com.zeromail.api.config.JpaAuditingConfig}.
+ * The bean is provided by the API module's {@code JpaAuditingConfig}.
  *
  * <p><b>D-A5 — bulk SQL bypass (CRITICAL):</b> {@code @LastModifiedDate} and {@code @PreUpdate}
  * lifecycle callbacks DO NOT fire for bulk JPQL {@code @Modifying @Query}, native SQL via

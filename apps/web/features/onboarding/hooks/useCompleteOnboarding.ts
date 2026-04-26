@@ -10,9 +10,11 @@ export function useCompleteOnboarding() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: completeOnboarding,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: onboardingKeys.all });
-      qc.invalidateQueries({ queryKey: accountKeys.me() });
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: onboardingKeys.all }),
+        qc.invalidateQueries({ queryKey: accountKeys.me() }),
+      ]);
     },
   });
 }

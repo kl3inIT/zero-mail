@@ -15,8 +15,9 @@ import jakarta.persistence.Version;
 /**
  * Tier 2: identity + audit timestamps + optimistic-lock version. Extends {@link AbstractEntity}.
  *
- * <p><b>Implements decisions D-A2 (audit field naming), D-A3 (schema additions), D-A4 (auditing
- * mechanism via Spring Data + {@link AuditingEntityListener} + {@link com.zeromail.api.config.JpaAuditingConfig}).</b>
+ * <p><b>Implements decisions D-A2 (audit field naming), D-A3 (schema additions), D-A4
+ * (auditing mechanism via Spring Data + {@link AuditingEntityListener} + the API module's
+ * {@code JpaAuditingConfig}).</b>
  *
  * <p><b>D-A5 caveat — bulk SQL bypass:</b> {@code @LastModifiedDate} and {@code @PreUpdate}
  * lifecycle callbacks DO NOT fire for bulk JPQL {@code @Modifying @Query}, native SQL via
@@ -29,6 +30,7 @@ import jakarta.persistence.Version;
  * omitted. Row-level user identity is forbidden by the project privacy constraint until the
  * Phase 6 audit-log table lands with a proper {@code AuditorAware<UUID>} bean.
  */
+@SuppressWarnings("unused")
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
 public abstract class AbstractAuditableEntity extends AbstractEntity {

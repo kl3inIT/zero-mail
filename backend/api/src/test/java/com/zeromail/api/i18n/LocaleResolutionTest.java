@@ -43,6 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @ActiveProfiles("test")
 @Import(TestSessionSupport.class)
+@SuppressWarnings("SqlNoDataSourceInspection")
 class LocaleResolutionTest extends ApiPostgresTestBase {
 
     @LocalServerPort int port;
@@ -70,7 +71,7 @@ class LocaleResolutionTest extends ApiPostgresTestBase {
 
     @Test
     @DisplayName("PATCH /me/language { language: 'en' } persists to users.preferred_language")
-    void patch_me_language_persists_preferredLanguage_to_db() throws Exception {
+    void patch_me_language_persists_preferredLanguage_to_db() {
         Seed s = seed("locres-persist");
 
         ResponseEntity<String> res = client().patch()
@@ -120,11 +121,11 @@ class LocaleResolutionTest extends ApiPostgresTestBase {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body("{\"language\":\"zz\"}")
                 .retrieve()
-                .onStatus(HttpStatusCode::is4xxClientError, (req, resp) -> { /* swallow default error handler */ })
+                .onStatus(HttpStatusCode::is4xxClientError, (_, _) -> { /* swallow default error handler */ })
                 .toEntity(String.class);
 
         assertThat(res.getStatusCode().value()).isEqualTo(400);
-        assertThat(res.getHeaders().getContentType().toString()).startsWith("application/problem+json");
+        assertThat(String.valueOf(res.getHeaders().getContentType())).startsWith("application/problem+json");
 
         JsonNode json = new ObjectMapper().readTree(res.getBody());
         assertThat(json.path("code").asText()).isEqualTo("error.validation");

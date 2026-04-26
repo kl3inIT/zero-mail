@@ -16,9 +16,9 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain chain(HttpSecurity http,
                               TenantBindingFilter tenantFilter,
-                              OAuth2LoginDispatchingSuccessHandler dispatchSuccess,
-                              OAuth2LoginDispatchingFailureHandler dispatchFailure,
-                              GmailScopeRequestResolver gmailResolver) throws Exception {
+                               OAuth2LoginDispatchingSuccessHandler dispatchSuccess,
+                               OAuth2LoginDispatchingFailureHandler dispatchFailure,
+                               GmailScopeRequestResolver gmailResolver) {
         http
             .cors(Customizer.withDefaults())
             .authorizeHttpRequests(a -> a

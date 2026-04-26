@@ -2,10 +2,12 @@ package com.zeromail.api.security;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
@@ -92,10 +94,14 @@ public class GmailOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHand
     }
 
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest req, HttpServletResponse res, Authentication auth)
+    public void onAuthenticationSuccess(
+            @NonNull HttpServletRequest req,
+            @NonNull HttpServletResponse res,
+            @NonNull Authentication auth)
             throws IOException, ServletException {
         OAuth2AuthenticationToken token = (OAuth2AuthenticationToken) auth;
-        OidcUser leg2 = (OidcUser) token.getPrincipal();
+        OidcUser leg2 = Objects.requireNonNull((OidcUser) token.getPrincipal(), "OIDC principal is required");
+        String googleSubject = Objects.requireNonNull(leg2.getSubject(), "Google subject is required");
 
         // 0. Load the AuthorizedClient ONCE — both the success path and any
         //    GmailIdentityMismatchException throw site reuse this single load.
@@ -117,20 +123,24 @@ public class GmailOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHand
         // 1. Resolve the currently-bound user by leg-2 OIDC subject.
         //    Per CONTEXT D-A1: leg-2 user MUST already exist (signed in via leg 1). If not,
         //    that's an integrity error — fail loudly via the failure handler.
-        UserEntity currentUser = users.findByGoogleSubject(leg2.getSubject())
+        UserEntity currentUser = users.findByGoogleSubject(googleSubject)
                 .orElseThrow(() -> new GmailIdentityMismatchException(accessTokenForRevoke));
 
         // 2. Subject check. (Tautological in the lookup form above, but kept explicit so the
         //    contract is visible if we later switch to a session-principal-based current-user
         //    lookup.) Reuse the captured token (no re-load).
-        if (!leg2.getSubject().equals(currentUser.getGoogleSubject())) {
+        if (!googleSubject.equals(currentUser.getGoogleSubject())) {
             throw new GmailIdentityMismatchException(accessTokenForRevoke);
         }
 
         // 3. Extract refresh token + scopes from the AuthorizedClient loaded in step 0.
         //    (No second loadAuthorizedClient call — single source of truth for this callback.)
-        String refreshToken = authorizedClient.getRefreshToken().getTokenValue();
-        Set<String> scopes = authorizedClient.getAccessToken().getScopes();
+        OAuth2AuthorizedClient gmailClient = Objects.requireNonNull(
+                authorizedClient, "Gmail authorized client is required");
+        String refreshToken = Objects.requireNonNull(
+                gmailClient.getRefreshToken(), "Gmail refresh token is required").getTokenValue();
+        Set<String> scopes = Objects.requireNonNull(
+                gmailClient.getAccessToken(), "Gmail access token is required").getScopes();
 
         // Filter to gmail-prefixed scopes only (Pitfall 5: include_granted_scopes=true returns
         // ALL leg-1+leg-2 scopes; openid+profile+email are leg-1 surface and not the Gmail
@@ -148,7 +158,7 @@ public class GmailOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHand
         String email = leg2.getEmail();
 
         ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                .run(() -> tx.executeWithoutResult(status -> {
+                .run(() -> tx.executeWithoutResult(_ -> {
                     byte[] envelope = cipher.encrypt(
                             refreshToken.getBytes(StandardCharsets.UTF_8),
                             tenantId.toString());

@@ -291,9 +291,7 @@ function isNonProseLine(line: string): boolean {
   if (trimmed.startsWith('export {') || trimmed.startsWith('export *')) return true;
   if (trimmed.startsWith('//')) return true;
   if (trimmed.startsWith('*')) return true; // JSDoc continuation
-  if (trimmed.startsWith('/*') || trimmed.startsWith('*/')) return true;
-  if (trimmed.includes('// i18n-allow')) return true;
-  return false;
+  return trimmed.startsWith('/*') || trimmed.startsWith('*/') || trimmed.includes('// i18n-allow');
 }
 
 function scanFileForEnglishProse(absPath: string, relPath: string): string[] {

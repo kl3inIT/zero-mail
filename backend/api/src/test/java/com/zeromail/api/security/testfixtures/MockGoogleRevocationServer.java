@@ -88,7 +88,7 @@ public final class MockGoogleRevocationServer {
                 body.readAllBytes();
             }
 
-            String token = parseTokenParam(exchange.getRequestURI(), readBodyAsString(exchange));
+            String token = parseTokenParam(exchange.getRequestURI(), readBodyAsString());
             if (token != null) {
                 receivedTokens.add(token);
             }
@@ -98,7 +98,7 @@ public final class MockGoogleRevocationServer {
             exchange.close();
         }
 
-        private String readBodyAsString(HttpExchange exchange) {
+        private String readBodyAsString() {
             // Body already drained above; this overload exists for the form-encoded path
             // (Google's spec accepts the token via either query param or body). Tests assert
             // the query-param shape, but the helper is here in case Wave 1 sends it as a body.

@@ -57,6 +57,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @ActiveProfiles("test")
 @Import(TestSessionSupport.class)
+@SuppressWarnings("SqlNoDataSourceInspection")
 class MeLanguageIntegrationTest extends ApiPostgresTestBase {
 
     @LocalServerPort int port;
@@ -75,10 +76,8 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
         UUID tenantId = UUID.randomUUID();
         tenants.save(new TenantEntity(tenantId, label));
         UUID userId = UUID.randomUUID();
-        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() -> {
-            users.save(new UserEntity(
-                    userId, tenantId, "sub-" + label, label + "@example.com"));
-        });
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() -> users.save(new UserEntity(
+                userId, tenantId, "sub-" + label, label + "@example.com")));
         minter.mint("sub-" + label, label + "@example.com");
         return new Seed(tenantId, userId, "sub-" + label, label + "@example.com");
     }
@@ -148,7 +147,7 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body("{\"language\":\"zz\"}")
                 .retrieve()
-                .onStatus(HttpStatusCode::is4xxClientError, (req, resp) -> { /* let it through */ })
+                .onStatus(HttpStatusCode::is4xxClientError, (_, _) -> { /* let it through */ })
                 .toEntity(String.class);
 
         assertThat(res.getStatusCode().value()).isEqualTo(400);
@@ -186,7 +185,7 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
 
     @Test
     @DisplayName("PATCH /me/language is tenant-scoped — does not mutate other tenants' rows")
-    void patchMeLanguage_isTenantScoped_doesNotMutateOtherTenants() throws Exception {
+    void patchMeLanguage_isTenantScoped_doesNotMutateOtherTenants() {
         Seed a = seedUser("tenant-a");
         Seed b = seedUser("tenant-b");
 

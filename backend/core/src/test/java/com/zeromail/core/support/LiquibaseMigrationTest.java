@@ -10,8 +10,6 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.zeromail.core.support.PostgresContainerTest;
-
 /**
  * [BLOCKING] schema-push proof: boots Spring against a real Postgres 17 Testcontainer,
  * Liquibase applies all changesets, then asserts every required table is present.

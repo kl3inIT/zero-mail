@@ -48,7 +48,7 @@ class GmailScopeRequestResolverTest {
         var resolver = new GmailScopeRequestResolver(repo);
 
         // Authenticated principal: email "alice@example.com"
-        SecurityContextHolder.getContext().setAuthentication(authenticatedToken("alice@example.com"));
+        SecurityContextHolder.getContext().setAuthentication(authenticatedToken());
 
         var req = new MockHttpServletRequest();
         req.setRequestURI("/oauth2/authorization/" + GMAIL_REGISTRATION_ID);
@@ -108,10 +108,10 @@ class GmailScopeRequestResolverTest {
         return repo;
     }
 
-    private OAuth2AuthenticationToken authenticatedToken(String email) {
+    private OAuth2AuthenticationToken authenticatedToken() {
         var claims = Map.<String, Object>of(
                 "sub", "google-subject-test-resolver",
-                "email", email);
+                "email", "alice@example.com");
         var idToken = new OidcIdToken(
                 "test-id-token-resolver",
                 java.time.Instant.now(),

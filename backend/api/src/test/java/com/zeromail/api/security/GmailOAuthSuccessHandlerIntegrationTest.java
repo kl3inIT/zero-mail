@@ -10,7 +10,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
@@ -34,7 +33,6 @@ import com.zeromail.core.gmail.model.GmailConnectionStatus;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
-import com.zeromail.core.gmail.service.GmailConnectionService;
 import com.zeromail.core.onboarding.model.OnboardingStep;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.persistence.TenantEntity;
@@ -70,7 +68,7 @@ class GmailOAuthSuccessHandlerIntegrationTest extends ApiPostgresTestBase {
      *
      * <p>Pattern: expose a {@code @Primary} Mockito mock so it wins the autowire over the
      * default bean. Each test method then programs the mock via
-     * {@link #stubAuthorizedClient(Seed, OAuth2AuthenticationToken, String, java.util.Set)}.
+     * {@link #stubAuthorizedClient(OAuth2AuthenticationToken, String, java.util.Set)}.
      */
     @TestConfiguration
     static class MockAuthorizedClientServiceConfig {
@@ -85,12 +83,9 @@ class GmailOAuthSuccessHandlerIntegrationTest extends ApiPostgresTestBase {
     private static final String FAKE_REFRESH_TOKEN_V1 = "fake-refresh-token-do-not-use-v1";
     private static final String FAKE_REFRESH_TOKEN_V2 = "fake-refresh-token-do-not-use-v2";
 
-    @LocalServerPort int port;
-
     @Autowired UserRepository users;
     @Autowired TenantRepository tenants;
     @Autowired GmailConnectionRepository connections;
-    @Autowired GmailConnectionService connectionService;
     @Autowired RefreshTokenCipher cipher;
     @Autowired TestSessionSupport.TestSessionMinter minter;
 
@@ -109,14 +104,14 @@ class GmailOAuthSuccessHandlerIntegrationTest extends ApiPostgresTestBase {
     }
 
     @Test
-    void successPath_matchingSubject_upsertsConnectionAndAdvancesStep() throws Exception {
+    void successPath_matchingSubject_upsertsConnectionAndAdvancesStep() {
         Seed seed = seedUser("alpha");
 
         var oidc = oidcUserMock(seed.googleSubject(), seed.email());
         var token = new OAuth2AuthenticationToken(
                 oidc, oidc.getAuthorities(), GMAIL_REGISTRATION_ID);
 
-        stubAuthorizedClient(seed, token, FAKE_REFRESH_TOKEN_V1,
+        stubAuthorizedClient(token, FAKE_REFRESH_TOKEN_V1,
                 Set.of("openid", "profile", "email",
                         "https://www.googleapis.com/auth/gmail.modify"));
 
@@ -154,14 +149,14 @@ class GmailOAuthSuccessHandlerIntegrationTest extends ApiPostgresTestBase {
     }
 
     @Test
-    void idempotentReGrant_updatesExistingRowNoDuplicate() throws Exception {
+    void idempotentReGrant_updatesExistingRowNoDuplicate() {
         Seed seed = seedUser("beta");
 
         var oidc = oidcUserMock(seed.googleSubject(), seed.email());
         var token = new OAuth2AuthenticationToken(
                 oidc, oidc.getAuthorities(), GMAIL_REGISTRATION_ID);
 
-        stubAuthorizedClient(seed, token, FAKE_REFRESH_TOKEN_V1,
+        stubAuthorizedClient(token, FAKE_REFRESH_TOKEN_V1,
                 Set.of("https://www.googleapis.com/auth/gmail.modify"));
 
         var req1 = new MockHttpServletRequest();
@@ -189,7 +184,7 @@ class GmailOAuthSuccessHandlerIntegrationTest extends ApiPostgresTestBase {
         });
 
         // Second grant with a fresh token.
-        stubAuthorizedClient(seed, token, FAKE_REFRESH_TOKEN_V2,
+        stubAuthorizedClient(token, FAKE_REFRESH_TOKEN_V2,
                 Set.of("https://www.googleapis.com/auth/gmail.modify"));
 
         var req2 = new MockHttpServletRequest();
@@ -230,7 +225,7 @@ class GmailOAuthSuccessHandlerIntegrationTest extends ApiPostgresTestBase {
         var token = new OAuth2AuthenticationToken(
                 oidc, oidc.getAuthorities(), GMAIL_REGISTRATION_ID);
 
-        stubAuthorizedClient(seed, token, "fake-refresh-token-mismatch-leg2",
+        stubAuthorizedClient(token, "fake-refresh-token-mismatch-leg2",
                 Set.of("https://www.googleapis.com/auth/gmail.modify"));
 
         var req = new MockHttpServletRequest();
@@ -281,7 +276,7 @@ class GmailOAuthSuccessHandlerIntegrationTest extends ApiPostgresTestBase {
     }
 
     private void stubAuthorizedClient(
-            Seed seed, OAuth2AuthenticationToken token, String refreshTokenValue, Set<String> scopes) {
+            OAuth2AuthenticationToken token, String refreshTokenValue, Set<String> scopes) {
         ClientRegistration registration = ClientRegistration.withRegistrationId(GMAIL_REGISTRATION_ID)
                 .clientId("test-google-client")
                 .clientSecret("test-google-secret")

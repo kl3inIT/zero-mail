@@ -32,7 +32,7 @@ class GoogleOAuthSuccessHandlerTest {
 
         var request = new MockHttpServletRequest();
         var response = new MockHttpServletResponse();
-        var auth = new TestingAuthenticationToken(oidc, null);
+        var auth = new TestingAuthenticationToken(oidc, "");
 
         handler.onAuthenticationSuccess(request, response, auth);
 

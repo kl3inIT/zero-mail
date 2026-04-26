@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import com.zeromail.core.tenant.concurrency.TenantAwareTaskScope;
 
+@SuppressWarnings("preview")
 class TenantAwareTaskScopeTest {
 
     @Test
@@ -17,7 +18,7 @@ class TenantAwareTaskScopeTest {
         ScopedValue.where(TenantContext.TENANT, "tenant-A").run(() -> {
             try (var scope = TenantAwareTaskScope.openInherit()) {
                 List<StructuredTaskScope.Subtask<String>> subs = IntStream.range(0, 10)
-                        .mapToObj(i -> scope.<String>fork(TenantContext::currentOrThrow))
+                        .mapToObj(_ -> scope.fork(TenantContext::currentOrThrow))
                         .toList();
                 scope.join();
                 subs.forEach(s -> assertThat(s.get()).isEqualTo("tenant-A"));

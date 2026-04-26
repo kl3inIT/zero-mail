@@ -11,7 +11,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
@@ -160,7 +159,7 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body)
                 .retrieve()
-                .onStatus(HttpStatusCode::isError, (req, resp) -> { /* let body through */ })
+                .onStatus(HttpStatusCode::isError, (_, _) -> { /* let body through */ })
                 .toEntity(String.class);
         return new Probe(
                 res.getStatusCode().value(),
@@ -380,7 +379,7 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
     // ─────────────────────────────────────────────────────────────────────────────────
     @org.junit.jupiter.api.Test
     @DisplayName("SQL state '23505' sentinel never appears on wire or in logs (data-integrity)")
-    void dataIntegrity_doesNotLeakSqlStateSentinel() throws Exception {
+    void dataIntegrity_doesNotLeakSqlStateSentinel() {
         Probe probe = drive("/test/safety/throw/data-integrity-sql-state",
                 "\"" + SENTINEL_SQL_STATE + "\"");
         assertThat(probe.status()).isEqualTo(409);
@@ -422,6 +421,7 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
         @PostMapping("/test/safety/validate")
         public void validate(@Valid @RequestBody SafetyLocaleBody body) {
             // Body is valid by the time we get here — the handler under test fires earlier.
+            assertThat(body).isNotNull();
         }
 
         @PostMapping("/test/safety/throw/access-denied")

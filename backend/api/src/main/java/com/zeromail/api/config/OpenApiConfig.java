@@ -98,58 +98,58 @@ public class OpenApiConfig {
                             + "Filtered through AllowedParamScalars before serialization.");
 
             // --- 1. Register FieldErrorDto schema (referenced by ApiError.fieldErrors[]) ---
-            Schema<?> fieldErrorDto = new ObjectSchema()
-                    .description("Per-field validation error. CONTEXT.md decision D-C2: "
-                            + "{ field, code, params }. The JHipster `message` and `objectName` "
-                            + "fields are deliberately rejected — the frontend localizes the "
-                            + "dotted `code` via the errors.field.* dictionary.")
-                    .addProperty("field", new StringSchema()
-                            .description("Dotted path to the offending field, e.g. "
-                                    + "`email`, `templates[0].key`."))
-                    .addProperty("code", new StringSchema()
-                            .description("Dotted hierarchical key inside the errors.field.* namespace."))
-                    .addProperty("params", new MapSchema()
-                            .additionalProperties(safeParamScalar)
-                            .description("Allow-listed scalars (numbers, booleans, dotted keys, "
-                                    + "short resource identifiers). Never raw user content."))
-                    .required(List.of("field", "code"));
+            ObjectSchema fieldErrorDto = new ObjectSchema();
+            fieldErrorDto.description("Per-field validation error. CONTEXT.md decision D-C2: "
+                    + "{ field, code, params }. The JHipster `message` and `objectName` "
+                    + "fields are deliberately rejected — the frontend localizes the "
+                    + "dotted `code` via the errors.field.* dictionary.");
+            fieldErrorDto.addProperty("field", new StringSchema()
+                    .description("Dotted path to the offending field, e.g. "
+                            + "`email`, `templates[0].key`."));
+            fieldErrorDto.addProperty("code", new StringSchema()
+                    .description("Dotted hierarchical key inside the errors.field.* namespace."));
+            fieldErrorDto.addProperty("params", new MapSchema()
+                    .additionalProperties(safeParamScalar)
+                    .description("Allow-listed scalars (numbers, booleans, dotted keys, "
+                            + "short resource identifiers). Never raw user content."));
+            fieldErrorDto.setRequired(List.of("field", "code"));
 
             // --- 2. Register ApiError schema (the application/problem+json wire shape) ---
-            Schema<?> apiError = new ObjectSchema()
-                    .description("RFC 9457 ProblemDetail extended with code/params/fieldErrors. "
-                            + "Wire shape produced by Spring 7 ProblemDetail.setProperty(...) "
-                            + "flattened by Jackson 3 ProblemDetailJacksonMixin. "
-                            + "Phase 1.1 introduces this contract; the FE switches on `code`.")
-                    .addProperty("type", new StringSchema()
-                            .format("uri")
-                            .description("RFC 9457 problem type URI; defaults to `about:blank`."))
-                    .addProperty("title", new StringSchema()
-                            .description("Generic English diagnostic. NOT the user-facing message — FE ignores it."))
-                    .addProperty("status", new IntegerSchema()
-                            .format("int32")
-                            .description("HTTP status code echoed in the body."))
-                    .addProperty("detail", new StringSchema()
-                            .description("Generic English diagnostic. NOT the user-facing message — FE ignores it."))
-                    .addProperty("instance", new StringSchema()
-                            .format("uri")
-                            .description("Optional URI identifying this specific occurrence."))
-                    .addProperty("code", new StringSchema()
-                            .description("Stable dotted hierarchical key (e.g. `error.auth.unauthorized`). "
-                                    + "Frontend localizes via the errors.* dictionary. "
-                                    + "ALWAYS PRESENT."))
-                    .addProperty("params", new MapSchema()
-                            .additionalProperties(safeParamScalar)
-                            .description("Allow-listed ICU placeholder scalars for the FE error message. "
-                                    + "Filtered through AllowedParamScalars; never carries raw user content, "
-                                    + "Gmail body fragments, SQL constraint names, or exception class names."))
-                    .addProperty("fieldErrors", new ArraySchema()
-                            .items(new Schema<>().$ref(FIELD_ERROR_DTO_REF))
-                            .description("Per-field validation errors. Present only on validation failures."))
-                    .addProperty("message", new StringSchema()
-                            .deprecated(true)
-                            .description("Transitional alias of `code`, kept for one phase per CONTEXT.md "
-                                    + "decision D-C1. Prefer `code`."))
-                    .required(List.of("code"));
+            ObjectSchema apiError = new ObjectSchema();
+            apiError.description("RFC 9457 ProblemDetail extended with code/params/fieldErrors. "
+                    + "Wire shape produced by Spring 7 ProblemDetail.setProperty(...) "
+                    + "flattened by Jackson 3 ProblemDetailJacksonMixin. "
+                    + "Phase 1.1 introduces this contract; the FE switches on `code`.");
+            apiError.addProperty("type", new StringSchema()
+                    .format("uri")
+                    .description("RFC 9457 problem type URI; defaults to `about:blank`."));
+            apiError.addProperty("title", new StringSchema()
+                    .description("Generic English diagnostic. NOT the user-facing message — FE ignores it."));
+            apiError.addProperty("status", new IntegerSchema()
+                    .format("int32")
+                    .description("HTTP status code echoed in the body."));
+            apiError.addProperty("detail", new StringSchema()
+                    .description("Generic English diagnostic. NOT the user-facing message — FE ignores it."));
+            apiError.addProperty("instance", new StringSchema()
+                    .format("uri")
+                    .description("Optional URI identifying this specific occurrence."));
+            apiError.addProperty("code", new StringSchema()
+                    .description("Stable dotted hierarchical key (e.g. `error.auth.unauthorized`). "
+                            + "Frontend localizes via the errors.* dictionary. "
+                            + "ALWAYS PRESENT."));
+            apiError.addProperty("params", new MapSchema()
+                    .additionalProperties(safeParamScalar)
+                    .description("Allow-listed ICU placeholder scalars for the FE error message. "
+                            + "Filtered through AllowedParamScalars; never carries raw user content, "
+                            + "Gmail body fragments, SQL constraint names, or exception class names."));
+            apiError.addProperty("fieldErrors", new ArraySchema()
+                    .items(new Schema<>().$ref(FIELD_ERROR_DTO_REF))
+                    .description("Per-field validation errors. Present only on validation failures."));
+            apiError.addProperty("message", new StringSchema()
+                    .deprecated(true)
+                    .description("Transitional alias of `code`, kept for one phase per CONTEXT.md "
+                            + "decision D-C1. Prefer `code`."));
+            apiError.setRequired(List.of("code"));
 
             if (openApi.getComponents() == null) {
                 openApi.components(new io.swagger.v3.oas.models.Components());

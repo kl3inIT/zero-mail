@@ -78,7 +78,7 @@ public class OAuthProvisioningService {
     private UserEntity createTenantAndUser(String googleSubject, String email) {
         UUID tenantId = UUID.randomUUID();
         return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                .call(() -> provisioningTx.execute(status -> {
+                .call(() -> provisioningTx.execute(_ -> {
                     tenantService.createTenant(tenantId, email);
                     return users.save(new UserEntity(
                             UUID.randomUUID(), tenantId, googleSubject, email));

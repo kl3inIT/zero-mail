@@ -1,12 +1,10 @@
 import { headers } from 'next/headers';
-import { getLocale, getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 
 import { PageShell } from '@/components/ui/PageShell';
 import { buttonVariants } from '@/components/ui/button';
 import { getCurrentUser } from '@/features/account/api/me';
-
-import type { AppLocale } from '@/i18n/routing';
 
 /**
  * Public landing (Phase 1.3 Plan 05 — D-C3, D-D4 "Light skeleton" scope).
@@ -26,9 +24,6 @@ import type { AppLocale } from '@/i18n/routing';
  */
 export default async function LandingPage() {
   const t = await getTranslations();
-  // Locale read for parity with sibling layouts (and for future generateMetadata).
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _locale = (await getLocale()) as AppLocale;
 
   let ctaHref = '/login';
   let ctaKey: 'landing.primaryCta' | 'landing.continueSetupCta' = 'landing.primaryCta';

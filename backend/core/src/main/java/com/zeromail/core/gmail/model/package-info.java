@@ -1,5 +1,5 @@
 /**
- * Gmail domain model types: domain enums + view records (e.g., {@link GmailConnectionStatus},
- * {@link GmailConnectionView}).
+ * Gmail domain model types: domain enums + view records (for example
+ * {@code GmailConnectionStatus} and {@code GmailConnectionView}).
  */
 package com.zeromail.core.gmail.model;

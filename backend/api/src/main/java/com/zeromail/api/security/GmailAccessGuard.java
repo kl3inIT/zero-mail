@@ -49,7 +49,7 @@ public class GmailAccessGuard {
             return;
         }
         ScopedValue.where(TenantContext.TENANT, tenant.toString()).run(() ->
-                tx.executeWithoutResult(status ->
+                tx.executeWithoutResult(_ ->
                         conns.findByTenantId(tenant).ifPresent(conn -> {
                             conn.setStatus(GmailConnectionStatus.DISCONNECTED);
                             conn.setDisconnectedAt(Instant.now());

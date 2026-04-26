@@ -3,24 +3,16 @@ package com.zeromail.core.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import org.jspecify.annotations.NonNull;
 
-@ConfigurationProperties(prefix = "zeromail")
+@ConfigurationProperties(prefix = "zeromail.crypto")
 @Validated
 public record ZeroMailCoreProperties(
-        @Valid CryptoProperties crypto) {
+        @NotBlank String refreshTokenKeyBase64) {
 
-    public ZeroMailCoreProperties {
-        crypto = crypto == null ? new CryptoProperties(null) : crypto;
-    }
-
-    public record CryptoProperties(
-            @NotBlank String refreshTokenKeyBase64) {
-
-        @Override
-        public String toString() {
-            return "CryptoProperties[refreshTokenKeyBase64=****]";
-        }
+    @Override
+    public @NonNull String toString() {
+        return "ZeroMailCoreProperties[refreshTokenKeyBase64=****]";
     }
 }

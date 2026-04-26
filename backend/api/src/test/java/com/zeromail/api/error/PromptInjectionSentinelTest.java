@@ -91,7 +91,7 @@ class PromptInjectionSentinelTest extends ApiPostgresTestBase {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body)
                 .retrieve()
-                .onStatus(HttpStatusCode::isError, (req, resp) -> { /* let body through */ })
+                .onStatus(HttpStatusCode::isError, (_, _) -> { /* let body through */ })
                 .toEntity(String.class);
 
         assertThat(res.getStatusCode().value()).isEqualTo(400);
@@ -160,7 +160,7 @@ class PromptInjectionSentinelTest extends ApiPostgresTestBase {
      */
     @org.junit.jupiter.api.Test
     @DisplayName("zero-width space (\\u200b) sentinel is filtered out of params")
-    void zeroWidthSpaceSentinel_isFilteredFromParams() throws Exception {
+    void zeroWidthSpaceSentinel_isFilteredFromParams() {
         String zwsp = "​";
         String corpusEntry = zwsp + "jailbreak" + zwsp;
         String body = "{\"language\":\"" + jsonEscape(corpusEntry) + "\"}";
@@ -170,7 +170,7 @@ class PromptInjectionSentinelTest extends ApiPostgresTestBase {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body)
                 .retrieve()
-                .onStatus(HttpStatusCode::isError, (req, resp) -> { /* let body through */ })
+                .onStatus(HttpStatusCode::isError, (_, _) -> { /* let body through */ })
                 .toEntity(String.class);
 
         assertThat(res.getStatusCode().value()).isEqualTo(400);
@@ -204,6 +204,7 @@ class PromptInjectionSentinelTest extends ApiPostgresTestBase {
         @PostMapping("/test/prompt-injection/validate")
         public void validate(@Valid @RequestBody PromptInjectionLocaleBody body) {
             // body is valid by the time we get here — handler under test fires earlier
+            assertThat(body).isNotNull();
         }
     }
 

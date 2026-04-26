@@ -87,7 +87,7 @@ describe('Phase 1.3 — MDX docs pipeline (D-D1..D-D5)', () => {
     expect(src).toMatch(/notFound\(\)/);
 
     const loaderSrc = readFileSync(DOCS_LOADER, 'utf8');
-    expect(loaderSrc).toMatch(/export const SLUG_RE\s*=\s*\/\^\[a-z0-9-\]\+\$\/;/);
+    expect(loaderSrc).toMatch(/export const SLUG_RE\s*=\s*\/\^\[a-z0-9-]\+\$\/;/);
   });
 
   // REVIEWS Revision 6 (OpenCode MEDIUM, Codex LOW)
