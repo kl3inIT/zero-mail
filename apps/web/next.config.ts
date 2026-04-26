@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: workspaceRoot,
   },
+  // Phase 1.3 Plan 02 (Pitfall 6 in 01.3-RESEARCH.md): Turbopack's stricter
+  // ESM expectations require explicit transpilation of next-mdx-remote (which
+  // has unist/remark CJS edges). Documented temporary workaround per the
+  // hashicorp/next-mdx-remote README. Plan 06 installs the runtime dep.
+  transpilePackages: ['next-mdx-remote'],
 };
 
 export default withNextIntl(nextConfig);
