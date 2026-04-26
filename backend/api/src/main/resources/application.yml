@@ -7,10 +7,10 @@ spring:
   docker:
     compose:
       lifecycle-management: start_only
-      # docker-compose.yml lives at the repo root; bootRun's cwd is backend/api,
-      # so resolve two levels up. Override with -Dspring.docker.compose.file=...
-      # if you launch with a different working directory.
-      file: ../../docker-compose.yml
+      # Resolve from the repo root. IntelliJ Application run configs use the
+      # repo root by default; backend:api bootRun is configured the same way.
+      # Override with -Dspring.docker.compose.file=... if needed.
+      file: ${SPRING_DOCKER_COMPOSE_FILE:docker-compose.yml}
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/zeromail}
     username: ${DB_USER:zeromail}
