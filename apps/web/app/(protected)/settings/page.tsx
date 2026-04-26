@@ -11,16 +11,27 @@ import { useTenantStatus } from '@/features/gmail/hooks/useTenantStatus';
 import { useDisconnectGmail } from '@/features/gmail/hooks/useDisconnectGmail';
 import { useDeleteAccount } from '@/features/account/hooks/useDeleteAccount';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { PageShell } from '@/components/ui/PageShell';
+import { SectionCard } from '@/components/ui/SectionCard';
 import { Separator } from '@/components/ui/separator';
 import { getApiUrl } from '@/lib/api/base-url';
 
 import type { AppLocale } from '@/i18n/routing';
 
 /**
- * /settings (client). Plan 04 Task 3 — endpoint-specific calls fully moved into
- * features/<name>/api + hooks (REVIEWS Revision 1, Codex HIGH #1). All
- * inline api.GET/POST/DELETE removed; UI/JSX/copy preserved.
+ * /settings (client). Plan 06 Task 1 — refactored onto Plan 04 primitives
+ * (PageShell + 5 SectionCards) with token-aware Tailwind classes (CONTEXT
+ * D-C2 / D-C3 / D-D5). Existing behaviour, hooks, copy, and click handlers
+ * preserved verbatim; only composition + tokens change.
+ *
+ * UI-SPEC §Spacing locks `app` variant at `max-w-3xl` — narrower than the
+ * historical `max-w-4xl`, but the design contract takes precedence over the
+ * incidental width. Container padding flows from PageShell.
+ *
+ * D-D5 single-account note: Gmail card carries a footer note (i18n key
+ * `settings.gmailConnection.singleAccountNote`) so users understand the v1
+ * single-Gmail expectation without seeing a disabled "add another" stub
+ * (D-B4 — no false-promise affordances).
  */
 export default function SettingsPage() {
   const t = useTranslations();
@@ -39,19 +50,24 @@ export default function SettingsPage() {
   };
 
   return (
-    <main className="mx-auto max-w-4xl space-y-6 p-6">
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold">{t('settings.account.heading')}</h2>
-        <p className="mt-2">{me.data?.email ?? t('common.loading')}</p>
-      </Card>
+    <PageShell variant="app">
+      <SectionCard heading={t('settings.account.heading')}>
+        <p>{me.data?.email ?? t('common.loading')}</p>
+      </SectionCard>
 
-      <Card className="p-6">
+      <SectionCard>
         <LanguageSwitcher currentLocale={preferredLanguage} authenticated={true} variant="row" />
-      </Card>
+      </SectionCard>
 
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold">{t('settings.gmailConnection.heading')}</h2>
-        <div className="mt-3 flex items-center gap-3">
+      <SectionCard
+        heading={t('settings.gmailConnection.heading')}
+        footer={
+          <p className="text-muted-foreground text-sm">
+            {t('settings.gmailConnection.singleAccountNote')}
+          </p>
+        }
+      >
+        <div className="flex items-center gap-3">
           <ConnectionHealthBadge status={connStatus} />
         </div>
         {connStatus === 'DISCONNECTED' && (
@@ -64,23 +80,21 @@ export default function SettingsPage() {
             <Button type="submit">{t('onboarding.connect.cta')}</Button>
           </form>
         )}
-      </Card>
+      </SectionCard>
 
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold">{t('settings.privacy.heading')}</h2>
-        <ul className="mt-3 list-disc pl-5 text-sm">
+      <SectionCard heading={t('settings.privacy.heading')}>
+        <ul className="list-disc pl-5 text-sm">
           <li>{t('settings.privacy.noBodyStorage')}</li>
           <li>{t('settings.privacy.noAutoSend')}</li>
           <li>{t('settings.privacy.revokeAnytime')}</li>
           <li>{t('settings.privacy.byokPlanned')}</li>
         </ul>
-      </Card>
+      </SectionCard>
 
       <Separator />
 
-      <Card className="border-red-200 p-6">
-        <h2 className="text-xl font-semibold">{t('settings.dangerZone.heading')}</h2>
-        <div className="mt-4 flex gap-3">
+      <SectionCard heading={t('settings.dangerZone.heading')} className="border-destructive/30">
+        <div className="flex flex-wrap gap-3">
           <Button variant="destructive" onClick={() => disconnect.mutate()}>
             {t('settings.gmailConnection.disconnectCta')}
           </Button>
@@ -91,7 +105,7 @@ export default function SettingsPage() {
             }}
           />
         </div>
-      </Card>
-    </main>
+      </SectionCard>
+    </PageShell>
   );
 }
