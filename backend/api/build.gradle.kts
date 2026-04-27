@@ -15,7 +15,6 @@ dependencies {
     implementation("org.springframework.session:spring-session-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
-    implementation("com.google.cloud:spring-cloud-gcp-starter-secretmanager")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
     developmentOnly("org.springframework.boot:spring-boot-docker-compose")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
@@ -53,10 +52,7 @@ openApi {
                 // Phase 01.5: single bundled google registration (google-gmail deleted).
                 "--spring.security.oauth2.client.registration.google.client-id=openapi-emit",
                 "--spring.security.oauth2.client.registration.google.client-secret=openapi-emit",
-                // Skip Secret Manager entirely (no GCP project in CI/dev).
-                "--spring.cloud.gcp.secretmanager.enabled=false",
-                // Provide a 32-byte AES-GCM key (base64) so RefreshTokenCipher beans
-                // initialize without contacting Secret Manager.
+                // Provide a 32-byte AES-GCM key (base64) so RefreshTokenCipher beans initialize.
                 "--zeromail.crypto.refresh-token-key-base64=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
             )
         )
