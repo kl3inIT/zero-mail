@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 01.5 context gathered
-last_updated: "2026-04-27T11:25:34.290Z"
-last_activity: 2026-04-27 -- Phase 01.5 planning complete
+last_updated: "2026-04-27T12:26:43.963Z"
+last_activity: 2026-04-27
 progress:
   total_phases: 14
   completed_phases: 6
   total_plans: 46
-  completed_plans: 41
-  percent: 89
+  completed_plans: 42
+  percent: 91
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 01.5 — inbox-zero-alignment-bundled-oauth-ux-polish-cleanup-sweep
+**Current focus:** Phase 01.5 — inbox-zero-alignment-bundled-oauth-ux-polish-cleanup-sweep-r
 
 ## Current Position
 
-Phase: 01.5 (inbox-zero-alignment-bundled-oauth-ux-polish-cleanup-sweep) — READY TO PLAN
-Plan: 0 of 0 (not planned)
+Phase: 01.5 (inbox-zero-alignment-bundled-oauth-ux-polish-cleanup-sweep-r) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-04-27 -- Phase 01.5 planning complete
+Last activity: 2026-04-27
 
-Progress: [██████████] 100%
+Progress: [█████████░] 91%
 
 ## Performance Metrics
 
@@ -81,6 +81,7 @@ Progress: [██████████] 100%
 | Phase 01.4 P04 | 25min | 2 tasks | 5 files |
 | Phase 01.4 P05 | 38min | 2 tasks | 5 created + 5 modified |
 | Phase 01.4 P06 | 28min | 2 tasks | 9 modified |
+| Phase 01.5 P01 | 120 | - tasks | - files |
 
 ## Accumulated Context
 
@@ -154,6 +155,10 @@ Recent decisions affecting current work:
 - [Phase 01.4]: Plan 06: Settings narrows max-w-4xl → max-w-3xl — UI-SPEC §Spacing locks app variant; design contract takes precedence over historical width
 - [Phase 01.4]: Plan 06: ReconnectPrompt collapse từ 18-line hand-crafted Alert (border-amber-500 bg-amber-50 + Button) → 12-line StatusAlert variant=warn wrapper. Pattern: bất kỳ existing Alert ad-hoc nào trong repo có thể refactor cùng cách miễn là single i18n key resolves to one-line string
 - [Phase 01.4]: Plan 06: TemplateCard ring-blue-600 → ring-ring (KHÔNG ring-primary). UI-SPEC Color reservation list không name selection-ring là accent slot; ring-ring là structural focus token, đúng choice cho selected-state visual
+- [Phase ?]: Single bundled google OAuth2 registration replaces two-leg google+google-gmail pattern (Inbox Zero alignment)
+- [Phase ?]: OAuthProvisioningService.provisionBundledOAuth uses PROPAGATION_REQUIRED (HIGH-1 atomicity fix): user+tenant+gmail all roll back together on failure
+- [Phase ?]: Null refresh token on first login throws OAuth2AuthenticationException(consent_denied) before any DB write (MED-3)
+- [Phase ?]: gmail.settings.basic missing allows provisioning with opaque warning log — not a hard failure (INFO-7 policy)
 
 ### Roadmap Evolution
 
@@ -200,6 +205,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-27T09:42:59.804Z
+Last session: 2026-04-27T12:24:53.467Z
 Stopped at: Phase 01.5 context gathered
-Resume file: .planning/phases/01.5-inbox-zero-alignment-bundled-oauth-ux-polish-cleanup-sweep-r/01.5-CONTEXT.md
+Resume file: None
