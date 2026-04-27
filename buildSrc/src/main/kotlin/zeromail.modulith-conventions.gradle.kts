@@ -1,8 +1,10 @@
+import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
+
 plugins {
     id("zeromail.spring-boot-conventions")
 }
 
-dependencyManagement {
+configure<DependencyManagementExtension> {
     // Pin matches libs.versions.toml springModulith; snapshot is the only Boot-4-compatible line
     // as of 2026-04-24. When 2.0.0-M1+ ships, update both here and in the catalog in lockstep.
     imports {

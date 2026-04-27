@@ -1,21 +1,20 @@
 package com.zeromail.core.shared.privacy;
 
-import java.io.IOException;
-
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.module.SimpleModule;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueSerializer;
+import tools.jackson.databind.module.SimpleModule;
 
 @Component
 public class SensitiveJacksonModule extends SimpleModule {
 
     public SensitiveJacksonModule() {
-        addSerializer(Sensitive.class, new JsonSerializer<Sensitive>() {
+        addSerializer(Sensitive.class, new ValueSerializer<Sensitive>() {
             @Override
-            public void serialize(Sensitive v, JsonGenerator g, SerializerProvider s) throws IOException {
+            public void serialize(Sensitive v, JsonGenerator g, SerializationContext s) throws JacksonException {
                 g.writeString("***REDACTED***");
             }
         });

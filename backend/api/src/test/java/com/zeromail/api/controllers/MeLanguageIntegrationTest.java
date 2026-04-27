@@ -14,8 +14,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.RestClient;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zeromail.api.security.TestSessionSupport;
 import com.zeromail.api.support.ApiPostgresTestBase;
 import com.zeromail.core.account.persistence.UserEntity;
@@ -23,6 +21,8 @@ import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.persistence.TenantEntity;
 import com.zeromail.core.tenant.persistence.TenantRepository;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -96,8 +96,8 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
 
         assertThat(res.getStatusCode().value()).isEqualTo(200);
         JsonNode json = new ObjectMapper().readTree(res.getBody());
-        assertThat(json.path("preferredLanguage").asText()).isEqualTo("vi");
-        assertThat(json.path("email").asText()).isEqualTo(s.email());
+        assertThat(json.path("preferredLanguage").asString()).isEqualTo("vi");
+        assertThat(json.path("email").asString()).isEqualTo(s.email());
     }
 
     @Test
@@ -116,7 +116,7 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
 
         assertThat(patchRes.getStatusCode().value()).isEqualTo(200);
         JsonNode patched = new ObjectMapper().readTree(patchRes.getBody());
-        assertThat(patched.path("preferredLanguage").asText()).isEqualTo("en");
+        assertThat(patched.path("preferredLanguage").asString()).isEqualTo("en");
 
         ResponseEntity<String> getRes = client().get()
                 .uri("/me")
@@ -125,7 +125,7 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
                 .retrieve()
                 .toEntity(String.class);
         JsonNode reloaded = new ObjectMapper().readTree(getRes.getBody());
-        assertThat(reloaded.path("preferredLanguage").asText()).isEqualTo("en");
+        assertThat(reloaded.path("preferredLanguage").asString()).isEqualTo("en");
 
         // Direct DB assertion — bypasses the application stack to prove the column was actually written.
         String dbValue = jdbc.queryForObject(
@@ -165,13 +165,13 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
                 .doesNotContain("org.springframework");
 
         JsonNode json = new ObjectMapper().readTree(body);
-        assertThat(json.path("code").asText()).isEqualTo("error.validation");
-        assertThat(json.path("message").asText()).isEqualTo("error.validation");
+        assertThat(json.path("code").asString()).isEqualTo("error.validation");
+        assertThat(json.path("message").asString()).isEqualTo("error.validation");
         assertThat(json.path("fieldErrors").isArray()).isTrue();
         assertThat(json.path("fieldErrors")).isNotEmpty();
         JsonNode firstFieldError = json.path("fieldErrors").get(0);
-        assertThat(firstFieldError.path("field").asText()).isEqualTo("language");
-        assertThat(firstFieldError.path("code").asText())
+        assertThat(firstFieldError.path("field").asString()).isEqualTo("language");
+        assertThat(firstFieldError.path("code").asString())
                 .matches("error\\.validation\\.field\\.language\\..+");
         assertThat(firstFieldError.path("params").isObject()).isTrue();
 

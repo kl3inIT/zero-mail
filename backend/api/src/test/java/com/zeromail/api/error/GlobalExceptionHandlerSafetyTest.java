@@ -28,8 +28,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClient;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.zeromail.api.security.TestSessionSupport;
 import com.zeromail.api.support.ApiPostgresTestBase;
 import com.zeromail.core.account.model.CurrentUserNotFoundException;
@@ -210,8 +210,8 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
         // Generic title/detail invariants — don't leak Java type / framework / SQL state into
         // the prose, even if the underlying exception carried them.
         JsonNode json = new ObjectMapper().readTree(probe.body());
-        String title = json.path("title").asText();
-        String detail = json.path("detail").asText();
+        String title = json.path("title").asString();
+        String detail = json.path("detail").asString();
         assertThat(title)
                 .as("title must be a generic English diagnostic — no exception class names, "
                         + "framework package prefixes, or SQL state")
@@ -228,7 +228,7 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
                 .doesNotContain("SQLSTATE");
 
         // Code is dotted-hierarchy from ErrorCodes — sanity-check the wire shape.
-        String code = json.path("code").asText();
+        String code = json.path("code").asString();
         assertThat(code)
                 .as("code is one of the locked dotted-hierarchy ErrorCodes constants")
                 .matches("error\\.[a-zA-Z][a-zA-Z0-9.]*");
@@ -239,9 +239,9 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
         assertThat(params.isObject()).isTrue();
         params.properties().forEach(entry -> {
             JsonNode v = entry.getValue();
-            if (v.isTextual()) {
-                assertThat(v.asText())
-                        .as("params value '%s' must match AllowedParamScalars regex", v.asText())
+            if (v.isString()) {
+                assertThat(v.asString())
+                        .as("params value '%s' must match AllowedParamScalars regex", v.asString())
                         .matches("[a-zA-Z0-9_.\\-]{1,64}");
             } else {
                 assertThat(v.isNumber() || v.isBoolean())
@@ -269,7 +269,7 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
         assertNoSentinelLeak(sentinel, probe);
 
         JsonNode json = new ObjectMapper().readTree(probe.body());
-        assertThat(json.path("code").asText()).isEqualTo(ErrorCodes.VALIDATION);
+        assertThat(json.path("code").asString()).isEqualTo(ErrorCodes.VALIDATION);
         assertThat(json.path("fieldErrors").isArray()).isTrue();
         assertThat(json.path("fieldErrors")).isNotEmpty();
     }
@@ -286,7 +286,7 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
         assertThat(probe.status()).isEqualTo(403);
         assertNoSentinelLeak(sentinel, probe);
 
-        assertThat(new ObjectMapper().readTree(probe.body()).path("code").asText())
+        assertThat(new ObjectMapper().readTree(probe.body()).path("code").asString())
                 .isEqualTo(ErrorCodes.AUTH_FORBIDDEN);
     }
 
@@ -302,7 +302,7 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
         assertThat(probe.status()).isEqualTo(401);
         assertNoSentinelLeak(sentinel, probe);
 
-        assertThat(new ObjectMapper().readTree(probe.body()).path("code").asText())
+        assertThat(new ObjectMapper().readTree(probe.body()).path("code").asString())
                 .isEqualTo(ErrorCodes.AUTH_UNAUTHORIZED);
     }
 
@@ -318,7 +318,7 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
         assertThat(probe.status()).isEqualTo(401);
         assertNoSentinelLeak(sentinel, probe);
 
-        assertThat(new ObjectMapper().readTree(probe.body()).path("code").asText())
+        assertThat(new ObjectMapper().readTree(probe.body()).path("code").asString())
                 .isEqualTo(ErrorCodes.AUTH_CURRENT_USER_NOT_FOUND);
     }
 
@@ -335,7 +335,7 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
         assertThat(probe.status()).isEqualTo(409);
         assertNoSentinelLeak(sentinel, probe);
 
-        assertThat(new ObjectMapper().readTree(probe.body()).path("code").asText())
+        assertThat(new ObjectMapper().readTree(probe.body()).path("code").asString())
                 .isEqualTo(ErrorCodes.DATA_INTEGRITY);
     }
 
@@ -351,7 +351,7 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
         assertThat(probe.status()).isEqualTo(400);
         assertNoSentinelLeak(sentinel, probe);
 
-        assertThat(new ObjectMapper().readTree(probe.body()).path("code").asText())
+        assertThat(new ObjectMapper().readTree(probe.body()).path("code").asString())
                 .isEqualTo(ErrorCodes.BAD_REQUEST);
     }
 
@@ -367,7 +367,7 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
         assertThat(probe.status()).isEqualTo(409);
         assertNoSentinelLeak(sentinel, probe);
 
-        assertThat(new ObjectMapper().readTree(probe.body()).path("code").asText())
+        assertThat(new ObjectMapper().readTree(probe.body()).path("code").asString())
                 .isEqualTo(ErrorCodes.CONFLICT);
     }
 

@@ -14,8 +14,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.RestClient;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.zeromail.api.security.TestSessionSupport;
 import com.zeromail.api.support.ApiPostgresTestBase;
 import com.zeromail.core.account.persistence.UserEntity;
@@ -106,7 +106,7 @@ class LocaleResolutionTest extends ApiPostgresTestBase {
 
         assertThat(res.getStatusCode().value()).isEqualTo(200);
         JsonNode json = new ObjectMapper().readTree(res.getBody());
-        assertThat(json.path("preferredLanguage").asText()).isEqualTo("vi");
+        assertThat(json.path("preferredLanguage").asString()).isEqualTo("vi");
     }
 
     @Test
@@ -128,11 +128,11 @@ class LocaleResolutionTest extends ApiPostgresTestBase {
         assertThat(String.valueOf(res.getHeaders().getContentType())).startsWith("application/problem+json");
 
         JsonNode json = new ObjectMapper().readTree(res.getBody());
-        assertThat(json.path("code").asText()).isEqualTo("error.validation");
+        assertThat(json.path("code").asString()).isEqualTo("error.validation");
         assertThat(json.path("fieldErrors").isArray()).isTrue();
         JsonNode firstFieldError = json.path("fieldErrors").get(0);
-        assertThat(firstFieldError.path("field").asText()).isEqualTo("language");
-        assertThat(firstFieldError.path("code").asText())
+        assertThat(firstFieldError.path("field").asString()).isEqualTo("language");
+        assertThat(firstFieldError.path("code").asString())
                 .matches("error\\.validation\\.field\\.language\\..+");
     }
 }

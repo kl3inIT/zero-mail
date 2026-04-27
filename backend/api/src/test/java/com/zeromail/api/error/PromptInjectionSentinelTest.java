@@ -16,8 +16,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClient;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.zeromail.api.security.TestSessionSupport;
 import com.zeromail.api.support.ApiPostgresTestBase;
 
@@ -105,13 +105,13 @@ class PromptInjectionSentinelTest extends ApiPostgresTestBase {
                 .doesNotContain(corpusEntry);
 
         JsonNode json = new ObjectMapper().readTree(responseBody);
-        assertThat(json.path("code").asText()).isEqualTo(ErrorCodes.VALIDATION);
+        assertThat(json.path("code").asString()).isEqualTo(ErrorCodes.VALIDATION);
         assertThat(json.path("fieldErrors").isArray()).isTrue();
         assertThat(json.path("fieldErrors")).isNotEmpty();
 
         JsonNode firstFieldError = json.path("fieldErrors").get(0);
-        assertThat(firstFieldError.path("field").asText()).isEqualTo("language");
-        assertThat(firstFieldError.path("code").asText())
+        assertThat(firstFieldError.path("field").asString()).isEqualTo("language");
+        assertThat(firstFieldError.path("code").asString())
                 .matches("error\\.validation\\.field\\.language\\..+");
 
         JsonNode params = firstFieldError.path("params");
@@ -125,8 +125,8 @@ class PromptInjectionSentinelTest extends ApiPostgresTestBase {
         // space) so none of them should survive into params.
         params.properties().forEach(entry -> {
             JsonNode v = entry.getValue();
-            if (v.isTextual()) {
-                String s = v.asText();
+            if (v.isString()) {
+                String s = v.asString();
                 assertThat(s)
                         .as("params['%s'] = '%s' must match AllowedParamScalars regex",
                                 entry.getKey(), s)
@@ -144,7 +144,7 @@ class PromptInjectionSentinelTest extends ApiPostgresTestBase {
 
         // Additional defense: the dotted code itself must not contain the corpus entry
         // (a buggy code derivation could splice user input into "error.validation.field.<input>.…").
-        assertThat(firstFieldError.path("code").asText())
+        assertThat(firstFieldError.path("code").asString())
                 .as("dotted code is derived from field name + constraint annotation, "
                         + "never from user input")
                 .doesNotContain(corpusEntry);

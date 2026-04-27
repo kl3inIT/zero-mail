@@ -6,8 +6,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.RestClient;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.zeromail.api.security.TestSessionSupport;
 import com.zeromail.api.support.ApiPostgresTestBase;
 
@@ -38,11 +38,11 @@ class ApiErrorSchemaTest extends ApiPostgresTestBase {
         assertThat(apiError.isMissingNode()).as("ApiError schema must be registered").isFalse();
 
         JsonNode props = apiError.path("properties");
-        assertThat(props.path("code").path("type").asText()).isEqualTo("string");
-        assertThat(props.path("title").path("type").asText()).isEqualTo("string");
-        assertThat(props.path("status").path("type").asText()).isEqualTo("integer");
-        assertThat(props.path("detail").path("type").asText()).isEqualTo("string");
-        assertThat(props.path("type").path("type").asText()).isEqualTo("string");
+        assertThat(props.path("code").path("type").asString()).isEqualTo("string");
+        assertThat(props.path("title").path("type").asString()).isEqualTo("string");
+        assertThat(props.path("status").path("type").asString()).isEqualTo("integer");
+        assertThat(props.path("detail").path("type").asString()).isEqualTo("string");
+        assertThat(props.path("type").path("type").asString()).isEqualTo("string");
         assertThat(props.has("params")).as("params extension member must be schema-registered").isTrue();
         assertThat(props.has("fieldErrors")).as("fieldErrors extension member must be schema-registered").isTrue();
         assertThat(props.has("message")).as("transitional message alias must be schema-registered").isTrue();
@@ -51,14 +51,14 @@ class ApiErrorSchemaTest extends ApiPostgresTestBase {
         assertThat(required.isArray()).isTrue();
         boolean hasCode = false;
         for (JsonNode r : required) {
-            if ("code".equals(r.asText())) hasCode = true;
+            if ("code".equals(r.asString())) hasCode = true;
         }
         assertThat(hasCode).as("ApiError.required must contain 'code'").isTrue();
 
         // fieldErrors should reference FieldErrorDto via items.$ref
         JsonNode fieldErrors = props.path("fieldErrors");
-        assertThat(fieldErrors.path("type").asText()).isEqualTo("array");
-        String itemsRef = fieldErrors.path("items").path("$ref").asText();
+        assertThat(fieldErrors.path("type").asString()).isEqualTo("array");
+        String itemsRef = fieldErrors.path("items").path("$ref").asString();
         assertThat(itemsRef).isEqualTo("#/components/schemas/FieldErrorDto");
     }
 
@@ -69,8 +69,8 @@ class ApiErrorSchemaTest extends ApiPostgresTestBase {
         assertThat(dto.isMissingNode()).as("FieldErrorDto schema must be registered").isFalse();
 
         JsonNode props = dto.path("properties");
-        assertThat(props.path("field").path("type").asText()).isEqualTo("string");
-        assertThat(props.path("code").path("type").asText()).isEqualTo("string");
+        assertThat(props.path("field").path("type").asString()).isEqualTo("string");
+        assertThat(props.path("code").path("type").asString()).isEqualTo("string");
         assertThat(props.has("params")).isTrue();
         // CONTEXT.md §E reject — FieldErrorDto MUST NOT carry a message string (JHipster anti-pattern).
         assertThat(props.has("message")).as("FieldErrorDto must not carry server-built message string").isFalse();
@@ -79,8 +79,8 @@ class ApiErrorSchemaTest extends ApiPostgresTestBase {
         boolean hasField = false;
         boolean hasCode = false;
         for (JsonNode r : required) {
-            if ("field".equals(r.asText())) hasField = true;
-            if ("code".equals(r.asText())) hasCode = true;
+            if ("field".equals(r.asString())) hasField = true;
+            if ("code".equals(r.asString())) hasCode = true;
         }
         assertThat(hasField).as("FieldErrorDto.required must contain 'field'").isTrue();
         assertThat(hasCode).as("FieldErrorDto.required must contain 'code'").isTrue();
@@ -95,14 +95,14 @@ class ApiErrorSchemaTest extends ApiPostgresTestBase {
         JsonNode r401 = meGet.path("responses").path("401");
         assertThat(r401.isMissingNode()).as("/me GET 401 response must be defaulted by the customizer").isFalse();
 
-        String ref = r401.path("content").path("application/problem+json").path("schema").path("$ref").asText();
+        String ref = r401.path("content").path("application/problem+json").path("schema").path("$ref").asString();
         assertThat(ref).isEqualTo("#/components/schemas/ApiError");
     }
 
     @Test
     void info_version_is_bumped_to_0_1_1() throws Exception {
         JsonNode root = fetchApiDocs();
-        assertThat(root.path("info").path("version").asText()).isEqualTo("0.1.1");
+        assertThat(root.path("info").path("version").asString()).isEqualTo("0.1.1");
     }
 
     /**
@@ -136,7 +136,7 @@ class ApiErrorSchemaTest extends ApiPostgresTestBase {
                 .isTrue();
         java.util.Set<String> types = new java.util.HashSet<>();
         for (JsonNode opt : oneOf) {
-            types.add(opt.path("type").asText());
+            types.add(opt.path("type").asString());
         }
         assertThat(types)
                 .as("%s.additionalProperties.oneOf must include string, integer, number, boolean", label)

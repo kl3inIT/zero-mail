@@ -21,8 +21,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.WebApplicationContext;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.zeromail.api.config.GlobalExceptionHandler;
 import com.zeromail.api.security.TestSessionSupport;
 import com.zeromail.api.support.ApiPostgresTestBase;
@@ -90,12 +90,12 @@ class ProblemDetailContractTest extends ApiPostgresTestBase {
                 .doesNotContain("<<SENTINEL_USER_INPUT>>");
 
         JsonNode json = new ObjectMapper().readTree(responseBody);
-        assertThat(json.path("code").asText()).isEqualTo("error.validation");
-        assertThat(json.path("message").asText()).isEqualTo("error.validation"); // transitional alias
+        assertThat(json.path("code").asString()).isEqualTo("error.validation");
+        assertThat(json.path("message").asString()).isEqualTo("error.validation"); // transitional alias
         assertThat(json.path("fieldErrors")).isNotEmpty();
         JsonNode firstFieldError = json.path("fieldErrors").get(0);
-        assertThat(firstFieldError.path("field").asText()).isEqualTo("language");
-        assertThat(firstFieldError.path("code").asText())
+        assertThat(firstFieldError.path("field").asString()).isEqualTo("language");
+        assertThat(firstFieldError.path("code").asString())
                 .matches("error\\.validation\\.field\\.language\\..+");
         assertThat(firstFieldError.path("params").isObject()).isTrue();
     }
@@ -123,8 +123,8 @@ class ProblemDetailContractTest extends ApiPostgresTestBase {
         assertThat(res.getResponse().getContentType()).startsWith("application/problem+json");
 
         JsonNode json = new ObjectMapper().readTree(res.getResponse().getContentAsString());
-        assertThat(json.path("code").asText()).isEqualTo("error.auth.forbidden");
-        assertThat(json.path("message").asText()).isEqualTo("error.auth.forbidden");
+        assertThat(json.path("code").asString()).isEqualTo("error.auth.forbidden");
+        assertThat(json.path("message").asString()).isEqualTo("error.auth.forbidden");
         assertThat(json.path("params").isObject()).isTrue();
     }
 
