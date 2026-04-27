@@ -22,12 +22,14 @@ import com.zeromail.core.tenant.service.TenantService;
 /**
  * Atomic provisioning for the OAuth first-login flow.
  *
- * <p>Phase 01.5 HIGH-1 fix: the new {@link #provisionBundledOAuth} method collapses
+ * <p>Phase 01.5 HIGH-1 fix: {@link #provisionBundledOAuth} collapses
  * user + tenant + GmailConnectionEntity creation into ONE TransactionTemplate
  * (PROPAGATION_REQUIRED) so any failure rolls back all three — no half-provisioned state.
- * The original {@link #findOrCreateGoogleUser} method is preserved (it remains the basis
- * for the bundled path's race-handling logic) but is no longer called by
- * {@code GoogleOAuthSuccessHandler} directly.
+ *
+ * <p>Phase 01.5 WR-01 cleanup: the legacy two-leg {@code findOrCreateGoogleUser} entry point
+ * (and its {@code provisioningTx} PROPAGATION_REQUIRES_NEW template) was deleted along with
+ * the bundled-flow collapse. {@link #provisionBundledOAuth} is now the single provisioning
+ * surface.
  *
  * <p>ScopedValue binding invariant (FND-05): {@link TenantContext#TENANT} MUST be bound
  * BEFORE the TransactionTemplate opens (Hibernate captures tenant on JPA session open).
@@ -45,9 +47,6 @@ public class OAuthProvisioningService {
     private final TenantService tenantService;
     private final GmailConnectionService connections;
     private final RefreshTokenCipher cipher;
-    // DEAD CODE (provisioningTx + findOrCreateGoogleUser): remove after Phase 02 confirms no callers.
-    // findOrCreateGoogleUser is still called by OAuthProvisioningIntegrationTest (legacy test).
-    private final TransactionTemplate provisioningTx;
     private final TransactionTemplate bundledTx;
 
     public OAuthProvisioningService(UserRepository users,
@@ -59,8 +58,6 @@ public class OAuthProvisioningService {
         this.tenantService = tenantService;
         this.connections = connections;
         this.cipher = cipher;
-        this.provisioningTx = new TransactionTemplate(txManager);
-        this.provisioningTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         this.bundledTx = new TransactionTemplate(txManager);
         this.bundledTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
     }
@@ -165,39 +162,5 @@ public class OAuthProvisioningService {
                     .orElseThrow(() -> race);
             return new BundledProvisioningResult(racedWinner.getTenantId(), racedWinner.getId(), false);
         }
-    }
-
-    /**
-     * Returns the existing user for the Google subject, or creates a tenant + user pair.
-     * Preserved for safety (no callers remain after Phase 01.5 pivot, but kept as an
-     * internal seam). On a duplicate-Google-subject race, rolls back the inner REQUIRES_NEW
-     * tx and re-reads so both callers converge on the same {@link UserEntity}.
-     *
-     * @deprecated Use {@link #provisionBundledOAuth} instead (Phase 01.5 HIGH-1 atomicity fix).
-     */
-    @Deprecated(since = "01.5", forRemoval = true)
-    public UserEntity findOrCreateGoogleUser(String googleSubject, String email) {
-        return users.findByGoogleSubject(googleSubject)
-                .orElseGet(() -> tryCreateOrReadAfterRace(googleSubject, email));
-    }
-
-    private UserEntity tryCreateOrReadAfterRace(String googleSubject, String email) {
-        try {
-            return createTenantAndUser(googleSubject, email);
-        } catch (DataIntegrityViolationException race) {
-            log.warn("event=oauth_provisioning_race_legacy");
-            return users.findByGoogleSubject(googleSubject)
-                    .orElseThrow(() -> race);
-        }
-    }
-
-    private UserEntity createTenantAndUser(String googleSubject, String email) {
-        UUID tenantId = UUID.randomUUID();
-        return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                .call(() -> provisioningTx.execute(_ -> {
-                    tenantService.createTenant(tenantId, email);
-                    return users.save(new UserEntity(
-                            UUID.randomUUID(), tenantId, googleSubject, email));
-                }));
     }
 }
