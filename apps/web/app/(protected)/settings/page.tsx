@@ -92,9 +92,14 @@ export default function SettingsPage() {
           </div>
           {connStatus === 'DISCONNECTED' && <ReconnectPrompt onReconnect={reconnect} />}
           {connStatus === 'NOT_CONNECTED' && (
-            <form method="post" action={getApiUrl('/tenant/connect-gmail')}>
-              <Button type="submit">{t('onboarding.connect.cta')}</Button>
-            </form>
+            // CR-03 fix: GET navigation — no CSRF needed; endpoint is now @GetMapping.
+            <Button
+              onClick={() => {
+                window.location.href = getApiUrl('/tenant/connect-gmail');
+              }}
+            >
+              {t('onboarding.connect.cta')}
+            </Button>
           )}
         </CardContent>
         <CardFooter>
