@@ -45,6 +45,8 @@ public class OAuthProvisioningService {
     private final TenantService tenantService;
     private final GmailConnectionService connections;
     private final RefreshTokenCipher cipher;
+    // DEAD CODE (provisioningTx + findOrCreateGoogleUser): remove after Phase 02 confirms no callers.
+    // findOrCreateGoogleUser is still called by OAuthProvisioningIntegrationTest (legacy test).
     private final TransactionTemplate provisioningTx;
     private final TransactionTemplate bundledTx;
 
@@ -77,10 +79,16 @@ public class OAuthProvisioningService {
      * <ul>
      *   <li>Existing user (reconnect path): preserves existing GmailConnectionEntity envelope
      *       unchanged; emits opaque warning log {@code event=oauth_no_refresh_token}.</li>
-     *   <li>No existing user (first-login path): throws
-     *       {@link OAuth2AuthenticationException}{@code ("consent_denied")} — caller must
-     *       have validated this before calling (defensive check here).</li>
+     *   <li>No existing user (first-login path): throws {@code IllegalStateException("consent_denied")}
+     *       — caller ({@code GoogleOAuthSuccessHandler}) must have validated this before calling
+     *       (this is a defensive check; the handler throws {@code OAuth2AuthenticationException}
+     *       before reaching here).</li>
      * </ul>
+     *
+     * <p>Race-loser path ({@code DataIntegrityViolationException} on {@code users.save}):
+     * observes the winner's already-complete state, returns
+     * {@code BundledProvisioningResult(winner tenant, winner id, false)} without any further
+     * DB write — preserving the single-transaction guarantee (CR-01 fix).
      *
      * <p><b>Privacy (T-01.5-01-02):</b> raw refresh-token bytes are encrypted inside the
      * same transaction boundary and NEVER logged. Event names are opaque.
@@ -146,20 +154,16 @@ public class OAuthProvisioningService {
             log.info("event=oauth_provisioning_complete tenantId={}", tenantId);
             return new BundledProvisioningResult(tenantId, userId, true);
         } catch (DataIntegrityViolationException race) {
-            // Concurrent first-login from same Google subject: tx rolled back (no orphans).
+            // Concurrent first-login from same Google subject: first tx rolled back (no orphans).
+            // Race-loser: do NOT open a second transaction or overwrite the winner's gmail
+            // connection envelope. The winner's thread already committed its own atomic
+            // user + tenant + connection in its own bundledTx — that is the correct, complete
+            // state. Opening a second tx here would break the single-transaction atomicity
+            // contract (CR-01 / HIGH-1 fix) if that second tx fails, leaving a partial state.
             log.warn("event=oauth_provisioning_race");
             UserEntity racedWinner = users.findByGoogleSubject(googleSubject)
                     .orElseThrow(() -> race);
-            // Race-loser: upsert gmail connection under winner's tenant in a fresh tx.
-            UUID winnerTenant = racedWinner.getTenantId();
-            ScopedValue.where(TenantContext.TENANT, winnerTenant.toString())
-                    .run(() -> bundledTx.executeWithoutResult(_ -> {
-                        byte[] envelope = cipher.encrypt(
-                                refreshTokenPlaintext.getBytes(StandardCharsets.UTF_8),
-                                winnerTenant.toString());
-                        connections.upsert(winnerTenant, email, grantedGmailScopes, envelope);
-                    }));
-            return new BundledProvisioningResult(winnerTenant, racedWinner.getId(), false);
+            return new BundledProvisioningResult(racedWinner.getTenantId(), racedWinner.getId(), false);
         }
     }
 
