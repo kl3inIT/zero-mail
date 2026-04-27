@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: verifying
 stopped_at: Completed 01.5-03-PLAN.md
-last_updated: "2026-04-27T16:38:12.027Z"
+last_updated: "2026-04-27T16:51:06.280Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 14
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 49
-  completed_plans: 48
-  percent: 98
+  completed_plans: 49
+  percent: 100
 ---
 
 # Project State
@@ -30,7 +30,7 @@ Plan: 5 of 5
 Status: Phase complete — ready for verification
 Last activity: 2026-04-27
 
-Progress: [██████████] 98%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -87,6 +87,7 @@ Progress: [██████████] 98%
 | Phase 01.5 P04 | 35min | 3 tasks | 7 files |
 | Phase 01.5 P06 | 25min | 2 tasks | 2 files |
 | Phase 01.5 P07 | 11 | 2 tasks | 4 files |
+| Phase 01.5 P08 | 12min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -174,6 +175,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Race-loser drops second bundledTx entirely: winner thread committed atomically; re-encrypting loser token overwrites winner envelope (privacy + atomicity violation)
 - [Phase ?]: GET for /tenant/connect-gmail: idempotent OAuth redirect trigger; token rotation on callback; no CSRF needed per Spring Security safe-method defaults (CR-03)
 - [Phase ?]: token.getName() not req.getUserPrincipal() for removeAuthorizedClient: principal not in SecurityContext at throw sites; CR-02 fix
+- [Phase ?]: Plan 01.5-08: spring-cloud-gcp-starter-secretmanager + BOM removed -- CLAUDE.md No GCP hosting baseline lock now honored in build artifacts
+- [Phase ?]: Plan 01.5-08: REFRESH_TOKEN_KEY_BASE64 uses :? fail-fast -- missing env var gives clear startup error, no sm:// fallback
 
 ### Roadmap Evolution
 
@@ -223,6 +226,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-27T16:38:12.006Z
+Last session: 2026-04-27T16:50:42.652Z
 Stopped at: Completed 01.5-03-PLAN.md
 Resume file: None
