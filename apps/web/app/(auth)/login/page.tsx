@@ -3,7 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { LanguageSwitcher } from '@/i18n/components/LanguageSwitcher';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { buttonVariants } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { getApiUrl } from '@/lib/api/base-url';
 
@@ -12,6 +12,16 @@ import type { AppLocale } from '@/i18n/routing';
 /**
  * /login (RSC). Phase 01.5 Plan 02 — deflated from PageShell to raw <main>,
  * wired RSC searchParams for ?error=... rendering (D-B3).
+ * Phase 01.5 Plan 04 — visual polish via frontend-design skill (D-D1).
+ *
+ * Design intent (Plan 04):
+ *  - Card with explicit header/content separation: heading large + confident,
+ *    safety microcopy as small supplementary beneath button.
+ *  - Error Alert rendered above Card with gap-6 separation — visible but
+ *    not dominating; destructive variant reads as a status indicator, not alarm.
+ *  - LanguageSwitcher anchored top-right within card header row.
+ *  - Google button full-width, size=lg — clear primary action.
+ *  - Body text is muted-foreground to keep heading primary.
  *
  * Closed-enum tamper-guard (T-01.5-02-01): only KNOWN_ERROR_CODES are allowed;
  * unknown values (including XSS attempts) render no Alert.
@@ -42,30 +52,45 @@ export default async function LoginPage({
 
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
-      <div className="flex w-full max-w-md flex-col gap-4">
+      <div className="flex w-full max-w-md flex-col gap-6">
         {isKnownError(error) && (
           <Alert variant="destructive">
             <AlertTitle>{tError(`error.${error}.title`)}</AlertTitle>
             <AlertDescription>{tError(`error.${error}.body`)}</AlertDescription>
           </Alert>
         )}
-        <Card className="w-full p-8">
-          <div className="flex items-start justify-between gap-3">
-            <h1 className="text-3xl font-semibold tracking-tight">{tLogin('headline')}</h1>
-            <LanguageSwitcher currentLocale={locale} authenticated={false} variant="compact" />
-          </div>
-          <p className="text-foreground mt-4 text-base">{tLogin('body')}</p>
-          <ul className="text-muted-foreground mt-4 list-disc pl-5 text-sm">
-            <li>{tLogin('safety.noAutoSend')}</li>
-            <li>{tLogin('safety.noLongTermStorage')}</li>
-            <li>{tLogin('safety.revokeAnytime')}</li>
-          </ul>
-          <a
-            href={getApiUrl('/oauth2/authorization/google')}
-            className={cn(buttonVariants(), 'mt-6 w-full')}
-          >
-            {tLogin('googleButton')}
-          </a>
+        <Card className="w-full">
+          <CardHeader className="pb-0">
+            <div className="flex items-start justify-between gap-3">
+              <h1 className="text-foreground text-2xl leading-snug font-bold tracking-tight">
+                {tLogin('headline')}
+              </h1>
+              <LanguageSwitcher currentLocale={locale} authenticated={false} variant="compact" />
+            </div>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-6 pt-4">
+            <p className="text-muted-foreground text-sm leading-relaxed">{tLogin('body')}</p>
+            <a
+              href={getApiUrl('/oauth2/authorization/google')}
+              className={cn(buttonVariants({ size: 'lg' }), 'w-full')}
+            >
+              {tLogin('googleButton')}
+            </a>
+            <ul className="text-muted-foreground space-y-1.5 text-xs">
+              <li className="flex items-start gap-2">
+                <span className="mt-0.5 shrink-0 opacity-50">&#x2713;</span>
+                {tLogin('safety.noAutoSend')}
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-0.5 shrink-0 opacity-50">&#x2713;</span>
+                {tLogin('safety.noLongTermStorage')}
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-0.5 shrink-0 opacity-50">&#x2713;</span>
+                {tLogin('safety.revokeAnytime')}
+              </li>
+            </ul>
+          </CardContent>
         </Card>
       </div>
     </main>
