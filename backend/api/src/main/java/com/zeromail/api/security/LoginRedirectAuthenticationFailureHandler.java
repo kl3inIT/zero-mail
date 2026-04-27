@@ -9,6 +9,7 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import com.zeromail.api.config.ZeroMailApiProperties;
 
@@ -42,13 +43,13 @@ public class LoginRedirectAuthenticationFailureHandler extends SimpleUrlAuthenti
     private static final Logger log = LoggerFactory.getLogger(LoginRedirectAuthenticationFailureHandler.class);
 
     private final OAuth2AuthorizedClientService authorizedClients;
-    private final String loginUrl;
+    private final ZeroMailApiProperties properties;
 
     public LoginRedirectAuthenticationFailureHandler(
             OAuth2AuthorizedClientService authorizedClients,
             ZeroMailApiProperties properties) {
         this.authorizedClients = authorizedClients;
-        this.loginUrl = stripTrailingSlash(properties.web().baseUrl().toString()) + "/login";
+        this.properties = properties;
     }
 
     @Override
@@ -58,7 +59,7 @@ public class LoginRedirectAuthenticationFailureHandler extends SimpleUrlAuthenti
             switch (oae.getError().getErrorCode()) {
                 case "access_denied", "consent_denied" -> {
                     log.info("event=login_consent_denied");
-                    getRedirectStrategy().sendRedirect(req, res, loginUrl + "?error=consent_denied");
+                    getRedirectStrategy().sendRedirect(req, res, buildLoginUrl("consent_denied"));
                     return;
                 }
                 case "gmail_scope_required" -> {
@@ -70,7 +71,7 @@ public class LoginRedirectAuthenticationFailureHandler extends SimpleUrlAuthenti
                         // Best-effort — never log the principal name (privacy contract).
                     }
                     log.info("event=login_gmail_scope_missing");
-                    getRedirectStrategy().sendRedirect(req, res, loginUrl + "?error=gmail_scope_required");
+                    getRedirectStrategy().sendRedirect(req, res, buildLoginUrl("gmail_scope_required"));
                     return;
                 }
                 default -> { /* fall through to super */ }
@@ -80,15 +81,25 @@ public class LoginRedirectAuthenticationFailureHandler extends SimpleUrlAuthenti
     }
 
     /**
+     * Build a /login redirect URL with an {@code ?error=} query param using
+     * {@link UriComponentsBuilder} so URI semantics are preserved regardless of input shape.
+     * String concat (the previous implementation) malformed the URL when {@code baseUrl}
+     * contained an existing query string (WR-05 fix).
+     */
+    private String buildLoginUrl(String errorCode) {
+        return UriComponentsBuilder.fromUri(properties.web().baseUrl())
+                .path("/login")
+                .queryParam("error", errorCode)
+                .build()
+                .toUriString();
+    }
+
+    /**
      * Best-effort principal-name resolution for the {@code removeAuthorizedClient} call.
      * Falls back to a sentinel so {@code removeAuthorizedClient} no-ops cleanly when the
      * principal name does not match any stored client.
      */
     private static String currentPrincipalName(HttpServletRequest req) {
         return req.getUserPrincipal() != null ? req.getUserPrincipal().getName() : "anonymous";
-    }
-
-    private static String stripTrailingSlash(String value) {
-        return value.replaceAll("/+$", "");
     }
 }
