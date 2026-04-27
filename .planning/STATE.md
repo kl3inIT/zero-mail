@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 01.5 context gathered
-last_updated: "2026-04-27T12:26:43.963Z"
+stopped_at: Completed 01.5-02-PLAN.md
+last_updated: "2026-04-27T13:00:10.627Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 14
   completed_phases: 6
   total_plans: 46
-  completed_plans: 42
-  percent: 91
+  completed_plans: 43
+  percent: 93
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 ## Current Position
 
 Phase: 01.5 (inbox-zero-alignment-bundled-oauth-ux-polish-cleanup-sweep-r) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-04-27
 
-Progress: [█████████░] 91%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -82,6 +82,7 @@ Progress: [█████████░] 91%
 | Phase 01.4 P05 | 38min | 2 tasks | 5 created + 5 modified |
 | Phase 01.4 P06 | 28min | 2 tasks | 9 modified |
 | Phase 01.5 P01 | 120 | - tasks | - files |
+| Phase 01.5 P02 | 78min | 2 tasks | 28 files |
 
 ## Accumulated Context
 
@@ -159,6 +160,10 @@ Recent decisions affecting current work:
 - [Phase ?]: OAuthProvisioningService.provisionBundledOAuth uses PROPAGATION_REQUIRED (HIGH-1 atomicity fix): user+tenant+gmail all roll back together on failure
 - [Phase ?]: Null refresh token on first login throws OAuth2AuthenticationException(consent_denied) before any DB write (MED-3)
 - [Phase ?]: gmail.settings.basic missing allows provisioning with opaque warning log — not a hard failure (INFO-7 policy)
+- [Phase ?]: Phase 01.5 Plan 02: D-D3 — TemplateCard ring-ring -> ring-primary so Phase 5 brand swap propagates automatically
+- [Phase ?]: Phase 01.5 Plan 02: global-error.tsx left inline-styled English — next-intl getTranslations cannot run in global error boundary
+- [Phase ?]: Phase 01.5 Plan 02: Loose translator cast (as unknown as string-to-string fn) for dynamic template-literal error key lookups under next-intl 4 strict bundle
+- [Phase ?]: Phase 01.5 Plan 02: Plain <a> with eslint-disable in not-found.tsx — next/link triggers vitest React-dedupe useContext null; mirrors lucide-react inline-SVG boundary
 
 ### Roadmap Evolution
 
@@ -205,6 +210,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-27T12:24:53.467Z
-Stopped at: Phase 01.5 context gathered
+Last session: 2026-04-27T13:00:10.608Z
+Stopped at: Completed 01.5-02-PLAN.md
 Resume file: None
