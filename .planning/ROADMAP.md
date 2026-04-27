@@ -148,7 +148,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] 01.4-06-PLAN.md — Token sweep across 12 surfaces + onboarding mismatch alert wiring + settings singleAccountNote + final phase gates _(completed 2026-04-27 — Phase 01.4 closed without ship; follow-up cleanup moved to Phase 01.5)_
 **UI hint**: yes
 
-### Phase 01.5: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED)
+### Phase 1.5: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED)
 
 **Goal**: Finish the remaining heavy Phase 1.5 work after the quick-task sweep: align with Inbox Zero's bundled Google OAuth model, remove the now-unnecessary two-registration Gmail mismatch architecture, simplify onboarding and consent-denied UX, deflate custom frontend primitives back to raw shadcn/token-aware composition, polish the current landing/login/onboarding/settings/reconnect surfaces, and close surviving REVIEW cleanup that still applies.
 **Requirements**: _(no new product requirements; pivots AUTH-01/AUTH-02 behavior and frontend architecture after Phase 1.4 review)_
@@ -260,7 +260,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 ## Progress
 
 **Execution Order:**
-Phase 1 → Phase 1.1 → Phase 1.2 → Phase 1.3 → {Phase 2A ∥ Phase 2B ∥ Phase 2C} → Phase 3 → Phase 4 → Phase 5 → Phase 6
+Phase 1 → Phase 1.1 → Phase 1.2 → Phase 1.2.1 → Phase 1.3 → Phase 1.4 → Phase 1.5 → {Phase 2A ∥ Phase 2B ∥ Phase 2C} → Phase 3 → Phase 4 → Phase 5 → Phase 6
 
 Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 completes. Phase 5 starts after Phase 4, but `apps/web` scaffolding may start immediately after Phase 1 once the OpenAPI stub is stable.
 
@@ -271,6 +271,8 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 1.2. Domain-owned persistence restructuring (INSERTED) | 6/6 | Complete | 2026-04-26 |
 | 1.2.1. Shared base entity + IdentifiedEnum standard + DTO group-by-domain (INSERTED) | 4/4 | Complete | 2026-04-26 |
 | 1.3. Frontend Architecture Refactor and Public Content Foundation (INSERTED) | 8/8 | Complete | 2026-04-26 |
+| 1.4. Gmail Identity Semantics, Permission UX, and UI Consistency (INSERTED) | 6/6 | Complete without ship; superseded by 1.5 | 2026-04-27 |
+| 1.5. Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED) | 0/TBD | Not planned | - |
 | 2A. Mail Ingestion | 0/TBD | Not started | - |
 | 2B. Billing (Prepaid Credits) | 0/TBD | Not started | - |
 | 2C. LLM Gateway | 0/TBD | Not started | - |
