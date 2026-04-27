@@ -14,6 +14,7 @@ import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import com.zeromail.api.config.ZeroMailApiProperties;
 import com.zeromail.core.account.persistence.UserRepository;
@@ -72,7 +73,29 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         this.provisioning = provisioning;
         this.authorizedClients = authorizedClients;
         this.users = users;
-        setDefaultTargetUrl(stripTrailingSlash(properties.web().baseUrl().toString()) + "/onboarding");
+
+        // WR-04 fix: validate baseUrl scheme/host at construction time so a misconfigured
+        // ZEROMAIL_WEB_BASE_URL fails fast instead of silently becoming an open-redirect on
+        // the OAuth success path. Same-origin deployments only — http/https schemes; host
+        // must be present (no opaque or relative URIs).
+        java.net.URI baseUrl = properties.web().baseUrl();
+        String scheme = baseUrl.getScheme();
+        if (scheme == null || (!scheme.equals("http") && !scheme.equals("https"))) {
+            throw new IllegalStateException(
+                    "zeromail.web.base-url must use http or https scheme; got: " + scheme);
+        }
+        if (baseUrl.getHost() == null || baseUrl.getHost().isBlank()) {
+            throw new IllegalStateException(
+                    "zeromail.web.base-url must have a non-blank host");
+        }
+
+        // Build the success-redirect URL via UriComponentsBuilder so URI semantics are
+        // preserved regardless of input shape (mirrors WR-05 fix for the failure handler).
+        String onboardingUrl = UriComponentsBuilder.fromUri(baseUrl)
+                .path("/onboarding")
+                .build()
+                .toUriString();
+        setDefaultTargetUrl(onboardingUrl);
     }
 
     @Override
@@ -150,9 +173,5 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         }
 
         super.onAuthenticationSuccess(req, res, auth);
-    }
-
-    private static String stripTrailingSlash(String value) {
-        return value.replaceAll("/+$", "");
     }
 }
