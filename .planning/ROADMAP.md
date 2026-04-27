@@ -162,7 +162,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 **Plans**: 5 plans
 - [x] 01.5-01-PLAN.md — Backend bundled OAuth collapse + onboarding state machine simplification + 2-leg flow deletion
 - [x] 01.5-02-PLAN.md — Atomic frontend deflation + Alert warning variant + RSC login error rendering + i18n key swap
-- [ ] 01.5-03-PLAN.md — /me fetch React cache() per-request dedupe
+- [x] 01.5-03-PLAN.md — /me fetch React cache() per-request dedupe
 - [ ] 01.5-04-PLAN.md — frontend-design skill polish pass across 5 surfaces (landing/login/onboarding/settings/ReconnectPrompt)
 - [ ] 01.5-05-PLAN.md — CLAUDE.md Conventions promotion + STATE.md deferred verification ceremonies
 **UI hint**: yes
