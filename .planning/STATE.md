@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: verifying
 stopped_at: Completed 01.5-03-PLAN.md
-last_updated: "2026-04-27T15:23:05.224Z"
+last_updated: "2026-04-27T16:20:09.354Z"
 last_activity: 2026-04-27
 progress:
   total_phases: 14
-  completed_phases: 7
-  total_plans: 46
-  completed_plans: 46
-  percent: 100
+  completed_phases: 6
+  total_plans: 49
+  completed_plans: 47
+  percent: 96
 ---
 
 # Project State
@@ -30,7 +30,7 @@ Plan: 5 of 5
 Status: Phase complete — ready for verification
 Last activity: 2026-04-27
 
-Progress: [██████████] 98%
+Progress: [██████████] 96%
 
 ## Performance Metrics
 
@@ -85,6 +85,7 @@ Progress: [██████████] 98%
 | Phase 01.5 P02 | 78min | 2 tasks | 28 files |
 | Phase 01.5 P03 | 25m | 2 tasks | 4 files |
 | Phase 01.5 P04 | 35min | 3 tasks | 7 files |
+| Phase 01.5 P06 | 25min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -169,6 +170,7 @@ Recent decisions affecting current work:
 - [Phase ?]: HIGH-2 fix: getCurrentUserCached uses primitive cookie header string as React cache() key for real RSC dedupe
 - [Phase 01.5]: Plan 04: frontend-design skill là sole invocation site trong Phase 01.5 (MED-5 review fix) — Plan 02 deflation không invoke skill; Plan 04 polish IS the visual-design pass
 - [Phase 01.5]: Plan 04: danger-zone settings dùng border-destructive token trên Card thay solid background fill — keeps visual hierarchy mà không alarmist
+- [Phase ?]: Race-loser drops second bundledTx entirely: winner thread committed atomically; re-encrypting loser token overwrites winner envelope (privacy + atomicity violation)
 
 ### Roadmap Evolution
 
@@ -218,6 +220,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-27T15:23:05.202Z
+Last session: 2026-04-27T16:19:37.285Z
 Stopped at: Completed 01.5-03-PLAN.md
 Resume file: None
