@@ -159,8 +159,12 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
   3. Onboarding routes directly to template selection after provisioning; consent-denied UX uses a simple `/login?error=...` path, while reconnect still uses the single `google` registration with `prompt=consent`.
   4. Phase 1.4 frontend wrapper primitives are deflated where they add no value; retained primitives must justify real composition, and affected surfaces use raw shadcn components plus token-aware `className`.
   5. Surviving REVIEW cleanup is closed or explicitly documented: `/me` fetch dedupe/cache strategy, `TemplateCard` `cn()`, retained `ReconnectPrompt` token variant, CLAUDE.md conventions, and deferred verification ceremonies.
-**Plans**: 0 plans
-- [ ] TBD (run /gsd-plan-phase 01.5 to break down)
+**Plans**: 5 plans
+- [ ] 01.5-01-PLAN.md — Backend bundled OAuth collapse + onboarding state machine simplification + 2-leg flow deletion
+- [ ] 01.5-02-PLAN.md — Atomic frontend deflation + Alert warning variant + RSC login error rendering + i18n key swap
+- [ ] 01.5-03-PLAN.md — /me fetch React cache() per-request dedupe
+- [ ] 01.5-04-PLAN.md — frontend-design skill polish pass across 5 surfaces (landing/login/onboarding/settings/ReconnectPrompt)
+- [ ] 01.5-05-PLAN.md — CLAUDE.md Conventions promotion + STATE.md deferred verification ceremonies
 **UI hint**: yes
 
 ### Phase 2A: Mail Ingestion
