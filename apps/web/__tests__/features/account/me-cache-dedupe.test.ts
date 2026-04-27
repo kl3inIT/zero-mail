@@ -21,6 +21,9 @@
  * Xem: https://react.dev/reference/react/cache — "only available in Server Components"
  */
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Verify exports tồn tại (sẽ RED trước Task 2, GREEN sau Task 2)
@@ -47,6 +50,39 @@ beforeEach(() => {
 
   // Inject mock vào global fetch
   vi.stubGlobal('fetch', mockFetch);
+});
+
+/**
+ * WR-03 fix — primitive-string keying is a CONTRACT, not a runtime check.
+ *
+ * React `cache()` is RSC-context-only and is a pass-through in vitest/jsdom,
+ * so call-count assertions cannot exercise dedupe. The previous test asserted
+ * `mockFetch.mock.calls.length >= 1` — a tautology that passes whether the
+ * fix is in place or has been reverted.
+ *
+ * To lock the HIGH-2 contract, regression-guard the SHAPE of the wrapper by
+ * inspecting the source text of `me.ts` directly. Note: React `cache()`
+ * normalizes the wrapped function so `getCurrentUserCached.length` is 0 (not
+ * 1) and cannot be used as a contract assertion — see the second test below.
+ *
+ * The source of `cache(...)` MUST receive `(cookieHeader: string | undefined)`
+ * and MUST NOT receive `(opts: ...)` / `({ headers ... })` — blocks any future
+ * refactor that accidentally re-introduces an object arg shape (which would
+ * break primitive-string dedupe in RSC).
+ *
+ * This is a structural test, not a behavioral one — full RSC dedupe is
+ * verified manually per 01.5-03-SUMMARY's deferred manual gate.
+ */
+describe('WR-03 — getCurrentUserCached primitive-string contract (regression guard)', () => {
+  it('me.ts source defines cache() with primitive-string arg, not object arg', () => {
+    const meSrc = readFileSync(resolve(__dirname, '../../../features/account/api/me.ts'), 'utf8');
+    // Positive guard: cache() wraps an async function whose first param is
+    // explicitly typed `cookieHeader: string | undefined` (primitive contract).
+    expect(meSrc).toMatch(/cache\(\s*async\s*\(\s*cookieHeader:\s*string\s*\|\s*undefined\s*\)/);
+    // Negative guard: forbid any options-object signature inside cache(...).
+    expect(meSrc).not.toMatch(/cache\(\s*async\s*\(\s*opts/);
+    expect(meSrc).not.toMatch(/cache\(\s*async\s*\(\s*\{/);
+  });
 });
 
 describe('HIGH-2 — getCurrentUserCached primitive-keyed cache() (Phase 01.5 fix)', () => {
