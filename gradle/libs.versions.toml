@@ -8,13 +8,13 @@ springCloudGcp = "8.0.2"
 # artifact from the Spring snapshot repo. Revisit + re-pin when 2.0.0-M1 or later ships.
 springModulith = "2.0.7-SNAPSHOT"
 liquibase = "5.0.2"
-archunit = "1.3.0"
+archunit = "1.4.2"
 logstashLogback = "8.0"
 googleAuthLibrary = "1.35.0"
 gmailApi = "v1-rev20250331-2.0.0"
 testcontainers = "1.21.3"
 springdoc = "2.8.6"
-jsoup = "1.18.3"
+jsoup = "1.22.2"
 
 [libraries]
 spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "springBoot" }
