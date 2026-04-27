@@ -35,10 +35,15 @@ import jakarta.servlet.http.HttpServletResponse;
  * <ol>
  *   <li>If {@code gmail.modify} is absent from granted scopes → throw
  *       {@link OAuth2AuthenticationException}{@code ("gmail_scope_required")} BEFORE any DB
- *       write. Failure handler redirects to {@code /login?error=gmail_scope_required}.</li>
+ *       write. Failure handler redirects to {@code /login?error=gmail_scope_required}.
+ *       (1a) Pre-throw cleanup: before throwing,
+ *       {@code removeAuthorizedClient("google", token.getName())} is called so the
+ *       {@code LoginRedirectAuthenticationFailureHandler}'s best-effort cleanup is no longer
+ *       the sole cleanup path (CR-02 fix).</li>
  *   <li>If refresh token is null AND no existing user → throw
  *       {@link OAuth2AuthenticationException}{@code ("consent_denied")} BEFORE any DB write.
- *       Failure handler redirects to {@code /login?error=consent_denied} (MED-3 fix).</li>
+ *       Failure handler redirects to {@code /login?error=consent_denied} (MED-3 fix).
+ *       Pre-throw cleanup applied here too (CR-02 fix).</li>
  *   <li>If only {@code gmail.settings.basic} is missing (but {@code gmail.modify} present)
  *       → emit opaque warning log {@code event=oauth_settings_basic_missing} and proceed
  *       (INFO-7: settings.basic is forward-looking for Phase 3, not v1-blocking).</li>
@@ -84,6 +89,17 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         // (a) Granted-scope check BEFORE any DB write (D-A2, T-01.5-01-04).
         if (client == null || client.getAccessToken() == null
                 || !client.getAccessToken().getScopes().contains(OAuthScopes.GMAIL_MODIFY)) {
+            // CR-02 fix: clean up any partial AuthorizedClient Spring stored before the success
+            // handler ran. Use token.getName() — always available from OAuth2AuthenticationToken,
+            // unlike req.getUserPrincipal() which is null here (principal not committed to
+            // SecurityContext yet). Best-effort; never log the principal name (privacy D-E1).
+            if (client != null) {
+                try {
+                    authorizedClients.removeAuthorizedClient("google", token.getName());
+                } catch (Exception ignored) {
+                    // Best-effort — failure to clean up is non-fatal for the error redirect.
+                }
+            }
             throw new OAuth2AuthenticationException(
                     new OAuth2Error("gmail_scope_required",
                             "Required Gmail scope was not granted", null));
@@ -95,6 +111,11 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             boolean existingUser = users.findByGoogleSubject(googleSubject).isPresent();
             if (!existingUser) {
                 log.info("event=oauth_no_refresh_token_first_login");
+                // CR-02 fix: clean up partial AuthorizedClient before throwing.
+                // token.getName() is always available; req.getUserPrincipal() is null here.
+                try {
+                    authorizedClients.removeAuthorizedClient("google", token.getName());
+                } catch (Exception ignored) { /* best-effort */ }
                 throw new OAuth2AuthenticationException(
                         new OAuth2Error("consent_denied",
                                 "Refresh token was not issued — user must re-authenticate with consent", null));
