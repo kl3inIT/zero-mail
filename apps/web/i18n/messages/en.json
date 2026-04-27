@@ -45,12 +45,6 @@
         "revokeAnytime": "You can revoke access anytime"
       }
     },
-    "errors": {
-      "oauth": {
-        "cancelled": "Google sign-in was cancelled. Try again when you are ready.",
-        "failed": "Google sign-in could not finish. Please try again."
-      }
-    },
     "error": {
       "consent_denied": {
         "title": "Gmail access was declined",

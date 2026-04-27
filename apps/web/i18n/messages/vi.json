@@ -45,12 +45,6 @@
         "revokeAnytime": "Bạn có thể thu hồi quyền truy cập bất cứ lúc nào"
       }
     },
-    "errors": {
-      "oauth": {
-        "cancelled": "Bạn đã hủy đăng nhập Google. Hãy thử lại khi sẵn sàng.",
-        "failed": "Không thể hoàn tất đăng nhập Google. Hãy thử lại."
-      }
-    },
     "error": {
       "consent_denied": {
         "title": "Truy cập Gmail bị từ chối",
