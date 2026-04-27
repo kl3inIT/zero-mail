@@ -163,7 +163,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] 01.5-01-PLAN.md — Backend bundled OAuth collapse + onboarding state machine simplification + 2-leg flow deletion
 - [x] 01.5-02-PLAN.md — Atomic frontend deflation + Alert warning variant + RSC login error rendering + i18n key swap
 - [x] 01.5-03-PLAN.md — /me fetch React cache() per-request dedupe
-- [ ] 01.5-04-PLAN.md — frontend-design skill polish pass across 5 surfaces (landing/login/onboarding/settings/ReconnectPrompt)
+- [x] 01.5-04-PLAN.md — frontend-design skill polish pass across 5 surfaces (landing/login/onboarding/settings/ReconnectPrompt)
 - [ ] 01.5-05-PLAN.md — CLAUDE.md Conventions promotion + STATE.md deferred verification ceremonies
 **UI hint**: yes
 
@@ -276,7 +276,7 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 1.2.1. Shared base entity + IdentifiedEnum standard + DTO group-by-domain (INSERTED) | 4/4 | Complete | 2026-04-26 |
 | 1.3. Frontend Architecture Refactor and Public Content Foundation (INSERTED) | 8/8 | Complete | 2026-04-26 |
 | 1.4. Gmail Identity Semantics, Permission UX, and UI Consistency (INSERTED) | 6/6 | Complete without ship; superseded by 1.5 | 2026-04-27 |
-| 1.5. Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED) | 2/5 | In Progress|  |
+| 1.5. Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED) | 3/5 | In Progress|  |
 | 2A. Mail Ingestion | 0/TBD | Not started | - |
 | 2B. Billing (Prepaid Credits) | 0/TBD | Not started | - |
 | 2C. LLM Gateway | 0/TBD | Not started | - |
