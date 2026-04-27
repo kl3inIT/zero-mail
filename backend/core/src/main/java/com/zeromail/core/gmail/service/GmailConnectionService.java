@@ -71,11 +71,11 @@ public class GmailConnectionService {
      * timestamp đã disconnect cũ để view-state phản ánh đúng CONNECTED.
      *
      * <p>{@code googleEmail} chỉ được set ở constructor (path INSERT). Trên path UPDATE
-     * không write lại — subject check trong {@code GmailOAuthSuccessHandler} (Plan 02)
-     * đã guarantee email equality nên defensive write là dư thừa (RESEARCH Q4 / D-A4
+     * không write lại — Phase 01.5 bundled flow đã guarantee email equality nên
+     * defensive write là dư thừa (RESEARCH Q4 / D-A4
      * "defensive — should always equal stored value post-A1 check").
      *
-     * <p>Caller (typically {@code GmailOAuthSuccessHandler}) phải bind
+     * <p>Caller (typically {@code GoogleOAuthSuccessHandler}) phải bind
      * {@code TenantContext.TENANT} ScopedValue TRƯỚC khi gọi method này; method dùng
      * default propagation (REQUIRED) nên join transaction của caller — JPA session
      * sẽ capture đúng tenant tại điểm caller mở tx (Pitfall 6 / FND-05).

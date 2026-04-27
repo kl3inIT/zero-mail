@@ -50,10 +50,9 @@ openApi {
                 // vars. The spec emit only needs the controllers/DTOs introspected — runtime
                 // OAuth and crypto are never exercised. These literals are NEVER committed
                 // anywhere except this build script and never reach a deployed environment.
+                // Phase 01.5: single bundled google registration (google-gmail deleted).
                 "--spring.security.oauth2.client.registration.google.client-id=openapi-emit",
                 "--spring.security.oauth2.client.registration.google.client-secret=openapi-emit",
-                "--spring.security.oauth2.client.registration.google-gmail.client-id=openapi-emit",
-                "--spring.security.oauth2.client.registration.google-gmail.client-secret=openapi-emit",
                 // Skip Secret Manager entirely (no GCP project in CI/dev).
                 "--spring.cloud.gcp.secretmanager.enabled=false",
                 // Provide a 32-byte AES-GCM key (base64) so RefreshTokenCipher beans
