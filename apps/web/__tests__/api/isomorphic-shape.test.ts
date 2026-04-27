@@ -10,13 +10,18 @@ const PROXY_FILE = resolve(APP_WEB, 'proxy.ts');
 const LAYOUT_FILE = resolve(APP_WEB, 'app/layout.tsx');
 
 describe('Phase 1.3 — Isomorphic /me API shape (D-B1, D-B4)', () => {
-  it('features/account/api/me.ts exists with isomorphic getCurrentUser signature', () => {
+  it('features/account/api/me.ts exists with isomorphic fetchCurrentUser signature (Phase 01.5 rename)', () => {
     expect(existsSync(ME_FILE)).toBe(true);
     const src = readFileSync(ME_FILE, 'utf8');
-    expect(src).toMatch(/export\s+async\s+function\s+getCurrentUser/);
+    // Phase 01.5 HIGH-2: renamed to fetchCurrentUser (raw export); getCurrentUser = alias
+    expect(src).toMatch(/export\s+async\s+function\s+fetchCurrentUser/);
     expect(src).toMatch(/fetcher\??:/);
     expect(src).toMatch(/signal\??:/);
     expect(src).toMatch(/headers\??:/);
+    // Cached wrapper export (primitive-keyed)
+    expect(src).toMatch(/export\s+const\s+getCurrentUserCached\s*=\s*cache\s*\(/);
+    // Backwards-compat alias for client/TanStack callers
+    expect(src).toMatch(/export\s+const\s+getCurrentUser\s*=\s*fetchCurrentUser/);
   });
 
   it('features/account/api/keys.ts exports accountKeys factory (D-B3)', () => {
@@ -41,10 +46,11 @@ describe('Phase 1.3 — Isomorphic /me API shape (D-B1, D-B4)', () => {
     expect(src).toMatch(/from\s+['"]@\/features\/account\/api\/me['"]/);
   });
 
-  it('app/layout.tsx no longer has inline fetch(`${apiBase}/me`); imports getCurrentUser', () => {
+  it('app/layout.tsx no longer has inline fetch(`${apiBase}/me`); imports getCurrentUserCached (Phase 01.5)', () => {
     const src = readFileSync(LAYOUT_FILE, 'utf8');
     expect(src).not.toMatch(/fetch\(`\$\{apiBase\}\/me`/);
-    expect(src).toMatch(/getCurrentUser\s*\(/);
+    // Phase 01.5 HIGH-2: layout uses the primitive-keyed cached wrapper
+    expect(src).toMatch(/getCurrentUserCached\s*\(/);
     expect(src).toMatch(/from\s+['"]@\/features\/account\/api\/me['"]/);
   });
 
