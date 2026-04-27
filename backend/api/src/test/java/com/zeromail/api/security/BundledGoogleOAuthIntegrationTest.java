@@ -9,11 +9,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
-import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -31,7 +30,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import com.zeromail.api.support.ApiPostgresTestBase;
 import com.zeromail.core.account.persistence.UserRepository;
-import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.service.GmailConnectionService;
 import com.zeromail.core.onboarding.model.OnboardingStep;
 import com.zeromail.core.tenant.persistence.TenantRepository;
@@ -79,14 +77,16 @@ class BundledGoogleOAuthIntegrationTest extends ApiPostgresTestBase {
     private static final String GOOGLE_REGISTRATION_ID = "google";
     private static final String FAKE_REFRESH_TOKEN = "fake-bundled-refresh-token-do-not-use-v1";
 
-    @LocalServerPort
-    int port;
-
     @Autowired UserRepository users;
     @Autowired TenantRepository tenants;
-    @Autowired GmailConnectionRepository connections;
     @Autowired OAuth2AuthorizedClientService authorizedClientService;
     @Autowired GoogleOAuthSuccessHandler handler;
+    /**
+     * JdbcTemplate used for row-count assertions that must bypass Hibernate's @TenantId
+     * filter. JPA count() on tenant-filtered entities returns 0 when TenantContext.TENANT
+     * is not bound (which is normal outside a request thread), hiding real rows.
+     */
+    @Autowired JdbcTemplate jdbc;
 
     // @MockitoSpyBean for HIGH-1 test — wraps real GmailConnectionService to simulate failure.
     @MockitoSpyBean
@@ -94,9 +94,24 @@ class BundledGoogleOAuthIntegrationTest extends ApiPostgresTestBase {
 
     @BeforeEach
     void cleanUp() {
-        connections.deleteAll();
-        users.deleteAll();
-        tenants.deleteAll();
+        // Use JDBC to bypass tenant filter on delete — JPA deleteAll() on filtered entities
+        // would also return 0 rows under a missing tenant context.
+        jdbc.execute("DELETE FROM gmail_connections");
+        jdbc.execute("DELETE FROM users");
+        jdbc.execute("DELETE FROM tenants");
+    }
+
+    /** Count rows without Hibernate tenant filter (for cross-tenant assertions). */
+    private long countUsers() {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM users", Long.class);
+    }
+
+    private long countTenants() {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM tenants", Long.class);
+    }
+
+    private long countConnections() {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM gmail_connections", Long.class);
     }
 
     // -------------------------------------------------------------------------
@@ -116,9 +131,9 @@ class BundledGoogleOAuthIntegrationTest extends ApiPostgresTestBase {
 
         handler.onAuthenticationSuccess(req, res, token);
 
-        assertThat(users.count()).as("UserEntity must be persisted").isEqualTo(1);
-        assertThat(tenants.count()).as("TenantEntity must be persisted").isEqualTo(1);
-        assertThat(connections.count()).as("GmailConnectionEntity must be persisted").isEqualTo(1);
+        assertThat(countUsers()).as("UserEntity must be persisted").isEqualTo(1);
+        assertThat(countTenants()).as("TenantEntity must be persisted").isEqualTo(1);
+        assertThat(countConnections()).as("GmailConnectionEntity must be persisted").isEqualTo(1);
 
         var user = users.findByGoogleSubject(subject).orElseThrow();
         assertThat(user.getOnboardingStep())
@@ -152,9 +167,9 @@ class BundledGoogleOAuthIntegrationTest extends ApiPostgresTestBase {
             // The success handler throws OAuth2AuthenticationException which bubbles up.
         }
 
-        assertThat(users.count()).as("No UserEntity on scope-missing path").isZero();
-        assertThat(tenants.count()).as("No TenantEntity on scope-missing path").isZero();
-        assertThat(connections.count()).as("No GmailConnectionEntity on scope-missing path").isZero();
+        assertThat(countUsers()).as("No UserEntity on scope-missing path").isZero();
+        assertThat(countTenants()).as("No TenantEntity on scope-missing path").isZero();
+        assertThat(countConnections()).as("No GmailConnectionEntity on scope-missing path").isZero();
     }
 
     // -------------------------------------------------------------------------
@@ -187,13 +202,13 @@ class BundledGoogleOAuthIntegrationTest extends ApiPostgresTestBase {
         }
 
         // HIGH-1 invariant: ALL three tables must be EMPTY after rollback.
-        assertThat(users.count())
+        assertThat(countUsers())
                 .as("HIGH-1: users must be empty after upsert failure rollback")
                 .isZero();
-        assertThat(tenants.count())
+        assertThat(countTenants())
                 .as("HIGH-1: tenants must be empty after upsert failure rollback")
                 .isZero();
-        assertThat(connections.count())
+        assertThat(countConnections())
                 .as("HIGH-1: gmail_connections must be empty after upsert failure rollback")
                 .isZero();
     }
@@ -221,9 +236,9 @@ class BundledGoogleOAuthIntegrationTest extends ApiPostgresTestBase {
         }
 
         // MED-3: no DB rows must exist when refresh token is null on first login
-        assertThat(users.count()).as("MED-3: no UserEntity on null-refresh-token first login").isZero();
-        assertThat(tenants.count()).as("MED-3: no TenantEntity on null-refresh-token first login").isZero();
-        assertThat(connections.count()).as("MED-3: no GmailConnectionEntity on null-refresh-token first login").isZero();
+        assertThat(countUsers()).as("MED-3: no UserEntity on null-refresh-token first login").isZero();
+        assertThat(countTenants()).as("MED-3: no TenantEntity on null-refresh-token first login").isZero();
+        assertThat(countConnections()).as("MED-3: no GmailConnectionEntity on null-refresh-token first login").isZero();
     }
 
     // -------------------------------------------------------------------------
@@ -246,9 +261,9 @@ class BundledGoogleOAuthIntegrationTest extends ApiPostgresTestBase {
         // INFO-7: provisioning should SUCCEED (settings.basic is forward-looking, not v1-blocking)
         handler.onAuthenticationSuccess(req, res, token);
 
-        assertThat(users.count()).as("INFO-7: UserEntity must be persisted").isEqualTo(1);
-        assertThat(tenants.count()).as("INFO-7: TenantEntity must be persisted").isEqualTo(1);
-        assertThat(connections.count()).as("INFO-7: GmailConnectionEntity must be persisted").isEqualTo(1);
+        assertThat(countUsers()).as("INFO-7: UserEntity must be persisted").isEqualTo(1);
+        assertThat(countTenants()).as("INFO-7: TenantEntity must be persisted").isEqualTo(1);
+        assertThat(countConnections()).as("INFO-7: GmailConnectionEntity must be persisted").isEqualTo(1);
         // Warning log with event=oauth_settings_basic_missing is verified via manual log inspection
         // (Logback test appender wiring would add test complexity; opaque-event-name contract is
         // validated by code review + privacy threat model T-01.5-01-11).

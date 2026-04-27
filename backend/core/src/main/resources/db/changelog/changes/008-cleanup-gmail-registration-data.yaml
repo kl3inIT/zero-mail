@@ -6,7 +6,13 @@ databaseChangeLog:
         Phase 01.5 D-A4 — collapse the two-leg google + google-gmail OAuth flow
         into a single bundled-scope google registration. Drop any orphaned
         oauth2_authorized_client rows that point at the deleted google-gmail
-        registration. Idempotent: 0 rows affected on a clean DB.
+        registration. Idempotent: 0 rows affected on a clean DB or when the
+        table does not exist (e.g. fresh test databases that never ran Spring
+        Session's schema initializer).
+      preConditions:
+        - onFail: MARK_RAN
+          tableExists:
+            tableName: oauth2_authorized_client
       changes:
         - delete:
             tableName: oauth2_authorized_client
