@@ -148,15 +148,20 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] 01.4-06-PLAN.md — Token sweep across 12 surfaces + onboarding mismatch alert wiring + settings singleAccountNote + final phase gates _(completed 2026-04-27 — Phase 01.4 closed without ship; follow-up cleanup moved to Phase 01.5)_
 **UI hint**: yes
 
-### Phase 01.5: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep - Remaining heavy Phase 1.5 work: single Google OAuth upfront Gmail scope, remove google-gmail mismatch architecture, merge Gmail token provisioning, simplify onboarding/consent UX, deflate frontend primitives, polish landing/login/onboarding/settings/ReconnectPrompt, and close surviving REVIEW cleanup; excludes quick tasks already completed. (INSERTED)
+### Phase 01.5: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED)
 
-**Goal:** [Urgent work - to be planned]
-**Requirements**: TBD
+**Goal**: Finish the remaining heavy Phase 1.5 work after the quick-task sweep: align with Inbox Zero's bundled Google OAuth model, remove the now-unnecessary two-registration Gmail mismatch architecture, simplify onboarding and consent-denied UX, deflate custom frontend primitives back to raw shadcn/token-aware composition, polish the current landing/login/onboarding/settings/reconnect surfaces, and close surviving REVIEW cleanup that still applies.
+**Requirements**: _(no new product requirements; pivots AUTH-01/AUTH-02 behavior and frontend architecture after Phase 1.4 review)_
 **Depends on:** Phase 1.4
-**Plans:** 0 plans
-
-Plans:
+**Success Criteria** (what must be TRUE):
+  1. The primary Google OAuth registration requests `openid profile email https://www.googleapis.com/auth/gmail.modify` upfront, persists Gmail connection tokens during Google login provisioning, and removes the `google-gmail` registration plus mismatch/revocation handler architecture.
+  2. Gmail provisioning and token persistence run in the same transaction as user provisioning, so a successful login creates or updates the tenant's Gmail connection without a separate onboarding "connect Gmail" step.
+  3. Onboarding routes directly to template selection after provisioning; consent-denied UX uses a simple `/login?error=...` path, while reconnect still uses the single `google` registration with `prompt=consent`.
+  4. Phase 1.4 frontend wrapper primitives are deflated where they add no value; retained primitives must justify real composition, and affected surfaces use raw shadcn components plus token-aware `className`.
+  5. Surviving REVIEW cleanup is closed or explicitly documented: `/me` fetch dedupe/cache strategy, `TemplateCard` `cn()`, retained `ReconnectPrompt` token variant, CLAUDE.md conventions, and deferred verification ceremonies.
+**Plans**: 0 plans
 - [ ] TBD (run /gsd-plan-phase 01.5 to break down)
+**UI hint**: yes
 
 ### Phase 2A: Mail Ingestion
 **Goal**: Receive Gmail push notifications reliably, keep `users.watch` alive, and process every history delivery idempotently with a tenant-visible global pause.
