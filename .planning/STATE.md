@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed quick task 260427-9n3: cài Dependabot cho tôi
-last_updated: "2026-04-27T06:58:28+07:00"
-last_activity: 2026-04-27
+status: planning
+stopped_at: "Marked Phase 01.4 complete without ship; Phase 01.5 queued for follow-up cleanup"
+last_updated: "2026-04-27T07:04:27+07:00"
+last_activity: "2026-04-27 - Marked Phase 01.4 complete without ship; Phase 01.5 will absorb remaining cleanup"
 progress:
-  total_phases: 13
-  completed_phases: 6
+  total_phases: 14
+  completed_phases: 7
   total_plans: 41
   completed_plans: 41
   percent: 100
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 01.4 — gmail-identity-semantics-permission-ux-and-ui-consistency
+**Current focus:** Phase 01.5 — inbox-zero-alignment-bundled-oauth-ux-polish-cleanup-sweep
 
 ## Current Position
 
-Phase: 01.4 (gmail-identity-semantics-permission-ux-and-ui-consistency) — VERIFYING
-Plan: 6 of 6 (complete)
-Status: Phase ready for /gsd-verify-work
-Last activity: 2026-04-27 - Completed quick task 260427-9n3: cài Dependabot cho tôi
+Phase: 01.5 (inbox-zero-alignment-bundled-oauth-ux-polish-cleanup-sweep) — READY TO PLAN
+Plan: 0 of 0 (not planned)
+Status: Phase 01.4 marked complete without ship; Phase 01.5 queued to absorb remaining OAuth/UX cleanup
+Last activity: 2026-04-27 - Marked Phase 01.4 complete without ship; Phase 01.5 will absorb remaining cleanup
 
 Progress: [██████████] 100%
 
@@ -162,6 +162,8 @@ Recent decisions affecting current work:
 - Phase 1.3 inserted after Phase 1.2: Frontend Architecture Refactor and Public Content Foundation — reorganize `apps/web` with Next.js route groups, feature folders (`api/`, `components/`, `hooks/`), typed OpenAPI boundaries, workspace cleanup, Prettier/Husky/lint-staged gates, and landing/docs scaffolding without final content design (URGENT)
 - Phase 1.2.1 inserted after Phase 1.2: Shared base entity hierarchy (`AbstractEntity`/`AbstractAuditableEntity`/`AbstractTenantOwnedEntity` in `core.shared.persistence`) + `IdentifiedEnum` standard (id/weight/labelKey, applied to `OnboardingStep` + `GmailConnectionStatus`) + `backend/api/dto/` group-by-domain (with `TenantStatusResponse` → `GmailConnectionStatusResponse` rename) + close code-review WR-01/WR-02/WR-03; closes structural-cleanup gaps Phase 1.2 intentionally deferred (URGENT)
 - Phase 1.4 inserted after Phase 1.3: Gmail Identity Semantics, Permission UX, and UI Consistency — align v1 auth so the Google login account IS the first managed Gmail account; treat initial Gmail access as incremental consent for that same account; reject mismatched initial Gmail OAuth callbacks; keep multi-account management as a later workspace-level capability (users add more Gmail accounts to a workspace); sweep UI consistency, visual polish, layout quality, copy, states, and reusable frontend patterns via the `frontend-design` skill (URGENT)
+- Phase 1.4 marked complete without `/gsd-ship` on 2026-04-27 because Phase 1.5 supersedes much of the remaining OAuth/UX cleanup value.
+- Phase 01.5 inserted after Phase 1.4: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep - Remaining heavy Phase 1.5 work: single Google OAuth upfront Gmail scope, remove google-gmail mismatch architecture, merge Gmail token provisioning, simplify onboarding/consent UX, deflate frontend primitives, polish landing/login/onboarding/settings/ReconnectPrompt, and close surviving REVIEW cleanup; excludes quick tasks already completed. (URGENT)
 
 ### Pending Todos
 

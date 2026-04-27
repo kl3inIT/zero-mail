@@ -16,7 +16,8 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] **Phase 1.2: Domain-owned persistence restructuring (INSERTED)** _(completed 2026-04-26)_ - Refactor `backend/core` into domain-owned service/persistence/model packages, add a small shared package for stable cross-cutting infrastructure, preserve schema and safety constraints, and enforce boundaries with Modulith or ArchUnit
 - [x] **Phase 1.2.1: Shared base entity + IdentifiedEnum standard + DTO group-by-domain (INSERTED)** _(completed 2026-04-26)_ - Introduce `core.shared.persistence` abstract entity hierarchy (`AbstractEntity`, `AbstractAuditableEntity`, `AbstractTenantOwnedEntity`); introduce `core.shared.lang.IdentifiedEnum` interface (id/weight/labelKey) and apply to `OnboardingStep` + `GmailConnectionStatus`; reorganize `backend/api/dto/` group-by-domain (account/, gmail/, onboarding/) and rename `TenantStatusResponse` → `GmailConnectionStatusResponse`; close code review WR-01 (Pitfall 5 real persistence test), WR-02 (replace ordinal() with weight()), WR-03 (bulk delete query)
 - [x] **Phase 1.3: Frontend Architecture Refactor and Public Content Foundation (INSERTED)** _(completed 2026-04-26)_ - Reorganize `apps/web` around route groups, feature folders, typed OpenAPI boundaries, frontend quality gates, and public landing/docs scaffolding without implementing the final landing/docs design yet
-- [ ] **Phase 1.4: Gmail Identity Semantics, Permission UX, and UI Consistency (INSERTED)** _(executing complete 2026-04-27 — verification pending)_ - Align v1 auth so the Google login account IS the first managed Gmail account; treat initial Gmail access as incremental consent for that same account; reject mismatched initial Gmail OAuth callbacks; keep multi-account management as a later workspace-level capability (users add more Gmail accounts to a workspace); sweep UI consistency, visual polish, layout quality, copy, states, and reusable frontend patterns across the current app via the `frontend-design` skill
+- [x] **Phase 1.4: Gmail Identity Semantics, Permission UX, and UI Consistency (INSERTED)** _(completed 2026-04-27 — closed without ship; remaining value superseded by Phase 1.5)_ - Align v1 auth so the Google login account IS the first managed Gmail account; treat initial Gmail access as incremental consent for that same account; reject mismatched initial Gmail OAuth callbacks; keep multi-account management as a later workspace-level capability (users add more Gmail accounts to a workspace); sweep UI consistency, visual polish, layout quality, copy, states, and reusable frontend patterns across the current app via the `frontend-design` skill
+- [ ] **Phase 1.5: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED)** - Remaining heavy Phase 1.5 work: single Google OAuth upfront Gmail scope, remove google-gmail mismatch architecture, merge Gmail token provisioning, simplify onboarding/consent UX, deflate frontend primitives, polish landing/login/onboarding/settings/ReconnectPrompt, and close surviving REVIEW cleanup; excludes quick tasks already completed
 - [ ] **Phase 2A: Mail Ingestion** - Gmail `users.watch` + Pub/Sub push + OIDC verification + idempotent history processing + global pause
 - [ ] **Phase 2B: Billing (Prepaid Credits)** - Double-entry Postgres ledger, reserve/settle/release, credit-hold watchdog, balance UI hooks
 - [ ] **Phase 2C: LLM Gateway** - Spring AI 2.0.0-M4 `LlmGateway` with sanitize → Unicode strip → structured tool-call + allow-list → BYOK per-request options → daily spend cap → drift detection
@@ -144,8 +145,18 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] 01.4-03-PLAN.md — Backend extensions: GmailConnectionService.upsert(...) idempotent + GmailScopeRequestResolver login_hint graceful-degrade _(completed 2026-04-27)_
 - [x] 01.4-04-PLAN.md — Frontend primitives: PageShell + SectionCard + StatusAlert + EmptyState + LoadingState (compose existing shadcn, no new installs) _(completed 2026-04-27)_
 - [x] 01.4-05-PLAN.md — Next.js error-boundary baseline: global-error.tsx + not-found.tsx + 3 segment error.tsx + i18n key bundle (vi+en) _(completed 2026-04-27)_
-- [x] 01.4-06-PLAN.md — Token sweep across 12 surfaces + onboarding mismatch alert wiring + settings singleAccountNote + final phase gates _(completed 2026-04-27 — Phase 01.4 ready for /gsd-verify-work)_
+- [x] 01.4-06-PLAN.md — Token sweep across 12 surfaces + onboarding mismatch alert wiring + settings singleAccountNote + final phase gates _(completed 2026-04-27 — Phase 01.4 closed without ship; follow-up cleanup moved to Phase 01.5)_
 **UI hint**: yes
+
+### Phase 01.5: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep - Remaining heavy Phase 1.5 work: single Google OAuth upfront Gmail scope, remove google-gmail mismatch architecture, merge Gmail token provisioning, simplify onboarding/consent UX, deflate frontend primitives, polish landing/login/onboarding/settings/ReconnectPrompt, and close surviving REVIEW cleanup; excludes quick tasks already completed. (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 1.4
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 01.5 to break down)
 
 ### Phase 2A: Mail Ingestion
 **Goal**: Receive Gmail push notifications reliably, keep `users.watch` alive, and process every history delivery idempotently with a tenant-visible global pause.
