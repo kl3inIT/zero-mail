@@ -50,6 +50,16 @@
         "cancelled": "Google sign-in was cancelled. Try again when you are ready.",
         "failed": "Google sign-in could not finish. Please try again."
       }
+    },
+    "error": {
+      "consent_denied": {
+        "title": "Gmail access was declined",
+        "body": "Zero Mail needs Gmail access to triage your inbox. Click Sign in with Google to try again."
+      },
+      "gmail_scope_required": {
+        "title": "Gmail permission missing",
+        "body": "Sign in worked, but Gmail access wasn't granted. Click Sign in with Google and approve the Gmail permission to continue."
+      }
     }
   },
   "onboarding": {
@@ -131,22 +141,6 @@
     "cancelCta": "Cancel",
     "success": "Your account and data have been deleted."
   },
-  "gmail": {
-    "identity": {
-      "mismatch": {
-        "title": "Gmail account doesn't match",
-        "body": "Please grant Gmail access using the same Google account you logged in with. Try again and select the matching account.",
-        "cta": "Try again"
-      }
-    },
-    "consent": {
-      "denied": {
-        "title": "Gmail access was declined",
-        "body": "To use auto-triage, Zero Mail needs access to your inbox.",
-        "cta": "Grant access"
-      }
-    }
-  },
   "errors": {
     "boundary": {
       "title": "Something went wrong",
@@ -164,7 +158,9 @@
     "auth": {
       "unauthorized": "Your session expired. Sign in with Google again.",
       "forbidden": "You do not have permission to perform this action.",
-      "currentUserNotFound": "The current account could not be found. Sign in again."
+      "currentUserNotFound": "The current account could not be found. Sign in again.",
+      "consent_denied": "Gmail access was declined. Sign in with Google and approve Gmail access to continue.",
+      "gmail_scope_required": "Gmail permission was not granted. Sign in with Google and approve the Gmail permission to continue."
     },
     "validation": {
       "generic": "One or more fields are invalid. Please check them and try again.",
@@ -178,13 +174,7 @@
       }
     },
     "gmail": {
-      "disconnected": "Google access was revoked or expired. Reconnect Gmail.",
-      "identity": {
-        "mismatch": "The Gmail account doesn't match the one you logged in with. Please try again with the matching account."
-      },
-      "consent": {
-        "denied": "Gmail access was declined. Please grant access so Zero Mail can continue setup."
-      }
+      "disconnected": "Google access was revoked or expired. Reconnect Gmail."
     },
     "conflict": "The data changed before the action finished. Reload the page and try again.",
     "dataIntegrity": "The change could not be saved because the data is invalid.",

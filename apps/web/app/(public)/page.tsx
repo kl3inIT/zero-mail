@@ -2,25 +2,17 @@ import { headers } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 
-import { PageShell } from '@/components/ui/PageShell';
 import { buttonVariants } from '@/components/ui/button';
 import { getCurrentUser } from '@/features/account/api/me';
 
 /**
  * Public landing (Phase 1.3 Plan 05 — D-C3, D-D4 "Light skeleton" scope).
+ * Phase 01.5 Plan 02 — deflated from PageShell to raw <main> (D-C1, D-C2).
  *
- * Replaces `app/page.tsx → redirect('/login')`. Renders the public marketing
- * surface for everyone (authenticated or not). The CTA target is auth-aware:
+ * CTA target is auth-aware:
  *   - Unauthenticated: → /login
  *   - Authenticated with onboardingStep !== 'COMPLETE': → /onboarding
  *   - Errors / no cookie: silent fallback → /login
- *
- * REVIEWS Revision 2 — Codex HIGH #3: the CTA uses
- * `<Link className={buttonVariants(...)}>`, NOT `<Button asChild>`. The local
- * `Button` wraps `@base-ui/react/button` and does NOT support `asChild`.
- *
- * Plan 07 will add the `landing.*` namespace; until then `t()` returns key
- * paths as fallback (warn-only i18n:check tolerates the parity gap).
  */
 export default async function LandingPage() {
   const t = await getTranslations();
@@ -42,7 +34,7 @@ export default async function LandingPage() {
   }
 
   return (
-    <PageShell variant="marketing">
+    <main className="mx-auto max-w-5xl px-4 py-12 lg:py-16">
       <div className="flex flex-col gap-8">
         <h1 className="text-3xl font-semibold tracking-tight">{t('landing.heading')}</h1>
         <p className="text-muted-foreground text-base">{t('landing.tagline')}</p>
@@ -52,6 +44,6 @@ export default async function LandingPage() {
           </Link>
         </div>
       </div>
-    </PageShell>
+    </main>
   );
 }

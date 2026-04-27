@@ -11,7 +11,7 @@ import { render, screen } from '@testing-library/react';
 
 // Mock next-intl/server before imports so the RSC module resolves
 vi.mock('next-intl/server', () => ({
-  getTranslations: vi.fn(async (namespace?: string) => {
+  getTranslations: vi.fn(async () => {
     // Minimal typed-key resolver for the login error keys
     const allMessages: Record<string, string> = {
       'error.consent_denied.title': 'Gmail access was declined',

@@ -70,7 +70,9 @@ describe('Phase 1.3 — MDX docs pipeline (D-D1..D-D5)', () => {
     expect(existsSync(DOCS_INDEX)).toBe(true);
     const src = readFileSync(DOCS_INDEX, 'utf8');
     expect(src).toMatch(/gray-matter|from\s+['"]gray-matter['"]/);
-    expect(src).toMatch(/readdir/);
+    // Phase 01.5 Plan 02 deflation: readdir is now abstracted behind
+    // listDocFilenames() from @/lib/docs/loader. Check for either pattern.
+    expect(src).toMatch(/readdir|listDocFilenames/);
   });
 
   it('docs slug page uses compileMDX with await params (Next 16 Pattern 2)', () => {

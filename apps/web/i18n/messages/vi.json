@@ -50,6 +50,16 @@
         "cancelled": "Bạn đã hủy đăng nhập Google. Hãy thử lại khi sẵn sàng.",
         "failed": "Không thể hoàn tất đăng nhập Google. Hãy thử lại."
       }
+    },
+    "error": {
+      "consent_denied": {
+        "title": "Truy cập Gmail bị từ chối",
+        "body": "Zero Mail cần quyền truy cập Gmail để sắp xếp hộp thư của bạn. Nhấn Đăng nhập với Google để thử lại."
+      },
+      "gmail_scope_required": {
+        "title": "Thiếu quyền Gmail",
+        "body": "Đăng nhập thành công nhưng quyền Gmail chưa được cấp. Nhấn Đăng nhập với Google và cấp quyền Gmail để tiếp tục."
+      }
     }
   },
   "onboarding": {
@@ -131,22 +141,6 @@
     "cancelCta": "Hủy",
     "success": "Đã xóa tài khoản và dữ liệu của bạn."
   },
-  "gmail": {
-    "identity": {
-      "mismatch": {
-        "title": "Tài khoản Gmail không khớp",
-        "body": "Bạn cần cấp quyền cho cùng tài khoản Gmail mà bạn đã đăng nhập. Vui lòng thử lại và chọn đúng tài khoản.",
-        "cta": "Thử lại"
-      }
-    },
-    "consent": {
-      "denied": {
-        "title": "Bạn đã từ chối quyền truy cập Gmail",
-        "body": "Để Zero Mail có thể phân loại email tự động, chúng tôi cần quyền truy cập hộp thư của bạn.",
-        "cta": "Cấp quyền"
-      }
-    }
-  },
   "errors": {
     "boundary": {
       "title": "Đã xảy ra lỗi",
@@ -164,7 +158,9 @@
     "auth": {
       "unauthorized": "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại bằng Google.",
       "forbidden": "Bạn không có quyền thực hiện thao tác này.",
-      "currentUserNotFound": "Không tìm thấy tài khoản hiện tại. Hãy đăng nhập lại."
+      "currentUserNotFound": "Không tìm thấy tài khoản hiện tại. Hãy đăng nhập lại.",
+      "consent_denied": "Quyền truy cập Gmail bị từ chối. Hãy đăng nhập lại bằng Google và cấp quyền Gmail để tiếp tục.",
+      "gmail_scope_required": "Quyền Gmail chưa được cấp. Hãy đăng nhập lại bằng Google và cấp quyền Gmail để tiếp tục."
     },
     "validation": {
       "generic": "Một hoặc nhiều trường không hợp lệ. Hãy kiểm tra lại.",
@@ -178,13 +174,7 @@
       }
     },
     "gmail": {
-      "disconnected": "Quyền truy cập Google đã bị thu hồi hoặc hết hạn. Hãy kết nối lại Gmail.",
-      "identity": {
-        "mismatch": "Tài khoản Gmail không khớp với tài khoản bạn đã đăng nhập. Hãy thử lại với đúng tài khoản."
-      },
-      "consent": {
-        "denied": "Bạn đã từ chối quyền truy cập Gmail. Hãy cấp quyền để Zero Mail tiếp tục thiết lập."
-      }
+      "disconnected": "Quyền truy cập Google đã bị thu hồi hoặc hết hạn. Hãy kết nối lại Gmail."
     },
     "conflict": "Dữ liệu đã thay đổi trước khi thao tác hoàn tất. Hãy tải lại trang rồi thử lại.",
     "dataIntegrity": "Không thể lưu thay đổi vì dữ liệu không hợp lệ.",
