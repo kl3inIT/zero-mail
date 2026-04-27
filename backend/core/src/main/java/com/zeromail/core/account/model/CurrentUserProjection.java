@@ -8,4 +8,4 @@ import java.util.UUID;
  * keeps the WR-01 controllers-do-not-touch-entities arch rule clean and avoids leaking
  * Hibernate-managed instances across the transaction boundary.
  */
-public record CurrentUserView(UUID userId, UUID tenantId, String email, String onboardingStep, String preferredLanguage) {}
+public record CurrentUserProjection(UUID userId, UUID tenantId, String email, String onboardingStep, String preferredLanguage) {}

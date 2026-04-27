@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.zeromail.core.gmail.model.GmailConnectionStatus;
-import com.zeromail.core.gmail.model.GmailConnectionView;
+import com.zeromail.core.gmail.model.GmailConnectionProjection;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 
@@ -26,14 +26,14 @@ public class GmailConnectionService {
 
     /**
      * Read-side projection of the current tenant's Gmail connection. Returns a
-     * {@link GmailConnectionView#notConnected()} sentinel when the tenant never connected
+     * {@link GmailConnectionProjection#notConnected()} sentinel when the tenant never connected
      * (or completely deleted state) so controllers do not have to handle Optional<Entity>.
      */
     @Transactional(readOnly = true)
-    public GmailConnectionView currentStatus(UUID tenantId) {
+    public GmailConnectionProjection currentStatus(UUID tenantId) {
         return connections.findByTenantId(tenantId)
-                .map(c -> new GmailConnectionView(c.getStatus().name(), c.getGoogleEmail()))
-                .orElseGet(GmailConnectionView::notConnected);
+                .map(c -> new GmailConnectionProjection(c.getStatus().name(), c.getGoogleEmail()))
+                .orElseGet(GmailConnectionProjection::notConnected);
     }
 
     /**
