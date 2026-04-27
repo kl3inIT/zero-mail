@@ -192,7 +192,8 @@ Recent decisions affecting current work:
 
 [From .planning/todos/pending/ — ideas captured during sessions]
 
-None yet.
+- WR-06: dedicated test-profile SecurityConfig slice (so OAuth filter chain is exercised under integration tests) — `.planning/todos/pending/2026-04-28-wr-06-test-profile-securityconfig-slice.md`
+- Apply `:?` fail-fast to `backend/worker/src/main/resources/application.yml:10` (CR-04 parity with api module) — `.planning/todos/pending/2026-04-28-worker-application-yml-fail-fast-parity.md`
 
 ### Blockers/Concerns
 
