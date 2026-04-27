@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-cleanup-gmail-registration-data
+      author: zeromail
+      comment: >-
+        Phase 01.5 D-A4 — collapse the two-leg google + google-gmail OAuth flow
+        into a single bundled-scope google registration. Drop any orphaned
+        oauth2_authorized_client rows that point at the deleted google-gmail
+        registration. Idempotent: 0 rows affected on a clean DB.
+      changes:
+        - delete:
+            tableName: oauth2_authorized_client
+            where: "client_registration_id = 'google-gmail'"
+      rollback:
+        - empty

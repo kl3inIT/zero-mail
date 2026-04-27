@@ -65,7 +65,7 @@ class OnboardingStepPersistenceTest extends PostgresContainerTest {
                     "sub-" + step.id(),
                     "user-" + step.id().toLowerCase() + "@example.test");
             // advanceTo enforces the forward-only invariant via weight() (post-Task-1);
-            // SIGNED_IN is the default so calling advanceTo(SIGNED_IN) is a no-op which is fine.
+            // GMAIL_CONNECTED is the entry state (Phase 01.5 D-B1 simplification).
             u.advanceTo(step);
             users.saveAndFlush(u);
         });

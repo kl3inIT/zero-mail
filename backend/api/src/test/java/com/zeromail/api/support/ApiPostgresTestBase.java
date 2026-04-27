@@ -43,8 +43,7 @@ public abstract class ApiPostgresTestBase {
         // (we never actually contact Google in tests).
         r.add("spring.security.oauth2.client.registration.google.client-id", () -> "test-google-client");
         r.add("spring.security.oauth2.client.registration.google.client-secret", () -> "test-google-secret");
-        r.add("spring.security.oauth2.client.registration.google-gmail.client-id", () -> "test-google-client");
-        r.add("spring.security.oauth2.client.registration.google-gmail.client-secret", () -> "test-google-secret");
+        // Phase 01.5: google-gmail registration deleted — single bundled google registration only.
         // Test-only AES-256 key (32 zero bytes, base64-encoded).
         r.add("zeromail.crypto.refresh-token-key-base64",
                 () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");

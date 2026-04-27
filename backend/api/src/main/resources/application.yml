@@ -26,15 +26,13 @@ spring:
           google:
             client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
             client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}
-            scope: openid, profile, email
+            scope:
+              - openid
+              - profile
+              - email
+              - https://www.googleapis.com/auth/gmail.modify
+              - https://www.googleapis.com/auth/gmail.settings.basic
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-          google-gmail:
-            provider: google
-            client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
-            client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}
-            scope: https://www.googleapis.com/auth/gmail.modify
-            redirect-uri: "{baseUrl}/oauth2/callback/gmail"
-            authorization-grant-type: authorization_code
         provider:
           google:
             authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
@@ -73,11 +71,6 @@ zeromail:
   crypto:
     # Prefer Secret Manager in deployed environments; fall back to local env var in dev/test.
     refresh-token-key-base64: ${REFRESH_TOKEN_KEY_BASE64:${sm://oauth-refresh-token-key-v1/versions/1:}}
-google:
-  revoke:
-    # Token revocation endpoint base URL (D-A3). Overridable via @DynamicPropertySource
-    # in tests so MockGoogleRevocationServer can stand in for the real Google endpoint.
-    base-url: https://oauth2.googleapis.com
 server:
   port: 8080
   servlet:
