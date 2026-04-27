@@ -13,7 +13,7 @@ logstashLogback = "8.0"
 googleAuthLibrary = "1.35.0"
 gmailApi = "v1-rev20250331-2.0.0"
 testcontainers = "1.21.3"
-springdoc = "2.8.6"
+springdoc = "3.0.3"
 jsoup = "1.22.2"
 
 [libraries]
