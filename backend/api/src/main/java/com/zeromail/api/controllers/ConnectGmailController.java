@@ -10,8 +10,10 @@ import jakarta.servlet.http.HttpServletResponse;
 @RestController
 public class ConnectGmailController {
 
+    // INFO-8: POST verb locked — frontend ReconnectPrompt uses <form method="post">.
     @PostMapping("/tenant/connect-gmail")
     public void connect(HttpServletResponse res) throws IOException {
-        res.sendRedirect("/oauth2/authorization/google-gmail");
+        // D-A5: reconnect path forces prompt=consent via resolver signal parameter.
+        res.sendRedirect("/oauth2/authorization/google?reconnect=true");
     }
 }

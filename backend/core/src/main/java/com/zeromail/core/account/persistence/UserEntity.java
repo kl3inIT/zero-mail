@@ -23,7 +23,7 @@ public class UserEntity extends AbstractTenantOwnedEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "onboarding_step", nullable = false)
-    private OnboardingStep onboardingStep = OnboardingStep.SIGNED_IN;
+    private OnboardingStep onboardingStep = OnboardingStep.GMAIL_CONNECTED;
 
     @Column(name = "preferred_language", length = 2, nullable = false)
     private String preferredLanguage = "vi";

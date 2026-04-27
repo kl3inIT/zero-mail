@@ -32,7 +32,8 @@ class OnboardingStateMachineTest extends ApiPostgresTestBase {
 
         ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() -> {
             var u = users.save(new UserEntity(UUID.randomUUID(), tenantId, "gs-x", "x@example.com"));
-            assertThat(u.getOnboardingStep()).isEqualTo(OnboardingStep.SIGNED_IN);
+            // Phase 01.5 D-B1: entry state is GMAIL_CONNECTED (SIGNED_IN dropped)
+            assertThat(u.getOnboardingStep()).isEqualTo(OnboardingStep.GMAIL_CONNECTED);
 
             onboarding.selectTemplate(new SelectTemplateRequest("archive-receipts"));
             assertThat(users.findById(u.getId()).orElseThrow().getOnboardingStep())
