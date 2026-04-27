@@ -17,6 +17,16 @@ type TemplateKey = 'archive-receipts' | 'label-newsletters' | 'pin-calendar';
 /**
  * /onboarding (client). Phase 01.5 Plan 02 — deflated from PageShell/SectionCard/
  * StatusAlert to raw shadcn primitives (D-C1, D-C2).
+ * Phase 01.5 Plan 04 — visual polish via frontend-design skill (D-D1).
+ *
+ * Design intent (Plan 04):
+ *  - Loading fallback: text-sm muted-foreground with leading-relaxed — calmer
+ *    than the prior inline <p> without styling.
+ *  - GMAIL_CONNECTED step: CardDescription text-sm leading-relaxed for
+ *    better scanability; TemplateCard grid gap-4 for breathing room.
+ *  - CTA button: w-full, disabled state visually clear via disabled:opacity-50
+ *    (native disabled attribute on <button> triggers Tailwind's disabled: variant).
+ *  - TEMPLATE_SELECTED step: CardHeader with heading, CTA prominent w-full.
  *
  * Deleted (Plan 01 backend no longer emits these):
  *  - useSearchParams + ERROR_KEY_MAP + handleRetry (mismatch flow removed)
@@ -39,7 +49,7 @@ export default function OnboardingPage() {
   if (!me.data) {
     return (
       <main className="mx-auto max-w-3xl space-y-6 p-6">
-        <p>{t('onboarding.loading')}</p>
+        <p className="text-muted-foreground text-sm leading-relaxed">{t('onboarding.loading')}</p>
       </main>
     );
   }
@@ -65,17 +75,17 @@ export default function OnboardingPage() {
   ];
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-6">
-      <p className="text-muted-foreground text-sm">{t('common.loadingApp')}</p>
-
+    <main className="mx-auto max-w-3xl space-y-8 p-6">
       {step === 'GMAIL_CONNECTED' && (
         <Card>
           <CardHeader>
             <CardTitle>{t('onboarding.template.heading')}</CardTitle>
-            <CardDescription>{t('onboarding.template.body')}</CardDescription>
+            <CardDescription className="leading-relaxed">
+              {t('onboarding.template.body')}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4">
+            <div className="flex flex-col gap-4">
               {templates.map((tpl) => (
                 <TemplateCard
                   key={tpl.key}
@@ -90,7 +100,7 @@ export default function OnboardingPage() {
                 type="button"
                 disabled={!selected || selectMut.isPending}
                 onClick={() => selected && selectMut.mutate({ templateKey: selected })}
-                className={cn(buttonVariants())}
+                className={cn(buttonVariants(), 'mt-2 w-full')}
               >
                 {selectMut.isPending ? t('common.loading') : t('onboarding.template.saveCta')}
               </button>
@@ -108,7 +118,7 @@ export default function OnboardingPage() {
             <button
               type="button"
               onClick={() => completeMut.mutate()}
-              className={cn(buttonVariants())}
+              className={cn(buttonVariants(), 'w-full')}
             >
               {t('onboarding.completion.cta')}
             </button>
@@ -116,7 +126,9 @@ export default function OnboardingPage() {
         </Card>
       )}
 
-      {step === 'COMPLETE' && <p>{t('onboarding.loading')}</p>}
+      {step === 'COMPLETE' && (
+        <p className="text-muted-foreground text-sm">{t('onboarding.loading')}</p>
+      )}
     </main>
   );
 }

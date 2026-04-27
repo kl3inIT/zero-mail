@@ -11,7 +11,14 @@ import { useTenantStatus } from '@/features/gmail/hooks/useTenantStatus';
 import { useDisconnectGmail } from '@/features/gmail/hooks/useDisconnectGmail';
 import { useDeleteAccount } from '@/features/account/hooks/useDeleteAccount';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { getApiUrl } from '@/lib/api/base-url';
 
@@ -20,6 +27,19 @@ import type { AppLocale } from '@/i18n/routing';
 /**
  * /settings (client). Phase 01.5 Plan 02 — deflated from PageShell/SectionCard
  * to raw shadcn Card chains (D-C1, D-C2).
+ * Phase 01.5 Plan 04 — visual polish via frontend-design skill (D-D1).
+ *
+ * Design intent (Plan 04):
+ *  - Section rhythm: max-w-2xl (tighter than max-w-3xl for form-heavy pages),
+ *    space-y-4 between cards (tighter than space-y-6 — settings feel dense, not airy).
+ *  - Language card: added CardHeader + CardTitle for consistent section heading
+ *    hierarchy with other sections.
+ *  - gmailConnection CardFooter: text-xs (down from text-sm) to subordinate the
+ *    single-account note clearly below the connection status content.
+ *  - Privacy section: CardDescription for intro line, list remains as items.
+ *  - dangerZone: border-destructive/40 (up from /30) — clearer visual separation
+ *    without using a filled background. Separator above provides gap.
+ *  - Danger zone actions: flex-wrap gap-3, kept as-is per existing behavior.
  *
  * Five sections: account, language, gmailConnection (with CardFooter single-
  * account-note per D-D5), privacy, dangerZone. Separator preserved. All hooks,
@@ -39,54 +59,58 @@ export default function SettingsPage() {
   };
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-6">
+    <main className="mx-auto max-w-2xl space-y-4 p-6">
+      {/* Account */}
       <Card>
         <CardHeader>
           <CardTitle>{t('settings.account.heading')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>{me.data?.email ?? t('common.loading')}</p>
+          <p className="text-foreground text-sm">{me.data?.email ?? t('common.loading')}</p>
         </CardContent>
       </Card>
 
+      {/* Language */}
       <Card>
-        <CardContent className="pt-6">
+        <CardHeader className="pb-2">
+          <CardTitle>{t('settings.language.label')}</CardTitle>
+          <CardDescription>{t('settings.language.helper')}</CardDescription>
+        </CardHeader>
+        <CardContent>
           <LanguageSwitcher currentLocale={preferredLanguage} authenticated={true} variant="row" />
         </CardContent>
       </Card>
 
+      {/* Gmail connection */}
       <Card>
         <CardHeader>
           <CardTitle>{t('settings.gmailConnection.heading')}</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <div className="flex items-center gap-3">
             <ConnectionHealthBadge status={connStatus} />
           </div>
-          {connStatus === 'DISCONNECTED' && (
-            <div className="mt-3">
-              <ReconnectPrompt onReconnect={reconnect} />
-            </div>
-          )}
+          {connStatus === 'DISCONNECTED' && <ReconnectPrompt onReconnect={reconnect} />}
           {connStatus === 'NOT_CONNECTED' && (
-            <form method="post" action={getApiUrl('/tenant/connect-gmail')} className="mt-3">
+            <form method="post" action={getApiUrl('/tenant/connect-gmail')}>
               <Button type="submit">{t('onboarding.connect.cta')}</Button>
             </form>
           )}
         </CardContent>
         <CardFooter>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-xs">
             {t('settings.gmailConnection.singleAccountNote')}
           </p>
         </CardFooter>
       </Card>
 
+      {/* Privacy */}
       <Card>
         <CardHeader>
           <CardTitle>{t('settings.privacy.heading')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <ul className="list-disc pl-5 text-sm">
+          <ul className="text-muted-foreground space-y-1.5 text-sm">
             <li>{t('settings.privacy.noBodyStorage')}</li>
             <li>{t('settings.privacy.noAutoSend')}</li>
             <li>{t('settings.privacy.revokeAnytime')}</li>
@@ -97,9 +121,11 @@ export default function SettingsPage() {
 
       <Separator />
 
-      <Card className="border-destructive/30">
+      {/* Danger zone */}
+      <Card className="border-destructive/40">
         <CardHeader>
-          <CardTitle>{t('settings.dangerZone.heading')}</CardTitle>
+          <CardTitle className="text-destructive">{t('settings.dangerZone.heading')}</CardTitle>
+          <CardDescription>{t('deleteAccount.body')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-3">

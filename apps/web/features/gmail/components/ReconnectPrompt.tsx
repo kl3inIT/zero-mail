@@ -2,15 +2,22 @@
 
 import { useTranslations } from 'next-intl';
 
-import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 /**
  * ReconnectPrompt — Phase 01.5 Plan 02 deflation (D-C1, D-C2, D-C3).
+ * Phase 01.5 Plan 04 — visual polish via frontend-design skill (D-D1).
  *
  * Replaces StatusAlert variant=warn with raw <Alert variant="warning">.
  * Token-aware classes only — no hardcoded amber literals (closes REVIEW.md §6).
+ *
+ * Design intent (Plan 04):
+ *  - AlertTitle: short subject line ("Google access revoked") — scannable.
+ *  - AlertDescription: full sentence body from connectionHealth.reconnectPrompt
+ *    i18n key, text-sm — read at leisure after title.
+ *  - AlertAction: reconnect button outline/sm — secondary to the alert message.
  *
  * Plain DOM <button> pattern preserved (STATE.md line 153 — vitest @base-ui
  * useRef null-dispatcher boundary).
@@ -19,7 +26,8 @@ export function ReconnectPrompt({ onReconnect }: { onReconnect: () => void }) {
   const t = useTranslations();
   return (
     <Alert variant="warning">
-      <AlertTitle>{t('connectionHealth.reconnectPrompt')}</AlertTitle>
+      <AlertTitle>{t('connectionHealth.disconnected')}</AlertTitle>
+      <AlertDescription>{t('connectionHealth.reconnectPrompt')}</AlertDescription>
       <AlertAction>
         <button
           type="button"
