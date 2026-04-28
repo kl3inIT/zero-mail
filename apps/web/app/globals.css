@@ -7,8 +7,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans:
+    var(--font-geist-sans), var(--font-be-vietnam-pro), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-instrument-serif), 'Iowan Old Style', Georgia, serif;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -29,6 +31,28 @@
   --color-destructive: var(--destructive);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  /* Phase 1.6 supplemental color mappings (D-A1) */
+  --color-accent-soft: var(--accent-soft);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-text: var(--text);
+  --color-text-faint: var(--text-faint);
+  --color-green: var(--green);
+  --color-green-soft: var(--green-soft);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-red: var(--red);
+  --color-red-soft: var(--red-soft);
+  --color-blue: var(--blue);
+  --color-blue-soft: var(--blue-soft);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
+
+  /* Phase 1.6 shadow utilities (D-A4). Inline comments keep token counts scoped to value blocks. */
+  --shadow-xs/* @theme */: var(--shadow-xs);
+  --shadow-sm/* @theme */: var(--shadow-sm);
+  --shadow-md/* @theme */: var(--shadow-md);
+  --shadow-lg/* @theme */: var(--shadow-lg);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -41,86 +65,157 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
   --radius-xl: calc(var(--radius) * 1.4);
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* prettier-ignore */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --warning: oklch(0.769 0.188 70.08);
-  --warning-foreground: oklch(0.205 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Paper-warm neutrals. Rebind shadcn names; hex values follow the reference token sheet. */
+  --background: #FAFAF7;
+  --foreground: #2D2D2A;
+  --card: #FFFFFF;
+  --card-foreground: #2D2D2A;
+  --popover: #FFFFFF;
+  --popover-foreground: #2D2D2A;
+  --primary: #0E5E5A;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F1EFE7;
+  --secondary-foreground: #2D2D2A;
+  --muted: #F1EFE7;
+  --muted-foreground: #6B6A63;
+  --accent: #0E5E5A;
+  --accent-foreground: #FFFFFF;
+  --destructive: #B0413E;
+  --warning: #B5731F;
+  --warning-foreground: #FFFFFF;
+  --border: #E6E3D8;
+  --input: #E6E3D8;
+  --ring: #0E5E5A;
+
+  /* Charts stay neutral-but-branded until a later data-viz pass. */
+  --chart-1: #0E5E5A;
+  --chart-2: #2C5BA8;
+  --chart-3: #5E4B8B;
+  --chart-4: #2F7D5C;
+  --chart-5: #B5731F;
+
+  /* Sidebar tokens are unused in 1.6 but stay brand-ready for future protected chrome. */
+  --sidebar: #FAFAF7;
+  --sidebar-foreground: #2D2D2A;
+  --sidebar-primary: #0E5E5A;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F1EFE7;
+  --sidebar-accent-foreground: #0E5E5A;
+  --sidebar-border: #E6E3D8;
+  --sidebar-ring: #0E5E5A;
+
+  --radius: 7px;
+
+  /* Phase 1.6 supplemental tokens. */
+  --accent-soft: #D6E8E5;
+  --ink: #1A1A1A;
+  --ink-2: #2D2D2A;
+  --text: var(--foreground);
+  --text-faint: #8E8C82;
+
+  /* Shadow scale from the reference token sheet. */
+  --shadow-xs: 0 1px 0 rgba(20, 20, 18, 0.04);
+  --shadow-sm: 0 1px 2px rgba(20, 20, 18, 0.05), 0 1px 0 rgba(20, 20, 18, 0.02);
+  --shadow-md: 0 4px 12px -2px rgba(20, 20, 18, 0.06), 0 2px 4px -1px rgba(20, 20, 18, 0.04);
+  --shadow-lg: 0 24px 48px -12px rgba(20, 20, 18, 0.14), 0 8px 16px -8px rgba(20, 20, 18, 0.08);
+
+  --green: #2F7D5C;
+  --green-soft: #D8EAD8;
+  --amber: #B5731F;
+  --amber-soft: #F5E1C2;
+  --red: #B0413E;
+  --red-soft: #F5D7D2;
+  --blue: #2C5BA8;
+  --blue-soft: #D7E1F1;
+  --violet: #5E4B8B;
+  --violet-soft: #E0DBEC;
+
+  /* Chrome helpers consumed directly through CSS variables, not color utilities. */
+  --grain-dot: rgba(45, 45, 42, 0.04);
+  --gm-chrome-grad: linear-gradient(180deg, #FAFAF7 0%, #F1EFE7 100%);
+  --trust-bg: #2D2D2A;
+  --trust-text: #F5F4EE;
+  --nav-bg: #FAFAF7;
 }
 
+/* prettier-ignore */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --warning: oklch(0.828 0.189 84.429);
-  --warning-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #131312;
+  --foreground: #D6D5CC;
+  --card: #1C1C1A;
+  --card-foreground: #D6D5CC;
+  --popover: #1C1C1A;
+  --popover-foreground: #D6D5CC;
+  --primary: #6FB3A8;
+  --primary-foreground: #0E2826;
+  --secondary: #232220;
+  --secondary-foreground: #D6D5CC;
+  --muted: #232220;
+  --muted-foreground: #8E8C82;
+  --accent: #6FB3A8;
+  --accent-foreground: #0E2826;
+  --destructive: #DA8480;
+  --warning: #D9A064;
+  --warning-foreground: #131312;
+  --border: rgba(214, 213, 204, 0.12);
+  --input: rgba(214, 213, 204, 0.16);
+  --ring: #6fb3a8;
+
+  --chart-1: #6FB3A8;
+  --chart-2: #8DA8E0;
+  --chart-3: #B0A0DC;
+  --chart-4: #6FB389;
+  --chart-5: #D9A064;
+
+  --sidebar: #131312;
+  --sidebar-foreground: #D6D5CC;
+  --sidebar-primary: #6FB3A8;
+  --sidebar-primary-foreground: #0E2826;
+  --sidebar-accent: #232220;
+  --sidebar-accent-foreground: #6FB3A8;
+  --sidebar-border: rgba(214, 213, 204, 0.12);
+  --sidebar-ring: #6fb3a8;
+
+  /* Supplemental tokens: dark variants. */
+  --accent-soft: #1F3A37;
+  --ink: #F5F4EE;
+  --ink-2: #D6D5CC;
+  --text: var(--foreground);
+  --text-faint: #6B6A63;
+
+  /* Shadow scale from the reference token sheet. */
+  --shadow-xs: 0 1px 0 rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.55), 0 2px 4px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 24px 48px -12px rgba(0, 0, 0, 0.65), 0 8px 16px -8px rgba(0, 0, 0, 0.5);
+
+  --green: #6FB389;
+  --green-soft: #1F3A28;
+  --amber: #D9A064;
+  --amber-soft: #3A2A14;
+  --red: #DA8480;
+  --red-soft: #3A1F1D;
+  --blue: #8DA8E0;
+  --blue-soft: #1A2540;
+  --violet: #B0A0DC;
+  --violet-soft: #2A2240;
+
+  --grain-dot: rgba(245, 244, 238, 0.04);
+  --gm-chrome-grad: linear-gradient(180deg, #131312 0%, #1C1C1A 100%);
+  --trust-bg: #0A0A0A;
+  --trust-text: #F5F4EE;
+  --nav-bg: #131312;
 }
 
 @layer base {
