@@ -69,6 +69,24 @@ const EN_SCAN_FILES = [
   'features/gmail/components/ReconnectPrompt.tsx',
   'features/account/components/DeleteAccountDialog.tsx',
   'i18n/components/LanguageSwitcher.tsx',
+  // Phase 1.6 additions — landing + auth chrome + onboarding split + legal stubs
+  'app/(public)/terms/page.tsx',
+  'app/(public)/privacy/page.tsx',
+  'app/(protected)/onboarding/gmail-connect/page.tsx',
+  'app/(protected)/onboarding/template-select/page.tsx',
+  'app/(protected)/onboarding/complete/page.tsx',
+  'features/landing/components/TopBar.tsx',
+  'features/landing/components/Footer.tsx',
+  'features/landing/components/Hero.tsx',
+  'features/landing/components/HowItWorks.tsx',
+  'features/landing/components/Features.tsx',
+  'features/landing/components/TrustPillars.tsx',
+  'features/landing/components/ThemeToggle.tsx',
+  'features/landing/components/ZMLogoMark.tsx',
+  'features/auth/components/AuthTopBar.tsx',
+  'features/auth/components/TrustPanel.tsx',
+  'features/auth/components/LegalFooter.tsx',
+  'features/auth/components/StepIndicator.tsx',
 ];
 
 // -----------------------------------------------------------------------------
@@ -299,7 +317,11 @@ function scanFileForEnglishProse(absPath: string, relPath: string): string[] {
   try {
     src = readFileSync(absPath, 'utf8');
   } catch {
-    return [`[en-scanner] cannot read ${relPath} (file missing)`];
+    // File does not yet exist — silently skip.
+    // Wave 0 adds future-implementation paths to EN_SCAN_FILES before those files
+    // are created; the scanner should only report when prose appears, not when
+    // the file is absent (Phase 1.6 T-1.6-00-01 + PLAN.md §"Task 0.3 action").
+    return [];
   }
   const failures: string[] = [];
   const lines = src.split(/\r?\n/);

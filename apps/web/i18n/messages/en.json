@@ -16,11 +16,267 @@
     "retry": "Try action again",
     "savingLanguage": "Updating language preference..."
   },
+  "nav": {
+    "logoLabel": "Zero Mail home",
+    "themeToLight": "Switch to light mode",
+    "themeToDark": "Switch to dark mode",
+    "languageSelector": "Language",
+    "beta": "beta",
+    "how": "How it works",
+    "features": "Features",
+    "rules": "Example rules",
+    "trust": "Trust & safety",
+    "waitlist": "Join the waitlist",
+    "signIn": "Sign in",
+    "continueSetup": "Continue setup",
+    "openApp": "Open app",
+    "onboardingProgress": "Onboarding progress"
+  },
+  "footer": {
+    "copyright": "© 2026 Zero Mail",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "tagline": "AI auto-triage you can trust with your real inbox. Built for Gmail, by a small team in Brooklyn & Berlin.",
+    "product": "Product",
+    "company": "Company",
+    "legal": "Legal",
+    "about": "About",
+    "changelog": "Changelog",
+    "careers": "Careers",
+    "contact": "Contact",
+    "security": "Security",
+    "dpa": "DPA",
+    "status": "All systems normal",
+    "version": "v1.0 · Gmail"
+  },
   "landing": {
-    "heading": "Zero Mail",
-    "tagline": "AI auto-triage for Gmail. This page is being finalized.",
+    "heading": {
+      "line1": "Inbox zero,",
+      "line2": "without handing AI",
+      "accent": "the send button."
+    },
+    "tagline": "Zero Mail triages your Gmail with rules you write in plain English — labels what matters, archives what doesn't, drafts the easy replies. You stay in the loop on everything that goes out.",
     "primaryCta": "Sign in",
-    "continueSetupCta": "Continue setup"
+    "waitlistCta": "Join the waitlist",
+    "secondaryCta": "See how it works",
+    "continueSetupCta": "Continue setup",
+    "eyebrow": "Gmail · Private beta · v1",
+    "bullets": {
+      "noAutoSend": "No auto-send",
+      "readOnlyPrompts": "Read-only AI prompts",
+      "reversibleActions": "Reversible actions"
+    },
+    "peek": {
+      "eyebrow": "Next · How it works",
+      "title": "Three steps to reach inbox zero — connect, describe, review.",
+      "link": "Read the walkthrough"
+    }
+  },
+  "how": {
+    "eyebrow": "How it works",
+    "title": "Three steps. No new inbox to learn.",
+    "desc": "Zero Mail runs inside your existing Gmail. Connect once, describe how you want your inbox handled in plain English, and watch the queue.",
+    "step1": {
+      "title": "Connect Gmail",
+      "desc": "Sign in with Google. Zero Mail uses scoped Gmail permissions — never your password — and you can revoke access at any time.",
+      "connected": "Connected",
+      "scope": "Read & modify scope · revoke anytime in Google account"
+    },
+    "step2": {
+      "title": "Write rules in plain English",
+      "desc": "Describe what should be archived, labeled, or drafted. No filters, no boolean operators — just sentences like you'd give to an assistant.",
+      "example": "Archive newsletters and receipts under $500",
+      "parsed": "Parsed · ready to test on last 7 days"
+    },
+    "step3": {
+      "title": "Review the triage queue",
+      "desc": "Every action is logged and reversible. Approve drafts before they go out. Nothing is ever sent on your behalf."
+    },
+    "audit": {
+      "archived": "archived",
+      "labeled": "labeled",
+      "drafted": "drafted",
+      "skipped": "skipped",
+      "r1": "Stripe receipt — matched \"receipts\"",
+      "r2": "Maya R. → Investors",
+      "r3": "reply to Alex C. (not sent)",
+      "r4": "Priya A. — \"keep in inbox\""
+    }
+  },
+  "feat": {
+    "eyebrow": "What you get",
+    "title": "The boring features your inbox actually needs.",
+    "desc": "No agents. No multi-step workflows. Five tools that quietly remove decisions from your morning.",
+    "labels": {
+      "title": "AI labels",
+      "body": "Zero Mail reads each message and applies the right Gmail label — investors, customer, receipts, recruiters — based on the rules you wrote, not a fixed taxonomy."
+    },
+    "archive": {
+      "title": "Archive suggestions",
+      "body": "Low-value mail is staged for archive with a one-line reason. Approve in bulk or let high-confidence matches archive automatically."
+    },
+    "draft": {
+      "title": "Draft replies",
+      "body": "Drafts are written in your tone and saved straight to Gmail's drafts folder. You read every word before anything ships.",
+      "head": "draft.zeromail · not sent",
+      "ready": "ready",
+      "to": "To",
+      "subject": "Subject",
+      "subjectVal": "Re: Following up after our call",
+      "bodyText": "Thanks Alex — really enjoyed the conversation too. I'd be glad to share the deck format you mentioned. Wednesday at 2pm Pacific work for a follow-up?",
+      "edit": "Edit",
+      "open": "Open in Gmail"
+    },
+    "tester": {
+      "title": "Rule testing",
+      "body": "Before a rule goes live, dry-run it against your last 7 or 30 days of mail. See exactly what would have been archived, labeled, or drafted — with no side effects.",
+      "prompt": "test rule>",
+      "input": "archive newsletters and receipts under $500",
+      "r1": "receipt",
+      "r2": "newsletter",
+      "r3": "invoice",
+      "archive": "archive",
+      "keep": "keep",
+      "over": "(over $500)",
+      "more": "7 more matches..."
+    },
+    "audit": {
+      "title": "Audit trail",
+      "body": "Every action — archive, label, draft, skip — is logged with the rule that triggered it and a one-click undo. 90 days of history. Exportable as CSV."
+    },
+    "f1": {
+      "title": "Plain-English rules",
+      "desc": "Write triage logic the way you'd describe it to a teammate. We compile it into structured matchers."
+    },
+    "f2": {
+      "title": "BYOK ready",
+      "desc": "Use OpenRouter routing or plug in your own OpenAI / Anthropic key. Your wallet, your keys."
+    },
+    "f3": {
+      "title": "Auditable trail",
+      "desc": "Every automated label, archive, or draft is logged with the rule that fired and the message it touched."
+    },
+    "f4": {
+      "title": "Vietnamese-first",
+      "desc": "Native VI / EN bilingual UI. Write rules in either language; we triage either way."
+    },
+    "f5": {
+      "title": "No auto-send",
+      "desc": "Zero Mail labels, archives, and saves drafts. It will never send a message without your review."
+    },
+    "f6": {
+      "title": "Revoke any time",
+      "desc": "Disconnect Gmail or delete your account from Settings. Tokens deleted immediately."
+    }
+  },
+  "rules": {
+    "eyebrow": "Example rules",
+    "title": "Sentences, not filters.",
+    "desc": "Five rules cover most professional inboxes. Each one is editable, testable, and reversible.",
+    "tabs": {
+      "newsletters": "Newsletters & receipts",
+      "investors": "Investor follow-ups",
+      "customer": "Customer escalations",
+      "recruiters": "Recruiters",
+      "calendar": "Calendar invites"
+    },
+    "ruleN": "Rule 1 of 5",
+    "exampleQuote": "\"Archive newsletters, marketing, and receipts unless a charge is over $500 or it's a refund.\"",
+    "r1": {
+      "a1": "stripe.com — $48 receipt",
+      "a2": "linkedin.com — weekly digest",
+      "a3": "square.com — $612 receipt",
+      "a4": "amex.com — refund notice"
+    },
+    "q": {
+      "plain": "plain English",
+      "tested": "tested on 7 days",
+      "undo": "undo enabled"
+    },
+    "parses": {
+      "title": "How it parses",
+      "body": "Zero Mail extracts intents (archive, label, draft, notify), entities (newsletter, receipt), and conditions (amount, sender, thread state). It never touches mail that doesn't match."
+    },
+    "dryrun": "Last 7 days · dry run",
+    "matches": "4 matches"
+  },
+  "action": {
+    "archive": "archive",
+    "label": "label",
+    "draft": "draft",
+    "keep": "keep",
+    "notify": "notify",
+    "alert": "alert"
+  },
+  "cta": {
+    "eyebrow": "Early access",
+    "title": {
+      "a": "Reach inbox zero",
+      "b": "without the anxiety."
+    },
+    "desc": "Join the waitlist. We're onboarding 50 founders and operators a week, in order. You'll get an invite to set up Zero Mail with your real Gmail account.",
+    "emailPlaceholder": "you@company.com",
+    "button": "Join the waitlist",
+    "b1": "Free during beta",
+    "b2": "No card required",
+    "b3": "Unsubscribe in one click",
+    "stats": {
+      "s1": "on the waitlist",
+      "s2": "invites going out",
+      "s3": "avg inbox reduction",
+      "s4": "emails auto-sent"
+    },
+    "note": {
+      "title": "Gmail-only · v1",
+      "body": "We're going deep on Gmail before adding Outlook or IMAP. If you live in another inbox, leave your email and we'll let you know when we expand."
+    }
+  },
+  "trust": {
+    "eyebrow": "Trust & safety",
+    "title": {
+      "a": "Your inbox stays yours.",
+      "b": "Always."
+    },
+    "authTitle": "Three promises, in writing.",
+    "desc": "Auto-triage only works if you can fully trust it with a real inbox. We engineered Zero Mail around three hard guarantees — and made every one of them auditable.",
+    "badges": {
+      "soc": "SOC 2 in progress",
+      "casa": "Google CASA tier 2",
+      "regions": "EU + US regions"
+    },
+    "proof": {
+      "audit": "Open audit log",
+      "scopes": "View Gmail scopes",
+      "revoke": "Revoke from Google"
+    },
+    "c1": {
+      "title": "No auto-send. Ever.",
+      "body": "Drafts land in Gmail's drafts folder. You read, edit, and hit send. There is no setting that lets the AI deliver mail on your behalf."
+    },
+    "c2": {
+      "title": "Nothing is stored long-term.",
+      "body": "Raw email bodies, LLM prompts, completions, and embeddings are discarded after each triage run. Only metadata and your audit log persist."
+    },
+    "c3": {
+      "title": "Sanitized before AI sees it.",
+      "body": "Bodies are stripped of attachments, signatures, and quoted history, then truncated to a token budget before any model call."
+    },
+    "c4": {
+      "title": "Every action is reversible.",
+      "body": "Pause triage with one click. Undo any archive, label, or draft from a complete audit trail going back 90 days."
+    },
+    "p1": {
+      "title": "Drafts only — never auto-send",
+      "body": "Zero Mail never sends a message on your behalf. Replies sit in your Gmail Drafts folder until you press Send."
+    },
+    "p2": {
+      "title": "We don't store email bodies",
+      "body": "Your messages stay in Gmail. We process them in memory to apply your rules, then keep only the headers and an action log."
+    },
+    "p3": {
+      "title": "Revoke access anytime",
+      "body": "Disconnect from inside Zero Mail or directly from your Google Account. We delete your data within 24 hours."
+    }
   },
   "docs": {
     "indexHeading": "Docs",
@@ -33,12 +289,40 @@
       "body": "This document could not be found. Return to the docs list."
     }
   },
+  "legal": {
+    "terms": {
+      "body": "By clicking continue, you agree to our <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",
+      "placeholderTitle": "Terms of Service",
+      "placeholderBody": "Real legal content will land in Phase 6 launch hardening. This stub exists so the legal-footer link target resolves and Google OAuth verification (CASA) requirements are unblocked."
+    },
+    "privacy": {
+      "placeholderTitle": "Privacy Policy",
+      "placeholderBody": "Real privacy policy content will land in Phase 6 launch hardening. PROJECT.md describes the binding privacy contract: no long-term storage of email content, prompts, completions, or embeddings."
+    },
+    "googleApiPolicy": {
+      "body": "Zero Mail's use and transfer of information received from Google APIs to any other app will adhere to <link>Google API Services User Data</link> Policy, including the Limited Use requirements."
+    }
+  },
   "auth": {
+    "backToSite": "Back to site",
+    "help": "Help",
+    "everywhere": "End-to-end · SOC 2 Type II in progress",
     "login": {
       "title": "Sign in",
       "headline": "Reach inbox zero without giving up control.",
-      "body": "Zero Mail connects to Gmail so you can set safe, reviewable automation rules. This phase only stores your account, connection, and onboarding choices.",
-      "googleButton": "Sign in with Google",
+      "headlineA": "Welcome back to",
+      "headlineB": "your inbox.",
+      "body": "Zero Mail connects to Gmail with your permission. We never auto-send, and you can revoke access from Google in two clicks.",
+      "googleButton": "Continue with Google",
+      "googleNote": "We'll redirect you to Google to grant access.",
+      "divider": "or",
+      "workEmail": "Sign in with work email",
+      "termsPrefix": "By signing in you agree to our",
+      "terms": "Terms",
+      "termsAnd": "and",
+      "privacy": "Privacy Policy",
+      "newUser": "First time here?",
+      "waitlist": "Join the waitlist →",
       "safety": {
         "noAutoSend": "No auto-send",
         "noLongTermStorage": "No long-term email body storage",
@@ -56,21 +340,61 @@
       }
     }
   },
+  "permissions": {
+    "title": "What you'll grant",
+    "minimum": "3 scopes · minimum",
+    "intro": "Google will ask you to approve the following Gmail scopes. Each one is the minimum required for a feature you control.",
+    "r1": {
+      "title": "Read messages and labels",
+      "body": "Used to apply your rules. Bodies are processed in memory; we only keep headers and action history."
+    },
+    "r2": {
+      "title": "Modify labels and archive",
+      "body": "Used to label, archive, and unarchive — every action is reversible from your audit log."
+    },
+    "r3": {
+      "title": "Compose drafts",
+      "body": "Used to write drafts that wait in your Gmail Drafts folder. We do not have permission to send."
+    },
+    "notGranted": "We are not asking for: send, delete forever, or contacts."
+  },
   "onboarding": {
     "loading": "Loading setup...",
     "connect": {
-      "heading": "Connect Gmail to finish setup",
+      "eyebrow": "Step 1 — Connect",
+      "heading": "Gmail is connected.",
       "body": "Zero Mail needs a Gmail grant before later phases can watch, label, archive, or draft. You can revoke access anytime.",
-      "cta": "Connect Gmail"
+      "cta": "Connect Gmail",
+      "lastSync": "Last sync · just now",
+      "scopes": "3 scopes granted",
+      "callout": "Drafts only, never auto-send — replies wait in Gmail Drafts until you press Send."
     },
     "template": {
-      "heading": "Choose a starter template",
+      "eyebrow": "Step 2 — Starter rules",
+      "heading": "Pick a few starting points.",
       "body": "A starter template helps Zero Mail understand how you want your inbox handled. You can change it later in Settings.",
       "saveCta": "Save starter template"
     },
     "completion": {
       "heading": "You're ready. Open Settings to review your choices.",
+      "body": "Zero Mail is now watching your inbox in audit-only mode. Open the audit log anytime to see what it would have done.",
+      "nextTitle": "What happens next",
+      "next1": "Audit-only for 24 hours — actions are logged, not applied.",
+      "next2": "You'll get a daily summary at 8am local time.",
+      "next3": "Switch to live mode any time from Settings.",
       "cta": "Continue to settings"
+    },
+    "steps": {
+      "gmailConnect": {
+        "shortLabel": "Connect Gmail"
+      },
+      "templateSelect": {
+        "shortLabel": "Pick template"
+      },
+      "complete": {
+        "shortLabel": "Done"
+      },
+      "progressLabel": "Step {current} of {total}"
     }
   },
   "settings": {

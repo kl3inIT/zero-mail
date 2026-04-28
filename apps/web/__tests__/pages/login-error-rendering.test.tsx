@@ -45,6 +45,18 @@ vi.mock('@/i18n/components/LanguageSwitcher', () => ({
   LanguageSwitcher: () => null,
 }));
 
+vi.mock('@/features/auth/components/AuthTopBar', () => ({
+  default: ({ children }: { children?: React.ReactNode }) => <header>{children}</header>,
+}));
+
+vi.mock('@/features/auth/components/TrustPanel', () => ({
+  TrustPanel: () => <aside />,
+}));
+
+vi.mock('@/features/auth/components/LegalFooter', () => ({
+  LegalFooter: () => <footer />,
+}));
+
 // Mock next/headers (not used in login page directly but may be transitively loaded)
 vi.mock('next/headers', () => ({
   headers: vi.fn(async () => ({ get: vi.fn(() => null) })),

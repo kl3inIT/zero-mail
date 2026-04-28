@@ -1,4 +1,4 @@
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig, devices } from '@playwright/test';
 
 /**
  * Phase 1.1 Plan 07 — Playwright config (smoke-only).
@@ -15,26 +15,27 @@ import { defineConfig, devices } from "@playwright/test";
  *   locally (so `pnpm dev` in another terminal short-circuits the boot).
  */
 export default defineConfig({
-    testDir: "./__tests__/e2e",
-    fullyParallel: true,
-    forbidOnly: !!process.env.CI,
-    retries: process.env.CI ? 2 : 0,
-    workers: process.env.CI ? 1 : undefined,
-    reporter: process.env.CI ? "github" : "list",
-    use: {
-        baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000",
-        trace: "retain-on-failure",
+  testDir: '.',
+  testMatch: ['__tests__/e2e/**/*.spec.ts', 'e2e/**/*.spec.ts'],
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: process.env.CI ? 'github' : 'list',
+  use: {
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',
+    trace: 'retain-on-failure',
+  },
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
     },
-    projects: [
-        {
-            name: "chromium",
-            use: { ...devices["Desktop Chrome"] },
-        },
-    ],
-    webServer: {
-        command: "pnpm dev",
-        url: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000",
-        reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
-    },
+  ],
+  webServer: {
+    command: 'pnpm dev',
+    url: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+  },
 });

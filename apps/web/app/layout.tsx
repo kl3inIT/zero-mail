@@ -1,29 +1,12 @@
 import type { Metadata } from 'next';
 import { cookies, headers } from 'next/headers';
-import { Geist, Geist_Mono } from 'next/font/google';
-import { NextIntlClientProvider } from 'next-intl';
-import { getLocale, getMessages, getTranslations } from 'next-intl/server';
-
-import { QueryProvider } from '@/lib/query-client';
+import { getLocale, getTranslations } from 'next-intl/server';
 
 import { getCurrentUserCached } from '@/features/account/api/me';
 import { routing } from '@/i18n/routing';
 import { getApiBase } from '@/lib/api/base-url';
 
 import './globals.css';
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  // Vietnamese diacritics render via the Latin Extended block, which the
-  // "latin" + "latin-ext" subsets cover (Geist does not expose a "vietnamese"
-  // subset directly). Accessibility contract: see UI-SPEC §"Bilingual copy".
-  subsets: ['latin', 'latin-ext'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
 
 /**
  * Localize <title> + <meta name="description"> via next-intl (UI-SPEC §"Routing
@@ -93,15 +76,12 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const themeValue = cookieStore.get('zm-theme')?.value;
+  const theme: 'light' | 'dark' = themeValue === 'dark' ? 'dark' : 'light';
   const cookieLocale = await getLocale();
   // Reassert from /me when authenticated; falls back to cookie when not.
   const locale = await reassertServerLocale(cookieLocale);
-  // If the locale changed, refetch messages for the new locale; otherwise reuse.
-  const messages =
-    locale === cookieLocale
-      ? await getMessages()
-      : ((await import(`../i18n/messages/${locale}.json`)).default as Record<string, unknown>);
-
   // Defensive guard: ensure routing.locales contains the resolved locale before
   // rendering (prevents "<html lang=invalid>" if /me ever returns a bad value).
   const safeLocale: (typeof routing.locales)[number] = (
@@ -111,15 +91,8 @@ export default async function RootLayout({
     : routing.defaultLocale;
 
   return (
-    <html
-      lang={safeLocale}
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="flex min-h-full flex-col">
-        <NextIntlClientProvider locale={safeLocale} messages={messages}>
-          <QueryProvider>{children}</QueryProvider>
-        </NextIntlClientProvider>
-      </body>
+    <html lang={safeLocale} className={`${theme === 'dark' ? 'dark' : ''} h-full antialiased`}>
+      <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );
 }

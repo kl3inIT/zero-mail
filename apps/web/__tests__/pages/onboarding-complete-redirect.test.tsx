@@ -37,6 +37,7 @@ vi.mock('@/features/onboarding/hooks/useCompleteOnboarding', () => ({
 }));
 
 import OnboardingPage from '@/app/(protected)/onboarding/page';
+import { CompleteClient } from '@/app/(protected)/onboarding/complete/CompleteClient';
 
 describe('/onboarding completion redirect', () => {
   it('redirects completed users to settings instead of staying on loading copy', async () => {
@@ -50,7 +51,7 @@ describe('/onboarding completion redirect', () => {
     onboardingStep = 'TEMPLATE_SELECTED';
     completeMutate.mockImplementationOnce((_variables, options) => options?.onSuccess?.());
 
-    render(<OnboardingPage />);
+    render(<CompleteClient />);
     fireEvent.click(screen.getByRole('button', { name: 'onboarding.completion.cta' }));
 
     expect(completeMutate).toHaveBeenCalled();

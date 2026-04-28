@@ -34,7 +34,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    include: ['__tests__/**/*.{test,spec}.{ts,tsx}'],
+    include: ['__tests__/**/*.{test,spec}.{ts,tsx}', 'test/**/*.{test,spec}.{ts,tsx}'],
     // Plan 07: Playwright spec lives under __tests__/e2e/ and uses its own
     // runner. Vitest must NOT try to load it (Playwright's `test()` throws
     // when called outside its runner).

@@ -50,6 +50,32 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [ ] 01-09-PLAN.md — FND-03 log-scrub synthetic-traffic test + CASA submission package + actuator probes
 **UI hint**: yes
 
+### Phase 01.6: Brand Identity, Design Tokens, and Landing Page (INSERTED)
+
+**Goal:** `apps/web` adopts the Zero Mail brand identity (Teal accent + Paper-warm neutrals + Earnest trust copy), exposes a demo-ready landing page at `/` with hero + how-it-works + features + trust-pillars sections, and reskins Phase 1.5 sign-in + onboarding surfaces to match the reference visual tone — without changing any backend integration, OAuth flow, or route contract.
+**Depends on:** Phase 1.5
+**Requirements**: see `.planning/phases/01.6-brand-identity-design-tokens-and-landing-page/01.6-SPEC.md` (9 phase-internal requirements: design tokens, typography stack, landing page sections, public layout shell, ZMLogoMark, Phase 1.5 reskin, theme cookie persistence, sign-in TrustPanel + legal footer, i18n VI/EN coverage)
+**Success Criteria** (what must be TRUE):
+  1. `/` renders 4 sections (Hero, HowItWorks 3 steps, Features, TrustPillars) on Teal-locked Paper-warm tokens; Lighthouse mobile + desktop ≥ 90 for Performance/Accessibility/Best-Practices; responsive from 320px viewport upward without horizontal scroll.
+  2. Geist Sans + Geist Mono + Be Vietnam Pro (Vietnamese subset) + Instrument Serif load via `next/font`; `font-sans`/`font-mono`/`font-serif` Tailwind utilities resolve correctly; Vietnamese diacritics render with correct glyphs.
+  3. `(auth)/login` shows TrustPanel + 2-column shell at desktop (≥768px), single-column form at mobile; legal footer (Terms / Privacy / Google API Limited Use disclosure) renders at every viewport beneath the OAuth button; bundled Google OAuth flow from Phase 1.5 D-A1 is unchanged.
+  4. Onboarding 3 screens (`gmail-connect`, `template-select`, `complete`) render with `<AuthTopBar>` + named-step pill `<StepIndicator>`; `OnboardingStep` enum + state machine + route paths unchanged.
+  5. Theme toggle persists via `zm-theme` cookie set by a Next 16 Server Action; first-paint HTML respects cookie value with no flash; no `localStorage` usage anywhere.
+  6. i18n parity: every visible string flows through `next-intl` keys; `apps/web/i18n/messages/{vi,en}.json` lock-step on new namespaces (`nav.*`, `trust.*`, `how.*`, `feat.*`, `legal.*`, `footer.*`, `onboarding.steps.*`); `pnpm i18n:check` passes.
+  7. `01.6-VISUAL-SWEEP.md` checklist proves Phase 1.5 components (Alert variant=warning, ReconnectPrompt, Login form, 3 onboarding cards) survive token swap — every row PASS for contrast WCAG AA, layout intact at 320/768/1024 px, focus ring visible, dark-mode renders, OAuth click path still ends at `/welcome` or correct onboarding step.
+**Plans:** 7/8 plans executed
+**Research flag**: COMPLETE — Tailwind 4 `@theme inline`, Next.js 16 `next/font` Vietnamese subset, Server Action cookie write, shadcn primitive token-rebind verified in 01.6-RESEARCH.md.
+
+Plans:
+- [x] 01.6-00-PLAN.md — Wave 0 test scaffolding (red specs + i18n scanner extension)
+- [x] 01.6-01-PLAN.md — Wave 1 design tokens (Teal + paper-warm + supplemental tokens + retuned radii/warning/destructive)
+- [x] 01.6-02-PLAN.md — Wave 1 typography stack (Be Vietnam Pro vietnamese subset + Instrument Serif)
+- [x] 01.6-03-PLAN.md — Wave 2 public layout shell (TopBar + Footer + ZMLogoMark + ThemeToggle + setTheme + cookie read)
+- [x] 01.6-04-PLAN.md — Wave 2 landing sections (Hero + HowItWorks + Features + TrustPillars + landing/how/feat/trust i18n)
+- [x] 01.6-05-PLAN.md — Wave 3 sign-in 2-col reskin (AuthTopBar + TrustPanel + LegalFooter) + /terms /privacy stubs
+- [x] 01.6-06-PLAN.md — Wave 3 onboarding 3-route split + StepIndicator + onboarding.steps.* i18n
+- [ ] 01.6-07-PLAN.md — Wave 4 visual sweep + Lighthouse audit + Phase 1.5 regression checklist
+
 ### Phase 1.1: Vietnamese-first i18n and error-handling foundation (INSERTED)
 **Goal**: Establish a Vietnamese-default, English-secondary i18n architecture across `backend/api`, `backend/core`, and `apps/web`, with a user-facing language switcher and a stable, frontend-localizable API error contract — referencing the local JHipster project's proven patterns where they fit Spring Boot 4 / Next.js 16. All Phase 1 privacy/safety constraints (no body/prompt/completion in logs, no PII in error payloads, tenant isolation via Scoped Values, ArchUnit bans) must remain intact.
 **Depends on**: Phase 1 (needs OpenAPI skeleton, Spring Security session cookie, log-scrub contract, and `apps/web` scaffold to land first)

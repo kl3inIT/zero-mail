@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: Phase 01.5 complete, ready to plan Phase 2A
-last_updated: "2026-04-28T10:26:24+07:00"
-last_activity: 2026-04-28
+status: "Phase 01.6 shipped — PR #16"
+stopped_at: Phase 01.6 verification complete
+last_updated: "2026-04-28T19:24:32.638Z"
+last_activity: 2026-04-29
 progress:
-  total_phases: 14
-  completed_phases: 9
-  total_plans: 49
-  completed_plans: 49
-  percent: 64
+  total_phases: 15
+  completed_phases: 8
+  total_plans: 58
+  completed_plans: 58
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 2A — Mail Ingestion
+**Current focus:** Phase 01.6 — brand-identity-design-tokens-and-landing-page
 
 ## Current Position
 
-Phase: 2A
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-04-28
+Phase: 01.6 (brand-identity-design-tokens-and-landing-page) — EXECUTING
+Plan: 7 of 8
+Status: Phase 01.6 shipped — PR #16
+Last activity: 2026-04-29
 
-Progress: [██████████] 100%
+Progress: [██████████] 98%
 
 ## Performance Metrics
 
@@ -89,6 +89,11 @@ Progress: [██████████] 100%
 | Phase 01.5 P07 | 11 | 2 tasks | 4 files |
 | Phase 01.5 P08 | 12min | 2 tasks | 4 files |
 | Phase 01.5 P09 | 24min | 2 tasks | 5 files |
+| Phase 01.6 P01 | 9min | 1 tasks | 2 files |
+| Phase 01.6 P02 | 16min | 1 tasks | 2 files |
+| Phase 01.6 P03 | 6min | 3 tasks | 10 files |
+| Phase 01.6 P05 | 18min | 3 tasks | 8 files |
+| Phase 01.6 P06 | 35min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -178,6 +183,13 @@ Recent decisions affecting current work:
 - [Phase ?]: token.getName() not req.getUserPrincipal() for removeAuthorizedClient: principal not in SecurityContext at throw sites; CR-02 fix
 - [Phase ?]: Plan 01.5-08: spring-cloud-gcp-starter-secretmanager + BOM removed -- CLAUDE.md No GCP hosting baseline lock now honored in build artifacts
 - [Phase ?]: Plan 01.5-08: REFRESH_TOKEN_KEY_BASE64 uses :? fail-fast -- missing env var gives clear startup error, no sm:// fallback
+- [Phase 01.6]: Plan 01: Theme tokens stay Teal-only for v1; no [data-accent] or multi-palette scope was added.
+- [Phase 01.6]: Plan 01: Chrome helper tokens remain direct CSS variables, not --color-* utilities, to avoid misleading gradient/overlay utility classes.
+- [Phase 01.6]: Plan 01: Prettier ignore markers are limited to :root and .dark token value blocks because the Wave 0 spec requires exact uppercase hex literals.
+- [Phase 01.6]: Plan 02: Keep production next/font/google loaders as direct module-scope const calls; Vitest specs mock next/font/google locally because Next/Turbopack rejects conditional font-loader wrappers.
+- [Phase 01.6]: Plan 02: Be Vietnam Pro ships with vietnamese+latin subsets and weights 400/500/600; Instrument Serif remains latin-only with normal+italic style.
+- [Phase 01.6]: 01.6-03: Theme persistence uses Server Action + zm-theme cookie only; no localStorage or client-side cookie writes.
+- [Phase 01.6]: 01.6-03: LanguageSwitcher variant compact was reused directly in public TopBar; no fork was needed.
 
 ### Roadmap Evolution
 
@@ -188,6 +200,7 @@ Recent decisions affecting current work:
 - Phase 1.4 inserted after Phase 1.3: Gmail Identity Semantics, Permission UX, and UI Consistency — align v1 auth so the Google login account IS the first managed Gmail account; treat initial Gmail access as incremental consent for that same account; reject mismatched initial Gmail OAuth callbacks; keep multi-account management as a later workspace-level capability (users add more Gmail accounts to a workspace); sweep UI consistency, visual polish, layout quality, copy, states, and reusable frontend patterns via the `frontend-design` skill (URGENT)
 - Phase 1.4 marked complete without `/gsd-ship` on 2026-04-27 because Phase 1.5 supersedes much of the remaining OAuth/UX cleanup value.
 - Phase 01.5 inserted after Phase 1.4: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep - Remaining heavy Phase 1.5 work: single Google OAuth upfront Gmail scope, remove google-gmail mismatch architecture, merge Gmail token provisioning, simplify onboarding/consent UX, deflate frontend primitives, polish landing/login/onboarding/settings/ReconnectPrompt, and close surviving REVIEW cleanup; excludes quick tasks already completed. (URGENT)
+- Phase 01.6 inserted after Phase 1: Brand Identity, Design Tokens, and Landing Page (URGENT)
 
 ### Pending Todos
 
@@ -229,6 +242,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-28T10:26:24+07:00
-Stopped at: Phase 01.5 complete, ready to plan Phase 2A
+Last session: 2026-04-28T14:49:13.559Z
+Stopped at: Phase 01.6 verification complete
 Resume file: None
