@@ -63,14 +63,14 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
   5. Theme toggle persists via `zm-theme` cookie set by a Next 16 Server Action; first-paint HTML respects cookie value with no flash; no `localStorage` usage anywhere.
   6. i18n parity: every visible string flows through `next-intl` keys; `apps/web/i18n/messages/{vi,en}.json` lock-step on new namespaces (`nav.*`, `trust.*`, `how.*`, `feat.*`, `legal.*`, `footer.*`, `onboarding.steps.*`); `pnpm i18n:check` passes.
   7. `01.6-VISUAL-SWEEP.md` checklist proves Phase 1.5 components (Alert variant=warning, ReconnectPrompt, Login form, 3 onboarding cards) survive token swap — every row PASS for contrast WCAG AA, layout intact at 320/768/1024 px, focus ring visible, dark-mode renders, OAuth click path still ends at `/welcome` or correct onboarding step.
-**Plans:** 3/8 plans executed
+**Plans:** 4/8 plans executed
 **Research flag**: COMPLETE — Tailwind 4 `@theme inline`, Next.js 16 `next/font` Vietnamese subset, Server Action cookie write, shadcn primitive token-rebind verified in 01.6-RESEARCH.md.
 
 Plans:
 - [x] 01.6-00-PLAN.md — Wave 0 test scaffolding (red specs + i18n scanner extension)
 - [x] 01.6-01-PLAN.md — Wave 1 design tokens (Teal + paper-warm + supplemental tokens + retuned radii/warning/destructive)
 - [x] 01.6-02-PLAN.md — Wave 1 typography stack (Be Vietnam Pro vietnamese subset + Instrument Serif)
-- [ ] 01.6-03-PLAN.md — Wave 2 public layout shell (TopBar + Footer + ZMLogoMark + ThemeToggle + setTheme + cookie read)
+- [x] 01.6-03-PLAN.md — Wave 2 public layout shell (TopBar + Footer + ZMLogoMark + ThemeToggle + setTheme + cookie read)
 - [ ] 01.6-04-PLAN.md — Wave 2 landing sections (Hero + HowItWorks + Features + TrustPillars + landing/how/feat/trust i18n)
 - [ ] 01.6-05-PLAN.md — Wave 3 sign-in 2-col reskin (AuthTopBar + TrustPanel + LegalFooter) + /terms /privacy stubs
 - [ ] 01.6-06-PLAN.md — Wave 3 onboarding 3-route split + StepIndicator + onboarding.steps.* i18n

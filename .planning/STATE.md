@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01.6-02-PLAN.md
-last_updated: "2026-04-28T09:35:42.855Z"
+stopped_at: Completed 01.6-03-PLAN.md
+last_updated: "2026-04-28T09:49:15.909Z"
 last_activity: 2026-04-28
 progress:
   total_phases: 15
   completed_phases: 7
   total_plans: 58
-  completed_plans: 53
-  percent: 91
+  completed_plans: 54
+  percent: 93
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 01.6 (brand-identity-design-tokens-and-landing-page) — EXECUTING
-Plan: 3 of 8
+Plan: 4 of 8
 Status: Ready to execute
 Last activity: 2026-04-28
 
-Progress: [█████████░] 91%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -91,6 +91,7 @@ Progress: [█████████░] 91%
 | Phase 01.5 P09 | 24min | 2 tasks | 5 files |
 | Phase 01.6 P01 | 9min | 1 tasks | 2 files |
 | Phase 01.6 P02 | 16min | 1 tasks | 2 files |
+| Phase 01.6 P03 | 6min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -185,6 +186,8 @@ Recent decisions affecting current work:
 - [Phase 01.6]: Plan 01: Prettier ignore markers are limited to :root and .dark token value blocks because the Wave 0 spec requires exact uppercase hex literals.
 - [Phase 01.6]: Plan 02: Keep production next/font/google loaders as direct module-scope const calls; Vitest specs mock next/font/google locally because Next/Turbopack rejects conditional font-loader wrappers.
 - [Phase 01.6]: Plan 02: Be Vietnam Pro ships with vietnamese+latin subsets and weights 400/500/600; Instrument Serif remains latin-only with normal+italic style.
+- [Phase 01.6]: 01.6-03: Theme persistence uses Server Action + zm-theme cookie only; no localStorage or client-side cookie writes.
+- [Phase 01.6]: 01.6-03: LanguageSwitcher variant compact was reused directly in public TopBar; no fork was needed.
 
 ### Roadmap Evolution
 
@@ -237,6 +240,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-28T09:35:33.215Z
-Stopped at: Completed 01.6-02-PLAN.md
+Last session: 2026-04-28T09:49:15.887Z
+Stopped at: Completed 01.6-03-PLAN.md
 Resume file: None
