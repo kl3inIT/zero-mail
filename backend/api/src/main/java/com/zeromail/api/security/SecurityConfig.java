@@ -7,7 +7,6 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 @Configuration
 @Profile("!test")
@@ -16,9 +15,9 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain chain(HttpSecurity http,
                               TenantBindingFilter tenantFilter,
-                               OAuth2LoginDispatchingSuccessHandler dispatchSuccess,
-                               OAuth2LoginDispatchingFailureHandler dispatchFailure,
-                               GmailScopeRequestResolver gmailResolver) {
+                              GoogleOAuthSuccessHandler successHandler,
+                              LoginRedirectAuthenticationFailureHandler failureHandler,
+                              GoogleAuthorizationRequestResolver authRequestResolver) {
         http
             .cors(Customizer.withDefaults())
             .authorizeHttpRequests(a -> a
@@ -26,11 +25,11 @@ public class SecurityConfig {
                                  "/login/oauth2/**", "/oauth2/**").permitAll()
                 .anyRequest().authenticated())
             .oauth2Login(o -> o
-                .successHandler(dispatchSuccess)
-                .failureHandler(dispatchFailure)
-                .authorizationEndpoint(a -> a.authorizationRequestResolver(gmailResolver)))
+                .successHandler(successHandler)
+                .failureHandler(failureHandler)
+                .authorizationEndpoint(a -> a.authorizationRequestResolver(authRequestResolver)))
             .csrf(csrf -> csrf
-                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .spa()
                 .ignoringRequestMatchers("/login/oauth2/code/**", "/oauth2/callback/**"))
             .sessionManagement(Customizer.withDefaults())
             .addFilterAfter(tenantFilter, AuthorizationFilter.class);

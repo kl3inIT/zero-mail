@@ -1,3 +1,5 @@
+import { cache } from 'react';
+
 import { api } from '@/lib/api/client';
 import { getApiUrl } from '@/lib/api/base-url';
 
@@ -15,7 +17,7 @@ export interface GetCurrentUserOptions {
 }
 
 /**
- * Isomorphic /me fetcher (Plan 04 Task 2 — D-B1, D-B4).
+ * Raw /me fetcher — isomorphic (Plan 04 Task 2 — D-B1, D-B4).
  *
  * Two execution paths:
  *   - RSC / proxy.ts: caller passes `headers: { cookie }` (and optionally a
@@ -25,8 +27,12 @@ export interface GetCurrentUserOptions {
  *     openapi-fetch singleton handles cookies automatically.
  *
  * Throws on non-OK responses (status code only — never logs PII).
+ *
+ * RSC consumers should prefer getCurrentUserCached(cookieHeader) for
+ * per-request dedupe. Client/TanStack callers use this directly (or via
+ * the getCurrentUser backwards-compat alias).
  */
-export async function getCurrentUser(opts: GetCurrentUserOptions = {}): Promise<CurrentUser> {
+export async function fetchCurrentUser(opts: GetCurrentUserOptions = {}): Promise<CurrentUser> {
   const { fetcher, signal, headers } = opts;
   if (fetcher || headers) {
     const res = await (fetcher ?? fetch)(getApiUrl('/me'), {
@@ -41,3 +47,33 @@ export async function getCurrentUser(opts: GetCurrentUserOptions = {}): Promise<
   if (error || !response.ok) throw error ?? new Error(`/me failed: ${response.status}`);
   return data as CurrentUser;
 }
+
+/**
+ * Server-only cached /me fetch. Cache key = primitive cookie header string.
+ *
+ * Two calls with the SAME cookie string within one render pass dedupe to ONE
+ * underlying fetch. Two calls with DIFFERENT cookie strings produce separate fetches.
+ *
+ * RSC callers MUST pass `(await cookies()).toString()` — NOT a constructed
+ * `{ headers: { cookie } }` object, because React's cache() keys by argument
+ * identity (reference equality for objects, VALUE equality for primitives).
+ *
+ * Phase 01.5 HIGH-2 review fix: previous design wrapped getCurrentUser(opts)
+ * directly — fresh object arg per render → no real dedupe in RSC call graphs.
+ */
+export const getCurrentUserCached = cache(
+  async (cookieHeader: string | undefined): Promise<CurrentUser> => {
+    if (cookieHeader === undefined) {
+      // No cookie context (unauthenticated path) — fall through to default fetch.
+      return fetchCurrentUser();
+    }
+    return fetchCurrentUser({ headers: { cookie: cookieHeader } });
+  },
+);
+
+/**
+ * Backwards-compat alias for client/TanStack consumers (un-cached).
+ * Server-side RSC consumers should prefer getCurrentUserCached(cookieHeader)
+ * for per-request dedupe.
+ */
+export const getCurrentUser = fetchCurrentUser;

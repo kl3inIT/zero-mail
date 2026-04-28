@@ -1,7 +1,6 @@
 [versions]
 springBoot = "4.0.6"
 springAi = "2.0.0-M4"
-springCloudGcp = "8.0.2"
 # Spring Modulith: Boot-4-compatible 2.x line has no milestone/RC on Spring's milestone repo
 # as of 2026-04-24 — only tracked snapshots (latest 2.0.7-SNAPSHOT). We pin to the tracked
 # 2.0.7-SNAPSHOT rather than floating `2.0.0-SNAPSHOT` so rebuilds resolve a deterministic
@@ -18,7 +17,6 @@ jsoup = "1.22.2"
 
 [libraries]
 spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "springBoot" }
-spring-cloud-gcp-bom = { module = "com.google.cloud:spring-cloud-gcp-dependencies", version.ref = "springCloudGcp" }
 spring-modulith-bom = { module = "org.springframework.modulith:spring-modulith-bom", version.ref = "springModulith" }
 archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
 logstash-logback-encoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstashLogback" }

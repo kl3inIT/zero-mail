@@ -26,15 +26,13 @@ spring:
           google:
             client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
             client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}
-            scope: openid, profile, email
+            scope:
+              - openid
+              - profile
+              - email
+              - https://www.googleapis.com/auth/gmail.modify
+              - https://www.googleapis.com/auth/gmail.settings.basic
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-          google-gmail:
-            provider: google
-            client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
-            client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}
-            scope: https://www.googleapis.com/auth/gmail.modify
-            redirect-uri: "{baseUrl}/oauth2/callback/gmail"
-            authorization-grant-type: authorization_code
         provider:
           google:
             authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
@@ -54,10 +52,6 @@ spring:
     properties:
       hibernate:
         format_sql: false
-  cloud:
-    gcp:
-      secretmanager:
-        enabled: ${GCP_SECRET_MANAGER_ENABLED:false}
 zeromail:
   web:
     base-url: ${ZEROMAIL_WEB_BASE_URL:http://localhost:3000}
@@ -71,13 +65,12 @@ zeromail:
     allow-credentials: ${ZEROMAIL_CORS_ALLOW_CREDENTIALS:true}
     max-age: ${ZEROMAIL_CORS_MAX_AGE:1800}
   crypto:
-    # Prefer Secret Manager in deployed environments; fall back to local env var in dev/test.
-    refresh-token-key-base64: ${REFRESH_TOKEN_KEY_BASE64:${sm://oauth-refresh-token-key-v1/versions/1:}}
-google:
-  revoke:
-    # Token revocation endpoint base URL (D-A3). Overridable via @DynamicPropertySource
-    # in tests so MockGoogleRevocationServer can stand in for the real Google endpoint.
-    base-url: https://oauth2.googleapis.com
+    # Required deployment secret. For local dev, set REFRESH_TOKEN_KEY_BASE64 in .env or
+    # docker-compose.yml environment block. For openapi-emit, build.gradle.kts supplies a dummy.
+    # Boot fails immediately with a clear error if this env var is absent.
+    # No GCP Secret Manager fallback — CLAUDE.md stack lock: secrets via Docker secret,
+    # systemd credential, or locked-down env file on the VPS.
+    refresh-token-key-base64: ${REFRESH_TOKEN_KEY_BASE64:?REFRESH_TOKEN_KEY_BASE64 must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
 server:
   port: 8080
   servlet:

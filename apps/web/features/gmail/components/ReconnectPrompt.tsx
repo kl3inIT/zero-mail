@@ -1,24 +1,42 @@
 'use client';
 
-import { StatusAlert } from '@/components/ui/StatusAlert';
+import { useTranslations } from 'next-intl';
+
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 /**
- * ReconnectPrompt — refactored in Phase 01.4 Plan 06 to consume the StatusAlert
- * primitive (UI-SPEC §Component Inventory + analog precedent in PATTERNS.md
- * "StatusAlert existing in-repo precedent"). Token-aware via StatusAlert's
- * variant=warn mapping; the previous border-amber-500 / bg-amber-50 raw color
- * literals are replaced by the primitive's neutral warn surface.
+ * ReconnectPrompt — Phase 01.5 Plan 02 deflation (D-C1, D-C2, D-C3).
+ * Phase 01.5 Plan 04 — visual polish via frontend-design skill (D-D1).
  *
- * The single i18n key `connectionHealth.reconnectPrompt` resolves to a one-line
- * sentence — passed as titleKey only (no bodyKey). The CTA reuses the existing
- * `settings.gmailConnection.reconnectCta` key.
+ * Replaces StatusAlert variant=warn with raw <Alert variant="warning">.
+ * Token-aware classes only — no hardcoded amber literals (closes REVIEW.md §6).
+ *
+ * Design intent (Plan 04):
+ *  - AlertTitle: short subject line ("Google access revoked") — scannable.
+ *  - AlertDescription: full sentence body from connectionHealth.reconnectPrompt
+ *    i18n key, text-sm — read at leisure after title.
+ *  - AlertAction: reconnect button outline/sm — secondary to the alert message.
+ *
+ * Plain DOM <button> pattern preserved (STATE.md line 153 — vitest @base-ui
+ * useRef null-dispatcher boundary).
  */
 export function ReconnectPrompt({ onReconnect }: { onReconnect: () => void }) {
+  const t = useTranslations();
   return (
-    <StatusAlert
-      variant="warn"
-      titleKey="connectionHealth.reconnectPrompt"
-      cta={{ labelKey: 'settings.gmailConnection.reconnectCta', onClick: onReconnect }}
-    />
+    <Alert variant="warning">
+      <AlertTitle>{t('connectionHealth.disconnected')}</AlertTitle>
+      <AlertDescription>{t('connectionHealth.reconnectPrompt')}</AlertDescription>
+      <AlertAction>
+        <button
+          type="button"
+          onClick={onReconnect}
+          className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
+        >
+          {t('settings.gmailConnection.reconnectCta')}
+        </button>
+      </AlertAction>
+    </Alert>
   );
 }

@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.zeromail.core.account.model.CurrentUserNotFoundException;
-import com.zeromail.core.account.model.CurrentUserView;
+import com.zeromail.core.account.model.CurrentUserProjection;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.onboarding.model.OnboardingStep;
 
@@ -31,16 +31,16 @@ public class AccountService {
     }
 
     /**
-     * Returns the canonical current-user view for the tenant, or throws
+     * Returns the canonical current-user projection for the tenant, or throws
      * {@link CurrentUserNotFoundException} if the session is bound to a tenant whose user row
-     * no longer exists. Returns a {@link CurrentUserView} record so controllers do not need
+     * no longer exists. Returns a {@link CurrentUserProjection} record so controllers do not need
      * to import the persistence-managed entity type.
      */
     @Transactional(readOnly = true)
-    public CurrentUserView requireCurrentUser(UUID tenantId) {
+    public CurrentUserProjection requireCurrentUser(UUID tenantId) {
         var user = users.findFirstByTenantId(tenantId)
                 .orElseThrow(() -> new CurrentUserNotFoundException(tenantId));
-        return new CurrentUserView(
+        return new CurrentUserProjection(
                 user.getId(),
                 tenantId,
                 user.getEmail(),
@@ -62,17 +62,17 @@ public class AccountService {
      *
      * @param tenantId tenant binding from the active {@code TenantContext} ScopedValue
      * @param language two-letter locale code; caller guarantees membership in {@code {"vi","en"}}
-     * @return updated {@link CurrentUserView} reflecting the new {@code preferredLanguage}
+     * @return updated {@link CurrentUserProjection} reflecting the new {@code preferredLanguage}
      * @throws CurrentUserNotFoundException if no user row exists for the tenant
      */
     @Transactional
-    public CurrentUserView updateCurrentUserLanguage(UUID tenantId, String language) {
+    public CurrentUserProjection updateCurrentUserLanguage(UUID tenantId, String language) {
         var user = users.findFirstByTenantId(tenantId)
                 .orElseThrow(() -> new CurrentUserNotFoundException(tenantId));
         user.setPreferredLanguage(language);
         // No explicit save() — the entity is managed and the @Transactional commit will
         // flush the dirty field.
-        return new CurrentUserView(
+        return new CurrentUserProjection(
                 user.getId(),
                 tenantId,
                 user.getEmail(),

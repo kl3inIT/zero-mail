@@ -15,6 +15,8 @@ type Props = {
  * TemplateCard — selectable template option on /onboarding step 2.
  * Phase 01.4 Plan 06 token sweep: ring-blue-600 -> ring-ring (token-aware),
  * text-stone-600 -> text-muted-foreground. Shape preserved.
+ * Phase 01.5 D-D3: ring uses ring-primary token (brand-leaning), so Phase 5
+ * brand swap propagates automatically to the selection indicator.
  */
 export function TemplateCard({ title, description, selected, onSelect }: Props) {
   return (
@@ -22,7 +24,7 @@ export function TemplateCard({ title, description, selected, onSelect }: Props) 
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      className={cn('w-full rounded-xl text-left', selected ? 'ring-ring ring-2' : '')}
+      className={cn('w-full rounded-xl text-left', selected ? 'ring-primary ring-2' : '')}
     >
       <Card className="p-6">
         <h3 className="text-lg font-semibold">{title}</h3>

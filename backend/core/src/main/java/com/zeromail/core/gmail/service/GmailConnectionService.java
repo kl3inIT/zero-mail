@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.zeromail.core.gmail.model.GmailConnectionStatus;
-import com.zeromail.core.gmail.model.GmailConnectionView;
+import com.zeromail.core.gmail.model.GmailConnectionProjection;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 
@@ -26,14 +26,14 @@ public class GmailConnectionService {
 
     /**
      * Read-side projection of the current tenant's Gmail connection. Returns a
-     * {@link GmailConnectionView#notConnected()} sentinel when the tenant never connected
+     * {@link GmailConnectionProjection#notConnected()} sentinel when the tenant never connected
      * (or completely deleted state) so controllers do not have to handle Optional<Entity>.
      */
     @Transactional(readOnly = true)
-    public GmailConnectionView currentStatus(UUID tenantId) {
+    public GmailConnectionProjection currentStatus(UUID tenantId) {
         return connections.findByTenantId(tenantId)
-                .map(c -> new GmailConnectionView(c.getStatus().name(), c.getGoogleEmail()))
-                .orElseGet(GmailConnectionView::notConnected);
+                .map(c -> new GmailConnectionProjection(c.getStatus().name(), c.getGoogleEmail()))
+                .orElseGet(GmailConnectionProjection::notConnected);
     }
 
     /**
@@ -71,11 +71,11 @@ public class GmailConnectionService {
      * timestamp đã disconnect cũ để view-state phản ánh đúng CONNECTED.
      *
      * <p>{@code googleEmail} chỉ được set ở constructor (path INSERT). Trên path UPDATE
-     * không write lại — subject check trong {@code GmailOAuthSuccessHandler} (Plan 02)
-     * đã guarantee email equality nên defensive write là dư thừa (RESEARCH Q4 / D-A4
+     * không write lại — Phase 01.5 bundled flow đã guarantee email equality nên
+     * defensive write là dư thừa (RESEARCH Q4 / D-A4
      * "defensive — should always equal stored value post-A1 check").
      *
-     * <p>Caller (typically {@code GmailOAuthSuccessHandler}) phải bind
+     * <p>Caller (typically {@code GoogleOAuthSuccessHandler}) phải bind
      * {@code TenantContext.TENANT} ScopedValue TRƯỚC khi gọi method này; method dùng
      * default propagation (REQUIRED) nên join transaction của caller — JPA session
      * sẽ capture đúng tenant tại điểm caller mở tx (Pitfall 6 / FND-05).

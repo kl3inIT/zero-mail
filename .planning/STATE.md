@@ -2,33 +2,33 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: "Marked Phase 01.4 complete without ship; Phase 01.5 queued for follow-up cleanup"
-last_updated: "2026-04-27T07:04:27+07:00"
-last_activity: "2026-04-27 - Marked Phase 01.4 complete without ship; Phase 01.5 will absorb remaining cleanup"
+status: ready_to_plan
+stopped_at: Phase 01.5 complete, ready to plan Phase 2A
+last_updated: "2026-04-28T10:26:24+07:00"
+last_activity: 2026-04-28
 progress:
   total_phases: 14
-  completed_phases: 7
-  total_plans: 41
-  completed_plans: 41
-  percent: 100
+  completed_phases: 9
+  total_plans: 49
+  completed_plans: 49
+  percent: 64
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-24)
+See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 01.5 — inbox-zero-alignment-bundled-oauth-ux-polish-cleanup-sweep
+**Current focus:** Phase 2A — Mail Ingestion
 
 ## Current Position
 
-Phase: 01.5 (inbox-zero-alignment-bundled-oauth-ux-polish-cleanup-sweep) — READY TO PLAN
-Plan: 0 of 0 (not planned)
-Status: Phase 01.4 marked complete without ship; Phase 01.5 queued to absorb remaining OAuth/UX cleanup
-Last activity: 2026-04-27 - Marked Phase 01.4 complete without ship; Phase 01.5 will absorb remaining cleanup
+Phase: 2A
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-04-28
 
 Progress: [██████████] 100%
 
@@ -36,7 +36,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 17
 - Average duration: —
 - Total execution time: 0.0 hours
 
@@ -44,7 +44,7 @@ Progress: [██████████] 100%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01.5 | 9 | - | - |
 
 **Recent Trend:**
 
@@ -81,6 +81,14 @@ Progress: [██████████] 100%
 | Phase 01.4 P04 | 25min | 2 tasks | 5 files |
 | Phase 01.4 P05 | 38min | 2 tasks | 5 created + 5 modified |
 | Phase 01.4 P06 | 28min | 2 tasks | 9 modified |
+| Phase 01.5 P01 | 120 | - tasks | - files |
+| Phase 01.5 P02 | 78min | 2 tasks | 28 files |
+| Phase 01.5 P03 | 25m | 2 tasks | 4 files |
+| Phase 01.5 P04 | 35min | 3 tasks | 7 files |
+| Phase 01.5 P06 | 25min | 2 tasks | 2 files |
+| Phase 01.5 P07 | 11 | 2 tasks | 4 files |
+| Phase 01.5 P08 | 12min | 2 tasks | 4 files |
+| Phase 01.5 P09 | 24min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -154,6 +162,22 @@ Recent decisions affecting current work:
 - [Phase 01.4]: Plan 06: Settings narrows max-w-4xl → max-w-3xl — UI-SPEC §Spacing locks app variant; design contract takes precedence over historical width
 - [Phase 01.4]: Plan 06: ReconnectPrompt collapse từ 18-line hand-crafted Alert (border-amber-500 bg-amber-50 + Button) → 12-line StatusAlert variant=warn wrapper. Pattern: bất kỳ existing Alert ad-hoc nào trong repo có thể refactor cùng cách miễn là single i18n key resolves to one-line string
 - [Phase 01.4]: Plan 06: TemplateCard ring-blue-600 → ring-ring (KHÔNG ring-primary). UI-SPEC Color reservation list không name selection-ring là accent slot; ring-ring là structural focus token, đúng choice cho selected-state visual
+- [Phase ?]: Single bundled google OAuth2 registration replaces two-leg google+google-gmail pattern (Inbox Zero alignment)
+- [Phase ?]: OAuthProvisioningService.provisionBundledOAuth uses PROPAGATION_REQUIRED (HIGH-1 atomicity fix): user+tenant+gmail all roll back together on failure
+- [Phase ?]: Null refresh token on first login throws OAuth2AuthenticationException(consent_denied) before any DB write (MED-3)
+- [Phase ?]: gmail.settings.basic missing allows provisioning with opaque warning log — not a hard failure (INFO-7 policy)
+- [Phase ?]: Phase 01.5 Plan 02: D-D3 — TemplateCard ring-ring -> ring-primary so Phase 5 brand swap propagates automatically
+- [Phase ?]: Phase 01.5 Plan 02: global-error.tsx left inline-styled English — next-intl getTranslations cannot run in global error boundary
+- [Phase ?]: Phase 01.5 Plan 02: Loose translator cast (as unknown as string-to-string fn) for dynamic template-literal error key lookups under next-intl 4 strict bundle
+- [Phase ?]: Phase 01.5 Plan 02: Plain <a> with eslint-disable in not-found.tsx — next/link triggers vitest React-dedupe useContext null; mirrors lucide-react inline-SVG boundary
+- [Phase ?]: HIGH-2 fix: getCurrentUserCached uses primitive cookie header string as React cache() key for real RSC dedupe
+- [Phase 01.5]: Plan 04: frontend-design skill là sole invocation site trong Phase 01.5 (MED-5 review fix) — Plan 02 deflation không invoke skill; Plan 04 polish IS the visual-design pass
+- [Phase 01.5]: Plan 04: danger-zone settings dùng border-destructive token trên Card thay solid background fill — keeps visual hierarchy mà không alarmist
+- [Phase ?]: Race-loser drops second bundledTx entirely: winner thread committed atomically; re-encrypting loser token overwrites winner envelope (privacy + atomicity violation)
+- [Phase ?]: GET for /tenant/connect-gmail: idempotent OAuth redirect trigger; token rotation on callback; no CSRF needed per Spring Security safe-method defaults (CR-03)
+- [Phase ?]: token.getName() not req.getUserPrincipal() for removeAuthorizedClient: principal not in SecurityContext at throw sites; CR-02 fix
+- [Phase ?]: Plan 01.5-08: spring-cloud-gcp-starter-secretmanager + BOM removed -- CLAUDE.md No GCP hosting baseline lock now honored in build artifacts
+- [Phase ?]: Plan 01.5-08: REFRESH_TOKEN_KEY_BASE64 uses :? fail-fast -- missing env var gives clear startup error, no sm:// fallback
 
 ### Roadmap Evolution
 
@@ -169,7 +193,8 @@ Recent decisions affecting current work:
 
 [From .planning/todos/pending/ — ideas captured during sessions]
 
-None yet.
+- WR-06: dedicated test-profile SecurityConfig slice (so OAuth filter chain is exercised under integration tests) — `.planning/todos/pending/2026-04-28-wr-06-test-profile-securityconfig-slice.md`
+- Apply `:?` fail-fast to `backend/worker/src/main/resources/application.yml:10` (CR-04 parity with api module) — `.planning/todos/pending/2026-04-28-worker-application-yml-fail-fast-parity.md`
 
 ### Blockers/Concerns
 
@@ -178,11 +203,15 @@ None yet.
 - Phase 2A and Phase 2C are both flagged for `/gsd-research-phase` before planning — do not skip (Gmail watch/history + OIDC verification for 2A; Spring AI 2.0.0-M4 BYOK builder API + tokenizer for 2C).
 - CASA verification is a 4–12 week external clock — must be initiated during Phase 1 execution, not deferred.
 - Open decisions deferred to phase execution: credit unit economics (Phase 2B), tokenizer choice (Phase 2C), payment provider Stripe vs LemonSqueezy (Phase 2B), observability vendor (any), CASA tier (Phase 1/6).
+- **Pub/Sub OIDC verification ceremony** (Phase 2A push-receiver) — verification protocol: receive a synthetic Google Pub/Sub push; assert (a) JWT signature validates against Google's JWKS, (b) `aud` claim matches the configured public push endpoint URL on the VPS, (c) `email` claim matches the configured Pub/Sub service-account principal. Note: Pub/Sub itself remains GCP-only (Gmail push delivery is a Google service), but Spring receives the push as a plain HTTPS POST on the VPS — no `spring-cloud-gcp` Pub/Sub starter needed for receiving.
+- **Refresh-token key rotation drill** (Phase 2C or dedicated security-ceremony phase) — verification protocol: deploy v2 key alongside v1 in the deployment secret source (current VPS baseline: Docker secrets / systemd credentials / locked-down env files; future production options may include GCP Secret Manager, AWS Secrets Manager, or HashiCorp Vault); verify multi-version decrypt path reads `key_version` byte from envelope and selects correct key; rotate v1 → v2 + re-encrypt all rows; verify v1 envelopes still decrypt during overlap window. Per CLAUDE.md TL;DR ("No GCP hosting baseline; do not add spring-cloud-gcp starters by default"), the drill must be deployment-source-agnostic.
+- **Production cookie `secure: true` profile override + `REFRESH_TOKEN_KEY_BASE64` deployment secret resolution** (Phase 6 launch hardening) — verification protocol: assert `application-prod.yml` overrides `server.servlet.session.cookie.secure: true`; assert `REFRESH_TOKEN_KEY_BASE64` resolves successfully from the configured deployment secret source in prod profile (Docker secret / systemd credential / env file mounted via the VPS deployment pipeline; possible future production options: GCP Secret Manager, AWS Secrets Manager, HashiCorp Vault); assert app fails-fast at boot if the secret is missing (no fallback to plain env-var in prod). Per CLAUDE.md TL;DR, no GCP-specific resolution is required by default.
 
 ### Quick Tasks Completed
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260428-0hx | Rename core view records to projections | 2026-04-28 | 3ff9025 | [260428-0hx-rename-core-view-records-to-projections-](./quick/260428-0hx-rename-core-view-records-to-projections-/) |
 | 260427-9n3 | cài Dependabot cho tôi | 2026-04-27 | 600fef4 | [260427-9n3-c-i-dependabot-cho-t-i](./quick/260427-9n3-c-i-dependabot-cho-t-i/) |
 | 260427-02m | Refactor @Value application properties into @ConfigurationProperties | 2026-04-27 | fec9201 | [260427-02m-refactor-value-application-properties-in](./quick/260427-02m-refactor-value-application-properties-in/) |
 | 260427-8qe | Phase 1.5 quick cleanup: font fix and low-risk frontend/backend review findings | 2026-04-27 | 91117fd | [260427-8qe-phase-1-5-quick-cleanup-font-fix-and-low](./quick/260427-8qe-phase-1-5-quick-cleanup-font-fix-and-low/) |
@@ -200,6 +229,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-26T23:52:26.000Z
-Stopped at: Completed quick task 260427-8xs: project-wide JetBrains problem sweep
+Last session: 2026-04-28T10:26:24+07:00
+Stopped at: Phase 01.5 complete, ready to plan Phase 2A
 Resume file: None

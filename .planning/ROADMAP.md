@@ -17,7 +17,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] **Phase 1.2.1: Shared base entity + IdentifiedEnum standard + DTO group-by-domain (INSERTED)** _(completed 2026-04-26)_ - Introduce `core.shared.persistence` abstract entity hierarchy (`AbstractEntity`, `AbstractAuditableEntity`, `AbstractTenantOwnedEntity`); introduce `core.shared.lang.IdentifiedEnum` interface (id/weight/labelKey) and apply to `OnboardingStep` + `GmailConnectionStatus`; reorganize `backend/api/dto/` group-by-domain (account/, gmail/, onboarding/) and rename `TenantStatusResponse` → `GmailConnectionStatusResponse`; close code review WR-01 (Pitfall 5 real persistence test), WR-02 (replace ordinal() with weight()), WR-03 (bulk delete query)
 - [x] **Phase 1.3: Frontend Architecture Refactor and Public Content Foundation (INSERTED)** _(completed 2026-04-26)_ - Reorganize `apps/web` around route groups, feature folders, typed OpenAPI boundaries, frontend quality gates, and public landing/docs scaffolding without implementing the final landing/docs design yet
 - [x] **Phase 1.4: Gmail Identity Semantics, Permission UX, and UI Consistency (INSERTED)** _(completed 2026-04-27 — closed without ship; remaining value superseded by Phase 1.5)_ - Align v1 auth so the Google login account IS the first managed Gmail account; treat initial Gmail access as incremental consent for that same account; reject mismatched initial Gmail OAuth callbacks; keep multi-account management as a later workspace-level capability (users add more Gmail accounts to a workspace); sweep UI consistency, visual polish, layout quality, copy, states, and reusable frontend patterns across the current app via the `frontend-design` skill
-- [ ] **Phase 1.5: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED)** - Remaining heavy Phase 1.5 work: single Google OAuth upfront Gmail scope, remove google-gmail mismatch architecture, merge Gmail token provisioning, simplify onboarding/consent UX, deflate frontend primitives, polish landing/login/onboarding/settings/ReconnectPrompt, and close surviving REVIEW cleanup; excludes quick tasks already completed
+- [x] **Phase 1.5: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED)** _(completed 2026-04-28)_ - Remaining heavy Phase 1.5 work: single Google OAuth upfront Gmail scope, remove google-gmail mismatch architecture, merge Gmail token provisioning, simplify onboarding/consent UX, deflate frontend primitives, polish landing/login/onboarding/settings/ReconnectPrompt, and close surviving REVIEW cleanup; excludes quick tasks already completed
 - [ ] **Phase 2A: Mail Ingestion** - Gmail `users.watch` + Pub/Sub push + OIDC verification + idempotent history processing + global pause
 - [ ] **Phase 2B: Billing (Prepaid Credits)** - Double-entry Postgres ledger, reserve/settle/release, credit-hold watchdog, balance UI hooks
 - [ ] **Phase 2C: LLM Gateway** - Spring AI 2.0.0-M4 `LlmGateway` with sanitize → Unicode strip → structured tool-call + allow-list → BYOK per-request options → daily spend cap → drift detection
@@ -159,8 +159,12 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
   3. Onboarding routes directly to template selection after provisioning; consent-denied UX uses a simple `/login?error=...` path, while reconnect still uses the single `google` registration with `prompt=consent`.
   4. Phase 1.4 frontend wrapper primitives are deflated where they add no value; retained primitives must justify real composition, and affected surfaces use raw shadcn components plus token-aware `className`.
   5. Surviving REVIEW cleanup is closed or explicitly documented: `/me` fetch dedupe/cache strategy, `TemplateCard` `cn()`, retained `ReconnectPrompt` token variant, CLAUDE.md conventions, and deferred verification ceremonies.
-**Plans**: 0 plans
-- [ ] TBD (run /gsd-plan-phase 01.5 to break down)
+**Plans**: 5 plans
+- [x] 01.5-01-PLAN.md — Backend bundled OAuth collapse + onboarding state machine simplification + 2-leg flow deletion
+- [x] 01.5-02-PLAN.md — Atomic frontend deflation + Alert warning variant + RSC login error rendering + i18n key swap
+- [x] 01.5-03-PLAN.md — /me fetch React cache() per-request dedupe
+- [x] 01.5-04-PLAN.md — frontend-design skill polish pass across 5 surfaces (landing/login/onboarding/settings/ReconnectPrompt)
+- [x] 01.5-05-PLAN.md — CLAUDE.md Conventions promotion + STATE.md deferred verification ceremonies
 **UI hint**: yes
 
 ### Phase 2A: Mail Ingestion
@@ -272,7 +276,7 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 1.2.1. Shared base entity + IdentifiedEnum standard + DTO group-by-domain (INSERTED) | 4/4 | Complete | 2026-04-26 |
 | 1.3. Frontend Architecture Refactor and Public Content Foundation (INSERTED) | 8/8 | Complete | 2026-04-26 |
 | 1.4. Gmail Identity Semantics, Permission UX, and UI Consistency (INSERTED) | 6/6 | Complete without ship; superseded by 1.5 | 2026-04-27 |
-| 1.5. Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED) | 0/TBD | Not planned | - |
+| 1.5. Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED) | 7/8 | In Progress|  |
 | 2A. Mail Ingestion | 0/TBD | Not started | - |
 | 2B. Billing (Prepaid Credits) | 0/TBD | Not started | - |
 | 2C. LLM Gateway | 0/TBD | Not started | - |

@@ -4,8 +4,7 @@ import matter from 'gray-matter';
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 
-import { EmptyState } from '@/components/ui/EmptyState';
-import { PageShell } from '@/components/ui/PageShell';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   DOCS_DIR,
   FILENAME_RE,
@@ -16,18 +15,7 @@ import {
 
 /**
  * Docs index (Phase 1.3 Plan 06 — D-D3, D-D4).
- *
- * Reads apps/web/docs/ via the deterministic resolver in
- * @/lib/docs/loader (REVIEWS Revision 6, OpenCode MEDIUM). Filename listing
- * flows through fs.readdir inside loader.listDocFilenames; gray-matter parses
- * the frontmatter; FrontmatterSchema.safeParse validates each entry and SKIPS
- * malformed files rather than crashing the whole listing. Filters by current
- * locale (D-D5 filename suffix) and sorts by `order`.
- *
- * Empty-state copy uses keys under the `docs` namespace (e.g. docs.indexHeading,
- * docs.empty.heading, docs.empty.body). Plan 07 lands these keys; until then
- * runtime falls back to the key path itself, matching the cast-to-never bypass
- * that Plan 05 already established.
+ * Phase 01.5 Plan 02 — deflated from PageShell/EmptyState to raw <main>/Card (D-C1, D-C2).
  */
 export default async function DocsIndexPage() {
   const t = await getTranslations();
@@ -48,10 +36,15 @@ export default async function DocsIndexPage() {
   docs.sort((a, b) => a.order - b.order);
 
   return (
-    <PageShell variant="docs">
+    <main className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="mb-6 text-3xl font-semibold tracking-tight">{t('docs.indexHeading')}</h1>
       {docs.length === 0 ? (
-        <EmptyState title={t('docs.empty.heading')} body={t('docs.empty.body')} />
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
+            <h2 className="text-foreground text-lg font-semibold">{t('docs.empty.heading')}</h2>
+            <p className="text-muted-foreground text-sm">{t('docs.empty.body')}</p>
+          </CardContent>
+        </Card>
       ) : (
         <ul className="space-y-2">
           {docs.map((d) => (
@@ -63,6 +56,6 @@ export default async function DocsIndexPage() {
           ))}
         </ul>
       )}
-    </PageShell>
+    </main>
   );
 }

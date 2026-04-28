@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.zeromail.api.dto.account.MeResponse;
 import com.zeromail.api.dto.account.UpdateLanguageRequest;
-import com.zeromail.core.account.model.CurrentUserView;
+import com.zeromail.core.account.model.CurrentUserProjection;
 import com.zeromail.core.account.service.AccountService;
 import com.zeromail.core.tenant.TenantContext;
 
@@ -41,8 +41,8 @@ public class MeController {
     @GetMapping("/me")
     public MeResponse me() {
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
-        CurrentUserView user = accountService.requireCurrentUser(tenantId);
-        return toResponse(user);
+        CurrentUserProjection user = accountService.requireCurrentUser(tenantId);
+        return MeResponse.from(user);
     }
 
     /**
@@ -56,16 +56,7 @@ public class MeController {
     @PatchMapping("/me/language")
     public MeResponse updateLanguage(@Valid @RequestBody UpdateLanguageRequest req) {
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
-        CurrentUserView updated = accountService.updateCurrentUserLanguage(tenantId, req.language());
-        return toResponse(updated);
-    }
-
-    private static MeResponse toResponse(CurrentUserView user) {
-        return new MeResponse(
-                user.userId().toString(),
-                user.tenantId().toString(),
-                user.email(),
-                user.onboardingStep(),
-                user.preferredLanguage());
+        CurrentUserProjection updated = accountService.updateCurrentUserLanguage(tenantId, req.language());
+        return MeResponse.from(updated);
     }
 }

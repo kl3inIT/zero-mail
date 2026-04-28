@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.zeromail.api.dto.gmail.GmailConnectionStatusResponse;
-import com.zeromail.core.gmail.model.GmailConnectionView;
+import com.zeromail.core.gmail.model.GmailConnectionProjection;
 import com.zeromail.core.gmail.service.GmailConnectionService;
 import com.zeromail.core.tenant.TenantContext;
 
@@ -28,9 +28,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
  * rename this file in a follow-up phase without updating Spring's component scan
  * conventions and any documentation that references the class.
  *
- * <p><b>{@code toResponse(view)} helper:</b> matches the {@code MeController} convention
- * (Plan 01.2-06 Pattern 8 — controllers map view-model records to wire DTOs via a private
- * static helper, never inline {@code new}).
+ * <p><b>Response mapping:</b> the API DTO owns the static {@code from(...)} factory so
+ * controllers stay transport-only without repeating small projection-to-response mappers.
  */
 @RestController
 @Tag(name = "gmail")
@@ -45,11 +44,7 @@ public class TenantStatusController {
     @GetMapping("/gmail/connection/status")
     public GmailConnectionStatusResponse status() {
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
-        GmailConnectionView view = connectionService.currentStatus(tenantId);
-        return toResponse(view);
-    }
-
-    private static GmailConnectionStatusResponse toResponse(GmailConnectionView view) {
-        return new GmailConnectionStatusResponse(view.status(), view.googleEmail());
+        GmailConnectionProjection projection = connectionService.currentStatus(tenantId);
+        return GmailConnectionStatusResponse.from(projection);
     }
 }

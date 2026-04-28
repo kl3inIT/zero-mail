@@ -4,26 +4,21 @@ import { notFound } from 'next/navigation';
 import { compileMDX } from 'next-mdx-remote/rsc';
 import { getLocale, getTranslations } from 'next-intl/server';
 
-import { PageShell } from '@/components/ui/PageShell';
 import { FrontmatterSchema, SLUG_RE, buildDocPath } from '@/lib/docs/loader';
 
 /**
  * Single doc page (Phase 1.3 Plan 06 — D-D1..D-D5, REVIEWS Revision 6).
+ * Phase 01.5 Plan 02 — deflated from PageShell to raw <main> (D-C1, D-C2).
  *
  * Next 16 contract: `params` is a Promise and MUST be awaited.
  *
  * Hardening:
  *  - Validate slug against SLUG_RE (/^[a-z0-9-]+$/) BEFORE any path join
- *    (T-1.3.06-01 path traversal).
- *  - Validate locale ∈ {'vi','en'} before invoking buildDocPath.
- *  - fs.readFile failure → notFound() (T-1.3.06-03 path-info disclosure).
- *  - compileMDX uses next-mdx-remote v6 defaults — blockJS / blockDangerousJS
- *    are intentionally NOT overridden (T-1.3.06-02 RSC-side JS execution).
- *  - REVIEWS Revision 6 — runtime zod safeParse on the compileMDX-returned
- *    frontmatter; failure → notFound() (T-1.3.06-04 trusting cast).
- *  - REVIEWS Revision 6 — slug+locale consistency: notFound() when
- *    fm.data.slug !== params.slug or fm.data.locale !== currentLocale
- *    (T-1.3.06-05 frontmatter lying about file identity).
+ *  - Validate locale ∈ {'vi','en'} before invoking buildDocPath
+ *  - fs.readFile failure → notFound()
+ *  - compileMDX uses next-mdx-remote v6 defaults
+ *  - Runtime zod safeParse on compileMDX-returned frontmatter; failure → notFound()
+ *  - slug+locale consistency: notFound() when fm.data.slug !== params.slug
  */
 export default async function DocPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -53,7 +48,7 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
   if (fm.data.slug !== slug || fm.data.locale !== locale) notFound();
 
   return (
-    <PageShell variant="docs">
+    <main className="mx-auto max-w-3xl px-4 py-8">
       <article className="prose">
         <h1>{fm.data.title}</h1>
         {content}
@@ -63,6 +58,6 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
           </Link>
         </p>
       </article>
-    </PageShell>
+    </main>
   );
 }

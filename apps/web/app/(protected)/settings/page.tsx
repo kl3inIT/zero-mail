@@ -11,27 +11,39 @@ import { useTenantStatus } from '@/features/gmail/hooks/useTenantStatus';
 import { useDisconnectGmail } from '@/features/gmail/hooks/useDisconnectGmail';
 import { useDeleteAccount } from '@/features/account/hooks/useDeleteAccount';
 import { Button } from '@/components/ui/button';
-import { PageShell } from '@/components/ui/PageShell';
-import { SectionCard } from '@/components/ui/SectionCard';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { getApiUrl } from '@/lib/api/base-url';
 
 import type { AppLocale } from '@/i18n/routing';
 
 /**
- * /settings (client). Plan 06 Task 1 — refactored onto Plan 04 primitives
- * (PageShell + 5 SectionCards) with token-aware Tailwind classes (CONTEXT
- * D-C2 / D-C3 / D-D5). Existing behaviour, hooks, copy, and click handlers
- * preserved verbatim; only composition + tokens change.
+ * /settings (client). Phase 01.5 Plan 02 — deflated from PageShell/SectionCard
+ * to raw shadcn Card chains (D-C1, D-C2).
+ * Phase 01.5 Plan 04 — visual polish via frontend-design skill (D-D1).
  *
- * UI-SPEC §Spacing locks `app` variant at `max-w-3xl` — narrower than the
- * historical `max-w-4xl`, but the design contract takes precedence over the
- * incidental width. Container padding flows from PageShell.
+ * Design intent (Plan 04):
+ *  - Section rhythm: max-w-2xl (tighter than max-w-3xl for form-heavy pages),
+ *    space-y-4 between cards (tighter than space-y-6 — settings feel dense, not airy).
+ *  - Language card: added CardHeader + CardTitle for consistent section heading
+ *    hierarchy with other sections.
+ *  - gmailConnection CardFooter: text-xs (down from text-sm) to subordinate the
+ *    single-account note clearly below the connection status content.
+ *  - Privacy section: CardDescription for intro line, list remains as items.
+ *  - dangerZone: border-destructive/40 (up from /30) — clearer visual separation
+ *    without using a filled background. Separator above provides gap.
+ *  - Danger zone actions: flex-wrap gap-3, kept as-is per existing behavior.
  *
- * D-D5 single-account note: Gmail card carries a footer note (i18n key
- * `settings.gmailConnection.singleAccountNote`) so users understand the v1
- * single-Gmail expectation without seeing a disabled "add another" stub
- * (D-B4 — no false-promise affordances).
+ * Five sections: account, language, gmailConnection (with CardFooter single-
+ * account-note per D-D5), privacy, dangerZone. Separator preserved. All hooks,
+ * click handlers, and behavior unchanged.
  */
 export default function SettingsPage() {
   const t = useTranslations();
@@ -41,72 +53,100 @@ export default function SettingsPage() {
   const del = useDeleteAccount();
 
   const connStatus = status.data?.connectionStatus ?? 'NOT_CONNECTED';
-  // Source of truth for the switcher: /me.preferredLanguage. Cookie is the
-  // optimistic channel that LanguageSwitcher writes; the server overwrites it
-  // on first authenticated SSR (see app/layout.tsx).
   const preferredLanguage = (me.data?.preferredLanguage === 'en' ? 'en' : 'vi') as AppLocale;
   const reconnect = () => {
     window.location.href = getApiUrl('/tenant/connect-gmail');
   };
 
   return (
-    <PageShell variant="app">
-      <SectionCard heading={t('settings.account.heading')}>
-        <p>{me.data?.email ?? t('common.loading')}</p>
-      </SectionCard>
+    <main className="mx-auto max-w-2xl space-y-4 p-6">
+      {/* Account */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('settings.account.heading')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-foreground text-sm">{me.data?.email ?? t('common.loading')}</p>
+        </CardContent>
+      </Card>
 
-      <SectionCard>
-        <LanguageSwitcher currentLocale={preferredLanguage} authenticated={true} variant="row" />
-      </SectionCard>
+      {/* Language */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle>{t('settings.language.label')}</CardTitle>
+          <CardDescription>{t('settings.language.helper')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <LanguageSwitcher currentLocale={preferredLanguage} authenticated={true} variant="row" />
+        </CardContent>
+      </Card>
 
-      <SectionCard
-        heading={t('settings.gmailConnection.heading')}
-        footer={
-          <p className="text-muted-foreground text-sm">
+      {/* Gmail connection */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('settings.gmailConnection.heading')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-3">
+            <ConnectionHealthBadge status={connStatus} />
+          </div>
+          {connStatus === 'DISCONNECTED' && <ReconnectPrompt onReconnect={reconnect} />}
+          {connStatus === 'NOT_CONNECTED' && (
+            // CR-03 fix: GET navigation — no CSRF needed; endpoint is now @GetMapping.
+            <Button
+              onClick={() => {
+                window.location.href = getApiUrl('/tenant/connect-gmail');
+              }}
+            >
+              {t('onboarding.connect.cta')}
+            </Button>
+          )}
+        </CardContent>
+        <CardFooter>
+          <p className="text-muted-foreground text-xs">
             {t('settings.gmailConnection.singleAccountNote')}
           </p>
-        }
-      >
-        <div className="flex items-center gap-3">
-          <ConnectionHealthBadge status={connStatus} />
-        </div>
-        {connStatus === 'DISCONNECTED' && (
-          <div className="mt-3">
-            <ReconnectPrompt onReconnect={reconnect} />
-          </div>
-        )}
-        {connStatus === 'NOT_CONNECTED' && (
-          <form method="post" action={getApiUrl('/tenant/connect-gmail')} className="mt-3">
-            <Button type="submit">{t('onboarding.connect.cta')}</Button>
-          </form>
-        )}
-      </SectionCard>
+        </CardFooter>
+      </Card>
 
-      <SectionCard heading={t('settings.privacy.heading')}>
-        <ul className="list-disc pl-5 text-sm">
-          <li>{t('settings.privacy.noBodyStorage')}</li>
-          <li>{t('settings.privacy.noAutoSend')}</li>
-          <li>{t('settings.privacy.revokeAnytime')}</li>
-          <li>{t('settings.privacy.byokPlanned')}</li>
-        </ul>
-      </SectionCard>
+      {/* Privacy */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('settings.privacy.heading')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="text-muted-foreground space-y-1.5 text-sm">
+            <li>{t('settings.privacy.noBodyStorage')}</li>
+            <li>{t('settings.privacy.noAutoSend')}</li>
+            <li>{t('settings.privacy.revokeAnytime')}</li>
+            <li>{t('settings.privacy.byokPlanned')}</li>
+          </ul>
+        </CardContent>
+      </Card>
 
       <Separator />
 
-      <SectionCard heading={t('settings.dangerZone.heading')} className="border-destructive/30">
-        <div className="flex flex-wrap gap-3">
-          <Button variant="destructive" onClick={() => disconnect.mutate()}>
-            {t('settings.gmailConnection.disconnectCta')}
-          </Button>
-          <DeleteAccountDialog
-            isPending={del.isPending}
-            onConfirm={async () => {
-              await del.mutateAsync();
-              window.location.href = '/login';
-            }}
-          />
-        </div>
-      </SectionCard>
-    </PageShell>
+      {/* Danger zone */}
+      <Card className="border-destructive/40">
+        <CardHeader>
+          <CardTitle className="text-destructive">{t('settings.dangerZone.heading')}</CardTitle>
+          <CardDescription>{t('deleteAccount.body')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-3">
+            <Button variant="destructive" onClick={() => disconnect.mutate()}>
+              {t('settings.gmailConnection.disconnectCta')}
+            </Button>
+            <DeleteAccountDialog
+              isPending={del.isPending}
+              onConfirm={async () => {
+                await del.mutateAsync();
+                window.location.href = '/login';
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </main>
   );
 }
