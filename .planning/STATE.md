@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
+status: planning
 stopped_at: Phase 2A context gathered
-last_updated: "2026-04-28T11:00:00+07:00"
+last_updated: "2026-04-28T06:18:40.823Z"
 last_activity: 2026-04-28
 progress:
-  total_phases: 14
-  completed_phases: 9
-  total_plans: 49
-  completed_plans: 49
-  percent: 64
+  total_phases: 15
+  completed_phases: 7
+  total_plans: 50
+  completed_plans: 50
+  percent: 100
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 2A — Mail Ingestion
+**Current focus:** Phase 1.6 — Brand Identity, Design Tokens, and Landing Page
 
 ## Current Position
 
-Phase: 2A
+Phase: 1.6
 Plan: Not started
-Status: Context gathered, ready for research/planning
+Status: Inserted, ready for planning
 Last activity: 2026-04-28
 
 Progress: [██████████] 100%
@@ -188,6 +188,7 @@ Recent decisions affecting current work:
 - Phase 1.4 inserted after Phase 1.3: Gmail Identity Semantics, Permission UX, and UI Consistency — align v1 auth so the Google login account IS the first managed Gmail account; treat initial Gmail access as incremental consent for that same account; reject mismatched initial Gmail OAuth callbacks; keep multi-account management as a later workspace-level capability (users add more Gmail accounts to a workspace); sweep UI consistency, visual polish, layout quality, copy, states, and reusable frontend patterns via the `frontend-design` skill (URGENT)
 - Phase 1.4 marked complete without `/gsd-ship` on 2026-04-27 because Phase 1.5 supersedes much of the remaining OAuth/UX cleanup value.
 - Phase 01.5 inserted after Phase 1.4: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep - Remaining heavy Phase 1.5 work: single Google OAuth upfront Gmail scope, remove google-gmail mismatch architecture, merge Gmail token provisioning, simplify onboarding/consent UX, deflate frontend primitives, polish landing/login/onboarding/settings/ReconnectPrompt, and close surviving REVIEW cleanup; excludes quick tasks already completed. (URGENT)
+- Phase 01.6 inserted after Phase 1: Brand Identity, Design Tokens, and Landing Page (URGENT)
 
 ### Pending Todos
 
