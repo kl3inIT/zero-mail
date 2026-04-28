@@ -63,11 +63,18 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
   5. Theme toggle persists via `zm-theme` cookie set by a Next 16 Server Action; first-paint HTML respects cookie value with no flash; no `localStorage` usage anywhere.
   6. i18n parity: every visible string flows through `next-intl` keys; `apps/web/i18n/messages/{vi,en}.json` lock-step on new namespaces (`nav.*`, `trust.*`, `how.*`, `feat.*`, `legal.*`, `footer.*`, `onboarding.steps.*`); `pnpm i18n:check` passes.
   7. `01.6-VISUAL-SWEEP.md` checklist proves Phase 1.5 components (Alert variant=warning, ReconnectPrompt, Login form, 3 onboarding cards) survive token swap — every row PASS for contrast WCAG AA, layout intact at 320/768/1024 px, focus ring visible, dark-mode renders, OAuth click path still ends at `/welcome` or correct onboarding step.
-**Plans:** TBD
-**Research flag**: This phase should run through `/gsd-research-phase` before planning — Tailwind 4 `@theme inline` token rebinding semantics, Next.js 16 `next/font` Vietnamese subset support for Be Vietnam Pro, Server Action cookie write API, and shadcn primitive token-rebind behavior all need current-library lookup.
+**Plans:** 8 plans
+**Research flag**: COMPLETE — Tailwind 4 `@theme inline`, Next.js 16 `next/font` Vietnamese subset, Server Action cookie write, shadcn primitive token-rebind verified in 01.6-RESEARCH.md.
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 01.6 to break down)
+- [ ] 01.6-00-PLAN.md — Wave 0 test scaffolding (red specs + i18n scanner extension)
+- [ ] 01.6-01-PLAN.md — Wave 1 design tokens (Teal + paper-warm + supplemental tokens + retuned radii/warning/destructive)
+- [ ] 01.6-02-PLAN.md — Wave 1 typography stack (Be Vietnam Pro vietnamese subset + Instrument Serif)
+- [ ] 01.6-03-PLAN.md — Wave 2 public layout shell (TopBar + Footer + ZMLogoMark + ThemeToggle + setTheme + cookie read)
+- [ ] 01.6-04-PLAN.md — Wave 2 landing sections (Hero + HowItWorks + Features + TrustPillars + landing/how/feat/trust i18n)
+- [ ] 01.6-05-PLAN.md — Wave 3 sign-in 2-col reskin (AuthTopBar + TrustPanel + LegalFooter) + /terms /privacy stubs
+- [ ] 01.6-06-PLAN.md — Wave 3 onboarding 3-route split + StepIndicator + onboarding.steps.* i18n
+- [ ] 01.6-07-PLAN.md — Wave 4 visual sweep + Lighthouse audit + Phase 1.5 regression checklist
 
 ### Phase 1.1: Vietnamese-first i18n and error-handling foundation (INSERTED)
 **Goal**: Establish a Vietnamese-default, English-secondary i18n architecture across `backend/api`, `backend/core`, and `apps/web`, with a user-facing language switcher and a stable, frontend-localizable API error contract — referencing the local JHipster project's proven patterns where they fit Spring Boot 4 / Next.js 16. All Phase 1 privacy/safety constraints (no body/prompt/completion in logs, no PII in error payloads, tenant isolation via Scoped Values, ArchUnit bans) must remain intact.
