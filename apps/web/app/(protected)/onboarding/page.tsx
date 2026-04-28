@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 
 import { TemplateCard } from '@/features/onboarding/components/TemplateCard';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
@@ -41,10 +42,17 @@ type TemplateKey = 'archive-receipts' | 'label-newsletters' | 'pin-calendar';
  */
 export default function OnboardingPage() {
   const t = useTranslations();
+  const router = useRouter();
   const me = useCurrentUser();
   const selectMut = useSelectTemplate();
   const completeMut = useCompleteOnboarding();
   const [selected, setSelected] = useState<TemplateKey | null>(null);
+
+  useEffect(() => {
+    if (me.data?.onboardingStep === 'COMPLETE') {
+      router.replace('/settings');
+    }
+  }, [me.data?.onboardingStep, router]);
 
   if (!me.data) {
     return (
@@ -117,7 +125,11 @@ export default function OnboardingPage() {
           <CardContent>
             <button
               type="button"
-              onClick={() => completeMut.mutate()}
+              onClick={() =>
+                completeMut.mutate(undefined, {
+                  onSuccess: () => router.replace('/settings'),
+                })
+              }
               className={cn(buttonVariants(), 'w-full')}
             >
               {t('onboarding.completion.cta')}
