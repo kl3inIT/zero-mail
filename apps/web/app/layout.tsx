@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { cookies, headers } from 'next/headers';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Be_Vietnam_Pro, Geist, Geist_Mono, Instrument_Serif } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 
@@ -14,15 +14,33 @@ import './globals.css';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
-  // Vietnamese diacritics render via the Latin Extended block, which the
-  // "latin" + "latin-ext" subsets cover (Geist does not expose a "vietnamese"
-  // subset directly). Accessibility contract: see UI-SPEC §"Bilingual copy".
+  // Geist keeps the existing Latin baseline; Be Vietnam Pro below provides the
+  // full Vietnamese subset for body prose.
   subsets: ['latin', 'latin-ext'],
+  display: 'swap',
 });
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
+  display: 'swap',
+});
+
+const beVietnamPro = Be_Vietnam_Pro({
+  variable: '--font-be-vietnam-pro',
+  subsets: ['vietnamese', 'latin'],
+  // Weight 500 supports medium-emphasis nav and section headings while staying
+  // inside the Phase 1.6 font payload budget.
+  weight: ['400', '500', '600'],
+  display: 'swap',
+});
+
+const instrumentSerif = Instrument_Serif({
+  variable: '--font-instrument-serif',
+  subsets: ['latin'],
+  weight: '400',
+  style: ['normal', 'italic'],
+  display: 'swap',
 });
 
 /**
@@ -113,7 +131,7 @@ export default async function RootLayout({
   return (
     <html
       lang={safeLocale}
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${beVietnamPro.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <NextIntlClientProvider locale={safeLocale} messages={messages}>

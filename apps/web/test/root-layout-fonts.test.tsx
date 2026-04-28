@@ -2,8 +2,7 @@
 //  - <html> className contains all 4 font CSS-variable class substrings
 //  - Be Vietnam Pro + Instrument Serif declared via next/font/google
 //
-// RED-by-design: RootLayout does not yet declare Be Vietnam Pro or Instrument Serif.
-// This spec becomes GREEN when Phase 1.6 Wave 1 lands.
+// Guards the Phase 1.6 Wave 1 font wiring in RootLayout.
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 
@@ -19,6 +18,16 @@ vi.mock('next-intl/server', () => ({
   getLocale: vi.fn(async () => 'en'),
   getMessages: vi.fn(async () => ({})),
 }));
+
+vi.mock('next/font/google', () => {
+  const font = (options: { variable: string }) => ({ variable: options.variable });
+  return {
+    Be_Vietnam_Pro: font,
+    Geist: font,
+    Geist_Mono: font,
+    Instrument_Serif: font,
+  };
+});
 
 import RootLayout from '@/app/layout';
 
