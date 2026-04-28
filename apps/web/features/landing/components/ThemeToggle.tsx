@@ -1,6 +1,5 @@
 'use client';
 
-import { useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { buttonVariants } from '@/components/ui/button';
@@ -10,17 +9,15 @@ import { cn } from '@/lib/utils';
 type Props = { currentTheme: 'light' | 'dark' };
 
 export function ThemeToggle({ currentTheme }: Props) {
-  const [isPending, startTransition] = useTransition();
   const t = useTranslations();
   const next: 'light' | 'dark' = currentTheme === 'dark' ? 'light' : 'dark';
   const ariaLabel = currentTheme === 'dark' ? t('nav.themeToLight') : t('nav.themeToDark');
 
   return (
-    <form action={(fd) => startTransition(() => setTheme(fd))}>
+    <form action={setTheme}>
       <input type="hidden" name="theme" value={next} />
       <button
         type="submit"
-        disabled={isPending}
         aria-label={ariaLabel}
         aria-pressed={currentTheme === 'dark'}
         className={cn(

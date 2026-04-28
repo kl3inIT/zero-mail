@@ -34,7 +34,9 @@ test.describe('/login shell', () => {
         await page.setViewportSize({ width, height: 800 });
         await page.goto('/login');
         await expect(page.getByRole('link', { name: /terms|điều khoản/i })).toBeVisible();
-        await expect(page.getByRole('link', { name: /privacy|bảo mật/i })).toBeVisible();
+        await expect(
+          page.getByRole('link', { name: /^(privacy|chính sách bảo mật)$/i }),
+        ).toBeVisible();
         await expect(
           page.getByText(
             /Google API Services User Data|Chính sách bảo mật dữ liệu người dùng của Google API/i,

@@ -15,9 +15,12 @@ test.describe('theme persistence', () => {
     await toggle.click();
 
     // Cookie present
-    const cookies = await context.cookies();
-    const themeCookie = cookies.find((c) => c.name === 'zm-theme');
-    expect(themeCookie?.value).toBe('dark');
+    await expect
+      .poll(async () => {
+        const cookies = await context.cookies();
+        return cookies.find((c) => c.name === 'zm-theme')?.value;
+      })
+      .toBe('dark');
 
     // Reload — html.dark class persists
     await page.reload();
