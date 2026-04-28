@@ -1022,20 +1022,20 @@ Frontend:
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Spring Security 7.0.5 exact `@Order` interaction when `@Profile("!test")` is active**
    - What we know: existing `SecurityConfig` has `@Profile("!test")` annotation. The Pub/Sub chain needs `@Order(1)`.
    - What's unclear: does `@Profile("!test")` interact with `@Order` bean registration in test context? The worker tests don't use a full Spring Security context.
-   - Recommendation: In `PubSubSecurityConfig`, use `@Profile("!test")` too (or no profile annotation since the push endpoint is testable with a test-profile SecurityConfig per WR-06 pending todo).
+   - **RESOLVED:** Add `@Profile("!test")` to `PubSubSecurityConfig` as well (Plan 03 Task 1 does this). Both chains are excluded from the test context together; no ordering conflict. Test-profile security (WR-06) is a separate no-security config that is not ordered relative to these two chains.
 
 2. **Whether `GmailConnectionRepository.findByGoogleEmailIgnoreCase` needs `LOWER()` or Spring Data derive handles it**
    - What we know: existing `findByTenantId` uses standard derive. PostgreSQL `LOWER()` in query is needed for case normalization.
-   - Recommendation: Use `@Query("SELECT g FROM GmailConnectionEntity g WHERE LOWER(g.googleEmail) = LOWER(:email)")` with explicit param, not Spring Data derive (which uses `LIKE LOWER()` and may not behave identically).
+   - **RESOLVED:** Use explicit `@Query` with `LOWER()` cast — rename to `findByGoogleEmailLower` and accept a pre-lowercased param: `@Query("SELECT c FROM GmailConnectionEntity c WHERE LOWER(c.googleEmail) = :emailLower")`. Spring Data derived `IgnoreCase` generates `LOWER(col) = LOWER(?)` but the double-LOWER adds unnecessary work and the derive method name is misleading. `PubSubIngestionService` calls `email.toLowerCase()` before passing to the repo. Plan 03 Task 1 implements this.
 
 3. **`TenantService.setTriagePaused` — should it use the same `@TenantId` filter or bypass for an UPDATE by tenantId?**
    - What we know: `TenantEntity` extends `AbstractEntity` (NOT `AbstractTenantOwnedEntity`) — it IS the tenant, so no `@TenantId` discriminator applies. Update is by explicit `tenantId` column.
-   - Recommendation: Standard JPA `findById(tenantId).ifPresent(t -> { t.setTriagePaused(paused); })` — no filter complications.
+   - **RESOLVED:** Standard `findById(tenantId).ifPresent(t -> { t.setTriagePaused(paused); })` — no `@TenantId` filter complications because `TenantEntity` is not a tenant-owned entity; it IS the tenant. This pattern is identical to how `GmailConnectionService.currentStatus` works today.
 
 ---
 

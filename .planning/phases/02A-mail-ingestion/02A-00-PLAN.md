@@ -7,6 +7,9 @@ depends_on: []
 files_modified:
   - backend/api/src/test/java/com/zeromail/api/security/PubSubOidcAuthFilterTest.java
   - backend/api/src/test/java/com/zeromail/api/controllers/GmailPubSubControllerIntegrationTest.java
+  - backend/api/src/test/java/com/zeromail/api/controllers/MeControllerTest.java
+  - backend/api/src/test/java/com/zeromail/api/controllers/TriagePauseControllerTest.java
+  - backend/api/src/test/java/com/zeromail/api/controllers/PubSubIdempotencyTest.java
   - backend/core/src/test/java/com/zeromail/core/gmail/persistence/PubSubDeliveryEntityTest.java
   - backend/core/src/test/java/com/zeromail/core/gmail/persistence/MailMessageObservedEntityTest.java
   - backend/core/src/test/java/com/zeromail/core/gmail/model/GmailIngestionHealthTest.java
@@ -16,6 +19,7 @@ files_modified:
   - backend/worker/src/test/java/com/zeromail/worker/test/MockGmailHistoryServer.java
   - apps/web/features/triage/components/PauseBanner.test.tsx
   - apps/web/features/triage/hooks/useToggleTriagePause.test.tsx
+  - apps/web/features/gmail/components/ReconnectPrompt.test.tsx
   - apps/web/__tests__/architecture/phase-02a-files.test.ts
 autonomous: true
 requirements:
@@ -28,11 +32,15 @@ requirements:
 
 must_haves:
   truths:
-    - "All 12 Wave 0 test files exist on disk and compile (backend tests fail at RED; frontend tests fail at RED)"
+    - "All 16 Wave 0 test files exist on disk and compile (backend tests fail at RED; frontend tests fail at RED)"
     - "MockGoogleOidcServer and MockGmailHistoryServer fixtures can generate signed JWT tokens and serve fake JWKS"
     - "GmailIngestionHealthTest asserts fromId fail-loud contract"
     - "PauseBanner.test.tsx fails with import error (component doesn't exist yet)"
     - "phase-02a-files.test.ts asserts file presence and i18n key parity"
+    - "TriagePauseControllerTest.java exists with @Disabled RED scaffold (MAIL-06 has automated coverage)"
+    - "PubSubIdempotencyTest.java exists with @Disabled RED scaffold (MAIL-04 dedup path has automated coverage)"
+    - "MeControllerTest.java exists with @Disabled RED scaffold (triagePaused + ingestionHealth fields have automated coverage)"
+    - "ReconnectPrompt.test.tsx exists with it.skip RED scaffold (ingestionHealth gate has automated coverage)"
   artifacts:
     - path: "backend/api/src/test/java/com/zeromail/api/security/PubSubOidcAuthFilterTest.java"
       provides: "RED OIDC verification test — 5 test cases (valid passes, wrong aud/email/exp/sig → 401)"
@@ -40,6 +48,14 @@ must_haves:
       provides: "Hermetic JWKS fixture for OIDC tests"
     - path: "apps/web/__tests__/architecture/phase-02a-files.test.ts"
       provides: "File-presence + i18n parity guard"
+    - path: "backend/api/src/test/java/com/zeromail/api/controllers/TriagePauseControllerTest.java"
+      provides: "RED scaffold for MAIL-06 persistence automated coverage"
+    - path: "backend/api/src/test/java/com/zeromail/api/controllers/PubSubIdempotencyTest.java"
+      provides: "RED scaffold for MAIL-04 idempotency automated coverage"
+    - path: "backend/api/src/test/java/com/zeromail/api/controllers/MeControllerTest.java"
+      provides: "RED scaffold for /me endpoint triagePaused + ingestionHealth contract"
+    - path: "apps/web/features/gmail/components/ReconnectPrompt.test.tsx"
+      provides: "RED scaffold for MAIL-05 ingestionHealth gate"
   key_links:
     - from: "PubSubOidcAuthFilterTest"
       to: "MockGoogleOidcServer"
@@ -49,14 +65,18 @@ must_haves:
       to: "MockGmailHistoryServer"
       via: "stubbed history.list response"
       pattern: "MockGmailHistoryServer|stubHistory|historyResponse"
+    - from: "MeControllerTest"
+      to: "MeResponse.triagePaused + MeResponse.gmailConnectionStatus.ingestionHealth"
+      via: "JSON serialization assertions"
+      pattern: "triagePaused|ingestionHealth"
 ---
 
 <objective>
-Create all 12 Wave 0 RED-scaffold test files that define the acceptance contract for Waves 1-3. Tests must compile (or fail with clear import-not-found errors) and be RED-by-design — they reference classes that don't exist yet.
+Create all 16 Wave 0 RED-scaffold test files that define the acceptance contract for Waves 1-3. Tests must compile (or fail with clear import-not-found errors) and be RED-by-design — they reference classes that don't exist yet.
 
 Purpose: Establish the Nyquist-compliant verification spine before any production code is written. This is the established Phase 01.3/01.4/01.5/01.6 pattern.
 
-Output: 12 test files — 9 backend JUnit 5 + 2 hermetic fixtures + 1 frontend Vitest architecture guard + 2 frontend component/hook tests.
+Output: 16 test files — 12 backend JUnit 5 + 2 hermetic fixtures + 1 frontend Vitest architecture guard + 4 frontend component/hook tests.
 </objective>
 
 <execution_context>
@@ -91,10 +111,13 @@ Frontend test analogs:
 <tasks>
 
 <task type="auto">
-  <name>Task 1: Backend Wave 0 RED scaffolds — filter, controller, persistence tests + hermetic fixtures</name>
+  <name>Task 1: Backend Wave 0 RED scaffolds — filter, controller, persistence tests + hermetic fixtures + MAIL-04/06 coverage scaffolds</name>
   <files>
     backend/api/src/test/java/com/zeromail/api/security/PubSubOidcAuthFilterTest.java,
     backend/api/src/test/java/com/zeromail/api/controllers/GmailPubSubControllerIntegrationTest.java,
+    backend/api/src/test/java/com/zeromail/api/controllers/MeControllerTest.java,
+    backend/api/src/test/java/com/zeromail/api/controllers/TriagePauseControllerTest.java,
+    backend/api/src/test/java/com/zeromail/api/controllers/PubSubIdempotencyTest.java,
     backend/core/src/test/java/com/zeromail/core/gmail/persistence/PubSubDeliveryEntityTest.java,
     backend/core/src/test/java/com/zeromail/core/gmail/persistence/MailMessageObservedEntityTest.java,
     backend/core/src/test/java/com/zeromail/core/gmail/model/GmailIngestionHealthTest.java,
@@ -116,7 +139,7 @@ Frontend test analogs:
   </read_first>
 
   <action>
-Create all 9 backend test files + 2 fixtures as RED scaffolds. Each test references classes that don't exist yet — this is intentional.
+Create all 12 backend test files + 2 fixtures as RED scaffolds. Each test references classes that don't exist yet — this is intentional.
 
 **`PubSubOidcAuthFilterTest.java`** — package `com.zeromail.api.security`. Extends nothing (unit test). Import `com.zeromail.api.security.PubSubOidcAuthFilter` (RED). Five `@Test` methods:
 1. `validToken_passes()` — builds a valid signed JWT with correct aud + email + iss, calls `doFilterInternal`, asserts chain is called (verify mock `FilterChain`)
@@ -132,6 +155,122 @@ All test cases rely on `MockGoogleOidcServer` to serve JWKS at a local URL. `Pub
 3. `validPush_unknownEmail_returns200_dropsSilently()` — valid token but email not in `gmail_connections` → 200, no row
 4. `duplicatePush_idempotent()` — same `messageId` twice → 200 both times, one row in `pubsub_delivery`
 5. `invalidPayload_returns400()` — malformed base64 data → 400
+
+**`MeControllerTest.java`** — package `com.zeromail.api.controllers`. Covers the `/me` endpoint contract for the new `triagePaused` and `gmailConnectionStatus.ingestionHealth` fields added in Plan 03 Task 2. `@Disabled("Wave 0 RED scaffold — implementation pending in Plan 03")`. Uses `@SpringBootTest(webEnvironment = RANDOM_PORT)` + `RestClient`. Three `@Test` methods that will compile ONLY after `MeResponse.java` is extended:
+```java
+@Disabled("Wave 0 RED scaffold — implementation pending in Plan 03")
+class MeControllerTest extends ApiPostgresTestBase {
+
+    @LocalServerPort int port;
+
+    @Test
+    void me_response_contains_triagePaused_field() {
+        // When: authenticated user calls GET /me
+        // Then: response body contains "triagePaused" key with boolean value
+        // Assert: MeResponse.triagePaused is present in JSON
+        RestClient client = RestClient.create("http://localhost:" + port);
+        // RED: MeResponse does not have triagePaused field yet
+        // This test compiles once MeResponse is updated in Plan 03 Task 2
+        ResponseEntity<com.zeromail.api.dto.account.MeResponse> response =
+            client.get().uri("/me")
+                  .retrieve().toEntity(com.zeromail.api.dto.account.MeResponse.class);
+        assertThat(response.getBody().triagePaused()).isNotNull(); // RED: field missing
+    }
+
+    @Test
+    void me_response_contains_gmailConnectionStatus_with_ingestionHealth() {
+        // Assert: MeResponse.gmailConnectionStatus.ingestionHealth is present
+        RestClient client = RestClient.create("http://localhost:" + port);
+        ResponseEntity<com.zeromail.api.dto.account.MeResponse> response =
+            client.get().uri("/me")
+                  .retrieve().toEntity(com.zeromail.api.dto.account.MeResponse.class);
+        // RED: gmailConnectionStatus field missing until Plan 03 Task 2
+        assertThat(response.getBody().gmailConnectionStatus()).isNotNull();
+        assertThat(response.getBody().gmailConnectionStatus().ingestionHealth())
+            .isIn("HEALTHY", "WATCH_UNHEALTHY", "HISTORY_LOST");
+    }
+
+    @Test
+    void me_response_json_shape_serializes_cleanly() {
+        // Assert: JSON does not contain unexpected null fields
+        // RED: will fail until MeResponse extended + from() factory updated
+        RestClient client = RestClient.create("http://localhost:" + port);
+        String raw = client.get().uri("/me")
+                           .retrieve().body(String.class);
+        assertThat(raw).contains("\"triagePaused\"");
+        assertThat(raw).contains("\"ingestionHealth\"");
+    }
+}
+```
+Note: All three tests are `@Disabled` so the file compiles even though `MeResponse.triagePaused()` doesn't exist yet. When Plan 03 Task 2 is implemented, remove the `@Disabled` annotation and the tests become GREEN.
+
+**`TriagePauseControllerTest.java`** — package `com.zeromail.api.controllers`. RED scaffold for MAIL-06. `@Disabled("Wave 0 RED scaffold — implementation pending in Plan 03")`. Imports `com.zeromail.api.controllers.TriagePauseController` (RED until Plan 03). Two `@Test` methods:
+```java
+@Disabled("Wave 0 RED scaffold — implementation pending in Plan 03")
+class TriagePauseControllerTest extends ApiPostgresTestBase {
+
+    @LocalServerPort int port;
+
+    @Test
+    void putTriagePause_true_persists_triage_paused() {
+        // When: authenticated user PUT /tenant/triage-pause {paused: true}
+        // Then: tenants.triage_paused = true for that tenant
+        // Then: response body {paused: true}
+        // RED: TriagePauseController does not exist yet
+        RestClient client = RestClient.create("http://localhost:" + port);
+        ResponseEntity<com.zeromail.api.dto.tenant.TriagePauseResponse> response =
+            client.put().uri("/tenant/triage-pause")
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .body(new com.zeromail.api.dto.tenant.TriagePauseRequest(true))
+                  .retrieve().toEntity(com.zeromail.api.dto.tenant.TriagePauseResponse.class);
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody().paused()).isTrue();
+    }
+
+    @Test
+    void putTriagePause_false_clears_triage_paused() {
+        // When: paused=false after paused=true
+        // Then: tenants.triage_paused = false
+        RestClient client = RestClient.create("http://localhost:" + port);
+        ResponseEntity<com.zeromail.api.dto.tenant.TriagePauseResponse> response =
+            client.put().uri("/tenant/triage-pause")
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .body(new com.zeromail.api.dto.tenant.TriagePauseRequest(false))
+                  .retrieve().toEntity(com.zeromail.api.dto.tenant.TriagePauseResponse.class);
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody().paused()).isFalse();
+    }
+}
+```
+
+**`PubSubIdempotencyTest.java`** — package `com.zeromail.api.controllers`. RED scaffold for MAIL-04 dedup path at the controller integration level. `@Disabled("Wave 0 RED scaffold — implementation pending in Plan 03")`. Two `@Test` methods:
+```java
+@Disabled("Wave 0 RED scaffold — implementation pending in Plan 03")
+class PubSubIdempotencyTest extends ApiPostgresTestBase {
+
+    @LocalServerPort int port;
+
+    @Test
+    void duplicatePushMessage_sameMessageId_onlyOnePubSubDeliveryRow() {
+        // When: same Pub/Sub messageId delivered twice (valid OIDC token both times)
+        // Then: pubsub_delivery table has exactly ONE row for that messageId
+        // RED: GmailPubSubController + PubSubIngestionService not yet implemented
+        // This test verifies the UNIQUE(tenant_id, pubsub_message_id) dedup contract end-to-end
+        String messageId = UUID.randomUUID().toString();
+        // ... send push twice with same messageId ...
+        // ... assert COUNT(*) FROM pubsub_delivery WHERE pubsub_message_id = messageId == 1 ...
+        throw new org.opentest4j.TestAbortedException("RED scaffold — remove @Disabled when Plan 03 is complete");
+    }
+
+    @Test
+    void unknownEmailAddress_returns200_noPubSubDeliveryRow() {
+        // When: valid OIDC token but emailAddress not in gmail_connections
+        // Then: 200 OK + no row in pubsub_delivery
+        // RED: GmailPubSubController not yet implemented
+        throw new org.opentest4j.TestAbortedException("RED scaffold — remove @Disabled when Plan 03 is complete");
+    }
+}
+```
 
 **`PubSubDeliveryEntityTest.java`** — package `com.zeromail.core.gmail.persistence`. Extends `PostgresContainerTest`. Imports `com.zeromail.core.gmail.persistence.PubSubDeliveryEntity` (RED) + `PubSubDeliveryRepository` (RED). Three `@Test` methods:
 1. `insertAndRead_roundtrip()` — persist entity, find by id, assert fields
@@ -188,29 +327,33 @@ If not available, use `com.sun.net.httpserver.HttpServer` from JDK (always avail
   </verify>
 
   <acceptance_criteria>
-    - All 9 test files exist at the exact paths listed in files_modified
+    - All 12 test files exist at the exact paths listed in files_modified
     - `MockGoogleOidcServer.java` exists at `backend/worker/src/test/java/com/zeromail/worker/test/MockGoogleOidcServer.java` and contains `jwksUrl()` method signature
     - `MockGmailHistoryServer.java` exists at `backend/worker/src/test/java/com/zeromail/worker/test/MockGmailHistoryServer.java` and contains `stubHistoryList(` method signature
+    - `MeControllerTest.java` contains `@Disabled` annotation and references `MeResponse.triagePaused()` and `MeResponse.gmailConnectionStatus().ingestionHealth()`
+    - `TriagePauseControllerTest.java` contains `@Disabled` annotation and references `TriagePauseController`, `TriagePauseRequest`, `TriagePauseResponse`
+    - `PubSubIdempotencyTest.java` contains `@Disabled` annotation and describes the UNIQUE dedup contract
     - Compilation fails with "cannot find symbol" errors referencing `PubSubOidcAuthFilter`, `GmailPubSubController`, `PubSubDeliveryEntity`, `MailMessageObservedEntity`, `GmailIngestionHealth`, `GmailHistoryProcessor`, `GmailWatchScheduler` — NOT with syntax/package errors
     - `GmailIngestionHealthTest.java` contains `NoSuchElementException` in the body
     - `PubSubOidcAuthFilterTest.java` contains `"pubsub_oidc"` event string reference
   </acceptance_criteria>
 
-  <done>9 backend test files + 2 fixtures exist; compilation is RED-by-design (missing production classes); no syntax errors in test files themselves</done>
+  <done>12 backend test files + 2 fixtures exist; compilation is RED-by-design (missing production classes); TriagePauseControllerTest, PubSubIdempotencyTest, MeControllerTest exist as @Disabled RED scaffolds</done>
 </task>
 
 <task type="auto">
-  <name>Task 2: Frontend Wave 0 RED scaffolds — architecture guard + PauseBanner + hook tests</name>
+  <name>Task 2: Frontend Wave 0 RED scaffolds — architecture guard + PauseBanner + hook + ReconnectPrompt tests</name>
   <files>
     apps/web/features/triage/components/PauseBanner.test.tsx,
     apps/web/features/triage/hooks/useToggleTriagePause.test.tsx,
+    apps/web/features/gmail/components/ReconnectPrompt.test.tsx,
     apps/web/__tests__/architecture/phase-02a-files.test.ts
   </files>
 
   <read_first>
     - apps/web/__tests__/architecture/feature-folders.test.ts
     - apps/web/__tests__/features/account/me-cache-dedupe.test.ts
-    - apps/web/features/gmail/components/ReconnectPrompt.tsx (existing component shape)
+    - apps/web/features/gmail/components/ReconnectPrompt.tsx (existing component shape — read BEFORE writing test)
     - apps/web/features/gmail/hooks/useDisconnectGmail.ts (mutation hook analog)
     - apps/web/features/account/api/keys.ts (key factory analog for accountKeys.me())
     - .planning/phases/02A-mail-ingestion/02A-VALIDATION.md (Wave 0 Requirements)
@@ -218,7 +361,7 @@ If not available, use `com.sun.net.httpserver.HttpServer` from JDK (always avail
   </read_first>
 
   <action>
-Create 3 frontend RED scaffold files.
+Create 4 frontend RED scaffold files.
 
 **`apps/web/__tests__/architecture/phase-02a-files.test.ts`** — file-presence + i18n parity guard. Pattern: copy shape from `feature-folders.test.ts` (uses `existsSync` static predicate at module load, NOT `beforeAll`).
 
@@ -278,33 +421,61 @@ describe('Phase 02A: i18n key parity', () => {
 
 This test is RED now (files don't exist). GREEN after Wave 3 completes.
 
-**`apps/web/features/triage/components/PauseBanner.test.tsx`** — conditional render test. Import `PauseBanner` from `@/features/triage/components/PauseBanner` (RED until Wave 3). Use vitest + @testing-library/react. Three `@test` cases:
-1. `renders_when_triagePaused_true()` — mock `useCurrentUser()` returning `triagePaused: true`, render `<PauseBanner>`, assert `getByRole('alert')` present + heading contains "triage" (i18n key placeholder)
-2. `notRendered_when_triagePaused_false()` — mock returns `triagePaused: false`, assert alert NOT in document
-3. `unpauses_on_cta_click()` — `triagePaused: true`, click unpause button, assert `useToggleTriagePause().mutate` called with `false`
+**`apps/web/features/triage/components/PauseBanner.test.tsx`** — conditional render test. Import `PauseBanner` from `@/features/triage/components/PauseBanner` (RED until Wave 3). Use vitest + @testing-library/react. Three test cases:
+1. `renders_when_triagePaused_true` — mock `useCurrentUser()` returning `{ triagePaused: true }`, render `<PauseBanner>`, assert `getByRole('alert')` present + heading contains "triage"
+2. `notRendered_when_triagePaused_false` — mock returns `{ triagePaused: false }`, assert alert NOT in document
+3. `unpauses_on_cta_click` — `triagePaused: true`, click unpause button, assert `useToggleTriagePause().mutate` called with `false`
 
-Use `vi.mock('@/features/account/hooks/useCurrentUser', ...)` and `vi.mock('@/features/triage/hooks/useToggleTriagePause', ...)`. Plain DOM `<button>` (not `<Button>`) per Phase 01.4 vitest boundary pattern.
+Use `vi.mock('@/features/account/hooks/useCurrentUser', ...)` and `vi.mock('@/features/triage/hooks/useToggleTriagePause', ...)`. The component uses `useCurrentUser()` internally (hook-based, no props) — this is the authoritative shape per Plan 04. Plain DOM `<button>` (not `<Button>`) per Phase 01.4 vitest boundary pattern.
 
 **`apps/web/features/triage/hooks/useToggleTriagePause.test.tsx`** — mutation hook test. Import `useToggleTriagePause` from `@/features/triage/hooks/useToggleTriagePause` (RED until Wave 3). Two test cases:
-1. `mutate_callsSetTriagePaused()` — mock `setTriagePaused`, call mutation with `true`, assert mock called with `true`
-2. `onSuccess_invalidates_me_key()` — on successful mutation, assert `queryClient.invalidateQueries` called with key matching `accountKeys.me()`
+1. `mutate_callsSetTriagePaused` — mock `setTriagePaused`, call mutation with `true`, assert mock called with `true`
+2. `onSuccess_invalidates_me_key` — on successful mutation, assert `queryClient.invalidateQueries` called with key matching `accountKeys.me()`
+
+**`apps/web/features/gmail/components/ReconnectPrompt.test.tsx`** — MAIL-05 ingestionHealth gate test. This is a new test file for an EXISTING component. Import `ReconnectPrompt` from `@/features/gmail/components/ReconnectPrompt`. The tests are `it.skip(...)` RED scaffolds since the ingestionHealth gate extension is not yet implemented.
+
+```typescript
+import { describe, it } from 'vitest';
+
+// Wave 0 RED scaffold — ingestionHealth gate not yet implemented in Plan 04
+// Remove it.skip() when Plan 04 extends the ReconnectPrompt gate condition
+
+describe('ReconnectPrompt — ingestionHealth gate (MAIL-05)', () => {
+  it.skip('renders when status is CONNECTED but ingestionHealth is WATCH_UNHEALTHY', () => {
+    // When: user?.gmailConnectionStatus?.status === 'CONNECTED'
+    //   AND user?.gmailConnectionStatus?.ingestionHealth === 'WATCH_UNHEALTHY'
+    // Then: ReconnectPrompt is visible (gate must check BOTH conditions)
+    // This test verifies D-D3: unified gate status!=CONNECTED || ingestionHealth!=HEALTHY
+    // Production code: Plan 04 Task 1 extends ReconnectPrompt gate
+  });
+
+  it.skip('renders when status is CONNECTED but ingestionHealth is HISTORY_LOST', () => {
+    // Same as above but for HISTORY_LOST case
+  });
+
+  it.skip('does NOT render when status is CONNECTED and ingestionHealth is HEALTHY', () => {
+    // Healthy state: no prompt shown
+  });
+});
+```
 
 Create the directory `apps/web/features/triage/components/` and `apps/web/features/triage/hooks/` as needed (just empty test files; no production files yet).
   </action>
 
   <verify>
-    <automated>cd /d/study-materials-summer-2026/EXE202/zero-mail && pnpm -F web run test:run -- --reporter=verbose 2>&1 | grep -E "FAIL|pass|fail|PauseBanner|useToggle|phase-02a" | head -20</automated>
+    <automated>cd /d/study-materials-summer-2026/EXE202/zero-mail && pnpm -F web run test:run -- --reporter=verbose 2>&1 | grep -E "FAIL|pass|fail|PauseBanner|useToggle|phase-02a|ReconnectPrompt" | head -20</automated>
   </verify>
 
   <acceptance_criteria>
     - `apps/web/__tests__/architecture/phase-02a-files.test.ts` exists and contains `settings.triage.pause.title`
-    - `apps/web/features/triage/components/PauseBanner.test.tsx` exists and contains `triagePaused`
+    - `apps/web/features/triage/components/PauseBanner.test.tsx` exists and contains `triagePaused` and `vi.mock('@/features/account/hooks/useCurrentUser'`
     - `apps/web/features/triage/hooks/useToggleTriagePause.test.tsx` exists and contains `invalidateQueries`
-    - Running vitest shows these 3 files as FAIL (import errors or assertion failures) — NOT syntax errors
+    - `apps/web/features/gmail/components/ReconnectPrompt.test.tsx` exists, contains `it.skip`, and references `ingestionHealth` and `WATCH_UNHEALTHY`
+    - Running vitest shows these 4 files as FAIL or SKIP (import errors or skipped assertions) — NOT syntax errors
     - `phase-02a-files.test.ts` fails with "false to be true" (files don't exist yet)
   </acceptance_criteria>
 
-  <done>3 frontend test files exist; all fail RED; no TypeScript parse errors in test files themselves</done>
+  <done>4 frontend test files exist; PauseBanner + hook tests fail RED; ReconnectPrompt test has it.skip scaffolds; phase-02a-files.test.ts fails RED</done>
 </task>
 
 </tasks>
@@ -321,18 +492,19 @@ Create the directory `apps/web/features/triage/components/` and `apps/web/featur
 | Threat ID | Category | Component | Disposition | Mitigation Plan |
 |-----------|----------|-----------|-------------|-----------------|
 | T-01 | Spoofing | PubSubOidcAuthFilterTest | mitigate | Wave 0 test defines 5 rejection cases (wrong aud/email/exp/sig/iss) — these tests must go RED now and GREEN in Wave 2a |
-| T-02 | Tampering | Idempotency test coverage | mitigate | MailMessageObservedEntityTest + PubSubDeliveryEntityTest verify ON CONFLICT DO NOTHING semantics at DB level |
+| T-02 | Tampering | Idempotency test coverage | mitigate | MailMessageObservedEntityTest + PubSubDeliveryEntityTest + PubSubIdempotencyTest verify ON CONFLICT DO NOTHING semantics at DB level and controller integration level |
+| T-03 | Tampering | MeControllerTest field contract | mitigate | MeControllerTest asserts triagePaused + ingestionHealth JSON shape — prevents silent null serialization |
 </threat_model>
 
 <verification>
 After this plan:
 - `./gradlew :backend:core:compileTestJava :backend:api:compileTestJava :backend:worker:compileTestJava` exits non-zero (RED expected — production classes missing)
-- All 12 test files exist on disk
-- `pnpm -F web run test:run` shows 3 new failing test files
+- All 16 test files exist on disk
+- `pnpm -F web run test:run` shows 4 new failing or skipped test files
 </verification>
 
 <success_criteria>
-12 Wave 0 test scaffold files exist. Backend tests are RED ("cannot find symbol" for production classes). Frontend tests are RED (import not found). No syntax/parse errors in test files themselves. MockGoogleOidcServer and MockGmailHistoryServer are compilable fixtures.
+16 Wave 0 test scaffold files exist. Backend tests are RED ("cannot find symbol" for production classes). TriagePauseControllerTest, PubSubIdempotencyTest, MeControllerTest are @Disabled RED scaffolds that compile. Frontend tests are RED (import not found) or it.skip. No syntax/parse errors in test files themselves. MockGoogleOidcServer and MockGmailHistoryServer are compilable fixtures.
 </success_criteria>
 
 <output>

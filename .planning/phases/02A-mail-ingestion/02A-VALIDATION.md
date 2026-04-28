@@ -62,6 +62,10 @@ Wave 0 RED scaffolds (per RESEARCH.md `## Validation Architecture`):
 - [ ] `apps/web/features/triage/components/PauseBanner.test.tsx` — conditional render when triagePaused=true; unpause CTA wired
 - [ ] `apps/web/features/triage/hooks/useToggleTriagePause.test.tsx` — me-key invalidation after success
 - [ ] `apps/web/__tests__/architecture/phase-02a-files.test.ts` — file-presence guard for new feature folder + i18n key parity
+- [ ] `backend/api/src/test/java/com/zeromail/api/controllers/MeControllerTest.java` — Wave 0 RED scaffold: me_response_contains_triagePaused_field, me_response_contains_gmailConnectionStatus_with_ingestionHealth, me_response_json_shape_serializes_cleanly (@Disabled pending Plan 03 impl)
+- [ ] `backend/api/src/test/java/com/zeromail/api/controllers/TriagePauseControllerTest.java` — Wave 0 RED scaffold: putTriagePause_true_persists_triage_paused, putTriagePause_false_clears_triage_paused (@Disabled pending Plan 03 impl)
+- [ ] `backend/api/src/test/java/com/zeromail/api/controllers/PubSubIdempotencyTest.java` — Wave 0 RED scaffold: duplicatePushMessage_sameMessageId_onlyOnePubSubDeliveryRow, unknownEmailAddress_returns200_noPubSubDeliveryRow (@Disabled pending Plan 03 impl)
+- [ ] `apps/web/features/gmail/components/ReconnectPrompt.test.tsx` — Wave 0 RED scaffold: renders when ingestionHealth is WATCH_UNHEALTHY/HISTORY_LOST, does NOT render when HEALTHY (it.skip pending Plan 04 impl)
 
 *If none: "Existing infrastructure covers all phase requirements."*
 

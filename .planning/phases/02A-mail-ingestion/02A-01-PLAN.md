@@ -33,6 +33,7 @@ must_haves:
     - "MailMessageObservedEntity persists with composite PK (tenant_id, gmail_message_id) and TEXT[] label_ids"
     - "GmailIngestionHealth implements IdentifiedEnum with fromId fail-loud"
     - "TenantEntity has triage_paused boolean field"
+    - "012-mail-message-observed-table.yaml schema contains no subject, from_address, body, snippet, sender_domain, or recipient column definitions — privacy floor preserved (D-B3)"
   artifacts:
     - path: "backend/core/src/main/resources/db/changelog/changes/010-gmail-ingestion-state.yaml"
       provides: "ALTER TABLE gmail_connections — 6 columns"
@@ -391,9 +392,10 @@ databaseChangeLog:
     - `012-mail-message-observed-table.yaml` contains `createTable:` and `addPrimaryKey:`
     - `013-tenants-triage-paused.yaml` contains `defaultValueBoolean: false`
     - `./gradlew :backend:core:test` applies changesets without Liquibase errors (test startup succeeds)
+    - Privacy floor verified: `grep -v '^#' backend/core/src/main/resources/db/changelog/changes/012-mail-message-observed-table.yaml | grep -E "subject|from_address|body|snippet|sender|recipient"` returns empty (no matches) — D-B3 privacy floor enforced at DDL level
   </acceptance_criteria>
 
-  <done>4 YAML changesets exist with correct Liquibase syntax; Liquibase applies all 4 cleanly on test container startup</done>
+  <done>4 YAML changesets exist with correct Liquibase syntax; Liquibase applies all 4 cleanly on test container startup; 012 changeset contains no privacy-violating columns</done>
 </task>
 
 <task type="auto">
@@ -589,10 +591,11 @@ After this plan:
 - `./gradlew :backend:core:test --tests "*GmailIngestionHealthTest*"` exits 0 (GREEN)
 - `./gradlew :backend:core:test --tests "*PubSubDeliveryEntityTest*" --tests "*MailMessageObservedEntityTest*"` exits 0 (GREEN)
 - Liquibase applies changesets 010-013 without errors during test container startup
+- Privacy floor: `grep -v '^#' backend/core/src/main/resources/db/changelog/changes/012-mail-message-observed-table.yaml | grep -E "subject|from_address|body|snippet|sender|recipient"` returns empty
 </verification>
 
 <success_criteria>
-All 4 Liquibase changesets exist and apply cleanly. All 7 Java files compile. GmailIngestionHealthTest, PubSubDeliveryEntityTest, and MailMessageObservedEntityTest pass GREEN. The Wave 0 tests for these classes are now unblocked.
+All 4 Liquibase changesets exist and apply cleanly. All 7 Java files compile. GmailIngestionHealthTest, PubSubDeliveryEntityTest, and MailMessageObservedEntityTest pass GREEN. The Wave 0 tests for these classes are now unblocked. 012 changeset has no privacy-violating columns.
 </success_criteria>
 
 <output>

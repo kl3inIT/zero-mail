@@ -810,11 +810,13 @@ export function ReconnectPrompt({ onReconnect }: { onReconnect: () => void }) {
 
 **Adaptation for `PauseBanner`:**
 - Same `'use client'` + `<Alert variant="warning">` + `AlertTitle` + `AlertDescription` + `AlertAction` structure
-- Prop: `{ onUnpause: () => void }` instead of `{ onReconnect }`
+- **No props** — reads `useCurrentUser()` internally to check `triagePaused` state; calls `useToggleTriagePause` hook on Unpause click (not a prop callback)
+- Shape: `function PauseBanner() { ... }` — zero-prop component; parent does not pass `onUnpause`
 - i18n keys: `settings.triage.pause.banner.heading`, `settings.triage.pause.banner.unpause`
 - Non-dismissible by design — no close/dismiss button
 - Plain DOM `<button>` pattern preserved (STATE.md vitest @base-ui/react boundary — avoids useRef null-dispatch in test)
-- `'use client'` directive REQUIRED — it calls `useTranslations()` and handles onClick
+- `'use client'` directive REQUIRED — it calls `useTranslations()`, `useCurrentUser()`, and `useToggleTriagePause()`
+- **Test note:** In `PauseBanner.test.tsx` — mock `useCurrentUser` to return `{ triagePaused: true }` to trigger render; no `onUnpause` prop to pass
 
 ---
 
@@ -1072,10 +1074,12 @@ describe('...', () => {
 ```
 
 **`PauseBanner.test.tsx` pattern:**
-- Render `<PauseBanner onUnpause={mockFn} />` and assert `<Alert variant="warning">` renders
-- Assert "Unpause" button exists and calls `mockFn` on click
+- PauseBanner has no props — mock `useCurrentUser` to return `{ triagePaused: true }` to trigger render
+- Render `<PauseBanner />` (no props) and assert `<Alert variant="warning">` renders
+- Assert "Unpause" button exists and clicking it invokes `useToggleTriagePause` mutation
 - Plain DOM `<button>` — use `screen.getByRole('button', { name: /unpause/i })`
 - Pitfall: `'use client'` components need next-intl `NextIntlClientProvider` wrapper in test render
+- Pitfall: mock both `useCurrentUser` and `useToggleTriagePause` — component reads user state and fires mutation internally
 
 **`useToggleTriagePause.test.tsx` pattern:**
 - `vi.mock('@/features/triage/api/triagePause')` — mock the mutation fn

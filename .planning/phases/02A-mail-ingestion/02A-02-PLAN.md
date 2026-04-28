@@ -9,6 +9,7 @@ files_modified:
   - backend/core/src/main/java/com/zeromail/core/gmail/service/GmailConnectionService.java
   - backend/core/src/main/java/com/zeromail/core/tenant/service/TenantService.java
   - backend/core/src/main/java/com/zeromail/core/gmail/service/GmailApiClientFactory.java
+  - backend/core/src/main/java/com/zeromail/core/gmail/service/GmailDeliveryProcessingService.java
   - backend/worker/src/main/java/com/zeromail/worker/GmailWatchScheduler.java
   - backend/worker/src/main/java/com/zeromail/worker/GmailHistoryProcessor.java
   - backend/worker/src/main/resources/application.yml
@@ -27,37 +28,41 @@ must_haves:
     - "ScopedValue.where(TENANT, tenantId).run(...) wraps every per-row operation in both schedulers"
     - "Token refresh uses direct POST to https://oauth2.googleapis.com/token (no OAuth2AuthorizedClientService)"
     - "GmailConnectionService has markHistoryLost, markWatchUnhealthy, clearForReconnect, recordWatchSuccess methods"
+    - "GmailDeliveryProcessingService.processDelivery is a PUBLIC @Transactional method — Spring AOP can intercept it; @Transactional on private methods is ineffective"
   artifacts:
     - path: "backend/worker/src/main/java/com/zeromail/worker/GmailWatchScheduler.java"
       provides: "@Scheduled(cron=every-minute) watch register + renew unified"
       contains: "0 * * * * *"
     - path: "backend/worker/src/main/java/com/zeromail/worker/GmailHistoryProcessor.java"
-      provides: "@Scheduled(fixedDelay=1000) history fan-out"
+      provides: "@Scheduled(fixedDelay=1000) history fan-out — tick() only; delegates processDelivery to GmailDeliveryProcessingService"
       contains: "fixedDelay"
     - path: "backend/core/src/main/java/com/zeromail/core/gmail/service/GmailApiClientFactory.java"
       provides: "Gmail API client builder + token refresh"
       exports: ["buildGmailClient", "refreshAccessToken"]
+    - path: "backend/core/src/main/java/com/zeromail/core/gmail/service/GmailDeliveryProcessingService.java"
+      provides: "@Service @Transactional class with public processDelivery() method"
+      contains: "@Transactional"
   key_links:
-    - from: "GmailHistoryProcessor"
-      to: "TenantContext.TENANT"
-      via: "ScopedValue.where(...).run(...) per row"
-      pattern: "ScopedValue\\.where.*TENANT"
+    - from: "GmailHistoryProcessor.tick()"
+      to: "GmailDeliveryProcessingService.processDelivery()"
+      via: "injected service call per row inside ScopedValue.run()"
+      pattern: "deliveryProcessingService\\.processDelivery"
     - from: "GmailWatchScheduler"
       to: "GmailConnectionService.recordWatchSuccess"
       via: "success path after users.watch()"
       pattern: "recordWatchSuccess"
-    - from: "GmailHistoryProcessor"
+    - from: "GmailDeliveryProcessingService"
       to: "GmailConnectionService.markHistoryLost"
       via: "404 catch block"
       pattern: "markHistoryLost"
 ---
 
 <objective>
-Implement the two backend worker schedulers (GmailWatchScheduler + GmailHistoryProcessor), extend GmailConnectionService with new state-management methods, and create GmailApiClientFactory for headless token refresh.
+Implement the two backend worker schedulers (GmailWatchScheduler + GmailHistoryProcessor), extend GmailConnectionService with new state-management methods, create GmailApiClientFactory for headless token refresh, and introduce GmailDeliveryProcessingService to own the per-delivery transaction boundary.
 
 Purpose: These schedulers are the core of Phase 2A — they drive Gmail watch lifecycle and history fan-out.
 
-Output: GmailWatchScheduler, GmailHistoryProcessor, GmailApiClientFactory, GmailConnectionService extensions, TenantService.setTriagePaused.
+Output: GmailWatchScheduler, GmailHistoryProcessor (thin tick-only), GmailDeliveryProcessingService (transaction owner), GmailApiClientFactory, GmailConnectionService extensions, TenantService.setTriagePaused.
 </objective>
 
 <execution_context>
@@ -120,11 +125,12 @@ Add: findByStatusAndWatchExpiresAtIsNullOrWatchExpiresAtBefore(GmailConnectionSt
 <tasks>
 
 <task type="auto">
-  <name>Task 1: GmailApiClientFactory + GmailConnectionService extensions + TenantService.setTriagePaused</name>
+  <name>Task 1: GmailApiClientFactory + GmailConnectionService extensions + TenantService.setTriagePaused + GmailDeliveryProcessingService</name>
   <files>
     backend/core/src/main/java/com/zeromail/core/gmail/service/GmailApiClientFactory.java,
     backend/core/src/main/java/com/zeromail/core/gmail/service/GmailConnectionService.java,
-    backend/core/src/main/java/com/zeromail/core/tenant/service/TenantService.java
+    backend/core/src/main/java/com/zeromail/core/tenant/service/TenantService.java,
+    backend/core/src/main/java/com/zeromail/core/gmail/service/GmailDeliveryProcessingService.java
   </files>
 
   <read_first>
@@ -291,6 +297,156 @@ public void setTriagePaused(UUID tenantId, boolean paused) {
 }
 ```
 Privacy log goes in the controller (not here).
+
+**`GmailDeliveryProcessingService.java`** — NEW `@Service @Transactional` class in `com.zeromail.core.gmail.service`. This class owns the per-delivery transaction boundary — extracted from GmailHistoryProcessor to avoid the `private @Transactional` Spring AOP interception bug (Spring AOP cannot intercept private methods; transaction never starts on a private method).
+
+```java
+package com.zeromail.core.gmail.service;
+
+import ...;
+
+@Service
+@Transactional
+public class GmailDeliveryProcessingService {
+
+    private static final Logger log = LoggerFactory.getLogger(GmailDeliveryProcessingService.class);
+    private static final long HISTORY_GAP_CAP = 500L;   // D-B6 bounded window
+
+    private final PubSubDeliveryRepository deliveryRepository;
+    private final MailMessageObservedRepository observedRepository;
+    private final GmailConnectionService connectionService;
+    private final GmailConnectionRepository connectionRepository;
+    private final GmailApiClientFactory gmailApiClientFactory;
+    private final RefreshTokenCipher refreshTokenCipher;
+
+    public GmailDeliveryProcessingService(
+            PubSubDeliveryRepository deliveryRepository,
+            MailMessageObservedRepository observedRepository,
+            GmailConnectionService connectionService,
+            GmailConnectionRepository connectionRepository,
+            GmailApiClientFactory gmailApiClientFactory,
+            RefreshTokenCipher refreshTokenCipher) {
+        this.deliveryRepository = deliveryRepository;
+        this.observedRepository = observedRepository;
+        this.connectionService = connectionService;
+        this.connectionRepository = connectionRepository;
+        this.gmailApiClientFactory = gmailApiClientFactory;
+        this.refreshTokenCipher = refreshTokenCipher;
+    }
+
+    // PUBLIC method — Spring AOP can intercept it; @Transactional takes effect.
+    // DO NOT make this private. The transaction boundary wraps the entire delivery processing
+    // including mail_message_observed inserts + last_synced_history_id update.
+    public void processDelivery(PubSubDeliveryEntity delivery) {
+        UUID tenantId = delivery.getTenantId();
+        long webhookHistoryId = delivery.getHistoryId();
+
+        try {
+            GmailConnectionEntity conn = connectionRepository.findByTenantId(tenantId)
+                .orElseThrow(() -> new IllegalStateException("No connection for tenantId: " + tenantId));
+
+            String decryptedToken = refreshTokenCipher.decrypt(conn.getRefreshTokenEncrypted());
+            GmailApiClientFactory.TokenRefreshResult tokenResult = gmailApiClientFactory.refreshAccessToken(decryptedToken);
+            Gmail gmail = gmailApiClientFactory.buildGmailClient(tokenResult.accessToken());
+
+            // D-B6 bounded history window
+            long startHistoryId = conn.getLastSyncedHistoryId() != null
+                ? conn.getLastSyncedHistoryId() : webhookHistoryId;
+            if (webhookHistoryId - startHistoryId > HISTORY_GAP_CAP) {
+                startHistoryId = webhookHistoryId - HISTORY_GAP_CAP;
+                log.warn("event=gmail_history_gap_truncated tenantId={} skipped={}",
+                    tenantId, (webhookHistoryId - startHistoryId));
+            }
+
+            ListHistoryResponse historyResponse = gmail.users()
+                .history().list("me")
+                .setStartHistoryId(BigInteger.valueOf(startHistoryId))
+                .setHistoryTypes(List.of("messageAdded"))
+                .setMaxResults(500L)
+                .execute();
+
+            if (historyResponse.getNextPageToken() != null) {
+                log.warn("event=gmail_history_pagination_dropped tenantId={}", tenantId);
+            }
+
+            int newObservations = 0;
+            List<History> historyList = historyResponse.getHistory();
+            if (historyList != null) {
+                for (History h : historyList) {
+                    if (h.getMessagesAdded() == null) continue;
+                    for (HistoryMessageAdded added : h.getMessagesAdded()) {
+                        Message msg = added.getMessage();
+                        List<String> labelIds = msg.getLabelIds();
+                        if (labelIds == null || !labelIds.contains("INBOX")) continue;
+
+                        // D-B3: privacy floor — IDs + labels only, no content
+                        MailMessageObservedEntity observed = new MailMessageObservedEntity(
+                            tenantId,
+                            msg.getId(),
+                            msg.getThreadId(),
+                            h.getId().longValue(),
+                            labelIds.toArray(new String[0]),
+                            msg.getInternalDate()  // nullable per schema
+                        );
+                        // ON CONFLICT DO NOTHING semantics via save + ignore duplicate exception
+                        try {
+                            observedRepository.save(observed);
+                            newObservations++;
+                        } catch (DataIntegrityViolationException ignored) {
+                            // Duplicate — idempotent (D-A5)
+                        }
+                    }
+                }
+            }
+
+            // D-B5: monotonic-conditional history pointer advance
+            connectionRepository.updateLastSyncedHistoryIdMonotonic(tenantId, webhookHistoryId);
+
+            deliveryRepository.updateStatus(delivery.getId(), "PROCESSED");
+            log.info("event=gmail_history_processed tenantId={} batch_size=1 new_observations={}",
+                tenantId, newObservations);
+
+        } catch (GoogleJsonResponseException e) {
+            if (e.getStatusCode() == 404) {
+                // D-D2: history-404 recovery — advance pointer, set HISTORY_LOST, mark PROCESSED
+                connectionService.markHistoryLost(tenantId, webhookHistoryId);
+                deliveryRepository.updateStatus(delivery.getId(), "PROCESSED");
+                log.warn("event=gmail_history_lost tenantId={} expired_history_id={} new_pointer={}",
+                    tenantId, delivery.getHistoryId(), webhookHistoryId);
+            } else {
+                handleRetryableFailure(delivery, tenantId, e);
+            }
+        } catch (InvalidGrantException e) {
+            connectionService.disconnect(tenantId);
+            deliveryRepository.updateStatus(delivery.getId(), "DEAD");
+            log.warn("event=gmail_oauth_revoked tenantId={}", tenantId);
+        } catch (Exception e) {
+            handleRetryableFailure(delivery, tenantId, e);
+        }
+    }
+
+    private void handleRetryableFailure(PubSubDeliveryEntity delivery, UUID tenantId, Exception e) {
+        int attempts = delivery.getAttempts() + 1;
+        if (attempts >= 3) {
+            deliveryRepository.updateStatus(delivery.getId(), "DEAD");
+            log.warn("event=gmail_delivery_dead tenantId={} attempts={}", tenantId, attempts);
+        } else {
+            deliveryRepository.incrementAttempts(delivery.getId());
+            log.warn("event=gmail_delivery_retry tenantId={} attempt={}", tenantId, attempts);
+        }
+    }
+}
+```
+
+Add `incrementAttempts` to `PubSubDeliveryRepository`:
+```java
+@Modifying
+@Query("UPDATE PubSubDeliveryEntity d SET d.attempts = d.attempts + 1 WHERE d.id = :id")
+@Transactional
+int incrementAttempts(@Param("id") UUID id);
+```
+
+Privacy: NEVER log `conn.getRefreshTokenEncrypted()`, `decryptedToken`, token values, email addresses, `msg.getSnippet()`, subject, or any email content. Only log `tenantId` UUID + numeric counts.
   </action>
 
   <verify>
@@ -304,14 +460,16 @@ Privacy log goes in the controller (not here).
     - `GmailConnectionService.java` contains `markHistoryLost(`, `markWatchUnhealthy(`, `recordWatchSuccess(`, `clearForReconnect(`, `incrementWatchFailure(`
     - `GmailConnectionRepository.java` contains `findConnectionsNeedingWatchRenewal(` and `updateLastSyncedHistoryIdMonotonic(`
     - `TenantService.java` contains `setTriagePaused(UUID tenantId, boolean paused)`
+    - `GmailDeliveryProcessingService.java` exists in `com.zeromail.core.gmail.service`, is annotated `@Service @Transactional`, and has a `public void processDelivery(PubSubDeliveryEntity delivery)` method — NOT private
+    - `GmailDeliveryProcessingService.java` does NOT have `private void processDelivery` (the old Spring AOP bug pattern)
     - `./gradlew :backend:core:compileJava` exits 0
   </acceptance_criteria>
 
-  <done>GmailApiClientFactory, 5 new GmailConnectionService methods, TenantService.setTriagePaused all compile cleanly</done>
+  <done>GmailApiClientFactory, 5 new GmailConnectionService methods, TenantService.setTriagePaused, and GmailDeliveryProcessingService (public @Transactional) all compile cleanly</done>
 </task>
 
 <task type="auto">
-  <name>Task 2: GmailWatchScheduler + GmailHistoryProcessor + worker application.yml env vars</name>
+  <name>Task 2: GmailWatchScheduler + GmailHistoryProcessor (thin tick, delegates to GmailDeliveryProcessingService) + worker application.yml env vars</name>
   <files>
     backend/worker/src/main/java/com/zeromail/worker/GmailWatchScheduler.java,
     backend/worker/src/main/java/com/zeromail/worker/GmailHistoryProcessor.java,
@@ -400,143 +558,38 @@ Privacy: NEVER log `conn.getRefreshTokenEncrypted()`, `decryptedToken`, `tokenRe
 
 **`GmailHistoryProcessor.java`** — new `@Component` in `com.zeromail.worker`. `@Scheduled(fixedDelay = 1_000L)` — 1s after previous tick completes.
 
+The `tick()` method is a thin scan loop only — it does NOT own any `@Transactional` logic. Per-delivery transaction is owned by `GmailDeliveryProcessingService.processDelivery()` (a PUBLIC method on a separate Spring bean — allows Spring AOP to intercept the `@Transactional` annotation correctly). This avoids the `private @Transactional` bug where Spring AOP cannot intercept private methods and the transaction never starts.
+
 ```java
 @Component
 public class GmailHistoryProcessor {
 
     private static final Logger log = LoggerFactory.getLogger(GmailHistoryProcessor.class);
     private static final int BATCH_SIZE = 50;
-    private static final long HISTORY_GAP_CAP = 500L;   // D-B6 bounded window
 
     private final PubSubDeliveryRepository deliveryRepository;
-    private final MailMessageObservedRepository observedRepository;
-    private final GmailConnectionService connectionService;
-    private final GmailConnectionRepository connectionRepository;
-    private final GmailApiClientFactory gmailApiClientFactory;
-    private final RefreshTokenCipher refreshTokenCipher;
+    private final GmailDeliveryProcessingService deliveryProcessingService;
 
     // Constructor injection (Lombok-free)
+    public GmailHistoryProcessor(PubSubDeliveryRepository deliveryRepository,
+                                  GmailDeliveryProcessingService deliveryProcessingService) {
+        this.deliveryRepository = deliveryRepository;
+        this.deliveryProcessingService = deliveryProcessingService;
+    }
 
     @Scheduled(fixedDelay = 1_000L)
     public void tick() {
         List<PubSubDeliveryEntity> batch = deliveryRepository.claimPendingBatch(BATCH_SIZE);
         for (PubSubDeliveryEntity delivery : batch) {
+            // ScopedValue binds TenantContext per row before delegate call
             ScopedValue.where(TenantContext.TENANT, delivery.getTenantId().toString())
-                       .run(() -> processDelivery(delivery));
-        }
-    }
-
-    @Transactional
-    private void processDelivery(PubSubDeliveryEntity delivery) {
-        UUID tenantId = delivery.getTenantId();
-        long webhookHistoryId = delivery.getHistoryId();
-
-        try {
-            GmailConnectionEntity conn = connectionRepository.findByTenantId(tenantId)
-                .orElseThrow(() -> new IllegalStateException("No connection for tenantId: " + tenantId));
-
-            String decryptedToken = refreshTokenCipher.decrypt(conn.getRefreshTokenEncrypted());
-            GmailApiClientFactory.TokenRefreshResult tokenResult = gmailApiClientFactory.refreshAccessToken(decryptedToken);
-            Gmail gmail = gmailApiClientFactory.buildGmailClient(tokenResult.accessToken());
-
-            // D-B6 bounded history window
-            long startHistoryId = conn.getLastSyncedHistoryId() != null
-                ? conn.getLastSyncedHistoryId() : webhookHistoryId;
-            if (webhookHistoryId - startHistoryId > HISTORY_GAP_CAP) {
-                startHistoryId = webhookHistoryId - HISTORY_GAP_CAP;
-                log.warn("event=gmail_history_gap_truncated tenantId={} skipped={}",
-                    tenantId, (webhookHistoryId - startHistoryId));
-            }
-
-            ListHistoryResponse historyResponse = gmail.users()
-                .history().list("me")
-                .setStartHistoryId(BigInteger.valueOf(startHistoryId))
-                .setHistoryTypes(List.of("messageAdded"))
-                .setMaxResults(500L)
-                .execute();
-
-            if (historyResponse.getNextPageToken() != null) {
-                log.warn("event=gmail_history_pagination_dropped tenantId={}", tenantId);
-            }
-
-            int newObservations = 0;
-            List<History> historyList = historyResponse.getHistory();
-            if (historyList != null) {
-                for (History h : historyList) {
-                    if (h.getMessagesAdded() == null) continue;
-                    for (HistoryMessageAdded added : h.getMessagesAdded()) {
-                        Message msg = added.getMessage();
-                        List<String> labelIds = msg.getLabelIds();
-                        if (labelIds == null || !labelIds.contains("INBOX")) continue;
-
-                        // D-B3: privacy floor — IDs + labels only, no content
-                        MailMessageObservedEntity observed = new MailMessageObservedEntity(
-                            tenantId,
-                            msg.getId(),
-                            msg.getThreadId(),
-                            h.getId().longValue(),
-                            labelIds.toArray(new String[0]),
-                            msg.getInternalDate()  // nullable per schema
-                        );
-                        // ON CONFLICT DO NOTHING semantics via saveAndFlush + ignore duplicate exception
-                        try {
-                            observedRepository.save(observed);
-                            newObservations++;
-                        } catch (DataIntegrityViolationException ignored) {
-                            // Duplicate — idempotent (D-A5)
-                        }
-                    }
-                }
-            }
-
-            // D-B5: monotonic-conditional history pointer advance
-            connectionRepository.updateLastSyncedHistoryIdMonotonic(tenantId, webhookHistoryId);
-
-            deliveryRepository.updateStatus(delivery.getId(), "PROCESSED");
-            log.info("event=gmail_history_processed tenantId={} batch_size=1 new_observations={}",
-                tenantId, newObservations);
-
-        } catch (GoogleJsonResponseException e) {
-            if (e.getStatusCode() == 404) {
-                // D-D2: history-404 recovery — advance pointer, set HISTORY_LOST, mark PROCESSED
-                connectionService.markHistoryLost(tenantId, webhookHistoryId);
-                deliveryRepository.updateStatus(delivery.getId(), "PROCESSED");
-                log.warn("event=gmail_history_lost tenantId={} expired_history_id={} new_pointer={}",
-                    tenantId, delivery.getHistoryId(), webhookHistoryId);
-            } else {
-                handleRetryableFailure(delivery, tenantId, e);
-            }
-        } catch (InvalidGrantException e) {
-            connectionService.disconnect(tenantId);
-            deliveryRepository.updateStatus(delivery.getId(), "DEAD");
-            log.warn("event=gmail_oauth_revoked tenantId={}", tenantId);
-        } catch (Exception e) {
-            handleRetryableFailure(delivery, tenantId, e);
-        }
-    }
-
-    private void handleRetryableFailure(PubSubDeliveryEntity delivery, UUID tenantId, Exception e) {
-        int attempts = delivery.getAttempts() + 1;
-        if (attempts >= 3) {
-            deliveryRepository.updateStatus(delivery.getId(), "DEAD");
-            log.warn("event=gmail_delivery_dead tenantId={} attempts={}", tenantId, attempts);
-        } else {
-            deliveryRepository.incrementAttempts(delivery.getId());
-            log.warn("event=gmail_delivery_retry tenantId={} attempt={}", tenantId, attempts);
+                       .run(() -> deliveryProcessingService.processDelivery(delivery));
         }
     }
 }
 ```
 
-Add `incrementAttempts` to `PubSubDeliveryRepository`:
-```java
-@Modifying
-@Query("UPDATE PubSubDeliveryEntity d SET d.attempts = d.attempts + 1 WHERE d.id = :id")
-@Transactional
-int incrementAttempts(@Param("id") UUID id);
-```
-
-Privacy: NEVER log `conn.getRefreshTokenEncrypted()`, `decryptedToken`, token values, email addresses, `msg.getSnippet()`, subject, or any email content. Only log `tenantId` UUID + numeric counts.
+Privacy: Only `deliveryProcessingService.processDelivery` handles the Gmail API and DB writes; privacy logging lives there. This class does NOT log any tenant-specific content beyond what GmailDeliveryProcessingService emits.
 
 **`backend/worker/src/main/resources/application.yml`** — READ the current file. ADD env vars with `:?` fail-fast (per Phase 01.5 P08 pattern):
 ```yaml
@@ -557,15 +610,16 @@ Also ensure `spring.threads.virtual.enabled: true` is present (or add if missing
     - `GmailWatchScheduler.java` contains `setLabelIds(List.of("INBOX"))` — D-C3 INBOX-only
     - `GmailWatchScheduler.java` does NOT contain any log statement referencing `refreshToken`, `accessToken`, or `googleEmail`
     - `GmailHistoryProcessor.java` contains `fixedDelay` and `ScopedValue.where`
-    - `GmailHistoryProcessor.java` contains `HISTORY_GAP_CAP` = 500 and `event=gmail_history_gap_truncated`
-    - `GmailHistoryProcessor.java` contains `event=gmail_history_lost` on 404 catch
-    - `GmailHistoryProcessor.java` does NOT contain subject, from, body, snippet, or email address in any log statement
+    - `GmailHistoryProcessor.java` injects `GmailDeliveryProcessingService` and calls `deliveryProcessingService.processDelivery(delivery)` — NOT an inline private method
+    - `GmailHistoryProcessor.java` does NOT contain `@Transactional` annotation (transaction lives in GmailDeliveryProcessingService)
+    - `GmailDeliveryProcessingService.java` contains `event=gmail_history_gap_truncated` and `event=gmail_history_lost` on 404 catch
+    - `GmailDeliveryProcessingService.java` does NOT contain subject, from, body, snippet, or email address in any log statement
     - `backend/worker/src/main/resources/application.yml` contains `GOOGLE_PUBSUB_TOPIC_NAME:?`
     - `./gradlew :backend:worker:compileJava` exits 0
     - GmailWatchSchedulerTest and GmailHistoryProcessorTest pass GREEN (using MockGmailHistoryServer)
   </acceptance_criteria>
 
-  <done>Both schedulers compile; GmailWatchSchedulerTest and GmailHistoryProcessorTest pass GREEN; worker application.yml has 3-env-var fail-fast config</done>
+  <done>Both schedulers compile; GmailHistoryProcessor delegates to GmailDeliveryProcessingService (public @Transactional); GmailWatchSchedulerTest and GmailHistoryProcessorTest pass GREEN; worker application.yml has env-var fail-fast config</done>
 </task>
 
 </tasks>
@@ -584,9 +638,9 @@ Also ensure `spring.threads.virtual.enabled: true` is present (or add if missing
 | Threat ID | Category | Component | Disposition | Mitigation Plan |
 |-----------|----------|-----------|-------------|-----------------|
 | T-04 | Information Disclosure | GmailApiClientFactory.refreshAccessToken | mitigate | `decryptedRefreshToken` parameter never logged; only `event=gmail_token_refresh_failed tenantId={}` on error |
-| T-05 | Information Disclosure | GmailHistoryProcessor per-message loop | mitigate | Only `gmail_message_id`, `gmail_thread_id`, `history_id`, `label_ids`, `internal_date` stored — no subject/from/body/snippet in code or logs |
+| T-05 | Information Disclosure | GmailDeliveryProcessingService per-message loop | mitigate | Only `gmail_message_id`, `gmail_thread_id`, `history_id`, `label_ids`, `internal_date` stored — no subject/from/body/snippet in code or logs |
 | T-09 | Denial of Service | GmailWatchScheduler retry loop | mitigate | `watch_consecutive_failures < 3` WHERE clause gates retries; after 3 failures sets WATCH_UNHEALTHY + stops standard renewal until clearForReconnect called |
-| T-11 | Tampering | GmailHistoryProcessor crash recovery | mitigate | `ON CONFLICT DO NOTHING` + monotonic pointer update = exactly-once observation on restart |
+| T-11 | Tampering | GmailDeliveryProcessingService crash recovery | mitigate | `ON CONFLICT DO NOTHING` + monotonic pointer update = exactly-once observation on restart; PUBLIC @Transactional ensures atomicity |
 | T-03 | Elevation of Privilege | history gap truncation | accept | D-B6 explicitly accepts dropped-gap messages — 500-item cap prevents runaway; logged for admin visibility |
 </threat_model>
 
@@ -595,11 +649,12 @@ After this plan:
 - `./gradlew :backend:worker:compileJava` exits 0
 - `./gradlew :backend:worker:test --tests "*GmailWatchSchedulerTest*"` exits 0 (GREEN)
 - `./gradlew :backend:worker:test --tests "*GmailHistoryProcessorTest*"` exits 0 (GREEN)
-- `GmailWatchScheduler.java` passes grep: `grep -v '^//' | grep -c 'googleEmail\|refreshToken\|accessToken' = 0` on log lines
+- `GmailWatchScheduler.java` passes grep: `grep -v '^//' GmailWatchScheduler.java | grep -v '^#' | grep -c 'googleEmail\|refreshToken\|accessToken'` = 0 on log lines
+- `GmailHistoryProcessor.java` does NOT contain `@Transactional` annotation (transaction is in GmailDeliveryProcessingService)
 </verification>
 
 <success_criteria>
-GmailWatchScheduler and GmailHistoryProcessor compile and their Wave 0 tests turn GREEN. GmailConnectionService has 5 new state-management methods. TenantService.setTriagePaused added. Worker application.yml has GOOGLE_PUBSUB_TOPIC_NAME fail-fast var.
+GmailWatchScheduler and GmailHistoryProcessor compile and their Wave 0 tests turn GREEN. GmailHistoryProcessor delegates per-delivery work to GmailDeliveryProcessingService (public @Transactional — Spring AOP intercepts correctly). GmailConnectionService has 5 new state-management methods. TenantService.setTriagePaused added. Worker application.yml has GOOGLE_PUBSUB_TOPIC_NAME fail-fast var.
 </success_criteria>
 
 <output>
