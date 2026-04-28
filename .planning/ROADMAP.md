@@ -52,10 +52,19 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 
 ### Phase 01.6: Brand Identity, Design Tokens, and Landing Page (INSERTED)
 
-**Goal:** [Urgent work - to be planned]
-**Requirements**: TBD
-**Depends on:** Phase 1
-**Plans:** 0 plans
+**Goal:** `apps/web` adopts the Zero Mail brand identity (Teal accent + Paper-warm neutrals + Earnest trust copy), exposes a demo-ready landing page at `/` with hero + how-it-works + features + trust-pillars sections, and reskins Phase 1.5 sign-in + onboarding surfaces to match the reference visual tone — without changing any backend integration, OAuth flow, or route contract.
+**Depends on:** Phase 1.5
+**Requirements**: see `.planning/phases/01.6-brand-identity-design-tokens-and-landing-page/01.6-SPEC.md` (9 phase-internal requirements: design tokens, typography stack, landing page sections, public layout shell, ZMLogoMark, Phase 1.5 reskin, theme cookie persistence, sign-in TrustPanel + legal footer, i18n VI/EN coverage)
+**Success Criteria** (what must be TRUE):
+  1. `/` renders 4 sections (Hero, HowItWorks 3 steps, Features, TrustPillars) on Teal-locked Paper-warm tokens; Lighthouse mobile + desktop ≥ 90 for Performance/Accessibility/Best-Practices; responsive from 320px viewport upward without horizontal scroll.
+  2. Geist Sans + Geist Mono + Be Vietnam Pro (Vietnamese subset) + Instrument Serif load via `next/font`; `font-sans`/`font-mono`/`font-serif` Tailwind utilities resolve correctly; Vietnamese diacritics render with correct glyphs.
+  3. `(auth)/login` shows TrustPanel + 2-column shell at desktop (≥768px), single-column form at mobile; legal footer (Terms / Privacy / Google API Limited Use disclosure) renders at every viewport beneath the OAuth button; bundled Google OAuth flow from Phase 1.5 D-A1 is unchanged.
+  4. Onboarding 3 screens (`gmail-connect`, `template-select`, `complete`) render with `<AuthTopBar>` + named-step pill `<StepIndicator>`; `OnboardingStep` enum + state machine + route paths unchanged.
+  5. Theme toggle persists via `zm-theme` cookie set by a Next 16 Server Action; first-paint HTML respects cookie value with no flash; no `localStorage` usage anywhere.
+  6. i18n parity: every visible string flows through `next-intl` keys; `apps/web/i18n/messages/{vi,en}.json` lock-step on new namespaces (`nav.*`, `trust.*`, `how.*`, `feat.*`, `legal.*`, `footer.*`, `onboarding.steps.*`); `pnpm i18n:check` passes.
+  7. `01.6-VISUAL-SWEEP.md` checklist proves Phase 1.5 components (Alert variant=warning, ReconnectPrompt, Login form, 3 onboarding cards) survive token swap — every row PASS for contrast WCAG AA, layout intact at 320/768/1024 px, focus ring visible, dark-mode renders, OAuth click path still ends at `/welcome` or correct onboarding step.
+**Plans:** TBD
+**Research flag**: This phase should run through `/gsd-research-phase` before planning — Tailwind 4 `@theme inline` token rebinding semantics, Next.js 16 `next/font` Vietnamese subset support for Be Vietnam Pro, Server Action cookie write API, and shadcn primitive token-rebind behavior all need current-library lookup.
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 01.6 to break down)
