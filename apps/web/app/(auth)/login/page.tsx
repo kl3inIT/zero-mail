@@ -4,6 +4,9 @@ import { LanguageSwitcher } from '@/i18n/components/LanguageSwitcher';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import AuthTopBar from '@/features/auth/components/AuthTopBar';
+import { LegalFooter } from '@/features/auth/components/LegalFooter';
+import { TrustPanel } from '@/features/auth/components/TrustPanel';
 import { cn } from '@/lib/utils';
 import { getApiUrl } from '@/lib/api/base-url';
 
@@ -52,47 +55,58 @@ export default async function LoginPage({
   const locale = (await getLocale()) as AppLocale;
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-6">
-      <div className="flex w-full max-w-md flex-col gap-6">
-        {isKnownError(error) && (
-          <Alert variant="destructive">
-            <AlertTitle>{tError(`${error}.title`)}</AlertTitle>
-            <AlertDescription>{tError(`${error}.body`)}</AlertDescription>
-          </Alert>
-        )}
-        <Card className="w-full">
-          <CardHeader className="pb-0">
-            <div className="flex items-start justify-between gap-3">
-              <h1 className="text-foreground text-2xl leading-snug font-bold tracking-tight">
-                {tLogin('headline')}
-              </h1>
-              <LanguageSwitcher currentLocale={locale} authenticated={false} variant="compact" />
-            </div>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-6 pt-4">
-            <p className="text-muted-foreground text-sm leading-relaxed">{tLogin('body')}</p>
-            <a
-              href={getApiUrl('/oauth2/authorization/google')}
-              className={cn(buttonVariants({ size: 'lg' }), 'w-full')}
-            >
-              {tLogin('googleButton')}
-            </a>
-            <ul className="text-muted-foreground space-y-1.5 text-xs">
-              <li className="flex items-start gap-2">
-                <span className="mt-0.5 shrink-0 opacity-50">&#x2713;</span>
-                {tLogin('safety.noAutoSend')}
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-0.5 shrink-0 opacity-50">&#x2713;</span>
-                {tLogin('safety.noLongTermStorage')}
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-0.5 shrink-0 opacity-50">&#x2713;</span>
-                {tLogin('safety.revokeAnytime')}
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
+    <main className="grid min-h-screen md:grid-cols-2">
+      <TrustPanel />
+      <div className="bg-background flex flex-col">
+        <AuthTopBar />
+        <div className="flex flex-1 items-center justify-center p-6">
+          <div className="flex w-full max-w-md flex-col gap-6">
+            {isKnownError(error) && (
+              <Alert variant="destructive">
+                <AlertTitle>{tError(`${error}.title`)}</AlertTitle>
+                <AlertDescription>{tError(`${error}.body`)}</AlertDescription>
+              </Alert>
+            )}
+            <Card className="w-full">
+              <CardHeader className="pb-0">
+                <div className="flex items-start justify-between gap-3">
+                  <h1 className="text-foreground text-2xl leading-snug font-bold tracking-tight">
+                    {tLogin('headline')}
+                  </h1>
+                  <LanguageSwitcher
+                    currentLocale={locale}
+                    authenticated={false}
+                    variant="compact"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-6 pt-4">
+                <p className="text-muted-foreground text-sm leading-relaxed">{tLogin('body')}</p>
+                <a
+                  href={getApiUrl('/oauth2/authorization/google')}
+                  className={cn(buttonVariants({ size: 'lg' }), 'w-full')}
+                >
+                  {tLogin('googleButton')}
+                </a>
+                <ul className="text-muted-foreground space-y-1.5 text-xs">
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 shrink-0 opacity-50">&#x2713;</span>
+                    {tLogin('safety.noAutoSend')}
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 shrink-0 opacity-50">&#x2713;</span>
+                    {tLogin('safety.noLongTermStorage')}
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="mt-0.5 shrink-0 opacity-50">&#x2713;</span>
+                    {tLogin('safety.revokeAnytime')}
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+            <LegalFooter />
+          </div>
+        </div>
       </div>
     </main>
   );
