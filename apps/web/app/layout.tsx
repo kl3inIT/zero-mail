@@ -111,6 +111,9 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const themeValue = cookieStore.get('zm-theme')?.value;
+  const theme: 'light' | 'dark' = themeValue === 'dark' ? 'dark' : 'light';
   const cookieLocale = await getLocale();
   // Reassert from /me when authenticated; falls back to cookie when not.
   const locale = await reassertServerLocale(cookieLocale);
@@ -131,7 +134,7 @@ export default async function RootLayout({
   return (
     <html
       lang={safeLocale}
-      className={`${geistSans.variable} ${geistMono.variable} ${beVietnamPro.variable} ${instrumentSerif.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${beVietnamPro.variable} ${instrumentSerif.variable} ${theme === 'dark' ? 'dark' : ''} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <NextIntlClientProvider locale={safeLocale} messages={messages}>
