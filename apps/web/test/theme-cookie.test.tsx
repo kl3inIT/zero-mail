@@ -2,8 +2,7 @@
 //  - zm-theme=dark cookie causes RootLayout to render <html class="... dark ...">
 //  - Absent cookie does NOT apply dark class
 //
-// RED-by-design: RootLayout does not yet read the zm-theme cookie to apply the dark class.
-// This spec becomes GREEN when Phase 1.6 Wave 1 lands.
+// Guards the Phase 1.6 Wave 2 first-paint theme cookie wiring in RootLayout.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
 
@@ -21,6 +20,16 @@ vi.mock('next-intl/server', () => ({
   getLocale: vi.fn(async () => 'en'),
   getMessages: vi.fn(async () => ({})),
 }));
+
+vi.mock('next/font/google', () => {
+  const font = (options: { variable: string }) => ({ variable: options.variable });
+  return {
+    Be_Vietnam_Pro: font,
+    Geist: font,
+    Geist_Mono: font,
+    Instrument_Serif: font,
+  };
+});
 
 import RootLayout from '@/app/layout';
 
