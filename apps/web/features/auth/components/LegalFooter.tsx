@@ -1,11 +1,18 @@
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 
-export async function LegalFooter() {
+import { cn } from '@/lib/utils';
+
+export async function LegalFooter({ className }: { className?: string }) {
   const t = await getTranslations();
 
   return (
-    <div className="text-muted-foreground space-y-3 text-center text-xs leading-relaxed">
+    <div
+      className={cn(
+        'text-muted-foreground space-y-3 text-center text-xs leading-relaxed',
+        className,
+      )}
+    >
       <p>
         {t.rich('legal.terms.body', {
           terms: (chunks) => (

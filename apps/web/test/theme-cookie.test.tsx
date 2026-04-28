@@ -21,16 +21,6 @@ vi.mock('next-intl/server', () => ({
   getMessages: vi.fn(async () => ({})),
 }));
 
-vi.mock('next/font/google', () => {
-  const font = (options: { variable: string }) => ({ variable: options.variable });
-  return {
-    Be_Vietnam_Pro: font,
-    Geist: font,
-    Geist_Mono: font,
-    Instrument_Serif: font,
-  };
-});
-
 import RootLayout from '@/app/layout';
 
 describe('RootLayout zm-theme cookie', () => {

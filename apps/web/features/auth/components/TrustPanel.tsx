@@ -1,49 +1,96 @@
 import { getTranslations } from 'next-intl/server';
 
+import {
+  ArrowUpRightIcon,
+  DatabaseIcon,
+  FileTextIcon,
+  MailIcon,
+  PenIcon,
+  SendIcon,
+  ShieldIcon,
+  TagIcon,
+  UndoIcon,
+  XIcon,
+} from '@/features/landing/components/PrototypeIcons';
+
 export async function TrustPanel() {
   const t = await getTranslations();
   const pillars = [
-    { id: 'p1', titleKey: 'trust.p1.title', bodyKey: 'trust.p1.body' },
-    { id: 'p2', titleKey: 'trust.p2.title', bodyKey: 'trust.p2.body' },
-    { id: 'p3', titleKey: 'trust.p3.title', bodyKey: 'trust.p3.body' },
+    { id: 'p1', titleKey: 'trust.p1.title', bodyKey: 'trust.p1.body', icon: SendIcon },
+    { id: 'p2', titleKey: 'trust.p2.title', bodyKey: 'trust.p2.body', icon: DatabaseIcon },
+    { id: 'p3', titleKey: 'trust.p3.title', bodyKey: 'trust.p3.body', icon: UndoIcon },
   ] as const;
+  const permissionIcons = [MailIcon, TagIcon, PenIcon] as const;
 
   return (
-    <aside
-      className="hidden md:flex md:flex-col md:gap-8 md:px-12 md:py-16 lg:px-16"
-      style={{ background: 'var(--trust-bg)', color: 'var(--trust-text)' }}
-    >
-      <div className="flex flex-col gap-2">
-        <span className="text-xs font-medium tracking-wider uppercase opacity-70">
-          {t('trust.eyebrow')}
+    <aside className="zm-trust-panel hidden md:block">
+      <span className="zm-eyebrow">
+        <span className="zm-dot" />
+        {t('auth.everywhere')}
+      </span>
+      <h2 className="zm-trust-panel-title">{t('trust.authTitle')}</h2>
+      <ul className="zm-trust-list">
+        {pillars.map((pillar) => {
+          const Icon = pillar.icon;
+          return (
+            <li key={pillar.id} className="zm-trust-item">
+              <span className="zm-trust-ic">
+                <Icon size={16} />
+              </span>
+              <div>
+                <h3>{t(pillar.titleKey as never)}</h3>
+                <p>{t(pillar.bodyKey as never)}</p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="mt-6 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+        <span className="inline-flex items-center gap-1">
+          <FileTextIcon size={12} /> {t('trust.proof.audit')}
+        </span>
+        <span>·</span>
+        <span className="inline-flex items-center gap-1">
+          <ShieldIcon size={12} /> {t('trust.proof.scopes')}
+        </span>
+        <span>·</span>
+        <span className="inline-flex items-center gap-1">
+          <ArrowUpRightIcon size={12} /> {t('trust.proof.revoke')}
         </span>
       </div>
-      <ul className="flex flex-col gap-8">
-        {pillars.map((pillar) => (
-          <li key={pillar.id} className="flex flex-col gap-2">
-            <CheckIcon className="size-5 shrink-0" />
-            <h3 className="text-lg font-semibold">{t(pillar.titleKey as never)}</h3>
-            <p className="text-sm leading-relaxed opacity-80">{t(pillar.bodyKey as never)}</p>
-          </li>
-        ))}
-      </ul>
+      <div className="zm-perm-card">
+        <div className="flex items-center justify-between gap-3">
+          <h4>{t('permissions.title')}</h4>
+          <span className="zm-pill zm-pill-mono">{t('permissions.minimum')}</span>
+        </div>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
+          {t('permissions.intro')}
+        </p>
+        <div className="mt-4 grid gap-3">
+          {(['r1', 'r2', 'r3'] as const).map((row, index) => {
+            const Icon = permissionIcons[index];
+            return (
+              <div key={row} className="grid grid-cols-[22px_1fr] gap-2">
+                <span className="grid size-[22px] place-items-center rounded border border-[var(--line)] bg-[var(--bg-elevated)]">
+                  <Icon size={13} />
+                </span>
+                <div>
+                  <div className="text-sm font-semibold text-[var(--ink)]">
+                    {t(`permissions.${row}.title` as never)}
+                  </div>
+                  <p className="text-xs leading-relaxed text-[var(--text-muted)]">
+                    {t(`permissions.${row}.body` as never)}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-4 flex items-start gap-2 rounded-md border border-dashed border-[var(--line)] bg-[var(--bg-elevated)] p-3 font-mono text-[11.5px] leading-relaxed text-[var(--text-faint)]">
+          <XIcon size={12} className="mt-0.5 shrink-0" />
+          <span>{t('permissions.notGranted' as never)}</span>
+        </div>
+      </div>
     </aside>
-  );
-}
-
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M5 13l4 4L19 7" />
-    </svg>
   );
 }

@@ -4,6 +4,7 @@
 **/dist/**
 **/out/**
 apps/web/lib/api/schema.d.ts
+apps/web/components/ui/**
 pnpm-lock.yaml
 backend/**/*.java
 backend/**/build/**

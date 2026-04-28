@@ -1,67 +1,28 @@
-'use client';
+import { Button } from '@/components/ui/button';
+import { MoonIcon, SunIcon } from '@/features/landing/components/PrototypeIcons';
 
-import { useTranslations } from 'next-intl';
+type Props = {
+  currentTheme: 'light' | 'dark';
+  label: string;
+};
 
-import { buttonVariants } from '@/components/ui/button';
-import { setTheme } from '@/features/landing/lib/setTheme';
-import { cn } from '@/lib/utils';
-
-type Props = { currentTheme: 'light' | 'dark' };
-
-export function ThemeToggle({ currentTheme }: Props) {
-  const t = useTranslations();
+export function ThemeToggle({ currentTheme, label }: Props) {
   const next: 'light' | 'dark' = currentTheme === 'dark' ? 'light' : 'dark';
-  const ariaLabel = currentTheme === 'dark' ? t('nav.themeToLight') : t('nav.themeToDark');
 
   return (
-    <form action={setTheme}>
+    <form action="/actions/theme" method="post">
       <input type="hidden" name="theme" value={next} />
-      <button
+      <Button
         type="submit"
-        aria-label={ariaLabel}
+        variant="outline"
+        size="icon"
+        aria-label={label}
+        title={label}
         aria-pressed={currentTheme === 'dark'}
-        className={cn(
-          buttonVariants({ variant: 'ghost', size: 'icon' }),
-          'min-h-[44px] min-w-[44px]',
-        )}
+        className="zm-icon-btn min-h-11 min-w-11 sm:min-h-8 sm:min-w-8"
       >
-        {currentTheme === 'dark' ? <SunIcon /> : <MoonIcon />}
-      </button>
+        {currentTheme === 'dark' ? <SunIcon size={15} /> : <MoonIcon size={15} />}
+      </Button>
     </form>
-  );
-}
-
-function SunIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="size-4"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-    </svg>
-  );
-}
-
-function MoonIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="size-4"
-      aria-hidden="true"
-    >
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-    </svg>
   );
 }

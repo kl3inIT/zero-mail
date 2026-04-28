@@ -2,12 +2,6 @@
 
 import { useEffect } from 'react';
 
-import { useTranslations } from 'next-intl';
-
-import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { buttonVariants } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-
 /**
  * Auth segment error boundary (Phase 01.4 D-D2 + D-D3).
  * Phase 01.5 Plan 02 — deflated from PageShell/SectionCard/StatusAlert to raw
@@ -23,8 +17,6 @@ export default function AuthError({
   error: Error & { digest?: string };
   unstable_retry: () => void;
 }) {
-  const t = useTranslations('errors.boundary');
-
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') {
       console.error(error);
@@ -34,19 +26,17 @@ export default function AuthError({
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-md">
-        <Alert variant="destructive">
-          <AlertTitle>{t('title')}</AlertTitle>
-          <AlertDescription>{t('body')}</AlertDescription>
-          <AlertAction>
-            <button
-              type="button"
-              onClick={() => unstable_retry()}
-              className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
-            >
-              {t('reset')}
-            </button>
-          </AlertAction>
-        </Alert>
+        <div className="border-destructive/30 bg-destructive/5 text-foreground rounded-lg border p-4">
+          <h2 className="font-semibold">Đã xảy ra lỗi / Something went wrong</h2>
+          <p className="text-muted-foreground mt-1 text-sm">Vui lòng thử lại. Please try again.</p>
+          <button
+            type="button"
+            onClick={() => unstable_retry()}
+            className="border-border bg-background hover:bg-muted mt-4 inline-flex h-8 items-center rounded-md border px-3 text-sm font-medium"
+          >
+            Thử lại
+          </button>
+        </div>
       </div>
     </main>
   );

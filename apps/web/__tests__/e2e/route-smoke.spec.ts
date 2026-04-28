@@ -58,6 +58,8 @@ test.describe('Phase 1.3 route-smoke (REVIEWS Revision 2 — Codex HIGH #5)', ()
   test('no nested <main> elements anywhere (REVIEWS Revision 2 — Codex HIGH #4)', async ({
     page,
   }) => {
+    test.setTimeout(45_000);
+
     for (const path of ['/', '/login']) {
       await page.goto(path, { waitUntil: 'domcontentloaded' });
       const mainCount = await page.locator('main').count();

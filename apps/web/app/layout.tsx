@@ -1,47 +1,12 @@
 import type { Metadata } from 'next';
 import { cookies, headers } from 'next/headers';
-import { Be_Vietnam_Pro, Geist, Geist_Mono, Instrument_Serif } from 'next/font/google';
-import { NextIntlClientProvider } from 'next-intl';
-import { getLocale, getMessages, getTranslations } from 'next-intl/server';
-
-import { QueryProvider } from '@/lib/query-client';
+import { getLocale, getTranslations } from 'next-intl/server';
 
 import { getCurrentUserCached } from '@/features/account/api/me';
 import { routing } from '@/i18n/routing';
 import { getApiBase } from '@/lib/api/base-url';
 
 import './globals.css';
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  // Geist keeps the existing Latin baseline; Be Vietnam Pro below provides the
-  // full Vietnamese subset for body prose.
-  subsets: ['latin', 'latin-ext'],
-  display: 'swap',
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-  display: 'swap',
-});
-
-const beVietnamPro = Be_Vietnam_Pro({
-  variable: '--font-be-vietnam-pro',
-  subsets: ['vietnamese', 'latin'],
-  // Weight 500 supports medium-emphasis nav and section headings while staying
-  // inside the Phase 1.6 font payload budget.
-  weight: ['400', '500', '600'],
-  display: 'swap',
-});
-
-const instrumentSerif = Instrument_Serif({
-  variable: '--font-instrument-serif',
-  subsets: ['latin'],
-  weight: '400',
-  style: ['normal', 'italic'],
-  display: 'swap',
-});
 
 /**
  * Localize <title> + <meta name="description"> via next-intl (UI-SPEC §"Routing
@@ -117,12 +82,6 @@ export default async function RootLayout({
   const cookieLocale = await getLocale();
   // Reassert from /me when authenticated; falls back to cookie when not.
   const locale = await reassertServerLocale(cookieLocale);
-  // If the locale changed, refetch messages for the new locale; otherwise reuse.
-  const messages =
-    locale === cookieLocale
-      ? await getMessages()
-      : ((await import(`../i18n/messages/${locale}.json`)).default as Record<string, unknown>);
-
   // Defensive guard: ensure routing.locales contains the resolved locale before
   // rendering (prevents "<html lang=invalid>" if /me ever returns a bad value).
   const safeLocale: (typeof routing.locales)[number] = (
@@ -132,15 +91,8 @@ export default async function RootLayout({
     : routing.defaultLocale;
 
   return (
-    <html
-      lang={safeLocale}
-      className={`${geistSans.variable} ${geistMono.variable} ${beVietnamPro.variable} ${instrumentSerif.variable} ${theme === 'dark' ? 'dark' : ''} h-full antialiased`}
-    >
-      <body className="flex min-h-full flex-col">
-        <NextIntlClientProvider locale={safeLocale} messages={messages}>
-          <QueryProvider>{children}</QueryProvider>
-        </NextIntlClientProvider>
-      </body>
+    <html lang={safeLocale} className={`${theme === 'dark' ? 'dark' : ''} h-full antialiased`}>
+      <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );
 }

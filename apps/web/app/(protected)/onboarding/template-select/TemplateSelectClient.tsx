@@ -4,12 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
-import { buttonVariants } from '@/components/ui/button';
-import { CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { RadioGroup } from '@/components/ui/radio-group';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { TemplateCard } from '@/features/onboarding/components/TemplateCard';
 import { useSelectTemplate } from '@/features/onboarding/hooks/useSelectTemplate';
-import { cn } from '@/lib/utils';
 
 type TemplateKey = 'archive-receipts' | 'label-newsletters' | 'pin-calendar';
 
@@ -31,6 +30,10 @@ const templates: { key: TemplateKey; titleKey: string; descKey: string }[] = [
   },
 ];
 
+function isTemplateKey(value: unknown): value is TemplateKey {
+  return templates.some((tpl) => tpl.key === value);
+}
+
 export function TemplateSelectClient() {
   const t = useTranslations();
   const router = useRouter();
@@ -47,19 +50,32 @@ export function TemplateSelectClient() {
 
   if (!me.data) {
     return (
-      <p className="text-muted-foreground text-sm leading-relaxed">{t('onboarding.loading')}</p>
+      <div className="zm-auth-panel">
+        <p className="text-sm leading-relaxed text-[var(--text-muted)]">
+          {t('onboarding.loading')}
+        </p>
+      </div>
     );
   }
 
   return (
-    <section className="space-y-6">
-      <CardHeader className="px-0">
-        <CardTitle>{t('onboarding.template.heading')}</CardTitle>
-        <CardDescription className="leading-relaxed">
-          {t('onboarding.template.body')}
-        </CardDescription>
-      </CardHeader>
-      <div className="flex flex-col gap-4">
+    <section className="zm-auth-panel">
+      <span className="zm-eyebrow">
+        <span className="zm-dot" />
+        {t('onboarding.template.eyebrow')}
+      </span>
+      <h1 className="zm-auth-title">
+        <span>{t('onboarding.template.heading')}</span>
+      </h1>
+      <p className="zm-auth-sub">{t('onboarding.template.body')}</p>
+      <RadioGroup
+        className="mt-7 gap-3"
+        value={selected ?? undefined}
+        onValueChange={(value) => {
+          if (isTemplateKey(value)) setSelected(value);
+        }}
+        aria-label={t('onboarding.template.heading')}
+      >
         {templates.map((tpl) => (
           <TemplateCard
             key={tpl.key}
@@ -67,17 +83,20 @@ export function TemplateSelectClient() {
             title={t(tpl.titleKey as never)}
             description={t(tpl.descKey as never)}
             selected={selected === tpl.key}
-            onSelect={() => setSelected(tpl.key)}
           />
         ))}
-        <button
+      </RadioGroup>
+      <div className="flex flex-col gap-4">
+        <Button
           type="button"
+          variant="accent"
+          size="lg"
           disabled={!selected || selectMut.isPending}
           onClick={() => selected && selectMut.mutate({ templateKey: selected })}
-          className={cn(buttonVariants(), 'mt-2 w-full')}
+          className="mt-2 h-10 w-full"
         >
           {selectMut.isPending ? t('common.loading') : t('onboarding.template.saveCta')}
-        </button>
+        </Button>
       </div>
     </section>
   );

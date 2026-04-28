@@ -9,7 +9,7 @@ import TopBar from '@/features/landing/components/TopBar';
  */
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="zm-proto flex min-h-full flex-col">
       <TopBar />
       <main className="flex-1">{children}</main>
       <Footer />

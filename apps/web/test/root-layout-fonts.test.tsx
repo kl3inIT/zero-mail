@@ -1,6 +1,6 @@
-// Wave 0 RED scaffold — locks the root layout font CSS-variable contract (Phase 1.6 REQ-1.6-2):
-//  - <html> className contains all 4 font CSS-variable class substrings
-//  - Be Vietnam Pro + Instrument Serif declared via next/font/google
+// Locks the root layout font contract (Phase 1.6 REQ-1.6-2):
+//  - root layout stays system-font backed so mobile Lighthouse has stable >90 performance
+//  - decorative mono/serif faces stay system-backed too
 //
 // Guards the Phase 1.6 Wave 1 font wiring in RootLayout.
 import { describe, it, expect, vi } from 'vitest';
@@ -19,27 +19,16 @@ vi.mock('next-intl/server', () => ({
   getMessages: vi.fn(async () => ({})),
 }));
 
-vi.mock('next/font/google', () => {
-  const font = (options: { variable: string }) => ({ variable: options.variable });
-  return {
-    Be_Vietnam_Pro: font,
-    Geist: font,
-    Geist_Mono: font,
-    Instrument_Serif: font,
-  };
-});
-
 import RootLayout from '@/app/layout';
 
 describe('RootLayout fonts', () => {
-  it('html className includes all 4 font CSS-variable classes', async () => {
+  it('html className does not include next/font CSS-variable classes', async () => {
     const Page = await RootLayout({ children: null as unknown as React.ReactNode });
     const { container } = render(Page as React.ReactElement);
     const html = container.querySelector('html') ?? document.documentElement;
     const cls = html.className ?? '';
-    expect(cls).toMatch(/--font-geist-sans/);
-    expect(cls).toMatch(/--font-geist-mono/);
-    expect(cls).toMatch(/--font-be-vietnam-pro/);
-    expect(cls).toMatch(/--font-instrument-serif/);
+    expect(cls).not.toMatch(/--font-be-vietnam-pro/);
+    expect(cls).not.toMatch(/--font-geist/);
+    expect(cls).not.toMatch(/--font-instrument-serif/);
   });
 });

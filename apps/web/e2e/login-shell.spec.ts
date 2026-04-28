@@ -13,18 +13,14 @@ test.describe('/login shell', () => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await page.goto('/login');
     // TrustPanel marker (aside with hidden md:flex visibility)
-    const trustPanel = page
-      .locator('aside')
-      .filter({ hasText: /no email content stored|không lưu trữ nội dung email/i });
+    const trustPanel = page.locator('aside.zm-trust-panel');
     await expect(trustPanel).toBeVisible();
   });
 
   test('mobile <768px hides TrustPanel, shows single column', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/login');
-    const trustPanel = page
-      .locator('aside')
-      .filter({ hasText: /no email content stored|không lưu trữ nội dung email/i });
+    const trustPanel = page.locator('aside.zm-trust-panel');
     await expect(trustPanel).not.toBeVisible();
   });
 
@@ -33,10 +29,9 @@ test.describe('/login shell', () => {
       test(`legal footer visible at ${width}px`, async ({ page }) => {
         await page.setViewportSize({ width, height: 800 });
         await page.goto('/login');
-        await expect(page.getByRole('link', { name: /terms|điều khoản/i })).toBeVisible();
-        await expect(
-          page.getByRole('link', { name: /^(privacy|chính sách bảo mật)$/i }),
-        ).toBeVisible();
+        const footer = page.getByRole('contentinfo');
+        await expect(footer.locator('a[href="/terms"]')).toBeVisible();
+        await expect(footer.locator('a[href="/privacy"]')).toBeVisible();
         await expect(
           page.getByText(
             /Google API Services User Data|Chính sách bảo mật dữ liệu người dùng của Google API/i,

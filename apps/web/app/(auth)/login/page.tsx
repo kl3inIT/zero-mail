@@ -1,16 +1,14 @@
-import { getLocale, getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
+import Link from 'next/link';
 
-import { LanguageSwitcher } from '@/i18n/components/LanguageSwitcher';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { buttonVariants } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import AuthTopBar from '@/features/auth/components/AuthTopBar';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { LegalFooter } from '@/features/auth/components/LegalFooter';
+import AuthTopBar from '@/features/auth/components/AuthTopBar';
 import { TrustPanel } from '@/features/auth/components/TrustPanel';
-import { cn } from '@/lib/utils';
+import { GoogleG, LockIcon, MailIcon } from '@/features/landing/components/PrototypeIcons';
 import { getApiUrl } from '@/lib/api/base-url';
-
-import type { AppLocale } from '@/i18n/routing';
+import { cn } from '@/lib/utils';
 
 /**
  * /login (RSC). Phase 01.5 Plan 02 — deflated from PageShell to raw <main>,
@@ -46,68 +44,79 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+  const t = await getTranslations();
   const tLogin = await getTranslations('auth.login');
   const tAuthError = await getTranslations('auth.error');
   // Cast error translator to loose shape to allow dynamic key construction for
   // KNOWN_ERROR_CODES. next-intl 4.x strict typed bundle cannot narrow template
   // literals; mirrors the LanguageSwitcher / StatusAlert LooseTranslator pattern.
   const tError = tAuthError as unknown as (key: string) => string;
-  const locale = (await getLocale()) as AppLocale;
-
   return (
-    <main className="grid min-h-screen md:grid-cols-2">
-      <TrustPanel />
-      <div className="bg-background flex flex-col">
-        <AuthTopBar />
-        <div className="flex flex-1 items-center justify-center p-6">
-          <div className="flex w-full max-w-md flex-col gap-6">
-            {isKnownError(error) && (
-              <Alert variant="destructive">
-                <AlertTitle>{tError(`${error}.title`)}</AlertTitle>
-                <AlertDescription>{tError(`${error}.body`)}</AlertDescription>
-              </Alert>
-            )}
-            <Card className="w-full">
-              <CardHeader className="pb-0">
-                <div className="flex items-start justify-between gap-3">
-                  <h1 className="text-foreground text-2xl leading-snug font-bold tracking-tight">
-                    {tLogin('headline')}
-                  </h1>
-                  <LanguageSwitcher
-                    currentLocale={locale}
-                    authenticated={false}
-                    variant="compact"
-                  />
-                </div>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-6 pt-4">
-                <p className="text-muted-foreground text-sm leading-relaxed">{tLogin('body')}</p>
-                <a
-                  href={getApiUrl('/oauth2/authorization/google')}
-                  className={cn(buttonVariants({ size: 'lg' }), 'w-full')}
-                >
-                  {tLogin('googleButton')}
-                </a>
-                <ul className="text-muted-foreground space-y-1.5 text-xs">
-                  <li className="flex items-start gap-2">
-                    <span className="mt-0.5 shrink-0 opacity-50">&#x2713;</span>
-                    {tLogin('safety.noAutoSend')}
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="mt-0.5 shrink-0 opacity-50">&#x2713;</span>
-                    {tLogin('safety.noLongTermStorage')}
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="mt-0.5 shrink-0 opacity-50">&#x2713;</span>
-                    {tLogin('safety.revokeAnytime')}
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-            <LegalFooter />
+    <div className="zm-auth flex min-h-screen flex-col">
+      <AuthTopBar />
+      <main className="zm-auth-main flex-1">
+        <div className="zm-auth-grid">
+          <div className="zm-auth-panel">
+            <div className="flex flex-col gap-1">
+              <span className="zm-eyebrow">
+                <span className="zm-dot" />
+                {tLogin('title')}
+              </span>
+              <h1 className="zm-auth-title">
+                <span>{tLogin('headlineA')}</span>
+                <em>{tLogin('headlineB')}</em>
+              </h1>
+              <p className="zm-auth-sub">{tLogin('body')}</p>
+            </div>
+            <div className="zm-signin-card">
+              {isKnownError(error) && (
+                <Alert variant="destructive">
+                  <AlertTitle>{tError(`${error}.title`)}</AlertTitle>
+                  <AlertDescription>{tError(`${error}.body`)}</AlertDescription>
+                </Alert>
+              )}
+              <a
+                href={getApiUrl('/oauth2/authorization/google')}
+                className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'zm-google-btn')}
+              >
+                <GoogleG size={18} />
+                {tLogin('googleButton')}
+              </a>
+              <p className="zm-signin-helper">
+                <LockIcon size={11} /> {tLogin('googleNote')}
+              </p>
+              <div className="zm-or-row">
+                <span>{tLogin('divider')}</span>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-10 w-full text-[var(--text-muted)] hover:text-[var(--ink)]"
+              >
+                <MailIcon size={14} /> {tLogin('workEmail')}
+              </Button>
+              <LegalFooter className="zm-signin-terms text-left" />
+            </div>
+            <div className="zm-signin-foot">
+              <span>{tLogin('newUser')}</span>
+              <Link href="/#cta" className="text-[var(--ink)]">
+                {tLogin('waitlist')}
+              </Link>
+            </div>
           </div>
+          <TrustPanel />
         </div>
-      </div>
-    </main>
+      </main>
+      <footer className="zm-auth-footer">
+        <span>{t('footer.copyright')}</span>
+        <span className="inline-flex items-center gap-2">
+          <Link href="/privacy">{t('footer.privacy')}</Link>
+          <span>·</span>
+          <Link href="/terms">{t('footer.terms')}</Link>
+          <span>·</span>
+          <Link href="/docs">{t('auth.help')}</Link>
+        </span>
+      </footer>
+    </div>
   );
 }

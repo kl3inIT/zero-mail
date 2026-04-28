@@ -8,15 +8,15 @@ import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 export default function OnboardingIndexPage() {
   const router = useRouter();
   const me = useCurrentUser();
+  const onboardingStep = me.data?.onboardingStep;
 
   useEffect(() => {
-    if (!me.data) return;
-    const step = me.data.onboardingStep;
-    if (step === 'GMAIL_CONNECTED') router.replace('/onboarding/template-select');
-    else if (step === 'TEMPLATE_SELECTED') router.replace('/onboarding/complete');
-    else if (step === 'COMPLETE') router.replace('/settings');
+    if (!onboardingStep) return;
+    if (onboardingStep === 'GMAIL_CONNECTED') router.replace('/onboarding/template-select');
+    else if (onboardingStep === 'TEMPLATE_SELECTED') router.replace('/onboarding/complete');
+    else if (onboardingStep === 'COMPLETE') router.replace('/settings');
     else router.replace('/welcome');
-  }, [me.data?.onboardingStep, router]);
+  }, [onboardingStep, router]);
 
   return null;
 }
