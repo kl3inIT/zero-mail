@@ -203,8 +203,15 @@ Plans:
   3. Replaying the same Pub/Sub delivery (same `historyId` + `messageId`) a second time produces no duplicate downstream effects — verifiable via audit trail in Phase 4.
   4. A Pub/Sub push request with a missing, expired, or wrong-audience Google OIDC token is rejected with 401 and never reaches business logic.
   5. A user can flip a "pause all automated triage" toggle and observe that new-message events are still received but no write actions are queued; after a history-404, the user sees a visible reconnect prompt instead of a full mailbox rescan.
-**Plans**: TBD
-**Research flag**: This phase should run through `/gsd-research-phase` before planning — Gmail `watch`/history edge cases and OIDC push-token verification need current-library lookup (see SUMMARY.md research flags).
+**Plans**: 6 plans
+
+Plans:
+- [ ] 02A-00-PLAN.md â Wave 0 RED test scaffolds (12 files: 9 backend + 3 frontend)
+- [ ] 02A-01-PLAN.md â Schema (Liquibase 010-013) + GmailIngestionHealth enum + entities/repositories
+- [ ] 02A-02-PLAN.md â Worker schedulers (GmailWatchScheduler + GmailHistoryProcessor + GmailApiClientFactory)
+- [ ] 02A-03-PLAN.md â API layer (PubSubOidcAuthFilter + SecurityFilterChain @Order(1) + push controller + triage-pause controller + MeResponse extension)
+- [ ] 02A-04-PLAN.md â Frontend (PauseBanner + settings toggle + ReconnectPrompt gate + i18n keys)
+- [ ] 02A-05-PLAN.md â Full verification sweep + closure
 
 ### Phase 2B: Billing (Prepaid Credits)
 **Goal**: Stand up a double-entry Postgres credit ledger with reserve/settle/release semantics and a watchdog, so that every billable action in later phases can charge credits safely under concurrency.
@@ -303,7 +310,7 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 1.3. Frontend Architecture Refactor and Public Content Foundation (INSERTED) | 8/8 | Complete | 2026-04-26 |
 | 1.4. Gmail Identity Semantics, Permission UX, and UI Consistency (INSERTED) | 6/6 | Complete without ship; superseded by 1.5 | 2026-04-27 |
 | 1.5. Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED) | 7/8 | In Progress|  |
-| 2A. Mail Ingestion | 0/TBD | Not started | - |
+| 2A. Mail Ingestion | 0/6 | In Progress | - |
 | 2B. Billing (Prepaid Credits) | 0/TBD | Not started | - |
 | 2C. LLM Gateway | 0/TBD | Not started | - |
 | 3. Rules Engine | 0/TBD | Not started | - |
