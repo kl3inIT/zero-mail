@@ -128,6 +128,20 @@
       "body": "This document could not be found. Return to the docs list."
     }
   },
+  "legal": {
+    "terms": {
+      "body": "By clicking continue, you agree to our <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",
+      "placeholderTitle": "Terms of Service",
+      "placeholderBody": "Real legal content will land in Phase 6 launch hardening. This stub exists so the legal-footer link target resolves and Google OAuth verification (CASA) requirements are unblocked."
+    },
+    "privacy": {
+      "placeholderTitle": "Privacy Policy",
+      "placeholderBody": "Real privacy policy content will land in Phase 6 launch hardening. PROJECT.md describes the binding privacy contract: no long-term storage of email content, prompts, completions, or embeddings."
+    },
+    "googleApiPolicy": {
+      "body": "Zero Mail's use and transfer of information received from Google APIs to any other app will adhere to <link>Google API Services User Data</link> Policy, including the Limited Use requirements."
+    }
+  },
   "auth": {
     "login": {
       "title": "Sign in",

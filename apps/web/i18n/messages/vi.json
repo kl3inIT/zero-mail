@@ -128,6 +128,20 @@
       "body": "Không tìm thấy tài liệu này. Quay lại danh sách tài liệu."
     }
   },
+  "legal": {
+    "terms": {
+      "body": "Khi nhấn tiếp tục, bạn đồng ý với <terms>Điều khoản dịch vụ</terms> và <privacy>Chính sách bảo mật</privacy> của chúng tôi.",
+      "placeholderTitle": "Điều khoản dịch vụ",
+      "placeholderBody": "Nội dung pháp lý đầy đủ sẽ có trong Phase 6 (giai đoạn hardening trước khi launch). Trang stub này tồn tại để các liên kết trong footer pháp lý phân giải đúng và để Zero Mail không bị chặn yêu cầu xác minh Google OAuth (CASA)."
+    },
+    "privacy": {
+      "placeholderTitle": "Chính sách bảo mật",
+      "placeholderBody": "Chính sách bảo mật đầy đủ sẽ có trong Phase 6 (giai đoạn hardening trước khi launch). PROJECT.md mô tả cam kết ràng buộc về bảo mật: không lưu trữ lâu dài nội dung email, prompt, câu trả lời, hay embedding."
+    },
+    "googleApiPolicy": {
+      "body": "Việc Zero Mail sử dụng và chuyển giao thông tin nhận được từ Google API sang bất kỳ ứng dụng nào khác sẽ tuân thủ <link>Chính sách bảo mật dữ liệu người dùng của Google API</link>, bao gồm các yêu cầu Sử dụng có giới hạn (Limited Use)."
+    }
+  },
   "auth": {
     "login": {
       "title": "Đăng nhập",
