@@ -35,7 +35,87 @@
     "heading": "Zero Mail",
     "tagline": "AI auto-triage for Gmail. This page is being finalized.",
     "primaryCta": "Sign in",
-    "continueSetupCta": "Continue setup"
+    "continueSetupCta": "Continue setup",
+    "eyebrow": "Inbox zero, on autopilot"
+  },
+  "how": {
+    "eyebrow": "How it works",
+    "title": "Three steps to an inbox that handles itself",
+    "desc": "Connect Gmail, write rules in plain English, review what happened. That's the loop.",
+    "step1": {
+      "title": "Connect Gmail",
+      "desc": "One-click Google sign-in with the minimum scopes Zero Mail needs to triage your inbox.",
+      "connected": "Connected · 3 scopes"
+    },
+    "step2": {
+      "title": "Write rules in plain English",
+      "desc": "\"Archive Stripe receipts and label them Finance.\" That's it. We turn it into structured triage.",
+      "example": "Archive Stripe receipts and label them Finance"
+    },
+    "step3": {
+      "title": "Review what triage did",
+      "desc": "Every action is logged with reason and rule. Undo anything in one click."
+    }
+  },
+  "feat": {
+    "eyebrow": "Built for trust",
+    "title": "Capabilities that respect your inbox",
+    "f1": {
+      "title": "Plain-English rules",
+      "desc": "Write triage logic the way you'd describe it to a teammate. We compile it into structured matchers."
+    },
+    "f2": {
+      "title": "BYOK ready",
+      "desc": "Use OpenRouter routing or plug in your own OpenAI / Anthropic key. Your wallet, your keys."
+    },
+    "f3": {
+      "title": "Auditable trail",
+      "desc": "Every automated label, archive, or draft is logged with the rule that fired and the message it touched."
+    },
+    "f4": {
+      "title": "Vietnamese-first",
+      "desc": "Native VI / EN bilingual UI. Write rules in either language; we triage either way."
+    },
+    "f5": {
+      "title": "No auto-send",
+      "desc": "Zero Mail labels, archives, and saves drafts. It will never send a message without your review."
+    },
+    "f6": {
+      "title": "Revoke any time",
+      "desc": "Disconnect Gmail or delete your account from Settings. Tokens deleted immediately."
+    }
+  },
+  "trust": {
+    "eyebrow": "Trust is the product",
+    "title": "Built around what your inbox actually deserves",
+    "c1": {
+      "title": "No long-term storage of email content",
+      "body": "Bodies sanitized, truncated, sent to the LLM, then dropped. No embeddings, no prompts, no completions retained."
+    },
+    "c2": {
+      "title": "No auto-send — ever",
+      "body": "Zero Mail labels, archives, and saves drafts. You always review before anything ships."
+    },
+    "c3": {
+      "title": "Revoke any time",
+      "body": "Disconnect Gmail or delete your account from Settings. We delete tokens and selections immediately."
+    },
+    "c4": {
+      "title": "Auditable triage trail",
+      "body": "Every automated action is logged with the rule that fired and the message it touched."
+    },
+    "p1": {
+      "title": "We never store your email content",
+      "body": "Bodies are sanitized, sent to the LLM in a single request, and discarded. No prompts or replies are kept long-term."
+    },
+    "p2": {
+      "title": "Auto-send is off by default — and stays off",
+      "body": "Zero Mail can label, archive, and save drafts. It will never send a message without your review. This is a product invariant, not a setting."
+    },
+    "p3": {
+      "title": "Bring your own key — your wallet, your keys",
+      "body": "Use OpenRouter routing or plug in your own OpenAI / Anthropic key. BYOK requests bypass our LLM cost entirely."
+    }
   },
   "docs": {
     "indexHeading": "Docs",

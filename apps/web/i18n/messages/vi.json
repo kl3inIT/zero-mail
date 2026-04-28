@@ -35,7 +35,87 @@
     "heading": "Zero Mail",
     "tagline": "AI auto-triage cho Gmail. Trang đang được hoàn thiện.",
     "primaryCta": "Đăng nhập",
-    "continueSetupCta": "Tiếp tục thiết lập"
+    "continueSetupCta": "Tiếp tục thiết lập",
+    "eyebrow": "Hộp thư trống, tự động"
+  },
+  "how": {
+    "eyebrow": "Cách hoạt động",
+    "title": "Ba bước để hộp thư tự xử lý chính nó",
+    "desc": "Kết nối Gmail, viết quy tắc bằng tiếng Việt thông thường, xem lại kết quả. Vòng lặp chỉ có thế.",
+    "step1": {
+      "title": "Kết nối Gmail",
+      "desc": "Đăng nhập Google một cú nhấn với phạm vi tối thiểu mà Zero Mail cần để triage hộp thư của bạn.",
+      "connected": "Đã kết nối · 3 phạm vi"
+    },
+    "step2": {
+      "title": "Viết quy tắc bằng tiếng Việt thông thường",
+      "desc": "\"Lưu trữ biên lai Stripe và gắn nhãn Tài chính.\" Vậy thôi. Chúng tôi chuyển thành quy tắc có cấu trúc.",
+      "example": "Lưu trữ biên lai Stripe và gắn nhãn Tài chính"
+    },
+    "step3": {
+      "title": "Xem lại những gì đã làm",
+      "desc": "Mọi hành động đều có lý do và quy tắc đi kèm. Hoàn tác bất kỳ thao tác nào trong một cú nhấn."
+    }
+  },
+  "feat": {
+    "eyebrow": "Xây dựng cho niềm tin",
+    "title": "Tính năng tôn trọng hộp thư của bạn",
+    "f1": {
+      "title": "Quy tắc bằng tiếng Việt",
+      "desc": "Viết logic triage như khi bạn nói với đồng nghiệp. Chúng tôi biên dịch thành matcher có cấu trúc."
+    },
+    "f2": {
+      "title": "Dùng API key riêng",
+      "desc": "Định tuyến qua OpenRouter hoặc cắm thẳng API key OpenAI / Anthropic. Ví của bạn, key của bạn."
+    },
+    "f3": {
+      "title": "Nhật ký minh bạch",
+      "desc": "Mọi nhãn, lưu trữ, hay bản nháp tự động đều được ghi lại kèm quy tắc đã kích hoạt và email nó đã xử lý."
+    },
+    "f4": {
+      "title": "Ưu tiên tiếng Việt",
+      "desc": "Giao diện song ngữ VI / EN gốc. Viết quy tắc bằng ngôn ngữ nào cũng được; chúng tôi triage cả hai."
+    },
+    "f5": {
+      "title": "Không tự động gửi",
+      "desc": "Zero Mail gắn nhãn, lưu trữ, lưu bản nháp. Sẽ không bao giờ gửi tin nhắn trước khi bạn xem lại."
+    },
+    "f6": {
+      "title": "Hủy quyền bất kỳ lúc nào",
+      "desc": "Ngắt Gmail hoặc xoá tài khoản trong phần Cài đặt. Token được xoá ngay lập tức."
+    }
+  },
+  "trust": {
+    "eyebrow": "Niềm tin chính là sản phẩm",
+    "title": "Được thiết kế đúng với điều hộp thư của bạn xứng đáng",
+    "c1": {
+      "title": "Không lưu nội dung email lâu dài",
+      "body": "Nội dung được làm sạch, cắt gọn, gửi đến LLM rồi bỏ đi. Không giữ embedding, prompt, hay câu trả lời."
+    },
+    "c2": {
+      "title": "Không bao giờ tự động gửi",
+      "body": "Zero Mail gắn nhãn, lưu trữ, lưu bản nháp. Bạn luôn xem lại trước khi gửi đi."
+    },
+    "c3": {
+      "title": "Hủy quyền bất kỳ lúc nào",
+      "body": "Ngắt Gmail hoặc xoá tài khoản trong phần Cài đặt. Chúng tôi xoá token và lựa chọn của bạn ngay lập tức."
+    },
+    "c4": {
+      "title": "Nhật ký triage minh bạch",
+      "body": "Mọi hành động tự động đều được ghi lại kèm quy tắc đã kích hoạt và email nó đã xử lý."
+    },
+    "p1": {
+      "title": "Chúng tôi không lưu trữ nội dung email của bạn",
+      "body": "Nội dung email được làm sạch, gửi đến LLM trong một lượt duy nhất, rồi bỏ đi. Không có lời nhắc (prompt) hay câu trả lời nào được giữ lâu dài."
+    },
+    "p2": {
+      "title": "Tự động gửi luôn tắt — và giữ nguyên như vậy",
+      "body": "Zero Mail có thể gắn nhãn, lưu trữ, và lưu bản nháp. Nó sẽ không bao giờ gửi tin nhắn trước khi bạn xem lại. Đây là nguyên tắc sản phẩm, không phải tuỳ chọn."
+    },
+    "p3": {
+      "title": "Dùng API key của riêng bạn — ví của bạn, key của bạn",
+      "body": "Dùng định tuyến qua OpenRouter hoặc cắm thẳng API key OpenAI / Anthropic của bạn. Yêu cầu dùng key riêng không tính vào chi phí LLM của chúng tôi."
+    }
   },
   "docs": {
     "indexHeading": "Tài liệu",
