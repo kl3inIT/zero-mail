@@ -16,6 +16,21 @@
     "retry": "Thử lại thao tác",
     "savingLanguage": "Đang cập nhật ngôn ngữ..."
   },
+  "nav": {
+    "logoLabel": "Trang chủ Zero Mail",
+    "themeToLight": "Chuyển sang chế độ sáng",
+    "themeToDark": "Chuyển sang chế độ tối",
+    "languageSelector": "Ngôn ngữ",
+    "signIn": "Đăng nhập",
+    "continueSetup": "Tiếp tục cài đặt",
+    "openApp": "Mở ứng dụng",
+    "onboardingProgress": "Tiến trình cài đặt"
+  },
+  "footer": {
+    "copyright": "© 2026 Zero Mail",
+    "privacy": "Bảo mật",
+    "terms": "Điều khoản"
+  },
   "landing": {
     "heading": "Zero Mail",
     "tagline": "AI auto-triage cho Gmail. Trang đang được hoàn thiện.",
