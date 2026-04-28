@@ -108,12 +108,12 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Structure**: Monorepo / multi-module Gradle project — locked by user directive. Backend topology is now locked to **`backend/core` + `backend/api` + `backend/worker`**, with `apps/web` as the separate frontend module. Internal backend boundaries stay package-based inside `backend/core`, enforced by Spring Modulith verification and architectural tests.
 - **Frontend**: Next.js / React as a separate module inside the monorepo — locked by product decision.
 - **Mail provider (v1)**: Gmail / Google Workspace only, via Gmail API + Google Pub/Sub push — locked by product decision.
-- **Distribution (v1)**: Cloud SaaS, multi-tenant — locked by product decision.
+- **Distribution (v1)**: Self-hosted SaaS on a single VPS for the current deployment; managed cloud can be revisited later — locked by user decision.
 - **LLM routing**: Default via OpenRouter behind Spring AI; BYOK supported — locked by product decision.
 - **Billing model**: Prepaid credits, pay-as-you-go; unit economics TBD — locked direction, details deferred.
 - **Privacy**: No long-term storage of raw email bodies, LLM prompts/completions, or embeddings. Content always sanitized + truncated + prompt-injection-hardened before hitting any LLM — locked.
 - **Write actions allowed in v1**: label, archive (skip inbox), save Gmail draft. **Auto-send is forbidden.**
-- **Primary datastore**: PostgreSQL on Cloud SQL (confirmed). Redis remains cache / session / rate-limit infrastructure only; vector DB is deferred.
+- **Primary datastore**: PostgreSQL self-hosted on the same VPS as the app (confirmed). Redis also runs on the same VPS for cache / session / rate-limit infrastructure only; vector DB is deferred.
 - **Schema migrations**: Liquibase with YAML changelogs — locked by user directive.
 - **Timeline**: Exploratory project — learning-oriented, no hard ship deadline. Favor architectural quality and defensibility over speed.
 
@@ -130,6 +130,8 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 | Next.js frontend, separate module | Keeps frontend talent pool open; backend stays a clean API boundary; matches Inbox Zero DX | Chosen |
 | Monorepo module layout | Keep the build simple for v1 while still separating HTTP edge from async workers | Chosen — `apps/web` + `backend/core` + `backend/api` + `backend/worker` |
 | Name "Zero Mail" — placeholder | Directory-derived; final brand will be chosen before public launch to avoid rework | Pending rename before launch |
+| Single bundled Google OAuth registration | Phase 01.5 removed the separate `google-gmail` leg; login now requests Gmail scopes up front and persists the Gmail connection during provisioning | Chosen |
+| Single VPS deployment baseline | Current deployment runs app, worker, web, PostgreSQL, and Redis together on one VPS; no GCP hosting baseline or `spring-cloud-gcp` starter by default | Chosen |
 
 ## Evolution
 
@@ -149,4 +151,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-24 after initialization*
+*Last updated: 2026-04-28 after Phase 01.5*
