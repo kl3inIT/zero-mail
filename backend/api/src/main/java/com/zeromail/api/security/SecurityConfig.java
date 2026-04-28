@@ -7,7 +7,6 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 @Configuration
 @Profile("!test")
@@ -30,7 +29,7 @@ public class SecurityConfig {
                 .failureHandler(failureHandler)
                 .authorizationEndpoint(a -> a.authorizationRequestResolver(authRequestResolver)))
             .csrf(csrf -> csrf
-                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .spa()
                 .ignoringRequestMatchers("/login/oauth2/code/**", "/oauth2/callback/**"))
             .sessionManagement(Customizer.withDefaults())
             .addFilterAfter(tenantFilter, AuthorizationFilter.class);

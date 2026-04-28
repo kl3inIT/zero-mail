@@ -11,23 +11,25 @@ import { render, screen } from '@testing-library/react';
 
 // Mock next-intl/server before imports so the RSC module resolves
 vi.mock('next-intl/server', () => ({
-  getTranslations: vi.fn(async () => {
-    // Minimal typed-key resolver for the login error keys
+  getTranslations: vi.fn(async (namespace?: string) => {
+    // Namespace-sensitive resolver. This catches real next-intl failures where
+    // component lookup paths drift away from the message bundle shape.
     const allMessages: Record<string, string> = {
-      'error.consent_denied.title': 'Gmail access was declined',
-      'error.consent_denied.body':
+      'auth.error.consent_denied.title': 'Gmail access was declined',
+      'auth.error.consent_denied.body':
         'Zero Mail needs Gmail access to triage your inbox. Click Sign in with Google to try again.',
-      'error.gmail_scope_required.title': 'Gmail permission missing',
-      'error.gmail_scope_required.body':
+      'auth.error.gmail_scope_required.title': 'Gmail permission missing',
+      'auth.error.gmail_scope_required.body':
         "Sign in worked, but Gmail access wasn't granted. Click Sign in with Google and approve the Gmail permission to continue.",
-      headline: 'Reach inbox zero without giving up control.',
-      body: 'Zero Mail connects to Gmail so you can set safe, reviewable automation rules.',
-      googleButton: 'Sign in with Google',
-      'safety.noAutoSend': 'No auto-send',
-      'safety.noLongTermStorage': 'No long-term email body storage',
-      'safety.revokeAnytime': 'You can revoke access anytime',
+      'auth.login.headline': 'Reach inbox zero without giving up control.',
+      'auth.login.body':
+        'Zero Mail connects to Gmail so you can set safe, reviewable automation rules.',
+      'auth.login.googleButton': 'Sign in with Google',
+      'auth.login.safety.noAutoSend': 'No auto-send',
+      'auth.login.safety.noLongTermStorage': 'No long-term email body storage',
+      'auth.login.safety.revokeAnytime': 'You can revoke access anytime',
     };
-    return (key: string) => allMessages[key] ?? key;
+    return (key: string) => allMessages[namespace ? `${namespace}.${key}` : key] ?? key;
   }),
   getLocale: vi.fn(async () => 'en'),
 }));

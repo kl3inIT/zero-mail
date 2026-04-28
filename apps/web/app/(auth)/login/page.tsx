@@ -44,10 +44,11 @@ export default async function LoginPage({
 }) {
   const { error } = await searchParams;
   const tLogin = await getTranslations('auth.login');
+  const tAuthError = await getTranslations('auth.error');
   // Cast error translator to loose shape to allow dynamic key construction for
   // KNOWN_ERROR_CODES. next-intl 4.x strict typed bundle cannot narrow template
   // literals; mirrors the LanguageSwitcher / StatusAlert LooseTranslator pattern.
-  const tError = tLogin as unknown as (key: string) => string;
+  const tError = tAuthError as unknown as (key: string) => string;
   const locale = (await getLocale()) as AppLocale;
 
   return (
@@ -55,8 +56,8 @@ export default async function LoginPage({
       <div className="flex w-full max-w-md flex-col gap-6">
         {isKnownError(error) && (
           <Alert variant="destructive">
-            <AlertTitle>{tError(`error.${error}.title`)}</AlertTitle>
-            <AlertDescription>{tError(`error.${error}.body`)}</AlertDescription>
+            <AlertTitle>{tError(`${error}.title`)}</AlertTitle>
+            <AlertDescription>{tError(`${error}.body`)}</AlertDescription>
           </Alert>
         )}
         <Card className="w-full">
