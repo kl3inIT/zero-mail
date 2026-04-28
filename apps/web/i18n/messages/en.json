@@ -33,7 +33,7 @@
   },
   "landing": {
     "heading": "Zero Mail",
-    "tagline": "AI auto-triage for Gmail. This page is being finalized.",
+    "tagline": "AI triage for Gmail that labels, archives, and drafts with rules you can audit before anything is sent.",
     "primaryCta": "Sign in",
     "continueSetupCta": "Continue setup",
     "eyebrow": "Inbox zero, on autopilot"
