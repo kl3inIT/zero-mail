@@ -180,6 +180,18 @@
     "completion": {
       "heading": "You're ready. Open Settings to review your choices.",
       "cta": "Continue to settings"
+    },
+    "steps": {
+      "gmailConnect": {
+        "shortLabel": "Connect Gmail"
+      },
+      "templateSelect": {
+        "shortLabel": "Pick template"
+      },
+      "complete": {
+        "shortLabel": "Done"
+      },
+      "progressLabel": "Step {current} of {total}"
     }
   },
   "settings": {

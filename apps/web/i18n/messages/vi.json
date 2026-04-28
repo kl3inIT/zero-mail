@@ -180,6 +180,18 @@
     "completion": {
       "heading": "Đã sẵn sàng. Mở phần Cài đặt để xem lại lựa chọn của bạn.",
       "cta": "Mở cài đặt"
+    },
+    "steps": {
+      "gmailConnect": {
+        "shortLabel": "Kết nối Gmail"
+      },
+      "templateSelect": {
+        "shortLabel": "Chọn template"
+      },
+      "complete": {
+        "shortLabel": "Hoàn tất"
+      },
+      "progressLabel": "Bước {current} trên {total}"
     }
   },
   "settings": {
