@@ -65,7 +65,7 @@ Phase 2A wires the Gmail ingress pipeline that every later phase depends on: reg
 - TanStack Query hook `useToggleTriagePause` mutation invalidates the `me` query key after success.
 
 *Frontend — ReconnectPrompt extension:*
-- `apps/web/features/gmail/components/ReconnectPrompt.tsx` gate now reads `gmailConnectionStatus.ingestionHealth` in addition to `status`. Shown when `status !== 'CONNECTED' OR ingestionHealth !== 'HEALTHY'`. One copy + one CTA — root cause is for telemetry/admin only. CTA still points at `/tenant/connect-gmail` (Phase 01.5 D-A5).
+- The real mount gate lives in `apps/web/app/(protected)/settings/page.tsx`, because `ReconnectPrompt.tsx` is a presentational alert that renders whenever mounted. Settings page must show it when `status === 'DISCONNECTED' OR (status === 'CONNECTED' AND ingestionHealth !== 'HEALTHY')`. The `NOT_CONNECTED` state keeps the initial "Connect Gmail" CTA instead of rendering both prompts. One copy + one CTA — root cause is for telemetry/admin only. CTA still points at `/tenant/connect-gmail` (Phase 01.5 D-A5).
 - i18n keys preserved from Phase 01.5; no new copy strings unless `frontend-design` skill recommends during plan-phase polish review.
 
 **Out of scope (enforced):**
@@ -138,7 +138,7 @@ Phase 2A wires the Gmail ingress pipeline that every later phase depends on: reg
 
 - **D-D2: Bounded history-404 recovery.** Worker catches Gmail 404 from `history.list`. Action: (a) `UPDATE gmail_connections SET last_synced_history_id = :webhook_history_id, ingestion_health = 'HISTORY_LOST'`; (b) log `event=gmail_history_lost tenantId={} expired_history_id={} new_pointer={webhook_history_id}`; (c) mark current `pubsub_delivery` row `status='PROCESSED'` (we successfully advanced state, even though we dropped the gap). Future webhooks process forward from the new pointer normally. NO full mailbox rescan, NO `messages.list` call. ROADMAP success #5 satisfied.
 
-- **D-D3: ReconnectPrompt unified gate, single copy + single CTA.** Frontend logic: `shouldShowReconnect = status !== 'CONNECTED' || ingestionHealth !== 'HEALTHY'`. One `<Alert variant="warning">` with the existing copy from Phase 01.5 (no new i18n keys). One CTA → `/tenant/connect-gmail` (Phase 01.5 D-A5 reconnect entry with `prompt=consent`). End-user doesn't need to distinguish "token revoked" vs "watch retry failed" vs "history expired" — the action is the same OAuth re-grant. `ingestion_health` value is for telemetry / admin debugging only.
+- **D-D3: ReconnectPrompt unified gate, single copy + single CTA.** Frontend logic lives at the settings-page parent mount site: `shouldShowReconnect = status === 'DISCONNECTED' || (status === 'CONNECTED' && ingestionHealth !== 'HEALTHY')`. `NOT_CONNECTED` keeps the initial connect CTA. One `<Alert variant="warning">` with the existing copy from Phase 01.5 (no new i18n keys). One CTA → `/tenant/connect-gmail` (Phase 01.5 D-A5 reconnect entry with `prompt=consent`). End-user doesn't need to distinguish "token revoked" vs "watch retry failed" vs "history expired" — the action is the same OAuth re-grant. `ingestion_health` value is for telemetry / admin debugging only.
 
 - **D-D4: Reconnect handler clears `watch_*` columns to force re-register.** After a successful reconnect via `/tenant/connect-gmail`, the bundled-OAuth success handler (or its post-success cleanup) sets `watch_expires_at = NULL`, `watch_history_id = NULL`, `watch_consecutive_failures = 0`, `ingestion_health = HEALTHY`. Worker `GmailWatchScheduler` picks up the row on its next minute-tick (NULL expiry matches the initial-register condition) → re-issues `users.watch` → persists fresh baseline → ingress resumes normally.
 
@@ -222,7 +222,7 @@ _No todos folded — `gsd-sdk query todo.match-phase 2A` not run (init blocked b
 - `apps/web/app/(protected)/settings/page.tsx` — ADD Card section "Pause automated triage" with `<Switch>`-style toggle. Polish target.
 - `apps/web/app/(protected)/layout.tsx` — ADD conditional `<PauseBanner />` render when `tenant.triagePaused`.
 - `apps/web/features/triage/` (NEW) or `apps/web/features/tenant/` — ADD `components/PauseBanner.tsx`, `hooks/useToggleTriagePause.ts`, `api/triagePause.ts`. Follows Phase 01.3 feature-folder convention (deep imports, no barrel index).
-- `apps/web/features/gmail/components/ReconnectPrompt.tsx` — extend gate logic to read `ingestionHealth !== 'HEALTHY'` in addition to `status !== 'CONNECTED'`. No new copy needed (D-D3).
+- `apps/web/app/(protected)/settings/page.tsx` — extend the ReconnectPrompt parent mount logic to read `ingestionHealth !== 'HEALTHY'` in addition to `status === 'DISCONNECTED'`. No new copy needed (D-D3).
 - `apps/web/features/account/api/me.ts` (`getCurrentUser`) — extend response schema to include `triagePaused` + `gmailConnectionStatus`. Re-runs through Phase 01.5 D-D2 `cache()` wrapper.
 - `apps/web/lib/api/schema.d.ts` — auto-regenerated via `pnpm generate:api` after backend OpenAPI emits new fields/endpoint.
 - `apps/web/i18n/messages/{vi,en}.json` — ADD `settings.triage.pause.{title,body,toggleLabel,banner.heading,banner.unpause}` (exact key set picked during plan phase). `EN_SCAN_FILES` in `apps/web/scripts/check-i18n.ts` updated if new files added.
@@ -268,7 +268,7 @@ _No todos folded — `gsd-sdk query todo.match-phase 2A` not run (init blocked b
 - **shadcn `<Alert variant="warning">`** (Phase 01.5 D-C3) — `PauseBanner` reuses; existing `--warning` token from `globals.css`.
 - **`features/<name>/{api,components,hooks}/`** (Phase 01.3) — feature folder structure preserved; new `features/triage/` (or co-located in `features/tenant/` — planner picks).
 - **TanStack Query `me` key + `cache()` wrapper** (Phase 01.5 D-D2) — extended with `triagePaused` + `gmailConnectionStatus`; same dedupe semantics.
-- **`ReconnectPrompt.tsx`** (Phase 01.4 / 01.5) — gate condition extended; copy unchanged (D-D3).
+- **`ReconnectPrompt.tsx` + settings-page parent gate** (Phase 01.4 / 01.5) — component copy unchanged; settings-page render condition extended (D-D3).
 - **OpenAPI codegen pipeline** (`apps/web/lib/api/schema.d.ts` via `springdoc-openapi-gradle-plugin`, Phase 01.2.1 P04) — used to type the new `PUT /tenant/triage-pause` endpoint + extended `MeResponse`.
 
 ### Established patterns (preserved as constraints)
@@ -308,7 +308,7 @@ _No todos folded — `gsd-sdk query todo.match-phase 2A` not run (init blocked b
 - **`TenantService.setTriagePaused` ↔ `tenants.triage_paused`** — single-column UPDATE under TenantContext.
 - **`/me` endpoint ↔ extended response** — single read covers triagePaused + gmailConnectionStatus (no N+1).
 - **`PauseBanner` ↔ TanStack Query `me` cache** — read `triagePaused`; `useToggleTriagePause` invalidates `me` key on success.
-- **`ReconnectPrompt` ↔ TanStack Query `me` cache** — gate logic now reads `gmailConnectionStatus.ingestionHealth`.
+- **Settings page `ReconnectPrompt` mount ↔ TanStack Query `me` cache** — gate logic now reads `gmailConnectionStatus.ingestionHealth`.
 - **OpenAPI codegen pipeline** — backend exposes `PUT /tenant/triage-pause` + extended `MeResponse`; `pnpm generate:api` regenerates `schema.d.ts`.
 
 </code_context>

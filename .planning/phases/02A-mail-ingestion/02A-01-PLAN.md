@@ -6,6 +6,9 @@ wave: 1
 depends_on:
   - "02A-00"
 files_modified:
+  - gradle/libs.versions.toml
+  - backend/core/build.gradle.kts
+  - backend/api/build.gradle.kts
   - backend/core/src/main/resources/db/changelog/changes/010-gmail-ingestion-state.yaml
   - backend/core/src/main/resources/db/changelog/changes/011-pubsub-delivery-table.yaml
   - backend/core/src/main/resources/db/changelog/changes/012-mail-message-observed-table.yaml
@@ -32,6 +35,7 @@ must_haves:
     - "PubSubDeliveryEntity persists to pubsub_delivery with UNIQUE(tenant_id, pubsub_message_id), non-null updated_at, and non-null version inherited from AbstractAuditableEntity"
     - "MailMessageObservedRepository exposes native INSERT ... ON CONFLICT DO NOTHING for idempotent observation writes"
     - "MailMessageObservedEntity persists with composite PK (tenant_id, gmail_message_id), applies Hibernate @TenantId on tenant_id, and maps TEXT[] label_ids"
+    - "Gradle dependency wiring exists before worker/API implementation: version catalog aliases for Gmail API + google-auth, core module dependency for Gmail client factory, and api module dependency for TokenVerifier"
     - "GmailIngestionHealth implements IdentifiedEnum with fromId fail-loud"
     - "TenantEntity has triage_paused boolean field"
     - "012-mail-message-observed-table.yaml schema contains no subject, from_address, body, snippet, sender_domain, or recipient column definitions — privacy floor preserved (D-B3)"
@@ -55,6 +59,15 @@ must_haves:
       provides: "JPA entity for pubsub_delivery table"
     - path: "backend/core/src/main/java/com/zeromail/core/gmail/persistence/MailMessageObservedEntity.java"
       provides: "JPA entity for mail_message_observed with composite PK + TEXT[]"
+    - path: "gradle/libs.versions.toml"
+      provides: "Library aliases for Google auth and Gmail API clients"
+      contains: "google-api-services-gmail"
+    - path: "backend/core/build.gradle.kts"
+      provides: "Gmail API + Google auth dependencies for GmailApiClientFactory"
+      contains: "google.api.services.gmail"
+    - path: "backend/api/build.gradle.kts"
+      provides: "Google auth dependency for PubSubOidcAuthFilter and OpenAPI dummy Pub/Sub args"
+      contains: "google.auth.library.oauth2.http"
   key_links:
     - from: "GmailConnectionEntity"
       to: "GmailIngestionHealth"
@@ -417,10 +430,16 @@ databaseChangeLog:
     backend/core/src/main/java/com/zeromail/core/gmail/persistence/PubSubDeliveryRepository.java,
     backend/core/src/main/java/com/zeromail/core/gmail/persistence/MailMessageObservedEntity.java,
     backend/core/src/main/java/com/zeromail/core/gmail/persistence/MailMessageObservedRepository.java,
-    backend/core/src/main/java/com/zeromail/core/tenant/persistence/TenantEntity.java
+    backend/core/src/main/java/com/zeromail/core/tenant/persistence/TenantEntity.java,
+    gradle/libs.versions.toml,
+    backend/core/build.gradle.kts,
+    backend/api/build.gradle.kts
   </files>
 
   <read_first>
+    - gradle/libs.versions.toml (existing version catalog; versions already include googleAuthLibrary + gmailApi)
+    - backend/core/build.gradle.kts (add deps before GmailApiClientFactory lands in Plan 02)
+    - backend/api/build.gradle.kts (add deps before PubSubOidcAuthFilter lands in Plan 03; add OpenAPI dummy Pub/Sub args)
     - backend/core/src/main/java/com/zeromail/core/gmail/model/GmailConnectionStatus.java (exact IdentifiedEnum pattern to copy)
     - backend/core/src/main/java/com/zeromail/core/gmail/persistence/GmailConnectionEntity.java (field annotation style)
     - backend/core/src/main/java/com/zeromail/core/gmail/persistence/GmailConnectionRepository.java (repository pattern)
@@ -432,6 +451,45 @@ databaseChangeLog:
   </read_first>
 
   <action>
+First wire Gradle dependencies, then create or modify 7 Java files.
+
+**Step 0 — Gradle dependency wiring for Plans 02 and 03**
+
+`gradle/libs.versions.toml` already contains:
+```toml
+googleAuthLibrary = "1.35.0"
+gmailApi = "v1-rev20250331-2.0.0"
+```
+
+ADD library aliases:
+```toml
+google-auth-library-oauth2-http = { module = "com.google.auth:google-auth-library-oauth2-http", version.ref = "googleAuthLibrary" }
+google-api-services-gmail = { module = "com.google.apis:google-api-services-gmail", version.ref = "gmailApi" }
+```
+
+`backend/core/build.gradle.kts` — ADD:
+```kotlin
+api(libs.google.api.services.gmail)
+implementation(libs.google.auth.library.oauth2.http)
+```
+Use `api(...)` for Gmail because `GmailApiClientFactory.buildGmailClient(...)` returns the generated `Gmail` type and worker code calls generated Gmail APIs through that object. Use `implementation(...)` for Google auth because `GoogleCredentials` / `HttpCredentialsAdapter` are implementation details inside the factory.
+
+`backend/api/build.gradle.kts` — ADD:
+```kotlin
+implementation(libs.google.auth.library.oauth2.http)
+```
+This is required by `PubSubOidcAuthFilter` (`TokenVerifier` + `JsonWebSignature`).
+
+Also extend the existing `openApi.customBootRun.args` dummy-arg list with:
+```kotlin
+"--pubsub.push-audience-url=https://openapi.invalid/internal/pubsub/gmail",
+"--pubsub.sa-principal-email=pubsub-openapi@openapi.invalid",
+"--pubsub.oidc-certificates-url=https://www.googleapis.com/oauth2/v3/certs"
+```
+Without these dummy args, Plan 03's fail-fast Pub/Sub properties can break `:backend:api:generateOpenApiDocs`.
+
+***
+
 Create or modify 7 Java files.
 
 **`GmailIngestionHealth.java`** — copy EXACTLY from `GmailConnectionStatus.java` pattern. Change enum name, change values to `HEALTHY, WATCH_UNHEALTHY, HISTORY_LOST`. Update `fromId` error message to "Unknown GmailIngestionHealth id: ". No `weight()` — this is `IdentifiedEnum`, not `OrderedEnum` (unordered per D-D1).
@@ -637,12 +695,15 @@ Do NOT touch any existing field, constructor, or getter.
     - `MailMessageObservedRepository.java` contains `insertObservedIfAbsent` with `ON CONFLICT (tenant_id, gmail_message_id) DO NOTHING`
     - `MailMessageObservedEntityTest` contains a tenant-isolation assertion: with `TenantContext.TENANT` bound to tenant A, a JPA `findAll`/derived read cannot see tenant B's `mail_message_observed` row
     - `TenantEntity.java` contains `private boolean triagePaused = false`
+    - `gradle/libs.versions.toml` contains `google-auth-library-oauth2-http` and `google-api-services-gmail` aliases
+    - `backend/core/build.gradle.kts` contains `api(libs.google.api.services.gmail)` and `implementation(libs.google.auth.library.oauth2.http)`
+    - `backend/api/build.gradle.kts` contains `implementation(libs.google.auth.library.oauth2.http)` and OpenAPI dummy args for `pubsub.push-audience-url`, `pubsub.sa-principal-email`, and `pubsub.oidc-certificates-url`
     - `./gradlew :backend:core:compileJava` exits 0
     - `GmailIngestionHealthTest` goes GREEN (id()==name() + fromId + NoSuchElementException)
     - `PubSubDeliveryEntityTest` and `MailMessageObservedEntityTest` pass (Liquibase applies schema, round-trips work)
   </acceptance_criteria>
 
-  <done>All 7 Java files compile; GmailIngestionHealthTest GREEN; PubSubDeliveryEntityTest and MailMessageObservedEntityTest GREEN (Liquibase applied 010-013)</done>
+  <done>Gradle Google/Gmail dependencies wired; all 7 Java files compile; GmailIngestionHealthTest GREEN; PubSubDeliveryEntityTest and MailMessageObservedEntityTest GREEN (Liquibase applied 010-013)</done>
 </task>
 
 </tasks>
@@ -675,7 +736,7 @@ After this plan:
 </verification>
 
 <success_criteria>
-All 4 Liquibase changesets exist and apply cleanly. All 7 Java files compile. GmailIngestionHealthTest, PubSubDeliveryEntityTest, and MailMessageObservedEntityTest pass GREEN. The Wave 0 tests for these classes are now unblocked. 012 changeset has no privacy-violating columns.
+All 4 Liquibase changesets exist and apply cleanly. Google/Gmail Gradle dependencies are present before API/worker implementation. All 7 Java files compile. GmailIngestionHealthTest, PubSubDeliveryEntityTest, and MailMessageObservedEntityTest pass GREEN. The Wave 0 tests for these classes are now unblocked. 012 changeset has no privacy-violating columns.
 </success_criteria>
 
 <output>

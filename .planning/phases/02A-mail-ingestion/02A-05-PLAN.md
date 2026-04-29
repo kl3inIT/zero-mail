@@ -193,7 +193,7 @@ Remove this entire bullet point. This blocker is now closed by Phase 2A Plan 03 
 
 In the Accumulated Context → Decisions section, ADD a new entry documenting the Phase 2A closure:
 ```
-- [Phase 2A]: Pub/Sub push-token validation closed. PubSubOidcAuthFilter uses TokenVerifier.newBuilder().setAudience().setIssuer().setCertificatesLocation() from google-auth-library-oauth2-http. PubSubSecurityConfig @Order(1) remains active under the test profile; user-session SecurityConfig is @Order(2). 5-case test validates: valid passes, wrong aud/email/exp/sig all return 401. Phase 01.5 D-D5 deferred blocker retired.
+- [Phase 2A]: Pub/Sub push-token validation closed. PubSubOidcAuthFilter uses TokenVerifier.newBuilder().setAudience().setIssuer().setCertificatesLocation() from google-auth-library-oauth2-http. PubSubSecurityConfig @Order(1) remains active under the test profile; user-session SecurityConfig is @Order(2). 6-case test validates: valid passes, wrong aud/email/exp/sig all return 401, and non-Pub/Sub paths skip the filter. Phase 01.5 D-D5 deferred blocker retired.
 ```
 
 Also update Current Position to reflect Phase 2A complete.

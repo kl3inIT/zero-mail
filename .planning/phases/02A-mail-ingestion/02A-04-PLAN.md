@@ -12,7 +12,9 @@ files_modified:
   - apps/web/features/triage/hooks/useToggleTriagePause.ts
   - apps/web/features/triage/components/PauseBanner.tsx
   - apps/web/features/gmail/components/ReconnectPrompt.tsx
+  - apps/web/features/gmail/components/ReconnectPrompt.test.tsx
   - apps/web/features/account/api/me.ts
+  - apps/web/openapi/openapi.json
   - apps/web/lib/api/schema.d.ts
   - apps/web/app/(protected)/layout.tsx
   - apps/web/app/(protected)/settings/page.tsx
@@ -30,7 +32,7 @@ must_haves:
     - "PauseBanner is non-dismissible and has an inline Unpause button"
     - "Settings page has a Pause automated triage Card section with toggle"
     - "useToggleTriagePause invalidates accountKeys.me() on success"
-    - "ReconnectPrompt shows when status!=CONNECTED OR ingestionHealth!=HEALTHY"
+    - "Settings page mounts ReconnectPrompt when connectionStatus is DISCONNECTED OR when connectionStatus is CONNECTED and ingestionHealth!=HEALTHY"
     - "ReconnectPrompt.test.tsx has its ingestionHealth gate tests enabled and GREEN"
     - "i18n parity: vi.json and en.json both contain settings.triage.pause.* keys including banner.body"
     - "pnpm i18n:check exits 0 after this plan"
@@ -42,7 +44,10 @@ must_haves:
       provides: "TanStack Query mutation that invalidates me key"
       contains: "invalidateQueries"
     - path: "apps/web/features/gmail/components/ReconnectPrompt.tsx"
-      provides: "Extended gate: status!=CONNECTED || ingestionHealth!=HEALTHY"
+      provides: "Presentational reconnect alert reused by settings-page parent gate"
+      contains: "onReconnect"
+    - path: "apps/web/app/(protected)/settings/page.tsx"
+      provides: "Real MAIL-05 parent gate for reconnect prompt"
       contains: "ingestionHealth"
   key_links:
     - from: "apps/web/app/(protected)/layout.tsx"
@@ -53,9 +58,9 @@ must_haves:
       to: "accountKeys.me()"
       via: "invalidateQueries in onSuccess callback"
       pattern: "accountKeys\\.me\\(\\)"
-    - from: "ReconnectPrompt"
+    - from: "settings/page.tsx"
       to: "ingestionHealth"
-      via: "shouldShowReconnect boolean gate"
+      via: "shouldShowReconnect boolean gate before mounting ReconnectPrompt"
       pattern: "ingestionHealth.*HEALTHY|shouldShowReconnect"
 ---
 
@@ -64,7 +69,7 @@ Implement the frontend features: PauseBanner, triage-pause toggle in settings, R
 
 Purpose: Close MAIL-05 (reconnect prompt extension for ingestion health) and MAIL-06 (user-visible pause toggle + banner).
 
-Output: features/triage/* (api/keys/hooks/components), ReconnectPrompt gate extension, me.ts + generated schema extension, settings toggle, i18n keys.
+Output: features/triage/* (api/keys/hooks/components), settings-page ReconnectPrompt gate extension, me.ts + generated schema extension, settings toggle, i18n keys.
 </objective>
 
 <execution_context>
@@ -105,7 +110,8 @@ export const accountKeys = {
 
 From apps/web/features/gmail/components/ReconnectPrompt.tsx (existing component — read full):
 - Already uses <Alert variant="warning">
-- Gate condition currently: status !== 'CONNECTED'
+- Presentational component: renders whenever the parent mounts it
+- Current parent gate in `apps/web/app/(protected)/settings/page.tsx`: `connStatus === 'DISCONNECTED'`
 - CTA: /tenant/connect-gmail
 
 From apps/web/lib/api/client.ts:
@@ -153,7 +159,7 @@ i18n context:
   <read_first>
     - INVOKE frontend-design skill BEFORE writing any JSX (per project memory: feedback_frontend_design_skill.md)
     - apps/web/features/gmail/hooks/useDisconnectGmail.ts (mutation hook pattern to copy)
-    - apps/web/features/gmail/components/ReconnectPrompt.tsx (full file — gate condition to extend)
+    - apps/web/features/gmail/components/ReconnectPrompt.tsx (full file — presentational alert; parent gate updated in Task 2)
     - apps/web/features/account/api/me.ts (full file — extend CurrentUser type)
     - apps/web/features/account/api/keys.ts (accountKeys.me() key factory)
     - apps/web/i18n/messages/vi.json (current keys — add settings.triage.pause.* block)
@@ -248,16 +254,9 @@ gmailConnectionStatus: {
 ```
 If `CurrentUser` is derived from `schema.d.ts` OpenAPI types, the type change happens automatically after `pnpm generate:api`. In that case, update any local type overrides or `Partial<>` wrappers. If `getCurrentUser` has a manually-typed return, add the two fields.
 
-**`apps/web/features/gmail/components/ReconnectPrompt.tsx`** — READ the full current file. Extend the gate condition per D-D3:
+**`apps/web/features/gmail/components/ReconnectPrompt.tsx`** — READ the full current file. This component is currently presentational: it always renders when mounted. Keep that shape unless the current file already owns a gate. The MAIL-05 gate is enforced at the real parent mount site in Task 2 (`apps/web/app/(protected)/settings/page.tsx`), because the current settings page only mounts this component for `connStatus === 'DISCONNECTED'`.
 
-Find the condition that determines whether to show the prompt. It currently checks something like `status !== 'CONNECTED'`. Change to:
-```typescript
-const shouldShowReconnect =
-  user?.gmailConnectionStatus?.status !== 'CONNECTED' ||
-  user?.gmailConnectionStatus?.ingestionHealth !== 'HEALTHY';
-```
-
-Single copy (D-D3: user doesn't need to distinguish the root cause). No new i18n keys — existing copy from Phase 01.5 is sufficient. CTA still points to `/tenant/connect-gmail`.
+Do not add raw enum values to the visible copy. Single copy (D-D3: user doesn't need to distinguish the root cause). No new i18n keys — existing copy from Phase 01.5 is sufficient. CTA still points to `/tenant/connect-gmail`.
 
 **i18n keys** — ADD these keys to both `vi.json` and `en.json`. Find the `settings` namespace in each file and add a `triage.pause` nested block:
 
@@ -311,7 +310,7 @@ English version:
     - `apps/web/features/triage/api/triagePause.ts` contains `api.PUT('/tenant/triage-pause'`
     - `apps/web/features/triage/hooks/useToggleTriagePause.ts` contains `accountKeys.me()` and `invalidateQueries`
     - `apps/web/features/triage/components/PauseBanner.tsx` contains `variant="warning"` and does NOT use `<Button>` (plain `<button>`)
-    - `apps/web/features/gmail/components/ReconnectPrompt.tsx` contains `ingestionHealth` in the gate condition
+    - `apps/web/features/gmail/components/ReconnectPrompt.tsx` keeps using existing reconnect copy and does not render raw `ingestionHealth` enum values
     - `apps/web/i18n/messages/vi.json` contains `settings.triage.pause.banner.unpause` key (traverse: vi["settings"]["triage"]["pause"]["banner"]["unpause"])
     - `apps/web/i18n/messages/vi.json` and `en.json` contain `settings.triage.pause.banner.body`
     - `apps/web/i18n/messages/en.json` contains the matching English key
@@ -327,7 +326,10 @@ English version:
   <name>Task 2: Settings toggle + protected layout PauseBanner + OpenAPI regen + frontend test green</name>
   <files>
     apps/web/app/(protected)/layout.tsx,
-    apps/web/app/(protected)/settings/page.tsx
+    apps/web/app/(protected)/settings/page.tsx,
+    apps/web/openapi/openapi.json,
+    apps/web/lib/api/schema.d.ts,
+    apps/web/features/gmail/components/ReconnectPrompt.test.tsx
   </files>
 
   <read_first>
@@ -352,7 +354,7 @@ The PauseBanner is a Client Component that reads from TanStack Query cache — i
 
 If layout is a Server Component that pre-fetches user data, `PauseBanner` can read from the already-populated TanStack Query cache (hydrated by the layout's `prefetchQuery`). No new server-fetch needed.
 
-**`apps/web/app/(protected)/settings/page.tsx`** — READ the current file. Add a new Card section for the pause toggle. Use raw shadcn `<Card>`, `<CardHeader>`, `<CardContent>` + a `<Switch>` from shadcn (or a plain toggle button if `<Switch>` is not installed).
+**`apps/web/app/(protected)/settings/page.tsx`** — READ the current file. First implement the MAIL-05 parent gate described in Task 1: compute `ingestionHealth` from `me.data?.gmailConnectionStatus?.ingestionHealth`, compute `shouldShowReconnect`, and render `<ReconnectPrompt onReconnect={reconnect} />` when disconnected or connected-but-unhealthy. Then add a new Card section for the pause toggle. Use raw shadcn `<Card>`, `<CardHeader>`, `<CardContent>` + a `<Switch>` from shadcn (or a plain toggle button if `<Switch>` is not installed).
 
 Check if `@/components/ui/switch` exists:
 ```bash
@@ -391,7 +393,7 @@ pnpm -F web generate:api
 ```
 This updates `apps/web/openapi/openapi.json` and `apps/web/lib/api/schema.d.ts` without requiring a manually running backend because `backend/api/build.gradle.kts` configures the springdoc OpenAPI Gradle plugin. If generation is blocked by unrelated local service or Docker issues, manually update `apps/web/lib/api/schema.d.ts` for `/tenant/triage-pause`, `triagePaused`, and `gmailConnectionStatus`, then record the regen blocker in the plan summary.
 
-**Enable ReconnectPrompt Wave 0 tests:** remove `it.skip` from `apps/web/features/gmail/components/ReconnectPrompt.test.tsx` now that the ingestionHealth gate is implemented. These tests must run GREEN before this plan completes.
+**Enable ReconnectPrompt Wave 0 tests:** remove `it.skip` from `apps/web/features/gmail/components/ReconnectPrompt.test.tsx` now that the settings-page parent mount gate is implemented. These tests must run GREEN before this plan completes.
 
 **Run full frontend test suite to confirm Wave 0 tests are now GREEN:**
 ```bash
@@ -408,6 +410,7 @@ All 4 Wave 0 frontend test files should now be GREEN.
     - `apps/web/app/(protected)/layout.tsx` imports `PauseBanner` and renders `<PauseBanner />` somewhere in the JSX
     - `apps/web/app/(protected)/settings/page.tsx` contains `settings.triage.pause.title` i18n key reference
     - `apps/web/app/(protected)/settings/page.tsx` uses `useToggleTriagePause` hook
+    - `apps/web/app/(protected)/settings/page.tsx` mounts `ReconnectPrompt` for `DISCONNECTED` and for `CONNECTED` with `ingestionHealth !== 'HEALTHY'`
     - `pnpm -F web run typecheck` exits 0
     - `pnpm -F web run test:run` shows `PauseBanner.test.tsx` PASS
     - `pnpm -F web run test:run` shows `useToggleTriagePause.test.tsx` PASS
@@ -447,7 +450,7 @@ After this plan:
 </verification>
 
 <success_criteria>
-All Wave 3 frontend files exist. PauseBanner is non-dismissible with unpause CTA. Settings page has pause toggle Card section. ReconnectPrompt gate extended to check ingestionHealth. i18n keys parity maintained. All 4 Wave 0 frontend tests are GREEN.
+All Wave 3 frontend files exist. PauseBanner is non-dismissible with unpause CTA. Settings page has pause toggle Card section. Settings page mounts ReconnectPrompt for disconnected and connected-but-unhealthy Gmail states. i18n keys parity maintained. All 4 Wave 0 frontend tests are GREEN.
 </success_criteria>
 
 <output>

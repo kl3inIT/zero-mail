@@ -161,14 +161,18 @@ Constructor injects:
 Methods:
 
 ```java
-public Gmail buildGmailClient(String accessToken) {
-    GoogleCredentials credentials = GoogleCredentials.create(
-        new AccessToken(accessToken, null));
-    HttpRequestInitializer requestInitializer = new HttpCredentialsAdapter(credentials);
-    return new Gmail.Builder(GoogleNetHttpTransport.newTrustedTransport(),
-        GsonFactory.getDefaultInstance(), requestInitializer)
-        .setApplicationName("ZeroMail")
-        .build();
+public Gmail buildGmailClient(String accessToken) throws IOException {
+    try {
+        GoogleCredentials credentials = GoogleCredentials.create(
+            new AccessToken(accessToken, null));
+        HttpRequestInitializer requestInitializer = new HttpCredentialsAdapter(credentials);
+        return new Gmail.Builder(GoogleNetHttpTransport.newTrustedTransport(),
+            GsonFactory.getDefaultInstance(), requestInitializer)
+            .setApplicationName("ZeroMail")
+            .build();
+    } catch (GeneralSecurityException e) {
+        throw new IOException("Unable to initialize Gmail HTTP transport", e);
+    }
 }
 
 public record TokenRefreshResult(String accessToken, Instant expiresAt) {}
@@ -211,6 +215,10 @@ public TokenRefreshResult refreshAccessToken(String decryptedRefreshToken) throw
 `InvalidGrantException` is a custom checked or unchecked exception: `public class InvalidGrantException extends RuntimeException { public InvalidGrantException(String msg) { super(msg); } }` — declare in the same package or `com.zeromail.core.gmail.service`.
 
 Privacy: NEVER log `decryptedRefreshToken`. NEVER log `accessToken`. Log only `event=gmail_token_refresh_failed tenantId={}` on error (tenantId comes from caller context).
+
+Dependency note: Plan 01 owns Gradle wiring for this class. `backend/core/build.gradle.kts` must already expose `api(libs.google.api.services.gmail)` and `implementation(libs.google.auth.library.oauth2.http)`, and `gradle/libs.versions.toml` must already define those aliases. Do not proceed with this task if those aliases/dependencies are missing.
+
+Testability note: Worker tests may inject a mocked `GmailApiClientFactory` instead of using a real generated Gmail client. If a test chooses to exercise the real factory, it must use a hermetic HTTP transport/root URL seam and must not call `https://gmail.googleapis.com` or `https://oauth2.googleapis.com` during tests.
 
 **`GmailConnectionService.java`** — READ full current file first. ADD these methods following the existing `@Transactional` + `findByTenantId` + `save` pattern:
 
@@ -454,6 +462,7 @@ Privacy: NEVER log `conn.getRefreshTokenEncrypted()`, `decryptedToken`, token va
   <acceptance_criteria>
     - `GmailApiClientFactory.java` exists in `com.zeromail.core.gmail.service` package
     - `GmailApiClientFactory.java` contains `refreshAccessToken` method and `invalid_grant` check
+    - `GmailApiClientFactory.buildGmailClient` handles `GoogleNetHttpTransport.newTrustedTransport()` checked exceptions by wrapping `GeneralSecurityException` in `IOException` or otherwise declaring a compile-safe checked-exception path
     - `GmailApiClientFactory.java` does NOT contain any log statement with `refreshToken`, `accessToken`, or `decryptedRefresh` variable contents
     - `GmailConnectionService.java` contains `markHistoryLost(`, `markWatchUnhealthy(`, `recordWatchSuccess(`, `clearForReconnect(`, `incrementWatchFailure(`, `markDisconnected(`
     - `GmailConnectionService.recordWatchSuccess` sets `lastSyncedHistoryId` from `watchHistoryId` when null or lower

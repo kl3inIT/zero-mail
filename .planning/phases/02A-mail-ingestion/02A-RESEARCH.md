@@ -29,7 +29,7 @@
 - **D-C5:** `users.stop()` best-effort on disconnect/deletion.
 - **D-D1:** `GmailIngestionHealth` — new `IdentifiedEnum` with `HEALTHY`, `WATCH_UNHEALTHY`, `HISTORY_LOST`. `GmailConnectionStatus` UNCHANGED.
 - **D-D2:** History-404 → advance pointer to `webhook_history_id`, set `HISTORY_LOST`, mark delivery `PROCESSED`.
-- **D-D3:** ReconnectPrompt unified gate: `status != CONNECTED || ingestionHealth != HEALTHY`. Single copy, single CTA.
+- **D-D3:** ReconnectPrompt unified gate lives at the settings-page parent mount site: render for `status == DISCONNECTED` OR `(status == CONNECTED AND ingestionHealth != HEALTHY)`. Single copy, single CTA. `NOT_CONNECTED` keeps the initial connect CTA.
 - **D-D4:** Reconnect handler clears `watch_*` columns + resets `ingestion_health = HEALTHY` + `watch_consecutive_failures = 0`.
 - **D-E1:** `tenants.triage_paused BOOLEAN NOT NULL DEFAULT false` (one column, not a settings table).
 - **D-E2:** Pause gate semantic = Phase 2A persists + exposes; Phase 4 reads at enqueue time.
@@ -115,7 +115,7 @@ Token refresh in the worker context (no `Authentication` principal in scheduler 
 | Global pause toggle | API (`PUT /tenant/triage-pause`) | Core (TenantService) | Standard controller→service pattern; Phase 4 reads the flag |
 | Pause flag read at triage enqueue | Worker (Phase 4, out of scope) | — | Phase 2A only stores; Phase 4 reads |
 | `PauseBanner` conditional render | Frontend (`(protected)/layout.tsx`) | — | Per-layout server render; reads `me` query cache |
-| `ReconnectPrompt` gate extension | Frontend (gmail feature) | — | Existing component, extend gate condition only |
+| `ReconnectPrompt` gate extension | Frontend settings page + gmail feature | — | Existing component is presentational; extend settings-page parent mount condition |
 | OpenAPI schema codegen | API (`springdoc-openapi-gradle-plugin`) | Frontend (`pnpm generate:api`) | Extend `MeResponse` + add pause endpoint |
 
 ---
@@ -203,7 +203,7 @@ Frontend (apps/web)
     | GET /me -> triagePaused, gmailConnectionStatus.{status, ingestionHealth, googleEmail}
     | (protected)/layout.tsx: conditional <PauseBanner> when triagePaused
     | settings/page.tsx: toggle -> useToggleTriagePause -> invalidates me key
-    | ReconnectPrompt: shown when status!=CONNECTED || ingestionHealth!=HEALTHY
+    | Settings page: ReconnectPrompt shown when DISCONNECTED or CONNECTED+unhealthy
 ```
 
 ### Recommended Project Structure
@@ -257,7 +257,7 @@ apps/web/features/triage/              # NEW feature folder (recommended)
 ├── components/PauseBanner.tsx
 └── hooks/useToggleTriagePause.ts
 apps/web/features/gmail/
-└── components/ReconnectPrompt.tsx      # MODIFIED: extend gate condition
+└── components/ReconnectPrompt.tsx      # Reused presentational alert; settings page owns mount gate
 apps/web/features/account/api/me.ts    # MODIFIED: extend CurrentUser interface
 apps/web/app/(protected)/
 ├── layout.tsx                          # MODIFIED: +PauseBanner conditional
@@ -959,7 +959,7 @@ Per-user per-second limit: 250 units/user/sec. Worker processes 50 rows/tick at 
 | MAIL-04 | Duplicate push → single `pubsub_delivery` row (ON CONFLICT) | Integration | `./gradlew :backend:api:test --tests "*PubSubIdempotencyTest*"` | `backend/api/src/.../PubSubIdempotencyTest.java` — Wave 0 RED |
 | MAIL-04 | Duplicate history → single `mail_message_observed` row | Integration | `./gradlew :backend:core:test --tests "*MailMessageObservedPersistenceTest*"` | Wave 0 RED |
 | MAIL-05 | History 404 → advance pointer + HISTORY_LOST, no rescan | Unit | `./gradlew :backend:worker:test --tests "*GmailHistoryProcessorTest*"` | `backend/worker/src/.../GmailHistoryProcessorTest.java` — Wave 0 RED |
-| MAIL-05 | ReconnectPrompt renders when ingestionHealth != HEALTHY | Vitest | `pnpm --filter web test --run -- ReconnectPrompt` | `apps/web/.../ReconnectPrompt.test.tsx` — Wave 0 RED |
+| MAIL-05 | Settings page mounts ReconnectPrompt when connected Gmail has ingestionHealth != HEALTHY | Vitest | `pnpm --filter web test --run -- ReconnectPrompt` | `apps/web/.../ReconnectPrompt.test.tsx` — Wave 0 RED |
 | MAIL-06 | Toggle persists `triage_paused` in DB | Integration | `./gradlew :backend:api:test --tests "*TriagePauseControllerTest*"` | `backend/api/src/.../TriagePauseControllerTest.java` — Wave 0 RED |
 | MAIL-06 | `PauseBanner` renders conditionally on `triagePaused=true` | Vitest | `pnpm --filter web test --run -- PauseBanner` | `apps/web/.../PauseBanner.test.tsx` — Wave 0 RED |
 | MAIL-06 | `useToggleTriagePause` invalidates `me` query on success | Vitest unit | `pnpm --filter web test --run -- useToggleTriagePause` | Wave 0 RED |
@@ -996,7 +996,7 @@ Backend:
 Frontend:
 - [ ] `apps/web/features/triage/components/PauseBanner.test.tsx` — MAIL-06 conditional render
 - [ ] `apps/web/features/triage/hooks/useToggleTriagePause.test.ts` — MAIL-06 mutation + invalidation
-- [ ] `apps/web/features/gmail/components/ReconnectPrompt.test.tsx` (extend existing) — MAIL-05 ingestionHealth gate
+- [ ] `apps/web/features/gmail/components/ReconnectPrompt.test.tsx` (extend existing) — MAIL-05 settings-page ReconnectPrompt parent gate
 
 ---
 

@@ -946,11 +946,11 @@ The `fetchCurrentUser` function body and caching wrapper are UNCHANGED — the b
 
 ---
 
-### Frontend: `apps/web/features/gmail/components/ReconnectPrompt.tsx` — extend gate logic
+### Frontend: settings-page `ReconnectPrompt` mount gate
 
 **Analog:** itself (full file, lines 25–42)
 
-The component itself does not own the gate condition — its parent decides whether to render it. The gate condition lives in the parent (`settings/page.tsx` or `layout.tsx`). Per D-D3: extend the calling site's condition from `status !== 'CONNECTED'` to `status !== 'CONNECTED' || ingestionHealth !== 'HEALTHY'`. The `ReconnectPrompt` component JSX itself may be unchanged.
+The component itself does not own the gate condition — its parent decides whether to render it. The current parent is `apps/web/app/(protected)/settings/page.tsx`. Per D-D3, extend the settings-page condition from `connStatus === 'DISCONNECTED'` to `connStatus === 'DISCONNECTED' || (connStatus === 'CONNECTED' && ingestionHealth !== 'HEALTHY')`. Keep `NOT_CONNECTED` on the initial connect CTA. The `ReconnectPrompt` component JSX itself may be unchanged.
 
 ---
 

@@ -417,21 +417,23 @@ Use `vi.mock('@/features/account/hooks/useCurrentUser', ...)` and `vi.mock('@/fe
 1. `mutate_callsSetTriagePaused` — mock `setTriagePaused`, call mutation with `true`, assert mock called with `true`
 2. `onSuccess_invalidates_me_key` — on successful mutation, assert `queryClient.invalidateQueries` called with key matching `accountKeys.me()`
 
-**`apps/web/features/gmail/components/ReconnectPrompt.test.tsx`** — MAIL-05 ingestionHealth gate test. This is a new test file for an EXISTING component. Import `ReconnectPrompt` from `@/features/gmail/components/ReconnectPrompt`. The tests are `it.skip(...)` RED scaffolds since the ingestionHealth gate extension is not yet implemented.
+**`apps/web/features/gmail/components/ReconnectPrompt.test.tsx`** — MAIL-05 ingestionHealth gate test. This is a new test file for an EXISTING component and its real settings-page mount point. Import `ReconnectPrompt` from `@/features/gmail/components/ReconnectPrompt`; for the gate tests, render the smallest settings-page harness or `SettingsPage` itself with `useTenantStatus()` / `useCurrentUser()` mocked. The tests are `it.skip(...)` RED scaffolds since the parent mount condition is not yet implemented.
 
 ```typescript
 import { describe, it } from 'vitest';
 
-// Wave 0 RED scaffold — ingestionHealth gate not yet implemented in Plan 04
-// Remove it.skip() when Plan 04 extends the ReconnectPrompt gate condition
+// Wave 0 RED scaffold — settings-page ReconnectPrompt mount gate not yet implemented in Plan 04
+// Remove it.skip() when Plan 04 extends the parent render condition
 
 describe('ReconnectPrompt — ingestionHealth gate (MAIL-05)', () => {
   it.skip('renders when status is CONNECTED but ingestionHealth is WATCH_UNHEALTHY', () => {
-    // When: user?.gmailConnectionStatus?.status === 'CONNECTED'
-    //   AND user?.gmailConnectionStatus?.ingestionHealth === 'WATCH_UNHEALTHY'
-    // Then: ReconnectPrompt is visible (gate must check BOTH conditions)
-    // This test verifies D-D3: unified gate status!=CONNECTED || ingestionHealth!=HEALTHY
-    // Production code: Plan 04 Task 1 extends ReconnectPrompt gate
+    // Mock the settings page data so:
+    //   status.data.connectionStatus === 'CONNECTED'
+    //   me.data.gmailConnectionStatus.ingestionHealth === 'WATCH_UNHEALTHY'
+    // Then render SettingsPage (or a minimal extracted settings Gmail card harness)
+    // and assert ReconnectPrompt is visible.
+    // This test verifies D-D3 at the real parent boundary: settings/page.tsx must
+    // mount ReconnectPrompt for CONNECTED + ingestionHealth != HEALTHY.
   });
 
   it.skip('renders when status is CONNECTED but ingestionHealth is HISTORY_LOST', () => {
@@ -439,7 +441,7 @@ describe('ReconnectPrompt — ingestionHealth gate (MAIL-05)', () => {
   });
 
   it.skip('does NOT render when status is CONNECTED and ingestionHealth is HEALTHY', () => {
-    // Healthy state: no prompt shown
+    // Healthy state: settings/page.tsx should not mount ReconnectPrompt
   });
 });
 ```
