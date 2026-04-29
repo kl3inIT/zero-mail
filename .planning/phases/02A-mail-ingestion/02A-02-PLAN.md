@@ -380,6 +380,7 @@ public class GmailDeliveryProcessingService {
                 .history().list("me")
                 .setStartHistoryId(BigInteger.valueOf(startHistoryId))
                 .setHistoryTypes(List.of("messageAdded"))
+                .setLabelId("INBOX")
                 .setMaxResults(500L)
                 .execute();
 
@@ -393,7 +394,16 @@ public class GmailDeliveryProcessingService {
                 for (History h : historyList) {
                     if (h.getMessagesAdded() == null) continue;
                     for (HistoryMessageAdded added : h.getMessagesAdded()) {
-                        Message msg = added.getMessage();
+                        Message historyMsg = added.getMessage();
+                        if (historyMsg == null || historyMsg.getId() == null) continue;
+
+                        // history.list entries may contain only id/threadId. Fetch metadata only,
+                        // with a fields mask that excludes snippet, payload, headers, body, and raw.
+                        Message msg = gmail.users().messages()
+                            .get("me", historyMsg.getId())
+                            .setFormat("metadata")
+                            .setFields("id,threadId,labelIds,internalDate")
+                            .execute();
                         List<String> labelIds = msg.getLabelIds();
                         if (labelIds == null || !labelIds.contains("INBOX")) continue;
 
@@ -630,6 +640,7 @@ Also ensure `spring.threads.virtual.enabled: true` is present (or add if missing
     - `GmailHistoryProcessor.java` calls `claimPendingBatch(BATCH_SIZE, LOCK_SECONDS)` and claimed rows are already `PROCESSING`
     - `GmailHistoryProcessor.java` injects `GmailDeliveryProcessingService` and calls `deliveryProcessingService.processDelivery(delivery)` — NOT an inline private method
     - `GmailHistoryProcessor.java` does NOT contain `@Transactional` annotation (transaction lives in GmailDeliveryProcessingService)
+    - `GmailDeliveryProcessingService.java` calls `history().list("me").setLabelId("INBOX")` and then `messages().get("me", messageId).setFormat("metadata").setFields("id,threadId,labelIds,internalDate")` before checking `labelIds`
     - `GmailWatchScheduler.java` invalid-grant catch calls `connectionService.markDisconnected(tenantId)`, not `connectionService.disconnect(tenantId)`
     - `GmailDeliveryProcessingService.java` contains `event=gmail_history_gap_truncated` and `event=gmail_history_lost` on 404 catch
     - `GmailDeliveryProcessingService.java` does NOT contain subject, from, body, snippet, or email address in any log statement

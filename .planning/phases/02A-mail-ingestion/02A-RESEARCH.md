@@ -41,7 +41,7 @@
 
 - Full Pub/Sub envelope vs decoded payload in `pubsub_delivery.payload JSONB` — recommend full envelope.
 - Worker module shape: single `mail-ingestion` module (not split) — recommend single.
-- Spring Security filter shape: `SecurityFilterChain @Order(1)` vs `OncePerRequestFilter` only — researcher recommends `SecurityFilterChain @Order(1)` (see §Architecture Patterns).
+- Spring Security filter shape: `SecurityFilterChain @Bean @Order(1)` vs `OncePerRequestFilter` only — researcher recommends `@Order` on the chain bean method (see §Architecture Patterns).
 - `GmailHistoryProcessor` retry classification — documented in §Common Pitfalls.
 - Token refresh: direct POST to `https://oauth2.googleapis.com/token` (not `OAuth2AuthorizedClientService`).
 - `watch_consecutive_failures` column on `gmail_connections` (durable, not in-memory).
@@ -95,11 +95,11 @@
 
 Phase 2A wires the complete Gmail ingress pipeline. The architecture is an ack-fast push receiver (controller is pure OIDC-verify + DB-insert + 200), a Postgres-backed SKIP LOCKED worker for history fan-out, and a minute-tick scheduler for watch lifecycle. Three privacy-correct tables capture state: `pubsub_delivery` (ingress queue), `mail_message_observed` (audit log, no email content), and `tenants.triage_paused` (one-bit pause flag).
 
-The most technically demanding deliverable is the `PubSubOidcAuthFilter`: a separate `SecurityFilterChain @Bean @Order(1)` that runs BEFORE the user OAuth chain, verifies Google OIDC tokens using `TokenVerifier` from `google-auth-library-oauth2-http 1.35.0`, and returns 401 on any mismatch without binding `TenantContext`. This closes the deferred ceremony from Phase 01.5 D-D5.
+The most technically demanding deliverable is the `PubSubOidcAuthFilter`: a separate `SecurityFilterChain @Bean` with `@Order(1)` on the bean method that runs BEFORE the user OAuth chain, verifies Google OIDC tokens using `TokenVerifier` from `google-auth-library-oauth2-http 1.35.0`, and returns 401 on any mismatch without binding `TenantContext`. This closes the deferred ceremony from Phase 01.5 D-D5.
 
 Token refresh in the worker context (no `Authentication` principal in scheduler thread) is handled by a direct POST to `https://oauth2.googleapis.com/token` using the decrypted refresh token from `RefreshTokenCipher`. This is the correct pattern for headless worker scenarios; `OAuth2AuthorizedClientService` is designed for request-scoped OAuth flows and cannot be used in scheduled worker threads without significant workarounds.
 
-**Primary recommendation:** Use a dedicated `SecurityFilterChain @Order(1)` with `securityMatcher("/internal/pubsub/**")` for the push endpoint. Add `PubSubOidcAuthFilter` as a `BeforeFilter` within that chain. Keep the existing user OAuth chain unchanged.
+**Primary recommendation:** Use a dedicated `SecurityFilterChain @Bean @Order(1)` with `securityMatcher("/internal/pubsub/**")` for the push endpoint. Add `PubSubOidcAuthFilter` as a `BeforeFilter` within that chain. Keep the existing user OAuth chain unchanged except for `@Order(2)` on its filter-chain bean.
 
 ---
 
@@ -153,7 +153,7 @@ Google Pub/Sub
     |
     | HTTP POST (OIDC-signed)
     v
-[PubSubOidcAuthFilter @Order(1)]
+[SecurityFilterChain @Bean @Order(1) for /internal/pubsub/**]
     | 401 on any OIDC failure (never reaches business logic)
     v
 [GmailPubSubController POST /internal/pubsub/gmail]
@@ -173,10 +173,11 @@ Google Pub/Sub
     | per row: bind TenantContext, decrypt refresh token (RefreshTokenCipher)
     | POST https://oauth2.googleapis.com/token -> access_token
     |   401 invalid_grant -> flip status=DISCONNECTED, mark DEAD
-    | gmail.users().history().list(startHistoryId, historyTypes=[messageAdded], maxResults=500)
+    | gmail.users().history().list(startHistoryId, historyTypes=[messageAdded], labelId=INBOX, maxResults=500)
     |   404 -> HISTORY_LOST flow (advance pointer, mark PROCESSED)
     |   500/429 -> increment attempts; 3 fails -> DEAD
-    | for each messagesAdded where INBOX in labelIds:
+    | for each messagesAdded candidate: messages.get(format=metadata, fields=id,threadId,labelIds,internalDate)
+    |   if returned labelIds contains INBOX:
     |   INSERT mail_message_observed ON CONFLICT DO NOTHING
     | UPDATE gmail_connections last_synced_history_id (monotonic-conditional)
     | UPDATE pubsub_delivery status=PROCESSED
@@ -218,8 +219,8 @@ backend/api/src/main/java/com/zeromail/api/
 │   └── TriagePauseController.java        # NEW: PUT /tenant/triage-pause
 ├── security/
 │   ├── PubSubOidcAuthFilter.java         # NEW: OIDC filter
-│   ├── PubSubSecurityConfig.java         # NEW: SecurityFilterChain @Order(1)
-│   └── SecurityConfig.java              # MODIFIED: @Order(2) existing chain
+│   ├── PubSubSecurityConfig.java         # NEW: SecurityFilterChain @Bean @Order(1)
+│   └── SecurityConfig.java              # MODIFIED: existing chain bean @Order(2)
 ├── dto/account/
 │   └── MeResponse.java                  # MODIFIED: + triagePaused + gmailConnectionStatus
 
@@ -485,18 +486,23 @@ ListHistoryResponse historyResponse = gmail.users()
     .list("me")
     .setStartHistoryId(BigInteger.valueOf(startHistoryId))
     .setHistoryTypes(List.of("messageAdded"))
+    .setLabelId("INBOX")
     .setMaxResults(500L)
-    // Do NOT setLabelId here — labelId filters the returned messages by label,
-    // but we filter manually to avoid missing multi-label messages
     .execute();
 
 List<History> historyList = historyResponse.getHistory();       // may be null if empty
 String nextPageToken = historyResponse.getNextPageToken();      // non-null if more pages
 
-// Check for INBOX in each message's labelIds
+// history.list entries may only contain message id/threadId. Fetch metadata only.
 for (History h : historyList != null ? historyList : List.of()) {
     for (HistoryMessageAdded added : h.getMessagesAdded() != null ? h.getMessagesAdded() : List.of()) {
-        Message msg = added.getMessage();
+        Message historyMsg = added.getMessage();
+        if (historyMsg == null || historyMsg.getId() == null) continue;
+        Message msg = gmail.users().messages()
+            .get("me", historyMsg.getId())
+            .setFormat("metadata")
+            .setFields("id,threadId,labelIds,internalDate")
+            .execute();
         if (msg.getLabelIds() != null && msg.getLabelIds().contains("INBOX")) {
             // Insert into mail_message_observed
         }
@@ -731,8 +737,8 @@ export function useToggleTriagePause() {
 
 ### P-01: Forged Push — OIDC Filter Runs AFTER Business Logic
 **What goes wrong:** If `SecurityConfig` order is wrong and the existing chain runs first, the push endpoint may be treated as "not matched by any chain" and fall through to `anyRequest().authenticated()`, which redirects to OAuth login — not a 401.
-**Root cause:** Spring Security applies filter chains in `@Order` sequence; without `@Order(1)` on the Pub/Sub chain, the user OAuth chain (`@Order(2)`) may intercept first.
-**Prevention:** `@Order(1)` on `PubSubSecurityConfig`; confirm `securityMatcher("/internal/pubsub/**")` is correct. Add explicit `@Order(2)` to existing `SecurityConfig`.
+**Root cause:** Spring Security applies filter chains in `@Order` sequence; without `@Order(1)` on the Pub/Sub `SecurityFilterChain @Bean`, the user OAuth chain (`@Order(2)`) may intercept first.
+**Prevention:** `@Order(1)` on the `pubSubFilterChain` bean method; confirm `securityMatcher("/internal/pubsub/**")` is correct. Add explicit `@Order(2)` to the existing user-session `SecurityFilterChain` bean method.
 **Verification gate:** Integration test: POST to `/internal/pubsub/gmail` without Authorization header → assert 401, not 302 redirect.
 
 ### P-02: ScopedValue Not Bound Before DB Call in Worker
@@ -794,6 +800,12 @@ export function useToggleTriagePause() {
 **Root cause:** Missing proxy exclusion rule.
 **Prevention:** Check `apps/web` proxy config. Add `!path.startsWith('/internal/')` exclusion. Document in RUNBOOK.md.
 **Verification gate:** Code review check on `apps/web` proxy/rewrites config.
+
+### P-12: `history.list` Message Objects Missing Metadata
+**What goes wrong:** `users.history.list` returns `messagesAdded.message` with only `id`/`threadId`; worker checks `message.labelIds` and skips every real INBOX message because labels are absent.
+**Root cause:** Treating history-list message objects as fully populated Gmail Message resources.
+**Prevention:** Use `history.list(...).setLabelId("INBOX")` to reduce candidates, then call `messages.get(format=metadata, fields=id,threadId,labelIds,internalDate)` per candidate before checking labels or storing `internalDate`.
+**Verification gate:** Worker test: history.list candidate has only `id`/`threadId`; metadata get returns `labelIds=["INBOX"]`; assert `mail_message_observed` row is inserted.
 
 ---
 
@@ -923,7 +935,7 @@ Per-user per-second limit: 250 units/user/sec. Worker processes 50 rows/tick at 
 | # | Claim | Section | Risk if Wrong |
 |---|-------|---------|---------------|
 | A1 | `users.watch` re-call replaces/renews the existing watch (not fails with "already watching") | §Code Examples Pattern 5 | If it fails, need `users.stop` + `users.watch` sequence; minor code change |
-| A2 | Separate `SecurityFilterChain @Order(1)` + `@Order(2)` on existing chain is idiomatic Spring Security 7.0.5 | §Architecture Patterns | If wrong, fallback is adding the filter to the existing chain via a path matcher in `addFilterBefore` |
+| A2 | Separate `SecurityFilterChain @Bean @Order(1)` + `@Order(2)` on the existing user-session chain bean is idiomatic Spring Security 7.0.5 | §Architecture Patterns | If wrong, fallback is adding the filter to the existing chain via a path matcher in `addFilterBefore` |
 | A3 | Gmail API quota units: `users.watch` = 100, `users.history.list` = 2, `users.stop` = 50 | §Performance | If wrong, quota budget may be tighter; add monitoring |
 | A4 | Pause toggle copy (Vietnamese/English) | §Code Examples Pattern 10 | `frontend-design` skill will refine; keys are placeholders |
 | A5 | `fixedDelay` tasks in Spring Boot 4 with virtual threads may serialize on same virtual thread (GH #31900) | §Architecture Patterns | If fixed in Boot 4.0.6, behavior is more concurrent; `cron` still safer for the watch scheduler |
@@ -1049,7 +1061,7 @@ Frontend:
 ## Open Questions (RESOLVED)
 
 1. **Spring Security 7.0.5 exact `@Order` interaction when `@Profile("!test")` is active**
-   - What we know: existing `SecurityConfig` has `@Profile("!test")` annotation. The Pub/Sub chain needs `@Order(1)`.
+   - What we know: existing `SecurityConfig` has `@Profile("!test")` annotation. The Pub/Sub chain bean needs `@Order(1)`.
    - What's unclear: does `@Profile("!test")` interact with `@Order` bean registration in test context? The worker tests don't use a full Spring Security context.
    - **RESOLVED:** Add `@Profile("!test")` to `PubSubSecurityConfig` as well (Plan 03 Task 1 does this). Both chains are excluded from the test context together; no ordering conflict. Test-profile security (WR-06) is a separate no-security config that is not ordered relative to these two chains.
 
@@ -1100,7 +1112,7 @@ Frontend:
 - OIDC `aud` claim semantics: HIGH — verified via official GCP docs
 - Hibernate TEXT[] mapping: MEDIUM-HIGH — Hibernate 6+ native support confirmed; Hibernate 7 specific behavior extrapolated
 - ScopedValue per-row binding: HIGH — Java 25 JEP-464 semantics; confirmed by Phase 1 patterns
-- `SecurityFilterChain @Order` with `@Profile`: MEDIUM — standard pattern confirmed; test-profile interaction is ASSUMED
+- `SecurityFilterChain @Bean @Order` with `@Profile`: MEDIUM — standard pattern confirmed; test-profile interaction is ASSUMED
 
 **Research date:** 2026-04-28
 **Valid until:** 2026-06-28 (stable libraries; Gmail API reference is stable)

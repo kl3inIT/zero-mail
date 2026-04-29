@@ -143,21 +143,23 @@ Frontend test analogs:
   <action>
 Create 10 backend test classes + 2 fixtures as RED scaffolds. Non-disabled tests may reference production classes that do not exist yet; disabled scaffolds must avoid missing type references and compile under `compileTestJava`.
 
-**`PubSubOidcAuthFilterTest.java`** — package `com.zeromail.api.security`. Extends nothing (unit test). Import `com.zeromail.api.security.PubSubOidcAuthFilter` (RED). Six `@Test` methods:
+**`PubSubOidcAuthFilterTest.java`** — package `com.zeromail.api.security`. Extends nothing (unit test). Import `com.zeromail.api.security.PubSubOidcAuthFilter` (RED). Seven `@Test` methods:
 1. `validToken_passes()` — builds a valid signed JWT with correct aud + email + iss, calls `doFilterInternal`, asserts chain is called (verify mock `FilterChain`)
 2. `wrongAudience_returns401()` — token with wrong `aud`, asserts `response.getStatus() == 401`
 3. `wrongEmail_returns401()` — token with correct aud but wrong email claim
-4. `expiredToken_returns401()` — token with `exp` in the past
-5. `badSignature_returns401()` — token signed with wrong RSA key
-6. `nonPubSubPath_skipsFilter()` — request path `/me`, no Authorization header, asserts the filter chain is called and response remains uncommitted. This proves the filter's path guard prevents global servlet registration from breaking user-session endpoints.
+4. `wrongIssuer_returns401()` — token with wrong `iss`, asserts `response.getStatus() == 401`
+5. `expiredToken_returns401()` — token with `exp` in the past
+6. `badSignature_returns401()` — token signed with wrong RSA key
+7. `nonPubSubPath_skipsFilter()` — request path `/me`, no Authorization header, asserts the filter chain is called and response remains uncommitted. This proves the filter's path guard prevents global servlet registration from breaking user-session endpoints.
 All test cases import `com.zeromail.api.support.MockGoogleOidcServer` from `backend/api/src/test/java/com/zeromail/api/support`. The fixture serves JWKS at a local URL so `backend:api:test` has direct test-scope visibility without depending on worker test classes. `PubSubOidcAuthFilter` is constructed with `audience="https://test.example/internal/pubsub/gmail"` and `saEmail="pubsub-sa@test-project.iam.gserviceaccount.com"` + `setCertificatesLocation(mockServer.jwksUrl())` override. Use `MockHttpServletRequest` / `MockHttpServletResponse` from `spring-test`.
 
-**`GmailPubSubControllerIntegrationTest.java`** — package `com.zeromail.api.controllers`. `@SpringBootTest(webEnvironment = RANDOM_PORT)` + `@ActiveProfiles("test")`. Imports `com.zeromail.api.controllers.GmailPubSubController` (RED). Uses `RestClient` + `@LocalServerPort` (NOT MockMvc — per STATE.md decision). Five `@Test` methods:
+**`GmailPubSubControllerIntegrationTest.java`** — package `com.zeromail.api.controllers`. `@SpringBootTest(webEnvironment = RANDOM_PORT)` + `@ActiveProfiles("test")`. Imports `com.zeromail.api.controllers.GmailPubSubController` (RED). Uses `RestClient` + `@LocalServerPort` (NOT MockMvc — per STATE.md decision). Six `@Test` methods:
 1. `missingAuthHeader_returns401()` — POST `/internal/pubsub/gmail` no auth → assert 401
 2. `validPush_knownTenant_returns200()` — valid OIDC token + valid payload for known tenant → assert 200 + `pubsub_delivery` row exists
 3. `validPush_unknownEmail_returns200_dropsSilently()` — valid token but email not in `gmail_connections` → 200, no row
 4. `duplicatePush_idempotent()` — same `messageId` twice → 200 both times, one row in `pubsub_delivery`
 5. `invalidPayload_returns200_dropsSilently()` — malformed base64 data → 200, no row, `event=pubsub_payload_decode_failed` (ack-fast policy prevents Pub/Sub redelivery loops)
+6. `missingMessageId_returns200_noPubSubDeliveryRow()` — valid OIDC token + valid payload but null/blank Pub/Sub `messageId` → 200, no insert, `event=pubsub_missing_message_id`
 
 **`MeControllerTest.java`** — package `com.zeromail.api.controllers`. Covers the `/me` endpoint contract for the new `triagePaused` and `gmailConnectionStatus.ingestionHealth` fields added in Plan 03 Task 2. `@Disabled("Wave 0 RED scaffold — enable after Plan 03 extends MeResponse")`. Uses `@SpringBootTest(webEnvironment = RANDOM_PORT)` + `RestClient`. This file must compile before Plan 03, so it must not import or call missing `MeResponse` accessors. Assert against raw JSON strings only:
 ```java
@@ -288,17 +290,19 @@ If not available, use `com.sun.net.httpserver.HttpServer` from JDK (always avail
 **`MockGmailHistoryServer.java`** — package `com.zeromail.worker.test`. Configures a stub Gmail API server using `HttpServer`. Exposes:
 - `void stubHistoryList(long startHistoryId, List<HistoryMessageResponse> messages)` — returns synthetic Gmail history.list response
 - `void stubHistoryList404()` — returns 404 response to simulate expired historyId
+- `void stubMessageMetadata(String messageId, String threadId, List<String> labelIds, Long internalDate)` — returns synthetic `users.messages.get(format=metadata)` response with only id/threadId/labelIds/internalDate fields
 - `void stubWatchSuccess(long historyId, long expirationMs)` — returns watch response
 - `void stubWatchFailure(int statusCode)` — returns failure
 - `String baseUrl()` — local base URL for Gmail client configuration
 - `void start()` / `void stop()`
 
-**`GmailHistoryProcessorTest.java`** — package `com.zeromail.worker`. Extends `PostgresContainerTest` (from `backend/core`). Imports `com.zeromail.worker.GmailHistoryProcessor` (RED). Uses `MockGmailHistoryServer` fixture. Five `@Test` methods:
-1. `processDelivery_insertsMailMessageObserved()` — PENDING delivery row + stubbed history.list with 1 INBOX message → asserts `mail_message_observed` row created + delivery status=PROCESSED
+**`GmailHistoryProcessorTest.java`** — package `com.zeromail.worker`. Extends `PostgresContainerTest` (from `backend/core`). Imports `com.zeromail.worker.GmailHistoryProcessor` (RED). Uses `MockGmailHistoryServer` fixture. Six `@Test` methods:
+1. `processDelivery_insertsMailMessageObserved()` — PENDING delivery row + stubbed history.list with 1 candidate message + stubbed `messages.get(format=metadata)` returning INBOX labels → asserts `mail_message_observed` row created + delivery status=PROCESSED
 2. `processDelivery_history404_setsHistoryLost()` — stubbed 404 → asserts `ingestion_health=HISTORY_LOST`, delivery status=PROCESSED, `last_synced_history_id` advanced to webhook_history_id
 3. `processDelivery_idempotent_duplicateMessage()` — same delivery twice → exactly one `mail_message_observed` row
 4. `processDelivery_scopedValueBound_perRow()` — two deliveries for different tenants → each observation row has correct `tenant_id` (cross-tenant isolation)
 5. `processDelivery_invalidGrant_setsDisconnected()` — 401 from token refresh → asserts `gmail_connections.status=DISCONNECTED`, delivery status=DEAD
+6. `processDelivery_historyListMessageWithoutLabels_fetchesMetadataBeforeInboxFilter()` — history.list returns a `messagesAdded.message` with only `id`/`threadId`; mock `messages.get` returns `labelIds=["INBOX"]` + `internalDate`; assert the observation row is inserted and `internal_date` is stored
 
 **`GmailWatchSchedulerTest.java`** — package `com.zeromail.worker`. Extends `PostgresContainerTest`. Imports `com.zeromail.worker.GmailWatchScheduler` (RED). Uses `MockGmailHistoryServer`. Five `@Test` methods:
 1. `register_nullExpiry_issuersWatch()` — `gmail_connections` row with `watch_expires_at=NULL` + `status=CONNECTED` → scheduler tick → asserts `watch_history_id` + `watch_expires_at` + `watch_renewed_at` set + `ingestion_health=HEALTHY`

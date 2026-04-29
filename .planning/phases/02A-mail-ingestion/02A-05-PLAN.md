@@ -156,7 +156,7 @@ Add manual verification instructions summary at the bottom (the 4 manual-only it
 
   <acceptance_criteria>
     - `./gradlew clean check` exits 0 (BUILD SUCCESSFUL)
-    - All 10 backend Wave 0 test classes are GREEN (PubSubOidcAuthFilterTest x6, GmailPubSubControllerIntegrationTest x5, MeControllerTest x3, TriagePauseControllerTest x2, PubSubIdempotencyTest x2, PubSubDeliveryEntityTest x4, MailMessageObservedEntityTest x4, GmailIngestionHealthTest x4, GmailHistoryProcessorTest x5, GmailWatchSchedulerTest x5)
+    - All 10 backend Wave 0 test classes are GREEN (PubSubOidcAuthFilterTest x7, GmailPubSubControllerIntegrationTest x6, MeControllerTest x3, TriagePauseControllerTest x2, PubSubIdempotencyTest x2, PubSubDeliveryEntityTest x4, MailMessageObservedEntityTest x4, GmailIngestionHealthTest x4, GmailHistoryProcessorTest x6, GmailWatchSchedulerTest x5)
     - `grep -R "@Disabled" backend/api/src/test/java/com/zeromail/api/controllers/MeControllerTest.java backend/api/src/test/java/com/zeromail/api/controllers/TriagePauseControllerTest.java backend/api/src/test/java/com/zeromail/api/controllers/PubSubIdempotencyTest.java` returns no matches
     - `ApplicationModulesTest` passes GREEN
     - `DomainBoundaryArchTests` passes GREEN
@@ -193,7 +193,7 @@ Remove this entire bullet point. This blocker is now closed by Phase 2A Plan 03 
 
 In the Accumulated Context → Decisions section, ADD a new entry documenting the Phase 2A closure:
 ```
-- [Phase 2A]: Pub/Sub push-token validation closed. PubSubOidcAuthFilter uses TokenVerifier.newBuilder().setAudience().setIssuer().setCertificatesLocation() from google-auth-library-oauth2-http. PubSubSecurityConfig @Order(1) remains active under the test profile; user-session SecurityConfig is @Order(2). 6-case test validates: valid passes, wrong aud/email/exp/sig all return 401, and non-Pub/Sub paths skip the filter. Phase 01.5 D-D5 deferred blocker retired.
+- [Phase 2A]: Pub/Sub push-token validation closed. PubSubOidcAuthFilter uses TokenVerifier.newBuilder().setAudience().setIssuer().setCertificatesLocation() from google-auth-library-oauth2-http. PubSubSecurityConfig contributes a SecurityFilterChain bean with @Order(1) and remains active under the test profile; user-session SecurityConfig's SecurityFilterChain bean is @Order(2). 7-case test validates: valid passes, wrong aud/email/issuer/exp/sig all return 401, and non-Pub/Sub paths skip the filter. Phase 01.5 D-D5 deferred blocker retired.
 ```
 
 Also update Current Position to reflect Phase 2A complete.
@@ -241,7 +241,7 @@ Plans:
 
 | Threat ID | Category | Component | Disposition | Mitigation Plan |
 |-----------|----------|-----------|-------------|-----------------|
-| T-01 | Spoofing | Final gate: PubSubOidcAuthFilterTest all 6 cases GREEN | mitigate | Acceptance criterion requires all 6 test cases pass: valid + wrong aud + wrong email + expired + bad signature + non-Pub/Sub path guard — all OIDC failures must return 401, and non-Pub/Sub paths must skip the filter |
+| T-01 | Spoofing | Final gate: PubSubOidcAuthFilterTest all 7 cases GREEN | mitigate | Acceptance criterion requires all 7 test cases pass: valid + wrong aud + wrong email + wrong issuer + expired + bad signature + non-Pub/Sub path guard — all OIDC failures must return 401, and non-Pub/Sub paths must skip the filter |
 | T-05 | Information Disclosure | DomainBoundaryArchTests covers new entities | mitigate | ArchUnit test must pass GREEN confirming no cross-domain persistence access in new code |
 </threat_model>
 

@@ -380,7 +380,7 @@ public class TenantBindingFilter extends OncePerRequestFilter {
 
 ---
 
-### `PubSubSecurityConfig.java` — new config (@Order(1) SecurityFilterChain)
+### `PubSubSecurityConfig.java` — new config (SecurityFilterChain @Bean @Order(1))
 
 **Analog:** `backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java` (full file)
 
@@ -409,7 +409,6 @@ public class SecurityConfig {
 **Adaptation for `PubSubSecurityConfig`:**
 ```java
 @Configuration
-@Order(1)           // Runs BEFORE the user OAuth chain (which gets @Order(2))
 public class PubSubSecurityConfig {
 
     @Bean
@@ -423,6 +422,7 @@ public class PubSubSecurityConfig {
     }
 
     @Bean
+    @Order(1)       // Runs BEFORE the user OAuth chain bean (which gets @Order(2))
     SecurityFilterChain pubSubFilterChain(HttpSecurity http,
                                           PubSubOidcAuthFilter oidcFilter) throws Exception {
         http
@@ -436,7 +436,7 @@ public class PubSubSecurityConfig {
 }
 ```
 
-**Existing `SecurityConfig` modification:** Add `@Order(2)` to the existing chain bean method (or class). The `@Profile("!test")` stays on the user-session `SecurityConfig`. `PubSubSecurityConfig` is active in `test` profile so integration tests prove missing/invalid Pub/Sub OIDC requests return 401 before business logic.
+**Existing `SecurityConfig` modification:** Add `@Order(2)` to the existing user-session `SecurityFilterChain` bean method. Do not rely on configuration-class ordering to order filter chains. The `@Profile("!test")` stays on the user-session `SecurityConfig`. `PubSubSecurityConfig` is active in `test` profile so integration tests prove missing/invalid Pub/Sub OIDC requests return 401 before business logic.
 
 **Pitfall:** `securityMatcher` is Spring Security 6+ API (also valid in 7.0.5). Do not use `antMatcher` (removed in Spring 6). Without `securityMatcher`, the `@Order(1)` chain would intercept ALL requests.
 
@@ -1292,7 +1292,7 @@ For these files, the RESEARCH.md §Common Pitfalls and §Code Examples sections 
 ### Key Patterns Identified
 - All new backend entities extend `AbstractTenantOwnedEntity` via `super(id, tenantId)` constructor, except `MailMessageObservedEntity` which uses `@IdClass` composite PK with explicit `@TenantId` on the standalone `tenantId` field — this entity does NOT extend AbstractTenantOwnedEntity but is still Hibernate tenant-filtered
 - All new scheduled workers follow `HealthcheckScheduler` shape (`@Component`, `@Scheduled`, static Logger) and bind `ScopedValue.where(TenantContext.TENANT, ...).run(...)` PER ROW, not at the scheduler level
-- `PubSubSecurityConfig @Order(1)` + `securityMatcher("/internal/pubsub/**")` is the idiomatic Spring Security 7 pattern for isolating machine-to-machine endpoints; the existing `SecurityConfig` adds `@Order(2)`
+- `PubSubSecurityConfig` contributes a `SecurityFilterChain @Bean @Order(1)` + `securityMatcher("/internal/pubsub/**")`, which is the idiomatic Spring Security 7 pattern for isolating machine-to-machine endpoints; the existing `SecurityConfig` adds `@Order(2)` to its user-session `SecurityFilterChain` bean
 - Frontend hook pattern: `useMutation` + `qc.invalidateQueries` + `xsrfHeader()` on the API function — identical to `useDisconnectGmail` and `useUpdateLanguage`
 - Privacy rule: log `event=<opaque_name> tenantId={}` — NEVER `emailAddress`, token bytes, or Gmail message content in any log line in any new file
 - Liquibase changesets use `defaultValueBoolean` for boolean, `defaultValue` (string) for VARCHAR, `defaultValueNumeric` for INT/BIGINT — mix matters and `007-add-audit-columns.yaml` is the authoritative in-repo example

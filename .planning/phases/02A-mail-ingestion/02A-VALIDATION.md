@@ -55,7 +55,7 @@ Wave 0 RED scaffolds (per RESEARCH.md `## Validation Architecture`):
 - [ ] `backend/core/src/test/java/com/zeromail/core/gmail/persistence/PubSubDeliveryEntityTest.java` — UNIQUE (tenant_id, pubsub_message_id) round-trip + ON CONFLICT DO NOTHING semantics + expired PROCESSING row reclaim
 - [ ] `backend/core/src/test/java/com/zeromail/core/gmail/persistence/MailMessageObservedEntityTest.java` — composite PK round-trip + TEXT[] label_ids round-trip + `@TenantId` cross-tenant JPA-read isolation
 - [ ] `backend/core/src/test/java/com/zeromail/core/gmail/model/GmailIngestionHealthTest.java` — IdentifiedEnum contract: id() + fromId fail-loud
-- [ ] `backend/worker/src/test/java/com/zeromail/worker/GmailHistoryProcessorTest.java` — fan-out semantics, history-404 → HISTORY_LOST, monotonic last_synced_history_id, ScopedValue binding per row
+- [ ] `backend/worker/src/test/java/com/zeromail/worker/GmailHistoryProcessorTest.java` — fan-out semantics, metadata fetch before INBOX filtering, history-404 → HISTORY_LOST, monotonic last_synced_history_id, ScopedValue binding per row
 - [ ] `backend/worker/src/test/java/com/zeromail/worker/GmailWatchSchedulerTest.java` — initial register, renew at <24h without advancing existing `last_synced_history_id`, 3-strike unhealthy threshold, INBOX-only labelIds
 - [ ] `backend/worker/src/test/java/com/zeromail/worker/test/MockGoogleOidcServer.java` — hermetic JWKS + signed synthetic ID tokens (testkit fixture)
 - [ ] `backend/worker/src/test/java/com/zeromail/worker/test/MockGmailHistoryServer.java` — hermetic Gmail history.list + watch + stop responder
