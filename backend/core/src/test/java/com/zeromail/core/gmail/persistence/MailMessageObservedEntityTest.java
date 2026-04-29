@@ -48,7 +48,7 @@ class MailMessageObservedEntityTest extends PostgresContainerTest {
 
         String[] labels = jdbc.queryForObject(
                 "SELECT label_ids FROM mail_message_observed WHERE tenant_id = ? AND gmail_message_id = ?",
-                String[].class,
+                (rs, rowNum) -> (String[]) rs.getArray(1).getArray(),
                 tenantId,
                 "array-roundtrip");
         assertThat(labels).containsExactly("INBOX", "UNREAD");

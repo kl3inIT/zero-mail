@@ -15,6 +15,7 @@ dependencies {
     implementation("org.springframework.session:spring-session-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
+    implementation(libs.google.auth.library.oauth2.http)
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
     developmentOnly("org.springframework.boot:spring-boot-docker-compose")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
@@ -53,7 +54,10 @@ openApi {
                 "--spring.security.oauth2.client.registration.google.client-id=openapi-emit",
                 "--spring.security.oauth2.client.registration.google.client-secret=openapi-emit",
                 // Provide a 32-byte AES-GCM key (base64) so RefreshTokenCipher beans initialize.
-                "--zeromail.crypto.refresh-token-key-base64=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+                "--zeromail.crypto.refresh-token-key-base64=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+                "--pubsub.push-audience-url=https://openapi.invalid/internal/pubsub/gmail",
+                "--pubsub.sa-principal-email=pubsub-openapi@openapi.invalid",
+                "--pubsub.oidc-certificates-url=https://www.googleapis.com/oauth2/v3/certs"
             )
         )
     }

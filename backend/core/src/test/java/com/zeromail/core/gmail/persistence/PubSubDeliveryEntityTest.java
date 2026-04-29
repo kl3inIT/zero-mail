@@ -3,6 +3,7 @@ package com.zeromail.core.gmail.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -99,6 +100,7 @@ class PubSubDeliveryEntityTest extends PostgresContainerTest {
         jdbc.update("""
                 INSERT INTO pubsub_delivery(id, tenant_id, pubsub_message_id, history_id, payload, status, attempts, locked_until)
                 VALUES (?, ?, ?, ?, '{}'::jsonb, ?, ?, ?)
-                """, UUID.randomUUID(), tenantId, messageId, 10L, status, attempts, lockedUntil);
+                """, UUID.randomUUID(), tenantId, messageId, 10L, status, attempts,
+                lockedUntil == null ? null : Timestamp.from(lockedUntil));
     }
 }
