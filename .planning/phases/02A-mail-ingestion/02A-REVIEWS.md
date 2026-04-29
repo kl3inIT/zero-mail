@@ -1,10 +1,10 @@
 ---
 phase: 02A
-review_cycle: 4
+review_cycle: 5
 reviewers: [codex]
-reviewed_at: 2026-04-29T11:04:42.6856105+07:00
-follow_up_to_cycle: 3
-fix_commit: 312df88
+reviewed_at: 2026-04-29T11:17:29.3409733+07:00
+follow_up_to_cycle: 4
+fix_commit: 6a3e914
 plans_reviewed:
   - 02A-00-PLAN.md
   - 02A-01-PLAN.md
@@ -12,80 +12,82 @@ plans_reviewed:
   - 02A-03-PLAN.md
   - 02A-04-PLAN.md
   - 02A-05-PLAN.md
-current_high: 2
+current_high: 1
 ---
 
-# Cross-AI Plan Review - Phase 02A (Cycle 4)
+# Cross-AI Plan Review - Phase 02A (Cycle 5)
 
 Only the Codex reviewer was requested and invoked for this follow-up convergence cycle, so this is a single-reviewer synthesis rather than a multi-reviewer consensus.
 
-Manual fix commit `312df88` resolved the two Cycle 3 HIGH concerns at the plan-text level. This Cycle 4 review found two new HIGH concerns.
+Manual fix commit `6a3e914` fully resolved Cycle 4's two HIGH concerns at the plan-text level. This Cycle 5 review found one new HIGH reliability concern.
 
 ## Codex Review
 
 **Summary**
 
-I reviewed the repository plan artifacts only. The two Cycle 3 HIGH concerns are now addressed at the plan-text level. However, I found two new HIGH plan risks: the backend plans introduce Google/Gmail classes without adding the required Gradle dependencies, and the frontend MAIL-05 reconnect gate is aimed at the wrong component boundary, so `CONNECTED + HISTORY_LOST/WATCH_UNHEALTHY` may still not render the prompt.
+I reviewed the current repo state and pasted Phase 02A plans without modifying files. The two Cycle 4 HIGHs are now addressed in the plan text. Overall the plan set is much stronger, but I found one remaining HIGH reliability gap in the worker queue claim semantics: a crash after claiming `pubsub_delivery` rows can strand rows in `PROCESSING` forever.
 
 **Prior HIGH Resolution**
 
-- `mail_message_observed` tenant isolation: **FULLY RESOLVED.** Plan 01 now requires `MailMessageObservedEntity` to use `@IdClass` with explicit `@TenantId` on `tenantId`, and Plan 00 adds a cross-tenant JPA-read isolation test. Evidence: [02A-01-PLAN.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/02A-mail-ingestion/02A-01-PLAN.md:529), [02A-01-PLAN.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/02A-mail-ingestion/02A-01-PLAN.md:544), [02A-00-PLAN.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/02A-mail-ingestion/02A-00-PLAN.md:267).
-- `PubSubOidcAuthFilter` global registration/scoping: **FULLY RESOLVED.** Plan 03 explicitly says not to annotate the filter as `@Component`, creates it through `PubSubSecurityConfig`, disables servlet registration with `FilterRegistrationBean#setEnabled(false)`, and keeps `shouldNotFilter()` as defense in depth. Evidence: [02A-03-PLAN.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/02A-mail-ingestion/02A-03-PLAN.md:402), [02A-03-PLAN.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/02A-mail-ingestion/02A-03-PLAN.md:422), [02A-03-PLAN.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/02A-mail-ingestion/02A-03-PLAN.md:442).
+1. Missing Google/Gmail Gradle dependency plan changes: **FULLY RESOLVED.**
+   Plan 01 now modifies `gradle/libs.versions.toml`, `backend/core/build.gradle.kts`, and `backend/api/build.gradle.kts`, adds aliases for `google-auth-library-oauth2-http` and `google-api-services-gmail`, wires core/API dependencies, and adds OpenAPI dummy Pub/Sub args. Evidence: `02A-01-PLAN.md:466`, `02A-01-PLAN.md:472`, `02A-01-PLAN.md:479`.
+
+2. Settings-page `ReconnectPrompt` parent gate for `CONNECTED` plus unhealthy `ingestionHealth`: **FULLY RESOLVED.**
+   Plan 04 now correctly targets the real parent mount site and requires `ReconnectPrompt` for `DISCONNECTED` or `CONNECTED && ingestionHealth !== 'HEALTHY'`, with tests enabled. Evidence: `02A-04-PLAN.md:257`, `02A-04-PLAN.md:357`, current parent gate at `apps/web/app/(protected)/settings/page.tsx:93`.
 
 **Strengths**
 
-- Strong Wave 0 test spine, especially tenant isolation, OIDC rejection, idempotency, and reconnect/pause UI contracts.
-- `pubsub_delivery` claim is now atomic `UPDATE ... RETURNING`, avoiding the released-lock issue for history processing.
-- `markDisconnected()` is DB-only and invalid-grant paths avoid best-effort `users.stop()`.
-- Pub/Sub controller persistence is moved into `PubSubIngestionService`, preserving thin-controller boundaries.
-- Final verification includes full backend/frontend suites, Modulith, ArchUnit, disabled-test checks, and state cleanup.
+- Dependency ordering is now correct: Gradle/library wiring lands in Plan 01 before API/worker code.
+- OIDC filter scoping is well specified: no `@Component`, explicit `PubSubSecurityConfig @Order(1)`, disabled servlet registration, and active test-profile coverage.
+- Controller persistence moved into `PubSubIngestionService`, preserving thin-controller boundaries.
+- Reconnect prompt fix is now at the actual settings-page boundary, not just the presentational component.
+- Worker transaction ownership improved by extracting public `GmailDeliveryProcessingService.processDelivery`.
 
 **Concerns**
 
-- **HIGH - Missing Google/Gmail Gradle dependencies block compilation.** Plan 02 adds `GmailApiClientFactory` and Gmail API usage, and Plan 03 adds `TokenVerifier`, but neither plan lists `gradle/libs.versions.toml`, `backend/core/build.gradle.kts`, or `backend/api/build.gradle.kts`. Current build files contain no Google auth or Gmail API dependencies. Evidence: [02A-02-PLAN.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/02A-mail-ingestion/02A-02-PLAN.md:155), [02A-03-PLAN.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/02A-mail-ingestion/02A-03-PLAN.md:406), [backend/core/build.gradle.kts](D:/study-materials-summer-2026/EXE202/zero-mail/backend/core/build.gradle.kts:8), [backend/api/build.gradle.kts](D:/study-materials-summer-2026/EXE202/zero-mail/backend/api/build.gradle.kts:9).
-- **HIGH - MAIL-05 frontend gate may not render in the actual app.** Plan 04 assumes `ReconnectPrompt` owns the status gate, but the current component always renders when mounted, while the settings page only mounts it for `connStatus === 'DISCONNECTED'`. A `CONNECTED` account with `ingestionHealth=HISTORY_LOST` can still miss the prompt unless the parent mount condition is also changed. Evidence: [02A-04-PLAN.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/02A-mail-ingestion/02A-04-PLAN.md:251), [ReconnectPrompt.tsx](D:/study-materials-summer-2026/EXE202/zero-mail/apps/web/features/gmail/components/ReconnectPrompt.tsx:25), [settings/page.tsx](D:/study-materials-summer-2026/EXE202/zero-mail/apps/web/app/(protected)/settings/page.tsx:93).
-- **MEDIUM - Pub/Sub required properties are not globally accounted for.** Plan 03 makes Pub/Sub config active under `test` and fail-fast via env vars, but does not add test defaults or OpenAPI emit dummy args. `generateOpenApiDocs` currently only supplies OAuth/crypto dummy values. Evidence: [02A-03-PLAN.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/02A-mail-ingestion/02A-03-PLAN.md:637), [backend/api/build.gradle.kts](D:/study-materials-summer-2026/EXE202/zero-mail/backend/api/build.gradle.kts:38).
-- **MEDIUM - Gmail worker tests are still not clearly hermetic.** `MockGmailHistoryServer` is planned, but `GmailApiClientFactory` hardcodes token refresh URL and a standard trusted Gmail client; no injectable Gmail/token base URL is specified.
-- **MEDIUM - `GoogleNetHttpTransport.newTrustedTransport()` compile handling is still underspecified.** The planned `buildGmailClient` signature does not catch or declare checked exceptions. Evidence: [02A-02-PLAN.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/02A-mail-ingestion/02A-02-PLAN.md:168).
-- **LOW - Controller still lacks explicit missing `messageId` handling.** Authenticated malformed envelopes with null `messageId` can fall into DB not-null failure instead of 200-drop.
-- **LOW - Plan 04 still mentions generated `apps/web/openapi/openapi.json` but does not list it in `files_modified`.**
+- **HIGH - Claimed `pubsub_delivery` rows can be stranded forever after a worker crash.** Plan 01 changes rows to `PROCESSING` during `claimPendingBatch`, but the claim query only selects `status = 'PENDING'`. If the worker process dies after claim and before `processDelivery`, the row remains `PROCESSING`; even after `locked_until` expires, future claims ignore it. This contradicts the plan's crash-recovery claim and threatens MAIL-01/MAIL-04 reliability. Evidence: claim sets `PROCESSING` at `02A-01-PLAN.md:538`, filters only `PENDING` at `02A-01-PLAN.md:546`, while the research explicitly calls for stale `PROCESSING` handling at `02A-RESEARCH.md:753`.
+
+- **MEDIUM - Pub/Sub test properties are still underspecified.** Plan 03 makes `PubSubSecurityConfig` active under `test` and requires Pub/Sub properties, but the current `ApiPostgresTestBase` only supplies datasource/OAuth/crypto properties. Controller tests using `MockGoogleOidcServer` need a clear `DynamicPropertySource` seam for audience, SA email, and local cert URL. Evidence: `backend/api/src/test/java/com/zeromail/api/support/ApiPostgresTestBase.java:26`, `02A-03-PLAN.md:415`.
+
+- **MEDIUM - Cross-tenant worker scans use tenant-owned JPA repositories before `TenantContext` is bound.** The tenant resolver falls back to `BOOTSTRAP_TENANT`, while Plan 02 calls `findConnectionsNeedingWatchRenewal` and `claimPendingBatch` before per-row `ScopedValue.where(...)`. If this is intentional system-level access, the plan should make it explicit and prefer `JdbcTemplate` projections. Evidence: `backend/core/src/main/java/com/zeromail/core/tenant/ScopedValueTenantResolver.java:26`, `02A-02-PLAN.md:525`, `02A-02-PLAN.md:597`.
+
+- **LOW - Missing `messageId` is still not explicitly dropped.** The controller validates decoded Gmail fields but passes `envelope.message().messageId()` through without a null/blank guard, risking DB constraint failure instead of ack-fast 200-drop.
 
 **Suggestions**
 
-- Add Gradle dependency updates explicitly: version catalog library aliases plus `google-auth-library-oauth2-http` where `TokenVerifier` is used, and Gmail API/client dependencies where `GmailApiClientFactory` lives.
-- In Plan 04, update the settings-page mount condition or render `ReconnectPrompt` unconditionally and let it self-gate; add a page-level test for `CONNECTED + HISTORY_LOST`.
-- Add `application-test.yml` or `@DynamicPropertySource` instructions for Pub/Sub properties, and add OpenAPI dummy args in `backend/api/build.gradle.kts`.
-- Make `GmailApiClientFactory` test-configurable for token URL, Gmail root URL/transport, and clock, or require worker tests to inject a fake factory.
-- Add wrong-issuer OIDC test coverage and a missing-`messageId` malformed-envelope test.
+- Change `claimPendingBatch` to reclaim stale `PROCESSING` rows whose `locked_until < NOW()`, and add a test for expired `PROCESSING` recovery.
+- Add explicit test property wiring for Pub/Sub OIDC in `ApiPostgresTestBase` or per Pub/Sub integration test.
+- Make cross-tenant worker claim scans raw `JdbcTemplate` system queries returning small row DTOs, then bind `TenantContext` before tenant-owned JPA work.
+- Add a null/blank `messageId` controller branch returning 200 with an opaque warning event.
 
 **Risk Assessment**
 
-Overall risk: **HIGH**. The two prior security HIGHs are closed, but the current plan set still has a compile-blocking dependency gap and a user-visible MAIL-05 gap that can leave history-loss recovery invisible in the actual app.
+Overall risk: **HIGH**. The prior HIGHs are closed, but the `PROCESSING`-row recovery bug can silently stop processing a delivery after a crash, which cuts directly against Phase 02A's reliability goal.
 
-CURRENT_HIGH_COUNT: 2
+CURRENT_HIGH_COUNT: 1
 
 ### Current HIGH Concerns
 
-- Missing Google/Gmail Gradle dependency changes for the new API/core classes, likely blocking `compileJava`.
-- ReconnectPrompt ingestion-health gate is planned at the component level, but the current parent only mounts it for `DISCONNECTED`, so `CONNECTED + HISTORY_LOST/WATCH_UNHEALTHY` may not show the reconnect prompt.
+- Stale `pubsub_delivery` rows in `PROCESSING` are not reclaimable after `locked_until` expires, so a crash after claim can permanently strand Gmail deliveries.
 
 ---
 
 ## Consensus Summary
 
-Only Codex was invoked in Cycle 4, so the consensus summary reflects a single external review.
+Only Codex was invoked in Cycle 5, so the consensus summary reflects a single external review.
 
 ### Agreed Strengths
 
-- The two Cycle 3 HIGH concerns are fully resolved at the current plan-text level.
-- The Wave 0 test spine is strong, especially around tenant isolation, OIDC rejection, idempotency, pause behavior, and reconnect behavior.
-- The phase decomposition remains coherent, and final verification now includes backend, frontend, architecture, and disabled-test checks.
+- Cycle 4's Google/Gmail dependency planning gap is fully resolved in Plan 01.
+- Cycle 4's `ReconnectPrompt` parent gate gap is fully resolved in Plan 04 and now targets the actual settings-page mount condition.
+- Security filter scoping, controller/service boundaries, and worker transaction ownership are materially stronger than Cycle 4.
 
 ### Agreed Concerns
 
-- HIGH: New Google/Gmail and token-verifier code is planned, but the required Gradle dependency updates are not listed in the plans.
-- HIGH: The MAIL-05 reconnect prompt may still be hidden for `CONNECTED + HISTORY_LOST/WATCH_UNHEALTHY` because the current settings page only mounts `ReconnectPrompt` for `DISCONNECTED`.
-- MEDIUM: Pub/Sub test properties, hermetic Gmail/OAuth seams, checked exception handling, malformed message handling, and generated OpenAPI file tracking still need tighter plan instructions.
+- HIGH: `claimPendingBatch` marks deliveries as `PROCESSING` but only reclaims `PENDING` rows, so expired `PROCESSING` rows can be stranded after a worker crash.
+- MEDIUM: Pub/Sub OIDC test properties still need an explicit `DynamicPropertySource` or base-test wiring plan.
+- MEDIUM: Cross-tenant worker scans should clarify system-level access and preferably use raw `JdbcTemplate` projections before binding `TenantContext`.
+- LOW: Missing Pub/Sub `messageId` should be explicitly ack-dropped rather than allowed to fall into a database constraint failure.
 
 ### Divergent Views
 
@@ -93,10 +95,9 @@ Only Codex was invoked in Cycle 4, so the consensus summary reflects a single ex
 
 ## Cycle Summary
 
-- Prior Cycle 3 HIGH concerns: 2
+- Prior Cycle 4 HIGH concerns: 2
 - Fully resolved prior HIGH concerns: 2
 - Partially resolved prior HIGH concerns: 0
 - Previously raised HIGH concerns still unresolved: 0
-- New Cycle 4 HIGH concerns: 2
-- Current unresolved HIGH concerns: 2
-
+- New Cycle 5 HIGH concerns: 1
+- Current unresolved HIGH concerns: 1
