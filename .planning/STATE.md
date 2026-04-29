@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02A-03-PLAN.md
-last_updated: "2026-04-29T06:23:49.618Z"
+stopped_at: Completed 02A-04-PLAN.md
+last_updated: "2026-04-29T06:45:19.516Z"
 last_activity: 2026-04-29
 progress:
   total_phases: 15
   completed_phases: 8
   total_plans: 64
-  completed_plans: 62
-  percent: 97
+  completed_plans: 63
+  percent: 98
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 02A (mail-ingestion) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-04-29
 
-Progress: [██████████] 97%
+Progress: [██████████] 98%
 
 ## Performance Metrics
 
@@ -98,6 +98,7 @@ Progress: [██████████] 97%
 | Phase 02A P01 | 11min | 2 tasks | 18 files |
 | Phase 02A P02 | 12min | 2 tasks | 15 files |
 | Phase 02A P03 | 20min | 2 tasks | 26 files |
+| Phase 02A P04 | 16min | 2 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -207,6 +208,8 @@ Recent decisions affecting current work:
 - [Phase 02A]: 02A-03: PubSubIngestionService performs Gmail email lookup with unscoped JdbcTemplate, then binds TenantContext before inserting delivery rows.
 - [Phase 02A]: 02A-03: GmailPubSubController returns void for ack paths to avoid existing controller-boundary ArchUnit false positives on ResponseEntity.
 - [Phase 02A]: 02A-03: /me composes tenant pause state and Gmail ingestion health from services; googleEmail is response-only and not logged.
+- [Phase 02A]: Plan 04: Use a plain accessible toggle button because apps/web has no shadcn Switch primitive installed. — No local Switch primitive exists and the plan forbids installing new shadcn primitives in this plan.
+- [Phase 02A]: Plan 04: generate-api.ts defaults to openapi/openapi.json for schema generation. — The Gradle OpenAPI task writes a local artifact and stops its forked server, so frontend codegen must not require localhost:8080 by default.
 
 ### Roadmap Evolution
 
@@ -259,6 +262,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-29T06:23:49.599Z
-Stopped at: Completed 02A-03-PLAN.md
+Last session: 2026-04-29T06:45:19.492Z
+Stopped at: Completed 02A-04-PLAN.md
 Resume file: None

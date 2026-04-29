@@ -217,7 +217,7 @@ Plans:
 - [x] 02A-03-PLAN.md — API layer (PubSubOidcAuthFilter + SecurityFilterChain @Order(1) + push controller + triage-pause controller + MeResponse extension)
 
 **Wave 3 *(blocked on Wave 2 completion)***
-- [ ] 02A-04-PLAN.md — Frontend (PauseBanner + settings toggle + ReconnectPrompt gate + i18n keys)
+- [x] 02A-04-PLAN.md — Frontend (PauseBanner + settings toggle + ReconnectPrompt gate + i18n keys)
 
 **Wave 4 *(blocked on Wave 3 completion)***
 - [ ] 02A-05-PLAN.md — Full verification sweep + closure
