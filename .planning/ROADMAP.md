@@ -214,7 +214,7 @@ Plans:
 
 **Wave 2 *(blocked on Wave 1 completion)***
 - [x] 02A-02-PLAN.md — Worker schedulers (GmailWatchScheduler + GmailHistoryProcessor + GmailApiClientFactory)
-- [ ] 02A-03-PLAN.md — API layer (PubSubOidcAuthFilter + SecurityFilterChain @Order(1) + push controller + triage-pause controller + MeResponse extension)
+- [x] 02A-03-PLAN.md — API layer (PubSubOidcAuthFilter + SecurityFilterChain @Order(1) + push controller + triage-pause controller + MeResponse extension)
 
 **Wave 3 *(blocked on Wave 2 completion)***
 - [ ] 02A-04-PLAN.md — Frontend (PauseBanner + settings toggle + ReconnectPrompt gate + i18n keys)

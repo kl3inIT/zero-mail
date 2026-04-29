@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02A-02-PLAN.md
-last_updated: "2026-04-29T06:01:36.518Z"
+stopped_at: Completed 02A-03-PLAN.md
+last_updated: "2026-04-29T06:23:49.618Z"
 last_activity: 2026-04-29
 progress:
   total_phases: 15
   completed_phases: 8
   total_plans: 64
-  completed_plans: 61
-  percent: 95
+  completed_plans: 62
+  percent: 97
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 02A (mail-ingestion) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-04-29
 
-Progress: [██████████] 95%
+Progress: [██████████] 97%
 
 ## Performance Metrics
 
@@ -97,6 +97,7 @@ Progress: [██████████] 95%
 | Phase 02A P00 | 14min | 2 tasks | 17 files |
 | Phase 02A P01 | 11min | 2 tasks | 18 files |
 | Phase 02A P02 | 12min | 2 tasks | 15 files |
+| Phase 02A P03 | 20min | 2 tasks | 26 files |
 
 ## Accumulated Context
 
@@ -202,6 +203,10 @@ Recent decisions affecting current work:
 - [Phase 02A]: 02A-02: GmailHistoryProcessor remains a thin scheduled loop; GmailDeliveryProcessingService owns the public @Transactional per-delivery boundary.
 - [Phase 02A]: 02A-02: WorkerApplication mirrors API entity/repository scanning because the worker directly consumes backend/core repositories.
 - [Phase 02A]: 02A-02: Worker REFRESH_TOKEN_KEY_BASE64 is fail-fast with no sm:// fallback, honoring the no-GCP-hosting baseline.
+- [Phase 02A]: 02A-03: Pub/Sub OIDC verification is isolated in an @Order(1) SecurityFilterChain that remains active under test profile.
+- [Phase 02A]: 02A-03: PubSubIngestionService performs Gmail email lookup with unscoped JdbcTemplate, then binds TenantContext before inserting delivery rows.
+- [Phase 02A]: 02A-03: GmailPubSubController returns void for ack paths to avoid existing controller-boundary ArchUnit false positives on ResponseEntity.
+- [Phase 02A]: 02A-03: /me composes tenant pause state and Gmail ingestion health from services; googleEmail is response-only and not logged.
 
 ### Roadmap Evolution
 
@@ -254,6 +259,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-29T06:01:36.501Z
-Stopped at: Completed 02A-02-PLAN.md
+Last session: 2026-04-29T06:23:49.599Z
+Stopped at: Completed 02A-03-PLAN.md
 Resume file: None
