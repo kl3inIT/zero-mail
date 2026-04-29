@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 01.6 verification complete
-last_updated: "2026-04-29T05:03:27.724Z"
-last_activity: 2026-04-29 -- Phase 2A planning complete
+stopped_at: Completed 02A-00-PLAN.md
+last_updated: "2026-04-29T05:25:38.229Z"
+last_activity: 2026-04-29
 progress:
   total_phases: 15
   completed_phases: 8
   total_plans: 64
-  completed_plans: 58
-  percent: 91
+  completed_plans: 59
+  percent: 92
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 01.6 — brand-identity-design-tokens-and-landing-page
+**Current focus:** Phase 02A — mail-ingestion
 
 ## Current Position
 
-Phase: 01.6 (brand-identity-design-tokens-and-landing-page) — EXECUTING
-Plan: 7 of 8
+Phase: 02A (mail-ingestion) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-04-29 -- Phase 2A planning complete
+Last activity: 2026-04-29
 
-Progress: [██████████] 98%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -94,6 +94,7 @@ Progress: [██████████] 98%
 | Phase 01.6 P03 | 6min | 3 tasks | 10 files |
 | Phase 01.6 P05 | 18min | 3 tasks | 8 files |
 | Phase 01.6 P06 | 35min | 3 tasks | 12 files |
+| Phase 02A P00 | 14min | 2 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -190,6 +191,8 @@ Recent decisions affecting current work:
 - [Phase 01.6]: Plan 02: Be Vietnam Pro ships with vietnamese+latin subsets and weights 400/500/600; Instrument Serif remains latin-only with normal+italic style.
 - [Phase 01.6]: 01.6-03: Theme persistence uses Server Action + zm-theme cookie only; no localStorage or client-side cookie writes.
 - [Phase 01.6]: 01.6-03: LanguageSwitcher variant compact was reused directly in public TopBar; no fork was needed.
+- [Phase ?]: 02A-00: Worker RED tests use a package-local SpringBootTest scaffold because backend/core test sources are not on the worker test classpath. — Keeps Wave 0 worker verification RED on future production classes instead of failing on cross-module test-source visibility.
+- [Phase ?]: 02A-00: Vitest includes features/**/*.{test,spec}.{ts,tsx} for feature-owned Wave 0 tests. — Without this include glob, PauseBanner and useToggleTriagePause tests are not collected by Vitest and the frontend RED spine is partially invisible.
 
 ### Roadmap Evolution
 
@@ -242,6 +245,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-28T14:49:13.559Z
-Stopped at: Phase 01.6 verification complete
+Last session: 2026-04-29T05:25:38.209Z
+Stopped at: Completed 02A-00-PLAN.md
 Resume file: None
