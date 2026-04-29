@@ -18,6 +18,7 @@ files_modified:
   - backend/api/src/main/java/com/zeromail/api/dto/tenant/TriagePauseResponse.java
   - backend/api/src/main/java/com/zeromail/api/dto/account/MeResponse.java
   - backend/api/src/main/resources/application.yml
+  - backend/api/src/test/java/com/zeromail/api/security/PubSubOidcAuthFilterTest.java
   - backend/api/src/test/java/com/zeromail/api/security/TestSessionSupport.java
   - backend/api/src/test/java/com/zeromail/api/controllers/MeControllerTest.java
   - backend/api/src/test/java/com/zeromail/api/controllers/TriagePauseControllerTest.java
@@ -42,6 +43,7 @@ must_haves:
     - "PUT /tenant/triage-pause with paused=true sets tenants.triage_paused=true"
     - "GET /me returns triagePaused boolean and gmailConnectionStatus.ingestionHealth"
     - "PubSubSecurityConfig @Order(1) is active under the test profile and intercepts /internal/pubsub/** BEFORE user OAuth chain"
+    - "PubSubOidcAuthFilter is not globally servlet-registered; it is added only through PubSubSecurityConfig and has a shouldNotFilter path guard for non-/internal/pubsub/** requests"
     - "Test-profile /me and /tenant/triage-pause tests import TestSessionSupport, send X-Test-Subject/X-Test-Email headers, and exercise authenticated TenantContext binding instead of bypassing auth"
     - "TestSessionSupport does not match /internal/pubsub/**, so PubSubSecurityConfig remains the only test-profile chain for Pub/Sub OIDC integration tests"
     - "GmailPubSubController does NOT inject any JPA repository directly — all persistence routed via PubSubIngestionService"
@@ -342,7 +344,6 @@ Do NOT add `GmailConnectionRepository.findByGoogleEmailLower(...)` for this look
 **Step 3 — `PubSubOidcAuthFilter.java`** — package `com.zeromail.api.security`. Exact shape from RESEARCH.md Pattern 2:
 
 ```java
-@Component
 public class PubSubOidcAuthFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(PubSubOidcAuthFilter.class);
@@ -351,15 +352,20 @@ public class PubSubOidcAuthFilter extends OncePerRequestFilter {
     private final String expectedEmail;
 
     public PubSubOidcAuthFilter(
-            @Value("${pubsub.push-audience-url}") String audience,
-            @Value("${pubsub.sa-principal-email}") String saEmail,
-            @Value("${pubsub.oidc-certificates-url:https://www.googleapis.com/oauth2/v3/certs}") String certsUrl) {
+            String audience,
+            String saEmail,
+            String certsUrl) {
         this.expectedEmail = saEmail;
         this.tokenVerifier = TokenVerifier.newBuilder()
                 .setAudience(audience)
                 .setIssuer("https://accounts.google.com")
                 .setCertificatesLocation(certsUrl)
                 .build();
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return !request.getServletPath().startsWith("/internal/pubsub/");
     }
 
     @Override
@@ -393,6 +399,8 @@ public class PubSubOidcAuthFilter extends OncePerRequestFilter {
 
 Import: `com.google.auth.oauth2.TokenVerifier`, `com.google.api.client.json.webtoken.JsonWebSignature`.
 
+Do NOT annotate this class with `@Component`. A servlet `Filter` bean can be auto-registered globally by Spring Boot, outside the Spring Security chain. `PubSubOidcAuthFilter` must only be created by `PubSubSecurityConfig` and added to the `/internal/pubsub/**` security chain. Keep the `shouldNotFilter` guard as a defense-in-depth check so accidental global registration cannot make `/me` or `/tenant/triage-pause` return Pub/Sub 401s.
+
 ***
 
 **Step 4 — `PubSubSecurityConfig.java`** — package `com.zeromail.api.security`. New `@Configuration @Order(1)`. Do NOT add `@Profile("!test")`: API integration tests run under `@ActiveProfiles("test")` and must still verify that missing/invalid Pub/Sub OIDC requests return 401 before business logic.
@@ -401,6 +409,21 @@ Import: `com.google.auth.oauth2.TokenVerifier`, `com.google.api.client.json.webt
 @Configuration
 @Order(1)
 public class PubSubSecurityConfig {
+
+    @Bean
+    PubSubOidcAuthFilter pubSubOidcAuthFilter(
+            @Value("${pubsub.push-audience-url}") String audience,
+            @Value("${pubsub.sa-principal-email}") String saEmail,
+            @Value("${pubsub.oidc-certificates-url:https://www.googleapis.com/oauth2/v3/certs}") String certsUrl) {
+        return new PubSubOidcAuthFilter(audience, saEmail, certsUrl);
+    }
+
+    @Bean
+    FilterRegistrationBean<PubSubOidcAuthFilter> pubSubOidcAuthFilterRegistration(PubSubOidcAuthFilter filter) {
+        FilterRegistrationBean<PubSubOidcAuthFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
 
     @Bean
     SecurityFilterChain pubSubFilterChain(HttpSecurity http,
@@ -415,6 +438,8 @@ public class PubSubSecurityConfig {
     }
 }
 ```
+
+Import `org.springframework.beans.factory.annotation.Value` and `org.springframework.boot.web.servlet.FilterRegistrationBean`. The disabled `FilterRegistrationBean` is mandatory: the filter is a bean so it can be injected into the Spring Security chain, but it must not be registered as a container-wide servlet filter.
 
 ***
 
@@ -638,7 +663,7 @@ Keep assertions raw HTTP/SQL if that is still simpler, but the tests must execut
   </verify>
 
   <acceptance_criteria>
-    - Plan 03 `files_modified` lists every helper/test file created or modified by this plan: `IngestResult.java`, `GmailNotification.java`, `FlexibleLongDeserializer.java`, `GmailConnectionProjection.java`, `TestSessionSupport.java`, `MeControllerTest.java`, `TriagePauseControllerTest.java`, and `PubSubIdempotencyTest.java`
+    - Plan 03 `files_modified` lists every helper/test file created or modified by this plan: `IngestResult.java`, `GmailNotification.java`, `FlexibleLongDeserializer.java`, `GmailConnectionProjection.java`, `PubSubOidcAuthFilterTest.java`, `TestSessionSupport.java`, `MeControllerTest.java`, `TriagePauseControllerTest.java`, and `PubSubIdempotencyTest.java`
     - `IngestResult.java` exists in `backend/core/src/main/java/com/zeromail/core/gmail/service/` and contains `UNKNOWN_EMAIL`, `DUPLICATE`, and `ACCEPTED`
     - `PubSubIngestionService.java` exists in `backend/core/src/main/java/com/zeromail/core/gmail/service/` and contains `JdbcTemplate`, `TransactionTemplate`, and `ScopedValue.where(TenantContext.TENANT`
     - `PubSubIngestionService.java` does NOT contain `@Transactional` on `ingestPushEnvelope`, `findByGoogleEmailLower`, `GmailConnectionRepository`, or `DataIntegrityViolationException`
@@ -648,8 +673,10 @@ Keep assertions raw HTTP/SQL if that is still simpler, but the tests must execut
     - `GmailPubSubController.java` does NOT inject `GmailConnectionRepository` or `PubSubDeliveryRepository` — verify: `grep -n "GmailConnectionRepository\|PubSubDeliveryRepository" backend/api/src/main/java/com/zeromail/api/controllers/GmailPubSubController.java` returns empty
     - `GmailPubSubController.java` contains `ingestionService.ingestPushEnvelope` call
     - `PubSubOidcAuthFilter.java` contains `TokenVerifier.newBuilder()`, `setCertificatesLocation`, and `event=pubsub_oidc_verification_failed`
+    - `PubSubOidcAuthFilter.java` does NOT contain `@Component`
+    - `PubSubOidcAuthFilter.java` contains `shouldNotFilter` and `startsWith("/internal/pubsub/")`
     - `PubSubOidcAuthFilter.java` does NOT contain any log line referencing the token content or email address
-    - `PubSubSecurityConfig.java` contains `@Order(1)` and `securityMatcher("/internal/pubsub/**")`
+    - `PubSubSecurityConfig.java` contains `@Order(1)`, `securityMatcher("/internal/pubsub/**")`, a `PubSubOidcAuthFilter` `@Bean`, and `FilterRegistrationBean<PubSubOidcAuthFilter>` with `setEnabled(false)`
     - `PubSubSecurityConfig.java` does NOT contain `@Profile("!test")`; Pub/Sub security must be active under `@ActiveProfiles("test")`
     - `SecurityConfig.java` contains `@Order(2)` — check with `grep -n '@Order' backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java`
     - `TestSessionSupport.java` no longer contains `Ordered.HIGHEST_PRECEDENCE`, does not match `/internal/pubsub/**`, requires authenticated requests for non-Pub/Sub endpoints, and binds `TenantContext.TENANT` from seeded `UserEntity`
@@ -657,7 +684,7 @@ Keep assertions raw HTTP/SQL if that is still simpler, but the tests must execut
     - `TenantService.java` contains `setTriagePaused(UUID tenantId, boolean paused)`
     - `backend/api/src/main/resources/application.yml` contains `PUBSUB_PUSH_AUDIENCE_URL:?` and `PUBSUB_SA_PRINCIPAL_EMAIL:?`
     - `./gradlew :backend:api:compileJava :backend:core:compileJava` exits 0
-    - `PubSubOidcAuthFilterTest` passes GREEN (5 test cases: valid + 4 rejection paths)
+    - `PubSubOidcAuthFilterTest` passes GREEN (6 test cases: valid + 4 rejection paths + non-Pub/Sub path guard)
     - `GmailPubSubControllerIntegrationTest` passes GREEN (5 test cases including duplicate dedup)
     - `TriagePauseControllerTest` contains `@Import(TestSessionSupport.class)`, sends `TestSessionSupport.HEADER_SUBJECT` and `HEADER_EMAIL` headers on successful requests, has a missing-auth negative test, no longer contains class-level `@Disabled`, and passes GREEN
     - `PubSubIdempotencyTest` does NOT import `TestSessionSupport`, no longer contains class-level `@Disabled`, and passes GREEN with valid Pub/Sub OIDC bearer-token requests
@@ -782,7 +809,7 @@ Privacy: `googleEmail` is in the response ONLY for UI display (the user's own em
 
 | Threat ID | Category | Component | Disposition | Mitigation Plan |
 |-----------|----------|-----------|-------------|-----------------|
-| T-01 | Spoofing | PubSubOidcAuthFilter | mitigate | TokenVerifier.newBuilder().setAudience().setIssuer() — hard 401 on any mismatch; verify() throws VerificationException for wrong aud/email/exp/sig/iss; filter never calls chain.doFilter on failure |
+| T-01 | Spoofing | PubSubOidcAuthFilter | mitigate | TokenVerifier.newBuilder().setAudience().setIssuer() — hard 401 on any mismatch; verify() throws VerificationException for wrong aud/email/exp/sig/iss; filter never calls chain.doFilter on failure; disabled FilterRegistrationBean + shouldNotFilter guard prevent the Pub/Sub filter from affecting non-Pub/Sub user endpoints |
 | T-06 | Tampering | PubSubIngestionService tenant lookup | mitigate | Unscoped JdbcTemplate lookup returns only tenant_id with parameterized SQL; tenant-owned JPA queries are never run before TenantContext binding |
 | T-07 | Elevation of Privilege | TriagePauseController | mitigate | Existing SecurityConfig user OAuth chain (now @Order(2)) requires authentication in production; TestSessionSupport requires X-Test-Subject/X-Test-Email and binds TenantContext in test profile; missing-auth tests assert protected endpoints do not run with empty TenantContext |
 | T-08 | Denial of Service | GmailPubSubController ack deadline | mitigate | D-A1 ack-fast pattern: controller does ONLY envelope parse + service.ingestPushEnvelope() + 200; no Gmail API call; all persistence in PubSubIngestionService; p99 target <300ms |
@@ -793,7 +820,7 @@ Privacy: `googleEmail` is in the response ONLY for UI display (the user's own em
 <verification>
 After this plan:
 - `./gradlew :backend:api:compileJava :backend:core:compileJava` exits 0
-- `./gradlew :backend:api:test --tests "*PubSubOidcAuthFilterTest*"` exits 0 — 5 test cases GREEN
+- `./gradlew :backend:api:test --tests "*PubSubOidcAuthFilterTest*"` exits 0 — 6 test cases GREEN
 - `./gradlew :backend:api:test --tests "*GmailPubSubControllerIntegrationTest*"` exits 0 — 5 test cases GREEN
 - `grep -n "GmailConnectionRepository\|PubSubDeliveryRepository" backend/api/src/main/java/com/zeromail/api/controllers/GmailPubSubController.java` returns empty (no direct repo injection in controller)
 - `grep -n '@Order' backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java` shows `@Order(2)`
@@ -804,7 +831,7 @@ After this plan:
 </verification>
 
 <success_criteria>
-OIDC filter verified by 5-case test (valid + wrong aud/email/exp/sig). Push controller is thin (parse → service → 200). PubSubIngestionService owns all persistence through unscoped JdbcTemplate lookup plus tenant-bound TransactionTemplate insert — CLAUDE.md §1 compliant. SecurityConfig correctly ordered and Pub/Sub security active in tests. Test-profile user endpoints use TestSessionSupport headers to bind authenticated TenantContext and include missing-auth negative coverage. MeResponse extended with triagePaused + gmailConnectionStatus. Phase 01.5 D-D5 deferred ceremony is closed.
+OIDC filter verified by 6-case test (valid + wrong aud/email/exp/sig + non-Pub/Sub path guard). Push controller is thin (parse → service → 200). PubSubIngestionService owns all persistence through unscoped JdbcTemplate lookup plus tenant-bound TransactionTemplate insert — CLAUDE.md §1 compliant. SecurityConfig correctly ordered and Pub/Sub security active in tests. Test-profile user endpoints use TestSessionSupport headers to bind authenticated TenantContext and include missing-auth negative coverage. MeResponse extended with triagePaused + gmailConnectionStatus. Phase 01.5 D-D5 deferred ceremony is closed.
 </success_criteria>
 
 <output>

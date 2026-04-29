@@ -50,10 +50,10 @@ created: 2026-04-28
 
 Wave 0 RED scaffolds (per RESEARCH.md `## Validation Architecture`):
 
-- [ ] `backend/api/src/test/java/com/zeromail/api/security/PubSubOidcAuthFilterTest.java` — OIDC verification: valid token PASSES, wrong audience/email/issuer/expired/bad-signature 401
+- [ ] `backend/api/src/test/java/com/zeromail/api/security/PubSubOidcAuthFilterTest.java` — OIDC verification: valid token PASSES, wrong audience/email/issuer/expired/bad-signature 401; non-`/internal/pubsub/**` path skips the filter
 - [ ] `backend/api/src/test/java/com/zeromail/api/controllers/GmailPubSubControllerIntegrationTest.java` — RestClient + LocalServerPort: end-to-end push receiver including OIDC + tenant lookup + dedup INSERT
 - [ ] `backend/core/src/test/java/com/zeromail/core/gmail/persistence/PubSubDeliveryEntityTest.java` — UNIQUE (tenant_id, pubsub_message_id) round-trip + ON CONFLICT DO NOTHING semantics
-- [ ] `backend/core/src/test/java/com/zeromail/core/gmail/persistence/MailMessageObservedEntityTest.java` — composite PK round-trip + TEXT[] label_ids round-trip
+- [ ] `backend/core/src/test/java/com/zeromail/core/gmail/persistence/MailMessageObservedEntityTest.java` — composite PK round-trip + TEXT[] label_ids round-trip + `@TenantId` cross-tenant JPA-read isolation
 - [ ] `backend/core/src/test/java/com/zeromail/core/gmail/model/GmailIngestionHealthTest.java` — IdentifiedEnum contract: id() + fromId fail-loud
 - [ ] `backend/worker/src/test/java/com/zeromail/worker/GmailHistoryProcessorTest.java` — fan-out semantics, history-404 → HISTORY_LOST, monotonic last_synced_history_id, ScopedValue binding per row
 - [ ] `backend/worker/src/test/java/com/zeromail/worker/GmailWatchSchedulerTest.java` — initial register, renew at <24h, 3-strike unhealthy threshold, INBOX-only labelIds

@@ -179,9 +179,8 @@ public class GmailConnectionEntity extends AbstractTenantOwnedEntity {
     }
 ```
 
-**Composite PK adaptation:** Use `@Embeddable` + `@EmbeddedId` for `(tenant_id, gmail_message_id)`:
+**Composite PK adaptation:** Use `@IdClass` for `(tenant_id, gmail_message_id)` and put Hibernate `@TenantId` directly on the standalone `tenantId` id field:
 ```java
-@Embeddable
 public record MailMessageObservedId(UUID tenantId, String gmailMessageId) implements Serializable {}
 ```
 
@@ -189,10 +188,17 @@ Then on the entity:
 ```java
 @Entity
 @Table(name = "mail_message_observed")
+@IdClass(MailMessageObservedId.class)
 public class MailMessageObservedEntity {  // Does NOT extend AbstractTenantOwnedEntity (custom PK)
 
-    @EmbeddedId
-    private MailMessageObservedId id;
+    @Id
+    @TenantId
+    @Column(name = "tenant_id", nullable = false)
+    private UUID tenantId;
+
+    @Id
+    @Column(name = "gmail_message_id", nullable = false)
+    private String gmailMessageId;
     ...
 }
 ```
@@ -204,7 +210,7 @@ public class MailMessageObservedEntity {  // Does NOT extend AbstractTenantOwned
 private String[] labelIds;
 ```
 
-**Pitfall — composite PK vs AbstractTenantOwnedEntity:** `AbstractTenantOwnedEntity` injects its own `@TenantId @Column("tenant_id")` field and carries `AbstractEntity`'s `@Id UUID id`. A composite PK entity cannot inherit that base — it needs its own `@EmbeddedId` or `@IdClass`. This entity is the ONLY one in Phase 2A that does NOT extend `AbstractTenantOwnedEntity`. The `@TenantId` discriminator still works when placed on the `tenantId` component of the embeddable, but verify with Hibernate 7 docs — if not, add a dedicated `@Column("tenant_id") @TenantId private UUID tenantId` alongside the embeddable and use `@Embeddable` without tenantId inside. Confirm in integration test.
+**Pitfall — composite PK vs AbstractTenantOwnedEntity:** `AbstractTenantOwnedEntity` injects its own `@TenantId @Column("tenant_id")` field and carries `AbstractEntity`'s `@Id UUID id`. A composite PK entity cannot inherit that base. This entity is the ONLY one in Phase 2A that does NOT extend `AbstractTenantOwnedEntity`, but it still MUST be tenant-filtered. Use `@IdClass` with a standalone `@Id @TenantId @Column(name = "tenant_id") UUID tenantId` field, not `@EmbeddedId`; then prove with an integration test that tenant A's bound context cannot see tenant B's `mail_message_observed` rows through JPA.
 
 **Pitfall — TEXT[] round-trip:** Must run an integration test that inserts and reads back a multi-element `label_ids` array via `JdbcTemplate` (see `OnboardingStepPersistenceTest` for the raw-column assertion pattern).
 
@@ -214,7 +220,7 @@ private String[] labelIds;
 
 **Analog:** `GmailConnectionRepository.java`
 
-Same `JpaRepository<MailMessageObservedEntity, MailMessageObservedId>` extension pattern. No SKIP LOCKED needed here (only inserts via controller/service; worker inserts via `save()`). Add `existsByIdGmailMessageIdAndIdTenantId(String, UUID)` if needed for dedup checks (though `ON CONFLICT DO NOTHING` in native SQL is preferred over read-then-write).
+Same `JpaRepository<MailMessageObservedEntity, MailMessageObservedId>` extension pattern. No SKIP LOCKED needed here. Worker writes use the native `insertObservedIfAbsent(...)` method, not `save()`, so duplicate-message idempotency never depends on catching a JPA flush exception. Avoid unscoped repository read helpers; any future reads must rely on bound `TenantContext` + `@TenantId`, or use explicit tenant predicates.
 
 ---
 
@@ -362,10 +368,11 @@ public class TenantBindingFilter extends OncePerRequestFilter {
 ```
 
 **Adaptation for `PubSubOidcAuthFilter`:**
-- `@Component` — Spring manages the bean
-- Constructor injects `@Value("${pubsub.push-audience-url}")` and `@Value("${pubsub.sa-principal-email}")` (`:?` fail-fast pattern from Phase 01.5 P08)
+- Do NOT annotate the filter class with `@Component`; create it as a `@Bean` in `PubSubSecurityConfig`, add it to the `/internal/pubsub/**` Spring Security chain, and disable container-wide servlet registration with `FilterRegistrationBean#setEnabled(false)`
+- Constructor receives `pubsub.push-audience-url`, `pubsub.sa-principal-email`, and `pubsub.oidc-certificates-url` values from the config bean method (`:?` fail-fast pattern from Phase 01.5 P08)
 - Build `TokenVerifier` once at construction time (not per-request)
 - `doFilterInternal`: extract `Authorization: Bearer <token>`, call `tokenVerifier.verify(token)`, check `email` claim, call `response.sendError(401)` on any failure — never `chain.doFilter` on failure
+- Override `shouldNotFilter(HttpServletRequest)` so non-`/internal/pubsub/**` paths skip the filter even if it is accidentally registered globally later
 - Privacy: log events use `log.warn("event=pubsub_oidc_verification_failed")` — no token content, no email in log
 - Does NOT bind `TenantContext.TENANT` — that is the controller's responsibility after tenant lookup
 
@@ -403,8 +410,17 @@ public class SecurityConfig {
 ```java
 @Configuration
 @Order(1)           // Runs BEFORE the user OAuth chain (which gets @Order(2))
-@Profile("!test")
 public class PubSubSecurityConfig {
+
+    @Bean
+    PubSubOidcAuthFilter pubSubOidcAuthFilter(...) { ... }
+
+    @Bean
+    FilterRegistrationBean<PubSubOidcAuthFilter> pubSubOidcAuthFilterRegistration(PubSubOidcAuthFilter filter) {
+        FilterRegistrationBean<PubSubOidcAuthFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
 
     @Bean
     SecurityFilterChain pubSubFilterChain(HttpSecurity http,
@@ -420,9 +436,11 @@ public class PubSubSecurityConfig {
 }
 ```
 
-**Existing `SecurityConfig` modification:** Add `@Order(2)` to the existing chain bean method (or class). The `@Profile("!test")` stays on SecurityConfig. A parallel `PubSubSecurityConfig @Profile("!test")` keeps test isolation symmetric.
+**Existing `SecurityConfig` modification:** Add `@Order(2)` to the existing chain bean method (or class). The `@Profile("!test")` stays on the user-session `SecurityConfig`. `PubSubSecurityConfig` is active in `test` profile so integration tests prove missing/invalid Pub/Sub OIDC requests return 401 before business logic.
 
 **Pitfall:** `securityMatcher` is Spring Security 6+ API (also valid in 7.0.5). Do not use `antMatcher` (removed in Spring 6). Without `securityMatcher`, the `@Order(1)` chain would intercept ALL requests.
+
+**Pitfall:** A servlet `Filter` bean can be auto-registered outside Spring Security. The disabled `FilterRegistrationBean<PubSubOidcAuthFilter>` is mandatory; otherwise the OIDC filter may run globally before `/me`, `/tenant/triage-pause`, or `TestSessionSupport`.
 
 ---
 
@@ -1268,7 +1286,7 @@ For these files, the RESEARCH.md §Common Pitfalls and §Code Examples sections 
 - Files with no analog: 3 (worker test fixtures)
 
 ### Key Patterns Identified
-- All new backend entities extend `AbstractTenantOwnedEntity` via `super(id, tenantId)` constructor, except `MailMessageObservedEntity` which uses `@EmbeddedId` composite PK — this entity does NOT extend AbstractTenantOwnedEntity
+- All new backend entities extend `AbstractTenantOwnedEntity` via `super(id, tenantId)` constructor, except `MailMessageObservedEntity` which uses `@IdClass` composite PK with explicit `@TenantId` on the standalone `tenantId` field — this entity does NOT extend AbstractTenantOwnedEntity but is still Hibernate tenant-filtered
 - All new scheduled workers follow `HealthcheckScheduler` shape (`@Component`, `@Scheduled`, static Logger) and bind `ScopedValue.where(TenantContext.TENANT, ...).run(...)` PER ROW, not at the scheduler level
 - `PubSubSecurityConfig @Order(1)` + `securityMatcher("/internal/pubsub/**")` is the idiomatic Spring Security 7 pattern for isolating machine-to-machine endpoints; the existing `SecurityConfig` adds `@Order(2)`
 - Frontend hook pattern: `useMutation` + `qc.invalidateQueries` + `xsrfHeader()` on the API function — identical to `useDisconnectGmail` and `useUpdateLanguage`

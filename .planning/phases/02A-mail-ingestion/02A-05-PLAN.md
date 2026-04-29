@@ -9,6 +9,7 @@ depends_on:
   - "02A-04"
 files_modified:
   - .planning/phases/02A-mail-ingestion/02A-VALIDATION.md
+  - .planning/ROADMAP.md
   - .planning/STATE.md
 autonomous: true
 requirements:
@@ -155,7 +156,7 @@ Add manual verification instructions summary at the bottom (the 4 manual-only it
 
   <acceptance_criteria>
     - `./gradlew clean check` exits 0 (BUILD SUCCESSFUL)
-    - All 10 backend Wave 0 test classes are GREEN (PubSubOidcAuthFilterTest x5, GmailPubSubControllerIntegrationTest x5, MeControllerTest x3, TriagePauseControllerTest x2, PubSubIdempotencyTest x2, PubSubDeliveryEntityTest x3, MailMessageObservedEntityTest x3, GmailIngestionHealthTest x4, GmailHistoryProcessorTest x5, GmailWatchSchedulerTest x4)
+    - All 10 backend Wave 0 test classes are GREEN (PubSubOidcAuthFilterTest x6, GmailPubSubControllerIntegrationTest x5, MeControllerTest x3, TriagePauseControllerTest x2, PubSubIdempotencyTest x2, PubSubDeliveryEntityTest x3, MailMessageObservedEntityTest x4, GmailIngestionHealthTest x4, GmailHistoryProcessorTest x5, GmailWatchSchedulerTest x4)
     - `grep -R "@Disabled" backend/api/src/test/java/com/zeromail/api/controllers/MeControllerTest.java backend/api/src/test/java/com/zeromail/api/controllers/TriagePauseControllerTest.java backend/api/src/test/java/com/zeromail/api/controllers/PubSubIdempotencyTest.java` returns no matches
     - `ApplicationModulesTest` passes GREEN
     - `DomainBoundaryArchTests` passes GREEN
@@ -240,7 +241,7 @@ Plans:
 
 | Threat ID | Category | Component | Disposition | Mitigation Plan |
 |-----------|----------|-----------|-------------|-----------------|
-| T-01 | Spoofing | Final gate: PubSubOidcAuthFilterTest all 5 cases GREEN | mitigate | Acceptance criterion requires all 5 test cases pass: valid + wrong aud + wrong email + expired + bad signature — all must return 401 except valid |
+| T-01 | Spoofing | Final gate: PubSubOidcAuthFilterTest all 6 cases GREEN | mitigate | Acceptance criterion requires all 6 test cases pass: valid + wrong aud + wrong email + expired + bad signature + non-Pub/Sub path guard — all OIDC failures must return 401, and non-Pub/Sub paths must skip the filter |
 | T-05 | Information Disclosure | DomainBoundaryArchTests covers new entities | mitigate | ArchUnit test must pass GREEN confirming no cross-domain persistence access in new code |
 </threat_model>
 

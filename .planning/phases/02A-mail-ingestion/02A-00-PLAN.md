@@ -44,7 +44,7 @@ must_haves:
     - "ReconnectPrompt.test.tsx exists with it.skip RED scaffold (ingestionHealth gate has automated coverage)"
   artifacts:
     - path: "backend/api/src/test/java/com/zeromail/api/security/PubSubOidcAuthFilterTest.java"
-      provides: "RED OIDC verification test — 5 test cases (valid passes, wrong aud/email/exp/sig → 401)"
+      provides: "RED OIDC verification test — 6 test cases (valid passes, wrong aud/email/exp/sig → 401, non-Pub/Sub path skips filter)"
     - path: "backend/api/src/test/java/com/zeromail/api/support/MockGoogleOidcServer.java"
       provides: "Hermetic JWKS fixture for OIDC tests"
     - path: "apps/web/__tests__/architecture/phase-02a-files.test.ts"
@@ -143,12 +143,13 @@ Frontend test analogs:
   <action>
 Create 10 backend test classes + 2 fixtures as RED scaffolds. Non-disabled tests may reference production classes that do not exist yet; disabled scaffolds must avoid missing type references and compile under `compileTestJava`.
 
-**`PubSubOidcAuthFilterTest.java`** — package `com.zeromail.api.security`. Extends nothing (unit test). Import `com.zeromail.api.security.PubSubOidcAuthFilter` (RED). Five `@Test` methods:
+**`PubSubOidcAuthFilterTest.java`** — package `com.zeromail.api.security`. Extends nothing (unit test). Import `com.zeromail.api.security.PubSubOidcAuthFilter` (RED). Six `@Test` methods:
 1. `validToken_passes()` — builds a valid signed JWT with correct aud + email + iss, calls `doFilterInternal`, asserts chain is called (verify mock `FilterChain`)
 2. `wrongAudience_returns401()` — token with wrong `aud`, asserts `response.getStatus() == 401`
 3. `wrongEmail_returns401()` — token with correct aud but wrong email claim
 4. `expiredToken_returns401()` — token with `exp` in the past
 5. `badSignature_returns401()` — token signed with wrong RSA key
+6. `nonPubSubPath_skipsFilter()` — request path `/me`, no Authorization header, asserts the filter chain is called and response remains uncommitted. This proves the filter's path guard prevents global servlet registration from breaking user-session endpoints.
 All test cases import `com.zeromail.api.support.MockGoogleOidcServer` from `backend/api/src/test/java/com/zeromail/api/support`. The fixture serves JWKS at a local URL so `backend:api:test` has direct test-scope visibility without depending on worker test classes. `PubSubOidcAuthFilter` is constructed with `audience="https://test.example/internal/pubsub/gmail"` and `saEmail="pubsub-sa@test-project.iam.gserviceaccount.com"` + `setCertificatesLocation(mockServer.jwksUrl())` override. Use `MockHttpServletRequest` / `MockHttpServletResponse` from `spring-test`.
 
 **`GmailPubSubControllerIntegrationTest.java`** — package `com.zeromail.api.controllers`. `@SpringBootTest(webEnvironment = RANDOM_PORT)` + `@ActiveProfiles("test")`. Imports `com.zeromail.api.controllers.GmailPubSubController` (RED). Uses `RestClient` + `@LocalServerPort` (NOT MockMvc — per STATE.md decision). Five `@Test` methods:
@@ -259,10 +260,11 @@ class PubSubIdempotencyTest extends ApiPostgresTestBase {
 2. `uniqueConstraint_preventsduplicateMessageId()` — insert two rows with same `(tenantId, pubsubMessageId)`, assert second throws `DataIntegrityViolationException`
 3. `atomicClaimPendingBatch_updatesRowsToProcessing()` — insert 3 PENDING rows, call `claimPendingBatch(2)`, assert 2 returned, those rows now have `status='PROCESSING'`, and `locked_until > NOW()`
 
-**`MailMessageObservedEntityTest.java`** — package `com.zeromail.core.gmail.persistence`. Extends `PostgresContainerTest`. Imports `com.zeromail.core.gmail.persistence.MailMessageObservedEntity` (RED) + `MailMessageObservedRepository` (RED). Three `@Test` methods:
+**`MailMessageObservedEntityTest.java`** — package `com.zeromail.core.gmail.persistence`. Extends `PostgresContainerTest`. Imports `com.zeromail.core.gmail.persistence.MailMessageObservedEntity` (RED) + `MailMessageObservedRepository` (RED). Four `@Test` methods:
 1. `insertAndRead_compositePk_roundtrip()` — persist entity, find by composite PK, assert all fields
 2. `labelIds_textArray_roundtrip()` — persist entity with `labelIds = ["INBOX", "UNREAD"]`, read via `JdbcTemplate`, assert raw column type `text[]` and values
 3. `onConflictDoNothing_deduplication()` — insert row with same composite PK twice, assert second is silently ignored (no exception), count = 1
+4. `tenantIdFilter_blocksCrossTenantJpaReads()` — insert rows for tenant A and tenant B with raw SQL/native insert, bind `TenantContext.TENANT` to tenant A, call a JPA repository read (`findAll` or explicit derived read), and assert tenant B's row is not visible. This is the regression test for `@TenantId` on the composite-key entity.
 
 **`GmailIngestionHealthTest.java`** — package `com.zeromail.core.gmail.model`. Pure unit test. Imports `com.zeromail.core.gmail.model.GmailIngestionHealth` (RED). Four `@Test` methods:
 1. `allValues_haveStableId()` — assert `HEALTHY.id() == "HEALTHY"`, `WATCH_UNHEALTHY.id() == "WATCH_UNHEALTHY"`, `HISTORY_LOST.id() == "HISTORY_LOST"`
@@ -474,7 +476,7 @@ Create the directory `apps/web/features/triage/components/` and `apps/web/featur
 
 | Threat ID | Category | Component | Disposition | Mitigation Plan |
 |-----------|----------|-----------|-------------|-----------------|
-| T-01 | Spoofing | PubSubOidcAuthFilterTest | mitigate | Wave 0 test defines 5 rejection cases (wrong aud/email/exp/sig/iss) — these tests must go RED now and GREEN in Wave 2a |
+| T-01 | Spoofing | PubSubOidcAuthFilterTest | mitigate | Wave 0 test defines 5 OIDC rejection cases (wrong aud/email/exp/sig/iss) plus a non-Pub/Sub path-guard case — these tests must go RED now and GREEN in Wave 2a |
 | T-02 | Tampering | Idempotency test coverage | mitigate | MailMessageObservedEntityTest + PubSubDeliveryEntityTest + PubSubIdempotencyTest verify ON CONFLICT DO NOTHING semantics at DB level and controller integration level |
 | T-03 | Tampering | MeControllerTest field contract | mitigate | MeControllerTest asserts triagePaused + ingestionHealth JSON shape — prevents silent null serialization |
 </threat_model>

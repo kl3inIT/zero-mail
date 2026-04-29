@@ -209,7 +209,7 @@ _No todos folded — `gsd-sdk query todo.match-phase 2A` not run (init blocked b
 - `backend/core/src/main/java/com/zeromail/core/gmail/persistence/GmailConnectionEntity.java` — ADD 5 columns (`last_synced_history_id BIGINT`, `watch_history_id BIGINT`, `watch_expires_at TIMESTAMPTZ`, `watch_renewed_at TIMESTAMPTZ`, `watch_consecutive_failures INT NOT NULL DEFAULT 0`, `ingestion_health VARCHAR(32) NOT NULL DEFAULT 'HEALTHY'`).
 - `backend/core/src/main/java/com/zeromail/core/gmail/model/GmailConnectionStatus.java` — UNCHANGED (D-D1 keeps the 4-value enum).
 - `backend/core/src/main/java/com/zeromail/core/gmail/model/` — ADD `GmailIngestionHealth.java` (new IdentifiedEnum: HEALTHY, WATCH_UNHEALTHY, HISTORY_LOST + static `fromId` fail-loud).
-- `backend/core/src/main/java/com/zeromail/core/gmail/persistence/` — ADD `PubSubDeliveryEntity.java` + `PubSubDeliveryRepository.java`; ADD `MailMessageObservedEntity.java` + `MailMessageObservedRepository.java`. Both extend `AbstractTenantOwnedEntity` (Phase 01.2.1).
+- `backend/core/src/main/java/com/zeromail/core/gmail/persistence/` — ADD `PubSubDeliveryEntity.java` + `PubSubDeliveryRepository.java`; ADD `MailMessageObservedEntity.java` + `MailMessageObservedRepository.java`. `PubSubDeliveryEntity` extends `AbstractTenantOwnedEntity`; `MailMessageObservedEntity` uses a composite `(tenant_id, gmail_message_id)` key with explicit `@TenantId` on `tenant_id` because it cannot inherit the surrogate-id base class.
 - `backend/core/src/main/java/com/zeromail/core/gmail/service/GmailConnectionService.java` — extend `disconnect(...)` to call `users.stop()` and null watch_* columns; add `markHistoryLost(...)`, `markWatchUnhealthy(...)`, `clearForReconnect(...)` methods.
 - `backend/core/src/main/java/com/zeromail/core/tenant/persistence/TenantEntity.java` — ADD `triage_paused BOOLEAN NOT NULL DEFAULT false` column.
 - `backend/core/src/main/java/com/zeromail/core/tenant/service/TenantService.java` — ADD `setTriagePaused(boolean)` method.
@@ -258,8 +258,8 @@ _No todos folded — `gsd-sdk query todo.match-phase 2A` not run (init blocked b
 - **`GmailConnectionService`** (Phase 01.5 P03) — `upsert(...)`, `currentStatus(...)`, `disconnect(...)`, `deleteForCurrentTenant(...)` preserved; `disconnect(...)` extended to call `users.stop()`. New methods added: `markHistoryLost`, `markWatchUnhealthy`, `clearForReconnect`, `recordWatchSuccess`.
 - **`OAuthProvisioningService`** (Phase 01.5) — bundled-OAuth provisioning preserved verbatim. Watch registration is async post-provisioning (D-C1) — handler doesn't change.
 - **`TenantContext` ScopedValue + `OncePerRequestFilter` pattern** (Phase 1 D-B1/D-B2) — Pub/Sub controller's filter binds `TENANT` after tenant lookup; worker schedulers bind explicitly per row.
-- **`@TenantId` discriminator** (Phase 1 D-B2) — automatically applied by Hibernate to `pubsub_delivery` and `mail_message_observed` queries via the existing tenant filter.
-- **`AbstractTenantOwnedEntity`** (Phase 01.2.1) — `PubSubDeliveryEntity` and `MailMessageObservedEntity` extend it.
+- **`@TenantId` discriminator** (Phase 1 D-B2) — automatically applied by Hibernate to `pubsub_delivery` via `AbstractTenantOwnedEntity` and to `mail_message_observed` via an explicit `@TenantId` field on its composite-key entity.
+- **`AbstractTenantOwnedEntity`** (Phase 01.2.1) — `PubSubDeliveryEntity` extends it. `MailMessageObservedEntity` cannot extend it because of its composite key, so it must carry an explicit `@TenantId` tenant field instead.
 - **`IdentifiedEnum` + `OrderedEnum` contract** (Phase 01.2.1 P02) — `GmailIngestionHealth` implements `IdentifiedEnum` (unordered, `fromId` fail-loud).
 - **`PostgresContainerTest`** (Phase 01.2.1 P03) — integration test harness for ingestion controller + worker schedulers.
 - **`MultiTenantLeakIntegrationTest`** (Phase 1 FND-05) — pattern reference for ScopedValue + `@TenantId` test wiring.

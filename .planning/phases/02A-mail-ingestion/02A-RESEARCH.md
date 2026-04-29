@@ -304,7 +304,6 @@ public class SecurityConfig { ... }
 // Source: https://github.com/googleapis/google-auth-library-java/blob/main/oauth2_http/java/com/google/auth/oauth2/TokenVerifier.java
 // Source: https://github.com/googleapis/google-auth-library-java/blob/main/samples/snippets/src/main/java/VerifyGoogleIdToken.java
 
-@Component
 public class PubSubOidcAuthFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(PubSubOidcAuthFilter.class);
@@ -314,15 +313,20 @@ public class PubSubOidcAuthFilter extends OncePerRequestFilter {
     private final String expectedEmail;
 
     public PubSubOidcAuthFilter(
-            @Value("${pubsub.push-audience-url}") String audience,
-            @Value("${pubsub.sa-principal-email}") String saEmail) {
+            String audience,
+            String saEmail,
+            String certsUrl) {
         this.expectedEmail = saEmail;
         this.tokenVerifier = TokenVerifier.newBuilder()
                 .setAudience(audience)
                 .setIssuer("https://accounts.google.com")
-                // Default certs location: https://www.googleapis.com/oauth2/v3/certs
-                // setCertificatesLocation() only if overriding for tests
+                .setCertificatesLocation(certsUrl)
                 .build();
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return !request.getServletPath().startsWith("/internal/pubsub/");
     }
 
     @Override
@@ -357,6 +361,8 @@ public class PubSubOidcAuthFilter extends OncePerRequestFilter {
     }
 }
 ```
+
+Cycle 3 review correction: do not make `PubSubOidcAuthFilter` a `@Component`. Define it as a bean in `PubSubSecurityConfig`, disable global servlet registration with `FilterRegistrationBean#setEnabled(false)`, and keep `shouldNotFilter` as defense in depth.
 
 **VerificationException causes:** [VERIFIED: github.com/googleapis/google-auth-library-java TokenVerifier.java source]
 - `"Expected audience does not match"` — wrong `aud` claim
@@ -903,7 +909,7 @@ Per-user per-second limit: 250 units/user/sec. Worker processes 50 rows/tick at 
 | A3 | Gmail API quota units: `users.watch` = 100, `users.history.list` = 2, `users.stop` = 50 | §Performance | If wrong, quota budget may be tighter; add monitoring |
 | A4 | Pause toggle copy (Vietnamese/English) | §Code Examples Pattern 10 | `frontend-design` skill will refine; keys are placeholders |
 | A5 | `fixedDelay` tasks in Spring Boot 4 with virtual threads may serialize on same virtual thread (GH #31900) | §Architecture Patterns | If fixed in Boot 4.0.6, behavior is more concurrent; `cron` still safer for the watch scheduler |
-| A6 | `PubSubOidcAuthFilter.shouldNotFilter()` not needed — `securityMatcher` on the chain handles URL scoping | §Architecture Patterns | If the filter is registered globally, add `shouldNotFilter` override |
+| A6 | `PubSubOidcAuthFilter.shouldNotFilter()` is required as defense in depth, and global servlet registration must be disabled with `FilterRegistrationBean#setEnabled(false)` | Cycle 3 review correction to §Architecture Patterns | Without this, a servlet Filter bean can run outside the `/internal/pubsub/**` SecurityFilterChain and break user-session endpoints |
 
 ---
 

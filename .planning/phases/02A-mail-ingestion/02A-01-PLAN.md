@@ -31,7 +31,7 @@ must_haves:
     - "GmailConnectionEntity has all 6 new fields (lastSyncedHistoryId, watchHistoryId, watchExpiresAt, watchRenewedAt, watchConsecutiveFailures, ingestionHealth)"
     - "PubSubDeliveryEntity persists to pubsub_delivery with UNIQUE(tenant_id, pubsub_message_id), non-null updated_at, and non-null version inherited from AbstractAuditableEntity"
     - "MailMessageObservedRepository exposes native INSERT ... ON CONFLICT DO NOTHING for idempotent observation writes"
-    - "MailMessageObservedEntity persists with composite PK (tenant_id, gmail_message_id) and TEXT[] label_ids"
+    - "MailMessageObservedEntity persists with composite PK (tenant_id, gmail_message_id), applies Hibernate @TenantId on tenant_id, and maps TEXT[] label_ids"
     - "GmailIngestionHealth implements IdentifiedEnum with fromId fail-loud"
     - "TenantEntity has triage_paused boolean field"
     - "012-mail-message-observed-table.yaml schema contains no subject, from_address, body, snippet, sender_domain, or recipient column definitions — privacy floor preserved (D-B3)"
@@ -62,8 +62,8 @@ must_haves:
       pattern: "GmailIngestionHealth"
     - from: "MailMessageObservedEntity"
       to: "MailMessageObservedId"
-      via: "@EmbeddedId"
-      pattern: "@EmbeddedId|MailMessageObservedId"
+      via: "@IdClass"
+      pattern: "@IdClass|MailMessageObservedId|@TenantId"
     - from: "Liquibase changeset 011"
       to: "pubsub_delivery table"
       via: "includeAll auto-pick from db.changelog-master.yaml"
@@ -526,20 +526,28 @@ int updateStatus(@Param("id") UUID id, @Param("status") String status);
 int releaseForRetry(@Param("id") UUID id, @Param("nextAttemptAt") Instant nextAttemptAt);
 ```
 
-**`MailMessageObservedEntity.java`** — new entity WITHOUT extending AbstractTenantOwnedEntity (composite PK incompatibility). Package `com.zeromail.core.gmail.persistence`.
+**`MailMessageObservedEntity.java`** — new entity WITHOUT extending `AbstractTenantOwnedEntity`, but WITH explicit Hibernate `@TenantId` on `tenant_id`. Package `com.zeromail.core.gmail.persistence`.
+
+Why: this table has a natural composite PK `(tenant_id, gmail_message_id)`, so it cannot inherit the project base class that supplies a surrogate `id`. It is still tenant-owned audit data. Do not leave it as an unfiltered JPA entity. Use `@IdClass` and annotate the standalone `tenantId` id field with `@TenantId` so Hibernate's tenant discriminator protects JPA reads (`findAll`, derived queries, future Phase 4 polling helpers). Native inserts still pass `tenantId` explicitly.
 ```java
 @Entity
 @Table(name = "mail_message_observed")
+@IdClass(MailMessageObservedEntity.MailMessageObservedId.class)
 public class MailMessageObservedEntity {
 
-    @Embeddable
     public record MailMessageObservedId(
-        @Column(name = "tenant_id") UUID tenantId,
-        @Column(name = "gmail_message_id") String gmailMessageId
+        UUID tenantId,
+        String gmailMessageId
     ) implements java.io.Serializable {}
 
-    @EmbeddedId
-    private MailMessageObservedId id;
+    @Id
+    @TenantId
+    @Column(name = "tenant_id", nullable = false)
+    private UUID tenantId;
+
+    @Id
+    @Column(name = "gmail_message_id", nullable = false)
+    private String gmailMessageId;
 
     @Column(name = "gmail_thread_id", nullable = false)
     private String gmailThreadId;
@@ -561,7 +569,8 @@ public class MailMessageObservedEntity {
 
     public MailMessageObservedEntity(UUID tenantId, String gmailMessageId, String gmailThreadId,
                                       Long historyId, String[] labelIds, Long internalDate) {
-        this.id = new MailMessageObservedId(tenantId, gmailMessageId);
+        this.tenantId = tenantId;
+        this.gmailMessageId = gmailMessageId;
         this.gmailThreadId = gmailThreadId;
         this.historyId = historyId;
         this.labelIds = labelIds;
@@ -569,9 +578,9 @@ public class MailMessageObservedEntity {
     }
 
     // Getters for all fields
-    public MailMessageObservedId getId() { return id; }
-    public UUID getTenantId() { return id.tenantId(); }
-    public String getGmailMessageId() { return id.gmailMessageId(); }
+    public MailMessageObservedId getId() { return new MailMessageObservedId(tenantId, gmailMessageId); }
+    public UUID getTenantId() { return tenantId; }
+    public String getGmailMessageId() { return gmailMessageId; }
     public String getGmailThreadId() { return gmailThreadId; }
     public Long getHistoryId() { return historyId; }
     public String[] getLabelIds() { return labelIds; }
@@ -579,7 +588,7 @@ public class MailMessageObservedEntity {
     public Instant getObservedAt() { return observedAt; }
 }
 ```
-Import: `org.hibernate.annotations.JdbcTypeCode`, `org.hibernate.type.SqlTypes`.
+Import: `jakarta.persistence.Id`, `jakarta.persistence.IdClass`, `org.hibernate.annotations.TenantId`, `org.hibernate.annotations.JdbcTypeCode`, `org.hibernate.type.SqlTypes`.
 
 **`MailMessageObservedRepository.java`** — extends `JpaRepository<MailMessageObservedEntity, MailMessageObservedEntity.MailMessageObservedId>`. Add a native insert method so idempotency never depends on catching `DataIntegrityViolationException` from JPA flush/commit:
 ```java
@@ -623,9 +632,10 @@ Do NOT touch any existing field, constructor, or getter.
     - `PubSubDeliveryEntity.java` maps payload with `@JdbcTypeCode(SqlTypes.JSON)`
     - `PubSubDeliveryRepository.java` contains `UPDATE pubsub_delivery` + `RETURNING *` inside `claimPendingBatch` and does NOT contain a standalone `SELECT * FROM pubsub_delivery ... FOR UPDATE SKIP LOCKED` claim method
     - `PubSubDeliveryRepository.java` contains `insertPendingIfAbsent` with `ON CONFLICT (tenant_id, pubsub_message_id) DO NOTHING`
-    - `MailMessageObservedEntity.java` contains `@EmbeddedId` and `@JdbcTypeCode(SqlTypes.ARRAY)`
-    - `MailMessageObservedEntity.java` does NOT extend `AbstractTenantOwnedEntity`
+    - `MailMessageObservedEntity.java` contains `@IdClass`, `@TenantId`, and `@JdbcTypeCode(SqlTypes.ARRAY)`
+    - `MailMessageObservedEntity.java` does NOT extend `AbstractTenantOwnedEntity`, but its `tenantId` field is annotated `@TenantId`
     - `MailMessageObservedRepository.java` contains `insertObservedIfAbsent` with `ON CONFLICT (tenant_id, gmail_message_id) DO NOTHING`
+    - `MailMessageObservedEntityTest` contains a tenant-isolation assertion: with `TenantContext.TENANT` bound to tenant A, a JPA `findAll`/derived read cannot see tenant B's `mail_message_observed` row
     - `TenantEntity.java` contains `private boolean triagePaused = false`
     - `./gradlew :backend:core:compileJava` exits 0
     - `GmailIngestionHealthTest` goes GREEN (id()==name() + fromId + NoSuchElementException)
@@ -643,14 +653,14 @@ Do NOT touch any existing field, constructor, or getter.
 | Boundary | Description |
 |----------|-------------|
 | DB schema layer | Changeset rollback sections prevent orphaned schema state |
-| Entity layer | @TenantId Hibernate filter applied to AbstractTenantOwnedEntity subclasses |
+| Entity layer | @TenantId Hibernate filter applied to AbstractTenantOwnedEntity subclasses and explicitly to MailMessageObservedEntity.tenantId |
 
 ## STRIDE Threat Register
 
 | Threat ID | Category | Component | Disposition | Mitigation Plan |
 |-----------|----------|-----------|-------------|-----------------|
 | T-02 | Tampering | pubsub_delivery UNIQUE constraint | mitigate | `UNIQUE(tenant_id, pubsub_message_id)` in Liquibase changeset 011 enforces atomic dedup at DB level |
-| T-05 | Information Disclosure | mail_message_observed schema | mitigate | Schema contains NO subject/from/body/snippet columns — privacy floor enforced at DDL level; only IDs + label_ids + timestamps |
+| T-05 | Information Disclosure | mail_message_observed schema + JPA reads | mitigate | Schema contains NO subject/from/body/snippet columns; entity uses `@TenantId` on `tenant_id` despite custom composite PK, so future JPA reads are tenant-filtered |
 | T-06 | Tampering | emailAddress lookup query | mitigate | Repository uses parameterized `findByGoogleEmailIgnoreCase(String)` — never string concatenation |
 | T-04 | Information Disclosure | refresh token logging | accept | No refresh token fields exist in these entity classes; token cipher is in a separate module; ArchUnit FND-04 remains active |
 </threat_model>
