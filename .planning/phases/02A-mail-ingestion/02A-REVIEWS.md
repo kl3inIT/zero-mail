@@ -1,7 +1,9 @@
 ---
 phase: 02A
+review_cycle: 2
 reviewers: [codex]
-reviewed_at: 2026-04-29T09:36:40.8700833+07:00
+reviewed_at: 2026-04-29T09:57:31.9552875+07:00
+replan_commit: b4af158
 plans_reviewed:
   - 02A-00-PLAN.md
   - 02A-01-PLAN.md
@@ -9,110 +11,113 @@ plans_reviewed:
   - 02A-03-PLAN.md
   - 02A-04-PLAN.md
   - 02A-05-PLAN.md
+current_high: 3
 ---
 
-# Cross-AI Plan Review - Phase 02A
+# Cross-AI Plan Review - Phase 02A (Cycle 2)
+
+Only the Codex reviewer was requested and invoked for this cycle, so this is a single-reviewer synthesis rather than a multi-reviewer consensus.
 
 ## Codex Review
 
 ### Summary
 
-The phase is well decomposed and covers the right major surfaces: schema, OIDC-secured Pub/Sub ingress, idempotent worker processing, watch renewal, pause UX, and final verification. The strongest parts are the explicit privacy floor, ack-fast controller design, and separation between API and worker responsibilities. The main risk is that several plans are internally inconsistent or cross-dependent in ways that will break compilation, tests, or tenant isolation unless corrected before execution.
+Cycle 2 materially improves the Phase 02A plans. The prior HIGH issues around compile-safe scaffolds, Pub/Sub security in tests, tenant lookup, atomic claim semantics, native idempotency inserts, watch baseline initialization, and final verification are mostly resolved.
+
+Remaining risk is lower, but there are still a few plan-level correctness gaps that could break compilation or leave important behaviors unverified.
 
 ### Strengths
 
-- The ack-fast Pub/Sub design is appropriate for Pub/Sub push semantics and avoids Gmail API work inside the request path.
-- OIDC verification is treated as a first-class security deliverable, with explicit wrong-audience, wrong-email, expired-token, and bad-signature coverage.
-- The schema keeps `mail_message_observed` privacy-safe: no subject, sender, body, snippet, or recipient.
-- Worker processing is correctly framed as idempotent and at-least-once, with monotonic history pointer advancement.
-- The pause feature is scoped correctly for Phase 2A: persist and expose the flag now, enforce write-action gating later in Phase 4.
-- The frontend plan preserves the unified reconnect prompt instead of exposing low-level ingestion-health causes to users.
+- Pub/Sub OIDC security is now active under the test profile and explicitly verified.
+- Tenant lookup is correctly moved to unscoped `JdbcTemplate`, with tenant-bound writes after `TenantContext` binding.
+- `claimPendingBatch` now atomically updates rows to `PROCESSING` with `RETURNING *`.
+- Message observation idempotency now uses native `INSERT ... ON CONFLICT DO NOTHING`.
+- Final verification now requires all Wave 0 tests enabled and GREEN.
+- `recordWatchSuccess` now initializes `last_synced_history_id` from `watch_history_id`.
+
+### Prior Cycle HIGH Resolution
+
+- Mock OIDC fixture module visibility: **FULLY RESOLVED** - `MockGoogleOidcServer` now lives under `backend/api/src/test/java/com/zeromail/api/support`.
+- Disabled Java tests referencing missing symbols: **FULLY RESOLVED** - disabled controller scaffolds are specified as raw HTTP/JSON/JdbcTemplate tests without missing DTO/controller imports.
+- Test-profile Pub/Sub security conflict: **FULLY RESOLVED** - `PubSubSecurityConfig` explicitly omits `@Profile("!test")` and remains active under `@ActiveProfiles("test")`.
+- Same-wave `TenantService.setTriagePaused` dependency: **FULLY RESOLVED** - Plan 03 owns `TenantService.setTriagePaused`, so it no longer depends on Plan 02.
+- `SKIP LOCKED` locks released before processing: **FULLY RESOLVED** - Plan 01 replaces claim-by-select with atomic `UPDATE ... RETURNING *`.
+- Pub/Sub transaction opened before tenant binding: **FULLY RESOLVED** - Plan 03 performs unscoped lookup first, then wraps insert in `ScopedValue` plus `TransactionTemplate`.
+- Tenant-owned Gmail email lookup before binding: **FULLY RESOLVED** - Plan 03 rejects JPA lookup and uses parameterized `JdbcTemplate`.
+- Initial watch does not seed `last_synced_history_id`: **FULLY RESOLVED** - `recordWatchSuccess` sets it from `watchHistoryId` when null or lower.
+- JPA duplicate-key idempotency via caught exception: **FULLY RESOLVED** - repositories now require native `ON CONFLICT DO NOTHING`.
+- Plan 05 misses Wave 0 tests: **FULLY RESOLVED** - Plan 05 lists all backend and frontend Wave 0 tests and requires no `@Disabled` / `it.skip`.
+- STATE.md blocker grep contradiction: **FULLY RESOLVED** - Plan 05 removes the blocker bullet and uses a precise grep for that bullet, while the retrospective decision text does not match the blocker pattern.
 
 ### Concerns
 
-- **HIGH** Plan 00 places `MockGoogleOidcServer` under `backend/worker/src/test`, but API tests rely on it. `backend:api:test` will not normally see worker test classes.
+- **HIGH** Plan 03 references new files `IngestResult.java`, `GmailNotification.java`, and `FlexibleLongDeserializer.java`, and Plan 03 Task 2 references `GmailConnectionProjection.java`, but these files are not listed in `files_modified`. This can cause incomplete execution tracking and missed review/commit scope.
 
-- **HIGH** Plan 00 says `@Disabled` Java tests can reference missing methods/classes and still compile. They cannot. `@Disabled` only skips execution, not compilation.
+- **HIGH** Plan 02 extends `GmailConnectionService.disconnect()` to call `users.stop()`, then also uses `connectionService.disconnect(tenantId)` on `InvalidGrantException` paths. If refresh is invalid, `disconnect()` may try to refresh/build a Gmail client to call `users.stop()` and fail before marking the connection disconnected unless the DB update is structurally guaranteed outside that best-effort path.
 
-- **HIGH** Plans 00 and 03 conflict on test security: API integration tests use `@ActiveProfiles("test")` and expect 401 from the Pub/Sub filter, but Plan 03 puts `PubSubSecurityConfig` behind `@Profile("!test")`.
+- **HIGH** Plan 03 keeps the normal user `SecurityConfig` under `@Profile("!test")`, but then requires `TriagePauseControllerTest` and `MeControllerTest` under test profile to exercise authenticated, tenant-bound endpoints. The plan does not specify a test security chain or tenant-binding mechanism for those tests, so they may fail with missing tenant context or bypass the real authorization behavior.
 
-- **HIGH** Plan 02 and Plan 03 are both Wave 2, but Plan 03 uses `TenantService.setTriagePaused`, which Plan 02 adds. Plan 03 should depend on Plan 02 or the tenant-service change should move earlier.
+- **MEDIUM** `PubSubIngestionService` uses `List.getFirst()`, which is only available on Java 21+ `List`, so Java 25 is fine, but it may not match project style and can surprise if Gradle source compatibility/toolchain is misconfigured.
 
-- **HIGH** `PubSubDeliveryRepository.claimPendingBatch()` uses `FOR UPDATE SKIP LOCKED`, but the transaction ends when the repository method returns. Locks are released before `GmailDeliveryProcessingService.processDelivery()` runs, so multiple workers can claim the same rows.
+- **MEDIUM** `MailMessageObservedRepository.insertObservedIfAbsent` passes `String[]` into a native query for `text[]`; depending on Hibernate/PostgreSQL binding, this may need an explicit cast such as `CAST(:labelIds AS text[])` or JDBC `Array` handling.
 
-- **HIGH** `PubSubIngestionService.ingestPushEnvelope()` starts a transaction before binding `TenantContext`, then performs tenant lookup and insert inside that transaction. With tenant-scoped entities, this risks broken filtering or wrong tenant context at EntityManager creation time.
+- **MEDIUM** Plan 02 creates `GmailApiClientFactory` in `backend/core`, but the implementation uses direct `newTrustedTransport()` and direct `HttpClient.newHttpClient()`, making hermetic worker tests harder unless the plan also introduces injectable base URLs/transports/HTTP clients.
 
-- **HIGH** `GmailConnectionRepository.findByGoogleEmailLower()` queries a tenant-owned entity before tenant binding. If Hibernate tenant filtering applies, the lookup may return nothing or behave incorrectly. This needs an explicit unscoped lookup path, likely native SQL/JdbcTemplate.
+- **MEDIUM** Plan 02 says `GmailHistoryProcessorTest` uses `MockGmailHistoryServer`, but `GmailDeliveryProcessingService` calls the real token endpoint unless `GmailApiClientFactory` is injectable/configurable for tests.
 
-- **HIGH** Plan 02 does not set `last_synced_history_id` from `watch_history_id` on initial watch success. If the first delivery starts at the webhook history id while `last_synced_history_id` is null, the first message window can be skipped.
+- **MEDIUM** `GmailPubSubControllerIntegrationTest.invalidPayload_returns200_dropsSilently` is now aligned with implementation, but this behavior should be explicitly justified as an ack-fast anti-redelivery policy because malformed payloads from non-Google callers are still authenticated by OIDC first.
 
-- **HIGH** Idempotency via `observedRepository.save()` plus catching `DataIntegrityViolationException` is unsafe. JPA may throw on flush/commit, and the transaction may become rollback-only. Use native `INSERT ... ON CONFLICT DO NOTHING`.
-
-- **HIGH** Plan 05 misses several Wave 0 tests in final verification: `MeControllerTest`, `TriagePauseControllerTest`, `PubSubIdempotencyTest`, and the skipped `ReconnectPrompt` tests. Disabled/skipped scaffolds should not count as GREEN closure.
-
-- **HIGH** Plan 05 says `grep -c "Pub/Sub OIDC verification ceremony" .planning/STATE.md` must return 0, but then adds a new STATE entry containing the same phrase.
-
-- **MEDIUM** `PubSubDeliveryEntity` extends `AbstractTenantOwnedEntity`, but the proposed `pubsub_delivery` DDL may be missing inherited columns such as `version` if the base class maps one.
-
-- **MEDIUM** `MailMessageObservedEntity` intentionally does not extend `AbstractTenantOwnedEntity`, contradicting the canonical refs and losing automatic tenant filtering. If kept, every query must be explicitly tenant-scoped.
-
-- **MEDIUM** `payload JSONB` is mapped as plain `String` without `@JdbcTypeCode(SqlTypes.JSON)` or a native cast. PostgreSQL may reject the insert depending on Hibernate binding.
-
-- **MEDIUM** The watch retry policy is inconsistent. Context says retries continue after `WATCH_UNHEALTHY`; Plan 02 filters out `watch_consecutive_failures >= 3`, so unhealthy watches never self-recover.
-
-- **MEDIUM** Reconnect recovery is incomplete. `clearForReconnect()` is added, but no plan updates the OAuth reconnect success handler to call it.
-
-- **MEDIUM** Account deletion watch cleanup is mentioned in context, but the plans only extend `disconnect()`, not the account deletion path.
-
-- **MEDIUM** Plan 03 returns `200 OK` for malformed Pub/Sub payloads, while Plan 00 expects `400`. Pick one behavior and align tests.
-
-- **MEDIUM** Plan 04 references `settings.triage.pause.banner.body` in JSX but does not add that i18n key to the required key set.
-
-- **MEDIUM** Plan 04 depends on OpenAPI-generated path types for `PUT /tenant/triage-pause`, but `schema.d.ts` is not listed in `files_modified`, and regen is optional.
-
-- **LOW** Plan 00 repeatedly miscounts files: 16 files are listed, but the objective text describes totals that do not add up.
-
-- **LOW** Plan 01 acceptance says `010` should contain `addColumn:` six times, but the YAML uses one `addColumn` with six column entries.
+- **LOW** Plan 00 still says active backend RED tests may fail at `compileTestJava`; that blocks running any test task in the module until production classes exist. This is acceptable if intentional, but it weakens Wave 0 feedback granularity.
 
 ### Suggestions
 
-- Move shared test fixtures to the module that uses them, or create a proper test-fixtures source set shared by API and worker tests.
-- Decide whether Wave 0 tests should be compile-red or execution-red. Prefer execution-red tests that compile, using reflection or TODO-disabled bodies without missing symbol calls.
-- Make Pub/Sub security active in integration tests, with test-only OIDC properties and a mock JWKS verifier hook.
-- Split Pub/Sub ingestion into an unscoped tenant lookup followed by a tenant-bound transactional insert. Avoid starting the transaction before `TenantContext` is bound.
-- Replace claim-by-select with atomic claim semantics: `UPDATE ... SET status='PROCESSING', locked_until=... WHERE id IN (...) RETURNING *`, or keep the claim and processing in one transaction.
-- Add native repository methods for `INSERT ... ON CONFLICT DO NOTHING` for both `pubsub_delivery` and `mail_message_observed`.
-- On watch success, initialize or advance `last_synced_history_id` to the returned `watch_history_id` when appropriate.
-- Add the OAuth reconnect-handler update and account-deletion watch-stop update to the relevant plan.
-- Include all files actually edited in each plan frontmatter, especially repositories, projections, generated OpenAPI schema, `ROADMAP.md`, and any `TenantContext` helper.
-- In Plan 05, require disabled/skipped RED scaffolds to be enabled or explicitly documented as deferred before marking Nyquist complete.
+- Add all newly created helper DTO/enum/deserializer/projection files to Plan 03 `files_modified`.
+- Split `disconnect()` into "mark disconnected" and "best-effort stop watch" so invalid-grant paths cannot be blocked by watch-stop cleanup.
+- Specify the test-profile authentication/tenant-binding setup for `/me` and `/tenant/triage-pause`, or make those tests use the existing project test auth pattern explicitly.
+- Make `GmailApiClientFactory` testable via injectable HTTP transport/token endpoint/Gmail base URL, or document the mocking seam used by worker tests.
+- Add an acceptance check that native `label_ids` insertion works through `insertObservedIfAbsent`, not only through entity persistence.
 
 ### Risk Assessment
 
-Overall risk: **HIGH**.
+Overall risk: **MEDIUM**.
 
-The architecture is directionally sound, but execution risk is high because several plan dependencies and transaction boundaries are wrong enough to cause test-profile failures, duplicate worker processing, tenant-context issues, or false verification closure. Fixing the ordering, tenant lookup, SKIP LOCKED claim semantics, and final verification criteria would reduce the phase to MEDIUM risk.
+The major architectural hazards from Cycle 1 are fixed. Remaining risk is mostly execution-level: missing file tracking, test-profile security ambiguity, and invalid-grant/disconnect cleanup coupling. These are fixable before implementation and do not undermine the overall design.
+
+### Current HIGH Concerns
+
+- Plan 03 omits several newly created/modified files from `files_modified`, including `IngestResult.java`, `GmailNotification.java`, `FlexibleLongDeserializer.java`, and likely `GmailConnectionProjection.java`.
+- `disconnect()` best-effort `users.stop()` may interfere with invalid-grant disconnect paths unless the DB status update is guaranteed independently.
+- Test-profile authenticated endpoint behavior for `/me` and `/tenant/triage-pause` is underspecified while the real user security chain remains disabled under `test`.
+
+CURRENT_HIGH_COUNT: 3
 
 ---
 
 ## Consensus Summary
 
-Only the Codex reviewer was requested and invoked for this cycle, so this is a single-reviewer synthesis rather than a multi-reviewer consensus.
+Only Codex was invoked in Cycle 2, so the consensus summary reflects a single external review.
 
 ### Agreed Strengths
 
-- The phase covers the correct major delivery surfaces for Gmail ingestion: OIDC-protected Pub/Sub ingress, durable idempotency, worker processing, watch renewal, pause state, reconnect visibility, and verification.
-- The privacy boundary is strong: observed-message storage intentionally avoids raw email content.
-- The API/worker split and ack-fast push receiver are directionally appropriate for Pub/Sub push semantics.
+- The Cycle 1 architectural hazards were substantially addressed in the replan: tenant lookup, transaction boundaries, OIDC test-profile security, atomic claim semantics, watch baseline initialization, and native idempotency inserts are now called out explicitly.
+- The phase still covers the right Phase 2A surface: Gmail watch lifecycle, Pub/Sub push ingress, OIDC verification, durable idempotency, history processing, pause state, reconnect visibility, and final verification.
+- The final verification plan now better defends against false GREEN closure by requiring Wave 0 tests to be enabled and passing.
 
 ### Agreed Concerns
 
-- HIGH: Wave 0 test scaffolds have compile and module-visibility problems that can break the intended RED baseline before implementation starts.
-- HIGH: Pub/Sub security tests and implementation disagree about whether the OIDC filter is active in the test profile.
-- HIGH: Tenant binding and unscoped Gmail-account lookup need clearer transaction boundaries before Pub/Sub ingestion can be trusted in a multi-tenant app.
-- HIGH: Worker claim/idempotency semantics are not yet robust enough for at-least-once Pub/Sub delivery.
-- HIGH: Plan 05 verification can falsely close the phase because it omits or discounts several Wave 0 tests.
+- HIGH: Plan 03 file tracking is incomplete for several helper DTO/deserializer/projection files, which can cause missed execution scope.
+- HIGH: `disconnect()` needs a stronger separation between durable DB state change and best-effort Gmail `users.stop()` cleanup, especially on invalid-grant paths.
+- HIGH: Test-profile behavior for authenticated `/me` and `/tenant/triage-pause` tests remains underspecified because the normal user security chain is disabled under `test`.
 
 ### Divergent Views
 
 - None observed. Only one reviewer was invoked.
+
+## Cycle Summary
+
+- Prior Cycle HIGH concerns: 11
+- Fully resolved prior HIGH concerns: 11
+- Partially resolved prior HIGH concerns: 0
+- Unresolved prior HIGH concerns: 0
+- New Cycle 2 HIGH concerns: 3
+- Current unresolved HIGH concerns: 3
