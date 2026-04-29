@@ -583,6 +583,9 @@ public void markWatchUnhealthy(UUID tenantId) {
 public void recordWatchSuccess(UUID tenantId, Long watchHistoryId, Instant watchExpiresAt) {
     connections.findByTenantId(tenantId).ifPresent(c -> {
         c.setWatchHistoryId(watchHistoryId);
+        if (c.getLastSyncedHistoryId() == null) {
+            c.setLastSyncedHistoryId(watchHistoryId);
+        }
         c.setWatchExpiresAt(watchExpiresAt);
         c.setWatchRenewedAt(Instant.now());
         c.setWatchConsecutiveFailures(0);
@@ -596,6 +599,7 @@ public void clearForReconnect(UUID tenantId) {
     connections.findByTenantId(tenantId).ifPresent(c -> {
         c.setWatchExpiresAt(null);
         c.setWatchHistoryId(null);
+        c.setLastSyncedHistoryId(null);
         c.setWatchConsecutiveFailures(0);
         c.setIngestionHealth(GmailIngestionHealth.HEALTHY);
         connections.save(c);

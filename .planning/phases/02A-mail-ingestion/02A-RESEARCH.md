@@ -190,6 +190,7 @@ Google Pub/Sub
     | per row: bind TenantContext, decrypt + refresh token
     | gmail.users().watch(userId='me', labelIds=['INBOX'], topicName=env)
     |   success -> persist watch_history_id, watch_expires_at, watch_renewed_at, HEALTHY
+    |              initialize last_synced_history_id ONLY if currently NULL
     |   failure -> increment watch_consecutive_failures
     |   3 failures -> ingestion_health=WATCH_UNHEALTHY
 
@@ -470,6 +471,8 @@ Instant expiresAt = Instant.ofEpochMilli(expirationMs);
 ```
 
 **Response:** `historyId` (baseline for sync start), `expiration` (epoch ms when watch expires, ~7 days from call). [VERIFIED: Gmail API reference]
+
+**Pointer rule:** Treat the returned `historyId` as a sync baseline only when `gmail_connections.last_synced_history_id` is NULL (initial registration or reconnect after clearing the cursor). Regular renewal must update watch metadata only; advancing a non-null `last_synced_history_id` to the new watch baseline can skip queued or otherwise unprocessed Pub/Sub deliveries.
 
 **Idempotency on re-call:** Re-calling `users.watch` on an already-watched account replaces the previous watch with a new one and returns a fresh `historyId` and `expiration`. This is the intended renewal mechanism. [ASSUMED — no explicit doc statement, but Inbox-zero pattern + Gmail API behavior implies replace-not-fail; worker uses this for renewal]
 
@@ -766,21 +769,27 @@ export function useToggleTriagePause() {
 **What goes wrong:** New `apps/web/features/triage/components/PauseBanner.tsx` and `hooks/useToggleTriagePause.ts` are not in `EN_SCAN_FILES` in `apps/web/scripts/check-i18n.ts` → missing key check silently drops coverage.
 **Root cause:** Phase 01.3 D-D3 pattern — `EN_SCAN_FILES` must be updated in the same plan as new files adding i18n usage.
 **Prevention:** Add `features/triage/components/PauseBanner.tsx` + settings toggle to `EN_SCAN_FILES` in same commit as the i18n keys.
+
+### P-08: Watch Renewal Advances Sync Cursor Past Queued History
+**What goes wrong:** A normal `users.watch` renewal returns a fresh `historyId` near "now"; if the scheduler writes that value into `last_synced_history_id`, pending `pubsub_delivery` rows with older history IDs can be silently skipped.
+**Root cause:** Initial registration and renewal share one scheduler path, but only initial registration/reconnect should create a fresh sync baseline.
+**Prevention:** `recordWatchSuccess` sets `last_synced_history_id = watchHistoryId` only when the current cursor is NULL. Renewal updates `watch_history_id`, `watch_expires_at`, `watch_renewed_at`, failures, and health while preserving a non-null cursor.
+**Verification gate:** `GmailWatchSchedulerTest` — existing `last_synced_history_id=100`, pending delivery `history_id=110`, renewal returns `watchHistoryId=200`; assert `last_synced_history_id` remains `100`.
 **Verification gate:** `pnpm i18n:check` in strict mode (husky pre-commit gate); assert it fails if `settings.triage.pause.*` keys are missing.
 
-### P-08: `nextPageToken` Silently Dropped — History Pagination
+### P-09: `nextPageToken` Silently Dropped — History Pagination
 **What goes wrong:** `history.list(maxResults=500)` returns `nextPageToken`. Worker ignores it, advances `last_synced_history_id` to the highest returned `historyId`. On next push, a gap exists.
 **Root cause:** D-B6 explicitly accepts this truncation. However, if `last_synced_history_id` is advanced to the full `webhook_history_id` (not to the last returned history entry), the gap is bridged. Advance to `webhookHistoryId` unconditionally after the 500-item pass.
 **Prevention:** Inbox-zero pattern: if empty history after gap truncation, still advance `last_synced_history_id` to `webhookHistoryId`. Worker must always advance even on pagination truncation.
 **Verification gate:** Log `event=gmail_history_pagination_dropped` when `nextPageToken` is non-null; integration test asserts `last_synced_history_id` advances to `webhookHistoryId` even on truncated response.
 
-### P-09: `users.stop()` Failure Propagates Disconnect
+### P-10: `users.stop()` Failure Propagates Disconnect
 **What goes wrong:** `GmailConnectionService.disconnect()` calls `users.stop()` which throws (token revoked) → entire disconnect transaction rolls back → user cannot disconnect.
 **Root cause:** Best-effort call wrapped in same transaction as status update.
 **Prevention:** Call `users.stop()` OUTSIDE the transaction (or in a separate try-catch that swallows non-critical exceptions). Commit the status=DISCONNECTED update first, then attempt stop. D-C5 explicitly states "best-effort (don't fail disconnect if stop() fails)".
 **Verification gate:** Unit test: mock `users.stop()` to throw; assert `disconnect()` still sets `status=DISCONNECTED` and clears `watch_*` columns.
 
-### P-10: Push Endpoint Reachable from Next.js Proxy
+### P-11: Push Endpoint Reachable from Next.js Proxy
 **What goes wrong:** `/internal/pubsub/gmail` is accidentally forwarded by the Next.js reverse proxy config, exposing it to browser clients (CSRF vector even though the filter would block them).
 **Root cause:** Missing proxy exclusion rule.
 **Prevention:** Check `apps/web` proxy config. Add `!path.startsWith('/internal/')` exclusion. Document in RUNBOOK.md.

@@ -300,11 +300,12 @@ If not available, use `com.sun.net.httpserver.HttpServer` from JDK (always avail
 4. `processDelivery_scopedValueBound_perRow()` — two deliveries for different tenants → each observation row has correct `tenant_id` (cross-tenant isolation)
 5. `processDelivery_invalidGrant_setsDisconnected()` — 401 from token refresh → asserts `gmail_connections.status=DISCONNECTED`, delivery status=DEAD
 
-**`GmailWatchSchedulerTest.java`** — package `com.zeromail.worker`. Extends `PostgresContainerTest`. Imports `com.zeromail.worker.GmailWatchScheduler` (RED). Uses `MockGmailHistoryServer`. Four `@Test` methods:
+**`GmailWatchSchedulerTest.java`** — package `com.zeromail.worker`. Extends `PostgresContainerTest`. Imports `com.zeromail.worker.GmailWatchScheduler` (RED). Uses `MockGmailHistoryServer`. Five `@Test` methods:
 1. `register_nullExpiry_issuersWatch()` — `gmail_connections` row with `watch_expires_at=NULL` + `status=CONNECTED` → scheduler tick → asserts `watch_history_id` + `watch_expires_at` + `watch_renewed_at` set + `ingestion_health=HEALTHY`
 2. `renew_expiryWithin24h_issuersWatch()` — row with `watch_expires_at=NOW+23h` → tick → renewed
 3. `threeConsecutiveFailures_setsWatchUnhealthy()` — stub watch failure three times → after 3rd, `ingestion_health=WATCH_UNHEALTHY`
 4. `watchRequest_inboxOnly_labelIds()` — capture the `WatchRequest` sent to Gmail stub, assert `labelIds=["INBOX"]` and `labelFilterBehavior="include"`
+5. `renew_existingHistoryPointer_doesNotAdvanceLastSyncedHistoryId()` — existing `last_synced_history_id=100`, pending delivery `history_id=110`, renewal returns `watchHistoryId=200`; assert `last_synced_history_id` remains `100` while watch metadata updates
   </action>
 
   <verify>

@@ -26,7 +26,7 @@ must_haves:
     - "GmailWatchScheduler runs every minute and registers/renews users.watch for CONNECTED rows with NULL or near-expiry watch_expires_at"
     - "After 3 consecutive watch failures, ingestion_health flips to WATCH_UNHEALTHY"
     - "Rows with WATCH_UNHEALTHY are still retried by GmailWatchScheduler; a later successful watch flips ingestion_health back to HEALTHY"
-    - "recordWatchSuccess initializes/advances last_synced_history_id from the returned watch_history_id so the first Pub/Sub delivery does not skip its starting window"
+    - "recordWatchSuccess initializes last_synced_history_id from the returned watch_history_id only when the cursor is NULL; renewals preserve the existing cursor so queued/unprocessed Gmail history is not skipped"
     - "GmailHistoryProcessor polls pubsub_delivery every 1s and fans out to mail_message_observed"
     - "claimPendingBatch atomically updates rows to PROCESSING before returning them; worker processing does not rely on locks that were released when the repository method returned"
     - "History-404 advances last_synced_history_id to webhook_history_id and sets ingestion_health=HISTORY_LOST"
@@ -244,7 +244,9 @@ public void markWatchUnhealthy(UUID tenantId) {
 public void recordWatchSuccess(UUID tenantId, Long watchHistoryId, Instant watchExpiresAt) {
     connections.findByTenantId(tenantId).ifPresent(c -> {
         c.setWatchHistoryId(watchHistoryId);
-        if (c.getLastSyncedHistoryId() == null || c.getLastSyncedHistoryId() < watchHistoryId) {
+        // Only initial registration/reconnect creates a fresh baseline. Regular renewals must not
+        // advance the history-processing cursor past queued or unprocessed Pub/Sub deliveries.
+        if (c.getLastSyncedHistoryId() == null) {
             c.setLastSyncedHistoryId(watchHistoryId);
         }
         c.setWatchExpiresAt(watchExpiresAt);
@@ -465,7 +467,7 @@ Privacy: NEVER log `conn.getRefreshTokenEncrypted()`, `decryptedToken`, token va
     - `GmailApiClientFactory.buildGmailClient` handles `GoogleNetHttpTransport.newTrustedTransport()` checked exceptions by wrapping `GeneralSecurityException` in `IOException` or otherwise declaring a compile-safe checked-exception path
     - `GmailApiClientFactory.java` does NOT contain any log statement with `refreshToken`, `accessToken`, or `decryptedRefresh` variable contents
     - `GmailConnectionService.java` contains `markHistoryLost(`, `markWatchUnhealthy(`, `recordWatchSuccess(`, `clearForReconnect(`, `incrementWatchFailure(`, `markDisconnected(`
-    - `GmailConnectionService.recordWatchSuccess` sets `lastSyncedHistoryId` from `watchHistoryId` when null or lower
+    - `GmailConnectionService.recordWatchSuccess` sets `lastSyncedHistoryId` from `watchHistoryId` only when the existing cursor is null; it does NOT advance a non-null cursor during renewal
     - `GmailConnectionService.markDisconnected` contains no `users().stop`, `refreshAccessToken`, `buildGmailClient`, or `RefreshTokenCipher` call path
     - `GmailConnectionService.disconnect` invokes durable `markDisconnected(tenantId)` before `tryStopWatch(tenantId)`
     - `tryStopWatch` catches all failures and logs `event=gmail_watch_stop_failed tenantId={}` without rethrowing
@@ -633,6 +635,7 @@ Also ensure `spring.threads.virtual.enabled: true` is present (or add if missing
     - `GmailDeliveryProcessingService.java` does NOT contain subject, from, body, snippet, or email address in any log statement
     - `backend/worker/src/main/resources/application.yml` contains `GOOGLE_PUBSUB_TOPIC_NAME:?`
     - `./gradlew :backend:worker:compileJava` exits 0
+    - `GmailWatchSchedulerTest` contains `renew_existingHistoryPointer_doesNotAdvanceLastSyncedHistoryId()` or equivalent coverage
     - GmailWatchSchedulerTest and GmailHistoryProcessorTest pass GREEN (using MockGmailHistoryServer)
   </acceptance_criteria>
 
@@ -671,7 +674,7 @@ After this plan:
 </verification>
 
 <success_criteria>
-GmailWatchScheduler and GmailHistoryProcessor compile and their Wave 0 tests turn GREEN. GmailHistoryProcessor delegates per-delivery work to GmailDeliveryProcessingService (public @Transactional — Spring AOP intercepts correctly). GmailConnectionService has 6 new state-management methods, including DB-only markDisconnected, and recordWatchSuccess initializes last_synced_history_id from watch_history_id. Invalid-grant paths never call best-effort users.stop cleanup. OAuth reconnect clears watch state for retry. Worker application.yml has GOOGLE_PUBSUB_TOPIC_NAME fail-fast var.
+GmailWatchScheduler and GmailHistoryProcessor compile and their Wave 0 tests turn GREEN. GmailHistoryProcessor delegates per-delivery work to GmailDeliveryProcessingService (public @Transactional — Spring AOP intercepts correctly). GmailConnectionService has 6 new state-management methods, including DB-only markDisconnected, and recordWatchSuccess initializes last_synced_history_id from watch_history_id only when the cursor is null. Regular watch renewal preserves a non-null last_synced_history_id so queued/unprocessed Gmail history cannot be skipped. Invalid-grant paths never call best-effort users.stop cleanup. OAuth reconnect clears watch state for retry. Worker application.yml has GOOGLE_PUBSUB_TOPIC_NAME fail-fast var.
 </success_criteria>
 
 <output>
