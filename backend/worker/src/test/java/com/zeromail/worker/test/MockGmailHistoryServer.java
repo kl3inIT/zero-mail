@@ -1,6 +1,7 @@
 package com.zeromail.worker.test;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -8,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.zip.GZIPInputStream;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -56,6 +58,21 @@ public class MockGmailHistoryServer implements AutoCloseable {
         return lastWatchRequestBody;
     }
 
+    public void reset() {
+        responses.clear();
+        lastWatchRequestBody = null;
+    }
+
+    public void stubTokenSuccess() {
+        responses.put("/token",
+                new Response(200, "{\"access_token\":\"test-access-token\",\"expires_in\":3600}"));
+    }
+
+    public void stubTokenInvalidGrant() {
+        responses.put("/token",
+                new Response(400, "{\"error\":\"invalid_grant\"}"));
+    }
+
     public void stubHistoryList(long startHistoryId, List<HistoryMessageResponse> messages) {
         responses.put("/gmail/v1/users/me/history", new Response(200, historyResponse(startHistoryId, messages)));
     }
@@ -82,7 +99,7 @@ public class MockGmailHistoryServer implements AutoCloseable {
     private void dispatch(HttpExchange exchange) throws IOException {
         String path = exchange.getRequestURI().getPath();
         if (path.endsWith("/watch")) {
-            lastWatchRequestBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            lastWatchRequestBody = new String(readRequestBody(exchange), StandardCharsets.UTF_8);
         }
         Response response = responses.getOrDefault(path, new Response(404, "{\"error\":{\"code\":404}}"));
         byte[] body = response.body().getBytes(StandardCharsets.UTF_8);
@@ -91,6 +108,15 @@ public class MockGmailHistoryServer implements AutoCloseable {
         try (OutputStream out = exchange.getResponseBody()) {
             out.write(body);
         }
+    }
+
+    private static byte[] readRequestBody(HttpExchange exchange) throws IOException {
+        InputStream in = exchange.getRequestBody();
+        String encoding = exchange.getRequestHeaders().getFirst("Content-Encoding");
+        if ("gzip".equalsIgnoreCase(encoding)) {
+            in = new GZIPInputStream(in);
+        }
+        return in.readAllBytes();
     }
 
     private static String historyResponse(long startHistoryId, List<HistoryMessageResponse> messages) {

@@ -2,10 +2,10 @@ package com.zeromail.worker;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,14 +21,14 @@ class GmailWatchSchedulerTest extends PostgresContainerTest {
     private MockGmailHistoryServer gmail;
 
     @BeforeEach
-    void startGmail() throws Exception {
-        gmail = new MockGmailHistoryServer();
-        gmail.start();
-    }
-
-    @AfterEach
-    void stopGmail() {
-        gmail.stop();
+    void resetState() {
+        jdbc.execute("DELETE FROM mail_message_observed");
+        jdbc.execute("DELETE FROM pubsub_delivery");
+        jdbc.execute("DELETE FROM gmail_connections");
+        jdbc.execute("DELETE FROM tenants");
+        gmail = GMAIL;
+        gmail.reset();
+        gmail.stubTokenSuccess();
     }
 
     @Test
@@ -103,12 +103,16 @@ class GmailWatchSchedulerTest extends PostgresContainerTest {
         jdbc.update("INSERT INTO tenants(id, display_name) VALUES (?, ?)", tenantId, "tenant-" + tenantId);
         jdbc.update("""
                 INSERT INTO gmail_connections(
-                    id, tenant_id, google_email, status, last_synced_history_id, watch_expires_at,
+                    id, tenant_id, google_email, status, refresh_token_encrypted, last_synced_history_id, watch_expires_at,
                     ingestion_health, watch_consecutive_failures
                 )
-                VALUES (?, ?, ?, 'CONNECTED', ?, ?, ?, ?)
+                VALUES (?, ?, ?, 'CONNECTED', ?, ?, ?, ?, ?)
                 """, UUID.randomUUID(), tenantId, "watch-" + tenantId + "@example.test",
-                lastSyncedHistoryId, watchExpiresAt, ingestionHealth, failures);
+                encryptedRefreshToken(tenantId),
+                lastSyncedHistoryId,
+                watchExpiresAt == null ? null : Timestamp.from(watchExpiresAt),
+                ingestionHealth,
+                failures);
         return tenantId;
     }
 
