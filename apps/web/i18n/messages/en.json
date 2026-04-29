@@ -408,6 +408,18 @@
       "reconnectCta": "Reconnect Gmail",
       "singleAccountNote": "Zero Mail v1 supports one Gmail account, the email you logged in with. Multi-account support is on the roadmap."
     },
+    "triage": {
+      "pause": {
+        "title": "Automated triage",
+        "body": "When off, Zero Mail won't automatically process new emails",
+        "toggleLabel": "Pause automated triage",
+        "banner": {
+          "heading": "Automated triage is paused",
+          "body": "New mail is still observed, but Zero Mail will not run automated actions.",
+          "unpause": "Resume"
+        }
+      }
+    },
     "language": {
       "label": "Language",
       "helper": "This language preference applies to your account on every device.",

@@ -408,6 +408,18 @@
       "reconnectCta": "Kết nối lại Gmail",
       "singleAccountNote": "Zero Mail v1 hỗ trợ một tài khoản Gmail — chính là email bạn đã đăng nhập. Hỗ trợ nhiều tài khoản đang nằm trong roadmap."
     },
+    "triage": {
+      "pause": {
+        "title": "Tự động xử lý email",
+        "body": "Khi tắt, Zero Mail sẽ không tự động xử lý email mới",
+        "toggleLabel": "Tạm dừng tự động xử lý",
+        "banner": {
+          "heading": "Tự động xử lý đang tạm dừng",
+          "body": "Email mới vẫn được ghi nhận, nhưng Zero Mail sẽ không thực hiện hành động tự động.",
+          "unpause": "Bật lại"
+        }
+      }
+    },
     "language": {
       "label": "Ngôn ngữ",
       "helper": "Lựa chọn ngôn ngữ này áp dụng cho tài khoản của bạn ở mọi thiết bị.",

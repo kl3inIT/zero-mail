@@ -64,7 +64,11 @@ describe('PauseBanner', () => {
     });
 
     renderBanner();
-    fireEvent.click(screen.getByRole('button', { name: /unpause/i }));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: enMessages.settings.triage.pause.banner.unpause,
+      }),
+    );
 
     expect(mocks.mutate).toHaveBeenCalledWith(false);
   });
