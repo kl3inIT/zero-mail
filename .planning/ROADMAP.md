@@ -18,7 +18,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] **Phase 1.3: Frontend Architecture Refactor and Public Content Foundation (INSERTED)** _(completed 2026-04-26)_ - Reorganize `apps/web` around route groups, feature folders, typed OpenAPI boundaries, frontend quality gates, and public landing/docs scaffolding without implementing the final landing/docs design yet
 - [x] **Phase 1.4: Gmail Identity Semantics, Permission UX, and UI Consistency (INSERTED)** _(completed 2026-04-27 — closed without ship; remaining value superseded by Phase 1.5)_ - Align v1 auth so the Google login account IS the first managed Gmail account; treat initial Gmail access as incremental consent for that same account; reject mismatched initial Gmail OAuth callbacks; keep multi-account management as a later workspace-level capability (users add more Gmail accounts to a workspace); sweep UI consistency, visual polish, layout quality, copy, states, and reusable frontend patterns across the current app via the `frontend-design` skill
 - [x] **Phase 1.5: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED)** _(completed 2026-04-28)_ - Remaining heavy Phase 1.5 work: single Google OAuth upfront Gmail scope, remove google-gmail mismatch architecture, merge Gmail token provisioning, simplify onboarding/consent UX, deflate frontend primitives, polish landing/login/onboarding/settings/ReconnectPrompt, and close surviving REVIEW cleanup; excludes quick tasks already completed
-- [ ] **Phase 2A: Mail Ingestion** - Gmail `users.watch` + Pub/Sub push + OIDC verification + idempotent history processing + global pause
+- [x] **Phase 2A: Mail Ingestion** _(completed 2026-04-29)_ - Gmail `users.watch` + Pub/Sub push + OIDC verification + idempotent history processing + global pause
 - [ ] **Phase 2B: Billing (Prepaid Credits)** - Double-entry Postgres ledger, reserve/settle/release, credit-hold watchdog, balance UI hooks
 - [ ] **Phase 2C: LLM Gateway** - Spring AI 2.0.0-M4 `LlmGateway` with sanitize → Unicode strip → structured tool-call + allow-list → BYOK per-request options → daily spend cap → drift detection
 - [ ] **Phase 3: Rules Engine** - NL → structured matcher AST via Spring AI tool-call, deterministic evaluator, live preview, CRUD + reorder, template gallery
@@ -206,21 +206,12 @@ Plans:
 **Plans**: 6 plans
 
 Plans:
-**Wave 0**
 - [x] 02A-00-PLAN.md — Wave 0 RED test scaffolds (10 backend test classes + 2 fixtures + 4 frontend test files)
-
-**Wave 1 *(blocked on Wave 0 completion)***
-- [x] 02A-01-PLAN.md — Schema (Liquibase 010-013) + GmailIngestionHealth enum + entities/repositories
-
-**Wave 2 *(blocked on Wave 1 completion)***
-- [x] 02A-02-PLAN.md — Worker schedulers (GmailWatchScheduler + GmailHistoryProcessor + GmailApiClientFactory)
-- [x] 02A-03-PLAN.md — API layer (PubSubOidcAuthFilter + SecurityFilterChain @Order(1) + push controller + triage-pause controller + MeResponse extension)
-
-**Wave 3 *(blocked on Wave 2 completion)***
-- [x] 02A-04-PLAN.md — Frontend (PauseBanner + settings toggle + ReconnectPrompt gate + i18n keys)
-
-**Wave 4 *(blocked on Wave 3 completion)***
-- [ ] 02A-05-PLAN.md — Full verification sweep + closure
+- [x] 02A-01-PLAN.md — Schema (Liquibase 010-013) + entities + enum
+- [x] 02A-02-PLAN.md — Worker schedulers (GmailWatchScheduler + GmailHistoryProcessor)
+- [x] 02A-03-PLAN.md — API layer (PubSubOidcAuthFilter + push receiver + triage-pause controller)
+- [x] 02A-04-PLAN.md — Frontend (PauseBanner + settings toggle + ReconnectPrompt gate + i18n)
+- [x] 02A-05-PLAN.md — Full verification sweep + closure
 
 Cross-cutting constraints:
 - Pub/Sub OIDC security is active under the test profile; missing or invalid tokens return 401 before business logic.
@@ -325,7 +316,7 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 1.3. Frontend Architecture Refactor and Public Content Foundation (INSERTED) | 8/8 | Complete | 2026-04-26 |
 | 1.4. Gmail Identity Semantics, Permission UX, and UI Consistency (INSERTED) | 6/6 | Complete without ship; superseded by 1.5 | 2026-04-27 |
 | 1.5. Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED) | 7/8 | In Progress|  |
-| 2A. Mail Ingestion | 0/6 | In Progress | - |
+| 2A. Mail Ingestion | 6/6 | Complete | 2026-04-29 |
 | 2B. Billing (Prepaid Credits) | 0/TBD | Not started | - |
 | 2C. LLM Gateway | 0/TBD | Not started | - |
 | 3. Rules Engine | 0/TBD | Not started | - |

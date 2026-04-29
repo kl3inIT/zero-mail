@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 
 ## Current Position
 
-Phase: 02A (mail-ingestion) — EXECUTING
+Phase: 02A (mail-ingestion) — COMPLETE
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete; automated Nyquist verification passed
 Last activity: 2026-04-29
 
-Progress: [██████████] 98%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -210,6 +210,7 @@ Recent decisions affecting current work:
 - [Phase 02A]: 02A-03: /me composes tenant pause state and Gmail ingestion health from services; googleEmail is response-only and not logged.
 - [Phase 02A]: Plan 04: Use a plain accessible toggle button because apps/web has no shadcn Switch primitive installed. — No local Switch primitive exists and the plan forbids installing new shadcn primitives in this plan.
 - [Phase 02A]: Plan 04: generate-api.ts defaults to openapi/openapi.json for schema generation. — The Gradle OpenAPI task writes a local artifact and stops its forked server, so frontend codegen must not require localhost:8080 by default.
+- [Phase 2A]: Pub/Sub push-token validation closed. PubSubOidcAuthFilter uses TokenVerifier.newBuilder().setAudience().setIssuer().setCertificatesLocation() from google-auth-library-oauth2-http. PubSubSecurityConfig contributes a SecurityFilterChain bean with @Order(1) and remains active under the test profile; user-session SecurityConfig's SecurityFilterChain bean is @Order(2). 7-case test validates: valid passes, wrong aud/email/issuer/exp/sig all return 401, and non-Pub/Sub paths skip the filter. Phase 01.5 D-D5 deferred blocker retired.
 
 ### Roadmap Evolution
 
@@ -236,7 +237,6 @@ Recent decisions affecting current work:
 - Phase 2A and Phase 2C are both flagged for `/gsd-research-phase` before planning — do not skip (Gmail watch/history + OIDC verification for 2A; Spring AI 2.0.0-M4 BYOK builder API + tokenizer for 2C).
 - CASA verification is a 4–12 week external clock — must be initiated during Phase 1 execution, not deferred.
 - Open decisions deferred to phase execution: credit unit economics (Phase 2B), tokenizer choice (Phase 2C), payment provider Stripe vs LemonSqueezy (Phase 2B), observability vendor (any), CASA tier (Phase 1/6).
-- **Pub/Sub OIDC verification ceremony** (Phase 2A push-receiver) — verification protocol: receive a synthetic Google Pub/Sub push; assert (a) JWT signature validates against Google's JWKS, (b) `aud` claim matches the configured public push endpoint URL on the VPS, (c) `email` claim matches the configured Pub/Sub service-account principal. Note: Pub/Sub itself remains GCP-only (Gmail push delivery is a Google service), but Spring receives the push as a plain HTTPS POST on the VPS — no `spring-cloud-gcp` Pub/Sub starter needed for receiving.
 - **Refresh-token key rotation drill** (Phase 2C or dedicated security-ceremony phase) — verification protocol: deploy v2 key alongside v1 in the deployment secret source (current VPS baseline: Docker secrets / systemd credentials / locked-down env files; future production options may include GCP Secret Manager, AWS Secrets Manager, or HashiCorp Vault); verify multi-version decrypt path reads `key_version` byte from envelope and selects correct key; rotate v1 → v2 + re-encrypt all rows; verify v1 envelopes still decrypt during overlap window. Per CLAUDE.md TL;DR ("No GCP hosting baseline; do not add spring-cloud-gcp starters by default"), the drill must be deployment-source-agnostic.
 - **Production cookie `secure: true` profile override + `REFRESH_TOKEN_KEY_BASE64` deployment secret resolution** (Phase 6 launch hardening) — verification protocol: assert `application-prod.yml` overrides `server.servlet.session.cookie.secure: true`; assert `REFRESH_TOKEN_KEY_BASE64` resolves successfully from the configured deployment secret source in prod profile (Docker secret / systemd credential / env file mounted via the VPS deployment pipeline; possible future production options: GCP Secret Manager, AWS Secrets Manager, HashiCorp Vault); assert app fails-fast at boot if the secret is missing (no fallback to plain env-var in prod). Per CLAUDE.md TL;DR, no GCP-specific resolution is required by default.
 
