@@ -16,11 +16,17 @@ import jakarta.validation.constraints.NotNull;
 @Validated
 public record ZeroMailApiProperties(
         @Valid WebProperties web,
-        @Valid CorsProperties cors) {
+        @Valid CorsProperties cors,
+        @Valid GmailProperties gmail) {
 
     public ZeroMailApiProperties {
         web = web == null ? WebProperties.defaults() : web;
         cors = cors == null ? CorsProperties.defaults() : cors;
+        gmail = gmail == null ? GmailProperties.defaults() : gmail;
+    }
+
+    public ZeroMailApiProperties(WebProperties web, CorsProperties cors) {
+        this(web, cors, null);
     }
 
     public record WebProperties(
@@ -70,6 +76,28 @@ public record ZeroMailApiProperties(
                     .map(String::trim)
                     .filter(value -> !value.isEmpty())
                     .toList();
+        }
+    }
+
+    public record GmailProperties(
+            @Valid PubSubProperties pubsub) {
+
+        public GmailProperties {
+            pubsub = pubsub == null ? PubSubProperties.defaults() : pubsub;
+        }
+
+        static GmailProperties defaults() {
+            return new GmailProperties(null);
+        }
+    }
+
+    public record PubSubProperties(
+            @NotBlank String pushAudienceUrl,
+            @NotBlank String saPrincipalEmail,
+            @DefaultValue("https://www.googleapis.com/oauth2/v3/certs") @NotBlank String oidcCertificatesUrl) {
+
+        static PubSubProperties defaults() {
+            return new PubSubProperties(null, null, "https://www.googleapis.com/oauth2/v3/certs");
         }
     }
 }

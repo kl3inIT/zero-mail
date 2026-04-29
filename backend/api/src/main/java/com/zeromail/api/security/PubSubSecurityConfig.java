@@ -1,6 +1,5 @@
 package com.zeromail.api.security;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,15 +9,18 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.zeromail.api.config.ZeroMailApiProperties;
+
 @Configuration
 public class PubSubSecurityConfig {
 
     @Bean
-    PubSubOidcAuthFilter pubSubOidcAuthFilter(
-            @Value("${pubsub.push-audience-url}") String audience,
-            @Value("${pubsub.sa-principal-email}") String saEmail,
-            @Value("${pubsub.oidc-certificates-url:https://www.googleapis.com/oauth2/v3/certs}") String certsUrl) {
-        return new PubSubOidcAuthFilter(audience, saEmail, certsUrl);
+    PubSubOidcAuthFilter pubSubOidcAuthFilter(ZeroMailApiProperties properties) {
+        var pubsub = properties.gmail().pubsub();
+        return new PubSubOidcAuthFilter(
+                pubsub.pushAudienceUrl(),
+                pubsub.saPrincipalEmail(),
+                pubsub.oidcCertificatesUrl());
     }
 
     @Bean

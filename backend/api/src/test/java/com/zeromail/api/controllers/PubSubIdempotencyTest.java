@@ -38,7 +38,7 @@ class PubSubIdempotencyTest extends ApiPostgresTestBase {
 
     @DynamicPropertySource
     static void pubsubProps(DynamicPropertyRegistry r) {
-        r.add("pubsub.oidc-certificates-url", OIDC::jwksUrl);
+        r.add("zeromail.gmail.pubsub.oidc-certificates-url", OIDC::jwksUrl);
     }
 
     @LocalServerPort int port;

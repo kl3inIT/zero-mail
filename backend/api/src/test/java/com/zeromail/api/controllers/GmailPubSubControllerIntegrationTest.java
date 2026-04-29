@@ -39,9 +39,9 @@ class GmailPubSubControllerIntegrationTest extends ApiPostgresTestBase {
 
     @DynamicPropertySource
     static void pubsubProps(DynamicPropertyRegistry r) {
-        r.add("pubsub.push-audience-url", () -> AUDIENCE);
-        r.add("pubsub.sa-principal-email", () -> SERVICE_ACCOUNT_EMAIL);
-        r.add("pubsub.oidc-certificates-url", OIDC::jwksUrl);
+        r.add("zeromail.gmail.pubsub.push-audience-url", () -> AUDIENCE);
+        r.add("zeromail.gmail.pubsub.sa-principal-email", () -> SERVICE_ACCOUNT_EMAIL);
+        r.add("zeromail.gmail.pubsub.oidc-certificates-url", OIDC::jwksUrl);
     }
 
     @SuppressWarnings("unused")

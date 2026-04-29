@@ -45,7 +45,7 @@ abstract class PostgresContainerTest {
         r.add("spring.security.oauth2.client.registration.google.client-secret", () -> "test-google-secret");
         r.add("zeromail.crypto.refresh-token-key-base64",
                 () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
-        r.add("google.pubsub.topic-name", () -> "projects/test/topics/gmail");
+        r.add("zeromail.gmail.pubsub.topic-name", () -> "projects/test/topics/gmail");
         r.add("zeromail.gmail.api-root-url", GMAIL::baseUrl);
         r.add("zeromail.gmail.oauth-token-url", () -> GMAIL.baseUrl() + "token");
     }

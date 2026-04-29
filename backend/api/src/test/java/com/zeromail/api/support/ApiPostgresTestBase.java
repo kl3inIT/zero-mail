@@ -47,7 +47,7 @@ public abstract class ApiPostgresTestBase {
         // Test-only AES-256 key (32 zero bytes, base64-encoded).
         r.add("zeromail.crypto.refresh-token-key-base64",
                 () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
-        r.add("pubsub.push-audience-url", () -> "https://test.example/internal/pubsub/gmail");
-        r.add("pubsub.sa-principal-email", () -> "pubsub-sa@test-project.iam.gserviceaccount.com");
+        r.add("zeromail.gmail.pubsub.push-audience-url", () -> "https://test.example/internal/pubsub/gmail");
+        r.add("zeromail.gmail.pubsub.sa-principal-email", () -> "pubsub-sa@test-project.iam.gserviceaccount.com");
     }
 }

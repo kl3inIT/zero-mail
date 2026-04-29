@@ -55,9 +55,9 @@ openApi {
                 "--spring.security.oauth2.client.registration.google.client-secret=openapi-emit",
                 // Provide a 32-byte AES-GCM key (base64) so RefreshTokenCipher beans initialize.
                 "--zeromail.crypto.refresh-token-key-base64=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-                "--pubsub.push-audience-url=https://openapi.invalid/internal/pubsub/gmail",
-                "--pubsub.sa-principal-email=pubsub-openapi@openapi.invalid",
-                "--pubsub.oidc-certificates-url=https://www.googleapis.com/oauth2/v3/certs"
+                "--zeromail.gmail.pubsub.push-audience-url=https://openapi.invalid/internal/pubsub/gmail",
+                "--zeromail.gmail.pubsub.sa-principal-email=pubsub-openapi@openapi.invalid",
+                "--zeromail.gmail.pubsub.oidc-certificates-url=https://www.googleapis.com/oauth2/v3/certs"
             )
         )
     }

@@ -7,7 +7,6 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -21,6 +20,7 @@ import com.zeromail.core.gmail.service.GmailApiClientFactory;
 import com.zeromail.core.gmail.service.GmailConnectionService;
 import com.zeromail.core.gmail.service.InvalidGrantException;
 import com.zeromail.core.tenant.TenantContext;
+import com.zeromail.worker.config.ZeroMailWorkerProperties;
 
 @Component
 public class GmailWatchScheduler {
@@ -39,12 +39,12 @@ public class GmailWatchScheduler {
                                GmailConnectionService connectionService,
                                GmailApiClientFactory gmailApiClientFactory,
                                RefreshTokenCipher refreshTokenCipher,
-                               @Value("${google.pubsub.topic-name}") String topicName) {
+                               ZeroMailWorkerProperties properties) {
         this.connectionRepository = connectionRepository;
         this.connectionService = connectionService;
         this.gmailApiClientFactory = gmailApiClientFactory;
         this.refreshTokenCipher = refreshTokenCipher;
-        this.topicName = topicName;
+        this.topicName = properties.gmail().pubsub().topicName();
     }
 
     @Scheduled(cron = "0 * * * * *")

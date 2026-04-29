@@ -20,6 +20,7 @@ import com.google.api.services.gmail.Gmail;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
+import com.zeromail.core.config.ZeroMailCoreProperties;
 import com.zeromail.core.shared.privacy.Sensitive;
 
 import tools.jackson.databind.JsonNode;
@@ -36,12 +37,11 @@ public class GmailApiClientFactory {
     public GmailApiClientFactory(
             @Value("${spring.security.oauth2.client.registration.google.client-id}") String clientId,
             @Value("${spring.security.oauth2.client.registration.google.client-secret}") String clientSecret,
-            @Value("${zeromail.gmail.api-root-url:https://gmail.googleapis.com/}") String apiRootUrl,
-            @Value("${zeromail.gmail.oauth-token-url:https://oauth2.googleapis.com/token}") URI tokenEndpoint) {
+            ZeroMailCoreProperties properties) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
-        this.apiRootUrl = apiRootUrl;
-        this.tokenEndpoint = tokenEndpoint;
+        this.apiRootUrl = properties.gmail().apiRootUrl();
+        this.tokenEndpoint = properties.gmail().oauthTokenUrl();
     }
 
     public Gmail buildGmailClient(String accessToken) throws IOException {
