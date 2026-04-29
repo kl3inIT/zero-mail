@@ -50,7 +50,10 @@ public class GmailConnectionService {
     @Transactional(readOnly = true)
     public GmailConnectionProjection currentStatus(UUID tenantId) {
         return connections.findByTenantId(tenantId)
-                .map(c -> new GmailConnectionProjection(c.getStatus().name(), c.getGoogleEmail()))
+                .map(c -> new GmailConnectionProjection(
+                        c.getStatus().name(),
+                        c.getIngestionHealth().name(),
+                        c.getGoogleEmail()))
                 .orElseGet(GmailConnectionProjection::notConnected);
     }
 

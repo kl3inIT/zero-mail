@@ -8,10 +8,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.zeromail.api.dto.account.MeResponse;
+import com.zeromail.api.dto.account.MeResponse.GmailConnectionStatusExtended;
 import com.zeromail.api.dto.account.UpdateLanguageRequest;
 import com.zeromail.core.account.model.CurrentUserProjection;
 import com.zeromail.core.account.service.AccountService;
+import com.zeromail.core.gmail.model.GmailConnectionProjection;
+import com.zeromail.core.gmail.service.GmailConnectionService;
 import com.zeromail.core.tenant.TenantContext;
+import com.zeromail.core.tenant.service.TenantService;
 
 import jakarta.validation.Valid;
 
@@ -33,16 +37,22 @@ import jakarta.validation.Valid;
 public class MeController {
 
     private final AccountService accountService;
+    private final TenantService tenantService;
+    private final GmailConnectionService gmailConnectionService;
 
-    public MeController(AccountService accountService) {
+    public MeController(AccountService accountService,
+                        TenantService tenantService,
+                        GmailConnectionService gmailConnectionService) {
         this.accountService = accountService;
+        this.tenantService = tenantService;
+        this.gmailConnectionService = gmailConnectionService;
     }
 
     @GetMapping("/me")
     public MeResponse me() {
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
         CurrentUserProjection user = accountService.requireCurrentUser(tenantId);
-        return MeResponse.from(user);
+        return toResponse(user, tenantId);
     }
 
     /**
@@ -57,6 +67,15 @@ public class MeController {
     public MeResponse updateLanguage(@Valid @RequestBody UpdateLanguageRequest req) {
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
         CurrentUserProjection updated = accountService.updateCurrentUserLanguage(tenantId, req.language());
-        return MeResponse.from(updated);
+        return toResponse(updated, tenantId);
+    }
+
+    private MeResponse toResponse(CurrentUserProjection user, UUID tenantId) {
+        boolean triagePaused = tenantService.isTriagePaused(tenantId);
+        GmailConnectionProjection gmail = gmailConnectionService.currentStatus(tenantId);
+        return MeResponse.from(user, triagePaused, new GmailConnectionStatusExtended(
+                gmail.status(),
+                gmail.ingestionHealth(),
+                gmail.googleEmail()));
     }
 }

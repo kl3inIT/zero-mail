@@ -53,4 +53,11 @@ public class TenantService {
             tenants.save(t);
         });
     }
+
+    @Transactional(readOnly = true)
+    public boolean isTriagePaused(UUID tenantId) {
+        return tenants.findById(tenantId)
+                .map(TenantEntity::isTriagePaused)
+                .orElse(false);
+    }
 }
