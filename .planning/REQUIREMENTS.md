@@ -32,7 +32,7 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 - [x] **MAIL-02**: Daily scheduled job renews `users.watch` before its 7-day expiry with per-tenant health alerting
 - [x] **MAIL-03**: Pub/Sub push receiver verifies Google OIDC tokens on every request
 - [x] **MAIL-04**: Message processing is idempotent per `(tenantId, historyId, messageId)` — duplicate deliveries are safe
-- [ ] **MAIL-05**: History-404 recovery is bounded (no full mailbox rescan) and surfaces a user-visible reconnect prompt
+- [x] **MAIL-05**: History-404 recovery is bounded (no full mailbox rescan) and surfaces a user-visible reconnect prompt
 - [x] **MAIL-06**: User can globally pause all automated triage actions from the UI
 
 ### LLM Gateway
@@ -159,7 +159,7 @@ Each v1 requirement maps to exactly one phase.
 | MAIL-02 | Phase 2A | Complete |
 | MAIL-03 | Phase 2A | Complete |
 | MAIL-04 | Phase 2A | Complete |
-| MAIL-05 | Phase 2A | Pending |
+| MAIL-05 | Phase 2A | Complete |
 | MAIL-06 | Phase 2A | Complete |
 | BILL-01 | Phase 2B | Pending |
 | BILL-02 | Phase 2B | Pending |

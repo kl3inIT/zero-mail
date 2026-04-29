@@ -213,7 +213,7 @@ Plans:
 - [x] 02A-01-PLAN.md — Schema (Liquibase 010-013) + GmailIngestionHealth enum + entities/repositories
 
 **Wave 2 *(blocked on Wave 1 completion)***
-- [ ] 02A-02-PLAN.md — Worker schedulers (GmailWatchScheduler + GmailHistoryProcessor + GmailApiClientFactory)
+- [x] 02A-02-PLAN.md — Worker schedulers (GmailWatchScheduler + GmailHistoryProcessor + GmailApiClientFactory)
 - [ ] 02A-03-PLAN.md — API layer (PubSubOidcAuthFilter + SecurityFilterChain @Order(1) + push controller + triage-pause controller + MeResponse extension)
 
 **Wave 3 *(blocked on Wave 2 completion)***

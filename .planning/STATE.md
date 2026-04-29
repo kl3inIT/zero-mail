@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02A-01-PLAN.md
-last_updated: "2026-04-29T05:42:17.113Z"
+stopped_at: Completed 02A-02-PLAN.md
+last_updated: "2026-04-29T06:01:36.518Z"
 last_activity: 2026-04-29
 progress:
   total_phases: 15
   completed_phases: 8
   total_plans: 64
-  completed_plans: 60
-  percent: 94
+  completed_plans: 61
+  percent: 95
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 02A (mail-ingestion) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-04-29
 
-Progress: [█████████░] 94%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
@@ -96,6 +96,7 @@ Progress: [█████████░] 94%
 | Phase 01.6 P06 | 35min | 3 tasks | 12 files |
 | Phase 02A P00 | 14min | 2 tasks | 17 files |
 | Phase 02A P01 | 11min | 2 tasks | 18 files |
+| Phase 02A P02 | 12min | 2 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -197,6 +198,10 @@ Recent decisions affecting current work:
 - [Phase 02A]: 02A-01: Use Yasson JSON-B at runtime for Hibernate JSONB mapping under Spring Boot 4/Jackson 3 instead of adding Jackson 2.
 - [Phase 02A]: 02A-01: Keep MailMessageObservedId as a top-level record to satisfy the committed Wave 0 test contract while still using Hibernate @IdClass.
 - [Phase 02A]: 02A-01: Explicitly tenant-scope one-argument PubSubDeliveryRepository claims because native SQL does not inherit Hibernate @TenantId filtering.
+- [Phase 02A]: 02A-02: GmailConnectionService.markDisconnected uses TransactionTemplate for a DB-only durable state update before best-effort users.stop cleanup.
+- [Phase 02A]: 02A-02: GmailHistoryProcessor remains a thin scheduled loop; GmailDeliveryProcessingService owns the public @Transactional per-delivery boundary.
+- [Phase 02A]: 02A-02: WorkerApplication mirrors API entity/repository scanning because the worker directly consumes backend/core repositories.
+- [Phase 02A]: 02A-02: Worker REFRESH_TOKEN_KEY_BASE64 is fail-fast with no sm:// fallback, honoring the no-GCP-hosting baseline.
 
 ### Roadmap Evolution
 
@@ -249,6 +254,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-29T05:42:17.093Z
-Stopped at: Completed 02A-01-PLAN.md
+Last session: 2026-04-29T06:01:36.501Z
+Stopped at: Completed 02A-02-PLAN.md
 Resume file: None
