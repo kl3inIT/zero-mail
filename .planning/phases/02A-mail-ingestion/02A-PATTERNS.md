@@ -159,7 +159,7 @@ public interface GmailConnectionRepository extends JpaRepository<GmailConnection
 }
 ```
 
-**Adaptation:** `GmailConnectionRepository` → `PubSubDeliveryRepository extends JpaRepository<PubSubDeliveryEntity, UUID>`. Add a native `@Query` for the SKIP LOCKED batch claim (see RESEARCH.md Pattern 4). Mark the native query method with `@Transactional`. No `@Lock` annotation — the FOR UPDATE SKIP LOCKED syntax is inside the native SQL string.
+**Adaptation:** `GmailConnectionRepository` → `PubSubDeliveryRepository extends JpaRepository<PubSubDeliveryEntity, UUID>`. Add a native `@Query` for the SKIP LOCKED batch claim (see RESEARCH.md Pattern 4). The claim must be an atomic `UPDATE ... RETURNING *` that selects due PENDING rows (`locked_until IS NULL OR locked_until < NOW()`) and expired PROCESSING rows (`locked_until < NOW()`) inside the subquery, so a worker crash after claim cannot strand a row forever while retry-delayed PENDING rows stay parked. Mark the native query method with `@Transactional`. No `@Lock` annotation — the FOR UPDATE SKIP LOCKED syntax is inside the native SQL string.
 
 ---
 

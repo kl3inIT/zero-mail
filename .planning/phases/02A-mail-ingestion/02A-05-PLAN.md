@@ -156,7 +156,7 @@ Add manual verification instructions summary at the bottom (the 4 manual-only it
 
   <acceptance_criteria>
     - `./gradlew clean check` exits 0 (BUILD SUCCESSFUL)
-    - All 10 backend Wave 0 test classes are GREEN (PubSubOidcAuthFilterTest x6, GmailPubSubControllerIntegrationTest x5, MeControllerTest x3, TriagePauseControllerTest x2, PubSubIdempotencyTest x2, PubSubDeliveryEntityTest x3, MailMessageObservedEntityTest x4, GmailIngestionHealthTest x4, GmailHistoryProcessorTest x5, GmailWatchSchedulerTest x4)
+    - All 10 backend Wave 0 test classes are GREEN (PubSubOidcAuthFilterTest x6, GmailPubSubControllerIntegrationTest x5, MeControllerTest x3, TriagePauseControllerTest x2, PubSubIdempotencyTest x2, PubSubDeliveryEntityTest x4, MailMessageObservedEntityTest x4, GmailIngestionHealthTest x4, GmailHistoryProcessorTest x5, GmailWatchSchedulerTest x4)
     - `grep -R "@Disabled" backend/api/src/test/java/com/zeromail/api/controllers/MeControllerTest.java backend/api/src/test/java/com/zeromail/api/controllers/TriagePauseControllerTest.java backend/api/src/test/java/com/zeromail/api/controllers/PubSubIdempotencyTest.java` returns no matches
     - `ApplicationModulesTest` passes GREEN
     - `DomainBoundaryArchTests` passes GREEN

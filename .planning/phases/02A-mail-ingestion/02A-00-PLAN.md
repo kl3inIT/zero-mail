@@ -255,10 +255,11 @@ class PubSubIdempotencyTest extends ApiPostgresTestBase {
 }
 ```
 
-**`PubSubDeliveryEntityTest.java`** — package `com.zeromail.core.gmail.persistence`. Extends `PostgresContainerTest`. Imports `com.zeromail.core.gmail.persistence.PubSubDeliveryEntity` (RED) + `PubSubDeliveryRepository` (RED). Three `@Test` methods:
+**`PubSubDeliveryEntityTest.java`** — package `com.zeromail.core.gmail.persistence`. Extends `PostgresContainerTest`. Imports `com.zeromail.core.gmail.persistence.PubSubDeliveryEntity` (RED) + `PubSubDeliveryRepository` (RED). Four `@Test` methods:
 1. `insertAndRead_roundtrip()` — persist entity, find by id, assert fields
 2. `uniqueConstraint_preventsduplicateMessageId()` — insert two rows with same `(tenantId, pubsubMessageId)`, assert second throws `DataIntegrityViolationException`
-3. `atomicClaimPendingBatch_updatesRowsToProcessing()` — insert 3 PENDING rows, call `claimPendingBatch(2)`, assert 2 returned, those rows now have `status='PROCESSING'`, and `locked_until > NOW()`
+3. `atomicClaimPendingBatch_updatesPendingRowsToProcessing()` — insert 3 PENDING rows, call `claimPendingBatch(2)`, assert 2 returned, those rows now have `status='PROCESSING'`, `attempts=1`, and `locked_until > NOW()`
+4. `expiredProcessingRows_areReclaimedByClaimPendingBatch()` — insert a PROCESSING row with `locked_until < NOW()`, call `claimPendingBatch(1)`, assert the row is returned, `attempts` increments, and `locked_until` moves forward
 
 **`MailMessageObservedEntityTest.java`** — package `com.zeromail.core.gmail.persistence`. Extends `PostgresContainerTest`. Imports `com.zeromail.core.gmail.persistence.MailMessageObservedEntity` (RED) + `MailMessageObservedRepository` (RED). Four `@Test` methods:
 1. `insertAndRead_compositePk_roundtrip()` — persist entity, find by composite PK, assert all fields

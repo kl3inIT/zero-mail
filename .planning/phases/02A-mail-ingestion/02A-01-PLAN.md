@@ -543,8 +543,8 @@ Add corresponding getters/setters using the existing one-liner style. DO NOT tou
     WHERE id IN (
         SELECT id
         FROM pubsub_delivery
-        WHERE status = 'PENDING'
-          AND (locked_until IS NULL OR locked_until < NOW())
+        WHERE (status = 'PENDING' AND (locked_until IS NULL OR locked_until < NOW()))
+           OR (status = 'PROCESSING' AND locked_until < NOW())
         ORDER BY created_at
         LIMIT :limit
         FOR UPDATE SKIP LOCKED
@@ -689,6 +689,7 @@ Do NOT touch any existing field, constructor, or getter.
     - `PubSubDeliveryEntity.java` extends `AbstractTenantOwnedEntity` and `@Table(name = "pubsub_delivery")`
     - `PubSubDeliveryEntity.java` maps payload with `@JdbcTypeCode(SqlTypes.JSON)`
     - `PubSubDeliveryRepository.java` contains `UPDATE pubsub_delivery` + `RETURNING *` inside `claimPendingBatch` and does NOT contain a standalone `SELECT * FROM pubsub_delivery ... FOR UPDATE SKIP LOCKED` claim method
+    - `claimPendingBatch` selects both due `status = 'PENDING'` rows (`locked_until IS NULL OR locked_until < NOW()`) and stale `status = 'PROCESSING' AND locked_until < NOW()` rows, then increments `attempts`, refreshes `locked_until`, and returns the claimed/reclaimed rows in the same SQL statement
     - `PubSubDeliveryRepository.java` contains `insertPendingIfAbsent` with `ON CONFLICT (tenant_id, pubsub_message_id) DO NOTHING`
     - `MailMessageObservedEntity.java` contains `@IdClass`, `@TenantId`, and `@JdbcTypeCode(SqlTypes.ARRAY)`
     - `MailMessageObservedEntity.java` does NOT extend `AbstractTenantOwnedEntity`, but its `tenantId` field is annotated `@TenantId`

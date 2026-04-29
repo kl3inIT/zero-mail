@@ -657,7 +657,7 @@ Also ensure `spring.threads.virtual.enabled: true` is present (or add if missing
 | T-04 | Information Disclosure | GmailApiClientFactory.refreshAccessToken | mitigate | `decryptedRefreshToken` parameter never logged; only `event=gmail_token_refresh_failed tenantId={}` on error |
 | T-05 | Information Disclosure | GmailDeliveryProcessingService per-message loop | mitigate | Only `gmail_message_id`, `gmail_thread_id`, `history_id`, `label_ids`, `internal_date` stored — no subject/from/body/snippet in code or logs |
 | T-09 | Denial of Service | GmailWatchScheduler retry loop | mitigate | After 3 failures sets WATCH_UNHEALTHY but renewal query continues retrying; a later success resets failures + HEALTHY so transient outages self-recover |
-| T-11 | Tampering | GmailDeliveryProcessingService crash recovery | mitigate | Atomic PROCESSING claim + native `ON CONFLICT DO NOTHING` + monotonic pointer update = exactly-once observation on restart; PUBLIC @Transactional ensures atomicity |
+| T-11 | Tampering | GmailDeliveryProcessingService crash recovery | mitigate | Atomic PROCESSING claim reclaims expired PROCESSING rows via `locked_until < NOW()` + native `ON CONFLICT DO NOTHING` + monotonic pointer update = exactly-once observation on restart; PUBLIC @Transactional ensures atomicity |
 | T-03 | Elevation of Privilege | history gap truncation | accept | D-B6 explicitly accepts dropped-gap messages — 500-item cap prevents runaway; logged for admin visibility |
 </threat_model>
 

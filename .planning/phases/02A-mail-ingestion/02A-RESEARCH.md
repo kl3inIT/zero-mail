@@ -415,8 +415,8 @@ public record GmailNotification(String emailAddress, long historyId) {}
 @Scheduled(fixedDelay = 1_000L)  // 1s after previous tick completes
 public void processTick() {
     // NOTE: @Scheduled on virtual threads with fixedDelay runs on same thread per tick
-    // Each tick should be a single transaction to bound the work unit
-    List<PubSubDeliveryEntity> batch = deliveryRepository.claimPendingBatch(50);
+    // claimPendingBatch atomically moves eligible rows to PROCESSING before returning
+    List<PubSubDeliveryEntity> batch = deliveryRepository.claimPendingBatch(50, 120);
     for (PubSubDeliveryEntity delivery : batch) {
         // Bind TenantContext PER ROW - scheduler thread does NOT auto-bind
         ScopedValue.where(TenantContext.TENANT, delivery.getTenantId().toString())
@@ -424,16 +424,25 @@ public void processTick() {
     }
 }
 
-// Repository: claimPendingBatch uses SKIP LOCKED
+// Repository: claimPendingBatch uses SKIP LOCKED and reclaims stale PROCESSING rows
 @Query(value = """
-    SELECT * FROM pubsub_delivery
-    WHERE status = 'PENDING'
-    ORDER BY created_at
-    LIMIT :limit
-    FOR UPDATE SKIP LOCKED
+    UPDATE pubsub_delivery
+    SET status = 'PROCESSING',
+        locked_until = NOW() + (:lockSeconds * INTERVAL '1 second'),
+        attempts = attempts + 1
+    WHERE id IN (
+        SELECT id FROM pubsub_delivery
+        WHERE (status = 'PENDING' AND (locked_until IS NULL OR locked_until < NOW()))
+           OR (status = 'PROCESSING' AND locked_until < NOW())
+        ORDER BY created_at
+        LIMIT :limit
+        FOR UPDATE SKIP LOCKED
+    )
+    RETURNING *
     """, nativeQuery = true)
 @Transactional
-List<PubSubDeliveryEntity> claimPendingBatch(@Param("limit") int limit);
+List<PubSubDeliveryEntity> claimPendingBatch(@Param("limit") int limit,
+                                             @Param("lockSeconds") int lockSeconds);
 ```
 
 **ScopedValue on scheduled threads:** `@Scheduled` threads do NOT inherit the HTTP-request `TenantContext.TENANT` binding. The `ScopedValue.where(...).run(...)` must be called explicitly per-row before any DB or Gmail API call. [VERIFIED: Java 25 JEP-464 ScopedValue semantics; ScopedValues are not inherited by non-child threads]
@@ -750,8 +759,8 @@ export function useToggleTriagePause() {
 ### P-06: `ON CONFLICT DO NOTHING` Returns Empty on Duplicate — Worker Sees Empty Insert
 **What goes wrong:** Worker inserts `pubsub_delivery` row, gets 0 rows inserted (conflict), but doesn't detect that the delivery is already being processed by another worker tick (was already set to PROCESSING by previous tick).
 **Root cause:** `ON CONFLICT DO NOTHING` does not distinguish "conflict because already PROCESSED" from "conflict because currently PROCESSING by another worker". SKIP LOCKED covers most cases but there's a subtle window.
-**Prevention:** Worker query: `SELECT ... WHERE status IN ('PENDING', 'PROCESSING') AND locked_until < NOW()`. The `locked_until` column prevents re-acquisition of in-flight rows.
-**Verification gate:** Worker idempotency test — insert a PROCESSING row with `locked_until = NOW() + 30s`, confirm worker tick does NOT re-process it.
+**Prevention:** Worker claim query atomically updates and returns rows matching `(status = 'PENDING' AND (locked_until IS NULL OR locked_until < NOW())) OR (status = 'PROCESSING' AND locked_until < NOW())`. The `locked_until` column prevents re-acquisition of in-flight rows and lets expired PROCESSING rows recover after crashes.
+**Verification gate:** Worker idempotency tests — insert a PROCESSING row with `locked_until = NOW() + 30s`, confirm worker tick does NOT re-process it; insert a PROCESSING row with `locked_until < NOW()`, confirm `claimPendingBatch` reclaims it and increments attempts.
 
 ### P-07: i18n EN_SCAN_FILES Drift on New Feature Folder
 **What goes wrong:** New `apps/web/features/triage/components/PauseBanner.tsx` and `hooks/useToggleTriagePause.ts` are not in `EN_SCAN_FILES` in `apps/web/scripts/check-i18n.ts` → missing key check silently drops coverage.
