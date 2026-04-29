@@ -9,6 +9,7 @@ files_modified:
   - backend/core/src/main/java/com/zeromail/core/gmail/service/GmailConnectionService.java
   - backend/core/src/main/java/com/zeromail/core/gmail/persistence/GmailConnectionRepository.java
   - backend/core/src/main/java/com/zeromail/core/gmail/service/GmailApiClientFactory.java
+  - backend/core/src/main/java/com/zeromail/core/gmail/service/InvalidGrantException.java
   - backend/core/src/main/java/com/zeromail/core/gmail/service/GmailDeliveryProcessingService.java
   - backend/core/src/main/java/com/zeromail/core/account/service/OAuthProvisioningService.java
   - backend/worker/src/main/java/com/zeromail/worker/GmailWatchScheduler.java
@@ -32,6 +33,8 @@ must_haves:
     - "ScopedValue.where(TENANT, tenantId).run(...) wraps every per-row operation in both schedulers"
     - "Token refresh uses direct POST to https://oauth2.googleapis.com/token (no OAuth2AuthorizedClientService)"
     - "GmailConnectionService has markHistoryLost, markWatchUnhealthy, clearForReconnect, recordWatchSuccess methods"
+    - "GmailConnectionService has a DB-only markDisconnected method; invalid-grant paths call it instead of best-effort users.stop cleanup"
+    - "User-initiated disconnect commits DISCONNECTED/watch-field cleanup before any best-effort Gmail users.stop call can run or fail"
     - "OAuthProvisioningService calls clearForReconnect after successful reconnect/upsert so HISTORY_LOST and WATCH_UNHEALTHY recover through the normal watch scheduler path"
     - "GmailDeliveryProcessingService.processDelivery is a PUBLIC @Transactional method — Spring AOP can intercept it; @Transactional on private methods is ineffective"
   artifacts:
@@ -265,11 +268,16 @@ public void clearForReconnect(UUID tenantId) {
 }
 ```
 
-Also extend the existing `disconnect(UUID tenantId)` method to call `users.stop()` BEST-EFFORT OUTSIDE the main transaction:
-- Extract the stop() call to a private `tryStopWatch(UUID tenantId)` method
-- The tryStopWatch method calls the Gmail client, wraps in try-catch, logs `event=gmail_watch_stop_failed tenantId={}` on failure — never re-throws
-- Call `tryStopWatch(tenantId)` BEFORE the `connections.findByTenantId(tenantId).ifPresent(...)` block, so DB commit happens even if stop() fails
-- Inject `GmailApiClientFactory` and `RefreshTokenCipher` into this service for the stop() call
+Also split durable disconnect state from best-effort Gmail watch cleanup. This addresses the Cycle 2 review concern: invalid-grant paths must not call `users.stop()` or attempt another token refresh before the durable DB disconnect is recorded.
+
+Implement these exact semantics:
+- Add `public void markDisconnected(UUID tenantId)` as a DB-only method. It updates the `gmail_connections` row to `status=DISCONNECTED`, sets `disconnected_at=Instant.now()`, clears `watch_expires_at`, `watch_history_id`, and `watch_renewed_at`, resets `watch_consecutive_failures=0`, sets `ingestion_health=HEALTHY`, and saves the row. It MUST NOT call Gmail APIs, `GmailApiClientFactory`, `RefreshTokenCipher`, or `users.stop()`.
+- Use a `TransactionTemplate` or equivalent explicit transaction boundary for `markDisconnected(UUID tenantId)` so the DB update is committed independently before optional cleanup. Do not rely on self-invoked `@Transactional` methods for this split.
+- Keep `public void disconnect(UUID tenantId)` as the user/API disconnect orchestration method. It calls `markDisconnected(tenantId)` first, then calls private `tryStopWatch(UUID tenantId)` best-effort after the durable DB update has committed.
+- Extract the stop call to `private void tryStopWatch(UUID tenantId)`. It may decrypt the stored refresh token, refresh/build the Gmail client, and call `gmail.users().stop("me").execute()`, but it wraps the entire path in try/catch, logs `event=gmail_watch_stop_failed tenantId={}` on failure, and never re-throws.
+- Inject `GmailApiClientFactory`, `RefreshTokenCipher`, and `PlatformTransactionManager` (for `TransactionTemplate`) into this service as needed.
+- Update every invalid-grant handler in this plan (`GmailDeliveryProcessingService` and `GmailWatchScheduler`) to call `connectionService.markDisconnected(tenantId)` instead of `connectionService.disconnect(tenantId)`. The invalid-grant path already proved the refresh token is unusable, so attempting `users.stop()` there is both redundant and risky.
+- Existing user-facing disconnect flows such as `DisconnectController` continue to call `connectionService.disconnect(tenantId)` so explicit user disconnect still attempts watch cleanup best-effort.
 
 Also add a native @Query to GmailConnectionRepository for the SKIP LOCKED watch scheduler query (or add as a new interface method). Add to `GmailConnectionRepository.java`:
 ```java
@@ -415,7 +423,7 @@ public class GmailDeliveryProcessingService {
                 handleRetryableFailure(delivery, tenantId, e);
             }
         } catch (InvalidGrantException e) {
-            connectionService.disconnect(tenantId);
+            connectionService.markDisconnected(tenantId);
             deliveryRepository.updateStatus(delivery.getId(), "DEAD");
             log.warn("event=gmail_oauth_revoked tenantId={}", tenantId);
         } catch (Exception e) {
@@ -447,18 +455,22 @@ Privacy: NEVER log `conn.getRefreshTokenEncrypted()`, `decryptedToken`, token va
     - `GmailApiClientFactory.java` exists in `com.zeromail.core.gmail.service` package
     - `GmailApiClientFactory.java` contains `refreshAccessToken` method and `invalid_grant` check
     - `GmailApiClientFactory.java` does NOT contain any log statement with `refreshToken`, `accessToken`, or `decryptedRefresh` variable contents
-    - `GmailConnectionService.java` contains `markHistoryLost(`, `markWatchUnhealthy(`, `recordWatchSuccess(`, `clearForReconnect(`, `incrementWatchFailure(`
+    - `GmailConnectionService.java` contains `markHistoryLost(`, `markWatchUnhealthy(`, `recordWatchSuccess(`, `clearForReconnect(`, `incrementWatchFailure(`, `markDisconnected(`
     - `GmailConnectionService.recordWatchSuccess` sets `lastSyncedHistoryId` from `watchHistoryId` when null or lower
+    - `GmailConnectionService.markDisconnected` contains no `users().stop`, `refreshAccessToken`, `buildGmailClient`, or `RefreshTokenCipher` call path
+    - `GmailConnectionService.disconnect` invokes durable `markDisconnected(tenantId)` before `tryStopWatch(tenantId)`
+    - `tryStopWatch` catches all failures and logs `event=gmail_watch_stop_failed tenantId={}` without rethrowing
     - `GmailConnectionRepository.java` contains `findConnectionsNeedingWatchRenewal(` and `updateLastSyncedHistoryIdMonotonic(`
     - `findConnectionsNeedingWatchRenewal` does NOT contain `watch_consecutive_failures < 3`
     - `OAuthProvisioningService.java` contains `connections.clearForReconnect(tenantId)` in the reconnect/upsert path
     - `GmailDeliveryProcessingService.java` exists in `com.zeromail.core.gmail.service`, is annotated `@Service @Transactional`, and has a `public void processDelivery(PubSubDeliveryEntity delivery)` method — NOT private
     - `GmailDeliveryProcessingService.java` does NOT have `private void processDelivery` (the old Spring AOP bug pattern)
+    - `GmailDeliveryProcessingService.java` invalid-grant catch calls `connectionService.markDisconnected(tenantId)`, not `connectionService.disconnect(tenantId)`
     - `GmailDeliveryProcessingService.java` uses `observedRepository.insertObservedIfAbsent` and does NOT catch `DataIntegrityViolationException` for message-level idempotency
     - `./gradlew :backend:core:compileJava` exits 0
   </acceptance_criteria>
 
-  <done>GmailApiClientFactory, 5 new GmailConnectionService methods, OAuthProvisioningService reconnect cleanup, and GmailDeliveryProcessingService (public @Transactional) all compile cleanly</done>
+  <done>GmailApiClientFactory, 6 new GmailConnectionService methods including DB-only markDisconnected, OAuthProvisioningService reconnect cleanup, and GmailDeliveryProcessingService (public @Transactional) all compile cleanly</done>
 </task>
 
 <task type="auto">
@@ -529,8 +541,8 @@ public class GmailWatchScheduler {
             log.info("event=gmail_watch_renewed tenantId={}", tenantId);
 
         } catch (InvalidGrantException e) {
-            // Token revoked — disconnect
-            connectionService.disconnect(tenantId);
+            // Token revoked — DB-only disconnect. Do not call users.stop() on invalid-grant paths.
+            connectionService.markDisconnected(tenantId);
             log.warn("event=gmail_watch_invalid_grant tenantId={}", tenantId);
         } catch (Exception e) {
             // Retryable failure path (D-C4: 3 strikes → WATCH_UNHEALTHY)
@@ -607,6 +619,7 @@ Also ensure `spring.threads.virtual.enabled: true` is present (or add if missing
     - `GmailHistoryProcessor.java` calls `claimPendingBatch(BATCH_SIZE, LOCK_SECONDS)` and claimed rows are already `PROCESSING`
     - `GmailHistoryProcessor.java` injects `GmailDeliveryProcessingService` and calls `deliveryProcessingService.processDelivery(delivery)` — NOT an inline private method
     - `GmailHistoryProcessor.java` does NOT contain `@Transactional` annotation (transaction lives in GmailDeliveryProcessingService)
+    - `GmailWatchScheduler.java` invalid-grant catch calls `connectionService.markDisconnected(tenantId)`, not `connectionService.disconnect(tenantId)`
     - `GmailDeliveryProcessingService.java` contains `event=gmail_history_gap_truncated` and `event=gmail_history_lost` on 404 catch
     - `GmailDeliveryProcessingService.java` does NOT contain subject, from, body, snippet, or email address in any log statement
     - `backend/worker/src/main/resources/application.yml` contains `GOOGLE_PUBSUB_TOPIC_NAME:?`
@@ -649,7 +662,7 @@ After this plan:
 </verification>
 
 <success_criteria>
-GmailWatchScheduler and GmailHistoryProcessor compile and their Wave 0 tests turn GREEN. GmailHistoryProcessor delegates per-delivery work to GmailDeliveryProcessingService (public @Transactional — Spring AOP intercepts correctly). GmailConnectionService has 5 new state-management methods and recordWatchSuccess initializes last_synced_history_id from watch_history_id. OAuth reconnect clears watch state for retry. Worker application.yml has GOOGLE_PUBSUB_TOPIC_NAME fail-fast var.
+GmailWatchScheduler and GmailHistoryProcessor compile and their Wave 0 tests turn GREEN. GmailHistoryProcessor delegates per-delivery work to GmailDeliveryProcessingService (public @Transactional — Spring AOP intercepts correctly). GmailConnectionService has 6 new state-management methods, including DB-only markDisconnected, and recordWatchSuccess initializes last_synced_history_id from watch_history_id. Invalid-grant paths never call best-effort users.stop cleanup. OAuth reconnect clears watch state for retry. Worker application.yml has GOOGLE_PUBSUB_TOPIC_NAME fail-fast var.
 </success_criteria>
 
 <output>
