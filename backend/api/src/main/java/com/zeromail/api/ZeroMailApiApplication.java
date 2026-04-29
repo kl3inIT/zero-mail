@@ -12,8 +12,8 @@ import org.springframework.modulith.Modulithic;
 @ConfigurationPropertiesScan(basePackages = "com.zeromail")
 @EntityScan(basePackages = "com.zeromail.core")
 @EnableJpaRepositories(basePackages = "com.zeromail.core")
-public class Application {
+public class ZeroMailApiApplication {
     public static void main(String[] args) {
-        SpringApplication.run(Application.class, args);
+        SpringApplication.run(ZeroMailApiApplication.class, args);
     }
 }

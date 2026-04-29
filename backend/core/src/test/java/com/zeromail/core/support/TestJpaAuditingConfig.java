@@ -10,10 +10,10 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 /**
  * Test-only mirror of {@code com.zeromail.api.config.JpaAuditingConfig} for
- * {@link CoreTestApplication}.
+ * {@link ZeroMailCoreTestApplication}.
  *
  * <p>The production {@code JpaAuditingConfig} lives in {@code backend/api} so the
- * {@code com.zeromail.core} scan base used by {@link CoreTestApplication} does not pick it
+ * {@code com.zeromail.core} scan base used by {@link ZeroMailCoreTestApplication} does not pick it
  * up. Without {@code @EnableJpaAuditing} bound to a {@link DateTimeProvider}, Hibernate
  * issues INSERT statements with explicit {@code NULL} for the {@code @CreatedDate} /
  * {@code @LastModifiedDate} fields on
@@ -26,7 +26,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
  * can replace the clock bean with {@code Clock.fixed(...)} via a localized
  * {@code @TestConfiguration}.
  *
- * <p>Picked up by {@link CoreTestApplication}'s {@code scanBasePackages = "com.zeromail.core"}
+ * <p>Picked up by {@link ZeroMailCoreTestApplication}'s {@code scanBasePackages = "com.zeromail.core"}
  * because this class lives under {@code com.zeromail.core.support}.
  */
 @Configuration

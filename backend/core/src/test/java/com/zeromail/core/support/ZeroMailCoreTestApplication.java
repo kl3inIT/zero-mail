@@ -19,8 +19,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @ConfigurationPropertiesScan(basePackages = "com.zeromail.core")
 @EntityScan(basePackages = "com.zeromail.core")
 @EnableJpaRepositories(basePackages = "com.zeromail.core")
-public class CoreTestApplication {
+public class ZeroMailCoreTestApplication {
     public static void main(String[] args) {
-        SpringApplication.run(CoreTestApplication.class, args);
+        SpringApplication.run(ZeroMailCoreTestApplication.class, args);
     }
 }

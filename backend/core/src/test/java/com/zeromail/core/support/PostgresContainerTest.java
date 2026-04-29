@@ -16,7 +16,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
  *
  * Requires Docker on the host.
  */
-@SpringBootTest(classes = CoreTestApplication.class)
+@SpringBootTest(classes = ZeroMailCoreTestApplication.class)
 public abstract class PostgresContainerTest {
 
     protected static final PostgreSQLContainer<?> POSTGRES;

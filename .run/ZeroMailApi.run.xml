@@ -2,7 +2,7 @@
   <configuration default="false" name="ZeroMailApi" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
     <module name="zero-mail.backend.api.main" />
     <option name="SHORTEN_COMMAND_LINE" value="MANIFEST" />
-    <option name="SPRING_BOOT_MAIN_CLASS" value="com.zeromail.api.Application" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.zeromail.api.ZeroMailApiApplication" />
     <option name="VM_PARAMETERS" value="--enable-preview" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <extension name="net.ashald.envfile">

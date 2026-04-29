@@ -13,7 +13,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.worker.test.MockGmailHistoryServer;
 
-@SpringBootTest(classes = WorkerApplication.class)
+@SpringBootTest(classes = ZeroMailWorkerApplication.class)
 abstract class PostgresContainerTest {
 
     protected static final PostgreSQLContainer<?> POSTGRES;

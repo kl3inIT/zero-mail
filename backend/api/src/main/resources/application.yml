@@ -7,7 +7,7 @@ spring:
   docker:
     compose:
       lifecycle-management: start_only
-      # Resolve from the repo root. IntelliJ Application run configs use the
+      # Resolve from the repo root. IntelliJ run configs use the
       # repo root by default; backend:api bootRun is configured the same way.
       # Override with -Dspring.docker.compose.file=... if needed.
       file: ${SPRING_DOCKER_COMPOSE_FILE:docker-compose.yml}

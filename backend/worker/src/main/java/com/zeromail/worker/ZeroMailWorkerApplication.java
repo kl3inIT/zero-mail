@@ -12,8 +12,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EntityScan(basePackages = "com.zeromail.core")
 @EnableJpaRepositories(basePackages = "com.zeromail.core")
 @EnableScheduling
-public class WorkerApplication {
+public class ZeroMailWorkerApplication {
     public static void main(String[] args) {
-        SpringApplication.run(WorkerApplication.class, args);
+        SpringApplication.run(ZeroMailWorkerApplication.class, args);
     }
 }
