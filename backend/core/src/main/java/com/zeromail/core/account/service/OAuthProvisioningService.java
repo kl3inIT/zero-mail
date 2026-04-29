@@ -119,6 +119,7 @@ public class OAuthProvisioningService {
                                 refreshTokenPlaintext.getBytes(StandardCharsets.UTF_8),
                                 tenantId.toString());
                         connections.upsert(tenantId, email, grantedGmailScopes, envelope);
+                        connections.clearForReconnect(tenantId);
                         // Reconnect MUST NOT regress onboarding_step (D-B4 invariant).
                     }));
             return new BundledProvisioningResult(tenantId, userId, false);

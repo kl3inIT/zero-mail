@@ -1,15 +1,22 @@
 package com.zeromail.core.gmail.service;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.zeromail.core.gmail.model.GmailConnectionStatus;
+import com.zeromail.core.gmail.model.GmailIngestionHealth;
 import com.zeromail.core.gmail.model.GmailConnectionProjection;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
+import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 
 /**
  * Owns Gmail connection state transitions for the current tenant.
@@ -18,10 +25,21 @@ import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 @Service
 public class GmailConnectionService {
 
-    private final GmailConnectionRepository connections;
+    private static final Logger log = LoggerFactory.getLogger(GmailConnectionService.class);
 
-    public GmailConnectionService(GmailConnectionRepository connections) {
+    private final GmailConnectionRepository connections;
+    private final GmailApiClientFactory gmailApiClientFactory;
+    private final RefreshTokenCipher refreshTokenCipher;
+    private final TransactionTemplate disconnectTx;
+
+    public GmailConnectionService(GmailConnectionRepository connections,
+                                  GmailApiClientFactory gmailApiClientFactory,
+                                  RefreshTokenCipher refreshTokenCipher,
+                                  PlatformTransactionManager txManager) {
         this.connections = connections;
+        this.gmailApiClientFactory = gmailApiClientFactory;
+        this.refreshTokenCipher = refreshTokenCipher;
+        this.disconnectTx = new TransactionTemplate(txManager);
     }
 
     /**
@@ -40,13 +58,42 @@ public class GmailConnectionService {
      * Marks the tenant's Gmail connection as disconnected. No-op when no connection exists —
      * the user may never have connected, or may have already disconnected.
      */
-    @Transactional
     public void disconnect(UUID tenantId) {
-        connections.findByTenantId(tenantId).ifPresent(c -> {
+        markDisconnected(tenantId);
+        tryStopWatch(tenantId);
+    }
+
+    public void markDisconnected(UUID tenantId) {
+        disconnectTx.executeWithoutResult(_ -> connections.findByTenantId(tenantId).ifPresent(c -> {
             c.setStatus(GmailConnectionStatus.DISCONNECTED);
             c.setDisconnectedAt(Instant.now());
+            c.setWatchExpiresAt(null);
+            c.setWatchHistoryId(null);
+            c.setWatchRenewedAt(null);
+            c.setWatchConsecutiveFailures(0);
+            c.setIngestionHealth(GmailIngestionHealth.HEALTHY);
             connections.save(c);
-        });
+        }));
+    }
+
+    private void tryStopWatch(UUID tenantId) {
+        try {
+            GmailConnectionEntity connection = connections.findByTenantId(tenantId).orElse(null);
+            if (connection == null || connection.getRefreshTokenEncrypted() == null) {
+                return;
+            }
+            String decryptedToken = new String(
+                    refreshTokenCipher.decrypt(connection.getRefreshTokenEncrypted(), tenantId.toString()),
+                    StandardCharsets.UTF_8);
+            GmailApiClientFactory.TokenRefreshResult tokenResult =
+                    gmailApiClientFactory.refreshAccessToken(decryptedToken);
+            gmailApiClientFactory.buildGmailClient(tokenResult.accessToken())
+                    .users()
+                    .stop("me")
+                    .execute();
+        } catch (Exception e) {
+            log.warn("event=gmail_watch_stop_failed tenantId={}", tenantId);
+        }
     }
 
     /**
@@ -95,5 +142,59 @@ public class GmailConnectionService {
         row.setConnectedAt(Instant.now());
         row.setDisconnectedAt(null);
         connections.save(row);
+    }
+
+    @Transactional
+    public void markHistoryLost(UUID tenantId, Long newPointer) {
+        connections.findByTenantId(tenantId).ifPresent(c -> {
+            c.setLastSyncedHistoryId(newPointer);
+            c.setIngestionHealth(GmailIngestionHealth.HISTORY_LOST);
+            connections.save(c);
+        });
+    }
+
+    @Transactional
+    public void markWatchUnhealthy(UUID tenantId) {
+        connections.findByTenantId(tenantId).ifPresent(c -> {
+            c.setIngestionHealth(GmailIngestionHealth.WATCH_UNHEALTHY);
+            connections.save(c);
+        });
+    }
+
+    @Transactional
+    public void recordWatchSuccess(UUID tenantId, Long watchHistoryId, Instant watchExpiresAt) {
+        connections.findByTenantId(tenantId).ifPresent(c -> {
+            c.setWatchHistoryId(watchHistoryId);
+            if (c.getLastSyncedHistoryId() == null) {
+                c.setLastSyncedHistoryId(watchHistoryId);
+            }
+            c.setWatchExpiresAt(watchExpiresAt);
+            c.setWatchRenewedAt(Instant.now());
+            c.setWatchConsecutiveFailures(0);
+            if (c.getIngestionHealth() == GmailIngestionHealth.WATCH_UNHEALTHY) {
+                c.setIngestionHealth(GmailIngestionHealth.HEALTHY);
+            }
+            connections.save(c);
+        });
+    }
+
+    @Transactional
+    public void incrementWatchFailure(UUID tenantId) {
+        connections.findByTenantId(tenantId).ifPresent(c -> {
+            c.setWatchConsecutiveFailures(c.getWatchConsecutiveFailures() + 1);
+            connections.save(c);
+        });
+    }
+
+    @Transactional
+    public void clearForReconnect(UUID tenantId) {
+        connections.findByTenantId(tenantId).ifPresent(c -> {
+            c.setWatchExpiresAt(null);
+            c.setWatchHistoryId(null);
+            c.setLastSyncedHistoryId(null);
+            c.setWatchConsecutiveFailures(0);
+            c.setIngestionHealth(GmailIngestionHealth.HEALTHY);
+            connections.save(c);
+        });
     }
 }
