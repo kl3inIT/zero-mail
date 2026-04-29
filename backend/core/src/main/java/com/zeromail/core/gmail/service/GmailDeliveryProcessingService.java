@@ -65,7 +65,7 @@ public class GmailDeliveryProcessingService {
                     StandardCharsets.UTF_8);
             GmailApiClientFactory.TokenRefreshResult tokenResult =
                     gmailApiClientFactory.refreshAccessToken(decryptedToken);
-            Gmail gmail = gmailApiClientFactory.buildGmailClient(tokenResult.accessToken());
+            Gmail gmail = gmailApiClientFactory.buildGmailClient(tokenResult.accessToken().value());
 
             long startHistoryId = conn.getLastSyncedHistoryId() != null
                     ? conn.getLastSyncedHistoryId()

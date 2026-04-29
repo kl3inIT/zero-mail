@@ -20,6 +20,7 @@ import com.google.api.services.gmail.Gmail;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
+import com.zeromail.core.shared.privacy.Sensitive;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -58,7 +59,7 @@ public class GmailApiClientFactory {
         }
     }
 
-    public record TokenRefreshResult(String accessToken, Instant expiresAt) {}
+    public record TokenRefreshResult(Sensitive<String> accessToken, Instant expiresAt) {}
 
     public TokenRefreshResult refreshAccessToken(String decryptedRefreshToken) throws IOException {
         HttpClient httpClient = HttpClient.newHttpClient();
@@ -84,7 +85,9 @@ public class GmailApiClientFactory {
             JsonNode node = mapper.readTree(response.body());
             String refreshedAccessToken = node.path("access_token").asString();
             int expiresIn = node.path("expires_in").asInt(3600);
-            return new TokenRefreshResult(refreshedAccessToken, Instant.now().plusSeconds(expiresIn - 60L));
+            return new TokenRefreshResult(
+                    Sensitive.of(refreshedAccessToken),
+                    Instant.now().plusSeconds(expiresIn - 60L));
         }
         if (response.statusCode() == 400 && response.body().contains("invalid_grant")) {
             throw new InvalidGrantException("OAuth token revoked");

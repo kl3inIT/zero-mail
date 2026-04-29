@@ -90,7 +90,7 @@ public class GmailConnectionService {
                     StandardCharsets.UTF_8);
             GmailApiClientFactory.TokenRefreshResult tokenResult =
                     gmailApiClientFactory.refreshAccessToken(decryptedToken);
-            gmailApiClientFactory.buildGmailClient(tokenResult.accessToken())
+            gmailApiClientFactory.buildGmailClient(tokenResult.accessToken().value())
                     .users()
                     .stop("me")
                     .execute();

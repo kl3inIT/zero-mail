@@ -1,5 +1,5 @@
 {
-  "name": "zeromail-web",
+  "name": "web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,7 +10,9 @@
     "generate:api": "tsx scripts/generate-api.ts",
     "i18n:check": "tsx scripts/check-i18n.ts",
     "test": "vitest run",
+    "test:run": "vitest run",
     "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
     "test:e2e": "node ../../node_modules/@playwright/test/cli.js test"
   },
   "dependencies": {

@@ -123,7 +123,9 @@ public class TestSessionSupport {
                 .securityMatcher(nonPubSub)
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(a -> a.anyRequest().authenticated())
+                .authorizeHttpRequests(a -> a
+                        .requestMatchers("/v3/api-docs/**", "/test/**").permitAll()
+                        .anyRequest().authenticated())
                 .exceptionHandling(e -> e.authenticationEntryPoint((_, res, _) ->
                         res.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
                 .addFilterBefore(testAuthFilter, UsernamePasswordAuthenticationFilter.class)

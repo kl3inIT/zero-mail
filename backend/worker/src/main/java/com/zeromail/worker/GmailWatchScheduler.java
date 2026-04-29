@@ -64,7 +64,7 @@ public class GmailWatchScheduler {
                     StandardCharsets.UTF_8);
             GmailApiClientFactory.TokenRefreshResult tokenResult =
                     gmailApiClientFactory.refreshAccessToken(decryptedToken);
-            Gmail gmail = gmailApiClientFactory.buildGmailClient(tokenResult.accessToken());
+            Gmail gmail = gmailApiClientFactory.buildGmailClient(tokenResult.accessToken().value());
 
             WatchRequest watchRequest = new WatchRequest()
                     .setLabelIds(List.of("INBOX"))
