@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="ZeroMailBackend" type="CompoundRunConfigurationType">
+    <toRun name="ZeroMailApi" type="SpringBootApplicationConfigurationType" />
+    <toRun name="ZeroMailWorker" type="SpringBootApplicationConfigurationType" />
+    <method v="2" />
+  </configuration>
+</component>
