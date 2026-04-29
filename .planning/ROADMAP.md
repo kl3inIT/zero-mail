@@ -207,10 +207,10 @@ Plans:
 
 Plans:
 **Wave 0**
-- [ ] 02A-00-PLAN.md — Wave 0 RED test scaffolds (10 backend test classes + 2 fixtures + 4 frontend test files)
+- [x] 02A-00-PLAN.md — Wave 0 RED test scaffolds (10 backend test classes + 2 fixtures + 4 frontend test files)
 
 **Wave 1 *(blocked on Wave 0 completion)***
-- [ ] 02A-01-PLAN.md — Schema (Liquibase 010-013) + GmailIngestionHealth enum + entities/repositories
+- [x] 02A-01-PLAN.md — Schema (Liquibase 010-013) + GmailIngestionHealth enum + entities/repositories
 
 **Wave 2 *(blocked on Wave 1 completion)***
 - [ ] 02A-02-PLAN.md — Worker schedulers (GmailWatchScheduler + GmailHistoryProcessor + GmailApiClientFactory)

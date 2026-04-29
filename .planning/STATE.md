@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02A-00-PLAN.md
-last_updated: "2026-04-29T05:25:38.229Z"
+stopped_at: Completed 02A-01-PLAN.md
+last_updated: "2026-04-29T05:42:17.113Z"
 last_activity: 2026-04-29
 progress:
   total_phases: 15
   completed_phases: 8
   total_plans: 64
-  completed_plans: 59
-  percent: 92
+  completed_plans: 60
+  percent: 94
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 02A (mail-ingestion) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-04-29
 
-Progress: [█████████░] 92%
+Progress: [█████████░] 94%
 
 ## Performance Metrics
 
@@ -95,6 +95,7 @@ Progress: [█████████░] 92%
 | Phase 01.6 P05 | 18min | 3 tasks | 8 files |
 | Phase 01.6 P06 | 35min | 3 tasks | 12 files |
 | Phase 02A P00 | 14min | 2 tasks | 17 files |
+| Phase 02A P01 | 11min | 2 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -193,6 +194,9 @@ Recent decisions affecting current work:
 - [Phase 01.6]: 01.6-03: LanguageSwitcher variant compact was reused directly in public TopBar; no fork was needed.
 - [Phase ?]: 02A-00: Worker RED tests use a package-local SpringBootTest scaffold because backend/core test sources are not on the worker test classpath. — Keeps Wave 0 worker verification RED on future production classes instead of failing on cross-module test-source visibility.
 - [Phase ?]: 02A-00: Vitest includes features/**/*.{test,spec}.{ts,tsx} for feature-owned Wave 0 tests. — Without this include glob, PauseBanner and useToggleTriagePause tests are not collected by Vitest and the frontend RED spine is partially invisible.
+- [Phase 02A]: 02A-01: Use Yasson JSON-B at runtime for Hibernate JSONB mapping under Spring Boot 4/Jackson 3 instead of adding Jackson 2.
+- [Phase 02A]: 02A-01: Keep MailMessageObservedId as a top-level record to satisfy the committed Wave 0 test contract while still using Hibernate @IdClass.
+- [Phase 02A]: 02A-01: Explicitly tenant-scope one-argument PubSubDeliveryRepository claims because native SQL does not inherit Hibernate @TenantId filtering.
 
 ### Roadmap Evolution
 
@@ -245,6 +249,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-29T05:25:38.209Z
-Stopped at: Completed 02A-00-PLAN.md
+Last session: 2026-04-29T05:42:17.093Z
+Stopped at: Completed 02A-01-PLAN.md
 Resume file: None
