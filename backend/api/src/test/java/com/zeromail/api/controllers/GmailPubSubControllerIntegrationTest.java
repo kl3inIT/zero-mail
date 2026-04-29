@@ -73,6 +73,13 @@ class GmailPubSubControllerIntegrationTest extends ApiPostgresTestBase {
                 tenantId,
                 messageId);
         assertThat(count).isEqualTo(1);
+        String payload = jdbc.queryForObject(
+                "SELECT payload::text FROM pubsub_delivery WHERE tenant_id = ? AND pubsub_message_id = ?",
+                String.class,
+                tenantId,
+                messageId);
+        assertThat(payload).isEqualTo("{}");
+        assertThat(payload).doesNotContain(email).doesNotContain("data").doesNotContain("emailAddress");
     }
 
     @Test

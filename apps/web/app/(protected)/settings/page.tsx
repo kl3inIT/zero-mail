@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { ConnectionHealthBadge } from '@/features/gmail/components/ConnectionHealthBadge';
 import { DeleteAccountDialog } from '@/features/account/components/DeleteAccountDialog';
 import { LanguageSwitcher } from '@/i18n/components/LanguageSwitcher';
-import { ReconnectPrompt } from '@/features/gmail/components/ReconnectPrompt';
+import { ReconnectPromptGate } from '@/features/gmail/components/ReconnectPrompt';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useTenantStatus } from '@/features/gmail/hooks/useTenantStatus';
 import { useDisconnectGmail } from '@/features/gmail/hooks/useDisconnectGmail';
@@ -71,8 +71,6 @@ export default function SettingsPage() {
     ? gmailConnection.status
     : (status.data?.connectionStatus ?? 'NOT_CONNECTED');
   const ingestionHealth = gmailConnection?.ingestionHealth ?? 'HEALTHY';
-  const shouldShowReconnect =
-    connStatus === 'DISCONNECTED' || (connStatus === 'CONNECTED' && ingestionHealth !== 'HEALTHY');
   const triagePaused = me.data?.triagePaused ?? false;
   const preferredLanguage = (me.data?.preferredLanguage === 'en' ? 'en' : 'vi') as AppLocale;
   const reconnect = () => {
@@ -111,7 +109,11 @@ export default function SettingsPage() {
           <div className="flex items-center gap-3">
             <ConnectionHealthBadge status={connStatus} />
           </div>
-          {shouldShowReconnect && <ReconnectPrompt onReconnect={reconnect} />}
+          <ReconnectPromptGate
+            status={connStatus}
+            ingestionHealth={ingestionHealth}
+            onReconnect={reconnect}
+          />
           {connStatus === 'NOT_CONNECTED' && (
             // CR-03 fix: GET navigation — no CSRF needed; endpoint is now @GetMapping.
             <Button

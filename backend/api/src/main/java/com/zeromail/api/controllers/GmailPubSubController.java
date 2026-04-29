@@ -53,17 +53,10 @@ public class GmailPubSubController {
             return;
         }
 
-        String rawPayload;
-        try {
-            rawPayload = objectMapper.writeValueAsString(envelope);
-        } catch (Exception e) {
-            rawPayload = "{}";
-        }
-
         ingestionService.ingestPushEnvelope(
                 notification.emailAddress(),
                 envelope.message().messageId(),
                 notification.historyId(),
-                rawPayload);
+                "{}");
     }
 }

@@ -48,7 +48,7 @@ public class PubSubIngestionService {
     public IngestResult ingestPushEnvelope(String emailAddress,
                                            String pubsubMessageId,
                                            long historyId,
-                                           String rawPayload) {
+                                           String sanitizedPayload) {
         List<UUID> tenantIds = jdbc.query(
                 """
                 SELECT tenant_id
@@ -74,7 +74,7 @@ public class PubSubIngestionService {
                             tenantId,
                             pubsubMessageId,
                             historyId,
-                            rawPayload);
+                            sanitizedPayload);
                     if (inserted == 0) {
                         log.info("event=pubsub_duplicate_delivery_dropped tenantId={}", tenantId);
                         return IngestResult.DUPLICATE;
