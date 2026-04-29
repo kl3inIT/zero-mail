@@ -10,6 +10,7 @@ import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useTenantStatus } from '@/features/gmail/hooks/useTenantStatus';
 import { useDisconnectGmail } from '@/features/gmail/hooks/useDisconnectGmail';
 import { useDeleteAccount } from '@/features/account/hooks/useDeleteAccount';
+import { useToggleTriagePause } from '@/features/triage/hooks/useToggleTriagePause';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -21,8 +22,20 @@ import {
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { getApiUrl } from '@/lib/api/base-url';
+import { cn } from '@/lib/utils';
 
 import type { AppLocale } from '@/i18n/routing';
+
+type GmailConnectionStatus = 'CONNECTED' | 'DISCONNECTED' | 'NOT_CONNECTED' | 'PENDING';
+
+function isGmailConnectionStatus(value: string | undefined): value is GmailConnectionStatus {
+  return (
+    value === 'CONNECTED' ||
+    value === 'DISCONNECTED' ||
+    value === 'NOT_CONNECTED' ||
+    value === 'PENDING'
+  );
+}
 
 /**
  * /settings (client). Phase 01.5 Plan 02 — deflated from PageShell/SectionCard
@@ -51,8 +64,16 @@ export default function SettingsPage() {
   const status = useTenantStatus();
   const disconnect = useDisconnectGmail();
   const del = useDeleteAccount();
+  const togglePause = useToggleTriagePause();
 
-  const connStatus = status.data?.connectionStatus ?? 'NOT_CONNECTED';
+  const gmailConnection = me.data?.gmailConnectionStatus;
+  const connStatus = isGmailConnectionStatus(gmailConnection?.status)
+    ? gmailConnection.status
+    : (status.data?.connectionStatus ?? 'NOT_CONNECTED');
+  const ingestionHealth = gmailConnection?.ingestionHealth ?? 'HEALTHY';
+  const shouldShowReconnect =
+    connStatus === 'DISCONNECTED' || (connStatus === 'CONNECTED' && ingestionHealth !== 'HEALTHY');
+  const triagePaused = me.data?.triagePaused ?? false;
   const preferredLanguage = (me.data?.preferredLanguage === 'en' ? 'en' : 'vi') as AppLocale;
   const reconnect = () => {
     window.location.href = getApiUrl('/tenant/connect-gmail');
@@ -90,7 +111,7 @@ export default function SettingsPage() {
           <div className="flex items-center gap-3">
             <ConnectionHealthBadge status={connStatus} />
           </div>
-          {connStatus === 'DISCONNECTED' && <ReconnectPrompt onReconnect={reconnect} />}
+          {shouldShowReconnect && <ReconnectPrompt onReconnect={reconnect} />}
           {connStatus === 'NOT_CONNECTED' && (
             // CR-03 fix: GET navigation — no CSRF needed; endpoint is now @GetMapping.
             <Button
@@ -107,6 +128,37 @@ export default function SettingsPage() {
             {t('settings.gmailConnection.singleAccountNote')}
           </p>
         </CardFooter>
+      </Card>
+
+      {/* Automated triage */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('settings.triage.pause.title')}</CardTitle>
+          <CardDescription>{t('settings.triage.pause.body')}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-between gap-4">
+          <span className="text-foreground text-sm font-medium">
+            {t('settings.triage.pause.toggleLabel')}
+          </span>
+          <button
+            type="button"
+            aria-pressed={triagePaused}
+            aria-label={t('settings.triage.pause.toggleLabel')}
+            disabled={!me.data || togglePause.isPending}
+            onClick={() => togglePause.mutate(!triagePaused)}
+            className={cn(
+              'focus-visible:ring-ring relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+              triagePaused ? 'border-warning bg-warning' : 'border-border bg-muted',
+            )}
+          >
+            <span
+              className={cn(
+                'bg-background size-5 rounded-full shadow-sm transition-transform',
+                triagePaused ? 'translate-x-5' : 'translate-x-0',
+              )}
+            />
+          </button>
+        </CardContent>
       </Card>
 
       {/* Privacy */}

@@ -14,19 +14,21 @@ export function PauseBanner() {
   if (!user?.triagePaused) return null;
 
   return (
-    <Alert variant="warning" role="alert">
-      <AlertTitle>{t('settings.triage.pause.banner.heading')}</AlertTitle>
-      <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <span>{t('settings.triage.pause.banner.body')}</span>
-        <button
-          type="button"
-          onClick={() => togglePause(false)}
-          disabled={isPending}
-          className="text-warning shrink-0 text-sm font-medium underline underline-offset-4 disabled:pointer-events-none disabled:opacity-60"
-        >
-          {t('settings.triage.pause.banner.unpause')}
-        </button>
-      </AlertDescription>
-    </Alert>
+    <div className="mx-auto max-w-2xl px-6 pt-6">
+      <Alert variant="warning" role="alert">
+        <AlertTitle>{t('settings.triage.pause.banner.heading')}</AlertTitle>
+        <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <span>{t('settings.triage.pause.banner.body')}</span>
+          <button
+            type="button"
+            onClick={() => togglePause(false)}
+            disabled={isPending}
+            className="text-warning shrink-0 text-sm font-medium underline underline-offset-4 disabled:pointer-events-none disabled:opacity-60"
+          >
+            {t('settings.triage.pause.banner.unpause')}
+          </button>
+        </AlertDescription>
+      </Alert>
+    </div>
   );
 }

@@ -12,13 +12,32 @@
     }
   ],
   "paths": {
-    "/tenant/disconnect": {
-      "post": {
-        "tags": ["disconnect-controller"],
-        "operationId": "disconnect",
+    "/tenant/triage-pause": {
+      "put": {
+        "tags": [
+          "tenant"
+        ],
+        "operationId": "setTriagePause",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TriagePauseRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/TriagePauseResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Bad Request",
@@ -83,10 +102,12 @@
         }
       }
     },
-    "/tenant/connect-gmail": {
+    "/tenant/disconnect": {
       "post": {
-        "tags": ["connect-gmail-controller"],
-        "operationId": "connect",
+        "tags": [
+          "disconnect-controller"
+        ],
+        "operationId": "disconnect",
         "responses": {
           "200": {
             "description": "OK"
@@ -156,7 +177,9 @@
     },
     "/onboarding/select-template": {
       "post": {
-        "tags": ["onboarding-controller"],
+        "tags": [
+          "onboarding-controller"
+        ],
         "operationId": "selectTemplate",
         "requestBody": {
           "content": {
@@ -237,7 +260,9 @@
     },
     "/onboarding/complete": {
       "post": {
-        "tags": ["onboarding-controller"],
+        "tags": [
+          "onboarding-controller"
+        ],
         "operationId": "complete",
         "responses": {
           "200": {
@@ -308,7 +333,9 @@
     },
     "/me/language": {
       "patch": {
-        "tags": ["me-controller"],
+        "tags": [
+          "me-controller"
+        ],
         "operationId": "updateLanguage",
         "requestBody": {
           "content": {
@@ -394,9 +421,84 @@
         }
       }
     },
+    "/tenant/connect-gmail": {
+      "get": {
+        "tags": [
+          "connect-gmail-controller"
+        ],
+        "operationId": "connect",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me": {
       "get": {
-        "tags": ["me-controller"],
+        "tags": [
+          "me-controller"
+        ],
         "operationId": "me",
         "responses": {
           "200": {
@@ -474,7 +576,9 @@
     },
     "/gmail/connection/status": {
       "get": {
-        "tags": ["gmail"],
+        "tags": [
+          "gmail"
+        ],
         "operationId": "status",
         "responses": {
           "200": {
@@ -552,7 +656,9 @@
     },
     "/me/account": {
       "delete": {
-        "tags": ["account-deletion-controller"],
+        "tags": [
+          "account-deletion-controller"
+        ],
         "operationId": "deleteAccount",
         "responses": {
           "200": {
@@ -624,6 +730,25 @@
   },
   "components": {
     "schemas": {
+      "TriagePauseRequest": {
+        "type": "object",
+        "properties": {
+          "paused": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "paused"
+        ]
+      },
+      "TriagePauseResponse": {
+        "type": "object",
+        "properties": {
+          "paused": {
+            "type": "boolean"
+          }
+        }
+      },
       "SelectTemplateRequest": {
         "type": "object",
         "properties": {
@@ -632,7 +757,10 @@
             "minLength": 1,
             "pattern": "archive-receipts|label-newsletters|pin-calendar"
           }
-        }
+        },
+        "required": [
+          "templateKey"
+        ]
       },
       "UpdateLanguageRequest": {
         "type": "object",
@@ -641,6 +769,23 @@
             "type": "string",
             "minLength": 1,
             "pattern": "vi|en"
+          }
+        },
+        "required": [
+          "language"
+        ]
+      },
+      "GmailConnectionStatusExtended": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "ingestionHealth": {
+            "type": "string"
+          },
+          "googleEmail": {
+            "type": "string"
           }
         }
       },
@@ -661,6 +806,12 @@
           },
           "preferredLanguage": {
             "type": "string"
+          },
+          "triagePaused": {
+            "type": "boolean"
+          },
+          "gmailConnectionStatus": {
+            "$ref": "#/components/schemas/GmailConnectionStatusExtended"
           }
         }
       },
@@ -741,7 +892,9 @@
             "description": "Transitional alias of `code`, kept for one phase per CONTEXT.md decision D-C1. Prefer `code`."
           }
         },
-        "required": ["code"]
+        "required": [
+          "code"
+        ]
       },
       "FieldErrorDto": {
         "type": "object",
@@ -778,7 +931,10 @@
             "description": "Allow-listed scalars (numbers, booleans, dotted keys, short resource identifiers). Never raw user content."
           }
         },
-        "required": ["field", "code"]
+        "required": [
+          "code",
+          "field"
+        ]
       }
     }
   }

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { ReconnectPrompt } from '@/features/gmail/components/ReconnectPrompt';
 
 describe('ReconnectPrompt - ingestionHealth gate (MAIL-05)', () => {
-  it.skip('renders when status is CONNECTED but ingestionHealth is WATCH_UNHEALTHY', () => {
+  it('renders when status is CONNECTED but ingestionHealth is WATCH_UNHEALTHY', () => {
     expect(ReconnectPrompt).toBeDefined();
     const connectionStatus = 'CONNECTED';
     const ingestionHealth = 'WATCH_UNHEALTHY';
@@ -12,7 +12,7 @@ describe('ReconnectPrompt - ingestionHealth gate (MAIL-05)', () => {
     expect(ingestionHealth).toBe('WATCH_UNHEALTHY');
   });
 
-  it.skip('renders when status is CONNECTED but ingestionHealth is HISTORY_LOST', () => {
+  it('renders when status is CONNECTED but ingestionHealth is HISTORY_LOST', () => {
     expect(ReconnectPrompt).toBeDefined();
     const connectionStatus = 'CONNECTED';
     const ingestionHealth = 'HISTORY_LOST';
@@ -21,7 +21,7 @@ describe('ReconnectPrompt - ingestionHealth gate (MAIL-05)', () => {
     expect(ingestionHealth).toBe('HISTORY_LOST');
   });
 
-  it.skip('does NOT render when status is CONNECTED and ingestionHealth is HEALTHY', () => {
+  it('does NOT render when status is CONNECTED and ingestionHealth is HEALTHY', () => {
     expect(ReconnectPrompt).toBeDefined();
     const connectionStatus = 'CONNECTED';
     const ingestionHealth = 'HEALTHY';
