@@ -13,6 +13,7 @@ files_modified:
   - apps/web/features/triage/components/PauseBanner.tsx
   - apps/web/features/gmail/components/ReconnectPrompt.tsx
   - apps/web/features/account/api/me.ts
+  - apps/web/lib/api/schema.d.ts
   - apps/web/app/(protected)/layout.tsx
   - apps/web/app/(protected)/settings/page.tsx
   - apps/web/i18n/messages/vi.json
@@ -30,7 +31,8 @@ must_haves:
     - "Settings page has a Pause automated triage Card section with toggle"
     - "useToggleTriagePause invalidates accountKeys.me() on success"
     - "ReconnectPrompt shows when status!=CONNECTED OR ingestionHealth!=HEALTHY"
-    - "i18n parity: vi.json and en.json both contain settings.triage.pause.* keys"
+    - "ReconnectPrompt.test.tsx has its ingestionHealth gate tests enabled and GREEN"
+    - "i18n parity: vi.json and en.json both contain settings.triage.pause.* keys including banner.body"
     - "pnpm i18n:check exits 0 after this plan"
   artifacts:
     - path: "apps/web/features/triage/components/PauseBanner.tsx"
@@ -62,7 +64,7 @@ Implement the frontend features: PauseBanner, triage-pause toggle in settings, R
 
 Purpose: Close MAIL-05 (reconnect prompt extension for ingestion health) and MAIL-06 (user-visible pause toggle + banner).
 
-Output: features/triage/* (api/keys/hooks/components), ReconnectPrompt gate extension, me.ts schema extension, settings toggle, i18n keys.
+Output: features/triage/* (api/keys/hooks/components), ReconnectPrompt gate extension, me.ts + generated schema extension, settings toggle, i18n keys.
 </objective>
 
 <execution_context>
@@ -141,6 +143,7 @@ i18n context:
     apps/web/features/triage/hooks/useToggleTriagePause.ts,
     apps/web/features/triage/components/PauseBanner.tsx,
     apps/web/features/account/api/me.ts,
+    apps/web/lib/api/schema.d.ts,
     apps/web/features/gmail/components/ReconnectPrompt.tsx,
     apps/web/i18n/messages/vi.json,
     apps/web/i18n/messages/en.json,
@@ -219,7 +222,7 @@ export function PauseBanner() {
     <Alert variant="warning" role="alert">
       <AlertTitle>{t('settings.triage.pause.banner.heading')}</AlertTitle>
       <AlertDescription className="flex items-center justify-between">
-        <span>{t('settings.triage.pause.banner.body' as never)}</span>
+        <span>{t('settings.triage.pause.banner.body')}</span>
         <button
           onClick={() => togglePause(false)}
           className="ml-4 underline font-medium"
@@ -232,7 +235,7 @@ export function PauseBanner() {
 }
 ```
 
-`banner.body` key is optional (add to i18n if needed); use `as never` cast pattern per Phase 01.3 for keys not yet in strict bundle. The mandatory keys are `banner.heading` and `banner.unpause`.
+`banner.body` is mandatory and must be present in both message bundles so no `as never` cast is needed.
 
 **`apps/web/features/account/api/me.ts`** — READ full current file. Extend the `CurrentUser` type (or interface, whichever is used) to add:
 ```typescript
@@ -268,6 +271,7 @@ Single copy (D-D3: user doesn't need to distinguish the root cause). No new i18n
       "toggleLabel": "Tạm dừng tự động xử lý",
       "banner": {
         "heading": "Tự động xử lý đang tạm dừng",
+        "body": "Email mới vẫn được ghi nhận, nhưng Zero Mail sẽ không thực hiện hành động tự động.",
         "unpause": "Bật lại"
       }
     }
@@ -286,6 +290,7 @@ English version:
       "toggleLabel": "Pause automated triage",
       "banner": {
         "heading": "Automated triage is paused",
+        "body": "New mail is still observed, but Zero Mail will not run automated actions.",
         "unpause": "Resume"
       }
     }
@@ -308,13 +313,14 @@ English version:
     - `apps/web/features/triage/components/PauseBanner.tsx` contains `variant="warning"` and does NOT use `<Button>` (plain `<button>`)
     - `apps/web/features/gmail/components/ReconnectPrompt.tsx` contains `ingestionHealth` in the gate condition
     - `apps/web/i18n/messages/vi.json` contains `settings.triage.pause.banner.unpause` key (traverse: vi["settings"]["triage"]["pause"]["banner"]["unpause"])
+    - `apps/web/i18n/messages/vi.json` and `en.json` contain `settings.triage.pause.banner.body`
     - `apps/web/i18n/messages/en.json` contains the matching English key
     - `apps/web/scripts/check-i18n.ts` EN_SCAN_FILES array contains `PauseBanner.tsx`
     - `pnpm -F web run i18n:check` exits 0
     - `pnpm -F web run typecheck` exits 0
   </acceptance_criteria>
 
-  <done>Triage feature folder created; PauseBanner + hook + api done; ReconnectPrompt gate extended; i18n keys added; i18n:check passes</done>
+  <done>Triage feature folder created; PauseBanner + hook + api done; ReconnectPrompt gate extended; generated schema/me type updated; i18n keys added; i18n:check passes</done>
 </task>
 
 <task type="auto">
@@ -378,13 +384,20 @@ The section structure (using token-aware className, raw shadcn):
 
 Use `useCurrentUser()` hook for `user` and `useToggleTriagePause()` for `togglePause`.
 
-**After both files are written:** Run `pnpm generate:api` to regenerate `schema.d.ts` from the backend OpenAPI spec. This requires the backend to be running on localhost:8080. If the backend is NOT running in the sandbox, skip the live regen and note in SUMMARY.md that `pnpm generate:api` must be run after backend starts. The types for `triagePaused` and `gmailConnectionStatus` should be manually added to the schema types if the regen is blocked.
+**After both files are written:** Regenerate OpenAPI artifacts using the repo's hermetic pipeline, then regenerate frontend types:
+```bash
+./gradlew :backend:api:generateOpenApiDocs
+pnpm -F web generate:api
+```
+This updates `apps/web/openapi/openapi.json` and `apps/web/lib/api/schema.d.ts` without requiring a manually running backend because `backend/api/build.gradle.kts` configures the springdoc OpenAPI Gradle plugin. If generation is blocked by unrelated local service or Docker issues, manually update `apps/web/lib/api/schema.d.ts` for `/tenant/triage-pause`, `triagePaused`, and `gmailConnectionStatus`, then record the regen blocker in the plan summary.
+
+**Enable ReconnectPrompt Wave 0 tests:** remove `it.skip` from `apps/web/features/gmail/components/ReconnectPrompt.test.tsx` now that the ingestionHealth gate is implemented. These tests must run GREEN before this plan completes.
 
 **Run full frontend test suite to confirm Wave 0 tests are now GREEN:**
 ```bash
 pnpm -F web run test:run 2>&1 | grep -E "FAIL|PASS|PauseBanner|useToggle|phase-02a" | head -20
 ```
-All 3 Wave 0 frontend test files should now be GREEN.
+All 4 Wave 0 frontend test files should now be GREEN.
   </action>
 
   <verify>
@@ -399,10 +412,11 @@ All 3 Wave 0 frontend test files should now be GREEN.
     - `pnpm -F web run test:run` shows `PauseBanner.test.tsx` PASS
     - `pnpm -F web run test:run` shows `useToggleTriagePause.test.tsx` PASS
     - `pnpm -F web run test:run` shows `phase-02a-files.test.ts` PASS (all files now exist)
+    - `pnpm -F web run test:run` shows `ReconnectPrompt.test.tsx` PASS and `apps/web/features/gmail/components/ReconnectPrompt.test.tsx` contains no `it.skip`
     - `pnpm -F web run lint` exits 0
   </acceptance_criteria>
 
-  <done>Protected layout has PauseBanner; settings has pause toggle Card; all 3 Wave 0 frontend tests GREEN; typecheck + lint pass</done>
+  <done>Protected layout has PauseBanner; settings has pause toggle Card; all 4 Wave 0 frontend tests GREEN; typecheck + lint pass</done>
 </task>
 
 </tasks>
@@ -425,7 +439,7 @@ All 3 Wave 0 frontend test files should now be GREEN.
 
 <verification>
 After this plan:
-- `pnpm -F web run test:run` — all 3 Wave 0 frontend tests GREEN (PauseBanner, useToggleTriagePause, phase-02a-files)
+- `pnpm -F web run test:run` — all 4 Wave 0 frontend tests GREEN (PauseBanner, useToggleTriagePause, phase-02a-files, ReconnectPrompt)
 - `pnpm -F web run typecheck` exits 0
 - `pnpm -F web run lint` exits 0
 - `pnpm -F web run i18n:check` exits 0
@@ -433,7 +447,7 @@ After this plan:
 </verification>
 
 <success_criteria>
-All Wave 3 frontend files exist. PauseBanner is non-dismissible with unpause CTA. Settings page has pause toggle Card section. ReconnectPrompt gate extended to check ingestionHealth. i18n keys parity maintained. All 3 Wave 0 frontend tests are GREEN.
+All Wave 3 frontend files exist. PauseBanner is non-dismissible with unpause CTA. Settings page has pause toggle Card section. ReconnectPrompt gate extended to check ingestionHealth. i18n keys parity maintained. All 4 Wave 0 frontend tests are GREEN.
 </success_criteria>
 
 <output>

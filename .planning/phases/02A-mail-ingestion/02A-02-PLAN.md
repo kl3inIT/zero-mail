@@ -7,9 +7,10 @@ depends_on:
   - "02A-01"
 files_modified:
   - backend/core/src/main/java/com/zeromail/core/gmail/service/GmailConnectionService.java
-  - backend/core/src/main/java/com/zeromail/core/tenant/service/TenantService.java
+  - backend/core/src/main/java/com/zeromail/core/gmail/persistence/GmailConnectionRepository.java
   - backend/core/src/main/java/com/zeromail/core/gmail/service/GmailApiClientFactory.java
   - backend/core/src/main/java/com/zeromail/core/gmail/service/GmailDeliveryProcessingService.java
+  - backend/core/src/main/java/com/zeromail/core/account/service/OAuthProvisioningService.java
   - backend/worker/src/main/java/com/zeromail/worker/GmailWatchScheduler.java
   - backend/worker/src/main/java/com/zeromail/worker/GmailHistoryProcessor.java
   - backend/worker/src/main/resources/application.yml
@@ -23,11 +24,15 @@ must_haves:
   truths:
     - "GmailWatchScheduler runs every minute and registers/renews users.watch for CONNECTED rows with NULL or near-expiry watch_expires_at"
     - "After 3 consecutive watch failures, ingestion_health flips to WATCH_UNHEALTHY"
+    - "Rows with WATCH_UNHEALTHY are still retried by GmailWatchScheduler; a later successful watch flips ingestion_health back to HEALTHY"
+    - "recordWatchSuccess initializes/advances last_synced_history_id from the returned watch_history_id so the first Pub/Sub delivery does not skip its starting window"
     - "GmailHistoryProcessor polls pubsub_delivery every 1s and fans out to mail_message_observed"
+    - "claimPendingBatch atomically updates rows to PROCESSING before returning them; worker processing does not rely on locks that were released when the repository method returned"
     - "History-404 advances last_synced_history_id to webhook_history_id and sets ingestion_health=HISTORY_LOST"
     - "ScopedValue.where(TENANT, tenantId).run(...) wraps every per-row operation in both schedulers"
     - "Token refresh uses direct POST to https://oauth2.googleapis.com/token (no OAuth2AuthorizedClientService)"
     - "GmailConnectionService has markHistoryLost, markWatchUnhealthy, clearForReconnect, recordWatchSuccess methods"
+    - "OAuthProvisioningService calls clearForReconnect after successful reconnect/upsert so HISTORY_LOST and WATCH_UNHEALTHY recover through the normal watch scheduler path"
     - "GmailDeliveryProcessingService.processDelivery is a PUBLIC @Transactional method — Spring AOP can intercept it; @Transactional on private methods is ineffective"
   artifacts:
     - path: "backend/worker/src/main/java/com/zeromail/worker/GmailWatchScheduler.java"
@@ -62,7 +67,7 @@ Implement the two backend worker schedulers (GmailWatchScheduler + GmailHistoryP
 
 Purpose: These schedulers are the core of Phase 2A — they drive Gmail watch lifecycle and history fan-out.
 
-Output: GmailWatchScheduler, GmailHistoryProcessor (thin tick-only), GmailDeliveryProcessingService (transaction owner), GmailApiClientFactory, GmailConnectionService extensions, TenantService.setTriagePaused.
+Output: GmailWatchScheduler, GmailHistoryProcessor (thin tick-only), GmailDeliveryProcessingService (transaction owner), GmailApiClientFactory, GmailConnectionService extensions, and reconnect cleanup wiring in OAuthProvisioningService. `TenantService.setTriagePaused` is owned by Plan 03 so Plan 03 no longer depends on this worker plan.
 </objective>
 
 <execution_context>
@@ -118,27 +123,28 @@ public record TokenRefreshResult(String accessToken, Instant expiresAt) {}
 ```
 
 GmailConnectionRepository already has: findByTenantId(UUID)
-Add: findByStatusAndWatchExpiresAtIsNullOrWatchExpiresAtBefore(GmailConnectionStatus, Instant) — or use @Query native SQL.
+Plan 01 adds the repository methods used here: atomic `claimPendingBatch(...)`, `insertObservedIfAbsent(...)`, and the native watch-renewal query.
 </interfaces>
 </context>
 
 <tasks>
 
 <task type="auto">
-  <name>Task 1: GmailApiClientFactory + GmailConnectionService extensions + TenantService.setTriagePaused + GmailDeliveryProcessingService</name>
+  <name>Task 1: GmailApiClientFactory + GmailConnectionService extensions + reconnect cleanup + GmailDeliveryProcessingService</name>
   <files>
     backend/core/src/main/java/com/zeromail/core/gmail/service/GmailApiClientFactory.java,
     backend/core/src/main/java/com/zeromail/core/gmail/service/GmailConnectionService.java,
-    backend/core/src/main/java/com/zeromail/core/tenant/service/TenantService.java,
-    backend/core/src/main/java/com/zeromail/core/gmail/service/GmailDeliveryProcessingService.java
+    backend/core/src/main/java/com/zeromail/core/gmail/persistence/GmailConnectionRepository.java,
+    backend/core/src/main/java/com/zeromail/core/gmail/service/GmailDeliveryProcessingService.java,
+    backend/core/src/main/java/com/zeromail/core/account/service/OAuthProvisioningService.java
   </files>
 
   <read_first>
     - backend/core/src/main/java/com/zeromail/core/gmail/service/GmailConnectionService.java (full file — read BEFORE editing)
-    - backend/core/src/main/java/com/zeromail/core/tenant/service/TenantService.java (full file — read BEFORE editing)
+    - backend/core/src/main/java/com/zeromail/core/account/service/OAuthProvisioningService.java (full file — read BEFORE editing; reconnect path lives here)
     - backend/core/src/main/java/com/zeromail/core/gmail/persistence/GmailConnectionEntity.java (new fields from Plan 01)
     - .planning/phases/02A-mail-ingestion/02A-RESEARCH.md (Pattern 6 token refresh, Pattern 5 Gmail API shapes)
-    - .planning/phases/02A-mail-ingestion/02A-PATTERNS.md (GmailConnectionService new methods, TenantService.setTriagePaused)
+    - .planning/phases/02A-mail-ingestion/02A-PATTERNS.md (GmailConnectionService new methods, reconnect cleanup)
     - CLAUDE.md (Conventions: service-owned @Transactional, privacy logging format, Lombok-free)
   </read_first>
 
@@ -227,6 +233,9 @@ public void markWatchUnhealthy(UUID tenantId) {
 public void recordWatchSuccess(UUID tenantId, Long watchHistoryId, Instant watchExpiresAt) {
     connections.findByTenantId(tenantId).ifPresent(c -> {
         c.setWatchHistoryId(watchHistoryId);
+        if (c.getLastSyncedHistoryId() == null || c.getLastSyncedHistoryId() < watchHistoryId) {
+            c.setLastSyncedHistoryId(watchHistoryId);
+        }
         c.setWatchExpiresAt(watchExpiresAt);
         c.setWatchRenewedAt(Instant.now());
         c.setWatchConsecutiveFailures(0);
@@ -248,6 +257,7 @@ public void clearForReconnect(UUID tenantId) {
     connections.findByTenantId(tenantId).ifPresent(c -> {
         c.setWatchExpiresAt(null);
         c.setWatchHistoryId(null);
+        c.setLastSyncedHistoryId(null);
         c.setWatchConsecutiveFailures(0);
         c.setIngestionHealth(GmailIngestionHealth.HEALTHY);
         connections.save(c);
@@ -267,7 +277,6 @@ Also add a native @Query to GmailConnectionRepository for the SKIP LOCKED watch 
     SELECT * FROM gmail_connections
     WHERE status = 'CONNECTED'
     AND (watch_expires_at IS NULL OR watch_expires_at < NOW() + INTERVAL '24 hours')
-    AND watch_consecutive_failures < 3
     ORDER BY watch_renewed_at NULLS FIRST
     LIMIT :limit
     FOR UPDATE SKIP LOCKED
@@ -275,6 +284,7 @@ Also add a native @Query to GmailConnectionRepository for the SKIP LOCKED watch 
 @Transactional
 List<GmailConnectionEntity> findConnectionsNeedingWatchRenewal(@Param("limit") int limit);
 ```
+Do not filter out `watch_consecutive_failures >= 3`. The third failure sets `ingestion_health=WATCH_UNHEALTHY`, but renewal ticks continue retrying so the system can self-recover without requiring a manual reconnect for transient Gmail/API failures.
 
 Also add monotonic-conditional UPDATE query to `GmailConnectionRepository`:
 ```java
@@ -286,17 +296,7 @@ Also add monotonic-conditional UPDATE query to `GmailConnectionRepository`:
 int updateLastSyncedHistoryIdMonotonic(@Param("tenantId") UUID tenantId, @Param("newId") Long newId);
 ```
 
-**`TenantService.java`** — READ full current file. ADD:
-```java
-@Transactional
-public void setTriagePaused(UUID tenantId, boolean paused) {
-    tenants.findById(tenantId).ifPresent(t -> {
-        t.setTriagePaused(paused);
-        tenants.save(t);
-    });
-}
-```
-Privacy log goes in the controller (not here).
+**`OAuthProvisioningService.java`** — READ the full file. In the existing reconnect path, after `connections.upsert(tenantId, email, grantedGmailScopes, envelope)` succeeds, call `connections.clearForReconnect(tenantId)` in the same tenant-bound transaction. This clears `last_synced_history_id`, `watch_expires_at`, `watch_history_id`, resets `watch_consecutive_failures`, and sets `ingestion_health=HEALTHY` so `GmailWatchScheduler` re-registers the watch on the next minute tick. Do not call Gmail APIs from the OAuth success path.
 
 **`GmailDeliveryProcessingService.java`** — NEW `@Service @Transactional` class in `com.zeromail.core.gmail.service`. This class owns the per-delivery transaction boundary — extracted from GmailHistoryProcessor to avoid the `private @Transactional` Spring AOP interception bug (Spring AOP cannot intercept private methods; transaction never starts on a private method).
 
@@ -379,8 +379,10 @@ public class GmailDeliveryProcessingService {
                         List<String> labelIds = msg.getLabelIds();
                         if (labelIds == null || !labelIds.contains("INBOX")) continue;
 
-                        // D-B3: privacy floor — IDs + labels only, no content
-                        MailMessageObservedEntity observed = new MailMessageObservedEntity(
+                        // D-B3: privacy floor — IDs + labels only, no content.
+                        // Native INSERT ... ON CONFLICT DO NOTHING avoids rollback-only
+                        // transactions from JPA duplicate-key exceptions.
+                        int inserted = observedRepository.insertObservedIfAbsent(
                             tenantId,
                             msg.getId(),
                             msg.getThreadId(),
@@ -388,12 +390,8 @@ public class GmailDeliveryProcessingService {
                             labelIds.toArray(new String[0]),
                             msg.getInternalDate()  // nullable per schema
                         );
-                        // ON CONFLICT DO NOTHING semantics via save + ignore duplicate exception
-                        try {
-                            observedRepository.save(observed);
+                        if (inserted == 1) {
                             newObservations++;
-                        } catch (DataIntegrityViolationException ignored) {
-                            // Duplicate — idempotent (D-A5)
                         }
                     }
                 }
@@ -426,24 +424,16 @@ public class GmailDeliveryProcessingService {
     }
 
     private void handleRetryableFailure(PubSubDeliveryEntity delivery, UUID tenantId, Exception e) {
-        int attempts = delivery.getAttempts() + 1;
+        int attempts = delivery.getAttempts(); // incremented atomically by claimPendingBatch
         if (attempts >= 3) {
             deliveryRepository.updateStatus(delivery.getId(), "DEAD");
             log.warn("event=gmail_delivery_dead tenantId={} attempts={}", tenantId, attempts);
         } else {
-            deliveryRepository.incrementAttempts(delivery.getId());
+            deliveryRepository.releaseForRetry(delivery.getId(), Instant.now().plusSeconds(30));
             log.warn("event=gmail_delivery_retry tenantId={} attempt={}", tenantId, attempts);
         }
     }
 }
-```
-
-Add `incrementAttempts` to `PubSubDeliveryRepository`:
-```java
-@Modifying
-@Query("UPDATE PubSubDeliveryEntity d SET d.attempts = d.attempts + 1 WHERE d.id = :id")
-@Transactional
-int incrementAttempts(@Param("id") UUID id);
 ```
 
 Privacy: NEVER log `conn.getRefreshTokenEncrypted()`, `decryptedToken`, token values, email addresses, `msg.getSnippet()`, subject, or any email content. Only log `tenantId` UUID + numeric counts.
@@ -458,14 +448,17 @@ Privacy: NEVER log `conn.getRefreshTokenEncrypted()`, `decryptedToken`, token va
     - `GmailApiClientFactory.java` contains `refreshAccessToken` method and `invalid_grant` check
     - `GmailApiClientFactory.java` does NOT contain any log statement with `refreshToken`, `accessToken`, or `decryptedRefresh` variable contents
     - `GmailConnectionService.java` contains `markHistoryLost(`, `markWatchUnhealthy(`, `recordWatchSuccess(`, `clearForReconnect(`, `incrementWatchFailure(`
+    - `GmailConnectionService.recordWatchSuccess` sets `lastSyncedHistoryId` from `watchHistoryId` when null or lower
     - `GmailConnectionRepository.java` contains `findConnectionsNeedingWatchRenewal(` and `updateLastSyncedHistoryIdMonotonic(`
-    - `TenantService.java` contains `setTriagePaused(UUID tenantId, boolean paused)`
+    - `findConnectionsNeedingWatchRenewal` does NOT contain `watch_consecutive_failures < 3`
+    - `OAuthProvisioningService.java` contains `connections.clearForReconnect(tenantId)` in the reconnect/upsert path
     - `GmailDeliveryProcessingService.java` exists in `com.zeromail.core.gmail.service`, is annotated `@Service @Transactional`, and has a `public void processDelivery(PubSubDeliveryEntity delivery)` method — NOT private
     - `GmailDeliveryProcessingService.java` does NOT have `private void processDelivery` (the old Spring AOP bug pattern)
+    - `GmailDeliveryProcessingService.java` uses `observedRepository.insertObservedIfAbsent` and does NOT catch `DataIntegrityViolationException` for message-level idempotency
     - `./gradlew :backend:core:compileJava` exits 0
   </acceptance_criteria>
 
-  <done>GmailApiClientFactory, 5 new GmailConnectionService methods, TenantService.setTriagePaused, and GmailDeliveryProcessingService (public @Transactional) all compile cleanly</done>
+  <done>GmailApiClientFactory, 5 new GmailConnectionService methods, OAuthProvisioningService reconnect cleanup, and GmailDeliveryProcessingService (public @Transactional) all compile cleanly</done>
 </task>
 
 <task type="auto">
@@ -566,6 +559,7 @@ public class GmailHistoryProcessor {
 
     private static final Logger log = LoggerFactory.getLogger(GmailHistoryProcessor.class);
     private static final int BATCH_SIZE = 50;
+    private static final int LOCK_SECONDS = 120;
 
     private final PubSubDeliveryRepository deliveryRepository;
     private final GmailDeliveryProcessingService deliveryProcessingService;
@@ -579,7 +573,7 @@ public class GmailHistoryProcessor {
 
     @Scheduled(fixedDelay = 1_000L)
     public void tick() {
-        List<PubSubDeliveryEntity> batch = deliveryRepository.claimPendingBatch(BATCH_SIZE);
+        List<PubSubDeliveryEntity> batch = deliveryRepository.claimPendingBatch(BATCH_SIZE, LOCK_SECONDS);
         for (PubSubDeliveryEntity delivery : batch) {
             // ScopedValue binds TenantContext per row before delegate call
             ScopedValue.where(TenantContext.TENANT, delivery.getTenantId().toString())
@@ -610,6 +604,7 @@ Also ensure `spring.threads.virtual.enabled: true` is present (or add if missing
     - `GmailWatchScheduler.java` contains `setLabelIds(List.of("INBOX"))` — D-C3 INBOX-only
     - `GmailWatchScheduler.java` does NOT contain any log statement referencing `refreshToken`, `accessToken`, or `googleEmail`
     - `GmailHistoryProcessor.java` contains `fixedDelay` and `ScopedValue.where`
+    - `GmailHistoryProcessor.java` calls `claimPendingBatch(BATCH_SIZE, LOCK_SECONDS)` and claimed rows are already `PROCESSING`
     - `GmailHistoryProcessor.java` injects `GmailDeliveryProcessingService` and calls `deliveryProcessingService.processDelivery(delivery)` — NOT an inline private method
     - `GmailHistoryProcessor.java` does NOT contain `@Transactional` annotation (transaction lives in GmailDeliveryProcessingService)
     - `GmailDeliveryProcessingService.java` contains `event=gmail_history_gap_truncated` and `event=gmail_history_lost` on 404 catch
@@ -639,8 +634,8 @@ Also ensure `spring.threads.virtual.enabled: true` is present (or add if missing
 |-----------|----------|-----------|-------------|-----------------|
 | T-04 | Information Disclosure | GmailApiClientFactory.refreshAccessToken | mitigate | `decryptedRefreshToken` parameter never logged; only `event=gmail_token_refresh_failed tenantId={}` on error |
 | T-05 | Information Disclosure | GmailDeliveryProcessingService per-message loop | mitigate | Only `gmail_message_id`, `gmail_thread_id`, `history_id`, `label_ids`, `internal_date` stored — no subject/from/body/snippet in code or logs |
-| T-09 | Denial of Service | GmailWatchScheduler retry loop | mitigate | `watch_consecutive_failures < 3` WHERE clause gates retries; after 3 failures sets WATCH_UNHEALTHY + stops standard renewal until clearForReconnect called |
-| T-11 | Tampering | GmailDeliveryProcessingService crash recovery | mitigate | `ON CONFLICT DO NOTHING` + monotonic pointer update = exactly-once observation on restart; PUBLIC @Transactional ensures atomicity |
+| T-09 | Denial of Service | GmailWatchScheduler retry loop | mitigate | After 3 failures sets WATCH_UNHEALTHY but renewal query continues retrying; a later success resets failures + HEALTHY so transient outages self-recover |
+| T-11 | Tampering | GmailDeliveryProcessingService crash recovery | mitigate | Atomic PROCESSING claim + native `ON CONFLICT DO NOTHING` + monotonic pointer update = exactly-once observation on restart; PUBLIC @Transactional ensures atomicity |
 | T-03 | Elevation of Privilege | history gap truncation | accept | D-B6 explicitly accepts dropped-gap messages — 500-item cap prevents runaway; logged for admin visibility |
 </threat_model>
 
@@ -654,7 +649,7 @@ After this plan:
 </verification>
 
 <success_criteria>
-GmailWatchScheduler and GmailHistoryProcessor compile and their Wave 0 tests turn GREEN. GmailHistoryProcessor delegates per-delivery work to GmailDeliveryProcessingService (public @Transactional — Spring AOP intercepts correctly). GmailConnectionService has 5 new state-management methods. TenantService.setTriagePaused added. Worker application.yml has GOOGLE_PUBSUB_TOPIC_NAME fail-fast var.
+GmailWatchScheduler and GmailHistoryProcessor compile and their Wave 0 tests turn GREEN. GmailHistoryProcessor delegates per-delivery work to GmailDeliveryProcessingService (public @Transactional — Spring AOP intercepts correctly). GmailConnectionService has 5 new state-management methods and recordWatchSuccess initializes last_synced_history_id from watch_history_id. OAuth reconnect clears watch state for retry. Worker application.yml has GOOGLE_PUBSUB_TOPIC_NAME fail-fast var.
 </success_criteria>
 
 <output>

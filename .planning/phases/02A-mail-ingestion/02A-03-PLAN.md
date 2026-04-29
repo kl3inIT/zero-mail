@@ -17,6 +17,7 @@ files_modified:
   - backend/api/src/main/java/com/zeromail/api/dto/account/MeResponse.java
   - backend/api/src/main/resources/application.yml
   - backend/core/src/main/java/com/zeromail/core/gmail/service/PubSubIngestionService.java
+  - backend/core/src/main/java/com/zeromail/core/tenant/service/TenantService.java
 autonomous: true
 requirements:
   - MAIL-01
@@ -32,18 +33,20 @@ must_haves:
     - "Second POST with same messageId returns 200 with no duplicate DB row"
     - "PUT /tenant/triage-pause with paused=true sets tenants.triage_paused=true"
     - "GET /me returns triagePaused boolean and gmailConnectionStatus.ingestionHealth"
-    - "PubSubSecurityConfig @Order(1) intercepts /internal/pubsub/** BEFORE user OAuth chain"
+    - "PubSubSecurityConfig @Order(1) is active under the test profile and intercepts /internal/pubsub/** BEFORE user OAuth chain"
     - "GmailPubSubController does NOT inject any JPA repository directly — all persistence routed via PubSubIngestionService"
-    - "PubSubIngestionService.ingestPushEnvelope is @Transactional — tenant lookup + delivery INSERT are atomic"
+    - "PubSubIngestionService performs unscoped JdbcTemplate tenant lookup before binding TenantContext, then opens a tenant-bound TransactionTemplate for delivery INSERT"
+    - "PubSubIngestionService uses PubSubDeliveryRepository.insertPendingIfAbsent; duplicate Pub/Sub messages are detected by row count, not caught DataIntegrityViolationException"
+    - "TenantService.setTriagePaused is implemented in this plan so Plan 03 has no same-wave dependency on Plan 02"
   artifacts:
     - path: "backend/api/src/main/java/com/zeromail/api/security/PubSubOidcAuthFilter.java"
       provides: "OncePerRequestFilter that verifies Google OIDC token"
       contains: "TokenVerifier"
     - path: "backend/api/src/main/java/com/zeromail/api/security/PubSubSecurityConfig.java"
-      provides: "SecurityFilterChain @Order(1) for /internal/pubsub/**"
+      provides: "SecurityFilterChain @Order(1) for /internal/pubsub/** active in test profile"
       contains: "securityMatcher"
     - path: "backend/core/src/main/java/com/zeromail/core/gmail/service/PubSubIngestionService.java"
-      provides: "@Service @Transactional — tenant lookup + delivery INSERT"
+      provides: "@Service — unscoped lookup + tenant-bound TransactionTemplate delivery INSERT"
       contains: "ingestPushEnvelope"
     - path: "backend/api/src/main/java/com/zeromail/api/controllers/GmailPubSubController.java"
       provides: "POST /internal/pubsub/gmail ack-fast receiver"
@@ -62,8 +65,8 @@ must_haves:
       pattern: "ingestionService\\.ingestPushEnvelope"
     - from: "PubSubIngestionService"
       to: "PubSubDeliveryRepository"
-      via: "service-owned @Transactional — CLAUDE.md §1 compliant"
-      pattern: "deliveryRepository\\.save"
+      via: "service-owned TransactionTemplate — CLAUDE.md §1 compliant"
+      pattern: "insertPendingIfAbsent"
     - from: "SecurityConfig"
       to: "@Order(2)"
       via: "@Order annotation on SecurityConfig class or bean method"
@@ -77,7 +80,7 @@ Purpose: The push receiver + OIDC filter is the Phase 01.5 D-D5 deferred ceremon
 
 Output: PubSubOidcAuthFilter, PubSubSecurityConfig, PubSubIngestionService (new — owns all persistence), GmailPubSubController (thin: parse → service call → map result), TriagePauseController, DTOs, MeResponse extension, SecurityConfig @Order(2).
 
-CLAUDE.md §1 compliance note: GmailPubSubController MUST NOT inject JPA repositories. All tenant lookup + pubsub_delivery INSERT logic lives in PubSubIngestionService (@Service @Transactional) in backend/core.
+CLAUDE.md §1 compliance note: GmailPubSubController MUST NOT inject JPA repositories. All tenant lookup + pubsub_delivery INSERT logic lives in PubSubIngestionService in backend/core; it uses unscoped JdbcTemplate lookup plus tenant-bound TransactionTemplate, not controller-owned persistence.
 </objective>
 
 <execution_context>
@@ -146,9 +149,9 @@ public record MeResponse(String userId, String tenantId, String email,
 
 GmailConnectionRepository.findByTenantId(UUID) — returns Optional<GmailConnectionEntity>
 
-PubSubDeliveryRepository — available from Plan 01; has claimPendingBatch + updateStatus
+PubSubDeliveryRepository — available from Plan 01; has claimPendingBatch, insertPendingIfAbsent, updateStatus, and releaseForRetry
 
-TenantService.setTriagePaused(UUID, boolean) — available from Plan 02
+TenantService.setTriagePaused(UUID, boolean) — implemented in this plan before TriagePauseController uses it
 </interfaces>
 </context>
 
@@ -166,6 +169,7 @@ TenantService.setTriagePaused(UUID, boolean) — available from Plan 02
     backend/api/src/main/java/com/zeromail/api/dto/gmail/PubSubPushEnvelope.java,
     backend/api/src/main/java/com/zeromail/api/dto/tenant/TriagePauseRequest.java,
     backend/api/src/main/java/com/zeromail/api/dto/tenant/TriagePauseResponse.java,
+    backend/core/src/main/java/com/zeromail/core/tenant/service/TenantService.java,
     backend/api/src/main/resources/application.yml
   </files>
 
@@ -174,6 +178,7 @@ TenantService.setTriagePaused(UUID, boolean) — available from Plan 02
     - backend/api/src/main/java/com/zeromail/api/security/TenantBindingFilter.java (OncePerRequestFilter pattern)
     - backend/api/src/main/java/com/zeromail/api/controllers/DisconnectController.java (thin controller pattern)
     - backend/api/src/main/java/com/zeromail/api/dto/account/MeResponse.java (record DTO pattern)
+    - backend/core/src/main/java/com/zeromail/core/tenant/service/TenantService.java (full file — add setTriagePaused here)
     - backend/api/src/main/resources/application.yml (full file — READ BEFORE editing to add env vars)
     - .planning/phases/02A-mail-ingestion/02A-RESEARCH.md (Pattern 2 TokenVerifier, Pattern 3 PubSub payload, Pattern 1 dual SecurityFilterChain, P-01 pitfall order)
     - .planning/phases/02A-mail-ingestion/02A-PATTERNS.md (PubSubOidcAuthFilter, PubSubSecurityConfig, GmailPubSubController, TriagePauseController adaptations)
@@ -212,40 +217,47 @@ public enum IngestResult {
 ```java
 package com.zeromail.core.gmail.service;
 
-import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.PubSubDeliveryRepository;
-import com.zeromail.core.gmail.persistence.PubSubDeliveryEntity;
-import com.zeromail.core.shared.tenant.TenantContext;
+import com.zeromail.core.tenant.TenantContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
-import java.util.Map;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Owns all persistence for the ack-fast PubSub push path.
  * CLAUDE.md §1: controllers never inject repositories — this service is the
- * transaction boundary for tenant lookup + pubsub_delivery INSERT.
+ * boundary for unscoped tenant lookup + tenant-bound pubsub_delivery INSERT.
  */
 @Service
 public class PubSubIngestionService {
 
     private static final Logger log = LoggerFactory.getLogger(PubSubIngestionService.class);
 
-    private final GmailConnectionRepository connectionRepository;
+    private final JdbcTemplate jdbc;
     private final PubSubDeliveryRepository deliveryRepository;
+    private final TransactionTemplate tx;
 
-    public PubSubIngestionService(GmailConnectionRepository connectionRepository,
-                                   PubSubDeliveryRepository deliveryRepository) {
-        this.connectionRepository = connectionRepository;
+    public PubSubIngestionService(JdbcTemplate jdbc,
+                                  PubSubDeliveryRepository deliveryRepository,
+                                  PlatformTransactionManager txManager) {
+        this.jdbc = jdbc;
         this.deliveryRepository = deliveryRepository;
+        this.tx = new TransactionTemplate(txManager);
     }
 
     /**
-     * Ack-fast ingestion: tenant lookup + delivery row INSERT, all under one transaction.
+     * Ack-fast ingestion.
+     *
+     * Tenant lookup is intentionally unscoped native SQL because Gmail email lookup
+     * happens before a tenant is known. The tenant-bound INSERT transaction opens only
+     * after TenantContext is bound, preserving the Hibernate tenant invariant.
      *
      * @param emailAddress   from the decoded Pub/Sub notification (NOT logged — privacy)
      * @param pubsubMessageId Pub/Sub message ID (dedup key)
@@ -253,57 +265,53 @@ public class PubSubIngestionService {
      * @param rawPayload     full envelope payload serialized as JSON string (stored for replay)
      * @return IngestResult — caller maps to HTTP response, no business logic needed
      */
-    @Transactional
     public IngestResult ingestPushEnvelope(String emailAddress,
                                            String pubsubMessageId,
                                            long historyId,
                                            String rawPayload) {
-        // Tenant lookup by LOWER(google_email) — D-A4
-        // Use explicit @Query with LOWER() cast — findByGoogleEmailIgnoreCase uses DB-specific
-        // case folding that may not match ASCII lowercase on non-ASCII input; explicit LOWER is safer.
-        var connOpt = connectionRepository.findByGoogleEmailLower(emailAddress.toLowerCase());
-        if (connOpt.isEmpty()) {
+        List<UUID> tenantIds = jdbc.query(
+            """
+            SELECT tenant_id
+            FROM gmail_connections
+            WHERE LOWER(google_email) = ?
+              AND status = 'CONNECTED'
+            LIMIT 1
+            """,
+            (rs, rowNum) -> rs.getObject("tenant_id", UUID.class),
+            emailAddress.toLowerCase()
+        );
+
+        if (tenantIds.isEmpty()) {
             log.info("event=pubsub_unknown_email_dropped");  // email NOT logged — privacy safe
             return IngestResult.UNKNOWN_EMAIL;
         }
 
-        UUID tenantId = connOpt.get().getTenantId();
+        UUID tenantId = tenantIds.getFirst();
 
-        // Bind TenantContext for the duration of this transaction — D-A3
-        // ScopedValue.where ensures TenantContext.currentOrThrow() works for any
-        // downstream code that runs within this call.
-        try {
-            return TenantContext.withTenant(tenantId.toString(), () -> {
-                PubSubDeliveryEntity delivery = new PubSubDeliveryEntity(
+        AtomicReference<IngestResult> result = new AtomicReference<>();
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() ->
+            result.set(tx.execute(_ -> {
+                int inserted = deliveryRepository.insertPendingIfAbsent(
                     UUID.randomUUID(),
                     tenantId,
                     pubsubMessageId,
                     historyId,
                     rawPayload
                 );
-                deliveryRepository.save(delivery);
+                if (inserted == 0) {
+                    log.info("event=pubsub_duplicate_delivery_dropped tenantId={}", tenantId);
+                    return IngestResult.DUPLICATE;
+                }
                 log.info("event=pubsub_delivery_accepted tenantId={}", tenantId);
                 return IngestResult.ACCEPTED;
-            });
-        } catch (DataIntegrityViolationException e) {
-            // UNIQUE constraint on (pubsub_message_id) — duplicate delivery, silently dedup
-            log.info("event=pubsub_duplicate_delivery_dropped tenantId={}", tenantId);
-            return IngestResult.DUPLICATE;
-        }
+            }))
+        );
+        return result.get();
     }
 }
 ```
 
-Note: `TenantContext.withTenant(String, Supplier<T>)` — if this helper does not yet exist in
-`backend/core`, create it as a static helper on `TenantContext` using `ScopedValue.where(...).call(supplier)`.
-Alternatively, use `ScopedValue.where(TenantContext.TENANT, tenantId.toString()).call(() -> { ... })` inline.
-
-Also add `findByGoogleEmailLower` to `GmailConnectionRepository.java` — use explicit `@Query` to avoid
-Spring Data derived query case-folding ambiguity:
-```java
-@Query("SELECT c FROM GmailConnectionEntity c WHERE LOWER(c.googleEmail) = :emailLower")
-Optional<GmailConnectionEntity> findByGoogleEmailLower(@Param("emailLower") String emailLower);
-```
+Do NOT add `GmailConnectionRepository.findByGoogleEmailLower(...)` for this lookup. `GmailConnectionEntity` is tenant-owned; querying it through JPA before `TenantContext` is bound can return nothing or bind the wrong tenant state. The native `JdbcTemplate` lookup is intentionally unscoped and only returns `tenant_id`; all tenant-owned inserts happen after `ScopedValue.where(TenantContext.TENANT, ...)` and inside `TransactionTemplate`.
 
 ---
 
@@ -320,11 +328,13 @@ public class PubSubOidcAuthFilter extends OncePerRequestFilter {
 
     public PubSubOidcAuthFilter(
             @Value("${pubsub.push-audience-url}") String audience,
-            @Value("${pubsub.sa-principal-email}") String saEmail) {
+            @Value("${pubsub.sa-principal-email}") String saEmail,
+            @Value("${pubsub.oidc-certificates-url:https://www.googleapis.com/oauth2/v3/certs}") String certsUrl) {
         this.expectedEmail = saEmail;
         this.tokenVerifier = TokenVerifier.newBuilder()
                 .setAudience(audience)
                 .setIssuer("https://accounts.google.com")
+                .setCertificatesLocation(certsUrl)
                 .build();
     }
 
@@ -361,12 +371,11 @@ Import: `com.google.auth.oauth2.TokenVerifier`, `com.google.api.client.json.webt
 
 ---
 
-**Step 4 — `PubSubSecurityConfig.java`** — package `com.zeromail.api.security`. New `@Configuration @Order(1) @Profile("!test")`:
+**Step 4 — `PubSubSecurityConfig.java`** — package `com.zeromail.api.security`. New `@Configuration @Order(1)`. Do NOT add `@Profile("!test")`: API integration tests run under `@ActiveProfiles("test")` and must still verify that missing/invalid Pub/Sub OIDC requests return 401 before business logic.
 
 ```java
 @Configuration
 @Order(1)
-@Profile("!test")
 public class PubSubSecurityConfig {
 
     @Bean
@@ -385,7 +394,7 @@ public class PubSubSecurityConfig {
 
 ---
 
-**Step 5 — `SecurityConfig.java`** — READ the current file. Add `@Order(2)` to the SecurityConfig class declaration:
+**Step 5 — `SecurityConfig.java`** — READ the current file. Add `@Order(2)` to the existing user-session SecurityConfig class declaration. Keeping its existing `@Profile("!test")` is acceptable because the Pub/Sub machine-to-machine chain is now in `PubSubSecurityConfig` and active in tests:
 ```java
 @Configuration
 @Order(2)
@@ -519,6 +528,18 @@ public record TriagePauseRequest(@NotNull Boolean paused) {}
 public record TriagePauseResponse(boolean paused) {}
 ```
 
+**`TenantService.java`** — READ the current file. ADD this method before writing the controller:
+```java
+@Transactional
+public void setTriagePaused(UUID tenantId, boolean paused) {
+    tenants.findById(tenantId).ifPresent(t -> {
+        t.setTriagePaused(paused);
+        tenants.save(t);
+    });
+}
+```
+Privacy log goes in the controller, not the service.
+
 **`TriagePauseController.java`** — package `com.zeromail.api.controllers`. Thin per DisconnectController pattern:
 
 ```java
@@ -550,7 +571,14 @@ public class TriagePauseController {
 pubsub:
   push-audience-url: ${PUBSUB_PUSH_AUDIENCE_URL:?PUBSUB_PUSH_AUDIENCE_URL env var is required}
   sa-principal-email: ${PUBSUB_SA_PRINCIPAL_EMAIL:?PUBSUB_SA_PRINCIPAL_EMAIL env var is required}
+  oidc-certificates-url: ${PUBSUB_OIDC_CERTIFICATES_URL:https://www.googleapis.com/oauth2/v3/certs}
 ```
+
+**Step 10 — Enable API Wave 0 scaffolds now covered by this task.** Remove class-level `@Disabled` from:
+- `backend/api/src/test/java/com/zeromail/api/controllers/TriagePauseControllerTest.java`
+- `backend/api/src/test/java/com/zeromail/api/controllers/PubSubIdempotencyTest.java`
+
+Keep assertions raw HTTP/SQL if that is still simpler, but the tests must execute GREEN before this plan is complete.
   </action>
 
   <verify>
@@ -558,18 +586,23 @@ pubsub:
   </verify>
 
   <acceptance_criteria>
-    - `PubSubIngestionService.java` exists in `backend/core/src/main/java/com/zeromail/core/gmail/service/` and contains `@Service` + `@Transactional` on `ingestPushEnvelope` method
+    - `PubSubIngestionService.java` exists in `backend/core/src/main/java/com/zeromail/core/gmail/service/` and contains `JdbcTemplate`, `TransactionTemplate`, and `ScopedValue.where(TenantContext.TENANT`
+    - `PubSubIngestionService.java` does NOT contain `@Transactional` on `ingestPushEnvelope`, `findByGoogleEmailLower`, `GmailConnectionRepository`, or `DataIntegrityViolationException`
+    - `PubSubIngestionService.java` contains `insertPendingIfAbsent` and branches on `inserted == 0` for duplicates
     - `GmailPubSubController.java` does NOT inject `GmailConnectionRepository` or `PubSubDeliveryRepository` — verify: `grep -n "GmailConnectionRepository\|PubSubDeliveryRepository" backend/api/src/main/java/com/zeromail/api/controllers/GmailPubSubController.java` returns empty
     - `GmailPubSubController.java` contains `ingestionService.ingestPushEnvelope` call
-    - `PubSubOidcAuthFilter.java` contains `TokenVerifier.newBuilder()` and `event=pubsub_oidc_verification_failed`
+    - `PubSubOidcAuthFilter.java` contains `TokenVerifier.newBuilder()`, `setCertificatesLocation`, and `event=pubsub_oidc_verification_failed`
     - `PubSubOidcAuthFilter.java` does NOT contain any log line referencing the token content or email address
     - `PubSubSecurityConfig.java` contains `@Order(1)` and `securityMatcher("/internal/pubsub/**")`
+    - `PubSubSecurityConfig.java` does NOT contain `@Profile("!test")`; Pub/Sub security must be active under `@ActiveProfiles("test")`
     - `SecurityConfig.java` contains `@Order(2)` — check with `grep -n '@Order' backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java`
     - `TriagePauseController.java` contains `@PutMapping("/tenant/triage-pause")` and `event=triage_pause_toggled`
+    - `TenantService.java` contains `setTriagePaused(UUID tenantId, boolean paused)`
     - `backend/api/src/main/resources/application.yml` contains `PUBSUB_PUSH_AUDIENCE_URL:?` and `PUBSUB_SA_PRINCIPAL_EMAIL:?`
     - `./gradlew :backend:api:compileJava :backend:core:compileJava` exits 0
     - `PubSubOidcAuthFilterTest` passes GREEN (5 test cases: valid + 4 rejection paths)
     - `GmailPubSubControllerIntegrationTest` passes GREEN (5 test cases including duplicate dedup)
+    - `TriagePauseControllerTest` and `PubSubIdempotencyTest` no longer contain class-level `@Disabled` and both pass GREEN
   </acceptance_criteria>
 
   <done>OIDC filter, dual SecurityFilterChain, PubSubIngestionService (CLAUDE.md §1 compliant), thin PubSub controller, and triage-pause controller all compile and their Wave 0 tests pass GREEN. Phase 01.5 D-D5 deferred ceremony is now closed.</done>
@@ -641,6 +674,8 @@ The controller calling `/me` must now make these two additional reads. The `/me`
 
 Extend `GmailConnectionProjection.java` (read it first) to add `String ingestionHealth()` if not present. If it's a Spring Data projection interface, add the method. If it's a record, update the record.
 
+After the `/me` endpoint and DTO are updated, remove class-level `@Disabled` from `backend/api/src/test/java/com/zeromail/api/controllers/MeControllerTest.java`. It must execute GREEN in this plan; skipped tests do not count as closure.
+
 Privacy: `googleEmail` is in the response ONLY for UI display (the user's own email). It must NOT appear in any log statement in the controller or service. The response field is safe because the user owns it.
   </action>
 
@@ -654,10 +689,11 @@ Privacy: `googleEmail` is in the response ONLY for UI display (the user's own em
     - The `from(...)` factory method accepts two new arguments (triagePaused + GmailConnectionStatusExtended)
     - No existing tests break (`./gradlew :backend:api:compileJava` exits 0)
     - `GmailConnectionProjection` (or whatever projection is used) exposes `ingestionHealth` field
-    - `./gradlew :backend:api:test --tests "com.zeromail.api.controllers.MeControllerTest"` exits 0 (tests are @Disabled / SKIPPED — not 0 FAILED is the acceptance bar here; the Wave 0 scaffold exists and compiles)
+    - `MeControllerTest.java` no longer contains class-level `@Disabled`
+    - `./gradlew :backend:api:test --tests "com.zeromail.api.controllers.MeControllerTest"` exits 0 with GREEN tests, not SKIPPED-only output
   </acceptance_criteria>
 
-  <done>MeResponse extended with triagePaused + GmailConnectionStatusExtended; all callers updated; api module compiles clean; MeControllerTest Wave 0 scaffold runs as SKIPPED (not FAILED)</done>
+  <done>MeResponse extended with triagePaused + GmailConnectionStatusExtended; all callers updated; api module compiles clean; MeControllerTest Wave 0 scaffold is enabled and GREEN</done>
 </task>
 
 </tasks>
@@ -675,11 +711,11 @@ Privacy: `googleEmail` is in the response ONLY for UI display (the user's own em
 | Threat ID | Category | Component | Disposition | Mitigation Plan |
 |-----------|----------|-----------|-------------|-----------------|
 | T-01 | Spoofing | PubSubOidcAuthFilter | mitigate | TokenVerifier.newBuilder().setAudience().setIssuer() — hard 401 on any mismatch; verify() throws VerificationException for wrong aud/email/exp/sig/iss; filter never calls chain.doFilter on failure |
-| T-06 | Tampering | GmailConnectionRepository.findByGoogleEmailLower | mitigate | Explicit @Query with LOWER() — always parameterized; no string concatenation in lookup |
+| T-06 | Tampering | PubSubIngestionService tenant lookup | mitigate | Unscoped JdbcTemplate lookup returns only tenant_id with parameterized SQL; tenant-owned JPA queries are never run before TenantContext binding |
 | T-07 | Elevation of Privilege | TriagePauseController | mitigate | Existing SecurityConfig user OAuth chain (now @Order(2)) requires authentication; TenantContext.currentOrThrow() throws if no binding; @TenantId filter bounds service writes |
 | T-08 | Denial of Service | GmailPubSubController ack deadline | mitigate | D-A1 ack-fast pattern: controller does ONLY envelope parse + service.ingestPushEnvelope() + 200; no Gmail API call; all persistence in PubSubIngestionService; p99 target <300ms |
 | T-10 | Information Disclosure | MeResponse.gmailConnectionStatus.googleEmail | accept | googleEmail shown to authenticated user only (their own email); never logged; acceptable display field |
-| T-02 | Tampering | PubSubDeliveryRepository.save duplicate | mitigate | DataIntegrityViolationException catch on UNIQUE constraint violation inside PubSubIngestionService = silent dedup; exactly-once delivery semantics |
+| T-02 | Tampering | PubSubDeliveryRepository.insertPendingIfAbsent duplicate | mitigate | Native `INSERT ... ON CONFLICT DO NOTHING` returns row count; no rollback-only transaction from caught DataIntegrityViolationException |
 </threat_model>
 
 <verification>
@@ -690,11 +726,11 @@ After this plan:
 - `grep -n "GmailConnectionRepository\|PubSubDeliveryRepository" backend/api/src/main/java/com/zeromail/api/controllers/GmailPubSubController.java` returns empty (no direct repo injection in controller)
 - `grep -n '@Order' backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java` shows `@Order(2)`
 - `grep -c 'PUBSUB_PUSH_AUDIENCE_URL' backend/api/src/main/resources/application.yml` >= 1
-- `./gradlew :backend:api:test --tests "com.zeromail.api.controllers.MeControllerTest"` exits 0 (SKIPPED counts — wave 0 @Disabled scaffold compiles and is found)
+- `./gradlew :backend:api:test --tests "com.zeromail.api.controllers.MeControllerTest"` exits 0 with GREEN tests (SKIPPED-only output does not count)
 </verification>
 
 <success_criteria>
-OIDC filter verified by 5-case test (valid + wrong aud/email/exp/sig). Push controller is thin (parse → service → 200). PubSubIngestionService owns all persistence under @Transactional — CLAUDE.md §1 compliant. SecurityConfig correctly ordered. MeResponse extended with triagePaused + gmailConnectionStatus. Phase 01.5 D-D5 deferred ceremony is closed.
+OIDC filter verified by 5-case test (valid + wrong aud/email/exp/sig). Push controller is thin (parse → service → 200). PubSubIngestionService owns all persistence through unscoped JdbcTemplate lookup plus tenant-bound TransactionTemplate insert — CLAUDE.md §1 compliant. SecurityConfig correctly ordered and Pub/Sub security active in tests. MeResponse extended with triagePaused + gmailConnectionStatus. Phase 01.5 D-D5 deferred ceremony is closed.
 </success_criteria>
 
 <output>

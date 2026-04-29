@@ -22,19 +22,20 @@ requirements:
 must_haves:
   truths:
     - "Full backend test suite passes (./gradlew clean check)"
-    - "All 7 backend Wave 0 tests are GREEN"
-    - "All 3 frontend Wave 0 tests are GREEN"
+    - "All 10 backend Wave 0 test classes are enabled and GREEN"
+    - "All 4 frontend Wave 0 test files are enabled and GREEN"
+    - "No Phase 2A Wave 0 Java test class contains class-level @Disabled and no Phase 2A frontend test contains it.skip"
     - "pnpm -F web run typecheck + lint + i18n:check all exit 0"
     - "ApplicationModulesTest passes (no new Modulith boundary violations)"
     - "DomainBoundaryArchTests passes (no cross-domain persistence access)"
     - "02A-VALIDATION.md flipped nyquist_compliant: true + wave_0_complete: true"
-    - "STATE.md Pub/Sub OIDC verification ceremony blocker removed"
+    - "STATE.md no longer contains the blocker bullet `- **Pub/Sub OIDC verification ceremony**`"
   artifacts:
     - path: ".planning/phases/02A-mail-ingestion/02A-VALIDATION.md"
       provides: "Flipped nyquist_compliant + wave_0_complete"
       contains: "nyquist_compliant: true"
     - path: ".planning/STATE.md"
-      provides: "Pub/Sub OIDC ceremony blocker removed"
+      provides: "Phase 01.5 Pub/Sub push-token blocker removed"
   key_links:
     - from: "ApplicationModulesTest"
       to: "core.gmail module"
@@ -91,7 +92,10 @@ Expected: BUILD SUCCESSFUL. If failures, fix before proceeding.
 **Step 2 — Targeted Wave 0 backend tests:**
 ```bash
 ./gradlew :backend:api:test --tests "*PubSubOidcAuthFilterTest*" \
-  --tests "*GmailPubSubControllerIntegrationTest*" 2>&1 | grep -E "PASSED|FAILED"
+  --tests "*GmailPubSubControllerIntegrationTest*" \
+  --tests "*MeControllerTest*" \
+  --tests "*TriagePauseControllerTest*" \
+  --tests "*PubSubIdempotencyTest*" 2>&1 | grep -E "PASSED|FAILED|SKIPPED"
 
 ./gradlew :backend:core:test --tests "*PubSubDeliveryEntityTest*" \
   --tests "*MailMessageObservedEntityTest*" \
@@ -100,6 +104,14 @@ Expected: BUILD SUCCESSFUL. If failures, fix before proceeding.
 ./gradlew :backend:worker:test --tests "*GmailWatchSchedulerTest*" \
   --tests "*GmailHistoryProcessorTest*" 2>&1 | grep -E "PASSED|FAILED"
 ```
+
+Then verify skipped API scaffolds are gone:
+```bash
+grep -R "@Disabled" backend/api/src/test/java/com/zeromail/api/controllers/MeControllerTest.java \
+  backend/api/src/test/java/com/zeromail/api/controllers/TriagePauseControllerTest.java \
+  backend/api/src/test/java/com/zeromail/api/controllers/PubSubIdempotencyTest.java
+```
+Expected: no matches.
 
 **Step 3 — Modulith + ArchUnit:**
 ```bash
@@ -119,7 +131,9 @@ pnpm -F web run test:run 2>&1 | tail -20
 pnpm -F web run typecheck 2>&1 | tail -10
 pnpm -F web run lint 2>&1 | tail -10
 pnpm -F web run i18n:check 2>&1 | tail -10
+grep -R "it.skip" apps/web/features/gmail/components/ReconnectPrompt.test.tsx
 ```
+Expected for the `grep -R "it.skip"` command: no matches.
 
 **Step 5 — Update 02A-VALIDATION.md:**
 READ the file. Change frontmatter:
@@ -141,10 +155,12 @@ Add manual verification instructions summary at the bottom (the 4 manual-only it
 
   <acceptance_criteria>
     - `./gradlew clean check` exits 0 (BUILD SUCCESSFUL)
-    - All 7 backend Wave 0 tests are GREEN (PubSubOidcAuthFilterTest x5, GmailPubSubControllerIntegrationTest x5, PubSubDeliveryEntityTest x3, MailMessageObservedEntityTest x3, GmailIngestionHealthTest x4, GmailHistoryProcessorTest x5, GmailWatchSchedulerTest x4)
+    - All 10 backend Wave 0 test classes are GREEN (PubSubOidcAuthFilterTest x5, GmailPubSubControllerIntegrationTest x5, MeControllerTest x3, TriagePauseControllerTest x2, PubSubIdempotencyTest x2, PubSubDeliveryEntityTest x3, MailMessageObservedEntityTest x3, GmailIngestionHealthTest x4, GmailHistoryProcessorTest x5, GmailWatchSchedulerTest x4)
+    - `grep -R "@Disabled" backend/api/src/test/java/com/zeromail/api/controllers/MeControllerTest.java backend/api/src/test/java/com/zeromail/api/controllers/TriagePauseControllerTest.java backend/api/src/test/java/com/zeromail/api/controllers/PubSubIdempotencyTest.java` returns no matches
     - `ApplicationModulesTest` passes GREEN
     - `DomainBoundaryArchTests` passes GREEN
-    - `pnpm -F web run test:run` — all Wave 0 tests GREEN (PauseBanner.test.tsx, useToggleTriagePause.test.tsx, phase-02a-files.test.ts)
+    - `pnpm -F web run test:run` — all Wave 0 tests GREEN (PauseBanner.test.tsx, useToggleTriagePause.test.tsx, ReconnectPrompt.test.tsx, phase-02a-files.test.ts)
+    - `grep -R "it.skip" apps/web/features/gmail/components/ReconnectPrompt.test.tsx` returns no matches
     - `pnpm -F web run typecheck` exits 0
     - `pnpm -F web run lint` exits 0
     - `pnpm -F web run i18n:check` exits 0
@@ -167,7 +183,7 @@ Add manual verification instructions summary at the bottom (the 4 manual-only it
   </read_first>
 
   <action>
-**`STATE.md`** — READ the full file. Find the Blockers/Concerns section. Locate the line:
+**`STATE.md`** — READ the full file. Find the Blockers/Concerns section. Locate the blocker bullet:
 ```
 - **Pub/Sub OIDC verification ceremony** (Phase 2A push-receiver) ...
 ```
@@ -176,7 +192,7 @@ Remove this entire bullet point. This blocker is now closed by Phase 2A Plan 03 
 
 In the Accumulated Context → Decisions section, ADD a new entry documenting the Phase 2A closure:
 ```
-- [Phase 2A]: Pub/Sub OIDC verification ceremony closed. PubSubOidcAuthFilter uses TokenVerifier.newBuilder().setAudience().setIssuer() from google-auth-library-oauth2-http 1.35.0. Dual SecurityFilterChain @Order(1)/@Order(2) pattern confirmed on Spring Security 7.0.5. 5-case test validates: valid passes, wrong aud/email/exp/sig all return 401. Phase 01.5 D-D5 deferred ceremony retired.
+- [Phase 2A]: Pub/Sub push-token validation closed. PubSubOidcAuthFilter uses TokenVerifier.newBuilder().setAudience().setIssuer().setCertificatesLocation() from google-auth-library-oauth2-http. PubSubSecurityConfig @Order(1) remains active under the test profile; user-session SecurityConfig is @Order(2). 5-case test validates: valid passes, wrong aud/email/exp/sig all return 401. Phase 01.5 D-D5 deferred blocker retired.
 ```
 
 Also update Current Position to reflect Phase 2A complete.
@@ -188,7 +204,7 @@ Also update Current Position to reflect Phase 2A complete.
 And update the Plans list:
 ```
 Plans:
-- [x] 02A-00-PLAN.md — Wave 0 RED test scaffolds (12 files: 9 backend + 3 frontend)
+- [x] 02A-00-PLAN.md — Wave 0 RED test scaffolds (10 backend test classes + 2 fixtures + 4 frontend test files)
 - [x] 02A-01-PLAN.md — Schema (Liquibase 010-013) + entities + enum
 - [x] 02A-02-PLAN.md — Worker schedulers (GmailWatchScheduler + GmailHistoryProcessor)
 - [x] 02A-03-PLAN.md — API layer (PubSubOidcAuthFilter + push receiver + triage-pause controller)
@@ -198,12 +214,12 @@ Plans:
   </action>
 
   <verify>
-    <automated>grep -c "Pub/Sub OIDC verification ceremony" .planning/STATE.md</automated>
+    <automated>grep -c -- "- \\*\\*Pub/Sub OIDC verification ceremony\\*\\*" .planning/STATE.md</automated>
   </verify>
 
   <acceptance_criteria>
-    - `grep -c "Pub/Sub OIDC verification ceremony" .planning/STATE.md` returns 0 (blocker removed)
-    - STATE.md Accumulated Context → Decisions section contains "Phase 2A" entry about OIDC closure
+    - `grep -c -- "- \\*\\*Pub/Sub OIDC verification ceremony\\*\\*" .planning/STATE.md` returns 0 (blocker bullet removed)
+    - STATE.md Accumulated Context → Decisions section contains "Phase 2A" entry about Pub/Sub push-token validation closure
     - ROADMAP.md Phase 2A section shows `**Plans**: 6 plans`
     - ROADMAP.md Phase 2A plans list shows all 6 plans with `[x]` checkboxes
   </acceptance_criteria>
@@ -232,12 +248,12 @@ Plans:
 After this plan:
 - `./gradlew clean check` BUILD SUCCESSFUL (entire backend suite)
 - `pnpm -F web run test:run && pnpm -F web run typecheck && pnpm -F web run lint && pnpm -F web run i18n:check` all exit 0
-- `grep -c "Pub/Sub OIDC verification ceremony" .planning/STATE.md` = 0
+- `grep -c -- "- \\*\\*Pub/Sub OIDC verification ceremony\\*\\*" .planning/STATE.md` = 0
 - `grep "nyquist_compliant" .planning/phases/02A-mail-ingestion/02A-VALIDATION.md` shows `true`
 </verification>
 
 <success_criteria>
-Full test suite GREEN (backend + frontend). All 12 Wave 0 tests GREEN. ApplicationModulesTest + DomainBoundaryArchTests pass. VALIDATION.md nyquist_compliant: true. STATE.md Pub/Sub OIDC blocker removed. Phase 2A declared complete.
+Full test suite GREEN (backend + frontend). All 10 backend Wave 0 test classes and all 4 frontend Wave 0 test files are enabled and GREEN. ApplicationModulesTest + DomainBoundaryArchTests pass. VALIDATION.md nyquist_compliant: true. STATE.md Pub/Sub OIDC blocker bullet removed. Phase 2A declared complete.
 </success_criteria>
 
 <output>

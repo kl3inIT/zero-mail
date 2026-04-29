@@ -206,12 +206,27 @@ Plans:
 **Plans**: 6 plans
 
 Plans:
-- [ ] 02A-00-PLAN.md â Wave 0 RED test scaffolds (12 files: 9 backend + 3 frontend)
-- [ ] 02A-01-PLAN.md â Schema (Liquibase 010-013) + GmailIngestionHealth enum + entities/repositories
-- [ ] 02A-02-PLAN.md â Worker schedulers (GmailWatchScheduler + GmailHistoryProcessor + GmailApiClientFactory)
-- [ ] 02A-03-PLAN.md â API layer (PubSubOidcAuthFilter + SecurityFilterChain @Order(1) + push controller + triage-pause controller + MeResponse extension)
-- [ ] 02A-04-PLAN.md â Frontend (PauseBanner + settings toggle + ReconnectPrompt gate + i18n keys)
-- [ ] 02A-05-PLAN.md â Full verification sweep + closure
+**Wave 0**
+- [ ] 02A-00-PLAN.md — Wave 0 RED test scaffolds (10 backend test classes + 2 fixtures + 4 frontend test files)
+
+**Wave 1 *(blocked on Wave 0 completion)***
+- [ ] 02A-01-PLAN.md — Schema (Liquibase 010-013) + GmailIngestionHealth enum + entities/repositories
+
+**Wave 2 *(blocked on Wave 1 completion)***
+- [ ] 02A-02-PLAN.md — Worker schedulers (GmailWatchScheduler + GmailHistoryProcessor + GmailApiClientFactory)
+- [ ] 02A-03-PLAN.md — API layer (PubSubOidcAuthFilter + SecurityFilterChain @Order(1) + push controller + triage-pause controller + MeResponse extension)
+
+**Wave 3 *(blocked on Wave 2 completion)***
+- [ ] 02A-04-PLAN.md — Frontend (PauseBanner + settings toggle + ReconnectPrompt gate + i18n keys)
+
+**Wave 4 *(blocked on Wave 3 completion)***
+- [ ] 02A-05-PLAN.md — Full verification sweep + closure
+
+Cross-cutting constraints:
+- Pub/Sub OIDC security is active under the test profile; missing or invalid tokens return 401 before business logic.
+- TenantContext is bound before tenant-scoped persistence transactions open; unscoped Gmail email lookup uses parameterized JdbcTemplate only.
+- Delivery and observed-message idempotency use native INSERT ... ON CONFLICT DO NOTHING, not caught JPA DataIntegrityViolationException paths.
+- No raw email content, token values, or Google email addresses are logged or persisted outside the explicitly allowed owner-visible response field.
 
 ### Phase 2B: Billing (Prepaid Credits)
 **Goal**: Stand up a double-entry Postgres credit ledger with reserve/settle/release semantics and a watchdog, so that every billable action in later phases can charge credits safely under concurrency.

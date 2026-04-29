@@ -29,7 +29,8 @@ must_haves:
   truths:
     - "Liquibase applies changesets 010-013 cleanly on a fresh schema without errors"
     - "GmailConnectionEntity has all 6 new fields (lastSyncedHistoryId, watchHistoryId, watchExpiresAt, watchRenewedAt, watchConsecutiveFailures, ingestionHealth)"
-    - "PubSubDeliveryEntity persists to pubsub_delivery with UNIQUE(tenant_id, pubsub_message_id)"
+    - "PubSubDeliveryEntity persists to pubsub_delivery with UNIQUE(tenant_id, pubsub_message_id), non-null updated_at, and non-null version inherited from AbstractAuditableEntity"
+    - "MailMessageObservedRepository exposes native INSERT ... ON CONFLICT DO NOTHING for idempotent observation writes"
     - "MailMessageObservedEntity persists with composite PK (tenant_id, gmail_message_id) and TEXT[] label_ids"
     - "GmailIngestionHealth implements IdentifiedEnum with fromId fail-loud"
     - "TenantEntity has triage_paused boolean field"
@@ -281,6 +282,15 @@ databaseChangeLog:
               - column:
                   name: updated_at
                   type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
         - addUniqueConstraint:
             tableName: pubsub_delivery
             columnNames: tenant_id, pubsub_message_id
@@ -387,8 +397,8 @@ databaseChangeLog:
 
   <acceptance_criteria>
     - All 4 YAML files exist at the exact paths
-    - `010-gmail-ingestion-state.yaml` contains `addColumn:` 6 times (one per new column)
-    - `011-pubsub-delivery-table.yaml` contains `createTable:` and `addUniqueConstraint:`
+    - `010-gmail-ingestion-state.yaml` contains one `addColumn:` block with six `- column:` entries for `last_synced_history_id`, `watch_history_id`, `watch_expires_at`, `watch_renewed_at`, `watch_consecutive_failures`, and `ingestion_health`
+    - `011-pubsub-delivery-table.yaml` contains `createTable:`, `addUniqueConstraint:`, `name: updated_at` with `nullable: false`, and `name: version`
     - `012-mail-message-observed-table.yaml` contains `createTable:` and `addPrimaryKey:`
     - `013-tenants-triage-paused.yaml` contains `defaultValueBoolean: false`
     - `./gradlew :backend:core:test` applies changesets without Liquibase errors (test startup succeeds)
@@ -454,7 +464,7 @@ Add corresponding getters/setters using the existing one-liner style. DO NOT tou
 - Fields (AbstractTenantOwnedEntity already provides: id, tenantId, createdAt, updatedAt, version — DO NOT redeclare):
   - `@Column(name = "pubsub_message_id", nullable = false) private String pubsubMessageId`
   - `@Column(name = "history_id", nullable = false) private Long historyId`
-  - `@Column(name = "payload", columnDefinition = "jsonb", nullable = false) private String payload` (store full JSON string)
+  - `@JdbcTypeCode(SqlTypes.JSON) @Column(name = "payload", columnDefinition = "jsonb", nullable = false) private String payload` (store full JSON string)
   - `@Column(name = "status", nullable = false) private String status = "PENDING"`
   - `@Column(name = "attempts", nullable = false) private int attempts = 0`
   - `@Column(name = "locked_until") private Instant lockedUntil`
@@ -462,20 +472,59 @@ Add corresponding getters/setters using the existing one-liner style. DO NOT tou
 - Constructor: `public PubSubDeliveryEntity(UUID id, UUID tenantId, String pubsubMessageId, Long historyId, String payload) { super(id, tenantId); ... }`
 - Getters/setters one-liner style for all fields
 
-**`PubSubDeliveryRepository.java`** — extends `JpaRepository<PubSubDeliveryEntity, UUID>`. Add native query for SKIP LOCKED batch claim:
+**`PubSubDeliveryRepository.java`** — extends `JpaRepository<PubSubDeliveryEntity, UUID>`. Add an atomic native claim query. Do NOT implement claim as `SELECT ... FOR UPDATE SKIP LOCKED` returning entities only; repository method transactions end before worker processing, releasing locks and allowing duplicate workers to select the same rows. Claim must change row state inside the SQL statement:
 ```java
+@Transactional
 @Query(value = """
-    SELECT * FROM pubsub_delivery
-    WHERE status = 'PENDING'
-    AND (locked_until IS NULL OR locked_until < NOW())
-    ORDER BY created_at
-    LIMIT :limit
-    FOR UPDATE SKIP LOCKED
+    UPDATE pubsub_delivery
+    SET status = 'PROCESSING',
+        locked_until = NOW() + (:lockSeconds * INTERVAL '1 second'),
+        attempts = attempts + 1,
+        updated_at = NOW(),
+        version = version + 1
+    WHERE id IN (
+        SELECT id
+        FROM pubsub_delivery
+        WHERE status = 'PENDING'
+          AND (locked_until IS NULL OR locked_until < NOW())
+        ORDER BY created_at
+        LIMIT :limit
+        FOR UPDATE SKIP LOCKED
+    )
+    RETURNING *
+    """, nativeQuery = true)
+List<PubSubDeliveryEntity> claimPendingBatch(@Param("limit") int limit,
+                                             @Param("lockSeconds") int lockSeconds);
+```
+Also add native idempotent insert + state update helpers:
+```java
+@Modifying
+@Query(value = """
+    INSERT INTO pubsub_delivery
+      (id, tenant_id, pubsub_message_id, history_id, payload, status, attempts,
+       locked_until, created_at, updated_at, version)
+    VALUES
+      (:id, :tenantId, :pubsubMessageId, :historyId, CAST(:payload AS jsonb),
+       'PENDING', 0, NULL, NOW(), NOW(), 0)
+    ON CONFLICT (tenant_id, pubsub_message_id) DO NOTHING
     """, nativeQuery = true)
 @Transactional
-List<PubSubDeliveryEntity> claimPendingBatch(@Param("limit") int limit);
+int insertPendingIfAbsent(@Param("id") UUID id,
+                          @Param("tenantId") UUID tenantId,
+                          @Param("pubsubMessageId") String pubsubMessageId,
+                          @Param("historyId") Long historyId,
+                          @Param("payload") String payload);
+
+@Modifying
+@Query("UPDATE PubSubDeliveryEntity d SET d.status = :status, d.lockedUntil = null WHERE d.id = :id")
+@Transactional
+int updateStatus(@Param("id") UUID id, @Param("status") String status);
+
+@Modifying
+@Query("UPDATE PubSubDeliveryEntity d SET d.status = 'PENDING', d.lockedUntil = :nextAttemptAt WHERE d.id = :id")
+@Transactional
+int releaseForRetry(@Param("id") UUID id, @Param("nextAttemptAt") Instant nextAttemptAt);
 ```
-Also add: `@Modifying @Query("UPDATE PubSubDeliveryEntity d SET d.status = :status WHERE d.id = :id") @Transactional int updateStatus(@Param("id") UUID id, @Param("status") String status)`
 
 **`MailMessageObservedEntity.java`** — new entity WITHOUT extending AbstractTenantOwnedEntity (composite PK incompatibility). Package `com.zeromail.core.gmail.persistence`.
 ```java
@@ -532,7 +581,24 @@ public class MailMessageObservedEntity {
 ```
 Import: `org.hibernate.annotations.JdbcTypeCode`, `org.hibernate.type.SqlTypes`.
 
-**`MailMessageObservedRepository.java`** — extends `JpaRepository<MailMessageObservedEntity, MailMessageObservedEntity.MailMessageObservedId>`. No custom queries needed in this wave; ON CONFLICT DO NOTHING handled at service layer via native INSERT.
+**`MailMessageObservedRepository.java`** — extends `JpaRepository<MailMessageObservedEntity, MailMessageObservedEntity.MailMessageObservedId>`. Add a native insert method so idempotency never depends on catching `DataIntegrityViolationException` from JPA flush/commit:
+```java
+@Modifying
+@Query(value = """
+    INSERT INTO mail_message_observed
+      (tenant_id, gmail_message_id, gmail_thread_id, history_id, label_ids, internal_date, observed_at)
+    VALUES
+      (:tenantId, :gmailMessageId, :gmailThreadId, :historyId, :labelIds, :internalDate, NOW())
+    ON CONFLICT (tenant_id, gmail_message_id) DO NOTHING
+    """, nativeQuery = true)
+@Transactional
+int insertObservedIfAbsent(@Param("tenantId") UUID tenantId,
+                           @Param("gmailMessageId") String gmailMessageId,
+                           @Param("gmailThreadId") String gmailThreadId,
+                           @Param("historyId") Long historyId,
+                           @Param("labelIds") String[] labelIds,
+                           @Param("internalDate") Long internalDate);
+```
 
 **`TenantEntity.java`** — READ the current file, then ADD after the last field:
 ```java
@@ -554,8 +620,12 @@ Do NOT touch any existing field, constructor, or getter.
     - `GmailIngestionHealth.java` does NOT contain `weight()` method (unordered enum)
     - `GmailConnectionEntity.java` contains `private GmailIngestionHealth ingestionHealth` with `@Enumerated(EnumType.STRING)`
     - `PubSubDeliveryEntity.java` extends `AbstractTenantOwnedEntity` and `@Table(name = "pubsub_delivery")`
+    - `PubSubDeliveryEntity.java` maps payload with `@JdbcTypeCode(SqlTypes.JSON)`
+    - `PubSubDeliveryRepository.java` contains `UPDATE pubsub_delivery` + `RETURNING *` inside `claimPendingBatch` and does NOT contain a standalone `SELECT * FROM pubsub_delivery ... FOR UPDATE SKIP LOCKED` claim method
+    - `PubSubDeliveryRepository.java` contains `insertPendingIfAbsent` with `ON CONFLICT (tenant_id, pubsub_message_id) DO NOTHING`
     - `MailMessageObservedEntity.java` contains `@EmbeddedId` and `@JdbcTypeCode(SqlTypes.ARRAY)`
     - `MailMessageObservedEntity.java` does NOT extend `AbstractTenantOwnedEntity`
+    - `MailMessageObservedRepository.java` contains `insertObservedIfAbsent` with `ON CONFLICT (tenant_id, gmail_message_id) DO NOTHING`
     - `TenantEntity.java` contains `private boolean triagePaused = false`
     - `./gradlew :backend:core:compileJava` exits 0
     - `GmailIngestionHealthTest` goes GREEN (id()==name() + fromId + NoSuchElementException)
