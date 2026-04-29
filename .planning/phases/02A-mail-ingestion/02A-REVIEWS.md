@@ -1,10 +1,10 @@
 ---
 phase: 02A
-review_cycle: 5
+review_cycle: 6
 reviewers: [codex]
-reviewed_at: 2026-04-29T11:17:29.3409733+07:00
-follow_up_to_cycle: 4
-fix_commit: 6a3e914
+reviewed_at: 2026-04-29T11:28:37.3505479+07:00
+follow_up_to_cycle: 5
+fix_commit: b2ae18b
 plans_reviewed:
   - 02A-00-PLAN.md
   - 02A-01-PLAN.md
@@ -15,79 +15,72 @@ plans_reviewed:
 current_high: 1
 ---
 
-# Cross-AI Plan Review - Phase 02A (Cycle 5)
+# Cross-AI Plan Review - Phase 02A (Cycle 6)
 
 Only the Codex reviewer was requested and invoked for this follow-up convergence cycle, so this is a single-reviewer synthesis rather than a multi-reviewer consensus.
 
-Manual fix commit `6a3e914` fully resolved Cycle 4's two HIGH concerns at the plan-text level. This Cycle 5 review found one new HIGH reliability concern.
+Manual fix commit `b2ae18b` fully resolved Cycle 5's HIGH concern at the plan-text level. This Cycle 6 review found one new HIGH reliability concern.
 
 ## Codex Review
 
 **Summary**
 
-I reviewed the current repo state and pasted Phase 02A plans without modifying files. The two Cycle 4 HIGHs are now addressed in the plan text. Overall the plan set is much stronger, but I found one remaining HIGH reliability gap in the worker queue claim semantics: a crash after claiming `pubsub_delivery` rows can strand rows in `PROCESSING` forever.
+The prior stale `PROCESSING` reclaim HIGH is fully resolved in the plan text. However, I found one new HIGH reliability issue: the watch-renewal path can advance `last_synced_history_id` to the fresh `users.watch` baseline, which can skip unprocessed Gmail history deliveries.
 
 **Prior HIGH Resolution**
 
-1. Missing Google/Gmail Gradle dependency plan changes: **FULLY RESOLVED.**
-   Plan 01 now modifies `gradle/libs.versions.toml`, `backend/core/build.gradle.kts`, and `backend/api/build.gradle.kts`, adds aliases for `google-auth-library-oauth2-http` and `google-api-services-gmail`, wires core/API dependencies, and adds OpenAPI dummy Pub/Sub args. Evidence: `02A-01-PLAN.md:466`, `02A-01-PLAN.md:472`, `02A-01-PLAN.md:479`.
-
-2. Settings-page `ReconnectPrompt` parent gate for `CONNECTED` plus unhealthy `ingestionHealth`: **FULLY RESOLVED.**
-   Plan 04 now correctly targets the real parent mount site and requires `ReconnectPrompt` for `DISCONNECTED` or `CONNECTED && ingestionHealth !== 'HEALTHY'`, with tests enabled. Evidence: `02A-04-PLAN.md:257`, `02A-04-PLAN.md:357`, current parent gate at `apps/web/app/(protected)/settings/page.tsx:93`.
+FULLY RESOLVED. `claimPendingBatch` now reclaims both due `PENDING` rows and expired `PROCESSING` rows atomically in the same `UPDATE ... RETURNING *` query: `02A-01-PLAN.md:538`, `02A-01-PLAN.md:546`. Wave 0 now explicitly tests expired `PROCESSING` reclaim: `02A-00-PLAN.md:262`. Plan 02 also documents the crash-recovery invariant: `02A-02-PLAN.md:660`.
 
 **Strengths**
 
-- Dependency ordering is now correct: Gradle/library wiring lands in Plan 01 before API/worker code.
-- OIDC filter scoping is well specified: no `@Component`, explicit `PubSubSecurityConfig @Order(1)`, disabled servlet registration, and active test-profile coverage.
-- Controller persistence moved into `PubSubIngestionService`, preserving thin-controller boundaries.
-- Reconnect prompt fix is now at the actual settings-page boundary, not just the presentational component.
-- Worker transaction ownership improved by extracting public `GmailDeliveryProcessingService.processDelivery`.
+- Delivery claim semantics are now correct for crash recovery: claim changes row state before returning and reclaims expired `PROCESSING`.
+- OIDC filter scoping is much stronger: no `@Component`, disabled servlet filter registration, dedicated `@Order(1)` chain, and `shouldNotFilter` guard: `02A-03-PLAN.md:402`, `02A-03-PLAN.md:422`.
+- Controller persistence is correctly moved into `PubSubIngestionService` with unscoped `JdbcTemplate` lookup followed by tenant-bound insert: `02A-03-PLAN.md:250`.
+- The frontend reconnect gate now targets the real settings-page parent boundary and covers `CONNECTED && ingestionHealth !== 'HEALTHY'`: `02A-04-PLAN.md:357`.
 
 **Concerns**
 
-- **HIGH - Claimed `pubsub_delivery` rows can be stranded forever after a worker crash.** Plan 01 changes rows to `PROCESSING` during `claimPendingBatch`, but the claim query only selects `status = 'PENDING'`. If the worker process dies after claim and before `processDelivery`, the row remains `PROCESSING`; even after `locked_until` expires, future claims ignore it. This contradicts the plan's crash-recovery claim and threatens MAIL-01/MAIL-04 reliability. Evidence: claim sets `PROCESSING` at `02A-01-PLAN.md:538`, filters only `PENDING` at `02A-01-PLAN.md:546`, while the research explicitly calls for stale `PROCESSING` handling at `02A-RESEARCH.md:753`.
-
-- **MEDIUM - Pub/Sub test properties are still underspecified.** Plan 03 makes `PubSubSecurityConfig` active under `test` and requires Pub/Sub properties, but the current `ApiPostgresTestBase` only supplies datasource/OAuth/crypto properties. Controller tests using `MockGoogleOidcServer` need a clear `DynamicPropertySource` seam for audience, SA email, and local cert URL. Evidence: `backend/api/src/test/java/com/zeromail/api/support/ApiPostgresTestBase.java:26`, `02A-03-PLAN.md:415`.
-
-- **MEDIUM - Cross-tenant worker scans use tenant-owned JPA repositories before `TenantContext` is bound.** The tenant resolver falls back to `BOOTSTRAP_TENANT`, while Plan 02 calls `findConnectionsNeedingWatchRenewal` and `claimPendingBatch` before per-row `ScopedValue.where(...)`. If this is intentional system-level access, the plan should make it explicit and prefer `JdbcTemplate` projections. Evidence: `backend/core/src/main/java/com/zeromail/core/tenant/ScopedValueTenantResolver.java:26`, `02A-02-PLAN.md:525`, `02A-02-PLAN.md:597`.
-
-- **LOW - Missing `messageId` is still not explicitly dropped.** The controller validates decoded Gmail fields but passes `envelope.message().messageId()` through without a null/blank guard, risking DB constraint failure instead of ack-fast 200-drop.
+- **HIGH - Watch renewal can skip unprocessed Gmail history.** Plan 02 requires `recordWatchSuccess` to "initializes/advances" `last_synced_history_id` from returned `watch_history_id`: `02A-02-PLAN.md:29`. The method does exactly that when the returned watch baseline is higher: `02A-02-PLAN.md:244`. But watch renewal runs through the same path after `gmail.users().watch(...)`: `02A-02-PLAN.md:545`. On renewal, advancing the sync pointer to "now" can jump past already queued but unprocessed `pubsub_delivery` rows. The context only says renewal should persist `watch_history_id`/expiry fields, while `last_synced_history_id` is advanced by history processing: `02A-CONTEXT.md:40`, `02A-CONTEXT.md:117`.
+- **MEDIUM - Watch scheduler `FOR UPDATE SKIP LOCKED` is not a durable claim.** `findConnectionsNeedingWatchRenewal` selects with `FOR UPDATE SKIP LOCKED`, but the repository transaction ends before the Gmail API call: `02A-02-PLAN.md:293`, `02A-02-PLAN.md:525`. Multiple workers can renew the same row concurrently, causing duplicate `users.watch` calls and worsening the pointer-skip issue above.
+- **MEDIUM - Test Pub/Sub properties are still not globally wired.** `PubSubSecurityConfig` is active under test and requires `pubsub.push-audience-url` / service-account email: `02A-03-PLAN.md:406`, `02A-03-PLAN.md:415`. The plan adds fail-fast application properties, but does not explicitly update the shared API test base; current `ApiPostgresTestBase` only supplies datasource/OAuth/crypto props: `backend/api/src/test/java/com/zeromail/api/support/ApiPostgresTestBase.java:26`.
+- **LOW - Missing or blank Pub/Sub `messageId` is still not explicitly ack-dropped.** The controller validates `data`, `emailAddress`, and `historyId`, but passes `envelope.message().messageId()` directly into ingestion: `02A-03-PLAN.md:540`, `02A-03-PLAN.md:570`.
 
 **Suggestions**
 
-- Change `claimPendingBatch` to reclaim stale `PROCESSING` rows whose `locked_until < NOW()`, and add a test for expired `PROCESSING` recovery.
-- Add explicit test property wiring for Pub/Sub OIDC in `ApiPostgresTestBase` or per Pub/Sub integration test.
-- Make cross-tenant worker claim scans raw `JdbcTemplate` system queries returning small row DTOs, then bind `TenantContext` before tenant-owned JPA work.
-- Add a null/blank `messageId` controller branch returning 200 with an opaque warning event.
+- Split watch success handling into initial registration/reconnect vs renewal. Only initialize `last_synced_history_id` when it is `NULL`; regular renewals should update `watch_history_id`, expiry, renewal timestamp, failures, and health only.
+- Add a Wave 0/worker test: existing `last_synced_history_id=100`, pending delivery `history_id=110`, watch renewal returns `watchHistoryId=200`; assert `last_synced_history_id` remains `100` and the pending delivery can still process.
+- Consider a durable watch-renewal claim column such as `watch_locked_until`, or an atomic update-returning claim, to avoid duplicate renewals across worker instances.
+- Add Pub/Sub default test properties to `ApiPostgresTestBase` or a test profile config, with per-test override for the mock JWKS/certs URL.
+- Add a controller guard for null/blank `messageId` returning `200 OK` with an opaque warning event.
 
 **Risk Assessment**
 
-Overall risk: **HIGH**. The prior HIGHs are closed, but the `PROCESSING`-row recovery bug can silently stop processing a delivery after a crash, which cuts directly against Phase 02A's reliability goal.
+Overall risk: **HIGH**. The original crash-recovery gap is closed, but the new watch-renewal pointer advancement can silently drop real Gmail history during normal renewal, which cuts directly against MAIL-01 and MAIL-04 reliability.
 
 CURRENT_HIGH_COUNT: 1
 
 ### Current HIGH Concerns
 
-- Stale `pubsub_delivery` rows in `PROCESSING` are not reclaimable after `locked_until` expires, so a crash after claim can permanently strand Gmail deliveries.
+- Watch renewal can advance `last_synced_history_id` to the new `users.watch` baseline and skip queued or otherwise unprocessed Gmail history deliveries.
 
 ---
 
 ## Consensus Summary
 
-Only Codex was invoked in Cycle 5, so the consensus summary reflects a single external review.
+Only Codex was invoked in Cycle 6, so the consensus summary reflects a single external review.
 
 ### Agreed Strengths
 
-- Cycle 4's Google/Gmail dependency planning gap is fully resolved in Plan 01.
-- Cycle 4's `ReconnectPrompt` parent gate gap is fully resolved in Plan 04 and now targets the actual settings-page mount condition.
-- Security filter scoping, controller/service boundaries, and worker transaction ownership are materially stronger than Cycle 4.
+- Cycle 5's stale `PROCESSING` reclaim gap is fully resolved by atomically reclaiming due `PENDING` rows and expired `PROCESSING` rows.
+- Wave 0 now has explicit coverage for expired `PROCESSING` reclaim.
+- Pub/Sub OIDC scoping, controller/service boundaries, and settings-page reconnect gating remain materially strong.
 
 ### Agreed Concerns
 
-- HIGH: `claimPendingBatch` marks deliveries as `PROCESSING` but only reclaims `PENDING` rows, so expired `PROCESSING` rows can be stranded after a worker crash.
-- MEDIUM: Pub/Sub OIDC test properties still need an explicit `DynamicPropertySource` or base-test wiring plan.
-- MEDIUM: Cross-tenant worker scans should clarify system-level access and preferably use raw `JdbcTemplate` projections before binding `TenantContext`.
-- LOW: Missing Pub/Sub `messageId` should be explicitly ack-dropped rather than allowed to fall into a database constraint failure.
+- HIGH: Watch renewal can call the same `recordWatchSuccess` path used for initial watch registration, advancing `last_synced_history_id` to the fresh `users.watch` baseline and skipping queued or otherwise unprocessed Gmail history.
+- MEDIUM: Watch renewal's `FOR UPDATE SKIP LOCKED` select is not a durable multi-worker claim once the repository transaction ends before the Gmail API call.
+- MEDIUM: Pub/Sub test properties still need explicit shared API test-base or test-profile wiring.
+- LOW: Missing Pub/Sub `messageId` should be explicitly ack-dropped rather than allowed to flow into ingestion.
 
 ### Divergent Views
 
@@ -95,9 +88,9 @@ Only Codex was invoked in Cycle 5, so the consensus summary reflects a single ex
 
 ## Cycle Summary
 
-- Prior Cycle 4 HIGH concerns: 2
-- Fully resolved prior HIGH concerns: 2
+- Prior Cycle 5 HIGH concerns: 1
+- Fully resolved prior HIGH concerns: 1
 - Partially resolved prior HIGH concerns: 0
 - Previously raised HIGH concerns still unresolved: 0
-- New Cycle 5 HIGH concerns: 1
+- New Cycle 6 HIGH concerns: 1
 - Current unresolved HIGH concerns: 1
