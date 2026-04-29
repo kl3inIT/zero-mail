@@ -4,6 +4,26 @@ spring:
   threads:
     virtual:
       enabled: true
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/zeromail}
+    username: ${DB_USER:zeromail}
+    password: ${DB_PASSWORD:zeromail}
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
+            client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
 zeromail:
   crypto:
     refresh-token-key-base64: ${REFRESH_TOKEN_KEY_BASE64:?REFRESH_TOKEN_KEY_BASE64 must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
