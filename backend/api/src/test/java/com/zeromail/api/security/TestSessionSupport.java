@@ -8,7 +8,6 @@ import java.util.UUID;
 
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -19,6 +18,7 @@ import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.zeromail.core.account.persistence.UserEntity;
@@ -37,9 +37,9 @@ import jakarta.servlet.http.HttpServletResponse;
  * {@code TenantContext.TENANT} ScopedValue (so controllers see the right tenant
  * without round-tripping through {@link TenantBindingFilter}'s session-backed lookup).
  *
- * Contributes a {@link SecurityFilterChain} ordered above the main one in
- * {@link SecurityConfig}, so test traffic uses this chain. The chain disables CSRF
- * and is stateless (no session creation).
+ * Contributes a {@link SecurityFilterChain} after the Pub/Sub OIDC chain, so
+ * test traffic for user-session endpoints uses this chain while machine-authenticated
+ * {@code /internal/pubsub/**} requests remain owned by {@link PubSubSecurityConfig}.
  */
 @TestConfiguration
 public class TestSessionSupport {
@@ -85,19 +85,20 @@ public class TestSessionSupport {
                 SecurityContextHolder.getContext().setAuthentication(authToken);
 
                 Optional<UserEntity> userOpt = users.findByGoogleSubject(subject);
+                if (userOpt.isEmpty()) {
+                    SecurityContextHolder.clearContext();
+                    res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
                 try {
-                    if (userOpt.isPresent()) {
-                        UUID tenantId = userOpt.get().getTenantId();
-                        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() -> {
-                            try {
-                                chain.doFilter(req, res);
-                            } catch (IOException | ServletException e) {
-                                throw new RuntimeException(e);
-                            }
-                        });
-                    } else {
-                        chain.doFilter(req, res);
-                    }
+                    UUID tenantId = userOpt.get().getTenantId();
+                    ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() -> {
+                        try {
+                            chain.doFilter(req, res);
+                        } catch (IOException | ServletException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
                 } catch (RuntimeException re) {
                     if (re.getCause() instanceof IOException io) throw io;
                     if (re.getCause() instanceof ServletException se) throw se;
@@ -110,17 +111,21 @@ public class TestSessionSupport {
     }
 
     /**
-     * Highest-priority SecurityFilterChain. Matches everything; permits everything;
-     * inserts the test auth filter so SecurityContext + ScopedValue are populated
-     * before any controller runs. Order 0 wins against SecurityConfig's default-100 chain.
+     * Test user-session SecurityFilterChain. It explicitly excludes Pub/Sub endpoints,
+     * requires authentication for everything else, and inserts the test auth filter so
+     * SecurityContext + ScopedValue are populated before any controller runs.
      */
     @Bean
-    @Order(Ordered.HIGHEST_PRECEDENCE)
+    @Order(2)
     SecurityFilterChain testSecurityChain(HttpSecurity http, OncePerRequestFilter testAuthFilter) throws Exception {
+        RequestMatcher nonPubSub = request -> !request.getServletPath().startsWith("/internal/pubsub/");
         return http
+                .securityMatcher(nonPubSub)
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(a -> a.anyRequest().permitAll())
+                .authorizeHttpRequests(a -> a.anyRequest().authenticated())
+                .exceptionHandling(e -> e.authenticationEntryPoint((_, res, _) ->
+                        res.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
                 .addFilterBefore(testAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

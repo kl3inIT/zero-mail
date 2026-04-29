@@ -104,9 +104,7 @@ class PubSubOidcAuthFilterTest {
     }
 
     private PubSubOidcAuthFilter filter() {
-        PubSubOidcAuthFilter filter = new PubSubOidcAuthFilter(AUDIENCE, SERVICE_ACCOUNT_EMAIL);
-        filter.setCertificatesLocation(oidc.jwksUrl());
-        return filter;
+        return new PubSubOidcAuthFilter(AUDIENCE, SERVICE_ACCOUNT_EMAIL, oidc.jwksUrl());
     }
 
     private static MockHttpServletRequest pubsubRequest(String token) {

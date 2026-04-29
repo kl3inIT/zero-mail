@@ -71,6 +71,10 @@ zeromail:
     # No GCP Secret Manager fallback — CLAUDE.md stack lock: secrets via Docker secret,
     # systemd credential, or locked-down env file on the VPS.
     refresh-token-key-base64: ${REFRESH_TOKEN_KEY_BASE64:?REFRESH_TOKEN_KEY_BASE64 must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
+pubsub:
+  push-audience-url: ${PUBSUB_PUSH_AUDIENCE_URL:?PUBSUB_PUSH_AUDIENCE_URL env var is required}
+  sa-principal-email: ${PUBSUB_SA_PRINCIPAL_EMAIL:?PUBSUB_SA_PRINCIPAL_EMAIL env var is required}
+  oidc-certificates-url: ${PUBSUB_OIDC_CERTIFICATES_URL:https://www.googleapis.com/oauth2/v3/certs}
 server:
   port: 8080
   servlet:

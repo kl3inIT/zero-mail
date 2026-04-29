@@ -45,4 +45,12 @@ public class TenantService {
     public void deleteCurrentTenant(UUID tenantId) {
         tenants.findById(tenantId).ifPresent(tenants::delete);
     }
+
+    @Transactional
+    public void setTriagePaused(UUID tenantId, boolean paused) {
+        tenants.findById(tenantId).ifPresent(t -> {
+            t.setTriagePaused(paused);
+            tenants.save(t);
+        });
+    }
 }
