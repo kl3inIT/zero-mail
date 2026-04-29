@@ -29,7 +29,6 @@ import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 public class GmailDeliveryProcessingService {
 
     private static final Logger log = LoggerFactory.getLogger(GmailDeliveryProcessingService.class);
-    private static final long HISTORY_GAP_CAP = 500L;
 
     private final PubSubDeliveryRepository deliveryRepository;
     private final MailMessageObservedRepository observedRepository;
@@ -67,29 +66,31 @@ public class GmailDeliveryProcessingService {
                     gmailApiClientFactory.refreshAccessToken(decryptedToken);
             Gmail gmail = gmailApiClientFactory.buildGmailClient(tokenResult.accessToken().value());
 
-            long startHistoryId = conn.getLastSyncedHistoryId() != null
-                    ? conn.getLastSyncedHistoryId()
-                    : webhookHistoryId;
-            if (webhookHistoryId - startHistoryId > HISTORY_GAP_CAP) {
-                long skipped = webhookHistoryId - startHistoryId;
-                startHistoryId = webhookHistoryId - HISTORY_GAP_CAP;
-                log.warn("event=gmail_history_gap_truncated tenantId={} skipped={}", tenantId, skipped);
+            Long savedPointer = conn.getLastSyncedHistoryId();
+            if (savedPointer == null) {
+                connectionService.markHistoryLost(tenantId, webhookHistoryId);
+                deliveryRepository.updateStatus(delivery.getId(), "PROCESSED");
+                log.warn("event=gmail_history_missing_pointer tenantId={} new_pointer={}", tenantId, webhookHistoryId);
+                return;
             }
 
-            ListHistoryResponse historyResponse = gmail.users()
-                    .history()
-                    .list("me")
-                    .setStartHistoryId(BigInteger.valueOf(startHistoryId))
-                    .setHistoryTypes(List.of("messageAdded"))
-                    .setLabelId("INBOX")
-                    .setMaxResults(500L)
-                    .execute();
-
-            if (historyResponse.getNextPageToken() != null) {
-                log.warn("event=gmail_history_pagination_dropped tenantId={}", tenantId);
-            }
-
-            int newObservations = observeInboxMessages(gmail, tenantId, historyResponse);
+            int newObservations = 0;
+            String pageToken = null;
+            do {
+                var request = gmail.users()
+                        .history()
+                        .list("me")
+                        .setStartHistoryId(BigInteger.valueOf(savedPointer))
+                        .setHistoryTypes(List.of("messageAdded"))
+                        .setLabelId("INBOX")
+                        .setMaxResults(500L);
+                if (pageToken != null) {
+                    request.setPageToken(pageToken);
+                }
+                ListHistoryResponse historyResponse = request.execute();
+                newObservations += observeInboxMessages(gmail, tenantId, historyResponse);
+                pageToken = historyResponse.getNextPageToken();
+            } while (pageToken != null);
 
             connectionRepository.updateLastSyncedHistoryIdMonotonic(tenantId, webhookHistoryId);
             deliveryRepository.updateStatus(delivery.getId(), "PROCESSED");
@@ -146,7 +147,7 @@ public class GmailDeliveryProcessingService {
                         tenantId,
                         msg.getId(),
                         msg.getThreadId(),
-                        history.getId().longValue(),
+                        history.getId().longValueExact(),
                         labelIds.toArray(new String[0]),
                         msg.getInternalDate());
                 if (inserted == 1) {

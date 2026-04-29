@@ -77,18 +77,46 @@ class GmailHistoryProcessorTest extends PostgresContainerTest {
     }
 
     @Test
+    void processDelivery_readsAllHistoryPagesBeforeAdvancingPointer() {
+        UUID tenantId = seedConnectedGmail("history-pages@example.test", 10L);
+        seedDelivery(tenantId, "delivery-pages", 30L);
+        gmail.stubHistoryListPage(
+                10L,
+                "page-2",
+                List.of(new HistoryMessageResponse("gmail-page-1", "thread-page-1", List.of(), null)));
+        gmail.stubHistoryListPageToken(
+                "page-2",
+                11L,
+                List.of(new HistoryMessageResponse("gmail-page-2", "thread-page-2", List.of(), null)));
+        gmail.stubMessageMetadata("gmail-page-1", "thread-page-1", List.of("INBOX"), 1_700_000_000_000L);
+        gmail.stubMessageMetadata("gmail-page-2", "thread-page-2", List.of("INBOX"), 1_700_000_000_001L);
+
+        processor.tick();
+
+        assertThat(messageExists(tenantId, "gmail-page-1")).isTrue();
+        assertThat(messageExists(tenantId, "gmail-page-2")).isTrue();
+        assertThat(gmailConnectionColumn(tenantId, "last_synced_history_id")).isEqualTo(30L);
+        assertThat(status("delivery-pages")).isEqualTo("PROCESSED");
+    }
+
+    @Test
     void processDelivery_scopedValueBound_perRow() {
         UUID tenantA = seedConnectedGmail("history-a@example.test", 10L);
         UUID tenantB = seedConnectedGmail("history-b@example.test", 20L);
         seedDelivery(tenantA, "delivery-a", 11L);
         seedDelivery(tenantB, "delivery-b", 21L);
         gmail.stubHistoryList(10L, List.of(new HistoryMessageResponse("gmail-a", "thread-a", List.of(), null)));
+        gmail.stubHistoryList(20L, List.of(new HistoryMessageResponse("gmail-b", "thread-b", List.of(), null)));
         gmail.stubMessageMetadata("gmail-a", "thread-a", List.of("INBOX"), 1_700_000_000_000L);
+        gmail.stubMessageMetadata("gmail-b", "thread-b", List.of("INBOX"), 1_700_000_000_001L);
 
         processor.tick();
 
         assertThat(count("mail_message_observed", tenantA)).isEqualTo(1L);
-        assertThat(count("mail_message_observed", tenantB)).isGreaterThanOrEqualTo(0L);
+        assertThat(count("mail_message_observed", tenantB)).isEqualTo(1L);
+        assertThat(messageExists(tenantA, "gmail-a")).isTrue();
+        assertThat(messageExists(tenantB, "gmail-b")).isTrue();
+        assertThat(messageExists(tenantB, "gmail-a")).isFalse();
     }
 
     @Test
@@ -143,6 +171,15 @@ class GmailHistoryProcessorTest extends PostgresContainerTest {
         return jdbc.queryForObject("SELECT COUNT(*) FROM " + table + " WHERE tenant_id = ?",
                 Long.class,
                 tenantId);
+    }
+
+    private boolean messageExists(UUID tenantId, String gmailMessageId) {
+        Long count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM mail_message_observed WHERE tenant_id = ? AND gmail_message_id = ?",
+                Long.class,
+                tenantId,
+                gmailMessageId);
+        return count != null && count > 0;
     }
 
     private String status(String messageId) {

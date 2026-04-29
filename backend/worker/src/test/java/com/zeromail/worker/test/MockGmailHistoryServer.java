@@ -74,7 +74,17 @@ public class MockGmailHistoryServer implements AutoCloseable {
     }
 
     public void stubHistoryList(long startHistoryId, List<HistoryMessageResponse> messages) {
-        responses.put("/gmail/v1/users/me/history", new Response(200, historyResponse(startHistoryId, messages)));
+        responses.put(historyStartKey(startHistoryId), new Response(200, historyResponse(startHistoryId, messages, null)));
+        responses.put("/gmail/v1/users/me/history", new Response(200, historyResponse(startHistoryId, messages, null)));
+    }
+
+    public void stubHistoryListPage(long startHistoryId, String nextPageToken, List<HistoryMessageResponse> messages) {
+        responses.put(historyStartKey(startHistoryId),
+                new Response(200, historyResponse(startHistoryId, messages, nextPageToken)));
+    }
+
+    public void stubHistoryListPageToken(String pageToken, long historyId, List<HistoryMessageResponse> messages) {
+        responses.put(historyPageKey(pageToken), new Response(200, historyResponse(historyId, messages, null)));
     }
 
     public void stubHistoryList404() {
@@ -101,7 +111,8 @@ public class MockGmailHistoryServer implements AutoCloseable {
         if (path.endsWith("/watch")) {
             lastWatchRequestBody = new String(readRequestBody(exchange), StandardCharsets.UTF_8);
         }
-        Response response = responses.getOrDefault(path, new Response(404, "{\"error\":{\"code\":404}}"));
+        Response response = responses.getOrDefault(responseKey(exchange), responses.getOrDefault(path,
+                new Response(404, "{\"error\":{\"code\":404}}")));
         byte[] body = response.body().getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().add("Content-Type", "application/json");
         exchange.sendResponseHeaders(response.status(), body.length);
@@ -119,14 +130,45 @@ public class MockGmailHistoryServer implements AutoCloseable {
         return in.readAllBytes();
     }
 
-    private static String historyResponse(long startHistoryId, List<HistoryMessageResponse> messages) {
+    private static String responseKey(HttpExchange exchange) {
+        String path = exchange.getRequestURI().getPath();
+        String query = exchange.getRequestURI().getRawQuery();
+        if (query == null) {
+            return path;
+        }
+        for (String pair : query.split("&")) {
+            if (pair.startsWith("pageToken=")) {
+                return historyPageKey(pair.substring("pageToken=".length()));
+            }
+        }
+        for (String pair : query.split("&")) {
+            if (pair.startsWith("startHistoryId=")) {
+                return path + "?startHistoryId=" + pair.substring("startHistoryId=".length());
+            }
+        }
+        return path;
+    }
+
+    private static String historyStartKey(long startHistoryId) {
+        return "/gmail/v1/users/me/history?startHistoryId=" + startHistoryId;
+    }
+
+    private static String historyPageKey(String pageToken) {
+        return "/gmail/v1/users/me/history?pageToken=" + pageToken;
+    }
+
+    private static String historyResponse(long startHistoryId, List<HistoryMessageResponse> messages, String nextPageToken) {
         List<String> added = new ArrayList<>();
         for (HistoryMessageResponse message : messages) {
             added.add("{\"message\":" + messageShape(message.messageId(), message.threadId(), message.labelIds(), null) + "}");
         }
-        return "{\"history\":[{\"id\":\"" + startHistoryId + "\",\"messagesAdded\":["
+        String json = "{\"history\":[{\"id\":\"" + startHistoryId + "\",\"messagesAdded\":["
                 + String.join(",", added)
-                + "]}],\"historyId\":\"" + startHistoryId + "\"}";
+                + "]}],\"historyId\":\"" + startHistoryId + "\"";
+        if (nextPageToken != null) {
+            json += ",\"nextPageToken\":\"" + escape(nextPageToken) + "\"";
+        }
+        return json + "}";
     }
 
     private static String messageResponse(String messageId, String threadId, List<String> labelIds, Long internalDate) {

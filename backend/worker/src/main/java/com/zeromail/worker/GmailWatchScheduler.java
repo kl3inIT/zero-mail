@@ -72,7 +72,7 @@ public class GmailWatchScheduler {
                     .setTopicName(topicName);
 
             WatchResponse response = gmail.users().watch("me", watchRequest).execute();
-            long watchHistoryId = response.getHistoryId().longValue();
+            long watchHistoryId = response.getHistoryId().longValueExact();
             Instant watchExpiresAt = Instant.ofEpochMilli(response.getExpiration());
 
             connectionService.recordWatchSuccess(tenantId, watchHistoryId, watchExpiresAt);

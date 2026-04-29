@@ -125,7 +125,7 @@ class GmailPubSubControllerIntegrationTest extends ApiPostgresTestBase {
     void missingMessageId_returns200_noPubSubDeliveryRow() {
         String email = "missing-message-id-" + UUID.randomUUID() + "@example.test";
         seedConnectedGmail(email);
-        String data = Base64.getUrlEncoder().withoutPadding().encodeToString(
+        String data = Base64.getEncoder().encodeToString(
                 ("{\"emailAddress\":\"" + email + "\",\"historyId\":\"103\"}").getBytes(StandardCharsets.UTF_8));
         String body = "{\"message\":{\"messageId\":\"\",\"data\":\"" + data + "\"}}";
 
@@ -177,7 +177,7 @@ class GmailPubSubControllerIntegrationTest extends ApiPostgresTestBase {
 
     private static String pushEnvelope(String messageId, String email, long historyId) {
         String dataJson = "{\"emailAddress\":\"" + email + "\",\"historyId\":\"" + historyId + "\"}";
-        String data = Base64.getUrlEncoder().withoutPadding()
+        String data = Base64.getEncoder()
                 .encodeToString(dataJson.getBytes(StandardCharsets.UTF_8));
         return "{\"message\":{\"messageId\":\"" + messageId + "\",\"data\":\"" + data + "\"}}";
     }
