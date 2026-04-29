@@ -304,12 +304,13 @@ If not available, use `com.sun.net.httpserver.HttpServer` from JDK (always avail
 5. `processDelivery_invalidGrant_setsDisconnected()` — 401 from token refresh → asserts `gmail_connections.status=DISCONNECTED`, delivery status=DEAD
 6. `processDelivery_historyListMessageWithoutLabels_fetchesMetadataBeforeInboxFilter()` — history.list returns a `messagesAdded.message` with only `id`/`threadId`; mock `messages.get` returns `labelIds=["INBOX"]` + `internalDate`; assert the observation row is inserted and `internal_date` is stored
 
-**`GmailWatchSchedulerTest.java`** — package `com.zeromail.worker`. Extends `PostgresContainerTest`. Imports `com.zeromail.worker.GmailWatchScheduler` (RED). Uses `MockGmailHistoryServer`. Five `@Test` methods:
+**`GmailWatchSchedulerTest.java`** — package `com.zeromail.worker`. Extends `PostgresContainerTest`. Imports `com.zeromail.worker.GmailWatchScheduler` (RED). Uses `MockGmailHistoryServer`. Six `@Test` methods:
 1. `register_nullExpiry_issuersWatch()` — `gmail_connections` row with `watch_expires_at=NULL` + `status=CONNECTED` → scheduler tick → asserts `watch_history_id` + `watch_expires_at` + `watch_renewed_at` set + `ingestion_health=HEALTHY`
 2. `renew_expiryWithin24h_issuersWatch()` — row with `watch_expires_at=NOW+23h` → tick → renewed
 3. `threeConsecutiveFailures_setsWatchUnhealthy()` — stub watch failure three times → after 3rd, `ingestion_health=WATCH_UNHEALTHY`
 4. `watchRequest_inboxOnly_labelIds()` — capture the `WatchRequest` sent to Gmail stub, assert `labelIds=["INBOX"]` and `labelFilterBehavior="include"`
 5. `renew_existingHistoryPointer_doesNotAdvanceLastSyncedHistoryId()` — existing `last_synced_history_id=100`, pending delivery `history_id=110`, renewal returns `watchHistoryId=200`; assert `last_synced_history_id` remains `100` while watch metadata updates
+6. `watchRenewal_historyLost_doesNotClearIngestionHealth()` — row with `ingestion_health=HISTORY_LOST` and near-expiry watch renews successfully; assert `ingestion_health` remains `HISTORY_LOST` so the reconnect prompt stays visible
   </action>
 
   <verify>

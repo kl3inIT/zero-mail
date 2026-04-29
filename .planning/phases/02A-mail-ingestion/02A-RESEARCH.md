@@ -30,7 +30,7 @@
 - **D-D1:** `GmailIngestionHealth` — new `IdentifiedEnum` with `HEALTHY`, `WATCH_UNHEALTHY`, `HISTORY_LOST`. `GmailConnectionStatus` UNCHANGED.
 - **D-D2:** History-404 → advance pointer to `webhook_history_id`, set `HISTORY_LOST`, mark delivery `PROCESSED`.
 - **D-D3:** ReconnectPrompt unified gate lives at the settings-page parent mount site: render for `status == DISCONNECTED` OR `(status == CONNECTED AND ingestionHealth != HEALTHY)`. Single copy, single CTA. `NOT_CONNECTED` keeps the initial connect CTA.
-- **D-D4:** Reconnect handler clears `watch_*` columns + resets `ingestion_health = HEALTHY` + `watch_consecutive_failures = 0`.
+- **D-D4:** Explicit reconnect/re-consent handler clears `last_synced_history_id` + `watch_*` columns + resets `ingestion_health = HEALTHY` + `watch_consecutive_failures = 0`; ordinary login/upsert does not clear HISTORY_LOST.
 - **D-E1:** `tenants.triage_paused BOOLEAN NOT NULL DEFAULT false` (one column, not a settings table).
 - **D-E2:** Pause gate semantic = Phase 2A persists + exposes; Phase 4 reads at enqueue time.
 - **D-E3:** `PUT /tenant/triage-pause` body `{"paused": boolean}`.
@@ -190,7 +190,8 @@ Google Pub/Sub
     |   FOR UPDATE SKIP LOCKED LIMIT 50
     | per row: bind TenantContext, decrypt + refresh token
     | gmail.users().watch(userId='me', labelIds=['INBOX'], topicName=env)
-    |   success -> persist watch_history_id, watch_expires_at, watch_renewed_at, HEALTHY
+    |   success -> persist watch_history_id, watch_expires_at, watch_renewed_at
+    |              clear WATCH_UNHEALTHY to HEALTHY, but preserve HISTORY_LOST
     |              initialize last_synced_history_id ONLY if currently NULL
     |   failure -> increment watch_consecutive_failures
     |   3 failures -> ingestion_health=WATCH_UNHEALTHY
@@ -775,33 +776,39 @@ export function useToggleTriagePause() {
 **What goes wrong:** New `apps/web/features/triage/components/PauseBanner.tsx` and `hooks/useToggleTriagePause.ts` are not in `EN_SCAN_FILES` in `apps/web/scripts/check-i18n.ts` → missing key check silently drops coverage.
 **Root cause:** Phase 01.3 D-D3 pattern — `EN_SCAN_FILES` must be updated in the same plan as new files adding i18n usage.
 **Prevention:** Add `features/triage/components/PauseBanner.tsx` + settings toggle to `EN_SCAN_FILES` in same commit as the i18n keys.
+**Verification gate:** `pnpm i18n:check` in strict mode (husky pre-commit gate); assert it fails if `settings.triage.pause.*` keys are missing.
 
 ### P-08: Watch Renewal Advances Sync Cursor Past Queued History
 **What goes wrong:** A normal `users.watch` renewal returns a fresh `historyId` near "now"; if the scheduler writes that value into `last_synced_history_id`, pending `pubsub_delivery` rows with older history IDs can be silently skipped.
 **Root cause:** Initial registration and renewal share one scheduler path, but only initial registration/reconnect should create a fresh sync baseline.
-**Prevention:** `recordWatchSuccess` sets `last_synced_history_id = watchHistoryId` only when the current cursor is NULL. Renewal updates `watch_history_id`, `watch_expires_at`, `watch_renewed_at`, failures, and health while preserving a non-null cursor.
+**Prevention:** `recordWatchSuccess` sets `last_synced_history_id = watchHistoryId` only when the current cursor is NULL. Renewal updates `watch_history_id`, `watch_expires_at`, `watch_renewed_at`, and failure count while preserving a non-null cursor.
 **Verification gate:** `GmailWatchSchedulerTest` — existing `last_synced_history_id=100`, pending delivery `history_id=110`, renewal returns `watchHistoryId=200`; assert `last_synced_history_id` remains `100`.
-**Verification gate:** `pnpm i18n:check` in strict mode (husky pre-commit gate); assert it fails if `settings.triage.pause.*` keys are missing.
 
-### P-09: `nextPageToken` Silently Dropped — History Pagination
+### P-09: Watch Renewal Clears HISTORY_LOST Reconnect State
+**What goes wrong:** After history-404 sets `ingestion_health=HISTORY_LOST`, a routine successful `users.watch` renewal sets `ingestion_health=HEALTHY` and hides the reconnect prompt without user reconnect/re-consent.
+**Root cause:** Treating all watch-success states as self-healing. `WATCH_UNHEALTHY` can self-heal after a successful watch, but `HISTORY_LOST` means a data gap was intentionally dropped and requires explicit reconnect UX.
+**Prevention:** `recordWatchSuccess` only clears `WATCH_UNHEALTHY` to `HEALTHY`; it preserves `HISTORY_LOST`. Only `clearForReconnect` in the explicit reconnect/re-consent path resets `HISTORY_LOST` to `HEALTHY`.
+**Verification gate:** `GmailWatchSchedulerTest` — row with `ingestion_health=HISTORY_LOST` renews successfully; assert `ingestion_health` remains `HISTORY_LOST`.
+
+### P-10: `nextPageToken` Silently Dropped — History Pagination
 **What goes wrong:** `history.list(maxResults=500)` returns `nextPageToken`. Worker ignores it, advances `last_synced_history_id` to the highest returned `historyId`. On next push, a gap exists.
 **Root cause:** D-B6 explicitly accepts this truncation. However, if `last_synced_history_id` is advanced to the full `webhook_history_id` (not to the last returned history entry), the gap is bridged. Advance to `webhookHistoryId` unconditionally after the 500-item pass.
 **Prevention:** Inbox-zero pattern: if empty history after gap truncation, still advance `last_synced_history_id` to `webhookHistoryId`. Worker must always advance even on pagination truncation.
 **Verification gate:** Log `event=gmail_history_pagination_dropped` when `nextPageToken` is non-null; integration test asserts `last_synced_history_id` advances to `webhookHistoryId` even on truncated response.
 
-### P-10: `users.stop()` Failure Propagates Disconnect
+### P-11: `users.stop()` Failure Propagates Disconnect
 **What goes wrong:** `GmailConnectionService.disconnect()` calls `users.stop()` which throws (token revoked) → entire disconnect transaction rolls back → user cannot disconnect.
 **Root cause:** Best-effort call wrapped in same transaction as status update.
 **Prevention:** Call `users.stop()` OUTSIDE the transaction (or in a separate try-catch that swallows non-critical exceptions). Commit the status=DISCONNECTED update first, then attempt stop. D-C5 explicitly states "best-effort (don't fail disconnect if stop() fails)".
 **Verification gate:** Unit test: mock `users.stop()` to throw; assert `disconnect()` still sets `status=DISCONNECTED` and clears `watch_*` columns.
 
-### P-11: Push Endpoint Reachable from Next.js Proxy
+### P-12: Push Endpoint Reachable from Next.js Proxy
 **What goes wrong:** `/internal/pubsub/gmail` is accidentally forwarded by the Next.js reverse proxy config, exposing it to browser clients (CSRF vector even though the filter would block them).
 **Root cause:** Missing proxy exclusion rule.
 **Prevention:** Check `apps/web` proxy config. Add `!path.startsWith('/internal/')` exclusion. Document in RUNBOOK.md.
 **Verification gate:** Code review check on `apps/web` proxy/rewrites config.
 
-### P-12: `history.list` Message Objects Missing Metadata
+### P-13: `history.list` Message Objects Missing Metadata
 **What goes wrong:** `users.history.list` returns `messagesAdded.message` with only `id`/`threadId`; worker checks `message.labelIds` and skips every real INBOX message because labels are absent.
 **Root cause:** Treating history-list message objects as fully populated Gmail Message resources.
 **Prevention:** Use `history.list(...).setLabelId("INBOX")` to reduce candidates, then call `messages.get(format=metadata, fields=id,threadId,labelIds,internalDate)` per candidate before checking labels or storing `internalDate`.
@@ -871,8 +878,8 @@ export function useToggleTriagePause() {
 **Severity:** MEDIUM
 **STRIDE:** Denial of Service
 **Description:** `GmailWatchScheduler` retries on failure every minute. If 1000 tenants all fail simultaneously, 1000 `users.watch` calls/minute = 1000 × 100 quota units = 100,000 units/min (~1,667/sec against 250/user/sec per-project limit).
-**Mitigation:** `watch_consecutive_failures` column gates retries (after 3 fails, sets `WATCH_UNHEALTHY` and stops standard renewal until user reconnects). `LIMIT 50` per tick bounds per-tick quota. `SKIP LOCKED` ensures multiple worker instances don't double-process.
-**Verification gate:** Mock Gmail API to fail; assert 3 failures → `WATCH_UNHEALTHY`; assert no further `users.watch` calls for that tenant until `clearForReconnect` is called.
+**Mitigation:** `watch_consecutive_failures` column records retry history; after 3 fails, set `WATCH_UNHEALTHY` for UI visibility while still allowing renewal ticks to retry. A later successful watch clears `WATCH_UNHEALTHY` to `HEALTHY` but preserves `HISTORY_LOST`. `LIMIT 50` per tick bounds per-tick quota. `SKIP LOCKED` ensures multiple worker instances don't double-process.
+**Verification gate:** Mock Gmail API to fail; assert 3 failures → `WATCH_UNHEALTHY`; then mock success and assert `WATCH_UNHEALTHY` clears while a separate `HISTORY_LOST` row remains `HISTORY_LOST`.
 
 ### T-10: Frontend `ingestionHealth` Enum Exposure to Users
 **Severity:** LOW

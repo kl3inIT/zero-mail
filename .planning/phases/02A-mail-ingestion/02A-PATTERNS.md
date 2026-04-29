@@ -589,7 +589,10 @@ public void recordWatchSuccess(UUID tenantId, Long watchHistoryId, Instant watch
         c.setWatchExpiresAt(watchExpiresAt);
         c.setWatchRenewedAt(Instant.now());
         c.setWatchConsecutiveFailures(0);
-        c.setIngestionHealth(GmailIngestionHealth.HEALTHY);
+        // WATCH_UNHEALTHY self-heals on watch success; HISTORY_LOST requires explicit reconnect.
+        if (c.getIngestionHealth() == GmailIngestionHealth.WATCH_UNHEALTHY) {
+            c.setIngestionHealth(GmailIngestionHealth.HEALTHY);
+        }
         connections.save(c);
     });
 }
