@@ -56,18 +56,18 @@ public class GmailDeliveryProcessingService {
         long webhookHistoryId = delivery.getHistoryId();
 
         try {
-            GmailConnectionEntity conn = connectionRepository.findByTenantId(tenantId)
+            GmailConnectionEntity connection = connectionRepository.findByTenantId(tenantId)
                     .orElseThrow(() -> new IllegalStateException("No connection for tenantId: " + tenantId));
 
-            String decryptedToken = new String(
-                    refreshTokenCipher.decrypt(conn.getRefreshTokenEncrypted(), tenantId.toString()),
+            String decryptedRefreshToken = new String(
+                    refreshTokenCipher.decrypt(connection.getRefreshTokenEncrypted(), tenantId.toString()),
                     StandardCharsets.UTF_8);
             GmailApiClientFactory.TokenRefreshResult tokenResult =
-                    gmailApiClientFactory.refreshAccessToken(decryptedToken);
+                    gmailApiClientFactory.refreshAccessToken(decryptedRefreshToken);
             Gmail gmail = gmailApiClientFactory.buildGmailClient(tokenResult.accessToken().value());
 
-            Long savedPointer = conn.getLastSyncedHistoryId();
-            if (savedPointer == null) {
+            Long savedHistoryPointer = connection.getLastSyncedHistoryId();
+            if (savedHistoryPointer == null) {
                 connectionService.markHistoryLost(tenantId, webhookHistoryId);
                 deliveryRepository.updateStatus(delivery.getId(), "PROCESSED");
                 log.warn("event=gmail_history_missing_pointer tenantId={} new_pointer={}", tenantId, webhookHistoryId);
@@ -77,17 +77,17 @@ public class GmailDeliveryProcessingService {
             int newObservations = 0;
             String pageToken = null;
             do {
-                var request = gmail.users()
+                var historyListRequest = gmail.users()
                         .history()
                         .list("me")
-                        .setStartHistoryId(BigInteger.valueOf(savedPointer))
+                        .setStartHistoryId(BigInteger.valueOf(savedHistoryPointer))
                         .setHistoryTypes(List.of("messageAdded"))
                         .setLabelId("INBOX")
                         .setMaxResults(500L);
                 if (pageToken != null) {
-                    request.setPageToken(pageToken);
+                    historyListRequest.setPageToken(pageToken);
                 }
-                ListHistoryResponse historyResponse = request.execute();
+                ListHistoryResponse historyResponse = historyListRequest.execute();
                 newObservations += observeInboxMessages(gmail, tenantId, historyResponse);
                 pageToken = historyResponse.getNextPageToken();
             } while (pageToken != null);
@@ -96,8 +96,8 @@ public class GmailDeliveryProcessingService {
             deliveryRepository.updateStatus(delivery.getId(), "PROCESSED");
             log.info("event=gmail_history_processed tenantId={} batch_size=1 new_observations={}",
                     tenantId, newObservations);
-        } catch (GoogleJsonResponseException e) {
-            if (e.getStatusCode() == 404) {
+        } catch (GoogleJsonResponseException googleResponseException) {
+            if (googleResponseException.getStatusCode() == 404) {
                 connectionService.markHistoryLost(tenantId, webhookHistoryId);
                 deliveryRepository.updateStatus(delivery.getId(), "PROCESSED");
                 log.warn("event=gmail_history_lost tenantId={} expired_history_id={} new_pointer={}",
@@ -105,11 +105,11 @@ public class GmailDeliveryProcessingService {
             } else {
                 handleRetryableFailure(delivery, tenantId);
             }
-        } catch (InvalidGrantException e) {
+        } catch (InvalidGrantException invalidGrantException) {
             connectionService.markDisconnected(tenantId);
             deliveryRepository.updateStatus(delivery.getId(), "DEAD");
             log.warn("event=gmail_oauth_revoked tenantId={}", tenantId);
-        } catch (Exception e) {
+        } catch (Exception processingException) {
             handleRetryableFailure(delivery, tenantId);
         }
     }
@@ -126,31 +126,31 @@ public class GmailDeliveryProcessingService {
             if (history.getMessagesAdded() == null) {
                 continue;
             }
-            for (HistoryMessageAdded added : history.getMessagesAdded()) {
-                Message historyMessage = added.getMessage();
+            for (HistoryMessageAdded addedMessage : history.getMessagesAdded()) {
+                Message historyMessage = addedMessage.getMessage();
                 if (historyMessage == null || historyMessage.getId() == null) {
                     continue;
                 }
 
-                Message msg = gmail.users()
+                Message gmailMessage = gmail.users()
                         .messages()
                         .get("me", historyMessage.getId())
                         .setFormat("metadata")
                         .setFields("id,threadId,labelIds,internalDate")
                         .execute();
-                List<String> labelIds = msg.getLabelIds();
+                List<String> labelIds = gmailMessage.getLabelIds();
                 if (labelIds == null || !labelIds.contains("INBOX")) {
                     continue;
                 }
 
-                int inserted = observedRepository.insertObservedIfAbsent(
+                int insertedCount = observedRepository.insertObservedIfAbsent(
                         tenantId,
-                        msg.getId(),
-                        msg.getThreadId(),
+                        gmailMessage.getId(),
+                        gmailMessage.getThreadId(),
                         history.getId().longValueExact(),
                         labelIds.toArray(new String[0]),
-                        msg.getInternalDate());
-                if (inserted == 1) {
+                        gmailMessage.getInternalDate());
+                if (insertedCount == 1) {
                     newObservations++;
                 }
             }

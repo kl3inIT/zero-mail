@@ -26,16 +26,16 @@ public class PubSubIngestionService {
 
     private static final Logger log = LoggerFactory.getLogger(PubSubIngestionService.class);
 
-    private final JdbcTemplate jdbc;
+    private final JdbcTemplate jdbcTemplate;
     private final PubSubDeliveryRepository deliveryRepository;
-    private final TransactionTemplate tx;
+    private final TransactionTemplate transactionTemplate;
 
-    public PubSubIngestionService(JdbcTemplate jdbc,
+    public PubSubIngestionService(JdbcTemplate jdbcTemplate,
                                   PubSubDeliveryRepository deliveryRepository,
-                                  PlatformTransactionManager txManager) {
-        this.jdbc = jdbc;
+                                  PlatformTransactionManager transactionManager) {
+        this.jdbcTemplate = jdbcTemplate;
         this.deliveryRepository = deliveryRepository;
-        this.tx = new TransactionTemplate(txManager);
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     /**
@@ -49,7 +49,7 @@ public class PubSubIngestionService {
                                            String pubsubMessageId,
                                            long historyId,
                                            String sanitizedPayload) {
-        List<UUID> tenantIds = jdbc.query(
+        List<UUID> tenantIds = jdbcTemplate.query(
                 """
                 SELECT tenant_id
                 FROM gmail_connections
@@ -68,14 +68,14 @@ public class PubSubIngestionService {
         UUID tenantId = tenantIds.getFirst();
         AtomicReference<IngestResult> result = new AtomicReference<>();
         ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() ->
-                result.set(tx.execute(_ -> {
-                    int inserted = deliveryRepository.insertPendingIfAbsent(
+                result.set(transactionTemplate.execute(_ -> {
+                    int insertedCount = deliveryRepository.insertPendingIfAbsent(
                             UUID.randomUUID(),
                             tenantId,
                             pubsubMessageId,
                             historyId,
                             sanitizedPayload);
-                    if (inserted == 0) {
+                    if (insertedCount == 0) {
                         log.info("event=pubsub_duplicate_delivery_dropped tenantId={}", tenantId);
                         return IngestResult.DUPLICATE;
                     }

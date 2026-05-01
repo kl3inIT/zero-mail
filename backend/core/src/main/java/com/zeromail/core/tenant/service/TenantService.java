@@ -21,10 +21,10 @@ import com.zeromail.core.tenant.persistence.TenantRepository;
 @Service
 public class TenantService {
 
-    private final TenantRepository tenants;
+    private final TenantRepository tenantRepository;
 
-    public TenantService(TenantRepository tenants) {
-        this.tenants = tenants;
+    public TenantService(TenantRepository tenantRepository) {
+        this.tenantRepository = tenantRepository;
     }
 
     /**
@@ -34,7 +34,7 @@ public class TenantService {
      */
     @Transactional
     public TenantEntity createTenant(UUID tenantId, String displayName) {
-        return tenants.save(new TenantEntity(tenantId, displayName));
+        return tenantRepository.save(new TenantEntity(tenantId, displayName));
     }
 
     /**
@@ -43,20 +43,20 @@ public class TenantService {
      */
     @Transactional
     public void deleteCurrentTenant(UUID tenantId) {
-        tenants.findById(tenantId).ifPresent(tenants::delete);
+        tenantRepository.findById(tenantId).ifPresent(tenantRepository::delete);
     }
 
     @Transactional
     public void setTriagePaused(UUID tenantId, boolean paused) {
-        tenants.findById(tenantId).ifPresent(t -> {
-            t.setTriagePaused(paused);
-            tenants.save(t);
+        tenantRepository.findById(tenantId).ifPresent(tenant -> {
+            tenant.setTriagePaused(paused);
+            tenantRepository.save(tenant);
         });
     }
 
     @Transactional(readOnly = true)
     public boolean isTriagePaused(UUID tenantId) {
-        return tenants.findById(tenantId)
+        return tenantRepository.findById(tenantId)
                 .map(TenantEntity::isTriagePaused)
                 .orElse(false);
     }

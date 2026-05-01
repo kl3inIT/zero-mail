@@ -25,10 +25,6 @@ public record ZeroMailApiProperties(
         gmail = gmail == null ? GmailProperties.defaults() : gmail;
     }
 
-    public ZeroMailApiProperties(WebProperties web, CorsProperties cors) {
-        this(web, cors, null);
-    }
-
     public record WebProperties(
             @DefaultValue("http://localhost:3000") @NotNull URI baseUrl) {
 

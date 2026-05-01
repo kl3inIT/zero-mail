@@ -49,21 +49,22 @@ public class GmailWatchScheduler {
 
     @Scheduled(cron = "0 * * * * *")
     public void tick() {
-        List<GmailConnectionEntity> batch = connectionRepository.findConnectionsNeedingWatchRenewal(BATCH_SIZE);
-        for (GmailConnectionEntity conn : batch) {
-            ScopedValue.where(TenantContext.TENANT, conn.getTenantId().toString())
-                    .run(() -> processWatchRenewal(conn));
+        List<GmailConnectionEntity> connectionsNeedingRenewal =
+                connectionRepository.findConnectionsNeedingWatchRenewal(BATCH_SIZE);
+        for (GmailConnectionEntity connection : connectionsNeedingRenewal) {
+            ScopedValue.where(TenantContext.TENANT, connection.getTenantId().toString())
+                    .run(() -> processWatchRenewal(connection));
         }
     }
 
-    private void processWatchRenewal(GmailConnectionEntity conn) {
-        UUID tenantId = conn.getTenantId();
+    private void processWatchRenewal(GmailConnectionEntity connection) {
+        UUID tenantId = connection.getTenantId();
         try {
-            String decryptedToken = new String(
-                    refreshTokenCipher.decrypt(conn.getRefreshTokenEncrypted(), tenantId.toString()),
+            String decryptedRefreshToken = new String(
+                    refreshTokenCipher.decrypt(connection.getRefreshTokenEncrypted(), tenantId.toString()),
                     StandardCharsets.UTF_8);
             GmailApiClientFactory.TokenRefreshResult tokenResult =
-                    gmailApiClientFactory.refreshAccessToken(decryptedToken);
+                    gmailApiClientFactory.refreshAccessToken(decryptedRefreshToken);
             Gmail gmail = gmailApiClientFactory.buildGmailClient(tokenResult.accessToken().value());
 
             WatchRequest watchRequest = new WatchRequest()
@@ -77,12 +78,12 @@ public class GmailWatchScheduler {
 
             connectionService.recordWatchSuccess(tenantId, watchHistoryId, watchExpiresAt);
             log.info("event=gmail_watch_renewed tenantId={}", tenantId);
-        } catch (InvalidGrantException e) {
+        } catch (InvalidGrantException invalidGrantException) {
             connectionService.markDisconnected(tenantId);
             log.warn("event=gmail_watch_invalid_grant tenantId={}", tenantId);
-        } catch (Exception e) {
+        } catch (Exception watchRenewalException) {
             connectionService.incrementWatchFailure(tenantId);
-            int failures = conn.getWatchConsecutiveFailures() + 1;
+            int failures = connection.getWatchConsecutiveFailures() + 1;
             if (failures >= FAILURE_THRESHOLD) {
                 connectionService.markWatchUnhealthy(tenantId);
                 log.warn("event=gmail_watch_unhealthy_threshold tenantId={}", tenantId);

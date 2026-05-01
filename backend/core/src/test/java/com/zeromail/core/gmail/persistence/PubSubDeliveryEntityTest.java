@@ -58,7 +58,7 @@ class PubSubDeliveryEntityTest extends PostgresContainerTest {
         insertDelivery(tenantId, "pending-3", "PENDING", 0, null);
 
         List<PubSubDeliveryEntity> claimed = ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                .call(() -> deliveries.claimPendingBatch(2));
+                .call(() -> deliveries.claimPendingBatchForTenant(tenantId, 2, 300));
 
         assertThat(claimed).hasSize(2);
         Long processing = jdbc.queryForObject(
@@ -79,7 +79,7 @@ class PubSubDeliveryEntityTest extends PostgresContainerTest {
         insertDelivery(tenantId, "expired-processing", "PROCESSING", 2, Instant.now().minusSeconds(60));
 
         List<PubSubDeliveryEntity> claimed = ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                .call(() -> deliveries.claimPendingBatch(1));
+                .call(() -> deliveries.claimPendingBatchForTenant(tenantId, 1, 300));
 
         assertThat(claimed).hasSize(1);
         Integer attempts = jdbc.queryForObject(

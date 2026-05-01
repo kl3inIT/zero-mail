@@ -22,9 +22,9 @@ public class OnboardingController {
     }
 
     @PostMapping("/onboarding/select-template")
-    public void selectTemplate(@Valid @RequestBody SelectTemplateRequest req) {
+    public void selectTemplate(@Valid @RequestBody SelectTemplateRequest request) {
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
-        onboardingService.selectTemplate(tenantId, req.templateKey());
+        onboardingService.selectTemplate(tenantId, request.templateKey());
     }
 
     @PostMapping("/onboarding/complete")

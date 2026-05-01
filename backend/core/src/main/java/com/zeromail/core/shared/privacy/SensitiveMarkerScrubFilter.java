@@ -58,14 +58,15 @@ public class SensitiveMarkerScrubFilter extends Filter<ILoggingEvent> {
         copy.put("scrubbed", "true");
         copy.put("scrub_reason", "sensitive_marker");
         try {
-            Field f = LoggingEvent.class.getDeclaredField("mdcPropertyMap");
-            f.setAccessible(true);
-            f.set(classic, copy);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
+            Field mdcPropertyMapField = LoggingEvent.class.getDeclaredField("mdcPropertyMap");
+            mdcPropertyMapField.setAccessible(true);
+            mdcPropertyMapField.set(classic, copy);
+        } catch (NoSuchFieldException | IllegalAccessException reflectionException) {
             // If the Logback layout ever changes the field name we want to know about it
             // loudly during tests/CI, but never break a production log emission for it.
             throw new IllegalStateException(
-                    "Logback LoggingEvent layout changed; SensitiveMarkerScrubFilter needs update", e);
+                    "Logback LoggingEvent layout changed; SensitiveMarkerScrubFilter needs update",
+                    reflectionException);
         }
     }
 }

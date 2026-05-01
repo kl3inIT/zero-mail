@@ -14,51 +14,55 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.jspecify.annotations.NonNull;
 
 public class PubSubOidcAuthFilter extends OncePerRequestFilter {
 
-    private static final Logger log = LoggerFactory.getLogger(PubSubOidcAuthFilter.class);
+  private static final Logger log = LoggerFactory.getLogger(PubSubOidcAuthFilter.class);
 
-    private final TokenVerifier tokenVerifier;
-    private final String expectedEmail;
+  private final TokenVerifier tokenVerifier;
+  private final String expectedEmail;
 
-    public PubSubOidcAuthFilter(String audience, String saEmail, String certsUrl) {
-        this.expectedEmail = saEmail;
-        this.tokenVerifier = TokenVerifier.newBuilder()
-                .setAudience(audience)
-                .setIssuer("https://accounts.google.com")
-                .setCertificatesLocation(certsUrl)
-                .build();
+  public PubSubOidcAuthFilter(String audience, String serviceAccountEmail, String certificatesUrl) {
+    this.expectedEmail = serviceAccountEmail;
+    this.tokenVerifier =
+        TokenVerifier.newBuilder()
+            .setAudience(audience)
+            .setIssuer("https://accounts.google.com")
+            .setCertificatesLocation(certificatesUrl)
+            .build();
+  }
+
+  @Override
+  protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+    return !request.getServletPath().startsWith("/internal/pubsub/");
+  }
+
+  @Override
+  protected void doFilterInternal(
+      @NonNull HttpServletRequest request,
+      @NonNull HttpServletResponse response,
+      @NonNull FilterChain chain)
+      throws IOException, ServletException {
+    String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+    if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+      log.warn("event=pubsub_oidc_missing_token");
+      response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+      return;
     }
-
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !request.getServletPath().startsWith("/internal/pubsub/");
+    try {
+      JsonWebSignature verifiedToken = tokenVerifier.verify(authorizationHeader.substring(7));
+      String verifiedEmail = (String) verifiedToken.getPayload().get("email");
+      if (!expectedEmail.equalsIgnoreCase(verifiedEmail)) {
+        log.warn("event=pubsub_oidc_wrong_email");
+        response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        return;
+      }
+      request.setAttribute("pubsub.verified.email", verifiedEmail);
+      chain.doFilter(request, response);
+    } catch (TokenVerifier.VerificationException verificationException) {
+      log.warn("event=pubsub_oidc_verification_failed type={}", verificationException.getClass().getSimpleName());
+      response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
     }
-
-    @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain chain) throws IOException, ServletException {
-        String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            log.warn("event=pubsub_oidc_missing_token");
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-            return;
-        }
-        try {
-            JsonWebSignature jws = tokenVerifier.verify(authHeader.substring(7));
-            String email = (String) jws.getPayload().get("email");
-            if (!expectedEmail.equalsIgnoreCase(email)) {
-                log.warn("event=pubsub_oidc_wrong_email");
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-                return;
-            }
-            request.setAttribute("pubsub.verified.email", email);
-            chain.doFilter(request, response);
-        } catch (TokenVerifier.VerificationException e) {
-            log.warn("event=pubsub_oidc_verification_failed");
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-        }
-    }
+  }
 }

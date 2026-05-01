@@ -11,12 +11,20 @@ import tools.jackson.databind.module.SimpleModule;
 @Component
 public class SensitiveJacksonModule extends SimpleModule {
 
-    public SensitiveJacksonModule() {
-        addSerializer(Sensitive.class, new ValueSerializer<Sensitive>() {
-            @Override
-            public void serialize(Sensitive v, JsonGenerator g, SerializationContext s) throws JacksonException {
-                g.writeString("***REDACTED***");
-            }
+  public SensitiveJacksonModule() {
+    @SuppressWarnings("unchecked")
+    Class<Sensitive<?>> sensitiveType = (Class<Sensitive<?>>) (Class<?>) Sensitive.class;
+    addSerializer(
+        sensitiveType,
+        new ValueSerializer<>() {
+          @Override
+          public void serialize(
+              Sensitive<?> sensitiveValue,
+              JsonGenerator jsonGenerator,
+              SerializationContext serializationContext)
+              throws JacksonException {
+            jsonGenerator.writeString("***REDACTED***");
+          }
         });
-    }
+  }
 }

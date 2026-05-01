@@ -23,24 +23,24 @@ import com.zeromail.core.tenant.TenantContext;
 public class DisconnectDetectingRefreshTokenClient
         implements OAuth2AccessTokenResponseClient<OAuth2RefreshTokenGrantRequest> {
 
-    private final OAuth2AccessTokenResponseClient<OAuth2RefreshTokenGrantRequest> delegate;
-    private final ApplicationEventPublisher publisher;
+    private final OAuth2AccessTokenResponseClient<OAuth2RefreshTokenGrantRequest> refreshTokenClient;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public DisconnectDetectingRefreshTokenClient(ApplicationEventPublisher publisher) {
-        this.delegate = new RestClientRefreshTokenTokenResponseClient();
-        this.publisher = publisher;
+    public DisconnectDetectingRefreshTokenClient(ApplicationEventPublisher eventPublisher) {
+        this.refreshTokenClient = new RestClientRefreshTokenTokenResponseClient();
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
-    public OAuth2AccessTokenResponse getTokenResponse(OAuth2RefreshTokenGrantRequest req) {
+    public OAuth2AccessTokenResponse getTokenResponse(OAuth2RefreshTokenGrantRequest refreshTokenGrantRequest) {
         try {
-            return delegate.getTokenResponse(req);
-        } catch (OAuth2AuthorizationException ex) {
-            if ("invalid_grant".equals(ex.getError().getErrorCode())) {
-                String tenant = TenantContext.currentOptional().orElse("unknown");
-                publisher.publishEvent(new OAuth2TokenRefreshFailed(tenant, "invalid_grant", Instant.now()));
+            return refreshTokenClient.getTokenResponse(refreshTokenGrantRequest);
+        } catch (OAuth2AuthorizationException authorizationException) {
+            if ("invalid_grant".equals(authorizationException.getError().getErrorCode())) {
+                String tenantId = TenantContext.currentOptional().orElse("unknown");
+                eventPublisher.publishEvent(new OAuth2TokenRefreshFailed(tenantId, "invalid_grant", Instant.now()));
             }
-            throw ex;
+            throw authorizationException;
         }
     }
 }

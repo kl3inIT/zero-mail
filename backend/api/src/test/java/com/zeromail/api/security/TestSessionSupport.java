@@ -3,6 +3,7 @@ package com.zeromail.api.security;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -10,6 +11,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,106 +31,117 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.jspecify.annotations.NonNull;
 
 /**
- * Test-only auth shim. Replaces Spring Session cookie resolution with a header-based
- * filter that reads {@code X-Test-Subject} + {@code X-Test-Email} and sets both
- * {@code SecurityContextHolder} (so Spring Security's authorization rules pass) and
- * {@code TenantContext.TENANT} ScopedValue (so controllers see the right tenant
- * without round-tripping through {@link TenantBindingFilter}'s session-backed lookup).
+ * Test-only auth shim. Replaces Spring Session cookie resolution with a header-based filter that
+ * reads {@code X-Test-Subject} + {@code X-Test-Email} and sets both {@code SecurityContextHolder}
+ * (so Spring Security's authorization rules pass) and {@code TenantContext.TENANT} ScopedValue (so
+ * controllers see the right tenant without round-tripping through {@link TenantBindingFilter}'s
+ * session-backed lookup).
  *
- * Contributes a {@link SecurityFilterChain} after the Pub/Sub OIDC chain, so
- * test traffic for user-session endpoints uses this chain while machine-authenticated
- * {@code /internal/pubsub/**} requests remain owned by {@link PubSubSecurityConfig}.
+ * <p>Contributes a {@link SecurityFilterChain} after the Pub/Sub OIDC chain, so test traffic for
+ * user-session endpoints uses this chain while machine-authenticated {@code /internal/pubsub/**}
+ * requests remain owned by {@link PubSubSecurityConfig}.
  */
 @TestConfiguration
 public class TestSessionSupport {
 
-    public static final String HEADER_SUBJECT = "X-Test-Subject";
-    public static final String HEADER_EMAIL = "X-Test-Email";
+  public static final String HEADER_SUBJECT = "X-Test-Subject";
+  public static final String HEADER_EMAIL = "X-Test-Email";
 
-    public interface TestSessionMinter {
-        /** Convenience no-op: kept so existing test call sites that pass a "cookie" still compile. */
-        String mint(String googleSubject, String email);
-    }
+  public interface TestSessionMinter {
+    /** Convenience no-op: kept so existing test call sites that pass a "cookie" still compile. */
+    void mint(String googleSubject, String email);
+  }
 
-    @Bean
-    TestSessionMinter testSessionMinter() {
-        return (googleSubject, email) -> "X-Test-Subject=" + googleSubject;
-    }
+  @Bean
+  TestSessionMinter testSessionMinter() {
+    return (googleSubject, email) -> {
+      Objects.requireNonNull(googleSubject, "googleSubject");
+      Objects.requireNonNull(email, "email");
+    };
+  }
 
-    @Bean
-    OncePerRequestFilter testAuthFilter(UserRepository users) {
-        return new OncePerRequestFilter() {
-            @Override
-            protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
-                    throws ServletException, IOException {
-                String subject = req.getHeader(HEADER_SUBJECT);
-                String email = req.getHeader(HEADER_EMAIL);
-                if (subject == null || email == null) {
-                    chain.doFilter(req, res);
-                    return;
-                }
-                var claims = Map.<String, Object>of("sub", subject, "email", email);
-                var idToken = new OidcIdToken(
-                        "test-id-token-" + subject,
-                        java.time.Instant.now(),
-                        java.time.Instant.now().plusSeconds(3600),
-                        claims);
-                var principal = new DefaultOidcUser(
-                        List.of(new SimpleGrantedAuthority("OIDC_USER")),
-                        idToken);
-                var authToken = new OAuth2AuthenticationToken(
-                        principal,
-                        principal.getAuthorities(),
-                        "google");
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+  @Bean
+  OncePerRequestFilter testAuthFilter(UserRepository users) {
+    return new OncePerRequestFilter() {
+      @Override
+      protected void doFilterInternal(
+          @NonNull HttpServletRequest req,
+          @NonNull HttpServletResponse res,
+          @NonNull FilterChain chain)
+          throws ServletException, IOException {
+        String subject = req.getHeader(HEADER_SUBJECT);
+        String email = req.getHeader(HEADER_EMAIL);
+        if (subject == null || email == null) {
+          chain.doFilter(req, res);
+          return;
+        }
+        var claims = Map.<String, Object>of("sub", subject, "email", email);
+        var idToken =
+            new OidcIdToken(
+                "test-id-token-" + subject,
+                java.time.Instant.now(),
+                java.time.Instant.now().plusSeconds(3600),
+                claims);
+        var principal =
+            new DefaultOidcUser(List.of(new SimpleGrantedAuthority("OIDC_USER")), idToken);
+        var authToken =
+            new OAuth2AuthenticationToken(principal, principal.getAuthorities(), "google");
+        SecurityContextHolder.getContext().setAuthentication(authToken);
 
-                Optional<UserEntity> userOpt = users.findByGoogleSubject(subject);
-                if (userOpt.isEmpty()) {
-                    SecurityContextHolder.clearContext();
-                    res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-                    return;
-                }
-                try {
-                    UUID tenantId = userOpt.get().getTenantId();
-                    ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() -> {
-                        try {
-                            chain.doFilter(req, res);
-                        } catch (IOException | ServletException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
-                } catch (RuntimeException re) {
-                    if (re.getCause() instanceof IOException io) throw io;
-                    if (re.getCause() instanceof ServletException se) throw se;
-                    throw re;
-                } finally {
-                    SecurityContextHolder.clearContext();
-                }
-            }
-        };
-    }
+        Optional<UserEntity> userOpt = users.findByGoogleSubject(subject);
+        if (userOpt.isEmpty()) {
+          SecurityContextHolder.clearContext();
+          res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+          return;
+        }
+        try {
+          UUID tenantId = userOpt.get().getTenantId();
+          ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+              .run(
+                  () -> {
+                    try {
+                      chain.doFilter(req, res);
+                    } catch (IOException | ServletException e) {
+                      throw new RuntimeException(e);
+                    }
+                  });
+        } catch (RuntimeException re) {
+          if (re.getCause() instanceof IOException io) throw io;
+          if (re.getCause() instanceof ServletException se) throw se;
+          throw re;
+        } finally {
+          SecurityContextHolder.clearContext();
+        }
+      }
+    };
+  }
 
-    /**
-     * Test user-session SecurityFilterChain. It explicitly excludes Pub/Sub endpoints,
-     * requires authentication for everything else, and inserts the test auth filter so
-     * SecurityContext + ScopedValue are populated before any controller runs.
-     */
-    @Bean
-    @Order(2)
-    SecurityFilterChain testSecurityChain(HttpSecurity http, OncePerRequestFilter testAuthFilter) throws Exception {
-        RequestMatcher nonPubSub = request -> !request.getServletPath().startsWith("/internal/pubsub/");
-        return http
-                .securityMatcher(nonPubSub)
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(a -> a
-                        .requestMatchers("/v3/api-docs/**", "/test/**").permitAll()
-                        .anyRequest().authenticated())
-                .exceptionHandling(e -> e.authenticationEntryPoint((_, res, _) ->
-                        res.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
-                .addFilterBefore(testAuthFilter, UsernamePasswordAuthenticationFilter.class)
-                .build();
-    }
+  /**
+   * Test user-session SecurityFilterChain. It explicitly excludes Pub/Sub endpoints, requires
+   * authentication for everything else, and inserts the test auth filter so SecurityContext +
+   * ScopedValue are populated before any controller runs.
+   */
+  @Bean
+  @Order(2)
+  SecurityFilterChain testSecurityChain(HttpSecurity http, OncePerRequestFilter testAuthFilter) {
+    RequestMatcher nonPubSub = request -> !request.getServletPath().startsWith("/internal/pubsub/");
+    return http.securityMatcher(nonPubSub)
+        .csrf(AbstractHttpConfigurer::disable)
+        .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(
+            a ->
+                a.requestMatchers("/v3/api-docs/**", "/test/**")
+                    .permitAll()
+                    .anyRequest()
+                    .authenticated())
+        .exceptionHandling(
+            e ->
+                e.authenticationEntryPoint(
+                    (_, res, _) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
+        .addFilterBefore(testAuthFilter, UsernamePasswordAuthenticationFilter.class)
+        .build();
+  }
 }

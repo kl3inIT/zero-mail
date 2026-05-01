@@ -13,9 +13,8 @@ import com.zeromail.core.shared.lang.OrderedEnum;
  *
  * <p><b>D-C2 invariant:</b> {@link #id()} returns {@link Enum#name()} so
  * {@code @Enumerated(EnumType.STRING)} continues to persist the canonical id.
- */
-/**
- * Phase 01.5 D-B1: {@code SIGNED_IN} removed. After bundled-OAuth collapse, login +
+ *
+ * <p>Phase 01.5 D-B1: {@code SIGNED_IN} removed. After bundled-OAuth collapse, login +
  * Gmail connection happen atomically — {@code SIGNED_IN} was a transient state never
  * persisted in the new flow. Liquibase changeset 009 migrates any pre-launch dev rows.
  * Entry state is now {@code GMAIL_CONNECTED(10)}.

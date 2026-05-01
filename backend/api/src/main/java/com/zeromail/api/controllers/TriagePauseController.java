@@ -29,10 +29,10 @@ public class TriagePauseController {
     }
 
     @PutMapping("/tenant/triage-pause")
-    public TriagePauseResponse setTriagePause(@RequestBody @Valid TriagePauseRequest req) {
+    public TriagePauseResponse setTriagePause(@RequestBody @Valid TriagePauseRequest request) {
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
-        tenantService.setTriagePaused(tenantId, req.paused());
-        log.info("event=triage_pause_toggled tenantId={} paused={}", tenantId, req.paused());
-        return new TriagePauseResponse(req.paused());
+        tenantService.setTriagePaused(tenantId, request.paused());
+        log.info("event=triage_pause_toggled tenantId={} paused={}", tenantId, request.paused());
+        return new TriagePauseResponse(request.paused());
     }
 }

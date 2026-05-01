@@ -64,9 +64,9 @@ public class MeController {
      * line of defense (D-B2).
      */
     @PatchMapping("/me/language")
-    public MeResponse updateLanguage(@Valid @RequestBody UpdateLanguageRequest req) {
+    public MeResponse updateLanguage(@Valid @RequestBody UpdateLanguageRequest request) {
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
-        CurrentUserProjection updated = accountService.updateCurrentUserLanguage(tenantId, req.language());
+        CurrentUserProjection updated = accountService.updateCurrentUserLanguage(tenantId, request.language());
         return toResponse(updated, tenantId);
     }
 

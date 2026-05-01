@@ -10,16 +10,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.zeromail.core.tenant.TenantContext;
-
 public interface PubSubDeliveryRepository extends JpaRepository<PubSubDeliveryEntity, UUID> {
 
-    default List<PubSubDeliveryEntity> claimPendingBatch(int limit) {
-        return claimPendingBatchForTenant(UUID.fromString(TenantContext.currentOrThrow()), limit, 300);
-    }
-
-    @Transactional
-    @Query(value = """
+  @Transactional
+  @Query(
+      value =
+          """
+            WITH claimed AS (
             UPDATE pubsub_delivery
             SET status = 'PROCESSING',
                 locked_until = NOW() + (:lockSeconds * INTERVAL '1 second'),
@@ -36,12 +33,19 @@ public interface PubSubDeliveryRepository extends JpaRepository<PubSubDeliveryEn
                 FOR UPDATE SKIP LOCKED
             )
             RETURNING *
-            """, nativeQuery = true)
-    List<PubSubDeliveryEntity> claimPendingBatch(@Param("limit") int limit,
-                                                 @Param("lockSeconds") int lockSeconds);
+            )
+            SELECT *
+            FROM claimed
+            """,
+      nativeQuery = true)
+  List<PubSubDeliveryEntity> claimPendingBatch(
+      @Param("limit") int limit, @Param("lockSeconds") int lockSeconds);
 
-    @Transactional
-    @Query(value = """
+  @Transactional
+  @Query(
+      value =
+          """
+            WITH claimed AS (
             UPDATE pubsub_delivery
             SET status = 'PROCESSING',
                 locked_until = NOW() + (:lockSeconds * INTERVAL '1 second'),
@@ -61,13 +65,20 @@ public interface PubSubDeliveryRepository extends JpaRepository<PubSubDeliveryEn
                 FOR UPDATE SKIP LOCKED
             )
             RETURNING *
-            """, nativeQuery = true)
-    List<PubSubDeliveryEntity> claimPendingBatchForTenant(@Param("tenantId") UUID tenantId,
-                                                          @Param("limit") int limit,
-                                                          @Param("lockSeconds") int lockSeconds);
+            )
+            SELECT *
+            FROM claimed
+            """,
+      nativeQuery = true)
+  List<PubSubDeliveryEntity> claimPendingBatchForTenant(
+      @Param("tenantId") UUID tenantId,
+      @Param("limit") int limit,
+      @Param("lockSeconds") int lockSeconds);
 
-    @Modifying
-    @Query(value = """
+  @Modifying
+  @Query(
+      value =
+          """
             INSERT INTO pubsub_delivery
               (id, tenant_id, pubsub_message_id, history_id, payload, status, attempts,
                locked_until, created_at, updated_at, version)
@@ -75,21 +86,25 @@ public interface PubSubDeliveryRepository extends JpaRepository<PubSubDeliveryEn
               (:id, :tenantId, :pubsubMessageId, :historyId, CAST(:payload AS jsonb),
                'PENDING', 0, NULL, NOW(), NOW(), 0)
             ON CONFLICT (tenant_id, pubsub_message_id) DO NOTHING
-            """, nativeQuery = true)
-    @Transactional
-    int insertPendingIfAbsent(@Param("id") UUID id,
-                              @Param("tenantId") UUID tenantId,
-                              @Param("pubsubMessageId") String pubsubMessageId,
-                              @Param("historyId") Long historyId,
-                              @Param("payload") String payload);
+            """,
+      nativeQuery = true)
+  @Transactional
+  int insertPendingIfAbsent(
+      @Param("id") UUID id,
+      @Param("tenantId") UUID tenantId,
+      @Param("pubsubMessageId") String pubsubMessageId,
+      @Param("historyId") Long historyId,
+      @Param("payload") String payload);
 
-    @Modifying
-    @Query("UPDATE PubSubDeliveryEntity d SET d.status = :status, d.lockedUntil = null WHERE d.id = :id")
-    @Transactional
-    int updateStatus(@Param("id") UUID id, @Param("status") String status);
+  @Modifying
+  @Query(
+      "UPDATE PubSubDeliveryEntity d SET d.status = :status, d.lockedUntil = null WHERE d.id = :id")
+  @Transactional
+  void updateStatus(@Param("id") UUID id, @Param("status") String status);
 
-    @Modifying
-    @Query("UPDATE PubSubDeliveryEntity d SET d.status = 'PENDING', d.lockedUntil = :nextAttemptAt WHERE d.id = :id")
-    @Transactional
-    int releaseForRetry(@Param("id") UUID id, @Param("nextAttemptAt") Instant nextAttemptAt);
+  @Modifying
+  @Query(
+      "UPDATE PubSubDeliveryEntity d SET d.status = 'PENDING', d.lockedUntil = :nextAttemptAt WHERE d.id = :id")
+  @Transactional
+  void releaseForRetry(@Param("id") UUID id, @Param("nextAttemptAt") Instant nextAttemptAt);
 }

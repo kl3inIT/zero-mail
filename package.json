@@ -8,8 +8,15 @@
   },
   "scripts": {
     "web:dev": "pnpm --filter web dev",
+    "web:dev:tailscale": "pnpm run tailscale:serve:web && pnpm run web:dev",
     "web:build": "pnpm --filter web build",
     "generate:api": "pnpm --filter web generate:api",
+    "tailscale:serve:web": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-tailscale.ps1 -Mode serve -Target 3000",
+    "tailscale:serve:api": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-tailscale.ps1 -Mode serve -Target 8080",
+    "tailscale:funnel:web": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-tailscale.ps1 -Mode funnel -Target 3000",
+    "tailscale:funnel:api": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-tailscale.ps1 -Mode funnel -Target 8080",
+    "tailscale:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-tailscale.ps1 -Mode status",
+    "tailscale:reset": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-tailscale.ps1 -Mode reset",
     "prepare": "husky"
   },
   "devDependencies": {

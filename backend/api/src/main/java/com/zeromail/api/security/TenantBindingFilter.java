@@ -14,42 +14,48 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.jspecify.annotations.NonNull;
 
 @Component
 public class TenantBindingFilter extends OncePerRequestFilter {
 
-    private final UserRepository users;
+  private final UserRepository userRepository;
 
-    public TenantBindingFilter(UserRepository users) {
-        this.users = users;
+  public TenantBindingFilter(UserRepository userRepository) {
+    this.userRepository = userRepository;
+  }
+
+  @Override
+  protected void doFilterInternal(
+      @NonNull HttpServletRequest request,
+      @NonNull HttpServletResponse response,
+      @NonNull FilterChain chain)
+      throws ServletException, IOException {
+    var authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication == null || !(authentication.getPrincipal() instanceof OidcUser oidcUser)) {
+      chain.doFilter(request, response);
+      return;
     }
-
-    @Override
-    protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
-            throws ServletException, IOException {
-        var auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !(auth.getPrincipal() instanceof OidcUser oidc)) {
-            chain.doFilter(req, res);
-            return;
-        }
-        var user = users.findByGoogleSubject(oidc.getSubject()).orElse(null);
-        if (user == null) {
-            chain.doFilter(req, res);
-            return;
-        }
-        final String tenantId = user.getTenantId().toString();
-        try {
-            ScopedValue.where(TenantContext.TENANT, tenantId).run(() -> {
+    var user = userRepository.findByGoogleSubject(oidcUser.getSubject()).orElse(null);
+    if (user == null) {
+      chain.doFilter(request, response);
+      return;
+    }
+    final String tenantId = user.getTenantId().toString();
+    try {
+      ScopedValue.where(TenantContext.TENANT, tenantId)
+          .run(
+              () -> {
                 try {
-                    chain.doFilter(req, res);
-                } catch (IOException | ServletException e) {
-                    throw new RuntimeException(e);
+                  chain.doFilter(request, response);
+                } catch (IOException | ServletException filterException) {
+                  throw new RuntimeException(filterException);
                 }
-            });
-        } catch (RuntimeException re) {
-            if (re.getCause() instanceof IOException io) throw io;
-            if (re.getCause() instanceof ServletException se) throw se;
-            throw re;
-        }
+              });
+    } catch (RuntimeException runtimeException) {
+      if (runtimeException.getCause() instanceof IOException ioException) throw ioException;
+      if (runtimeException.getCause() instanceof ServletException servletException) throw servletException;
+      throw runtimeException;
     }
+  }
 }

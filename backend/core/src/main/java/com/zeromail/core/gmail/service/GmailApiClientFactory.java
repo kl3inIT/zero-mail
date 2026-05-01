@@ -54,8 +54,8 @@ public class GmailApiClientFactory {
                     .setApplicationName("ZeroMail")
                     .setRootUrl(apiRootUrl)
                     .build();
-        } catch (GeneralSecurityException e) {
-            throw new IOException("Unable to initialize Gmail HTTP transport", e);
+        } catch (GeneralSecurityException securityException) {
+            throw new IOException("Unable to initialize Gmail HTTP transport", securityException);
         }
     }
 
@@ -63,31 +63,31 @@ public class GmailApiClientFactory {
 
     public TokenRefreshResult refreshAccessToken(String decryptedRefreshToken) throws IOException {
         HttpClient httpClient = HttpClient.newHttpClient();
-        String body = "grant_type=refresh_token"
+        String requestBody = "grant_type=refresh_token"
                 + "&client_id=" + URLEncoder.encode(clientId, StandardCharsets.UTF_8)
                 + "&client_secret=" + URLEncoder.encode(clientSecret, StandardCharsets.UTF_8)
                 + "&refresh_token=" + URLEncoder.encode(decryptedRefreshToken, StandardCharsets.UTF_8);
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(tokenEndpoint)
                 .header("Content-Type", "application/x-www-form-urlencoded")
-                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
         HttpResponse<String> response;
         try {
             response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        } catch (InterruptedException e) {
+        } catch (InterruptedException interruptedException) {
             Thread.currentThread().interrupt();
-            throw new IOException("Token refresh interrupted", e);
+            throw new IOException("Token refresh interrupted", interruptedException);
         }
 
         if (response.statusCode() == 200) {
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode node = mapper.readTree(response.body());
-            String refreshedAccessToken = node.path("access_token").asString();
-            int expiresIn = node.path("expires_in").asInt(3600);
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode responseBody = objectMapper.readTree(response.body());
+            String refreshedAccessToken = responseBody.path("access_token").asString();
+            int expiresInSeconds = responseBody.path("expires_in").asInt(3600);
             return new TokenRefreshResult(
                     Sensitive.of(refreshedAccessToken),
-                    Instant.now().plusSeconds(expiresIn - 60L));
+                    Instant.now().plusSeconds(expiresInSeconds - 60L));
         }
         if (response.statusCode() == 400 && response.body().contains("invalid_grant")) {
             throw new InvalidGrantException("OAuth token revoked");

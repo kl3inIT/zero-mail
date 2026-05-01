@@ -3,12 +3,16 @@ status: partial
 phase: 02A-mail-ingestion
 source: [02A-VERIFICATION.md]
 started: 2026-04-29T08:04:45Z
-updated: 2026-04-29T08:04:45Z
+updated: 2026-04-30T15:55:48+07:00
 ---
 
 ## Current Test
 
-[awaiting human testing]
+number: 1
+name: End-to-end Pub/Sub delivery on staging VPS
+expected: |
+  Real Gmail message creates one tenant-attributed mail_message_observed row, and replaying the same Pub/Sub message creates no duplicate.
+awaiting: user response
 
 ## Tests
 
