@@ -109,7 +109,7 @@ No unregistered threat flags were reported in the execution summaries. `02A-04-S
 | `pnpm -F web run typecheck` | PASS. |
 | `pnpm -F web run lint` | PASS. |
 | `pnpm -F web run i18n:check` | PASS: vi/en parity, 318 leaf keys. |
-| `.\gradlew.bat clean check` | FAILED outside the declared Phase 2A threat register: `ControllerBoundaryArchTests.controllers_do_not_touch_entities` matches Spring `org.springframework.http.ResponseEntity` because the rule uses `.*Entity`. Source search found no controller dependency on persistence entities or repositories. |
+| `.\gradlew.bat clean check` | PASS after the 2026-05-05 validation audit narrowed `ControllerBoundaryArchTests.controllers_do_not_touch_entities` to project persistence entities, fixing the Spring `ResponseEntity` false positive. |
 
 ---
 

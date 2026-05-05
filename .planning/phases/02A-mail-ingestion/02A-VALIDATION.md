@@ -17,11 +17,11 @@ created: 2026-04-28
 
 | Property | Value |
 |----------|-------|
-| **Framework** | JUnit 5 + Spring Boot Test (backend); Vitest 3.x (frontend) |
+| **Framework** | JUnit 5 + Spring Boot Test (backend); Vitest 4.1.5 (frontend) |
 | **Config file** | `backend/build.gradle.kts` test task; `apps/web/vitest.config.ts` |
-| **Quick run command** | `./gradlew :backend:core:test :backend:api:test :backend:worker:test --offline` |
-| **Full suite command** | `./gradlew clean check && pnpm -F web run test:run && pnpm -F web run lint && pnpm -F web run typecheck` |
-| **Estimated runtime** | ~180 seconds (backend ~120s, frontend ~30s, lint+typecheck ~30s) |
+| **Quick run command** | `./gradlew :backend:core:test :backend:api:test :backend:worker:test` |
+| **Full suite command** | `./gradlew clean check && pnpm -F web run test:run && pnpm -F web run typecheck && pnpm -F web run lint && pnpm -F web run i18n:check` |
+| **Estimated runtime** | ~210 seconds (backend ~120s, frontend test ~10s, type/lint/i18n ~35s) |
 
 ---
 
@@ -42,7 +42,7 @@ created: 2026-04-28
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | 02A-00 | 02A-00-PLAN.md | 0 | MAIL-01..MAIL-06 | T-01, T-05 | RED scaffolds cover Pub/Sub OIDC, idempotency, Gmail history/watch, pause UX, and reconnect UX | Backend JUnit + Vitest scaffolds | `./gradlew clean check`; `pnpm -F web run test:run` | Yes | ✅ green |
 | 02A-01 | 02A-01-PLAN.md | 1 | MAIL-01, MAIL-03, MAIL-05, MAIL-06 | T-05 | Schema, entities, enum, tenant-scoped claim semantics | JUnit persistence tests | `./gradlew :backend:core:test --tests "*PubSubDeliveryEntityTest*" --tests "*MailMessageObservedEntityTest*" --tests "*GmailIngestionHealthTest*"` | Yes | ✅ green |
-| 02A-02 | 02A-02-PLAN.md | 2 | MAIL-02, MAIL-03, MAIL-05 | T-05 | Gmail watch renewal and history processing are idempotent and tenant-bound | Worker JUnit tests | `./gradlew :backend:worker:test --tests "*GmailWatchSchedulerTest*" --tests "*GmailHistoryProcessorTest*"` | Yes | ✅ green |
+| 02A-02 | 02A-02-PLAN.md | 2 | MAIL-02, MAIL-03, MAIL-05 | T-05 | Gmail watch renewal and history processing are idempotent, tenant-bound, and covered for no-tenant-context global scans | Worker JUnit tests | `./gradlew :backend:worker:test --tests "*GmailWatchSchedulerTest*" --tests "*GmailHistoryProcessorTest*"` | Yes | ✅ green |
 | 02A-03 | 02A-03-PLAN.md | 2 | MAIL-01, MAIL-04, MAIL-06 | T-01 | Pub/Sub OIDC rejects invalid tokens before business logic; API exposes pause and health | API integration tests | `./gradlew :backend:api:test --tests "*PubSubOidcAuthFilterTest*" --tests "*GmailPubSubControllerIntegrationTest*" --tests "*MeControllerTest*" --tests "*TriagePauseControllerTest*" --tests "*PubSubIdempotencyTest*"` | Yes | ✅ green |
 | 02A-04 | 02A-04-PLAN.md | 3 | MAIL-05, MAIL-06 | T-05 | Frontend pause banner, settings toggle, reconnect prompt, and i18n keys are wired | Vitest + type/lint/i18n | `pnpm -F web run test:run`; `pnpm -F web run typecheck`; `pnpm -F web run lint`; `pnpm -F web run i18n:check` | Yes | ✅ green |
 | 02A-05 | 02A-05-PLAN.md | 4 | MAIL-01..MAIL-06 | T-01, T-05 | Final Nyquist sweep proves all automated acceptance gates are green | Full backend/frontend verification | `./gradlew clean check`; `pnpm -F web run test:run && pnpm -F web run typecheck && pnpm -F web run lint && pnpm -F web run i18n:check` | Yes | ✅ green |
@@ -57,11 +57,11 @@ Wave 0 RED scaffolds (per RESEARCH.md `## Validation Architecture`):
 
 - [x] `backend/api/src/test/java/com/zeromail/api/security/PubSubOidcAuthFilterTest.java` — OIDC verification: valid token PASSES, wrong audience/email/issuer/expired/bad-signature 401; non-`/internal/pubsub/**` path skips the filter (7/7 GREEN)
 - [x] `backend/api/src/test/java/com/zeromail/api/controllers/GmailPubSubControllerIntegrationTest.java` — RestClient + LocalServerPort: end-to-end push receiver including OIDC + tenant lookup + dedup INSERT (6/6 GREEN)
-- [x] `backend/core/src/test/java/com/zeromail/core/gmail/persistence/PubSubDeliveryEntityTest.java` — UNIQUE (tenant_id, pubsub_message_id) round-trip + ON CONFLICT DO NOTHING semantics + expired PROCESSING row reclaim (4/4 GREEN)
+- [x] `backend/core/src/test/java/com/zeromail/core/gmail/persistence/PubSubDeliveryEntityTest.java` — UNIQUE (tenant_id, pubsub_message_id) round-trip + ON CONFLICT DO NOTHING semantics + expired PROCESSING row reclaim + global claim without TenantContext (5/5 GREEN)
 - [x] `backend/core/src/test/java/com/zeromail/core/gmail/persistence/MailMessageObservedEntityTest.java` — composite PK round-trip + TEXT[] label_ids round-trip + `@TenantId` cross-tenant JPA-read isolation (4/4 GREEN)
 - [x] `backend/core/src/test/java/com/zeromail/core/gmail/model/GmailIngestionHealthTest.java` — IdentifiedEnum contract: id() + fromId fail-loud (4/4 GREEN)
-- [x] `backend/worker/src/test/java/com/zeromail/worker/GmailHistoryProcessorTest.java` — fan-out semantics, metadata fetch before INBOX filtering, history-404 -> HISTORY_LOST, monotonic last_synced_history_id, ScopedValue binding per row (6/6 GREEN)
-- [x] `backend/worker/src/test/java/com/zeromail/worker/GmailWatchSchedulerTest.java` — initial register, renew at <24h without advancing existing `last_synced_history_id`, HISTORY_LOST preserved on renewal, 3-strike unhealthy threshold, INBOX-only labelIds (6/6 GREEN)
+- [x] `backend/worker/src/test/java/com/zeromail/worker/GmailHistoryProcessorTest.java` — fan-out semantics, metadata fetch before INBOX filtering, history-404 -> HISTORY_LOST, monotonic last_synced_history_id, ScopedValue binding per row (7/7 GREEN)
+- [x] `backend/worker/src/test/java/com/zeromail/worker/GmailWatchSchedulerTest.java` — initial register, global renewal scan without TenantContext, renew at <24h without advancing existing `last_synced_history_id`, HISTORY_LOST preserved on renewal, 3-strike unhealthy threshold, INBOX-only labelIds (7/7 GREEN)
 - [x] `backend/api/src/test/java/com/zeromail/api/support/MockGoogleOidcServer.java` — hermetic JWKS + signed synthetic ID tokens (testkit fixture)
 - [x] `backend/worker/src/test/java/com/zeromail/worker/test/MockGmailHistoryServer.java` — hermetic Gmail history.list + watch + stop responder
 - [x] `apps/web/features/triage/components/PauseBanner.test.tsx` — conditional render when triagePaused=true; unpause CTA wired (GREEN)
@@ -71,6 +71,7 @@ Wave 0 RED scaffolds (per RESEARCH.md `## Validation Architecture`):
 - [x] `backend/api/src/test/java/com/zeromail/api/controllers/TriagePauseControllerTest.java` — Wave 0 scaffold enabled: putTriagePause_true_persists_triage_paused, putTriagePause_false_clears_triage_paused (3/3 GREEN including missing-auth guard)
 - [x] `backend/api/src/test/java/com/zeromail/api/controllers/PubSubIdempotencyTest.java` — Wave 0 scaffold enabled: duplicatePushMessage_sameMessageId_onlyOnePubSubDeliveryRow, unknownEmailAddress_returns200_noPubSubDeliveryRow (2/2 GREEN)
 - [x] `apps/web/features/gmail/components/ReconnectPrompt.test.tsx` — Wave 0 scaffold enabled: renders when ingestionHealth is WATCH_UNHEALTHY/HISTORY_LOST, does NOT render when HEALTHY (GREEN, no `it.skip`)
+- [x] `backend/api/src/test/java/com/zeromail/api/security/OAuthProvisioningRaceAtomicityTest.java` — Review hardening: ordinary login without refresh token preserves `HISTORY_LOST`, `last_synced_history_id`, and `watch_history_id` (3/3 GREEN)
 
 *If none: "Existing infrastructure covers all phase requirements."*
 
@@ -100,6 +101,34 @@ Wave 0 RED scaffolds (per RESEARCH.md `## Validation Architecture`):
 - [x] `wave_0_complete: true` flipped after Wave 0 RED scaffolds land
 
 **Approval:** automated closure complete; staging-only manual verifications remain pending below.
+
+---
+
+## Validation Audit 2026-05-05
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 3 |
+| Resolved | 3 |
+| Escalated | 0 |
+
+Resolved gaps:
+
+- Added explicit `PubSubDeliveryEntityTest.globalClaimPendingBatch_withoutTenantContext_claimsRowsForWorkerFanout` coverage for the global worker claim path.
+- Added explicit `GmailWatchSchedulerTest.tick_withoutTenantContext_processesGlobalRenewalScan` coverage for global watch-renewal scans.
+- Added `OAuthProvisioningRaceAtomicityTest.ordinaryLogin_withoutRefreshToken_preservesHistoryLostConnectionState` to lock the ordinary-login vs explicit-reconnect distinction.
+
+Additional validation repair:
+
+- Narrowed `ControllerBoundaryArchTests.controllers_do_not_touch_entities` to project persistence entities only, fixing the false positive where Spring `ResponseEntity` matched `.*Entity`.
+
+Fresh audit verification:
+
+- `.\gradlew.bat clean check` — PASS.
+- `pnpm -F web run test:run` — PASS: 27 files, 151 tests.
+- `pnpm -F web run typecheck` — PASS.
+- `pnpm -F web run lint` — PASS.
+- `pnpm -F web run i18n:check` — PASS: vi/en parity, 318 leaf keys.
 
 ---
 
