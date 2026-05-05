@@ -25,6 +25,8 @@ testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", ve
 springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
 liquibase-core = { module = "org.liquibase:liquibase-core", version.ref = "liquibase" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
+google-auth-library-oauth2-http = { module = "com.google.auth:google-auth-library-oauth2-http", version.ref = "googleAuthLibrary" }
+google-api-services-gmail = { module = "com.google.apis:google-api-services-gmail", version.ref = "gmailApi" }
 
 [plugins]
 springBoot = { id = "org.springframework.boot", version.ref = "springBoot" }

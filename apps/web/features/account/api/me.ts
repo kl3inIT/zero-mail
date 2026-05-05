@@ -4,10 +4,18 @@ import { api } from '@/lib/api/client';
 import { getApiUrl } from '@/lib/api/base-url';
 
 export interface CurrentUser {
-  id: string;
+  id?: string;
+  userId?: string;
+  tenantId?: string;
   email: string;
   preferredLanguage: 'vi' | 'en';
   onboardingStep?: string;
+  triagePaused: boolean;
+  gmailConnectionStatus: {
+    status: 'CONNECTED' | 'DISCONNECTED' | 'NOT_CONNECTED' | 'PENDING' | string;
+    ingestionHealth: 'HEALTHY' | 'WATCH_UNHEALTHY' | 'HISTORY_LOST' | string;
+    googleEmail: string | null;
+  } | null;
 }
 
 export interface GetCurrentUserOptions {

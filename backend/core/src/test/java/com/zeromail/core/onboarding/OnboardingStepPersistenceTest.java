@@ -24,7 +24,7 @@ import com.zeromail.core.tenant.TenantContext;
  * switch (the previous pure-JVM test would silently pass under that regression).
  *
  * <p>Pattern: extends {@link PostgresContainerTest} (NOT {@code @DataJpaTest}) per the
- * project standard — {@code @DataJpaTest} would skip {@code CoreTestApplication} and miss
+ * project standard — {@code @DataJpaTest} would skip {@code ZeroMailCoreTestApplication} and miss
  * the Liquibase audit-column changeset (007). 4 existing DB-touching tests follow this
  * pattern: {@code PreferredLanguageMigrationTest}, {@code GmailConnectionUniquenessTest},
  * {@code LiquibaseMigrationTest}, and {@code MultiTenantLeakIntegrationTest}.

@@ -18,16 +18,16 @@ import com.zeromail.core.tenant.TenantContext;
 @Service
 public class GmailAccessGuard {
 
-    private final GmailConnectionRepository conns;
-    private final ApplicationEventPublisher publisher;
-    private final TransactionTemplate tx;
+    private final GmailConnectionRepository connectionRepository;
+    private final ApplicationEventPublisher eventPublisher;
+    private final TransactionTemplate transactionTemplate;
 
-    public GmailAccessGuard(GmailConnectionRepository conns,
-                            ApplicationEventPublisher publisher,
-                            PlatformTransactionManager txManager) {
-        this.conns = conns;
-        this.publisher = publisher;
-        this.tx = new TransactionTemplate(txManager);
+    public GmailAccessGuard(GmailConnectionRepository connectionRepository,
+                            ApplicationEventPublisher eventPublisher,
+                            PlatformTransactionManager transactionManager) {
+        this.connectionRepository = connectionRepository;
+        this.eventPublisher = eventPublisher;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     /**
@@ -36,25 +36,25 @@ public class GmailAccessGuard {
      * the session is created (rather than the bootstrap sentinel from
      * {@link com.zeromail.core.tenant.ScopedValueTenantResolver#BOOTSTRAP_TENANT}). For that
      * reason this method does not use {@code @Transactional} on itself — it would open the
-     * tx before our wrap. Instead it binds the ScopedValue, then uses TransactionTemplate
+     * transaction before our wrap. Instead it binds the ScopedValue, then uses TransactionTemplate
      * inside the bound scope.
      */
     @EventListener
-    public void on(OAuth2TokenRefreshFailed e) {
-        if (!"invalid_grant".equals(e.errorCode())) return;
+    public void on(OAuth2TokenRefreshFailed event) {
+        if (!"invalid_grant".equals(event.errorCode())) return;
         UUID tenant;
         try {
-            tenant = UUID.fromString(e.tenantId());
-        } catch (IllegalArgumentException x) {
+            tenant = UUID.fromString(event.tenantId());
+        } catch (IllegalArgumentException invalidTenantIdException) {
             return;
         }
         ScopedValue.where(TenantContext.TENANT, tenant.toString()).run(() ->
-                tx.executeWithoutResult(_ ->
-                        conns.findByTenantId(tenant).ifPresent(conn -> {
-                            conn.setStatus(GmailConnectionStatus.DISCONNECTED);
-                            conn.setDisconnectedAt(Instant.now());
-                            conns.save(conn);
-                            publisher.publishEvent(new GmailConnectionRevokedEvent(tenant, Instant.now()));
+                transactionTemplate.executeWithoutResult(_ ->
+                        connectionRepository.findByTenantId(tenant).ifPresent(connection -> {
+                            connection.setStatus(GmailConnectionStatus.DISCONNECTED);
+                            connection.setDisconnectedAt(Instant.now());
+                            connectionRepository.save(connection);
+                            eventPublisher.publishEvent(new GmailConnectionRevokedEvent(tenant, Instant.now()));
                         })));
     }
 }

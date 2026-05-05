@@ -1,7 +1,6 @@
 package com.zeromail.api.security;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -29,7 +28,8 @@ class LoginRedirectAuthenticationFailureHandlerTest {
 
     private static final ZeroMailApiProperties PROPS = new ZeroMailApiProperties(
             new ZeroMailApiProperties.WebProperties(URI.create("http://localhost:3000")),
-            null /* null triggers CorsProperties defaults via compact constructor */);
+            null /* null triggers CorsProperties defaults via compact constructor */,
+            null /* null triggers GmailProperties defaults via compact constructor */);
 
     @Test
     void access_denied_redirects_to_login_consent_denied() throws Exception {

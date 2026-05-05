@@ -3,10 +3,10 @@ package com.zeromail.api;
 import org.junit.jupiter.api.Test;
 import org.springframework.modulith.core.ApplicationModules;
 
-class ApplicationModulesTest {
+class ZeroMailApiApplicationModulesTest {
 
     @Test
     void verify() {
-        ApplicationModules.of(Application.class).verify();
+        ApplicationModules.of(ZeroMailApiApplication.class).verify();
     }
 }

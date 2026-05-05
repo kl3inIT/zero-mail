@@ -3,6 +3,8 @@
 **/build/**
 **/dist/**
 **/out/**
+.env.local
+apps/web/.env.local
 apps/web/lib/api/schema.d.ts
 apps/web/components/ui/**
 pnpm-lock.yaml

@@ -1,15 +1,22 @@
 package com.zeromail.core.gmail.service;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.zeromail.core.gmail.model.GmailConnectionStatus;
+import com.zeromail.core.gmail.model.GmailIngestionHealth;
 import com.zeromail.core.gmail.model.GmailConnectionProjection;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
+import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 
 /**
  * Owns Gmail connection state transitions for the current tenant.
@@ -18,10 +25,21 @@ import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 @Service
 public class GmailConnectionService {
 
-    private final GmailConnectionRepository connections;
+    private static final Logger log = LoggerFactory.getLogger(GmailConnectionService.class);
 
-    public GmailConnectionService(GmailConnectionRepository connections) {
-        this.connections = connections;
+    private final GmailConnectionRepository connectionRepository;
+    private final GmailApiClientFactory gmailApiClientFactory;
+    private final RefreshTokenCipher refreshTokenCipher;
+    private final TransactionTemplate disconnectTransaction;
+
+    public GmailConnectionService(GmailConnectionRepository connectionRepository,
+                                  GmailApiClientFactory gmailApiClientFactory,
+                                  RefreshTokenCipher refreshTokenCipher,
+                                  PlatformTransactionManager transactionManager) {
+        this.connectionRepository = connectionRepository;
+        this.gmailApiClientFactory = gmailApiClientFactory;
+        this.refreshTokenCipher = refreshTokenCipher;
+        this.disconnectTransaction = new TransactionTemplate(transactionManager);
     }
 
     /**
@@ -31,8 +49,11 @@ public class GmailConnectionService {
      */
     @Transactional(readOnly = true)
     public GmailConnectionProjection currentStatus(UUID tenantId) {
-        return connections.findByTenantId(tenantId)
-                .map(c -> new GmailConnectionProjection(c.getStatus().name(), c.getGoogleEmail()))
+        return connectionRepository.findByTenantId(tenantId)
+                .map(connection -> new GmailConnectionProjection(
+                        connection.getStatus().name(),
+                        connection.getIngestionHealth().name(),
+                        connection.getGoogleEmail()))
                 .orElseGet(GmailConnectionProjection::notConnected);
     }
 
@@ -40,13 +61,42 @@ public class GmailConnectionService {
      * Marks the tenant's Gmail connection as disconnected. No-op when no connection exists —
      * the user may never have connected, or may have already disconnected.
      */
-    @Transactional
     public void disconnect(UUID tenantId) {
-        connections.findByTenantId(tenantId).ifPresent(c -> {
-            c.setStatus(GmailConnectionStatus.DISCONNECTED);
-            c.setDisconnectedAt(Instant.now());
-            connections.save(c);
-        });
+        markDisconnected(tenantId);
+        tryStopWatch(tenantId);
+    }
+
+    public void markDisconnected(UUID tenantId) {
+        disconnectTransaction.executeWithoutResult(_ -> connectionRepository.findByTenantId(tenantId).ifPresent(connection -> {
+            connection.setStatus(GmailConnectionStatus.DISCONNECTED);
+            connection.setDisconnectedAt(Instant.now());
+            connection.setWatchExpiresAt(null);
+            connection.setWatchHistoryId(null);
+            connection.setWatchRenewedAt(null);
+            connection.setWatchConsecutiveFailures(0);
+            connection.setIngestionHealth(GmailIngestionHealth.HEALTHY);
+            connectionRepository.save(connection);
+        }));
+    }
+
+    private void tryStopWatch(UUID tenantId) {
+        try {
+            GmailConnectionEntity connection = connectionRepository.findByTenantId(tenantId).orElse(null);
+            if (connection == null || connection.getRefreshTokenEncrypted() == null) {
+                return;
+            }
+            String decryptedRefreshToken = new String(
+                    refreshTokenCipher.decrypt(connection.getRefreshTokenEncrypted(), tenantId.toString()),
+                    StandardCharsets.UTF_8);
+            GmailApiClientFactory.TokenRefreshResult tokenResult =
+                    gmailApiClientFactory.refreshAccessToken(decryptedRefreshToken);
+            gmailApiClientFactory.buildGmailClient(tokenResult.accessToken().value())
+                    .users()
+                    .stop("me")
+                    .execute();
+        } catch (Exception watchStopException) {
+            log.warn("event=gmail_watch_stop_failed tenantId={}", tenantId);
+        }
     }
 
     /**
@@ -56,7 +106,7 @@ public class GmailConnectionService {
      */
     @Transactional
     public void deleteForCurrentTenant(UUID tenantId) {
-        connections.findByTenantId(tenantId).ifPresent(connections::delete);
+        connectionRepository.findByTenantId(tenantId).ifPresent(connectionRepository::delete);
     }
 
     /**
@@ -78,7 +128,7 @@ public class GmailConnectionService {
      * <p>Caller (typically {@code GoogleOAuthSuccessHandler}) phải bind
      * {@code TenantContext.TENANT} ScopedValue TRƯỚC khi gọi method này; method dùng
      * default propagation (REQUIRED) nên join transaction của caller — JPA session
-     * sẽ capture đúng tenant tại điểm caller mở tx (Pitfall 6 / FND-05).
+     * sẽ capture đúng tenant tại điểm caller mở transaction (Pitfall 6 / FND-05).
      *
      * <p>Privacy: KHÔNG log {@code googleEmail}, {@code scopesGranted}, hoặc
      * {@code refreshTokenEncrypted} (T-1.4-03-token-leak / D-E1). Auditing listener
@@ -86,14 +136,68 @@ public class GmailConnectionService {
      */
     @Transactional
     public void upsert(UUID tenantId, String googleEmail, String scopesGranted, byte[] refreshTokenEncrypted) {
-        GmailConnectionEntity row = connections.findByTenantId(tenantId)
+        GmailConnectionEntity connection = connectionRepository.findByTenantId(tenantId)
                 .orElseGet(() -> new GmailConnectionEntity(
                         UUID.randomUUID(), tenantId, googleEmail, GmailConnectionStatus.CONNECTED));
-        row.setStatus(GmailConnectionStatus.CONNECTED);
-        row.setRefreshTokenEncrypted(refreshTokenEncrypted);
-        row.setScopesGranted(scopesGranted);
-        row.setConnectedAt(Instant.now());
-        row.setDisconnectedAt(null);
-        connections.save(row);
+        connection.setStatus(GmailConnectionStatus.CONNECTED);
+        connection.setRefreshTokenEncrypted(refreshTokenEncrypted);
+        connection.setScopesGranted(scopesGranted);
+        connection.setConnectedAt(Instant.now());
+        connection.setDisconnectedAt(null);
+        connectionRepository.save(connection);
+    }
+
+    @Transactional
+    public void markHistoryLost(UUID tenantId, Long newPointer) {
+        connectionRepository.findByTenantId(tenantId).ifPresent(connection -> {
+            connection.setLastSyncedHistoryId(newPointer);
+            connection.setIngestionHealth(GmailIngestionHealth.HISTORY_LOST);
+            connectionRepository.save(connection);
+        });
+    }
+
+    @Transactional
+    public void markWatchUnhealthy(UUID tenantId) {
+        connectionRepository.findByTenantId(tenantId).ifPresent(connection -> {
+            connection.setIngestionHealth(GmailIngestionHealth.WATCH_UNHEALTHY);
+            connectionRepository.save(connection);
+        });
+    }
+
+    @Transactional
+    public void recordWatchSuccess(UUID tenantId, Long watchHistoryId, Instant watchExpiresAt) {
+        connectionRepository.findByTenantId(tenantId).ifPresent(connection -> {
+            connection.setWatchHistoryId(watchHistoryId);
+            if (connection.getLastSyncedHistoryId() == null) {
+                connection.setLastSyncedHistoryId(watchHistoryId);
+            }
+            connection.setWatchExpiresAt(watchExpiresAt);
+            connection.setWatchRenewedAt(Instant.now());
+            connection.setWatchConsecutiveFailures(0);
+            if (connection.getIngestionHealth() == GmailIngestionHealth.WATCH_UNHEALTHY) {
+                connection.setIngestionHealth(GmailIngestionHealth.HEALTHY);
+            }
+            connectionRepository.save(connection);
+        });
+    }
+
+    @Transactional
+    public void incrementWatchFailure(UUID tenantId) {
+        connectionRepository.findByTenantId(tenantId).ifPresent(connection -> {
+            connection.setWatchConsecutiveFailures(connection.getWatchConsecutiveFailures() + 1);
+            connectionRepository.save(connection);
+        });
+    }
+
+    @Transactional
+    public void clearForReconnect(UUID tenantId) {
+        connectionRepository.findByTenantId(tenantId).ifPresent(connection -> {
+            connection.setWatchExpiresAt(null);
+            connection.setWatchHistoryId(null);
+            connection.setLastSyncedHistoryId(null);
+            connection.setWatchConsecutiveFailures(0);
+            connection.setIngestionHealth(GmailIngestionHealth.HEALTHY);
+            connectionRepository.save(connection);
+        });
     }
 }

@@ -1,6 +1,7 @@
 .gradle/
 build/
 .env
+.env.local
 node_modules/
 .idea/
 *.iml

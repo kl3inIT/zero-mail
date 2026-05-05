@@ -1,0 +1,82 @@
+databaseChangeLog:
+  - changeSet:
+      id: 011-pubsub-delivery-table
+      author: zeromail
+      changes:
+        - createTable:
+            tableName: pubsub_delivery
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: pubsub_message_id
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: history_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payload
+                  type: jsonb
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(16)
+                  defaultValue: PENDING
+                  constraints:
+                    nullable: false
+              - column:
+                  name: attempts
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: locked_until
+                  type: timestamptz
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: pubsub_delivery
+            columnNames: tenant_id, pubsub_message_id
+            constraintName: uq_pubsub_delivery_tenant_message
+        - createIndex:
+            tableName: pubsub_delivery
+            indexName: idx_pubsub_delivery_status_locked
+            columns:
+              - column:
+                  name: status
+              - column:
+                  name: locked_until
+      rollback:
+        - dropTable:
+            tableName: pubsub_delivery

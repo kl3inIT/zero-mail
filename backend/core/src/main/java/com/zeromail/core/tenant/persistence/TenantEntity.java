@@ -15,6 +15,9 @@ public class TenantEntity extends AbstractEntity {
     @Column(name = "display_name", nullable = false)
     private String displayName;
 
+    @Column(name = "triage_paused", nullable = false)
+    private boolean triagePaused = false;
+
     protected TenantEntity() {}
 
     public TenantEntity(UUID id, String displayName) {
@@ -24,5 +27,13 @@ public class TenantEntity extends AbstractEntity {
 
     public String getDisplayName() {
         return displayName;
+    }
+
+    public boolean isTriagePaused() {
+        return triagePaused;
+    }
+
+    public void setTriagePaused(boolean triagePaused) {
+        this.triagePaused = triagePaused;
     }
 }

@@ -1,6 +1,7 @@
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 
+import { PauseBanner } from '@/features/triage/components/PauseBanner';
 import { QueryProvider } from '@/lib/query-client';
 
 /**
@@ -20,7 +21,10 @@ export default async function ProtectedLayout({ children }: { children: React.Re
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
-      <QueryProvider>{children}</QueryProvider>
+      <QueryProvider>
+        <PauseBanner />
+        {children}
+      </QueryProvider>
     </NextIntlClientProvider>
   );
 }

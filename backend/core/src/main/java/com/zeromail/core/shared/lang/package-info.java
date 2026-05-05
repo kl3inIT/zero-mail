@@ -1,16 +1,16 @@
 /**
- * Cross-cutting enum standard: {@link IdentifiedEnum} (id + default labelKey) and
- * {@link OrderedEnum} (+ weight). The contract that domain enums implement so persistence
+ * Cross-cutting enum standard: {@code IdentifiedEnum} (id + default labelKey) and
+ * {@code OrderedEnum} (+ weight). The contract that domain enums implement so persistence
  * is decoupled from Java symbol layout (D-C2) and ordering is decoupled from declaration
  * order (D-B5).
  *
  * <p><b>Two-interface design (D-B1):</b>
  * <ul>
- *   <li>{@link IdentifiedEnum} — every domain enum implements this. Provides stable
+ *   <li>{@code IdentifiedEnum} — every domain enum implements this. Provides stable
  *       {@code id()} (string) + default {@code labelKey()}.</li>
- *   <li>{@link OrderedEnum} extends {@link IdentifiedEnum}, adds {@code weight()}. Use only
+ *   <li>{@code OrderedEnum} extends {@code IdentifiedEnum}, adds {@code weight()}. Use only
  *       when the enum has a forward-only flow ({@code OnboardingStep}) or sortable priority.
- *       Status enums ({@code GmailConnectionStatus}) implement {@link IdentifiedEnum} only.</li>
+ *       Status enums ({@code GmailConnectionStatus}) implement {@code IdentifiedEnum} only.</li>
  * </ul>
  * Rejected alternatives: a single all-in-one interface with sentinel weight (forces every
  * author to consider weight) and a generic {@code <T>} id type (no Integer use case in
@@ -39,7 +39,7 @@
  * <p><b>fromId() pattern (D-B4):</b> per-impl static method on each enum (static cannot be
  * abstract on interfaces). One-liner using {@code Stream.of(values())} + filter + findFirst
  * + {@code orElseThrow(NoSuchElementException::new)}. Fail-loud (NOT
- * {@link IllegalArgumentException}).
+ * {@code IllegalArgumentException}).
  *
  * <p><b>Spring Modulith naming form (CL-3 lock):</b> Cross-sibling modules MUST reference
  * this module as {@code "shared.lang"} in their {@code allowedDependencies} array. Plan 03

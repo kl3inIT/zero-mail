@@ -15,7 +15,7 @@ public class RefreshTokenCryptoConfig {
 
     @Bean
     RefreshTokenCipher refreshTokenCipher(ZeroMailCoreProperties properties) {
-        byte[] keyBytes = Base64.getDecoder().decode(properties.refreshTokenKeyBase64());
+        byte[] keyBytes = Base64.getDecoder().decode(properties.crypto().refreshTokenKeyBase64());
         if (keyBytes.length != 32) {
             throw new IllegalStateException("AES-256 key must be exactly 32 bytes, got " + keyBytes.length);
         }

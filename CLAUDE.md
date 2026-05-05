@@ -26,6 +26,10 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Primary datastore**: PostgreSQL self-hosted on the same VPS as the app (confirmed). Redis also runs on the same VPS for cache / session / rate-limit infrastructure only; vector DB is deferred.
 - **Schema migrations**: Liquibase with YAML changelogs — locked by user directive.
 - **Timeline**: Exploratory project — learning-oriented, no hard ship deadline. Favor architectural quality and defensibility over speed.
+
+### Backend Code Style
+
+- **Enterprise readability**: Backend Java code must use explicit, domain-revealing names for fields, parameters, locals, and lambda variables. Avoid opaque abbreviations such as `req`, `res`, `repo`, `svc`, `cfg`, `ctx`, `msg`, `err`, `ex`, `e`, `conn`, `tx`, or one-letter variables. Prefer names like `request`, `response`, `userRepository`, `gmailConnectionService`, `configurationProperties`, `tenantContext`, `gmailMessage`, `authenticationException`, `connection`, and `transactionTemplate`. Exceptions are allowed only for established technical acronyms (`ID`, `DTO`, `JPA`, `OAuth2`, `OIDC`, `URL`, `URI`, `HTTP`), generated API names, or intentionally ignored lambda parameters (`_`).
 <!-- GSD:project-end -->
 
 <!-- GSD:stack-start source:research/STACK.md -->

@@ -16,7 +16,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
  *
  * Requires Docker on the host.
  */
-@SpringBootTest(classes = CoreTestApplication.class)
+@SpringBootTest(classes = ZeroMailCoreTestApplication.class)
 public abstract class PostgresContainerTest {
 
     protected static final PostgreSQLContainer<?> POSTGRES;
@@ -42,5 +42,8 @@ public abstract class PostgresContainerTest {
         // requires this to construct the cipher bean during context boot.
         r.add("zeromail.crypto.refresh-token-key-base64",
                 () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        // GmailApiClientFactory is in backend/core and is constructed by this test context.
+        r.add("spring.security.oauth2.client.registration.google.client-id", () -> "test-google-client");
+        r.add("spring.security.oauth2.client.registration.google.client-secret", () -> "test-google-secret");
     }
 }

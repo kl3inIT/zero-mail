@@ -1,0 +1,51 @@
+databaseChangeLog:
+  - changeSet:
+      id: 010-gmail-ingestion-state
+      author: zeromail
+      changes:
+        - addColumn:
+            tableName: gmail_connections
+            columns:
+              - column:
+                  name: last_synced_history_id
+                  type: bigint
+              - column:
+                  name: watch_history_id
+                  type: bigint
+              - column:
+                  name: watch_expires_at
+                  type: timestamptz
+              - column:
+                  name: watch_renewed_at
+                  type: timestamptz
+              - column:
+                  name: watch_consecutive_failures
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ingestion_health
+                  type: varchar(32)
+                  defaultValue: HEALTHY
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropColumn:
+            tableName: gmail_connections
+            columnName: last_synced_history_id
+        - dropColumn:
+            tableName: gmail_connections
+            columnName: watch_history_id
+        - dropColumn:
+            tableName: gmail_connections
+            columnName: watch_expires_at
+        - dropColumn:
+            tableName: gmail_connections
+            columnName: watch_renewed_at
+        - dropColumn:
+            tableName: gmail_connections
+            columnName: watch_consecutive_failures
+        - dropColumn:
+            tableName: gmail_connections
+            columnName: ingestion_health

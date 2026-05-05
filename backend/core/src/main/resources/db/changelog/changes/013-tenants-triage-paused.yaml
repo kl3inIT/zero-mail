@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 013-tenants-triage-paused
+      author: zeromail
+      changes:
+        - addColumn:
+            tableName: tenants
+            columns:
+              - column:
+                  name: triage_paused
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropColumn:
+            tableName: tenants
+            columnName: triage_paused

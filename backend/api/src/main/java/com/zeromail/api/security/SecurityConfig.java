@@ -3,6 +3,7 @@ package com.zeromail.api.security;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -13,6 +14,7 @@ import org.springframework.security.web.access.intercept.AuthorizationFilter;
 public class SecurityConfig {
 
     @Bean
+    @Order(2)
     SecurityFilterChain chain(HttpSecurity http,
                               TenantBindingFilter tenantFilter,
                               GoogleOAuthSuccessHandler successHandler,

@@ -1,5 +1,6 @@
-package com.zeromail.api.config;
+package com.zeromail.api.security;
 
+import com.zeromail.api.config.ZeroMailApiProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;

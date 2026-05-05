@@ -3,7 +3,6 @@ package com.zeromail.api.security;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
@@ -25,7 +24,6 @@ import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.account.service.OAuthProvisioningService;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -40,7 +38,8 @@ class GoogleOAuthSuccessHandlerTest {
 
     private static final ZeroMailApiProperties PROPS = new ZeroMailApiProperties(
             new ZeroMailApiProperties.WebProperties(URI.create("http://localhost:3000/")),
-            null /* null triggers CorsProperties defaults via compact constructor */);
+            null /* null triggers CorsProperties defaults via compact constructor */,
+            null /* null triggers GmailProperties defaults via compact constructor */);
 
     @Test
     void redirects_to_frontend_onboarding_after_successful_bundled_grant() throws Exception {

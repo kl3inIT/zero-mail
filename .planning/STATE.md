@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: "Phase 01.6 shipped — PR #16"
-stopped_at: Phase 01.6 verification complete
-last_updated: "2026-04-28T19:24:32.638Z"
-last_activity: 2026-04-29
+status: "Phase 02A shipped - PR #19"
+stopped_at: Completed 02A-05-PLAN.md
+last_updated: "2026-05-05T06:41:32.935Z"
+last_activity: 2026-05-05
 progress:
   total_phases: 15
-  completed_phases: 8
-  total_plans: 58
-  completed_plans: 58
+  completed_phases: 9
+  total_plans: 64
+  completed_plans: 64
   percent: 100
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 01.6 — brand-identity-design-tokens-and-landing-page
+**Current focus:** Phase 02A — mail-ingestion
 
 ## Current Position
 
-Phase: 01.6 (brand-identity-design-tokens-and-landing-page) — EXECUTING
-Plan: 7 of 8
-Status: Phase 01.6 shipped — PR #16
-Last activity: 2026-04-29
+Phase: 02A (mail-ingestion) — COMPLETE
+Plan: 6 of 6
+Status: Phase 02A shipped - PR #19
+Last activity: 2026-05-05
 
-Progress: [██████████] 98%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -94,6 +94,12 @@ Progress: [██████████] 98%
 | Phase 01.6 P03 | 6min | 3 tasks | 10 files |
 | Phase 01.6 P05 | 18min | 3 tasks | 8 files |
 | Phase 01.6 P06 | 35min | 3 tasks | 12 files |
+| Phase 02A P00 | 14min | 2 tasks | 17 files |
+| Phase 02A P01 | 11min | 2 tasks | 18 files |
+| Phase 02A P02 | 12min | 2 tasks | 15 files |
+| Phase 02A P03 | 20min | 2 tasks | 26 files |
+| Phase 02A P04 | 16min | 2 tasks | 15 files |
+| Phase 02A P05 | 20min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -190,6 +196,22 @@ Recent decisions affecting current work:
 - [Phase 01.6]: Plan 02: Be Vietnam Pro ships with vietnamese+latin subsets and weights 400/500/600; Instrument Serif remains latin-only with normal+italic style.
 - [Phase 01.6]: 01.6-03: Theme persistence uses Server Action + zm-theme cookie only; no localStorage or client-side cookie writes.
 - [Phase 01.6]: 01.6-03: LanguageSwitcher variant compact was reused directly in public TopBar; no fork was needed.
+- [Phase ?]: 02A-00: Worker RED tests use a package-local SpringBootTest scaffold because backend/core test sources are not on the worker test classpath. — Keeps Wave 0 worker verification RED on future production classes instead of failing on cross-module test-source visibility.
+- [Phase ?]: 02A-00: Vitest includes features/**/*.{test,spec}.{ts,tsx} for feature-owned Wave 0 tests. — Without this include glob, PauseBanner and useToggleTriagePause tests are not collected by Vitest and the frontend RED spine is partially invisible.
+- [Phase 02A]: 02A-01: Use Yasson JSON-B at runtime for Hibernate JSONB mapping under Spring Boot 4/Jackson 3 instead of adding Jackson 2.
+- [Phase 02A]: 02A-01: Keep MailMessageObservedId as a top-level record to satisfy the committed Wave 0 test contract while still using Hibernate @IdClass.
+- [Phase 02A]: 02A-01: Explicitly tenant-scope one-argument PubSubDeliveryRepository claims because native SQL does not inherit Hibernate @TenantId filtering.
+- [Phase 02A]: 02A-02: GmailConnectionService.markDisconnected uses TransactionTemplate for a DB-only durable state update before best-effort users.stop cleanup.
+- [Phase 02A]: 02A-02: GmailHistoryProcessor remains a thin scheduled loop; GmailDeliveryProcessingService owns the public @Transactional per-delivery boundary.
+- [Phase 02A]: 02A-02: WorkerApplication mirrors API entity/repository scanning because the worker directly consumes backend/core repositories.
+- [Phase 02A]: 02A-02: Worker REFRESH_TOKEN_KEY_BASE64 is fail-fast with no sm:// fallback, honoring the no-GCP-hosting baseline.
+- [Phase 02A]: 02A-03: Pub/Sub OIDC verification is isolated in an @Order(1) SecurityFilterChain that remains active under test profile.
+- [Phase 02A]: 02A-03: PubSubIngestionService performs Gmail email lookup with unscoped JdbcTemplate, then binds TenantContext before inserting delivery rows.
+- [Phase 02A]: 02A-03: GmailPubSubController returns void for ack paths to avoid existing controller-boundary ArchUnit false positives on ResponseEntity.
+- [Phase 02A]: 02A-03: /me composes tenant pause state and Gmail ingestion health from services; googleEmail is response-only and not logged.
+- [Phase 02A]: Plan 04: Use a plain accessible toggle button because apps/web has no shadcn Switch primitive installed. — No local Switch primitive exists and the plan forbids installing new shadcn primitives in this plan.
+- [Phase 02A]: Plan 04: generate-api.ts defaults to openapi/openapi.json for schema generation. — The Gradle OpenAPI task writes a local artifact and stops its forked server, so frontend codegen must not require localhost:8080 by default.
+- [Phase 2A]: Pub/Sub push-token validation closed. PubSubOidcAuthFilter uses TokenVerifier.newBuilder().setAudience().setIssuer().setCertificatesLocation() from google-auth-library-oauth2-http. PubSubSecurityConfig contributes a SecurityFilterChain bean with @Order(1) and remains active under the test profile; user-session SecurityConfig's SecurityFilterChain bean is @Order(2). 7-case test validates: valid passes, wrong aud/email/issuer/exp/sig all return 401, and non-Pub/Sub paths skip the filter. Phase 01.5 D-D5 deferred blocker retired.
 
 ### Roadmap Evolution
 
@@ -216,7 +238,6 @@ Recent decisions affecting current work:
 - Phase 2A and Phase 2C are both flagged for `/gsd-research-phase` before planning — do not skip (Gmail watch/history + OIDC verification for 2A; Spring AI 2.0.0-M4 BYOK builder API + tokenizer for 2C).
 - CASA verification is a 4–12 week external clock — must be initiated during Phase 1 execution, not deferred.
 - Open decisions deferred to phase execution: credit unit economics (Phase 2B), tokenizer choice (Phase 2C), payment provider Stripe vs LemonSqueezy (Phase 2B), observability vendor (any), CASA tier (Phase 1/6).
-- **Pub/Sub OIDC verification ceremony** (Phase 2A push-receiver) — verification protocol: receive a synthetic Google Pub/Sub push; assert (a) JWT signature validates against Google's JWKS, (b) `aud` claim matches the configured public push endpoint URL on the VPS, (c) `email` claim matches the configured Pub/Sub service-account principal. Note: Pub/Sub itself remains GCP-only (Gmail push delivery is a Google service), but Spring receives the push as a plain HTTPS POST on the VPS — no `spring-cloud-gcp` Pub/Sub starter needed for receiving.
 - **Refresh-token key rotation drill** (Phase 2C or dedicated security-ceremony phase) — verification protocol: deploy v2 key alongside v1 in the deployment secret source (current VPS baseline: Docker secrets / systemd credentials / locked-down env files; future production options may include GCP Secret Manager, AWS Secrets Manager, or HashiCorp Vault); verify multi-version decrypt path reads `key_version` byte from envelope and selects correct key; rotate v1 → v2 + re-encrypt all rows; verify v1 envelopes still decrypt during overlap window. Per CLAUDE.md TL;DR ("No GCP hosting baseline; do not add spring-cloud-gcp starters by default"), the drill must be deployment-source-agnostic.
 - **Production cookie `secure: true` profile override + `REFRESH_TOKEN_KEY_BASE64` deployment secret resolution** (Phase 6 launch hardening) — verification protocol: assert `application-prod.yml` overrides `server.servlet.session.cookie.secure: true`; assert `REFRESH_TOKEN_KEY_BASE64` resolves successfully from the configured deployment secret source in prod profile (Docker secret / systemd credential / env file mounted via the VPS deployment pipeline; possible future production options: GCP Secret Manager, AWS Secrets Manager, HashiCorp Vault); assert app fails-fast at boot if the secret is missing (no fallback to plain env-var in prod). Per CLAUDE.md TL;DR, no GCP-specific resolution is required by default.
 
@@ -242,6 +263,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-28T14:49:13.559Z
-Stopped at: Phase 01.6 verification complete
+Last session: 2026-04-29T07:11:31.932Z
+Stopped at: Completed 02A-05-PLAN.md
 Resume file: None

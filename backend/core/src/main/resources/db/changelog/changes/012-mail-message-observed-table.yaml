@@ -1,0 +1,56 @@
+databaseChangeLog:
+  - changeSet:
+      id: 012-mail-message-observed-table
+      author: zeromail
+      changes:
+        - createTable:
+            tableName: mail_message_observed
+            columns:
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: gmail_message_id
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: gmail_thread_id
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: history_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: label_ids
+                  type: text[]
+                  constraints:
+                    nullable: false
+              - column:
+                  name: internal_date
+                  type: bigint
+              - column:
+                  name: observed_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: mail_message_observed
+            columnNames: tenant_id, gmail_message_id
+            constraintName: pk_mail_message_observed
+        - createIndex:
+            tableName: mail_message_observed
+            indexName: idx_mail_message_observed_at_brin
+            indexType: BRIN
+            columns:
+              - column:
+                  name: observed_at
+      rollback:
+        - dropTable:
+            tableName: mail_message_observed

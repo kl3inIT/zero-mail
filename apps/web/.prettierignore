@@ -1,1 +1,8 @@
+.env.local
+.next/**
+node_modules/**
+build/**
+dist/**
+out/**
+lib/api/schema.d.ts
 components/ui/**

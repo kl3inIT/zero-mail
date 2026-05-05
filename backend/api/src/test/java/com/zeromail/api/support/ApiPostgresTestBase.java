@@ -5,7 +5,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-import com.zeromail.api.Application;
+import com.zeromail.api.ZeroMailApiApplication;
 
 /**
  * Base for API-side integration tests. Starts a singleton Postgres 17.6 container, applies
@@ -13,7 +13,7 @@ import com.zeromail.api.Application;
  * MapSessionRepository contributed by TestSessionConfig — so Spring Security session
  * resolution still works end-to-end without requiring a live redis at test time.
  */
-@SpringBootTest(classes = Application.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(classes = ZeroMailApiApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public abstract class ApiPostgresTestBase {
 
     protected static final PostgreSQLContainer<?> POSTGRES;
@@ -47,5 +47,7 @@ public abstract class ApiPostgresTestBase {
         // Test-only AES-256 key (32 zero bytes, base64-encoded).
         r.add("zeromail.crypto.refresh-token-key-base64",
                 () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        r.add("zeromail.gmail.pubsub.push-audience-url", () -> "https://test.example/internal/pubsub/gmail");
+        r.add("zeromail.gmail.pubsub.sa-principal-email", () -> "pubsub-sa@test-project.iam.gserviceaccount.com");
     }
 }

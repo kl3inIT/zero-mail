@@ -43,23 +43,23 @@ public class OAuthProvisioningService {
 
     private static final Logger log = LoggerFactory.getLogger(OAuthProvisioningService.class);
 
-    private final UserRepository users;
+    private final UserRepository userRepository;
     private final TenantService tenantService;
-    private final GmailConnectionService connections;
-    private final RefreshTokenCipher cipher;
-    private final TransactionTemplate bundledTx;
+    private final GmailConnectionService gmailConnectionService;
+    private final RefreshTokenCipher refreshTokenCipher;
+    private final TransactionTemplate bundledTransaction;
 
-    public OAuthProvisioningService(UserRepository users,
+    public OAuthProvisioningService(UserRepository userRepository,
                                     TenantService tenantService,
-                                    GmailConnectionService connections,
-                                    RefreshTokenCipher cipher,
-                                    PlatformTransactionManager txManager) {
-        this.users = users;
+                                    GmailConnectionService gmailConnectionService,
+                                    RefreshTokenCipher refreshTokenCipher,
+                                    PlatformTransactionManager transactionManager) {
+        this.userRepository = userRepository;
         this.tenantService = tenantService;
-        this.connections = connections;
-        this.cipher = cipher;
-        this.bundledTx = new TransactionTemplate(txManager);
-        this.bundledTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+        this.gmailConnectionService = gmailConnectionService;
+        this.refreshTokenCipher = refreshTokenCipher;
+        this.bundledTransaction = new TransactionTemplate(transactionManager);
+        this.bundledTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
     }
 
     /**
@@ -102,23 +102,24 @@ public class OAuthProvisioningService {
             String grantedGmailScopes) {
 
         // FAST PATH: existing user (race-safe re-read).
-        var existing = users.findByGoogleSubject(googleSubject);
-        if (existing.isPresent()) {
-            UserEntity u = existing.get();
-            UUID tenantId = u.getTenantId();
-            UUID userId = u.getId();
+        var existingUser = userRepository.findByGoogleSubject(googleSubject);
+        if (existingUser.isPresent()) {
+            UserEntity user = existingUser.get();
+            UUID tenantId = user.getTenantId();
+            UUID userId = user.getId();
             if (refreshTokenPlaintext == null) {
                 // MED-3: reconnect with null refresh token — preserve existing envelope.
                 log.warn("event=oauth_no_refresh_token tenantId={}", tenantId);
                 return new BundledProvisioningResult(tenantId, userId, false);
             }
-            // Reconnect with new refresh token — re-encrypt + upsert in single tx.
+            // Reconnect with new refresh token — re-encrypt + upsert in single transaction.
             ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                    .run(() -> bundledTx.executeWithoutResult(_ -> {
-                        byte[] envelope = cipher.encrypt(
+                    .run(() -> bundledTransaction.executeWithoutResult(_ -> {
+                        byte[] envelope = refreshTokenCipher.encrypt(
                                 refreshTokenPlaintext.getBytes(StandardCharsets.UTF_8),
                                 tenantId.toString());
-                        connections.upsert(tenantId, email, grantedGmailScopes, envelope);
+                        gmailConnectionService.upsert(tenantId, email, grantedGmailScopes, envelope);
+                        gmailConnectionService.clearForReconnect(tenantId);
                         // Reconnect MUST NOT regress onboarding_step (D-B4 invariant).
                     }));
             return new BundledProvisioningResult(tenantId, userId, false);
@@ -137,30 +138,31 @@ public class OAuthProvisioningService {
         UUID userId = UUID.randomUUID();
         try {
             ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                    .run(() -> bundledTx.executeWithoutResult(_ -> {
+                    .run(() -> bundledTransaction.executeWithoutResult(_ -> {
                         tenantService.createTenant(tenantId, email);
-                        UserEntity saved = users.save(new UserEntity(
+                        UserEntity savedUser = userRepository.save(new UserEntity(
                                 userId, tenantId, googleSubject, email));
-                        byte[] envelope = cipher.encrypt(
+                        byte[] envelope = refreshTokenCipher.encrypt(
                                 refreshTokenPlaintext.getBytes(StandardCharsets.UTF_8),
                                 tenantId.toString());
-                        connections.upsert(tenantId, email, grantedGmailScopes, envelope);
-                        saved.advanceTo(OnboardingStep.GMAIL_CONNECTED);
-                        users.save(saved);
+                        gmailConnectionService.upsert(tenantId, email, grantedGmailScopes, envelope);
+                        savedUser.advanceTo(OnboardingStep.GMAIL_CONNECTED);
+                        userRepository.save(savedUser);
                     }));
             log.info("event=oauth_provisioning_complete tenantId={}", tenantId);
             return new BundledProvisioningResult(tenantId, userId, true);
-        } catch (DataIntegrityViolationException race) {
-            // Concurrent first-login from same Google subject: first tx rolled back (no orphans).
+        } catch (DataIntegrityViolationException dataIntegrityViolation) {
+            // Concurrent first-login from same Google subject: first transaction rolled back (no orphans).
             // Race-loser: do NOT open a second transaction or overwrite the winner's gmail
             // connection envelope. The winner's thread already committed its own atomic
-            // user + tenant + connection in its own bundledTx — that is the correct, complete
-            // state. Opening a second tx here would break the single-transaction atomicity
-            // contract (CR-01 / HIGH-1 fix) if that second tx fails, leaving a partial state.
+            // user + tenant + connection in its own bundled transaction — that is the correct,
+            // complete state. Opening a second transaction here would break the
+            // single-transaction atomicity contract (CR-01 / HIGH-1 fix) if that second
+            // transaction fails, leaving a partial state.
             log.warn("event=oauth_provisioning_race");
-            UserEntity racedWinner = users.findByGoogleSubject(googleSubject)
-                    .orElseThrow(() -> race);
-            return new BundledProvisioningResult(racedWinner.getTenantId(), racedWinner.getId(), false);
+            UserEntity raceWinner = userRepository.findByGoogleSubject(googleSubject)
+                    .orElseThrow(() -> dataIntegrityViolation);
+            return new BundledProvisioningResult(raceWinner.getTenantId(), raceWinner.getId(), false);
         }
     }
 }

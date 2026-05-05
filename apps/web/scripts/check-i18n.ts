@@ -67,6 +67,7 @@ const EN_SCAN_FILES = [
   'features/onboarding/components/TemplateCard.tsx',
   'features/gmail/components/ConnectionHealthBadge.tsx',
   'features/gmail/components/ReconnectPrompt.tsx',
+  'features/triage/components/PauseBanner.tsx',
   'features/account/components/DeleteAccountDialog.tsx',
   'i18n/components/LanguageSwitcher.tsx',
   // Phase 1.6 additions — landing + auth chrome + onboarding split + legal stubs

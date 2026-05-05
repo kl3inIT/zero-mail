@@ -1,7 +1,10 @@
 package com.zeromail.api.arch;
 
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAnyPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
+import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
@@ -18,6 +21,18 @@ import com.tngtech.archunit.lang.ArchRule;
 @AnalyzeClasses(packages = "com.zeromail", importOptions = ImportOption.DoNotIncludeTests.class)
 public class ControllerBoundaryArchTests {
 
+    private static final DescribedPredicate<JavaClass> persistenceEntity =
+            new DescribedPredicate<JavaClass>("be a persistence entity") {
+                @Override
+                public boolean test(JavaClass javaClass) {
+                    return javaClass.getSimpleName().endsWith("Entity");
+                }
+            }.and(resideInAnyPackage(
+                    "..core.account.persistence..",
+                    "..core.gmail.persistence..",
+                    "..core.onboarding.persistence..",
+                    "..core.tenant.persistence.."));
+
     @ArchTest
     static final ArchRule controllers_do_not_touch_repositories =
             noClasses()
@@ -30,7 +45,7 @@ public class ControllerBoundaryArchTests {
     static final ArchRule controllers_do_not_touch_entities =
             noClasses()
                     .that().resideInAPackage("..api.controllers..")
-                    .should().dependOnClassesThat().haveNameMatching(".*Entity")
+                    .should().dependOnClassesThat(persistenceEntity)
                     .because("WR-01: controllers expose DTOs only; entity types stay behind "
                             + "the service layer to keep tenant + transaction invariants in one place");
 }

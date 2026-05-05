@@ -7,29 +7,29 @@ import com.zeromail.core.tenant.TenantContext;
 
 public final class TenantAwareTaskScope implements AutoCloseable {
 
-    private final StructuredTaskScope<Object, Void> inner;
-    private final String tenant;
+    private final StructuredTaskScope<Object, Void> structuredTaskScope;
+    private final String tenantId;
 
-    private TenantAwareTaskScope(String tenant, StructuredTaskScope<Object, Void> inner) {
-        this.tenant = tenant;
-        this.inner = inner;
+    private TenantAwareTaskScope(String tenantId, StructuredTaskScope<Object, Void> structuredTaskScope) {
+        this.tenantId = tenantId;
+        this.structuredTaskScope = structuredTaskScope;
     }
 
     public static TenantAwareTaskScope openInherit() {
-        String t = TenantContext.currentOrThrow();
-        return new TenantAwareTaskScope(t, StructuredTaskScope.open());
+        String currentTenantId = TenantContext.currentOrThrow();
+        return new TenantAwareTaskScope(currentTenantId, StructuredTaskScope.open());
     }
 
     public <T> StructuredTaskScope.Subtask<T> fork(Callable<T> task) {
-        return inner.fork(() -> ScopedValue.where(TenantContext.TENANT, tenant).call(task::call));
+        return structuredTaskScope.fork(() -> ScopedValue.where(TenantContext.TENANT, tenantId).call(task::call));
     }
 
     public void join() throws InterruptedException {
-        inner.join();
+        structuredTaskScope.join();
     }
 
     @Override
     public void close() {
-        inner.close();
+        structuredTaskScope.close();
     }
 }
