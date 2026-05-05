@@ -56,6 +56,17 @@ class GmailWatchSchedulerTest extends PostgresContainerTest {
     }
 
     @Test
+    void tick_withoutTenantContext_processesGlobalRenewalScan() {
+        UUID tenantId = seedConnectedGmail(null, null, "HEALTHY", 0);
+        gmail.stubWatchSuccess(204L, Instant.now().plusSeconds(604800).toEpochMilli());
+
+        scheduler.tick();
+
+        assertThat(connectionColumn(tenantId, "watch_history_id")).isEqualTo(204L);
+        assertThat(connectionColumn(tenantId, "ingestion_health")).isEqualTo("HEALTHY");
+    }
+
+    @Test
     void threeConsecutiveFailures_setsWatchUnhealthy() {
         UUID tenantId = seedConnectedGmail(null, null, "HEALTHY", 2);
         gmail.stubWatchFailure(503);

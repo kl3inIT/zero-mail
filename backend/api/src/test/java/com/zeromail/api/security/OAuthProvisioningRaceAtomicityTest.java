@@ -113,6 +113,32 @@ class OAuthProvisioningRaceAtomicityTest extends ApiPostgresTestBase {
         assertThat(countTenants()).isEqualTo(1);
     }
 
+    @Test
+    void ordinaryLogin_withoutRefreshToken_preservesHistoryLostConnectionState() {
+        String subject = "google-subject-history-lost-login-" + UUID.randomUUID();
+        String email = "history-lost-login-" + UUID.randomUUID() + "@example.test";
+        String scopes = "https://www.googleapis.com/auth/gmail.modify";
+
+        OAuthProvisioningService.BundledProvisioningResult firstLogin =
+                provisioning.provisionBundledOAuth(subject, email, FAKE_REFRESH_TOKEN, scopes);
+        jdbc.update("""
+                UPDATE gmail_connections
+                SET ingestion_health = 'HISTORY_LOST',
+                    last_synced_history_id = 99,
+                    watch_history_id = 120
+                WHERE tenant_id = ?
+                """, firstLogin.tenantId());
+
+        OAuthProvisioningService.BundledProvisioningResult ordinaryLogin =
+                provisioning.provisionBundledOAuth(subject, email, null, scopes);
+
+        assertThat(ordinaryLogin.firstLogin()).isFalse();
+        assertThat(ordinaryLogin.tenantId()).isEqualTo(firstLogin.tenantId());
+        assertThat(connectionColumn(firstLogin.tenantId(), "ingestion_health")).isEqualTo("HISTORY_LOST");
+        assertThat(connectionColumn(firstLogin.tenantId(), "last_synced_history_id")).isEqualTo(99L);
+        assertThat(connectionColumn(firstLogin.tenantId(), "watch_history_id")).isEqualTo(120L);
+    }
+
     private long countUsers() {
         return jdbc.queryForObject("SELECT COUNT(*) FROM users", Long.class);
     }
@@ -123,5 +149,11 @@ class OAuthProvisioningRaceAtomicityTest extends ApiPostgresTestBase {
 
     private long countConnections() {
         return jdbc.queryForObject("SELECT COUNT(*) FROM gmail_connections", Long.class);
+    }
+
+    private Object connectionColumn(UUID tenantId, String columnName) {
+        return jdbc.queryForObject("SELECT " + columnName + " FROM gmail_connections WHERE tenant_id = ?",
+                Object.class,
+                tenantId);
     }
 }

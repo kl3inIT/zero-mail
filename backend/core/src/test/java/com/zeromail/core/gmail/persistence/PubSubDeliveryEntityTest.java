@@ -74,6 +74,18 @@ class PubSubDeliveryEntityTest extends PostgresContainerTest {
     }
 
     @Test
+    void globalClaimPendingBatch_withoutTenantContext_claimsRowsForWorkerFanout() {
+        UUID tenantId = seedTenant();
+        insertDelivery(tenantId, "pending-global", "PENDING", 0, null);
+
+        List<PubSubDeliveryEntity> claimed = deliveries.claimPendingBatch(1, 300);
+
+        assertThat(claimed).hasSize(1);
+        assertThat(claimed.getFirst().getTenantId()).isEqualTo(tenantId);
+        assertThat(statusForMessage("pending-global")).isEqualTo("PROCESSING");
+    }
+
+    @Test
     void expiredProcessingRows_areReclaimedByClaimPendingBatch() {
         UUID tenantId = seedTenant();
         insertDelivery(tenantId, "expired-processing", "PROCESSING", 2, Instant.now().minusSeconds(60));
@@ -102,5 +114,12 @@ class PubSubDeliveryEntityTest extends PostgresContainerTest {
                 VALUES (?, ?, ?, ?, '{}'::jsonb, ?, ?, ?)
                 """, UUID.randomUUID(), tenantId, messageId, 10L, status, attempts,
                 lockedUntil == null ? null : Timestamp.from(lockedUntil));
+    }
+
+    private String statusForMessage(String messageId) {
+        return jdbc.queryForObject(
+                "SELECT status FROM pubsub_delivery WHERE pubsub_message_id = ?",
+                String.class,
+                messageId);
     }
 }
