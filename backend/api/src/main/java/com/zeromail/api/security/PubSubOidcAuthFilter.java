@@ -47,7 +47,7 @@ public class PubSubOidcAuthFilter extends OncePerRequestFilter {
     String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
     if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
       log.warn("event=pubsub_oidc_missing_token");
-      response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+      response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
       return;
     }
     try {
@@ -55,14 +55,14 @@ public class PubSubOidcAuthFilter extends OncePerRequestFilter {
       String verifiedEmail = (String) verifiedToken.getPayload().get("email");
       if (!expectedEmail.equalsIgnoreCase(verifiedEmail)) {
         log.warn("event=pubsub_oidc_wrong_email");
-        response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         return;
       }
       request.setAttribute("pubsub.verified.email", verifiedEmail);
       chain.doFilter(request, response);
     } catch (TokenVerifier.VerificationException verificationException) {
       log.warn("event=pubsub_oidc_verification_failed type={}", verificationException.getClass().getSimpleName());
-      response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+      response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
     }
   }
 }
