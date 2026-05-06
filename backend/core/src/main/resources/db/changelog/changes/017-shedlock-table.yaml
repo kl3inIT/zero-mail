@@ -1,0 +1,32 @@
+databaseChangeLog:
+  - changeSet:
+      id: 017-shedlock-table
+      author: zeromail
+      changes:
+        - createTable:
+            tableName: shedlock
+            columns:
+              - column:
+                  name: name
+                  type: varchar(64)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: lock_until
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: locked_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: locked_by
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropTable:
+            tableName: shedlock
