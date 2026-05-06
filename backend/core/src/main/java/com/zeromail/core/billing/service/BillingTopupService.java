@@ -206,18 +206,30 @@ public class BillingTopupService {
       return;
     }
 
+    String sepayTransactionIdString = String.valueOf(sepayTransactionId);
+    int rowsUpdated = intentRepository.markPaidIfPending(intentId, sepayTransactionIdString);
+    if (rowsUpdated == 0) {
+      // Concurrent webhook delivery: another thread already moved this intent to PAID. Per the
+      // SePay endpoint contract, duplicate delivery must respond 200 to stop retries — return
+      // here so the controller produces a success body. The ledger row uniqueness on
+      // (ref_type, ref_id) is enforced by the winning thread; this loser must not insert again.
+      log.info("event=sepay_topup_replay_ignored tenantId={}", intent.getTenantId());
+      return;
+    }
+
     try {
-      intent.markPaid(String.valueOf(sepayTransactionId));
-      intentRepository.saveAndFlush(intent);
       CreditLedgerEntryEntity topupEntry =
           CreditLedgerEntryEntity.topup(
               UUID.randomUUID(),
               intent.getTenantId(),
               Math.toIntExact(credits),
-              String.valueOf(sepayTransactionId));
+              sepayTransactionIdString);
       entryRepository.saveAndFlush(topupEntry);
       log.info("event=sepay_topup_credited tenantId={} credits={}", intent.getTenantId(), credits);
     } catch (DataIntegrityViolationException duplicateTopup) {
+      // Defensive: the conditional UPDATE already serializes status transitions, but the unique
+      // index on (ref_type, ref_id) still guards against any historical race window. Treat as
+      // replay so SePay receives 200.
       log.info("event=sepay_topup_replay_ignored tenantId={}", intent.getTenantId());
     }
   }

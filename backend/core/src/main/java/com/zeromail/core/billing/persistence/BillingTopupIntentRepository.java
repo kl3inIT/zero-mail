@@ -32,4 +32,29 @@ public interface BillingTopupIntentRepository
                AND expires_at < :now
             """, nativeQuery = true)
     int expireStale(@Param("now") Instant now);
+
+    /**
+     * Atomic conditional state transition for the SePay webhook idempotency contract. Two
+     * concurrent webhook deliveries for the same intent both pass the pre-transaction read; only
+     * the call that updates exactly one row may write the {@code TOPUP} ledger entry. The losing
+     * call sees {@code 0} rows affected and must treat it as a replay ack rather than a 409.
+     *
+     * <p>Bypasses Hibernate's optimistic lock and managed-entity flush, so the version column is
+     * bumped explicitly here; Spring Data's audit listener does not fire on bulk SQL updates, so
+     * {@code updated_at} is set in the query as well.
+     */
+    @Modifying
+    @Query(value = """
+            UPDATE billing_topup_intent
+               SET status = 'PAID',
+                   paid_at = CURRENT_TIMESTAMP,
+                   sepay_transaction_id = :sepayTransactionId,
+                   updated_at = CURRENT_TIMESTAMP,
+                   version = version + 1
+             WHERE id = :intentId
+               AND status = 'PENDING'
+            """, nativeQuery = true)
+    int markPaidIfPending(
+            @Param("intentId") UUID intentId,
+            @Param("sepayTransactionId") String sepayTransactionId);
 }
