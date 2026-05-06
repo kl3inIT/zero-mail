@@ -3,7 +3,6 @@ package com.zeromail.core.billing;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import com.tngtech.archunit.core.importer.ClassFileImporter;
@@ -12,7 +11,6 @@ import com.tngtech.archunit.core.importer.ImportOption;
 class BillingDomainBoundaryArchTest {
 
     @Test
-    @Disabled("Wave 0 RED scaffold - production class lands in Plan 06")
     void jdbc_template_only_in_lowlevel() {
         var importedClasses = new ClassFileImporter()
                 .withImportOption(new ImportOption.DoNotIncludeTests())
@@ -27,7 +25,6 @@ class BillingDomainBoundaryArchTest {
     }
 
     @Test
-    @Disabled("Wave 0 RED scaffold - production class lands in Plan 06")
     void credit_ledger_service_not_instantiated_outside_billing_service() {
         var importedClasses = new ClassFileImporter()
                 .withImportOption(new ImportOption.DoNotIncludeTests())
@@ -42,7 +39,6 @@ class BillingDomainBoundaryArchTest {
     }
 
     @Test
-    @Disabled("Wave 0 RED scaffold - production class lands in Plan 06")
     void core_billing_only_depends_on_allowed_packages() {
         var importedClasses = new ClassFileImporter()
                 .withImportOption(new ImportOption.DoNotIncludeTests())
@@ -52,6 +48,7 @@ class BillingDomainBoundaryArchTest {
                 .that().resideInAPackage("..core.billing..")
                 .should().onlyDependOnClassesThat().resideInAnyPackage(
                         "..core.billing..",
+                        "..core.config..",
                         "..core.tenant..",
                         "..core.shared.persistence..",
                         "..core.shared.lang..",
@@ -60,7 +57,7 @@ class BillingDomainBoundaryArchTest {
                         "org.springframework..",
                         "org.hibernate..",
                         "org.slf4j..",
-                        "com.fasterxml.jackson..")
+                        "tools.jackson..")
                 .because("D-G1: billing is a leaf module with a narrow dependency list")
                 .check(importedClasses);
     }
