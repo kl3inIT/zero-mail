@@ -13,27 +13,32 @@ import com.zeromail.core.billing.persistence.BillingTopupIntentRepository;
 
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 
-/**
- * Marks unpaid top-up intents as expired after their configured expiry time passes.
- */
+/** Marks unpaid top-up intents as expired after their configured expiry time passes. */
 @Component
 public class BillingIntentExpirySweeper {
 
-    private static final Logger log = LoggerFactory.getLogger(BillingIntentExpirySweeper.class);
+  private static final Logger log = LoggerFactory.getLogger(BillingIntentExpirySweeper.class);
 
-    private final BillingTopupIntentRepository intentRepository;
+  private final BillingTopupIntentRepository intentRepository;
 
-    public BillingIntentExpirySweeper(BillingTopupIntentRepository intentRepository) {
-        this.intentRepository = intentRepository;
+  public BillingIntentExpirySweeper(BillingTopupIntentRepository intentRepository) {
+    this.intentRepository = intentRepository;
+  }
+
+  @Scheduled(fixedRate = 3_600_000L)
+  @SchedulerLock(
+      name = "billingIntentExpirySweeper",
+      lockAtLeastFor = "PT1M",
+      lockAtMostFor = "PT10M")
+  public void scheduledSweep() {
+    sweep();
+  }
+
+  @Transactional(propagation = Propagation.REQUIRED)
+  public void sweep() {
+    int rowsExpired = intentRepository.expireStale(Instant.now());
+    if (rowsExpired > 0) {
+      log.info("event=billing_intent_expiry_sweep rowsExpired={}", rowsExpired);
     }
-
-    @Scheduled(fixedRate = 3_600_000L)
-    @SchedulerLock(name = "billingIntentExpirySweeper", lockAtLeastFor = "PT1M", lockAtMostFor = "PT10M")
-    @Transactional(propagation = Propagation.REQUIRED)
-    public void sweep() {
-        int rowsExpired = intentRepository.expireStale(Instant.now());
-        if (rowsExpired > 0) {
-            log.info("event=billing_intent_expiry_sweep rowsExpired={}", rowsExpired);
-        }
-    }
+  }
 }

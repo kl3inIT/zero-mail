@@ -24,12 +24,12 @@ public interface BillingTopupIntentRepository
 
     @Modifying
     @Transactional
-    @Query("""
-            UPDATE BillingTopupIntentEntity intent
-               SET intent.status = com.zeromail.core.billing.model.BillingTopupIntentStatus.EXPIRED,
-                   intent.updatedAt = CURRENT_TIMESTAMP
-             WHERE intent.status = com.zeromail.core.billing.model.BillingTopupIntentStatus.PENDING
-               AND intent.expiresAt < :now
-            """)
+    @Query(value = """
+            UPDATE billing_topup_intent
+               SET status = 'EXPIRED',
+                   updated_at = CURRENT_TIMESTAMP
+             WHERE status = 'PENDING'
+               AND expires_at < :now
+            """, nativeQuery = true)
     int expireStale(@Param("now") Instant now);
 }
