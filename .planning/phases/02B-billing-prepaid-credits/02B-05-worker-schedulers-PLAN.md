@@ -17,8 +17,8 @@ must_haves:
   truths:
     - "`CreditReserveWatchdog` runs at @Scheduled(fixedRate=60_000L) under @SchedulerLock(name=\"creditReserveWatchdog\", lockAtMostFor=PT2M); each tick consumes `List<StaleReservation>` projections from `findStalePendingProjections` (Plan 03 B3) and, per row, opens `ScopedValue.where(TenantContext.TENANT, stale.tenantId().toString()).run(...)` BEFORE calling `creditLedger.release(...)` so Hibernate's @TenantId filter does not reject the read."
     - "`BillingIntentExpirySweeper` runs at @Scheduled(fixedRate=3_600_000L) under @SchedulerLock(name=\"billingIntentExpirySweeper\"); each tick flips PENDING intents past expiresAt to EXPIRED via @Modifying UPDATE."
-    - "`backend/worker/src/main/resources/application.yml` declares `SEPAY_WEBHOOK_API_KEY:?` fail-fast (parity with api per D-F1) and `REFRESH_TOKEN_KEY_BASE64:?` fail-fast (CR-04 carryover from Folded Todos)."
-    - "Worker test base injects `SEPAY_WEBHOOK_API_KEY=test-sepay-key-fixture` + zero-mail.billing.* defaults via @DynamicPropertySource so :? fail-fast doesn't crash @SpringBootTest."
+    - "`backend/worker/src/main/resources/application.yml` declares bare `${SEPAY_WEBHOOK_API_KEY}` (REVIEWS CYCLE-3 HIGH-2: NO `:?` default — Spring placeholder resolution raises IllegalArgumentException at boot when env is missing; parity with api per D-F1) and `REFRESH_TOKEN_KEY_BASE64:?` fail-fast (CR-04 carryover from Folded Todos — kept in `:?` form because the downstream Base64 decoder semantically catches a sentinel default; the SePay key has no such semantic catch, hence the bare-placeholder form)."
+    - "Worker test base injects `SEPAY_WEBHOOK_API_KEY=test-sepay-key-fixture` + zero-mail.billing.* defaults via @DynamicPropertySource so the bare-placeholder fail-fast doesn't crash @SpringBootTest."
     - "Wave 0 `CreditReserveWatchdogTest` + `BillingIntentExpirySweeperTest` flip GREEN."
   artifacts:
     - path: "backend/worker/src/main/java/com/zeromail/worker/billing/ShedLockConfig.java"
@@ -195,7 +195,11 @@ refresh-token-key-base64: ${REFRESH_TOKEN_KEY_BASE64:?REFRESH_TOKEN_KEY_BASE64 m
 zero-mail:
   billing:
     sepay:
-      webhook-api-key: ${SEPAY_WEBHOOK_API_KEY:?SEPAY_WEBHOOK_API_KEY must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
+      # REVIEWS CYCLE-3 HIGH-2: bare ${SEPAY_WEBHOOK_API_KEY} (NO `:?` default) — Spring placeholder
+      # resolution raises IllegalArgumentException at boot when env is absent. Mirrors the api yml
+      # exactly. Defense-in-depth lives in BillingProperties.SepayProperties' @PostConstruct
+      # sentinel check (Plan 03).
+      webhook-api-key: ${SEPAY_WEBHOOK_API_KEY}
     vnd-per-credit: 1000
     max-pending-intents-per-tenant: 5
     intent-expiry: PT24H
@@ -219,9 +223,9 @@ r.add("zeromail.crypto.refresh-token-key-base64", () -> "AAAAAAAAAAAAAAAAAAAAAAA
 After saving all 4 files, run `./gradlew :backend:worker:compileJava :backend:worker:compileTestJava` to confirm compile cleanliness. Then run `./gradlew :backend:worker:test` to confirm all worker tests still GREEN (before adding the watchdog/sweeper logic in Task 2).
   </action>
   <verify>
-    <automated>./gradlew :backend:worker:compileJava 2>&1 | grep -q SUCCESSFUL; grep -q "JdbcTemplateLockProvider" backend/worker/src/main/java/com/zeromail/worker/billing/ShedLockConfig.java; grep -q "@EnableSchedulerLock" backend/worker/src/main/java/com/zeromail/worker/billing/ShedLockConfig.java; grep -q "REFRESH_TOKEN_KEY_BASE64:?" backend/worker/src/main/resources/application.yml; grep -q "SEPAY_WEBHOOK_API_KEY:?" backend/worker/src/main/resources/application.yml; grep -q "test-sepay-key-fixture" backend/worker/src/test/java/com/zeromail/worker/PostgresContainerTest.java</automated>
+    <automated>./gradlew :backend:worker:compileJava 2>&1 | grep -q SUCCESSFUL; grep -q "JdbcTemplateLockProvider" backend/worker/src/main/java/com/zeromail/worker/billing/ShedLockConfig.java; grep -q "@EnableSchedulerLock" backend/worker/src/main/java/com/zeromail/worker/billing/ShedLockConfig.java; grep -q "REFRESH_TOKEN_KEY_BASE64:?" backend/worker/src/main/resources/application.yml; grep -qE 'webhook-api-key:\s*\$\{SEPAY_WEBHOOK_API_KEY\}\s*$' backend/worker/src/main/resources/application.yml; ! grep -E 'SEPAY_WEBHOOK_API_KEY:\?' backend/worker/src/main/resources/application.yml  # REVIEWS CYCLE-3 HIGH-2: NO default-value `:?` form on SePay key; grep -q "test-sepay-key-fixture" backend/worker/src/test/java/com/zeromail/worker/PostgresContainerTest.java</automated>
   </verify>
-  <done>BillingWorkerConfiguration enables BillingProperties + (if needed) entity/repository scan; ShedLockConfig declares @EnableScheduling + @EnableSchedulerLock + JdbcTemplateLockProvider with usingDbTime; worker application.yml has both :? fail-fast envs (REFRESH_TOKEN_KEY_BASE64 closes CR-04 carryover; SEPAY_WEBHOOK_API_KEY new); PostgresContainerTest test base injects all 4 zero-mail.billing.* values + crypto refresh-token key.</done>
+  <done>BillingWorkerConfiguration enables BillingProperties + (if needed) entity/repository scan; ShedLockConfig declares @EnableScheduling + @EnableSchedulerLock + JdbcTemplateLockProvider with usingDbTime; worker application.yml has REFRESH_TOKEN_KEY_BASE64:? fail-fast (closes CR-04 carryover) AND bare ${SEPAY_WEBHOOK_API_KEY} (REVIEWS CYCLE-3 HIGH-2: NO `:?` default — Spring placeholder resolution itself fails at boot when env is missing; defense-in-depth via BillingProperties @PostConstruct sentinel check from Plan 03); PostgresContainerTest test base injects all 4 zero-mail.billing.* values + crypto refresh-token key.</done>
 </task>
 
 <task type="auto" tdd="true">
@@ -430,7 +434,7 @@ Tests now run live. Run `./gradlew :backend:worker:test --tests "com.zeromail.wo
 |-----------|----------|-----------|-------------|-----------------|
 | T-02B-05-01 | Tampering | Watchdog double-release race (T6 phase threat model) | mitigate | Two layers: (a) FOR UPDATE SKIP LOCKED in repository query gives same-pod intra-job concurrency safety; (b) @SchedulerLock(name="creditReserveWatchdog", lockAtMostFor=PT2M) prevents N>1 worker pods from running tick() simultaneously. UNIQUE (ref_type, ref_id, kind) on credit_ledger_entry catches any residual race + IllegalLedgerStateException race-with-settle is silently handled. |
 | T-02B-05-02 | Information disclosure | Watchdog log payload | mitigate | event=credit_reserve_released_stale tenantId={} reservationId={} ageSeconds={} per CONTEXT D-I2 — NO amount_credits, NO call_site, NO PII. |
-| T-02B-05-03 | Tampering | Worker boot env-var missing | mitigate | application.yml uses :? fail-fast for both REFRESH_TOKEN_KEY_BASE64 (CR-04 carryover close) and SEPAY_WEBHOOK_API_KEY (D-F1 parity). Boot fails clearly if either env is absent; no silent fallback. |
+| T-02B-05-03 | Tampering | Worker boot env-var missing | mitigate | application.yml uses :? fail-fast for REFRESH_TOKEN_KEY_BASE64 (CR-04 carryover close) and bare `${SEPAY_WEBHOOK_API_KEY}` for SEPAY_WEBHOOK_API_KEY (REVIEWS CYCLE-3 HIGH-2: NO `:?` default — Spring placeholder resolution itself raises IllegalArgumentException at boot when env missing; D-F1 parity with api). Boot fails clearly if either env is absent; no silent fallback. |
 | T-02B-05-04 | Denial of service | Watchdog stuck job blocking other ticks | mitigate | @SchedulerLock(lockAtMostFor=PT2M) — if a worker dies mid-tick, lock auto-releases after 2 minutes; another pod picks up. defaultLockAtMostFor=PT5M on EnableSchedulerLock is the global safety net. |
 | T-02B-05-05 | Privilege escalation | Cross-tenant release via watchdog | mitigate | reservation.getTenantId() drives ScopedValue.where(TenantContext.TENANT, ...) per iteration; CreditLedger.release() then runs under that tenant's filter — cannot accidentally release tenant B's reservation while iterating tenant A's batch. |
 </threat_model>

@@ -19,6 +19,13 @@ cycle3_new_highs:
   - "version column type mismatch: new billing migrations declare version as bigint but AbstractAuditableEntity.version is Integer; spring.jpa.hibernate.ddl-auto=validate will fail"
   - "SEPAY_WEBHOOK_API_KEY:?msg placeholder is not reliable Spring fail-fast for plain strings — missing env can bind the literal '?...must...' and @NotBlank passes"
   - "SepayWebhookMismatchAuditEventTest uses code='MISMATCH' but 'I' is excluded by Crockford regex and service ignores referenceCode for lookup; will log unknown_code not amount_mismatch"
+cycle3_addressed_at: 2026-05-06
+cycle3_addressed_in: third replan with --reviews; mechanical edits only — no architecture changes
+cycle3_high_resolution_map:
+  CYCLE3-HIGH-1 (version column bigint vs int): 02B-01-schema-and-deps-PLAN.md (014/015/016 changesets all use type:int matching AbstractAuditableEntity.version Integer; must_haves truth + verify negative-grep assert no bigint anywhere)
+  CYCLE3-HIGH-2 (SEPAY_WEBHOOK_API_KEY fail-fast): 02B-04-api-surface-PLAN.md + 02B-05-worker-schedulers-PLAN.md (bare ${SEPAY_WEBHOOK_API_KEY} with NO `:?` default — Spring placeholder resolution itself raises IllegalArgumentException at boot when env missing) + 02B-03-credit-ledger-service-PLAN.md (BillingProperties compact constructor sentinel-rejects values starting with ? / $ or containing 'must be set' / 'must be supplied' as defense-in-depth)
+  CYCLE3-HIGH-3 (SepayWebhookMismatchAuditEventTest fixture): 02B-00-wave0-tests-PLAN.md File 13b (seed intent with code='ABCD2345' valid 8-char Crockford; payload code='ABCD2345' matches lookup with mismatching transferAmount=99000 vs amountVnd=50000; positive assert event=sepay_webhook_amount_mismatch + negative assert event=sepay_unknown_code; verify grep asserts ABCD2345 present AND 'MISMATCH' absent)
+  CYCLE3-HIGH-4 (Wave 0 RED window): 02B-00-wave0-tests-PLAN.md (no further technical fix per user direction; cleanup applied — Task 1 prose rewritten to remove the contradictory '@Disabled keeps clean check GREEN' wording, now correctly states @Disabled only affects RUN time not COMPILE time, matching the frontmatter's RED-by-design statement)
 cycle2_addressed_at: 2026-05-06
 cycle2_addressed_in: second replan with --reviews; see "REVIEWS HIGH-N NEW — RESOLVED" markers in plans 03/04/06 and the explicit RED-window convention block at the top of plan 00
 cycle2_high_resolution_map:
@@ -421,4 +428,61 @@ Sources checked: Spring transaction/proxy and placeholder docs via Context7, She
 2. **HIGH (NEW, codex):** `SEPAY_WEBHOOK_API_KEY:?…` placeholder isn't true Spring fail-fast for plain strings; `@NotBlank` may accept the literal default sentinel. Use `${SEPAY_WEBHOOK_API_KEY}` with no default.
 3. **HIGH (NEW, codex):** `SepayWebhookMismatchAuditEventTest` seeds an invalid Crockford code (`MISMATCH` contains `I`) and relies on `referenceCode`, contradicting the cycle-2 field-order fix; will log `unknown_code` not `amount_mismatch`.
 4. **HIGH (PARTIAL, carry-over from cycle 2):** Wave 0 `@Disabled` tests still committed RED between Plan 00 and Plan 06. Process-accepted, not technically resolved.
+
+## Cycle 3 — Resolution Plan (Replan #3)
+
+Date: 2026-05-06. Triggered by `/gsd-plan-phase 2B --reviews` third replan. All three new HIGHs resolved with mechanical edits; HIGH-4 left as previously documented (process-accepted phase-level convention scoped to Phase 2B; subsequent phases revert to "every commit GREEN").
+
+### CYCLE3-HIGH-1 — `version` column `bigint` → `int` — RESOLVED
+
+**Plan 01 changes (02B-01-schema-and-deps-PLAN.md):**
+
+- All three new billing changesets (`014-credit-ledger-entry.yaml`, `015-credit-reservation.yaml`, `016-billing-topup-intent.yaml`) declare the `version` column as `type: int` (not `bigint`). Inline `# REVIEWS CYCLE-3 HIGH-1` comments explain the alignment with `AbstractAuditableEntity.version` (Java `Integer`) so Hibernate `ddl-auto=validate` accepts the schema.
+- `must_haves.truths` adds an explicit assertion: every new billing changeset declares `version` as `int`, none `bigint`.
+- The Task 1 verify automated grep adds a negative assertion `! grep -E "name: version,\s+type: bigint" ...` over all three changesets, so any drift in execution is caught by the verifier rather than by Hibernate at boot.
+
+### CYCLE3-HIGH-2 — SePay webhook API key fail-fast — RESOLVED
+
+**Plan 04 changes (02B-04-api-surface-PLAN.md):**
+
+- `application.yml` `webhook-api-key` is now `${SEPAY_WEBHOOK_API_KEY}` (bare placeholder, NO `:?...` default). Inline comment documents that Spring's `${X:?msg}` syntax is a default-value mechanism for plain strings, not a true fail-fast operator. With the bare form, `PropertySourcesPlaceholderConfigurer` raises `IllegalArgumentException` at boot when the env is missing — the actual fail-fast behavior we want.
+- The Task 3 verify automated grep asserts both presence (`webhook-api-key:\s*\$\{SEPAY_WEBHOOK_API_KEY\}\s*$`) and absence (`! grep -E 'SEPAY_WEBHOOK_API_KEY:\?'`) of the wrong form.
+
+**Plan 05 changes (02B-05-worker-schedulers-PLAN.md):**
+
+- Worker `application.yml` mirrors the api change: bare `${SEPAY_WEBHOOK_API_KEY}` with NO `:?` default. Frontmatter `must_haves.truths` updated to call out the asymmetry with `REFRESH_TOKEN_KEY_BASE64:?` (kept in `:?` form because the downstream Base64 decoder semantically catches a sentinel default; the SePay key has no such semantic catch, hence the bare-placeholder form).
+- Task 1 verify automated grep asserts both presence (bare form) and absence (`:?` form).
+
+**Plan 03 changes (02B-03-credit-ledger-service-PLAN.md):**
+
+- `BillingProperties` record gains a defense-in-depth compact constructor that REJECTS sentinel-looking values for `sepay.webhookApiKey` — any value starting with `?` or `$`, or containing `must be set` / `must be supplied`, throws `IllegalStateException` with a clear remediation message. This is a SECOND layer behind the application.yml bare-placeholder fail-fast, in case some operator (or a wrong test profile) accidentally sets the env to a literal placeholder-default sentinel.
+- `must_haves.truths` documents the sentinel-rejection contract; Task 2 verify automated grep asserts the literal `must be set` / `must be supplied` strings appear in `BillingProperties.java`.
+
+The chosen approach (no-default placeholder + record-compact-ctor sentinel rejection) is option (a) from the codex suggestion list ("Use `${SEPAY_WEBHOOK_API_KEY}` with no default, or add explicit validation"). We did BOTH for defense-in-depth.
+
+### CYCLE3-HIGH-3 — `SepayWebhookMismatchAuditEventTest` fixture — RESOLVED
+
+**Plan 00 changes (02B-00-wave0-tests-PLAN.md):**
+
+- File 13b (`SepayWebhookMismatchAuditEventTest.java`) fixture rewritten:
+  - Seed `BillingTopupIntentEntity` with `code="ABCD2345"` (valid 8-char Crockford — alphabet `0-9 A-HJKMNP-TV-Z`, no I/L/O/U), `amountVnd=50000L`, `status=PENDING`.
+  - Webhook payload sends `code="ABCD2345"` (matches seeded intent — drives lookup path), `transferAmount=99000L` (intentionally MISMATCHES intent's `amountVnd=50000`), `referenceCode="BANK-REF-XYZ"` (audit metadata only — must NOT influence lookup).
+  - Test now correctly exercises the mismatch path: service finds the intent via `code`, computes amount mismatch, logs `event=sepay_webhook_amount_mismatch intentVnd=50000 actualVnd=99000`, and leaves the intent PENDING.
+- Anti-regression: positive assertion `event=sepay_webhook_amount_mismatch` AND negative assertion that `event=sepay_unknown_code` is NOT in the log buffer.
+- Task 2 verify automated grep adds presence-assertion of `code="ABCD2345"` AND absence-assertion of the old broken `"MISMATCH"` literal in the test source file.
+- The corrected fixture is consistent with cycle-2's HIGH-2 resolution (`code` precedes `referenceCode`; `referenceCode` is audit metadata only).
+
+### CYCLE3-HIGH-4 — Wave 0 RED window — PARTIAL (carry-over, no further action)
+
+Per user direction: leave as-is. The phase-level RED-window convention block in Plan 00's frontmatter remains the authoritative process acceptance, scoped to Phase 2B only; Phases 2C onward revert to "every commit GREEN."
+
+Cleanup applied: the prose under `Why @Disabled instead of compile-RED only` in Plan 00 Task 1 was rewritten to remove the contradictory claim that `@Disabled` keeps `./gradlew check` GREEN at compile time. The corrected wording explicitly says `@Disabled` only affects RUN time, not COMPILE time — matching the frontmatter's RED-by-design statement. Stale wording deleted.
+
+### Cycle 3 MEDIUMs — sanity-checked, deferred
+
+Per user direction the cycle-3 MEDIUMs (aggregate `int` vs `Long`, `FOR UPDATE SKIP LOCKED` watchdog framing, test-count drift 16/7 → 17/8) are NOT in scope of this replan. Recorded for sanity in the future-improvements list:
+
+- `CreditLedgerEntryRepository` aggregate signatures should use `Long` internally to avoid `SUM` widening surprises; expose `int` only after explicit range validation.
+- The watchdog `FOR UPDATE SKIP LOCKED` claim is cleanest if the select + processing share a transaction. ShedLock already provides multi-pod protection; the watchdog tick can be documented as relying on ShedLock for that property rather than overstating the SKIP-LOCKED semantics.
+- A future pass should reconcile any remaining "16 / 7 Wave 0 tests" comments to the actual `17 / 8` counts (Plan 00 Task 2 already references 8; some scattered prose may still say 7).
 

@@ -42,7 +42,7 @@ must_haves:
     - "IllegalLedgerStateException maps to HTTP 500 with code=error.billing.ledger.invalidState."
     - "apps/web/i18n/messages/{vi,en}.json both contain error.billing.insufficient + error.billing.ledger.invalidState + error.billing.sepay.reference_invalid + error.billing.sepay.auth_invalid; pnpm i18n:check STRICT passes."
     - "apps/web/lib/api/schema.d.ts regenerated via pnpm generate:api contains paths['/api/billing/balance'], paths['/api/billing/topup/intent'], paths['/api/billing/sepay/webhook']."
-    - "SEPAY_WEBHOOK_API_KEY resolves with :? fail-fast in application.yml; test profile injects via ApiPostgresTestBase @DynamicPropertySource."
+    - "SEPAY_WEBHOOK_API_KEY resolves via bare `${SEPAY_WEBHOOK_API_KEY}` placeholder in application.yml (REVIEWS CYCLE-3 HIGH-2: NO `:?` default — Spring placeholder resolution raises IllegalArgumentException at boot when env is missing). Defense-in-depth via BillingProperties record compact-constructor sentinel rejection (Plan 03). Test profile injects via ApiPostgresTestBase @DynamicPropertySource."
   artifacts:
     - path: "backend/api/src/main/java/com/zeromail/api/controllers/billing/BillingController.java"
       provides: "Session-auth thin controller: GET /balance + POST /topup/intent."
@@ -53,7 +53,7 @@ must_haves:
     - path: "backend/api/src/main/java/com/zeromail/api/security/billing/SepayApiKeyAuthFilter.java"
       provides: "OncePerRequestFilter using core.billing.service.SepayApiKeyVerifier; logs event=sepay_webhook_auth_invalid (no header bytes)."
     - path: "backend/api/src/main/resources/application.yml"
-      provides: "zero-mail.billing.* config block + SEPAY_WEBHOOK_API_KEY :? fail-fast."
+      provides: "zero-mail.billing.* config block + bare `${SEPAY_WEBHOOK_API_KEY}` (REVIEWS CYCLE-3 HIGH-2: NO `:?` default; Spring placeholder resolution itself fails at boot when env missing)."
     - path: "apps/web/lib/api/schema.d.ts"
       provides: "Regenerated typed client containing the 3 new billing endpoints."
   key_links:
@@ -536,7 +536,13 @@ Final order: PubSub @Order(1) → Sepay @Order(2) → User-session @Order(3). Ea
 zero-mail:
   billing:
     sepay:
-      webhook-api-key: ${SEPAY_WEBHOOK_API_KEY:?SEPAY_WEBHOOK_API_KEY must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
+      # REVIEWS CYCLE-3 HIGH-2: Use ${SEPAY_WEBHOOK_API_KEY} with NO default. Spring's ${X:?msg}
+      # syntax is a default-value mechanism, NOT a fail-fast operator for plain strings — when
+      # the env is missing it can bind the literal "?...must..." text and @NotBlank passes silently.
+      # Use the no-default form so PropertySourcesPlaceholderConfigurer raises
+      # IllegalArgumentException at boot when the env is absent. Defense-in-depth lives in
+      # BillingProperties.SepayProperties' @PostConstruct sentinel check (Plan 03).
+      webhook-api-key: ${SEPAY_WEBHOOK_API_KEY}
     vnd-per-credit: 1000
     max-pending-intents-per-tenant: 5
     intent-expiry: PT24H
@@ -560,14 +566,14 @@ r.add("zero-mail.billing.intent-expiry", () -> "PT24H");
 "--zero-mail.billing.max-pending-intents-per-tenant=5",
 "--zero-mail.billing.intent-expiry=PT24H",
 ```
-The exact placement depends on the file structure — read backend/api/build.gradle.kts first; the args list is likely a `listOf("--key=value", ...)` block on the springdoc-openapi gradle plugin's customBootRun extension. If the project uses a different mechanism (e.g., `apiBootRun` task with `args` list), append there instead. Goal: `./gradlew :backend:api:openApi` (hermetic OpenAPI emit) MUST boot without :? fail-fast crashing on the new env var.
+The exact placement depends on the file structure — read backend/api/build.gradle.kts first; the args list is likely a `listOf("--key=value", ...)` block on the springdoc-openapi gradle plugin's customBootRun extension. If the project uses a different mechanism (e.g., `apiBootRun` task with `args` list), append there instead. Goal: `./gradlew :backend:api:openApi` (hermetic OpenAPI emit) MUST boot without the bare-placeholder fail-fast crashing on the new env var (REVIEWS CYCLE-3 HIGH-2: application.yml uses `${SEPAY_WEBHOOK_API_KEY}` with no default; the openapi-emit dummy value satisfies that resolution at OpenAPI emit time).
 
 After all three changes saved, run `./gradlew :backend:api:openApi` to confirm hermetic OpenAPI emission still succeeds.
   </action>
   <verify>
-    <automated>grep -q "SEPAY_WEBHOOK_API_KEY:?" backend/api/src/main/resources/application.yml; grep -q "vnd-per-credit: 1000" backend/api/src/main/resources/application.yml; grep -q "test-sepay-key-fixture" backend/api/src/test/java/com/zeromail/api/support/ApiPostgresTestBase.java; grep -q "zero-mail.billing.sepay.webhook-api-key=openapi-emit" backend/api/build.gradle.kts; ./gradlew :backend:api:openApi 2>&1 | grep -E "BUILD SUCCESSFUL"</automated>
+    <automated>grep -qE 'webhook-api-key:\s*\$\{SEPAY_WEBHOOK_API_KEY\}\s*$' backend/api/src/main/resources/application.yml; ! grep -E 'SEPAY_WEBHOOK_API_KEY:\?' backend/api/src/main/resources/application.yml  # REVIEWS CYCLE-3 HIGH-2: NO default-value `:?` form; bare ${SEPAY_WEBHOOK_API_KEY}; grep -q "vnd-per-credit: 1000" backend/api/src/main/resources/application.yml; grep -q "test-sepay-key-fixture" backend/api/src/test/java/com/zeromail/api/support/ApiPostgresTestBase.java; grep -q "zero-mail.billing.sepay.webhook-api-key=openapi-emit" backend/api/build.gradle.kts; ./gradlew :backend:api:openApi 2>&1 | grep -E "BUILD SUCCESSFUL"</automated>
   </verify>
-  <done>application.yml has zero-mail.billing block with :? fail-fast on SEPAY_WEBHOOK_API_KEY; ApiPostgresTestBase injects all 4 zero-mail.billing.* test values; build.gradle.kts customBootRun.args includes the openapi-emit dummy values so hermetic OpenAPI emission still succeeds; ./gradlew :backend:api:openApi BUILD SUCCESSFUL.</done>
+  <done>application.yml has zero-mail.billing block with bare-placeholder fail-fast on SEPAY_WEBHOOK_API_KEY (REVIEWS CYCLE-3 HIGH-2: ${SEPAY_WEBHOOK_API_KEY} with NO `:?...` default — Spring placeholder resolution itself raises IllegalArgumentException when env missing; the BillingProperties @PostConstruct sentinel check in Plan 03 is defense-in-depth); ApiPostgresTestBase injects all 4 zero-mail.billing.* test values; build.gradle.kts customBootRun.args includes the openapi-emit dummy values so hermetic OpenAPI emission still succeeds; ./gradlew :backend:api:openApi BUILD SUCCESSFUL.</done>
 </task>
 
 <task type="auto">
@@ -679,7 +685,7 @@ Run `./gradlew :backend:api:test --tests "com.zeromail.api.controllers.billing.*
 
 | Threat ID | Category | Component | Disposition | Mitigation Plan |
 |-----------|----------|-----------|-------------|-----------------|
-| T-02B-04-01 | Spoofing | SePay webhook forgery (T1) | mitigate | @Order(1) SecurityFilterChain on /api/billing/sepay/** runs SepayApiKeyAuthFilter before any controller; SepayApiKeyVerifier uses MessageDigest.isEqual; SEPAY_WEBHOOK_API_KEY :? fail-fast at boot. |
+| T-02B-04-01 | Spoofing | SePay webhook forgery (T1) | mitigate | @Order(1) SecurityFilterChain on /api/billing/sepay/** runs SepayApiKeyAuthFilter before any controller; SepayApiKeyVerifier uses MessageDigest.isEqual; SEPAY_WEBHOOK_API_KEY bare-placeholder fail-fast at boot (REVIEWS CYCLE-3 HIGH-2: `${SEPAY_WEBHOOK_API_KEY}` no `:?` default + BillingProperties compact-ctor sentinel rejection). |
 | T-02B-04-02 | Information disclosure | Webhook key in logs (T5) | mitigate | SepayApiKeyAuthFilter only logs event=sepay_webhook_auth_invalid / event=sepay_webhook_auth_missing — never the header bytes. SepayWebhookController logs event=sepay_webhook_received with no payload bytes. Wave 0 BillingPrivacyLogScrubTest verifies no `Apikey ` substring leaks. |
 | T-02B-04-03 | Information disclosure | Cross-tenant balance read (T4) | mitigate | BillingController.balance() reads TenantContext.currentOrThrow() from the SecurityContext-bound ScopedValue — never from request body / path. ArchUnit guard (Plan 06) bans @PathVariable UUID tenantId on BillingController. Wave 0 BillingBalanceMultiTenantLeakTest verifies via 10 concurrent virtual-thread requests. |
 | T-02B-04-04 | Information disclosure | InsufficientCredits balance leak | mitigate | GlobalExceptionHandler.onInsufficientCredits passes Map.of() → no balance number in `params`; ApiError body shape verified by Wave 0 BillingInsufficientCreditsTest. |

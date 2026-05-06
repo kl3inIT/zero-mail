@@ -23,6 +23,7 @@ must_haves:
     - "`shedlock` table exists with PK on `name`."
     - "`gradle/libs.versions.toml` declares `shedlock = \"7.7.0\"` plus the two library entries."
     - "`backend/worker/build.gradle.kts` declares both ShedLock implementations."
+    - "REVIEWS CYCLE-3 HIGH-1: every new billing changeset (014/015/016) declares `version` as `type: int` (matches `AbstractAuditableEntity.version` Integer). NO `version` column uses `bigint`. Hibernate `ddl-auto=validate` accepts the schema."
   artifacts:
     - path: "backend/core/src/main/resources/db/changelog/changes/014-credit-ledger-entry.yaml"
       provides: "Append-only journal: credit_ledger_entry table + UNIQUE(ref_type, ref_id, kind) + BRIN(created_at) + B-tree(tenant_id, created_at) + B-tree(tenant_id, ref_type, ref_id)."
@@ -106,7 +107,7 @@ databaseChangeLog:
               - column: { name: ref_id,         type: varchar(128), constraints: { nullable: false } }
               - column: { name: created_at,     type: timestamptz,  defaultValueComputed: now(), constraints: { nullable: false } }
               - column: { name: updated_at,     type: timestamptz,  defaultValueComputed: now(), constraints: { nullable: false } }
-              - column: { name: version,        type: bigint,       defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: version,        type: int,          defaultValueNumeric: 0, constraints: { nullable: false } }  # REVIEWS CYCLE-3 HIGH-1: int (not bigint) — AbstractAuditableEntity.version is Integer; ddl-auto=validate would otherwise reject
         - addUniqueConstraint:
             tableName: credit_ledger_entry
             columnNames: ref_type, ref_id, kind
@@ -158,7 +159,7 @@ databaseChangeLog:
               - column: { name: created_at,     type: timestamptz, defaultValueComputed: now(), constraints: { nullable: false } }
               - column: { name: updated_at,     type: timestamptz, defaultValueComputed: now(), constraints: { nullable: false } }
               - column: { name: finalized_at,   type: timestamptz, constraints: { nullable: true } }
-              - column: { name: version,        type: bigint,      defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: version,        type: int,         defaultValueNumeric: 0, constraints: { nullable: false } }  # REVIEWS CYCLE-3 HIGH-1: int (not bigint) — AbstractAuditableEntity.version is Integer
         - addCheckConstraint:
             tableName: credit_reservation
             constraintName: ck_credit_reservation_status
@@ -200,7 +201,7 @@ databaseChangeLog:
               - column: { name: expires_at,            type: timestamptz,  constraints: { nullable: false } }
               - column: { name: paid_at,               type: timestamptz,  constraints: { nullable: true } }
               - column: { name: sepay_transaction_id,  type: varchar(128), constraints: { nullable: true } }
-              - column: { name: version,               type: bigint,       defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: version,               type: int,          defaultValueNumeric: 0, constraints: { nullable: false } }  # REVIEWS CYCLE-3 HIGH-1: int (not bigint) — AbstractAuditableEntity.version is Integer
         - addCheckConstraint:
             tableName: billing_topup_intent
             constraintName: ck_billing_topup_intent_status
@@ -225,7 +226,7 @@ databaseChangeLog:
 After writing all three files, run `./gradlew :backend:core:test --tests "*PostgresContainerTest*"` to confirm the schema applies. If `addCheckConstraint` is rejected by Liquibase 5 schema, replace each instance with a sibling `<sql>` change using `ALTER TABLE … ADD CONSTRAINT … CHECK (…)`.
   </action>
   <verify>
-    <automated>test -f backend/core/src/main/resources/db/changelog/changes/014-credit-ledger-entry.yaml; test -f backend/core/src/main/resources/db/changelog/changes/015-credit-reservation.yaml; test -f backend/core/src/main/resources/db/changelog/changes/016-billing-topup-intent.yaml; grep -q "tableName: credit_ledger_entry" backend/core/src/main/resources/db/changelog/changes/014-credit-ledger-entry.yaml; grep -q "ref_type, ref_id, kind" backend/core/src/main/resources/db/changelog/changes/014-credit-ledger-entry.yaml; grep -q "USING BRIN" backend/core/src/main/resources/db/changelog/changes/014-credit-ledger-entry.yaml; grep -q "WHERE status = 'PENDING'" backend/core/src/main/resources/db/changelog/changes/015-credit-reservation.yaml; grep -q "WHERE sepay_transaction_id IS NOT NULL" backend/core/src/main/resources/db/changelog/changes/016-billing-topup-intent.yaml</automated>
+    <automated>test -f backend/core/src/main/resources/db/changelog/changes/014-credit-ledger-entry.yaml; test -f backend/core/src/main/resources/db/changelog/changes/015-credit-reservation.yaml; test -f backend/core/src/main/resources/db/changelog/changes/016-billing-topup-intent.yaml; grep -q "tableName: credit_ledger_entry" backend/core/src/main/resources/db/changelog/changes/014-credit-ledger-entry.yaml; grep -q "ref_type, ref_id, kind" backend/core/src/main/resources/db/changelog/changes/014-credit-ledger-entry.yaml; grep -q "USING BRIN" backend/core/src/main/resources/db/changelog/changes/014-credit-ledger-entry.yaml; grep -q "WHERE status = 'PENDING'" backend/core/src/main/resources/db/changelog/changes/015-credit-reservation.yaml; grep -q "WHERE sepay_transaction_id IS NOT NULL" backend/core/src/main/resources/db/changelog/changes/016-billing-topup-intent.yaml; ! grep -E "name: version,\s+type: bigint" backend/core/src/main/resources/db/changelog/changes/014-credit-ledger-entry.yaml backend/core/src/main/resources/db/changelog/changes/015-credit-reservation.yaml backend/core/src/main/resources/db/changelog/changes/016-billing-topup-intent.yaml  # REVIEWS CYCLE-3 HIGH-1: assert version is NOT bigint anywhere</automated>
   </verify>
   <done>3 YAML files exist; UNIQUE(ref_type, ref_id, kind) declared on credit_ledger_entry; BRIN(created_at) declared via raw sql; partial index on credit_reservation(created_at) WHERE status='PENDING' declared; partial UNIQUE on billing_topup_intent.sepay_transaction_id declared; check constraints lock kind / status / positive amounts.</done>
 </task>

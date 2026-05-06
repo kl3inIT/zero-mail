@@ -37,6 +37,7 @@ must_haves:
     - "`SepayApiKeyVerifier.verify(authorizationHeader)` uses `MessageDigest.isEqual` over UTF-8 bytes — never `String.equals` / `Arrays.equals`."
     - "`TopupCodeGenerator.generateUniqueCode(predicate, 3)` retries up to 3x using Crockford alphabet `0123456789ABCDEFGHJKMNPQRSTVWXYZ` (no I/L/O/U)."
     - "`BillingProperties` is a `@ConfigurationProperties(prefix=\"zero-mail.billing\")` record with `vndPerCredit=1000` default + `sepay.webhookApiKey @NotBlank`."
+    - "REVIEWS CYCLE-3 HIGH-2: `BillingProperties` compact constructor REJECTS sentinel values for `sepay.webhookApiKey` — any value starting with `?` or `$`, or containing `must be set` / `must be supplied`, throws `IllegalStateException` at boot. This is defense-in-depth against an unresolved-placeholder default leaking through `@NotBlank` (Spring's `${X:?msg}` syntax is a default-value mechanism for plain strings, not a real fail-fast operator). Primary fail-fast lives in application.yml as bare `${SEPAY_WEBHOOK_API_KEY}` (no `:?` default)."
     - "`BillingTopupService.createIntent(tenantId, amountVnd)` throws `IllegalArgumentException` when `amountVnd < vndPerCredit` (REVIEWS HIGH-7 — prevents 0-credit topups at intent creation)."
     - "`BillingTopupService.applyWebhook` short-circuits with `event=sepay_topup_below_min_credits` log + return when `credits <= 0` (REVIEWS HIGH-7 defense-in-depth for vnd-per-credit reconfiguration race)."
     - "`BillingTopupService.applyWebhook` resolves the intent via `intentRepository.findTenantLookupByCode(code)` (raw JDBC, bypasses @TenantId filter), then `ScopedValue.where(TenantContext.TENANT, lookup.tenantId().toString()).run(() -> transactionTemplate.executeWithoutResult(...))` BEFORE any JPA write — REVIEWS HIGH-2 (cycle 1) + HIGH-1 NEW (cycle 2) both closed: webhook never calls `intentRepository.findByCode` directly (no bound TenantContext on the request thread), and the transactional body runs via `TransactionTemplate` rather than self-invoking a `@Transactional` method on `this` (which would silently bypass Spring's proxy)."
@@ -807,6 +808,32 @@ public record BillingProperties(
         @Min(1) @DefaultValue("5") int maxPendingIntentsPerTenant,
         @DefaultValue("PT24H") Duration intentExpiry) {
 
+    /**
+     * REVIEWS CYCLE-3 HIGH-2: defense-in-depth sentinel rejection.
+     *
+     * <p>The application.yml uses bare {@code ${SEPAY_WEBHOOK_API_KEY}} (no {@code :?} default), so
+     * Spring's {@code PropertySourcesPlaceholderConfigurer} raises {@code IllegalArgumentException}
+     * at boot when the env var is missing — that is the primary fail-fast layer.
+     *
+     * <p>This compact constructor is a SECOND layer for the case where some operator (or a wrong
+     * test profile) accidentally sets the env to a literal placeholder-default sentinel like
+     * "?SEPAY_WEBHOOK_API_KEY must be set" or a value that starts with "$" or "?". Spring's
+     * {@code @NotBlank} would happily accept such a string. We reject it explicitly here so the
+     * SePay verifier never compares against a sentinel.
+     */
+    public BillingProperties {
+        if (sepay != null && sepay.webhookApiKey() != null) {
+            String key = sepay.webhookApiKey();
+            if (key.startsWith("?") || key.startsWith("$") || key.toLowerCase().contains("must be set")
+                    || key.toLowerCase().contains("must be supplied")) {
+                throw new IllegalStateException(
+                        "zero-mail.billing.sepay.webhook-api-key looks like an unresolved placeholder default. "
+                                + "Set SEPAY_WEBHOOK_API_KEY to the real SePay webhook API key from the deployment "
+                                + "secret source (Docker secret / systemd credential / locked-down env file).");
+            }
+        }
+    }
+
     public record SepayProperties(@NotBlank String webhookApiKey) {
     }
 }
@@ -953,9 +980,9 @@ public class TopupCodeGenerator {
 After all 3 files saved, flip Wave 0 `@Disabled` off in `SepayApiKeyVerifierTest.java` and `TopupCodeGeneratorTest.java` (remove `@Disabled` annotations on each `@Test`) so those two pure-unit tests run GREEN. Run `./gradlew :backend:core:test --tests "*SepayApiKeyVerifierTest*" --tests "*TopupCodeGeneratorTest*"` to confirm.
   </action>
   <verify>
-    <automated>./gradlew :backend:core:compileJava 2>&1 | grep -q SUCCESSFUL; grep -q "MessageDigest.isEqual" backend/core/src/main/java/com/zeromail/core/billing/service/SepayApiKeyVerifier.java; ! grep -q 'Arrays.equals\|"\.equals\b' backend/core/src/main/java/com/zeromail/core/billing/service/SepayApiKeyVerifier.java; grep -q '0123456789ABCDEFGHJKMNPQRSTVWXYZ' backend/core/src/main/java/com/zeromail/core/billing/service/TopupCodeGenerator.java; grep -q 'zero-mail.billing.sepay.webhook-api-key' backend/core/src/test/java/com/zeromail/core/support/PostgresContainerTest.java; grep -q 'test-sepay-key-fixture' backend/core/src/test/java/com/zeromail/core/support/PostgresContainerTest.java; ./gradlew :backend:core:test --tests "*SepayApiKeyVerifierTest*" --tests "*TopupCodeGeneratorTest*" 2>&1 | grep -E "BUILD SUCCESSFUL|tests completed.*0 failed"</automated>
+    <automated>./gradlew :backend:core:compileJava 2>&1 | grep -q SUCCESSFUL; grep -q "MessageDigest.isEqual" backend/core/src/main/java/com/zeromail/core/billing/service/SepayApiKeyVerifier.java; ! grep -q 'Arrays.equals\|"\.equals\b' backend/core/src/main/java/com/zeromail/core/billing/service/SepayApiKeyVerifier.java; grep -q '0123456789ABCDEFGHJKMNPQRSTVWXYZ' backend/core/src/main/java/com/zeromail/core/billing/service/TopupCodeGenerator.java; grep -q 'zero-mail.billing.sepay.webhook-api-key' backend/core/src/test/java/com/zeromail/core/support/PostgresContainerTest.java; grep -q 'test-sepay-key-fixture' backend/core/src/test/java/com/zeromail/core/support/PostgresContainerTest.java; grep -q 'must be set\|must be supplied' backend/core/src/main/java/com/zeromail/core/billing/service/BillingProperties.java  # REVIEWS CYCLE-3 HIGH-2: compact ctor sentinel-rejection guard present; ./gradlew :backend:core:test --tests "*SepayApiKeyVerifierTest*" --tests "*TopupCodeGeneratorTest*" 2>&1 | grep -E "BUILD SUCCESSFUL|tests completed.*0 failed"</automated>
   </verify>
-  <done>BillingProperties record has 4 fields with @DefaultValue + nested SepayProperties; SepayApiKeyVerifier uses MessageDigest.isEqual (no String.equals / Arrays.equals); TopupCodeGenerator uses Crockford alphabet without I/L/O/U; Wave 0 SepayApiKeyVerifierTest + TopupCodeGeneratorTest flipped to GREEN (4+3 = 7 unit tests pass).</done>
+  <done>BillingProperties record has 4 fields with @DefaultValue + nested SepayProperties + REVIEWS CYCLE-3 HIGH-2 sentinel-rejection compact constructor (rejects values starting with `?` / `$` or containing `must be set` / `must be supplied`); SepayApiKeyVerifier uses MessageDigest.isEqual (no String.equals / Arrays.equals); TopupCodeGenerator uses Crockford alphabet without I/L/O/U; Wave 0 SepayApiKeyVerifierTest + TopupCodeGeneratorTest flipped to GREEN (4+3 = 7 unit tests pass).</done>
 </task>
 
 <task type="auto" tdd="true">
