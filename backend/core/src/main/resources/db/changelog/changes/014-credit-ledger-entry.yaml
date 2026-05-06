@@ -62,10 +62,9 @@ databaseChangeLog:
             tableName: credit_ledger_entry
             columnNames: ref_type, ref_id, kind
             constraintName: uq_credit_ledger_entry_ref_kind
-        - addCheckConstraint:
-            tableName: credit_ledger_entry
-            constraintName: ck_credit_ledger_entry_kind
-            constraintBody: kind IN ('TOPUP','RESERVE','SETTLE','RELEASE')
+        - sql:
+            comment: Check constraint for the allowed ledger entry kinds.
+            sql: ALTER TABLE credit_ledger_entry ADD CONSTRAINT ck_credit_ledger_entry_kind CHECK (kind IN ('TOPUP','RESERVE','SETTLE','RELEASE'))
         - createIndex:
             tableName: credit_ledger_entry
             indexName: idx_credit_ledger_entry_tenant_created

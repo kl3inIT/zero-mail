@@ -56,14 +56,12 @@ databaseChangeLog:
                   defaultValueNumeric: 0
                   constraints:
                     nullable: false
-        - addCheckConstraint:
-            tableName: credit_reservation
-            constraintName: ck_credit_reservation_status
-            constraintBody: status IN ('PENDING','SETTLED','RELEASED')
-        - addCheckConstraint:
-            tableName: credit_reservation
-            constraintName: ck_credit_reservation_amount_positive
-            constraintBody: amount_credits > 0
+        - sql:
+            comment: Check constraint for the allowed credit reservation statuses.
+            sql: ALTER TABLE credit_reservation ADD CONSTRAINT ck_credit_reservation_status CHECK (status IN ('PENDING','SETTLED','RELEASED'))
+        - sql:
+            comment: Check constraint requiring positive reserved credit amounts.
+            sql: ALTER TABLE credit_reservation ADD CONSTRAINT ck_credit_reservation_amount_positive CHECK (amount_credits > 0)
         - createIndex:
             tableName: credit_reservation
             indexName: idx_credit_reservation_tenant_status

@@ -30,7 +30,6 @@ zeromail:
   gmail:
     pubsub:
       topic-name: ${GOOGLE_PUBSUB_TOPIC_NAME:?GOOGLE_PUBSUB_TOPIC_NAME env var is required}
-zero-mail:
   billing:
     sepay:
       # Bare placeholder: Spring fails during placeholder resolution when the secret is absent.

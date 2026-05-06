@@ -66,14 +66,12 @@ databaseChangeLog:
                   defaultValueNumeric: 0
                   constraints:
                     nullable: false
-        - addCheckConstraint:
-            tableName: billing_topup_intent
-            constraintName: ck_billing_topup_intent_status
-            constraintBody: status IN ('PENDING','PAID','EXPIRED')
-        - addCheckConstraint:
-            tableName: billing_topup_intent
-            constraintName: ck_billing_topup_intent_amount_positive
-            constraintBody: amount_vnd > 0
+        - sql:
+            comment: Check constraint for the allowed top-up intent statuses.
+            sql: ALTER TABLE billing_topup_intent ADD CONSTRAINT ck_billing_topup_intent_status CHECK (status IN ('PENDING','PAID','EXPIRED'))
+        - sql:
+            comment: Check constraint requiring positive VND top-up amounts.
+            sql: ALTER TABLE billing_topup_intent ADD CONSTRAINT ck_billing_topup_intent_amount_positive CHECK (amount_vnd > 0)
         - createIndex:
             tableName: billing_topup_intent
             indexName: idx_billing_topup_intent_status_expires
