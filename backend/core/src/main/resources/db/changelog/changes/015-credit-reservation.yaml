@@ -1,0 +1,80 @@
+databaseChangeLog:
+  - changeSet:
+      id: 015-credit-reservation
+      author: zeromail
+      changes:
+        - createTable:
+            tableName: credit_reservation
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_credit_reservation_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: amount_credits
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: call_site
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: finalized_at
+                  type: timestamptz
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addCheckConstraint:
+            tableName: credit_reservation
+            constraintName: ck_credit_reservation_status
+            constraintBody: status IN ('PENDING','SETTLED','RELEASED')
+        - addCheckConstraint:
+            tableName: credit_reservation
+            constraintName: ck_credit_reservation_amount_positive
+            constraintBody: amount_credits > 0
+        - createIndex:
+            tableName: credit_reservation
+            indexName: idx_credit_reservation_tenant_status
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: status
+        - sql:
+            comment: Partial index on PENDING reservations for watchdog stale scans.
+            sql: CREATE INDEX idx_credit_reservation_pending_created ON credit_reservation (created_at) WHERE status = 'PENDING'
+      rollback:
+        - dropTable:
+            tableName: credit_reservation
