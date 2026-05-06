@@ -12,7 +12,7 @@ requires:
 provides:
   - Tenant-owned billing persistence entities and repositories.
   - Lowlevel JDBC advisory-lock and tenant-lookup fragments.
-  - Billing configuration properties, SePay API key verifier, and Crockford code generator.
+  - Billing services consume billing settings from ZeroMailCoreProperties, plus SePay API key verifier and Crockford code generator.
   - CreditLedgerService reserve, settle, release, and balance implementation.
   - BillingTopupService top-up intent and SePay webhook ledger credit flow.
 affects: [02B-04-api-surface, 02B-05-worker-schedulers, 02B-06-verification-closure, 02C-llm-gateway]
@@ -39,8 +39,6 @@ key-files:
     - backend/core/src/main/java/com/zeromail/core/billing/persistence/lowlevel/AdvisoryLockJdbcHelper.java
     - backend/core/src/main/java/com/zeromail/core/billing/persistence/lowlevel/CreditReservationRepositoryImpl.java
     - backend/core/src/main/java/com/zeromail/core/billing/persistence/lowlevel/BillingTopupIntentRepositoryImpl.java
-    - backend/core/src/main/java/com/zeromail/core/billing/service/BillingConfiguration.java
-    - backend/core/src/main/java/com/zeromail/core/billing/service/BillingProperties.java
     - backend/core/src/main/java/com/zeromail/core/billing/service/SepayApiKeyVerifier.java
     - backend/core/src/main/java/com/zeromail/core/billing/service/TopupCodeGenerator.java
     - backend/core/src/main/java/com/zeromail/core/billing/service/CreditLedgerService.java
@@ -55,7 +53,7 @@ key-files:
 
 key-decisions:
   - "Top-up code uniqueness checks use the tenant-bypassing lookup fragment because code is globally unique while standard JPA reads are tenant-filtered."
-  - "BillingProperties masks its toString output because the record carries the SePay webhook API key."
+  - "Billing settings are nested under ZeroMailCoreProperties and mask their toString output because the record carries the SePay webhook API key."
 
 patterns-established:
   - "Webhook tenant resolution reads by raw JDBC projection, then binds TenantContext before TransactionTemplate opens the JPA transaction."
@@ -82,7 +80,7 @@ completed: 2026-05-06
 ## Accomplishments
 
 - Added tenant-owned ledger, reservation, and top-up intent persistence with lowlevel JDBC fragments for stale reservation scans and webhook tenant lookup.
-- Added `BillingProperties`, constant-time `SepayApiKeyVerifier`, and Crockford `TopupCodeGenerator`; enabled their Wave 0 unit tests.
+- Added billing settings under `ZeroMailCoreProperties`, constant-time `SepayApiKeyVerifier`, and Crockford `TopupCodeGenerator`; enabled their Wave 0 unit tests.
 - Implemented `CreditLedgerService` and `BillingTopupService` with advisory-lock reserve, idempotent finalization, tenant-bound webhook writes, replay handling, and minimum top-up safeguards.
 
 ## Task Commits
@@ -95,7 +93,8 @@ completed: 2026-05-06
 
 - `backend/core/src/main/java/com/zeromail/core/billing/persistence/*` - Ledger, reservation, top-up intent entities, repositories, and tenant-aware projection contracts.
 - `backend/core/src/main/java/com/zeromail/core/billing/persistence/lowlevel/*` - Raw JDBC advisory lock and tenant-filter-bypassing lookup implementations.
-- `backend/core/src/main/java/com/zeromail/core/billing/service/*` - Billing config, utilities, and service implementations.
+- `backend/core/src/main/java/com/zeromail/core/billing/service/*` - Billing utilities and service implementations.
+- `backend/core/src/main/java/com/zeromail/core/config/ZeroMailCoreProperties.java` - Billing settings nested under the existing core properties root.
 - `backend/core/src/test/java/com/zeromail/core/support/PostgresContainerTest.java` - Core billing property test overrides.
 - `backend/core/src/test/java/com/zeromail/core/billing/**` - Plan 03 runtime-disabled annotations removed from utility and ledger tests.
 
@@ -103,7 +102,7 @@ completed: 2026-05-06
 
 - Used `Math.toIntExact(...)` in `CreditLedgerService` around JPQL `SUM(...)` results so widened aggregate values are converted deliberately at the service boundary.
 - Used `BillingTopupIntentRepository.findTenantLookupByCode(...)` for code collision checks, not tenant-filtered `findByCode(...)`, because `billing_topup_intent.code` is globally unique.
-- Masked `BillingProperties.toString()` to avoid accidental logging of the SePay webhook API key.
+- Masked nested billing properties in `ZeroMailCoreProperties.toString()` to avoid accidental logging of the SePay webhook API key.
 
 ## Deviations from Plan
 
@@ -113,7 +112,7 @@ completed: 2026-05-06
 - **Found during:** Task 2 (BillingProperties)
 - **Issue:** The planned record carried `sepay.webhookApiKey` but did not override record `toString()`, which would expose the secret if the bean were logged.
 - **Fix:** Added a masked `toString()` returning `sepay=****`.
-- **Files modified:** `backend/core/src/main/java/com/zeromail/core/billing/service/BillingProperties.java`
+- **Files modified:** `backend/core/src/main/java/com/zeromail/core/config/ZeroMailCoreProperties.java`
 - **Verification:** `./gradlew.bat :backend:core:compileJava` and utility tests passed.
 - **Committed in:** `d5151da`
 
