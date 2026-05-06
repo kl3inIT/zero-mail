@@ -31,7 +31,7 @@ key-files:
     - backend/core/src/main/java/com/zeromail/core/billing/model/CallSite.java
     - backend/core/src/main/java/com/zeromail/core/billing/model/CreditReservationStatus.java
     - backend/core/src/main/java/com/zeromail/core/billing/model/BillingTopupIntentStatus.java
-    - backend/core/src/main/java/com/zeromail/core/billing/model/CreditLedger.java
+    - backend/core/src/main/java/com/zeromail/core/billing/service/CreditLedger.java
     - backend/core/src/main/java/com/zeromail/core/billing/model/ReservationId.java
     - backend/core/src/main/java/com/zeromail/core/billing/model/CreditBalance.java
     - backend/core/src/main/java/com/zeromail/core/billing/model/InsufficientCreditsException.java
@@ -84,7 +84,7 @@ completed: 2026-05-06
 - `backend/core/src/main/java/com/zeromail/core/billing/model/CallSite.java` - Locked billable call sites `TRIAGE(1)`, `DRAFT(2)`, `PREVIEW(1)`.
 - `backend/core/src/main/java/com/zeromail/core/billing/model/CreditReservationStatus.java` - Reservation lifecycle enum.
 - `backend/core/src/main/java/com/zeromail/core/billing/model/BillingTopupIntentStatus.java` - SePay top-up intent lifecycle enum.
-- `backend/core/src/main/java/com/zeromail/core/billing/model/CreditLedger.java` - Cross-phase ledger interface for reserve, settle, release, and balance.
+- `backend/core/src/main/java/com/zeromail/core/billing/service/CreditLedger.java` - Cross-phase ledger interface for reserve, settle, release, and balance.
 - `backend/core/src/main/java/com/zeromail/core/billing/model/ReservationId.java` - UUID wrapper for reservation handles.
 - `backend/core/src/main/java/com/zeromail/core/billing/model/CreditBalance.java` - Available/held credits projection.
 - `backend/core/src/main/java/com/zeromail/core/billing/model/InsufficientCreditsException.java` - Privacy-safe insufficient balance exception.

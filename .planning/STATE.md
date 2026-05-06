@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: milestone
 status: ready_to_plan
 stopped_at: Completed Phase 02B billing-prepaid-credits
-last_updated: "2026-05-06T15:55:33+07:00"
+last_updated: "2026-05-06T16:47:35+07:00"
 last_activity: 2026-05-06
 progress:
   total_phases: 15
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 Phase: 02C
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-05-06
+Last activity: 2026-05-06 - Completed quick task 260506-n2x: Move billing CreditLedger interface into service package
 
 Progress: [███████░░░] 67%
 
@@ -253,6 +253,7 @@ Recent decisions affecting current work:
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260428-0hx | Rename core view records to projections | 2026-04-28 | 3ff9025 | [260428-0hx-rename-core-view-records-to-projections-](./quick/260428-0hx-rename-core-view-records-to-projections-/) |
+| 260506-n2x | Move billing CreditLedger interface into service package | 2026-05-06 | b2a97d5 | [260506-n2x-move-billing-creditledger-interface-into](./quick/260506-n2x-move-billing-creditledger-interface-into/) |
 | 260427-9n3 | cài Dependabot cho tôi | 2026-04-27 | 600fef4 | [260427-9n3-c-i-dependabot-cho-t-i](./quick/260427-9n3-c-i-dependabot-cho-t-i/) |
 | 260427-02m | Refactor @Value application properties into @ConfigurationProperties | 2026-04-27 | fec9201 | [260427-02m-refactor-value-application-properties-in](./quick/260427-02m-refactor-value-application-properties-in/) |
 | 260427-8qe | Phase 1.5 quick cleanup: font fix and low-risk frontend/backend review findings | 2026-04-27 | 91117fd | [260427-8qe-phase-1-5-quick-cleanup-font-fix-and-low](./quick/260427-8qe-phase-1-5-quick-cleanup-font-fix-and-low/) |
