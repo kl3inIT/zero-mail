@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-Phase 2B builds the backend-only credit ledger that every later billable surface will hit: a `core.billing` Spring Modulith package with a `CreditLedger` interface (consumed verbatim by Phase 2C's `LlmGateway`), a single append-only `credit_ledger_entry` journal plus a `credit_reservation` sidecar table for fast watchdog scans, an atomic `reserve` operation that holds under concurrent contention via Postgres advisory locks, a SePay HMAC-signed webhook that idempotently credits TOPUPs, a 60-second worker-side watchdog that releases reservations older than 5 minutes, and a `GET /api/billing/balance` endpoint. UI rendering, payment-provider checkout flows, refunds, and per-action cost preview pages are explicitly Phase 5+ territory.
+Phase 2B builds the backend-only credit ledger that every later billable surface will hit: a `core.billing` Spring Modulith package with a `CreditLedger` interface (consumed verbatim by Phase 2C's `LlmGateway`), a single append-only `credit_ledger_entry` journal plus a `credit_reservation` sidecar table for fast watchdog scans, an atomic `reserve` operation that holds under concurrent contention via Postgres advisory locks, a SePay API-key-authenticated webhook that idempotently credits TOPUPs, a 60-second worker-side watchdog that releases reservations older than 5 minutes, and a `GET /api/billing/balance` endpoint. UI rendering, payment-provider checkout flows, refunds, and per-action cost preview pages are explicitly Phase 5+ territory.
 
 </domain>
 
@@ -22,8 +22,8 @@ Downstream agents MUST read `02B-SPEC.md` before planning or implementing. Requi
 - `CallSite` enum (`TRIAGE=1`, `DRAFT=2`, `PREVIEW=1`) implementing `IdentifiedEnum`
 - `ReservationId`, `CreditBalance`, `BillingBalanceResponse` records
 - Liquibase changesets `014-credit-ledger-entry.yaml` (and `015-billing-sepay-payment.yaml` if needed for SePay payload audit, owned by `discuss-phase`)
-- `BillingController` with `GET /api/billing/balance` and `POST /api/billing/sepay/webhook`
-- HMAC-SHA256 SePay signature verification with `SEPAY_WEBHOOK_SECRET` `:?` fail-fast env wiring
+- `BillingController` with `GET /api/billing/balance`, `POST /api/billing/topup/intent`, and `POST /api/billing/sepay/webhook`
+- SePay API-key webhook verification via `Authorization: Apikey ...` with `SEPAY_WEBHOOK_API_KEY` `:?` fail-fast env wiring
 - VND → credits conversion via `@ConfigurationProperties("zero-mail.billing")` with `vnd-per-credit` rate
 - `CreditReserveWatchdog` `@Scheduled` job in `backend/worker` (60s fixedRate, 5 min TTL)
 - `InsufficientCreditsException` + global `ApiError` mapping to HTTP 402 + `error.billing.insufficient` i18n keys (vi/en)
@@ -36,16 +36,16 @@ Downstream agents MUST read `02B-SPEC.md` before planning or implementing. Requi
 
 **Out of scope (from SPEC.md):**
 - Refunds / chargeback automation — admin SQL or dedicated phase later
-- Receipt / invoice PDF generation + email — SePay sends its own confirmation
+- Receipt / invoice PDF generation + email — bank/SePay confirmations may exist, but Zero Mail receipt/invoice generation is deferred
 - Credit bundles / package pricing UI — single fixed `vnd-per-credit` rate v1
 - Per-action cost preview UI / multi-currency — VND-only; rendering is Phase 5
 - Full billing UI page (`/settings/billing`) — Phase 5 owns UI
 - LLM USD spend tracking + per-tenant daily spend cap — Phase 2C territory
 - Anything related to `tenant_byok_credentials` table — Phase 2C SPEC owns it
-- Refresh-token-style key rotation drill for `SEPAY_WEBHOOK_SECRET` — STATE.md Blockers
+- Refresh-token-style key rotation drill for `SEPAY_WEBHOOK_API_KEY` — STATE.md Blockers
 - Multi-tenant team / shared wallet — single-tenant individual prosumer model only
 - Soft-warn at low balance threshold — hard reject only in v1
-- Rate limiting on the SePay webhook beyond signature check — abuse handling is future concern
+- Rate limiting on the SePay webhook beyond API-key auth — abuse handling is future concern
 
 </spec_lock>
 
@@ -112,16 +112,16 @@ Downstream agents MUST read `02B-SPEC.md` before planning or implementing. Requi
 
 ### E. Test strategy for SePay webhook
 
-- **D-E1: WireMock-free webhook receive tests** — webhook is *inbound*, no outbound SePay calls in 2B scope. Tests POST signed fixture payloads directly to `/api/billing/sepay/webhook` via `@AutoConfigureMockMvc` or `RestClient + LocalServerPort` (use the latter when `TenantContext` ScopedValue must be bound — same lesson as Phase 1 OAuth tests).
+- **D-E1: WireMock-free webhook receive tests** — webhook is *inbound*, no outbound SePay calls in 2B scope. Tests POST API-key-authenticated fixture payloads directly to `/api/billing/sepay/webhook` via `@AutoConfigureMockMvc` or `RestClient + LocalServerPort` (use the latter when `TenantContext` ScopedValue must be bound — same lesson as Phase 1 OAuth tests).
 - **D-E2: Two test layers**:
-  1. **Pure unit:** `SePaySignatureVerifier` HMAC-SHA256 unit test (no Spring context) — covers algorithm correctness, edge cases (missing header, wrong-length sig, wrong secret).
-  2. **`@SpringBootTest` integration:** full webhook flow with synthetic JSON fixture + valid signature → assert ledger entry, intent transition, balance updated. Replay test posts the same payload twice → assert exactly one TOPUP entry. Bad-signature test asserts 401 without ledger touch.
-- **D-E3: Webhook fixture format**: synthetic JSON modeled after SePay's documented payload (verified by `gsd-research-phase` against `https://docs.sepay.vn/`). Plan-phase will pin the exact field names; if SePay docs are sparse, plan documents synthetic schema explicitly + flags risk for Phase 5 launch hardening to verify against live SePay.
+  1. **Pure unit:** `SePayApiKeyVerifier` constant-time comparison unit test (no Spring context) — covers missing header, wrong prefix, wrong key, and correct `Authorization: Apikey ...`.
+  2. **`@SpringBootTest` integration:** full webhook flow with synthetic JSON fixture + valid API key → assert ledger entry, intent transition, balance updated. Replay test posts the same payload twice → assert exactly one TOPUP entry. Bad API key test asserts 401 without ledger touch.
+- **D-E3: Webhook fixture format**: synthetic JSON modeled after SePay's documented payload (verified by `gsd-research-phase` against `https://docs.sepay.vn/` / `developer.sepay.vn`). Plan-phase will pin the exact field names; if SePay docs are sparse, plan documents synthetic schema explicitly + flags risk for Phase 5 launch hardening to verify against live SePay.
 
 ### F. Deployment-secret hardening
 
-- **D-F1: `SEPAY_WEBHOOK_SECRET` `:?` fail-fast in BOTH `backend/api` and `backend/worker` `application.yml`.** Same pattern as Phase 1.5 CR-04 fix for `REFRESH_TOKEN_KEY_BASE64`. Worker doesn't process the webhook (api does), but loads the same `application.yml` shape — adding the env there keeps boot semantics consistent and prevents future code-move surprises.
-- **D-F2: Test profile injects `SEPAY_WEBHOOK_SECRET=test-secret-base64-equiv` via `@DynamicPropertySource`** so `:?` fail-fast doesn't crash every `@SpringBootTest`. Mirror of Phase 1 testing pattern.
+- **D-F1: `SEPAY_WEBHOOK_API_KEY` `:?` fail-fast in BOTH `backend/api` and `backend/worker` `application.yml`.** Same pattern as Phase 1.5 CR-04 fix for `REFRESH_TOKEN_KEY_BASE64`. Worker doesn't process the webhook (api does), but loads the same `application.yml` shape — adding the env there keeps boot semantics consistent and prevents future code-move surprises.
+- **D-F2: Test profile injects `SEPAY_WEBHOOK_API_KEY=test-api-key` via `@DynamicPropertySource`** so `:?` fail-fast doesn't crash every `@SpringBootTest`. Mirror of Phase 1 testing pattern.
 
 ### G. Spring Modulith package boundary
 
@@ -139,14 +139,14 @@ Downstream agents MUST read `02B-SPEC.md` before planning or implementing. Requi
 
 ### I. Privacy-safe logging contract for billing flows
 
-- **D-I1: SePay webhook handler logs**: `event=sepay_webhook_received` (no payload), `event=sepay_webhook_signature_invalid` (no header bytes), `event=sepay_webhook_unknown_code` (no code value — only count metric increments), `event=sepay_webhook_amount_mismatch intentVnd={} actualVnd={}` (numbers OK, no payload), `event=sepay_topup_credited tenantId={} credits={}` (no transactionId in log; transactionId stays in DB only).
+- **D-I1: SePay webhook handler logs**: `event=sepay_webhook_received` (no payload), `event=sepay_webhook_auth_invalid` (no header bytes), `event=sepay_webhook_unknown_code` (no code value — only count metric increments), `event=sepay_webhook_amount_mismatch intentVnd={} actualVnd={}` (numbers OK, no payload), `event=sepay_topup_credited tenantId={} credits={}` (no transactionId in log; transactionId stays in DB only).
 - **D-I2: Watchdog log**: `event=credit_reserve_released_stale tenantId={} reservationId={} ageSeconds={}` — mirrors Phase 2A's privacy-safe pattern.
-- **D-I3: Logback scrub filter extension**: if Phase 1's existing scrub patterns don't cover `signature=`, `payload=`, `referenceCode=` patterns, plan-phase adds them. Verify before assuming.
+- **D-I3: Logback scrub filter extension**: if Phase 1's existing scrub patterns don't cover `authorization=`, `apikey=`, `payload=`, `referenceCode=` patterns, plan-phase adds them. Verify before assuming.
 
 ### Claude's Discretion
 
 The researcher/planner/executor have flexibility within CLAUDE.md, SPEC.md, and the decisions above on:
-- Exact SePay payload field names / signature header name (verify against `https://docs.sepay.vn/` in `gsd-research-phase` before plan-phase)
+- Exact SePay payload field names / API-key auth header handling (verify against `https://docs.sepay.vn/` / `developer.sepay.vn` in `gsd-research-phase` before plan-phase)
 - Crockford base32 alphabet implementation (use `org.apache.commons.codec` if already on classpath, else hand-rolled — discuss-phase research will pick)
 - `CreditReservationEntity` extending `AbstractAuditableEntity` vs `AbstractTenantOwnedEntity` (pick the latter — sidecar IS tenant-owned)
 - Exact watchdog batch size cap (locked at 100 in D-B3 above, but can tune)
@@ -157,7 +157,7 @@ The researcher/planner/executor have flexibility within CLAUDE.md, SPEC.md, and 
 
 ### Folded Todos
 
-- **`2026-04-28-worker-application-yml-fail-fast-parity.md`** (CR-04 carryover from Phase 1.5 SECURITY.md): `backend/worker/src/main/resources/application.yml` line 10 still uses the old `${REFRESH_TOKEN_KEY_BASE64:${sm://...}}` pattern; api was hardened to `:?` fail-fast in Phase 1.5 Plan 08, worker was out-of-scope. Fold into 2B because this phase already touches `backend/worker/application.yml` to add `SEPAY_WEBHOOK_SECRET` — atomic edit, single plan, closes CR-04 parity gap. Plan-phase task: same `:?` fail-fast pattern + `@DynamicPropertySource` test-profile supply for both env vars.
+- **`2026-04-28-worker-application-yml-fail-fast-parity.md`** (CR-04 carryover from Phase 1.5 SECURITY.md): `backend/worker/src/main/resources/application.yml` line 10 still uses the old `${REFRESH_TOKEN_KEY_BASE64:${sm://...}}` pattern; api was hardened to `:?` fail-fast in Phase 1.5 Plan 08, worker was out-of-scope. Fold into 2B because this phase already touches `backend/worker/application.yml` to add `SEPAY_WEBHOOK_API_KEY` — atomic edit, single plan, closes CR-04 parity gap. Plan-phase task: same `:?` fail-fast pattern + `@DynamicPropertySource` test-profile supply for both env vars.
 
 </decisions>
 
@@ -189,16 +189,16 @@ The researcher/planner/executor have flexibility within CLAUDE.md, SPEC.md, and 
 - `backend/core/src/main/resources/db/changelog/changes/` — next-free is `014`; allocation `014-credit-ledger-entry.yaml`, `015-credit-reservation.yaml`, `016-billing-topup-intent.yaml`.
 - `backend/core/src/main/resources/db/changelog/db.changelog-master.yaml` — append the three new changeset includes.
 - `backend/api/src/main/java/com/zeromail/api/controllers/` — new `billing/BillingController.java` (parity with account/, onboarding/ sub-folder grouping); add `billing/SepayWebhookController.java` if SePay webhook path is split for `@Order` security chain reasons.
-- `backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java` — extend or sibling `BillingWebhookSecurityConfig` adding `@Order(1)` filter chain for `/api/billing/sepay/webhook` matcher with custom HMAC verifier (mirror of `PubSubSecurityConfig` pattern from Phase 2A).
+- `backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java` — extend or sibling `BillingWebhookSecurityConfig` adding `@Order(1)` filter chain for `/api/billing/sepay/webhook` matcher with custom API-key verifier (mirror of `PubSubSecurityConfig` pattern from Phase 2A).
 - `backend/api/src/main/java/com/zeromail/api/dto/` — new `billing/` sub-package: `BillingBalanceResponse`, `TopupIntentRequest`, `TopupIntentResponse`.
 - `backend/api/src/main/java/com/zeromail/api/error/GlobalExceptionHandler.java` (or wherever `ApiError` mapping lives) — add `InsufficientCreditsException → 402` and `IllegalLedgerStateException → 500`.
-- `backend/api/src/main/resources/application.yml` AND `backend/worker/src/main/resources/application.yml` — both add `SEPAY_WEBHOOK_SECRET:?` fail-fast; worker also gets `REFRESH_TOKEN_KEY_BASE64:?` (CR-04 carryover fold).
+- `backend/api/src/main/resources/application.yml` AND `backend/worker/src/main/resources/application.yml` — both add `SEPAY_WEBHOOK_API_KEY:?` fail-fast; worker also gets `REFRESH_TOKEN_KEY_BASE64:?` (CR-04 carryover fold).
 - `backend/worker/src/main/java/com/zeromail/worker/billing/` (new package) — `CreditReserveWatchdog` + `BillingIntentExpirySweeper` `@Scheduled` jobs.
 - `apps/web/i18n/messages/{vi,en}.json` — add `error.billing.insufficient` keys; `pnpm i18n:check` STRICT must pass.
 - `apps/web/lib/api/schema.d.ts` — regenerated by `pnpm generate:api` after `springdoc-openapi` task picks up new endpoints.
 
 ### External specs (re-fetch via Context7 or `gsd-research-phase` at implementation time)
-- **SePay docs** — `https://docs.sepay.vn/` (canonical) — verify webhook payload schema, signature header name (`X-SePay-Signature` is hypothesis), HMAC algorithm (SHA-256 vs other), reference-code field name. **Recommended:** `gsd-research-phase 2B` before planning.
+- **SePay docs** — `https://docs.sepay.vn/` and `https://developer.sepay.vn/` (canonical) — verify webhook payload schema, `Authorization: Apikey ...` API-key auth, response contract, and payment-code/content/referenceCode fields. **Recommended:** `gsd-research-phase 2B` before planning.
 - **PostgreSQL `pg_advisory_xact_lock`** — `https://www.postgresql.org/docs/17/explicit-locking.html` §13.3.5 — semantics, hashtext key collision rate, transaction-scope behavior.
 - **Postgres `SKIP LOCKED`** — already used in Phase 2A (`PubSubDeliveryRepository`); pattern locked.
 - **ShedLock library** (or alternative) — `https://github.com/lukas-krecan/ShedLock` — for `@SchedulerLock` on watchdog; verify it's already in `libs.versions.toml` or add. Phase 2A's `GmailWatchScheduler` may already use it — reuse same artifact.
@@ -215,7 +215,7 @@ The researcher/planner/executor have flexibility within CLAUDE.md, SPEC.md, and 
 - **`AbstractTenantOwnedEntity`** (`core.shared.persistence`): all three new billing entities (`CreditLedgerEntryEntity`, `CreditReservationEntity`, `BillingTopupIntentEntity`) extend this — automatic `tenant_id` discriminator + audit columns + `@TenantId` filter.
 - **`IdentifiedEnum`** (`core.shared.lang`): `CallSite`, `CreditReservationStatus`, `BillingTopupIntentStatus` all implement — provides `id()`, `labelKey()`, static `fromId` fail-loud (NoSuchElementException) per Phase 1.2.1 D-B5.
 - **`TenantContext.currentOrThrow()`** (`core.tenant`): all `BillingController` methods and `CreditLedger.balance(tenantId)` resolve tenant via this ScopedValue (Phase 1 FND-02).
-- **`PubSubOidcAuthFilter`** + **`PubSubSecurityConfig`** (Phase 2A): mirror this pattern for `BillingWebhookSecurityConfig` — `@Order(1) SecurityFilterChain`, `permitAll` matcher on `/api/billing/sepay/webhook`, custom HMAC filter before any other security.
+- **`PubSubOidcAuthFilter`** + **`PubSubSecurityConfig`** (Phase 2A): mirror this pattern for `BillingWebhookSecurityConfig` — `@Order(1) SecurityFilterChain`, `permitAll` matcher on `/api/billing/sepay/webhook`, custom API-key filter before any other security.
 - **`GmailWatchScheduler`** + **`GmailHistoryProcessor`** (Phase 2A `backend/worker`): mirror for `CreditReserveWatchdog` + `BillingIntentExpirySweeper` — `@Scheduled` + `@SchedulerLock` (or whatever Phase 2A uses) + privacy-safe `event=...` logging + Micrometer counter.
 - **`RefreshTokenCipher`** (Phase 1 D-G1 — AES-GCM envelope): NOT directly reused in 2B (no encrypted column needed for billing — Phase 2C reuses it for BYOK keys). Listed for awareness so plan-phase doesn't accidentally duplicate the cipher.
 - **`MultiTenantLeakIntegrationTest`** (Phase 1 FND-05): pattern for tenant-isolation test on `GET /api/billing/balance` — mirror with virtual-thread concurrent calls from two tenants asserting no cross-leak.
@@ -224,7 +224,7 @@ The researcher/planner/executor have flexibility within CLAUDE.md, SPEC.md, and 
 - **Per-domain Modulith package shape**: `model/`, `service/`, `persistence/`, `persistence/lowlevel/` — locked Phase 1.2/1.2.1, applied to gmail/account/onboarding/tenant. Apply verbatim to `core.billing`.
 - **Liquibase changeset numbering**: monotonic; current floor is 013 from Phase 2A; 2B claims 014-016; 2C plan-phase renumbers BYOK to 017+.
 - **`JpaAuditingConfig` + `TestJpaAuditingConfig`** (Phase 1.2.1 D-Plan 03): both production and test config required — `@CreatedDate`/`@LastModifiedDate` fail to bind under test profile without the test mirror.
-- **`:?` fail-fast for deployment secrets** (Phase 1.5 CR-04): `${SEPAY_WEBHOOK_SECRET:?clear-message}` in `application.yml`; `@DynamicPropertySource` in test base supplies value.
+- **`:?` fail-fast for deployment secrets** (Phase 1.5 CR-04): `${SEPAY_WEBHOOK_API_KEY:?clear-message}` in `application.yml`; `@DynamicPropertySource` in test base supplies value.
 - **Thin controllers + service-owned `@Transactional`** (CLAUDE.md Conventions §1): `BillingController.balance()` calls `creditLedger.balance(tenantId)`; controller never opens a transaction; no repository injection in controllers.
 - **Records-for-DTOs / classes-for-entities Lombok-free** (CLAUDE.md Conventions §2): `BillingBalanceResponse`, `TopupIntentRequest`, `TopupIntentResponse`, `ReservationId`, `CreditBalance` are records; entities are mutable classes with `protected` no-args constructor.
 - **`event=opaque tenantId={}` privacy log format** (CLAUDE.md Conventions §4): all billing/webhook/watchdog logs follow.
@@ -241,7 +241,7 @@ The researcher/planner/executor have flexibility within CLAUDE.md, SPEC.md, and 
 <specifics>
 ## Specific Ideas
 
-- **SePay-as-MoR rationale**: User-locked the provider as SePay (Vietnam-domestic bank-transfer aggregator) over Stripe / LemonSqueezy. SePay is a Vietnamese fintech that sits between user bank transfers and the merchant; user types a `referenceCode` into their bank-transfer memo, SePay's bank-API integration parses the memo, and SePay forwards a webhook to the merchant. There is no SePay SDK on Maven Central — integration is plain HTTP webhook + signature verification.
+- **SePay/VietQR beta rationale**: User-locked the provider as SePay (Vietnam-domestic bank-transfer aggregator) over Stripe / LemonSqueezy for the Vietnam beta. SePay is a payment gateway/bank-transfer aggregator, not Merchant of Record; Zero Mail remains responsible for beta tax/invoice/refund policy. User types a top-up intent code into their bank-transfer memo, SePay's bank-API integration parses the memo, and SePay forwards an API-key-authenticated webhook to the merchant. There is no SePay SDK on Maven Central — integration is plain HTTP webhook + API-key verification.
 - **Credit unit semantics from spec interview**: TRIAGE=1, DRAFT=2, PREVIEW=1; LLM USD spend tracked separately at Phase 2C platform-side (not user-facing). BYOK=0 by gateway-skipping reserve entirely (no enum member).
 - **Watchdog runs in `backend/worker`, not `backend/api`** — explicit user choice during spec phase, mirrors Phase 2A pattern.
 - **No UI in Phase 2B** — backend-only; Phase 5 ships the `/settings/billing` page. `BillingController` exposes the API surface only.
@@ -251,15 +251,15 @@ The researcher/planner/executor have flexibility within CLAUDE.md, SPEC.md, and 
 <deferred>
 ## Deferred Ideas
 
-- **Refund / chargeback automation** — admin SQL script v1; dedicated phase post-launch if dispute volume warrants.
-- **PDF receipt / invoice email** — SePay's own email confirmation suffices for v1; PDF generation deferred to Phase 6 launch hardening or separate phase.
+- **Refund / chargeback automation** — admin SQL/manual reconciliation script v1; dedicated phase post-launch if dispute volume warrants.
+- **PDF receipt / invoice email** — bank/SePay confirmations may exist, but Zero Mail receipt/invoice generation is deferred to Phase 6 launch hardening or a separate phase.
 - **Credit bundles / package pricing** — single fixed `vnd-per-credit` rate v1; "buy 100 credits for 50k VND" packaging is Phase 5 marketing surface.
 - **Per-action cost preview UI** — Phase 5 territory; expose constants endpoint when Phase 5 needs it.
 - **Multi-currency support (USD/EUR top-up)** — VND-only v1; SePay is VN-domestic. International payment provider (Stripe) re-evaluation deferred.
 - **`/settings/billing` page** — Phase 5 user-surface phase.
 - **Soft-warn at low-balance threshold (e.g., 90% of typical daily spend)** — hard reject only v1; threshold tuning is Phase 5 telemetry.
-- **Rate limiting on the SePay webhook beyond signature check** — abuse handling (signature replay attack mitigation, IP allowlist, etc.) is future security-hardening phase.
-- **`SEPAY_WEBHOOK_SECRET` rotation drill** — captured in STATE.md Blockers under the same umbrella as `REFRESH_TOKEN_KEY_BASE64` rotation drill.
+- **Rate limiting on the SePay webhook beyond API-key auth** — abuse handling (invalid-auth spikes, IP allowlist, etc.) is future security-hardening phase.
+- **`SEPAY_WEBHOOK_API_KEY` rotation drill** — captured in STATE.md Blockers under the same umbrella as `REFRESH_TOKEN_KEY_BASE64` rotation drill.
 - **Admin-facing billing dashboard** — operator-side analytics (total credits issued, MRR-equivalent, refund rate) is post-v1 ops territory.
 - **LLM USD spend tracking + per-tenant daily spend cap** — orthogonal concern owned by Phase 2C (it's the platform-side cost guard; integer-credits ledger here is user-facing only).
 - **Anything related to `tenant_byok_credentials` table** — Phase 2C SPEC owns the table; Phase 2B only documents the BYOK exemption clause in `CreditLedger` Javadoc.

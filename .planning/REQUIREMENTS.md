@@ -51,7 +51,7 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 
 ### Billing (Prepaid Credits)
 
-- [ ] **BILL-01**: User can purchase prepaid credits via a payment provider (Stripe or LemonSqueezy)
+- [ ] **BILL-01**: User can purchase prepaid credits via SePay/VietQR for the Vietnam beta; global Merchant-of-Record/card provider is deferred
 - [ ] **BILL-02**: Each billable action (triage, draft, preview) deducts credits via a double-entry Postgres ledger
 - [ ] **BILL-03**: Credit reserve/settle/release flow prevents double-charge and lost credits under concurrency
 - [ ] **BILL-04**: A scheduled watchdog sweeps stale credit holds and releases them back to the balance
