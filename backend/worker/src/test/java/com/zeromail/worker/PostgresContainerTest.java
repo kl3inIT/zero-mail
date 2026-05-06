@@ -48,6 +48,10 @@ public abstract class PostgresContainerTest {
         r.add("zeromail.gmail.pubsub.topic-name", () -> "projects/test/topics/gmail");
         r.add("zeromail.gmail.api-root-url", GMAIL::baseUrl);
         r.add("zeromail.gmail.oauth-token-url", () -> GMAIL.baseUrl() + "token");
+        r.add("zero-mail.billing.sepay.webhook-api-key", () -> "test-sepay-key-fixture");
+        r.add("zero-mail.billing.vnd-per-credit", () -> "1000");
+        r.add("zero-mail.billing.max-pending-intents-per-tenant", () -> "5");
+        r.add("zero-mail.billing.intent-expiry", () -> "PT24H");
     }
 
     protected byte[] encryptedRefreshToken(UUID tenantId) {
