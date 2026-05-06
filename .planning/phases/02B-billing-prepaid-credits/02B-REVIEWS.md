@@ -1,6 +1,7 @@
 ---
 phase: 02B
-review_cycle: 1
+review_cycle: 2
+cycles_completed: 2
 reviewers: [codex, opencode]
 reviewed_at: 2026-05-06
 plans_reviewed:
@@ -11,7 +12,7 @@ plans_reviewed:
   - 02B-04-api-surface-PLAN.md
   - 02B-05-worker-schedulers-PLAN.md
   - 02B-06-verification-closure-PLAN.md
-current_high: 0
+current_high: 4
 addressed_at: 2026-05-06
 addressed_in: replan with --reviews; see "REVIEWS HIGH-N — RESOLVED" markers in each PLAN.md
 high_resolution_map:
@@ -163,3 +164,122 @@ All seven HIGHs are codex-only; opencode raised none. None are resolved (this is
 - **HIGH (codex):** `AdvisoryLockJdbcHelper` is shown as package-private in `persistence.lowlevel` yet imported from `core.billing.service` — won't compile; final visibility/placement is unresolved.
 - **HIGH (codex):** Plan 03 introduces required `BillingProperties` (incl. `sepay.webhookApiKey`) but only API/worker test bases get `DynamicPropertySource` overrides; core `@SpringBootTest` billing tests will fail to boot.
 - **HIGH (codex):** `credits = floor(amountVnd / vndPerCredit)` can be `0`, but `CreditLedgerEntryEntity.topup()` requires positive credits — webhook will throw on too-small SePay deposits.
+
+# Cycle 2 — Plan Reviews
+
+Reviewers: codex, opencode
+Date: 2026-05-06
+
+## Summary
+
+| Reviewer | Overall Risk        | HIGH | MEDIUM | LOW |
+|----------|---------------------|------|--------|-----|
+| codex    | MEDIUM              | 3 (new) + 1 (cycle-1 partial) | — | — |
+| opencode | LOW                 | 0 (new); cycle-1 HIGHs all RESOLVED | — | — |
+
+## Cycle 1 HIGH Resolution Verdicts
+
+Verdicts mediate codex's stricter view (codex inspected snippets line-by-line; opencode evaluated at structural level).
+
+| HIGH | Topic | Codex verdict | Opencode verdict | Final verdict |
+|------|-------|---------------|------------------|---------------|
+| HIGH-1 | Wave 0 `@Disabled` compile-RED | PARTIALLY RESOLVED (process accepted: tests committed RED, Plan 06 owns final GREEN gate; no technical fix to source) | RESOLVED | **PARTIALLY RESOLVED** (codex's stricter reading: the build is still RED during execution, gate moved to Plan 06) |
+| HIGH-2 | SePay tenant binding | RESOLVED (`BillingTopupIntentTenantLookup` projection + `ScopedValue.where(TenantContext.TENANT,...)`) | RESOLVED | **RESOLVED** |
+| HIGH-3 | OpenAPI `@Hidden` contradiction | RESOLVED (`@Hidden` removed, `@Tag(name="billing-webhook")` added) | RESOLVED | **RESOLVED** |
+| HIGH-4 | Worker sweeper transaction | RESOLVED (`@Transactional` on both `sweep()` and `expireStale`) | RESOLVED | **RESOLVED** |
+| HIGH-5 | `AdvisoryLockJdbcHelper` visibility | RESOLVED (class + ctor + method `public`; ArchUnit ban scoped to package) | RESOLVED | **RESOLVED** |
+| HIGH-6 | Core test billing properties | RESOLVED (`zero-mail.billing.*` `DynamicPropertySource` added to core `PostgresContainerTest`) | RESOLVED | **RESOLVED** |
+| HIGH-7 | 0-credit top-ups | RESOLVED (`createIntent` rejects below min; `applyWebhook` short-circuits with `event=sepay_topup_below_min_credits`) | RESOLVED | **RESOLVED** |
+
+## Codex Review (Cycle 2)
+
+### Cycle 1 HIGH Resolution Verdict
+
+| Cycle 1 HIGH | Status |
+|---|---|
+| HIGH-1 (`@Disabled` compile-RED) | PARTIALLY RESOLVED |
+| HIGH-2 (SePay tenant binding) | RESOLVED |
+| HIGH-3 (OpenAPI `@Hidden`) | RESOLVED |
+| HIGH-4 (Worker sweeper transaction) | RESOLVED |
+| HIGH-5 (`AdvisoryLockJdbcHelper` visibility) | RESOLVED |
+| HIGH-6 (Core test billing properties) | RESOLVED |
+| HIGH-7 (0-credit top-ups) | RESOLVED |
+
+HIGH-1 is partially resolved: the plans now openly accept that Wave 0 commits land RED and defer the green-build gate to Plan 06. This is a process acceptance, not a technical fix — `compileTestJava` still fails between Plan 00 and Plan 06, which violates the original convention that "every commit is green." The other six HIGHs have concrete plan-level fixes.
+
+### Summary
+
+The replanned Phase 2B is materially better than Cycle 1. Tenant-context handling, OpenAPI surface, worker transactions, advisory-lock visibility, core test wiring, and 0-credit guards are all properly addressed. The new pattern using `ScopedValue.where(TenantContext.TENANT, tenantId)` around webhook ledger writes is the right shape and matches existing tenant-aware paths.
+
+Three new blockers surfaced on a closer inspection of Plan 03 / Plan 04 / Plan 06 snippets that will fail at compile or runtime if executed verbatim. They are localized and cheap to fix, but they are real.
+
+### Strengths
+
+- `BillingTopupIntentTenantLookup` projection cleanly bypasses the Hibernate tenant filter for webhook resolution, then re-binds context before any JPA write — exactly the requested shape.
+- `applyWebhookForTenant` is correctly extracted as the actual transactional boundary; the outer `applyWebhook` is now a tenant-context wrapper.
+- Plan 06 has an explicit "GREEN gate" section that owns the build state, making the Wave-0 RED window explicit rather than hidden.
+- `AdvisoryLockJdbcHelper` is now `public` with a public `acquireTenantLock`, and the ArchUnit rule guards `JdbcTemplate` import by package, not visibility — the right separation.
+- Core `PostgresContainerTest` gets `zero-mail.billing.*` `DynamicPropertySource` entries the moment `BillingProperties` is introduced, removing the test-boot foot-gun.
+- Min-credit guard is now enforced on both edges: `createIntent` rejects sub-`vndPerCredit` amounts, and `applyWebhook` short-circuits with `event=sepay_topup_below_min_credits` if a stray webhook still produces 0 credits.
+- `SepayWebhookController` exposes the path under `@Tag(name="billing-webhook")`; `schema.d.ts` will include it without leaking other webhook internals.
+
+### Concerns
+
+- **HIGH (NEW): `applyWebhook` → `applyWebhookForTenant` self-invocation bypasses the `@Transactional` proxy.** Plan 03's revised `BillingTopupService` calls `applyWebhookForTenant(...)` from the same bean. Spring's CGLIB/JDK proxy only intercepts external calls, so the inner method's `@Transactional` annotation will not start a transaction. The `ScopedValue.where(TenantContext.TENANT, tenantId).run(() -> applyWebhookForTenant(...))` pattern needs to either (a) inject self via `@Lazy` and call through the proxy, or (b) collapse the two methods and start the tenant-bound transaction with `TransactionTemplate#execute` rather than annotation-driven AOP.
+
+- **HIGH (NEW): SePay payload field-order is wrong.** Plan 04's `SepayWebhookRequest` record places `code` before `referenceCode`, but per SePay's documented payload, `code` is the optional internal order code while `referenceCode` is the bank-issued reference and is mandatory. Several earlier snippets (and the Cycle-1 SePay correction note) treat `referenceCode` as the primary idempotency key. Either the record's parameter order or the parser/lookup logic — whichever the plan now relies on — must agree. As written, lookups by `code` will hit `null` for many real payloads and the unique constraint on `referenceCode` will not protect what callers think it does.
+
+- **HIGH (NEW): `BillingDomainBoundaryArchTest` references `CreditLedgerService.class` from outside its package.** Plan 06's ArchUnit test is placed in `com.zeromail.core.billing.arch` (or similar) and writes `noClasses().that().areNotAssignableTo(CreditLedgerService.class)...`. But `CreditLedgerService` is package-private in `com.zeromail.core.billing.service` (the plan keeps the implementation class non-public on purpose). A `.class` literal across package boundaries on a package-private type will not compile. The ArchUnit rule must either (a) target the public `CreditLedger` interface, (b) use the fully-qualified-name string form (`JavaClass.Predicates.assignableTo("com.zeromail.core.billing.service.CreditLedgerService")`), or (c) move the test into the same package.
+
+- **HIGH (PARTIAL from cycle 1): Wave 0 tests still committed RED.** HIGH-1 is process-resolved, not technically resolved. Plan 06 owns the green-build gate, and intermediate commits will fail `compileTestJava`. Acceptable if the team explicitly endorses RED-during-execution as a phase rule, but it is not a clean GREEN gate at every commit.
+
+### Suggestions
+
+- For the proxy self-invocation: the simplest fix is to keep `applyWebhook` as the only public method, drop the inner `@Transactional`, and wrap the body in `transactionTemplate.execute(status -> { ScopedValue.where(...).run(...); })` — this keeps the tenant binding inside the transaction and avoids self-invocation entirely.
+- For the SePay record: re-check the latest SePay docs (Cycle-1 already corrected from HMAC → API key; the field semantics are the next layer). Make `referenceCode` non-null and the canonical idempotency key in both the record's component order and `BillingTopupTransactionEntity.referenceCode`.
+- For the ArchUnit test: prefer string-FQN matching for cross-package package-private targets, or expose a marker interface (`CreditLedgerInternal`) that the impl implements and the test references.
+- Consider documenting the Wave-0 RED window as a phase-level convention in `PHASE-OVERVIEW.md` so reviewers don't keep re-flagging it.
+
+### Risk Assessment
+
+**Overall risk: MEDIUM.** Cycle 1's structural blockers are gone. The three new HIGHs are all localized to specific snippets and each has a one-line fix path. The lingering Wave-0 RED window is a process choice rather than a defect. After these three fixes, residual risk is concurrency-test fidelity and Liquibase-syntax confirmation — both already on the MEDIUM list.
+
+## OpenCode Review (Cycle 2)
+
+### Summary
+
+All seven Cycle 1 HIGH concerns have been properly addressed in the replanned phase. The fixes are concrete, localized, and consistent across the affected plans (00, 03, 04, 05, 06). The plans now read as executable: tenant context is bound before any JPA write in webhook flows, OpenAPI exposes `/api/billing/sepay/webhook` under `billing-webhook` tag, the worker sweeper is transactional, `AdvisoryLockJdbcHelper` is public with a properly-scoped ArchUnit guard, core tests get billing properties, and the 0-credit edge case is guarded on both ends.
+
+### Strengths
+
+- **HIGH-1 (Wave 0 RED)**: Plan 00 now explicitly states `depends_on:[02]` and acknowledges RED-during-execution; Plan 06 owns the final clean-check gate. The phase decomposes the build-state lifecycle honestly.
+- **HIGH-2 (SePay tenant binding)**: The `BillingTopupIntentTenantLookup` projection + `ScopedValue.where(TenantContext.TENANT, tenantId)` pattern is the right shape and matches the existing tenant-aware code paths. The two-step (lookup unfiltered, bind, write) is well-documented.
+- **HIGH-3 (OpenAPI)**: `@Hidden` removed, replaced with `@Tag(name="billing-webhook")`. `schema.d.ts` will now include the path. Acceptance criterion in Plan 06 aligns.
+- **HIGH-4 (Worker transaction)**: `@Transactional` is now on `BillingIntentExpirySweeper.sweep()` and defensively also on `BillingTopupIntentRepository.expireStale`. No transaction-required runtime risk.
+- **HIGH-5 (AdvisoryLockJdbcHelper)**: Class, constructor, and `acquireTenantLock` are all public. The ArchUnit rule bans `JdbcTemplate` imports by package, not by visibility — the correct separation of concerns.
+- **HIGH-6 (Core test properties)**: `PostgresContainerTest` in core gets `zero-mail.billing.*` `DynamicPropertySource` entries when `BillingProperties` is introduced. Core `@SpringBootTest` billing tests will boot.
+- **HIGH-7 (0-credit top-ups)**: `createIntent` rejects `amountVnd < vndPerCredit`; `applyWebhook` short-circuits with `event=sepay_topup_below_min_credits` if credits<=0. Belt-and-suspenders.
+
+### Concerns
+
+No new HIGH concerns. Previously raised MEDIUM/LOW items (hashtext collision documentation, advisory-lock observability counter, webhook response shape verification, security chain ordering verification) remain in scope as polish but do not block execution.
+
+### Suggestions
+
+- Carry forward the cycle 1 polish items (Micrometer counter for advisory lock contention, exact `{"success": true}` response shape verification against SePay docs, security-chain matcher specificity check) into Plan 06 verification or a follow-up phase.
+- Document the Wave-0 RED window as an explicit phase-level convention so future reviewers understand it is intentional.
+
+### Risk Assessment
+
+**Overall Risk Level: LOW.**
+
+All seven Cycle 1 HIGH concerns are addressed with concrete plan-level fixes. The plans are executable as-is. Residual risk is implementation-level (concurrency edge cases, Liquibase syntax) and well-covered by Wave 0 tests.
+
+## Consolidated Cycle 2 HIGH Concerns
+
+Deduped across reviewers. Counts only newly-raised HIGHs in cycle 2 plus any partially-resolved HIGHs from cycle 1, per the convergence inclusion rule.
+
+- **HIGH (codex, NEW):** `BillingTopupService.applyWebhook` calls `applyWebhookForTenant` on `this` — Spring's `@Transactional` proxy does not intercept self-invocation, so the inner method's transaction never starts. Fix: use `TransactionTemplate#execute` inside the `ScopedValue.where(...).run(...)` block, or inject self via `@Lazy` and call through the proxy.
+- **HIGH (codex, NEW):** `SepayWebhookRequest` record orders `code` before `referenceCode`, but per SePay's payload `referenceCode` is the mandatory bank-issued reference and the canonical idempotency key, while `code` is optional. The record's component order or the lookup/uniqueness logic must agree. As written, lookups by `code` will hit null for many real payloads.
+- **HIGH (codex, NEW):** `BillingDomainBoundaryArchTest` uses a `.class` literal (`CreditLedgerService.class`) on a package-private class from outside its package — won't compile. Fix: target the public `CreditLedger` interface, use ArchUnit's string-FQN form, or move the test into the same package.
+- **HIGH (codex, PARTIAL from cycle 1):** Wave 0 `@Disabled` tests are still committed RED. Plan 06 now owns the final clean-check gate, but intermediate commits between Plan 00 and Plan 06 fail `compileTestJava`. Process-accepted, not technically resolved.
