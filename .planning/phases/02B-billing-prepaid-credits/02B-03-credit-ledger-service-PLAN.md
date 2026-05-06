@@ -39,7 +39,8 @@ must_haves:
     - "`BillingProperties` is a `@ConfigurationProperties(prefix=\"zero-mail.billing\")` record with `vndPerCredit=1000` default + `sepay.webhookApiKey @NotBlank`."
     - "`BillingTopupService.createIntent(tenantId, amountVnd)` throws `IllegalArgumentException` when `amountVnd < vndPerCredit` (REVIEWS HIGH-7 — prevents 0-credit topups at intent creation)."
     - "`BillingTopupService.applyWebhook` short-circuits with `event=sepay_topup_below_min_credits` log + return when `credits <= 0` (REVIEWS HIGH-7 defense-in-depth for vnd-per-credit reconfiguration race)."
-    - "`BillingTopupService.applyWebhook` resolves the intent via `intentRepository.findTenantLookupByCode(code)` (raw JDBC, bypasses @TenantId filter), then `ScopedValue.where(TenantContext.TENANT, lookup.tenantId().toString()).run(...)` BEFORE any JPA write — REVIEWS HIGH-2 closed; webhook never calls `intentRepository.findByCode` directly because the request thread has no bound TenantContext."
+    - "`BillingTopupService.applyWebhook` resolves the intent via `intentRepository.findTenantLookupByCode(code)` (raw JDBC, bypasses @TenantId filter), then `ScopedValue.where(TenantContext.TENANT, lookup.tenantId().toString()).run(() -> transactionTemplate.executeWithoutResult(...))` BEFORE any JPA write — REVIEWS HIGH-2 (cycle 1) + HIGH-1 NEW (cycle 2) both closed: webhook never calls `intentRepository.findByCode` directly (no bound TenantContext on the request thread), and the transactional body runs via `TransactionTemplate` rather than self-invoking a `@Transactional` method on `this` (which would silently bypass Spring's proxy)."
+    - "`BillingTopupService.applyWebhook` reads SePay's `code` field first (with `content` fallback), per the SePay webhook spec — REVIEWS HIGH-2 NEW closed. `referenceCode` is treated as audit metadata only and persisted to `BillingTopupTransactionEntity.referenceCode` for SMS-trace forensics; the canonical idempotency key is the SePay `id` (transactionId) which the UNIQUE on `credit_ledger_entry.ref_id` enforces."
     - "`BillingTopupIntentRepository extends JpaRepository<BillingTopupIntentEntity, UUID>, BillingTopupIntentTenantLookupFragment` — fragment lives in `core.billing.persistence`, implementation lives in `core.billing.persistence.lowlevel.BillingTopupIntentRepositoryImpl` (ArchUnit-allowlisted for raw JDBC)."
     - "`./gradlew :backend:core:check` passes — Wave 0 RED tests in core/billing flip to GREEN once `@Disabled` annotations are removed by this plan."
   artifacts:
@@ -969,7 +970,7 @@ After all 3 files saved, flip Wave 0 `@Disabled` off in `SepayApiKeyVerifierTest
     - release symmetric: throw if SETTLED, no-op if RELEASED, else mark RELEASED + INSERT RELEASE journal entry.
     - balance read-only: returns CreditBalance(sumAvailableCreditsForTenant, sumHeldCreditsForTenant).
     - BillingTopupService.createIntent: count PENDING intents for tenant; if >= maxPendingIntentsPerTenant, expire oldest; generate unique 8-char code with up to 3 retries; INSERT intent with status=PENDING + expiresAt=now+intentExpiry; return DTO.
-    - BillingTopupService.applyWebhook: validate transferType=="in"; lookup intent by referenceCode (uppercase-normalized); if not found → log unknown_code event + return; if status != PENDING or expiresAt < now → log + return; if amount mismatch → log + return; else: in single TX, mark intent PAID + insert TOPUP entry; catch DataIntegrityViolationException = replay no-op.
+    - BillingTopupService.applyWebhook: validate transferType=="in"; resolve intent code via SePay `code` field first then `content` fallback (NOT `referenceCode` — per SePay spec that is bank/SMS reference, audit metadata only) using uppercase-normalized 8-char Crockford match; if not found → log unknown_code event + return; if status != PENDING or expiresAt < now → log + return; if amount mismatch → log + return; if credits<=0 → log sepay_topup_below_min_credits + return; else: open TX via TransactionTemplate inside the bound ScopedValue (NOT @Transactional self-invocation), mark intent PAID + insert TOPUP entry; catch DataIntegrityViolationException = replay no-op.
     - All Wave 0 `CreditLedgerConcurrentReserveTest` + `CreditLedgerSettleIdempotentTest` flip GREEN.
   </behavior>
   <read_first>
@@ -1139,6 +1140,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.zeromail.core.billing.model.BillingTopupIntentStatus;
 import com.zeromail.core.billing.persistence.BillingTopupIntentEntity;
@@ -1160,16 +1162,19 @@ public class BillingTopupService {
     private final CreditLedgerEntryRepository entryRepository;
     private final TopupCodeGenerator topupCodeGenerator;
     private final BillingProperties billingProperties;
+    private final TransactionTemplate transactionTemplate;
 
     public BillingTopupService(
             BillingTopupIntentRepository intentRepository,
             CreditLedgerEntryRepository entryRepository,
             TopupCodeGenerator topupCodeGenerator,
-            BillingProperties billingProperties) {
+            BillingProperties billingProperties,
+            TransactionTemplate transactionTemplate) {
         this.intentRepository = intentRepository;
         this.entryRepository = entryRepository;
         this.topupCodeGenerator = topupCodeGenerator;
         this.billingProperties = billingProperties;
+        this.transactionTemplate = transactionTemplate;
     }
 
     /**
@@ -1211,34 +1216,52 @@ public class BillingTopupService {
     }
 
     /**
-     * Per CONTEXT D-C3: parse referenceCode (or content fallback per Pitfall 1), uppercase,
-     * lookup intent. Unknown / mismatch / expired → ack 200 with opaque event log; happy path
-     * → in single TX: mark intent PAID + insert TOPUP entry; replay protected by UNIQUE on
-     * (ref_type='PAYMENT_SEPAY', ref_id=transactionId, kind='TOPUP').
+     * Per CONTEXT D-C3: parse {@code code} (SePay's detected payment-code field) with content
+     * fallback per Pitfall 1, uppercase, lookup intent. Unknown / mismatch / expired → ack 200
+     * with opaque event log; happy path → in single TX: mark intent PAID + insert TOPUP entry;
+     * replay protected by UNIQUE on (ref_type='PAYMENT_SEPAY', ref_id=transactionId, kind='TOPUP').
      *
-     * <p><b>Tenant binding (REVIEWS HIGH-2 — RESOLVED):</b> the SePay webhook runs on a
-     * request thread WITHOUT a bound {@link com.zeromail.core.tenant.TenantContext}
+     * <p><b>SePay field semantics (REVIEWS HIGH-2 NEW — RESOLVED):</b> per the SePay webhook
+     * spec (developer.sepay.vn/en/sepay-webhooks/tich-hop-webhook), {@code code} is the
+     * SePay-detected payment code (matches the intent code we generated), while
+     * {@code referenceCode} is the bank/SMS-provided reference (audit metadata only). We
+     * therefore try {@code code} first; if absent or non-matching shape, fall back to parsing
+     * the {@code content} memo string for an 8-char Crockford token. {@code referenceCode} is
+     * persisted onto {@code BillingTopupTransactionEntity.referenceCode} for audit but is
+     * NOT used for intent lookup or idempotency. The idempotency key is the SePay
+     * {@code id} (transactionId) which UNIQUEs the {@code credit_ledger_entry.ref_id}.
+     *
+     * <p><b>Tenant binding (REVIEWS HIGH-2 cycle 1 — RESOLVED):</b> the SePay webhook runs on
+     * a request thread WITHOUT a bound {@link com.zeromail.core.tenant.TenantContext}
      * (Authorization is API-key, not session). Calling {@code intentRepository.findByCode}
      * directly here would trip Hibernate's {@code @TenantId} filter and return empty. We
      * use {@link BillingTopupIntentRepository#findTenantLookupByCode} (raw JDBC, bypasses
      * the filter) to resolve {@code tenantId}, bind it via {@code ScopedValue.where}, and
-     * THEN perform JPA writes inside that scope so {@code @TenantId} accepts them.
+     * THEN open the transaction via {@link TransactionTemplate} inside that scope so JPA
+     * dirty-checking sees the tenant binding when SQL is flushed.
      *
-     * <p>Method itself is NOT {@code @Transactional} — the transaction is opened inside
-     * {@code applyWebhookForTenant} which runs under the bound ScopedValue.
+     * <p><b>Proxy self-invocation fix (REVIEWS HIGH-1 NEW — RESOLVED):</b> the previous
+     * design called {@code applyWebhookForTenant} on {@code this} from inside the
+     * {@code ScopedValue.where(...).run(...)} block. Spring's {@code @Transactional} proxy
+     * does NOT intercept self-invocations, so the inner annotation never started a
+     * transaction — the "mark intent PAID + insert TOPUP atomically" guarantee was broken.
+     * We now open the transaction explicitly via {@link TransactionTemplate#execute} inside
+     * the bound ScopedValue, which (a) avoids self-invocation entirely, (b) keeps tenant
+     * binding wrapping the transaction so flushes see {@code @TenantId} bound, and (c)
+     * keeps the public surface on {@code applyWebhook} only.
      */
-    public void applyWebhook(long sepayTransactionId, String referenceCode, String content, String transferType, long transferAmountVnd) {
+    public void applyWebhook(long sepayTransactionId, String code, String referenceCode, String content, String transferType, long transferAmountVnd) {
         if (!"in".equalsIgnoreCase(transferType)) {
             log.warn("event=sepay_webhook_non_inbound_ignored");
             return;
         }
-        Optional<String> codeOpt = extractIntentCode(referenceCode, content);
+        Optional<String> codeOpt = extractIntentCode(code, content);
         if (codeOpt.isEmpty()) {
             log.warn("event=sepay_webhook_unknown_code");
             return;
         }
-        String code = codeOpt.get();
-        Optional<BillingTopupIntentTenantLookup> maybeLookup = intentRepository.findTenantLookupByCode(code);
+        String resolvedCode = codeOpt.get();
+        Optional<BillingTopupIntentTenantLookup> maybeLookup = intentRepository.findTenantLookupByCode(resolvedCode);
         if (maybeLookup.isEmpty()) {
             log.warn("event=sepay_webhook_unknown_code");
             return;
@@ -1258,14 +1281,21 @@ public class BillingTopupService {
             return;
         }
 
-        // Bind TenantContext from the JDBC-resolved lookup BEFORE any JPA write so
-        // Hibernate @TenantId filter accepts the subsequent reads/writes.
+        // Bind TenantContext from the JDBC-resolved lookup BEFORE the transaction opens,
+        // and run the transactional body via TransactionTemplate so we never self-invoke a
+        // proxied @Transactional method (which would silently bypass the proxy).
         ScopedValue.where(TenantContext.TENANT, lookup.tenantId().toString()).run(() ->
-                applyWebhookForTenant(lookup.id(), sepayTransactionId, transferAmountVnd));
+                transactionTemplate.executeWithoutResult(transactionStatus ->
+                        applyTopupCreditTransactional(lookup.id(), sepayTransactionId, transferAmountVnd)));
     }
 
-    @Transactional(propagation = Propagation.REQUIRED)
-    void applyWebhookForTenant(UUID intentId, long sepayTransactionId, long transferAmountVnd) {
+    /**
+     * Body of the topup transaction. NOT {@code @Transactional} — its enclosing
+     * {@link TransactionTemplate#executeWithoutResult} call in {@link #applyWebhook} owns
+     * the transaction. Deliberately {@code private} to make the proxy-bypass concern a
+     * non-issue: there is no public proxy entry point for this method.
+     */
+    private void applyTopupCreditTransactional(UUID intentId, long sepayTransactionId, long transferAmountVnd) {
         // Re-fetch under bound TenantContext so JPA dirty checking + @TenantId filter both
         // operate correctly. The lookup projection above already validated status/amount/
         // expiry; here we only re-load to mutate.
@@ -1313,11 +1343,17 @@ public class BillingTopupService {
         }
     }
 
-    /** Pitfall 1: try referenceCode first, fall back to extracting an 8-char Crockford-shape token from content. */
-    private Optional<String> extractIntentCode(String referenceCode, String content) {
+    /**
+     * Pitfall 1 + REVIEWS HIGH-2 NEW: try SePay's {@code code} field first (the detected
+     * payment code), fall back to extracting an 8-char Crockford-shape token from
+     * {@code content} (the bank-memo string). {@code referenceCode} is NOT consulted here
+     * — per the SePay docs it carries the bank/SMS reference, which is audit metadata
+     * only and is not the canonical idempotency or lookup key.
+     */
+    private Optional<String> extractIntentCode(String code, String content) {
         java.util.regex.Pattern crockfordEight = java.util.regex.Pattern.compile("[0-9A-HJKMNPQRSTVWXYZ]{8}");
-        if (referenceCode != null) {
-            String normalized = referenceCode.trim().toUpperCase(java.util.Locale.ROOT);
+        if (code != null) {
+            String normalized = code.trim().toUpperCase(java.util.Locale.ROOT);
             if (crockfordEight.matcher(normalized).matches()) return Optional.of(normalized);
         }
         if (content != null) {
@@ -1332,9 +1368,9 @@ public class BillingTopupService {
 After saving both files, flip Wave 0 `@Disabled` off in `CreditLedgerConcurrentReserveTest.java` + `CreditLedgerSettleIdempotentTest.java` + `CreditLedgerEntryUniqueTest.java`. Run `./gradlew :backend:core:test --tests "com.zeromail.core.billing.*"` → all unit + integration tests should pass (the integration tests need Testcontainers Postgres which `PostgresContainerTest` boots automatically). If `CreditLedgerConcurrentReserveTest` is flaky, double-check that the test uses `StructuredTaskScope` + `CountDownLatch` simultaneous-release pattern (per CONTEXT D-A3) — Spring's default test transaction CAN swallow the REQUIRES_NEW propagation if the test method itself is `@Transactional`; the Wave 0 test must NOT be `@Transactional`.
   </action>
   <verify>
-    <automated>./gradlew :backend:core:compileJava 2>&1 | grep -q SUCCESSFUL; grep -q "Propagation.REQUIRES_NEW" backend/core/src/main/java/com/zeromail/core/billing/service/CreditLedgerService.java; grep -q "advisoryLockHelper.acquireTenantLock" backend/core/src/main/java/com/zeromail/core/billing/service/CreditLedgerService.java; grep -q "DataIntegrityViolationException" backend/core/src/main/java/com/zeromail/core/billing/service/CreditLedgerService.java; grep -q "DataIntegrityViolationException" backend/core/src/main/java/com/zeromail/core/billing/service/BillingTopupService.java; grep -q "event=sepay_topup_credited" backend/core/src/main/java/com/zeromail/core/billing/service/BillingTopupService.java; grep -q "findTenantLookupByCode" backend/core/src/main/java/com/zeromail/core/billing/service/BillingTopupService.java; grep -q "ScopedValue.where(TenantContext.TENANT" backend/core/src/main/java/com/zeromail/core/billing/service/BillingTopupService.java; test -f backend/core/src/main/java/com/zeromail/core/billing/persistence/BillingTopupIntentTenantLookup.java; test -f backend/core/src/main/java/com/zeromail/core/billing/persistence/BillingTopupIntentTenantLookupFragment.java; test -f backend/core/src/main/java/com/zeromail/core/billing/persistence/lowlevel/BillingTopupIntentRepositoryImpl.java; ./gradlew :backend:core:test --tests "com.zeromail.core.billing.service.*" 2>&1 | grep -E "BUILD SUCCESSFUL"</automated>
+    <automated>./gradlew :backend:core:compileJava 2>&1 | grep -q SUCCESSFUL; grep -q "Propagation.REQUIRES_NEW" backend/core/src/main/java/com/zeromail/core/billing/service/CreditLedgerService.java; grep -q "advisoryLockHelper.acquireTenantLock" backend/core/src/main/java/com/zeromail/core/billing/service/CreditLedgerService.java; grep -q "DataIntegrityViolationException" backend/core/src/main/java/com/zeromail/core/billing/service/CreditLedgerService.java; grep -q "DataIntegrityViolationException" backend/core/src/main/java/com/zeromail/core/billing/service/BillingTopupService.java; grep -q "event=sepay_topup_credited" backend/core/src/main/java/com/zeromail/core/billing/service/BillingTopupService.java; grep -q "findTenantLookupByCode" backend/core/src/main/java/com/zeromail/core/billing/service/BillingTopupService.java; grep -q "ScopedValue.where(TenantContext.TENANT" backend/core/src/main/java/com/zeromail/core/billing/service/BillingTopupService.java; grep -q "transactionTemplate.executeWithoutResult" backend/core/src/main/java/com/zeromail/core/billing/service/BillingTopupService.java; ! grep -E "applyWebhookForTenant" backend/core/src/main/java/com/zeromail/core/billing/service/BillingTopupService.java; test -f backend/core/src/main/java/com/zeromail/core/billing/persistence/BillingTopupIntentTenantLookup.java; test -f backend/core/src/main/java/com/zeromail/core/billing/persistence/BillingTopupIntentTenantLookupFragment.java; test -f backend/core/src/main/java/com/zeromail/core/billing/persistence/lowlevel/BillingTopupIntentRepositoryImpl.java; ./gradlew :backend:core:test --tests "com.zeromail.core.billing.service.*" 2>&1 | grep -E "BUILD SUCCESSFUL"</automated>
   </verify>
-  <done>CreditLedgerService implements all 4 CreditLedger methods with documented propagation; BillingTopupService.createIntent enforces max-5-PENDING and 3-attempt code retry; BillingTopupService.applyWebhook implements full D-C3 flow including referenceCode + content fallback (Pitfall 1) + UNIQUE-replay catch; Wave 0 core tests CreditLedgerConcurrentReserveTest + CreditLedgerSettleIdempotentTest + CreditLedgerEntryUniqueTest flipped GREEN.</done>
+  <done>CreditLedgerService implements all 4 CreditLedger methods with documented propagation; BillingTopupService.createIntent enforces max-5-PENDING and 3-attempt code retry; BillingTopupService.applyWebhook implements full D-C3 flow reading SePay `code` first with `content` fallback (REVIEWS HIGH-2 NEW), opens the tenant-bound transaction via `TransactionTemplate.executeWithoutResult` inside `ScopedValue.where(...)` (REVIEWS HIGH-1 NEW — no `@Transactional` self-invocation), `referenceCode` is audit metadata only, plus UNIQUE-replay catch; Wave 0 core tests CreditLedgerConcurrentReserveTest + CreditLedgerSettleIdempotentTest + CreditLedgerEntryUniqueTest flipped GREEN.</done>
 </task>
 
 </tasks>

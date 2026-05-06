@@ -113,7 +113,21 @@ Open Plan 00's RED scaffold. Remove all `@Disabled("Wave 0 RED scaffold...")` an
 
 1. `jdbc_template_only_in_lowlevel` — `noClasses().that().resideInAPackage("..core.billing..").and().resideOutsideOfPackage("..core.billing.persistence.lowlevel..").should().dependOnClassesThat().resideInAnyPackage("org.springframework.jdbc.core..")`. Should pass because Plan 03 only uses `JdbcTemplate` inside `AdvisoryLockJdbcHelper` which is in `lowlevel/`.
 
-2. `credit_ledger_service_not_instantiated_outside_billing_service` — Use the `noClasses().that().resideOutsideOfPackage("..core.billing.service..").should().callConstructor(CreditLedgerService.class)` form. (If `callConstructor` is not the exact ArchUnit DSL — check `ArchUnit 1.4.2` API — fall back to a `noClasses().should().dependOnClassesThat(equivalentTo(CreditLedgerService.class))` rule with a manual exclusion of the Spring container's auto-wiring path. The cleanest form: rely on `CreditLedgerService` being package-private; add a JUnit `@Test` asserting `assertThat(CreditLedgerService.class.getModifiers() & Modifier.PUBLIC).isZero();` if the ArchUnit form is awkward.)
+2. `credit_ledger_service_not_instantiated_outside_billing_service` — **REVIEWS HIGH-3 NEW (RESOLVED):** `CreditLedgerService` is package-private in `com.zeromail.core.billing.service` (Plan 03), so a `.class` literal from `BillingDomainBoundaryArchTest` (which lives in `com.zeromail.core.billing`, the parent package) WILL NOT COMPILE. Use ArchUnit's string-FQN form, which takes the fully-qualified name as a `String` and does NOT require a compile-time reference to the type:
+
+   ```java
+   @ArchTest
+   static final ArchRule credit_ledger_service_not_instantiated_outside_billing_service =
+       noClasses()
+           .that().resideOutsideOfPackage("..core.billing.service..")
+           .should().dependOnClassesThat()
+           .haveFullyQualifiedName("com.zeromail.core.billing.service.CreditLedgerService")
+           .because("D-G3: CreditLedgerService is package-private; callers must use the public CreditLedger interface");
+   ```
+
+   This works because `haveFullyQualifiedName(String)` is part of ArchUnit's `JavaClass.Predicates` family and does string matching at analysis time — the test class never needs the `CreditLedgerService.class` literal. The package-private visibility on `CreditLedgerService` itself is the primary defense; this ArchUnit rule is the secondary boundary that also catches reflective/`Class.forName` access drift. As a tertiary belt: keep the existing JUnit assertion `assertThat(CreditLedgerService.class.getModifiers() & Modifier.PUBLIC).isZero()` ONLY inside a test class that lives in the SAME package (`com.zeromail.core.billing.service`) — DO NOT put a `.class` literal in `BillingDomainBoundaryArchTest`. If the modifier-check is desired, place it in a separate `CreditLedgerServiceVisibilityTest.java` under `backend/core/src/test/java/com/zeromail/core/billing/service/`.
+
+   Targeting the public `CreditLedger` interface is also acceptable and arguably cleaner: `noClasses().that().resideOutsideOfPackage("..core.billing.service..").should().dependOnClassesThat().haveFullyQualifiedName("com.zeromail.core.billing.service.CreditLedgerService")` — keep using the FQN-string form for the implementation class because that is the boundary we are guarding. The interface is intentionally open for callers; the rule is about the impl.
 
 3. `core_billing_only_depends_on_allowed_packages` — assert `core.billing` only depends on `core.billing.*`, `core.tenant.*`, `core.shared.persistence.*`, `core.shared.lang.*`, plus standard JDK + Spring + Hibernate + SLF4J + Jackson + Jakarta packages. Mirror the rule from `02B-CONTEXT.md` D-G1.
 

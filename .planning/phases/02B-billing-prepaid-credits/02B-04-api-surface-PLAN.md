@@ -374,8 +374,13 @@ public class SepayWebhookController {
     @PostMapping("/api/billing/sepay/webhook")
     public Map<String, Object> receive(@RequestBody SepayWebhookPayload payload) {
         log.info("event=sepay_webhook_received");
+        // REVIEWS HIGH-2 NEW: per the SePay webhook spec, `code` is the payment-code field
+        // and is the primary intent-resolution input; `referenceCode` is the bank/SMS
+        // reference and is audit metadata only. Pass them in that order — service-side
+        // extractIntentCode reads `code` first with `content` fallback, NOT `referenceCode`.
         billingTopupService.applyWebhook(
                 payload.id(),
+                payload.code(),
                 payload.referenceCode(),
                 payload.content(),
                 payload.transferType(),

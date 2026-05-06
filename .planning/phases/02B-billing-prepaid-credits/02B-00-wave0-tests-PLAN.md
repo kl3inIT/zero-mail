@@ -28,6 +28,38 @@ depends_on: [02]
 # set OR land minimal production type skeletons before tests" with a pragmatic twist —
 # we use the natural plan-execution ordering (02 → 03 → 04 → 05 → 06) to land the
 # referenced symbols, and Plan 00 documents the RED-during-execution window honestly.
+#
+# REVIEWS HIGH-1 (cycle 2 PARTIAL — process-accepted as a phase-level convention):
+#
+# The "every commit is green" rule is RELAXED for Phase 2B intra-phase commits BY DESIGN.
+# Reviewers (codex cycle 2) flagged that intermediate commits between Plan 00 and Plan 06
+# fail `compileTestJava` and asked for either (a) shipping reflection/string-FQN tests
+# that compile against existing types only, or (b) explicit phase-level acceptance of
+# the RED window. We choose (b) for these reasons:
+#
+#   1. Plan 00 ships durable test contracts whose SHAPE depends on the production
+#      classes' actual signatures (e.g. `CreditLedgerEntryEntity.topup(...)` factory
+#      arity, `CreditReservationStatus.PENDING` enum value). Reflection-based scaffolds
+#      would require Plan 03/04/05 to rewrite the tests rather than flip `@Disabled`,
+#      which loses the Wave 0 contract value.
+#
+#   2. The phase-level acceptance gate is `./gradlew clean check BUILD SUCCESSFUL`
+#      at the END of Plan 06 (the last plan in the phase). Plan 06 OWNs the GREEN gate.
+#
+#   3. Intra-phase commits in Phase 2B are tagged in commit messages with a
+#      `[wave-0-red]` marker (e.g. "feat(billing): wave 0 RED scaffolds [wave-0-red]")
+#      so CI dashboards / git log readers can filter them. Plan 00 SUMMARY commit
+#      MUST include this marker; Plans 03/04/05 SUMMARY commits MUST NOT (those flip
+#      tests GREEN as part of their acceptance).
+#
+#   4. CI pipelines that key on per-commit GREEN status MAY be configured to run
+#      Phase 2B commits with `--continue` to expose the partial-failure shape rather
+#      than blocking. Production CI continues to enforce GREEN at the END of Phase 2B
+#      (Plan 06 commit) — at which point all Wave 0 `@Disabled` annotations are off.
+#
+# This is an explicit, time-boxed exception scoped to one phase. Phases 2C onward
+# revert to the standard "every commit GREEN" convention. Future phases requiring a
+# similar pattern must re-justify the acceptance in their own Plan 00 frontmatter.
 files_modified:
   - backend/core/src/test/java/com/zeromail/core/billing/service/CreditLedgerConcurrentReserveTest.java
   - backend/core/src/test/java/com/zeromail/core/billing/service/CreditLedgerSettleIdempotentTest.java
@@ -268,7 +300,7 @@ import com.zeromail.core.support.PostgresContainerTest;
 - `@AnalyzeClasses(packages = "com.zeromail.core.billing")` (or `"com.zeromail"` if other domains are scanned).
 - 3 `@ArchTest`s, all wrapped in `@Disabled` via custom annotation if ArchUnit doesn't honor `@Disabled` — alternative: use a `static final ArchRule` referenced from a `@Test @Disabled` JUnit method. Pick whichever runs RED:
   1. `jdbc_template_only_in_lowlevel` — `noClasses().that().resideInAPackage("..core.billing..").and().resideOutsideOfPackage("..core.billing.persistence.lowlevel..").should().dependOnClassesThat().resideInAnyPackage("org.springframework.jdbc.core..")`
-  2. `credit_ledger_service_not_instantiated_outside_billing_service` — `noClasses().that().resideOutsideOfPackage("..core.billing.service..").should().callConstructor(CreditLedgerService.class, ...)`
+  2. `credit_ledger_service_not_instantiated_outside_billing_service` — REVIEWS HIGH-3 NEW: `CreditLedgerService` is package-private in `..core.billing.service..` (Plan 03), so a `.class` literal from the parent-package test won't compile. Use ArchUnit's string-FQN form: `noClasses().that().resideOutsideOfPackage("..core.billing.service..").should().dependOnClassesThat().haveFullyQualifiedName("com.zeromail.core.billing.service.CreditLedgerService")`. Plan 06 reaffirms.
   3. `core_billing_only_depends_on_allowed_packages` — `classes().that().resideInAPackage("..core.billing..").should().onlyDependOnClassesThat().resideInAnyPackage("..core.billing..", "..core.tenant..", "..core.shared.persistence..", "..core.shared.lang..", "java..", "jakarta..", "org.springframework..", "org.hibernate..", "org.slf4j..", "com.fasterxml.jackson..")`. (Plan 06 widens this if false-positives surface.)
 
 **Why @Disabled instead of compile-RED only:** ArchUnit and `@SpringBootTest` failures cascade through the build. `@Disabled("Wave 0 RED scaffold")` keeps `./gradlew check` GREEN until production lands, AND the test files exist as durable contracts. This is the same pattern Phase 02A-00 used (verified by reading 02A-00-SUMMARY.md acceptance gate — the build was GREEN with disabled scaffolds). Executors flip `@Disabled → @Test` in Plan 03/04/05 acceptance.
