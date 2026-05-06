@@ -1,6 +1,7 @@
 package com.zeromail.core.billing.service;
 
 import java.time.Instant;
+import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
@@ -91,8 +92,13 @@ public class BillingTopupService {
   }
 
   /**
-   * Reads SePay's detected payment {@code code} first, with bank memo {@code content} fallback.
-   * {@code referenceCode} is audit metadata only and is not used for lookup or idempotency.
+   * Walks every plausible top-up code that may appear in the SePay payload (referenceCode, the
+   * detected code field, and any 8-character Crockford token in the bank memo content), in that
+   * priority order, deduplicated. The first candidate that resolves to a {@code PENDING}, unexpired
+   * intent with the exact transferred amount is credited. If no candidate is fully valid, the most
+   * specific known-intent failure is logged (status mismatch, expiry, or amount mismatch); only if
+   * no candidate resolves to any known intent do we fall through as {@code unknown_code}. Bank memo
+   * text and account numbers are never logged.
    */
   public void applyWebhook(
       long sepayTransactionId,
@@ -106,37 +112,60 @@ public class BillingTopupService {
       return;
     }
 
-    Optional<String> maybeIntentCode = extractIntentCode(code, content);
-    if (maybeIntentCode.isEmpty()) {
+    LinkedHashSet<String> candidateCodes = extractCandidateIntentCodes(referenceCode, code, content);
+    if (candidateCodes.isEmpty()) {
       log.warn("event=sepay_webhook_unknown_code tenantId=unresolved");
       return;
     }
 
-    Optional<BillingTopupIntentTenantLookup> maybeLookup =
-        intentRepository.findTenantLookupByCode(maybeIntentCode.get());
-    if (maybeLookup.isEmpty()) {
-      log.warn("event=sepay_webhook_unknown_code tenantId=unresolved");
-      return;
+    BillingTopupIntentTenantLookup matchedLookup = null;
+    BillingTopupIntentTenantLookup firstKnownLookup = null;
+    for (String candidateCode : candidateCodes) {
+      Optional<BillingTopupIntentTenantLookup> maybeLookup =
+          intentRepository.findTenantLookupByCode(candidateCode);
+      if (maybeLookup.isEmpty()) {
+        continue;
+      }
+      BillingTopupIntentTenantLookup lookup = maybeLookup.get();
+      if (firstKnownLookup == null) {
+        firstKnownLookup = lookup;
+      }
+      if (lookup.status() != BillingTopupIntentStatus.PENDING) {
+        continue;
+      }
+      if (lookup.expiresAt().toInstant().isBefore(Instant.now())) {
+        continue;
+      }
+      if (lookup.amountVnd() != transferAmountVnd) {
+        continue;
+      }
+      matchedLookup = lookup;
+      break;
     }
 
-    BillingTopupIntentTenantLookup lookup = maybeLookup.get();
-    if (lookup.status() != BillingTopupIntentStatus.PENDING) {
-      log.warn("event=sepay_webhook_intent_not_pending tenantId={}", lookup.tenantId());
-      return;
-    }
-    if (lookup.expiresAt().toInstant().isBefore(Instant.now())) {
-      log.warn("event=sepay_webhook_intent_expired tenantId={}", lookup.tenantId());
-      return;
-    }
-    if (lookup.amountVnd() != transferAmountVnd) {
+    if (matchedLookup == null) {
+      if (firstKnownLookup == null) {
+        log.warn("event=sepay_webhook_unknown_code tenantId=unresolved");
+        return;
+      }
+      if (firstKnownLookup.status() != BillingTopupIntentStatus.PENDING) {
+        log.warn(
+            "event=sepay_webhook_intent_not_pending tenantId={}", firstKnownLookup.tenantId());
+        return;
+      }
+      if (firstKnownLookup.expiresAt().toInstant().isBefore(Instant.now())) {
+        log.warn("event=sepay_webhook_intent_expired tenantId={}", firstKnownLookup.tenantId());
+        return;
+      }
       log.warn(
           "event=sepay_webhook_amount_mismatch tenantId={} intentVnd={} actualVnd={}",
-          lookup.tenantId(),
-          lookup.amountVnd(),
+          firstKnownLookup.tenantId(),
+          firstKnownLookup.amountVnd(),
           transferAmountVnd);
       return;
     }
 
+    BillingTopupIntentTenantLookup lookup = matchedLookup;
     ScopedValue.where(TenantContext.TENANT, lookup.tenantId().toString())
         .run(
             () ->
@@ -193,19 +222,35 @@ public class BillingTopupService {
     }
   }
 
-  private Optional<String> extractIntentCode(String code, String content) {
-    if (code != null) {
-      String normalizedCode = code.trim().toUpperCase(Locale.ROOT);
-      if (CROCKFORD_EIGHT_CHARACTER_CODE.matcher(normalizedCode).matches()) {
-        return Optional.of(normalizedCode);
-      }
-    }
+  /**
+   * Collects every plausible 8-character Crockford-shaped top-up code from the three SePay payload
+   * fields. Priority order matches typical reliability: {@code referenceCode} (SePay-detected
+   * reference) first, then the {@code code} field if it is itself a single 8-character token, then
+   * every 8-character match scanned out of the bank memo {@code content}. Duplicates are dropped
+   * while preserving insertion order. The result is normalized to upper-case so case-insensitive
+   * lookups hit the unique {@code billing_topup_intent.code} index.
+   */
+  private LinkedHashSet<String> extractCandidateIntentCodes(
+      String referenceCode, String code, String content) {
+    LinkedHashSet<String> candidates = new LinkedHashSet<>();
+    addIfMatchesWholeToken(candidates, referenceCode);
+    addIfMatchesWholeToken(candidates, code);
     if (content != null) {
       Matcher matcher = CROCKFORD_EIGHT_CHARACTER_CODE.matcher(content.toUpperCase(Locale.ROOT));
-      if (matcher.find()) {
-        return Optional.of(matcher.group());
+      while (matcher.find()) {
+        candidates.add(matcher.group());
       }
     }
-    return Optional.empty();
+    return candidates;
+  }
+
+  private static void addIfMatchesWholeToken(LinkedHashSet<String> candidates, String rawValue) {
+    if (rawValue == null) {
+      return;
+    }
+    String normalized = rawValue.trim().toUpperCase(Locale.ROOT);
+    if (CROCKFORD_EIGHT_CHARACTER_CODE.matcher(normalized).matches()) {
+      candidates.add(normalized);
+    }
   }
 }
