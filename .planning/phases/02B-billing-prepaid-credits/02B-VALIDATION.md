@@ -2,8 +2,8 @@
 phase: 2B
 slug: billing-prepaid-credits
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-05
 ---
 
@@ -72,22 +72,23 @@ created: 2026-05-05
 
 Wave 0 stubs (failing tests created BEFORE implementation, per Nyquist contract):
 
-- [ ] `backend/core/src/test/java/com/zeromail/core/billing/service/CreditLedgerConcurrentReserveTest.java` — REQ BILL-03
-- [ ] `backend/core/src/test/java/com/zeromail/core/billing/service/CreditLedgerSettleIdempotentTest.java` — REQ BILL-03 (settle/release/double-finalize)
-- [ ] `backend/core/src/test/java/com/zeromail/core/billing/service/SepayApiKeyVerifierTest.java` — REQ BILL-01 (constant-time compare unit)
-- [ ] `backend/core/src/test/java/com/zeromail/core/billing/service/TopupCodeGeneratorTest.java` — Crockford base32 8-char alphabet + collision retry
-- [ ] `backend/core/src/test/java/com/zeromail/core/billing/persistence/CreditLedgerEntryUniqueTest.java` — REQ BILL-02
-- [ ] `backend/core/src/test/java/com/zeromail/core/billing/CallSiteEnumMembershipArchTest.java` — REQ BILL-07
-- [ ] `backend/core/src/test/java/com/zeromail/core/billing/BillingDomainBoundaryArchTest.java` — Modulith + raw-JdbcTemplate ban + service-instantiation ban
-- [ ] `backend/api/src/test/java/com/zeromail/api/controllers/billing/SepayWebhookIntegrationTest.java` — REQ BILL-01
-- [ ] `backend/api/src/test/java/com/zeromail/api/controllers/billing/SepayReplayTest.java` — REQ BILL-01 idempotency
-- [ ] `backend/api/src/test/java/com/zeromail/api/controllers/billing/SepayBadAuthTest.java` — REQ BILL-01 401 path
-- [ ] `backend/api/src/test/java/com/zeromail/api/controllers/billing/BillingBalanceControllerTest.java` — REQ BILL-05
-- [ ] `backend/api/src/test/java/com/zeromail/api/controllers/billing/BillingBalanceMultiTenantLeakTest.java` — REQ BILL-05 isolation
-- [ ] `backend/api/src/test/java/com/zeromail/api/controllers/billing/BillingPrivacyLogScrubTest.java` — privacy invariant
-- [ ] `backend/api/src/test/java/com/zeromail/api/controllers/billing/BillingInsufficientCreditsTest.java` — REQ BILL-06 HTTP 402 mapping
-- [ ] `backend/worker/src/test/java/com/zeromail/worker/billing/CreditReserveWatchdogTest.java` — REQ BILL-04
-- [ ] `backend/worker/src/test/java/com/zeromail/worker/billing/BillingIntentExpirySweeperTest.java` — D-C4 (CONTEXT)
+- [x] `backend/core/src/test/java/com/zeromail/core/billing/service/CreditLedgerConcurrentReserveTest.java` — REQ BILL-03
+- [x] `backend/core/src/test/java/com/zeromail/core/billing/service/CreditLedgerSettleIdempotentTest.java` — REQ BILL-03 (settle/release/double-finalize)
+- [x] `backend/core/src/test/java/com/zeromail/core/billing/service/SepayApiKeyVerifierTest.java` — REQ BILL-01 (constant-time compare unit)
+- [x] `backend/core/src/test/java/com/zeromail/core/billing/service/TopupCodeGeneratorTest.java` — Crockford base32 8-char alphabet + collision retry
+- [x] `backend/core/src/test/java/com/zeromail/core/billing/persistence/CreditLedgerEntryUniqueTest.java` — REQ BILL-02
+- [x] `backend/core/src/test/java/com/zeromail/core/billing/CallSiteEnumMembershipArchTest.java` — REQ BILL-07
+- [x] `backend/core/src/test/java/com/zeromail/core/billing/BillingDomainBoundaryArchTest.java` — Modulith + raw-JdbcTemplate ban + service-instantiation ban
+- [x] `backend/api/src/test/java/com/zeromail/api/controllers/billing/SepayWebhookIntegrationTest.java` — REQ BILL-01
+- [x] `backend/api/src/test/java/com/zeromail/api/controllers/billing/SepayReplayTest.java` — REQ BILL-01 idempotency
+- [x] `backend/api/src/test/java/com/zeromail/api/controllers/billing/SepayBadAuthTest.java` — REQ BILL-01 401 path
+- [x] `backend/api/src/test/java/com/zeromail/api/controllers/billing/BillingBalanceControllerTest.java` — REQ BILL-05
+- [x] `backend/api/src/test/java/com/zeromail/api/controllers/billing/BillingBalanceMultiTenantLeakTest.java` — REQ BILL-05 isolation
+- [x] `backend/api/src/test/java/com/zeromail/api/controllers/billing/BillingPrivacyLogScrubTest.java` — privacy invariant
+- [x] `backend/api/src/test/java/com/zeromail/api/controllers/billing/SepayWebhookMismatchAuditEventTest.java` — REQ BILL-01 mismatch audit event
+- [x] `backend/api/src/test/java/com/zeromail/api/controllers/billing/BillingInsufficientCreditsTest.java` — REQ BILL-06 HTTP 402 mapping
+- [x] `backend/worker/src/test/java/com/zeromail/worker/billing/CreditReserveWatchdogTest.java` — REQ BILL-04
+- [x] `backend/worker/src/test/java/com/zeromail/worker/billing/BillingIntentExpirySweeperTest.java` — D-C4 (CONTEXT)
 - [ ] Update `apps/web/i18n/messages/{vi,en}.json` with `error.billing.insufficient` (+ any other `error.billing.*` keys planner introduces)
 - [ ] Update `ApiPostgresTestBase.props()` + worker `PostgresContainerTest.props()` with `zero-mail.billing.sepay.webhook-api-key=test-sepay-key-fixture` (so `:?` fail-fast doesn't crash `@SpringBootTest`)
 - [ ] Update `backend/api/build.gradle.kts` `customBootRun.args` with dummy `--zero-mail.billing.sepay.webhook-api-key=openapi-emit` (so `springdoc-openapi` hermetic emit boots — Pitfall 9 mitigation)
