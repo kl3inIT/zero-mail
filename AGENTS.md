@@ -117,6 +117,30 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 <!-- GSD:workflow-end -->
 
+## Tooling
+
+**JetBrains MCP first.** This project is opened in IntelliJ IDEA with the JetBrains MCP server attached, so its tools see the live project index (symbols, deps, problems). Prefer them over generic file/shell tools for project-aware operations:
+
+- **Read/search code**: `mcp__jetbrains__get_file_text_by_path`, `mcp__jetbrains__search_in_files_by_text`, `mcp__jetbrains__search_in_files_by_regex`, `mcp__jetbrains__search_symbol`, `mcp__jetbrains__get_symbol_info` — over `Read` / `Grep` when you need symbol-aware results or are inspecting Java/Kotlin sources.
+- **Diagnose**: `mcp__jetbrains__get_file_problems` after meaningful Java edits, before declaring done (matches existing memory rule).
+- **Refactor/rename**: `mcp__jetbrains__rename_refactoring`, `mcp__jetbrains__replace_text_in_file`, `mcp__jetbrains__reformat_file` — over manual `Edit` for cross-file renames or formatting.
+- **Build/run**: `mcp__jetbrains__build_project`, `mcp__jetbrains__execute_run_configuration`, `mcp__jetbrains__get_project_dependencies`, `mcp__jetbrains__get_project_modules` — over raw `gradle` shell calls when an existing run config or the module graph already answers the question.
+
+Fall back to `Read` / `Grep` / `Edit` / `Bash` when JetBrains MCP is unavailable, when working outside Java/Kotlin (e.g. `.gitignore`, YAML, shell), or when the operation is purely text-level (simple file create, single-line edit, git commands).
+
+**Postgres MCP Pro for database work.** PostgreSQL is the primary datastore (and the v1 queue). Prefer Postgres MCP tools over `psql` shell calls for any inspection, diagnostics, or query work:
+
+- **Schema introspection**: `mcp__postgres__list_schemas`, `mcp__postgres__list_objects`, `mcp__postgres__get_object_details` — over hand-written `information_schema` queries when checking tables, columns, indexes, constraints.
+- **Query diagnostics**: `mcp__postgres__explain_query`, `mcp__postgres__analyze_query_indexes`, `mcp__postgres__analyze_workload_indexes`, `mcp__postgres__get_top_queries` — when a query is slow, before adding an index, or when reviewing a Liquibase changelog that touches hot paths.
+- **Health checks**: `mcp__postgres__analyze_db_health` — when investigating production-like issues (bloat, cache hit ratio, replication, vacuum).
+- **Ad-hoc SQL**: `mcp__postgres__execute_sql` — for read-only verification queries against the dev DB. Never run destructive SQL through MCP without explicit user approval; prefer a Liquibase changelog for any schema change (per project policy).
+
+**Playwright MCP for browser verification.** Frontend changes in `apps/web` must be verified in a real browser before declaring done — type-check passing is not enough (per project UX rule).
+
+- **Verify UI**: `mcp__playwright__browser_navigate`, `mcp__playwright__browser_snapshot`, `mcp__playwright__browser_click`, `mcp__playwright__browser_fill_form`, `mcp__playwright__browser_take_screenshot` — drive the running `apps/web` dev server through the golden path + edge cases.
+- **Debug**: `mcp__playwright__browser_console_messages`, `mcp__playwright__browser_network_requests`, `mcp__playwright__browser_evaluate` — when a UI change misbehaves, inspect console + network before guessing.
+- **Auth flows**: use Playwright MCP to walk the OAuth login + Gmail-connect flow end-to-end whenever auth, session, or scope handling changes.
+
 <!-- GSD:profile-start -->
 
 ## Developer Profile

@@ -8,3 +8,4 @@ node_modules/
 out/
 apps/web/.next/
 apps/web/node_modules/
+.playwright-mcp/
