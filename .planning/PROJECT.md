@@ -110,7 +110,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Mail provider (v1)**: Gmail / Google Workspace only, via Gmail API + Google Pub/Sub push — locked by product decision.
 - **Distribution (v1)**: Self-hosted SaaS on a single VPS for the current deployment; managed cloud can be revisited later — locked by user decision.
 - **LLM routing**: Default via OpenRouter behind Spring AI; BYOK supported — locked by product decision.
-- **Billing model**: Prepaid credits, pay-as-you-go; unit economics TBD — locked direction, details deferred.
+- **Billing model**: Prepaid credits, pay-as-you-go. Vietnam beta top-ups use SePay/VietQR against a Postgres ledger with a configurable VND-per-credit rate; global Merchant-of-Record/card provider remains deferred.
 - **Privacy**: No long-term storage of raw email bodies, LLM prompts/completions, or embeddings. Content always sanitized + truncated + prompt-injection-hardened before hitting any LLM — locked.
 - **Write actions allowed in v1**: label, archive (skip inbox), save Gmail draft. **Auto-send is forbidden.**
 - **Primary datastore**: PostgreSQL self-hosted on the same VPS as the app (confirmed). Redis also runs on the same VPS for cache / session / rate-limit infrastructure only; vector DB is deferred.
@@ -132,6 +132,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 | Name "Zero Mail" — placeholder | Directory-derived; final brand will be chosen before public launch to avoid rework | Pending rename before launch |
 | Single bundled Google OAuth registration | Phase 01.5 removed the separate `google-gmail` leg; login now requests Gmail scopes up front and persists the Gmail connection during provisioning | Chosen |
 | Single VPS deployment baseline | Current deployment runs app, worker, web, PostgreSQL, and Redis together on one VPS; no GCP hosting baseline or `spring-cloud-gcp` starter by default | Chosen |
+| Billing configuration under `ZeroMailCoreProperties` | Phase 02B follows the existing backend properties convention: core-owned settings stay under one core properties root and bind as `zeromail.billing.*`, avoiding separate per-domain properties/configuration classes | Chosen |
 
 ## Evolution
 
@@ -151,4 +152,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-28 after Phase 01.5*
+*Last updated: 2026-05-06 after Phase 02B*
