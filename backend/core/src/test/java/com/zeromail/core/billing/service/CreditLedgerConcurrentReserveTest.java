@@ -6,7 +6,6 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.StructuredTaskScope;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -30,7 +29,6 @@ class CreditLedgerConcurrentReserveTest extends PostgresContainerTest {
     @Autowired JdbcTemplate jdbcTemplate;
 
     @Test
-    @Disabled("Wave 0 RED scaffold - production class lands in Plan 03")
     void ten_virtual_threads_reserve_against_available_5_yields_exactly_5_successes() throws Exception {
         UUID tenantId = seedTenant();
         ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() ->

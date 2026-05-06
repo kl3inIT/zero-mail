@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.UUID;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -27,7 +26,6 @@ class CreditLedgerSettleIdempotentTest extends PostgresContainerTest {
     @Autowired JdbcTemplate jdbcTemplate;
 
     @Test
-    @Disabled("Wave 0 RED scaffold - production class lands in Plan 03")
     void settle_twice_is_no_op() {
         UUID tenantId = seedTenantWithCredits(10);
         ReservationId reservationId = reserveTriage(tenantId);
@@ -41,7 +39,6 @@ class CreditLedgerSettleIdempotentTest extends PostgresContainerTest {
     }
 
     @Test
-    @Disabled("Wave 0 RED scaffold - production class lands in Plan 03")
     void release_twice_is_no_op() {
         UUID tenantId = seedTenantWithCredits(10);
         ReservationId reservationId = reserveTriage(tenantId);
@@ -55,7 +52,6 @@ class CreditLedgerSettleIdempotentTest extends PostgresContainerTest {
     }
 
     @Test
-    @Disabled("Wave 0 RED scaffold - production class lands in Plan 03")
     void release_after_settle_throws_IllegalLedgerStateException() {
         UUID tenantId = seedTenantWithCredits(10);
         ReservationId reservationId = reserveTriage(tenantId);
@@ -69,7 +65,6 @@ class CreditLedgerSettleIdempotentTest extends PostgresContainerTest {
     }
 
     @Test
-    @Disabled("Wave 0 RED scaffold - production class lands in Plan 03")
     void settle_after_release_throws_IllegalLedgerStateException() {
         UUID tenantId = seedTenantWithCredits(10);
         ReservationId reservationId = reserveTriage(tenantId);

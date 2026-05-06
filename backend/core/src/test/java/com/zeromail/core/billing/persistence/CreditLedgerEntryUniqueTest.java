@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.UUID;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -19,7 +18,6 @@ class CreditLedgerEntryUniqueTest extends PostgresContainerTest {
     @Autowired JdbcTemplate jdbcTemplate;
 
     @Test
-    @Disabled("Wave 0 RED scaffold - production class lands in Plan 03")
     void unique_constraint_blocks_duplicate_ref_type_id_kind() {
         UUID tenantId = seedTenant();
 
