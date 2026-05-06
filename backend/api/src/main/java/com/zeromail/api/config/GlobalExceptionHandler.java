@@ -23,6 +23,8 @@ import com.zeromail.api.error.AllowedParamScalars;
 import com.zeromail.api.error.ErrorCodes;
 import com.zeromail.api.error.FieldErrorDto;
 import com.zeromail.core.account.model.CurrentUserNotFoundException;
+import com.zeromail.core.billing.model.IllegalLedgerStateException;
+import com.zeromail.core.billing.model.InsufficientCreditsException;
 
 import jakarta.validation.ConstraintViolationException;
 import org.jspecify.annotations.NonNull;
@@ -123,6 +125,26 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         "Conflict",
         "The resource was modified by another request before this update completed.",
         ErrorCodes.CONFLICT);
+  }
+
+  @ExceptionHandler(InsufficientCreditsException.class)
+  public ResponseEntity<ProblemDetail> onInsufficientCredits(InsufficientCreditsException exception) {
+    log.warn("Insufficient credits translated to 402: {}", exception.getClass().getSimpleName());
+    return problem(
+        HttpStatus.valueOf(402),
+        "Insufficient credits",
+        "The current tenant balance is too low for this action.",
+        ErrorCodes.BILLING_INSUFFICIENT_CREDITS);
+  }
+
+  @ExceptionHandler(IllegalLedgerStateException.class)
+  public ResponseEntity<ProblemDetail> onIllegalLedgerState(IllegalLedgerStateException exception) {
+    log.error("Illegal ledger state transition translated to 500: {}", exception.getClass().getSimpleName());
+    return problem(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        "Ledger state invariant violated",
+        "An internal billing-state transition was attempted in an invalid order.",
+        ErrorCodes.BILLING_LEDGER_INVALID_STATE);
   }
 
   @ExceptionHandler(IllegalStateException.class)
