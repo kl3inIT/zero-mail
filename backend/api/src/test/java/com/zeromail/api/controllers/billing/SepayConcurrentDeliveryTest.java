@@ -46,9 +46,9 @@ class SepayConcurrentDeliveryTest extends ApiPostgresTestBase {
   @Test
   void two_concurrent_identical_webhooks_both_return_200_and_credit_once() throws Exception {
     UUID tenantId = seedTenant();
-    seedPendingIntent(tenantId, "CON12345", 100_000L);
+    seedPendingIntent(tenantId, "CNX12345", 100_000L);
 
-    SepayWebhookPayload payload = sepayPayload(8001L, "CON12345", "CON12345 nap tien", 100_000L);
+    SepayWebhookPayload payload = sepayPayload(8001L, "CNX12345", "CNX12345 nap tien", 100_000L);
 
     try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
       Callable<Integer> deliver = () -> postWebhook(payload).getStatusCode().value();
@@ -62,7 +62,7 @@ class SepayConcurrentDeliveryTest extends ApiPostgresTestBase {
     }
 
     assertThat(countTopupEntries(tenantId)).isEqualTo(1L);
-    BillingTopupIntentEntity paidIntent = findIntentByCode(tenantId, "CON12345");
+    BillingTopupIntentEntity paidIntent = findIntentByCode(tenantId, "CNX12345");
     assertThat(paidIntent.getStatus()).isEqualTo(BillingTopupIntentStatus.PAID);
   }
 
