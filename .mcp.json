@@ -1,13 +1,28 @@
 {
   "mcpServers": {
     "playwright-test": {
-      "command": "cmd",
+      "command": "node",
       "args": [
-        "/c",
-        "npx",
-        "playwright",
-        "run-test-mcp-server"
+        "node_modules/playwright/cli.js",
+        "run-test-mcp-server",
+        "--headless"
       ]
+    },
+    "postgres": {
+      "type": "stdio",
+      "command": "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "DATABASE_URI",
+        "crystaldba/postgres-mcp",
+        "--access-mode=unrestricted"
+      ],
+      "env": {
+        "DATABASE_URI": "postgresql://zeromail:zeromail@host.docker.internal:5432/zeromail"
+      }
     }
   }
 }

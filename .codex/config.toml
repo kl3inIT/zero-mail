@@ -1,0 +1,18 @@
+# Project-scoped Codex config for zero-mail.
+# Loaded only when this project is marked trusted in ~/.codex/config.toml.
+# See: https://github.com/openai/codex/blob/main/docs/config.md
+
+[mcp_servers.postgres]
+command = 'C:\Program Files\Docker\Docker\resources\bin\docker.exe'
+args = [
+  "run",
+  "-i",
+  "--rm",
+  "-e",
+  "DATABASE_URI",
+  "crystaldba/postgres-mcp",
+  "--access-mode=unrestricted",
+]
+
+[mcp_servers.postgres.env]
+DATABASE_URI = "postgresql://zeromail:zeromail@host.docker.internal:5432/zeromail"
