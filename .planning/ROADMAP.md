@@ -235,7 +235,7 @@ Plans:
 - [x] 02B-00-wave0-tests-PLAN.md — Wave 0 RED test scaffolds (7 core + 8 api + 2 worker = 17 files; flip VALIDATION nyquist_compliant true)
 - [x] 02B-01-schema-and-deps-PLAN.md — Liquibase 014 (credit_ledger_entry) + 015 (credit_reservation) + 016 (billing_topup_intent) + 017 (shedlock); ShedLock 7.7.0 + worker build wiring
 - [x] 02B-02-domain-model-PLAN.md — core.billing Modulith leaf + model package (CreditLedger interface + 3 enums + 2 records + 2 exceptions; BYOK Javadoc clause)
-- [ ] 02B-03-credit-ledger-service-PLAN.md — 3 entities + 3 repositories + AdvisoryLockJdbcHelper + BillingProperties + SepayApiKeyVerifier + TopupCodeGenerator + CreditLedgerService (REQUIRES_NEW + advisory lock) + BillingTopupService
+- [x] 02B-03-credit-ledger-service-PLAN.md — 3 entities + 3 repositories + AdvisoryLockJdbcHelper + BillingProperties + SepayApiKeyVerifier + TopupCodeGenerator + CreditLedgerService (REQUIRES_NEW + advisory lock) + BillingTopupService
 - [ ] 02B-04-api-surface-PLAN.md — 4 DTOs + BillingController + SepayWebhookController + @Order(1) BillingWebhookSecurityConfig + SepayApiKeyAuthFilter + ErrorCodes + GlobalExceptionHandler 402/500 + i18n vi/en + schema.d.ts regen
 - [ ] 02B-05-worker-schedulers-PLAN.md — CreditReserveWatchdog (60s + ShedLock + ScopedValue tenant binding) + BillingIntentExpirySweeper (1h) + worker application.yml :? fail-fast (close CR-04 carryover)
 - [ ] 02B-06-verification-closure-PLAN.md — DomainBoundaryArchTests (5th billing rule) + BillingDomainBoundaryArchTest GREEN + CallSiteEnumMembershipArchTest GREEN + REQUIREMENTS.md BILL-01..BILL-07 flip + ./gradlew clean check
