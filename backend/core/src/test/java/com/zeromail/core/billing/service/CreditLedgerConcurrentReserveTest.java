@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.zeromail.core.billing.model.CallSite;
-import com.zeromail.core.billing.model.CreditLedger;
 import com.zeromail.core.billing.model.InsufficientCreditsException;
 import com.zeromail.core.billing.model.ReservationId;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryEntity;

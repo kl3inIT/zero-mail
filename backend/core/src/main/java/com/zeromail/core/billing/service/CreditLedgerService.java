@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.zeromail.core.billing.model.CallSite;
 import com.zeromail.core.billing.model.CreditBalance;
-import com.zeromail.core.billing.model.CreditLedger;
 import com.zeromail.core.billing.model.CreditReservationStatus;
 import com.zeromail.core.billing.model.IllegalLedgerStateException;
 import com.zeromail.core.billing.model.InsufficientCreditsException;

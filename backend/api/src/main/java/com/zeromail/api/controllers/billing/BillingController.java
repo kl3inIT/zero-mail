@@ -11,9 +11,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.zeromail.api.dto.billing.BillingBalanceResponse;
 import com.zeromail.api.dto.billing.TopupIntentRequest;
 import com.zeromail.api.dto.billing.TopupIntentResponse;
-import com.zeromail.core.billing.model.CreditLedger;
 import com.zeromail.core.billing.persistence.BillingTopupIntentEntity;
 import com.zeromail.core.billing.service.BillingTopupService;
+import com.zeromail.core.billing.service.CreditLedger;
 import com.zeromail.core.tenant.TenantContext;
 
 import io.swagger.v3.oas.annotations.tags.Tag;

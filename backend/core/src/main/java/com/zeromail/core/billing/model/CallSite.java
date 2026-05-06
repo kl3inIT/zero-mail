@@ -11,7 +11,7 @@ import com.zeromail.core.shared.lang.IdentifiedEnum;
  *
  * <p><b>Locked membership (D-G3):</b> {@code TRIAGE}, {@code DRAFT}, {@code PREVIEW}.
  * There is intentionally no BYOK member because BYOK traffic bypasses the ledger entirely.
- * See {@link CreditLedger} Javadoc.
+ * The ledger service contract documents the BYOK skip path.
  *
  * <p><b>Costs:</b> TRIAGE = 1, DRAFT = 2, PREVIEW = 1.
  */

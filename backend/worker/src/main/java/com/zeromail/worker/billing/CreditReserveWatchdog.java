@@ -9,11 +9,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import com.zeromail.core.billing.model.CreditLedger;
 import com.zeromail.core.billing.model.IllegalLedgerStateException;
 import com.zeromail.core.billing.model.ReservationId;
 import com.zeromail.core.billing.persistence.CreditReservationRepository;
 import com.zeromail.core.billing.persistence.StaleReservation;
+import com.zeromail.core.billing.service.CreditLedger;
 import com.zeromail.core.tenant.TenantContext;
 
 import io.micrometer.core.instrument.Counter;

@@ -2,7 +2,7 @@
  * Billing domain: prepaid credit ledger with reserve, settle, and release semantics.
  *
  * <p><b>Cross-phase contract.</b> Phase 2C ({@code core.llm.LlmGateway}) imports
- * {@link com.zeromail.core.billing.model.CreditLedger} verbatim and calls
+ * {@link com.zeromail.core.billing.service.CreditLedger} verbatim and calls
  * {@code reserve(tenantId, callSite)} on the gateway pre-call path when no BYOK
  * credential exists for the tenant.
  *
@@ -14,8 +14,8 @@
  *
  * <p><b>Sub-packages (D-G2):</b>
  * <ul>
- *   <li>{@code model} - public API: interface, records, enums, exceptions.</li>
- *   <li>{@code service} - implementation, added in Plan 03.</li>
+ *   <li>{@code model} - public records, enums, and exceptions.</li>
+ *   <li>{@code service} - public service contract and implementation.</li>
  *   <li>{@code persistence} - JPA entities and repositories, added in Plan 03.</li>
  *   <li>{@code persistence.lowlevel} - raw JDBC for {@code pg_advisory_xact_lock},
  *       ArchUnit-allowlisted and added in Plan 03.</li>

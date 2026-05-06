@@ -13,12 +13,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.zeromail.core.billing.model.CallSite;
-import com.zeromail.core.billing.model.CreditLedger;
 import com.zeromail.core.billing.model.CreditReservationStatus;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryEntity;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryRepository;
 import com.zeromail.core.billing.persistence.CreditReservationEntity;
 import com.zeromail.core.billing.persistence.CreditReservationRepository;
+import com.zeromail.core.billing.service.CreditLedger;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.worker.PostgresContainerTest;
 
