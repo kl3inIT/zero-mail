@@ -1,7 +1,7 @@
 ---
 phase: 02B
-review_cycle: 2
-cycles_completed: 2
+review_cycle: 3
+cycles_completed: 3
 reviewers: [codex, opencode]
 reviewed_at: 2026-05-06
 plans_reviewed:
@@ -12,7 +12,13 @@ plans_reviewed:
   - 02B-04-api-surface-PLAN.md
   - 02B-05-worker-schedulers-PLAN.md
   - 02B-06-verification-closure-PLAN.md
-current_high: 0
+current_high: 4
+cycle3_high_breakdown: 3 new codex HIGHs + 1 carry-over PARTIAL (Wave 0 RED window)
+cycle3_opencode_status: provider_error (skipped — only codex reviewed cycle 3)
+cycle3_new_highs:
+  - "version column type mismatch: new billing migrations declare version as bigint but AbstractAuditableEntity.version is Integer; spring.jpa.hibernate.ddl-auto=validate will fail"
+  - "SEPAY_WEBHOOK_API_KEY:?msg placeholder is not reliable Spring fail-fast for plain strings — missing env can bind the literal '?...must...' and @NotBlank passes"
+  - "SepayWebhookMismatchAuditEventTest uses code='MISMATCH' but 'I' is excluded by Crockford regex and service ignores referenceCode for lookup; will log unknown_code not amount_mismatch"
 cycle2_addressed_at: 2026-05-06
 cycle2_addressed_in: second replan with --reviews; see "REVIEWS HIGH-N NEW — RESOLVED" markers in plans 03/04/06 and the explicit RED-window convention block at the top of plan 00
 cycle2_high_resolution_map:
@@ -337,3 +343,82 @@ This is option (a) from the codex suggestion list: "collapse the two methods and
 
 - New explicit phase-level convention block added to the frontmatter comment, accepting the RED window between Plan 00 and Plan 06 as a time-boxed, scoped-to-Phase-2B exception to the "every commit GREEN" rule. Reasons documented: (1) reflection-based scaffolds would force test rewrites instead of `@Disabled` flips; (2) Plan 06 owns the final GREEN gate; (3) intra-phase commits tagged with `[wave-0-red]` marker for CI/dashboard filtering; (4) Phases 2C onward revert to standard "every commit GREEN."
 - This is the "explicit acceptance" path codex offered as an alternative to restructuring Plan 00 around reflection/string-FQN scaffolds. The `[wave-0-red]` commit-message tag operationalises codex's "or similar" suggestion for CI markers.
+
+
+---
+
+# Cycle 3 — Plan Reviews
+
+**Reviewers:** codex (succeeded), opencode (provider error — skipped)
+**Date:** 2026-05-06
+**Plans state:** commit `d991d44` (after cycle-2 replan)
+
+## Summary
+
+| Reviewer | Overall Risk | HIGH | MEDIUM | LOW |
+|----------|--------------|------|--------|-----|
+| codex    | HIGH→MEDIUM after fixes | 3 new | 2 | 1 |
+| opencode | (failed)     | —    | —      | —   |
+
+## Cycle 2 HIGH Resolution Verdict (per codex)
+
+| Cycle 2 HIGH | Verdict | Justification |
+|---|---|---|
+| 1. `applyWebhook` self-invocation bypasses `@Transactional` proxy | RESOLVED | Plan 03 now uses `TransactionTemplate.executeWithoutResult(...)` inside `ScopedValue.where(...)`, eliminating proxied self-invocation. Matches Spring's documented proxy limitation. |
+| 2. SePay `code` / `referenceCode` semantics | RESOLVED | Plan 03/04 pass `code` before `referenceCode`; lookup tries `code` first with `content` fallback; `referenceCode` is audit metadata. Matches SePay docs. |
+| 3. ArchUnit `.class` access on package-private type | RESOLVED | Plan 06 + Plan 00 use `haveFullyQualifiedName(String)` form. No `.class` literal across packages. |
+| 4. Wave 0 RED compile window | PARTIALLY RESOLVED | RED window is now explicit and process-accepted, but not technically removed. Intermediate commits still fail `compileTestJava` by design. |
+
+## Codex Review (Cycle 3)
+
+> Source: `/tmp/gsd-review-codex-02B-cycle3.md`
+
+**Strengths**
+
+- The `TransactionTemplate` + `ScopedValue` pattern is now the right shape and matches an existing repo pattern in `GmailAccessGuard`.
+- The SePay production flow now correctly treats `code` as intent lookup input and `referenceCode` as metadata.
+- The webhook OpenAPI visibility, security-chain ordering, and `@Order(2)` placement are much cleaner than earlier revisions.
+- The watchdog tenant-binding fix via `StaleReservation(tenantId, ...)` is a solid correction.
+- The Plan 06 FQN-string ArchUnit rule avoids the package-private `.class` trap.
+
+**Concerns**
+
+- **HIGH (NEW):** Plan 01 declares `version` as `bigint` for new billing tables, but the repo's `AbstractAuditableEntity.version` is `Integer`, and existing migrations use `integer` / `int`. With `spring.jpa.hibernate.ddl-auto=validate`, this is likely to fail schema validation. Use `int` / `integer` for all new `version` columns.
+
+- **HIGH (NEW):** `SEPAY_WEBHOOK_API_KEY:?message` is not a reliable Spring fail-fast pattern for a plain string secret. Spring's placeholder `:` syntax is a default value mechanism; missing env can bind the literal `?SEPAY_WEBHOOK_API_KEY must...`, and `@NotBlank` will pass. For SePay, unlike the Base64 refresh-token key, no semantic decoder will fail later. Use `${SEPAY_WEBHOOK_API_KEY}` with no default, or add explicit validation rejecting unresolved/default sentinel values.
+
+- **HIGH (NEW):** `SepayWebhookMismatchAuditEventTest` still uses `code="MISMATCH"` / `referenceCode="MISMATCH"` semantics that conflict with the new service behavior. `MISMATCH` contains `I`, which is excluded by the Crockford regex, and the service ignores `referenceCode` for lookup. This test will log `unknown_code`, not `amount_mismatch`. Seed and send a valid 8-character code via `payload.code()` or content (e.g. `ABCD2345`).
+
+- **MEDIUM:** `CreditLedgerEntryRepository` aggregate queries return `int`, but JPQL `SUM` over integer fields commonly returns `Long`. Use `long`/`Long` internally and range-check when constructing `CreditBalance`.
+
+- **MEDIUM:** `FOR UPDATE SKIP LOCKED` in the watchdog stale scan is still overstated unless the select and processing share a transaction. ShedLock prevents concurrent workers, so correctness is fine, but the "two pods pick disjoint sets" claim is not really delivered by the current non-transactional tick.
+
+- **LOW:** Several plan comments still say 16 or 7 Wave 0 tests after the count became 17 and API tests became 8. Will confuse execution and verification.
+
+**Suggestions**
+
+- Change all new billing `version` columns to `type: int` or `integer`, matching `AbstractAuditableEntity`.
+- Replace the SePay env placeholder with a true unresolved-placeholder failure path, then keep the openapi/test overrides.
+- Fix the mismatch-audit fixture to use a valid top-up code in `code` or `content`; do not rely on `referenceCode`.
+- Remove the stale "`@Disabled` keeps check GREEN" wording from Plan 00, since the frontmatter now correctly says compile is RED by design.
+- Either wrap the stale scan claim in a transaction or document that ShedLock is the actual multi-pod protection.
+
+**Risk Assessment**
+
+Overall risk: **HIGH until the three HIGH concerns are fixed; MEDIUM after fixes.** The revised architecture is close and the cycle-2 blockers are substantively addressed, but the `version` column mismatch can break Hibernate validation, the SePay secret placeholder can silently disable the intended fail-fast security property, and the mismatch audit test no longer matches the corrected SePay field semantics.
+
+Sources checked: Spring transaction/proxy and placeholder docs via Context7, ShedLock docs via Context7, and SePay webhook docs at <https://developer.sepay.vn/en/sepay-webhooks/tich-hop-webhook>.
+
+## OpenCode Review (Cycle 3)
+
+> Provider returned error during invocation. OpenCode skipped this cycle.
+> Stderr: `Error: "Provider returned error"` (model: `nemotron-3-super-free`)
+> Likely cause: prompt size (~380KB including cycle 1+2 review history). Consider re-running with a leaner prompt if needed.
+
+## Cycle 3 — Consolidated HIGH Concerns
+
+1. **HIGH (NEW, codex):** `version` column type mismatch — billing migrations declare `bigint` but `AbstractAuditableEntity.version` is `Integer`; Hibernate `validate` will reject the schema.
+2. **HIGH (NEW, codex):** `SEPAY_WEBHOOK_API_KEY:?…` placeholder isn't true Spring fail-fast for plain strings; `@NotBlank` may accept the literal default sentinel. Use `${SEPAY_WEBHOOK_API_KEY}` with no default.
+3. **HIGH (NEW, codex):** `SepayWebhookMismatchAuditEventTest` seeds an invalid Crockford code (`MISMATCH` contains `I`) and relies on `referenceCode`, contradicting the cycle-2 field-order fix; will log `unknown_code` not `amount_mismatch`.
+4. **HIGH (PARTIAL, carry-over from cycle 2):** Wave 0 `@Disabled` tests still committed RED between Plan 00 and Plan 06. Process-accepted, not technically resolved.
+
