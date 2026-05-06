@@ -1,20 +1,11 @@
 package com.zeromail.worker.billing;
 
 import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-import com.zeromail.core.billing.model.IllegalLedgerStateException;
-import com.zeromail.core.billing.model.ReservationId;
-import com.zeromail.core.billing.persistence.CreditReservationRepository;
-import com.zeromail.core.billing.persistence.StaleReservation;
-import com.zeromail.core.billing.service.CreditLedger;
-import com.zeromail.core.tenant.TenantContext;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -23,6 +14,13 @@ import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 /**
  * Releases orphaned credit reservations after the normal reserve/settle/release path has failed to
  * finalize them.
+ *
+ * <p>Delegation to {@link CreditReserveWatchdogBatch} is deliberate: if the transactional
+ * scan-and-release method lived on this class and was invoked via {@code tick()}, Spring's proxy
+ * would not fire on the self-invocation and the {@code FOR UPDATE SKIP LOCKED} row locks would be
+ * released the instant the JDBC autocommit query returned, before the loop could call
+ * {@link com.zeromail.core.billing.service.CreditLedger#release}. The collaborator boundary is
+ * what guarantees the locks stay held across the loop.
  */
 @Component
 public class CreditReserveWatchdog {
@@ -31,16 +29,11 @@ public class CreditReserveWatchdog {
   private static final int BATCH_LIMIT = 100;
   private static final Duration STALE_THRESHOLD = Duration.ofMinutes(5);
 
-  private final CreditReservationRepository reservationRepository;
-  private final CreditLedger creditLedger;
+  private final CreditReserveWatchdogBatch batch;
   private final Counter releasedTotal;
 
-  public CreditReserveWatchdog(
-      CreditReservationRepository reservationRepository,
-      CreditLedger creditLedger,
-      MeterRegistry meterRegistry) {
-    this.reservationRepository = reservationRepository;
-    this.creditLedger = creditLedger;
+  public CreditReserveWatchdog(CreditReserveWatchdogBatch batch, MeterRegistry meterRegistry) {
+    this.batch = batch;
     releasedTotal =
         Counter.builder("zero_mail.billing.watchdog.released_total")
             .description("Stale credit reservations released by the worker watchdog")
@@ -54,32 +47,10 @@ public class CreditReserveWatchdog {
   }
 
   public void tick() {
-    Instant olderThan = Instant.now().minus(STALE_THRESHOLD);
-    List<StaleReservation> staleReservations =
-        reservationRepository.findStalePendingProjections(olderThan, BATCH_LIMIT);
-    for (StaleReservation staleReservation : staleReservations) {
-      releaseOne(staleReservation);
+    int releasedCount = batch.releaseStaleBatch(STALE_THRESHOLD, BATCH_LIMIT);
+    if (releasedCount > 0) {
+      releasedTotal.increment(releasedCount);
+      log.info("event=credit_reserve_watchdog_batch releasedCount={}", releasedCount);
     }
-  }
-
-  private void releaseOne(StaleReservation staleReservation) {
-    ScopedValue.where(TenantContext.TENANT, staleReservation.tenantId().toString())
-        .run(
-            () -> {
-              try {
-                creditLedger.release(new ReservationId(staleReservation.id()));
-                long ageSeconds =
-                    Duration.between(staleReservation.createdAt().toInstant(), Instant.now())
-                        .toSeconds();
-                log.info(
-                    "event=credit_reserve_released_stale tenantId={} reservationId={} ageSeconds={}",
-                    staleReservation.tenantId(),
-                    staleReservation.id(),
-                    ageSeconds);
-                releasedTotal.increment();
-              } catch (IllegalLedgerStateException ledgerStateRace) {
-                // A normal finalizer won the race between stale scan and release. Safe no-op.
-              }
-            });
   }
 }
