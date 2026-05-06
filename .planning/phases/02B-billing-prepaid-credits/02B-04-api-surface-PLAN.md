@@ -345,15 +345,22 @@ import org.springframework.web.bind.annotation.RestController;
 import com.zeromail.api.dto.billing.SepayWebhookPayload;
 import com.zeromail.core.billing.service.BillingTopupService;
 
-import io.swagger.v3.oas.annotations.Hidden;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
- * SePay webhook receiver. Authenticated by Authorization: Apikey header at the @Order(1)
+ * SePay webhook receiver. Authenticated by `Authorization: Apikey` header at the @Order(2)
  * security chain (see BillingWebhookSecurityConfig). Service layer handles all business
  * invariants (replay protection, code lookup, amount validation, privacy-safe event logging).
+ *
+ * <p><b>OpenAPI visibility (REVIEWS HIGH-3 — RESOLVED):</b> This controller is intentionally
+ * NOT {@code @Hidden}. Plan 06's acceptance criteria require {@code paths['/api/billing/sepay/webhook']}
+ * to appear in the regenerated {@code apps/web/lib/api/schema.d.ts} so internal tooling
+ * (admin replays, integration tests, future ops dashboards) can call it through the typed
+ * client. Public-facing risk is mitigated by the API-key auth filter at the security chain
+ * level — exposing the path in OpenAPI does not weaken authentication.
  */
-@Hidden
 @RestController
+@Tag(name = "billing-webhook")
 public class SepayWebhookController {
 
     private static final Logger log = LoggerFactory.getLogger(SepayWebhookController.class);
@@ -499,7 +506,7 @@ A second `@Order(1)` on `BillingWebhookSecurityConfig` would COLLIDE with PubSub
 Final order: PubSub @Order(1) → Sepay @Order(2) → User-session @Order(3). Each chain has a unique `securityMatcher` so the order only matters for tie-breaking, but the explicit numbering makes the precedence intent unambiguous and prevents future collisions.
   </action>
   <verify>
-    <automated>./gradlew :backend:api:compileJava 2>&1 | grep -q SUCCESSFUL; grep -q '@RequestMapping("/api/billing")' backend/api/src/main/java/com/zeromail/api/controllers/billing/BillingController.java; grep -q "creditLedger.balance" backend/api/src/main/java/com/zeromail/api/controllers/billing/BillingController.java; grep -q "/api/billing/sepay/webhook" backend/api/src/main/java/com/zeromail/api/controllers/billing/SepayWebhookController.java; grep -q '"success", true' backend/api/src/main/java/com/zeromail/api/controllers/billing/SepayWebhookController.java; grep -q "verifier.verify" backend/api/src/main/java/com/zeromail/api/security/billing/SepayApiKeyAuthFilter.java; grep -q "@Order(2)" backend/api/src/main/java/com/zeromail/api/security/billing/BillingWebhookSecurityConfig.java; ! grep -q "@Order(1)" backend/api/src/main/java/com/zeromail/api/security/billing/BillingWebhookSecurityConfig.java; grep -q "@Order(3)" backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java; ! grep -E "^\s*@Order\(2\)\s*$" backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java; grep -q '"/api/billing/sepay/\*\*"' backend/api/src/main/java/com/zeromail/api/security/billing/BillingWebhookSecurityConfig.java</automated>
+    <automated>./gradlew :backend:api:compileJava 2>&1 | grep -q SUCCESSFUL; grep -q '@RequestMapping("/api/billing")' backend/api/src/main/java/com/zeromail/api/controllers/billing/BillingController.java; grep -q "creditLedger.balance" backend/api/src/main/java/com/zeromail/api/controllers/billing/BillingController.java; grep -q "/api/billing/sepay/webhook" backend/api/src/main/java/com/zeromail/api/controllers/billing/SepayWebhookController.java; grep -q '"success", true' backend/api/src/main/java/com/zeromail/api/controllers/billing/SepayWebhookController.java; ! grep -q "@Hidden" backend/api/src/main/java/com/zeromail/api/controllers/billing/SepayWebhookController.java; ! grep -q "io.swagger.v3.oas.annotations.Hidden" backend/api/src/main/java/com/zeromail/api/controllers/billing/SepayWebhookController.java; grep -q "verifier.verify" backend/api/src/main/java/com/zeromail/api/security/billing/SepayApiKeyAuthFilter.java; grep -q "@Order(2)" backend/api/src/main/java/com/zeromail/api/security/billing/BillingWebhookSecurityConfig.java; ! grep -q "@Order(1)" backend/api/src/main/java/com/zeromail/api/security/billing/BillingWebhookSecurityConfig.java; grep -q "@Order(3)" backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java; ! grep -E "^\s*@Order\(2\)\s*$" backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java; grep -q '"/api/billing/sepay/\*\*"' backend/api/src/main/java/com/zeromail/api/security/billing/BillingWebhookSecurityConfig.java</automated>
   </verify>
   <done>BillingController has 2 endpoints under /api/billing; SepayWebhookController returns Map.of("success", true); SepayApiKeyAuthFilter delegates to SepayApiKeyVerifier and logs sepay_webhook_auth_invalid; BillingWebhookSecurityConfig declares @Order(1) chain with /api/billing/sepay/** matcher; ./gradlew :backend:api:compileJava BUILD SUCCESSFUL.</done>
 </task>

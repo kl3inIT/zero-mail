@@ -14,12 +14,17 @@ files_modified:
   - backend/core/src/main/java/com/zeromail/core/billing/persistence/lowlevel/CreditReservationRepositoryImpl.java
   - backend/core/src/main/java/com/zeromail/core/billing/persistence/BillingTopupIntentEntity.java
   - backend/core/src/main/java/com/zeromail/core/billing/persistence/BillingTopupIntentRepository.java
+  - backend/core/src/main/java/com/zeromail/core/billing/persistence/BillingTopupIntentTenantLookup.java
+  - backend/core/src/main/java/com/zeromail/core/billing/persistence/BillingTopupIntentTenantLookupFragment.java
+  - backend/core/src/main/java/com/zeromail/core/billing/persistence/lowlevel/BillingTopupIntentRepositoryImpl.java
   - backend/core/src/main/java/com/zeromail/core/billing/persistence/lowlevel/AdvisoryLockJdbcHelper.java
   - backend/core/src/main/java/com/zeromail/core/billing/service/BillingProperties.java
+  - backend/core/src/main/java/com/zeromail/core/billing/service/BillingConfiguration.java
   - backend/core/src/main/java/com/zeromail/core/billing/service/CreditLedgerService.java
   - backend/core/src/main/java/com/zeromail/core/billing/service/BillingTopupService.java
   - backend/core/src/main/java/com/zeromail/core/billing/service/SepayApiKeyVerifier.java
   - backend/core/src/main/java/com/zeromail/core/billing/service/TopupCodeGenerator.java
+  - backend/core/src/test/java/com/zeromail/core/support/PostgresContainerTest.java
 autonomous: true
 requirements: [BILL-02, BILL-03, BILL-04, BILL-05, BILL-06]
 files_modified_overlap_note: "No overlap with Plan 01 (which only touched changelogs + build files) or Plan 02 (which only touched core.billing.model + package-info). All new files."
@@ -32,6 +37,10 @@ must_haves:
     - "`SepayApiKeyVerifier.verify(authorizationHeader)` uses `MessageDigest.isEqual` over UTF-8 bytes — never `String.equals` / `Arrays.equals`."
     - "`TopupCodeGenerator.generateUniqueCode(predicate, 3)` retries up to 3x using Crockford alphabet `0123456789ABCDEFGHJKMNPQRSTVWXYZ` (no I/L/O/U)."
     - "`BillingProperties` is a `@ConfigurationProperties(prefix=\"zero-mail.billing\")` record with `vndPerCredit=1000` default + `sepay.webhookApiKey @NotBlank`."
+    - "`BillingTopupService.createIntent(tenantId, amountVnd)` throws `IllegalArgumentException` when `amountVnd < vndPerCredit` (REVIEWS HIGH-7 — prevents 0-credit topups at intent creation)."
+    - "`BillingTopupService.applyWebhook` short-circuits with `event=sepay_topup_below_min_credits` log + return when `credits <= 0` (REVIEWS HIGH-7 defense-in-depth for vnd-per-credit reconfiguration race)."
+    - "`BillingTopupService.applyWebhook` resolves the intent via `intentRepository.findTenantLookupByCode(code)` (raw JDBC, bypasses @TenantId filter), then `ScopedValue.where(TenantContext.TENANT, lookup.tenantId().toString()).run(...)` BEFORE any JPA write — REVIEWS HIGH-2 closed; webhook never calls `intentRepository.findByCode` directly because the request thread has no bound TenantContext."
+    - "`BillingTopupIntentRepository extends JpaRepository<BillingTopupIntentEntity, UUID>, BillingTopupIntentTenantLookupFragment` — fragment lives in `core.billing.persistence`, implementation lives in `core.billing.persistence.lowlevel.BillingTopupIntentRepositoryImpl` (ArchUnit-allowlisted for raw JDBC)."
     - "`./gradlew :backend:core:check` passes — Wave 0 RED tests in core/billing flip to GREEN once `@Disabled` annotations are removed by this plan."
   artifacts:
     - path: "backend/core/src/main/java/com/zeromail/core/billing/persistence/CreditLedgerEntryEntity.java"
@@ -41,7 +50,7 @@ must_haves:
     - path: "backend/core/src/main/java/com/zeromail/core/billing/persistence/BillingTopupIntentEntity.java"
       provides: "Top-up intent entity (mutable status + paidAt + sepayTransactionId) extending AbstractTenantOwnedEntity."
     - path: "backend/core/src/main/java/com/zeromail/core/billing/persistence/lowlevel/AdvisoryLockJdbcHelper.java"
-      provides: "Raw-JDBC component issuing `SELECT pg_advisory_xact_lock(hashtext(?))` — package-private; only `core.billing.persistence` callers."
+      provides: "Raw-JDBC component issuing `SELECT pg_advisory_xact_lock(hashtext(?))` — `public` class with `public acquireTenantLock(UUID)` so `core.billing.service` can call it across packages; ArchUnit (Plan 06) `jdbc_template_only_in_lowlevel` enforces the `JdbcTemplate` boundary by package, not by Java visibility (REVIEWS HIGH-5)."
     - path: "backend/core/src/main/java/com/zeromail/core/billing/service/CreditLedgerService.java"
       provides: "Implements CreditLedger; reserve REQUIRES_NEW + advisory lock; settle/release REQUIRED + UNIQUE-on-conflict idempotent; balance read-only."
     - path: "backend/core/src/main/java/com/zeromail/core/billing/service/BillingTopupService.java"
@@ -539,6 +548,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.zeromail.core.billing.model.BillingTopupIntentStatus;
 
@@ -551,7 +561,14 @@ public interface BillingTopupIntentRepository extends JpaRepository<BillingTopup
     Optional<BillingTopupIntentEntity> findFirstByTenantIdAndStatusOrderByCreatedAtAsc(
             UUID tenantId, BillingTopupIntentStatus status);
 
+    /**
+     * Bulk-flips PENDING intents past expiresAt to EXPIRED. {@code @Modifying} requires an
+     * enclosing transaction — see {@code BillingIntentExpirySweeper.sweep()} (Plan 05) which
+     * declares {@code @Transactional} per REVIEWS HIGH-4. Tests must wrap calls in
+     * {@code @Transactional} or call from a {@code @Transactional} service method.
+     */
     @Modifying
+    @Transactional
     @Query("""
             UPDATE BillingTopupIntentEntity intent
                SET intent.status = com.zeromail.core.billing.model.BillingTopupIntentStatus.EXPIRED,
@@ -562,6 +579,136 @@ public interface BillingTopupIntentRepository extends JpaRepository<BillingTopup
     int expireStale(@Param("now") Instant now);
 }
 ```
+
+**Files 6a/6b/6c: BillingTopupIntent tenant-filter-bypassing projection** (REVIEWS HIGH-2 — RESOLVED)
+
+The webhook handler runs on a request thread with NO bound `TenantContext` (`Authorization: Apikey` auth has no session/tenant). A standard `intentRepository.findByCode(...)` is a Hibernate read subject to `@TenantId` filtering — it will return empty (or fail) for every webhook. We MUST resolve `{intentId, tenantId, status, amountVnd, expiresAt, code}` via a JDBC projection that bypasses the tenant filter, then bind `ScopedValue.where(TenantContext.TENANT, lookup.tenantId().toString())` BEFORE any subsequent JPA write.
+
+This mirrors the `StaleReservation` projection pattern from the watchdog (Task 1 file 4a/4b/4c above).
+
+**File 6a: `BillingTopupIntentTenantLookup.java`** (`backend/core/src/main/java/com/zeromail/core/billing/persistence/`)
+
+```java
+package com.zeromail.core.billing.persistence;
+
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
+import com.zeromail.core.billing.model.BillingTopupIntentStatus;
+
+/**
+ * Webhook-only projection. Returned by {@link BillingTopupIntentTenantLookupFragment}
+ * via raw {@code JdbcTemplate} so the read deliberately bypasses Hibernate's
+ * {@code @TenantId} filter — the SePay webhook handler runs without a bound
+ * {@link com.zeromail.core.tenant.TenantContext} on its request thread.
+ *
+ * <p><b>Caller MUST bind {@link com.zeromail.core.tenant.TenantContext#TENANT} to
+ * {@link #tenantId()} before any subsequent JPA operation on {@link #id()}.</b>
+ */
+public record BillingTopupIntentTenantLookup(
+        UUID id,
+        UUID tenantId,
+        String code,
+        long amountVnd,
+        BillingTopupIntentStatus status,
+        OffsetDateTime expiresAt) {
+}
+```
+
+**File 6b: `BillingTopupIntentTenantLookupFragment.java`** (same package)
+
+```java
+package com.zeromail.core.billing.persistence;
+
+import java.util.Optional;
+
+/**
+ * Custom-fragment for the SePay webhook tenant-resolution scan. JPA cannot express it
+ * cleanly because the result must bypass Hibernate's @TenantId filter (no bound tenant
+ * on the webhook request thread).
+ */
+public interface BillingTopupIntentTenantLookupFragment {
+
+    /**
+     * Looks up an intent by code, returning a projection that includes {@code tenantId}.
+     * Bypasses Hibernate's @TenantId filter so callers can resolve the tenant before
+     * binding {@link com.zeromail.core.tenant.TenantContext#TENANT} for subsequent JPA
+     * writes.
+     */
+    Optional<BillingTopupIntentTenantLookup> findTenantLookupByCode(String code);
+}
+```
+
+**File 6c: `BillingTopupIntentRepositoryImpl.java`** (`persistence/lowlevel/`)
+
+```java
+package com.zeromail.core.billing.persistence.lowlevel;
+
+import java.time.OffsetDateTime;
+import java.util.Optional;
+import java.util.UUID;
+
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+import com.zeromail.core.billing.model.BillingTopupIntentStatus;
+import com.zeromail.core.billing.persistence.BillingTopupIntentTenantLookup;
+import com.zeromail.core.billing.persistence.BillingTopupIntentTenantLookupFragment;
+
+/**
+ * Native-JDBC implementation of {@link BillingTopupIntentTenantLookupFragment}. Lives in
+ * {@code persistence.lowlevel} so the {@code JdbcTemplate} import passes the Plan 06
+ * ArchUnit guard (`jdbc_template_only_in_lowlevel`).
+ *
+ * <p>Spring Data convention: the implementation class name matches the repository
+ * interface name + {@code Impl}. The repository interface is
+ * {@code BillingTopupIntentRepository}, so this class lives at
+ * {@code BillingTopupIntentRepositoryImpl} regardless of package — Spring Data
+ * scans the bean by name (lower-camel: {@code billingTopupIntentRepositoryImpl}).
+ */
+@Repository
+public class BillingTopupIntentRepositoryImpl implements BillingTopupIntentTenantLookupFragment {
+
+    private final JdbcTemplate jdbcTemplate;
+
+    public BillingTopupIntentRepositoryImpl(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    @Override
+    public Optional<BillingTopupIntentTenantLookup> findTenantLookupByCode(String code) {
+        return jdbcTemplate.query(
+                """
+                SELECT id, tenant_id, code, amount_vnd, status, expires_at
+                  FROM billing_topup_intent
+                 WHERE code = ?
+                 LIMIT 1
+                """,
+                (resultSet, rowIndex) -> new BillingTopupIntentTenantLookup(
+                        resultSet.getObject("id", UUID.class),
+                        resultSet.getObject("tenant_id", UUID.class),
+                        resultSet.getString("code"),
+                        resultSet.getLong("amount_vnd"),
+                        BillingTopupIntentStatus.fromId(resultSet.getString("status")),
+                        resultSet.getObject("expires_at", OffsetDateTime.class)),
+                code).stream().findFirst();
+    }
+}
+```
+
+**File 6d: extend `BillingTopupIntentRepository.java`** to compose the fragment:
+
+Replace the original interface declaration:
+
+```java
+public interface BillingTopupIntentRepository
+        extends JpaRepository<BillingTopupIntentEntity, UUID>, BillingTopupIntentTenantLookupFragment {
+    // existing method declarations unchanged: findByCode, countByTenantIdAndStatus,
+    // findFirstByTenantIdAndStatusOrderByCreatedAtAsc, expireStale.
+}
+```
+
+(Spring Data auto-wires the lowlevel `BillingTopupIntentRepositoryImpl` into the repository proxy. The `@Repository` annotation is required on the impl class for component scanning to find it.)
 
 **File 7: `AdvisoryLockJdbcHelper.java`** (`persistence/lowlevel/`)
 ```java
@@ -588,15 +735,15 @@ import org.springframework.stereotype.Component;
  * {@code core.billing.persistence} callers reach this helper.
  */
 @Component
-class AdvisoryLockJdbcHelper {
+public class AdvisoryLockJdbcHelper {
 
     private final JdbcTemplate jdbcTemplate;
 
-    AdvisoryLockJdbcHelper(JdbcTemplate jdbcTemplate) {
+    public AdvisoryLockJdbcHelper(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    void acquireTenantLock(UUID tenantId) {
+    public void acquireTenantLock(UUID tenantId) {
         jdbcTemplate.execute((Connection connection) -> {
             try (PreparedStatement statement = connection.prepareStatement(
                     "SELECT pg_advisory_xact_lock(hashtext(?))")) {
@@ -609,7 +756,7 @@ class AdvisoryLockJdbcHelper {
 }
 ```
 
-(Note: the class is package-private. To allow the service in `core.billing.service` to use it, expose via an explicit public method on a dedicated `BillingAdvisoryLock` facade IF Java's package-private visibility blocks cross-package access. Easiest path: move to `core.billing.persistence` package OR mark `AdvisoryLockJdbcHelper` `public` and rely on ArchUnit alone for the boundary. RECOMMENDED: declare the class `public` for cross-package access; ArchUnit guards the `JdbcTemplate` import boundary, not the class visibility. This matches the Phase 1 `RefreshTokenCipher` precedent.)
+**Visibility decision (REVIEWS HIGH-5 — RESOLVED):** The class is `public` and the constructor + `acquireTenantLock(UUID)` method are `public`. This is required because `CreditLedgerService` (in `core.billing.service`) injects and calls this helper across packages — Java's package-private visibility would make the import non-compilable. The `JdbcTemplate` boundary is enforced separately by Plan 06's ArchUnit rule `jdbc_template_only_in_lowlevel`, which gates by *package* (`..core.billing.persistence.lowlevel..`), not by Java visibility. This matches the Phase 1 `RefreshTokenCipher` precedent (public class, ArchUnit-package-bounded). Earlier drafts that suggested package-private visibility were inconsistent with the cross-package import in Task 3 and are explicitly REJECTED here.
 
   </action>
   <verify>
@@ -678,6 +825,22 @@ class BillingConfiguration {
 ```
 
 (Add `BillingConfiguration.java` as a sibling file in this same task — it's tiny, single concern, makes `BillingProperties` visible inside `@SpringBootTest` boots that scan `core.billing.service`.)
+
+**Core test base extension (REVIEWS HIGH-6 — RESOLVED):** `BillingProperties.SepayProperties.webhookApiKey` is `@NotBlank`, so any core `@SpringBootTest` that activates `BillingConfiguration` (or that boots the full app context including `core.billing.service`) will fail validation at startup unless the property is present. Plan 04 covers the api test base; Plan 05 covers the worker test base; this plan owns the core test base.
+
+Append the following lines inside `static void props(DynamicPropertyRegistry r)` in `backend/core/src/test/java/com/zeromail/core/support/PostgresContainerTest.java` (existing analog at lines 31–47 — match indentation and identifier-name style):
+
+```java
+// REVIEWS HIGH-6: BillingProperties has @NotBlank sepay.webhookApiKey, so any core
+// @SpringBootTest that includes BillingConfiguration must inject these values or fail
+// validation at startup.
+r.add("zero-mail.billing.sepay.webhook-api-key", () -> "test-sepay-key-fixture");
+r.add("zero-mail.billing.vnd-per-credit", () -> "1000");
+r.add("zero-mail.billing.max-pending-intents-per-tenant", () -> "5");
+r.add("zero-mail.billing.intent-expiry", () -> "PT24H");
+```
+
+After the edit, run `./gradlew :backend:core:test --tests "*BillingDomainBoundaryArchTest*"` (Plan 06 flips this test to GREEN) plus any core billing `@SpringBootTest` from Wave 0 (Plan 00 outputs that extend `PostgresContainerTest`) to confirm the full app context boots without `ConstraintViolationException` on `webhookApiKey`.
 
 **File 9: `SepayApiKeyVerifier.java`** (Constant-time API-key compare)
 ```java
@@ -789,7 +952,7 @@ public class TopupCodeGenerator {
 After all 3 files saved, flip Wave 0 `@Disabled` off in `SepayApiKeyVerifierTest.java` and `TopupCodeGeneratorTest.java` (remove `@Disabled` annotations on each `@Test`) so those two pure-unit tests run GREEN. Run `./gradlew :backend:core:test --tests "*SepayApiKeyVerifierTest*" --tests "*TopupCodeGeneratorTest*"` to confirm.
   </action>
   <verify>
-    <automated>./gradlew :backend:core:compileJava 2>&1 | grep -q SUCCESSFUL; grep -q "MessageDigest.isEqual" backend/core/src/main/java/com/zeromail/core/billing/service/SepayApiKeyVerifier.java; ! grep -q 'Arrays.equals\|"\.equals\b' backend/core/src/main/java/com/zeromail/core/billing/service/SepayApiKeyVerifier.java; grep -q '0123456789ABCDEFGHJKMNPQRSTVWXYZ' backend/core/src/main/java/com/zeromail/core/billing/service/TopupCodeGenerator.java; ./gradlew :backend:core:test --tests "*SepayApiKeyVerifierTest*" --tests "*TopupCodeGeneratorTest*" 2>&1 | grep -E "BUILD SUCCESSFUL|tests completed.*0 failed"</automated>
+    <automated>./gradlew :backend:core:compileJava 2>&1 | grep -q SUCCESSFUL; grep -q "MessageDigest.isEqual" backend/core/src/main/java/com/zeromail/core/billing/service/SepayApiKeyVerifier.java; ! grep -q 'Arrays.equals\|"\.equals\b' backend/core/src/main/java/com/zeromail/core/billing/service/SepayApiKeyVerifier.java; grep -q '0123456789ABCDEFGHJKMNPQRSTVWXYZ' backend/core/src/main/java/com/zeromail/core/billing/service/TopupCodeGenerator.java; grep -q 'zero-mail.billing.sepay.webhook-api-key' backend/core/src/test/java/com/zeromail/core/support/PostgresContainerTest.java; grep -q 'test-sepay-key-fixture' backend/core/src/test/java/com/zeromail/core/support/PostgresContainerTest.java; ./gradlew :backend:core:test --tests "*SepayApiKeyVerifierTest*" --tests "*TopupCodeGeneratorTest*" 2>&1 | grep -E "BUILD SUCCESSFUL|tests completed.*0 failed"</automated>
   </verify>
   <done>BillingProperties record has 4 fields with @DefaultValue + nested SepayProperties; SepayApiKeyVerifier uses MessageDigest.isEqual (no String.equals / Arrays.equals); TopupCodeGenerator uses Crockford alphabet without I/L/O/U; Wave 0 SepayApiKeyVerifierTest + TopupCodeGeneratorTest flipped to GREEN (4+3 = 7 unit tests pass).</done>
 </task>
@@ -980,8 +1143,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.zeromail.core.billing.model.BillingTopupIntentStatus;
 import com.zeromail.core.billing.persistence.BillingTopupIntentEntity;
 import com.zeromail.core.billing.persistence.BillingTopupIntentRepository;
+import com.zeromail.core.billing.persistence.BillingTopupIntentTenantLookup;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryEntity;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryRepository;
+import com.zeromail.core.tenant.TenantContext;
 
 /**
  * Top-up intent lifecycle + SePay webhook handling.
@@ -1007,9 +1172,23 @@ public class BillingTopupService {
         this.billingProperties = billingProperties;
     }
 
-    /** Per CONTEXT D-C2: max 5 PENDING intents per tenant; 6th create expires the oldest. */
+    /**
+     * Per CONTEXT D-C2: max 5 PENDING intents per tenant; 6th create expires the oldest.
+     *
+     * <p><b>Minimum amount (REVIEWS HIGH-7):</b> rejects {@code amountVnd < vndPerCredit} with
+     * {@link IllegalArgumentException} so a created intent always credits at least 1 unit.
+     * This is the FIRST line of defense against the 0-credit topup bug — a downstream
+     * webhook with mismatching amount is already blocked by the mismatch check, but
+     * rejecting at intent creation gives the user immediate UX feedback (Phase 5 maps to a
+     * 400 with {@code error.billing.topup.amount_too_small}).
+     */
     @Transactional(propagation = Propagation.REQUIRED)
     public BillingTopupIntentEntity createIntent(UUID tenantId, long amountVnd) {
+        long vndPerCredit = billingProperties.vndPerCredit();
+        if (amountVnd < vndPerCredit) {
+            throw new IllegalArgumentException(
+                    "Top-up amount must be at least " + vndPerCredit + " VND (one credit)");
+        }
         int pendingCount = intentRepository.countByTenantIdAndStatus(tenantId, BillingTopupIntentStatus.PENDING);
         if (pendingCount >= billingProperties.maxPendingIntentsPerTenant()) {
             intentRepository.findFirstByTenantIdAndStatusOrderByCreatedAtAsc(tenantId, BillingTopupIntentStatus.PENDING)
@@ -1036,8 +1215,18 @@ public class BillingTopupService {
      * lookup intent. Unknown / mismatch / expired → ack 200 with opaque event log; happy path
      * → in single TX: mark intent PAID + insert TOPUP entry; replay protected by UNIQUE on
      * (ref_type='PAYMENT_SEPAY', ref_id=transactionId, kind='TOPUP').
+     *
+     * <p><b>Tenant binding (REVIEWS HIGH-2 — RESOLVED):</b> the SePay webhook runs on a
+     * request thread WITHOUT a bound {@link com.zeromail.core.tenant.TenantContext}
+     * (Authorization is API-key, not session). Calling {@code intentRepository.findByCode}
+     * directly here would trip Hibernate's {@code @TenantId} filter and return empty. We
+     * use {@link BillingTopupIntentRepository#findTenantLookupByCode} (raw JDBC, bypasses
+     * the filter) to resolve {@code tenantId}, bind it via {@code ScopedValue.where}, and
+     * THEN perform JPA writes inside that scope so {@code @TenantId} accepts them.
+     *
+     * <p>Method itself is NOT {@code @Transactional} — the transaction is opened inside
+     * {@code applyWebhookForTenant} which runs under the bound ScopedValue.
      */
-    @Transactional(propagation = Propagation.REQUIRED)
     public void applyWebhook(long sepayTransactionId, String referenceCode, String content, String transferType, long transferAmountVnd) {
         if (!"in".equalsIgnoreCase(transferType)) {
             log.warn("event=sepay_webhook_non_inbound_ignored");
@@ -1049,23 +1238,47 @@ public class BillingTopupService {
             return;
         }
         String code = codeOpt.get();
-        Optional<BillingTopupIntentEntity> maybeIntent = intentRepository.findByCode(code);
-        if (maybeIntent.isEmpty()) {
+        Optional<BillingTopupIntentTenantLookup> maybeLookup = intentRepository.findTenantLookupByCode(code);
+        if (maybeLookup.isEmpty()) {
             log.warn("event=sepay_webhook_unknown_code");
+            return;
+        }
+        BillingTopupIntentTenantLookup lookup = maybeLookup.get();
+        if (lookup.status() != BillingTopupIntentStatus.PENDING) {
+            log.warn("event=sepay_webhook_intent_not_pending");
+            return;
+        }
+        if (lookup.expiresAt().toInstant().isBefore(Instant.now())) {
+            log.warn("event=sepay_webhook_intent_expired");
+            return;
+        }
+        if (lookup.amountVnd() != transferAmountVnd) {
+            log.warn("event=sepay_webhook_amount_mismatch intentVnd={} actualVnd={}",
+                    lookup.amountVnd(), transferAmountVnd);
+            return;
+        }
+
+        // Bind TenantContext from the JDBC-resolved lookup BEFORE any JPA write so
+        // Hibernate @TenantId filter accepts the subsequent reads/writes.
+        ScopedValue.where(TenantContext.TENANT, lookup.tenantId().toString()).run(() ->
+                applyWebhookForTenant(lookup.id(), sepayTransactionId, transferAmountVnd));
+    }
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    void applyWebhookForTenant(UUID intentId, long sepayTransactionId, long transferAmountVnd) {
+        // Re-fetch under bound TenantContext so JPA dirty checking + @TenantId filter both
+        // operate correctly. The lookup projection above already validated status/amount/
+        // expiry; here we only re-load to mutate.
+        Optional<BillingTopupIntentEntity> maybeIntent = intentRepository.findById(intentId);
+        if (maybeIntent.isEmpty()) {
+            // Intent was deleted between lookup and re-fetch — treat as race no-op.
+            log.warn("event=sepay_webhook_intent_vanished_post_lookup");
             return;
         }
         BillingTopupIntentEntity intent = maybeIntent.get();
         if (intent.getStatus() != BillingTopupIntentStatus.PENDING) {
-            log.warn("event=sepay_webhook_intent_not_pending");
-            return;
-        }
-        if (intent.getExpiresAt().isBefore(Instant.now())) {
-            log.warn("event=sepay_webhook_intent_expired");
-            return;
-        }
-        if (intent.getAmountVnd() != transferAmountVnd) {
-            log.warn("event=sepay_webhook_amount_mismatch intentVnd={} actualVnd={}",
-                    intent.getAmountVnd(), transferAmountVnd);
+            // Concurrent webhook already processed this intent — replay no-op.
+            log.info("event=sepay_topup_replay_ignored");
             return;
         }
 
@@ -1073,6 +1286,17 @@ public class BillingTopupService {
         long roundingLossVnd = transferAmountVnd - (credits * billingProperties.vndPerCredit());
         if (roundingLossVnd > 0) {
             log.info("event=sepay_topup_rounding_loss vndLost={}", roundingLossVnd);
+        }
+        if (credits <= 0) {
+            // REVIEWS HIGH-7 defense-in-depth: createIntent already enforces amountVnd >=
+            // vndPerCredit, and the mismatch check above blocks unequal amounts. This
+            // handles the residual edge case where vndPerCredit is reconfigured between
+            // intent creation and webhook arrival. ACK 200 to stop SePay retries; do NOT
+            // call CreditLedgerEntryEntity.topup() (which throws on credits <= 0); intent
+            // stays PENDING for manual reconciliation.
+            log.warn("event=sepay_topup_below_min_credits transferAmountVnd={} vndPerCredit={}",
+                    transferAmountVnd, billingProperties.vndPerCredit());
+            return;
         }
 
         try {
@@ -1108,7 +1332,7 @@ public class BillingTopupService {
 After saving both files, flip Wave 0 `@Disabled` off in `CreditLedgerConcurrentReserveTest.java` + `CreditLedgerSettleIdempotentTest.java` + `CreditLedgerEntryUniqueTest.java`. Run `./gradlew :backend:core:test --tests "com.zeromail.core.billing.*"` → all unit + integration tests should pass (the integration tests need Testcontainers Postgres which `PostgresContainerTest` boots automatically). If `CreditLedgerConcurrentReserveTest` is flaky, double-check that the test uses `StructuredTaskScope` + `CountDownLatch` simultaneous-release pattern (per CONTEXT D-A3) — Spring's default test transaction CAN swallow the REQUIRES_NEW propagation if the test method itself is `@Transactional`; the Wave 0 test must NOT be `@Transactional`.
   </action>
   <verify>
-    <automated>./gradlew :backend:core:compileJava 2>&1 | grep -q SUCCESSFUL; grep -q "Propagation.REQUIRES_NEW" backend/core/src/main/java/com/zeromail/core/billing/service/CreditLedgerService.java; grep -q "advisoryLockHelper.acquireTenantLock" backend/core/src/main/java/com/zeromail/core/billing/service/CreditLedgerService.java; grep -q "DataIntegrityViolationException" backend/core/src/main/java/com/zeromail/core/billing/service/CreditLedgerService.java; grep -q "DataIntegrityViolationException" backend/core/src/main/java/com/zeromail/core/billing/service/BillingTopupService.java; grep -q "event=sepay_topup_credited" backend/core/src/main/java/com/zeromail/core/billing/service/BillingTopupService.java; ./gradlew :backend:core:test --tests "com.zeromail.core.billing.service.*" 2>&1 | grep -E "BUILD SUCCESSFUL"</automated>
+    <automated>./gradlew :backend:core:compileJava 2>&1 | grep -q SUCCESSFUL; grep -q "Propagation.REQUIRES_NEW" backend/core/src/main/java/com/zeromail/core/billing/service/CreditLedgerService.java; grep -q "advisoryLockHelper.acquireTenantLock" backend/core/src/main/java/com/zeromail/core/billing/service/CreditLedgerService.java; grep -q "DataIntegrityViolationException" backend/core/src/main/java/com/zeromail/core/billing/service/CreditLedgerService.java; grep -q "DataIntegrityViolationException" backend/core/src/main/java/com/zeromail/core/billing/service/BillingTopupService.java; grep -q "event=sepay_topup_credited" backend/core/src/main/java/com/zeromail/core/billing/service/BillingTopupService.java; grep -q "findTenantLookupByCode" backend/core/src/main/java/com/zeromail/core/billing/service/BillingTopupService.java; grep -q "ScopedValue.where(TenantContext.TENANT" backend/core/src/main/java/com/zeromail/core/billing/service/BillingTopupService.java; test -f backend/core/src/main/java/com/zeromail/core/billing/persistence/BillingTopupIntentTenantLookup.java; test -f backend/core/src/main/java/com/zeromail/core/billing/persistence/BillingTopupIntentTenantLookupFragment.java; test -f backend/core/src/main/java/com/zeromail/core/billing/persistence/lowlevel/BillingTopupIntentRepositoryImpl.java; ./gradlew :backend:core:test --tests "com.zeromail.core.billing.service.*" 2>&1 | grep -E "BUILD SUCCESSFUL"</automated>
   </verify>
   <done>CreditLedgerService implements all 4 CreditLedger methods with documented propagation; BillingTopupService.createIntent enforces max-5-PENDING and 3-attempt code retry; BillingTopupService.applyWebhook implements full D-C3 flow including referenceCode + content fallback (Pitfall 1) + UNIQUE-replay catch; Wave 0 core tests CreditLedgerConcurrentReserveTest + CreditLedgerSettleIdempotentTest + CreditLedgerEntryUniqueTest flipped GREEN.</done>
 </task>

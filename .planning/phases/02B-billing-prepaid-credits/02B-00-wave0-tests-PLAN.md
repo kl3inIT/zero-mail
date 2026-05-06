@@ -3,7 +3,31 @@ phase: 02B
 plan: 00
 type: execute
 wave: 1
-depends_on: []
+depends_on: [02]
+# REVIEWS HIGH-1: Plan 00 ordering and build-state honesty.
+#
+# Plan 00 depends on Plan 02 so the domain-model symbols (CreditLedger, CallSite,
+# ReservationId, CreditBalance, InsufficientCreditsException, IllegalLedgerStateException,
+# CreditReservationStatus, BillingTopupIntentStatus) exist when Plan 00 compiles its tests.
+#
+# However, Wave 0 tests ALSO reference symbols that land later: CreditLedgerService
+# (Plan 03), SepayApiKeyVerifier (Plan 03), TopupCodeGenerator (Plan 03),
+# CreditLedgerEntryEntity / CreditLedgerEntryRepository / BillingTopupIntentEntity (Plan 03),
+# SepayWebhookPayload + BillingBalanceResponse (Plan 04), CreditReserveWatchdog +
+# BillingIntentExpirySweeper (Plan 05). Those are intentionally compile-RED until the
+# referenced plan lands.
+#
+# This means `./gradlew :backend:core:compileTestJava` is RED-by-design from the moment
+# Plan 00 commits until Plan 03 lands, and `./gradlew :backend:api:compileTestJava` is RED
+# until Plan 04 lands. The phase-level `./gradlew clean check` BUILD SUCCESSFUL invariant
+# only holds at the END of Plan 06, not after Plan 00. Plan 00's must_haves below
+# explicitly state the partial-build expectation; Plan 06's success criteria own the
+# final clean-check gate.
+#
+# This is the codex-recommended path "place future-contract tests in an excluded source
+# set OR land minimal production type skeletons before tests" with a pragmatic twist —
+# we use the natural plan-execution ordering (02 → 03 → 04 → 05 → 06) to land the
+# referenced symbols, and Plan 00 documents the RED-during-execution window honestly.
 files_modified:
   - backend/core/src/test/java/com/zeromail/core/billing/service/CreditLedgerConcurrentReserveTest.java
   - backend/core/src/test/java/com/zeromail/core/billing/service/CreditLedgerSettleIdempotentTest.java
@@ -27,11 +51,11 @@ autonomous: true
 requirements: [BILL-01, BILL-02, BILL-03, BILL-04, BILL-05, BILL-06, BILL-07]
 must_haves:
   truths:
-    - "All 17 Wave 0 RED test files exist (compile-RED by design — reference future production classes)."
+    - "All 17 Wave 0 test files exist (compile-RED by design — reference future production classes from Plans 03/04/05)."
     - "VALIDATION.md frontmatter `wave_0_complete: true` after this plan ships."
     - "Worker `PostgresContainerTest` is widened to `public abstract class` so sub-package billing tests can extend it from `com.zeromail.worker.billing`."
     - "Every generated test that extends a `PostgresContainerTest` imports it explicitly — `import com.zeromail.core.support.PostgresContainerTest;` (core analog) or `import com.zeromail.worker.PostgresContainerTest;` (worker analog) — never relying on same-package resolution."
-    - "`./gradlew :backend:core:compileTestJava :backend:api:compileTestJava :backend:worker:compileTestJava` is RED with predictable 'cannot find symbol: CreditLedger / CreditLedgerService / SepayApiKeyVerifier / CreditReserveWatchdog' errors — no other compile errors leak in."
+    - "REVIEWS HIGH-1 build-state honesty: this plan does NOT claim `./gradlew clean check` is GREEN at end-of-plan. The phase-level GREEN invariant is owned by Plan 06's final acceptance gate. After Plan 00 + Plan 02 commit, `./gradlew :backend:core:compileTestJava :backend:api:compileTestJava :backend:worker:compileTestJava` is RED with predictable `cannot find symbol: CreditLedgerService / SepayApiKeyVerifier / TopupCodeGenerator / CreditLedgerEntryEntity / CreditReserveWatchdog` errors. No OTHER compile errors must leak in (e.g., domain-model imports must resolve cleanly because Plan 02 ran first per `depends_on: [02]`). The RED window closes incrementally: Plan 03 lands → core compileTestJava goes GREEN; Plan 04 lands → api compileTestJava goes GREEN; Plan 05 lands → worker compileTestJava goes GREEN; Plan 06 verifies."
   artifacts:
     - path: "backend/core/src/test/java/com/zeromail/core/billing/service/CreditLedgerConcurrentReserveTest.java"
       provides: "BILL-03 RED test — 10 virtual threads × reserve(TRIAGE) on available=5 → exactly 5 OK + 5 InsufficientCreditsException"
@@ -406,13 +430,13 @@ import com.zeromail.worker.PostgresContainerTest;
 - Each test file contains at least one `@Disabled("Wave 0 RED scaffold — production class lands in Plan 0X")` annotation.
 - Tests extending a `PostgresContainerTest` (5 files: 3 core + 2 worker) include the explicit cross-package import line.
 - `02B-VALIDATION.md` frontmatter has `nyquist_compliant: true` and `wave_0_complete: true`.
-- `./gradlew :backend:core:check :backend:api:check :backend:worker:check` passes — disabled tests do not execute, no production-class compile errors leak through (since `@Disabled` keeps the class compilation isolated; if compile-RED is unavoidable for ArchUnit `@AnalyzeClasses`, those tests should be in their own test source-set OR use `@Disabled` at the class level).
+- REVIEWS HIGH-1: `./gradlew :backend:core:compileTestJava` (and `api` and `worker`) is RED at end-of-Plan-00. The errors are exclusively `cannot find symbol` for the future production classes named in this plan's `must_haves` truths. ArchUnit `@AnalyzeClasses` failures are also expected if any rule references not-yet-existing classes — they must be wrapped in `@Disabled` at the class level (or kept inside a JUnit `@Test @Disabled` method that holds the `static final ArchRule`) so the analyzer does not run. The phase-level `clean check` GREEN invariant is owned by Plan 06's final gate, NOT this plan.
 </verification>
 
 <success_criteria>
 - 17 test files committed to git + 1 worker test base visibility widening (`git status` clean after task 3 commit).
 - VALIDATION.md frontmatter flipped.
-- `./gradlew clean check` BUILD SUCCESSFUL — disabled tests skip, no compile errors leak through.
+- REVIEWS HIGH-1: `./gradlew clean check` is NOT expected GREEN at end-of-Plan-00 — that is Plan 06's responsibility. The achievable end-of-Plan-00 state is: tests committed, only "cannot find symbol" errors for the named future classes, no other compile-error leakage, `@Disabled` annotations keep the test bodies dormant.
 - Plans 03/04/05 can flip `@Disabled` off in their respective acceptance phases without rewriting test logic.
 - Worker `PostgresContainerTest` is `public abstract class` (B2 closed); core analog already was.
 - D-I1 mismatch audit event has explicit dedicated positive coverage (W7 closed); happy-path scrub test no longer carries the contradictory negative assertion against `100000`.

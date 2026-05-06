@@ -346,6 +346,8 @@ Verify before saving: `TenantContext.TENANT` is confirmed at `backend/core/src/m
 
 **File 6: `BillingIntentExpirySweeper.java`**
 
+REVIEWS HIGH-4 — RESOLVED: `BillingTopupIntentRepository.expireStale` is `@Modifying`, so calls MUST execute inside an open transaction. The sweeper method declares `@Transactional` (default `Propagation.REQUIRED`); the scheduler thread has no enclosing transaction, so without this annotation Spring throws `TransactionRequiredException` at runtime. The repository method also carries `@Transactional` defensively (Plan 03), but the sweeper method's annotation is the canonical owner of the transaction boundary.
+
 ```java
 package com.zeromail.worker.billing;
 
@@ -355,6 +357,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.zeromail.core.billing.persistence.BillingTopupIntentRepository;
 
@@ -363,6 +367,12 @@ import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 /**
  * Hourly sweep that flips PENDING top-up intents past expiresAt to EXPIRED. No financial
  * impact — intents that never produced ledger entries simply die. Pure cleanup.
+ *
+ * <p><b>Transaction scope (REVIEWS HIGH-4):</b> {@code sweep()} is {@code @Transactional} so
+ * the {@code @Modifying} JPQL UPDATE in {@link BillingTopupIntentRepository#expireStale}
+ * runs inside an open transaction; without it Spring throws
+ * {@code TransactionRequiredException}. ShedLock wraps {@code @Transactional} just fine —
+ * the lock is acquired before method entry, the transaction begins inside the method body.
  */
 @Component
 class BillingIntentExpirySweeper {
@@ -377,6 +387,7 @@ class BillingIntentExpirySweeper {
 
     @Scheduled(fixedRate = 3_600_000L)
     @SchedulerLock(name = "billingIntentExpirySweeper", lockAtLeastFor = "PT1M", lockAtMostFor = "PT10M")
+    @Transactional(propagation = Propagation.REQUIRED)
     public void sweep() {
         int rowsExpired = intentRepository.expireStale(Instant.now());
         if (rowsExpired > 0) {
@@ -398,7 +409,7 @@ Tests now run live. Run `./gradlew :backend:worker:test --tests "com.zeromail.wo
 - The `ScopedValue.where(...).run(...)` is JDK 25 stable API — no `--enable-preview` flag required.
   </action>
   <verify>
-    <automated>./gradlew :backend:worker:compileJava 2>&1 | grep -q SUCCESSFUL; grep -q "@SchedulerLock" backend/worker/src/main/java/com/zeromail/worker/billing/CreditReserveWatchdog.java; grep -q "fixedRate = 60_000L" backend/worker/src/main/java/com/zeromail/worker/billing/CreditReserveWatchdog.java; grep -q "STALE_THRESHOLD" backend/worker/src/main/java/com/zeromail/worker/billing/CreditReserveWatchdog.java; grep -q "ScopedValue.where(TenantContext.TENANT" backend/worker/src/main/java/com/zeromail/worker/billing/CreditReserveWatchdog.java; grep -q "findStalePendingProjections" backend/worker/src/main/java/com/zeromail/worker/billing/CreditReserveWatchdog.java; grep -q "StaleReservation" backend/worker/src/main/java/com/zeromail/worker/billing/CreditReserveWatchdog.java; ! grep -q "reservationRepository.findById" backend/worker/src/main/java/com/zeromail/worker/billing/CreditReserveWatchdog.java; grep -q "event=credit_reserve_released_stale" backend/worker/src/main/java/com/zeromail/worker/billing/CreditReserveWatchdog.java; grep -q "fixedRate = 3_600_000L" backend/worker/src/main/java/com/zeromail/worker/billing/BillingIntentExpirySweeper.java; ! grep -E '@Disabled.*Wave 0' backend/worker/src/test/java/com/zeromail/worker/billing/*.java; ./gradlew :backend:worker:test 2>&1 | grep -E "BUILD SUCCESSFUL"</automated>
+    <automated>./gradlew :backend:worker:compileJava 2>&1 | grep -q SUCCESSFUL; grep -q "@SchedulerLock" backend/worker/src/main/java/com/zeromail/worker/billing/CreditReserveWatchdog.java; grep -q "fixedRate = 60_000L" backend/worker/src/main/java/com/zeromail/worker/billing/CreditReserveWatchdog.java; grep -q "STALE_THRESHOLD" backend/worker/src/main/java/com/zeromail/worker/billing/CreditReserveWatchdog.java; grep -q "ScopedValue.where(TenantContext.TENANT" backend/worker/src/main/java/com/zeromail/worker/billing/CreditReserveWatchdog.java; grep -q "findStalePendingProjections" backend/worker/src/main/java/com/zeromail/worker/billing/CreditReserveWatchdog.java; grep -q "StaleReservation" backend/worker/src/main/java/com/zeromail/worker/billing/CreditReserveWatchdog.java; ! grep -q "reservationRepository.findById" backend/worker/src/main/java/com/zeromail/worker/billing/CreditReserveWatchdog.java; grep -q "event=credit_reserve_released_stale" backend/worker/src/main/java/com/zeromail/worker/billing/CreditReserveWatchdog.java; grep -q "fixedRate = 3_600_000L" backend/worker/src/main/java/com/zeromail/worker/billing/BillingIntentExpirySweeper.java; grep -q "@Transactional" backend/worker/src/main/java/com/zeromail/worker/billing/BillingIntentExpirySweeper.java; grep -q "import org.springframework.transaction.annotation.Transactional" backend/worker/src/main/java/com/zeromail/worker/billing/BillingIntentExpirySweeper.java; ! grep -E '@Disabled.*Wave 0' backend/worker/src/test/java/com/zeromail/worker/billing/*.java; ./gradlew :backend:worker:test 2>&1 | grep -E "BUILD SUCCESSFUL"</automated>
   </verify>
   <done>CreditReserveWatchdog has @Scheduled(fixedRate=60_000L) + @SchedulerLock + STALE_THRESHOLD=Duration.ofMinutes(5) + consumes List<StaleReservation> projections + ScopedValue.where(TenantContext.TENANT, stale.tenantId().toString()).run(...) BEFORE creditLedger.release(...) + IllegalLedgerStateException catch + Micrometer counter; NO secondary findById call (B3 closed); BillingIntentExpirySweeper has @Scheduled(fixedRate=3_600_000L) + @SchedulerLock + intentRepository.expireStale(now); both Wave 0 worker tests flipped to GREEN; ./gradlew :backend:worker:test BUILD SUCCESSFUL.</done>
 </task>

@@ -11,7 +11,17 @@ plans_reviewed:
   - 02B-04-api-surface-PLAN.md
   - 02B-05-worker-schedulers-PLAN.md
   - 02B-06-verification-closure-PLAN.md
-current_high: 7
+current_high: 0
+addressed_at: 2026-05-06
+addressed_in: replan with --reviews; see "REVIEWS HIGH-N — RESOLVED" markers in each PLAN.md
+high_resolution_map:
+  HIGH-1: 02B-00-wave0-tests-PLAN.md (depends_on:[02], honest RED-during-execution build state, Plan 06 owns final clean-check gate)
+  HIGH-2: 02B-03-credit-ledger-service-PLAN.md (BillingTopupIntentTenantLookup projection + ScopedValue.where(TenantContext.TENANT,...) before any JPA write in applyWebhook)
+  HIGH-3: 02B-04-api-surface-PLAN.md (SepayWebhookController @Hidden removed; @Tag(name="billing-webhook") so OpenAPI emits the path)
+  HIGH-4: 02B-05-worker-schedulers-PLAN.md + 02B-03-credit-ledger-service-PLAN.md (BillingIntentExpirySweeper.sweep() declares @Transactional; expireStale repo method also annotated defensively)
+  HIGH-5: 02B-03-credit-ledger-service-PLAN.md (AdvisoryLockJdbcHelper class + constructor + acquireTenantLock are public; ArchUnit guards JdbcTemplate boundary by package, not visibility)
+  HIGH-6: 02B-03-credit-ledger-service-PLAN.md (core PostgresContainerTest gets zero-mail.billing.* DynamicPropertySource entries when BillingProperties is introduced)
+  HIGH-7: 02B-03-credit-ledger-service-PLAN.md (createIntent rejects amountVnd<vndPerCredit; applyWebhook short-circuits if credits<=0 with event=sepay_topup_below_min_credits)
 ---
 
 # Phase 2B Plan Reviews — Cycle 1
