@@ -32,7 +32,7 @@ public class SepayWebhookController {
 
   @PostMapping("/api/billing/sepay/webhook")
   public Map<String, Object> receive(@RequestBody SepayWebhookPayload payload) {
-    log.info("event=sepay_webhook_received");
+    log.info("event=sepay_webhook_received tenantId=unresolved");
     billingTopupService.applyWebhook(
         payload.id(),
         payload.code(),

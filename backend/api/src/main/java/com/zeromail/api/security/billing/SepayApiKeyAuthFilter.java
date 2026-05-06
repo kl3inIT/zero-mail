@@ -39,9 +39,9 @@ public class SepayApiKeyAuthFilter extends OncePerRequestFilter {
     String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
     if (!verifier.verify(authorizationHeader)) {
       if (authorizationHeader == null) {
-        log.warn("event=sepay_webhook_auth_missing");
+        log.warn("event=sepay_webhook_auth_missing tenantId=unresolved");
       } else {
-        log.warn("event=sepay_webhook_auth_invalid");
+        log.warn("event=sepay_webhook_auth_invalid tenantId=unresolved");
       }
       response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
       return;

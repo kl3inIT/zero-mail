@@ -102,35 +102,36 @@ public class BillingTopupService {
       String transferType,
       long transferAmountVnd) {
     if (!"in".equalsIgnoreCase(transferType)) {
-      log.warn("event=sepay_webhook_non_inbound_ignored");
+      log.warn("event=sepay_webhook_non_inbound_ignored tenantId=unresolved");
       return;
     }
 
     Optional<String> maybeIntentCode = extractIntentCode(code, content);
     if (maybeIntentCode.isEmpty()) {
-      log.warn("event=sepay_webhook_unknown_code");
+      log.warn("event=sepay_webhook_unknown_code tenantId=unresolved");
       return;
     }
 
     Optional<BillingTopupIntentTenantLookup> maybeLookup =
         intentRepository.findTenantLookupByCode(maybeIntentCode.get());
     if (maybeLookup.isEmpty()) {
-      log.warn("event=sepay_webhook_unknown_code");
+      log.warn("event=sepay_webhook_unknown_code tenantId=unresolved");
       return;
     }
 
     BillingTopupIntentTenantLookup lookup = maybeLookup.get();
     if (lookup.status() != BillingTopupIntentStatus.PENDING) {
-      log.warn("event=sepay_webhook_intent_not_pending");
+      log.warn("event=sepay_webhook_intent_not_pending tenantId={}", lookup.tenantId());
       return;
     }
     if (lookup.expiresAt().toInstant().isBefore(Instant.now())) {
-      log.warn("event=sepay_webhook_intent_expired");
+      log.warn("event=sepay_webhook_intent_expired tenantId={}", lookup.tenantId());
       return;
     }
     if (lookup.amountVnd() != transferAmountVnd) {
       log.warn(
-          "event=sepay_webhook_amount_mismatch intentVnd={} actualVnd={}",
+          "event=sepay_webhook_amount_mismatch tenantId={} intentVnd={} actualVnd={}",
+          lookup.tenantId(),
           lookup.amountVnd(),
           transferAmountVnd);
       return;
@@ -149,24 +150,28 @@ public class BillingTopupService {
       UUID intentId, long sepayTransactionId, long transferAmountVnd) {
     Optional<BillingTopupIntentEntity> maybeIntent = intentRepository.findById(intentId);
     if (maybeIntent.isEmpty()) {
-      log.warn("event=sepay_webhook_intent_vanished_post_lookup");
+      log.warn("event=sepay_webhook_intent_vanished_post_lookup tenantId=unresolved");
       return;
     }
 
     BillingTopupIntentEntity intent = maybeIntent.get();
     if (intent.getStatus() != BillingTopupIntentStatus.PENDING) {
-      log.info("event=sepay_topup_replay_ignored");
+      log.info("event=sepay_topup_replay_ignored tenantId={}", intent.getTenantId());
       return;
     }
 
     long credits = transferAmountVnd / billingProperties.vndPerCredit();
     long roundingLossVnd = transferAmountVnd - (credits * billingProperties.vndPerCredit());
     if (roundingLossVnd > 0) {
-      log.info("event=sepay_topup_rounding_loss vndLost={}", roundingLossVnd);
+      log.info(
+          "event=sepay_topup_rounding_loss tenantId={} vndLost={}",
+          intent.getTenantId(),
+          roundingLossVnd);
     }
     if (credits <= 0) {
       log.warn(
-          "event=sepay_topup_below_min_credits transferAmountVnd={} vndPerCredit={}",
+          "event=sepay_topup_below_min_credits tenantId={} transferAmountVnd={} vndPerCredit={}",
+          intent.getTenantId(),
           transferAmountVnd,
           billingProperties.vndPerCredit());
       return;
@@ -184,7 +189,7 @@ public class BillingTopupService {
       entryRepository.saveAndFlush(topupEntry);
       log.info("event=sepay_topup_credited tenantId={} credits={}", intent.getTenantId(), credits);
     } catch (DataIntegrityViolationException duplicateTopup) {
-      log.info("event=sepay_topup_replay_ignored");
+      log.info("event=sepay_topup_replay_ignored tenantId={}", intent.getTenantId());
     }
   }
 
