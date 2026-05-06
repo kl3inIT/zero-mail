@@ -33,7 +33,7 @@ key-files:
     - backend/worker/build.gradle.kts
 
 key-decisions:
-  - "Used Liquibase addCheckConstraint with the current YAML field constraintBody, verified against Context7 docs and Testcontainers."
+  - "Used raw SQL check constraints for billing enums and positive amounts because the installed Liquibase runtime rejected addCheckConstraint in these changelogs."
   - "Replaced includeAll with explicit ordered includes because appending explicit 014-017 includes to the existing includeAll master would duplicate changeset execution."
 
 patterns-established:
@@ -98,10 +98,10 @@ completed: 2026-05-06
 - **Verification:** `./gradlew.bat :backend:core:test --tests "*PostgresContainerTest*"` passed.
 - **Committed in:** `8a1b866`
 
-**2. [Rule 3 - Blocking] Used current Liquibase check-constraint YAML field**
+**2. [Rule 3 - Blocking] Used explicit SQL for billing check constraints**
 - **Found during:** Task 1
-- **Issue:** The plan snippet used `checkCondition`, while current Liquibase docs use `constraintBody` for `addCheckConstraint`.
-- **Fix:** Wrote check constraints with `constraintBody`.
+- **Issue:** The initial plan used Liquibase's check-constraint change type, but the installed runtime rejected it during integration verification.
+- **Fix:** Wrote check constraints as explicit `ALTER TABLE ... ADD CONSTRAINT ... CHECK (...)` SQL changes.
 - **Files modified:** `014-credit-ledger-entry.yaml`, `015-credit-reservation.yaml`, `016-billing-topup-intent.yaml`
 - **Verification:** `./gradlew.bat :backend:core:test --tests "*PostgresContainerTest*"` passed.
 - **Committed in:** `fb73738`

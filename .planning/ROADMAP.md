@@ -19,7 +19,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] **Phase 1.4: Gmail Identity Semantics, Permission UX, and UI Consistency (INSERTED)** _(completed 2026-04-27 — closed without ship; remaining value superseded by Phase 1.5)_ - Align v1 auth so the Google login account IS the first managed Gmail account; treat initial Gmail access as incremental consent for that same account; reject mismatched initial Gmail OAuth callbacks; keep multi-account management as a later workspace-level capability (users add more Gmail accounts to a workspace); sweep UI consistency, visual polish, layout quality, copy, states, and reusable frontend patterns across the current app via the `frontend-design` skill
 - [x] **Phase 1.5: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED)** _(completed 2026-04-28)_ - Remaining heavy Phase 1.5 work: single Google OAuth upfront Gmail scope, remove google-gmail mismatch architecture, merge Gmail token provisioning, simplify onboarding/consent UX, deflate frontend primitives, polish landing/login/onboarding/settings/ReconnectPrompt, and close surviving REVIEW cleanup; excludes quick tasks already completed
 - [x] **Phase 2A: Mail Ingestion** _(completed 2026-04-29)_ - Gmail `users.watch` + Pub/Sub push + OIDC verification + idempotent history processing + global pause
-- [ ] **Phase 2B: Billing (Prepaid Credits)** - Double-entry Postgres ledger, reserve/settle/release, credit-hold watchdog, SePay/VietQR top-up intent + webhook, balance API hooks
+- [x] **Phase 2B: Billing (Prepaid Credits)** _(completed 2026-05-06)_ - Double-entry Postgres ledger, reserve/settle/release, credit-hold watchdog, SePay/VietQR top-up intent + webhook, balance API hooks
 - [ ] **Phase 2C: LLM Gateway** - Spring AI 2.0.0-M4 `LlmGateway` with sanitize → Unicode strip → structured tool-call + allow-list → BYOK per-request options → daily spend cap → drift detection
 - [ ] **Phase 3: Rules Engine** - NL → structured matcher AST via Spring AI tool-call, deterministic evaluator, live preview, CRUD + reorder, template gallery
 - [ ] **Phase 4: Triage Convergence (Hero)** - Orchestrator, safety policy layer, audit + undo, shadow mode for new tenants, sender safety net
@@ -235,10 +235,10 @@ Plans:
 - [x] 02B-00-wave0-tests-PLAN.md — Wave 0 RED test scaffolds (7 core + 8 api + 2 worker = 17 files; flip VALIDATION nyquist_compliant true)
 - [x] 02B-01-schema-and-deps-PLAN.md — Liquibase 014 (credit_ledger_entry) + 015 (credit_reservation) + 016 (billing_topup_intent) + 017 (shedlock); ShedLock 7.7.0 + worker build wiring
 - [x] 02B-02-domain-model-PLAN.md — core.billing Modulith leaf + model package (CreditLedger interface + 3 enums + 2 records + 2 exceptions; BYOK Javadoc clause)
-- [x] 02B-03-credit-ledger-service-PLAN.md — 3 entities + 3 repositories + AdvisoryLockJdbcHelper + BillingProperties + SepayApiKeyVerifier + TopupCodeGenerator + CreditLedgerService (REQUIRES_NEW + advisory lock) + BillingTopupService
-- [ ] 02B-04-api-surface-PLAN.md — 4 DTOs + BillingController + SepayWebhookController + @Order(1) BillingWebhookSecurityConfig + SepayApiKeyAuthFilter + ErrorCodes + GlobalExceptionHandler 402/500 + i18n vi/en + schema.d.ts regen
-- [ ] 02B-05-worker-schedulers-PLAN.md — CreditReserveWatchdog (60s + ShedLock + ScopedValue tenant binding) + BillingIntentExpirySweeper (1h) + worker application.yml :? fail-fast (close CR-04 carryover)
-- [ ] 02B-06-verification-closure-PLAN.md — DomainBoundaryArchTests (5th billing rule) + BillingDomainBoundaryArchTest GREEN + CallSiteEnumMembershipArchTest GREEN + REQUIREMENTS.md BILL-01..BILL-07 flip + ./gradlew clean check
+- [x] 02B-03-credit-ledger-service-PLAN.md — 3 entities + 3 repositories + AdvisoryLockJdbcHelper + nested ZeroMailCoreProperties billing settings + SepayApiKeyVerifier + TopupCodeGenerator + CreditLedgerService (REQUIRES_NEW + advisory lock) + BillingTopupService
+- [x] 02B-04-api-surface-PLAN.md — 4 DTOs + BillingController + SepayWebhookController + @Order(2) BillingWebhookSecurityConfig + SepayApiKeyAuthFilter + ErrorCodes + GlobalExceptionHandler 402/500 + i18n vi/en + schema.d.ts regen
+- [x] 02B-05-worker-schedulers-PLAN.md — CreditReserveWatchdog (60s + ShedLock + ScopedValue tenant binding) + BillingIntentExpirySweeper (1h) + worker application.yml :? fail-fast (close CR-04 carryover)
+- [x] 02B-06-verification-closure-PLAN.md — DomainBoundaryArchTests (5th billing rule) + BillingDomainBoundaryArchTest GREEN + CallSiteEnumMembershipArchTest GREEN + REQUIREMENTS.md BILL-01..BILL-07 flip + ./gradlew clean check
 **UI hint**: yes
 
 ### Phase 2C: LLM Gateway
@@ -326,7 +326,7 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 1.4. Gmail Identity Semantics, Permission UX, and UI Consistency (INSERTED) | 6/6 | Complete without ship; superseded by 1.5 | 2026-04-27 |
 | 1.5. Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED) | 7/8 | In Progress|  |
 | 2A. Mail Ingestion | 6/6 | Complete | 2026-04-29 |
-| 2B. Billing (Prepaid Credits) | 0/7 | Planned | - |
+| 2B. Billing (Prepaid Credits) | 7/7 | Complete | 2026-05-06 |
 | 2C. LLM Gateway | 0/TBD | Not started | - |
 | 3. Rules Engine | 0/TBD | Not started | - |
 | 4. Triage Convergence (Hero) | 0/TBD | Not started | - |

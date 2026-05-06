@@ -108,8 +108,8 @@ completed: 2026-05-06
 
 ### Auto-fixed Issues
 
-**1. [Rule 2 - Missing Critical] Masked billing secret in configuration record**
-- **Found during:** Task 2 (BillingProperties)
+**1. [Rule 2 - Missing Critical] Masked billing secret in nested core configuration record**
+- **Found during:** Task 2 (ZeroMailCoreProperties billing settings)
 - **Issue:** The planned record carried `sepay.webhookApiKey` but did not override record `toString()`, which would expose the secret if the bean were logged.
 - **Fix:** Added a masked `toString()` returning `sepay=****`.
 - **Files modified:** `backend/core/src/main/java/com/zeromail/core/config/ZeroMailCoreProperties.java`
