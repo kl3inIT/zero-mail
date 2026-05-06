@@ -30,6 +30,13 @@ zeromail:
   gmail:
     pubsub:
       topic-name: ${GOOGLE_PUBSUB_TOPIC_NAME:?GOOGLE_PUBSUB_TOPIC_NAME env var is required}
+  billing:
+    sepay:
+      # Bare placeholder: Spring fails during placeholder resolution when the secret is absent.
+      webhook-api-key: ${SEPAY_WEBHOOK_API_KEY}
+    vnd-per-credit: 1000
+    max-pending-intents-per-tenant: 5
+    intent-expiry: PT24H
 server:
   port: 8081
 management:

@@ -51,13 +51,13 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 
 ### Billing (Prepaid Credits)
 
-- [ ] **BILL-01**: User can purchase prepaid credits via a payment provider (Stripe or LemonSqueezy)
-- [ ] **BILL-02**: Each billable action (triage, draft, preview) deducts credits via a double-entry Postgres ledger
-- [ ] **BILL-03**: Credit reserve/settle/release flow prevents double-charge and lost credits under concurrency
-- [ ] **BILL-04**: A scheduled watchdog sweeps stale credit holds and releases them back to the balance
-- [ ] **BILL-05**: User sees real-time credit balance and per-action cost in the UI
-- [ ] **BILL-06**: System blocks billable actions when credit balance is insufficient with a clear UI prompt
-- [ ] **BILL-07**: BYOK-only actions do not consume platform credits
+- [x] **BILL-01**: User can purchase prepaid credits via SePay/VietQR for the Vietnam beta; global Merchant-of-Record/card provider is deferred
+- [x] **BILL-02**: Each billable action (triage, draft, preview) deducts credits via a double-entry Postgres ledger
+- [x] **BILL-03**: Credit reserve/settle/release flow prevents double-charge and lost credits under concurrency
+- [x] **BILL-04**: A scheduled watchdog sweeps stale credit holds and releases them back to the balance
+- [x] **BILL-05**: User sees real-time credit balance and per-action cost in the UI
+- [x] **BILL-06**: System blocks billable actions when credit balance is insufficient with a clear UI prompt
+- [x] **BILL-07**: BYOK-only actions do not consume platform credits
 
 ### Rules Engine
 
@@ -161,13 +161,13 @@ Each v1 requirement maps to exactly one phase.
 | MAIL-04 | Phase 2A | Complete |
 | MAIL-05 | Phase 2A | Complete |
 | MAIL-06 | Phase 2A | Complete |
-| BILL-01 | Phase 2B | Pending |
-| BILL-02 | Phase 2B | Pending |
-| BILL-03 | Phase 2B | Pending |
-| BILL-04 | Phase 2B | Pending |
-| BILL-05 | Phase 2B | Pending |
-| BILL-06 | Phase 2B | Pending |
-| BILL-07 | Phase 2B | Pending |
+| BILL-01 | Phase 2B | Complete |
+| BILL-02 | Phase 2B | Complete |
+| BILL-03 | Phase 2B | Complete |
+| BILL-04 | Phase 2B | Complete |
+| BILL-05 | Phase 2B | Complete |
+| BILL-06 | Phase 2B | Complete |
+| BILL-07 | Phase 2B | Complete |
 | LLM-01 | Phase 2C | Pending |
 | LLM-02 | Phase 2C | Pending |
 | LLM-03 | Phase 2C | Pending |

@@ -14,6 +14,7 @@ gmailApi = "v1-rev20250331-2.0.0"
 testcontainers = "1.21.3"
 springdoc = "3.0.3"
 jsoup = "1.22.2"
+shedlock = "7.7.0"
 
 [libraries]
 spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "springBoot" }
@@ -27,6 +28,8 @@ liquibase-core = { module = "org.liquibase:liquibase-core", version.ref = "liqui
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 google-auth-library-oauth2-http = { module = "com.google.auth:google-auth-library-oauth2-http", version.ref = "googleAuthLibrary" }
 google-api-services-gmail = { module = "com.google.apis:google-api-services-gmail", version.ref = "gmailApi" }
+shedlock-provider-jdbc-template = { module = "net.javacrumbs.shedlock:shedlock-provider-jdbc-template", version.ref = "shedlock" }
+shedlock-spring = { module = "net.javacrumbs.shedlock:shedlock-spring", version.ref = "shedlock" }
 
 [plugins]
 springBoot = { id = "org.springframework.boot", version.ref = "springBoot" }

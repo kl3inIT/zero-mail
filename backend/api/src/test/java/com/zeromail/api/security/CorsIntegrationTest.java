@@ -5,6 +5,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.web.client.RestClient;
 
 import com.zeromail.api.support.ApiPostgresTestBase;
@@ -37,15 +38,17 @@ class CorsIntegrationTest extends ApiPostgresTestBase {
     void actual_response_for_frontend_origin_includes_cors_headers() {
         var response = RestClient.create("http://localhost:" + port)
                 .get()
-                .uri("/actuator/health")
+                .uri("/me")
                 .header(HttpHeaders.ORIGIN, "http://localhost:3000")
-                .retrieve()
-                .toBodilessEntity();
+                .exchange((request, clientResponse) ->
+                        new CorsResponse(clientResponse.getStatusCode(), clientResponse.getHeaders()));
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getHeaders().getFirst(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN))
+        assertThat(response.statusCode().is3xxRedirection()).isTrue();
+        assertThat(response.headers().getFirst(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN))
                 .isEqualTo("http://localhost:3000");
-        assertThat(response.getHeaders().getFirst(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS))
+        assertThat(response.headers().getFirst(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS))
                 .isEqualTo("true");
     }
+
+    private record CorsResponse(HttpStatusCode statusCode, HttpHeaders headers) {}
 }

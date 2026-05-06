@@ -506,6 +506,16 @@
     "gmail": {
       "disconnected": "Google access was revoked or expired. Reconnect Gmail."
     },
+    "billing": {
+      "insufficient": "Insufficient credits — top up to continue.",
+      "ledger": {
+        "invalidState": "Internal billing-state error — please try again later."
+      },
+      "sepay": {
+        "reference_invalid": "Invalid transaction reference code.",
+        "auth_invalid": "Invalid webhook request."
+      }
+    },
     "conflict": "The data changed before the action finished. Reload the page and try again.",
     "dataIntegrity": "The change could not be saved because the data is invalid.",
     "badRequest": "The request is invalid. Check it and try again.",

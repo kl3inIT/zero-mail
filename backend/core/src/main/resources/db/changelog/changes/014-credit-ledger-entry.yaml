@@ -1,0 +1,91 @@
+databaseChangeLog:
+  - changeSet:
+      id: 014-credit-ledger-entry
+      author: zeromail
+      changes:
+        - createTable:
+            tableName: credit_ledger_entry
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_credit_ledger_entry_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: kind
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount_credits
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ref_type
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ref_id
+                  type: varchar(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: credit_ledger_entry
+            columnNames: ref_type, ref_id, kind
+            constraintName: uq_credit_ledger_entry_ref_kind
+        - sql:
+            comment: Check constraint for the allowed ledger entry kinds.
+            sql: ALTER TABLE credit_ledger_entry ADD CONSTRAINT ck_credit_ledger_entry_kind CHECK (kind IN ('TOPUP','RESERVE','SETTLE','RELEASE'))
+        - createIndex:
+            tableName: credit_ledger_entry
+            indexName: idx_credit_ledger_entry_tenant_created
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: created_at
+        - createIndex:
+            tableName: credit_ledger_entry
+            indexName: idx_credit_ledger_entry_tenant_ref
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: ref_type
+              - column:
+                  name: ref_id
+        - sql:
+            comment: BRIN index on created_at for append-only time-ordered scans.
+            sql: CREATE INDEX idx_credit_ledger_entry_created_brin ON credit_ledger_entry USING BRIN (created_at)
+      rollback:
+        - dropTable:
+            tableName: credit_ledger_entry

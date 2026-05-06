@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 
 // Vitest runs in --run (no watch) mode via the "test" npm script per VALIDATION.md.
@@ -12,28 +13,19 @@ import { resolve } from 'node:path';
 // which copy to use ("Cannot read properties of null (reading 'useTransition'/
 // 'useRef'/'useContext')").
 //
-// Fix: dedupe react/react-dom (Vite picks one resolved id for the whole graph).
-// We do NOT add explicit path aliases or server.deps.inline directives because
-// any combination of those re-introduces the duplicate React graph (some module
-// resolves through the alias, others through CJS require, leading to the same
-// dispatcher mismatch).
-// pnpm hoists `react` and `react-dom` to BOTH apps/web/node_modules and the
-// workspace root. Vitest's Vite resolver picks the one nearest the importer,
-// which means components in apps/web/components/ get apps/web's react, while
-// @testing-library/react (at root) gets root react. Two React module instances
-// → null hooks dispatcher → "Cannot read properties of null (reading 'useState')".
-//
-// Force a single absolute path for both react and react-dom by aliasing every
-// known subpath. The aliases are evaluated regardless of the importer location,
-// so apps/web's react and root's react converge on the SAME absolute file.
-const reactRoot = resolve(__dirname, '../../node_modules/react');
-const reactDomRoot = resolve(__dirname, '../../node_modules/react-dom');
+// Fix: dedupe react/react-dom and alias the common React entrypoints to a
+// single package instance. Resolve through the app package instead of
+// hard-coding ../../node_modules: a fresh pnpm install on CI may not place React
+// at the workspace root.
+const requireFromApp = createRequire(import.meta.url);
 
 export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
     globals: true,
+    pool: 'threads',
+    maxWorkers: 4,
     include: [
       '__tests__/**/*.{test,spec}.{ts,tsx}',
       'test/**/*.{test,spec}.{ts,tsx}',
@@ -48,12 +40,15 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: /^@\/(.*)$/, replacement: resolve(__dirname, '.') + '/$1' },
-      { find: 'react/jsx-dev-runtime', replacement: resolve(reactRoot, 'jsx-dev-runtime.js') },
-      { find: 'react/jsx-runtime', replacement: resolve(reactRoot, 'jsx-runtime.js') },
-      { find: 'react-dom/client', replacement: resolve(reactDomRoot, 'client.js') },
-      { find: 'react-dom/test-utils', replacement: resolve(reactDomRoot, 'test-utils.js') },
-      { find: /^react-dom$/, replacement: resolve(reactDomRoot, 'index.js') },
-      { find: /^react$/, replacement: resolve(reactRoot, 'index.js') },
+      {
+        find: 'react/jsx-dev-runtime',
+        replacement: requireFromApp.resolve('react/jsx-dev-runtime'),
+      },
+      { find: 'react/jsx-runtime', replacement: requireFromApp.resolve('react/jsx-runtime') },
+      { find: 'react-dom/client', replacement: requireFromApp.resolve('react-dom/client') },
+      { find: 'react-dom/test-utils', replacement: requireFromApp.resolve('react-dom/test-utils') },
+      { find: /^react-dom$/, replacement: requireFromApp.resolve('react-dom') },
+      { find: /^react$/, replacement: requireFromApp.resolve('react') },
     ],
     dedupe: ['react', 'react-dom'],
   },

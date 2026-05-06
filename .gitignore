@@ -6,5 +6,8 @@ node_modules/
 .idea/
 *.iml
 out/
+.config/
+.claude/worktrees/
 apps/web/.next/
 apps/web/node_modules/
+.playwright-mcp/

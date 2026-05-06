@@ -506,6 +506,16 @@
     "gmail": {
       "disconnected": "Quyền truy cập Google đã bị thu hồi hoặc hết hạn. Hãy kết nối lại Gmail."
     },
+    "billing": {
+      "insufficient": "Số dư tín dụng không đủ — vui lòng nạp thêm để tiếp tục.",
+      "ledger": {
+        "invalidState": "Lỗi nội bộ trong sổ tín dụng — vui lòng thử lại sau."
+      },
+      "sepay": {
+        "reference_invalid": "Mã tham chiếu giao dịch không hợp lệ.",
+        "auth_invalid": "Yêu cầu webhook không hợp lệ."
+      }
+    },
     "conflict": "Dữ liệu đã thay đổi trước khi thao tác hoàn tất. Hãy tải lại trang rồi thử lại.",
     "dataIntegrity": "Không thể lưu thay đổi vì dữ liệu không hợp lệ.",
     "badRequest": "Yêu cầu không hợp lệ. Hãy kiểm tra lại và thử lần nữa.",

@@ -1,0 +1,88 @@
+databaseChangeLog:
+  - changeSet:
+      id: 016-billing-topup-intent
+      author: zeromail
+      changes:
+        - createTable:
+            tableName: billing_topup_intent
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_billing_topup_intent_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: code
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uq_billing_topup_intent_code
+              - column:
+                  name: amount_vnd
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: paid_at
+                  type: timestamptz
+              - column:
+                  name: sepay_transaction_id
+                  type: varchar(128)
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            comment: Check constraint for the allowed top-up intent statuses.
+            sql: ALTER TABLE billing_topup_intent ADD CONSTRAINT ck_billing_topup_intent_status CHECK (status IN ('PENDING','PAID','EXPIRED'))
+        - sql:
+            comment: Check constraint requiring positive VND top-up amounts.
+            sql: ALTER TABLE billing_topup_intent ADD CONSTRAINT ck_billing_topup_intent_amount_positive CHECK (amount_vnd > 0)
+        - createIndex:
+            tableName: billing_topup_intent
+            indexName: idx_billing_topup_intent_status_expires
+            columns:
+              - column:
+                  name: status
+              - column:
+                  name: expires_at
+        - sql:
+            comment: Partial unique index on sepay_transaction_id for replay protection.
+            sql: CREATE UNIQUE INDEX uq_billing_topup_intent_sepay_tx ON billing_topup_intent (sepay_transaction_id) WHERE sepay_transaction_id IS NOT NULL
+      rollback:
+        - dropTable:
+            tableName: billing_topup_intent

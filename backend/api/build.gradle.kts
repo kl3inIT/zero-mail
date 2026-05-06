@@ -57,7 +57,11 @@ openApi {
                 "--zeromail.crypto.refresh-token-key-base64=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
                 "--zeromail.gmail.pubsub.push-audience-url=https://openapi.invalid/internal/pubsub/gmail",
                 "--zeromail.gmail.pubsub.sa-principal-email=pubsub-openapi@openapi.invalid",
-                "--zeromail.gmail.pubsub.oidc-certificates-url=https://www.googleapis.com/oauth2/v3/certs"
+                "--zeromail.gmail.pubsub.oidc-certificates-url=https://www.googleapis.com/oauth2/v3/certs",
+                "--zeromail.billing.sepay.webhook-api-key=openapi-emit",
+                "--zeromail.billing.vnd-per-credit=1000",
+                "--zeromail.billing.max-pending-intents-per-tenant=5",
+                "--zeromail.billing.intent-expiry=PT24H"
             )
         )
     }

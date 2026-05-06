@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: "Phase 02A shipped - PR #19"
-stopped_at: Completed 02A-05-PLAN.md
-last_updated: "2026-05-05T06:41:32.935Z"
-last_activity: 2026-05-05
+status: "Phase 02B shipped — PR #20"
+stopped_at: Completed Phase 02B billing-prepaid-credits
+last_updated: "2026-05-06T19:29:38.948Z"
+last_activity: 2026-05-07
 progress:
   total_phases: 15
-  completed_phases: 9
-  total_plans: 64
-  completed_plans: 64
-  percent: 100
+  completed_phases: 10
+  total_plans: 71
+  completed_plans: 68
+  percent: 67
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 02A — mail-ingestion
+**Current focus:** Phase 02C — llm-gateway
 
 ## Current Position
 
-Phase: 02A (mail-ingestion) — COMPLETE
-Plan: 6 of 6
-Status: Phase 02A shipped - PR #19
-Last activity: 2026-05-05
+Phase: 02C
+Plan: Not started
+Status: Phase 02B shipped — PR #20
+Last activity: 2026-05-07
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 17
+- Total plans completed: 24
 - Average duration: —
 - Total execution time: 0.0 hours
 
@@ -45,6 +45,7 @@ Progress: [██████████] 100%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01.5 | 9 | - | - |
+| 02B | 7 | - | - |
 
 **Recent Trend:**
 
@@ -100,6 +101,8 @@ Progress: [██████████] 100%
 | Phase 02A P03 | 20min | 2 tasks | 26 files |
 | Phase 02A P04 | 16min | 2 tasks | 15 files |
 | Phase 02A P05 | 20min | 2 tasks | 11 files |
+| Phase 02B P00 | 13min | 4 tasks | 20 files |
+| Phase 02B P03 | 14min | 3 tasks | 25 files |
 
 ## Accumulated Context
 
@@ -212,6 +215,10 @@ Recent decisions affecting current work:
 - [Phase 02A]: Plan 04: Use a plain accessible toggle button because apps/web has no shadcn Switch primitive installed. — No local Switch primitive exists and the plan forbids installing new shadcn primitives in this plan.
 - [Phase 02A]: Plan 04: generate-api.ts defaults to openapi/openapi.json for schema generation. — The Gradle OpenAPI task writes a local artifact and stops its forked server, so frontend codegen must not require localhost:8080 by default.
 - [Phase 2A]: Pub/Sub push-token validation closed. PubSubOidcAuthFilter uses TokenVerifier.newBuilder().setAudience().setIssuer().setCertificatesLocation() from google-auth-library-oauth2-http. PubSubSecurityConfig contributes a SecurityFilterChain bean with @Order(1) and remains active under the test profile; user-session SecurityConfig's SecurityFilterChain bean is @Order(2). 7-case test validates: valid passes, wrong aud/email/issuer/exp/sig all return 401, and non-Pub/Sub paths skip the filter. Phase 01.5 D-D5 deferred blocker retired.
+- [Phase 02B]: Plan 00 accepted a Phase 02B-only Wave 0 compile-RED contract-test window; no production stubs were added. — The plan explicitly scopes this exception to prepaid-credit billing tests until Plans 03, 04, and 05 land the referenced symbols.
+- [Phase 02B]: SepayWebhookMismatchAuditEventTest uses valid Crockford code ABCD2345 for the amount-mismatch audit path. — This guards the cycle-3 review fix so future implementation resolves by payload code instead of referenceCode or an invalid test fixture.
+- [Phase 02B]: Top-up code uniqueness uses tenant-bypassing lookup — billing_topup_intent.code is globally unique while standard JPA findByCode is tenant-filtered.
+- [Phase 02B]: BillingProperties masks SePay secret in toString — The configuration record carries zero-mail.billing.sepay.webhook-api-key and must not expose the API key through accidental bean logging.
 
 ### Roadmap Evolution
 
@@ -246,6 +253,7 @@ Recent decisions affecting current work:
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260428-0hx | Rename core view records to projections | 2026-04-28 | 3ff9025 | [260428-0hx-rename-core-view-records-to-projections-](./quick/260428-0hx-rename-core-view-records-to-projections-/) |
+| 260506-n2x | Move billing CreditLedger interface into service package | 2026-05-06 | b2a97d5 | [260506-n2x-move-billing-creditledger-interface-into](./quick/260506-n2x-move-billing-creditledger-interface-into/) |
 | 260427-9n3 | cài Dependabot cho tôi | 2026-04-27 | 600fef4 | [260427-9n3-c-i-dependabot-cho-t-i](./quick/260427-9n3-c-i-dependabot-cho-t-i/) |
 | 260427-02m | Refactor @Value application properties into @ConfigurationProperties | 2026-04-27 | fec9201 | [260427-02m-refactor-value-application-properties-in](./quick/260427-02m-refactor-value-application-properties-in/) |
 | 260427-8qe | Phase 1.5 quick cleanup: font fix and low-risk frontend/backend review findings | 2026-04-27 | 91117fd | [260427-8qe-phase-1-5-quick-cleanup-font-fix-and-low](./quick/260427-8qe-phase-1-5-quick-cleanup-font-fix-and-low/) |
@@ -263,6 +271,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-04-29T07:11:31.932Z
-Stopped at: Completed 02A-05-PLAN.md
+Last session: 2026-05-06T06:02:36.797Z
+Stopped at: Completed 02B-03-credit-ledger-service-PLAN.md
 Resume file: None

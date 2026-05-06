@@ -47,6 +47,7 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.yaml
     enabled: true
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: validate
     properties:
@@ -76,6 +77,13 @@ zeromail:
       push-audience-url: ${PUBSUB_PUSH_AUDIENCE_URL:?PUBSUB_PUSH_AUDIENCE_URL env var is required}
       sa-principal-email: ${PUBSUB_SA_PRINCIPAL_EMAIL:?PUBSUB_SA_PRINCIPAL_EMAIL env var is required}
       oidc-certificates-url: ${PUBSUB_OIDC_CERTIFICATES_URL:https://www.googleapis.com/oauth2/v3/certs}
+  billing:
+    sepay:
+      # Bare placeholder: Spring fails during placeholder resolution when the secret is absent.
+      webhook-api-key: ${SEPAY_WEBHOOK_API_KEY}
+    vnd-per-credit: 1000
+    max-pending-intents-per-tenant: 5
+    intent-expiry: PT24H
 server:
   port: 8080
   servlet:

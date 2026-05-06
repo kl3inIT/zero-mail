@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(rm -f .git/index.lock)",
-      "Bash(gsd-sdk commit *)"
+      "Bash(gsd-sdk commit *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
