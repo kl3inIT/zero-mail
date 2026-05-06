@@ -1,11 +1,8 @@
-// Wave 0 RED scaffold — locks the onboarding routes 200 + StepIndicator contract
+// Locks the onboarding routes 200 + StepIndicator contract
 // (Phase 1.6 REQ-1.6-6):
 //  - /onboarding/gmail-connect, /onboarding/template-select, /onboarding/complete
 //    return 200 (or redirect to /login when unauthenticated — both acceptable)
 //  - When authenticated, each route renders StepIndicator nav
-//
-// RED-by-design: onboarding routes do not yet exist at the new URL split paths.
-// This spec becomes GREEN when Phase 1.6 Wave 2 lands.
 import { test, expect } from '@playwright/test';
 
 test.describe('onboarding routes', () => {

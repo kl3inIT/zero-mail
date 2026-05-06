@@ -1,10 +1,7 @@
-// Wave 0 RED scaffold — locks the StepIndicator 3-state contract (Phase 1.6 REQ-1.6-6):
+// Locks the StepIndicator 3-state contract (Phase 1.6 REQ-1.6-6):
 //  - Renders active pill with bg-accent for each currentStep value
 //  - Renders completed pills with bg-accent-soft when currentStep=COMPLETE
 //  - Renders future pills with border border-border when currentStep=GMAIL_CONNECTED
-//
-// RED-by-design: StepIndicator does not yet exist at features/auth/components/StepIndicator.tsx.
-// This spec becomes GREEN when Phase 1.6 Wave 2 lands.
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 

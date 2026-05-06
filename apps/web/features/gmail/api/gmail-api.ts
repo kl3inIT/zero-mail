@@ -1,4 +1,4 @@
-import { api } from '@/lib/api/client';
+import { api, xsrfHeader } from '@/lib/api/client';
 
 export interface TenantStatus {
   connectionStatus: 'CONNECTED' | 'DISCONNECTED' | 'NOT_CONNECTED' | 'PENDING';
@@ -11,4 +11,13 @@ export async function getTenantStatus(opts: { signal?: AbortSignal } = {}): Prom
   if (error || !response.ok)
     throw error ?? new Error(`/gmail/connection/status failed: ${response.status}`);
   return data as TenantStatus;
+}
+
+export async function disconnectGmail(): Promise<void> {
+  const { error, response } = await api.POST('/tenant/disconnect', {
+    headers: { ...xsrfHeader() },
+  });
+  if (error || !response.ok) {
+    throw error ?? new Error(`/tenant/disconnect failed: ${response.status}`);
+  }
 }

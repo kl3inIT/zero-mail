@@ -7,13 +7,12 @@ import { expect, test } from '@playwright/test';
  *   "NEXT_LOCALE downgraded to session cookie" — mitigated by asserting the
  *   cookie's `expires` is roughly 1 year from now (>= now + 364d).
  *
- * Coverage scope (intentionally narrow per VALIDATION.md):
- *   - Test #1 (UNAUTHENTICATED, runs): visit /login, default vi, switch to en,
- *     assert <html lang="en"> AND NEXT_LOCALE cookie persisted with 1y expiry.
- *   - Test #2 (AUTHENTICATED, skipped): the PATCH /me/language flow needs an
- *     auth fixture that Phase 1.2 will provide. Plan 06 Task 3 step 10 is the
- *     compensating manual checkpoint and MUST be filled in before this plan
- *     can be considered fully approved.
+ * Coverage scope:
+ *   - Browser E2E covers unauthenticated locale persistence across reloads and
+ *     a fresh context.
+ *   - Authenticated PATCH /me/language behavior is covered by
+ *     __tests__/components/LanguageSwitcher.test.tsx until a real authenticated
+ *     Playwright storage-state fixture exists.
  */
 
 test('default Vietnamese, switch to English, NEXT_LOCALE cookie persists across context restart with ~1y maxAge', async ({
@@ -73,8 +72,6 @@ test('default Vietnamese, switch to English, NEXT_LOCALE cookie persists across 
 test('authenticated PATCH /me/language smoke', async () => {
   test.skip(
     true,
-    'Requires authenticated test fixture - Phase 1.2 will add the auth helper. ' +
-      'Cross-browser cross-session PATCH /me/language coverage is provided MANUALLY ' +
-      'by Plan 06 Task 3 step 10 (logged in 01.1-06-SUMMARY.md with date + reviewer initials).',
+    'Requires an authenticated Playwright storage-state fixture; unit tests cover PATCH /me/language.',
   );
 });

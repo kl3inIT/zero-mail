@@ -26,15 +26,10 @@ export default defineConfig({
     globals: true,
     pool: 'threads',
     maxWorkers: 4,
-    include: [
-      '__tests__/**/*.{test,spec}.{ts,tsx}',
-      'test/**/*.{test,spec}.{ts,tsx}',
-      'features/**/*.{test,spec}.{ts,tsx}',
-    ],
-    // Plan 07: Playwright spec lives under __tests__/e2e/ and uses its own
-    // runner. Vitest must NOT try to load it (Playwright's `test()` throws
-    // when called outside its runner).
-    exclude: ['**/node_modules/**', '__tests__/e2e/**'],
+    include: ['__tests__/**/*.{test,spec}.{ts,tsx}', 'features/**/*.{test,spec}.{ts,tsx}'],
+    // Playwright specs live under e2e/ and use their own runner. Vitest must
+    // not load them because Playwright's test() throws outside its runner.
+    exclude: ['**/node_modules/**'],
     setupFiles: ['__tests__/setup.ts'],
   },
   resolve: {

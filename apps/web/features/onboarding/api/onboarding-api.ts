@@ -12,3 +12,12 @@ export async function selectTemplate(body: SelectTemplateBody): Promise<void> {
   if (error || !response.ok)
     throw error ?? new Error(`/onboarding/select-template failed: ${response.status}`);
 }
+
+export async function completeOnboarding(): Promise<void> {
+  const { error, response } = await api.POST('/onboarding/complete', {
+    headers: { ...xsrfHeader() },
+  });
+  if (error || !response.ok) {
+    throw error ?? new Error(`/onboarding/complete failed: ${response.status}`);
+  }
+}

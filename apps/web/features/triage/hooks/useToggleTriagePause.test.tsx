@@ -1,14 +1,14 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { accountKeys } from '@/features/account/api/keys';
+import { accountQueryKeys } from '@/features/account/query-keys';
 
 const mocks = vi.hoisted(() => ({
   invalidateQueries: vi.fn(),
   setTriagePaused: vi.fn(),
 }));
 
-vi.mock('@/features/triage/api/triagePause', () => ({
+vi.mock('@/features/triage/api/triage-api', () => ({
   setTriagePaused: mocks.setTriagePaused,
   toggleTriagePause: mocks.setTriagePaused,
 }));
@@ -55,7 +55,7 @@ describe('useToggleTriagePause', () => {
     });
 
     await waitFor(() => {
-      expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: accountKeys.me() });
+      expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: accountQueryKeys.me() });
     });
   });
 });

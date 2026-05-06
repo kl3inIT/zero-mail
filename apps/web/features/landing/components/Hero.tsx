@@ -3,7 +3,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 
 import { buttonVariants } from '@/components/ui/button';
-import { getCurrentUserCached } from '@/features/account/api/me';
+import { getCurrentUserCached } from '@/features/account/api/account-api';
 import InboxPreview from '@/features/landing/components/InboxPreview';
 import {
   ArrowDownIcon,

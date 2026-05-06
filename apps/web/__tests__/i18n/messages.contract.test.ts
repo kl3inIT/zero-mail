@@ -4,8 +4,6 @@ import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
 /**
- * Plan 05 Wave 4 — flipped from RED stub to GREEN.
- *
  * Locks the vi/en dictionary parity contract:
  *  - every leaf key in i18n/messages/vi.json exists in i18n/messages/en.json
  *    (and vice versa)

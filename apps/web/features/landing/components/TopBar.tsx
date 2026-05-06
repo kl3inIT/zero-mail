@@ -3,7 +3,7 @@ import { cookies, headers } from 'next/headers';
 import Link from 'next/link';
 
 import { buttonVariants } from '@/components/ui/button';
-import { getCurrentUserCached } from '@/features/account/api/me';
+import { getCurrentUserCached } from '@/features/account/api/account-api';
 import { SegmentedLanguageToggle } from '@/features/landing/components/SegmentedLanguageToggle';
 import { ThemeToggle } from '@/features/landing/components/ThemeToggle';
 import ZMLogoMark from '@/features/landing/components/ZMLogoMark';

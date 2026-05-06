@@ -1,6 +1,4 @@
 /**
- * HIGH-2 Review Fix — Phase 01.5 Plan 03
- *
  * Kiểm tra primitive-keyed React cache() dedupe cho /me fetch.
  *
  * Vấn đề gốc: React cache() key theo REFERENCE EQUALITY đối với object args.
@@ -26,8 +24,7 @@ import { resolve } from 'node:path';
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Verify exports tồn tại (sẽ RED trước Task 2, GREEN sau Task 2)
-import { getCurrentUserCached, fetchCurrentUser } from '@/features/account/api/me';
+import { getCurrentUserCached, fetchCurrentUser } from '@/features/account/api/account-api';
 
 // Mock fetch globally để capture invocations
 const mockFetch = vi.fn();
@@ -61,7 +58,7 @@ beforeEach(() => {
  * fix is in place or has been reverted.
  *
  * To lock the HIGH-2 contract, regression-guard the SHAPE of the wrapper by
- * inspecting the source text of `me.ts` directly. Note: React `cache()`
+ * inspecting the source text of `account-api.ts` directly. Note: React `cache()`
  * normalizes the wrapped function so `getCurrentUserCached.length` is 0 (not
  * 1) and cannot be used as a contract assertion — see the second test below.
  *
@@ -74,8 +71,11 @@ beforeEach(() => {
  * verified manually per 01.5-03-SUMMARY's deferred manual gate.
  */
 describe('WR-03 — getCurrentUserCached primitive-string contract (regression guard)', () => {
-  it('me.ts source defines cache() with primitive-string arg, not object arg', () => {
-    const meSrc = readFileSync(resolve(__dirname, '../../../features/account/api/me.ts'), 'utf8');
+  it('account-api.ts source defines cache() with primitive-string arg, not object arg', () => {
+    const meSrc = readFileSync(
+      resolve(__dirname, '../../../features/account/api/account-api.ts'),
+      'utf8',
+    );
     // Positive guard: cache() wraps an async function whose first param is
     // explicitly typed `cookieHeader: string | undefined` (primitive contract).
     expect(meSrc).toMatch(/cache\(\s*async\s*\(\s*cookieHeader:\s*string\s*\|\s*undefined\s*\)/);
@@ -85,7 +85,7 @@ describe('WR-03 — getCurrentUserCached primitive-string contract (regression g
   });
 });
 
-describe('HIGH-2 — getCurrentUserCached primitive-keyed cache() (Phase 01.5 fix)', () => {
+describe('getCurrentUserCached primitive-keyed cache contract', () => {
   /**
    * Test 1: Export shape — getCurrentUserCached tồn tại và callable
    *

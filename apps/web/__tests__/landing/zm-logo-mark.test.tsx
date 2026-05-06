@@ -1,10 +1,7 @@
-// Wave 0 RED scaffold — locks the ZMLogoMark component contract (Phase 1.6 REQ-1.6-5):
+// Locks the ZMLogoMark component contract (Phase 1.6 REQ-1.6-5):
 //  - ZMLogoMark renders SVG with default size 16
 //  - Uses currentColor for stroke and fill
 //  - Respects size prop
-//
-// RED-by-design: ZMLogoMark does not yet exist at features/landing/components/ZMLogoMark.tsx.
-// This spec becomes GREEN when Phase 1.6 Wave 2 lands.
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import ZMLogoMark from '@/features/landing/components/ZMLogoMark';

@@ -1,8 +1,5 @@
-// Wave 0 RED scaffold — locks the landing page 4-section contract (Phase 1.6 REQ-1.6-3):
+// Locks the landing page 4-section contract (Phase 1.6 REQ-1.6-3):
 //  - (public)/page.tsx renders Hero, HowItWorks, Features, TrustPillars
-//
-// RED-by-design: LandingPage does not yet exist at app/(public)/page.tsx with these
-// 4 section components. This spec becomes GREEN when Phase 1.6 Wave 2 lands.
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 

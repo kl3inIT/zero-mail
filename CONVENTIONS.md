@@ -114,3 +114,34 @@ Spring application events are local to one Spring application context. They do n
 Before building or refactoring UI, check whether shadcn/ui already provides the needed primitive (for example button, card, input, label, radio-group, toggle-group, tooltip, dialog, alert, separator, skeleton, badge). If the primitive exists and is not already present locally, install it from `apps/web` with `pnpm dlx shadcn@latest add <component>` and compose product-specific components around `@/components/ui/*` instead of hand-rolling the primitive.
 
 Treat `apps/web/components/ui/**` as copied shadcn primitive source. These files are ignored by ESLint and Prettier; edit them only when intentionally customizing the local primitive contract.
+
+---
+
+## 7. Frontend feature API, hooks, query keys, and tests
+
+Feature code in `apps/web/features/<feature>/` uses explicit ownership:
+
+- `api/<feature>-api.ts` contains the feature's small HTTP functions. Split into multiple API files only when the feature grows into distinct resources or the file becomes hard to scan.
+- `query-keys.ts` contains TanStack Query key factories for cached server data. Keep this file outside `api/` because query keys describe cache identity, not transport.
+- `hooks/useX.ts` stays one hook per use case. Hooks own TanStack Query behavior such as `queryKey`, `queryFn`, mutation invalidation, optimistic updates, and error behavior.
+- Do not create a `query-keys.ts` file for mutation-only features unless the feature actually owns cached query data.
+- Query keys are named for cached data, not UI actions. Example: `accountQueryKeys.me()` is correct for `/me`; a mutation that toggles triage pause invalidates `accountQueryKeys.me()` if the paused state is returned by `/me`.
+- Keep feature roots barrel-free. Import concrete files directly.
+
+Tests are split by runtime:
+
+- Vitest unit/component tests that belong to one feature may live beside that feature under `features/**`. App-wide contract tests live in `apps/web/__tests__/**`.
+- Playwright browser tests live only in `apps/web/e2e/**`.
+- Do not put Playwright specs under `__tests__/`; Vitest and Playwright use different runners.
+
+**Example:**
+
+```text
+features/account/
+  api/account-api.ts
+  query-keys.ts
+  hooks/useCurrentUser.ts
+  hooks/useDeleteAccount.ts
+  hooks/useUpdateLanguage.ts
+  components/DeleteAccountDialog.tsx
+```

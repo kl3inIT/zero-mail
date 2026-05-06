@@ -1,4 +1,4 @@
-// Wave 0 RED scaffold — locks the zm-theme cookie first-paint dark class contract (Phase 1.6 REQ-1.6-7):
+// Locks the zm-theme cookie first-paint dark class contract (Phase 1.6 REQ-1.6-7):
 //  - zm-theme=dark cookie causes RootLayout to render <html class="... dark ...">
 //  - Absent cookie does NOT apply dark class
 //

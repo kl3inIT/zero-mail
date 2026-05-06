@@ -1,5 +1,3 @@
-// Plan 06 Task 1 — flipped from RED stub to GREEN.
-//
 // Locks the FE error-localization display contract (CONTEXT.md decision D-D5
 // + threat_model T-1.1.06-01/02):
 //  - default locale vi -> Vietnamese localized string for known error codes

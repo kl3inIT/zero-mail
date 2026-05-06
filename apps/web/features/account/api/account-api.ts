@@ -1,7 +1,10 @@
 import { cache } from 'react';
 
-import { api } from '@/lib/api/client';
+import { api, xsrfHeader } from '@/lib/api/client';
 import { getApiUrl } from '@/lib/api/base-url';
+import type { components } from '@/lib/api/schema';
+
+type ApiError = components['schemas']['ApiError'];
 
 export interface CurrentUser {
   id?: string;
@@ -85,3 +88,23 @@ export const getCurrentUserCached = cache(
  * for per-request dedupe.
  */
 export const getCurrentUser = fetchCurrentUser;
+
+export async function deleteAccount(): Promise<void> {
+  const { error, response } = await api.DELETE('/me/account', {
+    headers: { ...xsrfHeader() },
+  });
+  if (error || !response.ok) {
+    throw error ?? new Error(`/me/account DELETE failed: ${response.status}`);
+  }
+}
+
+export async function updateLanguage(language: 'vi' | 'en') {
+  const response = await api.PATCH('/me/language', {
+    body: { language },
+    headers: { 'Content-Type': 'application/json', ...xsrfHeader() },
+  });
+  if (response.error) {
+    throw response.error as ApiError;
+  }
+  return response.data;
+}

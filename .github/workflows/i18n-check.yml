@@ -3,9 +3,11 @@ name: i18n key coverage
 on:
   pull_request:
     paths:
-      - 'apps/web/messages/**'
+      - 'apps/web/i18n/messages/**'
+      - 'apps/web/i18n/components/**'
       - 'apps/web/app/**'
       - 'apps/web/components/**'
+      - 'apps/web/features/**'
       - 'apps/web/scripts/check-i18n.ts'
       - 'backend/api/src/main/java/com/zeromail/api/error/ErrorCodes.java'
       - 'tools/i18n-key-coverage/**'

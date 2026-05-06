@@ -1,5 +1,4 @@
-// Wave 0 RED scaffold — references implementation that lands in Plan 05.
-// Locks the not-found.tsx contract (CONTEXT.md D-D2, UI-SPEC §Copywriting Contract):
+// Locks the not-found.tsx contract (CONTEXT.md D-D2, UI-SPEC Copywriting Contract):
 //  - renders title from errors.notFound.title (i18n)
 //  - renders body from errors.notFound.body
 //  - renders Back home link pointing to "/"
@@ -46,7 +45,6 @@ vi.mock('next-intl/server', () => ({
   },
 }));
 
-// RED-by-design: @/app/not-found does not exist yet (Plan 05 lands it).
 import NotFound from '@/app/not-found';
 
 const messages = {

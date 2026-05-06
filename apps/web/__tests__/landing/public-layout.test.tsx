@@ -1,8 +1,5 @@
-// Wave 0 RED scaffold — locks the (public) layout TopBar+Footer mount contract (Phase 1.6 REQ-1.6-4):
+// Locks the (public) layout TopBar+Footer mount contract (Phase 1.6 REQ-1.6-4):
 //  - (public)/layout.tsx mounts TopBar and Footer around children
-//
-// RED-by-design: PublicLayout does not yet import TopBar/Footer from features/landing.
-// This spec becomes GREEN when Phase 1.6 Wave 2 lands.
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
