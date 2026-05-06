@@ -97,7 +97,19 @@ log.warn("Gmail body: " + emailBody);                             // content in 
 
 ---
 
-## 5. UI primitive selection
+## 5. Direct calls vs Spring Modulith events
+
+Use direct service calls for commands that need an immediate result, strong transaction semantics, or fail-fast behavior. Controllers and workers should call `backend/core` services directly; examples include OAuth bundled provisioning, credit reservation/settlement/release, Pub/Sub delivery ingestion, account deletion cleanup, and Gmail connection status reads. Do not replace these command paths with events just to appear more decoupled.
+
+Use Spring Modulith application events for in-process, after-commit side effects where the publishing module should not know who reacts. Good candidates are: `MailMessageObserved` → future rules/triage job creation, Gmail connection state changes → notifications/audit/projections, top-up credited → receipt/analytics/notification, onboarding completed → activation/analytics, and account deleted → non-critical post-cleanup side effects.
+
+Spring application events are local to one Spring application context. They do not cross from `backend/api` to `backend/worker` when those apps run as separate processes. Cross-process handoff must stay durable through PostgreSQL-backed outbox / processing tables with idempotent workers, not plain Spring events. If an event is part of the domain contract and may be produced or consumed by API, worker, or future modules, define it in `backend/core`, not under `backend/api`.
+
+**Anti-pattern:** eventifying synchronous commands such as `CreditLedger.reserve(...)`, using Spring events as an API-to-worker queue, or defining reusable domain events in `com.zeromail.api.*` so workers cannot publish/consume them cleanly.
+
+---
+
+## 6. UI primitive selection
 
 Before building or refactoring UI, check whether shadcn/ui already provides the needed primitive (for example button, card, input, label, radio-group, toggle-group, tooltip, dialog, alert, separator, skeleton, badge). If the primitive exists and is not already present locally, install it from `apps/web` with `pnpm dlx shadcn@latest add <component>` and compose product-specific components around `@/components/ui/*` instead of hand-rolling the primitive.
 

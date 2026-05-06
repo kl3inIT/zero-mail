@@ -80,7 +80,8 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 2. **Records for DTOs, classes for entities, Lombok-free** — Java 25 records for all DTOs/value objects; entities stay `class` for Hibernate proxies; no Lombok anywhere.
 3. **Enum state machines via `OrderedEnum` / `IdentifiedEnum` + static `fromId` fail-loud** — never use `ordinal()` for storage or comparison; `fromId` throws `NoSuchElementException` on unknown ids.
 4. **Privacy logging format** — every log line is `event=<name> tenantId={}` + structured fields; no email, no Google subject, no token bytes, no message body, no prompts/completions.
-5. **UI primitive selection** — check shadcn/ui first; install via `pnpm dlx shadcn@latest add <component>`; compose around `@/components/ui/*`. Treat `apps/web/components/ui/**` as copied primitive source (excluded from ESLint/Prettier).
+5. **Direct calls vs Spring Modulith events** — use direct service calls for commands needing immediate results or transaction safety (OAuth provisioning, credit reserve/settle/release, Pub/Sub ingestion, account deletion cleanup). Use Spring Modulith events for in-process after-commit side effects such as message-observed → future triage/rules work, Gmail state changes, top-up credited, onboarding completed, and non-critical account-deleted reactions. Spring events do **not** cross `backend/api` ↔ `backend/worker` processes; cross-process handoff must use PostgreSQL-backed outbox / processing tables. Domain events shared by API/worker/future modules belong in `backend/core`, not `backend/api`.
+6. **UI primitive selection** — check shadcn/ui first; install via `pnpm dlx shadcn@latest add <component>`; compose around `@/components/ui/*`. Treat `apps/web/components/ui/**` as copied primitive source (excluded from ESLint/Prettier).
 
 <!-- GSD:conventions-end -->
 
