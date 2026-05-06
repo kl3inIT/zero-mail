@@ -8,7 +8,6 @@ import java.time.Instant;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -40,7 +39,6 @@ class CreditReserveWatchdogTest extends PostgresContainerTest {
     }
 
     @Test
-    @Disabled("Wave 0 RED scaffold - production class lands in Plan 05")
     void stale_reservation_older_than_5_minutes_is_released() {
         UUID tenantId = seedTenant();
         UUID reservationId = seedPendingReservation(tenantId, 2, Instant.now().minus(Duration.ofMinutes(6)));
@@ -57,7 +55,6 @@ class CreditReserveWatchdogTest extends PostgresContainerTest {
     }
 
     @Test
-    @Disabled("Wave 0 RED scaffold - production class lands in Plan 05")
     void tick_on_already_released_reservation_is_no_op() {
         UUID tenantId = seedTenant();
         UUID reservationId = seedPendingReservation(tenantId, 2, Instant.now().minus(Duration.ofMinutes(6)));
@@ -70,7 +67,6 @@ class CreditReserveWatchdogTest extends PostgresContainerTest {
     }
 
     @Test
-    @Disabled("Wave 0 RED scaffold - production class lands in Plan 05")
     void fresh_reservation_under_5_minutes_is_not_released() {
         UUID tenantId = seedTenant();
         UUID reservationId = seedPendingReservation(tenantId, 2, Instant.now().minus(Duration.ofMinutes(2)));

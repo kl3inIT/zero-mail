@@ -7,7 +7,6 @@ import java.time.Instant;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -33,7 +32,6 @@ class BillingIntentExpirySweeperTest extends PostgresContainerTest {
     }
 
     @Test
-    @Disabled("Wave 0 RED scaffold - production class lands in Plan 05")
     void expired_pending_intents_marked_EXPIRED() {
         UUID tenantId = seedTenant();
         UUID intentId = seedIntent(
@@ -48,7 +46,6 @@ class BillingIntentExpirySweeperTest extends PostgresContainerTest {
     }
 
     @Test
-    @Disabled("Wave 0 RED scaffold - production class lands in Plan 05")
     void paid_intent_not_touched_by_sweeper() {
         UUID tenantId = seedTenant();
         UUID intentId = seedIntent(
