@@ -45,5 +45,10 @@ public abstract class PostgresContainerTest {
         // GmailApiClientFactory is in backend/core and is constructed by this test context.
         r.add("spring.security.oauth2.client.registration.google.client-id", () -> "test-google-client");
         r.add("spring.security.oauth2.client.registration.google.client-secret", () -> "test-google-secret");
+        // BillingProperties is loaded by core billing tests and requires SePay settings.
+        r.add("zero-mail.billing.sepay.webhook-api-key", () -> "test-sepay-key-fixture");
+        r.add("zero-mail.billing.vnd-per-credit", () -> "1000");
+        r.add("zero-mail.billing.max-pending-intents-per-tenant", () -> "5");
+        r.add("zero-mail.billing.intent-expiry", () -> "PT24H");
     }
 }

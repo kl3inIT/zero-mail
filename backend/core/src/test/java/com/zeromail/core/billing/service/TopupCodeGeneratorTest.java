@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class TopupCodeGeneratorTest {
@@ -13,7 +12,6 @@ class TopupCodeGeneratorTest {
     private static final String CROCKFORD_EIGHT_CHARACTER_PATTERN = "[0-9A-HJKMNPQRSTVWXYZ]{8}";
 
     @Test
-    @Disabled("Wave 0 RED scaffold - production class lands in Plan 03")
     void code_is_8_chars_from_crockford_alphabet() {
         TopupCodeGenerator codeGenerator = new TopupCodeGenerator();
 
@@ -31,7 +29,6 @@ class TopupCodeGeneratorTest {
     }
 
     @Test
-    @Disabled("Wave 0 RED scaffold - production class lands in Plan 03")
     void collision_retry_succeeds_within_three_attempts() {
         TopupCodeGenerator codeGenerator = new TopupCodeGenerator();
         AtomicInteger attemptCounter = new AtomicInteger();
@@ -45,7 +42,6 @@ class TopupCodeGeneratorTest {
     }
 
     @Test
-    @Disabled("Wave 0 RED scaffold - production class lands in Plan 03")
     void collision_retry_throws_when_exhausted() {
         TopupCodeGenerator codeGenerator = new TopupCodeGenerator();
 
