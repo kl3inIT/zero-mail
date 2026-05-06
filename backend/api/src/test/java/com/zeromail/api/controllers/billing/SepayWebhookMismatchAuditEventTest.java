@@ -9,7 +9,6 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,100 +34,112 @@ import ch.qos.logback.core.read.ListAppender;
 @ActiveProfiles("test")
 class SepayWebhookMismatchAuditEventTest extends ApiPostgresTestBase {
 
-    @LocalServerPort int port;
-    @Autowired BillingTopupIntentRepository billingTopupIntentRepository;
-    @Autowired JdbcTemplate jdbcTemplate;
+  @LocalServerPort int port;
+  @Autowired BillingTopupIntentRepository billingTopupIntentRepository;
+  @Autowired JdbcTemplate jdbcTemplate;
 
-    private Logger rootLogger;
-    private ListAppender<ILoggingEvent> listAppender;
+  private Logger rootLogger;
+  private ListAppender<ILoggingEvent> listAppender;
 
-    @BeforeEach
-    void attachLogCapture() {
-        rootLogger = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
-        listAppender = new ListAppender<>();
-        listAppender.start();
-        rootLogger.addAppender(listAppender);
-    }
+  @BeforeEach
+  void attachLogCapture() {
+    rootLogger = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+    listAppender = new ListAppender<>();
+    listAppender.start();
+    rootLogger.addAppender(listAppender);
+  }
 
-    @AfterEach
-    void detachLogCapture() {
-        listAppender.stop();
-        rootLogger.detachAppender(listAppender);
-    }
+  @AfterEach
+  void detachLogCapture() {
+    listAppender.stop();
+    rootLogger.detachAppender(listAppender);
+  }
 
-    @Test
-    @Disabled("Wave 0 RED scaffold - production class lands in Plan 04")
-    void amount_mismatch_emits_audit_event_with_vnd_numbers() {
-        UUID tenantId = seedTenant();
-        String code = "ABCD2345";
-        seedPendingIntent(tenantId, code, 50_000L);
+  @Test
+  void amount_mismatch_emits_audit_event_with_vnd_numbers() {
+    UUID tenantId = seedTenant();
+    String code = "ABCD2345";
+    seedPendingIntent(tenantId, code, 50_000L);
 
-        ResponseEntity<String> response = RestClient.create("http://localhost:" + port).post()
-                .uri("/api/billing/sepay/webhook")
-                .header(HttpHeaders.AUTHORIZATION, "Apikey test-sepay-key-fixture")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(new SepayWebhookPayload(
-                        999L,
-                        "VCB",
-                        "2026-05-05 12:00:00",
-                        "0123",
-                        code,
-                        code + " nap tien zeromail",
-                        "in",
-                        99_000L,
-                        0L,
-                        null,
-                        "BANK-REF-XYZ",
-                        "bank sms"))
-                .retrieve()
-                .toEntity(String.class);
+    ResponseEntity<String> response =
+        RestClient.create("http://localhost:" + port)
+            .post()
+            .uri("/api/billing/sepay/webhook")
+            .header(HttpHeaders.AUTHORIZATION, "Apikey test-sepay-key-fixture")
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(
+                new SepayWebhookPayload(
+                    999L,
+                    "VCB",
+                    "2026-05-05 12:00:00",
+                    "0123",
+                    code,
+                    code + " nap tien zeromail",
+                    "in",
+                    99_000L,
+                    0L,
+                    null,
+                    "BANK-REF-XYZ",
+                    "bank sms"))
+            .retrieve()
+            .toEntity(String.class);
 
-        assertThat(response.getStatusCode().value()).isEqualTo(200);
-        assertThat(response.getBody()).contains("\"success\":true");
-        assertThat(countTopupEntries(tenantId)).isZero();
-        assertThat(billingTopupIntentRepository.findByCode(code).orElseThrow().getStatus())
-                .isEqualTo(BillingTopupIntentStatus.PENDING);
+    assertThat(response.getStatusCode().value()).isEqualTo(200);
+    assertThat(response.getBody()).contains("\"success\":true");
+    assertThat(countTopupEntries(tenantId)).isZero();
+    assertThat(findIntentByCode(tenantId, code).getStatus())
+        .isEqualTo(BillingTopupIntentStatus.PENDING);
 
-        String combinedLogOutput = String.join("\n", capturedLogLines());
-        assertThat(combinedLogOutput)
-                .contains("event=sepay_webhook_amount_mismatch")
-                .contains("intentVnd=50000")
-                .contains("actualVnd=99000")
-                .doesNotContain("event=sepay_unknown_code")
-                .doesNotContain("Apikey ")
-                .doesNotContain("999")
-                .doesNotContain("0123");
-    }
+    String combinedLogOutput = String.join("\n", capturedLogLines());
+    assertThat(combinedLogOutput)
+        .contains("event=sepay_webhook_amount_mismatch")
+        .contains("intentVnd=50000")
+        .contains("actualVnd=99000")
+        .doesNotContain("event=sepay_unknown_code")
+        .doesNotContain("Apikey ")
+        .doesNotContain("999")
+        .doesNotContain("0123");
+  }
 
-    private UUID seedTenant() {
-        UUID tenantId = UUID.randomUUID();
-        jdbcTemplate.update("INSERT INTO tenants(id, display_name) VALUES (?, ?)",
-                tenantId, "billing-mismatch-" + tenantId);
-        return tenantId;
-    }
+  private UUID seedTenant() {
+    UUID tenantId = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO tenants(id, display_name) VALUES (?, ?)",
+        tenantId,
+        "billing-mismatch-" + tenantId);
+    return tenantId;
+  }
 
-    private void seedPendingIntent(UUID tenantId, String code, long amountVnd) {
-        BillingTopupIntentEntity intent = new BillingTopupIntentEntity(
-                UUID.randomUUID(),
-                tenantId,
-                code,
-                amountVnd,
-                BillingTopupIntentStatus.PENDING,
-                Instant.now().plus(Duration.ofHours(24)));
-        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() ->
-                billingTopupIntentRepository.saveAndFlush(intent));
-    }
+  private void seedPendingIntent(UUID tenantId, String code, long amountVnd) {
+    BillingTopupIntentEntity intent =
+        new BillingTopupIntentEntity(
+            UUID.randomUUID(),
+            tenantId,
+            code,
+            amountVnd,
+            BillingTopupIntentStatus.PENDING,
+            Instant.now().plus(Duration.ofHours(24)));
+    ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+        .run(() -> billingTopupIntentRepository.saveAndFlush(intent));
+  }
 
-    private Long countTopupEntries(UUID tenantId) {
-        return jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM credit_ledger_entry WHERE tenant_id = ? AND kind = 'TOPUP'",
-                Long.class,
-                tenantId);
-    }
+  private Long countTopupEntries(UUID tenantId) {
+    return jdbcTemplate.queryForObject(
+        "SELECT COUNT(*) FROM credit_ledger_entry WHERE tenant_id = ? AND kind = 'TOPUP'",
+        Long.class,
+        tenantId);
+  }
 
-    private List<String> capturedLogLines() {
-        return listAppender.list.stream()
-                .map(loggingEvent -> loggingEvent.getFormattedMessage() + " " + loggingEvent.getMDCPropertyMap())
-                .toList();
-    }
+  private BillingTopupIntentEntity findIntentByCode(UUID tenantId, String code) {
+    return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+        .call(() -> billingTopupIntentRepository.findByCode(code).orElseThrow());
+  }
+
+  private List<String> capturedLogLines() {
+    return listAppender.list.stream()
+        .map(
+            loggingEvent ->
+                loggingEvent.getFormattedMessage() + " " + loggingEvent.getMDCPropertyMap())
+        .toList();
+  }
 }

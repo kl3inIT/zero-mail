@@ -6,7 +6,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -27,73 +26,83 @@ import com.zeromail.core.tenant.TenantContext;
 @ActiveProfiles("test")
 class SepayReplayTest extends ApiPostgresTestBase {
 
-    @LocalServerPort int port;
-    @Autowired BillingTopupIntentRepository billingTopupIntentRepository;
-    @Autowired JdbcTemplate jdbcTemplate;
+  @LocalServerPort int port;
+  @Autowired BillingTopupIntentRepository billingTopupIntentRepository;
+  @Autowired JdbcTemplate jdbcTemplate;
 
-    @Test
-    @Disabled("Wave 0 RED scaffold - production class lands in Plan 04")
-    void replay_same_transaction_id_yields_single_topup() {
-        UUID tenantId = seedTenant();
-        seedPendingIntent(tenantId, "RPLAY123", 100_000L);
-        SepayWebhookPayload payload = new SepayWebhookPayload(
-                1001L,
-                "VCB",
-                "2026-05-05 12:00:00",
-                "0123",
-                "RPLAY123",
-                "RPLAY123 nap tien zeromail",
-                "in",
-                100_000L,
-                0L,
-                null,
-                "BANK-REF-1001",
-                "bank sms");
+  @Test
+  void replay_same_transaction_id_yields_single_topup() {
+    UUID tenantId = seedTenant();
+    String topupCode = "RPA8Y123";
+    seedPendingIntent(tenantId, topupCode, 100_000L);
+    SepayWebhookPayload payload =
+        new SepayWebhookPayload(
+            1001L,
+            "VCB",
+            "2026-05-05 12:00:00",
+            "0123",
+            topupCode,
+            topupCode + " nap tien zeromail",
+            "in",
+            100_000L,
+            0L,
+            null,
+            "BANK-REF-1001",
+            "bank sms");
 
-        ResponseEntity<String> firstResponse = postWebhook(payload);
-        ResponseEntity<String> replayResponse = postWebhook(payload);
+    ResponseEntity<String> firstResponse = postWebhook(payload);
+    ResponseEntity<String> replayResponse = postWebhook(payload);
 
-        assertThat(firstResponse.getStatusCode().value()).isEqualTo(200);
-        assertThat(replayResponse.getStatusCode().value()).isEqualTo(200);
-        assertThat(countTopupEntries(tenantId)).isEqualTo(1L);
-        BillingTopupIntentEntity paidIntent = billingTopupIntentRepository.findByCode("RPLAY123").orElseThrow();
-        assertThat(paidIntent.getPaidAt()).isNotNull();
-        assertThat(paidIntent.getSepayTransactionId()).isEqualTo("1001");
-    }
+    assertThat(firstResponse.getStatusCode().value()).isEqualTo(200);
+    assertThat(replayResponse.getStatusCode().value()).isEqualTo(200);
+    assertThat(countTopupEntries(tenantId)).isEqualTo(1L);
+    BillingTopupIntentEntity paidIntent = findIntentByCode(tenantId, topupCode);
+    assertThat(paidIntent.getPaidAt()).isNotNull();
+    assertThat(paidIntent.getSepayTransactionId()).isEqualTo("1001");
+  }
 
-    private ResponseEntity<String> postWebhook(SepayWebhookPayload payload) {
-        return RestClient.create("http://localhost:" + port).post()
-                .uri("/api/billing/sepay/webhook")
-                .header(HttpHeaders.AUTHORIZATION, "Apikey test-sepay-key-fixture")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(payload)
-                .retrieve()
-                .toEntity(String.class);
-    }
+  private ResponseEntity<String> postWebhook(SepayWebhookPayload payload) {
+    return RestClient.create("http://localhost:" + port)
+        .post()
+        .uri("/api/billing/sepay/webhook")
+        .header(HttpHeaders.AUTHORIZATION, "Apikey test-sepay-key-fixture")
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(payload)
+        .retrieve()
+        .toEntity(String.class);
+  }
 
-    private UUID seedTenant() {
-        UUID tenantId = UUID.randomUUID();
-        jdbcTemplate.update("INSERT INTO tenants(id, display_name) VALUES (?, ?)",
-                tenantId, "billing-replay-" + tenantId);
-        return tenantId;
-    }
+  private UUID seedTenant() {
+    UUID tenantId = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO tenants(id, display_name) VALUES (?, ?)",
+        tenantId,
+        "billing-replay-" + tenantId);
+    return tenantId;
+  }
 
-    private void seedPendingIntent(UUID tenantId, String code, long amountVnd) {
-        BillingTopupIntentEntity intent = new BillingTopupIntentEntity(
-                UUID.randomUUID(),
-                tenantId,
-                code,
-                amountVnd,
-                BillingTopupIntentStatus.PENDING,
-                Instant.now().plus(Duration.ofHours(24)));
-        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() ->
-                billingTopupIntentRepository.saveAndFlush(intent));
-    }
+  private void seedPendingIntent(UUID tenantId, String code, long amountVnd) {
+    BillingTopupIntentEntity intent =
+        new BillingTopupIntentEntity(
+            UUID.randomUUID(),
+            tenantId,
+            code,
+            amountVnd,
+            BillingTopupIntentStatus.PENDING,
+            Instant.now().plus(Duration.ofHours(24)));
+    ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+        .run(() -> billingTopupIntentRepository.saveAndFlush(intent));
+  }
 
-    private Long countTopupEntries(UUID tenantId) {
-        return jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM credit_ledger_entry WHERE tenant_id = ? AND kind = 'TOPUP'",
-                Long.class,
-                tenantId);
-    }
+  private Long countTopupEntries(UUID tenantId) {
+    return jdbcTemplate.queryForObject(
+        "SELECT COUNT(*) FROM credit_ledger_entry WHERE tenant_id = ? AND kind = 'TOPUP'",
+        Long.class,
+        tenantId);
+  }
+
+  private BillingTopupIntentEntity findIntentByCode(UUID tenantId, String code) {
+    return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+        .call(() -> billingTopupIntentRepository.findByCode(code).orElseThrow());
+  }
 }

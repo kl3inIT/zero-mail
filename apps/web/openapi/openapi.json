@@ -14,9 +14,7 @@
   "paths": {
     "/tenant/triage-pause": {
       "put": {
-        "tags": [
-          "tenant"
-        ],
+        "tags": ["tenant"],
         "operationId": "setTriagePause",
         "requestBody": {
           "content": {
@@ -104,9 +102,7 @@
     },
     "/tenant/disconnect": {
       "post": {
-        "tags": [
-          "disconnect-controller"
-        ],
+        "tags": ["disconnect-controller"],
         "operationId": "disconnect",
         "responses": {
           "200": {
@@ -177,9 +173,7 @@
     },
     "/onboarding/select-template": {
       "post": {
-        "tags": [
-          "onboarding-controller"
-        ],
+        "tags": ["onboarding-controller"],
         "operationId": "selectTemplate",
         "requestBody": {
           "content": {
@@ -260,9 +254,7 @@
     },
     "/onboarding/complete": {
       "post": {
-        "tags": [
-          "onboarding-controller"
-        ],
+        "tags": ["onboarding-controller"],
         "operationId": "complete",
         "responses": {
           "200": {
@@ -331,11 +323,186 @@
         }
       }
     },
+    "/api/billing/topup/intent": {
+      "post": {
+        "tags": ["billing"],
+        "operationId": "createIntent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TopupIntentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopupIntentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/billing/sepay/webhook": {
+      "post": {
+        "tags": ["billing-webhook"],
+        "operationId": "receive",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SepayWebhookPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me/language": {
       "patch": {
-        "tags": [
-          "me-controller"
-        ],
+        "tags": ["me-controller"],
         "operationId": "updateLanguage",
         "requestBody": {
           "content": {
@@ -423,9 +590,7 @@
     },
     "/tenant/connect-gmail": {
       "get": {
-        "tags": [
-          "connect-gmail-controller"
-        ],
+        "tags": ["connect-gmail-controller"],
         "operationId": "connect",
         "responses": {
           "200": {
@@ -496,9 +661,7 @@
     },
     "/me": {
       "get": {
-        "tags": [
-          "me-controller"
-        ],
+        "tags": ["me-controller"],
         "operationId": "me",
         "responses": {
           "200": {
@@ -576,9 +739,7 @@
     },
     "/gmail/connection/status": {
       "get": {
-        "tags": [
-          "gmail"
-        ],
+        "tags": ["gmail"],
         "operationId": "status",
         "responses": {
           "200": {
@@ -654,11 +815,87 @@
         }
       }
     },
+    "/api/billing/balance": {
+      "get": {
+        "tags": ["billing"],
+        "operationId": "balance",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingBalanceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me/account": {
       "delete": {
-        "tags": [
-          "account-deletion-controller"
-        ],
+        "tags": ["account-deletion-controller"],
         "operationId": "deleteAccount",
         "responses": {
           "200": {
@@ -737,9 +974,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "paused"
-        ]
+        "required": ["paused"]
       },
       "TriagePauseResponse": {
         "type": "object",
@@ -758,9 +993,80 @@
             "pattern": "archive-receipts|label-newsletters|pin-calendar"
           }
         },
-        "required": [
-          "templateKey"
-        ]
+        "required": ["templateKey"]
+      },
+      "TopupIntentRequest": {
+        "type": "object",
+        "properties": {
+          "amountVnd": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1
+          }
+        }
+      },
+      "TopupIntentResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "amountVnd": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "qrPayload": {
+            "type": "string"
+          }
+        }
+      },
+      "SepayWebhookPayload": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "gateway": {
+            "type": "string"
+          },
+          "transactionDate": {
+            "type": "string"
+          },
+          "accountNumber": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "transferType": {
+            "type": "string"
+          },
+          "transferAmount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "accumulated": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "subAccount": {
+            "type": "string"
+          },
+          "referenceCode": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
       },
       "UpdateLanguageRequest": {
         "type": "object",
@@ -771,9 +1077,7 @@
             "pattern": "vi|en"
           }
         },
-        "required": [
-          "language"
-        ]
+        "required": ["language"]
       },
       "GmailConnectionStatusExtended": {
         "type": "object",
@@ -822,6 +1126,22 @@
             "type": "string"
           },
           "googleEmail": {
+            "type": "string"
+          }
+        }
+      },
+      "BillingBalanceResponse": {
+        "type": "object",
+        "properties": {
+          "availableCredits": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "heldCredits": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "currency": {
             "type": "string"
           }
         }
@@ -892,9 +1212,7 @@
             "description": "Transitional alias of `code`, kept for one phase per CONTEXT.md decision D-C1. Prefer `code`."
           }
         },
-        "required": [
-          "code"
-        ]
+        "required": ["code"]
       },
       "FieldErrorDto": {
         "type": "object",
@@ -931,10 +1249,7 @@
             "description": "Allow-listed scalars (numbers, booleans, dotted keys, short resource identifiers). Never raw user content."
           }
         },
-        "required": [
-          "code",
-          "field"
-        ]
+        "required": ["code", "field"]
       }
     }
   }
