@@ -33,17 +33,16 @@ class GlobalExceptionHandlerLogContentTest {
     }
 
     @Test
-    void handler_log_does_not_contain_exception_message() {
-        String sentinel = "SENTINEL_EXCEPTION_MESSAGE_NEVER_LOGGED_K8M2";
+    void handler_log_contains_only_exception_class_metadata() {
         GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
-        handler.onSafetyViolation(new SafetyViolationException(sentinel));
+        handler.onSafetyViolation(new SafetyViolationException());
 
         assertThat(appender.list).isNotEmpty();
         assertThat(appender.list).allSatisfy(loggingEvent -> {
-            assertThat(loggingEvent.getFormattedMessage()).doesNotContain(sentinel);
             assertThat(loggingEvent.getFormattedMessage()).contains("event=");
             assertThat(loggingEvent.getFormattedMessage()).contains("exceptionClass=SafetyViolationException");
+            assertThat(loggingEvent.getThrowableProxy()).isNull();
         });
     }
 }
