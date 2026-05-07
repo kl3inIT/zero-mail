@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02C-05a-PLAN.md
-last_updated: "2026-05-07T15:26:44.609Z"
-last_activity: 2026-05-07
+stopped_at: Completed 02C-05b-PLAN.md
+last_updated: "2026-05-07T17:14:00.000Z"
+last_activity: 2026-05-08 -- Completed Phase 02C Plan 05b
 progress:
   total_phases: 15
   completed_phases: 10
   total_plans: 80
-  completed_plans: 76
-  percent: 95
+  completed_plans: 77
+  percent: 96
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 02C (llm-gateway) — EXECUTING
-Plan: 6 of 9
-Status: Ready to execute
-Last activity: 2026-05-07
+Plan: 7 of 9
+Status: Ready to execute 02C-06
+Last activity: 2026-05-08 -- Completed Phase 02C Plan 05b
 
-Progress: [██████████] 95%
+Progress: [██████████] 96%
 
 ## Performance Metrics
 
@@ -108,6 +108,7 @@ Progress: [██████████] 95%
 | Phase 02C P03 | 75min | 1 tasks | 39 files |
 | Phase 02C P04 | 16min | 2 tasks | 13 files |
 | Phase 02C P05a | 47min | 1 tasks | 8 files |
+| Phase 02C P05b | 64min | 1 tasks | 46 files |
 
 ## Accumulated Context
 
@@ -239,6 +240,8 @@ Recent decisions affecting current work:
 - [Phase 02C]: Plan 05a uses tenantByokCredentialsRepository instead of byokRepo to comply with the project no-repo-abbreviation Java naming rule.
 - [Phase 02C]: Plan 05a leaves Logback scrub filters unchanged because BYOK gateway logs contain only tenant/provider/model/tokens/latency/truncation metadata.
 - [Phase 02C]: Plan 05a canonicalizes BYOK endpoints by trimming trailing slashes and uses URI.create(...).getHost() for host extraction instead of ad hoc parsing.
+- [Phase 02C]: Plan 05b exposes BYOK validate/save/current over REST while keeping core service signatures on core command records, not API DTOs.
+- [Phase 02C]: Plan 05b changes app configuration to canonical kebab-case `zero-mail.*`; API-only settings bind under `zero-mail.api.*`, worker-only settings bind under `zero-mail.worker.*`, and shared LLM platform/BYOK settings are nested under `ZeroMailCoreProperties`.
 
 ### Roadmap Evolution
 
