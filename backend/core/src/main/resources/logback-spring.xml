@@ -7,6 +7,10 @@
       A TurboFilter that stamped MDC made the marker thread-sticky and produced false
       audit signals on subsequent clean events. As an appender filter, the marker is
       attached only to the offending event's own MDC snapshot.
+      It also redacts common LLM/API secret spellings before appenders encode output:
+      apiKey=...
+      Bearer ...
+      x-api-key: ...
     -->
 
     <springProfile name="!prod &amp; !production">
