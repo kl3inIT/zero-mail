@@ -43,7 +43,7 @@ class SpringAiLlmModelClientTest {
         when(callResponseSpecification.chatResponse()).thenReturn(chatResponseWithToolCalls(List.of(
                 new AssistantMessage.ToolCall("call-1", "function", "label", "{\"value\":\"Receipts\"}"))));
         SpringAiLlmModelClient modelClient = new SpringAiLlmModelClient(platformChatClient);
-        LlmChatRequest request = request(true);
+        LlmChatRequest request = request();
 
         LlmChatResult chatResult = modelClient.call(request);
 
@@ -80,12 +80,12 @@ class SpringAiLlmModelClientTest {
         when(callResponseSpecification.chatResponse()).thenReturn(chatResponseWithToolCalls(List.of()));
         SpringAiLlmModelClient modelClient = new SpringAiLlmModelClient(platformChatClient);
 
-        LlmChatResult chatResult = modelClient.call(request(true));
+        LlmChatResult chatResult = modelClient.call(request());
 
         assertThat(chatResult.toolCalls()).isEmpty();
     }
 
-    private LlmChatRequest request(boolean toolChoiceRequired) {
+    private LlmChatRequest request() {
         List<LlmTool> tools = new AllowListedTools().tools();
         return new LlmChatRequest(
                 SystemPrompts.TRIAGE_SYSTEM_PROMPT,
@@ -93,7 +93,7 @@ class SpringAiLlmModelClientTest {
                 tools,
                 "openai/gpt-4o-mini",
                 0.0,
-                toolChoiceRequired);
+                true);
     }
 
     private ChatResponse chatResponseWithToolCalls(List<AssistantMessage.ToolCall> toolCalls) {

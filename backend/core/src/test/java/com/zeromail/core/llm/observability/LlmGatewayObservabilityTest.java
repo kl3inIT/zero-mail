@@ -20,6 +20,7 @@ import com.zeromail.core.llm.model.LlmChatResult;
 import com.zeromail.core.llm.model.LlmUsage;
 import com.zeromail.core.llm.model.RawToolCall;
 import com.zeromail.core.llm.model.SanitizationContext;
+import com.zeromail.core.llm.service.ActionValidator;
 import com.zeromail.core.llm.service.AllowListedTools;
 import com.zeromail.core.llm.service.LlmGateway;
 import com.zeromail.core.llm.service.LlmModelClient;
@@ -82,6 +83,7 @@ class LlmGatewayObservabilityTest {
                 SanitizationPipeline.class,
                 ZeroMailLlmProperties.class,
                 AllowListedTools.class,
+                ActionValidator.class,
                 ObservationRegistry.class);
         constructor.setAccessible(true);
         return (LlmGateway) constructor.newInstance(
@@ -89,6 +91,7 @@ class LlmGatewayObservabilityTest {
                 sanitizationPipeline,
                 llmProperties,
                 allowListedTools,
+                new ActionValidator(),
                 observationRegistry);
     }
 

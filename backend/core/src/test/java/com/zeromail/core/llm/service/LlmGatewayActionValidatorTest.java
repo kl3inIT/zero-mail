@@ -39,19 +39,19 @@ class LlmGatewayActionValidatorTest {
                         new LlmUsage(1, 1, "stop")));
         LlmGateway gateway = gateway(recordingModelClient);
 
-        assertThatThrownBy(() -> chatWithTenant(gateway, "hi"))
+        assertThatThrownBy(() -> chatWithTenant(gateway))
                 .isInstanceOf(SafetyViolationException.class);
     }
 
     @Test
-    void accepts_label_action() throws Exception {
+    void accepts_label_action() {
         RecordingLlmModelClient recordingModelClient = new RecordingLlmModelClient(
                 new LlmChatResult(
                         List.of(new RawToolCall("label", "{\"value\":\"Receipts\"}")),
                         new LlmUsage(1, 1, "stop")));
         LlmGateway gateway = gateway(recordingModelClient);
 
-        ToolCallResult toolCallResult = chatWithTenant(gateway, "hi");
+        ToolCallResult toolCallResult = chatWithTenant(gateway);
 
         assertThat(toolCallResult.action()).isEqualTo(Action.LABEL);
         assertThat(toolCallResult.args()).containsEntry("value", "Receipts");
@@ -71,7 +71,7 @@ class LlmGatewayActionValidatorTest {
         gatewayLogger.addAppender(listAppender);
 
         try {
-            assertThatThrownBy(() -> chatWithTenant(gateway, "hi"))
+            assertThatThrownBy(() -> chatWithTenant(gateway))
                     .isInstanceOf(SafetyViolationException.class);
         } finally {
             gatewayLogger.detachAppender(listAppender);
@@ -89,14 +89,14 @@ class LlmGatewayActionValidatorTest {
     }
 
     @Test
-    void requests_tool_choice_required() throws Exception {
+    void requests_tool_choice_required() {
         RecordingLlmModelClient recordingModelClient = new RecordingLlmModelClient(
                 new LlmChatResult(
                         List.of(new RawToolCall("label", "{\"value\":\"Receipts\"}")),
                         new LlmUsage(1, 1, "stop")));
         LlmGateway gateway = gateway(recordingModelClient);
 
-        chatWithTenant(gateway, "hi");
+        chatWithTenant(gateway);
 
         assertThat(recordingModelClient.lastRequest())
                 .satisfies(request -> {
@@ -111,13 +111,13 @@ class LlmGatewayActionValidatorTest {
                 new LlmChatResult(List.of(), new LlmUsage(1, 1, "stop")));
         LlmGateway gateway = gateway(recordingModelClient);
 
-        assertThatThrownBy(() -> chatWithTenant(gateway, "hi"))
+        assertThatThrownBy(() -> chatWithTenant(gateway))
                 .isInstanceOf(SafetyViolationException.class);
     }
 
-    private ToolCallResult chatWithTenant(LlmGateway gateway, String rawHtml) throws Exception {
+    private ToolCallResult chatWithTenant(LlmGateway gateway) {
         return ScopedValue.where(TenantContext.TENANT, TENANT_ID.toString())
-                .call(() -> gateway.chat(CallSite.PREVIEW, rawHtml));
+                .call(() -> gateway.chat(CallSite.PREVIEW, "hi"));
     }
 
     private LlmGateway gateway(LlmModelClient modelClient) {

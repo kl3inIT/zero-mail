@@ -34,7 +34,8 @@ class LlmGatewayWave0Test {
                         "openai/gpt-4o-mini",
                         null,
                         null),
-                new AllowListedTools());
+                new AllowListedTools(),
+                new ActionValidator());
 
         assertThat(ScopedValue.where(TenantContext.TENANT, UUID.randomUUID().toString())
                         .call(() -> gateway.chat(CallSite.PREVIEW, "hi")).action())

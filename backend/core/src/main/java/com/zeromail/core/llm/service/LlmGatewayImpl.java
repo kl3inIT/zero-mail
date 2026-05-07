@@ -20,6 +20,7 @@ import com.zeromail.core.llm.model.LlmChatResult;
 import com.zeromail.core.llm.model.LlmTool;
 import com.zeromail.core.llm.model.LlmUsage;
 import com.zeromail.core.llm.model.RawToolCall;
+import com.zeromail.core.llm.model.SafetyViolationException;
 import com.zeromail.core.llm.model.SanitizationContext;
 import com.zeromail.core.llm.model.SystemPrompts;
 import com.zeromail.core.llm.model.ToolCallResult;
@@ -41,9 +42,9 @@ class LlmGatewayImpl implements LlmGateway {
   private final SanitizationPipeline sanitizationPipeline;
   private final ZeroMailLlmProperties llmProperties;
   private final AllowListedTools allowListedTools;
+  private final ActionValidator actionValidator;
   private final ObservationRegistry observationRegistry;
 
-  // Plan 04 will add ActionValidator-backed tool-call validation at parseToolCall(...).
   // Plan 05 will branch here before platform calls to route tenant BYOK credentials.
   // Plan 06 will wrap platform calls here with CreditLedger reserve/settle/release.
 
@@ -51,12 +52,14 @@ class LlmGatewayImpl implements LlmGateway {
       LlmModelClient platformLlmModelClient,
       SanitizationPipeline sanitizationPipeline,
       ZeroMailLlmProperties llmProperties,
-      AllowListedTools allowListedTools) {
+      AllowListedTools allowListedTools,
+      ActionValidator actionValidator) {
     this(
         platformLlmModelClient,
         sanitizationPipeline,
         llmProperties,
         allowListedTools,
+        actionValidator,
         ObservationRegistry.create());
   }
 
@@ -66,12 +69,14 @@ class LlmGatewayImpl implements LlmGateway {
       SanitizationPipeline sanitizationPipeline,
       ZeroMailLlmProperties llmProperties,
       AllowListedTools allowListedTools,
+      ActionValidator actionValidator,
       ObjectProvider<ObservationRegistry> observationRegistryProvider) {
     this(
         platformLlmModelClient,
         sanitizationPipeline,
         llmProperties,
         allowListedTools,
+        actionValidator,
         observationRegistryProvider.getIfAvailable(ObservationRegistry::create));
   }
 
@@ -80,11 +85,13 @@ class LlmGatewayImpl implements LlmGateway {
       SanitizationPipeline sanitizationPipeline,
       ZeroMailLlmProperties llmProperties,
       AllowListedTools allowListedTools,
+      ActionValidator actionValidator,
       ObservationRegistry observationRegistry) {
     this.platformLlmModelClient = platformLlmModelClient;
     this.sanitizationPipeline = sanitizationPipeline;
     this.llmProperties = llmProperties;
     this.allowListedTools = allowListedTools;
+    this.actionValidator = actionValidator;
     this.observationRegistry = observationRegistry;
   }
 
@@ -136,6 +143,13 @@ class LlmGatewayImpl implements LlmGateway {
                     usage.finishReason(),
                     sanitizedContext.truncated());
                 return toolCallResult;
+              } catch (SafetyViolationException safetyViolation) {
+                log.error(
+                    "event=llm_safety_violation tenantId={} callSite={} reason={}",
+                    tenantId,
+                    callSite,
+                    safetyViolation.getClass().getSimpleName());
+                throw safetyViolation;
               } catch (RuntimeException callFailure) {
                 log.warn(
                     "event=llm_call_failed tenantId={} callSite={} provider={} model={} reason={}",
@@ -190,6 +204,12 @@ class LlmGatewayImpl implements LlmGateway {
                     latencyMs(startNanos),
                     sanitizedContext.truncated());
                 return toolCallResult;
+              } catch (SafetyViolationException safetyViolation) {
+                log.error(
+                    "event=llm_safety_violation tenantId={} callSite=DRIFT reason={}",
+                    tenantId,
+                    safetyViolation.getClass().getSimpleName());
+                throw safetyViolation;
               } catch (RuntimeException driftFailure) {
                 log.warn(
                     "event=llm_drift_call_failed tenantId={} provider={} model={} reason={}",
@@ -207,12 +227,11 @@ class LlmGatewayImpl implements LlmGateway {
   }
 
   private ToolCallResult parseToolCall(LlmChatResult result) {
-    // Plan 04 replaces this minimal parser with ActionValidator-backed fail-closed validation.
-    if (result.toolCalls().isEmpty()) {
-      throw new IllegalStateException("No tool call returned");
+    if (result.toolCalls() == null || result.toolCalls().isEmpty()) {
+      throw new SafetyViolationException();
     }
     RawToolCall rawToolCall = result.toolCalls().getFirst();
-    Action action = Action.fromFunctionName(rawToolCall.functionName());
+    Action action = actionValidator.validate(rawToolCall.functionName());
     return new ToolCallResult(action, parseJsonArgs(rawToolCall.argsJson()));
   }
 

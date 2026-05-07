@@ -60,7 +60,8 @@ class LlmGatewayMultiTenantLeakTest {
                         "openai/gpt-4o-mini",
                         null,
                         null),
-                new AllowListedTools());
+                new AllowListedTools(),
+                new ActionValidator());
     }
 
     private static final class TenantEchoLlmModelClient implements LlmModelClient {

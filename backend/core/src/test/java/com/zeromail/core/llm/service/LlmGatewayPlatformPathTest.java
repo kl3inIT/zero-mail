@@ -98,7 +98,8 @@ class LlmGatewayPlatformPathTest {
                 modelClient,
                 new SanitizationPipeline(List.of(new FixedSanitizer())),
                 llmProperties(),
-                new AllowListedTools());
+                new AllowListedTools(),
+                new ActionValidator());
     }
 
     private ZeroMailLlmProperties llmProperties() {
