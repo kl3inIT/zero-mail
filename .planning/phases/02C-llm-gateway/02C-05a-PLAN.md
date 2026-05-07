@@ -128,16 +128,21 @@ Output: 1 strategy interface + 2 asymmetric factory impls + `ByokEndpointValidat
     - Test 6 (LlmGatewayByokRoutingTest#multitenant_no_key_leak): 100 concurrent virtual-thread calls, 50 tenants with BYOK row + 50 without; mock factories echo bound tenantId in args; assert no cross-tenant leak (mirror of Plan 03 leak-test pattern).
   </behavior>
   <action>
-    1. **(H-4) Create `backend/core/src/main/java/com/zeromail/core/llm/byok/ByokEndpointValidator.java`** — SSRF allow-list validator that runs BEFORE either factory builds a client. Closes the surface where a user could paste a BYOK endpoint pointing at the cloud metadata IP (`169.254.169.254`), an RFC1918 IP (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), link-local (`169.254.0.0/16`), or loopback (`127.0.0.0/8`, `::1`).
+    1. **(H-4 + REVIEWS divergent — Codex HIGH "SSRF depth")** Create `backend/core/src/main/java/com/zeromail/core/llm/byok/ByokEndpointValidator.java` — SSRF allow-list validator that runs BEFORE either factory builds a client. Closes the surface where a user could paste a BYOK endpoint pointing at the cloud metadata IP (`169.254.169.254`), an RFC1918 IP (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), link-local (`169.254.0.0/16`), or loopback (`127.0.0.0/8`, `::1`).
 
-       Required behavior:
+       Required behavior (REVIEWS Codex HIGH SSRF depth list adopted):
        - Null / blank endpoint → return the provider-default URL: Anthropic = `https://api.anthropic.com`, OpenAI-compatible = `https://api.openai.com`, OpenRouter = `https://openrouter.ai/api/v1`. Do NOT throw on null — fall back to the SDK default.
-       - Non-`https` scheme → throw `InvalidByokException` with redacted message (no endpoint echo in the exception).
-       - Host parses to RFC1918 / link-local / loopback / metadata IP → throw `InvalidByokException`.
+       - **REQUIRE HTTPS** (REVIEWS Codex HIGH): non-`https` scheme → throw `InvalidByokException` with redacted message (no endpoint echo in the exception).
+       - **Reject userinfo, query, fragment** (REVIEWS Codex HIGH): the URI must NOT contain a userinfo segment (e.g., `https://user:pass@host`), query string, or fragment — these can mask the real authority. Reject any of these.
+       - **Resolve DNS and reject private/link-local/loopback/metadata addresses** (REVIEWS Codex HIGH): use `InetAddress.getAllByName(host)` and reject if ANY resolved address falls into RFC1918, link-local, loopback, or the AWS/GCP metadata IP `169.254.169.254`. This blocks DNS-based bypass where a public hostname resolves to an internal IP.
+       - **Exact host or safe suffix match** (REVIEWS Codex HIGH "evil-anthropic.com"): for Anthropic, require the host to equal `api.anthropic.com` OR end with `.anthropic.com` (NOT just `contains("anthropic.com")` which would accept `evil-anthropic.com`). Use `host.equals("anthropic.com") || host.endsWith(".anthropic.com")`. Same pattern for `openai.com` and `openrouter.ai`.
        - Provider-specific allow-list:
-         - Anthropic provider: host MUST match `*.anthropic.com` (or be the exact provider default).
-         - OpenAI-compatible provider: host MUST match `*.openai.com` OR `openrouter.ai` OR a `zeromail.llm.byok.allowed-extra-hosts` config list. For self-hosted dev (vLLM, Together.ai, Fireworks), gate on operator opt-in flag `zeromail.llm.byok.allow-non-vendor-endpoints=false` (default `false`); when `true`, accept any HTTPS public-IP host that is NOT RFC1918 / link-local / loopback / metadata.
-       - On rejection, log `event=byok_validate_failed tenantId={} provider={} reason=endpoint_rejected` (D-I2 — no endpoint URL echoed).
+         - Anthropic provider: host MUST be `api.anthropic.com` or end with `.anthropic.com` (exact-suffix match per above).
+         - OpenAI-compatible provider: host MUST end with `.openai.com` (e.g., `api.openai.com`) OR equal `openrouter.ai` (or end with `.openrouter.ai`) OR appear in a `zero-mail.llm.byok.allowed-extra-hosts` config list (operator-managed). For self-hosted dev (vLLM, Together.ai, Fireworks), gate on operator opt-in flag `zero-mail.llm.byok.allow-non-vendor-endpoints=false` (default `false`); when `true`, accept any HTTPS public-IP host (still subject to DNS-private-IP rejection).
+       - **DNS rebinding mitigation** (REVIEWS Codex HIGH): when factories build the per-call client, re-resolve the host on each call (do NOT cache the resolved IP). The validator returns the canonical URL string; the resolution happens implicitly inside Spring's RestClient on each outbound call.
+       - **Endpoint path normalization** (REVIEWS divergent — Codex HIGH "OpenAI-compatible endpoint path"): the STORED endpoint includes the version path (e.g., `https://openrouter.ai/api/v1`); BYOK validate calls (Plan 05b) use `${endpoint}/models` (NOT `${endpoint}/v1/models`). The validator returns the canonicalized URL string with NO trailing slash; ByokService appends `/models` (OpenAI-compat) or `/messages` (Anthropic). Document with code comment + acceptance test.
+       - On rejection, log `event=byok_validate_failed tenantId={} provider={} reason=endpoint_rejected` (D-I2 — no endpoint URL echoed; reason is opaque tag).
+       - **Outbound timeouts** (REVIEWS MEDIUM — Codex): when the validator's caller (ByokService) issues the upstream probe, it MUST set explicit connect/read timeouts (5s / 15s default; see application.yml `zero-mail.llm.byok.{connect,read}-timeout` from Plan 03 step 5). The validator itself does NOT issue HTTP — it validates URL shape + DNS only. The DNS resolution call should bound itself via `InetAddress.getAllByName(host)` with a reasonable JVM-level timeout (or wrap in `CompletableFuture.supplyAsync(...).orTimeout(2, SECONDS)` if precision matters).
 
        Wire the validator into `OpenAiCompatibleByokFactory.create(...)` and `AnthropicByokFactory.create(...)` as the FIRST call inside the factory, BEFORE building the client. (Also wire into `ByokService.validate(...)` in Plan 05b — but that's 05b's job; this plan exposes the validator as a `@Component` so 05b can inject it.)
 
@@ -174,11 +179,11 @@ Output: 1 strategy interface + 2 asymmetric factory impls + `ByokEndpointValidat
        private final AnthropicByokFactory anthropicByokFactory;
        ```
        
-       (b) Inside `chat()`, after `SanitizationContext sanitized = sanitizationPipeline.sanitize(rawHtml);`, add the BYOK branch BEFORE the platform-path call:
+       (b) Inside `chat()`, after `SanitizationContext sanitized = sanitizationPipeline.sanitize(rawHtml);` and `List<LlmTool> tools = allowListedTools.tools();`, add the BYOK branch BEFORE the platform-path call. **REVIEWS HIGH-consensus #2: tools come from gateway-owned `AllowListedTools` provider (Plan 03), NOT from caller.**
        ```java
        Optional<TenantByokCredentialsEntity> byok = byokRepo.findByTenantId(tenantId);
        if (byok.isPresent()) {
-           // BYOK path — Plan 06 will skip credit ledger here per LLM-05
+           // BYOK path — Plan 06 will skip credit ledger here per LLM-04
            return callViaByokFactory(byok.get(), sanitized, callSite, tools);
        }
        // Plan 06 will add: ReservationId reservation = creditLedger.reserve(tenantId, callSite);

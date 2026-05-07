@@ -137,7 +137,22 @@ Output: `LlmGatewayImpl` final wiring (the // Plan 06 markers from Plan 03 are n
                    chatResponse.getResults().get(0).getMetadata().getFinishReason(),
                    sanitized.truncated());
 
-           creditLedger.settle(reservation);
+           // REVIEWS MEDIUM-consensus: settle() failure must NOT trigger release(). If settle()
+           // partially succeeds then throws (transient DB issue, mid-commit failure), calling
+           // release() may double-adjust. Per Phase 2B CreditLedger Javadoc, settle() is
+           // idempotent on retry (advisory-lock-protected); a settle() failure is logged as
+           // an operational anomaly and the LlmGatewayImpl re-throws WITHOUT releasing.
+           // The reservation row remains in the ledger for operator reconciliation.
+           try {
+               creditLedger.settle(reservation);
+           } catch (RuntimeException settleFailure) {
+               log.error("event=llm_call_settle_failed tenantId={} callSite={} reservationId={} reason={}",
+                       tenantId, callSite, reservation.value(), settleFailure.getClass().getSimpleName());
+               // Do NOT call release(reservation) here — risks double-adjust per REVIEWS MEDIUM.
+               // The model call DID succeed; the ledger row will be reconciled by the Phase 2B
+               // CreditReserveWatchdog (idempotent settle retry) on the next tick.
+               throw settleFailure;
+           }
            return result;
        } catch (SafetyViolationException safetyViolation) {
            creditLedger.release(reservation);

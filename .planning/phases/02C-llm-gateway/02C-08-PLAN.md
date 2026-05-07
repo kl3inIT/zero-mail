@@ -18,6 +18,7 @@ files_modified:
   - apps/web/app/(protected)/settings/page.tsx
   - apps/web/features/llm/components/ByokForm.test.tsx
   - apps/web/__tests__/byok-key-handling.test.ts
+  - apps/web/e2e/byok.spec.ts
 autonomous: true
 requirements: [LLM-03, LLM-04, LLM-10]
 must_haves:
@@ -271,7 +272,17 @@ Output: 4 production files in `features/llm/` (api/components/hooks/messages.ts)
        ```
        Total key count: 22. Treat this as the contract — when step 8 emits `vi.json`/`en.json`, both files MUST contain exactly these 22 keys (plus the `_generated` marker). The merge script splits each `{vi, en}` value into the per-locale tree (e.g., `"llm.byok.title"` becomes `messages.llm.byok.title` after the script normalizes the dotted key into a nested tree).
 
-    8. **(H-6) Create `apps/web/scripts/merge-feature-i18n.ts`** — Node/TS script that walks `apps/web/features/**/messages.ts` (using `glob`), imports each `messages` const, splits by `{vi, en}` keys, and emits the merged tree into `apps/web/i18n/messages/vi.json` and `en.json`. Add a header comment to each generated JSON file: `// GENERATED — DO NOT EDIT. Source: features/**/messages.ts. Run `pnpm i18n:build` to regenerate.` (since JSON does not support comments, use a top-level `_generated` key OR add the marker as a separate `.gitattributes` linguist-generated rule + git pre-commit hook). Pick the `_generated` key approach for simplicity:
+    8. **(H-6 + REVIEWS HIGH-consensus — Codex "Plan 08 i18n erase risk")** Create `apps/web/scripts/merge-feature-i18n.ts` — Node/TS script that walks `apps/web/features/**/messages.ts` (using `glob`), imports each `messages` const, splits by `{vi, en}` keys, AND **preserves existing non-feature translations** in `apps/web/i18n/messages/{vi,en}.json` (e.g., keys outside any feature folder, like `auth.*`, `errors.*` that aren't yet migrated to features).
+
+       **Erase-protection algorithm (REVIEWS HIGH — codex flagged "may erase existing translations"):**
+       1. Load existing `vi.json` and `en.json` (if present) into memory as a tree.
+       2. Walk `features/**/messages.ts`; build the feature-sourced tree.
+       3. **Deep-merge** the feature-sourced tree INTO the existing tree (overwrite at the leaf level for keys that exist in features; preserve all keys in existing JSON that are NOT covered by any feature messages.ts).
+       4. Emit merged result with deterministic key ordering (sort alphabetically).
+
+       **Migration baseline** (before first run with the new script): freeze the current `apps/web/i18n/messages/vi.json` and `en.json` contents at HEAD as the "baseline" tree; the first run of `pnpm i18n:build` MUST produce output that contains EVERY key currently in vi.json/en.json (verified by Test 6 below, which diffs leaf-key counts pre/post). Any key that is exclusively in features/** moves to feature-owned source-of-truth; any key NOT yet migrated stays in the JSON files as a "legacy override" tree under `_legacy: { ... }` or simply at top-level (the script can emit a `_managed_by` marker only on keys it added/updated).
+
+       Add a header comment to each generated JSON file: `// GENERATED — DO NOT EDIT. Source: features/**/messages.ts + legacy non-feature keys preserved. Run pnpm i18n:build to regenerate.` (since JSON does not support comments, use a top-level `_generated` key):
        ```json
        {
          "_generated": "DO NOT EDIT — run pnpm i18n:build. Source: apps/web/features/**/messages.ts.",
@@ -323,6 +334,9 @@ Output: 4 production files in `features/llm/` (api/components/hooks/messages.ts)
     - HIGH-2 round-trip: after `pnpm -C apps/web i18n:build`, both `vi.json` and `en.json` contain ≥ 22 leaf keys (excluding `_generated`); vi/en key sets are identical (see step 9 round-trip node commands).
     - HIGH-2 source-of-truth: `grep -E "\"llm\.byok\.title\"" apps/web/features/llm/messages.ts` returns `>= 1` (key lives in source-of-truth file).
     - HIGH-2 no JSON hand-edits: the plan does NOT contain any step that hand-authors `apps/web/i18n/messages/vi.json` or `apps/web/i18n/messages/en.json` outside the merge script. (This is enforced by step 5 being explicitly deleted; if a future revision re-adds JSON authoring, that step must be flagged as contradicting D-D5.)
+    - REVIEWS HIGH-consensus i18n erase protection: pre/post `pnpm i18n:build` leaf-key count for non-llm namespaces (e.g., `auth.*`, `errors.*` that existed before Phase 2C) is preserved. Verify via: snapshot `vi.json` and `en.json` at `HEAD~1` BEFORE running `pnpm i18n:build` (capture leaf-key set), run the build, then assert post-build vi.json/en.json contains every captured legacy leaf-key. Test in `apps/web/__tests__/i18n-erase-protection.test.ts` — runs `pnpm i18n:build` against a temp dir seeded with a synthetic legacy bundle, asserts no key drops.
+    - REVIEWS MEDIUM-consensus Playwright: file `apps/web/e2e/byok.spec.ts` exists; `grep -c "byok\|/settings\|validateByok\|saveByok" apps/web/e2e/byok.spec.ts` returns `>= 4` (covers navigation + validate + save flow).
+    - Mobile viewport test: `grep -c "375.*812\|iPhone\|setViewportSize" apps/web/e2e/byok.spec.ts` returns `>= 1`.
   </acceptance_criteria>
   <done>
     Schema regenerated; api + hooks files land per PATTERNS.md; i18n keys for `llm.byok.*` + `errors.llm.*` mirrored across vi+en in lock-step; EN_SCAN_FILES updated; `pnpm i18n:check` STRICT passes.
@@ -386,6 +400,17 @@ Output: 4 production files in `features/llm/` (api/components/hooks/messages.ts)
        This is the durable privacy guard — same pattern as Phase 1.3 Wave 0 architecture tests.
 
     5. Run `pnpm -C apps/web tsc --noEmit && pnpm -C apps/web vitest run --include 'features/llm/**' --include '__tests__/byok-key-handling.test.ts' && pnpm -C apps/web eslint .` to verify type-check + tests + lint all pass.
+
+    6. **(REVIEWS MEDIUM-consensus — "Frontend Playwright verification missing")** Create `apps/web/e2e/byok.spec.ts` — Playwright spec covering:
+       - Navigate to `/settings` (test fixture handles login + tenant binding via existing Phase 1 `e2e` auth setup).
+       - Assert ByokForm card renders between automated-triage card and privacy card.
+       - Pick `OpenAI Compatible` provider; type `https://openrouter.ai/api/v1` into endpoint; type `sk-or-v1-test` into key.
+       - Mock `POST /api/llm/byok/validate` via Playwright `page.route(...)` to return `{ok: true, models: ["openai/gpt-4o-mini"]}`. Click Validate; assert success Alert appears.
+       - Click Save; mock `POST /api/llm/byok` to return `{ok: true, savedAt: "..."}`. Assert form resets, success state visible.
+       - Mobile viewport test: set viewport to 375x812 (iPhone SE), assert form remains usable (no horizontal scroll, all controls reachable).
+       - Per CLAUDE.md memory rule (frontend changes require real-browser verification): this spec runs in CI on every PR via `pnpm -C apps/web e2e`. Includes the validation/save mocked flow per REVIEWS MEDIUM.
+
+    7. Run `pnpm -C apps/web e2e --grep "byok"` against the running dev server to verify the spec passes locally before declaring done.
   </action>
   <verify>
     <automated>cd apps/web && pnpm tsc --noEmit && pnpm vitest run --include "features/llm/**" --include "__tests__/byok-key-handling.test.ts" && pnpm eslint . && pnpm i18n:check</automated>

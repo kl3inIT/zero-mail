@@ -6,6 +6,11 @@ wave: 6
 depends_on: [05a]
 files_modified:
   - backend/core/src/main/java/com/zeromail/core/llm/service/ByokService.java
+  - backend/core/src/main/java/com/zeromail/core/llm/model/ByokValidateCommand.java
+  - backend/core/src/main/java/com/zeromail/core/llm/model/ByokValidateResult.java
+  - backend/core/src/main/java/com/zeromail/core/llm/model/ByokSaveCommand.java
+  - backend/core/src/main/java/com/zeromail/core/llm/model/ByokSaveResult.java
+  - backend/core/src/main/java/com/zeromail/core/llm/model/ByokCurrent.java
   - backend/api/src/main/java/com/zeromail/api/controllers/llm/ByokController.java
   - backend/api/src/main/java/com/zeromail/api/dto/llm/ByokValidateRequest.java
   - backend/api/src/main/java/com/zeromail/api/dto/llm/ByokValidateResponse.java
@@ -20,8 +25,8 @@ autonomous: true
 requirements: [LLM-03]
 must_haves:
   truths:
-    - "POST /api/llm/byok/validate accepts {provider, endpoint?, apiKey} and issues a server-side probe (GET /v1/models for openai-compatible, POST /v1/messages with max_tokens=1 for anthropic); returns {ok, models?, reason?}; the browser NEVER issues the validate call directly"
-    - "POST /api/llm/byok saves only after the same payload validates; encrypts the key via existing RefreshTokenCipher (envelope = [key_version:int32 | nonce:12 | ciphertext], tenantId-bound AAD), upserts into tenant_byok_credentials"
+    - "POST /api/llm/byok/validate accepts {provider, endpoint?, apiKey} (API DTO ByokValidateRequest) and ByokController maps to a core command record ByokValidateCommand; ByokService.validate() takes the core command (NOT the API DTO) — REVIEWS HIGH-consensus #3 layering fix. Server-side probe (GET ${endpoint}/models for openai-compatible, POST ${endpoint}/messages with max_tokens=1 for anthropic) issues from server; the browser NEVER issues the validate call directly"
+    - "POST /api/llm/byok saves only after server-side re-validation (REVIEWS HIGH-consensus #4): save() re-runs the upstream key probe BEFORE encrypt+upsert. A client cannot bypass validate by POSTing directly to save with an unvalidated key. Encrypts the key via existing RefreshTokenCipher (envelope = [key_version:int32 | nonce:12 | ciphertext], tenantId-bound AAD), upserts into tenant_byok_credentials"
     - "GET /api/llm/byok returns provider, optional endpoint host (just the host, no path/query), saved timestamp; NEVER returns decrypted key bytes"
     - "ByokService.validate(...) and ByokService.save(...) call ByokEndpointValidator (from Plan 05a) BEFORE issuing any outbound probe or persisting; SSRF allow-list rejects metadata-IP / RFC1918 / non-vendor-host endpoints (H-4)"
     - "GlobalExceptionHandler maps SafetyViolationException → 500 LLM_SAFETY_VIOLATION; SanitizationException → 500 LLM_SANITIZATION_FAILED; InvalidByokException → 400 LLM_BYOK_INVALID; existing 402 InsufficientCreditsException mapping is preserved"
@@ -137,6 +142,9 @@ Output: `ByokService` + `ByokController` + 5 DTOs + GlobalExceptionHandler mappi
     - Test 13 (ByokControllerIntegrationTest#safety_violation_handler_returns_500): synthetic SafetyViolationException through a stub controller → assert 500 + body code=`error.llm.safety_violation`.
     - Test 14 (ByokControllerIntegrationTest#sanitization_failed_handler_returns_500): synthetic SanitizationException → 500 + code=`error.llm.sanitization_failed`.
     - Test 15 (ByokControllerIntegrationTest#insufficient_credits_still_returns_402): existing Phase 2B mapping preserved.
+    - Test 16 (REVIEWS HIGH-consensus #4 — `ByokServiceTest#save_re_runs_upstream_probe`): WireMock counts upstream `/v1/models` GET calls. Run validate(...) once → 1 upstream call. Run save(...) → 1 ADDITIONAL upstream call (total = 2). If the upstream stub returns 401 on the SECOND call (simulating key revoked between validate and save), `save()` throws `InvalidByokException` AND no row is persisted (verify via `byokRepo.findByTenantId(tenantId).isEmpty()` after the failed save).
+    - Test 17 (REVIEWS HIGH-consensus #4 — `ByokControllerIntegrationTest#save_without_prior_validate_still_validates_server_side`): client POSTs directly to `/api/llm/byok` (skipping `/validate`); WireMock returns 401 for the upstream probe; assert response 400 + `error.llm.byok.invalid` AND no DB row created.
+    - Test 18 (REVIEWS HIGH-consensus #3 — `ByokServiceLayeringTest`): assert via reflection that NO method on `ByokService` declares a parameter type whose class lives under `com.zeromail.api.dto`. Method-signature ArchUnit rule: `noMethods().that().areDeclaredInClassesThat().resideInAPackage("..core.llm.service..").should().haveRawParameterTypes().that().resideInAPackage("..api.dto..")`.
   </behavior>
   <action>
     1. **Create 5 DTOs** in `backend/api/src/main/java/com/zeromail/api/dto/llm/`:
@@ -148,23 +156,58 @@ Output: `ByokService` + `ByokController` + 5 DTOs + GlobalExceptionHandler mappi
 
        All as Java records per CLAUDE.md Conventions §2.
 
-    2. **Create `backend/core/src/main/java/com/zeromail/core/llm/service/ByokService.java`** — `@Service`. Methods:
-       - `validate(UUID tenantId, ByokValidateRequest payload)`:
+    2a. **(REVIEWS HIGH-consensus #3 — module-boundary fix)** Create core command/result records under `backend/core/src/main/java/com/zeromail/core/llm/model/`:
+       ```java
+       // ByokValidateCommand.java
+       public record ByokValidateCommand(BYOKProvider provider, String endpoint, String apiKey) {
+           public ByokValidateCommand {
+               java.util.Objects.requireNonNull(provider, "provider");
+               java.util.Objects.requireNonNull(apiKey, "apiKey");
+           }
+       }
+
+       // ByokValidateResult.java
+       public record ByokValidateResult(boolean ok, java.util.List<String> models, String reason) {
+           public ByokValidateResult {
+               models = models == null ? java.util.List.of() : java.util.List.copyOf(models);
+           }
+       }
+
+       // ByokSaveCommand.java + ByokSaveResult.java + ByokCurrent.java mirror this shape.
+       ```
+       `ByokService` accepts ONLY core command records — never `backend/api` DTOs (which would invert the module dependency direction; `core` cannot depend on `api`). The `ByokController` translates `ByokValidateRequest` (API DTO) → `ByokValidateCommand` (core command) at the controller boundary, and `ByokValidateResult` (core) → `ByokValidateResponse` (API DTO) on the response side. Verified via ArchUnit `DomainBoundaryArchTests` rule that already bans `core` packages from importing `com.zeromail.api..`.
+
+    2. **Create `backend/core/src/main/java/com/zeromail/core/llm/service/ByokService.java`** — `@Service`. Methods (REVIEWS HIGH-consensus #3 — accept core commands only):
+       - `validate(UUID tenantId, ByokValidateCommand command)`:
          - **(H-4)** First: `String canonicalEndpoint = byokEndpointValidator.validate{Anthropic,OpenAiCompatible}(payload.endpoint())` per provider — throws `InvalidByokException` on SSRF / non-HTTPS / non-vendor host before any outbound HTTP.
          - Issues outbound HTTP via Spring `RestClient` (see `BillingTopupService` for analog). Branch on provider:
            - OPENAI_COMPATIBLE → `GET ${canonicalEndpoint}/v1/models` with `Authorization: Bearer ${payload.apiKey()}`. On 200 → parse → `ByokValidateResponse(true, modelIds, null)`. On non-2xx → `ByokValidateResponse(false, null, "upstream_rejected" | "connection_failed")`.
            - ANTHROPIC → `POST ${canonicalEndpoint}/v1/messages` with `x-api-key`, `anthropic-version: 2023-06-01`, body `{model: "claude-3-haiku-20240307", max_tokens: 1, messages: [{role: "user", content: "."}]}`. On 200 → ok=true.
          - All exceptions caught and translated to opaque reason — NEVER include upstream response body bytes in reason.
          - Privacy logs: `event=byok_validate_attempted tenantId={} provider={}`, `event=byok_validate_succeeded tenantId={} provider={} modelsCount={}`, `event=byok_validate_failed tenantId={} provider={} reason={}` (opaque tag, NOT exception message).
-       - `save(UUID tenantId, ByokSaveRequest payload)`:
+       - `save(UUID tenantId, ByokSaveCommand command)`:
          - **(H-4)** First: re-run `byokEndpointValidator.validate{Anthropic,OpenAiCompatible}` on the endpoint. (Validate is also called in `validate(...)` but that's not a transactional barrier — re-run on save is the durable check that survives client behavior.)
-         - Encrypts `payload.apiKey().getBytes(UTF_8)` via `refreshTokenCipher.encrypt(plaintext, tenantId.toString())`.
-         - Upserts entity (find existing → mutate via `replaceKey(envelope, keyVersion)` or save new). Returns `ByokSaveResponse(true, Instant.now())`.
-         - **Decision**: server-side accepts save without re-running the upstream probe (UI-SPEC says client gates the save button; server-side re-validate would double the cost). Document in service Javadoc.
-       - `current(UUID tenantId)` — returns `Optional<ByokCurrentResponse>`; null if no row. Extracts host from endpoint via `URI.create(...).getHost()`. Never decrypts the key.
+         - **(REVIEWS HIGH-consensus #4 — server-side validate-before-save enforcement)** Re-run the upstream provider probe (the same outbound HTTP call that `validate(...)` issues) BEFORE encrypt+upsert. If the upstream probe fails, throw `InvalidByokException` and do NOT persist. **The previous "skip server-side re-probe on save" decision is REVERSED**: a malicious or buggy client could POST directly to `/api/llm/byok` with an unvalidated key; the server MUST be the durable gate. Cost is a single extra GET/POST per save; an order of magnitude smaller than the chat() calls a saved key enables.
+         - Encrypts `command.apiKey().getBytes(UTF_8)` via `refreshTokenCipher.encrypt(plaintext, tenantId.toString())`.
+         - Upserts entity (find existing → mutate via `replaceKey(envelope, keyVersion)` or save new). Returns `ByokSaveResult(true, Instant.now())`.
+         - **Optional optimization** (not in v1): `validate()` could return a short-lived signed `validation_token` (HMAC of `(tenantId, endpointHash, keyHash, exp)`) and `save()` could accept the token to skip the second probe. Defer to v2; v1 keeps the simple "validate-then-save also re-probes" contract.
+         - Document the re-probe in service Javadoc + acceptance test (Test 16 below) asserting two upstream HTTP calls per validate-then-save flow.
+       - `current(UUID tenantId)` — returns `Optional<ByokCurrent>` (core record); controller maps to `ByokCurrentResponse` API DTO. Extracts host from endpoint via `URI.create(...).getHost()`. Never decrypts the key.
        - **`@Transactional`** on save (mutation) and current (read consistency). Validate is non-transactional.
 
-    3. **Create `backend/api/src/main/java/com/zeromail/api/controllers/llm/ByokController.java`** — `@RestController @RequestMapping("/api/llm/byok") @Tag(name="llm-byok")`. Per PATTERNS.md verbatim shape — thin controller, 3 endpoints (`POST /validate`, `POST` (save), `GET` (current)), `TenantContext.currentOrThrow()` per call, `byokService.{validate,save,currentForTenant}(...)`. NO `@Transactional`, NO repository injection.
+    3. **Create `backend/api/src/main/java/com/zeromail/api/controllers/llm/ByokController.java`** — `@RestController @RequestMapping("/api/llm/byok") @Tag(name="llm-byok")`. Per PATTERNS.md verbatim shape — thin controller, 3 endpoints (`POST /validate`, `POST` (save), `GET` (current)), `TenantContext.currentOrThrow()` per call. **REVIEWS HIGH-consensus #3: controller is the boundary that maps API DTO → core command and core result → API DTO**. Each endpoint:
+       ```java
+       @PostMapping("/validate")
+       public ByokValidateResponse validate(@RequestBody @Valid ByokValidateRequest request) {
+           UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+           ByokValidateCommand command = new ByokValidateCommand(
+               request.provider(), request.endpoint(), request.apiKey()
+           );
+           ByokValidateResult result = byokService.validate(tenantId, command);
+           return new ByokValidateResponse(result.ok(), result.models(), result.reason());
+       }
+       ```
+       Same shape for `save` (maps `ByokSaveRequest` → `ByokSaveCommand` → returns `ByokSaveResponse`) and `current` (returns `ByokCurrent` → `ByokCurrentResponse`). NO `@Transactional`, NO repository injection.
 
     4. **Modify `backend/api/src/main/java/com/zeromail/api/config/GlobalExceptionHandler.java`** — append 3 new `@ExceptionHandler` methods after the existing `InsufficientCreditsException` one. PATTERNS.md "GlobalExceptionHandler.java (modify)" gives the pattern verbatim. Privacy invariant: `log.error("event=... reason={}", exception.getClass().getSimpleName())` — NEVER pass the exception object itself, NEVER pass `.getMessage()`.
        - `SafetyViolationException` → 500, code `LLM_SAFETY_VIOLATION`
@@ -192,6 +235,10 @@ Output: `ByokService` + `ByokController` + 5 DTOs + GlobalExceptionHandler mappi
     - `grep -c "public record " backend/api/src/main/java/com/zeromail/api/dto/llm/ByokValidateRequest.java backend/api/src/main/java/com/zeromail/api/dto/llm/ByokValidateResponse.java backend/api/src/main/java/com/zeromail/api/dto/llm/ByokSaveRequest.java backend/api/src/main/java/com/zeromail/api/dto/llm/ByokSaveResponse.java backend/api/src/main/java/com/zeromail/api/dto/llm/ByokCurrentResponse.java` returns `5`.
     - File `backend/core/src/main/java/com/zeromail/core/llm/service/ByokService.java` exists; `grep -c "refreshTokenCipher.encrypt" backend/core/src/main/java/com/zeromail/core/llm/service/ByokService.java` returns `>= 1`.
     - `grep -c "byokEndpointValidator\.validate" backend/core/src/main/java/com/zeromail/core/llm/service/ByokService.java` returns `>= 2` (called in both validate() and save() — H-4).
+    - REVIEWS HIGH-consensus #3 module-boundary: `grep -c "com.zeromail.api" backend/core/src/main/java/com/zeromail/core/llm/service/ByokService.java` returns `0` (NO API DTO imports inside core service).
+    - REVIEWS HIGH-consensus #3: ByokService method signatures use core command records: `grep -E "validate\(UUID[^,]+,\s*ByokValidateCommand|save\(UUID[^,]+,\s*ByokSaveCommand" backend/core/src/main/java/com/zeromail/core/llm/service/ByokService.java | wc -l` returns `>= 2`.
+    - REVIEWS HIGH-consensus #3: 5 core records exist under `backend/core/src/main/java/com/zeromail/core/llm/model/`: ByokValidateCommand, ByokValidateResult, ByokSaveCommand, ByokSaveResult, ByokCurrent — `ls backend/core/src/main/java/com/zeromail/core/llm/model/Byok*.java | wc -l` returns `5`.
+    - REVIEWS HIGH-consensus #4: ByokService.save() re-runs upstream probe — `grep -c "// Re-run upstream probe\|reValidateUpstream\|probeUpstream\|validateUpstreamKey" backend/core/src/main/java/com/zeromail/core/llm/service/ByokService.java` returns `>= 1` (named helper that calls the same probe as validate()). Test 16 asserts WireMock saw 2 calls.
     - `grep -E "log\.(info|warn|error|debug).*payload\.apiKey\(\)|log\.(info|warn|error|debug).*payload\.endpoint\(\)" backend/core/src/main/java/com/zeromail/core/llm/service/ByokService.java` returns no matches (no key/endpoint URL in logs).
     - File `backend/api/src/main/java/com/zeromail/api/controllers/llm/ByokController.java` exists; `grep -c "@RequestMapping.*api/llm/byok" backend/api/src/main/java/com/zeromail/api/controllers/llm/ByokController.java` returns `1`; `grep -cE "@PostMapping|@GetMapping" backend/api/src/main/java/com/zeromail/api/controllers/llm/ByokController.java` returns `>= 3`.
     - `grep -c "@ExceptionHandler(SafetyViolationException.class)\|@ExceptionHandler(SanitizationException.class)\|@ExceptionHandler(InvalidByokException.class)" backend/api/src/main/java/com/zeromail/api/config/GlobalExceptionHandler.java` returns `3`.
