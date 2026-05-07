@@ -93,7 +93,8 @@ public class DomainBoundaryArchTests {
                             "..core.account.persistence..",
                             "..core.onboarding.persistence..",
                             "..core.gmail.persistence..",
-                            "..core.tenant.persistence..")))
+                            "..core.tenant.persistence..",
+                            "..core.llm.persistence..")))
             .because("D-D1: cross-domain reads must go through the other domain's Service");
 
     @ArchTest

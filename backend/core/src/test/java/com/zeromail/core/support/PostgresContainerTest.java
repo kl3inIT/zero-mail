@@ -56,5 +56,9 @@ public abstract class PostgresContainerTest {
     r.add("zeromail.billing.vnd-per-credit", () -> "1000");
     r.add("zeromail.billing.max-pending-intents-per-tenant", () -> "5");
     r.add("zeromail.billing.intent-expiry", () -> "PT24H");
+    // Spring AI starters are on the core classpath in Phase 02C. The gateway adapter is not
+    // exercised by these persistence tests, but auto-configuration still needs placeholder keys.
+    r.add("spring.ai.openai.api-key", () -> "test-openai-key");
+    r.add("spring.ai.anthropic.api-key", () -> "test-anthropic-key");
   }
 }
