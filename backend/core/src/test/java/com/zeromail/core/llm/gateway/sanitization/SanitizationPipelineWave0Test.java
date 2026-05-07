@@ -7,7 +7,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+@SpringBootTest(classes = {
+        SanitizationPipeline.class,
+        JsoupHtmlStripSanitizer.class,
+        NfcNormalizeSanitizer.class,
+        UnicodeTagStripSanitizer.class,
+        JtokkitConfig.class,
+        JtokkitTruncateSanitizer.class
+})
 class SanitizationPipelineWave0Test {
 
     private static final String TENANT_ID = "00000000-0000-0000-0000-000000000001";

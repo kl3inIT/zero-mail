@@ -11,7 +11,7 @@ public class SanitizationException extends RuntimeException {
     private final String stepName;
 
     public SanitizationException(String stepName, Throwable cause) {
-        super(cause);
+        super(null, cause);
         this.stepName = stepName;
     }
 
