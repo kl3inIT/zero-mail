@@ -957,32 +957,32 @@ databaseChangeLog:
 
 **If this table is empty:** All claims in this research were verified or cited — no user confirmation needed. **(Not the case here — A1 has real M4→GA churn risk; mitigation = re-verify at execute-phase.)**
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **`PlatformApiKey` placement: `core.llm.gateway.springai` package vs. its own subpackage?**
    - What we know: Single class implementing `org.springframework.ai.openai.api.ApiKey`. ArchUnit allows it inside `core.llm.gateway.springai.*`.
    - What's unclear: Whether to put it in a `auth` sub-package for organization.
-   - Recommendation: Top-level of `core.llm.gateway.springai/` is fine — it's only one class. Defer sub-package split until N≥3 auth/key implementations exist.
+   - RESOLVED: Top-level of `core.llm.gateway.springai/` is fine — it's only one class. Defer sub-package split until N≥3 auth/key implementations exist.
 
 2. **`tenant_byok_credentials.endpoint` for Anthropic provider — null vs. fixed `https://api.anthropic.com`?**
    - What we know: CONTEXT D-G1 spec is "endpoint VARCHAR(512) NULL (only set for openai-compatible)". For Anthropic provider, the gateway needs a baseUrl somewhere.
    - What's unclear: If null, the `AnthropicByokFactory` falls back to either `application.yml` config OR Spring AI default. Either is acceptable; pick one and lock.
-   - Recommendation: Anthropic factory uses Spring AI's default baseUrl when `endpoint` is null (Spring AI defaults to `https://api.anthropic.com`). NEVER read this from user-controlled config — keep the Anthropic baseUrl hard-coded to the SDK default unless `endpoint` is explicitly provided AND validated to match `*.anthropic.com` or a known Anthropic-compatible proxy.
+   - RESOLVED: Anthropic factory uses Spring AI's default baseUrl when `endpoint` is null (Spring AI defaults to `https://api.anthropic.com`). NEVER read this from user-controlled config — keep the Anthropic baseUrl hard-coded to the SDK default unless `endpoint` is explicitly provided AND validated to match `*.anthropic.com` or a known Anthropic-compatible proxy.
 
 3. **`golden-baseline.json` regeneration semantics?**
    - What we know: D-H2 says "generated once at scaffold-build time by running golden-set through gateway against pinned `driftModel`; committed to repo".
    - What's unclear: When `driftModel` changes (e.g., GPT-4o-mini → GPT-4o), regenerate the baseline? Manual? CI?
-   - Recommendation: Phase 2C ships a `BaselineRegenerationCli` Spring Boot ApplicationRunner (executed via `./gradlew :backend-core:bootRun --args='--spring.profiles.active=baseline-regen'`) that runs the golden-set, writes the baseline JSON, exits. Operator runs manually when changing `driftModel`. NOT a CI step (would burn LLM tokens on every build).
+   - RESOLVED: Phase 2C ships a `BaselineRegenerationCli` Spring Boot ApplicationRunner (executed via `./gradlew :backend-core:bootRun --args='--spring.profiles.active=baseline-regen'`) that runs the golden-set, writes the baseline JSON, exits. Operator runs manually when changing `driftModel`. NOT a CI step (would burn LLM tokens on every build).
 
 4. **i18n key spelling for `error.llm.*` and `byok.*`?**
    - What we know: Phase 1.1 locked the `code` field on `ApiError` as dotted-camel (e.g., `error.auth.unauthorized`).
    - What's unclear: Specific keys.
-   - Recommendation: Plan-phase locks: `error.llm.safety_violation`, `error.llm.sanitization_failed`, `error.llm.byok_validate_failed`, `error.llm.byok_save_conflict` (409), `byok.title`, `byok.provider.openai_compatible`, `byok.provider.anthropic`, `byok.endpoint.label`, `byok.endpoint.placeholder`, `byok.api_key.label`, `byok.validate.button`, `byok.save.button`, `byok.validate.success_with_models`, `byok.validate.success_no_models`. Vietnamese copy by frontend-design skill at execute-phase.
+   - RESOLVED: Plan-phase locks: `error.llm.safety_violation`, `error.llm.sanitization_failed`, `error.llm.byok_validate_failed`, `error.llm.byok_save_conflict` (409), `byok.title`, `byok.provider.openai_compatible`, `byok.provider.anthropic`, `byok.endpoint.label`, `byok.endpoint.placeholder`, `byok.api_key.label`, `byok.validate.button`, `byok.save.button`, `byok.validate.success_with_models`, `byok.validate.success_no_models`. Vietnamese copy by frontend-design skill at execute-phase.
 
 5. **Phase 3/4 dependency: when does Phase 2C need to be plan-checkable as "not blocked by Phase 3/4"?**
    - What we know: Phase 3 calls `gateway.chat(CallSite.PREVIEW, ...)`; Phase 4 calls `gateway.chat(CallSite.TRIAGE, ...)`. Phase 2C is a hard gate for both.
    - What's unclear: Does Phase 2C ship a no-op stub triage caller for integration testing?
-   - Recommendation: NO. Phase 2C tests use `MockBean ChatModel` — pure Spring AI mock. The gateway's `chat()` method is exercised by golden-set drift fixtures + dedicated MockMvc/RestClient integration tests. No "stub Phase 4 caller" exists.
+   - RESOLVED: NO. Phase 2C tests use `MockBean ChatModel` — pure Spring AI mock. The gateway's `chat()` method is exercised by golden-set drift fixtures + dedicated MockMvc/RestClient integration tests. No "stub Phase 4 caller" exists.
 
 ## Environment Availability
 

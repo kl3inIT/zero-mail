@@ -2,7 +2,7 @@
 phase: 02C-llm-gateway
 plan: 04
 type: execute
-wave: 3
+wave: 4
 depends_on: [03]
 files_modified:
   - backend/core/src/main/java/com/zeromail/core/llm/service/ActionValidator.java
@@ -12,7 +12,7 @@ files_modified:
   - backend/core/src/test/java/com/zeromail/core/llm/service/LlmGatewayActionValidatorTest.java
   - backend/core/src/test/java/com/zeromail/core/llm/service/ActionValidatorWave0Test.java
 autonomous: true
-requirements: [LLM-03]
+requirements: [LLM-07]
 must_haves:
   truths:
     - "Layer 1 enforcement: every LlmGatewayImpl ChatClient call sets toolChoice='required' AND internalToolExecutionEnabled(false) so the model is forced to emit a tool call and Spring AI returns it without auto-executing"
@@ -43,7 +43,7 @@ must_haves:
 <objective>
 Wave 3a tool-call allow-list enforcement. Land the defense-in-depth guarantee that NO action outside `{LABEL, ARCHIVE, SAVE_DRAFT}` can ever leave `LlmGateway`. Two independent layers: (1) Spring AI `toolChoice="required"` + `internalToolExecutionEnabled(false)` at the wire level; (2) post-parse `ActionValidator` enum check.
 
-Purpose: this is LLM-03. With Phase 4 wired to a real Gmail mailbox, a single leaked `send` action = product-killing. The validator enforces the project's most critical invariant — auto-send forbidden, full stop. Two layers because either alone is insufficient: OpenRouter sometimes ignores `toolChoice` (RESEARCH issue #1899); Spring AI M4→GA churn could silently disable Layer 1; some self-hosted vLLM endpoints accept `toolChoice` but emit free-text anyway. Both layers must independently fail open for `send` to leak.
+Purpose: this is LLM-07 (defense-in-depth Layer 2 — pairs with Plan 02's structural sanitization wrap; together they implement the full prompt-injection hardening contract: structured tool-call schema + per-action allow-list). With Phase 4 wired to a real Gmail mailbox, a single leaked `send` action = product-killing. The validator enforces the project's most critical invariant — auto-send forbidden, full stop. Two layers because either alone is insufficient: OpenRouter sometimes ignores `toolChoice` (RESEARCH issue #1899); Spring AI M4→GA churn could silently disable Layer 1; some self-hosted vLLM endpoints accept `toolChoice` but emit free-text anyway. Both layers must independently fail open for `send` to leak.
 
 Output: 1 production class (ActionValidator) + 1 model (SafetyViolationException) + 2 test files + Plan 01 Wave 0 scaffold turned green + LlmGatewayImpl modified at the parseToolCall + options seams.
 </objective>
@@ -199,7 +199,7 @@ Output: 1 production class (ActionValidator) + 1 model (SafetyViolationException
     - Test 1 (LlmGatewayActionValidatorTest#rejects_send_action_at_validator): `@MockBean ChatModel` returning a ChatResponse with tool call `{name: "send", arguments: '{"to": "..."}'}` → calling `gateway.chat(CallSite.PREVIEW, "hi", List.of())` throws SafetyViolationException; ToolCallResult never returned to caller.
     - Test 2 (LlmGatewayActionValidatorTest#accepts_label_action): mock returns `{name: "label", arguments: '{"value": "Receipts"}'}` → returns `ToolCallResult(LABEL, {value=Receipts})`.
     - Test 3 (LlmGatewayActionValidatorTest#emits_safety_violation_log): on safety violation, captured Logback ListAppender contains `event=llm_safety_violation tenantId={...} callSite=PREVIEW reason=SafetyViolationException` AND does NOT contain the rejected action name `send` AND does NOT contain the args content `to`.
-    - Test 4 (LlmGatewayActionValidatorTest#sets_toolChoice_required_in_options): inspect the mock's captured options (via ArgumentCaptor) — assert `OpenAiChatOptions.toolChoice() == "required"` AND `internalToolExecutionEnabled() == false`.
+    - Test 4 (LlmGatewayActionValidatorTest#sets_toolChoice_required_in_options): inspect the mock's captured options (via ArgumentCaptor<OpenAiChatOptions>) — assert `capturedOptions.getToolChoice().equals("required")` AND `capturedOptions.getInternalToolExecutionEnabled().equals(Boolean.FALSE)` (H-5 lock — Spring AI 2.0.0-M4 getter shape verified via Context7).
     - Test 5 (LlmGatewayActionValidatorTest#fails_when_no_tool_call_returned): mock returns ChatResponse with empty tool calls → throws SafetyViolationException (model emitted free text instead of a tool call — fail closed).
     - Plan 01 ActionValidatorWave0Test @Disabled removed; assertion `validator.validate("send")` throws SafetyViolationException AND `validator.validate("label") == Action.LABEL` passes.
   </behavior>
@@ -208,15 +208,17 @@ Output: 1 production class (ActionValidator) + 1 model (SafetyViolationException
        
        (a) Add `private final ActionValidator actionValidator;` field; add to constructor; remove the `// Plan 04 will add: private final ActionValidator actionValidator;` comment.
        
-       (b) In `chat()`, modify the OpenAiChatOptions construction to include `toolChoice("required")` AND `internalToolExecutionEnabled(false)`:
+       (b) In `chat()`, modify the OpenAiChatOptions construction to include `toolChoice("required")` AND `internalToolExecutionEnabled(false)`. **H-5 LOCK** (Spring AI 2.0.0-M4 docs verified via Context7 — `internalToolExecutionEnabled` lives on `OpenAiChatOptions.builder()`, NOT on `ChatClient.prompt()`):
        ```java
+       import org.springframework.ai.openai.OpenAiChatOptions;
+
        OpenAiChatOptions perCallOptions = OpenAiChatOptions.builder()
                .model(model)
                .toolChoice("required")                       // D-C1 Layer 1
-               .internalToolExecutionEnabled(false)          // D-C1 — gateway parses, doesn't auto-execute
+               .internalToolExecutionEnabled(false)          // H-5 + D-C1 — gateway parses, does NOT auto-execute
                .build();
        ```
-       Note: if Context7 confirms `internalToolExecutionEnabled` lives on the ChatClient.prompt() builder rather than OpenAiChatOptions in M4, move it: `chatClient.prompt().internalToolExecutionEnabled(false).user(...).options(perCallOptions).call()...`. Verify via Context7 query `/spring-projects/spring-ai` "internalToolExecutionEnabled 2.0.0-M4" before committing.
+       The location is locked at plan-phase, not deferred. Spring AI maintainers may also accept this property via `spring.ai.openai.chat.options.internal-tool-execution-enabled=false` in `application.yml`, but per-call-site builder pinning beats yml because (a) it keeps the safety pin co-located with the tool-call site, and (b) it survives any application.yml mutations during execution.
        
        (c) Replace `parseToolCall(chatResponse)` body with validator-backed logic:
        ```java
@@ -265,7 +267,7 @@ Output: 1 production class (ActionValidator) + 1 model (SafetyViolationException
     - `grep -c 'private final ActionValidator actionValidator' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `1`.
     - `grep -c 'actionValidator.validate' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 1`.
     - `grep -c 'toolChoice("required")' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 1`.
-    - `grep -c 'internalToolExecutionEnabled(false)' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 1`.
+    - H-5 (canonical Spring AI 2.0.0-M4 location pinned): `grep -c "internalToolExecutionEnabled(false)" backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 1`. Additionally, the call MUST be on `OpenAiChatOptions.builder()` (verified via Context7 — see RESEARCH Open Questions RESOLVED + this plan's research lock): `grep -E "OpenAiChatOptions\.builder\(\)[\s\S]*\.internalToolExecutionEnabled\(false\)" backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` (multiline match) returns `>= 1`.
     - `grep -c 'event=llm_safety_violation' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 1`.
     - `grep -c 'Action.fromFunctionName' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `0` (validator is the only path now).
     - `grep -v '^\s*\*\|^\s*//' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java | grep -E 'log\.(info|warn|error|debug).*safetyViolation\)' ` returns `0` (must NOT pass exception object — only `getClass().getSimpleName()`).
@@ -301,6 +303,8 @@ Output: 1 production class (ActionValidator) + 1 model (SafetyViolationException
 </threat_model>
 
 <verification>
+> Run all grep / shell acceptance checks via Git Bash (bash.exe), not PowerShell.
+
 - `./gradlew :backend:core:test --tests "ActionValidatorTest" --tests "LlmGatewayActionValidatorTest" --tests "ActionValidatorWave0Test"` exits 0
 - `./gradlew :backend:core:test --tests "LlmGatewayPlatformPathTest" --tests "LlmGatewayMultiTenantLeakTest"` continues to exit 0 (Plan 03 tests still green with validator wired)
 - `./gradlew :backend:core:test` exits 0 (full module green)

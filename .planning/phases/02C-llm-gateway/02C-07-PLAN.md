@@ -2,7 +2,7 @@
 phase: 02C-llm-gateway
 plan: 07
 type: execute
-wave: 6
+wave: 7
 depends_on: [03, 04, 06]
 files_modified:
   - backend/worker/src/main/java/com/zeromail/worker/llm/DriftDetectionJob.java
@@ -14,7 +14,7 @@ files_modified:
   - backend/worker/src/test/java/com/zeromail/worker/llm/DriftDetectionJobDriftDetectedTest.java
   - backend/worker/src/test/java/com/zeromail/worker/llm/DriftFixtureLoaderTest.java
 autonomous: true
-requirements: [LLM-10]
+requirements: [LLM-11]
 must_haves:
   truths:
     - "DriftDetectionJob is @Scheduled(cron='0 0 6 * * *') and gated on zero-mail.llm.drift.enabled (default false in worker/application.yml from Plan 03)"
@@ -50,7 +50,7 @@ must_haves:
 <objective>
 Wave 6 drift detection scaffold. Land `DriftDetectionJob` in `backend/worker`, the golden-set + baseline JSON fixtures, the `DriftFixtureLoader`, and 2 CI mock tests proving the comparator works in both no-drift and drift cases. The cron flag defaults `false` per SPEC.md — production go-live is deferred to Phase 5 / dedicated ops phase.
 
-Purpose: this is LLM-10. After this plan, on-call can flip `ZEROMAIL_LLM_DRIFT_ENABLED=true` in worker config and the daily 06:00 UTC tick will run the golden set, compare against baseline, and increment a Micrometer counter (or simply log) on regressions. Without this scaffold, a silent model swap (provider-side or admin-initiated) could degrade triage quality for weeks before users notice — the canonical AI-SPEC failure mode #6 ("Silent post-upgrade quality drop").
+Purpose: this is LLM-11 (golden-set drift detection on schedule). After this plan, on-call can flip `ZEROMAIL_LLM_DRIFT_ENABLED=true` in worker config and the daily 06:00 UTC tick will run the golden set, compare against baseline, and increment a Micrometer counter (or simply log) on regressions. Without this scaffold, a silent model swap (provider-side or admin-initiated) could degrade triage quality for weeks before users notice — the canonical AI-SPEC failure mode #6 ("Silent post-upgrade quality drop").
 
 Output: 3 production files (DriftDetectionJob + DriftFixtureLoader + DriftFixture record) + 2 fixture JSON files + 3 test files. No frontend, no API changes, no schema changes.
 </objective>
@@ -234,19 +234,20 @@ Output: 3 production files (DriftDetectionJob + DriftFixtureLoader + DriftFixtur
     - Test 5 (DriftDetectionJobNoDriftTest#emits_metadata_only_log): captured log contains `event=drift_check_run total={n} drifted={n}` and does NOT contain any fixture id, subject, or htmlBody content (D-I3 / S-1).
   </behavior>
   <action>
-    1. **Create or extend `ZeroMailWorkerProperties`** to expose `llm().drift().enabled()` + `llm().drift().fixedTenantId()`. If the worker already has a properties record, nest a new `LlmConfig(DriftConfig drift)` + `DriftConfig(boolean enabled, String fixedTenantId)`. Default `fixedTenantId` to `"00000000-0000-0000-0000-000000000000"` — the synthetic UUID for drift's TenantContext binding.
+    1. **Create or extend `ZeroMailWorkerProperties`** to expose `llm().drift().enabled()` + `llm().drift().fixedTenantId()`. If the worker already has a properties record, nest a new `LlmConfig(DriftConfig drift)` + `DriftConfig(boolean enabled, String fixedTenantId, int thresholdPercent)`. Default `fixedTenantId` to `"00000000-0000-0000-0000-000000000000"` — the synthetic UUID for drift's TenantContext binding. Default `thresholdPercent = 20` (M-6).
 
     2. **Create `backend/worker/src/main/java/com/zeromail/worker/llm/DriftDetectionJob.java`** — `@Component`:
        ```java
        @Component
        public class DriftDetectionJob {
            private static final Logger log = LoggerFactory.getLogger(DriftDetectionJob.class);
-           private static final int LEVENSHTEIN_DRIFT_THRESHOLD_PERCENT = 20;
+           // M-6: threshold configurable via zeromail.llm.drift.threshold-percent (default 20). Tune via observed first-month cron runs.
 
            private final LlmGateway llmGateway;
            private final DriftFixtureLoader fixtureLoader;
            private final boolean enabled;
            private final String fixedTenantId;
+           private final ZeroMailWorkerProperties.LlmConfig.DriftConfig driftConfig;   // M-6 — exposes thresholdPercent
            private volatile int lastRunDriftCount = -1;     // -1 = never run
 
            public DriftDetectionJob(LlmGateway llmGateway,
@@ -256,6 +257,7 @@ Output: 3 production files (DriftDetectionJob + DriftFixtureLoader + DriftFixtur
                this.fixtureLoader = fixtureLoader;
                this.enabled = workerProperties.llm().drift().enabled();
                this.fixedTenantId = workerProperties.llm().drift().fixedTenantId();
+               this.driftConfig = workerProperties.llm().drift();   // M-6
            }
 
            @Scheduled(cron = "0 0 6 * * *")
@@ -289,7 +291,7 @@ Output: 3 production files (DriftDetectionJob + DriftFixtureLoader + DriftFixtur
                    String resultArgsJson = serializeArgs(result.args());
                    int distance = LevenshteinDistance.getDefaultInstance()
                            .apply(resultArgsJson, baselineEntry.argsJson());
-                   int threshold = baselineEntry.argsJson().length() * LEVENSHTEIN_DRIFT_THRESHOLD_PERCENT / 100;
+                   int threshold = baselineEntry.argsJson().length() * driftConfig.thresholdPercent() / 100;
                    if (distance > threshold) drifted++;
                }
                this.lastRunDriftCount = drifted;
@@ -319,7 +321,8 @@ Output: 3 production files (DriftDetectionJob + DriftFixtureLoader + DriftFixtur
     - `grep -c '@Scheduled(cron = "0 0 6 \* \* \*")' backend/worker/src/main/java/com/zeromail/worker/llm/DriftDetectionJob.java` returns `1`.
     - `grep -c '@SchedulerLock(name = "llmDriftDetectionJob"' backend/worker/src/main/java/com/zeromail/worker/llm/DriftDetectionJob.java` returns `1`.
     - `grep -c 'llmGateway.driftCheck' backend/worker/src/main/java/com/zeromail/worker/llm/DriftDetectionJob.java` returns `>= 1`.
-    - `grep -c 'event=drift_check_run' backend/worker/src/main/java/com/zeromail/worker/llm/DriftDetectionJob.java` returns `1`.
+    - `grep -c "event=drift_check_run" backend/worker/src/main/java/com/zeromail/worker/llm/DriftDetectionJob.java` returns `1`.
+    - M-6: `grep -c "thresholdPercent\|driftConfig\.thresholdPercent" backend/worker/src/main/java/com/zeromail/worker/llm/DriftDetectionJob.java` returns `>= 1` (configurable threshold via `zeromail.llm.drift.threshold-percent`, default 20).
     - `grep -E 'log\.(info|warn|error|debug).*fixture\.|log\.(info|warn|error|debug).*\.htmlBody|log\.(info|warn|error|debug).*\.subject' backend/worker/src/main/java/com/zeromail/worker/llm/DriftDetectionJob.java | grep -v '//'` returns no matches (no per-fixture content in logs).
     - `./gradlew :backend:worker:test --tests "DriftDetectionJobNoDriftTest"` exits 0.
     - `./gradlew :backend:worker:test --tests "DriftDetectionJobDriftDetectedTest"` exits 0.
@@ -356,6 +359,8 @@ Output: 3 production files (DriftDetectionJob + DriftFixtureLoader + DriftFixtur
 </threat_model>
 
 <verification>
+> Run all grep / shell acceptance checks via Git Bash (bash.exe), not PowerShell.
+
 - `./gradlew :backend:worker:test --tests "*Drift*"` exits 0 — all 3 test files pass
 - `./gradlew :backend:core:test :backend:api:test :backend:worker:test` exits 0 — full suite green
 - ArchUnit tests continue to pass — DriftDetectionJob lives in `backend/worker` and only imports `LlmGateway` from `core.llm.service`; no Spring AI imports leak

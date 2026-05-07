@@ -2,8 +2,8 @@
 phase: 02C-llm-gateway
 plan: 08
 type: execute
-wave: 6
-depends_on: [05]
+wave: 7
+depends_on: [05a, 05b]
 files_modified:
   - apps/web/lib/api/schema.d.ts
   - apps/web/features/llm/api/llm-api.ts
@@ -12,18 +12,21 @@ files_modified:
   - apps/web/features/llm/messages.ts
   - apps/web/i18n/messages/vi.json
   - apps/web/i18n/messages/en.json
-  - apps/web/app/(protected)/settings/page.tsx
+  - apps/web/scripts/merge-feature-i18n.ts
   - apps/web/scripts/check-i18n.ts
+  - apps/web/package.json
+  - apps/web/app/(protected)/settings/page.tsx
   - apps/web/features/llm/components/ByokForm.test.tsx
   - apps/web/__tests__/byok-key-handling.test.ts
 autonomous: true
-requirements: [LLM-04, LLM-06, LLM-11]
+requirements: [LLM-03, LLM-04, LLM-10]
 must_haves:
   truths:
     - "apps/web/features/llm/ triplet (api/components/hooks) exists per CONTEXT D-D1; mounted on /settings page between automated-triage card and privacy card per UI-SPEC layout contract"
     - "ByokForm uses useRef<HTMLFormElement> to read raw API key on submit; key NEVER enters React state, NEVER appears in TanStack Query cache key, NEVER persists in localStorage / sessionStorage / cookies / URL params (D-D2 + UI-SPEC privacy contract)"
     - "Validate-then-Save state machine: Save button disabled until validateByok.data?.ok === true; field change after validation clears the success state and re-disables Save (UI-SPEC interaction contract)"
-    - "All visible copy flows through next-intl keys under llm.byok.* and errors.llm.* namespaces; vi.json and en.json are lock-step; pnpm i18n:check STRICT passes (UI-SPEC i18n keys list)"
+    - "Per CONTEXT D-D5 (H-6 restored): copy keys live in apps/web/features/llm/messages.ts as the source of truth with {key: {vi, en}} shape; build-time script apps/web/scripts/merge-feature-i18n.ts walks apps/web/features/**/messages.ts and emits the merged tree into apps/web/i18n/messages/{vi,en}.json; pnpm i18n:build wired into pnpm build chain"
+    - "All visible copy flows through next-intl keys under llm.byok.* and errors.llm.* namespaces resolved from the merged vi.json + en.json bundles; the merged JSON files are GENERATED ARTIFACTS (gitignored or marked DO NOT EDIT MANUALLY at the top); pnpm i18n:check STRICT passes against the merged output"
     - "Frontend-design skill is invoked BEFORE writing ByokForm.tsx (CONTEXT D-D6 + memory rule)"
     - "Raw shadcn primitives used (Card, RadioGroup, Input, Button, Alert) — NO ByokFormCard, NO ValidationResultAlert wrappers (CONTEXT D-D4 + memory rule rule-of-three)"
     - "404 / 402 / safety-violation error responses from gateway-fronted endpoints (BillingController, future Phase 4 endpoints) are localizable via existing useLocalizedApiError hook + new errors.llm.* keys"
@@ -38,7 +41,7 @@ must_haves:
       provides: "Single shadcn Card with provider radio, conditional endpoint field, uncontrolled password input, Validate + Save buttons, success/destructive Alert"
       contains: "useRef<HTMLFormElement>"
     - path: "apps/web/features/llm/messages.ts"
-      provides: "Co-located {vi, en} copy table merged into top-level i18n bundles at build/check time (D-D5)"
+      provides: "Source of truth — {key: {vi, en}} shape, merged into i18n/messages/{vi,en}.json at build time by apps/web/scripts/merge-feature-i18n.ts (D-D5 per H-6)"
     - path: "apps/web/i18n/messages/vi.json + en.json"
       provides: "llm.byok.* + errors.llm.* keys per UI-SPEC required-keys list"
   key_links:
@@ -59,9 +62,9 @@ must_haves:
 <objective>
 Wave 6 BYOK frontend (parallel with Plan 07). Land `apps/web/features/llm/` (the triplet api/components/hooks) per CONTEXT D-D1; mount `ByokForm.tsx` on `/settings` per UI-SPEC layout contract; localize all copy through `llm.byok.*` and `errors.llm.*` next-intl keys with vi+en parity; regenerate the typed OpenAPI client from Plan 05's new endpoints.
 
-Purpose: this is LLM-04 (BYOK UX surface — user-provided key UI), LLM-06 (credit-depleted top-up prompt visible), LLM-11 (admin/BYOK config form). The frontend-design skill MUST be invoked before writing ByokForm.tsx (memory rule — passed into the executor agent).
+Purpose: this is LLM-03 (BYOK key UI surface — user installs / replaces / inspects encrypted-at-rest BYOK credentials via the typed API from Plan 05b), LLM-04 (BYOK billing-skip state surfaced — frontend shows a `Using your own key (no platform credit)` indicator on the BYOK card when a row exists), and LLM-10 (credit-depleted top-up prompt — frontend localizes HTTP 402 from gateway-fronted endpoints via `errors.llm.insufficientCredits.{title,body}`). The frontend-design skill MUST be invoked before writing ByokForm.tsx (memory rule — passed into the executor agent).
 
-Output: 4 production files in `features/llm/` + i18n keys merged into vi/en bundles + settings page wired + EN_SCAN_FILES update for `pnpm i18n:check` + 2 frontend tests + schema.d.ts regen. NO backend changes.
+Output: 4 production files in `features/llm/` (api/components/hooks/messages.ts) + `apps/web/scripts/merge-feature-i18n.ts` build-time merger + `pnpm i18n:build` wired into `pnpm build` chain + i18n keys generated into vi/en bundles + settings page wired + EN_SCAN_FILES update + 2 frontend tests + schema.d.ts regen. NO backend changes.
 </objective>
 
 <execution_context>
@@ -203,7 +206,36 @@ Output: 4 production files in `features/llm/` + i18n keys merged into vi/en bund
        ```
        Note: D-D1 says NO query-keys file — but `getCurrentByok` IS a read. Resolution: declare a small `byokKeys` factory inline in `use-byok.ts` (not a separate file). On Save success, the form invalidates `byokKeys.current()` to refresh the displayed metadata.
 
-    4. **Create `apps/web/features/llm/messages.ts`** per CONTEXT D-D5 — co-located source of truth for BYOK copy. The build/check script merges this into top-level vi.json + en.json. For Plan 08, simplest path: directly update vi.json + en.json with the keys; treat messages.ts as a typed manifest that the lint script reads (or skip messages.ts in v1 and put keys directly in i18n bundles per the existing convention). **Decision per project flat-folder rule + simplicity**: skip `messages.ts` for v1, put keys directly in `vi.json` + `en.json` under top-level `llm` namespace; document this deviation from D-D5 in the SUMMARY.
+    4. **(H-6 — D-D5 restored) Create `apps/web/features/llm/messages.ts`** as the source of truth for BYOK copy:
+       ```ts
+       export const llmMessages = {
+         "llm.byok.title": { vi: "Khóa API cho nhà cung cấp AI", en: "AI provider key" },
+         "llm.byok.description": {
+           vi: "Dùng khóa riêng của bạn để gọi OpenAI Compatible hoặc Anthropic. Zero Mail chỉ lưu khóa đã mã hóa và không trừ tín dụng nền tảng cho các lượt gọi BYOK.",
+           en: "Use your own key to call OpenAI Compatible or Anthropic. Zero Mail only stores the encrypted key and does not deduct platform credits for BYOK calls.",
+         },
+         // ... (provider/endpoint/apiKey/validateCta/saveCta/empty/validation/save/existing keys per UI-SPEC verbatim)
+         "errors.llm.safetyViolation": { vi: "Yêu cầu AI đã bị từ chối vì lý do an toàn.", en: "The AI request was rejected for safety reasons." },
+         // ... (insufficientCredits/sanitizationFailed/byokValidateFailed)
+       } as const;
+       ```
+
+    8. **(H-6) Create `apps/web/scripts/merge-feature-i18n.ts`** — Node/TS script that walks `apps/web/features/**/messages.ts` (using `glob`), imports each `messages` const, splits by `{vi, en}` keys, and emits the merged tree into `apps/web/i18n/messages/vi.json` and `en.json`. Add a header comment to each generated JSON file: `// GENERATED — DO NOT EDIT. Source: features/**/messages.ts. Run `pnpm i18n:build` to regenerate.` (since JSON does not support comments, use a top-level `_generated` key OR add the marker as a separate `.gitattributes` linguist-generated rule + git pre-commit hook). Pick the `_generated` key approach for simplicity:
+       ```json
+       {
+         "_generated": "DO NOT EDIT — run pnpm i18n:build. Source: apps/web/features/**/messages.ts.",
+         "llm": { "byok": { "title": "Khóa API cho nhà cung cấp AI", ... } }
+       }
+       ```
+
+    9. **(H-6) Wire `pnpm i18n:build` into the build chain.** In `apps/web/package.json` `scripts`:
+       ```json
+       "i18n:build": "tsx scripts/merge-feature-i18n.ts",
+       "build": "pnpm i18n:build && next build"
+       ```
+       Run `pnpm -C apps/web i18n:build` once after creating `messages.ts` to regenerate the merged bundles. Then run `pnpm -C apps/web i18n:check` (STRICT — Phase 1.3 P07) to confirm vi/en parity.
+
+    10. **DO NOT hand-edit `apps/web/i18n/messages/{vi,en}.json` directly.** They are now regenerated artifacts. Add `apps/web/i18n/messages/*.json` to a `.gitattributes` line marking them as `linguist-generated=true` (optional — ESLint/Prettier ignore based on existing config). The pre-commit lint job runs `pnpm i18n:build` before `pnpm i18n:check` to catch out-of-sync states.
 
     5. **Modify `apps/web/i18n/messages/vi.json`** — add the following keys under top-level `llm.byok.*` and `errors.llm.*` namespaces (Vietnamese copy from UI-SPEC "Copywriting Contract" verbatim):
        ```json
@@ -278,7 +310,11 @@ Output: 4 production files in `features/llm/` + i18n keys merged into vi/en bund
     - Same for en.json — `grep -c '"AI provider key"\|"safetyViolation"' apps/web/i18n/messages/en.json` returns `>= 2`.
     - `cd apps/web && pnpm tsc --noEmit` exits 0 — typed schema includes the new BYOK paths.
     - `cd apps/web && pnpm i18n:check` exits 0 — STRICT mode passes.
-    - `grep -c 'features/llm/components/ByokForm.tsx' apps/web/scripts/check-i18n.ts` returns `1` (file added to EN_SCAN_FILES).
+    - `grep -c "features/llm/components/ByokForm.tsx" apps/web/scripts/check-i18n.ts` returns `1` (file added to EN_SCAN_FILES).
+    - H-6: File `apps/web/features/llm/messages.ts` exists with `{vi, en}` shape; `grep -E "vi:\s*[\"\u00b4]\|en:\s*[\"\u00b4]" apps/web/features/llm/messages.ts | wc -l` returns `>= 8` (each key has both vi + en).
+    - H-6: File `apps/web/scripts/merge-feature-i18n.ts` exists; `grep -c "features/.*messages\.ts" apps/web/scripts/merge-feature-i18n.ts` returns `>= 1` (script walks feature messages files).
+    - H-6: `grep -c "i18n:build" apps/web/package.json` returns `>= 1` (script wired); `grep -E "\"build\"\s*:\s*\".*i18n:build" apps/web/package.json` matches (build chain runs i18n:build first).
+    - H-6: `apps/web/i18n/messages/vi.json` contains a `"_generated"` key OR a top-of-file generated marker (`grep -c "_generated\|GENERATED" apps/web/i18n/messages/vi.json` returns `>= 1`).
   </acceptance_criteria>
   <done>
     Schema regenerated; api + hooks files land per PATTERNS.md; i18n keys for `llm.byok.*` + `errors.llm.*` mirrored across vi+en in lock-step; EN_SCAN_FILES updated; `pnpm i18n:check` STRICT passes.
@@ -355,7 +391,7 @@ Output: 4 production files in `features/llm/` + i18n keys merged into vi/en bund
     - `grep -c 'useState<string>(apiKey\|setApiKey\|onChange.*apiKey' apps/web/features/llm/components/ByokForm.tsx` returns `0` (apiKey NEVER controlled).
     - `grep -c 'autoComplete="off"' apps/web/features/llm/components/ByokForm.tsx` returns `>= 1`.
     - `grep -c 'ByokFormCard\|ValidationResultAlert' apps/web/features/llm/components/ByokForm.tsx` returns `0` (no wrapper components).
-    - `grep -c 'ByokForm' apps/web/app/(protected)/settings/page.tsx` returns `>= 1` (mounted on settings).
+    - `grep -c "ByokForm" "apps/web/app/(protected)/settings/page.tsx"` returns `>= 1` (M-8 — path quoted because it contains parens; required for Git Bash too).
     - `cd apps/web && pnpm tsc --noEmit` exits 0.
     - `cd apps/web && pnpm vitest run --include "features/llm/**" --include "__tests__/byok-key-handling.test.ts"` exits 0 (all 9 tests pass — 5 component + 4 invariant).
     - `cd apps/web && pnpm eslint .` exits 0.
@@ -390,6 +426,8 @@ Output: 4 production files in `features/llm/` + i18n keys merged into vi/en bund
 </threat_model>
 
 <verification>
+> Run all grep / shell acceptance checks via Git Bash (bash.exe), not PowerShell. Quote any path containing parens (e.g., `"apps/web/app/(protected)/settings/page.tsx"`).
+
 - `cd apps/web && pnpm tsc --noEmit` exits 0
 - `cd apps/web && pnpm vitest run` exits 0 — all suites green including the new BYOK feature tests + the project-wide invariant test
 - `cd apps/web && pnpm eslint .` exits 0
@@ -410,7 +448,7 @@ Output: 4 production files in `features/llm/` + i18n keys merged into vi/en bund
 <output>
 After completion, create `.planning/phases/02C-llm-gateway/02C-08-SUMMARY.md` documenting:
 - Confirmation that frontend-design skill was invoked before writing ByokForm.tsx
-- Whether messages.ts co-located file was used (D-D5) or keys went directly to vi/en bundles (deviation note if so)
+- Confirmation that messages.ts co-located file IS the source of truth per D-D5 (H-6 — restored, no deviation)
 - Final i18n key count (added under llm.* + errors.llm.* namespaces)
 - Whether `pnpm generate:api` ran from a live backend or from a hermetic openapi.json artifact
 - Playwright manual-walk replay command for the user (since automated browser tests against `/settings` need a running stack)

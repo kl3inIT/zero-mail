@@ -2,8 +2,8 @@
 phase: 02C-llm-gateway
 plan: 02
 type: execute
-wave: 1
-depends_on: []
+wave: 2
+depends_on: [01]
 files_modified:
   - backend/core/src/main/java/com/zeromail/core/llm/gateway/sanitization/Sanitizer.java
   - backend/core/src/main/java/com/zeromail/core/llm/gateway/sanitization/SanitizationPipeline.java
@@ -21,7 +21,7 @@ files_modified:
   - backend/core/src/test/java/com/zeromail/core/llm/gateway/sanitization/PromptInjectionCorpusTest.java
   - backend/core/src/test/java/com/zeromail/core/llm/gateway/sanitization/SanitizationPipelineWave0Test.java
 autonomous: true
-requirements: [LLM-02]
+requirements: [LLM-05, LLM-06, LLM-07, LLM-08]
 must_haves:
   truths:
     - "Sanitization pipeline runs Jsoup → NFC → Unicode-tag-strip → jtokkit-truncate in @Order 10/20/30/40 sequence on every input"
@@ -64,7 +64,7 @@ must_haves:
 <objective>
 Wave 1 sanitization pipeline. Land the 4-step Jsoup → NFC → Unicode-tag-strip → jtokkit-truncate pipeline as ordered Spring beans behind a `Sanitizer` functional interface, with a `SanitizationPipeline` orchestrator that folds the steps. Each step has a zero-arg unit test; the corpus test exercises the whole pipeline against 5 prompt-injection fixtures from Plan 01.
 
-Purpose: this is the LLM-02 prompt-injection wall. Plan 03's `LlmGatewayImpl.chat(...)` calls `sanitizationPipeline.sanitize(rawHtml)` as the first thing it does — every byte that reaches Spring AI has already been Jsoup-stripped, NFC-normalized, tag-stripped, and truncated to ≤3896 tokens.
+Purpose: this is the LLM-05/06/07/08 sanitization wall (HTML strip via Jsoup, NFC normalize, Unicode tag-strip U+E0000..U+E007F, structural prompt-injection wrap via tool-call schema in Plan 04, and ≤4096-token jtokkit truncation with the Anthropic 200-token safety headroom = 3896 hard cap per CONTEXT D-B4). Plan 03's `LlmGatewayImpl.chat(...)` calls `sanitizationPipeline.sanitize(rawHtml)` as the first thing it does — every byte that reaches Spring AI has already been Jsoup-stripped, NFC-normalized, tag-stripped, and truncated to ≤3896 tokens.
 
 Output: 6 production files (4 sanitizer beans + orchestrator + interface) + 2 model records (SanitizationContext, SanitizationException) + 5 unit-test files + 1 corpus test + Plan 01's Wave 0 scaffold turned green.
 </objective>
@@ -208,8 +208,10 @@ Output: 6 production files (4 sanitizer beans + orchestrator + interface) + 2 mo
 
     7. **Create `backend/core/src/main/java/com/zeromail/core/llm/gateway/sanitization/JtokkitTruncateSanitizer.java`** — `@Component @Order(40)`. Inject `EncodingRegistry encodingRegistry` (constructor) and resolve `Encoding cl100kBase = registry.getEncoding(EncodingType.CL100K_BASE)`. Hard cap **3896** (4096 budget − 200 Anthropic safety headroom per D-B4 + SPEC.md acceptance criteria). Implementation:
        ```java
-       int hardCap = 3896;
-       EncodingResult result = cl100kBase.encode(context.content(), hardCap);
+       // CONTEXT D-B4: 4096-token budget minus 200-token Anthropic safety headroom = 3896.
+       public static final int HARD_CAP_TOKENS = 3896;
+       // ...
+       EncodingResult result = cl100kBase.encode(context.content(), HARD_CAP_TOKENS);
        String truncated = result.isTruncated()
                ? cl100kBase.decode(result.getTokens())
                : context.content();
@@ -232,7 +234,7 @@ Output: 6 production files (4 sanitizer beans + orchestrator + interface) + 2 mo
     - `grep -c 'Safelist.none()' backend/core/src/main/java/com/zeromail/core/llm/gateway/sanitization/JsoupHtmlStripSanitizer.java` returns `1`.
     - `grep -c 'Form.NFC' backend/core/src/main/java/com/zeromail/core/llm/gateway/sanitization/NfcNormalizeSanitizer.java` returns `1`.
     - `grep -c 'CL100K_BASE\|cl100k_base\|cl100kBase' backend/core/src/main/java/com/zeromail/core/llm/gateway/sanitization/JtokkitTruncateSanitizer.java` returns `>= 1`.
-    - `grep -c '3896' backend/core/src/main/java/com/zeromail/core/llm/gateway/sanitization/JtokkitTruncateSanitizer.java` returns `1` — the hard cap.
+    - Hard-cap constant pinned: `grep -E "(public|private)\s+static\s+final\s+int\s+HARD_CAP_TOKENS\s*=\s*3896\s*;" backend/core/src/main/java/com/zeromail/core/llm/gateway/sanitization/JtokkitTruncateSanitizer.java | wc -l` returns `1` (M-5 — exact constant declaration, not just any occurrence of the number 3896 in code or comments).
     - SanitizationException source: `grep -v '^\s*//' backend/core/src/main/java/com/zeromail/core/llm/model/SanitizationException.java | grep -c 'super(content)\|super(message)\|super(rawHtml)\|super(emailBody)\|super(prompt)\|super(completion)' ` returns `0` (no content in exception message).
     - All 4 sanitizer unit tests pass: `./gradlew :backend:core:test --tests "JsoupHtmlStripSanitizerTest" --tests "NfcNormalizeSanitizerTest" --tests "UnicodeTagStripSanitizerTest" --tests "JtokkitTruncateSanitizerTest"` exits 0.
   </acceptance_criteria>
@@ -301,7 +303,7 @@ Output: 6 production files (4 sanitizer beans + orchestrator + interface) + 2 mo
     - `grep -v '^\s*\*\|^\s*//' backend/core/src/main/java/com/zeromail/core/llm/gateway/sanitization/SanitizationPipeline.java | grep -c 'log\.\(info\|warn\|error\|debug\).*content()' ` returns `0` (no content logging — privacy invariant).
     - File `backend/core/src/test/java/com/zeromail/core/llm/gateway/sanitization/SanitizationPipelineTest.java` exists with at least 4 `@Test` methods.
     - File `backend/core/src/test/java/com/zeromail/core/llm/gateway/sanitization/PromptInjectionCorpusTest.java` exists with at least 5 `@Test` methods (one per corpus fixture).
-    - `grep -v '^\s*//' backend/core/src/test/java/com/zeromail/core/llm/gateway/sanitization/SanitizationPipelineWave0Test.java | grep -c '@Disabled' ` returns `0` (Wave 0 scaffold no longer disabled).
+    - `grep -v '^\s*//' backend/core/src/test/java/com/zeromail/core/llm/gateway/sanitization/SanitizationPipelineWave0Test.java | grep -v '^\s*\*' | grep -c '@Disabled'` returns `0` (Wave 0 scaffold no longer disabled — filter strips comment lines and Javadoc).
     - `./gradlew :backend:core:test --tests "SanitizationPipelineTest" --tests "PromptInjectionCorpusTest" --tests "SanitizationPipelineWave0Test"` exits 0.
     - `./gradlew :backend:core:test --tests "LlmGatewayBoundaryTest"` still exits 0 (no Spring AI imports leaked into sanitization package).
   </acceptance_criteria>
@@ -332,6 +334,8 @@ Output: 6 production files (4 sanitizer beans + orchestrator + interface) + 2 mo
 </threat_model>
 
 <verification>
+> Run all grep / shell acceptance checks via Git Bash (bash.exe), not PowerShell.
+
 - `./gradlew :backend:core:test --tests "*Sanitiz*" --tests "PromptInjectionCorpusTest"` exits 0
 - `./gradlew :backend:core:test --tests "LlmGatewayBoundaryTest"` exits 0 (jsoup + jtokkit imports confined to gateway/sanitization package)
 - `./gradlew :backend:core:test` exits 0 (full module test suite green; SanitizationPipelineWave0Test from Plan 01 is no longer @Disabled)

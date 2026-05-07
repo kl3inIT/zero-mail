@@ -2,13 +2,13 @@
 phase: 02C-llm-gateway
 plan: 06
 type: execute
-wave: 5
-depends_on: [03, 05]
+wave: 6
+depends_on: [03, 05a]
 files_modified:
   - backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java
   - backend/core/src/test/java/com/zeromail/core/llm/service/LlmGatewayCreditLifecycleTest.java
 autonomous: true
-requirements: [LLM-05, LLM-06, LLM-11]
+requirements: [LLM-04, LLM-10]
 must_haves:
   truths:
     - "Platform-path call site reserves credits via Phase 2B CreditLedger.reserve(tenantId, callSite) BEFORE the ChatClient call; on success, settles; on any exception (including SafetyViolationException, SanitizationException, RuntimeException), releases — never leaks a held reservation"
@@ -29,9 +29,9 @@ must_haves:
 ---
 
 <objective>
-Wave 5 credit cap wiring. Wrap the platform-path call site in `LlmGatewayImpl.chat()` with `CreditLedger.reserve` → try → `settle`/`release` per the cross-phase contract documented in `CreditLedger.java` Javadoc. Confirm BYOK path skips the ledger entirely (already short-circuits in Plan 05). Add a Phase 2B-style integration test proving credit lifecycle correctness under concurrent calls.
+Wave 5 credit cap wiring. Wrap the platform-path call site in `LlmGatewayImpl.chat()` with `CreditLedger.reserve` → try → `settle`/`release` per the cross-phase contract documented in `CreditLedger.java` Javadoc. Confirm BYOK path skips the ledger entirely (already short-circuits in Plan 05a). Add a Phase 2B-style integration test proving credit lifecycle correctness under concurrent calls. Increment a Micrometer counter `llm_safety_violation_cost_absorbed_total{tenantId}` on the SafetyViolation release path (M-3 — platform absorbs cost on safety violations to avoid charging users for adversarial inputs; abuse is monitored via this counter).
 
-Purpose: this is LLM-06 (per-tenant daily LLM spend cap blocks billable calls when exceeded — implemented as ledger-IS-the-cap per SPEC.md Constraint "No separate `daily_spend_cap_usd` table"; Phase 2B's CreditLedger handles the per-call deduction and the cap is implicit when balance hits zero), LLM-05 (BYOK billing skip — verified by negative path test), and LLM-11 (UI surfaces credit-depleted state — backend-side error code is the contract; Plan 08 surfaces in UI).
+Purpose: this is LLM-04 (BYOK bypasses platform LLM billing — verified by negative-path test that confirms the BYOK branch never touches `CreditLedger`) + LLM-10 (per-tenant daily LLM spend cap blocks billable calls — implemented as ledger-IS-the-cap per SPEC.md "No separate `daily_spend_cap_usd` table"; Phase 2B's CreditLedger handles per-call deduction and the cap is implicit when the balance hits zero, surfacing as `InsufficientCreditsException` → HTTP 402).
 
 Output: `LlmGatewayImpl` final wiring (the // Plan 06 markers from Plan 03 are now real code) + 1 integration test file covering 5 lifecycle scenarios.
 </objective>
@@ -104,7 +104,7 @@ Output: `LlmGatewayImpl` final wiring (the // Plan 06 markers from Plan 03 are n
   <action>
     1. **Modify `backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java`** at the `// Plan 06 will add:` markers:
        
-       (a) Add `private final CreditLedger creditLedger;` field; add to constructor; remove the corresponding marker comment.
+       (a) Add `private final CreditLedger creditLedger;` and `private final io.micrometer.core.instrument.MeterRegistry meterRegistry;` fields; add both to constructor; remove the corresponding marker comments.
        
        (b) Replace the platform-path block in `chat()` with the full lifecycle wrap. After the BYOK branch (Plan 05) returns early, the platform path becomes:
        ```java
@@ -141,6 +141,10 @@ Output: `LlmGatewayImpl` final wiring (the // Plan 06 markers from Plan 03 are n
            return result;
        } catch (SafetyViolationException safetyViolation) {
            creditLedger.release(reservation);
+           // M-3: platform absorbs cost on safety violations to avoid charging users for adversarial inputs.
+           // Abuse / regression is monitored via this Micrometer counter.
+           meterRegistry.counter("llm_safety_violation_cost_absorbed_total",
+                   "tenantId", tenantId.toString()).increment();
            log.error("event=llm_safety_violation tenantId={} callSite={} reason={}",
                    tenantId, callSite, safetyViolation.getClass().getSimpleName());
            throw safetyViolation;
@@ -167,7 +171,7 @@ Output: `LlmGatewayImpl` final wiring (the // Plan 06 markers from Plan 03 are n
        
        (d) **DO NOT** wrap `driftCheck()` in reserve/settle/release — D-E3 explicitly says drift bypasses the ledger. Add a code comment: `// D-E3 — drift is a platform-cost operation, not user-billable; ledger NOT touched`.
        
-       (e) Verify the BYOK branch (Plan 05) returns BEFORE any reserve call is reached — re-read the Plan 05 insertion point and confirm the early-return structure. If the BYOK branch is `if (byok.isPresent()) { return callViaByokFactory(...); }`, the structural guarantee holds. Add a code comment at the early return: `// LLM-05 — BYOK skips credit ledger by design`.
+       (e) Verify the BYOK branch (Plan 05a) returns BEFORE any reserve call is reached — re-read the Plan 05a insertion point and confirm the early-return structure. If the BYOK branch is `if (byok.isPresent()) { return callViaByokFactory(...); }`, the structural guarantee holds. Add a code comment at the early return: `// LLM-04 — BYOK skips credit ledger by design`.
 
     2. **Create `backend/core/src/test/java/com/zeromail/core/llm/service/LlmGatewayCreditLifecycleTest.java`** — `@SpringBootTest` with `@MockBean ChatModel` and `@SpyBean CreditLedger` (so the real ledger runs against Testcontainers Postgres but interactions are observable). Implement Tests 1–7 above. Test 6 uses `StructuredTaskScope` and `ScopedValue.where(TenantContext.TENANT, ...)` per the Plan 03 multi-tenant pattern, but for the SAME tenant id (concurrency under one tenant). Reuse PATTERNS.md "LlmGatewayMultiTenantLeakTest.java" structural shape — adapt for single-tenant + outcome-asserting.
   </action>
@@ -178,9 +182,11 @@ Output: `LlmGatewayImpl` final wiring (the // Plan 06 markers from Plan 03 are n
     - `grep -c 'private final CreditLedger creditLedger' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `1`.
     - `grep -c 'creditLedger.reserve' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 1` (in chat() platform path).
     - `grep -c 'creditLedger.settle' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 1`.
-    - `grep -c 'creditLedger.release' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 2` (release on SafetyViolation + release on RuntimeException — separate catch blocks).
+    - L-1 (tightened): `grep -c "creditLedger\.release" backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 2` (release on SafetyViolation + release on RuntimeException — distinct catch blocks).
+    - M-3: `grep -c "llm_safety_violation_cost_absorbed_total" backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `1` (Micrometer counter incremented in SafetyViolationException catch block, after release).
+    - M-3: `grep -c "private final io\.micrometer\.core\.instrument\.MeterRegistry meterRegistry\|private final MeterRegistry meterRegistry" backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `1`.
     - `grep -c 'event=llm_call_blocked_insufficient_credits' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `1`.
-    - `grep -c '// LLM-05 — BYOK skips credit ledger\|// D-E3' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 2` (BYOK skip comment + drift skip comment).
+    - `grep -c "// LLM-04 — BYOK skips credit ledger\|// D-E3" backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 2` (BYOK skip comment + drift skip comment — note: BYOK skip is LLM-04, not LLM-05; comment was renamed per H-1).
     - `grep -c '// Plan 06 will add' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `0` (all markers replaced with real code).
     - `grep -E 'log\.(info|warn|error|debug).*reservation\.id|log\.(info|warn|error|debug).*reservation\.uuid' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` — reservation id NOT logged in the gateway (Phase 2B may log it internally; that's fine; the gateway only logs metadata).
     - `./gradlew :backend:core:test --tests "LlmGatewayCreditLifecycleTest"` exits 0 — all 7 tests pass.
@@ -216,7 +222,9 @@ Output: `LlmGatewayImpl` final wiring (the // Plan 06 markers from Plan 03 are n
 </threat_model>
 
 <verification>
-- `./gradlew :backend:core:test --tests "LlmGateway*"` exits 0 — all gateway-touching tests across Plans 03/04/05/06 green
+> Run all grep / shell acceptance checks via Git Bash (bash.exe), not PowerShell.
+
+- `./gradlew :backend:core:test --tests "LlmGateway*"` exits 0 — all gateway-touching tests across Plans 03/04/05a/05b/06 green
 - `./gradlew :backend:core:test :backend:api:test :backend:worker:test` exits 0 — full suite green
 - ArchUnit `LlmGatewayBoundaryTest` + `DomainBoundaryArchTests` continue to pass
 - Phase 2B `CreditLedgerSettleIdempotentTest` continues to pass (we did not touch the ledger interface; only added a new caller)

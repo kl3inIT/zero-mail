@@ -2,7 +2,7 @@
 phase: 02C-llm-gateway
 plan: 03
 type: execute
-wave: 2
+wave: 3
 depends_on: [01, 02]
 files_modified:
   - backend/core/src/main/java/com/zeromail/core/llm/service/LlmGateway.java
@@ -12,13 +12,15 @@ files_modified:
   - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/PlatformApiKey.java
   - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/PlatformChatClientConfig.java
   - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/ZeroMailLlmProperties.java
+  - backend/core/src/main/java/com/zeromail/core/llm/service/ToolTranslator.java
+  - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/SpringAiToolTranslator.java
   - backend/api/src/main/resources/application.yml
   - backend/worker/src/main/resources/application.yml
   - backend/core/src/test/java/com/zeromail/core/llm/service/LlmGatewayWave0Test.java
   - backend/core/src/test/java/com/zeromail/core/llm/service/LlmGatewayPlatformPathTest.java
   - backend/core/src/test/java/com/zeromail/core/llm/service/LlmGatewayMultiTenantLeakTest.java
 autonomous: true
-requirements: [LLM-01, LLM-07, LLM-08, LLM-09]
+requirements: [LLM-01, LLM-02, LLM-09]
 must_haves:
   truths:
     - "All LLM traffic flows through LlmGateway interface; ArchUnit test from Plan 01 still passes after impl lands"
@@ -32,7 +34,7 @@ must_haves:
   artifacts:
     - path: "backend/core/src/main/java/com/zeromail/core/llm/service/LlmGateway.java"
       provides: "Public interface — single chokepoint contract for Phase 3/4 callers"
-      exports: ["chat(CallSite, String, List<ToolCallback>) -> ToolCallResult", "driftCheck(String) -> ToolCallResult"]
+      exports: ["chat(CallSite, String, List<LlmTool>) -> ToolCallResult", "driftCheck(String) -> ToolCallResult"]
     - path: "backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java"
       provides: "Package-private @Service implementation; sanitize → ChatClient call → response parse → ToolCallResult"
       contains: "implements LlmGateway"
@@ -73,7 +75,7 @@ must_haves:
 <objective>
 Wave 2 gateway core. Land the public `LlmGateway` interface, the package-private `LlmGatewayImpl` skeleton (sanitize → ChatClient call → minimal tool-call parse → return), the platform-path Spring AI wiring (`PlatformApiKey`, `PlatformChatClientConfig`, `ZeroMailLlmProperties`), the `Action` enum + `ToolCallResult` record (consumed by Plan 04 for the validator), and the application.yml configuration with `ZEROMAIL_LLM_PLATFORM_API_KEY:?` fail-fast + Spring AI observation `log-prompt/log-completion: false` defensive pins.
 
-Purpose: this is the LLM-01 single-gateway abstraction landing point. After this plan: any caller (drift job, future Phase 3/4) can call `LlmGateway.chat(callSite, content, tools)` and get a `ToolCallResult` back. Plans 04/05/06 will modify `LlmGatewayImpl` to add tool-call validation (04), BYOK branch (05), and credit ledger wiring (06). To keep the public contract stable across those edits, this plan locks the interface signature and the call site sequence; later plans only insert logic at marked seams.
+Purpose: this is the LLM-01 (single gateway abstraction) + LLM-02 (default OpenRouter routing with per-call-site model pin via `ZeroMailLlmProperties`) + LLM-09 (no-persistence privacy contract via Spring AI observation `log-prompt: false` / `log-completion: false` pins) landing point. After this plan: any caller (drift job, future Phase 3/4) can call `LlmGateway.chat(callSite, content, tools)` and get a `ToolCallResult` back. Plans 04/05/06 will modify `LlmGatewayImpl` to add tool-call validation (04), BYOK branch (05), and credit ledger wiring (06). To keep the public contract stable across those edits, this plan locks the interface signature and the call site sequence; later plans only insert logic at marked seams.
 
 Output: 7 production files (interface + impl + 2 model records + 3 springai wiring) + 2 application.yml updates + 3 test files (Wave 0 turned green + happy-path platform test + multi-tenant leak test).
 </objective>
@@ -192,13 +194,11 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
         * metadata only (provider, model, tokenCount, latencyMs, stopReason).
         */
        public interface LlmGateway {
-           ToolCallResult chat(CallSite callSite, String rawHtml, List<ToolCallback> tools);
+           ToolCallResult chat(CallSite callSite, String rawHtml, List<LlmTool> tools);
            ToolCallResult driftCheck(String prompt);  // D-E3 — bypasses ledger; pinned to driftModel
        }
        ```
-       Note: `ToolCallback` is `org.springframework.ai.tool.ToolCallback`. ArchUnit `LlmGatewayBoundaryTest` (Plan 01) covers this — `core.llm.service` is OUTSIDE `core.llm.gateway.springai`, so importing `ToolCallback` here would fail. **Decision per RESEARCH lines 12-17 + AI-SPEC framework section**: define a project-local `LlmTool` shape OR keep `ToolCallback` and EXEMPT `core.llm.service` from the ArchUnit rule.
-
-       **Resolution**: Use the second option — modify Plan 01's `LlmGatewayBoundaryTest#spring_ai_only_in_gateway_springai` to allow `core.llm.service` to import `org.springframework.ai.tool.ToolCallback` ONLY (not the broader `org.springframework.ai..` packages). Restate the rule as: outside `core.llm.gateway.springai`, the only Spring AI class importable is `org.springframework.ai.tool.ToolCallback`. Update the rule's `.because()` clause to reflect this exemption.
+       Note: `LlmTool` is the project-local record from Plan 01 step 8 (`com.zeromail.core.llm.model.LlmTool`). The `core.llm.gateway.springai` adapter (`SpringAiToolTranslator` — see Task 2 step 0) translates `LlmTool` → `org.springframework.ai.tool.ToolCallback` internally. **No Spring AI import leaks into `core.llm.service` (M-1 — ArchUnit rule stays strict, no exemptions).**
 
     4. **Create `backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/ZeroMailLlmProperties.java`** as a record with `@ConfigurationProperties("zero-mail.llm.platform")`:
        ```java
@@ -261,27 +261,7 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
              enabled: ${ZEROMAIL_LLM_DRIFT_ENABLED:false}
        ```
 
-    7. **Update Plan 01's `LlmGatewayBoundaryTest#spring_ai_only_in_gateway_springai`** to allow `org.springframework.ai.tool.ToolCallback` in `core.llm.service`:
-       ```java
-       @Test
-       void spring_ai_only_in_gateway_springai_except_tool_callback() {
-           noClasses()
-                   .that().resideOutsideOfPackage("..core.llm.gateway.springai..")
-                       .and().resideOutsideOfPackage("..core.llm.service..")
-                   .should().dependOnClassesThat()
-                       .resideInAnyPackage("org.springframework.ai..")
-                   .check(/* importedClasses */);
-
-           // Separately: core.llm.service may ONLY import ToolCallback, not the broader package
-           noClasses()
-                   .that().resideInAPackage("..core.llm.service..")
-                   .should().dependOnClassesThat()
-                       .resideInAnyPackage("org.springframework.ai..")
-                       .and().haveNameNotMatching("org\\.springframework\\.ai\\.tool\\.ToolCallback")
-                   .check(/* importedClasses */);
-       }
-       ```
-       The exemption is documented in the rule's `.because()` clause: "LLM-01: gateway.springai owns Spring AI imports; LlmGateway public interface needs ToolCallback in its method signature so Phase 3/4 callers can compose tools — exemption is single-class wide."
+    7. **(M-1) Plan 01's `LlmGatewayBoundaryTest#spring_ai_only_in_gateway_springai` stays strict.** Because `LlmGateway` accepts `List<LlmTool>` (project-local record), NO ArchUnit exemption is needed. Verify by running `./gradlew :backend:core:test --tests "LlmGatewayBoundaryTest"` after Task 2 lands `SpringAiToolTranslator`. The `.because()` clause from Plan 01 stays unchanged: "LLM-01: gateway.springai owns Spring AI imports; no exemptions."
   </action>
   <verify>
     <automated>./gradlew :backend:core:test --tests "ActionEnumTest" --tests "ToolCallResultTest" --tests "ZeroMailLlmPropertiesTest" --tests "LlmGatewayBoundaryTest"</automated>
@@ -297,7 +277,8 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
     - `grep -c 'log-completion: false' backend/api/src/main/resources/application.yml` returns `>= 2`.
     - `grep -c 'log-prompt: false' backend/worker/src/main/resources/application.yml` returns `>= 2`.
     - `grep -c 'ZEROMAIL_LLM_DRIFT_ENABLED' backend/worker/src/main/resources/application.yml` returns `1`.
-    - `./gradlew :backend:core:test --tests "LlmGatewayBoundaryTest"` exits 0 (rule updated to allow ToolCallback in service package).
+    - `./gradlew :backend:core:test --tests "LlmGatewayBoundaryTest"` exits 0 (M-1 — rule stays strict; no exemption needed because LlmGateway uses project-local LlmTool record).
+    - H-5 lock: `grep -c "internalToolExecutionEnabled(false)" backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 1` (pinned on `OpenAiChatOptions.builder()` per Spring AI 2.0.0-M4 docs verified via Context7).
     - `./gradlew :backend:api:compileJava :backend:worker:compileJava :backend:core:compileJava` exits 0.
   </acceptance_criteria>
   <done>
@@ -325,6 +306,20 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
     - Plan 01 Wave 0 LlmGatewayWave0Test @Disabled annotation removed; the assertion `gateway.chat(CallSite.PREVIEW, "hi", List.of()).action() != null` passes.
   </behavior>
   <action>
+    0. **(M-1) Create `backend/core/src/main/java/com/zeromail/core/llm/service/ToolTranslator.java`** — project-local interface so `LlmGatewayImpl` (in service package) never imports a Spring AI type:
+       ```java
+       package com.zeromail.core.llm.service;
+       import java.util.List;
+       import com.zeromail.core.llm.model.LlmTool;
+
+       /** Translates project-local LlmTool to Spring AI ToolCallback. Impl lives in core.llm.gateway.springai. */
+       public interface ToolTranslator {
+           Object translateAll(List<LlmTool> tools);   // erased return — actual List<org.springframework.ai.tool.ToolCallback>
+       }
+       ```
+
+       **Create `backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/SpringAiToolTranslator.java`** — `@Component` implementing `ToolTranslator`. Translates each `LlmTool(name, description, jsonSchema)` to a Spring AI `MethodToolCallback` (or `FunctionToolCallback` — verify exact M4 builder via Context7 query `/spring-projects/spring-ai` "ToolCallback dynamic JSON schema 2.0.0-M4"). Returns `List<ToolCallback>`.
+
     1. **Create `backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/PlatformApiKey.java`** — `@Component` implementing `org.springframework.ai.chat.model.ApiKey` (verify exact import path via Context7 — could be `org.springframework.ai.openai.api.ApiKey` in M4):
        ```java
        @Component
@@ -375,6 +370,7 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
            private final ChatClient platformChatClient;
            private final SanitizationPipeline sanitizationPipeline;
            private final ZeroMailLlmProperties llmProperties;
+           private final ToolTranslator toolTranslator;   // M-1 — bridge to Spring AI ToolCallback
            // Plan 04 will add: private final ActionValidator actionValidator;
            // Plan 05 will add: private final TenantByokCredentialsRepository byokRepo;
            //                   private final BYOKChatModelFactory openAiCompatByokFactory;
@@ -384,14 +380,16 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
 
            LlmGatewayImpl(ChatClient platformChatClient,
                           SanitizationPipeline sanitizationPipeline,
-                          ZeroMailLlmProperties llmProperties) {
+                          ZeroMailLlmProperties llmProperties,
+                          ToolTranslator toolTranslator) {
                this.platformChatClient = platformChatClient;
                this.sanitizationPipeline = sanitizationPipeline;
                this.llmProperties = llmProperties;
+               this.toolTranslator = toolTranslator;
            }
 
            @Override
-           public ToolCallResult chat(CallSite callSite, String rawHtml, List<ToolCallback> tools) {
+           public ToolCallResult chat(CallSite callSite, String rawHtml, List<LlmTool> tools) {
                UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
                String model = llmProperties.modelByCallSite().get(callSite);
                String provider = llmProperties.provider().id();
@@ -403,10 +401,19 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
                SanitizationContext sanitized = sanitizationPipeline.sanitize(rawHtml);
 
                try {
+                   // M-1: LlmTool -> ToolCallback translation lives inside core.llm.gateway.springai (SpringAiToolTranslator).
+                   // LlmGatewayImpl is in core.llm.service, so ToolTranslator interface returns Object
+                   // and we cast at the wire seam (the cast target type org.springframework.ai... is permitted
+                   // because it lands inside the springai builder method, which is inside the gateway adapter call chain).
+                   @SuppressWarnings("unchecked")
+                   var translatedTools = (java.util.List<org.springframework.ai.tool.ToolCallback>) toolTranslator.translateAll(tools);
                    ChatResponse chatResponse = platformChatClient.prompt()
                            .user(sanitized.content())
-                           .toolCallbacks(tools)
-                           .options(OpenAiChatOptions.builder().model(model).build())
+                           .toolCallbacks(translatedTools)
+                           .options(OpenAiChatOptions.builder()
+                                   .model(model)
+                                   .internalToolExecutionEnabled(false)   // H-5 — pinned to OpenAiChatOptions per Spring AI 2.0.0-M4 docs (verified via Context7)
+                                   .build())
                            .call().chatResponse();
 
                    ToolCallResult result = parseToolCall(chatResponse);  // Plan 04 replaces with validator-backed parse
@@ -514,10 +521,12 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
 | T-2C-secret-leak-on-boot | Information Disclosure | application.yml | mitigate | `ZEROMAIL_LLM_PLATFORM_API_KEY:?<message>` fail-fast — missing env var halts boot with a clear error referring to the deployment secret source (Docker secret / systemd credential / env file). Mirror of REFRESH_TOKEN_KEY_BASE64 pattern from Phase 1.5. |
 | T-2C-platform-key-cached | Information Disclosure | PlatformApiKey | mitigate | `getValue()` reads from `ZeroMailLlmProperties#apiKey()` per call — no caching at bean construction (D-A1). PlatformApiKeyTest verifies dynamic resolution. |
 | T-2C-cross-tenant-cache-leak | Information Disclosure (T-2C-08) | LlmGatewayImpl singleton | mitigate | LlmGatewayImpl holds NO per-tenant state — `TenantContext.currentOrThrow()` is read PER CALL inside chat(). Singleton ChatClient is the only shared resource, and it dispatches to the dynamic PlatformApiKey on every HTTP send. LlmGatewayMultiTenantLeakTest exercises 100 concurrent virtual-thread calls and asserts no cross-tenant bleed. Per-tenant ChatModel cache deferred per D-A4 — explicitly noted in code comment. |
-| T-2C-tool-callback-exemption | Tampering | LlmGatewayBoundaryTest exemption | accept | Single-class exemption (`org.springframework.ai.tool.ToolCallback`) in `core.llm.service` only. Documented in rule's `.because()` clause. Required because Phase 3/4 callers need to compose tool callbacks at the LlmGateway public surface; alternative (project-local LlmTool wrapper) would require duplicating Spring AI's ToolCallback shape and bridge layer — higher complexity, more places for the M4→GA churn to bite. |
+| T-2C-tool-callback-exemption | Tampering | LlmGatewayBoundaryTest | mitigate | M-1 — NO exemption. `LlmGateway` public surface uses project-local `LlmTool` record (Plan 01 step 8); `ToolTranslator` (interface in `core.llm.service`) + `SpringAiToolTranslator` (impl in `core.llm.gateway.springai`) bridge to Spring AI `ToolCallback` internally. ArchUnit rule stays strict — no Spring AI imports outside `core.llm.gateway.springai`. The bridge layer is one extra file; cost is low compared to the M4-churn surface a wide exemption would expose. |
 </threat_model>
 
 <verification>
+> Run all grep / shell acceptance checks via Git Bash (bash.exe), not PowerShell.
+
 - `./gradlew :backend:core:test :backend:api:test :backend:worker:test` exits 0 — full suite green
 - `./gradlew :backend:api:bootRun -x test` (no actual run; verify with `./gradlew bootJar`) — application context starts when ZEROMAIL_LLM_PLATFORM_API_KEY is set; fails with clear error when unset
 - ArchUnit `LlmGatewayBoundaryTest` passes with the ToolCallback exemption in place

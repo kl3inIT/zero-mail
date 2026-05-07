@@ -1,78 +1,55 @@
 ---
 phase: 02C-llm-gateway
-plan: 05
+plan: 05a
 type: execute
-wave: 4
+wave: 5
 depends_on: [01, 03, 04]
 files_modified:
   - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/BYOKChatModelFactory.java
   - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/OpenAiCompatibleByokFactory.java
   - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/AnthropicByokFactory.java
-  - backend/core/src/main/java/com/zeromail/core/llm/service/ByokService.java
+  - backend/core/src/main/java/com/zeromail/core/llm/byok/ByokEndpointValidator.java
   - backend/core/src/main/java/com/zeromail/core/llm/model/InvalidByokException.java
   - backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java
-  - backend/api/src/main/java/com/zeromail/api/controllers/llm/ByokController.java
-  - backend/api/src/main/java/com/zeromail/api/dto/llm/ByokValidateRequest.java
-  - backend/api/src/main/java/com/zeromail/api/dto/llm/ByokValidateResponse.java
-  - backend/api/src/main/java/com/zeromail/api/dto/llm/ByokSaveRequest.java
-  - backend/api/src/main/java/com/zeromail/api/dto/llm/ByokSaveResponse.java
-  - backend/api/src/main/java/com/zeromail/api/dto/llm/ByokCurrentResponse.java
-  - backend/api/src/main/java/com/zeromail/api/config/GlobalExceptionHandler.java
-  - backend/api/src/main/java/com/zeromail/api/error/ErrorCodes.java
-  - backend/core/src/test/java/com/zeromail/core/llm/service/ByokServiceTest.java
   - backend/core/src/test/java/com/zeromail/core/llm/service/LlmGatewayByokRoutingTest.java
-  - backend/api/src/test/java/com/zeromail/api/controllers/llm/ByokControllerIntegrationTest.java
 autonomous: true
-requirements: [LLM-04, LLM-05]
+requirements: [LLM-03]
 must_haves:
   truths:
     - "LlmGatewayImpl.chat() resolves Optional<TenantByokCredentialsEntity> via byokRepo.findByTenantId(tenantId) BEFORE the platform-path call site; if BYOK row exists, the BYOK factory is used and the platform path is skipped"
-    - "POST /api/llm/byok/validate accepts {provider, endpoint?, apiKey} and issues a server-side probe (GET /v1/models for openai-compatible, POST /v1/messages with max_tokens=1 for anthropic); returns {ok, models?, reason?}; the browser NEVER issues the validate call directly"
-    - "POST /api/llm/byok saves only after the same payload validates; encrypts the key via existing RefreshTokenCipher (envelope = [key_version:int32 | nonce:12 | ciphertext], tenantId-bound AAD), upserts into tenant_byok_credentials"
-    - "GET /api/llm/byok returns provider, optional endpoint host (masked path: just the host, no path/query), saved timestamp; NEVER returns decrypted key bytes"
     - "BYOKChatModelFactory has 2 implementations: OpenAiCompatibleByokFactory uses per-call OpenAiApi#mutate().apiKey().baseUrl() + OpenAiChatModel#mutate(); AnthropicByokFactory uses per-request AnthropicChatOptions.builder().apiKey().baseUrl() (D-A2 asymmetric seam — RESEARCH lines 13-16)"
-    - "BYOK plaintext key NEVER persists in DB or logs; lives only in the mutate() builder argument or runtime options for the duration of one HTTP call"
-    - "GlobalExceptionHandler maps SafetyViolationException → 500 LLM_SAFETY_VIOLATION; SanitizationException → 500 LLM_SANITIZATION_FAILED; InvalidByokException → 400 LLM_BYOK_INVALID; existing 402 InsufficientCreditsException mapping is preserved"
-    - "ErrorCodes constants added: LLM_SAFETY_VIOLATION, LLM_SANITIZATION_FAILED, LLM_BYOK_INVALID, LLM_BYOK_VALIDATE_FAILED"
-    - "When tenant has BYOK row, gateway call returns ToolCallResult; ledger is NOT touched (verified by Plan 06 once it lands; Plan 05 stubs the ledger call with a TODO marker that Plan 06 wires)"
-    - "Privacy log on BYOK validate: event=byok_validate_attempted tenantId={} provider={} (no endpoint URL, no key bytes); event=byok_validate_succeeded tenantId={} provider={} modelsCount={}; event=byok_validate_failed tenantId={} provider={} reason={opaqueClass}"
+    - "ByokEndpointValidator (H-4) is wired into BOTH factories BEFORE client construction; rejects null/non-https/RFC1918/link-local/loopback/metadata-IP/non-vendor-host endpoints; opt-in flag zeromail.llm.byok.allow-non-vendor-endpoints defaults false; rejected message is redacted (no endpoint echo)"
+    - "BYOK plaintext key NEVER persists in DB or logs; lives only in the mutate() builder argument or runtime options for the duration of one HTTP call; Arrays.fill best-effort heap zero on the way out"
+    - "BYOK call path emits event=llm_byok_call_started/_succeeded with tenantId + provider + model + latencyMs + token counts only; never the decrypted key, endpoint URL, or model output content"
+    - "When tenant has BYOK row, gateway call returns ToolCallResult; ledger is NOT touched (verified by Plan 06 negative-path test confirming LLM-04 — BYOK billing skip)"
   artifacts:
     - path: "backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/BYOKChatModelFactory.java"
-      provides: "Strategy interface — ChatResponse call(byte[] decryptedKey, String endpoint, String model, String userMessage, List<ToolCallback> tools)"
+      provides: "Strategy interface — ChatResponse call(byte[] decryptedKey, String endpoint, String model, String userMessage, List<ToolCallback> tools, String toolChoice)"
     - path: "backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/OpenAiCompatibleByokFactory.java"
       provides: "@Component implementing BYOKChatModelFactory via OpenAiApi#mutate() seam (D-A2)"
     - path: "backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/AnthropicByokFactory.java"
       provides: "@Component implementing BYOKChatModelFactory via AnthropicChatOptions.builder() per-request seam (D-A2 + RESEARCH correction)"
-    - path: "backend/core/src/main/java/com/zeromail/core/llm/service/ByokService.java"
-      provides: "@Service — validate(tenantId, payload) probes upstream provider; save(tenantId, payload) encrypts + upserts; current(tenantId) returns metadata-only DTO"
+    - path: "backend/core/src/main/java/com/zeromail/core/llm/byok/ByokEndpointValidator.java"
+      provides: "@Component SSRF allow-list — validateAnthropic / validateOpenAiCompatible reject metadata-IP / RFC1918 / link-local / loopback / non-HTTPS / non-vendor-host endpoints (H-4)"
     - path: "backend/core/src/main/java/com/zeromail/core/llm/model/InvalidByokException.java"
-      provides: "RuntimeException — no content payload; mapped to 400"
-    - path: "backend/api/src/main/java/com/zeromail/api/controllers/llm/ByokController.java"
-      provides: "Thin REST controller — delegates everything to ByokService"
-      contains: "@RequestMapping(\"/api/llm/byok\")"
-    - path: "backend/api/src/main/java/com/zeromail/api/error/ErrorCodes.java"
-      provides: "4 new constants: LLM_SAFETY_VIOLATION, LLM_SANITIZATION_FAILED, LLM_BYOK_INVALID, LLM_BYOK_VALIDATE_FAILED"
+      provides: "RuntimeException — no content payload; redacted message; mapped to 400 in Plan 05b GlobalExceptionHandler"
   key_links:
     - from: "backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java"
       to: "TenantByokCredentialsRepository.findByTenantId + RefreshTokenCipher.decrypt + BYOKChatModelFactory.call"
       via: "BYOK branch inserted at the // Plan 05 modifies here marker"
       pattern: "byokRepo\\.findByTenantId"
-    - from: "backend/core/src/main/java/com/zeromail/core/llm/service/ByokService.java"
-      to: "RefreshTokenCipher (existing core.gmail.persistence.crypto bean)"
-      via: "encrypt(plaintextKey, tenantId) on save; ciphertext stored as encrypted_key BYTEA"
-      pattern: "refreshTokenCipher\\.encrypt"
-    - from: "backend/api/src/main/java/com/zeromail/api/controllers/llm/ByokController.java"
-      to: "backend/api/src/main/java/com/zeromail/api/config/GlobalExceptionHandler.java"
-      via: "InvalidByokException + SafetyViolationException + SanitizationException mappings"
-      pattern: "@ExceptionHandler"
+    - from: "backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/{OpenAiCompatibleByokFactory,AnthropicByokFactory}.java"
+      to: "backend/core/src/main/java/com/zeromail/core/llm/byok/ByokEndpointValidator.java"
+      via: "validator.validate{OpenAiCompatible,Anthropic}(endpoint) called BEFORE building the client (H-4)"
+      pattern: "byokEndpointValidator\\.validate"
 ---
 
 <objective>
-Wave 4 BYOK persistence + factories + REST surface. Add the BYOK branch to `LlmGatewayImpl` so per-tenant credentials override the platform path; wire two `BYOKChatModelFactory` implementations using the asymmetric M4 seams (OpenAI-compatible via `OpenAiApi#mutate()`, Anthropic via `AnthropicChatOptions.builder()` per-request — RESEARCH correction); land `ByokService` (validate / save / current), `ByokController` (3 endpoints), 5 DTOs, 4 ErrorCodes constants, and 3 GlobalExceptionHandler mappings (SafetyViolationException, SanitizationException, InvalidByokException — InsufficientCreditsException already mapped from Phase 2B).
+Wave 4 BYOK gateway internals (M-2 split — Plan 05a covers gateway-side; Plan 05b covers REST surface). Add the BYOK branch to `LlmGatewayImpl` so per-tenant credentials override the platform path; wire two `BYOKChatModelFactory` implementations using the asymmetric M4 seams (OpenAI-compatible via `OpenAiApi#mutate()`, Anthropic via `AnthropicChatOptions.builder()` per-request — RESEARCH correction); ship the `ByokEndpointValidator` SSRF allow-list (H-4) so user-supplied endpoints cannot point at metadata services or RFC1918 / link-local / loopback hosts.
 
-Purpose: this is LLM-04 + LLM-05. After this plan, a tenant with a BYOK row gets routed via their own key + endpoint with zero credit ledger touch. Plaintext keys never persist in DB or logs — encrypted-at-rest via the existing `RefreshTokenCipher` envelope, decrypted only into the per-call `mutate()` argument (D-A5).
+Purpose: this is LLM-03 (BYOK per-request key delivery via Spring AI options). After this plan, the gateway *internally* knows how to route via a BYOK row when one exists. Plan 05b (next wave-4 plan, depends_on [05a]) lands the REST surface that lets users install / replace BYOK rows. Plan 06 (LLM-04 BYOK billing skip + LLM-10 spend cap) wires the ledger gate around the platform path; the BYOK branch from this plan must already short-circuit before any ledger call.
 
-Output: 3 production classes (1 interface + 2 factory impls) + ByokService + InvalidByokException + LlmGatewayImpl modified at the // Plan 05 seam + 5 DTOs + ByokController + GlobalExceptionHandler additions + ErrorCodes + 3 test files.
+Output: 1 strategy interface + 2 asymmetric factory impls + `ByokEndpointValidator` (H-4 SSRF allow-list) + `InvalidByokException` + `LlmGatewayImpl` modified at the // Plan 05 seam + 1 routing test file.
 </objective>
 
 <execution_context>
@@ -141,10 +118,30 @@ Output: 3 production classes (1 interface + 2 factory impls) + ByokService + Inv
     - Test 3 (LlmGatewayByokRoutingTest#openai_compat_byok_uses_mutate_seam): seed BYOK with provider=OPENAI_COMPATIBLE + endpoint=`https://together.xyz/v1`; assert OpenAiCompatibleByokFactory.call(decryptedKey, "https://together.xyz/v1", model, ...) was invoked.
     - Test 4 (LlmGatewayByokRoutingTest#cipher_decrypt_called_with_tenantId_aad): assert RefreshTokenCipher.decrypt(envelopeBytes, tenantIdString) is called exactly once per chat() invocation; the decrypted plaintext byte[] is the argument to factory.call().
     - Test 5 (LlmGatewayByokRoutingTest#byok_path_does_not_log_key_bytes): captured ListAppender contains no byte sequence matching the plaintext key; log lines emit `event=llm_byok_call_started tenantId={} provider={} model={}` only.
+    - Test 7 (ByokEndpointValidatorTest#rejects_metadata_ip): `validator.validateOpenAiCompatible("http://169.254.169.254/v1")` throws `InvalidByokException`.
+    - Test 8 (ByokEndpointValidatorTest#rejects_rfc1918): `validator.validateOpenAiCompatible("https://10.0.0.5/v1")` throws.
+    - Test 9 (ByokEndpointValidatorTest#rejects_loopback): `validator.validateAnthropic("https://127.0.0.1")` throws.
+    - Test 10 (ByokEndpointValidatorTest#rejects_non_https): `validator.validateAnthropic("http://api.anthropic.com")` throws.
+    - Test 11 (ByokEndpointValidatorTest#anthropic_default_when_null): `validator.validateAnthropic(null)` returns `"https://api.anthropic.com"`.
+    - Test 12 (ByokEndpointValidatorTest#anthropic_rejects_non_vendor_host): `validator.validateAnthropic("https://example.com")` throws.
+    - Test 13 (ByokEndpointValidatorTest#openai_compat_accepts_with_operator_opt_in): with `zeromail.llm.byok.allow-non-vendor-endpoints=true`, `validator.validateOpenAiCompatible("https://together.xyz/v1")` returns the URL unchanged.
     - Test 6 (LlmGatewayByokRoutingTest#multitenant_no_key_leak): 100 concurrent virtual-thread calls, 50 tenants with BYOK row + 50 without; mock factories echo bound tenantId in args; assert no cross-tenant leak (mirror of Plan 03 leak-test pattern).
   </behavior>
   <action>
-    1. **Create `backend/core/src/main/java/com/zeromail/core/llm/model/InvalidByokException.java`** — mirror SafetyViolationException shape; no message constructor; carries no content. Two-line class, public no-arg ctor only. Used by ByokService when validate fails or save is attempted before validate.
+    1. **(H-4) Create `backend/core/src/main/java/com/zeromail/core/llm/byok/ByokEndpointValidator.java`** — SSRF allow-list validator that runs BEFORE either factory builds a client. Closes the surface where a user could paste a BYOK endpoint pointing at the cloud metadata IP (`169.254.169.254`), an RFC1918 IP (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), link-local (`169.254.0.0/16`), or loopback (`127.0.0.0/8`, `::1`).
+
+       Required behavior:
+       - Null / blank endpoint → return the provider-default URL: Anthropic = `https://api.anthropic.com`, OpenAI-compatible = `https://api.openai.com`, OpenRouter = `https://openrouter.ai/api/v1`. Do NOT throw on null — fall back to the SDK default.
+       - Non-`https` scheme → throw `InvalidByokException` with redacted message (no endpoint echo in the exception).
+       - Host parses to RFC1918 / link-local / loopback / metadata IP → throw `InvalidByokException`.
+       - Provider-specific allow-list:
+         - Anthropic provider: host MUST match `*.anthropic.com` (or be the exact provider default).
+         - OpenAI-compatible provider: host MUST match `*.openai.com` OR `openrouter.ai` OR a `zeromail.llm.byok.allowed-extra-hosts` config list. For self-hosted dev (vLLM, Together.ai, Fireworks), gate on operator opt-in flag `zeromail.llm.byok.allow-non-vendor-endpoints=false` (default `false`); when `true`, accept any HTTPS public-IP host that is NOT RFC1918 / link-local / loopback / metadata.
+       - On rejection, log `event=byok_validate_failed tenantId={} provider={} reason=endpoint_rejected` (D-I2 — no endpoint URL echoed).
+
+       Wire the validator into `OpenAiCompatibleByokFactory.create(...)` and `AnthropicByokFactory.create(...)` as the FIRST call inside the factory, BEFORE building the client. (Also wire into `ByokService.validate(...)` in Plan 05b — but that's 05b's job; this plan exposes the validator as a `@Component` so 05b can inject it.)
+
+    8. **Create `backend/core/src/main/java/com/zeromail/core/llm/model/InvalidByokException.java`** — mirror SafetyViolationException shape; no message constructor; carries no content. Two-line class, public no-arg ctor only. Used by ByokService when validate fails or save is attempted before validate.
 
     2. **Create `backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/BYOKChatModelFactory.java`** — strategy interface:
        ```java
@@ -254,103 +251,13 @@ Output: 3 production classes (1 interface + 2 factory impls) + ByokService + Inv
     - `grep -E 'log\.(info|warn|error|debug).*decryptedKey' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns no matches.
     - `grep -c 'Arrays.fill(decryptedKey' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 1` (best-effort zero).
     - `./gradlew :backend:core:test --tests "LlmGatewayByokRoutingTest"` exits 0 — all 6 tests pass.
+    - `./gradlew :backend:core:test --tests "ByokEndpointValidatorTest"` exits 0 — all 7 SSRF tests pass (H-4).
+    - File `backend/core/src/main/java/com/zeromail/core/llm/byok/ByokEndpointValidator.java` exists; `grep -E "169\.254\.169\.254|10\.0\.0\.0|172\.16\.0\.0|192\.168\.0\.0|127\.0\.0\.0|::1" backend/core/src/main/java/com/zeromail/core/llm/byok/ByokEndpointValidator.java | wc -l` returns `>= 4` (RFC1918 + link-local + loopback + metadata blocked).
     - `./gradlew :backend:core:test --tests "LlmGatewayPlatformPathTest" --tests "LlmGatewayActionValidatorTest" --tests "LlmGatewayMultiTenantLeakTest"` exits 0 (Plan 03/04 tests still pass).
     - `./gradlew :backend:core:test --tests "LlmGatewayBoundaryTest"` exits 0 (Spring AI imports still confined).
   </acceptance_criteria>
   <done>
     BYOK strategy interface + 2 asymmetric impls land. LlmGatewayImpl branches on TenantByokCredentialsEntity presence; cipher decrypts the envelope per call; plaintext key never logged or persisted; `Arrays.fill` best-effort zero on the decrypted byte[]. Tests prove BYOK path skips platform ChatClient and that no key bytes leak under 100-tenant concurrency.
-  </done>
-</task>
-
-<task type="auto" tdd="true">
-  <name>Task 2: ByokService + ByokController + 5 DTOs + GlobalExceptionHandler mappings + ErrorCodes + integration test</name>
-  <read_first>
-    - backend/api/src/main/java/com/zeromail/api/controllers/billing/BillingController.java (controller analog — PATTERNS.md "ByokController.java")
-    - backend/api/src/main/java/com/zeromail/api/dto/billing/TopupIntentRequest.java (DTO record analog)
-    - backend/api/src/main/java/com/zeromail/api/dto/billing/TopupIntentResponse.java (DTO record analog)
-    - backend/api/src/main/java/com/zeromail/api/dto/billing/BillingBalanceResponse.java (current-config DTO analog — PATTERNS.md "ByokCurrentResponse.java")
-    - backend/api/src/main/java/com/zeromail/api/config/GlobalExceptionHandler.java (lines 105-148 — privacy-safe exception logging + 402 mapping for InsufficientCreditsException to PRESERVE)
-    - backend/api/src/main/java/com/zeromail/api/error/ErrorCodes.java (existing constants — append pattern)
-    - backend/core/src/main/java/com/zeromail/core/billing/service/BillingTopupService.java (service analog with outbound HTTP call shape — PATTERNS.md "ByokService.java")
-    - backend/api/src/test/java/com/zeromail/api/controllers/billing/BillingInsufficientCreditsTest.java (controller integration test analog with WireMock-like upstream stub)
-    - .planning/phases/02C-llm-gateway/02C-CONTEXT.md (D-D1 through D-D6 — though those are frontend; D-A5 cipher reuse; D-I2 byok logs)
-    - .planning/phases/02C-llm-gateway/02C-PATTERNS.md (sections "ByokController.java" + "GlobalExceptionHandler.java (modify)" + S-2 thin-controller)
-    - .planning/phases/02C-llm-gateway/02C-UI-SPEC.md (Section "Copywriting Contract" + "i18n Keys" — required errors.llm.* keys for Plan 08 to consume)
-  </read_first>
-  <behavior>
-    - Test 1 (ByokServiceTest#validate_openai_compatible_calls_v1_models): WireMock stub at `https://together.xyz/v1/models` returning 200 with `{data: [{id: "model-a"}, {id: "model-b"}]}`; ByokService.validate(tenantId, payload) returns `ByokValidateResponse(ok=true, models=["model-a","model-b"], reason=null)`.
-    - Test 2 (ByokServiceTest#validate_openai_compatible_failure): WireMock returns 401 → returns `ByokValidateResponse(ok=false, models=null, reason="upstream_rejected")` — reason is opaque (no upstream body bytes).
-    - Test 3 (ByokServiceTest#validate_anthropic_calls_v1_messages): WireMock at `/v1/messages` POST with `max_tokens=1` body returning 200 → returns `ByokValidateResponse(ok=true, models=null, reason=null)`.
-    - Test 4 (ByokServiceTest#save_encrypts_key_via_refresh_token_cipher): given a valid payload, save() stores a row whose encrypted_key BYTEA is NOT the plaintext key bytes; manual decrypt via RefreshTokenCipher returns the original plaintext.
-    - Test 5 (ByokServiceTest#save_upserts_existing_row): tenant already has BYOK row → second save() updates encrypted_key + key_version + provider, does NOT create a duplicate (UNIQUE constraint enforced from Plan 01).
-    - Test 6 (ByokServiceTest#current_returns_metadata_only): tenant with BYOK row → ByokCurrentResponse contains provider, optional endpointHost (e.g., `together.xyz` extracted from URL — no path/query), savedAt; encrypted_key bytes NEVER returned.
-    - Test 7 (ByokControllerIntegrationTest#post_validate_returns_200_for_valid_key): full HTTP test via RestClient + LocalServerPort + TenantContext-binding test filter; asserts 200 + body shape.
-    - Test 8 (ByokControllerIntegrationTest#post_save_returns_400_when_invalid_byok_exception_thrown): mock service to throw InvalidByokException → assert 400 + body code=`error.llm.byok.invalid`.
-    - Test 9 (ByokControllerIntegrationTest#safety_violation_handler_returns_500): synthetic SafetyViolationException through a stub controller → assert 500 + body code=`error.llm.safety_violation`.
-    - Test 10 (ByokControllerIntegrationTest#sanitization_failed_handler_returns_500): synthetic SanitizationException → 500 + code=`error.llm.sanitization_failed`.
-    - Test 11 (ByokControllerIntegrationTest#insufficient_credits_still_returns_402): existing Phase 2B mapping preserved.
-  </behavior>
-  <action>
-    1. **Create 5 DTOs** in `backend/api/src/main/java/com/zeromail/api/dto/llm/`:
-       - `ByokValidateRequest(BYOKProvider provider, String endpoint, String apiKey)` — with `@NotNull` on provider + apiKey; endpoint nullable. JSR-380 validation.
-       - `ByokValidateResponse(boolean ok, List<String> models, String reason)` — record with defensive copy on models; reason is opaque (e.g., `"upstream_rejected"`, `"connection_failed"`, `"timeout"`) — never raw upstream body.
-       - `ByokSaveRequest(BYOKProvider provider, String endpoint, String apiKey)` — same shape as ByokValidateRequest; could share, but UI-SPEC says save and validate are separate endpoints with potentially different validation.
-       - `ByokSaveResponse(boolean ok, Instant savedAt)` — minimal.
-       - `ByokCurrentResponse(BYOKProvider provider, String endpointHost, Instant savedAt)` — endpointHost is extracted via `URI.create(endpoint).getHost()`; null if no BYOK row (controller returns null body or 204).
-       
-       All as Java records per CLAUDE.md Conventions §2.
-
-    2. **Create `backend/core/src/main/java/com/zeromail/core/llm/service/ByokService.java`** — `@Service`. Methods:
-       - `validate(UUID tenantId, ByokValidateRequest payload)` — Issues outbound HTTP via Spring `RestClient` (see `BillingTopupService` for analog). Branch on provider:
-         - OPENAI_COMPATIBLE → `GET ${payload.endpoint()}/v1/models` with `Authorization: Bearer ${payload.apiKey()}`. On 200 with valid `{data: [...]}` body, parse `id` fields → return `ByokValidateResponse(true, modelIds, null)`. On non-2xx or parse failure → `ByokValidateResponse(false, null, "upstream_rejected" | "connection_failed")`.
-         - ANTHROPIC → `POST ${endpoint or "https://api.anthropic.com"}/v1/messages` with `x-api-key`, `anthropic-version: 2023-06-01`, body `{model: "claude-3-haiku-20240307", max_tokens: 1, messages: [{role: "user", content: "."}]}`. On 200 → ok=true.
-         - All exceptions caught and translated to opaque reason — NEVER include upstream response body bytes in reason.
-         - Privacy logs: `event=byok_validate_attempted tenantId={} provider={}`, `event=byok_validate_succeeded tenantId={} provider={} modelsCount={}`, `event=byok_validate_failed tenantId={} provider={} reason={}` (where reason is the opaque tag, NOT exception message).
-       - `save(UUID tenantId, ByokSaveRequest payload)` — encrypts `payload.apiKey().getBytes(UTF_8)` via `refreshTokenCipher.encrypt(plaintext, tenantId.toString())`; upserts entity (use repository: find existing → mutate via `replaceKey(envelope, keyVersion)` or save new). Returns `ByokSaveResponse(true, Instant.now())`. Throws `InvalidByokException` if validation has not happened (project policy: each save must be preceded by validate, but server cannot verify that across requests; UI-SPEC says client enforces this. Server-side, save accepts unconditionally — relies on UI). **Decision: server-side accepts save without re-validate** (UI-SPEC line 217 + Validation State Machine — client gates the save button; server-side re-validate would double the cost). Document in service Javadoc.
-       - `current(UUID tenantId)` — returns `Optional<ByokCurrentResponse>`; null if no row. Extracts host from endpoint via `URI.create(...).getHost()`. Never decrypts the key (no need — current only reports metadata).
-       
-       **`@Transactional`** on save (mutation) and current (read consistency). Validate is non-transactional (no DB writes; outbound HTTP only).
-
-    3. **Create `backend/api/src/main/java/com/zeromail/api/controllers/llm/ByokController.java`** — `@RestController @RequestMapping("/api/llm/byok") @Tag(name="llm-byok")`. Per PATTERNS.md verbatim shape — thin controller, 3 endpoints (`POST /validate`, `POST` (save), `GET` (current)), `TenantContext.currentOrThrow()` per call, `byokService.{validate,save,currentForTenant}(...)`. NO `@Transactional`, NO repository injection.
-
-    4. **Modify `backend/api/src/main/java/com/zeromail/api/config/GlobalExceptionHandler.java`** — append 3 new `@ExceptionHandler` methods after the existing InsufficientCreditsException one (line ~138). PATTERNS.md "GlobalExceptionHandler.java (modify)" gives the pattern verbatim. Privacy invariant: `log.error("event=... reason={}", exception.getClass().getSimpleName())` — NEVER pass the exception object itself, NEVER pass `.getMessage()` (could leak content).
-       - `SafetyViolationException` → 500, code `LLM_SAFETY_VIOLATION`
-       - `SanitizationException` → 500, code `LLM_SANITIZATION_FAILED`
-       - `InvalidByokException` → 400, code `LLM_BYOK_INVALID`
-       
-       Preserve the existing `InsufficientCreditsException → 402` mapping verbatim (Plan 06 will rely on it).
-
-    5. **Modify `backend/api/src/main/java/com/zeromail/api/error/ErrorCodes.java`** — append 4 constants:
-       ```java
-       public static final String LLM_SAFETY_VIOLATION = "error.llm.safety_violation";
-       public static final String LLM_SANITIZATION_FAILED = "error.llm.sanitization_failed";
-       public static final String LLM_BYOK_INVALID = "error.llm.byok.invalid";
-       public static final String LLM_BYOK_VALIDATE_FAILED = "error.llm.byok.validate_failed";
-       ```
-
-    6. **Create `backend/core/src/test/java/com/zeromail/core/llm/service/ByokServiceTest.java`** — Tests 1–6 above. Uses WireMock (or Spring's `MockRestServiceServer`) for outbound HTTP stubs. Test 5 verifies UNIQUE constraint upsert behavior. Test 6 asserts `ByokCurrentResponse.endpointHost()` = `"together.xyz"` for input endpoint `"https://together.xyz/v1"` (host extraction).
-
-    7. **Create `backend/api/src/test/java/com/zeromail/api/controllers/llm/ByokControllerIntegrationTest.java`** — RestClient + LocalServerPort + TenantContext-binding test pattern (per CLAUDE.md STATE.md Phase 1.5 OAuth pattern: "Use RestClient + LocalServerPort (not MockMvc.webAppContextSetup) for backend tests requiring TenantContext ScopedValue"). Tests 7–11 above. Test 11 specifically asserts the existing 402 mapping for InsufficientCreditsException is unaffected by the new mappings.
-  </action>
-  <verify>
-    <automated>./gradlew :backend:core:test --tests "ByokServiceTest" :backend:api:test --tests "ByokControllerIntegrationTest"</automated>
-  </verify>
-  <acceptance_criteria>
-    - All 5 DTOs exist under `backend/api/src/main/java/com/zeromail/api/dto/llm/`.
-    - `grep -c 'public record ' backend/api/src/main/java/com/zeromail/api/dto/llm/ByokValidateRequest.java backend/api/src/main/java/com/zeromail/api/dto/llm/ByokValidateResponse.java backend/api/src/main/java/com/zeromail/api/dto/llm/ByokSaveRequest.java backend/api/src/main/java/com/zeromail/api/dto/llm/ByokSaveResponse.java backend/api/src/main/java/com/zeromail/api/dto/llm/ByokCurrentResponse.java` returns `5`.
-    - File `backend/core/src/main/java/com/zeromail/core/llm/service/ByokService.java` exists; `grep -c 'refreshTokenCipher.encrypt' backend/core/src/main/java/com/zeromail/core/llm/service/ByokService.java` returns `>= 1`.
-    - `grep -E 'log\.(info|warn|error|debug).*payload\.apiKey\(\)|log\.(info|warn|error|debug).*payload\.endpoint\(\)' backend/core/src/main/java/com/zeromail/core/llm/service/ByokService.java` returns no matches (no key/endpoint URL in logs).
-    - File `backend/api/src/main/java/com/zeromail/api/controllers/llm/ByokController.java` exists; `grep -c '@RequestMapping.*api/llm/byok' backend/api/src/main/java/com/zeromail/api/controllers/llm/ByokController.java` returns `1`; `grep -c '@PostMapping.*validate\|@PostMapping\b\|@GetMapping' backend/api/src/main/java/com/zeromail/api/controllers/llm/ByokController.java` returns `>= 3`.
-    - `grep -c '@ExceptionHandler(SafetyViolationException.class)\|@ExceptionHandler(SanitizationException.class)\|@ExceptionHandler(InvalidByokException.class)' backend/api/src/main/java/com/zeromail/api/config/GlobalExceptionHandler.java` returns `3`.
-    - `grep -c '@ExceptionHandler(InsufficientCreditsException.class)' backend/api/src/main/java/com/zeromail/api/config/GlobalExceptionHandler.java` returns `1` (preserved).
-    - `grep -c 'LLM_SAFETY_VIOLATION\|LLM_SANITIZATION_FAILED\|LLM_BYOK_INVALID\|LLM_BYOK_VALIDATE_FAILED' backend/api/src/main/java/com/zeromail/api/error/ErrorCodes.java` returns `4`.
-    - `./gradlew :backend:core:test --tests "ByokServiceTest"` exits 0.
-    - `./gradlew :backend:api:test --tests "ByokControllerIntegrationTest"` exits 0.
-    - `./gradlew :backend:core:test :backend:api:test :backend:worker:test` exits 0 (full suite).
-    - `pnpm -C apps/web generate:api` (if executor has Node) regenerates `apps/web/lib/api/schema.d.ts` with new BYOK endpoints — defer to Plan 08 if Node not available; document expected paths in summary.
-  </acceptance_criteria>
-  <done>
-    BYOK service + controller + 5 DTOs + 4 ErrorCodes constants + 3 GlobalExceptionHandler mappings land. Server-side validate flow probes upstream provider with no body leakage; save encrypts via existing RefreshTokenCipher; current returns metadata only. Frontend (Plan 08) can now consume the typed schema.
   </done>
 </task>
 
@@ -373,30 +280,29 @@ Output: 3 production classes (1 interface + 2 factory impls) + ByokService + Inv
 | T-2C-03 | Information Disclosure (BYOK key leakage in logs / DB / error traces / metrics) | ByokService + LlmGatewayImpl + GlobalExceptionHandler | mitigate | (1) `event=byok_validate_attempted tenantId={} provider={}` — no endpoint, no key. (2) GlobalExceptionHandler logs `exception.getClass().getSimpleName()` only — never the exception object or its message. (3) BYOK `encrypted_key BYTEA` always encrypted via `RefreshTokenCipher` envelope (`[key_version:int32 | nonce:12 | ciphertext]`, tenantId AAD). (4) `Arrays.fill(decryptedKey, 0)` best-effort heap zero on the BYOK path. (5) `ByokServiceTest#validate_openai_compatible_failure` asserts the upstream response body is NOT in the reason field. (6) Logback scrub filter from Phase 1 covers `apiKey=`, `Bearer`, `x-api-key=` patterns — verify in Plan 07; extend if gaps found. |
 | T-2C-cipher-aad-mismatch | Tampering | RefreshTokenCipher reuse | mitigate | `tenantId.toString()` is the AAD passed to encrypt + decrypt — same value both sides per RefreshTokenCipher contract. ByokServiceTest#save + LlmGatewayByokRoutingTest#cipher_decrypt_called_with_tenantId_aad both assert this. If the AAD is wrong (e.g., another tenant's UUID), decrypt throws `AEADBadTagException` and the gateway call fails — zero risk of reading another tenant's key. |
 | T-2C-byok-host-leak-in-current | Information Disclosure | ByokCurrentResponse | mitigate | Endpoint URL is parsed via `URI.create(endpoint).getHost()` — only the host (`together.xyz`), not the full URL with paths/queries that could include tenant identifiers in some setups. ByokServiceTest#current_returns_metadata_only asserts. |
-| T-2C-validate-flow-amplification | DoS | POST /api/llm/byok/validate | accept | Endpoint is authenticated (TenantContext required) and rate-limited at the existing API filter chain. Upstream provider (OpenAI / Anthropic) imposes their own rate limits. No additional gateway-side rate limit in v1; revisit in Phase 5 if needed. |
-| T-2C-cross-tenant-byok-row-read | Information Disclosure | TenantByokCredentialsRepository.findByTenantId | mitigate | Repository inherits `@TenantId` filter from `AbstractTenantOwnedEntity` (Phase 1.2.1) — Hibernate auto-filters by `tenant_id` on every query. ByokServiceTest does NOT explicitly verify this (covered by FND-05 multi-tenant leak test pattern); LlmGatewayByokRoutingTest#multitenant_no_key_leak provides additional defense-in-depth on the gateway path. |
-| T-2C-globalexceptionhandler-content-leak | Information Disclosure | New @ExceptionHandler methods | mitigate | All 3 new mappings follow the existing Phase 2B / Phase 1.1 pattern: `log.error("event=... reason={}", exception.getClass().getSimpleName())`. ByokControllerIntegrationTest#safety_violation_handler_returns_500 asserts the response body code is `error.llm.safety_violation` (no rejected action name, no model output). |
+| T-2C-09 | Spoofing / SSRF | ByokEndpointValidator + factories | mitigate | H-4 — `ByokEndpointValidator` runs FIRST inside both `OpenAiCompatibleByokFactory.create(...)` and `AnthropicByokFactory.create(...)` BEFORE building the client. Rejects null/blank (falls back to provider default), non-`https`, RFC1918 (`10/8`, `172.16/12`, `192.168/16`), link-local (`169.254/16`), loopback (`127/8`, `::1`), and metadata IP (`169.254.169.254`). Provider-specific allow-list: Anthropic must be `*.anthropic.com`; OpenAI-compatible gated to `*.openai.com` + `openrouter.ai` unless operator opt-in flag `zeromail.llm.byok.allow-non-vendor-endpoints=true`. Rejection message is redacted (no endpoint echo). Tests in Task 2 cover metadata-IP / RFC1918 / non-vendor / opt-in. |
 </threat_model>
 
 <verification>
-- `./gradlew :backend:core:test --tests "*Byok*" --tests "LlmGateway*"` exits 0
-- `./gradlew :backend:api:test --tests "ByokControllerIntegrationTest"` exits 0 (RestClient + LocalServerPort pattern verified)
+> Run all grep / shell acceptance checks via Git Bash (bash.exe), not PowerShell.
+
+- `./gradlew :backend:core:test --tests "LlmGatewayByokRoutingTest" --tests "LlmGateway*"` exits 0
 - `./gradlew :backend:core:test :backend:api:test :backend:worker:test` exits 0 — full module test suite green
-- ArchUnit `LlmGatewayBoundaryTest` + `DomainBoundaryArchTests` both pass — Spring AI imports stay confined; new ByokController + DTOs don't introduce cross-module repository dependencies
-- The existing 402 mapping for InsufficientCreditsException is unchanged (test asserts)
+- ArchUnit `LlmGatewayBoundaryTest` + `DomainBoundaryArchTests` both pass — Spring AI imports stay confined to `core.llm.gateway.springai`; the new `core.llm.byok` package adds `ByokEndpointValidator` and is reachable from `core.llm.gateway.springai` per Modulith allowedDependencies (verify at execute-phase)
+- ByokEndpointValidator unit tests cover metadata-IP / RFC1918 / non-HTTPS / non-vendor-host rejection paths (H-4)
 </verification>
 
 <success_criteria>
 - BYOK strategy interface + 2 asymmetric impls (OpenAI-compat via `OpenAiApi#mutate()`, Anthropic via `AnthropicChatOptions.builder()`) land per RESEARCH correction.
+- `ByokEndpointValidator` (H-4) wired into both factories BEFORE client construction. SSRF allow-list rejects metadata IP / RFC1918 / link-local / loopback / non-HTTPS / non-vendor-host endpoints; opt-in flag `zeromail.llm.byok.allow-non-vendor-endpoints` defaults `false`.
 - LlmGatewayImpl branches on BYOK presence; cipher decrypts envelope per call; plaintext zeroed via `Arrays.fill` on exit.
-- 3 endpoints (`POST /validate`, `POST` save, `GET` current) exposed under `/api/llm/byok`; thin controller delegates to ByokService.
-- 4 ErrorCodes + 3 GlobalExceptionHandler mappings preserve privacy invariant (logger gets class name only).
 - BYOK call path emits `event=llm_byok_call_started/_succeeded` with no key bytes, no endpoint URL, no model output content.
-- All 11 LlmGatewayByokRoutingTest + ByokServiceTest + ByokControllerIntegrationTest assertions pass.
+- All 6 LlmGatewayByokRoutingTest assertions pass.
+- ArchUnit `LlmGatewayBoundaryTest` + `DomainBoundaryArchTests` continue to pass.
 </success_criteria>
 
 <output>
-After completion, create `.planning/phases/02C-llm-gateway/02C-05-SUMMARY.md` documenting:
+After completion, create `.planning/phases/02C-llm-gateway/02C-05a-SUMMARY.md` documenting:
 - Final M4 import paths used for `OpenAiApi.mutate()`, `AnthropicChatOptions.builder().apiKey().baseUrl()`, `OpenAiChatModel.mutate()`, `ChatClient.create()` — verified via Context7 at execution
 - Whether RefreshTokenCipher was relocated or referenced from `core.gmail.persistence.crypto` (default per Plan 01: keep in gmail, allowedDependencies edge already declared)
 - The exact regex used by `URI.create(endpoint).getHost()` extraction for `endpointHost` (verify on edge cases like trailing-slash, missing scheme)
