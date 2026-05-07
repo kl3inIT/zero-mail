@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02C-01-PLAN.md
-last_updated: "2026-05-07T12:27:34.292Z"
+stopped_at: Completed 02C-02-PLAN.md
+last_updated: "2026-05-07T12:45:08.655Z"
 last_activity: 2026-05-07
 progress:
   total_phases: 15
   completed_phases: 10
   total_plans: 80
-  completed_plans: 72
-  percent: 90
+  completed_plans: 73
+  percent: 91
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 02C (llm-gateway) — EXECUTING
-Plan: 2 of 9
+Plan: 3 of 9
 Status: Ready to execute
 Last activity: 2026-05-07
 
-Progress: [█████████░] 90%
+Progress: [█████████░] 91%
 
 ## Performance Metrics
 
@@ -104,6 +104,7 @@ Progress: [█████████░] 90%
 | Phase 02B P00 | 13min | 4 tasks | 20 files |
 | Phase 02B P03 | 14min | 3 tasks | 25 files |
 | Phase 02C P01 | 45min | 1 tasks | 42 files |
+| Phase 02C P02 | 13min | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,9 @@ Recent decisions affecting current work:
 - Roadmap: Phase 2C (LLM Gateway) hard-gated by Phase 1 safety infrastructure — prompt injection + log bleed are product-killing
 - Roadmap: Phase 4 (Triage) hard-gated by Phase 2C — no triage without sanitization, Unicode strip, allow-list
 - Roadmap: CASA restricted-scope verification tracked as external parallel track, initiated in Phase 1 (FND-07), closed before Phase 6 launch
+- [Phase 02C]: Plan 02 uses an @Order 10/20/30/40 List<Sanitizer> fold for Jsoup, NFC, Unicode-control strip, and jtokkit CL100K_BASE truncation at 3896 tokens.
+- [Phase 02C]: Plan 02 SanitizationException has no message payload; it preserves stepName and cause without inheriting potentially content-bearing cause text.
+- [Phase 02C]: Plan 03 should inject SanitizationPipeline into LlmGatewayImpl and call sanitize(rawHtml) first under TenantContext before constructing any model request.
 - [Phase ?]: Use RestClient + LocalServerPort (not MockMvc.webAppContextSetup) for backend tests requiring TenantContext ScopedValue — MockMvc skips servlet filters and the test auth filter never binds the ScopedValue
 - [Phase ?]: Phase 1.1 P06: Vitest dedupes react/react-dom + LanguageSwitcher inlines SVG/native button to escape pnpm's duplicate React install
 - [Phase ?]: Phase 1.1 P07: Playwright must live at workspace root because Next.js declares @playwright/test as an optional peer dep — installing under apps/web doubles the next install on disk and breaks tsc at the next-intl/middleware boundary
@@ -276,6 +280,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-07T12:27:34.267Z
-Stopped at: Completed 02C-01-PLAN.md
+Last session: 2026-05-07T12:45:08.635Z
+Stopped at: Completed 02C-02-PLAN.md
 Resume file: None
