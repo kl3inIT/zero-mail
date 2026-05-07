@@ -190,7 +190,7 @@ Output: 1 strategy interface + 2 asymmetric factory impls + `ByokEndpointValidat
        // [existing platform path from Plan 03 unchanged]
        ```
        
-       (c) Add private helper:
+       (c) Add private helper. Note: the `List<ToolCallback>` parameter type is permitted because `callViaByokFactory` is a method on `LlmGatewayImpl`, which is the single class exempted from the ArchUnit rule per HIGH-1 Solution B (see Plan 01 T-2C-06-exemption row). The `tools` list reaches this method via the cast in `chat()` body.
        ```java
        private ToolCallResult callViaByokFactory(TenantByokCredentialsEntity byokRow,
                                                  SanitizationContext sanitized,

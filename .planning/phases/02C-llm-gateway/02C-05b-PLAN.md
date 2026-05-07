@@ -2,7 +2,7 @@
 phase: 02C-llm-gateway
 plan: 05b
 type: execute
-wave: 5
+wave: 6
 depends_on: [05a]
 files_modified:
   - backend/core/src/main/java/com/zeromail/core/llm/service/ByokService.java

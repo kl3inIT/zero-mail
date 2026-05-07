@@ -206,7 +206,7 @@ Output: 4 production files in `features/llm/` (api/components/hooks/messages.ts)
        ```
        Note: D-D1 says NO query-keys file — but `getCurrentByok` IS a read. Resolution: declare a small `byokKeys` factory inline in `use-byok.ts` (not a separate file). On Save success, the form invalidates `byokKeys.current()` to refresh the displayed metadata.
 
-    4. **(H-6 — D-D5 restored) Create `apps/web/features/llm/messages.ts`** as the source of truth for BYOK copy:
+    4. **(H-6 — D-D5 restored, HIGH-2 fix — single source of truth)** Create `apps/web/features/llm/messages.ts` as the EXCLUSIVE source of truth for BYOK copy. Every key/value pair below MUST live in this file; the JSON bundles in `apps/web/i18n/messages/{vi,en}.json` are GENERATED artifacts produced by step 8's merge script. Do NOT hand-author the JSON files in any step of this plan.
        ```ts
        export const llmMessages = {
          "llm.byok.title": { vi: "Khóa API cho nhà cung cấp AI", en: "AI provider key" },
@@ -214,11 +214,62 @@ Output: 4 production files in `features/llm/` (api/components/hooks/messages.ts)
            vi: "Dùng khóa riêng của bạn để gọi OpenAI Compatible hoặc Anthropic. Zero Mail chỉ lưu khóa đã mã hóa và không trừ tín dụng nền tảng cho các lượt gọi BYOK.",
            en: "Use your own key to call OpenAI Compatible or Anthropic. Zero Mail only stores the encrypted key and does not deduct platform credits for BYOK calls.",
          },
-         // ... (provider/endpoint/apiKey/validateCta/saveCta/empty/validation/save/existing keys per UI-SPEC verbatim)
-         "errors.llm.safetyViolation": { vi: "Yêu cầu AI đã bị từ chối vì lý do an toàn.", en: "The AI request was rejected for safety reasons." },
-         // ... (insufficientCredits/sanitizationFailed/byokValidateFailed)
+         "llm.byok.provider.label": { vi: "Nhà cung cấp", en: "Provider" },
+         "llm.byok.provider.anthropic": { vi: "Anthropic", en: "Anthropic" },
+         "llm.byok.provider.openaiCompatible": { vi: "OpenAI Compatible", en: "OpenAI Compatible" },
+         "llm.byok.endpoint.label": { vi: "Endpoint OpenAI Compatible", en: "OpenAI Compatible endpoint" },
+         "llm.byok.endpoint.placeholder": { vi: "https://openrouter.ai/api/v1", en: "https://openrouter.ai/api/v1" },
+         "llm.byok.apiKey.label": { vi: "Khóa API", en: "API key" },
+         "llm.byok.apiKey.placeholder": { vi: "Dán khóa API", en: "Paste API key" },
+         "llm.byok.validateCta": { vi: "Kiểm tra khóa API", en: "Validate API key" },
+         "llm.byok.saveCta": { vi: "Lưu khóa API", en: "Save API key" },
+         "llm.byok.validating": { vi: "Đang kiểm tra khóa...", en: "Validating key..." },
+         "llm.byok.saving": { vi: "Đang lưu khóa...", en: "Saving key..." },
+         "llm.byok.empty.heading": { vi: "Chưa có khóa BYOK", en: "No BYOK key saved" },
+         "llm.byok.empty.body": {
+           vi: "Chọn nhà cung cấp, dán khóa API, rồi kiểm tra trước khi lưu.",
+           en: "Pick a provider, paste your API key, then validate before saving.",
+         },
+         "llm.byok.validation.success": {
+           vi: "Khóa đã được kiểm tra. Bạn có thể lưu cấu hình này.",
+           en: "Key validated. You can save this configuration.",
+         },
+         "llm.byok.validation.invalid": {
+           vi: "Không thể kiểm tra khóa này. Kiểm tra nhà cung cấp, endpoint và khóa API, rồi thử lại.",
+           en: "Could not validate this key. Check provider, endpoint, and API key, then retry.",
+         },
+         "llm.byok.save.success": {
+           vi: "Đã lưu khóa BYOK đã mã hóa. Các lượt gọi AI sẽ dùng khóa này cho đến khi bạn thay đổi.",
+           en: "Encrypted BYOK key saved. AI calls will use this key until you change it.",
+         },
+         "llm.byok.save.error": {
+           vi: "Không thể lưu khóa đã mã hóa. Tải lại trang rồi thử lại.",
+           en: "Could not save the encrypted key. Reload the page and retry.",
+         },
+         "llm.byok.existing.replaceNotice": {
+           vi: "Lưu khóa mới đã kiểm tra sẽ thay thế khóa đã mã hóa hiện tại.",
+           en: "Saving a newly validated key will replace the existing encrypted key.",
+         },
+         "errors.llm.insufficientCredits.title": { vi: "Tín dụng nền tảng đã hết", en: "Platform credits depleted" },
+         "errors.llm.insufficientCredits.body": {
+           vi: "Nạp thêm tín dụng hoặc lưu khóa BYOK hợp lệ để tiếp tục gọi AI.",
+           en: "Top up credits or save a valid BYOK key to continue AI calls.",
+         },
+         "errors.llm.safetyViolation": {
+           vi: "Yêu cầu AI đã bị từ chối vì lý do an toàn.",
+           en: "The AI request was rejected for safety reasons.",
+         },
+         "errors.llm.sanitizationFailed": {
+           vi: "Không thể chuẩn hóa nội dung email trước khi gọi AI. Hãy thử lại.",
+           en: "Could not sanitize the email body before calling the AI. Please retry.",
+         },
+         "errors.llm.byokValidateFailed": {
+           vi: "Không thể kiểm tra khóa BYOK. Kiểm tra nhà cung cấp và khóa rồi thử lại.",
+           en: "Could not validate the BYOK key. Check provider and key, then retry.",
+         },
        } as const;
        ```
+       Total key count: 22. Treat this as the contract — when step 8 emits `vi.json`/`en.json`, both files MUST contain exactly these 22 keys (plus the `_generated` marker). The merge script splits each `{vi, en}` value into the per-locale tree (e.g., `"llm.byok.title"` becomes `messages.llm.byok.title` after the script normalizes the dotted key into a nested tree).
 
     8. **(H-6) Create `apps/web/scripts/merge-feature-i18n.ts`** — Node/TS script that walks `apps/web/features/**/messages.ts` (using `glob`), imports each `messages` const, splits by `{vi, en}` keys, and emits the merged tree into `apps/web/i18n/messages/vi.json` and `en.json`. Add a header comment to each generated JSON file: `// GENERATED — DO NOT EDIT. Source: features/**/messages.ts. Run `pnpm i18n:build` to regenerate.` (since JSON does not support comments, use a top-level `_generated` key OR add the marker as a separate `.gitattributes` linguist-generated rule + git pre-commit hook). Pick the `_generated` key approach for simplicity:
        ```json
@@ -228,69 +279,23 @@ Output: 4 production files in `features/llm/` (api/components/hooks/messages.ts)
        }
        ```
 
-    9. **(H-6) Wire `pnpm i18n:build` into the build chain.** In `apps/web/package.json` `scripts`:
+    9. **(H-6 + HIGH-2) Wire `pnpm i18n:build` into the build chain and verify round-trip.** In `apps/web/package.json` `scripts`:
        ```json
        "i18n:build": "tsx scripts/merge-feature-i18n.ts",
        "build": "pnpm i18n:build && next build"
        ```
        Run `pnpm -C apps/web i18n:build` once after creating `messages.ts` to regenerate the merged bundles. Then run `pnpm -C apps/web i18n:check` (STRICT — Phase 1.3 P07) to confirm vi/en parity.
 
+       **Round-trip acceptance (HIGH-2):** `pnpm i18n:build` MUST losslessly emit every key from `messages.ts` into both `vi.json` and `en.json`. Concretely, after running `pnpm -C apps/web i18n:build`, both of the following commands MUST succeed:
+       - `node -e "const m = require('''./apps/web/i18n/messages/vi.json'''); const flat = (o, p='''''') => Object.entries(o).flatMap(([k,v]) => k === '''_generated''' ? [] : (typeof v === '''object''' ? flat(v, p+k+'''.''') : [p+k])); const keys = flat(m); if (keys.length < 22) { console.error('''vi.json missing keys, got ''' + keys.length); process.exit(1); }"` exits 0 (≥ 22 leaf keys excluding `_generated`).
+       - Same command against `apps/web/i18n/messages/en.json` exits 0.
+       - `node -e "const v = require('''./apps/web/i18n/messages/vi.json'''); const e = require('''./apps/web/i18n/messages/en.json'''); const flat = (o, p='''''') => Object.entries(o).flatMap(([k,vv]) => k === '''_generated''' ? [] : (typeof vv === '''object''' ? flat(vv, p+k+'''.''') : [p+k])); const a = flat(v).sort().join(''','''); const b = flat(e).sort().join(''','''); if (a !== b) { console.error('''vi/en key drift'''); process.exit(1); }"` exits 0 (vi/en key sets identical).
+
+       This proves `messages.ts` is the genuine source of truth: deleting `vi.json`+`en.json` and re-running `pnpm i18n:build` reproduces them byte-equivalently (modulo timestamp/order, which the script must keep deterministic — sort keys alphabetically before emit).
+
     10. **DO NOT hand-edit `apps/web/i18n/messages/{vi,en}.json` directly.** They are now regenerated artifacts. Add `apps/web/i18n/messages/*.json` to a `.gitattributes` line marking them as `linguist-generated=true` (optional — ESLint/Prettier ignore based on existing config). The pre-commit lint job runs `pnpm i18n:build` before `pnpm i18n:check` to catch out-of-sync states.
 
-    5. **Modify `apps/web/i18n/messages/vi.json`** — add the following keys under top-level `llm.byok.*` and `errors.llm.*` namespaces (Vietnamese copy from UI-SPEC "Copywriting Contract" verbatim):
-       ```json
-       "llm": {
-         "byok": {
-           "title": "Khóa API cho nhà cung cấp AI",
-           "description": "Dùng khóa riêng của bạn để gọi OpenAI Compatible hoặc Anthropic. Zero Mail chỉ lưu khóa đã mã hóa và không trừ tín dụng nền tảng cho các lượt gọi BYOK.",
-           "provider": {
-             "label": "Nhà cung cấp",
-             "anthropic": "Anthropic",
-             "openaiCompatible": "OpenAI Compatible"
-           },
-           "endpoint": {
-             "label": "Endpoint OpenAI Compatible",
-             "placeholder": "https://openrouter.ai/api/v1"
-           },
-           "apiKey": {
-             "label": "Khóa API",
-             "placeholder": "Dán khóa API"
-           },
-           "validateCta": "Kiểm tra khóa API",
-           "saveCta": "Lưu khóa API",
-           "validating": "Đang kiểm tra khóa...",
-           "saving": "Đang lưu khóa...",
-           "empty": {
-             "heading": "Chưa có khóa BYOK",
-             "body": "Chọn nhà cung cấp, dán khóa API, rồi kiểm tra trước khi lưu."
-           },
-           "validation": {
-             "success": "Khóa đã được kiểm tra. Bạn có thể lưu cấu hình này.",
-             "invalid": "Không thể kiểm tra khóa này. Kiểm tra nhà cung cấp, endpoint và khóa API, rồi thử lại."
-           },
-           "save": {
-             "success": "Đã lưu khóa BYOK đã mã hóa. Các lượt gọi AI sẽ dùng khóa này cho đến khi bạn thay đổi.",
-             "error": "Không thể lưu khóa đã mã hóa. Tải lại trang rồi thử lại."
-           },
-           "existing": {
-             "replaceNotice": "Lưu khóa mới đã kiểm tra sẽ thay thế khóa đã mã hóa hiện tại."
-           }
-         }
-       },
-       "errors": {
-         "llm": {
-           "insufficientCredits": {
-             "title": "Tín dụng nền tảng đã hết",
-             "body": "Nạp thêm tín dụng hoặc lưu khóa BYOK hợp lệ để tiếp tục gọi AI."
-           },
-           "safetyViolation": "Yêu cầu AI đã bị từ chối vì lý do an toàn.",
-           "sanitizationFailed": "Không thể chuẩn hóa nội dung email trước khi gọi AI. Hãy thử lại.",
-           "byokValidateFailed": "Không thể kiểm tra khóa BYOK. Kiểm tra nhà cung cấp và khóa rồi thử lại."
-         }
-       }
-       ```
-       
-       **Modify `apps/web/i18n/messages/en.json`** — add the same key tree with English copy from UI-SPEC verbatim (Card title `AI provider key`, etc. — see UI-SPEC table line 178-198).
+    5. **(HIGH-2 fix — step deleted)** No JSON hand-authoring step exists. The previous version of this plan hand-authored `vi.json` + `en.json` here, which contradicted steps 4/8/9 (the merge script overwrites whatever is hand-authored). All copy now lives exclusively in `messages.ts` (step 4); the JSON bundles are emitted by `pnpm i18n:build` (step 9) at build time. Skip directly to step 6.
 
     6. **Modify `apps/web/scripts/check-i18n.ts`** — add the 2 new file paths to `EN_SCAN_FILES` so the strict i18n parity check covers them:
        - `apps/web/features/llm/components/ByokForm.tsx`
@@ -314,7 +319,10 @@ Output: 4 production files in `features/llm/` (api/components/hooks/messages.ts)
     - H-6: File `apps/web/features/llm/messages.ts` exists with `{vi, en}` shape; `grep -E "vi:\s*[\"\u00b4]\|en:\s*[\"\u00b4]" apps/web/features/llm/messages.ts | wc -l` returns `>= 8` (each key has both vi + en).
     - H-6: File `apps/web/scripts/merge-feature-i18n.ts` exists; `grep -c "features/.*messages\.ts" apps/web/scripts/merge-feature-i18n.ts` returns `>= 1` (script walks feature messages files).
     - H-6: `grep -c "i18n:build" apps/web/package.json` returns `>= 1` (script wired); `grep -E "\"build\"\s*:\s*\".*i18n:build" apps/web/package.json` matches (build chain runs i18n:build first).
-    - H-6: `apps/web/i18n/messages/vi.json` contains a `"_generated"` key OR a top-of-file generated marker (`grep -c "_generated\|GENERATED" apps/web/i18n/messages/vi.json` returns `>= 1`).
+    - H-6: `apps/web/i18n/messages/vi.json` contains a `"_generated"` key (`grep -c "_generated" apps/web/i18n/messages/vi.json` returns `>= 1`). Same for en.json (`grep -c "_generated" apps/web/i18n/messages/en.json` returns `>= 1`).
+    - HIGH-2 round-trip: after `pnpm -C apps/web i18n:build`, both `vi.json` and `en.json` contain ≥ 22 leaf keys (excluding `_generated`); vi/en key sets are identical (see step 9 round-trip node commands).
+    - HIGH-2 source-of-truth: `grep -E "\"llm\.byok\.title\"" apps/web/features/llm/messages.ts` returns `>= 1` (key lives in source-of-truth file).
+    - HIGH-2 no JSON hand-edits: the plan does NOT contain any step that hand-authors `apps/web/i18n/messages/vi.json` or `apps/web/i18n/messages/en.json` outside the merge script. (This is enforced by step 5 being explicitly deleted; if a future revision re-adds JSON authoring, that step must be flagged as contradicting D-D5.)
   </acceptance_criteria>
   <done>
     Schema regenerated; api + hooks files land per PATTERNS.md; i18n keys for `llm.byok.*` + `errors.llm.*` mirrored across vi+en in lock-step; EN_SCAN_FILES updated; `pnpm i18n:check` STRICT passes.
