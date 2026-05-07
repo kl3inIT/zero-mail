@@ -102,6 +102,39 @@ The codebase has zero LLM infrastructure today: no Spring AI dependency in `grad
 - Vector store / embeddings / RAG — privacy lock from PROJECT.md
 - Streaming responses (SSE) — non-streaming sufficient for compile + drift; reconsider when triage UX needs it
 
+## Drift Check Path Policy (MEDIUM cycle-3 clarification)
+
+`LlmGateway.driftCheck(rawEmailFixture)` (Plan 03 + Plan 06):
+
+| Concern | Decision | Rationale |
+|---|---|---|
+| Sanitization pipeline | RUNS (same Jsoup → NFC → tag-strip → jtokkit truncate as `chat()`) | Golden-set fixtures contain hostile HTML + Unicode tag injection by design (LLM-06 corpus); skipping sanitization would create the bypass surface that `chat()` defends against. (Codex cycle-1 HIGH `driftCheck() bypasses sanitization` — closed in Plan 03.) |
+| System prompt | RUNS (same `SystemPrompts.TRIAGE_SYSTEM_PROMPT`) | Drift baseline assumes the model sees the production system prompt; otherwise drift detection compares against a different prompt regime than production. |
+| Tool allow-list | RUNS (same `AllowListedTools` fixed `{label, archive, save_draft}` set) | Same rationale — drift must run against the production safety surface. |
+| ActionValidator (Layer 2) | RUNS | A drift run that returns `send` is a regression — `SafetyViolationException` is the right signal. |
+| Credit ledger (`reserve/settle/release`) | SKIPPED | D-E3: drift is a platform-cost operation, not user-billable. The `driftCheck()` method is invoked by `DriftDetectionJob` (worker) under a synthetic fixed tenant id (Plan 07); never by user-facing endpoints. Wrapping it in `creditLedger.reserve(...)` would either (a) fail with `InsufficientCreditsException` for the synthetic tenant, or (b) require seeding credits for a non-real tenant — both are anti-patterns. |
+
+The asymmetry (sanitization runs, ledger doesn't) is intentional: sanitization protects the model from adversarial input, the ledger protects the platform from user cost. Drift is platform-internal — only the first concern applies.
+
+## Endpoint Path Policy (HIGH-3 cycle-3 lock)
+
+**Stored BYOK endpoint always includes the API version path.** Validation appends ONLY the resource segment — `/models` (OpenAI-compatible) or `/messages` (Anthropic) — NEVER `/v1/models` or `/v1/messages`.
+
+| Provider | Stored canonical endpoint              | Validate URL                              | Forbidden malformed URL          |
+|----------|----------------------------------------|-------------------------------------------|----------------------------------|
+| OpenAI-compatible (OpenRouter) | `https://openrouter.ai/api/v1` | `https://openrouter.ai/api/v1/models` | `.../api/v1/v1/models`           |
+| OpenAI                          | `https://api.openai.com/v1`    | `https://api.openai.com/v1/models`    | `.../v1/v1/models`               |
+| OpenAI-compatible (other host)  | `https://together.xyz/v1`      | `https://together.xyz/v1/models`      | `.../v1/v1/models`               |
+| Anthropic                       | `https://api.anthropic.com/v1` | `https://api.anthropic.com/v1/messages`| `.../v1/v1/messages`             |
+
+**Trailing-slash normalization:** validator strips any single trailing `/` so `https://openrouter.ai/api/v1/` and `https://openrouter.ai/api/v1` both canonicalize to `https://openrouter.ai/api/v1`.
+
+**Implementation locks:**
+- `ByokEndpointValidator.validate{OpenAiCompatible,Anthropic}` (Plan 05a) returns the canonical URL with version path included and trailing slash stripped.
+- `ByokService.validate / save` (Plan 05b) calls a centralized `joinPath(canonicalEndpoint, suffix)` helper that appends `/models` or `/messages` only.
+- `BYOK chat path` (Plan 05a `OpenAiCompatibleByokModelClient` / `AnthropicByokModelClient`) passes the same canonical endpoint into Spring AI `OpenAiApi.mutate().baseUrl(...)` / `AnthropicChatOptions.baseUrl(...)` — Spring AI handles the chat-completion/messages path appending internally; do NOT pre-pend `/v1/chat/completions` etc.
+- Regression tests pinned in Plan 05b: `openrouter_validate_does_not_double_prefix_v1`, `openai_validate_uses_v1_models`, `trailing_slash_does_not_change_outbound_url`.
+
 ## Constraints
 
 - **Spring AI 2.0.0-M4 milestone caveat**: M4 → GA churn likely. Keep all direct Spring AI usage isolated in `com.zeromail.core.llm.gateway.springai` package; nothing else imports `org.springframework.ai.*`. ArchUnit enforces.

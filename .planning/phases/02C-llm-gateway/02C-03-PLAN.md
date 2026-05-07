@@ -12,8 +12,8 @@ files_modified:
   - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/PlatformApiKey.java
   - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/PlatformChatClientConfig.java
   - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/ZeroMailLlmProperties.java
-  - backend/core/src/main/java/com/zeromail/core/llm/service/ToolTranslator.java
-  - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/SpringAiToolTranslator.java
+  - backend/core/src/main/java/com/zeromail/core/llm/byok/ZeroMailLlmByokProperties.java
+  - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/SpringAiLlmModelClient.java
   - backend/api/src/main/resources/application.yml
   - backend/worker/src/main/resources/application.yml
   - backend/core/src/test/java/com/zeromail/core/llm/service/LlmGatewayWave0Test.java
@@ -23,13 +23,16 @@ files_modified:
   - backend/core/src/main/java/com/zeromail/core/llm/model/SystemPrompts.java
   - backend/core/src/test/java/com/zeromail/core/llm/service/AllowListedToolsTest.java
   - backend/core/src/test/java/com/zeromail/core/arch/LlmRepositoryContentBanTest.java
+  - backend/core/src/test/java/com/zeromail/core/llm/observability/LlmGatewayObservabilityTest.java
+  - backend/api/src/test/java/com/zeromail/api/config/GlobalExceptionHandlerLogContentTest.java
+  - backend/core/src/test/java/com/zeromail/core/arch/ChatResponseToStringSafetyTest.java
   - .planning/REQUIREMENTS.md
 autonomous: true
 requirements: [LLM-01, LLM-02, LLM-04, LLM-09]
 must_haves:
   truths:
-    - "All LLM traffic flows through LlmGateway interface; ArchUnit test from Plan 01 still passes after impl lands"
-    - "LlmGatewayImpl.chat(callSite, rawHtml, tools) calls SanitizationPipeline first, then issues a Spring AI ChatClient call against the platform path with per-call-site model pin"
+    - "All LLM traffic flows through LlmGateway interface; ArchUnit test from Plan 01 (STRICT, no exemption) still passes after impl lands — LlmGatewayImpl has ZERO org.springframework.ai imports"
+    - "LlmGatewayImpl.chat(callSite, rawHtml) calls SanitizationPipeline first, then delegates to the pure-Java LlmModelClient seam (HIGH-1 cycle-3 fix); SpringAiLlmModelClient (in core.llm.gateway.springai) is the only class that touches the Spring AI ChatClient on the platform path"
     - "Platform path uses singleton ChatClient + dynamic PlatformApiKey reading TenantContext (D-A1) — resolved at HTTP send time, not bean construction"
     - "ZEROMAIL_LLM_PLATFORM_API_KEY env var fail-fast at boot via :? syntax in both api/application.yml and worker/application.yml"
     - "spring.ai.chat.client.observations.log-prompt: false AND log-completion: false pinned in both api/application.yml and worker/application.yml (D-I5) — no prompt or completion text in observation spans"
@@ -41,7 +44,7 @@ must_haves:
       provides: "Public interface — single chokepoint contract for Phase 3/4 callers"
       exports: ["chat(CallSite, String, List<LlmTool>) -> ToolCallResult", "driftCheck(String) -> ToolCallResult"]
     - path: "backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java"
-      provides: "Package-private @Service implementation; sanitize → ChatClient call → response parse → ToolCallResult"
+      provides: "Package-private @Service implementation; sanitize → LlmModelClient.call() (pure-Java seam) → ActionValidator (Plan 04) → ToolCallResult. ZERO Spring AI imports — HIGH-1 cycle-3 fix."
       contains: "implements LlmGateway"
     - path: "backend/core/src/main/java/com/zeromail/core/llm/model/Action.java"
       provides: "Allow-listed action enum {LABEL, ARCHIVE, SAVE_DRAFT}; IdentifiedEnum + fromId fail-loud + functionName accessor"
@@ -211,7 +214,7 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
                                                                // unicode tag-injection. Implementation in Task 2 step 3.
        }
        ```
-       Note: callers no longer pass `List<LlmTool>` — the gateway internally invokes `allowListedTools.toolCallbacks()` to inject the fixed `{label, archive, save_draft}` set. The `core.llm.gateway.springai` adapter (`SpringAiToolTranslator` — see Task 2 step 0) is what owns the Spring AI `ToolCallback` construction. **No Spring AI import leaks into the public `LlmGateway` interface. The `LlmGatewayImpl` class itself is the single narrow `areNotAssignableTo(...)` exemption per HIGH-1 Solution B so it can call `ChatClient.prompt()` and read `ChatResponse` for Layer-2 ActionValidator parsing — see Plan 01 T-2C-06-exemption row for full rationale.**
+       Note: callers no longer pass `List<LlmTool>` — the gateway internally invokes `allowListedTools.tools()` to inject the fixed `{label, archive, save_draft}` set. **(HIGH-1 cycle-3 fix)** The `core.llm.gateway.springai.SpringAiLlmModelClient` adapter (Task 2 step 0) is what owns ALL Spring AI imports — `ChatClient`, `ChatResponse`, `ToolCallback`, `OpenAiChatOptions`, `AssistantMessage`, etc. The `LlmGatewayImpl` class depends only on the pure-Java `LlmModelClient` seam (Plan 01 step 8b) + `LlmChatRequest` / `LlmChatResult` / `RawToolCall` / `LlmUsage` records. **NO Spring AI import lives in `core.llm.service`. The cycle-1/cycle-2 narrowed `areNotAssignableTo(LlmGatewayImpl.class)` exemption is REMOVED; the ArchUnit rule is strict.**
 
     3b. **(REVIEWS divergent — OpenCode HIGH "Tool-call system prompt missing")** Create `backend/core/src/main/java/com/zeromail/core/llm/model/SystemPrompts.java` with the fixed system prompt that LlmGatewayImpl prepends to every model call (chat AND driftCheck):
        ```java
@@ -299,6 +302,27 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
        ```
        Wire as a Spring bean via `@EnableConfigurationProperties(ZeroMailLlmProperties.class)` on `PlatformChatClientConfig` (Task 2).
 
+    4b. **(MEDIUM cycle-3 — `LlmConfigProperties` for BYOK config)** Create `backend/core/src/main/java/com/zeromail/core/llm/byok/ZeroMailLlmByokProperties.java` to bind `zero-mail.llm.byok.*`. Without this class, the BYOK config keys land in Spring's environment but no `@ConfigurationPropertiesBindingTest` can verify them and Plan 05a's validator has to read them via `@Value("${...}")` (less type-safe).
+       ```java
+       @ConfigurationProperties("zero-mail.llm.byok")
+       public record ZeroMailLlmByokProperties(
+               boolean allowNonVendorEndpoints,
+               java.util.List<String> allowedExtraHosts,
+               java.time.Duration connectTimeout,
+               java.time.Duration readTimeout) {
+
+           public ZeroMailLlmByokProperties {
+               // Defaults if missing from yml — match Plan 03 step 5 application.yml block.
+               allowedExtraHosts = allowedExtraHosts == null ? java.util.List.of() : java.util.List.copyOf(allowedExtraHosts);
+               connectTimeout = connectTimeout == null ? java.time.Duration.ofSeconds(5) : connectTimeout;
+               readTimeout = readTimeout == null ? java.time.Duration.ofSeconds(15) : readTimeout;
+           }
+       }
+       ```
+       Wire via `@EnableConfigurationProperties(ZeroMailLlmByokProperties.class)` on a new `@Configuration` class in `core.llm.byok` (or extend an existing one). Plan 05a's `ByokEndpointValidator` injects this record instead of using `@Value`. Plan 05b's `ByokService` uses `connectTimeout` / `readTimeout` for the outbound RestClient builder.
+
+       Acceptance: `grep -c "@ConfigurationProperties(\"zero-mail.llm.byok\")" backend/core/src/main/java/com/zeromail/core/llm/byok/ZeroMailLlmByokProperties.java` returns `1`. Add a `ZeroMailLlmByokPropertiesBindingTest` asserting all 4 keys round-trip from yml.
+
     5. **Modify `backend/api/src/main/resources/application.yml` — MERGE into existing top-level keys (REVIEWS HIGH-consensus #5: NEVER append duplicate `zero-mail:` or `spring:` blocks; YAML duplicate top-level keys silently override prior config in some parsers and fail-parse in others).**
 
        Procedure (executor MUST verify):
@@ -355,7 +379,10 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
              threshold-percent: 20
        ```
 
-    7. **(HIGH-1 Solution B) Plan 01's `LlmGatewayBoundaryTest` includes a narrow `areNotAssignableTo(LlmGatewayImpl.class)` exemption.** The `LlmGateway` interface signature accepts `List<LlmTool>` (project-local record), so no caller imports a Spring AI type. However, `LlmGatewayImpl` itself reads `ChatResponse`, `OpenAiChatOptions`, `AssistantMessage.ToolCall.name()/.arguments()` from Spring AI 2.0.0-M4 — required for Layer-2 ActionValidator parsing. The narrow exemption (`.areNotAssignableTo(LlmGatewayImpl.class)`) confines this to a single class; any other `core.llm.service` class touching `org.springframework.ai..` will still fail the rule. Verify by running `./gradlew :backend:core:test --tests "LlmGatewayBoundaryTest"` after Task 2. The `.because()` clause documents the exemption rationale.
+    7. **(HIGH-1 cycle-3 fix — STRICT ArchUnit rule)** Plan 01's `LlmGatewayBoundaryTest` is now strict — NO `areNotAssignableTo` exemption. The pure-Java `LlmModelClient` seam (Plan 01 step 8b) means `LlmGatewayImpl` reads only `LlmChatResult` (which contains pure-Java `RawToolCall(functionName, argsJson)` records) — it never imports `ChatResponse`, `OpenAiChatOptions`, or `AssistantMessage.ToolCall`. The `SpringAiLlmModelClient` adapter (Task 2 step 0) is the ONLY class in the entire `backend/core` module that imports `org.springframework.ai..`. Verify after Task 2:
+       - `./gradlew :backend:core:test --tests "LlmGatewayBoundaryTest"` exits 0 with strict rule.
+       - `grep -rE "org\.springframework\.ai\." backend/core/src/main/java/com/zeromail/core/llm/service/` returns ZERO matches.
+       - `grep -c "areNotAssignableTo" backend/core/src/test/java/com/zeromail/core/arch/LlmGatewayBoundaryTest.java` returns `0`.
   </action>
   <verify>
     <automated>./gradlew :backend:core:test --tests "ActionEnumTest" --tests "ToolCallResultTest" --tests "ZeroMailLlmPropertiesTest" --tests "LlmGatewayBoundaryTest"</automated>
@@ -400,19 +427,96 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
     - Plan 01 Wave 0 LlmGatewayWave0Test @Disabled annotation removed; the assertion `gateway.chat(CallSite.PREVIEW, "hi", List.of()).action() != null` passes.
   </behavior>
   <action>
-    0. **(M-1) Create `backend/core/src/main/java/com/zeromail/core/llm/service/ToolTranslator.java`** — project-local interface so `LlmGatewayImpl` (in service package) never imports a Spring AI type:
+    0. **(HIGH-1 cycle-3 fix) Create `backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/SpringAiLlmModelClient.java`** — `@Component @Primary` implementing the pure-Java `LlmModelClient` seam from Plan 01 step 8b. This class owns ALL Spring AI imports for the platform path (`ChatClient`, `ChatResponse`, `ToolCallback`, `OpenAiChatOptions`, `AssistantMessage`, `Usage`). It accepts a vendor-neutral `LlmChatRequest` and returns a vendor-neutral `LlmChatResult` containing `RawToolCall(functionName, argsJson)` records — no Spring AI type crosses back into `core.llm.service`.
        ```java
-       package com.zeromail.core.llm.service;
-       import java.util.List;
-       import com.zeromail.core.llm.model.LlmTool;
+       package com.zeromail.core.llm.gateway.springai;
 
-       /** Translates project-local LlmTool to Spring AI ToolCallback. Impl lives in core.llm.gateway.springai. */
-       public interface ToolTranslator {
-           Object translateAll(List<LlmTool> tools);   // erased return — actual List<org.springframework.ai.tool.ToolCallback>
+       import java.util.List;
+       import org.springframework.ai.chat.client.ChatClient;
+       import org.springframework.ai.chat.messages.AssistantMessage;
+       import org.springframework.ai.chat.metadata.Usage;
+       import org.springframework.ai.chat.model.ChatResponse;
+       import org.springframework.ai.openai.OpenAiChatOptions;
+       import org.springframework.ai.tool.ToolCallback;
+       import org.springframework.context.annotation.Primary;
+       import org.springframework.stereotype.Component;
+
+       import com.zeromail.core.llm.model.LlmChatRequest;
+       import com.zeromail.core.llm.model.LlmChatResult;
+       import com.zeromail.core.llm.model.LlmTool;
+       import com.zeromail.core.llm.model.LlmUsage;
+       import com.zeromail.core.llm.model.RawToolCall;
+       import com.zeromail.core.llm.service.LlmModelClient;
+
+       /**
+        * (HIGH-1 cycle-3 fix) Spring AI 2.0.0-M4 adapter for the platform-path LlmModelClient.
+        * BYOK clients (Plan 05a) ship as separate @Component impls of LlmModelClient — they are
+        * resolved per-request (NOT @Primary). The platform client is @Primary so it wins
+        * when no BYOK row is present.
+        *
+        * <p>This is the SINGLE class in core that imports org.springframework.ai.*. ArchUnit
+        * LlmGatewayBoundaryTest pins this confinement strictly (no exemption).
+        */
+       @Component
+       @Primary
+       public class SpringAiLlmModelClient implements LlmModelClient {
+
+           private final ChatClient platformChatClient;
+
+           public SpringAiLlmModelClient(ChatClient platformChatClient) {
+               this.platformChatClient = platformChatClient;
+           }
+
+           @Override
+           public LlmChatResult call(LlmChatRequest request) {
+               List<ToolCallback> toolCallbacks = translateTools(request.tools());
+               ChatResponse chatResponse = platformChatClient.prompt()
+                       .system(request.systemPrompt())
+                       .user(request.userMessage())
+                       .toolCallbacks(toolCallbacks)
+                       .options(OpenAiChatOptions.builder()
+                               .model(request.model())
+                               .temperature(request.temperature())
+                               .internalToolExecutionEnabled(false)   // H-5 — gateway parses tool calls itself
+                               .build())
+                       .call().chatResponse();
+               return toLlmChatResult(chatResponse);
+           }
+
+           private List<ToolCallback> translateTools(List<LlmTool> tools) {
+               // M4 builder: verify exact name via Context7 /spring-projects/spring-ai
+               // Translates project-local LlmTool(name, description, jsonSchema) to ToolCallback.
+               // Implementation deferred to executor — body uses MethodToolCallback or FunctionToolCallback
+               // depending on what M4 exposes for dynamic JSON-schema tools.
+               return tools.stream()
+                       .map(this::toToolCallback)
+                       .toList();
+           }
+
+           private ToolCallback toToolCallback(LlmTool tool) {
+               // executor implements per Spring AI 2.0.0-M4 docs (Context7-verified)
+               throw new UnsupportedOperationException("executor implements per Spring AI 2.0.0-M4");
+           }
+
+           private LlmChatResult toLlmChatResult(ChatResponse chatResponse) {
+               AssistantMessage message = chatResponse.getResults().get(0).getOutput();
+               List<RawToolCall> rawToolCalls = (message.getToolCalls() == null
+                       ? List.<AssistantMessage.ToolCall>of()
+                       : message.getToolCalls()).stream()
+                   .map(toolCall -> new RawToolCall(toolCall.name(), toolCall.arguments()))
+                   .toList();
+               Usage usage = chatResponse.getMetadata().getUsage();
+               String finishReason = chatResponse.getResults().get(0).getMetadata().getFinishReason();
+               return new LlmChatResult(
+                       rawToolCalls,
+                       new LlmUsage(
+                               usage.getPromptTokens() == null ? 0 : usage.getPromptTokens().intValue(),
+                               usage.getGenerationTokens() == null ? 0 : usage.getGenerationTokens().intValue(),
+                               finishReason));
+           }
        }
        ```
-
-       **Create `backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/SpringAiToolTranslator.java`** — `@Component` implementing `ToolTranslator`. Translates each `LlmTool(name, description, jsonSchema)` to a Spring AI `MethodToolCallback` (or `FunctionToolCallback` — verify exact M4 builder via Context7 query `/spring-projects/spring-ai` "ToolCallback dynamic JSON schema 2.0.0-M4"). Returns `List<ToolCallback>`.
+       Verify the Spring AI 2.0.0-M4 import paths via Context7 (`/spring-projects/spring-ai`) before finalizing. The cycle-2 `ToolTranslator` interface + `SpringAiToolTranslator` are REMOVED in this cycle — the `LlmModelClient` seam supersedes them.
 
     1. **Create `backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/PlatformApiKey.java`** — `@Component` implementing `org.springframework.ai.chat.model.ApiKey` (verify exact import path via Context7 — could be `org.springframework.ai.openai.api.ApiKey` in M4):
        ```java
@@ -455,31 +559,34 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
        ```
        Verify M4 builder API names via Context7 `/spring-projects/spring-ai` query "OpenAiApi.builder ApiKey 2.0.0-M4" before finalizing — RESEARCH lines 12-17 confirm `apiKey(ApiKey)` is documented.
 
-    3. **Create `backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java`** — package-private `@Service class LlmGatewayImpl implements LlmGateway`. Skeleton in this plan covers ONLY the platform-path happy case + sanitization + privacy logging + tool-call extraction (no validator, no BYOK, no ledger — those are Plan 04/05/06 modifications). Skeleton:
+    3. **Create `backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java`** — package-private `@Service class LlmGatewayImpl implements LlmGateway`. **(HIGH-1 cycle-3 fix)** ZERO Spring AI imports. Depends on the pure-Java `LlmModelClient` seam (Plan 01 step 8b) + `LlmChatRequest` / `LlmChatResult` / `RawToolCall` (all `core.llm.model` records). Skeleton in this plan covers ONLY the platform-path happy case + sanitization + privacy logging + tool-call extraction (no validator, no BYOK, no ledger — those are Plan 04/05/06 modifications). Skeleton:
        ```java
        @Service
        class LlmGatewayImpl implements LlmGateway {
            private static final Logger log = LoggerFactory.getLogger(LlmGatewayImpl.class);
 
-           private final ChatClient platformChatClient;
+           // (HIGH-1 cycle-3) Pure-Java seam — NO Spring AI types. SpringAiLlmModelClient
+           // (in core.llm.gateway.springai) is the @Primary impl; BYOK clients (Plan 05a)
+           // are separate impls resolved per-request.
+           private final LlmModelClient platformLlmModelClient;
            private final SanitizationPipeline sanitizationPipeline;
            private final ZeroMailLlmProperties llmProperties;
-           private final ToolTranslator toolTranslator;   // M-1 — bridge to Spring AI ToolCallback
+           private final AllowListedTools allowListedTools;
            // Plan 04 will add: private final ActionValidator actionValidator;
            // Plan 05 will add: private final TenantByokCredentialsRepository byokRepo;
-           //                   private final BYOKChatModelFactory openAiCompatByokFactory;
-           //                   private final BYOKChatModelFactory anthropicByokFactory;
+           //                   private final LlmModelClient openAiCompatibleByokModelClient;
+           //                   private final LlmModelClient anthropicByokModelClient;
            //                   private final RefreshTokenCipher refreshTokenCipher;
            // Plan 06 will add: private final CreditLedger creditLedger;
 
-           LlmGatewayImpl(ChatClient platformChatClient,
+           LlmGatewayImpl(LlmModelClient platformLlmModelClient,
                           SanitizationPipeline sanitizationPipeline,
                           ZeroMailLlmProperties llmProperties,
-                          ToolTranslator toolTranslator) {
-               this.platformChatClient = platformChatClient;
+                          AllowListedTools allowListedTools) {
+               this.platformLlmModelClient = platformLlmModelClient;
                this.sanitizationPipeline = sanitizationPipeline;
                this.llmProperties = llmProperties;
-               this.toolTranslator = toolTranslator;
+               this.allowListedTools = allowListedTools;
            }
 
            @Override
@@ -497,71 +604,59 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
                List<LlmTool> tools = allowListedTools.tools();   // gateway-owned fixed allow-list
 
                try {
-                   // M-1: LlmTool -> ToolCallback translation lives inside core.llm.gateway.springai (SpringAiToolTranslator).
-                   // LlmGatewayImpl is in core.llm.service, so ToolTranslator interface returns Object
-                   // and we cast at the wire seam (the cast target type org.springframework.ai... is permitted
-                   // because it lands inside the springai builder method, which is inside the gateway adapter call chain).
-                   @SuppressWarnings("unchecked")
-                   var translatedTools = (java.util.List<org.springframework.ai.tool.ToolCallback>) toolTranslator.translateAll(tools);
-                   ChatResponse chatResponse = platformChatClient.prompt()
-                           .system(SystemPrompts.TRIAGE_SYSTEM_PROMPT)   // REVIEWS divergent (OpenCode HIGH) — fixed system prompt declares email content as data
-                           .user(sanitized.content())
-                           .toolCallbacks(translatedTools)
-                           .options(OpenAiChatOptions.builder()
-                                   .model(model)
-                                   .internalToolExecutionEnabled(false)   // H-5 — pinned to OpenAiChatOptions per Spring AI 2.0.0-M4 docs (verified via Context7)
-                                   .build())
-                           .call().chatResponse();
-
-                   ToolCallResult result = parseToolCall(chatResponse);  // Plan 04 replaces with validator-backed parse
+                   // (HIGH-1 cycle-3) Build a vendor-neutral request — no Spring AI types here.
+                   LlmChatRequest request = new LlmChatRequest(
+                           SystemPrompts.TRIAGE_SYSTEM_PROMPT,
+                           sanitized.content(),
+                           tools,
+                           model,
+                           0.0,         // temperature — deterministic for triage
+                           true);       // toolChoiceRequired — Layer 1 safety
+                   LlmChatResult result = platformLlmModelClient.call(request);
+                   ToolCallResult toolCallResult = parseToolCall(result);   // Plan 04 replaces with validator-backed parse
 
                    long latencyMs = (System.nanoTime() - startNanos) / 1_000_000;
-                   Usage usage = chatResponse.getMetadata().getUsage();
+                   LlmUsage usage = result.usage();
                    log.info("event=llm_call_succeeded tenantId={} callSite={} latencyMs={} promptTokens={} completionTokens={} stopReason={} truncated={}",
                            tenantId, callSite, latencyMs,
-                           usage.getPromptTokens(), usage.getGenerationTokens(),
-                           chatResponse.getResults().get(0).getMetadata().getFinishReason(),
-                           sanitized.truncated());
-                   return result;
+                           usage.promptTokens(), usage.completionTokens(),
+                           usage.finishReason(), sanitized.truncated());
+                   return toolCallResult;
                } catch (RuntimeException callFailure) {
                    log.warn("event=llm_call_failed tenantId={} callSite={} reason={}",
                            tenantId, callSite, callFailure.getClass().getSimpleName());
                    throw callFailure;
                }
-           }
-
            @Override
            public ToolCallResult driftCheck(String rawEmailFixture) {
                // D-E3 — bypasses ledger; pinned to driftModel.
                // REVIEWS divergent (Codex HIGH): driftCheck input MUST traverse the same sanitization
-               // pipeline as chat() because golden-set fixtures contain hostile HTML +
-               // unicode tag-injection. Without the pipeline, drift call could be the bypass surface
-               // for prompt injection that chat() defends against.
+               // pipeline as chat() because golden-set fixtures contain hostile HTML + unicode
+               // tag-injection. Without the pipeline, drift call could be the bypass surface for
+               // prompt injection that chat() defends against.
                UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
                String model = llmProperties.driftModel();
 
                SanitizationContext sanitized = sanitizationPipeline.sanitize(rawEmailFixture);   // Same pipeline as chat()
                List<LlmTool> tools = allowListedTools.tools();                                   // Same fixed allow-list as chat()
-               @SuppressWarnings("unchecked")
-               var translatedTools = (java.util.List<org.springframework.ai.tool.ToolCallback>) toolTranslator.translateAll(tools);
 
                long startNanos = System.nanoTime();
                log.info("event=llm_drift_call_started tenantId={} model={}", tenantId, model);
                try {
-                   ChatResponse chatResponse = platformChatClient.prompt()
-                           .system(SystemPrompts.TRIAGE_SYSTEM_PROMPT)
-                           .user(sanitized.content())
-                           .toolCallbacks(translatedTools)
-                           .options(OpenAiChatOptions.builder()
-                                   .model(model)
-                                   .internalToolExecutionEnabled(false)
-                                   .build())
-                           .call().chatResponse();
-                   ToolCallResult result = parseToolCall(chatResponse);
+                   // (HIGH-1 cycle-3) Same vendor-neutral seam as chat() — different model pin.
+                   LlmChatRequest request = new LlmChatRequest(
+                           SystemPrompts.TRIAGE_SYSTEM_PROMPT,
+                           sanitized.content(),
+                           tools,
+                           model,
+                           0.0,
+                           true);
+                   LlmChatResult result = platformLlmModelClient.call(request);
+                   ToolCallResult toolCallResult = parseToolCall(result);
                    long latencyMs = (System.nanoTime() - startNanos) / 1_000_000;
                    log.info("event=llm_drift_call_succeeded tenantId={} latencyMs={} truncated={}",
                            tenantId, latencyMs, sanitized.truncated());
-                   return result;
+                   return toolCallResult;
                } catch (RuntimeException driftFailure) {
                    log.warn("event=llm_drift_call_failed tenantId={} reason={}",
                            tenantId, driftFailure.getClass().getSimpleName());
@@ -569,18 +664,17 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
                }
            }
 
-           private ToolCallResult parseToolCall(ChatResponse chatResponse) {
+           // (HIGH-1 cycle-3) Pure-Java parse — no Spring AI types. RawToolCall(functionName, argsJson)
+           // is what crosses the LlmModelClient seam. Plan 04 replaces this body with ActionValidator.
+           private ToolCallResult parseToolCall(LlmChatResult result) {
                // Plan 03 minimal: extract first tool call's function name + args; fallback throws.
                // Plan 04 replaces with ActionValidator-backed parse + Layer 1/Layer 2 enforcement.
-               AssistantMessage message = chatResponse.getResults().get(0).getOutput();
-               if (message.getToolCalls().isEmpty()) {
+               if (result.toolCalls().isEmpty()) {
                    throw new IllegalStateException("No tool call returned");
                }
-               AssistantMessage.ToolCall toolCall = message.getToolCalls().get(0);
-               // Minimal parse — Plan 04 wraps with ActionValidator
-               Action action = Action.fromFunctionName(toolCall.name());
-               // Args parsing is JSON; use Jackson via a private helper or inline ObjectMapper
-               Map<String, Object> args = parseJsonArgs(toolCall.arguments());
+               RawToolCall rawToolCall = result.toolCalls().get(0);
+               Action action = Action.fromFunctionName(rawToolCall.functionName());
+               Map<String, Object> args = parseJsonArgs(rawToolCall.argsJson());
                return new ToolCallResult(action, args);
            }
 
@@ -589,16 +683,15 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
        ```
        Critical: **mark the parseToolCall and BYOK seam locations with `// Plan 04/05/06 modifies here` comments** so future executors edit at the right spot without disrupting the structure.
 
-       Variable names per CLAUDE.md enterprise readability: `chatResponse` (not `resp`), `callFailure` (not `e`/`ex`), `tenantId` (not `tid`), `latencyMs` (not `lat`).
+       Variable names per CLAUDE.md enterprise readability: `callFailure` (not `e`/`ex`), `tenantId` (not `tid`), `latencyMs` (not `lat`).
 
-    4. **Create `backend/core/src/test/java/com/zeromail/core/llm/service/LlmGatewayPlatformPathTest.java`** — `@SpringBootTest` with `@MockBean ChatModel` (mock OpenAiChatModel via test slice) returning a synthetic ChatResponse containing one tool call `{name: "label", arguments: '{"value":"Receipts"}'}`. Bind TenantContext via `ScopedValue.where(...)`. Assert:
+    4. **Create `backend/core/src/test/java/com/zeromail/core/llm/service/LlmGatewayPlatformPathTest.java`** — `@SpringBootTest` **(HIGH-1 cycle-3)** with `@MockBean LlmModelClient` (mock the seam, NOT `ChatModel` — keeps the test free of Spring AI imports and matches the abstraction the gateway depends on). Mock returns a synthetic `LlmChatResult(List.of(new RawToolCall("label", "{\"value\":\"Receipts\"}")), new LlmUsage(10, 5, "stop"))`. Bind TenantContext via `ScopedValue.where(...)`. Assert:
        - Returns `ToolCallResult(LABEL, {value=Receipts})`.
-       - Privacy log assertion via Logback `ListAppender` — captured line matches `event=llm_call_succeeded` regex AND does not contain the input bytes (`<p>` / `hi` / `Receipts` if Receipts is the model output — wait, args ARE returned, so `Receipts` lives in the result; the log line MUST NOT include args content per D-I1).
-       - Wait: D-I1 explicitly says NO tool-call args content in logs. So assert log line does NOT contain `Receipts`.
+       - Privacy log assertion via Logback `ListAppender` — captured line matches `event=llm_call_succeeded` regex AND does not contain the input bytes (`<p>` / `hi`) AND does not contain `Receipts` (D-I1 — no tool-call args content in logs).
 
-    5. **Create `backend/core/src/test/java/com/zeromail/core/llm/service/LlmGatewayMultiTenantLeakTest.java`** per PATTERNS.md "LlmGatewayMultiTenantLeakTest.java" verbatim shape:
+    5. **Create `backend/core/src/test/java/com/zeromail/core/llm/service/LlmGatewayMultiTenantLeakTest.java`** per PATTERNS.md "LlmGatewayMultiTenantLeakTest.java" verbatim shape **(HIGH-1 cycle-3 — mock LlmModelClient seam, not ChatModel)**:
        - 100 seeded tenants, each binding a different UUID.
-       - Mock ChatModel returns a tool call where args contains `{boundTenantId: "<the bound tenant id>"}` — implementation reads `TenantContext.currentOrThrow()` from inside the mock.
+       - Mock `LlmModelClient` returns an `LlmChatResult` where the first `RawToolCall.argsJson` contains `{"boundTenantId":"<currentOrThrow value>"}` — implementation reads `TenantContext.currentOrThrow()` from inside the mock answer.
        - StructuredTaskScope.open() forks all 100 calls.
        - After scope.join, iterate results and assert `result.args().get("boundTenantId").equals(seeds[i].tenantId().toString())`.
 
@@ -612,6 +705,10 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
     - File `backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/PlatformChatClientConfig.java` exists; `grep -c '@Configuration' backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/PlatformChatClientConfig.java` returns `>= 1`; `grep -c 'OpenAiApi.builder()' backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/PlatformChatClientConfig.java` returns `>= 1`; `grep -c 'ChatClient.create' backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/PlatformChatClientConfig.java` returns `>= 1`.
     - File `backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` exists; `grep -c 'implements LlmGateway' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `1`; `grep -c 'sanitizationPipeline.sanitize' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 1`; `grep -c 'event=llm_call_started\|event=llm_call_succeeded\|event=llm_call_failed' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 3`.
     - `grep -E 'log\.(info|warn|error|debug).*\.content\(\)|log\.(info|warn|error|debug).*rawHtml|log\.(info|warn|error|debug).*chatResponse[^.]' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java | grep -v '//' ` returns no matches (no content/prompt/completion in log lines).
+    - **(HIGH-1 cycle-3)** `grep -c 'platformLlmModelClient.call' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 2` (chat + driftCheck both delegate to the seam).
+    - **(HIGH-1 cycle-3)** `grep -rE 'org\.springframework\.ai\.' backend/core/src/main/java/com/zeromail/core/llm/service/` returns ZERO matches (no Spring AI import survives in `core.llm.service`).
+    - **(HIGH-1 cycle-3)** File `backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/SpringAiLlmModelClient.java` exists; `grep -c '@Primary' backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/SpringAiLlmModelClient.java` returns `1`; `grep -c 'implements LlmModelClient' backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/SpringAiLlmModelClient.java` returns `1`.
+    - **(HIGH-1 cycle-3)** `ToolTranslator` and `SpringAiToolTranslator` are NOT referenced anywhere: `grep -rE 'ToolTranslator|SpringAiToolTranslator' backend/core/src/main/java/com/zeromail/core/llm/` returns ZERO matches.
     - `grep -c '// Plan 04 ' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 1` (Plan 04 seam markers present).
     - `grep -c '// Plan 05 ' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 1`.
     - `grep -c '// Plan 06 ' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 1`.
@@ -660,39 +757,43 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
       so adding an Action without adding a tool (or vice versa) fails this test.
   </behavior>
   <action>
-    1. **(REVIEWS HIGH-consensus #6 — LLM-09 privacy)** Create `backend/core/src/test/java/com/zeromail/core/arch/LlmRepositoryContentBanTest.java`:
+    1. **(REVIEWS HIGH-consensus #6 — LLM-09 privacy — HIGH-4 cycle-3 type-based predicate)** Create `backend/core/src/test/java/com/zeromail/core/arch/LlmRepositoryContentBanTest.java`. **Cycle-2 used parameter-NAME matching, which silently passes when the build does not set `javac -parameters` and parameter names are erased to `arg0`/`arg1`. Cycle-3 fix: switch to a type+method-name predicate that does NOT depend on `-parameters`.**
        ```java
        @AnalyzeClasses(packages = "com.zeromail")
        public class LlmRepositoryContentBanTest {
+           // (HIGH-4 cycle-3) Match by parameter TYPE (String) + method NAME regex.
+           // Method names ARE always retained in bytecode regardless of -parameters.
+           // Parameter NAMES are NOT — so the cycle-2 name-based check was unreliable.
+           private static final java.util.regex.Pattern BANNED_METHOD_NAME = java.util.regex.Pattern.compile(
+               "(?i).*(prompt|completion|messageBody|emailBody|rawHtml|apiKey|decryptedKey|plaintextKey).*"
+           );
+
            @ArchTest
-           static final ArchRule repos_must_not_accept_prompt_or_completion_or_body_content_args =
+           static final ArchRule repos_must_not_have_content_like_string_method =
                classes().that().resideInAPackage("..persistence..")
                    .and().haveSimpleNameEndingWith("Repository")
-                   .should(new ArchCondition<JavaClass>("not declare methods with content/secret parameter names") {
+                   .should(new ArchCondition<JavaClass>(
+                       "not declare a method whose name matches LLM content/secret tokens AND has any String parameter (LLM-09)") {
                        @Override
                        public void check(JavaClass repoClass, ConditionEvents events) {
-                           Set<String> bannedTokens = Set.of(
-                               "prompt", "completion", "messageBody", "emailBody",
-                               "rawHtml", "apiKey", "decryptedKey", "plaintextKey"
-                           );
                            for (JavaMethod method : repoClass.getMethods()) {
-                               for (JavaParameter param : method.getParameters()) {
-                                   String paramName = param.getName().toLowerCase();
-                                   for (String banned : bannedTokens) {
-                                       if (paramName.contains(banned.toLowerCase())) {
-                                           events.add(SimpleConditionEvent.violated(method,
-                                               "Repository " + repoClass.getName()
-                                                   + " method " + method.getName()
-                                                   + " accepts banned parameter '" + paramName
-                                                   + "' (LLM-09 privacy invariant — repos may not see content)"));
-                                       }
-                                   }
+                               if (!BANNED_METHOD_NAME.matcher(method.getName()).matches()) continue;
+                               boolean hasStringParam = method.getRawParameterTypes().stream()
+                                   .anyMatch(t -> t.getName().equals("java.lang.String"));
+                               if (hasStringParam) {
+                                   events.add(SimpleConditionEvent.violated(method,
+                                       "Repository " + repoClass.getName() + " method "
+                                           + method.getName() + " has a String parameter and a "
+                                           + "content-like name; LLM-09 forbids repositories from "
+                                           + "accepting prompt/completion/body/key content. Move the "
+                                           + "logic up to a service that does not persist."));
                                }
                            }
                        }
                    });
        }
        ```
+       This rule fires reliably regardless of `-parameters`. To still cover the case where a future executor names a method neutrally (e.g., `findByNeedle(String needle)`) but the parameter IS prompt/completion/body, an OPTIONAL annotation-based escape hatch can be added later: a marker `@LlmContentLike` annotation that any String parameter known to carry LLM content must wear; a second ArchUnit rule then bans `String @LlmContentLike` parameters in repository methods. Defer the marker annotation until a real case requires it.
 
     2. **(REVIEWS HIGH-consensus #6 — Logback scrubber extension)** Locate the existing scrub filter from Phase 1 (`backend/api/src/main/resources/logback-spring.xml` and worker equivalent). Extend the regex patterns to cover:
        - `apiKey=([^\s,;]+)` → `apiKey=***REDACTED***`
@@ -707,7 +808,70 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
 
     4. **(REVIEWS HIGH-consensus #2 — `AllowListedTools` tests)** Create `backend/core/src/test/java/com/zeromail/core/llm/service/AllowListedToolsTest.java` with Tests 4 and 5 above. The coupled-invariant test (Test 5) is the durable guard against future drift — adding an `Action` enum value without exposing a matching tool (or vice versa) breaks this test.
 
-    5. **(REVIEWS divergent — Codex HIGH "OpenAI-compatible endpoint path policy")** Document the endpoint normalization rule in CONTEXT D-A2 and pin it here for executor reference: STORED `endpoint` includes the version path (e.g., `https://openrouter.ai/api/v1`); BYOK Validate calls `${endpoint}/models` (NOT `${endpoint}/v1/models`). The `ByokEndpointValidator` (Plan 05a) parses + canonicalizes; `ByokService.validate(...)` (Plan 05b) appends `/models` (OpenAI-compat) or `/messages` (Anthropic) to the validated/canonicalized endpoint. Pin acceptance test in Plan 05b: `validate("https://openrouter.ai/api/v1")` issues `GET https://openrouter.ai/api/v1/models` (single `/v1`, no double prefix).
+    5. **(REVIEWS divergent — Codex HIGH "OpenAI-compatible endpoint path policy" — pinned in SPEC.md "Endpoint Path Policy" section)** Document the endpoint normalization rule in CONTEXT D-A2 and pin it here for executor reference: STORED `endpoint` includes the version path (e.g., `https://openrouter.ai/api/v1`); BYOK Validate calls `${canonicalEndpoint}/models` (NEVER `${endpoint}/v1/models`). The `ByokEndpointValidator` (Plan 05a) parses + canonicalizes; `ByokService.validate(...)` / `save(...)` (Plan 05b) use a centralized `joinPath(...)` helper that appends `/models` (OpenAI-compat) or `/messages` (Anthropic). Pin regression tests in Plan 05b: `openrouter_validate_does_not_double_prefix_v1`, `openai_validate_uses_v1_models`, `trailing_slash_does_not_change_outbound_url`.
+
+    6. **(HIGH-4 cycle-3 — span-attribute sentinel test)** Create `backend/core/src/test/java/com/zeromail/core/llm/observability/LlmGatewayObservabilityTest.java`. Wires an OpenTelemetry `InMemorySpanExporter` into the test ApplicationContext via a `@TestConfiguration` bean overriding the default OTel config. Test body:
+       ```java
+       @Test
+       void no_span_attribute_value_contains_prompt_or_completion_content() {
+           String sentinel = "SENTINEL_PROMPT_CONTENT_DO_NOT_LOG_X7Q9";
+           // Bind TenantContext, mock LlmModelClient to echo the sentinel verbatim in the response args
+           ScopedValue.where(TenantContext.TENANT, UUID.randomUUID().toString()).run(() -> {
+               try {
+                   gateway.chat(CallSite.PREVIEW, "<p>" + sentinel + "</p>");
+               } catch (RuntimeException ignored) {
+                   // We only care about spans, not the result
+               }
+           });
+           List<SpanData> spans = inMemorySpanExporter.getFinishedSpanItems();
+           assertThat(spans).isNotEmpty();
+           for (SpanData span : spans) {
+               for (var attr : span.getAttributes().asMap().entrySet()) {
+                   String stringValue = String.valueOf(attr.getValue());
+                   assertThat(stringValue)
+                       .as("span %s attribute %s leaked sentinel", span.getName(), attr.getKey())
+                       .doesNotContain(sentinel);
+               }
+               // Also assert span event attributes are clean (Spring AI emits prompt/response events too)
+               for (EventData event : span.getEvents()) {
+                   for (var attr : event.getAttributes().asMap().entrySet()) {
+                       assertThat(String.valueOf(attr.getValue())).doesNotContain(sentinel);
+                   }
+               }
+           }
+       }
+       ```
+       This proves the `spring.ai.chat.client.observations.log-prompt: false` + `log-completion: false` pins (Plan 03 step 5) actually take effect at the OTel layer — not just on the Logback side. If a future Spring AI version flips the default or moves the observation key, this test fires.
+
+    7. **(HIGH-4 cycle-3 — global exception-handler log content test)** Create `backend/api/src/test/java/com/zeromail/api/config/GlobalExceptionHandlerLogContentTest.java`. Throws an exception whose message contains a sentinel and asserts the emitted log line carries `event=...` + `exceptionClass={}` only — never the message body:
+       ```java
+       @Test
+       void handler_log_does_not_contain_exception_message() {
+           String sentinel = "SENTINEL_EXCEPTION_MESSAGE_NEVER_LOGGED_K8M2";
+           // Synthetic call: directly invoke the handler with an exception carrying the sentinel
+           ListAppender<ILoggingEvent> appender = attachListAppender(GlobalExceptionHandler.class);
+           handler.handleSafetyViolation(new SafetyViolationException(sentinel)); // even if the ctor accepts a message, the handler must not log it
+           List<ILoggingEvent> events = appender.list;
+           assertThat(events).isNotEmpty();
+           for (ILoggingEvent event : events) {
+               assertThat(event.getFormattedMessage()).doesNotContain(sentinel);
+               assertThat(event.getFormattedMessage()).contains("event=");
+               assertThat(event.getFormattedMessage()).contains("exceptionClass=SafetyViolationException");
+           }
+       }
+       ```
+       Asserts the handler logs `event=...` + `exceptionClass={getClass().getSimpleName()}` only. Plan 05b's GlobalExceptionHandler edits already follow this pattern; this test pins it.
+
+    8. **(HIGH-4 cycle-3 — ChatResponse.toString() ArchUnit ban)** Add to `LlmGatewayBoundaryTest` (or a new `ChatResponseToStringSafetyTest` if cleaner): banned `org.springframework.ai.chat.model.ChatResponse.toString()` calls outside test sources. Implementation via ArchUnit `methodCalls` predicate:
+       ```java
+       @ArchTest
+       static final ArchRule chat_response_to_string_banned_in_production =
+           noClasses().that().resideInAPackage("com.zeromail..")
+               .and().resideOutsideOfPackage("..test..")
+               .should().callMethod(org.springframework.ai.chat.model.ChatResponse.class, "toString")
+               .because("LLM-09: ChatResponse.toString() may serialize prompt/completion content; production code MUST extract metadata explicitly via getMetadata() / getResults() instead.");
+       ```
+       Same shape for `org.springframework.ai.chat.messages.AssistantMessage.toString()` if available in M4.
   </action>
   <verify>
     <automated>./gradlew :backend:core:test --tests "LlmRepositoryContentBanTest" --tests "AllowListedToolsTest" --tests "LogbackScrubExtensionTest" --tests "RequirementsLlm04WordingTest"</automated>
@@ -723,6 +887,10 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
     - Single canonical config namespace: `grep -E "^[^#]*zeromail\." backend/api/src/main/resources/application.yml` returns `0` matches (only `zero-mail.*` permitted; `zeromail.*` (no hyphen) is REVIEWS Codex HIGH drift). Same for worker.
     - YAML merge (REVIEWS HIGH-consensus #5): `grep -c "^zero-mail:" backend/api/src/main/resources/application.yml` returns `1` (NOT 2 — never duplicate top-level keys). Same for `^spring:` returning `1`.
     - File `backend/core/src/test/java/com/zeromail/core/arch/LlmRepositoryContentBanTest.java` exists; `grep -c "prompt\|completion\|messageBody\|apiKey\|decryptedKey" backend/core/src/test/java/com/zeromail/core/arch/LlmRepositoryContentBanTest.java` returns `>= 5` (banned tokens enumerated).
+    - **(HIGH-4 cycle-3 — type-based, not name-based)** `grep -c "getRawParameterTypes\|getRawType\|java.lang.String" backend/core/src/test/java/com/zeromail/core/arch/LlmRepositoryContentBanTest.java` returns `>= 1` (predicate uses parameter TYPES, not parameter NAMES — works without `javac -parameters`).
+    - **(HIGH-4 cycle-3 — span sentinel)** File `backend/core/src/test/java/com/zeromail/core/llm/observability/LlmGatewayObservabilityTest.java` exists; `grep -c "SENTINEL_PROMPT_CONTENT_DO_NOT_LOG_X7Q9" backend/core/src/test/java/com/zeromail/core/llm/observability/LlmGatewayObservabilityTest.java` returns `>= 1`; `grep -c "InMemorySpanExporter" backend/core/src/test/java/com/zeromail/core/llm/observability/LlmGatewayObservabilityTest.java` returns `>= 1`. `./gradlew :backend:core:test --tests "LlmGatewayObservabilityTest"` exits 0.
+    - **(HIGH-4 cycle-3 — global exception handler test)** File `backend/api/src/test/java/com/zeromail/api/config/GlobalExceptionHandlerLogContentTest.java` exists; `grep -c "SENTINEL_EXCEPTION_MESSAGE_NEVER_LOGGED_K8M2" backend/api/src/test/java/com/zeromail/api/config/GlobalExceptionHandlerLogContentTest.java` returns `>= 1`; `./gradlew :backend:api:test --tests "GlobalExceptionHandlerLogContentTest"` exits 0.
+    - **(HIGH-4 cycle-3 — ChatResponse.toString ban)** ArchUnit rule `chat_response_to_string_banned_in_production` (in `LlmGatewayBoundaryTest` or a new `ChatResponseToStringSafetyTest`) is added; `grep -c "ChatResponse.class, \"toString\"" backend/core/src/test/java/com/zeromail/core/arch/` returns `>= 1`. Rule passes today (no production class calls `ChatResponse.toString()`).
     - LLM-04 wording: `grep -c "no server-side persistence" .planning/REQUIREMENTS.md` returns `0` (old wording removed). `grep -c "encrypted-at-rest" .planning/REQUIREMENTS.md` returns `>= 1`.
     - Logback scrub: `grep -E "apiKey|Bearer|x-api-key" backend/api/src/main/resources/logback-spring.xml backend/worker/src/main/resources/logback-spring.xml` returns `>= 3` matches across both files (patterns added).
     - `./gradlew :backend:core:test --tests "AllowListedToolsTest"` exits 0.
@@ -743,7 +911,7 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
 | Boundary | Description |
 |----------|-------------|
 | LlmGateway public interface → Phase 3/4 callers | Public contract; ToolCallback is the single Spring AI type that crosses. |
-| LlmGatewayImpl → Spring AI ChatClient | LlmGatewayImpl is the single class exempted from the ArchUnit pin (HIGH-1 Solution B); all OTHER `core.llm.service` classes are still pinned to use only project-local types. |
+| LlmGatewayImpl → LlmModelClient seam | (HIGH-1 cycle-3) LlmGatewayImpl depends ONLY on the pure-Java LlmModelClient interface. SpringAiLlmModelClient (in core.llm.gateway.springai) is the @Primary impl that owns all Spring AI imports. NO ArchUnit exemption — the rule is strict. |
 | Application boot → ZEROMAIL_LLM_PLATFORM_API_KEY | Fail-fast at Spring context init; missing env var = process refuses to start. |
 | LlmGatewayImpl logs → Logback appenders | Privacy invariant: no email body, prompt, completion, or tool-call args content in any log line. |
 
@@ -751,12 +919,12 @@ Output: 7 production files (interface + impl + 2 model records + 3 springai wiri
 
 | Threat ID | Category | Component | Disposition | Mitigation Plan |
 |-----------|----------|-----------|-------------|-----------------|
-| T-2C-06 | Tampering (direct ChatClient bypass of gateway) | Repo-wide imports | mitigate | Plan 01 ArchUnit `LlmGatewayBoundaryTest` confines `org.springframework.ai..` to `core.llm.gateway.springai`, with a narrow `areNotAssignableTo(LlmGatewayImpl.class)` exemption (HIGH-1 Solution B — see Plan 01 T-2C-06-exemption row for full rationale). The exemption is one class only; any OTHER class in `core.llm.service` that imports a Spring AI type still fails the rule. |
+| T-2C-06 | Tampering (direct ChatClient bypass of gateway) | Repo-wide imports | mitigate | **(HIGH-1 cycle-3 fix — STRICT)** Plan 01 ArchUnit `LlmGatewayBoundaryTest` confines `org.springframework.ai..` to `core.llm.gateway.springai`. NO exemption. The pure-Java `LlmModelClient` seam (Plan 01 step 8b) + `SpringAiLlmModelClient` adapter (Task 2 step 0) make the strict rule pass — `LlmGatewayImpl` no longer needs any Spring AI import. Both reviewers (Codex + OpenCode) rejected the cycle-1/cycle-2 narrowed exemption as a documented waiver of LLM-01. |
 | T-2C-05 | Information Disclosure (PII / body / prompt / completion in logs / spans / DB) | LlmGatewayImpl + application.yml | mitigate | Privacy log lines emit `event=llm_call_{started,succeeded,failed} tenantId={} callSite={} provider={} model={} latencyMs={} promptTokens={} completionTokens={} stopReason={} truncated={}` — metadata only (D-I1). Spring AI `chat.client.observations.log-prompt: false` + `log-completion: false` pinned in BOTH api + worker yml (D-I5). LlmGatewayPlatformPathTest asserts log lines contain no input/output bytes. |
 | T-2C-secret-leak-on-boot | Information Disclosure | application.yml | mitigate | `ZEROMAIL_LLM_PLATFORM_API_KEY:?<message>` fail-fast — missing env var halts boot with a clear error referring to the deployment secret source (Docker secret / systemd credential / env file). Mirror of REFRESH_TOKEN_KEY_BASE64 pattern from Phase 1.5. |
 | T-2C-platform-key-cached | Information Disclosure | PlatformApiKey | mitigate | `getValue()` reads from `ZeroMailLlmProperties#apiKey()` per call — no caching at bean construction (D-A1). PlatformApiKeyTest verifies dynamic resolution. |
 | T-2C-cross-tenant-cache-leak | Information Disclosure (T-2C-08) | LlmGatewayImpl singleton | mitigate | LlmGatewayImpl holds NO per-tenant state — `TenantContext.currentOrThrow()` is read PER CALL inside chat(). Singleton ChatClient is the only shared resource, and it dispatches to the dynamic PlatformApiKey on every HTTP send. LlmGatewayMultiTenantLeakTest exercises 100 concurrent virtual-thread calls and asserts no cross-tenant bleed. Per-tenant ChatModel cache deferred per D-A4 — explicitly noted in code comment. |
-| T-2C-tool-callback-exemption | Tampering | LlmGatewayBoundaryTest | mitigate | HIGH-1 Solution B — narrow `areNotAssignableTo(LlmGatewayImpl.class)` exemption on the `org.springframework.ai..` rule (see Plan 01 T-2C-06-exemption row). `LlmGateway` public surface still uses project-local `LlmTool` record (no Spring AI import for Phase 3/4 callers). `ToolTranslator` interface in `core.llm.service` returns `Object` (erased — the impl `SpringAiToolTranslator` in `core.llm.gateway.springai` returns `List<ToolCallback>`); the cast back to `List<ToolCallback>` happens inside `LlmGatewayImpl` only, which is the single exempted class. Acceptance grep: outside `LlmGatewayImpl.java`, NO file in `core.llm.service` may reference `org.springframework.ai..` — `grep -rE "org\.springframework\.ai\." backend/core/src/main/java/com/zeromail/core/llm/service/ | grep -v "LlmGatewayImpl.java"` returns zero matches. |
+| T-2C-pure-java-seam | Tampering | LlmModelClient seam | mitigate | **(HIGH-1 cycle-3)** `LlmGateway` public surface uses project-local `LlmTool` record. `LlmModelClient` interface (in `core.llm.service`) is pure Java — the only methods/types it exposes are `LlmChatRequest` / `LlmChatResult` / `RawToolCall` / `LlmUsage`, all `core.llm.model` records with zero Spring AI imports. `SpringAiLlmModelClient` (in `core.llm.gateway.springai`) is the @Primary impl; BYOK clients (Plan 05a) ship as separate impls in the same `springai` package. Acceptance grep: `grep -rE "org\.springframework\.ai\." backend/core/src/main/java/com/zeromail/core/llm/service/` returns ZERO matches. The cycle-1/cycle-2 `ToolTranslator` workaround is REMOVED. |
 </threat_model>
 
 <verification>

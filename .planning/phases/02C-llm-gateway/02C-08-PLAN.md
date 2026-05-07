@@ -308,7 +308,11 @@ Output: 4 production files in `features/llm/` (api/components/hooks/messages.ts)
 
     5. **(HIGH-2 fix — step deleted)** No JSON hand-authoring step exists. The previous version of this plan hand-authored `vi.json` + `en.json` here, which contradicted steps 4/8/9 (the merge script overwrites whatever is hand-authored). All copy now lives exclusively in `messages.ts` (step 4); the JSON bundles are emitted by `pnpm i18n:build` (step 9) at build time. Skip directly to step 6.
 
-    6. **Modify `apps/web/scripts/check-i18n.ts`** — add the 2 new file paths to `EN_SCAN_FILES` so the strict i18n parity check covers them:
+    6. **Modify `apps/web/scripts/check-i18n.ts`** — **(MEDIUM cycle-3 i18n protection-test scope clarification)** The two i18n scripts run in DIFFERENT scopes and must not be confused:
+       - `merge-feature-i18n.ts` (this plan step 8) — read scope is `apps/web/features/**/messages.ts`; write scope is `apps/web/i18n/messages/{vi,en}.json`. Erase-protection algorithm preserves any pre-existing JSON keys whose top-level namespace is NOT a feature namespace (e.g., legacy `auth.*`, project-wide `errors.*` not under `errors.llm.*`).
+       - `check-i18n.ts` (this step) — read scope is `EN_SCAN_FILES` (TSX/TS files using `t('...')`); enforces vi/en lock-step parity for keys USED by those files only — does NOT scan the whole `i18n/messages/*.json` for orphan keys.
+
+       Add the 2 new file paths to `EN_SCAN_FILES` so the strict parity check covers them:
        - `apps/web/features/llm/components/ByokForm.tsx`
        - `apps/web/app/(protected)/settings/page.tsx` (if not already in the array — verify via Phase 1.3 P07 baseline; if already present from a prior plan, skip)
 

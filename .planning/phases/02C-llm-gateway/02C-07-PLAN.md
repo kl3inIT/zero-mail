@@ -21,7 +21,7 @@ must_haves:
     - "ShedLock @SchedulerLock(name='llmDriftDetectionJob', lockAtLeastFor='PT30S', lockAtMostFor='PT10M') prevents duplicate runs across worker replicas"
     - "Job loads golden-set.json (~20 synthetic, no-PII fixtures) + golden-baseline.json from classpath; calls LlmGateway.driftCheck(prompt) per fixture; compares (action, args) against baseline"
     - "Drift comparison: action mismatch → drift; argsJson Levenshtein > 20% → drift. Privacy log: event=drift_check_run total={} drifted={} (no per-fixture content, no per-fixture id even if id is non-PII — keep aggregate only)"
-    - "Two CI mock tests pass: (a) MockBean ChatModel returns baseline outputs verbatim → driftCount == 0; (b) MockBean ChatModel returns mutated outputs → driftCount > 0"
+    - "Two CI mock tests pass: (a) MockBean LlmGateway (NOT ChatModel — REVIEWS MEDIUM cycle-3 consistency: must_haves text matches the action steps that already mock LlmGateway) returns baseline outputs verbatim -> driftCount == 0; (b) MockBean LlmGateway returns mutated outputs -> driftCount > 0"
     - "Golden-set fixtures contain ZERO real PII: synthesized addresses (alice@example.com), invented subjects, no real company names, no real human names — fully synthetic per CONTEXT D-H1 + AI-SPEC privacy contract"
     - "Job runs even when enabled=false in tests via direct method call (DriftDetectionJob.run()); the @Scheduled trigger only fires when the flag flips"
     - "LlmGateway.driftCheck(prompt) is the call entry — Plan 06 confirmed it bypasses the ledger (D-E3); pinned to driftModel from ZeroMailLlmProperties"

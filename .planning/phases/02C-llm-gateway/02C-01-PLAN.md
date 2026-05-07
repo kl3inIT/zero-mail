@@ -20,7 +20,15 @@ files_modified:
   - backend/core/src/main/java/com/zeromail/core/llm/persistence/TenantByokCredentialsEntity.java
   - backend/core/src/main/java/com/zeromail/core/llm/persistence/TenantByokCredentialsRepository.java
   - backend/core/src/main/java/com/zeromail/core/llm/model/BYOKProvider.java
+  - backend/core/src/main/java/com/zeromail/core/llm/persistence/BYOKProviderAttributeConverter.java
+  - backend/core/src/test/java/com/zeromail/core/llm/persistence/BYOKProviderRoundTripPersistenceTest.java
+  - backend/core/src/test/java/com/zeromail/core/llm/model/BYOKProviderJsonTest.java
   - backend/core/src/main/java/com/zeromail/core/llm/model/LlmTool.java
+  - backend/core/src/main/java/com/zeromail/core/llm/service/LlmModelClient.java
+  - backend/core/src/main/java/com/zeromail/core/llm/model/LlmChatRequest.java
+  - backend/core/src/main/java/com/zeromail/core/llm/model/LlmChatResult.java
+  - backend/core/src/main/java/com/zeromail/core/llm/model/RawToolCall.java
+  - backend/core/src/main/java/com/zeromail/core/llm/model/LlmUsage.java
   - backend/core/src/main/java/com/zeromail/core/llm/gateway/sanitization/SanitizationPipeline.java
   - backend/core/src/main/java/com/zeromail/core/llm/service/LlmGateway.java
   - backend/core/src/main/java/com/zeromail/core/llm/service/ActionValidator.java
@@ -40,9 +48,12 @@ requirements: [LLM-01]
 must_haves:
   truths:
     - "core.llm Spring Modulith package exists with sub-packages model/service/persistence/gateway/springai/gateway/sanitization, all with package-info.java"
-    - "ArchUnit test LlmGatewayBoundaryTest fails any direct ChatClient or vendor SDK import outside core.llm.gateway.springai"
+    - "ArchUnit test LlmGatewayBoundaryTest fails any direct ChatClient or vendor SDK import outside core.llm.gateway.springai — STRICT, no areNotAssignableTo exemption (HIGH-1 cycle-3 fix)"
+    - "Pure-Java LlmModelClient seam (in core.llm.service) + LlmChatRequest/LlmChatResult/RawToolCall/LlmUsage records (in core.llm.model) compile with zero org.springframework.ai imports"
     - "Liquibase changeset 018-tenant-byok-credentials.yaml creates tenant_byok_credentials table; included from db.changelog-master.yaml; ./gradlew :backend:core:test runs schema migration successfully via Testcontainers"
     - "TenantByokCredentialsEntity + TenantByokCredentialsRepository + BYOKProvider enum compile and round-trip through Hibernate against the new table"
+    - "BYOKProvider persists as lowercase id ('anthropic' / 'openai-compatible') via BYOKProviderAttributeConverter (NOT @Enumerated.STRING which would persist the constant name and violate the Liquibase check constraint) — HIGH-2 cycle-3 fix"
+    - "BYOKProvider JSON round-trips via @JsonValue (id()) + @JsonCreator (fromId): {\"provider\":\"openai-compatible\"} <-> OPENAI_COMPATIBLE — HIGH-2 cycle-3 fix"
     - "Spring AI library coordinates (spring-ai-bom, spring-ai-starter-model-openai, spring-ai-starter-model-anthropic) and jtokkit 1.1.0 are declared in libs.versions.toml [libraries] block (springAi version already present at line 3); jsoup version is bumped from 1.22.2 to 1.18.3 ONLY IF Context7 confirms 1.22.2 has a regression — otherwise leave 1.22.2 alone"
     - "Wave 0 RED test scaffolds compile (referencing future Plan 02-06 production classes) and fail-by-design with clear assertions until implementations land"
   artifacts:
@@ -340,12 +351,14 @@ From `backend/core/src/main/java/com/zeromail/core/shared/lang/IdentifiedEnum.ja
     - Prompt-injection corpus fixtures (5 .txt files under `src/test/resources/llm/prompt-injection/`) consumed by Plan 02 sanitization tests.
   </behavior>
   <action>
-    1. **Create `backend/core/src/main/java/com/zeromail/core/llm/model/BYOKProvider.java`** per PATTERNS.md "Action.java and BYOKProvider.java":
+    1. **Create `backend/core/src/main/java/com/zeromail/core/llm/model/BYOKProvider.java`** per PATTERNS.md "Action.java and BYOKProvider.java" **PLUS Jackson `@JsonValue` / `@JsonCreator` annotations (HIGH-2 cycle-3 fix — JSON id() ↔ fromId() round-trip):**
        ```java
        package com.zeromail.core.llm.model;
 
        import java.util.NoSuchElementException;
        import java.util.stream.Stream;
+       import com.fasterxml.jackson.annotation.JsonCreator;
+       import com.fasterxml.jackson.annotation.JsonValue;
        import com.zeromail.core.shared.lang.IdentifiedEnum;
 
        public enum BYOKProvider implements IdentifiedEnum {
@@ -354,8 +367,16 @@ From `backend/core/src/main/java/com/zeromail/core/shared/lang/IdentifiedEnum.ja
 
            private final String id;
            BYOKProvider(String id) { this.id = id; }
+
+           // (HIGH-2 cycle-3) @JsonValue makes Jackson serialize the lowercase id "anthropic" / "openai-compatible"
+           // INSTEAD of the enum constant name "ANTHROPIC" / "OPENAI_COMPATIBLE". Pairs with the @JsonCreator below.
+           @JsonValue
            @Override public String id() { return id; }
 
+           // (HIGH-2 cycle-3) @JsonCreator deserializes JSON {"provider":"anthropic"} via fromId fail-loud.
+           // Without this annotation, Jackson would try to match "anthropic" against the constant names ANTHROPIC
+           // / OPENAI_COMPATIBLE and fail. With it, Jackson calls fromId("anthropic") -> ANTHROPIC.
+           @JsonCreator
            public static BYOKProvider fromId(String id) {
                return Stream.of(values())
                        .filter(provider -> provider.id().equals(id))
@@ -365,7 +386,39 @@ From `backend/core/src/main/java/com/zeromail/core/shared/lang/IdentifiedEnum.ja
        }
        ```
 
-    2. **Create `backend/core/src/main/java/com/zeromail/core/llm/persistence/TenantByokCredentialsEntity.java`** mirroring `CreditReservationEntity` shape — extend `AbstractTenantOwnedEntity`, `protected` no-arg ctor, public ctor `(UUID id, UUID tenantId, BYOKProvider provider, String endpoint, byte[] encryptedKey, short keyVersion)`, fields with `@Enumerated(EnumType.STRING) @Column(name="provider", nullable=false, length=32) BYOKProvider provider`, `@Column(name="endpoint", length=512) String endpoint`, `@Column(name="encrypted_key", nullable=false) byte[] encryptedKey`, `@Column(name="key_version", nullable=false) short keyVersion`. **DO NOT redeclare `tenant_id`** — `AbstractTenantOwnedEntity` provides it. Standard getters; mutator `replaceKey(byte[] envelope, short keyVersion)` that updates both fields together. Enterprise-readability variable names — no `req`/`tx`/`ctx`. Per CLAUDE.md no Lombok.
+    1b. **(HIGH-2 cycle-3 fix — JPA AttributeConverter)** Create `backend/core/src/main/java/com/zeromail/core/llm/persistence/BYOKProviderAttributeConverter.java`. The DB check constraint allows only lowercase ids `'anthropic'` and `'openai-compatible'`; default `@Enumerated(EnumType.STRING)` would persist `'ANTHROPIC'` / `'OPENAI_COMPATIBLE'` and violate the check constraint at first insert.
+       ```java
+       package com.zeromail.core.llm.persistence;
+
+       import com.zeromail.core.llm.model.BYOKProvider;
+       import jakarta.persistence.AttributeConverter;
+       import jakarta.persistence.Converter;
+
+       /**
+        * (HIGH-2 cycle-3) Maps BYOKProvider enum to/from its lowercase id() in the DB.
+        * Liquibase 018 check constraint allows only 'anthropic' / 'openai-compatible';
+        * default EnumType.STRING would persist the constant name and violate the check.
+        *
+        * <p>NOT autoApply (autoApply=false) — explicit @Convert on the entity field keeps
+        * the mapping local to BYOK (no risk of accidentally rewriting other enum mappings).
+        */
+       @Converter(autoApply = false)
+       public class BYOKProviderAttributeConverter
+               implements AttributeConverter<BYOKProvider, String> {
+
+           @Override
+           public String convertToDatabaseColumn(BYOKProvider provider) {
+               return provider == null ? null : provider.id();
+           }
+
+           @Override
+           public BYOKProvider convertToEntityAttribute(String dbColumn) {
+               return dbColumn == null ? null : BYOKProvider.fromId(dbColumn);
+           }
+       }
+       ```
+
+    2. **Create `backend/core/src/main/java/com/zeromail/core/llm/persistence/TenantByokCredentialsEntity.java`** mirroring `CreditReservationEntity` shape — extend `AbstractTenantOwnedEntity`, `protected` no-arg ctor, public ctor `(UUID id, UUID tenantId, BYOKProvider provider, String endpoint, byte[] encryptedKey, short keyVersion)`, fields with **(HIGH-2 cycle-3)** `@Convert(converter = BYOKProviderAttributeConverter.class) @Column(name="provider", nullable=false, length=32) BYOKProvider provider` — DO NOT use `@Enumerated(EnumType.STRING)` (would persist `ANTHROPIC` / `OPENAI_COMPATIBLE` and violate the lowercase-id Liquibase check constraint), `@Column(name="endpoint", length=512) String endpoint`, `@Column(name="encrypted_key", nullable=false) byte[] encryptedKey`, `@Column(name="key_version", nullable=false) short keyVersion`. **DO NOT redeclare `tenant_id`** — `AbstractTenantOwnedEntity` provides it. Standard getters; mutator `replaceKey(byte[] envelope, short keyVersion)` that updates both fields together. Enterprise-readability variable names — no `req`/`tx`/`ctx`. Per CLAUDE.md no Lombok.
 
     3. **Create `backend/core/src/main/java/com/zeromail/core/llm/persistence/TenantByokCredentialsRepository.java`** (9-line shape per PATTERNS.md):
        ```java
@@ -380,17 +433,30 @@ From `backend/core/src/main/java/com/zeromail/core/shared/lang/IdentifiedEnum.ja
        }
        ```
 
-    4. **Create `backend/core/src/test/java/com/zeromail/core/arch/LlmGatewayBoundaryTest.java`** with 3 ArchUnit `@Test` methods (per PATTERNS.md "LlmGatewayBoundaryTest.java" section):
-       - `spring_ai_only_in_gateway_springai` — narrow exemption for `LlmGatewayImpl` only (HIGH-1 Solution B — see Plan 03 step 7 for justification): `noClasses().that().resideOutsideOfPackage("..core.llm.gateway.springai..").and().areNotAssignableTo(com.zeromail.core.llm.service.LlmGatewayImpl.class).should().dependOnClassesThat().resideInAnyPackage("org.springframework.ai..").because("LLM-01: Spring AI imports confined to gateway.springai; LlmGatewayImpl exempted because Spring AI 2.0.0-M4 tool-call inspection API (AssistantMessage.ToolCall.name() / .arguments()) must be readable by the Layer-2 ActionValidator path — moving that into springai would put safety logic next to vendor SDK code; the exemption is narrowed to a single class via areNotAssignableTo")`
-       - `vendor_sdks_only_in_gateway_springai` — same narrow-exemption shape, packages `"com.openai..", "com.anthropic.."` (LlmGatewayImpl exempted on the same grounds — vendor-SDK-derived ChatResponse subtypes flow through tool-call parsing)
-       - `jsoup_and_jtokkit_only_in_gateway_sanitization` — strict, no exemption: `noClasses().that().resideOutsideOfPackage("..core.llm.gateway.sanitization..").should().dependOnClassesThat().resideInAnyPackage("org.jsoup..", "com.knuddels.jtokkit..")`
-       Each rule includes `.because("LLM-01: ...")` clause documenting the exemption rationale where applicable.
+    4. **Create `backend/core/src/test/java/com/zeromail/core/arch/LlmGatewayBoundaryTest.java`** with 3 ArchUnit `@Test` methods (per PATTERNS.md "LlmGatewayBoundaryTest.java" section). **(HIGH-1 cycle-3 fix — STRICT, NO EXEMPTION)** All three rules are strict; the `LlmModelClient` seam (pure Java) and `SpringAiLlmModelClient` adapter (Spring AI imports inside `core.llm.gateway.springai`) make `LlmGatewayImpl` Spring-AI-clean — there is no longer any class to exempt.
+       - `spring_ai_only_in_gateway_springai` — `noClasses().that().resideOutsideOfPackage("..core.llm.gateway.springai..").should().dependOnClassesThat().resideInAnyPackage("org.springframework.ai..").because("LLM-01: Spring AI imports MUST be confined to core.llm.gateway.springai. LlmGatewayImpl depends only on the pure-Java LlmModelClient seam; SpringAiLlmModelClient (in core.llm.gateway.springai) is the single adapter that imports Spring AI types. NO EXEMPTION.")`
+       - `vendor_sdks_only_in_gateway_springai` — same strict shape, packages `"com.openai..", "com.anthropic.."`
+       - `jsoup_and_jtokkit_only_in_gateway_sanitization` — strict: `noClasses().that().resideOutsideOfPackage("..core.llm.gateway.sanitization..").should().dependOnClassesThat().resideInAnyPackage("org.jsoup..", "com.knuddels.jtokkit..")`
+       **Acceptance grep (cycle-3):** `grep -c "areNotAssignableTo" backend/core/src/test/java/com/zeromail/core/arch/LlmGatewayBoundaryTest.java` returns `0` — the cycle-1/cycle-2 exemption is removed. Each rule includes `.because("LLM-01: ...")` clause.
 
     5. **Modify `backend/core/src/test/java/com/zeromail/core/arch/DomainBoundaryArchTests.java`** per PATTERNS.md S-9: add a 5th rule `llm_no_cross_domain_repos` (mirror billing rule shape) AND append `..core.llm.persistence..` to every existing rule's `resideInAnyPackage(...)` cross-domain array (account/onboarding/gmail/tenant/billing all need to deny `..core.llm.persistence..` repos).
 
     6. **Create `backend/core/src/test/java/com/zeromail/core/llm/persistence/TenantByokCredentialsPersistenceWave0Test.java`** as a `PostgresContainerTest`-extending integration test:
        - `@Test void persists_and_finds_by_tenant_id()` — saves a `TenantByokCredentialsEntity(UUID.randomUUID(), tenantId, BYOKProvider.ANTHROPIC, null, new byte[]{0,1,2,3, ... 32 bytes}, (short)1)` via repository, then `findByTenantId(tenantId)` returns it; asserts encrypted_key is the exact byte array (via JdbcTemplate raw read to confirm BYTEA round-trip).
        - `@Test void rejects_second_byok_for_same_tenant()` — saves first row, attempts second save with same tenantId, asserts `DataIntegrityViolationException` (UNIQUE constraint).
+
+    6b. **(HIGH-2 cycle-3 fix — provider id round-trip persistence test)** Create `backend/core/src/test/java/com/zeromail/core/llm/persistence/BYOKProviderRoundTripPersistenceTest.java` extending `PostgresContainerTest`. Two parameterized cases (one per provider id) prove the AttributeConverter writes the lowercase id the check constraint expects and Hibernate reads it back as the right enum:
+       - `@ParameterizedTest @EnumSource(BYOKProvider.class) void persists_lowercase_id_and_reads_back_enum(BYOKProvider provider)`:
+         - Save `new TenantByokCredentialsEntity(UUID.randomUUID(), tenantId, provider, providerEndpoint(provider), bytes32, (short)1)`.
+         - Assert no exception (i.e., DB check `provider IN ('anthropic','openai-compatible')` accepts the row → AttributeConverter wrote the lowercase id, NOT the constant name).
+         - Use raw JDBC: `jdbcTemplate.queryForObject("SELECT provider FROM tenant_byok_credentials WHERE tenant_id = ?", String.class, tenantId)` returns exactly `provider.id()` (i.e., `"anthropic"` for `ANTHROPIC`, `"openai-compatible"` for `OPENAI_COMPATIBLE`).
+         - `byokRepo.findByTenantId(tenantId).orElseThrow().getProvider()` returns the original enum constant (round-trip via `convertToEntityAttribute`).
+       - `@Test void enum_constant_name_would_violate_check_constraint_proof()` — direct JDBC `INSERT` with `'ANTHROPIC'` (the constant name, mimicking the broken `@Enumerated(EnumType.STRING)` behavior) MUST throw `DataIntegrityViolationException` from the check constraint. Proves the converter is load-bearing — if a future executor reverts to `@Enumerated`, this test fires.
+
+    6c. **(HIGH-2 cycle-3 fix — JSON id round-trip)** Create `backend/core/src/test/java/com/zeromail/core/llm/model/BYOKProviderJsonTest.java`:
+       - `@Test void serializes_to_lowercase_id()`: `objectMapper.writeValueAsString(BYOKProvider.OPENAI_COMPATIBLE)` returns `"\"openai-compatible\""` (NOT `"\"OPENAI_COMPATIBLE\""`).
+       - `@Test void deserializes_from_lowercase_id()`: `objectMapper.readValue("\"anthropic\"", BYOKProvider.class)` returns `BYOKProvider.ANTHROPIC`.
+       - `@Test void round_trips_in_request_dto()`: deserialize `{"provider":"openai-compatible","endpoint":"https://x","apiKey":"k"}` into a small test record carrying `BYOKProvider provider`; assert `provider == OPENAI_COMPATIBLE`. (Plan 05b adds the equivalent assertion at the controller-integration layer.)
 
     7. **Create stub interfaces for Wave 0 compile-safety (M-7).** These empty contracts make `@Disabled` Wave 0 tests *compile* without the production implementations from Plans 02-04. Plans 02/03/04 each delete-and-recreate these files as their concrete production classes.
        - `backend/core/src/main/java/com/zeromail/core/llm/gateway/sanitization/SanitizationPipeline.java` — empty marker interface `public interface SanitizationPipeline { com.zeromail.core.llm.model.SanitizationContext sanitize(String rawHtml); }`. Plan 02 deletes this file and ships the concrete `@Service class SanitizationPipeline` injecting `List<Sanitizer>`.
@@ -417,7 +483,119 @@ From `backend/core/src/main/java/com/zeromail/core/shared/lang/IdentifiedEnum.ja
            }
        }
        ```
-       This pairs with `LlmGatewayBoundaryTest#spring_ai_only_in_gateway_springai` — the project-local `LlmTool` record keeps the public `LlmGateway` interface free of Spring AI types, so callers (Phase 3/4) never import `org.springframework.ai..`. The rule retains a narrow `areNotAssignableTo(LlmGatewayImpl.class)` exemption so `LlmGatewayImpl` (the only class in `core.llm.service` that holds a `ChatClient` reference) can read tool-call results — see HIGH-1 Solution B in T-2C-06-exemption.
+       This pairs with `LlmGatewayBoundaryTest#spring_ai_only_in_gateway_springai` — the project-local `LlmTool` record keeps the public `LlmGateway` interface free of Spring AI types, so callers (Phase 3/4) never import `org.springframework.ai..`. **(HIGH-1 cycle-3 fix)** The ArchUnit rule is now STRICT — no `areNotAssignableTo` exemption. `LlmGatewayImpl` no longer imports any Spring AI type; instead it depends on the pure-Java `LlmModelClient` seam introduced in step 8b below. All Spring AI calls live in `core.llm.gateway.springai.SpringAiLlmModelClient`.
+
+    8b. **(HIGH-1 cycle-3 fix — pure-Java seam)** Create the `LlmModelClient` seam types so `LlmGatewayImpl` can speak to a vendor-agnostic Java contract:
+
+       **`backend/core/src/main/java/com/zeromail/core/llm/model/LlmChatRequest.java`** — pure-Java request record (no Spring AI imports):
+       ```java
+       package com.zeromail.core.llm.model;
+       import java.util.List;
+
+       /**
+        * Vendor-neutral chat request crossing the LlmModelClient seam.
+        * @param systemPrompt fixed system prompt (e.g., SystemPrompts.TRIAGE_SYSTEM_PROMPT)
+        * @param userMessage sanitized user content (post Plan 02 pipeline)
+        * @param tools project-local tool descriptors (gateway-owned allow-list)
+        * @param model model id pinned per call site (e.g., "openai/gpt-4o-mini")
+        * @param temperature deterministic by default (0.0 for triage)
+        * @param toolChoiceRequired forces a tool call (Layer 1 safety)
+        */
+       public record LlmChatRequest(
+               String systemPrompt,
+               String userMessage,
+               List<LlmTool> tools,
+               String model,
+               double temperature,
+               boolean toolChoiceRequired) {
+           public LlmChatRequest {
+               java.util.Objects.requireNonNull(systemPrompt, "systemPrompt");
+               java.util.Objects.requireNonNull(userMessage, "userMessage");
+               java.util.Objects.requireNonNull(model, "model");
+               tools = tools == null ? List.of() : List.copyOf(tools);
+           }
+       }
+       ```
+
+       **`backend/core/src/main/java/com/zeromail/core/llm/model/RawToolCall.java`** — pure-Java tool-call record:
+       ```java
+       package com.zeromail.core.llm.model;
+
+       /**
+        * Vendor-neutral tool-call result. functionName + argsJson are exactly what the
+        * model emitted; ActionValidator (Layer 2) parses argsJson and validates functionName.
+        */
+       public record RawToolCall(String functionName, String argsJson) {
+           public RawToolCall {
+               java.util.Objects.requireNonNull(functionName, "functionName");
+               argsJson = argsJson == null ? "{}" : argsJson;
+           }
+       }
+       ```
+
+       **`backend/core/src/main/java/com/zeromail/core/llm/model/LlmUsage.java`** — pure-Java usage record:
+       ```java
+       package com.zeromail.core.llm.model;
+
+       /**
+        * Vendor-neutral token usage + finish reason. Adapter normalizes
+        * Spring AI org.springframework.ai.chat.metadata.Usage into this record.
+        */
+       public record LlmUsage(int promptTokens, int completionTokens, String finishReason) {
+           public LlmUsage {
+               finishReason = finishReason == null ? "unknown" : finishReason;
+           }
+       }
+       ```
+
+       **`backend/core/src/main/java/com/zeromail/core/llm/model/LlmChatResult.java`** — pure-Java result record:
+       ```java
+       package com.zeromail.core.llm.model;
+       import java.util.List;
+
+       /**
+        * Vendor-neutral chat result. toolCalls is empty when the model emitted free text
+        * (LlmGatewayImpl + ActionValidator fail-close on empty tool calls).
+        */
+       public record LlmChatResult(List<RawToolCall> toolCalls, LlmUsage usage) {
+           public LlmChatResult {
+               toolCalls = toolCalls == null ? List.of() : List.copyOf(toolCalls);
+               java.util.Objects.requireNonNull(usage, "usage");
+           }
+       }
+       ```
+
+       **`backend/core/src/main/java/com/zeromail/core/llm/service/LlmModelClient.java`** — pure-Java seam interface; `LlmGatewayImpl` depends only on this. Zero Spring AI imports:
+       ```java
+       package com.zeromail.core.llm.service;
+
+       import com.zeromail.core.llm.model.LlmChatRequest;
+       import com.zeromail.core.llm.model.LlmChatResult;
+
+       /**
+        * Vendor-neutral seam between LlmGatewayImpl (in core.llm.service) and the
+        * Spring AI 2.0.0-M4 adapter (in core.llm.gateway.springai). Pure Java in/out;
+        * no org.springframework.ai imports leak into core.llm.service.
+        *
+        * <p><b>Implementations:</b>
+        * <ul>
+        *   <li>SpringAiLlmModelClient (core.llm.gateway.springai) — platform path,
+        *       singleton ChatClient pointing at OpenRouter via OpenAiApi.</li>
+        *   <li>OpenAiCompatibleByokModelClient + AnthropicByokModelClient
+        *       (core.llm.gateway.springai) — per-call BYOK clients (Plan 05a).</li>
+        * </ul>
+        *
+        * <p><b>Why a seam?</b> Cycle-2 reviewers (Codex + OpenCode) rejected the
+        * areNotAssignableTo(LlmGatewayImpl.class) exemption as a documented waiver of
+        * LLM-01 rather than a fix. This seam keeps Spring AI imports STRICTLY confined
+        * to core.llm.gateway.springai with NO ArchUnit exemption.
+        */
+       public interface LlmModelClient {
+           LlmChatResult call(LlmChatRequest request);
+       }
+       ```
+
+       **Acceptance grep:** `grep -c "org.springframework.ai" backend/core/src/main/java/com/zeromail/core/llm/service/LlmModelClient.java` returns `0`. Same for all four model records.
 
     9. **Create Wave 0 RED test scaffolds** (`@Disabled` to keep the build green; downstream plans remove `@Disabled` and the stub-vs-concrete swap once production classes land):
        - `SanitizationPipelineWave0Test.java` in `backend/core/src/test/java/com/zeromail/core/llm/gateway/sanitization/` — `@SpringBootTest`, autowires `SanitizationPipeline`, asserts `pipeline.sanitize("<script>alert(1)</script>hi").content()` equals `"hi"`. `@Disabled("Plan 02 lands SanitizationPipeline")`.
@@ -438,9 +616,16 @@ From `backend/core/src/main/java/com/zeromail/core/shared/lang/IdentifiedEnum.ja
   </verify>
   <acceptance_criteria>
     - File `backend/core/src/main/java/com/zeromail/core/llm/model/BYOKProvider.java` exists and `grep -c 'implements IdentifiedEnum' backend/core/src/main/java/com/zeromail/core/llm/model/BYOKProvider.java` returns `1`.
+    - **(HIGH-2 cycle-3)** `grep -c '@JsonValue' backend/core/src/main/java/com/zeromail/core/llm/model/BYOKProvider.java` returns `1`; `grep -c '@JsonCreator' backend/core/src/main/java/com/zeromail/core/llm/model/BYOKProvider.java` returns `1`.
+    - **(HIGH-2 cycle-3)** File `backend/core/src/main/java/com/zeromail/core/llm/persistence/BYOKProviderAttributeConverter.java` exists; `grep -c 'implements AttributeConverter<BYOKProvider, String>' backend/core/src/main/java/com/zeromail/core/llm/persistence/BYOKProviderAttributeConverter.java` returns `1`.
+    - **(HIGH-2 cycle-3)** Entity uses `@Convert`, NOT `@Enumerated`: `grep -c '@Convert(converter = BYOKProviderAttributeConverter.class)' backend/core/src/main/java/com/zeromail/core/llm/persistence/TenantByokCredentialsEntity.java` returns `1`; `grep -c '@Enumerated' backend/core/src/main/java/com/zeromail/core/llm/persistence/TenantByokCredentialsEntity.java` returns `0`.
+    - **(HIGH-2 cycle-3)** `./gradlew :backend:core:test --tests "BYOKProviderRoundTripPersistenceTest"` exits 0 — both providers persist as lowercase ids; INSERTing `'ANTHROPIC'` raw violates the check constraint as expected.
+    - **(HIGH-2 cycle-3)** `./gradlew :backend:core:test --tests "BYOKProviderJsonTest"` exits 0 — JSON serializes/deserializes via lowercase id.
     - File `backend/core/src/main/java/com/zeromail/core/llm/persistence/TenantByokCredentialsEntity.java` exists; `grep -c 'extends AbstractTenantOwnedEntity' backend/core/src/main/java/com/zeromail/core/llm/persistence/TenantByokCredentialsEntity.java` returns `1`; `grep -v '^\s*//' backend/core/src/main/java/com/zeromail/core/llm/persistence/TenantByokCredentialsEntity.java | grep -c '@Column(name = "tenant_id"' ` returns `0` (must NOT redeclare tenant_id — parent provides it).
     - File `backend/core/src/main/java/com/zeromail/core/llm/persistence/TenantByokCredentialsRepository.java` exists.
     - File `backend/core/src/test/java/com/zeromail/core/arch/LlmGatewayBoundaryTest.java` exists; `grep -c 'spring_ai_only_in_gateway_springai\|vendor_sdks_only_in_gateway_springai\|jsoup_and_jtokkit_only_in_gateway_sanitization' backend/core/src/test/java/com/zeromail/core/arch/LlmGatewayBoundaryTest.java` returns `3`.
+    - **(HIGH-1 cycle-3)** `grep -c 'areNotAssignableTo' backend/core/src/test/java/com/zeromail/core/arch/LlmGatewayBoundaryTest.java` returns `0` (strict rule, no class exemption).
+    - **(HIGH-1 cycle-3)** Files `LlmModelClient.java` (in `service/`), `LlmChatRequest.java`, `LlmChatResult.java`, `RawToolCall.java`, `LlmUsage.java` (in `model/`) all exist; `grep -rE 'org\.springframework\.ai' backend/core/src/main/java/com/zeromail/core/llm/service/LlmModelClient.java backend/core/src/main/java/com/zeromail/core/llm/model/LlmChatRequest.java backend/core/src/main/java/com/zeromail/core/llm/model/LlmChatResult.java backend/core/src/main/java/com/zeromail/core/llm/model/RawToolCall.java backend/core/src/main/java/com/zeromail/core/llm/model/LlmUsage.java` returns `0` matches.
     - `grep -c 'core.llm.persistence' backend/core/src/test/java/com/zeromail/core/arch/DomainBoundaryArchTests.java` returns `>= 5` (one per existing domain rule + the new llm rule itself).
     - `./gradlew :backend:core:test --tests "LlmGatewayBoundaryTest"` exits 0.
     - `./gradlew :backend:core:test --tests "TenantByokCredentialsPersistenceWave0Test"` exits 0 — schema migrates, both test methods pass.
@@ -471,8 +656,8 @@ From `backend/core/src/main/java/com/zeromail/core/shared/lang/IdentifiedEnum.ja
 
 | Threat ID | Category | Component | Disposition | Mitigation Plan |
 |-----------|----------|-----------|-------------|-----------------|
-| T-2C-06 | Tampering | LlmGatewayBoundaryTest (LLM-01) | mitigate | ArchUnit rule with 3 assertions: `org.springframework.ai..` outside `core.llm.gateway.springai` → fail (narrow `areNotAssignableTo(LlmGatewayImpl.class)` exemption per HIGH-1 Solution B — see sub-row below); `com.openai..`/`com.anthropic..` outside same → fail (same narrow exemption); `org.jsoup..`/`com.knuddels.jtokkit..` outside `core.llm.gateway.sanitization` → fail (strict, no exemption). Test added to Wave 0 so future plans inherit the pin. |
-| T-2C-06-exemption | Tampering | LlmGatewayImpl direct ChatClient bypass | mitigate | LlmGatewayImpl is the single class exempted from `org.springframework.ai..` and vendor-SDK ArchUnit isolation. Justification: Spring AI 2.0.0-M4 tool-call inspection API (`AssistantMessage.ToolCall.name() / .arguments()`) must be readable in the Layer-2 ActionValidator path; moving that into the springai package would weaken the safety boundary by placing tool-call validation next to vendor SDK code. Mitigation: (a) the exemption is narrowed to one class via `.areNotAssignableTo(LlmGatewayImpl.class)`; (b) the exemption is documented in code review checklist; (c) no other class in `core.llm.service` may reference Spring AI types — the test still fails for any such drift; (d) Plan 03/04 grep gates assert no Spring AI references appear in any other `core.llm.service` file. |
+| T-2C-06 | Tampering | LlmGatewayBoundaryTest (LLM-01) | mitigate | **(HIGH-1 cycle-3 fix — STRICT)** ArchUnit rule with 3 assertions: `org.springframework.ai..` outside `core.llm.gateway.springai` → fail (no exemption); `com.openai..`/`com.anthropic..` outside same → fail (no exemption); `org.jsoup..`/`com.knuddels.jtokkit..` outside `core.llm.gateway.sanitization` → fail. Cycle-1/cycle-2 narrowed `areNotAssignableTo(LlmGatewayImpl.class)` exemption is REMOVED; both reviewers (Codex + OpenCode) rejected it as a documented waiver of LLM-01. The pure-Java `LlmModelClient` seam (Plan 01 step 8b) + `SpringAiLlmModelClient` adapter (Plan 03 — moved out of `core.llm.service`) make the strict rule pass without exemption. Test added to Wave 0 so future plans inherit the pin. |
+| T-2C-06-pure-java-seam | Tampering | LlmGatewayImpl ↔ LlmModelClient seam | mitigate | `LlmGatewayImpl` (in `core.llm.service`) depends ONLY on `LlmModelClient` (pure Java) + project-local records (`LlmChatRequest`, `LlmChatResult`, `RawToolCall`, `LlmUsage`, `LlmTool`). The Spring AI `ChatClient`/`ChatResponse`/`ToolCallback`/`OpenAiChatOptions` references live ENTIRELY inside `core.llm.gateway.springai.SpringAiLlmModelClient` (Plan 03). `ActionValidator` (Plan 04) consumes `RawToolCall(functionName, argsJson)` — a pure Java record — so safety logic stays out of the vendor adapter. Acceptance grep across all `core.llm.service` files: `grep -rE "org\.springframework\.ai\." backend/core/src/main/java/com/zeromail/core/llm/service/` returns ZERO matches. |
 | T-2C-spurious-deps | Information Disclosure | gradle/libs.versions.toml | mitigate | jsoup version stays 1.22.2 (already pinned, Phase 1.5 has been on it without CVE). jtokkit 1.1.0 latest stable per RESEARCH.md verified. spring-ai-bom controls transitive Spring AI versions. |
 | T-2C-byok-schema-drift | Tampering | 018-tenant-byok-credentials.yaml | accept | Liquibase changeset with explicit rollback block; UNIQUE constraint enforces "one BYOK per tenant" (D-G1). CHECK constraint pins provider to `{anthropic, openai-compatible}`. Tampering with the changeset would be caught by Liquibase checksum verification at next deployment. |
 | T-2C-byok-key-redeclaration | Information Disclosure | TenantByokCredentialsEntity | mitigate | `AbstractTenantOwnedEntity` provides `@TenantId tenant_id` — entity MUST NOT redeclare it (acceptance criterion). If redeclared, `@TenantId` filter would fail and cross-tenant reads would become possible. ArchUnit + JpaAuditingConfig already enforce this for the rest of the codebase. |

@@ -5,9 +5,9 @@ type: execute
 wave: 5
 depends_on: [01, 03, 04]
 files_modified:
-  - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/BYOKChatModelFactory.java
-  - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/OpenAiCompatibleByokFactory.java
-  - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/AnthropicByokFactory.java
+  - backend/core/src/main/java/com/zeromail/core/llm/service/ByokLlmModelClient.java
+  - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/OpenAiCompatibleByokModelClient.java
+  - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/AnthropicByokModelClient.java
   - backend/core/src/main/java/com/zeromail/core/llm/byok/ByokEndpointValidator.java
   - backend/core/src/main/java/com/zeromail/core/llm/model/InvalidByokException.java
   - backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java
@@ -16,29 +16,29 @@ autonomous: true
 requirements: [LLM-03]
 must_haves:
   truths:
-    - "LlmGatewayImpl.chat() resolves Optional<TenantByokCredentialsEntity> via byokRepo.findByTenantId(tenantId) BEFORE the platform-path call site; if BYOK row exists, the BYOK factory is used and the platform path is skipped"
-    - "BYOKChatModelFactory has 2 implementations: OpenAiCompatibleByokFactory uses per-call OpenAiApi#mutate().apiKey().baseUrl() + OpenAiChatModel#mutate(); AnthropicByokFactory uses per-request AnthropicChatOptions.builder().apiKey().baseUrl() (D-A2 asymmetric seam — RESEARCH lines 13-16)"
+    - "LlmGatewayImpl.chat() resolves Optional<TenantByokCredentialsEntity> via byokRepo.findByTenantId(tenantId) BEFORE the platform-path call site; if BYOK row exists, the matching ByokLlmModelClient is invoked and the platform path is skipped"
+    - "(HIGH-1 cycle-3) ByokLlmModelClient is a pure-Java seam in core.llm.service taking (byte[] decryptedKey, String endpoint, LlmChatRequest); 2 impls in core.llm.gateway.springai: OpenAiCompatibleByokModelClient uses per-call OpenAiApi#mutate().apiKey().baseUrl() + OpenAiChatModel#mutate(); AnthropicByokModelClient uses per-request AnthropicChatOptions.builder().apiKey().baseUrl() (D-A2 asymmetric seam — RESEARCH lines 13-16). LlmGatewayImpl imports NEITHER OpenAiApi NOR AnthropicChatOptions; both adapters return pure-Java LlmChatResult."
     - "ByokEndpointValidator (H-4) is wired into BOTH factories BEFORE client construction; rejects null/non-https/RFC1918/link-local/loopback/metadata-IP/non-vendor-host endpoints; opt-in flag zeromail.llm.byok.allow-non-vendor-endpoints defaults false; rejected message is redacted (no endpoint echo)"
     - "BYOK plaintext key NEVER persists in DB or logs; lives only in the mutate() builder argument or runtime options for the duration of one HTTP call; Arrays.fill best-effort heap zero on the way out"
     - "BYOK call path emits event=llm_byok_call_started/_succeeded with tenantId + provider + model + latencyMs + token counts only; never the decrypted key, endpoint URL, or model output content"
     - "When tenant has BYOK row, gateway call returns ToolCallResult; ledger is NOT touched (verified by Plan 06 negative-path test confirming LLM-04 — BYOK billing skip)"
   artifacts:
-    - path: "backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/BYOKChatModelFactory.java"
-      provides: "Strategy interface — ChatResponse call(byte[] decryptedKey, String endpoint, String model, String userMessage, List<ToolCallback> tools, String toolChoice)"
-    - path: "backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/OpenAiCompatibleByokFactory.java"
-      provides: "@Component implementing BYOKChatModelFactory via OpenAiApi#mutate() seam (D-A2)"
-    - path: "backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/AnthropicByokFactory.java"
-      provides: "@Component implementing BYOKChatModelFactory via AnthropicChatOptions.builder() per-request seam (D-A2 + RESEARCH correction)"
+    - path: "backend/core/src/main/java/com/zeromail/core/llm/service/ByokLlmModelClient.java"
+      provides: "(HIGH-1 cycle-3) Pure-Java seam — LlmChatResult call(byte[] decryptedKey, String endpoint, LlmChatRequest request). Adapters live in core.llm.gateway.springai."
+    - path: "backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/OpenAiCompatibleByokModelClient.java"
+      provides: "(HIGH-1 cycle-3) @Component implementing ByokLlmModelClient via OpenAiApi#mutate() seam (D-A2). Returns pure-Java LlmChatResult."
+    - path: "backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/AnthropicByokModelClient.java"
+      provides: "(HIGH-1 cycle-3) @Component implementing ByokLlmModelClient via AnthropicChatOptions.builder() per-request seam (D-A2 + RESEARCH correction). Returns pure-Java LlmChatResult."
     - path: "backend/core/src/main/java/com/zeromail/core/llm/byok/ByokEndpointValidator.java"
       provides: "@Component SSRF allow-list — validateAnthropic / validateOpenAiCompatible reject metadata-IP / RFC1918 / link-local / loopback / non-HTTPS / non-vendor-host endpoints (H-4)"
     - path: "backend/core/src/main/java/com/zeromail/core/llm/model/InvalidByokException.java"
       provides: "RuntimeException — no content payload; redacted message; mapped to 400 in Plan 05b GlobalExceptionHandler"
   key_links:
     - from: "backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java"
-      to: "TenantByokCredentialsRepository.findByTenantId + RefreshTokenCipher.decrypt + BYOKChatModelFactory.call"
-      via: "BYOK branch inserted at the // Plan 05 modifies here marker"
+      to: "TenantByokCredentialsRepository.findByTenantId + RefreshTokenCipher.decrypt + ByokLlmModelClient.call"
+      via: "BYOK branch inserted at the // Plan 05 modifies here marker; resolves Map<BYOKProvider, ByokLlmModelClient>"
       pattern: "byokRepo\\.findByTenantId"
-    - from: "backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/{OpenAiCompatibleByokFactory,AnthropicByokFactory}.java"
+    - from: "backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/{OpenAiCompatibleByokModelClient,AnthropicByokModelClient}.java"
       to: "backend/core/src/main/java/com/zeromail/core/llm/byok/ByokEndpointValidator.java"
       via: "validator.validate{OpenAiCompatible,Anthropic}(endpoint) called BEFORE building the client (H-4)"
       pattern: "byokEndpointValidator\\.validate"
@@ -89,9 +89,9 @@ Output: 1 strategy interface + 2 asymmetric factory impls + `ByokEndpointValidat
 - OpenAI-compatible BYOK: `OpenAiApi.mutate().apiKey(plaintextApiKey).baseUrl(endpoint).build()` then `chatModel.mutate().openAiApi(derivedApi).build()` then `ChatClient.create(derivedModel)` — per-call, discarded after response.
 - Anthropic BYOK: `AnthropicChatOptions.builder().apiKey(plaintextApiKey).baseUrl(endpoint).model(modelId).build()` passed via `chatClient.prompt().options(...)` — per-request runtime options. (RESEARCH line 15: M4 source confirms `apiKey()` + `baseUrl()` exposed on AnthropicChatOptions; AnthropicApi.mutate() is NOT documented in M4.)
 
-<!-- Validate flow (SPEC #4) -->
-- OpenAI-compatible: `GET ${endpoint}/v1/models` with `Authorization: Bearer ${apiKey}` → expect 200 + `{ data: [{id: "..."}, ...] }`. Use Spring's `RestClient` (or existing equivalent in the codebase).
-- Anthropic: `POST ${endpoint or default}/v1/messages` with `x-api-key: ${apiKey}` + `anthropic-version: 2023-06-01` body `{model, max_tokens: 1, messages: [{role: "user", content: "."}]}` → 200 = valid.
+<!-- Validate flow (SPEC #4) — HIGH-3 cycle-3 endpoint policy: stored endpoint INCLUDES the API version path; validation appends ONLY /models or /messages, NEVER /v1/models or /v1/messages. -->
+- OpenAI-compatible: `GET ${canonicalEndpoint}/models` with `Authorization: Bearer ${apiKey}` → expect 200 + `{ data: [{id: "..."}, ...] }`. Use Spring's `RestClient`. For `https://openrouter.ai/api/v1`, the URL is `https://openrouter.ai/api/v1/models` (NOT `/api/v1/v1/models`).
+- Anthropic: `POST ${canonicalEndpoint}/messages` with `x-api-key: ${apiKey}` + `anthropic-version: 2023-06-01` body `{model, max_tokens: 1, messages: [{role: "user", content: "."}]}` → 200 = valid. Default canonical endpoint for Anthropic is `https://api.anthropic.com/v1` (i.e., includes `/v1`); validation appends `/messages`.
 
 <!-- Plan 03 marker comments inside LlmGatewayImpl -->
 - `// Plan 05 will add: private final TenantByokCredentialsRepository byokRepo; ...`
@@ -113,10 +113,10 @@ Output: 1 strategy interface + 2 asymmetric factory impls + `ByokEndpointValidat
     - .planning/phases/02C-llm-gateway/02C-PATTERNS.md (sections "OpenAiCompatibleByokFactory.java" + "AnthropicByokFactory.java" + "ByokService.java")
   </read_first>
   <behavior>
-    - Test 1 (LlmGatewayByokRoutingTest#byok_row_routes_through_factory_not_platform): seed BYOK row for tenant A with provider=ANTHROPIC + encrypted key; mock AnthropicByokFactory.call() to return a label tool call; mock platform ChatClient (verify `verify(platformChatClient, never()).prompt()`); assert ToolCallResult returned.
-    - Test 2 (LlmGatewayByokRoutingTest#no_byok_row_falls_through_to_platform): no BYOK row; mock platform path returns label; assert platform path was used.
-    - Test 3 (LlmGatewayByokRoutingTest#openai_compat_byok_uses_mutate_seam): seed BYOK with provider=OPENAI_COMPATIBLE + endpoint=`https://together.xyz/v1`; assert OpenAiCompatibleByokFactory.call(decryptedKey, "https://together.xyz/v1", model, ...) was invoked.
-    - Test 4 (LlmGatewayByokRoutingTest#cipher_decrypt_called_with_tenantId_aad): assert RefreshTokenCipher.decrypt(envelopeBytes, tenantIdString) is called exactly once per chat() invocation; the decrypted plaintext byte[] is the argument to factory.call().
+    - Test 1 (LlmGatewayByokRoutingTest#byok_row_routes_through_byok_client_not_platform): seed BYOK row for tenant A with provider=ANTHROPIC + encrypted key; **(HIGH-1 cycle-3)** mock `ByokLlmModelClient` (the qualified `anthropicByokModelClient` bean) to return an `LlmChatResult` carrying `RawToolCall("label", "{}")`; mock `LlmModelClient` (platform) and `verify(platformLlmModelClient, never()).call(any())`; assert ToolCallResult returned.
+    - Test 2 (LlmGatewayByokRoutingTest#no_byok_row_falls_through_to_platform): no BYOK row; mock platform `LlmModelClient` returns label `LlmChatResult`; assert platform path was used.
+    - Test 3 (LlmGatewayByokRoutingTest#openai_compat_byok_uses_mutate_seam): seed BYOK with provider=OPENAI_COMPATIBLE + endpoint=`https://together.xyz/v1`; **(HIGH-1 cycle-3)** assert `openAiCompatibleByokModelClient.call(decryptedKey, "https://together.xyz/v1", capturedRequest)` was invoked exactly once; `capturedRequest.model()` matches the per-call-site pin; `capturedRequest.toolChoiceRequired() == true`.
+    - Test 4 (LlmGatewayByokRoutingTest#cipher_decrypt_called_with_tenantId_aad): assert RefreshTokenCipher.decrypt(envelopeBytes, tenantIdString) is called exactly once per chat() invocation; the decrypted plaintext byte[] is the argument to `ByokLlmModelClient.call(decryptedKey, ...)`.
     - Test 5 (LlmGatewayByokRoutingTest#byok_path_does_not_log_key_bytes): captured ListAppender contains no byte sequence matching the plaintext key; log lines emit `event=llm_byok_call_started tenantId={} provider={} model={}` only.
     - Test 7 (ByokEndpointValidatorTest#rejects_metadata_ip): `validator.validateOpenAiCompatible("http://169.254.169.254/v1")` throws `InvalidByokException`.
     - Test 8 (ByokEndpointValidatorTest#rejects_rfc1918): `validator.validateOpenAiCompatible("https://10.0.0.5/v1")` throws.
@@ -125,13 +125,13 @@ Output: 1 strategy interface + 2 asymmetric factory impls + `ByokEndpointValidat
     - Test 11 (ByokEndpointValidatorTest#anthropic_default_when_null): `validator.validateAnthropic(null)` returns `"https://api.anthropic.com"`.
     - Test 12 (ByokEndpointValidatorTest#anthropic_rejects_non_vendor_host): `validator.validateAnthropic("https://example.com")` throws.
     - Test 13 (ByokEndpointValidatorTest#openai_compat_accepts_with_operator_opt_in): with `zeromail.llm.byok.allow-non-vendor-endpoints=true`, `validator.validateOpenAiCompatible("https://together.xyz/v1")` returns the URL unchanged.
-    - Test 6 (LlmGatewayByokRoutingTest#multitenant_no_key_leak): 100 concurrent virtual-thread calls, 50 tenants with BYOK row + 50 without; mock factories echo bound tenantId in args; assert no cross-tenant leak (mirror of Plan 03 leak-test pattern).
+    - Test 6 (LlmGatewayByokRoutingTest#multitenant_no_key_leak): 100 concurrent virtual-thread calls, 50 tenants with BYOK row + 50 without; **(HIGH-1 cycle-3)** mock `ByokLlmModelClient` and platform `LlmModelClient` echo bound tenantId via `RawToolCall("label", "{\"boundTenantId\":\"...\"}")`; assert no cross-tenant leak (mirror of Plan 03 leak-test pattern).
   </behavior>
   <action>
     1. **(H-4 + REVIEWS divergent — Codex HIGH "SSRF depth")** Create `backend/core/src/main/java/com/zeromail/core/llm/byok/ByokEndpointValidator.java` — SSRF allow-list validator that runs BEFORE either factory builds a client. Closes the surface where a user could paste a BYOK endpoint pointing at the cloud metadata IP (`169.254.169.254`), an RFC1918 IP (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), link-local (`169.254.0.0/16`), or loopback (`127.0.0.0/8`, `::1`).
 
        Required behavior (REVIEWS Codex HIGH SSRF depth list adopted):
-       - Null / blank endpoint → return the provider-default URL: Anthropic = `https://api.anthropic.com`, OpenAI-compatible = `https://api.openai.com`, OpenRouter = `https://openrouter.ai/api/v1`. Do NOT throw on null — fall back to the SDK default.
+       - Null / blank endpoint → return the provider-default URL **including the version path** per the HIGH-3 cycle-3 policy: Anthropic = `https://api.anthropic.com/v1`, OpenAI = `https://api.openai.com/v1`, OpenRouter = `https://openrouter.ai/api/v1`. Do NOT throw on null — fall back to the canonical default. Validation later appends ONLY `/models` (OpenAI-compat) or `/messages` (Anthropic) — NEVER `/v1/models` or `/v1/messages`.
        - **REQUIRE HTTPS** (REVIEWS Codex HIGH): non-`https` scheme → throw `InvalidByokException` with redacted message (no endpoint echo in the exception).
        - **Reject userinfo, query, fragment** (REVIEWS Codex HIGH): the URI must NOT contain a userinfo segment (e.g., `https://user:pass@host`), query string, or fragment — these can mask the real authority. Reject any of these.
        - **Resolve DNS and reject private/link-local/loopback/metadata addresses** (REVIEWS Codex HIGH): use `InetAddress.getAllByName(host)` and reject if ANY resolved address falls into RFC1918, link-local, loopback, or the AWS/GCP metadata IP `169.254.169.254`. This blocks DNS-based bypass where a public hostname resolves to an internal IP.
@@ -140,7 +140,7 @@ Output: 1 strategy interface + 2 asymmetric factory impls + `ByokEndpointValidat
          - Anthropic provider: host MUST be `api.anthropic.com` or end with `.anthropic.com` (exact-suffix match per above).
          - OpenAI-compatible provider: host MUST end with `.openai.com` (e.g., `api.openai.com`) OR equal `openrouter.ai` (or end with `.openrouter.ai`) OR appear in a `zero-mail.llm.byok.allowed-extra-hosts` config list (operator-managed). For self-hosted dev (vLLM, Together.ai, Fireworks), gate on operator opt-in flag `zero-mail.llm.byok.allow-non-vendor-endpoints=false` (default `false`); when `true`, accept any HTTPS public-IP host (still subject to DNS-private-IP rejection).
        - **DNS rebinding mitigation** (REVIEWS Codex HIGH): when factories build the per-call client, re-resolve the host on each call (do NOT cache the resolved IP). The validator returns the canonical URL string; the resolution happens implicitly inside Spring's RestClient on each outbound call.
-       - **Endpoint path normalization** (REVIEWS divergent — Codex HIGH "OpenAI-compatible endpoint path"): the STORED endpoint includes the version path (e.g., `https://openrouter.ai/api/v1`); BYOK validate calls (Plan 05b) use `${endpoint}/models` (NOT `${endpoint}/v1/models`). The validator returns the canonicalized URL string with NO trailing slash; ByokService appends `/models` (OpenAI-compat) or `/messages` (Anthropic). Document with code comment + acceptance test.
+       - **Endpoint path normalization (HIGH-3 cycle-3 lock)**: the STORED endpoint includes the version path (e.g., `https://openrouter.ai/api/v1`, `https://api.anthropic.com/v1`); BYOK validate calls (Plan 05b) use `${canonicalEndpoint}/models` (OpenAI-compat) or `${canonicalEndpoint}/messages` (Anthropic) — NEVER `${endpoint}/v1/models` or `${endpoint}/v1/messages`. The validator returns the canonicalized URL string with NO trailing slash AND with version path included. **Strip any single trailing `/`** (`endpoint.replaceAll("/+$", "")`) so `https://openrouter.ai/api/v1/` and `https://openrouter.ai/api/v1` both canonicalize to `https://openrouter.ai/api/v1`. **Acceptance tests in Plan 05b**: `openrouter_validate_does_not_double_prefix_v1` (asserts captured outbound URL is exactly `https://openrouter.ai/api/v1/models`, NOT `.../v1/v1/models`) AND `openai_validate_uses_v1_models` (asserts `https://api.openai.com/v1/models`).
        - On rejection, log `event=byok_validate_failed tenantId={} provider={} reason=endpoint_rejected` (D-I2 — no endpoint URL echoed; reason is opaque tag).
        - **Outbound timeouts** (REVIEWS MEDIUM — Codex): when the validator's caller (ByokService) issues the upstream probe, it MUST set explicit connect/read timeouts (5s / 15s default; see application.yml `zero-mail.llm.byok.{connect,read}-timeout` from Plan 03 step 5). The validator itself does NOT issue HTTP — it validates URL shape + DNS only. The DNS resolution call should bound itself via `InetAddress.getAllByName(host)` with a reasonable JVM-level timeout (or wrap in `CompletableFuture.supplyAsync(...).orTimeout(2, SECONDS)` if precision matters).
 
@@ -148,43 +148,47 @@ Output: 1 strategy interface + 2 asymmetric factory impls + `ByokEndpointValidat
 
     8. **Create `backend/core/src/main/java/com/zeromail/core/llm/model/InvalidByokException.java`** — mirror SafetyViolationException shape; no message constructor; carries no content. Two-line class, public no-arg ctor only. Used by ByokService when validate fails or save is attempted before validate.
 
-    2. **Create `backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/BYOKChatModelFactory.java`** — strategy interface:
+    2. **(HIGH-1 cycle-3) Create `backend/core/src/main/java/com/zeromail/core/llm/service/ByokLlmModelClient.java`** — pure-Java seam interface in `core.llm.service` (NOT `gateway.springai`); zero Spring AI imports:
        ```java
-       package com.zeromail.core.llm.gateway.springai;
-       import java.util.List;
-       import org.springframework.ai.chat.model.ChatResponse;
-       import org.springframework.ai.tool.ToolCallback;
+       package com.zeromail.core.llm.service;
 
-       public interface BYOKChatModelFactory {
-           ChatResponse call(byte[] decryptedKey, String endpoint, String model,
-                             String userMessage, List<ToolCallback> tools,
-                             String toolChoice);   // "required"
+       import com.zeromail.core.llm.model.LlmChatRequest;
+       import com.zeromail.core.llm.model.LlmChatResult;
+
+       /**
+        * Pure-Java seam for per-call BYOK clients. Implementations live in
+        * core.llm.gateway.springai (OpenAiCompatibleByokModelClient, AnthropicByokModelClient).
+        * Differs from LlmModelClient by carrying the per-request decrypted key + endpoint;
+        * platform LlmModelClient carries no per-request secrets (singleton ApiKey bean).
+        */
+       public interface ByokLlmModelClient {
+           LlmChatResult call(byte[] decryptedKey, String endpoint, LlmChatRequest request);
        }
        ```
-       Single signature for both providers per D-A3 — implementation strategy differs internally per provider.
 
-    3. **Create `backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/OpenAiCompatibleByokFactory.java`** — `@Component implements BYOKChatModelFactory`. Per D-A2: per-call `OpenAiApi#mutate().apiKey(new SimpleApiKey(new String(decryptedKey, UTF_8))).baseUrl(endpoint).build()` then `chatModel.mutate().openAiApi(derivedApi).build()` then `ChatClient.create(derivedModel)`. Wrap call in try-finally that nulls local refs to encourage GC of the plaintext key. The factory injects the parent `OpenAiChatModel` bean (from Plan 03's `PlatformChatClientConfig.platformOpenAiChatModel`).
-       
+    3. **(HIGH-1 cycle-3) Create `backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/OpenAiCompatibleByokModelClient.java`** — `@Component implements ByokLlmModelClient`. Per D-A2: per-call `OpenAiApi#mutate().apiKey(new SimpleApiKey(new String(decryptedKey, UTF_8))).baseUrl(endpoint).build()` then `chatModel.mutate().openAiApi(derivedApi).build()` then `ChatClient.create(derivedModel)`. Build per-call `OpenAiChatOptions` honoring `request.model()` + `request.temperature()` + `request.toolChoiceRequired()` (sets `toolChoice("required")` + `internalToolExecutionEnabled(false)` — H-5 lock at adapter). Translate `request.tools()` to `List<ToolCallback>` internally. Returns pure-Java `LlmChatResult` via the same `toLlmChatResult(...)` helper as `SpringAiLlmModelClient`. Wrap call in try-finally that nulls local refs to encourage GC of the plaintext key. The adapter injects the parent `OpenAiChatModel` bean (from Plan 03's `PlatformChatClientConfig.platformOpenAiChatModel`).
+
        Variable names: `decryptedKey` (not `key`), `derivedApi` (not `api`), `derivedModel` (not `m`). No Lombok.
 
-    4. **Create `backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/AnthropicByokFactory.java`** — `@Component implements BYOKChatModelFactory`. Per RESEARCH correction line 15: use `AnthropicChatOptions.builder().apiKey(new String(decryptedKey, UTF_8)).baseUrl(endpoint).model(model).toolChoice(/* AnthropicChatOptions tool-choice ANY */).build()`, pass via `parentAnthropicChatClient.prompt().options(perCallOptions).user(userMessage).toolCallbacks(tools).call().chatResponse()`. Verify exact M4 names via Context7 query `/spring-projects/spring-ai` "AnthropicChatOptions builder apiKey baseUrl 2.0.0-M4".
+    4. **(HIGH-1 cycle-3) Create `backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/AnthropicByokModelClient.java`** — `@Component implements ByokLlmModelClient`. Per RESEARCH correction line 15: build `AnthropicChatOptions.builder().apiKey(new String(decryptedKey, UTF_8)).baseUrl(endpoint).model(request.model()).toolChoice(/* AnthropicChatOptions tool-choice ANY */).build()`; call via `parentAnthropicChatClient.prompt().options(perCallOptions).system(request.systemPrompt()).user(request.userMessage()).toolCallbacks(translatedTools).call().chatResponse()`; convert to `LlmChatResult` via shared helper. Verify exact M4 names via Context7 query `/spring-projects/spring-ai` "AnthropicChatOptions builder apiKey baseUrl 2.0.0-M4".
 
-    5. **Modify `backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java`** at the `// Plan 05 modifies here` markers:
+    5. **Modify `backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java`** at the `// Plan 05 modifies here` markers. **(HIGH-1 cycle-3) ZERO Spring AI imports stay in this file**:
        
-       (a) Add fields + constructor params:
+       (a) Add fields + constructor params (all pure-Java types):
        ```java
        private final TenantByokCredentialsRepository byokRepo;
        private final RefreshTokenCipher refreshTokenCipher;
-       private final OpenAiCompatibleByokFactory openAiCompatByokFactory;
-       private final AnthropicByokFactory anthropicByokFactory;
+       private final ByokLlmModelClient openAiCompatibleByokModelClient;   // resolved by @Qualifier
+       private final ByokLlmModelClient anthropicByokModelClient;          // resolved by @Qualifier
        ```
+       Inject by Spring `@Qualifier("openAiCompatibleByokModelClient")` / `@Qualifier("anthropicByokModelClient")` — the bean names match the `@Component` class names so disambiguation is automatic. (Alternative: inject `Map<BYOKProvider, ByokLlmModelClient>` keyed by provider id; pick whichever the executor finds clearer.)
        
        (b) Inside `chat()`, after `SanitizationContext sanitized = sanitizationPipeline.sanitize(rawHtml);` and `List<LlmTool> tools = allowListedTools.tools();`, add the BYOK branch BEFORE the platform-path call. **REVIEWS HIGH-consensus #2: tools come from gateway-owned `AllowListedTools` provider (Plan 03), NOT from caller.**
        ```java
        Optional<TenantByokCredentialsEntity> byok = byokRepo.findByTenantId(tenantId);
        if (byok.isPresent()) {
            // BYOK path — Plan 06 will skip credit ledger here per LLM-04
-           return callViaByokFactory(byok.get(), sanitized, callSite, tools);
+           return callViaByokModelClient(byok.get(), sanitized, callSite, tools);
        }
        // Plan 06 will add: ReservationId reservation = creditLedger.reserve(tenantId, callSite);
        // try {
@@ -195,17 +199,17 @@ Output: 1 strategy interface + 2 asymmetric factory impls + `ByokEndpointValidat
        // [existing platform path from Plan 03 unchanged]
        ```
        
-       (c) Add private helper. Note: the `List<ToolCallback>` parameter type is permitted because `callViaByokFactory` is a method on `LlmGatewayImpl`, which is the single class exempted from the ArchUnit rule per HIGH-1 Solution B (see Plan 01 T-2C-06-exemption row). The `tools` list reaches this method via the cast in `chat()` body.
+       (c) Add private helper using only pure-Java types — NO `ToolCallback`, NO `ChatResponse`, NO Spring AI imports:
        ```java
-       private ToolCallResult callViaByokFactory(TenantByokCredentialsEntity byokRow,
-                                                 SanitizationContext sanitized,
-                                                 CallSite callSite,
-                                                 List<ToolCallback> tools) {
+       private ToolCallResult callViaByokModelClient(TenantByokCredentialsEntity byokRow,
+                                                     SanitizationContext sanitized,
+                                                     CallSite callSite,
+                                                     List<LlmTool> tools) {
            UUID tenantId = byokRow.getTenantId();
            String model = llmProperties.modelByCallSite().get(callSite);
-           BYOKChatModelFactory factory = switch (byokRow.getProvider()) {
-               case ANTHROPIC -> anthropicByokFactory;
-               case OPENAI_COMPATIBLE -> openAiCompatByokFactory;
+           ByokLlmModelClient client = switch (byokRow.getProvider()) {
+               case ANTHROPIC -> anthropicByokModelClient;
+               case OPENAI_COMPATIBLE -> openAiCompatibleByokModelClient;
            };
            byte[] decryptedKey = refreshTokenCipher.decrypt(byokRow.getEncryptedKey(), tenantId.toString());
            try {
@@ -213,24 +217,24 @@ Output: 1 strategy interface + 2 asymmetric factory impls + `ByokEndpointValidat
                log.info("event=llm_byok_call_started tenantId={} provider={} model={}",
                        tenantId, byokRow.getProvider(), model);
 
-               ChatResponse chatResponse = factory.call(
-                       decryptedKey,
-                       byokRow.getEndpoint(),
-                       model,
+               LlmChatRequest request = new LlmChatRequest(
+                       SystemPrompts.TRIAGE_SYSTEM_PROMPT,
                        sanitized.content(),
                        tools,
-                       "required");
+                       model,
+                       0.0,
+                       true);
+               LlmChatResult result = client.call(decryptedKey, byokRow.getEndpoint(), request);
 
-               ToolCallResult result = parseToolCall(chatResponse);   // Same Plan 04 validator path
+               ToolCallResult toolCallResult = parseToolCall(result);   // Same Plan 04 validator path
 
                long latencyMs = (System.nanoTime() - startNanos) / 1_000_000;
-               Usage usage = chatResponse.getMetadata().getUsage();
+               LlmUsage usage = result.usage();
                log.info("event=llm_byok_call_succeeded tenantId={} provider={} latencyMs={} promptTokens={} completionTokens={} stopReason={} truncated={}",
                        tenantId, byokRow.getProvider(), latencyMs,
-                       usage.getPromptTokens(), usage.getGenerationTokens(),
-                       chatResponse.getResults().get(0).getMetadata().getFinishReason(),
-                       sanitized.truncated());
-               return result;
+                       usage.promptTokens(), usage.completionTokens(),
+                       usage.finishReason(), sanitized.truncated());
+               return toolCallResult;
            } finally {
                // Best-effort plaintext zero — JVM may have copies in interned String pool if cipher
                // returned String, but byte[] heap reference becomes unreachable after this method.
@@ -238,18 +242,18 @@ Output: 1 strategy interface + 2 asymmetric factory impls + `ByokEndpointValidat
            }
        }
        ```
-       Variable names: `byokRow` (not `b`/`row`), `decryptedKey` (not `key`), `chatResponse` (not `resp`).
+       Variable names: `byokRow` (not `b`/`row`), `decryptedKey` (not `key`), `toolCallResult` (not `result`).
 
-    6. **Create `backend/core/src/test/java/com/zeromail/core/llm/service/LlmGatewayByokRoutingTest.java`** — `@SpringBootTest` with `@MockBean BYOKChatModelFactory` (both impls), `@MockBean` for the platform ChatClient (so we can `verify(...).prompt()` was never called on BYOK path). Persists actual BYOK entity rows via `TenantByokCredentialsRepository`; encrypts test keys via the actual RefreshTokenCipher bean. Tests 1–6 above.
+    6. **Create `backend/core/src/test/java/com/zeromail/core/llm/service/LlmGatewayByokRoutingTest.java`** — `@SpringBootTest` **(HIGH-1 cycle-3)** with `@MockBean(name="openAiCompatibleByokModelClient") ByokLlmModelClient` + `@MockBean(name="anthropicByokModelClient") ByokLlmModelClient` + `@MockBean LlmModelClient` (platform — verify `verify(platformLlmModelClient, never()).call(...)` on BYOK path). Persists actual BYOK entity rows via `TenantByokCredentialsRepository`; encrypts test keys via the actual RefreshTokenCipher bean. Tests 1–6 above.
 
-    7. **Update `LlmGatewayBoundaryTest`** ArchUnit rule from Plan 01 to keep `org.springframework.ai.openai..` and `org.springframework.ai.anthropic..` and `org.springframework.ai.tool..` confined to `core.llm.gateway.springai` (this is already the case from Plan 03's exemption — no change needed unless `AnthropicChatOptions` import path differs in M4; verify in Plan 04 summary).
+    7. **Plan 01 ArchUnit `LlmGatewayBoundaryTest` is STRICT (no exemption — HIGH-1 cycle-3)**. The new `core.llm.gateway.springai.{OpenAiCompatibleByokModelClient,AnthropicByokModelClient}` adapters are inside the allowed package; their Spring AI imports (`OpenAiApi`, `OpenAiChatOptions`, `AnthropicChatOptions`, `ChatClient`, `ChatResponse`, `ToolCallback`) do NOT trip the rule. Verify by running `./gradlew :backend:core:test --tests "LlmGatewayBoundaryTest"` after this plan completes — the rule must remain green WITHOUT any `areNotAssignableTo` exemption.
   </action>
   <verify>
     <automated>./gradlew :backend:core:test --tests "LlmGatewayByokRoutingTest" --tests "LlmGatewayPlatformPathTest" --tests "LlmGatewayActionValidatorTest" --tests "LlmGatewayMultiTenantLeakTest" --tests "LlmGatewayBoundaryTest"</automated>
   </verify>
   <acceptance_criteria>
-    - File `backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/BYOKChatModelFactory.java` exists; `grep -c 'ChatResponse call' backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/BYOKChatModelFactory.java` returns `1`.
-    - Files `OpenAiCompatibleByokFactory.java` and `AnthropicByokFactory.java` both exist; `grep -c 'OpenAiApi.*mutate' backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/OpenAiCompatibleByokFactory.java` returns `>= 1`; `grep -c 'AnthropicChatOptions.builder' backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/AnthropicByokFactory.java` returns `>= 1`.
+    - **(HIGH-1 cycle-3)** File `backend/core/src/main/java/com/zeromail/core/llm/service/ByokLlmModelClient.java` exists; `grep -c 'LlmChatResult call' backend/core/src/main/java/com/zeromail/core/llm/service/ByokLlmModelClient.java` returns `1`; `grep -c 'org.springframework.ai' backend/core/src/main/java/com/zeromail/core/llm/service/ByokLlmModelClient.java` returns `0`.
+    - **(HIGH-1 cycle-3)** Files `OpenAiCompatibleByokModelClient.java` and `AnthropicByokModelClient.java` both exist in `core.llm.gateway.springai`; `grep -c 'implements ByokLlmModelClient' backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/OpenAiCompatibleByokModelClient.java backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/AnthropicByokModelClient.java` returns `2`; `grep -c 'OpenAiApi.*mutate' backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/OpenAiCompatibleByokModelClient.java` returns `>= 1`; `grep -c 'AnthropicChatOptions.builder' backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/AnthropicByokModelClient.java` returns `>= 1`.
     - `grep -c 'byokRepo.findByTenantId' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 1`.
     - `grep -c 'refreshTokenCipher.decrypt' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 1`.
     - `grep -c 'event=llm_byok_call_started\|event=llm_byok_call_succeeded' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 2`.

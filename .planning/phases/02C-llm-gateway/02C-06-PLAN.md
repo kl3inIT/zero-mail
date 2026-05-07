@@ -106,36 +106,34 @@ Output: `LlmGatewayImpl` final wiring (the // Plan 06 markers from Plan 03 are n
        
        (a) Add `private final CreditLedger creditLedger;` and `private final io.micrometer.core.instrument.MeterRegistry meterRegistry;` fields; add both to constructor; remove the corresponding marker comments.
        
-       (b) Replace the platform-path block in `chat()` with the full lifecycle wrap. After the BYOK branch (Plan 05) returns early, the platform path becomes:
+       (b) Replace the platform-path block in `chat()` with the full lifecycle wrap. **(HIGH-1 cycle-3 + MEDIUM cycle-3 system-prompt lock)** Uses the pure-Java `LlmModelClient` seam from Plan 03 — no Spring AI imports — AND every call carries `SystemPrompts.TRIAGE_SYSTEM_PROMPT` via `LlmChatRequest.systemPrompt()`. After the BYOK branch (Plan 05) returns early, the platform path becomes:
        ```java
        // Sanitization already ran above; if it failed, we never reach this point — no reserve happens, no credit lost
        ReservationId reservation = creditLedger.reserve(tenantId, callSite);   // Throws InsufficientCreditsException → 402
        try {
-           OpenAiChatOptions perCallOptions = OpenAiChatOptions.builder()
-                   .model(model)
-                   .toolChoice("required")                       // Plan 04 Layer 1
-                   .internalToolExecutionEnabled(false)
-                   .build();
-
            long startNanos = System.nanoTime();
            log.info("event=llm_call_started tenantId={} callSite={} provider={} model={}",
                    tenantId, callSite, provider, model);
 
-           ChatResponse chatResponse = platformChatClient.prompt()
-                   .user(sanitized.content())
-                   .toolCallbacks(tools)
-                   .options(perCallOptions)
-                   .call().chatResponse();
-
-           ToolCallResult result = parseToolCall(chatResponse);     // Plan 04 ActionValidator — throws SafetyViolationException on bad tool call
+           // (HIGH-1 cycle-3) Pure-Java LlmChatRequest — system prompt PINNED, gateway-owned tools,
+           // toolChoiceRequired=true (Layer 1). SpringAiLlmModelClient adapter applies the
+           // OpenAiChatOptions builder + internalToolExecutionEnabled(false) lock internally.
+           LlmChatRequest request = new LlmChatRequest(
+                   SystemPrompts.TRIAGE_SYSTEM_PROMPT,
+                   sanitized.content(),
+                   tools,
+                   model,
+                   0.0,
+                   true);
+           LlmChatResult result = platformLlmModelClient.call(request);
+           ToolCallResult toolCallResult = parseToolCall(result);    // Plan 04 ActionValidator — throws SafetyViolationException on bad tool call
 
            long latencyMs = (System.nanoTime() - startNanos) / 1_000_000;
-           Usage usage = chatResponse.getMetadata().getUsage();
+           LlmUsage usage = result.usage();
            log.info("event=llm_call_succeeded tenantId={} callSite={} latencyMs={} promptTokens={} completionTokens={} stopReason={} truncated={}",
                    tenantId, callSite, latencyMs,
-                   usage.getPromptTokens(), usage.getGenerationTokens(),
-                   chatResponse.getResults().get(0).getMetadata().getFinishReason(),
-                   sanitized.truncated());
+                   usage.promptTokens(), usage.completionTokens(),
+                   usage.finishReason(), sanitized.truncated());
 
            // REVIEWS MEDIUM-consensus: settle() failure must NOT trigger release(). If settle()
            // partially succeeds then throws (transient DB issue, mid-commit failure), calling
@@ -146,14 +144,18 @@ Output: `LlmGatewayImpl` final wiring (the // Plan 06 markers from Plan 03 are n
            try {
                creditLedger.settle(reservation);
            } catch (RuntimeException settleFailure) {
-               log.error("event=llm_call_settle_failed tenantId={} callSite={} reservationId={} reason={}",
-                       tenantId, callSite, reservation.value(), settleFailure.getClass().getSimpleName());
+               // (MEDIUM cycle-3) OpenCode flagged that even reservation.value() is a reservation ID
+               // and must NOT appear in gateway logs (D-I1). Phase 2B's CreditReserveWatchdog logs the
+               // reservation id internally for operator reconciliation; the gateway log line carries
+               // tenantId + callSite + exception class only. Reconciliation correlates via tenantId + timestamp.
+               log.error("event=llm_call_settle_failed tenantId={} callSite={} reason={}",
+                       tenantId, callSite, settleFailure.getClass().getSimpleName());
                // Do NOT call release(reservation) here — risks double-adjust per REVIEWS MEDIUM.
                // The model call DID succeed; the ledger row will be reconciled by the Phase 2B
                // CreditReserveWatchdog (idempotent settle retry) on the next tick.
                throw settleFailure;
            }
-           return result;
+           return toolCallResult;
        } catch (SafetyViolationException safetyViolation) {
            creditLedger.release(reservation);
            // M-3: platform absorbs cost on safety violations to avoid charging users for adversarial inputs.
@@ -188,7 +190,7 @@ Output: `LlmGatewayImpl` final wiring (the // Plan 06 markers from Plan 03 are n
        
        (e) Verify the BYOK branch (Plan 05a) returns BEFORE any reserve call is reached — re-read the Plan 05a insertion point and confirm the early-return structure. If the BYOK branch is `if (byok.isPresent()) { return callViaByokFactory(...); }`, the structural guarantee holds. Add a code comment at the early return: `// LLM-04 — BYOK skips credit ledger by design`.
 
-    2. **Create `backend/core/src/test/java/com/zeromail/core/llm/service/LlmGatewayCreditLifecycleTest.java`** — `@SpringBootTest` with `@MockBean ChatModel` and `@SpyBean CreditLedger` (so the real ledger runs against Testcontainers Postgres but interactions are observable). Implement Tests 1–7 above. Test 6 uses `StructuredTaskScope` and `ScopedValue.where(TenantContext.TENANT, ...)` per the Plan 03 multi-tenant pattern, but for the SAME tenant id (concurrency under one tenant). Reuse PATTERNS.md "LlmGatewayMultiTenantLeakTest.java" structural shape — adapt for single-tenant + outcome-asserting.
+    2. **Create `backend/core/src/test/java/com/zeromail/core/llm/service/LlmGatewayCreditLifecycleTest.java`** — `@SpringBootTest` **(HIGH-1 cycle-3)** with `@MockBean LlmModelClient` (the seam — NOT `ChatModel`) and `@SpyBean CreditLedger` (so the real ledger runs against Testcontainers Postgres but interactions are observable). Implement Tests 1–7 above. Test 6 uses `StructuredTaskScope` and `ScopedValue.where(TenantContext.TENANT, ...)` per the Plan 03 multi-tenant pattern, but for the SAME tenant id (concurrency under one tenant). Reuse PATTERNS.md "LlmGatewayMultiTenantLeakTest.java" structural shape — adapt for single-tenant + outcome-asserting.
   </action>
   <verify>
     <automated>./gradlew :backend:core:test --tests "LlmGatewayCreditLifecycleTest" --tests "LlmGatewayPlatformPathTest" --tests "LlmGatewayActionValidatorTest" --tests "LlmGatewayByokRoutingTest" --tests "LlmGatewayMultiTenantLeakTest"</automated>
@@ -203,7 +205,9 @@ Output: `LlmGatewayImpl` final wiring (the // Plan 06 markers from Plan 03 are n
     - `grep -c 'event=llm_call_blocked_insufficient_credits' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `1`.
     - `grep -c "// LLM-04 — BYOK skips credit ledger\|// D-E3" backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 2` (BYOK skip comment + drift skip comment — note: BYOK skip is LLM-04, not LLM-05; comment was renamed per H-1).
     - `grep -c '// Plan 06 will add' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `0` (all markers replaced with real code).
-    - `grep -E 'log\.(info|warn|error|debug).*reservation\.id|log\.(info|warn|error|debug).*reservation\.uuid' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` — reservation id NOT logged in the gateway (Phase 2B may log it internally; that's fine; the gateway only logs metadata).
+    - **(MEDIUM cycle-3 system-prompt lock)** Every chat-call construction in `LlmGatewayImpl.java` MUST include `SystemPrompts.TRIAGE_SYSTEM_PROMPT`. Acceptance: `grep -c 'new LlmChatRequest' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 3` (chat platform + chat BYOK + driftCheck) AND `grep -c 'SystemPrompts.TRIAGE_SYSTEM_PROMPT' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `>= 3` (one per LlmChatRequest construction). The two greps must produce equal counts — if a future executor builds an `LlmChatRequest` without the system prompt, this gate fires.
+    - **(HIGH-1 cycle-3)** `grep -c 'platformChatClient' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns `0` (gateway no longer touches the Spring AI ChatClient directly — uses LlmModelClient seam).
+    - `grep -E 'log\.(info|warn|error|debug).*reservation\.id|log\.(info|warn|error|debug).*reservation\.uuid|log\.(info|warn|error|debug).*reservation\.value' backend/core/src/main/java/com/zeromail/core/llm/service/LlmGatewayImpl.java` returns no matches — reservation id NOT logged in the gateway under ANY accessor name (`.id`, `.uuid`, `.value()`). Phase 2B may log it internally; that's fine; the gateway only logs metadata. (MEDIUM cycle-3 fix — OpenCode flagged `reservation.value()` was missed by the cycle-2 grep.)
     - `./gradlew :backend:core:test --tests "LlmGatewayCreditLifecycleTest"` exits 0 — all 7 tests pass.
     - `./gradlew :backend:core:test --tests "LlmGatewayPlatformPathTest" --tests "LlmGatewayActionValidatorTest" --tests "LlmGatewayByokRoutingTest" --tests "LlmGatewayMultiTenantLeakTest"` exits 0 (Plans 03/04/05 tests still pass).
     - `./gradlew :backend:core:test :backend:api:test :backend:worker:test` exits 0 (full suite green).
