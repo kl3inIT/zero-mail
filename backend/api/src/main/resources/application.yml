@@ -53,7 +53,16 @@ spring:
     properties:
       hibernate:
         format_sql: false
-zeromail:
+  ai:
+    chat:
+      client:
+        observations:
+          log-prompt: false
+          log-completion: false
+      observations:
+        log-prompt: false
+        log-completion: false
+zero-mail:
   web:
     base-url: ${ZEROMAIL_WEB_BASE_URL:http://localhost:3000}
   cors:
@@ -84,6 +93,21 @@ zeromail:
     vnd-per-credit: 1000
     max-pending-intents-per-tenant: 5
     intent-expiry: PT24H
+  llm:
+    platform:
+      provider: openai-compatible
+      base-url: https://openrouter.ai/api/v1
+      api-key: ${ZEROMAIL_LLM_PLATFORM_API_KEY:?ZEROMAIL_LLM_PLATFORM_API_KEY must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
+      compile-model: openai/gpt-4o-mini
+      drift-model: openai/gpt-4o-mini
+      triage-model: openai/gpt-4o-mini
+      connect-timeout: 5s
+      read-timeout: 30s
+    byok:
+      allow-non-vendor-endpoints: false
+      allowed-extra-hosts: []
+      connect-timeout: 5s
+      read-timeout: 15s
 server:
   port: 8080
   servlet:

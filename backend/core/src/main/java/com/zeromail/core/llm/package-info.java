@@ -3,7 +3,7 @@
  *
  * <p><b>Cross-phase contract.</b> Phase 3 (Rules Engine) and Phase 4 (Triage) import
  * {@link com.zeromail.core.llm.service.LlmGateway} verbatim and call
- * {@code chat(callSite, content, tools)} for every LLM call.
+ * {@code chat(callSite, rawHtml)} for every LLM call.
  *
  * <p><b>Modulith boundary.</b> Allowed dependencies:
  * <ul>
