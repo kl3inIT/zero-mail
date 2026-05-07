@@ -76,6 +76,7 @@ public abstract class ApiPostgresTestBase {
     // gateway itself is not exercised here, but model auto-configuration still requires keys.
     dynamicPropertyRegistry.add("spring.ai.openai.api-key", () -> "test-openai-key");
     dynamicPropertyRegistry.add("spring.ai.anthropic.api-key", () -> "test-anthropic-key");
+    dynamicPropertyRegistry.add("zero-mail.llm.platform.api-key", () -> "test-platform-llm-key");
   }
 
   @BeforeEach

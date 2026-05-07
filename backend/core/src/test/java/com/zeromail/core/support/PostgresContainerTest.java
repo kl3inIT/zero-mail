@@ -60,5 +60,6 @@ public abstract class PostgresContainerTest {
     // exercised by these persistence tests, but auto-configuration still needs placeholder keys.
     r.add("spring.ai.openai.api-key", () -> "test-openai-key");
     r.add("spring.ai.anthropic.api-key", () -> "test-anthropic-key");
+    r.add("zero-mail.llm.platform.api-key", () -> "test-platform-llm-key");
   }
 }

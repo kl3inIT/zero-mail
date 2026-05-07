@@ -60,6 +60,7 @@ public abstract class PostgresContainerTest {
     // the gateway adapter yet, but auto-configuration still requires placeholder keys.
     dynamicPropertyRegistry.add("spring.ai.openai.api-key", () -> "test-openai-key");
     dynamicPropertyRegistry.add("spring.ai.anthropic.api-key", () -> "test-anthropic-key");
+    dynamicPropertyRegistry.add("zero-mail.llm.platform.api-key", () -> "test-platform-llm-key");
   }
 
   protected byte[] encryptedRefreshToken(UUID tenantId) {
