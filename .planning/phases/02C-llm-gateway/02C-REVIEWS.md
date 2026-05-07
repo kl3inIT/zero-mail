@@ -1,7 +1,8 @@
 ---
 phase: 2C
+cycle: 2
 reviewers: [codex, opencode]
-reviewed_at: 2026-05-07T09:26:55Z
+reviewed_at: 2026-05-07T10:01:53Z
 plans_reviewed:
   - 02C-01-PLAN.md
   - 02C-02-PLAN.md
@@ -15,228 +16,302 @@ plans_reviewed:
 models:
   codex: cx/gpt-5.5 (Codex CLI default)
   opencode: openai/gpt-5.5
+replan_under_review: 67eb724 "docs(02C): replan with --reviews — close 6 HIGH + 4 MEDIUM consensus + divergent items"
+prior_cycle_summary: "Cycle 1 raised 7 HIGH + 4 MEDIUM consensus concerns. Replan claimed closure of 6 HIGH + 4 MEDIUM + divergent items."
 ---
 
-# Cross-AI Plan Review — Phase 2C: LLM Gateway
+# Cross-AI Plan Review — Phase 2C: LLM Gateway (Cycle 2)
+
+> **Reviewer task:** Independently verify whether the cycle-1 HIGH concerns were actually closed by commit `67eb724`, and surface any new HIGHs introduced by the replan.
 
 ## Codex Review
 
 ## Summary
 
-The plans are unusually thorough and mostly aligned with Phase 2C's safety-first intent: they decompose the LLM gateway into sensible waves, add strong test gates, and treat privacy, BYOK, tenant isolation, and billing as first-class concerns. However, as written I would not execute them unchanged. Several issues can break core goals: the Spring AI boundary exemption weakens LLM-01, BYOK enum persistence/JSON mapping appears inconsistent with the DB schema, server-side BYOK save does not actually require successful validation, config/YAML edits are risky, drift may bypass the sanitization contract, and the frontend i18n generation could overwrite existing translations. Overall plan quality is high, but execution risk is high until those are corrected.
+Cycle 2 closes several real gaps: gateway-owned tools, core/API layering, server-side BYOK validation-on-save, and drift sanitization are now materially addressed. But it does **not** close the biggest architectural concern: Spring AI still leaks into `core.llm.service` through an explicit `LlmGatewayImpl` ArchUnit exemption and `ToolTranslator<Object>` workaround. YAML/config and LLM-09 privacy are improved but still partial. I also see new or remaining HIGH issues around `BYOKProvider` persistence/JSON mapping and OpenAI-compatible endpoint path handling.
 
-## Strengths
+## Closure Verdict
 
-- The wave ordering is mostly sound: foundation → sanitization → gateway → allow-list → BYOK → credit lifecycle → drift/frontend.
-- Sanitization is well factored: ordered beans, per-step tests, corpus tests, fail-fast behavior, and metadata-only logging.
-- Defense-in-depth is the right posture: `toolChoice=required` plus post-parse `ActionValidator`.
-- BYOK threat modeling is strong: encrypted-at-rest, AAD-bound cipher reuse, key zeroing, no key logging, SSRF thinking, tenant leak tests.
-- Credit lifecycle plan is good: reserve before platform call, settle on success, release on failure, BYOK/drift skip billing.
-- Drift scaffold is scoped correctly for v1: disabled cron, synthetic fixtures, baseline comparison, CI mock tests.
-- Frontend plan correctly calls out uncontrolled secret input and mutation-only handling for raw API keys.
+1. **Spring AI boundary violation: NOT CLOSED**  
+   `LlmGatewayImpl` still lives in `core.llm.service`, imports Spring AI types, and is explicitly exempted from the ArchUnit rule. This is the same architectural breach with more justification text.
 
-## Concerns
+2. **Caller-supplied tools: CLOSED**  
+   The public gateway signature is changed to `chat(CallSite, String)`, and `AllowListedTools` owns the fixed `{label, archive, save_draft}` set. There are stale frontmatter references to `List<LlmTool>`, but the implementation tasks and acceptance checks target gateway-owned tools.
 
-- **HIGH: Spring AI boundary is compromised.** `LlmGatewayImpl` in `core.llm.service` is exempted from the ArchUnit rule and imports Spring AI types. The `ToolTranslator` returning `Object` plus cast back to `List<ToolCallback>` is a brittle workaround. This weakens the "all direct Spring AI usage isolated in one adapter package" goal.
+3. **Core depending on API DTOs: CLOSED**  
+   Plan 05b now introduces core command/result records and has `ByokController` map API DTOs to core records.
 
-- **HIGH: `BYOKProvider` persistence likely fails.** The plan uses `@Enumerated(EnumType.STRING)` while the Liquibase check allows lowercase IDs like `'anthropic'` and `'openai-compatible'`. JPA will persist `ANTHROPIC` / `OPENAI_COMPATIBLE` unless a converter is added. The same issue affects JSON/OpenAPI payloads unless `@JsonValue` / `@JsonCreator` are used.
+4. **BYOK save can bypass validation: CLOSED**  
+   `ByokService.save()` now re-runs the upstream provider probe before encrypting/upserting, with tests for direct-save bypass and revoked-key-between-validate-and-save.
 
-- **HIGH: Core service depends on API DTOs in Plan 05b.** `ByokService` lives in `backend/core` but accepts `backend/api` DTO records. That inverts the module dependency. Core should expose its own command/result records or accept primitives; the controller maps API DTOs to core commands.
+5. **YAML/config merge risk: PARTIALLY CLOSED**  
+   The merge procedure is now concrete and checks duplicate top-level `spring:` / `zero-mail:` keys. However, later plans still refer to `zeromail.llm...` in places, while Plan 03 declares `zero-mail.*` canonical, and `zero-mail.llm.byok.*` lacks a clearly bound properties class.
 
-- **HIGH: BYOK save trusts the client-side validation state.** The SPEC says save only after validate ok. Plan 05b explicitly skips server-side upstream validation on save. A caller can POST directly to save an unvalidated or invalid key. Re-run validation on save or issue a short-lived validation token/nonce.
+6. **LLM-09 privacy verification incomplete: PARTIALLY CLOSED**  
+   The replan adds a repository-ban ArchUnit test and scrubber tests, but span-attribute inspection is still missing, and the repo-ban implementation relies on parameter names that may not be retained unless the build uses `-parameters`.
 
-- **HIGH: Config edits may break boot.** Plans say "append" new `spring:` and `zero-mail:` blocks. Duplicate top-level YAML keys can override prior config. Also `zero-mail.*` and `zeromail.*` are both used across plans. Merge into existing blocks and add binding tests for API and worker.
+7. **`driftCheck()` sanitization bypass: CLOSED**  
+   Plan 03 explicitly routes `driftCheck()` through `sanitizationPipeline.sanitize(...)`, the same system prompt, and the same gateway-owned allow-listed tools.
 
-- **HIGH: BYOK endpoint validation is incomplete unless DNS is resolved.** Blocking literal private IPs is not enough. A hostname can resolve to `127.0.0.1`, RFC1918, link-local, or metadata IP. The validator also needs exact host-suffix logic to avoid `evil-anthropic.com`.
+## New Or Remaining Concerns
 
-- **HIGH: OpenAI-compatible endpoint path handling is ambiguous.** UI placeholder is `https://openrouter.ai/api/v1`, but validate calls `${endpoint}/v1/models`, producing `/api/v1/v1/models`. Define whether stored endpoint includes `/v1`, then join URLs safely.
+- **HIGH: Spring AI isolation remains broken.**  
+  The plan did not adopt the requested pure-Java adapter seam. `LlmGatewayImpl` remains the one-class exception, which is exactly the pattern cycle 1 rejected.
 
-- **HIGH: `driftCheck(prompt)` may bypass sanitization.** The drift prompt includes subject/from/body and fixtures include hostile HTML/unicode. Every LLM call must traverse the same sanitization/truncation pipeline, including drift.
+- **HIGH: `BYOKProvider` DB/JSON mapping still appears broken.**  
+  Plan 01 uses `@Enumerated(EnumType.STRING)` while Liquibase allows lowercase ids (`anthropic`, `openai-compatible`). JPA will persist `ANTHROPIC` / `OPENAI_COMPATIBLE`, violating the check constraint. API JSON likely has the same mismatch without `@JsonValue` / `@JsonCreator`.
 
-- **HIGH: Gateway lets callers supply arbitrary or empty tools.** Phase 2C should own the allow-listed tool schema. Tests calling `gateway.chat(..., List.of())` conflict with `toolChoice=required`. Either gateway supplies the default `{label, archive, save_draft}` tools or rejects missing/non-allow-listed tools before model call.
+- **HIGH: OpenAI-compatible endpoint path policy is still contradictory.**  
+  Plan 05a says stored endpoint includes `/v1` and validation should call `${endpoint}/models`; Plan 05b still says `GET ${endpoint}/v1/models`. With the UI placeholder `https://openrouter.ai/api/v1`, this can still produce `/api/v1/v1/models`.
 
-- **HIGH: Plan 08 i18n generation can erase existing translations.** If `merge-feature-i18n.ts` emits only `features/**/messages.ts`, existing `vi.json` / `en.json` keys outside feature files may disappear. It must merge with an existing base or migrate all messages first.
+- **HIGH: LLM-09 is not fully verifiable yet.**  
+  Observation flags are pinned, but there is no required test that inspects spans and proves prompt/completion content is absent. The static repository ban is also weaker than stated.
 
-- **MEDIUM: Platform `anthropic` provider is specified but not really implemented.** Config allows platform provider `anthropic`, but platform wiring appears OpenAI-compatible only. Either remove platform Anthropic from v1 config or implement it.
+- **MEDIUM: Plan 06 may accidentally remove the fixed system prompt.**  
+  Earlier plans add `SystemPrompts.TRIAGE_SYSTEM_PROMPT`, but the Plan 06 replacement snippet for the platform call shows `.user(...)` without `.system(...)`. That should be made impossible with an acceptance grep after Plan 06.
 
-- **MEDIUM: API/provider calls need explicit timeouts.** BYOK validation should set connect/read timeouts. Otherwise validate endpoints can hang worker threads.
-
-- **MEDIUM: response parsing is under-specified.** Empty results, null usage metadata, null tool arguments, malformed JSON, and missing required args should map to a typed malformed-response exception, not arbitrary runtime errors.
-
-- **MEDIUM: privacy verification is incomplete.** Plans test some logs, but Phase 2C also needs span inspection and static checks preventing repositories from accepting prompt/body/completion fields.
-
-- **MEDIUM: Plan 06 settlement failure path needs care.** If `creditLedger.settle(reservation)` partially succeeds then throws, the catch block may call `release`. This needs explicit idempotency semantics or a narrower catch around model/parse only.
-
-- **MEDIUM: frontend browser verification is deferred.** Project instructions require real-browser verification for frontend changes. Plan 08 should include a Playwright run against `/settings`, not leave it as manual follow-up.
-
-- **LOW: the plan set has drifted from "8 plans" to 9 plan files.** Splitting 05a/05b is sensible, but roadmap/validation docs should be updated.
-
-- **LOW: grep-heavy acceptance gates are fragile.** Keep them for smoke checks, but rely on compile/tests/ArchUnit for real guarantees.
+- **MEDIUM: Platform `anthropic` provider is still underimplemented.**  
+  Config allows `provider: anthropic`, but platform wiring still appears OpenAI-compatible only. Either remove direct Anthropic platform provider from v1 config or implement it.
 
 ## Suggestions
 
-- Move all Spring AI calls into `core.llm.gateway.springai`. A clean shape is:
-  - `LlmGatewayImpl` in `core.llm.service` depends on a pure Java `LlmModelClient`.
-  - `SpringAiLlmModelClient` in `gateway.springai` returns `RawToolCall(functionName, argsJson, usageMetadata)`.
-  - `ActionValidator` stays in service and validates the pure Java result.
-  - Remove the ArchUnit exemption and remove `ToolTranslator<Object>`.
+- Move Spring AI usage behind a pure-Java client seam:
+  - `LlmGatewayImpl` depends on `LlmModelClient`.
+  - `SpringAiLlmModelClient` lives in `core.llm.gateway.springai`.
+  - It returns a pure `RawToolCall(functionName, argsJson, usage)`.
+  - Remove the ArchUnit exemption and `ToolTranslator<Object>`.
 
-- Add `AttributeConverter<BYOKProvider, String>` and `@JsonValue` / `@JsonCreator` for `BYOKProvider`. Do the same for any enum crossing JSON boundaries.
+- Add `BYOKProviderAttributeConverter` and Jackson annotations:
+  - `@Converter(autoApply = true)` mapping enum ↔ `id()`.
+  - `@JsonValue` on `id()`.
+  - `@JsonCreator` delegating to `fromId`.
 
-- Replace API DTO use in core with core command records, e.g. `ByokValidationCommand`, `ByokSaveCommand`, `ByokValidationResult`.
+- Centralize endpoint joining:
+  - Store canonical base including version path.
+  - Always append `models` or `messages` with a safe URI join helper.
+  - Add explicit tests for `https://openrouter.ai/api/v1` → `/api/v1/models`, not `/api/v1/v1/models`.
 
-- Make `save()` server-enforced:
-  - simplest: call `validate()` again before encrypt/upsert;
-  - better: `validate()` returns a short-lived signed validation token and `save()` requires it.
+- Strengthen LLM-09:
+  - Add a test that captures Micrometer/OTel span attributes and asserts no prompt/completion/body content.
+  - Ensure Java compilation retains parameter names if ArchUnit checks parameter names, or inspect method signatures/types/annotations instead.
 
-- Normalize endpoints with a single policy:
-  - store provider base URL including version path, then validate calls `${base}/models`, not `${base}/v1/models`; or
-  - store origin only and append `/v1/...`.
-  Document it and test OpenRouter, OpenAI, Anthropic, and an opt-in custom endpoint.
-
-- Harden SSRF validation:
-  - require HTTPS;
-  - reject userinfo, query, fragment;
-  - resolve DNS and reject private/link-local/loopback/metadata addresses;
-  - validate exact host or safe suffix `.anthropic.com`, `.openai.com`;
-  - re-check at request time to reduce DNS rebinding risk.
-
-- Ensure `driftCheck` uses the same sanitization pipeline and token cap as `chat`.
-
-- Let the gateway own default tools. If future phases need call-site-specific tools, accept a call-site enum and derive the allow-list internally.
-
-- Add missing requirement maintenance to a plan:
-  - update `REQUIREMENTS.md` LLM-04 wording;
-  - reconcile "daily spend cap" vs "ledger is the cap";
-  - update acceptance references from changeset `014` to `018`.
-
-- Fix Plan 08 i18n by preserving existing messages or first migrating all messages to feature-owned sources. Add a test that existing non-LLM keys remain after `pnpm i18n:build`.
-
-- Add Playwright verification to Plan 08's required verification, including mobile width and a validation/save mocked flow.
-
-## Per-Plan Notes
-
-| Plan | Assessment |
-|---|---|
-| 02C-01 | Good foundation, but fix enum persistence before executing. The ArchUnit exemption should be removed by redesigning the adapter boundary. |
-| 02C-02 | Strong sanitization plan. Confirm `TenantContext.currentOrThrow()` type and avoid making simple unit tests require tenant binding unless the pipeline log truly needs tenant context. |
-| 02C-03 | Highest architecture risk. Keep public gateway pure Java and move Spring AI response handling into the adapter package. Merge YAML instead of appending duplicate blocks. |
-| 02C-04 | Good validator design. Add malformed-response handling and keep safety logs payload-free. |
-| 02C-05a | Good BYOK direction, but endpoint normalization, DNS-based SSRF defense, exact Spring AI Anthropic seams, and boundary imports need tightening. |
-| 02C-05b | Needs module-boundary fix and server-side validation-on-save. Also add outbound timeouts and avoid core importing API DTOs. |
-| 02C-06 | Good lifecycle coverage. Clarify settle-failure behavior and keep reserve after sanitization. |
-| 02C-07 | Useful scaffold. Ensure drift goes through sanitization and consider mocking `LlmGateway` in comparator tests instead of `ChatModel`. |
-| 02C-08 | Good secret-handling UX. Biggest gaps are i18n overwrite risk and missing Playwright verification. |
+- Add a final Plan 06 acceptance check that every `platformChatClient.prompt()` and BYOK prompt call includes `SystemPrompts.TRIAGE_SYSTEM_PROMPT`.
 
 ## Risk Assessment
 
-**Overall risk: HIGH as written.** The plans are comprehensive, but several high-severity issues can either break execution outright or violate the phase's core guarantees: enum DB mismatch, server-side BYOK validation gap, Spring AI boundary leakage, YAML/config ambiguity, endpoint SSRF/path handling, drift sanitization ambiguity, and i18n overwrite risk. After correcting those, the residual risk drops to **MEDIUM**, mainly due to Spring AI 2.0.0-M4 API churn and the inherent complexity of BYOK/provider-specific tool calling.
+**Overall risk: HIGH.** The replan closes important product-flow issues, but the remaining Spring AI boundary violation is a core architectural invariant, not a style preference. Combined with the unresolved enum persistence mismatch, contradictory endpoint path policy, and partial LLM-09 verification, execution can still fail either at runtime or against the phase’s safety/privacy guarantees. After those are corrected, the plan would likely drop to MEDIUM risk, mostly due to Spring AI M4 churn and BYOK provider complexity.
+SUCCESS: The process with PID 6684 (child process of PID 13596) has been terminated.
+SUCCESS: The process with PID 13596 (child process of PID 30732) has been terminated.
+SUCCESS: The process with PID 30732 (child process of PID 15220) has been terminated.
+SUCCESS: The process with PID 15220 (child process of PID 13896) has been terminated.
+tokens used
+129,440
+## Summary
 
-Docs checked via Context7: Spring AI ToolCallback/runtime tools and OpenAI-compatible `mutate()` patterns from the Spring AI reference, plus jtokkit truncation behavior from the JTokkit docs:
-- https://docs.spring.io/spring-ai/reference/api/tools.html
-- https://docs.spring.io/spring-ai/reference/api/chatclient.html
-- https://docs.spring.io/spring-ai/reference/api/chat/openai-chat.html
-- https://github.com/knuddelsgmbh/jtokkit/blob/main/docs/docs/getting-started/usage.md
+Cycle 2 closes several real gaps: gateway-owned tools, core/API layering, server-side BYOK validation-on-save, and drift sanitization are now materially addressed. But it does **not** close the biggest architectural concern: Spring AI still leaks into `core.llm.service` through an explicit `LlmGatewayImpl` ArchUnit exemption and `ToolTranslator<Object>` workaround. YAML/config and LLM-09 privacy are improved but still partial. I also see new or remaining HIGH issues around `BYOKProvider` persistence/JSON mapping and OpenAI-compatible endpoint path handling.
+
+## Closure Verdict
+
+1. **Spring AI boundary violation: NOT CLOSED**  
+   `LlmGatewayImpl` still lives in `core.llm.service`, imports Spring AI types, and is explicitly exempted from the ArchUnit rule. This is the same architectural breach with more justification text.
+
+2. **Caller-supplied tools: CLOSED**  
+   The public gateway signature is changed to `chat(CallSite, String)`, and `AllowListedTools` owns the fixed `{label, archive, save_draft}` set. There are stale frontmatter references to `List<LlmTool>`, but the implementation tasks and acceptance checks target gateway-owned tools.
+
+3. **Core depending on API DTOs: CLOSED**  
+   Plan 05b now introduces core command/result records and has `ByokController` map API DTOs to core records.
+
+4. **BYOK save can bypass validation: CLOSED**  
+   `ByokService.save()` now re-runs the upstream provider probe before encrypting/upserting, with tests for direct-save bypass and revoked-key-between-validate-and-save.
+
+5. **YAML/config merge risk: PARTIALLY CLOSED**  
+   The merge procedure is now concrete and checks duplicate top-level `spring:` / `zero-mail:` keys. However, later plans still refer to `zeromail.llm...` in places, while Plan 03 declares `zero-mail.*` canonical, and `zero-mail.llm.byok.*` lacks a clearly bound properties class.
+
+6. **LLM-09 privacy verification incomplete: PARTIALLY CLOSED**  
+   The replan adds a repository-ban ArchUnit test and scrubber tests, but span-attribute inspection is still missing, and the repo-ban implementation relies on parameter names that may not be retained unless the build uses `-parameters`.
+
+7. **`driftCheck()` sanitization bypass: CLOSED**  
+   Plan 03 explicitly routes `driftCheck()` through `sanitizationPipeline.sanitize(...)`, the same system prompt, and the same gateway-owned allow-listed tools.
+
+## New Or Remaining Concerns
+
+- **HIGH: Spring AI isolation remains broken.**  
+  The plan did not adopt the requested pure-Java adapter seam. `LlmGatewayImpl` remains the one-class exception, which is exactly the pattern cycle 1 rejected.
+
+- **HIGH: `BYOKProvider` DB/JSON mapping still appears broken.**  
+  Plan 01 uses `@Enumerated(EnumType.STRING)` while Liquibase allows lowercase ids (`anthropic`, `openai-compatible`). JPA will persist `ANTHROPIC` / `OPENAI_COMPATIBLE`, violating the check constraint. API JSON likely has the same mismatch without `@JsonValue` / `@JsonCreator`.
+
+- **HIGH: OpenAI-compatible endpoint path policy is still contradictory.**  
+  Plan 05a says stored endpoint includes `/v1` and validation should call `${endpoint}/models`; Plan 05b still says `GET ${endpoint}/v1/models`. With the UI placeholder `https://openrouter.ai/api/v1`, this can still produce `/api/v1/v1/models`.
+
+- **HIGH: LLM-09 is not fully verifiable yet.**  
+  Observation flags are pinned, but there is no required test that inspects spans and proves prompt/completion content is absent. The static repository ban is also weaker than stated.
+
+- **MEDIUM: Plan 06 may accidentally remove the fixed system prompt.**  
+  Earlier plans add `SystemPrompts.TRIAGE_SYSTEM_PROMPT`, but the Plan 06 replacement snippet for the platform call shows `.user(...)` without `.system(...)`. That should be made impossible with an acceptance grep after Plan 06.
+
+- **MEDIUM: Platform `anthropic` provider is still underimplemented.**  
+  Config allows `provider: anthropic`, but platform wiring still appears OpenAI-compatible only. Either remove direct Anthropic platform provider from v1 config or implement it.
+
+## Suggestions
+
+- Move Spring AI usage behind a pure-Java client seam:
+  - `LlmGatewayImpl` depends on `LlmModelClient`.
+  - `SpringAiLlmModelClient` lives in `core.llm.gateway.springai`.
+  - It returns a pure `RawToolCall(functionName, argsJson, usage)`.
+  - Remove the ArchUnit exemption and `ToolTranslator<Object>`.
+
+- Add `BYOKProviderAttributeConverter` and Jackson annotations:
+  - `@Converter(autoApply = true)` mapping enum ↔ `id()`.
+  - `@JsonValue` on `id()`.
+  - `@JsonCreator` delegating to `fromId`.
+
+- Centralize endpoint joining:
+  - Store canonical base including version path.
+  - Always append `models` or `messages` with a safe URI join helper.
+  - Add explicit tests for `https://openrouter.ai/api/v1` → `/api/v1/models`, not `/api/v1/v1/models`.
+
+- Strengthen LLM-09:
+  - Add a test that captures Micrometer/OTel span attributes and asserts no prompt/completion/body content.
+  - Ensure Java compilation retains parameter names if ArchUnit checks parameter names, or inspect method signatures/types/annotations instead.
+
+- Add a final Plan 06 acceptance check that every `platformChatClient.prompt()` and BYOK prompt call includes `SystemPrompts.TRIAGE_SYSTEM_PROMPT`.
+
+## Risk Assessment
+
+**Overall risk: HIGH.** The replan closes important product-flow issues, but the remaining Spring AI boundary violation is a core architectural invariant, not a style preference. Combined with the unresolved enum persistence mismatch, contradictory endpoint path policy, and partial LLM-09 verification, execution can still fail either at runtime or against the phase’s safety/privacy guarantees. After those are corrected, the plan would likely drop to MEDIUM risk, mostly due to Spring AI M4 churn and BYOK provider complexity.
 
 ---
 
 ## OpenCode Review
 
 ## Summary
-The plan set is thorough and security-conscious, but currently too risky to execute as-is. It covers most Phase 2C goals on paper, especially sanitization, BYOK routing, credit lifecycle, and drift scaffolding. The biggest issues are architectural boundary violations, a too-flexible tool schema that lets callers pass arbitrary tools, backend layering mistakes between `core` and `api`, incomplete privacy/observability verification for LLM-09, and several likely Spring AI / jtokkit API assumptions that need proof before implementation.
 
-## Strengths
-- Strong phase decomposition: foundation → sanitization → gateway → allow-list → BYOK → credits → drift → UI is a sensible dependency chain.
-- Good defense-in-depth mindset for prompt injection: sanitization plus `toolChoice="required"` plus post-parse `ActionValidator`.
-- BYOK threat model is detailed and correctly focuses on key leakage, endpoint SSRF, tenant isolation, and billing bypass.
-- Credit lifecycle plan correctly calls out reserve/settle/release and BYOK/drift ledger bypass.
-- Drift detection scope is appropriately scaffold-only with cron disabled by default.
-- Frontend plan correctly requires uncontrolled password input and avoids storing raw keys in React state.
-- Validation map is strong: most tasks have concrete automated verification commands.
+Cycle 2 closes several product/security gaps on paper, especially YAML merge discipline, server-side BYOK save re-validation, core/API layering, gateway-owned tools intent, drift sanitization, and LLM-04 wording. However, it does **not** close the most important architectural blocker: Spring AI usage is still deliberately allowed in `LlmGatewayImpl` via an ArchUnit exemption, with `ToolTranslator<Object>` and casts preserving the same boundary leak. I would not execute this plan set unchanged because that remaining HIGH plus a still-unfixed `BYOKProvider` DB/JSON mapping issue and a reintroduced endpoint path ambiguity can break Phase 2C core guarantees.
 
-## Concerns
-- **HIGH: `LlmGatewayImpl` violates the stated Spring AI isolation boundary.** The SPEC and context say direct Spring AI usage must live in `core.llm.gateway.springai`, but Plans 03/04/05/06 exempt `LlmGatewayImpl` in `core.llm.service`. This weakens the main LLM-01 contract and normalizes future exemptions.
-- **HIGH: Gateway accepts caller-provided `List<LlmTool>`, which can include unsafe tools.** The model may be shown a `send` tool or arbitrary schema even if `ActionValidator` rejects the result later. The gateway should own the fixed allow-list tools `{label, archive, save_draft}` or strictly validate the requested tools before sending them to the model.
-- **HIGH: `core` service appears to depend on API DTOs in Plan 05b.** `ByokService` in `backend/core` cannot safely use `backend/api` DTO records such as `ByokValidateRequest`; that reverses module layering. The controller should map API DTOs to core command records.
-- **HIGH: BYOK save does not actually enforce "validated before save" server-side.** Plan 05b says `save()` re-runs endpoint validation but does not re-run the upstream key probe. A malicious or buggy client can call `POST /api/llm/byok` directly with an unvalidated key.
-- **HIGH: `REQUIREMENTS.md` LLM-04 update is missing from the execution plans.** The SPEC explicitly requires updating the original "no server-side persistence" wording to encrypted-at-rest BYOK. None of the plans include that artifact.
-- **HIGH: LLM-09 privacy verification is incomplete.** Plans pin Spring AI observation flags, but do not fully implement or verify repository bans, span attribute inspection, prompt/completion log scrub extension, or no content in `ChatResponse.toString()` paths.
-- **HIGH: YAML snippets risk duplicate top-level keys.** Plans say "append" new `zero-mail:` and `spring:` blocks. If existing `application.yml` already has those keys, duplicate YAML keys may override earlier config or fail parsing depending on parser behavior.
-- **HIGH: Tool-call system prompt is missing from the gateway implementation.** The plans call `.user(sanitized.content())` but do not consistently add the fixed system prompt that tells the model email content is data and only allowed tools may be called.
-- **MEDIUM: Spring AI API usage is speculative in multiple places.** `ApiKey` package, `OpenAiApi#mutate()`, `OpenAiChatModel#mutate()`, `internalToolExecutionEnabled(false)`, `toolCallbacks(...)`, and synthetic `ChatResponse` construction are all version-sensitive in 2.0.0-M4.
-- **MEDIUM: jtokkit API assumptions may be wrong.** The plans assume `Encoding#encode(String, int)` returns `EncodingResult` with `isTruncated()`. This must be verified against `jtokkit 1.1.0`.
-- **MEDIUM: Sanitization claims overstate NFC behavior.** NFC normalization does not fold Cyrillic/Latin homoglyphs. Tests should not claim homoglyph phishing is solved by NFC.
-- **MEDIUM: `ToolTranslator` returning `Object` is a design smell.** It hides type-safety and exists only to work around the package boundary exemption. Better to keep all Spring AI types and translation inside the adapter package.
-- **MEDIUM: Credit release on `settle()` failure is ambiguous.** If `settle(reservation)` throws after partially committing or due to transient DB issues, blindly calling `release(reservation)` may double-adjust or mask an unknown ledger state unless Phase 2B guarantees idempotent state transitions.
-- **MEDIUM: Drift job tests should mock `LlmGateway`, not `ChatModel`.** The job depends on `LlmGateway.driftCheck()`. Mocking lower-level `ChatModel` makes tests fragile and couples worker tests to gateway internals.
-- **MEDIUM: `ByokEndpointValidator` config is underspecified.** Plans reference `zeromail.llm.byok.allow-non-vendor-endpoints` and `allowed-extra-hosts`, but no properties class/application.yml wiring is planned.
-- **MEDIUM: Frontend i18n merge pipeline is scope creep.** Plan 08 introduces a new generated-i18n architecture for one feature. That is larger than needed and risks breaking existing i18n workflows.
-- **MEDIUM: Frontend browser verification is manual-only.** Project instructions require real browser verification for frontend changes before declaring done. Plan 08 should include an automated or explicit Playwright verification step, not only a deferred manual walk.
-- **LOW: Plan 01 `files_modified` omits some files later created.** Example: temporary `SanitizationContext.java` is introduced in actions but absent from frontmatter.
-- **LOW: Drift fixtures allow real company domains like `stripe.com` and `github.com` while saying "no real company names" elsewhere.** This is not PII, but the plan should be internally consistent.
-- **LOW: `InvalidByokException` with no message makes debugging harder.** Privacy is correct, but an internal enum reason can be stored safely if never exposed/logged as raw endpoint/key content.
+## Closure Verdict
+
+1. **Spring AI boundary violation: NOT CLOSED**  
+   Plans still exempt `LlmGatewayImpl` from the ArchUnit rule and keep Spring AI types/casts in `core.llm.service`, so LLM-01 isolation is still compromised.
+
+2. **Gateway accepts caller-supplied tools: PARTIALLY CLOSED**  
+   The public interface is changed to gateway-owned tools and `AllowListedTools` is added, but plan text/frontmatter remains inconsistent and Plan 05a has a likely `List<LlmTool>` vs `List<ToolCallback>` mismatch in the BYOK branch.
+
+3. **Core service depends on API DTOs: CLOSED**  
+   Plan 05b adds core command/result records and explicitly maps API DTOs only in `ByokController`, with tests/grep gates banning `com.zeromail.api` imports in `ByokService`.
+
+4. **BYOK save can bypass validation: CLOSED**  
+   Plan 05b now requires `save()` to re-run the upstream provider probe before encrypt/upsert and adds tests proving direct save without prior validate fails.
+
+5. **YAML duplicate top-level key/config drift: CLOSED**  
+   Plan 03 now gives concrete merge instructions, canonicalizes on `zero-mail.*`, checks top-level key counts, and requires binding verification.
+
+6. **LLM-09 privacy verification incomplete: PARTIALLY CLOSED**  
+   Logback scrub extension and repository-content ArchUnit tests were added, but the repository rule depends on Java parameter names being available and there is still no concrete span-attribute inspection or `ChatResponse`/exception stringification guard.
+
+7. **LLM-04 wording / drift/system-prompt maintenance: CLOSED**  
+   Plan 03 updates `REQUIREMENTS.md`, adds `SystemPrompts.TRIAGE_SYSTEM_PROMPT`, and requires both `chat()` and `driftCheck()` to run through the sanitization pipeline.
+
+## New Or Remaining Concerns
+
+- **HIGH: Spring AI boundary remains intentionally broken.**  
+  The core requirement says direct Spring AI usage is isolated in `core.llm.gateway.springai`, but the plans preserve an exemption for `LlmGatewayImpl` in `core.llm.service`. This is not a closure; it is a documented waiver of the invariant.
+
+- **HIGH: `BYOKProvider` persistence/JSON mismatch is still unresolved.**  
+  Plan 01 still uses `@Enumerated(EnumType.STRING)` while the DB check allows lowercase ids `'anthropic'` and `'openai-compatible'`. JPA will persist `ANTHROPIC` / `OPENAI_COMPATIBLE`, violating the check constraint. API JSON also needs explicit id mapping.
+
+- **HIGH: OpenAI-compatible endpoint path policy is still contradictory.**  
+  Plan 05a says stored endpoint includes version path and validate should call `${endpoint}/models`, but Plan 05b still says `GET ${canonicalEndpoint}/v1/models`. With `https://openrouter.ai/api/v1`, this can produce `/api/v1/v1/models`.
+
+- **HIGH: LLM-09 verification is not fully reliable.**  
+  The new repository ArchUnit rule checks parameter names, which are often unavailable as meaningful names unless compiled with `-parameters`. It also does not inspect Spring AI observation spans despite SPEC acceptance explicitly requiring no prompt/completion content in spans.
+
+- **MEDIUM: Gateway-owned tools refactor has internal inconsistencies.**  
+  The intended public signature is `chat(CallSite, String)`, but frontmatter and some plan text still mention `List<LlmTool>`, and Plan 05a’s BYOK helper appears to accept translated `ToolCallback`s while being passed project-local tools.
+
+- **MEDIUM: Drift job test instructions conflict.**  
+  Behavior says mock `LlmGateway`, but action steps still instruct creating tests with `@MockBean ChatModel`, which was a cycle-1 concern.
+
+- **MEDIUM: Plan 06 logs `reservation.value()` despite acceptance saying reservation IDs should not be logged.**  
+  The grep gate misses this because it only searches `reservation.id` / `reservation.uuid`.
+
+- **LOW: Several grep gates are fragile.**  
+  They help as smoke checks, but some can pass while the invariant is still broken, especially multi-line builder checks and log-content checks.
 
 ## Suggestions
-- Move the concrete Spring AI gateway implementation into `core.llm.gateway.springai`; expose only pure Java `LlmGateway` from `core.llm.service`.
-- Remove the `LlmGatewayImpl` ArchUnit exemption. If parsing Spring AI `ChatResponse` needs framework types, parse inside the adapter and return a pure internal result.
-- Replace caller-provided arbitrary `List<LlmTool>` with gateway-owned allowed tools, or validate `LlmTool.name()` against `ActionValidator` before sending tools to the model.
-- Add a fixed system prompt in every gateway call path, including `chat()` and `driftCheck()`.
-- Split API DTOs from core commands: `ByokController` maps `ByokValidateRequest` → `ByokValidateCommand`, and `ByokService` only depends on core model records.
-- Enforce server-side validate-before-save by re-running the upstream probe in `save()`, or issuing a short-lived validation token that `save()` must present.
-- Add an explicit plan task to update `REQUIREMENTS.md` LLM-04 wording.
-- Add LLM-09 tests: span attribute inspection, Logback scrub extension for `prompt`, `completion`, `messageBody`, `apiKey`, `Bearer`, `x-api-key`, and an ArchUnit rule preventing repositories from accepting content/prompt/completion parameters.
-- Merge `application.yml` changes into existing top-level keys rather than appending duplicate `zero-mail:` / `spring:` blocks.
-- Verify Spring AI and jtokkit APIs before implementation, ideally with a tiny compile-only spike committed or referenced in Plan 01.
-- Treat credit `settle()` failure separately from model-call failure unless the ledger contract explicitly guarantees safe release after failed settle.
-- Mock `LlmGateway` in drift job tests and keep lower-level gateway tests in `backend/core`.
-- Keep Plan 08 i18n minimal unless the generated feature-message pipeline is already a project direction. Otherwise, directly add keys to existing vi/en bundles.
-- Add Playwright verification for `/settings` BYOK form to Plan 08 completion criteria.
+
+- Replace the Spring AI exemption with a pure adapter seam:
+  - `core.llm.service.LlmGatewayImpl` depends on `LlmModelClient`.
+  - `core.llm.gateway.springai.SpringAiLlmModelClient` owns all `ChatClient`, `ChatResponse`, `ToolCallback`, `OpenAiChatOptions`, and vendor SDK imports.
+  - Adapter returns pure Java `RawToolCall(functionName, argsJson, usageMetadata)`.
+  - `ActionValidator` stays in service and validates the pure result.
+  - Remove `ToolTranslator<Object>` and remove the ArchUnit exemption entirely.
+
+- Fix `BYOKProvider` mapping:
+  - Add `AttributeConverter<BYOKProvider, String>` using `id()` / `fromId()`.
+  - Annotate `BYOKProvider` with `@JsonValue` and `@JsonCreator`.
+  - Add persistence and MVC serialization tests proving DB stores `openai-compatible` and API accepts/returns that exact id.
+
+- Make endpoint joining single-policy and tested:
+  - Store canonical base URL including version path.
+  - OpenAI-compatible validate calls `${base}/models`, not `${base}/v1/models`.
+  - Anthropic validate calls `${base}/v1/messages` only if base is origin; otherwise define the same base-path rule.
+  - Add exact tests for OpenRouter `https://openrouter.ai/api/v1` to ensure no double `/v1`.
+
+- Strengthen LLM-09:
+  - Add a test inspecting observation/span attributes after a gateway call with known sentinel prompt/completion strings.
+  - Replace parameter-name-only repository ban with method-name/type/name checks that do not rely solely on `-parameters`.
+  - Add a test that safety/sanitization/global exception handling never logs exception objects or model output.
+
+- Align Plan 07 tests with the abstraction:
+  - Worker drift tests should mock `LlmGateway`, not `ChatModel`.
 
 ## Risk Assessment
-**Overall risk: HIGH.**
 
-The plans are comprehensive, but several core invariants are not actually enforced as written: Spring AI isolation is weakened, unsafe tools can be supplied to the model, core/api layering is likely broken, BYOK save can bypass upstream validation, and LLM-09 privacy verification is incomplete. These are fixable before execution, but they should be addressed at plan level rather than discovered mid-implementation.
+**Overall risk: HIGH.** The replan materially improves many cycle-1 gaps, but one core invariant remains explicitly waived: Spring AI isolation. That alone keeps execution risk high because Phase 2C’s central purpose is to create a single enforceable gateway boundary. The unresolved enum persistence mismatch and contradictory endpoint path policy are also likely to fail implementation or produce unsafe behavior. Once those HIGH items are fixed, residual risk should drop to MEDIUM, mostly from Spring AI 2.0.0-M4 API churn and BYOK/provider edge cases.
 
 ---
 
 ## Consensus Summary
 
-Both reviewers independently rate Phase 2C **HIGH risk as written** despite agreeing the decomposition, threat modeling, and verification rigor are above average. The convergence on architectural and security gaps is striking — the same root issues surface from two independent perspectives, which means they are real plan defects, not reviewer noise.
+Both reviewers independently rate Phase 2C **HIGH risk after replan**. The cycle-2 commit closes real product-flow gaps (gateway-owned tools, core/API layering, BYOK validate-on-save, drift sanitization, system prompt, REQUIREMENTS.md LLM-04, YAML merge concreteness), but **leaves the cycle-1 architectural blocker intact** and **introduces / preserves three additional HIGH issues** that can break the phase's correctness guarantees.
 
-### Agreed Strengths
-- Wave decomposition (foundation → sanitization → gateway → allow-list → BYOK → credits → drift → UI) is sound and dependency-correct.
-- Defense-in-depth on prompt injection: sanitization pipeline + `toolChoice=required` + post-parse `ActionValidator`.
-- BYOK threat model addresses key leakage, SSRF, tenant isolation, and billing bypass with strong intent.
-- Credit lifecycle (reserve/settle/release; BYOK + drift skip ledger) is correctly scoped.
-- Drift scaffold is appropriately minimal for v1 (synthetic fixtures, cron disabled by default).
-- Frontend plan correctly mandates uncontrolled secret input and avoids React state for raw keys.
+### Cycle-1 HIGH Closure Scoreboard (consensus)
 
-### Agreed Concerns (HIGH — blockers before execution)
+| # | Cycle-1 HIGH                                            | Codex     | OpenCode  | Consensus |
+|---|---------------------------------------------------------|-----------|-----------|-----------|
+| 1 | Spring AI boundary violation (`LlmGatewayImpl` exempt)  | NOT CLOSED| NOT CLOSED| **NOT CLOSED** |
+| 2 | Caller-supplied tools to gateway                         | CLOSED    | PARTIALLY | PARTIALLY (frontmatter / 05a inconsistency) |
+| 3 | core ↔ api DTO layering inversion                       | CLOSED    | CLOSED    | **CLOSED** |
+| 4 | BYOK save can bypass server-side validation              | CLOSED    | CLOSED    | **CLOSED** |
+| 5 | YAML duplicate top-level keys / `zeromail` drift         | PARTIALLY | CLOSED    | PARTIALLY (`zero-mail.llm.byok.*` properties class still missing) |
+| 6 | LLM-09 privacy verification incomplete                   | PARTIALLY | PARTIALLY | **PARTIALLY CLOSED** (no span-attribute test; ArchUnit ban depends on `-parameters`) |
+| 7 | `driftCheck()` bypasses sanitization (Codex divergent HIGH) | CLOSED | CLOSED    | **CLOSED** |
 
-1. **Spring AI boundary violation.** `LlmGatewayImpl` lives in `core.llm.service` and imports Spring AI types under an ArchUnit exemption. The `ToolTranslator<Object>` cast confirms the design smell. Both reviewers want the impl moved into `core.llm.gateway.springai` behind a pure-Java `LlmModelClient` seam, with the exemption removed.
-2. **Gateway accepts caller-supplied tools.** `gateway.chat(..., List<LlmTool>)` lets call sites send unsafe or empty tool sets to the model. Both reviewers want the gateway to own the fixed `{label, archive, save_draft}` allow-list (or validate caller tools against `ActionValidator` before they reach the model).
-3. **`backend/core` ↔ `backend/api` layering inversion.** `ByokService` in core consumes API DTO records (`ByokValidateRequest`, etc.). Both reviewers require core to expose its own command/result records and have the controller map API DTOs to core commands.
-4. **BYOK save does not enforce server-side validation.** Plan 05b lets a client `POST /api/llm/byok` directly without re-running the upstream key probe. Both reviewers require either re-running `validate()` on save or a short-lived validation token/nonce.
-5. **YAML "append" pattern risks duplicate top-level keys.** Plans append new `spring:` and `zero-mail:` (and inconsistently `zeromail:`) blocks instead of merging into existing ones. Both reviewers require merge + binding tests for API and worker.
-6. **LLM-09 privacy verification is incomplete.** Spring AI observation flags are pinned, but neither span-attribute inspection, repository bans (ArchUnit), Logback scrubber extension for `prompt`/`completion`/`messageBody`/`apiKey`/`Bearer`, nor `ChatResponse.toString()` path checks are wired in. (Codex flagged as MEDIUM, OpenCode as HIGH — treating as HIGH for the consensus given LLM-09 is a phase invariant.)
+### Agreed Cycle-2 HIGH Concerns (blockers — must close before execution)
 
-### Agreed Concerns (MEDIUM — fix before execution but not blockers in isolation)
+1. **Spring AI boundary still violated.** `LlmGatewayImpl` in `core.llm.service` keeps an explicit ArchUnit exemption, imports Spring AI types (`ChatClient`, `ChatResponse`, `ToolCallback`, `OpenAiChatOptions`), and uses `ToolTranslator<Object>` casts. Both reviewers reject this as a documented waiver of LLM-01 rather than a fix. **Fix:** introduce `LlmModelClient` (pure Java) in `core.llm.service`; move all Spring AI calls into `core.llm.gateway.springai.SpringAiLlmModelClient`; adapter returns `RawToolCall(functionName, argsJson, usageMetadata)`; `ActionValidator` consumes pure Java result; remove `ToolTranslator<Object>`; remove the ArchUnit exemption entirely.
 
-- **`settle()` failure handling.** Catching from `settle()` and unconditionally calling `release()` may double-adjust the ledger; needs idempotency guarantees from Phase 2B or a narrower catch around model/parse.
-- **Drift job tests should mock `LlmGateway`, not `ChatModel`.** Mocking too low couples worker tests to gateway internals.
-- **Frontend Playwright verification is missing from Plan 08.** Project rule requires real-browser verification before declaring done.
-- **`ToolTranslator` returning `Object`.** Design smell that disappears once the Spring AI boundary is fixed.
+2. **`BYOKProvider` persistence/JSON mismatch unresolved.** Plan 01 still uses `@Enumerated(EnumType.STRING)` while the Liquibase check constraint allows lowercase ids `'anthropic'` and `'openai-compatible'`. JPA will persist `ANTHROPIC` / `OPENAI_COMPATIBLE`, violating the check constraint at first insert. Same problem on the JSON boundary without `@JsonValue` / `@JsonCreator`. **Fix:** add `BYOKProviderAttributeConverter` mapping enum ↔ `id()`; add `@JsonValue` on `id()` and `@JsonCreator` delegating to `fromId(String)`; add a persistence test inserting `openai-compatible` and a MVC test round-tripping the same id.
 
-### Divergent Views
+3. **OpenAI-compatible endpoint path policy is contradictory across plans.** Plan 05a says stored endpoint includes `/v1` and validate hits `${endpoint}/models`; Plan 05b still says `GET ${endpoint}/v1/models`. With the UI placeholder `https://openrouter.ai/api/v1`, this produces `/api/v1/v1/models`. **Fix:** pin one policy in the SPEC ("stored URL is canonical base including version path; validate appends `/models`, not `/v1/models`"); add explicit tests for OpenRouter and OpenAI base URLs proving no double-`/v1`.
 
-- **`driftCheck` sanitization** — Codex flags as HIGH ("drift may bypass sanitization"); OpenCode does not call it out explicitly (covered indirectly under "fixed system prompt missing"). Worth investigating: does `driftCheck(prompt)` traverse the full sanitize → NFC → tag-strip → truncate pipeline? If not, this is a phase-invariant break.
-- **BYOK endpoint SSRF depth (Codex HIGH, OpenCode silent).** Codex calls out DNS resolution + private/link-local/loopback/metadata IP checks + DNS rebinding + exact host-suffix matching. OpenCode does not address SSRF depth specifically. Codex's hardening list should be adopted.
-- **OpenAI-compatible endpoint path handling (Codex HIGH, OpenCode silent).** Codex flagged the `/api/v1` + `/v1/models` double-prefix bug. Worth a one-line policy decision in SPEC.
-- **Plan 08 i18n risk shape.** Codex frames as "may erase existing translations" (HIGH); OpenCode frames as "scope creep" (MEDIUM). The merge-vs-overwrite question must be answered concretely; the scope question is secondary.
-- **`REQUIREMENTS.md` LLM-04 update missing (OpenCode HIGH, Codex LOW under "missing requirement maintenance").** Both noticed; OpenCode treats as a blocker, Codex as housekeeping. Add a maintenance task to one of the existing plans.
-- **Tool-call system prompt missing (OpenCode HIGH, Codex silent).** OpenCode notes that `.user(sanitized.content())` lacks a fixed system prompt declaring email content as data and constraining tool use. This is a real defense-in-depth gap; should be addressed in Plan 03.
-- **Spring AI 2.0.0-M4 / jtokkit API speculation (OpenCode MEDIUM, Codex implicit).** OpenCode wants a compile-only spike. Codex relies on Context7-verified Spring AI docs but does not address jtokkit. A quick compile-only spike in Plan 01 would close both gaps.
+4. **LLM-09 verification still not fully reliable.** No required test inspects Micrometer/OTel span attributes for absence of prompt/completion content; the new repository-content ArchUnit rule checks parameter names which are not retained without `javac -parameters`; no guard against `ChatResponse.toString()` or exception object serialization leaking content. **Fix:** add a span-attribute inspection test using a sentinel prompt; switch the ArchUnit rule to method-name + parameter-type + annotation predicates that don't depend on parameter names; add a global-exception-handler test that asserts no model output is logged.
+
+### Agreed Cycle-2 MEDIUM Concerns (fix before execution but not blocking another cycle)
+
+- **Gateway-owned tools refactor has stale references.** Frontmatter and parts of plan text still mention `List<LlmTool>`; Plan 05a's BYOK branch has a likely `List<LlmTool>` vs `List<ToolCallback>` mismatch. Behavior is right; surface area still inconsistent.
+- **Plan 06 platform-call snippet may drop the system prompt.** Replacement code shows `.user(...)` without `.system(SystemPrompts.TRIAGE_SYSTEM_PROMPT)`. Add an acceptance grep after Plan 06 that `.system(SystemPrompts.TRIAGE_SYSTEM_PROMPT)` appears on every chat call site.
+- **Drift job tests still reference `@MockBean ChatModel` in places** despite the behavior section saying mock `LlmGateway`. Action steps and behavior must agree.
+- **Platform `anthropic` provider underimplemented.** Config allows `provider: anthropic` for platform routes, but platform wiring still appears OpenAI-compatible-only. Either implement it or drop it from v1 config.
+- **Plan 06 logs `reservation.value()` despite acceptance saying reservation IDs should not be logged** (OpenCode); the grep gate misses it because it only searches `reservation.id` / `reservation.uuid`.
+
+### Divergent Views (both noted, framing differs)
+
+- **Plan 06 system-prompt risk:** Codex MEDIUM ("may accidentally remove"); OpenCode silent on this specific snippet but flagged the broader system-prompt requirement upstream. Treat as MEDIUM and add a grep gate.
+- **`zero-mail.llm.byok.*` properties class:** Codex flags as part of HIGH-5 partial closure; OpenCode flags as MEDIUM ("config underspecified"). Treat as MEDIUM cleanup unless it materially blocks bind tests.
+- **Anthropic platform provider:** Codex MEDIUM, OpenCode silent. Treat as MEDIUM scoping question.
 
 ### Recommended Next Step
 
-The `--reviews` re-plan cycle should focus on closing the seven agreed-HIGH concerns first, then the four agreed-MEDIUM ones, then resolve the divergent items (drift sanitization, SSRF depth, endpoint path policy, i18n strategy, LLM-04 wording, system prompt, API spike). After that pass, residual risk should drop to MEDIUM (Spring AI M4 churn + BYOK provider asymmetry).
+Run `/gsd-plan-phase 2C --reviews` for **cycle 3**, focused exclusively on the **4 agreed-HIGH cycle-2 concerns** above. The fix for HIGH-1 is the largest (introducing `LlmModelClient` and refactoring Plans 03/04/05a/06 to consume it), but it eliminates HIGH-1, the residual MEDIUM around `ToolTranslator<Object>`, and clarifies the surface area for HIGH-2/3/4 verification. After cycle-3 closure, residual risk should drop to MEDIUM (Spring AI 2.0.0-M4 churn + BYOK provider asymmetry).
