@@ -258,7 +258,7 @@ Plans:
 - [x] 02C-01-PLAN.md — Wave 1 foundation: package skeleton + libs.versions.toml (Spring AI BOM + jtokkit) + Liquibase 018 BYOK schema + ArchUnit boundary test + Wave 0 RED scaffolds
 - [x] 02C-02-PLAN.md — Wave 1 sanitization pipeline: Jsoup -> NFC -> Unicode-tag-strip -> jtokkit truncate(3896) + corpus test (5 prompt-injection fixtures)
 - [x] 02C-03-PLAN.md — Wave 2 gateway core: LlmGateway interface + LlmGatewayImpl skeleton + PlatformApiKey + PlatformChatClientConfig + ZeroMailLlmProperties + application.yml fail-fast + observation pins + multi-tenant leak test
-- [ ] 02C-04-PLAN.md — Wave 3 tool-call allow-list: ActionValidator + SafetyViolationException + Layer 1 (toolChoice=required) + Layer 2 (validator) wired into LlmGatewayImpl
+- [x] 02C-04-PLAN.md — Wave 3 tool-call allow-list: ActionValidator + SafetyViolationException + Layer 1 (toolChoice=required) + Layer 2 (validator) wired into LlmGatewayImpl
 - [ ] 02C-05-PLAN.md — Wave 4 BYOK: BYOKChatModelFactory + 2 asymmetric impls + ByokService + ByokController + 5 DTOs + 4 ErrorCodes + 3 GlobalExceptionHandler mappings
 - [ ] 02C-06-PLAN.md — Wave 5 credit cap: CreditLedger reserve/settle/release wrapping platform path; BYOK + driftCheck skip ledger; 100-call concurrent test
 - [ ] 02C-07-PLAN.md — Wave 6 drift detection: DriftDetectionJob + golden-set.json (~20 synthetic fixtures) + golden-baseline.json + 2 CI mock tests; cron defaults disabled

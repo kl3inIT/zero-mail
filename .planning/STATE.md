@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02C-03-PLAN.md
-last_updated: "2026-05-07T14:09:09.088Z"
+stopped_at: Completed 02C-04-PLAN.md
+last_updated: "2026-05-07T14:30:09.808Z"
 last_activity: 2026-05-07
 progress:
   total_phases: 15
   completed_phases: 10
   total_plans: 80
-  completed_plans: 74
-  percent: 93
+  completed_plans: 75
+  percent: 94
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 02C (llm-gateway) — EXECUTING
-Plan: 4 of 9
+Plan: 5 of 9
 Status: Ready to execute
 Last activity: 2026-05-07
 
-Progress: [█████████░] 93%
+Progress: [█████████░] 94%
 
 ## Performance Metrics
 
@@ -106,6 +106,7 @@ Progress: [█████████░] 93%
 | Phase 02C P01 | 45min | 1 tasks | 42 files |
 | Phase 02C P02 | 13min | 2 tasks | 16 files |
 | Phase 02C P03 | 75min | 1 tasks | 39 files |
+| Phase 02C P04 | 16min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -231,6 +232,8 @@ Recent decisions affecting current work:
 - [Phase 02C]: Plan 03 keeps LlmGatewayImpl Spring-AI-free; all org.springframework.ai imports stay in core.llm.gateway.springai behind the pure-Java LlmModelClient seam.
 - [Phase 02C]: Plan 03 pins Spring AI observation log-prompt/log-completion false in API and worker YAML and verifies span/log content stays metadata-only.
 - [Phase 02C]: Plan 03 applies Logback secret-scrub hardening in the shared backend/core logback-spring.xml because API/worker-specific logback files do not exist.
+- [Phase 02C]: Plan 04 keeps toolChoice/internalToolExecution enforcement inside SpringAiLlmModelClient while LlmGatewayImpl remains Spring-AI-free and validates post-parse tool calls through ActionValidator. — Preserves the strict LLM-01 Spring AI adapter boundary from Plan 03 while satisfying LLM-07 defense-in-depth.
+- [Phase 02C]: Plan 04 SafetyViolationException has only a no-arg constructor. — Rejected action names, tool-call args, model output, and cause messages cannot be carried accidentally.
 
 ### Roadmap Evolution
 
@@ -284,6 +287,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-07T14:09:09.069Z
-Stopped at: Completed 02C-03-PLAN.md
+Last session: 2026-05-07T14:30:09.790Z
+Stopped at: Completed 02C-04-PLAN.md
 Resume file: None
