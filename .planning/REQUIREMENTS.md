@@ -39,7 +39,7 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 
 - [x] **LLM-01**: All LLM traffic flows through a `LlmGateway` abstraction built on Spring AI 2.0.0-M4
 - [x] **LLM-02**: Default traffic routes to OpenRouter; model pin is configurable per call site
-- [ ] **LLM-03**: User can provide BYOK API keys (OpenAI, Anthropic, OpenRouter) via per-request Spring AI options
+- [x] **LLM-03**: User can provide BYOK API keys (OpenAI, Anthropic, OpenRouter) via per-request Spring AI options
 - [x] **LLM-04**: BYOK keys are stored encrypted-at-rest only (AES-GCM via RefreshTokenCipher); ciphertext is decrypted into a per-call byte[] that lives only on the call stack and is zeroed via Arrays.fill on completion. Plaintext is never logged, never returned to clients, and never persisted in plaintext form. BYOK usage bypasses platform LLM billing (user pays their provider directly)
 - [x] **LLM-05**: All email content is HTML-sanitized (Jsoup) before reaching any LLM
 - [x] **LLM-06**: All content is NFC-normalized and Unicode tag characters (U+E0000–U+E007F) are stripped
@@ -170,7 +170,7 @@ Each v1 requirement maps to exactly one phase.
 | BILL-07 | Phase 2B | Complete |
 | LLM-01 | Phase 2C | Complete |
 | LLM-02 | Phase 2C | Complete |
-| LLM-03 | Phase 2C | Pending |
+| LLM-03 | Phase 2C | Complete |
 | LLM-04 | Phase 2C | Complete |
 | LLM-05 | Phase 2C | Complete |
 | LLM-06 | Phase 2C | Complete |
