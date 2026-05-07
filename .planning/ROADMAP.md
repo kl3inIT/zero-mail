@@ -255,7 +255,7 @@ Plans:
 **Research flag**: COMPLETE — Spring AI 2.0.0-M4 BYOK seam (`OpenAiApi#mutate()` + `AnthropicChatOptions.builder().apiKey().baseUrl()` asymmetric per RESEARCH.md), jtokkit 1.1.0 + cl100k_base, Liquibase floor 018, all verified in 02C-RESEARCH.md.
 
 Plans:
-- [ ] 02C-01-PLAN.md — Wave 1 foundation: package skeleton + libs.versions.toml (Spring AI BOM + jtokkit) + Liquibase 018 BYOK schema + ArchUnit boundary test + Wave 0 RED scaffolds
+- [x] 02C-01-PLAN.md — Wave 1 foundation: package skeleton + libs.versions.toml (Spring AI BOM + jtokkit) + Liquibase 018 BYOK schema + ArchUnit boundary test + Wave 0 RED scaffolds
 - [ ] 02C-02-PLAN.md — Wave 1 sanitization pipeline: Jsoup -> NFC -> Unicode-tag-strip -> jtokkit truncate(3896) + corpus test (5 prompt-injection fixtures)
 - [ ] 02C-03-PLAN.md — Wave 2 gateway core: LlmGateway interface + LlmGatewayImpl skeleton + PlatformApiKey + PlatformChatClientConfig + ZeroMailLlmProperties + application.yml fail-fast + observation pins + multi-tenant leak test
 - [ ] 02C-04-PLAN.md — Wave 3 tool-call allow-list: ActionValidator + SafetyViolationException + Layer 1 (toolChoice=required) + Layer 2 (validator) wired into LlmGatewayImpl

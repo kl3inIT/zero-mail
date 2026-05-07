@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: "Phase 02B shipped — PR #20"
-stopped_at: Phase 02C context gathered
-last_updated: "2026-05-06T20:50:18.205Z"
+status: executing
+stopped_at: Completed 02C-01-PLAN.md
+last_updated: "2026-05-07T12:27:34.292Z"
 last_activity: 2026-05-07
 progress:
   total_phases: 15
   completed_phases: 10
-  total_plans: 71
-  completed_plans: 71
-  percent: 100
+  total_plans: 80
+  completed_plans: 72
+  percent: 90
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 
 ## Current Position
 
-Phase: 02C
-Plan: Not started
-Status: Phase 02B shipped — PR #20
+Phase: 02C (llm-gateway) — EXECUTING
+Plan: 2 of 9
+Status: Ready to execute
 Last activity: 2026-05-07
 
-Progress: [███████░░░] 67%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -103,6 +103,7 @@ Progress: [███████░░░] 67%
 | Phase 02A P05 | 20min | 2 tasks | 11 files |
 | Phase 02B P00 | 13min | 4 tasks | 20 files |
 | Phase 02B P03 | 14min | 3 tasks | 25 files |
+| Phase 02C P01 | 45min | 1 tasks | 42 files |
 
 ## Accumulated Context
 
@@ -219,6 +220,9 @@ Recent decisions affecting current work:
 - [Phase 02B]: SepayWebhookMismatchAuditEventTest uses valid Crockford code ABCD2345 for the amount-mismatch audit path. — This guards the cycle-3 review fix so future implementation resolves by payload code instead of referenceCode or an invalid test fixture.
 - [Phase 02B]: Top-up code uniqueness uses tenant-bypassing lookup — billing_topup_intent.code is globally unique while standard JPA findByCode is tenant-filtered.
 - [Phase 02B]: BillingProperties masks SePay secret in toString — The configuration record carries zero-mail.billing.sepay.webhook-api-key and must not expose the API key through accidental bean logging.
+- [Phase 02C]: [Phase 02C Plan 01] Keep RefreshTokenCipher at core.gmail.persistence.crypto and declare core.llm -> gmail.persistence.crypto Modulith dependency for BYOK encryption reuse. — Matches D-A5 and avoids relocating Gmail token crypto in Plan 01.
+- [Phase 02C]: [Phase 02C Plan 01] Use pure-Java LlmModelClient seam and records so Spring AI imports stay confined to core.llm.gateway.springai. — Satisfies the strict ArchUnit no-exemption import boundary for LLM-01.
+- [Phase 02C]: [Phase 02C Plan 01] Add test-only Spring AI placeholder keys to SpringBootTest contexts because starters auto-configure model beans even when gateway behavior is not exercised. — Required to keep core/API/worker tests booting after adding Spring AI starters.
 
 ### Roadmap Evolution
 
@@ -272,6 +276,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-06T20:50:18.160Z
-Stopped at: Phase 02C context gathered
-Resume file: .planning/phases/02C-llm-gateway/02C-CONTEXT.md
+Last session: 2026-05-07T12:27:34.267Z
+Stopped at: Completed 02C-01-PLAN.md
+Resume file: None

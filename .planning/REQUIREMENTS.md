@@ -37,7 +37,7 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 
 ### LLM Gateway
 
-- [ ] **LLM-01**: All LLM traffic flows through a `LlmGateway` abstraction built on Spring AI 2.0.0-M4
+- [x] **LLM-01**: All LLM traffic flows through a `LlmGateway` abstraction built on Spring AI 2.0.0-M4
 - [ ] **LLM-02**: Default traffic routes to OpenRouter; model pin is configurable per call site
 - [ ] **LLM-03**: User can provide BYOK API keys (OpenAI, Anthropic, OpenRouter) via per-request Spring AI options
 - [ ] **LLM-04**: BYOK usage bypasses platform LLM billing (user pays their provider directly)
@@ -168,7 +168,7 @@ Each v1 requirement maps to exactly one phase.
 | BILL-05 | Phase 2B | Complete |
 | BILL-06 | Phase 2B | Complete |
 | BILL-07 | Phase 2B | Complete |
-| LLM-01 | Phase 2C | Pending |
+| LLM-01 | Phase 2C | Complete |
 | LLM-02 | Phase 2C | Pending |
 | LLM-03 | Phase 2C | Pending |
 | LLM-04 | Phase 2C | Pending |
