@@ -145,3 +145,29 @@ features/account/
   hooks/useUpdateLanguage.ts
   components/DeleteAccountDialog.tsx
 ```
+
+---
+
+## 8. Subproject-owned configuration files
+
+Each runnable subproject owns its own runtime configuration file. Do not move API-only,
+worker-only, or web-only properties into another module's configuration file just to avoid
+duplication.
+
+Backend examples:
+
+- API process properties belong in `backend/api/src/main/resources/application.yml`.
+- Worker process properties belong in `backend/worker/src/main/resources/application.yml`.
+- Shared typed configuration classes may live in `backend/core` when both API and worker bind the
+  same namespace, but each runnable module still declares the values/defaults it needs in its own
+  `application.yml`.
+
+Frontend examples:
+
+- Next.js environment and build/runtime configuration belongs under `apps/web`.
+- Backend Spring properties do not belong in `apps/web`, and frontend-only settings do not belong in
+  backend `application.yml` files.
+
+**Anti-pattern:** adding worker scheduler flags to API `application.yml`, adding API session/OAuth
+properties to worker `application.yml`, or creating a single monorepo-wide properties file that
+every subproject must parse.
