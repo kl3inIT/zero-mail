@@ -62,13 +62,17 @@ class ByokEndpointValidatorTest {
   @Test
   void openai_compat_accepts_with_operator_opt_in() {
     ByokEndpointValidator validator =
-        new ByokEndpointValidator(new ZeroMailLlmByokProperties(true, List.of(), Duration.ofSeconds(5), Duration.ofSeconds(15)));
+        new ByokEndpointValidator(
+            new ZeroMailLlmByokProperties(
+                true, List.of(), Duration.ofSeconds(5), Duration.ofSeconds(15)));
 
     assertThat(validator.validateOpenAiCompatible("https://together.xyz/v1"))
         .isEqualTo("https://together.xyz/v1");
   }
 
   private static ByokEndpointValidator defaultValidator() {
-    return new ByokEndpointValidator(new ZeroMailLlmByokProperties(false, List.of(), Duration.ofSeconds(5), Duration.ofSeconds(15)));
+    return new ByokEndpointValidator(
+        new ZeroMailLlmByokProperties(
+            false, List.of(), Duration.ofSeconds(5), Duration.ofSeconds(15)));
   }
 }

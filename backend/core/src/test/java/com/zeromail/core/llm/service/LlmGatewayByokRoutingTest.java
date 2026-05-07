@@ -45,7 +45,8 @@ import com.zeromail.core.tenant.TenantContext;
 class LlmGatewayByokRoutingTest extends PostgresContainerTest {
 
   private static final UUID TENANT_ID = UUID.fromString("00000000-0000-0000-0000-000000000052");
-  private static final byte[] PLAINTEXT_KEY = "sk-test-byok-secret".getBytes(StandardCharsets.UTF_8);
+  private static final byte[] PLAINTEXT_KEY =
+      "sk-test-byok-secret".getBytes(StandardCharsets.UTF_8);
 
   @Autowired LlmGateway llmGateway;
 
@@ -65,8 +66,8 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
 
   @BeforeEach
   void resetRows() {
-    jdbcTemplate.update("delete from tenant_byok_credentials");
-    jdbcTemplate.update("delete from tenants");
+    jdbcTemplate.update("delete from tenant_byok_credentials where tenant_id = ?", TENANT_ID);
+    jdbcTemplate.update("delete from tenants where id = ?", TENANT_ID);
   }
 
   @Test
@@ -124,7 +125,8 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
 
   @Test
   void cipher_decrypt_called_with_tenantId_aad() {
-    byte[] encryptedEnvelope = seedByokTenant(TENANT_ID, BYOKProvider.ANTHROPIC, null, PLAINTEXT_KEY);
+    byte[] encryptedEnvelope =
+        seedByokTenant(TENANT_ID, BYOKProvider.ANTHROPIC, null, PLAINTEXT_KEY);
     AtomicReference<byte[]> copiedDecryptedKey = new AtomicReference<>();
     when(anthropicByokModelClient.call(any(byte[].class), any(), any()))
         .thenAnswer(
@@ -164,7 +166,9 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
     String formattedMessages =
         listAppender.list.stream()
             .map(ILoggingEvent::getFormattedMessage)
-            .reduce("", (combinedMessages, formattedMessage) -> combinedMessages + "\n" + formattedMessage);
+            .reduce(
+                "",
+                (combinedMessages, formattedMessage) -> combinedMessages + "\n" + formattedMessage);
     assertThat(formattedMessages)
         .contains("event=llm_byok_call_started tenantId=" + TENANT_ID)
         .contains("event=llm_byok_call_succeeded tenantId=" + TENANT_ID)
@@ -176,7 +180,8 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
   @Test
   void multitenant_no_key_leak() throws Exception {
     int requestCount = 100;
-    List<UUID> tenantIds = IntStream.range(0, requestCount).mapToObj(_ -> UUID.randomUUID()).toList();
+    List<UUID> tenantIds =
+        IntStream.range(0, requestCount).mapToObj(_ -> UUID.randomUUID()).toList();
     for (int tenantIndex = 0; tenantIndex < requestCount; tenantIndex++) {
       UUID tenantId = tenantIds.get(tenantIndex);
       if (tenantIndex % 2 == 0) {
@@ -225,8 +230,7 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
     tenantIds.stream()
         .filter(tenantId -> tenantIds.indexOf(tenantId) % 2 == 0)
         .forEach(
-            tenantId ->
-                assertThat(byokKeyByTenant.get(tenantId)).isEqualTo("sk-byok-" + tenantId));
+            tenantId -> assertThat(byokKeyByTenant.get(tenantId)).isEqualTo("sk-byok-" + tenantId));
   }
 
   private byte[] seedByokTenant(
@@ -242,7 +246,8 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
   }
 
   private void seedTenant(UUID tenantId) {
-    jdbcTemplate.update("insert into tenants(id, display_name) values (?, ?)", tenantId, "tenant-" + tenantId);
+    jdbcTemplate.update(
+        "insert into tenants(id, display_name) values (?, ?)", tenantId, "tenant-" + tenantId);
   }
 
   private static LlmChatResult labelResult(String argumentsJson) {

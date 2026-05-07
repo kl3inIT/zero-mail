@@ -1,19 +1,24 @@
 package com.zeromail.core.llm.service;
 
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 import com.zeromail.core.billing.model.CallSite;
+import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
 import com.zeromail.core.llm.gateway.springai.ZeroMailLlmProperties;
+import com.zeromail.core.llm.model.BYOKProvider;
 import com.zeromail.core.llm.model.Action;
 import com.zeromail.core.llm.model.LlmChatRequest;
 import com.zeromail.core.llm.model.LlmChatResult;
@@ -24,6 +29,8 @@ import com.zeromail.core.llm.model.SafetyViolationException;
 import com.zeromail.core.llm.model.SanitizationContext;
 import com.zeromail.core.llm.model.SystemPrompts;
 import com.zeromail.core.llm.model.ToolCallResult;
+import com.zeromail.core.llm.persistence.TenantByokCredentialsEntity;
+import com.zeromail.core.llm.persistence.TenantByokCredentialsRepository;
 import com.zeromail.core.tenant.TenantContext;
 
 import tools.jackson.core.JacksonException;
@@ -44,8 +51,11 @@ class LlmGatewayImpl implements LlmGateway {
   private final AllowListedTools allowListedTools;
   private final ActionValidator actionValidator;
   private final ObservationRegistry observationRegistry;
+  private final TenantByokCredentialsRepository tenantByokCredentialsRepository;
+  private final RefreshTokenCipher refreshTokenCipher;
+  private final ByokLlmModelClient openAiCompatibleByokModelClient;
+  private final ByokLlmModelClient anthropicByokModelClient;
 
-  // Plan 05 will branch here before platform calls to route tenant BYOK credentials.
   // Plan 06 will wrap platform calls here with CreditLedger reserve/settle/release.
 
   LlmGatewayImpl(
@@ -60,7 +70,11 @@ class LlmGatewayImpl implements LlmGateway {
         llmProperties,
         allowListedTools,
         actionValidator,
-        ObservationRegistry.create());
+        ObservationRegistry.create(),
+        null,
+        null,
+        null,
+        null);
   }
 
   @Autowired
@@ -70,14 +84,23 @@ class LlmGatewayImpl implements LlmGateway {
       ZeroMailLlmProperties llmProperties,
       AllowListedTools allowListedTools,
       ActionValidator actionValidator,
-      ObjectProvider<ObservationRegistry> observationRegistryProvider) {
+      ObjectProvider<ObservationRegistry> observationRegistryProvider,
+      TenantByokCredentialsRepository tenantByokCredentialsRepository,
+      RefreshTokenCipher refreshTokenCipher,
+      @Qualifier("openAiCompatibleByokModelClient")
+          ByokLlmModelClient openAiCompatibleByokModelClient,
+      @Qualifier("anthropicByokModelClient") ByokLlmModelClient anthropicByokModelClient) {
     this(
         platformLlmModelClient,
         sanitizationPipeline,
         llmProperties,
         allowListedTools,
         actionValidator,
-        observationRegistryProvider.getIfAvailable(ObservationRegistry::create));
+        observationRegistryProvider.getIfAvailable(ObservationRegistry::create),
+        tenantByokCredentialsRepository,
+        refreshTokenCipher,
+        openAiCompatibleByokModelClient,
+        anthropicByokModelClient);
   }
 
   LlmGatewayImpl(
@@ -87,12 +110,40 @@ class LlmGatewayImpl implements LlmGateway {
       AllowListedTools allowListedTools,
       ActionValidator actionValidator,
       ObservationRegistry observationRegistry) {
+    this(
+        platformLlmModelClient,
+        sanitizationPipeline,
+        llmProperties,
+        allowListedTools,
+        actionValidator,
+        observationRegistry,
+        null,
+        null,
+        null,
+        null);
+  }
+
+  private LlmGatewayImpl(
+      LlmModelClient platformLlmModelClient,
+      SanitizationPipeline sanitizationPipeline,
+      ZeroMailLlmProperties llmProperties,
+      AllowListedTools allowListedTools,
+      ActionValidator actionValidator,
+      ObservationRegistry observationRegistry,
+      TenantByokCredentialsRepository tenantByokCredentialsRepository,
+      RefreshTokenCipher refreshTokenCipher,
+      ByokLlmModelClient openAiCompatibleByokModelClient,
+      ByokLlmModelClient anthropicByokModelClient) {
     this.platformLlmModelClient = platformLlmModelClient;
     this.sanitizationPipeline = sanitizationPipeline;
     this.llmProperties = llmProperties;
     this.allowListedTools = allowListedTools;
     this.actionValidator = actionValidator;
     this.observationRegistry = observationRegistry;
+    this.tenantByokCredentialsRepository = tenantByokCredentialsRepository;
+    this.refreshTokenCipher = refreshTokenCipher;
+    this.openAiCompatibleByokModelClient = openAiCompatibleByokModelClient;
+    this.anthropicByokModelClient = anthropicByokModelClient;
   }
 
   @Override
@@ -119,6 +170,10 @@ class LlmGatewayImpl implements LlmGateway {
               List<LlmTool> tools = allowListedTools.tools();
 
               try {
+                Optional<TenantByokCredentialsEntity> byok = findByokCredentials(tenantId);
+                if (byok.isPresent()) {
+                  return callViaByokModelClient(byok.get(), sanitizedContext, callSite, tools);
+                }
                 LlmChatRequest request =
                     new LlmChatRequest(
                         SystemPrompts.TRIAGE_SYSTEM_PROMPT,
@@ -224,6 +279,62 @@ class LlmGatewayImpl implements LlmGateway {
 
   private long latencyMs(long startNanos) {
     return (System.nanoTime() - startNanos) / 1_000_000L;
+  }
+
+  private Optional<TenantByokCredentialsEntity> findByokCredentials(UUID tenantId) {
+    return tenantByokCredentialsRepository == null
+        ? Optional.empty()
+        : tenantByokCredentialsRepository.findByTenantId(tenantId);
+  }
+
+  private ToolCallResult callViaByokModelClient(
+      TenantByokCredentialsEntity byokRow,
+      SanitizationContext sanitizedContext,
+      CallSite callSite,
+      List<LlmTool> tools) {
+    UUID tenantId = byokRow.getTenantId();
+    String model = llmProperties.modelByCallSite().get(callSite);
+    BYOKProvider provider = byokRow.getProvider();
+    ByokLlmModelClient byokLlmModelClient =
+        switch (provider) {
+          case ANTHROPIC -> anthropicByokModelClient;
+          case OPENAI_COMPATIBLE -> openAiCompatibleByokModelClient;
+        };
+    byte[] decryptedKey =
+        refreshTokenCipher.decrypt(byokRow.getEncryptedKey(), tenantId.toString());
+    try {
+      long startNanos = System.nanoTime();
+      log.info(
+          "event=llm_byok_call_started tenantId={} provider={} model={}",
+          tenantId,
+          provider,
+          model);
+      LlmChatRequest request =
+          new LlmChatRequest(
+              SystemPrompts.TRIAGE_SYSTEM_PROMPT,
+              sanitizedContext.content(),
+              tools,
+              model,
+              0.0,
+              true);
+      LlmChatResult result = byokLlmModelClient.call(decryptedKey, byokRow.getEndpoint(), request);
+      ToolCallResult toolCallResult = parseToolCall(result);
+      LlmUsage usage = result.usage();
+      log.info(
+          "event=llm_byok_call_succeeded tenantId={} provider={} model={} latencyMs={} "
+              + "promptTokens={} completionTokens={} stopReason={} truncated={}",
+          tenantId,
+          provider,
+          model,
+          latencyMs(startNanos),
+          usage.promptTokens(),
+          usage.completionTokens(),
+          usage.finishReason(),
+          sanitizedContext.truncated());
+      return toolCallResult;
+    } finally {
+      Arrays.fill(decryptedKey, (byte) 0);
+    }
   }
 
   private ToolCallResult parseToolCall(LlmChatResult result) {
