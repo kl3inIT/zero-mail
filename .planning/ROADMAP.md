@@ -251,8 +251,18 @@ Plans:
   3. A tool call returning an action outside the per-action allow-list is rejected before it can be executed.
   4. A user-provided BYOK key (OpenAI, Anthropic, OpenRouter) is used for that user's calls without any server-side persistence of the key beyond the request scope, and BYOK calls bypass platform credit deduction.
   5. Per-tenant daily LLM spend cap blocks further billable calls when exceeded, no raw body/prompt/completion is persisted beyond the short-lived in-memory cache, and the golden-set drift job flags any regression on the fixed sample on schedule.
-**Plans**: TBD
-**Research flag**: This phase should run through `/gsd-research-phase` before planning — Spring AI 2.0.0-M4 per-request BYOK builder API and tokenizer choice must be verified in code, not from memory (see SUMMARY.md research flags).
+**Plans**: 8 plans
+**Research flag**: COMPLETE — Spring AI 2.0.0-M4 BYOK seam (`OpenAiApi#mutate()` + `AnthropicChatOptions.builder().apiKey().baseUrl()` asymmetric per RESEARCH.md), jtokkit 1.1.0 + cl100k_base, Liquibase floor 018, all verified in 02C-RESEARCH.md.
+
+Plans:
+- [ ] 02C-01-PLAN.md — Wave 1 foundation: package skeleton + libs.versions.toml (Spring AI BOM + jtokkit) + Liquibase 018 BYOK schema + ArchUnit boundary test + Wave 0 RED scaffolds
+- [ ] 02C-02-PLAN.md — Wave 1 sanitization pipeline: Jsoup -> NFC -> Unicode-tag-strip -> jtokkit truncate(3896) + corpus test (5 prompt-injection fixtures)
+- [ ] 02C-03-PLAN.md — Wave 2 gateway core: LlmGateway interface + LlmGatewayImpl skeleton + PlatformApiKey + PlatformChatClientConfig + ZeroMailLlmProperties + application.yml fail-fast + observation pins + multi-tenant leak test
+- [ ] 02C-04-PLAN.md — Wave 3 tool-call allow-list: ActionValidator + SafetyViolationException + Layer 1 (toolChoice=required) + Layer 2 (validator) wired into LlmGatewayImpl
+- [ ] 02C-05-PLAN.md — Wave 4 BYOK: BYOKChatModelFactory + 2 asymmetric impls + ByokService + ByokController + 5 DTOs + 4 ErrorCodes + 3 GlobalExceptionHandler mappings
+- [ ] 02C-06-PLAN.md — Wave 5 credit cap: CreditLedger reserve/settle/release wrapping platform path; BYOK + driftCheck skip ledger; 100-call concurrent test
+- [ ] 02C-07-PLAN.md — Wave 6 drift detection: DriftDetectionJob + golden-set.json (~20 synthetic fixtures) + golden-baseline.json + 2 CI mock tests; cron defaults disabled
+- [ ] 02C-08-PLAN.md — Wave 6 frontend BYOK form: features/llm/ triplet + ByokForm.tsx (frontend-design skill) + i18n vi/en + mounted on /settings
 
 ### Phase 3: Rules Engine
 **Goal**: Let users author, preview, and manage natural-language rules that compile to a deterministic matcher AST — with `SEMANTIC_INTENT` matchers deferred to Phase 4 for batched LLM evaluation.
@@ -327,7 +337,7 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 1.5. Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED) | 7/8 | In Progress|  |
 | 2A. Mail Ingestion | 6/6 | Complete | 2026-04-29 |
 | 2B. Billing (Prepaid Credits) | 7/7 | Complete | 2026-05-06 |
-| 2C. LLM Gateway | 0/TBD | Not started | - |
+| 2C. LLM Gateway | 0/8 | Not started | - |
 | 3. Rules Engine | 0/TBD | Not started | - |
 | 4. Triage Convergence (Hero) | 0/TBD | Not started | - |
 | 5. User Surface — Drafts, Analytics, Web UI | 0/TBD | Not started | - |
