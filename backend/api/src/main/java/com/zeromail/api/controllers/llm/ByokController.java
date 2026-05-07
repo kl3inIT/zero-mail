@@ -1,0 +1,71 @@
+package com.zeromail.api.controllers.llm;
+
+import java.util.UUID;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.zeromail.api.dto.llm.ByokCurrentResponse;
+import com.zeromail.api.dto.llm.ByokSaveRequest;
+import com.zeromail.api.dto.llm.ByokSaveResponse;
+import com.zeromail.api.dto.llm.ByokValidateRequest;
+import com.zeromail.api.dto.llm.ByokValidateResponse;
+import com.zeromail.core.llm.model.ByokCurrent;
+import com.zeromail.core.llm.model.ByokSaveCommand;
+import com.zeromail.core.llm.model.ByokSaveResult;
+import com.zeromail.core.llm.model.ByokValidateCommand;
+import com.zeromail.core.llm.model.ByokValidateResult;
+import com.zeromail.core.llm.service.ByokService;
+import com.zeromail.core.tenant.TenantContext;
+
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+
+@RestController
+@Tag(name = "llm-byok")
+@RequestMapping("/api/llm/byok")
+public class ByokController {
+
+  private final ByokService byokService;
+
+  public ByokController(ByokService byokService) {
+    this.byokService = byokService;
+  }
+
+  @PostMapping("/validate")
+  public ByokValidateResponse validate(@Valid @RequestBody ByokValidateRequest request) {
+    UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+    ByokValidateResult result =
+        byokService.validate(
+            tenantId,
+            new ByokValidateCommand(request.provider(), request.endpoint(), request.apiKey()));
+    return new ByokValidateResponse(result.ok(), result.models(), result.reason());
+  }
+
+  @PostMapping
+  public ByokSaveResponse save(@Valid @RequestBody ByokSaveRequest request) {
+    UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+    ByokSaveResult result =
+        byokService.save(
+            tenantId,
+            new ByokSaveCommand(request.provider(), request.endpoint(), request.apiKey()));
+    return new ByokSaveResponse(result.ok(), result.savedAt());
+  }
+
+  @GetMapping
+  public ByokCurrentResponse current() {
+    UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+    return byokService.current(tenantId).map(ByokController::toResponse).orElse(nullResponse());
+  }
+
+  private static ByokCurrentResponse toResponse(ByokCurrent current) {
+    return new ByokCurrentResponse(current.provider(), current.endpointHost(), current.savedAt());
+  }
+
+  private static ByokCurrentResponse nullResponse() {
+    return new ByokCurrentResponse(null, null, null);
+  }
+}

@@ -54,14 +54,15 @@ openApi {
                 "--spring.security.oauth2.client.registration.google.client-id=openapi-emit",
                 "--spring.security.oauth2.client.registration.google.client-secret=openapi-emit",
                 // Provide a 32-byte AES-GCM key (base64) so RefreshTokenCipher beans initialize.
-                "--zeromail.crypto.refresh-token-key-base64=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-                "--zeromail.gmail.pubsub.push-audience-url=https://openapi.invalid/internal/pubsub/gmail",
-                "--zeromail.gmail.pubsub.sa-principal-email=pubsub-openapi@openapi.invalid",
-                "--zeromail.gmail.pubsub.oidc-certificates-url=https://www.googleapis.com/oauth2/v3/certs",
-                "--zeromail.billing.sepay.webhook-api-key=openapi-emit",
-                "--zeromail.billing.vnd-per-credit=1000",
-                "--zeromail.billing.max-pending-intents-per-tenant=5",
-                "--zeromail.billing.intent-expiry=PT24H"
+                "--zero-mail.crypto.refresh-token-key-base64=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+                "--zero-mail.api.gmail.pubsub.push-audience-url=https://openapi.invalid/internal/pubsub/gmail",
+                "--zero-mail.api.gmail.pubsub.sa-principal-email=pubsub-openapi@openapi.invalid",
+                "--zero-mail.api.gmail.pubsub.oidc-certificates-url=https://www.googleapis.com/oauth2/v3/certs",
+                "--zero-mail.billing.sepay.webhook-api-key=openapi-emit",
+                "--zero-mail.billing.vnd-per-credit=1000",
+                "--zero-mail.billing.max-pending-intents-per-tenant=5",
+                "--zero-mail.billing.intent-expiry=PT24H",
+                "--zero-mail.llm.platform.api-key=openapi-emit"
             )
         )
     }

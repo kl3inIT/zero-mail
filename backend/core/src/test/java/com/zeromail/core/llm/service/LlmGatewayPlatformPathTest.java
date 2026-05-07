@@ -11,7 +11,7 @@ import ch.qos.logback.core.read.ListAppender;
 import com.zeromail.core.billing.model.CallSite;
 import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
 import com.zeromail.core.llm.gateway.sanitization.Sanitizer;
-import com.zeromail.core.llm.gateway.springai.ZeroMailLlmProperties;
+import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
 import com.zeromail.core.llm.model.Action;
 import com.zeromail.core.llm.model.BYOKProvider;
 import com.zeromail.core.llm.model.LlmChatRequest;

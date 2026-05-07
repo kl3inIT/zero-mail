@@ -59,19 +59,19 @@ public abstract class ApiPostgresTestBase {
     // Phase 01.5: google-gmail registration deleted — single bundled google registration only.
     // Test-only AES-256 key (32 zero bytes, base64-encoded).
     dynamicPropertyRegistry.add(
-        "zeromail.crypto.refresh-token-key-base64",
+        "zero-mail.crypto.refresh-token-key-base64",
         () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
     dynamicPropertyRegistry.add(
-        "zeromail.gmail.pubsub.push-audience-url",
+        "zero-mail.api.gmail.pubsub.push-audience-url",
         () -> "https://test.example/internal/pubsub/gmail");
     dynamicPropertyRegistry.add(
-        "zeromail.gmail.pubsub.sa-principal-email",
+        "zero-mail.api.gmail.pubsub.sa-principal-email",
         () -> "pubsub-sa@test-project.iam.gserviceaccount.com");
     dynamicPropertyRegistry.add(
-        "zeromail.billing.sepay.webhook-api-key", () -> "test-sepay-key-fixture");
-    dynamicPropertyRegistry.add("zeromail.billing.vnd-per-credit", () -> "1000");
-    dynamicPropertyRegistry.add("zeromail.billing.max-pending-intents-per-tenant", () -> "5");
-    dynamicPropertyRegistry.add("zeromail.billing.intent-expiry", () -> "PT24H");
+        "zero-mail.billing.sepay.webhook-api-key", () -> "test-sepay-key-fixture");
+    dynamicPropertyRegistry.add("zero-mail.billing.vnd-per-credit", () -> "1000");
+    dynamicPropertyRegistry.add("zero-mail.billing.max-pending-intents-per-tenant", () -> "5");
+    dynamicPropertyRegistry.add("zero-mail.billing.intent-expiry", () -> "PT24H");
     // Spring AI starters are present transitively in API test contexts after Phase 02C wiring. The
     // gateway itself is not exercised here, but model auto-configuration still requires keys.
     dynamicPropertyRegistry.add("spring.ai.openai.api-key", () -> "test-openai-key");

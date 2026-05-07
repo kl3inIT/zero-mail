@@ -29,7 +29,10 @@ public final class ErrorCodes {
   public static final String BILLING_SEPAY_REFERENCE_INVALID =
       "error.billing.sepay.reference_invalid";
   public static final String BILLING_SEPAY_AUTH_INVALID = "error.billing.sepay.auth_invalid";
-  public static final String LLM_SAFETY_VIOLATION = "error.llm.safetyViolation";
+  public static final String LLM_SAFETY_VIOLATION = "error.llm.safety_violation";
+  public static final String LLM_SANITIZATION_FAILED = "error.llm.sanitization_failed";
+  public static final String LLM_BYOK_INVALID = "error.llm.byok.invalid";
+  public static final String LLM_BYOK_VALIDATE_FAILED = "error.llm.byok.validate_failed";
 
   private ErrorCodes() {}
 }

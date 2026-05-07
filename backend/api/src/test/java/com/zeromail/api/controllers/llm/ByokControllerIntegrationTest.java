@@ -1,7 +1,6 @@
 package com.zeromail.api.controllers.llm;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.client.ExpectedCount.once;
@@ -18,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Primary;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
@@ -27,7 +27,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -77,8 +76,6 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
 
   @Autowired ObjectMapper objectMapper;
 
-  @Autowired JdbcTemplate jdbcTemplate;
-
   @Autowired RefreshTokenCipher refreshTokenCipher;
 
   @Autowired TenantByokCredentialsRepository tenantByokCredentialsRepository;
@@ -93,7 +90,7 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
   }
 
   @Test
-  void post_validate_returns_200_for_valid_key() throws Exception {
+  void post_validate_returns_200_for_valid_key() {
     Seed seed = seedUser("byok-validate-ok");
     mockRestServiceServer
         .expect(once(), requestTo("https://openrouter.ai/api/v1/models"))
@@ -122,7 +119,7 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
   }
 
   @Test
-  void post_save_returns_400_when_invalid_byok_exception_thrown() throws Exception {
+  void post_save_returns_400_when_invalid_byok_exception_thrown() {
     Seed seed = seedUser("byok-save-invalid");
 
     ResponseEntity<String> response =
@@ -148,7 +145,7 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
   }
 
   @Test
-  void safety_violation_handler_returns_500() throws Exception {
+  void safety_violation_handler_returns_500() {
     JsonNode responseJson = postProbe("/test/llm/safety-violation");
 
     assertThat(responseJson.path("status").asInt()).isEqualTo(500);
@@ -156,7 +153,7 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
   }
 
   @Test
-  void sanitization_failed_handler_returns_500() throws Exception {
+  void sanitization_failed_handler_returns_500() {
     JsonNode responseJson = postProbe("/test/llm/sanitization-failed");
 
     assertThat(responseJson.path("status").asInt()).isEqualTo(500);
@@ -164,7 +161,7 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
   }
 
   @Test
-  void insufficient_credits_still_returns_402() throws Exception {
+  void insufficient_credits_still_returns_402() {
     Seed seed = seedUser("byok-insufficient");
 
     ResponseEntity<String> response =
@@ -183,7 +180,7 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
   }
 
   @Test
-  void save_without_prior_validate_still_validates_server_side() throws Exception {
+  void save_without_prior_validate_still_validates_server_side() {
     Seed seed = seedUser("byok-save-reprobe");
     mockRestServiceServer
         .expect(once(), requestTo("https://openrouter.ai/api/v1/models"))
@@ -213,7 +210,7 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
   }
 
   @Test
-  void post_validate_accepts_lowercase_provider_id() throws Exception {
+  void post_validate_accepts_lowercase_provider_id() {
     Seed seed = seedUser("byok-lower-provider");
     mockRestServiceServer
         .expect(times(1), requestTo("https://openrouter.ai/api/v1/models"))
@@ -260,10 +257,11 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
   }
 
   @Test
-  void get_current_returns_lowercase_provider_id() throws Exception {
+  void get_current_returns_lowercase_provider_id() {
     Seed seed = seedUser("byok-current-provider");
     byte[] encryptedEnvelope =
-        refreshTokenCipher.encrypt("stored-key".getBytes(StandardCharsets.UTF_8), seed.tenantId().toString());
+        refreshTokenCipher.encrypt(
+            "stored-key".getBytes(StandardCharsets.UTF_8), seed.tenantId().toString());
     ScopedValue.where(TenantContext.TENANT, seed.tenantId().toString())
         .run(
             () ->
@@ -290,7 +288,7 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
         .isEqualTo("anthropic");
   }
 
-  private JsonNode postProbe(String uri) throws Exception {
+  private JsonNode postProbe(String uri) {
     ResponseEntity<String> response =
         client()
             .post()
@@ -356,6 +354,7 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
   static class ByokRestClientBuilderConfiguration {
 
     @Bean
+    @Primary
     RestClient.Builder byokRestClientBuilder() {
       return RestClient.builder();
     }

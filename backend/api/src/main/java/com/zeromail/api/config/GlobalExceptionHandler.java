@@ -25,7 +25,10 @@ import com.zeromail.api.error.FieldErrorDto;
 import com.zeromail.core.account.model.CurrentUserNotFoundException;
 import com.zeromail.core.billing.model.IllegalLedgerStateException;
 import com.zeromail.core.billing.model.InsufficientCreditsException;
+import com.zeromail.core.llm.model.InvalidByokException;
 import com.zeromail.core.llm.model.SafetyViolationException;
+import com.zeromail.core.llm.model.SanitizationException;
+import com.zeromail.core.tenant.TenantContext;
 
 import jakarta.validation.ConstraintViolationException;
 import org.jspecify.annotations.NonNull;
@@ -157,12 +160,41 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
   @ExceptionHandler(SafetyViolationException.class)
   public ResponseEntity<ProblemDetail> onSafetyViolation(SafetyViolationException exception) {
-    log.warn("event=llm_safety_violation exceptionClass={}", exception.getClass().getSimpleName());
+    log.error(
+        "event=llm_safety_violation tenantId={} reason={}",
+        tenantIdForLog(),
+        exception.getClass().getSimpleName());
     return problem(
         HttpStatus.INTERNAL_SERVER_ERROR,
         "LLM safety violation",
         "The model response violated the LLM safety policy.",
         ErrorCodes.LLM_SAFETY_VIOLATION);
+  }
+
+  @ExceptionHandler(SanitizationException.class)
+  public ResponseEntity<ProblemDetail> onSanitizationFailed(SanitizationException exception) {
+    log.error(
+        "event=llm_sanitization_failed tenantId={} reason={}",
+        tenantIdForLog(),
+        exception.getClass().getSimpleName());
+    return problem(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        "LLM sanitization failed",
+        "The LLM request could not be sanitized safely.",
+        ErrorCodes.LLM_SANITIZATION_FAILED);
+  }
+
+  @ExceptionHandler(InvalidByokException.class)
+  public ResponseEntity<ProblemDetail> onInvalidByok(InvalidByokException exception) {
+    log.warn(
+        "event=llm_byok_invalid tenantId={} reason={}",
+        tenantIdForLog(),
+        exception.getClass().getSimpleName());
+    return problem(
+        HttpStatus.BAD_REQUEST,
+        "Invalid BYOK credentials",
+        "The BYOK provider, endpoint, or key could not be validated.",
+        ErrorCodes.LLM_BYOK_INVALID);
   }
 
   @ExceptionHandler(IllegalStateException.class)
@@ -270,5 +302,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     problemDetail.setProperty(
         "message", code); // transitional alias of code (drop next phase per D-C1)
     return ResponseEntity.status(status).body(problemDetail);
+  }
+
+  private static String tenantIdForLog() {
+    try {
+      return TenantContext.currentOrThrow();
+    } catch (RuntimeException tenantContextMissing) {
+      return "unknown";
+    }
   }
 }

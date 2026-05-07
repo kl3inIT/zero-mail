@@ -12,88 +12,84 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-@ConfigurationProperties(prefix = "zeromail")
+@ConfigurationProperties(prefix = "zero-mail.api")
 @Validated
 public record ZeroMailApiProperties(
-        @Valid WebProperties web,
-        @Valid CorsProperties cors,
-        @Valid GmailProperties gmail) {
+    @Valid WebProperties web, @Valid CorsProperties cors, @Valid GmailProperties gmail) {
 
-    public ZeroMailApiProperties {
-        web = web == null ? WebProperties.defaults() : web;
-        cors = cors == null ? CorsProperties.defaults() : cors;
-        gmail = gmail == null ? GmailProperties.defaults() : gmail;
+  public ZeroMailApiProperties {
+    web = web == null ? WebProperties.defaults() : web;
+    cors = cors == null ? CorsProperties.defaults() : cors;
+    gmail = gmail == null ? GmailProperties.defaults() : gmail;
+  }
+
+  public record WebProperties(@DefaultValue("http://localhost:3000") @NotNull URI baseUrl) {
+
+    static WebProperties defaults() {
+      return new WebProperties(URI.create("http://localhost:3000"));
+    }
+  }
+
+  public record CorsProperties(
+      List<@NotBlank String> allowedOrigins,
+      List<@NotBlank String> allowedOriginPatterns,
+      List<@NotBlank String> allowedMethods,
+      List<@NotBlank String> allowedHeaders,
+      List<@NotBlank String> exposedHeaders,
+      @DefaultValue("true") boolean allowCredentials,
+      @DefaultValue("1800") @Min(0) long maxAge) {
+
+    public CorsProperties {
+      var normalizedPatterns = nonBlank(allowedOriginPatterns);
+      var normalizedOrigins = nonBlank(allowedOrigins);
+      if (normalizedOrigins.isEmpty() && normalizedPatterns.isEmpty()) {
+        normalizedOrigins = List.of("http://localhost:3000");
+      }
+      allowedOrigins = normalizedOrigins;
+      allowedOriginPatterns = normalizedPatterns;
+      allowedMethods =
+          defaultIfBlank(
+              allowedMethods, List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+      allowedHeaders = defaultIfBlank(allowedHeaders, List.of("*"));
+      exposedHeaders = defaultIfBlank(exposedHeaders, List.of("XSRF-TOKEN"));
     }
 
-    public record WebProperties(
-            @DefaultValue("http://localhost:3000") @NotNull URI baseUrl) {
-
-        static WebProperties defaults() {
-            return new WebProperties(URI.create("http://localhost:3000"));
-        }
+    static CorsProperties defaults() {
+      return new CorsProperties(null, null, null, null, null, true, 1800);
     }
 
-    public record CorsProperties(
-            List<@NotBlank String> allowedOrigins,
-            List<@NotBlank String> allowedOriginPatterns,
-            List<@NotBlank String> allowedMethods,
-            List<@NotBlank String> allowedHeaders,
-            List<@NotBlank String> exposedHeaders,
-            @DefaultValue("true") boolean allowCredentials,
-            @DefaultValue("1800") @Min(0) long maxAge) {
-
-        public CorsProperties {
-            var normalizedPatterns = nonBlank(allowedOriginPatterns);
-            var normalizedOrigins = nonBlank(allowedOrigins);
-            if (normalizedOrigins.isEmpty() && normalizedPatterns.isEmpty()) {
-                normalizedOrigins = List.of("http://localhost:3000");
-            }
-            allowedOrigins = normalizedOrigins;
-            allowedOriginPatterns = normalizedPatterns;
-            allowedMethods = defaultIfBlank(allowedMethods, List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-            allowedHeaders = defaultIfBlank(allowedHeaders, List.of("*"));
-            exposedHeaders = defaultIfBlank(exposedHeaders, List.of("XSRF-TOKEN"));
-        }
-
-        static CorsProperties defaults() {
-            return new CorsProperties(null, null, null, null, null, true, 1800);
-        }
-
-        private static List<String> defaultIfBlank(List<String> values, List<String> fallback) {
-            var normalized = nonBlank(values);
-            return normalized.isEmpty() ? fallback : normalized;
-        }
-
-        private static List<String> nonBlank(List<String> values) {
-            if (values == null) {
-                return List.of();
-            }
-            return values.stream()
-                    .map(String::trim)
-                    .filter(value -> !value.isEmpty())
-                    .toList();
-        }
+    private static List<String> defaultIfBlank(List<String> values, List<String> fallback) {
+      var normalized = nonBlank(values);
+      return normalized.isEmpty() ? fallback : normalized;
     }
 
-    public record GmailProperties(
-            @Valid PubSubProperties pubsub) {
+    private static List<String> nonBlank(List<String> values) {
+      if (values == null) {
+        return List.of();
+      }
+      return values.stream().map(String::trim).filter(value -> !value.isEmpty()).toList();
+    }
+  }
 
-        public GmailProperties {
-            pubsub = pubsub == null ? PubSubProperties.defaults() : pubsub;
-        }
+  public record GmailProperties(@Valid PubSubProperties pubsub) {
 
-        static GmailProperties defaults() {
-            return new GmailProperties(null);
-        }
+    public GmailProperties {
+      pubsub = pubsub == null ? PubSubProperties.defaults() : pubsub;
     }
 
-    public record PubSubProperties(
-            @NotBlank String pushAudienceUrl,
-            @NotBlank String saPrincipalEmail,
-            @DefaultValue("https://www.googleapis.com/oauth2/v3/certs") @NotBlank String oidcCertificatesUrl) {
-
-        static PubSubProperties defaults() {
-            return new PubSubProperties(null, null, "https://www.googleapis.com/oauth2/v3/certs");
-        }
+    static GmailProperties defaults() {
+      return new GmailProperties(null);
     }
+  }
+
+  public record PubSubProperties(
+      @NotBlank String pushAudienceUrl,
+      @NotBlank String saPrincipalEmail,
+      @DefaultValue("https://www.googleapis.com/oauth2/v3/certs") @NotBlank
+          String oidcCertificatesUrl) {
+
+    static PubSubProperties defaults() {
+      return new PubSubProperties(null, null, "https://www.googleapis.com/oauth2/v3/certs");
+    }
+  }
 }

@@ -85,10 +85,10 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     String scheme = baseUrl.getScheme();
     if (scheme == null || (!scheme.equals("http") && !scheme.equals("https"))) {
       throw new IllegalStateException(
-          "zeromail.web.base-url must use http or https scheme; got: " + scheme);
+          "zero-mail.api.web.base-url must use http or https scheme; got: " + scheme);
     }
     if (baseUrl.getHost() == null || baseUrl.getHost().isBlank()) {
-      throw new IllegalStateException("zeromail.web.base-url must have a non-blank host");
+      throw new IllegalStateException("zero-mail.api.web.base-url must have a non-blank host");
     }
 
     // Build the success-redirect URL via UriComponentsBuilder so URI semantics are
@@ -106,7 +106,8 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
       throws IOException, ServletException {
     OAuth2AuthenticationToken authenticationToken = (OAuth2AuthenticationToken) authentication;
     OidcUser oidcUser =
-        Objects.requireNonNull((OidcUser) authenticationToken.getPrincipal(), "OIDC principal is required");
+        Objects.requireNonNull(
+            (OidcUser) authenticationToken.getPrincipal(), "OIDC principal is required");
     String googleSubject =
         Objects.requireNonNull(
             oidcUser.getClaimAsString(StandardClaimNames.SUB), "OIDC subject is required");
@@ -123,7 +124,8 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         || authorizedClient.getAccessToken() == null
         || !authorizedClient.getAccessToken().getScopes().contains(OAuthScopes.GMAIL_MODIFY)) {
       // CR-02 fix: clean up any partial AuthorizedClient Spring stored before the success
-      // handler ran. Use authenticationToken.getName() — always available from OAuth2AuthenticationToken,
+      // handler ran. Use authenticationToken.getName() — always available from
+      // OAuth2AuthenticationToken,
       // unlike request.getUserPrincipal() which is null here (principal not committed to
       // SecurityContext yet). Best-effort; never log the principal name (privacy D-E1).
       if (authorizedClient != null) {
@@ -144,7 +146,8 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
       if (!existingUser) {
         log.info("event=oauth_no_refresh_token_first_login");
         // CR-02 fix: clean up partial AuthorizedClient before throwing.
-        // authenticationToken.getName() is always available; request.getUserPrincipal() is null here.
+        // authenticationToken.getName() is always available; request.getUserPrincipal() is null
+        // here.
         try {
           authorizedClientService.removeAuthorizedClient("google", authenticationToken.getName());
         } catch (Exception ignored) {

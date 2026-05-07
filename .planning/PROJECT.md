@@ -132,7 +132,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 | Name "Zero Mail" — placeholder | Directory-derived; final brand will be chosen before public launch to avoid rework | Pending rename before launch |
 | Single bundled Google OAuth registration | Phase 01.5 removed the separate `google-gmail` leg; login now requests Gmail scopes up front and persists the Gmail connection during provisioning | Chosen |
 | Single VPS deployment baseline | Current deployment runs app, worker, web, PostgreSQL, and Redis together on one VPS; no GCP hosting baseline or `spring-cloud-gcp` starter by default | Chosen |
-| Billing configuration under `ZeroMailCoreProperties` | Phase 02B follows the existing backend properties convention: core-owned settings stay under one core properties root and bind as `zeromail.billing.*`, avoiding separate per-domain properties/configuration classes | Chosen |
+| Billing configuration under `ZeroMailCoreProperties` | Phase 02B follows the existing backend properties convention: core-owned settings stay under one core properties root and bind as `zero-mail.billing.*`, avoiding separate per-domain properties/configuration classes | Chosen |
 
 ## Evolution
 

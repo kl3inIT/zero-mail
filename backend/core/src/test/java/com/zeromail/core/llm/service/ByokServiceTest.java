@@ -28,7 +28,7 @@ import org.springframework.web.client.RestClient;
 
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.llm.byok.ByokEndpointValidator;
-import com.zeromail.core.llm.byok.ZeroMailLlmByokProperties;
+import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmByokProperties;
 import com.zeromail.core.llm.model.BYOKProvider;
 import com.zeromail.core.llm.model.ByokCurrent;
 import com.zeromail.core.llm.model.ByokSaveCommand;
@@ -56,7 +56,7 @@ class ByokServiceTest extends PostgresContainerTest {
   void setUp() {
     RestClient.Builder restClientBuilder = RestClient.builder();
     mockRestServiceServer = MockRestServiceServer.bindTo(restClientBuilder).build();
-    byokService = newService(restClientBuilder, true);
+    byokService = newService(restClientBuilder);
   }
 
   @Test
@@ -130,9 +130,7 @@ class ByokServiceTest extends PostgresContainerTest {
                 byokService.validate(
                     tenantId,
                     new ByokValidateCommand(
-                        BYOKProvider.ANTHROPIC,
-                        "https://api.anthropic.com/v1",
-                        "anthropic-key")));
+                        BYOKProvider.ANTHROPIC, "https://api.anthropic.com/v1", "anthropic-key")));
 
     assertThat(result.ok()).isTrue();
     assertThat(result.models()).isNull();
@@ -221,7 +219,8 @@ class ByokServiceTest extends PostgresContainerTest {
     TenantByokCredentialsEntity credentials = findCredentials(tenantId);
     assertThat(credentials.getEncryptedKey())
         .isNotEqualTo("plaintext-key".getBytes(StandardCharsets.UTF_8));
-    byte[] decryptedKey = refreshTokenCipher.decrypt(credentials.getEncryptedKey(), tenantId.toString());
+    byte[] decryptedKey =
+        refreshTokenCipher.decrypt(credentials.getEncryptedKey(), tenantId.toString());
     assertThat(new String(decryptedKey, StandardCharsets.UTF_8)).isEqualTo("plaintext-key");
     mockRestServiceServer.verify();
   }
@@ -229,7 +228,8 @@ class ByokServiceTest extends PostgresContainerTest {
   @Test
   void save_upserts_existing_row() {
     UUID tenantId = seedTenant();
-    byte[] firstEnvelope = refreshTokenCipher.encrypt("old-key".getBytes(StandardCharsets.UTF_8), tenantId.toString());
+    byte[] firstEnvelope =
+        refreshTokenCipher.encrypt("old-key".getBytes(StandardCharsets.UTF_8), tenantId.toString());
     underTenant(
         tenantId,
         () ->
@@ -254,14 +254,18 @@ class ByokServiceTest extends PostgresContainerTest {
                     "replacement-key")));
 
     List<TenantByokCredentialsEntity> allCredentials =
-        tenantByokCredentialsRepository.findAll().stream()
-            .filter(credentials -> credentials.getTenantId().equals(tenantId))
-            .toList();
+        underTenant(
+            tenantId,
+            () ->
+                tenantByokCredentialsRepository.findAll().stream()
+                    .filter(credentials -> credentials.getTenantId().equals(tenantId))
+                    .toList());
     assertThat(allCredentials).hasSize(1);
     assertThat(allCredentials.getFirst().getProvider()).isEqualTo(BYOKProvider.OPENAI_COMPATIBLE);
     assertThat(allCredentials.getFirst().getEndpoint()).isEqualTo("https://openrouter.ai/api/v1");
     byte[] decryptedKey =
-        refreshTokenCipher.decrypt(allCredentials.getFirst().getEncryptedKey(), tenantId.toString());
+        refreshTokenCipher.decrypt(
+            allCredentials.getFirst().getEncryptedKey(), tenantId.toString());
     assertThat(new String(decryptedKey, StandardCharsets.UTF_8)).isEqualTo("replacement-key");
     mockRestServiceServer.verify();
   }
@@ -270,7 +274,8 @@ class ByokServiceTest extends PostgresContainerTest {
   void current_returns_metadata_only() {
     UUID tenantId = seedTenant();
     byte[] encryptedEnvelope =
-        refreshTokenCipher.encrypt("stored-key".getBytes(StandardCharsets.UTF_8), tenantId.toString());
+        refreshTokenCipher.encrypt(
+            "stored-key".getBytes(StandardCharsets.UTF_8), tenantId.toString());
     underTenant(
         tenantId,
         () ->
@@ -341,7 +346,9 @@ class ByokServiceTest extends PostgresContainerTest {
                         byokService.save(
                             tenantId,
                             new ByokSaveCommand(
-                                BYOKProvider.ANTHROPIC, "https://example.com/v1", "anthropic-key"))))
+                                BYOKProvider.ANTHROPIC,
+                                "https://example.com/v1",
+                                "anthropic-key"))))
         .isInstanceOf(InvalidByokException.class);
     assertThat(tenantByokCredentialsRepository.findByTenantId(tenantId)).isEmpty();
     mockRestServiceServer.verify();
@@ -418,13 +425,13 @@ class ByokServiceTest extends PostgresContainerTest {
                                 .doesNotStartWith("com.zeromail.api.dto")));
   }
 
-  private ByokService newService(RestClient.Builder restClientBuilder, boolean allowNonVendorEndpoints) {
+  private ByokService newService(RestClient.Builder restClientBuilder) {
     return new ByokService(
         tenantByokCredentialsRepository,
         refreshTokenCipher,
         new ByokEndpointValidator(
             new ZeroMailLlmByokProperties(
-                allowNonVendorEndpoints, List.of(), Duration.ofSeconds(5), Duration.ofSeconds(15))),
+                true, List.of(), Duration.ofSeconds(5), Duration.ofSeconds(15))),
         restClientBuilder);
   }
 
@@ -442,7 +449,8 @@ class ByokServiceTest extends PostgresContainerTest {
 
   private UUID seedTenant() {
     UUID tenantId = UUID.randomUUID();
-    jdbcTemplate.update("insert into tenants(id, display_name) values (?, ?)", tenantId, "tenant-" + tenantId);
+    jdbcTemplate.update(
+        "insert into tenants(id, display_name) values (?, ?)", tenantId, "tenant-" + tenantId);
     return tenantId;
   }
 
@@ -450,17 +458,8 @@ class ByokServiceTest extends PostgresContainerTest {
     return ScopedValue.where(TenantContext.TENANT, tenantId.toString()).call(tenantCallable::call);
   }
 
-  private static void underTenant(UUID tenantId, TenantRunnable tenantRunnable) {
-    ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(tenantRunnable::run);
-  }
-
   @FunctionalInterface
   private interface TenantCallable<T> {
     T call();
-  }
-
-  @FunctionalInterface
-  private interface TenantRunnable {
-    void run();
   }
 }

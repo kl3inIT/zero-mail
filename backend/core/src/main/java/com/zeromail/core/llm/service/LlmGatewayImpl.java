@@ -15,9 +15,10 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 import com.zeromail.core.billing.model.CallSite;
+import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
-import com.zeromail.core.llm.gateway.springai.ZeroMailLlmProperties;
 import com.zeromail.core.llm.model.BYOKProvider;
 import com.zeromail.core.llm.model.Action;
 import com.zeromail.core.llm.model.LlmChatRequest;
@@ -81,7 +82,7 @@ class LlmGatewayImpl implements LlmGateway {
   LlmGatewayImpl(
       LlmModelClient platformLlmModelClient,
       SanitizationPipeline sanitizationPipeline,
-      ZeroMailLlmProperties llmProperties,
+      ZeroMailCoreProperties zeroMailCoreProperties,
       AllowListedTools allowListedTools,
       ActionValidator actionValidator,
       ObjectProvider<ObservationRegistry> observationRegistryProvider,
@@ -93,7 +94,7 @@ class LlmGatewayImpl implements LlmGateway {
     this(
         platformLlmModelClient,
         sanitizationPipeline,
-        llmProperties,
+        zeroMailCoreProperties.llm().platform(),
         allowListedTools,
         actionValidator,
         observationRegistryProvider.getIfAvailable(ObservationRegistry::create),

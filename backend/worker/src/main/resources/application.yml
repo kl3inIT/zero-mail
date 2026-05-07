@@ -34,11 +34,12 @@ spring:
         log-prompt: false
         log-completion: false
 zero-mail:
+  worker:
+    gmail:
+      pubsub:
+        topic-name: ${GOOGLE_PUBSUB_TOPIC_NAME:?GOOGLE_PUBSUB_TOPIC_NAME env var is required}
   crypto:
     refresh-token-key-base64: ${REFRESH_TOKEN_KEY_BASE64:?REFRESH_TOKEN_KEY_BASE64 must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
-  gmail:
-    pubsub:
-      topic-name: ${GOOGLE_PUBSUB_TOPIC_NAME:?GOOGLE_PUBSUB_TOPIC_NAME env var is required}
   billing:
     sepay:
       # Bare placeholder: Spring fails during placeholder resolution when the secret is absent.
@@ -56,11 +57,6 @@ zero-mail:
       triage-model: openai/gpt-4o-mini
       connect-timeout: 5s
       read-timeout: 30s
-    byok:
-      allow-non-vendor-endpoints: false
-      allowed-extra-hosts: []
-      connect-timeout: 5s
-      read-timeout: 15s
     drift:
       enabled: ${ZEROMAIL_LLM_DRIFT_ENABLED:false}
       fixed-tenant-id: 00000000-0000-0000-0000-000000000000

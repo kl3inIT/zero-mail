@@ -47,15 +47,17 @@ public abstract class PostgresContainerTest {
         "spring.security.oauth2.client.registration.google.client-secret",
         () -> "test-google-secret");
     dynamicPropertyRegistry.add(
-        "zeromail.crypto.refresh-token-key-base64",
+        "zero-mail.crypto.refresh-token-key-base64",
         () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
-    dynamicPropertyRegistry.add("zeromail.gmail.pubsub.topic-name", () -> "projects/test/topics/gmail");
-    dynamicPropertyRegistry.add("zeromail.gmail.api-root-url", GMAIL::baseUrl);
-    dynamicPropertyRegistry.add("zeromail.gmail.oauth-token-url", () -> GMAIL.baseUrl() + "token");
-    dynamicPropertyRegistry.add("zeromail.billing.sepay.webhook-api-key", () -> "test-sepay-key-fixture");
-    dynamicPropertyRegistry.add("zeromail.billing.vnd-per-credit", () -> "1000");
-    dynamicPropertyRegistry.add("zeromail.billing.max-pending-intents-per-tenant", () -> "5");
-    dynamicPropertyRegistry.add("zeromail.billing.intent-expiry", () -> "PT24H");
+    dynamicPropertyRegistry.add(
+        "zero-mail.worker.gmail.pubsub.topic-name", () -> "projects/test/topics/gmail");
+    dynamicPropertyRegistry.add("zero-mail.gmail.api-root-url", GMAIL::baseUrl);
+    dynamicPropertyRegistry.add("zero-mail.gmail.oauth-token-url", () -> GMAIL.baseUrl() + "token");
+    dynamicPropertyRegistry.add(
+        "zero-mail.billing.sepay.webhook-api-key", () -> "test-sepay-key-fixture");
+    dynamicPropertyRegistry.add("zero-mail.billing.vnd-per-credit", () -> "1000");
+    dynamicPropertyRegistry.add("zero-mail.billing.max-pending-intents-per-tenant", () -> "5");
+    dynamicPropertyRegistry.add("zero-mail.billing.intent-expiry", () -> "PT24H");
     // Spring AI starters are on the worker classpath in Phase 02C. Worker tests do not exercise
     // the gateway adapter yet, but auto-configuration still requires placeholder keys.
     dynamicPropertyRegistry.add("spring.ai.openai.api-key", () -> "test-openai-key");

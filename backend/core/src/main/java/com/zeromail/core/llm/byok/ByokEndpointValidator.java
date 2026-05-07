@@ -11,8 +11,11 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmByokProperties;
 import com.zeromail.core.llm.model.BYOKProvider;
 import com.zeromail.core.llm.model.InvalidByokException;
 import com.zeromail.core.tenant.TenantContext;
@@ -41,6 +44,11 @@ public class ByokEndpointValidator {
 
   private final ZeroMailLlmByokProperties byokProperties;
   private final Set<String> allowedExtraHosts;
+
+  @Autowired
+  public ByokEndpointValidator(ZeroMailCoreProperties zeroMailCoreProperties) {
+    this(zeroMailCoreProperties.llm().byok());
+  }
 
   public ByokEndpointValidator(ZeroMailLlmByokProperties byokProperties) {
     this.byokProperties = byokProperties;
