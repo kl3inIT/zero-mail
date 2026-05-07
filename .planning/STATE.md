@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02C-02-PLAN.md
-last_updated: "2026-05-07T12:45:08.655Z"
+stopped_at: Completed 02C-03-PLAN.md
+last_updated: "2026-05-07T14:09:09.088Z"
 last_activity: 2026-05-07
 progress:
   total_phases: 15
   completed_phases: 10
   total_plans: 80
-  completed_plans: 73
-  percent: 91
+  completed_plans: 74
+  percent: 93
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 02C (llm-gateway) — EXECUTING
-Plan: 3 of 9
+Plan: 4 of 9
 Status: Ready to execute
 Last activity: 2026-05-07
 
-Progress: [█████████░] 91%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -105,6 +105,7 @@ Progress: [█████████░] 91%
 | Phase 02B P03 | 14min | 3 tasks | 25 files |
 | Phase 02C P01 | 45min | 1 tasks | 42 files |
 | Phase 02C P02 | 13min | 2 tasks | 16 files |
+| Phase 02C P03 | 75min | 1 tasks | 39 files |
 
 ## Accumulated Context
 
@@ -227,6 +228,9 @@ Recent decisions affecting current work:
 - [Phase 02C]: [Phase 02C Plan 01] Keep RefreshTokenCipher at core.gmail.persistence.crypto and declare core.llm -> gmail.persistence.crypto Modulith dependency for BYOK encryption reuse. — Matches D-A5 and avoids relocating Gmail token crypto in Plan 01.
 - [Phase 02C]: [Phase 02C Plan 01] Use pure-Java LlmModelClient seam and records so Spring AI imports stay confined to core.llm.gateway.springai. — Satisfies the strict ArchUnit no-exemption import boundary for LLM-01.
 - [Phase 02C]: [Phase 02C Plan 01] Add test-only Spring AI placeholder keys to SpringBootTest contexts because starters auto-configure model beans even when gateway behavior is not exercised. — Required to keep core/API/worker tests booting after adding Spring AI starters.
+- [Phase 02C]: Plan 03 keeps LlmGatewayImpl Spring-AI-free; all org.springframework.ai imports stay in core.llm.gateway.springai behind the pure-Java LlmModelClient seam.
+- [Phase 02C]: Plan 03 pins Spring AI observation log-prompt/log-completion false in API and worker YAML and verifies span/log content stays metadata-only.
+- [Phase 02C]: Plan 03 applies Logback secret-scrub hardening in the shared backend/core logback-spring.xml because API/worker-specific logback files do not exist.
 
 ### Roadmap Evolution
 
@@ -280,6 +284,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-07T12:45:08.635Z
-Stopped at: Completed 02C-02-PLAN.md
+Last session: 2026-05-07T14:09:09.069Z
+Stopped at: Completed 02C-03-PLAN.md
 Resume file: None
