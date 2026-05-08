@@ -259,10 +259,10 @@ Plans:
 - [x] 02C-02-PLAN.md — Wave 1 sanitization pipeline: Jsoup -> NFC -> Unicode-tag-strip -> jtokkit truncate(3896) + corpus test (5 prompt-injection fixtures)
 - [x] 02C-03-PLAN.md — Wave 2 gateway core: LlmGateway interface + LlmGatewayImpl skeleton + PlatformApiKey + PlatformChatClientConfig + ZeroMailLlmProperties + application.yml fail-fast + observation pins + multi-tenant leak test
 - [x] 02C-04-PLAN.md — Wave 3 tool-call allow-list: ActionValidator + SafetyViolationException + Layer 1 (toolChoice=required) + Layer 2 (validator) wired into LlmGatewayImpl
-- [ ] 02C-05-PLAN.md — Wave 4 BYOK: BYOKChatModelFactory + 2 asymmetric impls + ByokService + ByokController + 5 DTOs + 4 ErrorCodes + 3 GlobalExceptionHandler mappings
+- [x] 02C-05a/05b-PLAN.md — Wave 4 BYOK: BYOKChatModelFactory + 2 asymmetric impls + ByokService + ByokController + 5 DTOs + 4 ErrorCodes + 3 GlobalExceptionHandler mappings
 - [x] 02C-06-PLAN.md — Wave 5 credit cap: CreditLedger reserve/settle/release wrapping platform path; BYOK + driftCheck skip ledger; 100-call concurrent test
 - [x] 02C-07-PLAN.md — Wave 6 drift detection: DriftDetectionJob + golden-set.json (~20 synthetic fixtures) + golden-baseline.json + 2 CI mock tests; cron defaults disabled
-- [ ] 02C-08-PLAN.md — Wave 6 frontend BYOK form: features/llm/ triplet + ByokForm.tsx (frontend-design skill) + i18n vi/en + mounted on /settings
+- [x] 02C-08-PLAN.md — Wave 6 frontend BYOK form: features/llm/ triplet + ByokForm.tsx (frontend-design skill) + i18n vi/en + mounted on /settings
 
 ### Phase 3: Rules Engine
 **Goal**: Let users author, preview, and manage natural-language rules that compile to a deterministic matcher AST — with `SEMANTIC_INTENT` matchers deferred to Phase 4 for batched LLM evaluation.
