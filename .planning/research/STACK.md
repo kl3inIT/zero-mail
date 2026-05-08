@@ -17,7 +17,7 @@
 - **PostgreSQL 17.6 on Cloud SQL** + **Liquibase 5.0.2 (YAML changelogs)** + **Spring Data JPA (Hibernate 7)** for aggregates, **Spring Data JDBC** for read-side and hot paths, **JSONB + jsonb_path_ops** for rule matchers, **pgcrypto / AES-GCM at app layer** for OAuth refresh-token encryption. Community PostgreSQL 18 exists, but Cloud SQL 18 is still Preview as of 2026-04-24.
 - **Redis 7.2 on Memorystore** (Spring Data Redis + Lettuce) for rate limiting, idempotency keys, session store, and per-tenant ChatModel cache — NOT as a task queue. OSS Redis 8.x exists, but GCP's managed service currently tops out at 7.2.
 - **Queue = Postgres-backed** (single `outbox` + `processing_job` table with `SKIP LOCKED`). No Kafka, no RabbitMQ in v1. Google Pub/Sub already handles ingress retries.
-- **Next.js 16.2.4 (App Router) + React 19.2.5** in `apps/web`, **pnpm 10.33.2 + Turborepo 2.9.6**, **TanStack Query 5.100.1**, **shadcn/ui + Tailwind CSS 4.2.4**, typed client via **OpenAPI codegen (`openapi-typescript` 7.13.0 + `openapi-fetch` 0.17.0)** from Spring's `springdoc-openapi` output.
+- **Next.js 16.2.4 (App Router) + React 19.2.5** in `apps/web`, **pnpm 11.0.8 + Turborepo 2.9.6**, **TanStack Query 5.100.1**, **shadcn/ui + Tailwind CSS 4.2.4**, typed client via **OpenAPI codegen (`openapi-typescript` 7.13.0 + `openapi-fetch` 0.17.0)** from Spring's `springdoc-openapi` output.
 - **Auth**: Spring Security OAuth2 Client (Google), **server-issued signed session cookie** (not stateless JWT). Next.js sits behind the same origin; cookie is HttpOnly, SameSite=Lax.
 - **Deploy**: **Google Cloud Run** (Pub/Sub push is natively OIDC-authenticated against Cloud Run URLs — zero glue). Cloud SQL Postgres, Memorystore Redis. Secret Manager for OAuth client secret + app-level encryption keys.
 - **Container**: `eclipse-temurin:25-jre-noble` (production) built via Spring Boot's **CDS + AOT layered image** support; distroless for hardening if startup tuning matters more than debuggability.
@@ -275,7 +275,7 @@ kotlin {
 | Hibernate 7.2.x | JDK 17+, Jakarta Persistence 3.2 | Ambient via Boot 4.0.6. **HIGH**. |
 | Liquibase 5.0.2 | Spring Boot 4.0.6 BOM-managed | **HIGH**. |
 | Next.js 16.2.4 | React 19.2.5, Node 20.9+ | **HIGH**. |
-| Turborepo 2.9.6 | pnpm 10.33.2 | **HIGH**. |
+| Turborepo 2.9.6 | pnpm 11.0.8 | **HIGH**. |
 
 ## Installation (representative fragments)
 

@@ -9,7 +9,7 @@ Synthesis of `STACK.md`, `FEATURES.md`, `ARCHITECTURE.md`, `PITFALLS.md`. Consum
 - Gradle 9.4.1 + Kotlin DSL · Cloud SQL Postgres 17.6 + Liquibase 5.0.2 (YAML) + JPA · Memorystore Redis 7.2 (cache / session / rate-limit only — not in billing critical path)
 - Monorepo layout locked to `apps/web` + `backend/core` + `backend/api` + `backend/worker`; internal backend boundaries enforced in `backend/core` via Spring Modulith + architecture tests
 - Cloud Run + Cloud SQL + Memorystore + Secret Manager
-- Next.js 16.2.4 / React 19.2.5 / Tailwind 4.2.4 / shadcn/ui / TanStack Query 5.100.1 / openapi-typescript 7.13.0; pnpm 10.33.2 + Turborepo 2.9.6 **outside Gradle**
+- Next.js 16.2.4 / React 19.2.5 / Tailwind 4.2.4 / shadcn/ui / TanStack Query 5.100.1 / openapi-typescript 7.13.0; pnpm 11.0.8 + Turborepo 2.9.6 **outside Gradle**
 - Cookie session (not JWT) · Virtual threads ON · **Scoped Values, never ThreadLocal** · no Lombok (Java records + pattern matching)
 
 ## v1 Feature Set

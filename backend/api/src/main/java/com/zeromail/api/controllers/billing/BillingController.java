@@ -43,11 +43,6 @@ public class BillingController {
     UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
     BillingTopupIntentEntity intent =
         billingTopupService.createIntent(tenantId, request.amountVnd());
-    return toResponse(intent);
-  }
-
-  private static TopupIntentResponse toResponse(BillingTopupIntentEntity intent) {
-    return new TopupIntentResponse(
-        intent.getCode(), intent.getAmountVnd(), intent.getExpiresAt(), null);
+    return TopupIntentResponse.from(intent);
   }
 }

@@ -13,7 +13,6 @@ import com.zeromail.api.dto.llm.ByokSaveRequest;
 import com.zeromail.api.dto.llm.ByokSaveResponse;
 import com.zeromail.api.dto.llm.ByokValidateRequest;
 import com.zeromail.api.dto.llm.ByokValidateResponse;
-import com.zeromail.core.llm.model.ByokCurrent;
 import com.zeromail.core.llm.model.ByokSaveCommand;
 import com.zeromail.core.llm.model.ByokSaveResult;
 import com.zeromail.core.llm.model.ByokValidateCommand;
@@ -43,7 +42,7 @@ public class ByokController {
             tenantId,
             new ByokValidateCommand(
                 request.preset(), request.endpoint(), request.model(), request.apiKey()));
-    return new ByokValidateResponse(result.ok(), result.models(), result.reason());
+    return ByokValidateResponse.from(result);
   }
 
   @PostMapping
@@ -54,21 +53,15 @@ public class ByokController {
             tenantId,
             new ByokSaveCommand(
                 request.preset(), request.endpoint(), request.model(), request.apiKey()));
-    return new ByokSaveResponse(result.ok(), result.savedAt());
+    return ByokSaveResponse.from(result);
   }
 
   @GetMapping
   public ByokCurrentResponse current() {
     UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
-    return byokService.current(tenantId).map(ByokController::toResponse).orElse(nullResponse());
-  }
-
-  private static ByokCurrentResponse toResponse(ByokCurrent current) {
-    return new ByokCurrentResponse(
-        current.provider(), current.endpointHost(), current.model(), current.savedAt());
-  }
-
-  private static ByokCurrentResponse nullResponse() {
-    return new ByokCurrentResponse(null, null, null, null);
+    return byokService
+        .current(tenantId)
+        .map(ByokCurrentResponse::from)
+        .orElse(ByokCurrentResponse.empty());
   }
 }

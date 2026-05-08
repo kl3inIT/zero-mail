@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed quick task 260508-g41 BYOK OpenRouter preset and Spring AI M5 sync
+stopped_at: Completed quick task 260508-vlk Update project pnpm version pin to latest stable
 last_updated: "2026-05-08T06:54:50.500Z"
 last_activity: 2026-05-08
 progress:
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 Phase: 02C (llm-gateway) — EXECUTING
 Plan: 9 of 9
 Status: Ready to execute
-Last activity: 2026-05-08
+Last activity: 2026-05-08 - Completed quick task 260508-vlk: Update project pnpm version pin to latest stable
 
 Progress: [██████████] 99%
 
@@ -277,6 +277,7 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260508-vlk | Update project pnpm version pin to latest stable | 2026-05-08 | pending | [260508-vlk-update-project-pnpm-version-pin-to-lates](./quick/260508-vlk-update-project-pnpm-version-pin-to-lates/) |
 | 260508-g41 | BYOK OpenRouter preset, model selection, Spring AI 2.0.0-M5 sync | 2026-05-08 | pending | [260508-g41-byok-openrouter-preset-and-per-tenant-mo](./quick/260508-g41-byok-openrouter-preset-and-per-tenant-mo/) |
 | 260507-4lb | Refactor frontend feature API, hooks, query keys, and tests | 2026-05-07 | a3c2966 | [260507-4lb-refactor-frontend-feature-api-hooks-quer](./quick/260507-4lb-refactor-frontend-feature-api-hooks-quer/) |
 | 260428-0hx | Rename core view records to projections | 2026-04-28 | 3ff9025 | [260428-0hx-rename-core-view-records-to-projections-](./quick/260428-0hx-rename-core-view-records-to-projections-/) |

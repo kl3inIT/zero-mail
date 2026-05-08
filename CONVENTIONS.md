@@ -6,7 +6,7 @@ Project-wide coding conventions referenced by `CLAUDE.md` / `AGENTS.md`.
 
 ## 1. Thin controllers + service-owned `@Transactional`
 
-Controllers map domain view-model records to wire DTOs via private `toResponse(...)` helpers and never touch repositories directly. Transaction boundaries belong in `@Service` classes; controllers translate HTTP-shape ↔ domain-shape and forward to services. This keeps controllers cheap to test (no DB), centralizes transaction logic, and lets Spring Modulith + ArchUnit enforce domain boundaries cleanly. Any controller that injects a JPA repository directly creates a hidden transaction-scope bug and breaks domain isolation.
+Controllers never touch repositories directly. Transaction boundaries belong in `@Service` classes; controllers translate HTTP-shape ↔ domain-shape and forward to services. Response DTOs own projection/result-to-wire mapping through static `from(...)` factories, so controllers return `SomeResponse.from(domainResult)` instead of keeping private `toResponse(...)` helpers or constructing response DTOs inline. This keeps controllers cheap to test (no DB), centralizes transaction logic, and lets Spring Modulith + ArchUnit enforce domain boundaries cleanly. Any controller that injects a JPA repository directly creates a hidden transaction-scope bug and breaks domain isolation.
 
 **Example:** `backend/api/src/main/java/com/zeromail/api/controllers/TenantStatusController.java`
 
@@ -14,16 +14,12 @@ Controllers map domain view-model records to wire DTOs via private `toResponse(.
 @GetMapping("/gmail/connection/status")
 public GmailConnectionStatusResponse status() {
     UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
-    GmailConnectionView view = connectionService.currentStatus(tenantId);
-    return toResponse(view);
-}
-
-private static GmailConnectionStatusResponse toResponse(GmailConnectionView view) {
-    return new GmailConnectionStatusResponse(view.status(), view.googleEmail());
+    GmailConnectionProjection projection = connectionService.currentStatus(tenantId);
+    return GmailConnectionStatusResponse.from(projection);
 }
 ```
 
-**Anti-pattern:** controller injecting `UserRepository` or `GmailConnectionRepository` and calling `findById` / `save` directly — bypasses service-layer transaction boundary and exposes persistence internals to the HTTP layer.
+**Anti-pattern:** controller injecting `UserRepository` or `GmailConnectionRepository` and calling `findById` / `save` directly — bypasses service-layer transaction boundary and exposes persistence internals to the HTTP layer. Also avoid controller-local `private static toResponse(...)` helpers or inline `new SomeResponse(...)` mapping when the response DTO can own a `from(...)` factory.
 
 ---
 

@@ -20,19 +20,19 @@ import jakarta.validation.Valid;
 @Tag(name = "tenant")
 public class TriagePauseController {
 
-    private static final Logger log = LoggerFactory.getLogger(TriagePauseController.class);
+  private static final Logger log = LoggerFactory.getLogger(TriagePauseController.class);
 
-    private final TenantService tenantService;
+  private final TenantService tenantService;
 
-    public TriagePauseController(TenantService tenantService) {
-        this.tenantService = tenantService;
-    }
+  public TriagePauseController(TenantService tenantService) {
+    this.tenantService = tenantService;
+  }
 
-    @PutMapping("/tenant/triage-pause")
-    public TriagePauseResponse setTriagePause(@RequestBody @Valid TriagePauseRequest request) {
-        UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
-        tenantService.setTriagePaused(tenantId, request.paused());
-        log.info("event=triage_pause_toggled tenantId={} paused={}", tenantId, request.paused());
-        return new TriagePauseResponse(request.paused());
-    }
+  @PutMapping("/tenant/triage-pause")
+  public TriagePauseResponse setTriagePause(@RequestBody @Valid TriagePauseRequest request) {
+    UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+    tenantService.setTriagePaused(tenantId, request.paused());
+    log.info("event=triage_pause_toggled tenantId={} paused={}", tenantId, request.paused());
+    return TriagePauseResponse.from(request.paused());
+  }
 }

@@ -1,6 +1,10 @@
 packages:
   - apps/*
 
-ignoredBuiltDependencies:
-  - sharp
-  - unrs-resolver
+allowBuilds:
+  '@parcel/watcher': true
+  '@swc/core': true
+  esbuild: true
+  msw: false
+  sharp: false
+  unrs-resolver: false
