@@ -7,9 +7,9 @@ files_reviewed: 154
 scope_source: SUMMARY.md plus git diff union
 findings:
   critical: 0
-  warning: 3
+  warning: 0
   info: 1
-  total: 4
+  total: 1
 created: 2026-05-08
 ---
 
@@ -34,6 +34,8 @@ Primary areas reviewed:
 
 Severity: Warning
 
+Status: Fixed in follow-up BYOK SSRF hardening.
+
 Files:
 
 - `backend/core/src/main/java/com/zeromail/core/llm/byok/ByokEndpointValidator.java:167`
@@ -45,9 +47,13 @@ Impact: The advertised SSRF guard is bypassable for custom BYOK endpoints. The d
 
 Recommended fix: Move SSRF enforcement to the transport layer used for the outbound request. At minimum, disable redirects for BYOK validation calls and re-check the final target. Prefer a resolver/client strategy that pins the validated IP address for the request, or limit custom endpoints to an operator-owned allowlist plus VPS egress firewall rules. Add regression tests for redirect-to-private and DNS-rebinding-style behavior.
 
+Resolution: BYOK custom non-vendor endpoints now require both `allowNonVendorEndpoints=true` and an explicit `allowedExtraHosts` match. The shared BYOK `RestClient.Builder` uses `JdkClientHttpRequestFactory` with configured connect/read timeouts and `HttpClient.Redirect.NEVER`; a regression test verifies redirects are not followed.
+
 ### WR-02: Google GenAI BYOK path drops required tool-call enforcement
 
 Severity: Warning
+
+Status: Fixed in follow-up Google GenAI BYOK safety hardening.
 
 Files:
 
@@ -60,9 +66,13 @@ Impact: Google BYOK calls do not get the same Layer 1 enforcement as the other p
 
 Recommended fix: If Spring AI's Google GenAI options expose an equivalent required tool-choice setting, wire it in and add a direct adapter test. If no equivalent exists, explicitly document the provider limitation and consider rejecting Google BYOK for tool-required gateway calls until the adapter can enforce the contract.
 
+Resolution: Spring AI 2.0.0-M5 `GoogleGenAiChatOptions` does not expose a provider-level required tool-choice equivalent. The Google GenAI BYOK adapter now fails closed with `SafetyViolationException` for tool-required requests until that adapter can enforce the Layer 1 contract, and a direct adapter test covers the behavior.
+
 ### WR-03: Configured LLM/BYOK network timeouts are not wired into clients
 
 Severity: Warning
+
+Status: Fixed in follow-up timeout wiring cleanup.
 
 Files:
 
@@ -76,6 +86,8 @@ The platform and BYOK properties define connect/read timeouts, and the API/worke
 Impact: A slow or half-open upstream provider can hold validation and gateway calls far longer than the configured 5s/15s/30s budgets. That is especially risky for the save path because it performs an upstream probe inside the service call before persisting credentials.
 
 Recommended fix: Build provider clients from timeout-aware HTTP request factories or the Spring AI client builder hooks, using `zero-mail.llm.platform.*Timeout` and `zero-mail.llm.byok.*Timeout`. Add a regression test that injects tiny timeout values and verifies validation fails with `timeout` rather than blocking on the default client behavior.
+
+Resolution: Platform OpenAI options now set the configured platform read timeout. BYOK validation probes use the BYOK timeout-aware no-redirect `RestClient.Builder`; OpenAI, Anthropic, DeepSeek, and Google BYOK adapters now pass timeout-aware options/client builders where their Spring AI M5/provider APIs expose them.
 
 ### IN-01: Native BYOK provider adapters have no direct tests
 
@@ -92,6 +104,33 @@ The gateway routing tests mock these adapters, which is appropriate for service-
 
 Recommended fix: Add adapter-focused tests or a thin factory abstraction that can be inspected without real network calls. Keep the tests secret-safe by using synthetic keys and asserting no prompt, completion, or key material is logged.
 
+### WR-04: Controllers did not consistently follow response DTO factory convention
+
+Severity: Warning
+
+Status: Fixed in follow-up controller convention cleanup.
+
+Files:
+
+- `backend/api/src/main/java/com/zeromail/api/controllers/MeController.java`
+- `backend/api/src/main/java/com/zeromail/api/controllers/TriagePauseController.java`
+- `backend/api/src/main/java/com/zeromail/api/controllers/billing/BillingController.java`
+- `backend/api/src/main/java/com/zeromail/api/controllers/llm/ByokController.java:43`
+- `backend/api/src/main/java/com/zeromail/api/controllers/llm/ByokController.java:54`
+- `backend/api/src/main/java/com/zeromail/api/controllers/llm/ByokController.java:61`
+- `backend/api/src/main/java/com/zeromail/api/dto/account/MeResponse.java`
+- `backend/api/src/main/java/com/zeromail/api/dto/billing/TopupIntentResponse.java`
+- `backend/api/src/main/java/com/zeromail/api/dto/tenant/TriagePauseResponse.java`
+- `backend/api/src/main/java/com/zeromail/api/dto/llm/ByokCurrentResponse.java`
+- `backend/api/src/main/java/com/zeromail/api/dto/llm/ByokSaveResponse.java`
+- `backend/api/src/main/java/com/zeromail/api/dto/llm/ByokValidateResponse.java`
+
+Project controller convention is that response DTOs own domain/projection/result mapping via static `from(...)` factories, for example `GmailConnectionStatusResponse.from(projection)`. At review time, several controllers still kept mapping in the controller layer: `MeController` and `BillingController` used private `toResponse(...)` helpers, while `TriagePauseController` and `ByokController` constructed response DTOs inline.
+
+Impact: This keeps mapping logic in the controller and diverges from the current transport-layer convention, making future DTO mapping harder to audit consistently.
+
+Recommended fix: Response DTOs should expose static factories for their corresponding projection/result objects, and controllers should call those factories directly. The follow-up cleanup added `from(...)` factories to the affected response DTOs and removed the controller-local response construction.
+
 ## Verification
 
 Passed:
@@ -102,6 +141,11 @@ Passed:
 - `.\gradlew.bat --no-daemon --max-workers=1 :backend:core:test --tests "com.zeromail.core.llm.service.ByokServiceTest" --tests "com.zeromail.core.llm.service.LlmGatewayByokRoutingTest" --tests "com.zeromail.core.llm.service.LlmGatewayCreditLifecycleTest"`
 - `.\gradlew.bat --no-daemon --max-workers=1 :backend:api:test --tests "com.zeromail.api.controllers.llm.ByokControllerIntegrationTest"`
 - `.\gradlew.bat --no-daemon --max-workers=1 :backend:worker:test --tests "com.zeromail.worker.llm.*"`
+- IntelliJ rebuild of changed backend files: success, no problems
+- `.\gradlew.bat --no-daemon --max-workers=1 :backend:core:test --tests "com.zeromail.core.llm.byok.ByokEndpointValidatorTest" --tests "com.zeromail.core.llm.service.ByokServiceTest" --tests "com.zeromail.core.llm.gateway.springai.GoogleGenAiByokModelClientTest" --tests "com.zeromail.core.config.RestClientConfigTest"`
+- `.\gradlew.bat --no-daemon --max-workers=1 :backend:api:test --tests "com.zeromail.api.controllers.llm.ByokControllerIntegrationTest"`
+- `.\gradlew.bat --no-daemon --max-workers=1 :backend:worker:test --tests "com.zeromail.worker.llm.*"`
+- `.\gradlew.bat --no-daemon --max-workers=1 :backend:core:test --tests "com.zeromail.core.arch.LlmGatewayBoundaryTest"`
 
 Notes:
 
