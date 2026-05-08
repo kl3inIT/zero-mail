@@ -42,7 +42,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Gradle 9.4.1** + **Kotlin DSL** + `libs.versions.toml` catalog, multi-project (not composite).
 - **Spring Boot 4.0.6** (current GA — stay on 4.0.x for production).
 - **Spring Framework 7.0.7**, **Spring Security 7.0.5**, **Jakarta Servlet 6.1**, **Jakarta Persistence 3.2**, **Jackson 3.1.2** (Boot-managed).
-- **Spring AI 2.0.0-M5** via `spring-ai-starter-model-openai`, pointed at OpenRouter (`base-url: https://openrouter.ai/api/v1`). Keep all direct Spring AI usage inside one LLM adapter module — M5 → GA churn still possible.
+- **Spring AI 2.0.0-M5** via OpenAI, Anthropic, Google GenAI, and DeepSeek starters. Platform OpenRouter routing uses the OpenAI adapter with `base-url: https://openrouter.ai/api/v1`; official BYOK providers use their native Spring AI adapters where available. Keep all direct Spring AI usage inside one LLM adapter module — M5 → GA churn still possible.
 - **No GCP hosting baseline** — do **not** add `spring-cloud-gcp` starters by default. Gmail push arrives as plain HTTP POSTs to a Spring MVC controller on the VPS.
 - **PostgreSQL 17.6 self-hosted on VPS** + **Liquibase 5.0.2 (YAML changelogs)** + **Spring Data JPA (Hibernate 7)** for aggregates, **Spring Data JDBC** for read-side and hot paths, **JSONB + jsonb_path_ops** for rule matchers, **AES-GCM at app layer** for OAuth refresh-token encryption.
 - **Redis 7.2 self-hosted on VPS** (Spring Data Redis + Lettuce) for rate limiting, idempotency, session store, per-tenant ChatModel cache — **NOT a queue**.

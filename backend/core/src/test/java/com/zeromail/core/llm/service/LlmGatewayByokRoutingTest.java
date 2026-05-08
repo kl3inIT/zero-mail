@@ -62,11 +62,17 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
 
   @MockitoBean LlmModelClient platformLlmModelClient;
 
-  @MockitoBean(name = "openAiCompatibleByokModelClient")
-  ByokLlmModelClient openAiCompatibleByokModelClient;
+  @MockitoBean(name = "openAiByokModelClient")
+  ByokLlmModelClient openAiByokModelClient;
 
   @MockitoBean(name = "anthropicByokModelClient")
   ByokLlmModelClient anthropicByokModelClient;
+
+  @MockitoBean(name = "googleGenAiByokModelClient")
+  ByokLlmModelClient googleGenAiByokModelClient;
+
+  @MockitoBean(name = "deepSeekByokModelClient")
+  ByokLlmModelClient deepSeekByokModelClient;
 
   @BeforeEach
   void resetRows() {
@@ -108,21 +114,21 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
     assertThat(toolCallResult.action()).isEqualTo(Action.LABEL);
     verify(platformLlmModelClient).call(any(LlmChatRequest.class));
     verify(anthropicByokModelClient, never()).call(any(byte[].class), anyString(), any());
-    verify(openAiCompatibleByokModelClient, never()).call(any(byte[].class), anyString(), any());
+    verify(openAiByokModelClient, never()).call(any(byte[].class), anyString(), any());
   }
 
   @Test
-  void openai_compat_byok_uses_mutate_seam() {
+  void openai_byok_routes_to_openai_client() {
     String endpoint = "https://together.xyz/v1";
-    seedByokTenant(TENANT_ID, BYOKProvider.OPENAI_COMPATIBLE, endpoint, PLAINTEXT_KEY);
-    when(openAiCompatibleByokModelClient.call(any(byte[].class), anyString(), any()))
+    seedByokTenant(TENANT_ID, BYOKProvider.OPENAI, endpoint, PLAINTEXT_KEY);
+    when(openAiByokModelClient.call(any(byte[].class), anyString(), any()))
         .thenReturn(labelResult("{}"));
 
     ScopedValue.where(TenantContext.TENANT, TENANT_ID.toString())
         .run(() -> llmGateway.chat(CallSite.PREVIEW, "<p>hello</p>"));
 
     ArgumentCaptor<LlmChatRequest> requestCaptor = ArgumentCaptor.forClass(LlmChatRequest.class);
-    verify(openAiCompatibleByokModelClient)
+    verify(openAiByokModelClient)
         .call(any(byte[].class), eq(endpoint), requestCaptor.capture());
     assertThat(requestCaptor.getValue())
         .satisfies(
@@ -131,6 +137,39 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
               assertThat(request.toolChoiceRequired()).isTrue();
               assertThat(request.temperature()).isZero();
             });
+    verify(platformLlmModelClient, never()).call(any());
+  }
+
+  @Test
+  void google_genai_byok_routes_to_google_client() {
+    String endpoint = "https://generativelanguage.googleapis.com/v1beta";
+    seedByokTenant(TENANT_ID, BYOKProvider.GOOGLE_GENAI, endpoint, PLAINTEXT_KEY);
+    when(googleGenAiByokModelClient.call(any(byte[].class), anyString(), any()))
+        .thenReturn(labelResult("{}"));
+
+    ScopedValue.where(TenantContext.TENANT, TENANT_ID.toString())
+        .run(() -> llmGateway.chat(CallSite.PREVIEW, "<p>hello</p>"));
+
+    ArgumentCaptor<LlmChatRequest> requestCaptor = ArgumentCaptor.forClass(LlmChatRequest.class);
+    verify(googleGenAiByokModelClient)
+        .call(any(byte[].class), eq(endpoint), requestCaptor.capture());
+    assertThat(requestCaptor.getValue().model()).isEqualTo("gemini-2.0-flash");
+    verify(platformLlmModelClient, never()).call(any());
+  }
+
+  @Test
+  void deepseek_byok_routes_to_deepseek_client() {
+    String endpoint = "https://api.deepseek.com";
+    seedByokTenant(TENANT_ID, BYOKProvider.DEEPSEEK, endpoint, PLAINTEXT_KEY);
+    when(deepSeekByokModelClient.call(any(byte[].class), anyString(), any()))
+        .thenReturn(labelResult("{}"));
+
+    ScopedValue.where(TenantContext.TENANT, TENANT_ID.toString())
+        .run(() -> llmGateway.chat(CallSite.PREVIEW, "<p>hello</p>"));
+
+    ArgumentCaptor<LlmChatRequest> requestCaptor = ArgumentCaptor.forClass(LlmChatRequest.class);
+    verify(deepSeekByokModelClient).call(any(byte[].class), eq(endpoint), requestCaptor.capture());
+    assertThat(requestCaptor.getValue().model()).isEqualTo("deepseek-chat");
     verify(platformLlmModelClient, never()).call(any());
   }
 
@@ -281,9 +320,12 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
   }
 
   private static String providerModel(BYOKProvider provider) {
-    return provider == BYOKProvider.OPENAI_COMPATIBLE
-        ? "openai/gpt-4o-mini"
-        : "claude-3-haiku-20240307";
+    return switch (provider) {
+      case ANTHROPIC -> "claude-3-haiku-20240307";
+      case DEEPSEEK -> "deepseek-chat";
+      case GOOGLE_GENAI -> "gemini-2.0-flash";
+      case OPENAI -> "openai/gpt-4o-mini";
+    };
   }
 
   private static LlmChatResult labelResult(String argumentsJson) {

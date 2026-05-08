@@ -61,8 +61,10 @@ class LlmGatewayImpl implements LlmGateway {
   private final ObservationRegistry observationRegistry;
   private final TenantByokCredentialsRepository tenantByokCredentialsRepository;
   private final RefreshTokenCipher refreshTokenCipher;
-  private final ByokLlmModelClient openAiCompatibleByokModelClient;
+  private final ByokLlmModelClient openAiByokModelClient;
   private final ByokLlmModelClient anthropicByokModelClient;
+  private final ByokLlmModelClient googleGenAiByokModelClient;
+  private final ByokLlmModelClient deepSeekByokModelClient;
   private final CreditLedger creditLedger;
   private final MeterRegistry meterRegistry;
 
@@ -83,6 +85,8 @@ class LlmGatewayImpl implements LlmGateway {
         null,
         null,
         null,
+        null,
+        null,
         NOOP_CREDIT_LEDGER,
         new SimpleMeterRegistry());
   }
@@ -97,9 +101,10 @@ class LlmGatewayImpl implements LlmGateway {
       ObjectProvider<ObservationRegistry> observationRegistryProvider,
       TenantByokCredentialsRepository tenantByokCredentialsRepository,
       RefreshTokenCipher refreshTokenCipher,
-      @Qualifier("openAiCompatibleByokModelClient")
-          ByokLlmModelClient openAiCompatibleByokModelClient,
+      @Qualifier("openAiByokModelClient") ByokLlmModelClient openAiByokModelClient,
       @Qualifier("anthropicByokModelClient") ByokLlmModelClient anthropicByokModelClient,
+      @Qualifier("googleGenAiByokModelClient") ByokLlmModelClient googleGenAiByokModelClient,
+      @Qualifier("deepSeekByokModelClient") ByokLlmModelClient deepSeekByokModelClient,
       CreditLedger creditLedger,
       ObjectProvider<MeterRegistry> meterRegistryProvider) {
     this(
@@ -111,8 +116,10 @@ class LlmGatewayImpl implements LlmGateway {
         observationRegistryProvider.getIfAvailable(ObservationRegistry::create),
         tenantByokCredentialsRepository,
         refreshTokenCipher,
-        openAiCompatibleByokModelClient,
+        openAiByokModelClient,
         anthropicByokModelClient,
+        googleGenAiByokModelClient,
+        deepSeekByokModelClient,
         creditLedger,
         meterRegistryProvider.getIfAvailable(SimpleMeterRegistry::new));
   }
@@ -135,6 +142,8 @@ class LlmGatewayImpl implements LlmGateway {
         null,
         null,
         null,
+        null,
+        null,
         NOOP_CREDIT_LEDGER,
         new SimpleMeterRegistry());
   }
@@ -148,8 +157,10 @@ class LlmGatewayImpl implements LlmGateway {
       ObservationRegistry observationRegistry,
       TenantByokCredentialsRepository tenantByokCredentialsRepository,
       RefreshTokenCipher refreshTokenCipher,
-      ByokLlmModelClient openAiCompatibleByokModelClient,
+      ByokLlmModelClient openAiByokModelClient,
       ByokLlmModelClient anthropicByokModelClient,
+      ByokLlmModelClient googleGenAiByokModelClient,
+      ByokLlmModelClient deepSeekByokModelClient,
       CreditLedger creditLedger,
       MeterRegistry meterRegistry) {
     this.platformLlmModelClient = platformLlmModelClient;
@@ -160,8 +171,10 @@ class LlmGatewayImpl implements LlmGateway {
     this.observationRegistry = observationRegistry;
     this.tenantByokCredentialsRepository = tenantByokCredentialsRepository;
     this.refreshTokenCipher = refreshTokenCipher;
-    this.openAiCompatibleByokModelClient = openAiCompatibleByokModelClient;
+    this.openAiByokModelClient = openAiByokModelClient;
     this.anthropicByokModelClient = anthropicByokModelClient;
+    this.googleGenAiByokModelClient = googleGenAiByokModelClient;
+    this.deepSeekByokModelClient = deepSeekByokModelClient;
     this.creditLedger = creditLedger;
     this.meterRegistry = meterRegistry;
   }
@@ -362,7 +375,9 @@ class LlmGatewayImpl implements LlmGateway {
     ByokLlmModelClient byokLlmModelClient =
         switch (provider) {
           case ANTHROPIC -> anthropicByokModelClient;
-          case OPENAI_COMPATIBLE -> openAiCompatibleByokModelClient;
+          case DEEPSEEK -> deepSeekByokModelClient;
+          case GOOGLE_GENAI -> googleGenAiByokModelClient;
+          case OPENAI -> openAiByokModelClient;
         };
     byte[] decryptedKey =
         refreshTokenCipher.decrypt(byokRow.getEncryptedKey(), tenantId.toString());
@@ -434,7 +449,9 @@ class LlmGatewayImpl implements LlmGateway {
     }
     return switch (provider) {
       case ANTHROPIC -> DEFAULT_ANTHROPIC_BYOK_MODEL;
-      case OPENAI_COMPATIBLE -> llmProperties.modelByCallSite().get(callSite);
+      case DEEPSEEK -> "deepseek-chat";
+      case GOOGLE_GENAI -> "gemini-2.0-flash";
+      case OPENAI -> llmProperties.modelByCallSite().get(callSite);
     };
   }
 

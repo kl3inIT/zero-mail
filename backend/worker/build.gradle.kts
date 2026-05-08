@@ -12,6 +12,8 @@ dependencies {
     implementation(platform(libs.spring.ai.bom))
     implementation(libs.spring.ai.starter.model.openai)
     implementation(libs.spring.ai.starter.model.anthropic)
+    implementation(libs.spring.ai.starter.model.google.genai)
+    implementation(libs.spring.ai.starter.model.deepseek)
     implementation(libs.jtokkit)
     implementation(libs.shedlock.provider.jdbc.template)
     implementation(libs.shedlock.spring)

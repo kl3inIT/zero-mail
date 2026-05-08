@@ -61,6 +61,12 @@ describe('ByokForm', () => {
       screen.getByRole('radio', { name: viMessages.llm.byok.provider.anthropic }),
     ).toBeInTheDocument();
     expect(
+      screen.getByRole('radio', { name: viMessages.llm.byok.provider.googleGenAi }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('radio', { name: viMessages.llm.byok.provider.deepseek }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole('radio', { name: viMessages.llm.byok.provider.openaiCompatible }),
     ).toBeInTheDocument();
     expect(
@@ -160,6 +166,26 @@ describe('ByokForm', () => {
         endpoint: 'https://together.xyz/v1',
         model: 'openai/gpt-4o-mini',
         apiKey: 'sk-compatible-test',
+      });
+    });
+  });
+
+  it('sends google genai official preset without an endpoint', async () => {
+    apiMocks.validateByok.mockResolvedValue({ ok: true, models: ['gemini-2.0-flash'] });
+    renderByokForm();
+
+    fireEvent.click(screen.getByRole('radio', { name: viMessages.llm.byok.provider.googleGenAi }));
+    fireEvent.change(screen.getByLabelText(viMessages.llm.byok.apiKey.label), {
+      target: { value: 'google-key' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: viMessages.llm.byok.validateCta }));
+
+    await waitFor(() => {
+      expect(apiMocks.validateByok.mock.calls[0]?.[0]).toEqual({
+        preset: 'google-genai',
+        endpoint: undefined,
+        model: 'gemini-2.0-flash',
+        apiKey: 'google-key',
       });
     });
   });

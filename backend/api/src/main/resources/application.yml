@@ -109,7 +109,7 @@ zero-mail:
     intent-expiry: PT24H
   llm:
     platform:
-      provider: openai-compatible
+      provider: openai
       base-url: https://openrouter.ai/api/v1
       api-key: ${ZEROMAIL_LLM_PLATFORM_API_KEY:?ZEROMAIL_LLM_PLATFORM_API_KEY must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
       compile-model: openai/gpt-4o-mini

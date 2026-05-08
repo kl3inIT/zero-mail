@@ -193,8 +193,10 @@ public class ByokService {
       UUID tenantId, BYOKProvider provider, String canonicalEndpoint, String model, String apiKey) {
     try {
       return switch (provider) {
-        case OPENAI_COMPATIBLE -> probeOpenAiCompatible(canonicalEndpoint, apiKey, model);
         case ANTHROPIC -> probeAnthropic(canonicalEndpoint, apiKey, model);
+        case DEEPSEEK -> probeDeepSeek(canonicalEndpoint, apiKey, model);
+        case GOOGLE_GENAI -> probeGoogleGenAi(canonicalEndpoint, apiKey, model);
+        case OPENAI -> probeOpenAi(canonicalEndpoint, apiKey, model);
       };
     } catch (RestClientResponseException upstreamRejection) {
       return new ByokValidateResult(
@@ -214,8 +216,7 @@ public class ByokService {
     }
   }
 
-  private ByokValidateResult probeOpenAiCompatible(
-      String canonicalEndpoint, String apiKey, String model) {
+  private ByokValidateResult probeOpenAi(String canonicalEndpoint, String apiKey, String model) {
     ModelsResponse response =
         restClientBuilder
             .build()
@@ -232,6 +233,10 @@ public class ByokService {
       return new ByokValidateResult(false, modelIds, "model_not_found");
     }
     return new ByokValidateResult(true, modelIds, null);
+  }
+
+  private ByokValidateResult probeDeepSeek(String canonicalEndpoint, String apiKey, String model) {
+    return probeOpenAi(canonicalEndpoint, apiKey, model);
   }
 
   private ByokValidateResult probeAnthropic(String canonicalEndpoint, String apiKey, String model) {
@@ -254,12 +259,39 @@ public class ByokService {
     return new ByokValidateResult(true, modelIds.isEmpty() ? List.of(model) : modelIds, null);
   }
 
+  private ByokValidateResult probeGoogleGenAi(
+      String canonicalEndpoint, String apiKey, String model) {
+    GoogleModelsResponse response =
+        restClientBuilder
+            .build()
+            .get()
+            .uri(joinPath(canonicalEndpoint, "models"))
+            .header("x-goog-api-key", apiKey)
+            .retrieve()
+            .body(GoogleModelsResponse.class);
+    List<String> modelIds =
+        response == null || response.models() == null
+            ? List.of()
+            : response.models().stream()
+                .filter(ByokService::supportsGoogleGenerateContent)
+                .map(GoogleModelResource::name)
+                .filter(modelName -> modelName != null && !modelName.isBlank())
+                .map(ByokService::googleModelId)
+                .toList();
+    if (!modelIds.isEmpty() && !modelIds.contains(model)) {
+      return new ByokValidateResult(false, modelIds, "model_not_found");
+    }
+    return new ByokValidateResult(true, modelIds, null);
+  }
+
   private ResolvedByokProvider resolveProvider(ByokProviderPreset preset, String endpoint) {
     String canonicalEndpoint =
         switch (preset) {
           case OPENROUTER, OPENAI ->
-              byokEndpointValidator.validateOpenAiCompatible(preset.fixedEndpoint());
+              byokEndpointValidator.validateOpenAi(preset.fixedEndpoint());
           case ANTHROPIC -> byokEndpointValidator.validateAnthropic(preset.fixedEndpoint());
+          case GOOGLE_GENAI -> byokEndpointValidator.validateGoogleGenAi(preset.fixedEndpoint());
+          case DEEPSEEK -> byokEndpointValidator.validateDeepSeek(preset.fixedEndpoint());
           case OPENAI_COMPATIBLE -> byokEndpointValidator.validateCustomOpenAiCompatible(endpoint);
           case ANTHROPIC_COMPATIBLE -> byokEndpointValidator.validateAnthropicCompatible(endpoint);
         };
@@ -325,4 +357,17 @@ public class ByokService {
   private record ModelsResponse(List<ModelResource> data) {}
 
   private record ModelResource(String id) {}
+
+  private record GoogleModelsResponse(List<GoogleModelResource> models) {}
+
+  private record GoogleModelResource(String name, List<String> supportedGenerationMethods) {}
+
+  private static boolean supportsGoogleGenerateContent(GoogleModelResource modelResource) {
+    return modelResource.supportedGenerationMethods() == null
+        || modelResource.supportedGenerationMethods().contains("generateContent");
+  }
+
+  private static String googleModelId(String modelName) {
+    return modelName.startsWith("models/") ? modelName.substring("models/".length()) : modelName;
+  }
 }

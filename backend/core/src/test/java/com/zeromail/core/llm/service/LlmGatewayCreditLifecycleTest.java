@@ -76,11 +76,17 @@ class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
 
   @MockitoBean SanitizationPipeline sanitizationPipeline;
 
-  @MockitoBean(name = "openAiCompatibleByokModelClient")
-  ByokLlmModelClient openAiCompatibleByokModelClient;
+  @MockitoBean(name = "openAiByokModelClient")
+  ByokLlmModelClient openAiByokModelClient;
 
   @MockitoBean(name = "anthropicByokModelClient")
   ByokLlmModelClient anthropicByokModelClient;
+
+  @MockitoBean(name = "googleGenAiByokModelClient")
+  ByokLlmModelClient googleGenAiByokModelClient;
+
+  @MockitoBean(name = "deepSeekByokModelClient")
+  ByokLlmModelClient deepSeekByokModelClient;
 
   @BeforeEach
   void setUpSanitizer() {
@@ -139,7 +145,7 @@ class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
   void byok_path_does_not_touch_ledger() {
     UUID tenantId = seedTenant();
     seedByokCredentials(tenantId);
-    when(openAiCompatibleByokModelClient.call(any(byte[].class), anyString(), any()))
+    when(openAiByokModelClient.call(any(byte[].class), anyString(), any()))
         .thenReturn(labelResult("{}"));
 
     ToolCallResult toolCallResult =
@@ -257,7 +263,7 @@ class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
         new TenantByokCredentialsEntity(
             UUID.randomUUID(),
             tenantId,
-            BYOKProvider.OPENAI_COMPATIBLE,
+            BYOKProvider.OPENAI,
             "https://openrouter.ai/api/v1",
             "openai/gpt-4o-mini",
             encryptedEnvelope,

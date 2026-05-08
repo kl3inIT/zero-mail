@@ -9,10 +9,16 @@ import com.zeromail.core.shared.lang.IdentifiedEnum;
 
 public enum ByokProviderPreset implements IdentifiedEnum {
 
-  OPENROUTER("openrouter", BYOKProvider.OPENAI_COMPATIBLE, "https://openrouter.ai/api/v1", false),
-  OPENAI("openai", BYOKProvider.OPENAI_COMPATIBLE, "https://api.openai.com/v1", false),
+  OPENROUTER("openrouter", BYOKProvider.OPENAI, "https://openrouter.ai/api/v1", false),
+  OPENAI("openai", BYOKProvider.OPENAI, "https://api.openai.com/v1", false),
   ANTHROPIC("anthropic", BYOKProvider.ANTHROPIC, "https://api.anthropic.com/v1", false),
-  OPENAI_COMPATIBLE("openai-compatible", BYOKProvider.OPENAI_COMPATIBLE, null, true),
+  GOOGLE_GENAI(
+      "google-genai",
+      BYOKProvider.GOOGLE_GENAI,
+      "https://generativelanguage.googleapis.com/v1beta",
+      false),
+  DEEPSEEK("deepseek", BYOKProvider.DEEPSEEK, "https://api.deepseek.com", false),
+  OPENAI_COMPATIBLE("openai-compatible", BYOKProvider.OPENAI, null, true),
   ANTHROPIC_COMPATIBLE("anthropic-compatible", BYOKProvider.ANTHROPIC, null, true);
 
   private final String id;

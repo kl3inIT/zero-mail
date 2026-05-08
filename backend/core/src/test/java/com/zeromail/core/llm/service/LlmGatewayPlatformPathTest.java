@@ -78,7 +78,7 @@ class LlmGatewayPlatformPathTest {
         assertThat(formattedMessages)
                 .contains("event=llm_call_succeeded tenantId=" + TENANT_ID)
                 .contains("callSite=PREVIEW")
-                .contains("provider=openai-compatible")
+        .contains("provider=openai")
                 .contains("model=openai/gpt-4o-mini")
                 .contains("latencyMs=")
                 .contains("promptTokens=10")
@@ -104,7 +104,7 @@ class LlmGatewayPlatformPathTest {
 
     private ZeroMailLlmProperties llmProperties() {
         return new ZeroMailLlmProperties(
-                BYOKProvider.OPENAI_COMPATIBLE,
+        BYOKProvider.OPENAI,
                 "https://openrouter.ai/api/v1",
                 "test-platform-key",
                 "openai/gpt-4o-mini",

@@ -62,7 +62,9 @@ openApi {
                 "--zero-mail.billing.vnd-per-credit=1000",
                 "--zero-mail.billing.max-pending-intents-per-tenant=5",
                 "--zero-mail.billing.intent-expiry=PT24H",
-                "--zero-mail.llm.platform.api-key=openapi-emit"
+                "--zero-mail.llm.platform.api-key=openapi-emit",
+                "--spring.ai.google.genai.api-key=openapi-emit",
+                "--spring.ai.deepseek.api-key=openapi-emit"
             )
         )
     }

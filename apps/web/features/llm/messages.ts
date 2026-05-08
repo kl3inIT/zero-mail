@@ -4,8 +4,8 @@ export const llmMessages = {
     en: 'AI provider key',
   },
   'llm.byok.description': {
-    vi: 'Dùng khóa riêng của bạn cho OpenRouter, OpenAI, Anthropic hoặc endpoint compatible. Zero Mail chỉ lưu khóa đã mã hóa và không trừ tín dụng nền tảng cho các lượt gọi BYOK.',
-    en: 'Use your own key for OpenRouter, OpenAI, Anthropic, or a compatible endpoint. Zero Mail stores only the encrypted key and does not spend platform credits for BYOK calls.',
+    vi: 'Dùng khóa riêng của bạn cho OpenRouter, OpenAI, Anthropic, Google GenAI, DeepSeek hoặc endpoint compatible. Zero Mail chỉ lưu khóa đã mã hóa và không trừ tín dụng nền tảng cho các lượt gọi BYOK.',
+    en: 'Use your own key for OpenRouter, OpenAI, Anthropic, Google GenAI, DeepSeek, or a compatible endpoint. Zero Mail stores only the encrypted key and does not spend platform credits for BYOK calls.',
   },
   'llm.byok.provider.label': {
     vi: 'Nhà cung cấp',
@@ -18,6 +18,14 @@ export const llmMessages = {
   'llm.byok.provider.anthropicCompatible': {
     vi: 'Anthropic compatible',
     en: 'Anthropic compatible',
+  },
+  'llm.byok.provider.deepseek': {
+    vi: 'DeepSeek',
+    en: 'DeepSeek',
+  },
+  'llm.byok.provider.googleGenAi': {
+    vi: 'Google GenAI',
+    en: 'Google GenAI',
   },
   'llm.byok.provider.compatibleGroup': {
     vi: 'Endpoint compatible',

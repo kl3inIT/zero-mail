@@ -36,12 +36,16 @@ const DEFAULT_PRESET: ByokProviderPreset = 'openrouter';
 const OPENROUTER_DEFAULT_MODEL = 'openai/gpt-4o-mini';
 const OPENAI_DEFAULT_MODEL = 'gpt-4o-mini';
 const ANTHROPIC_DEFAULT_MODEL = 'claude-3-haiku-20240307';
+const GOOGLE_GENAI_DEFAULT_MODEL = 'gemini-2.0-flash';
+const DEEPSEEK_DEFAULT_MODEL = 'deepseek-chat';
 
 const MODEL_EXAMPLES: Record<ByokProviderPreset, string[]> = {
   openrouter: ['openai/gpt-4o-mini', 'anthropic/claude-3.5-sonnet', 'google/gemini-flash-1.5'],
   openai: ['gpt-4o-mini', 'gpt-4.1-mini', 'o4-mini'],
   anthropic: ['claude-sonnet-4-20250514', 'claude-3-5-sonnet-latest', 'claude-3-haiku-20240307'],
-  'openai-compatible': ['gpt-4o-mini', 'llama-3.1-70b-instruct', 'mistral-large-latest'],
+  'google-genai': ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'],
+  deepseek: ['deepseek-chat', 'deepseek-reasoner', 'deepseek-v4-flash'],
+  'openai-compatible': ['gpt-4o-mini', 'llama-3.1-70b-instruct', 'qwen2.5-72b-instruct'],
   'anthropic-compatible': [
     'claude-sonnet-4-20250514',
     'claude-3-5-sonnet-latest',
@@ -54,6 +58,8 @@ function isByokProviderPreset(value: string): value is ByokProviderPreset {
     value === 'openrouter' ||
     value === 'openai' ||
     value === 'anthropic' ||
+    value === 'google-genai' ||
+    value === 'deepseek' ||
     value === 'openai-compatible' ||
     value === 'anthropic-compatible'
   );
@@ -86,6 +92,8 @@ function endpointForPreset(preset: ByokProviderPreset, endpoint: string): string
 
 function defaultModelForPreset(preset: ByokProviderPreset): string {
   if (preset === 'anthropic' || preset === 'anthropic-compatible') return ANTHROPIC_DEFAULT_MODEL;
+  if (preset === 'google-genai') return GOOGLE_GENAI_DEFAULT_MODEL;
+  if (preset === 'deepseek') return DEEPSEEK_DEFAULT_MODEL;
   if (preset === 'openai') return OPENAI_DEFAULT_MODEL;
   return OPENROUTER_DEFAULT_MODEL;
 }
@@ -96,6 +104,8 @@ function providerLabelKey(
 ):
   | 'llm.byok.provider.anthropic'
   | 'llm.byok.provider.anthropicCompatible'
+  | 'llm.byok.provider.deepseek'
+  | 'llm.byok.provider.googleGenAi'
   | 'llm.byok.provider.openai'
   | 'llm.byok.provider.openrouter'
   | 'llm.byok.provider.openaiCompatible' {
@@ -104,6 +114,8 @@ function providerLabelKey(
       ? 'llm.byok.provider.anthropic'
       : 'llm.byok.provider.anthropicCompatible';
   }
+  if (provider === 'google-genai') return 'llm.byok.provider.googleGenAi';
+  if (provider === 'deepseek') return 'llm.byok.provider.deepseek';
   if (endpointHost === 'openrouter.ai') return 'llm.byok.provider.openrouter';
   if (endpointHost === 'api.openai.com') return 'llm.byok.provider.openai';
   return 'llm.byok.provider.openaiCompatible';
@@ -358,7 +370,7 @@ export function ByokForm() {
                   <p className="text-muted-foreground text-xs font-medium">
                     {t('llm.byok.provider.officialGroup')}
                   </p>
-                  <div className="grid gap-2 sm:grid-cols-3">
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
                     <Label
                       htmlFor="byok-provider-openrouter"
                       className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
@@ -379,6 +391,20 @@ export function ByokForm() {
                     >
                       <RadioGroupItem id="byok-provider-anthropic" value="anthropic" />
                       {t('llm.byok.provider.anthropic')}
+                    </Label>
+                    <Label
+                      htmlFor="byok-provider-google-genai"
+                      className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                    >
+                      <RadioGroupItem id="byok-provider-google-genai" value="google-genai" />
+                      {t('llm.byok.provider.googleGenAi')}
+                    </Label>
+                    <Label
+                      htmlFor="byok-provider-deepseek"
+                      className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                    >
+                      <RadioGroupItem id="byok-provider-deepseek" value="deepseek" />
+                      {t('llm.byok.provider.deepseek')}
                     </Label>
                   </div>
                 </div>

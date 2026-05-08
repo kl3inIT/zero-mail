@@ -333,7 +333,7 @@
         "label": "Khóa API",
         "placeholder": "Dán khóa API"
       },
-      "description": "Dùng khóa riêng của bạn cho OpenRouter, OpenAI, Anthropic hoặc endpoint compatible. Zero Mail chỉ lưu khóa đã mã hóa và không trừ tín dụng nền tảng cho các lượt gọi BYOK.",
+      "description": "Dùng khóa riêng của bạn cho OpenRouter, OpenAI, Anthropic, Google GenAI, DeepSeek hoặc endpoint compatible. Zero Mail chỉ lưu khóa đã mã hóa và không trừ tín dụng nền tảng cho các lượt gọi BYOK.",
       "empty": {
         "body": "Chọn nhà cung cấp, model, dán khóa API, rồi kiểm tra trước khi lưu.",
         "heading": "Chưa có khóa BYOK"
@@ -359,6 +359,8 @@
         "anthropic": "Anthropic",
         "anthropicCompatible": "Anthropic compatible",
         "compatibleGroup": "Endpoint compatible",
+        "deepseek": "DeepSeek",
+        "googleGenAi": "Google GenAI",
         "label": "Nhà cung cấp",
         "officialGroup": "Nhà cung cấp chính thức",
         "openai": "OpenAI",

@@ -52,7 +52,7 @@ class LlmGatewayMultiTenantLeakTest {
                 new TenantEchoLlmModelClient(),
                 new SanitizationPipeline(List.of(new PassThroughSanitizer())),
                 new ZeroMailLlmProperties(
-                        BYOKProvider.OPENAI_COMPATIBLE,
+        BYOKProvider.OPENAI,
                         "https://openrouter.ai/api/v1",
                         "test-platform-key",
                         "openai/gpt-4o-mini",

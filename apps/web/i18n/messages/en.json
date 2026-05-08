@@ -333,7 +333,7 @@
         "label": "API key",
         "placeholder": "Paste API key"
       },
-      "description": "Use your own key for OpenRouter, OpenAI, Anthropic, or a compatible endpoint. Zero Mail stores only the encrypted key and does not spend platform credits for BYOK calls.",
+      "description": "Use your own key for OpenRouter, OpenAI, Anthropic, Google GenAI, DeepSeek, or a compatible endpoint. Zero Mail stores only the encrypted key and does not spend platform credits for BYOK calls.",
       "empty": {
         "body": "Pick a provider and model, paste your API key, then validate before saving.",
         "heading": "No BYOK key saved"
@@ -359,6 +359,8 @@
         "anthropic": "Anthropic",
         "anthropicCompatible": "Anthropic compatible",
         "compatibleGroup": "Compatible endpoints",
+        "deepseek": "DeepSeek",
+        "googleGenAi": "Google GenAI",
         "label": "Provider",
         "officialGroup": "Official providers",
         "openai": "OpenAI",

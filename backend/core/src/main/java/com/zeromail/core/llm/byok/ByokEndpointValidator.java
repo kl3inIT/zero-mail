@@ -39,7 +39,10 @@ public class ByokEndpointValidator {
   private static final Logger log = LoggerFactory.getLogger(ByokEndpointValidator.class);
 
   private static final String ANTHROPIC_DEFAULT_ENDPOINT = "https://api.anthropic.com/v1";
-  private static final String OPENAI_COMPATIBLE_DEFAULT_ENDPOINT = "https://api.openai.com/v1";
+  private static final String DEEPSEEK_DEFAULT_ENDPOINT = "https://api.deepseek.com";
+  private static final String GOOGLE_GENAI_DEFAULT_ENDPOINT =
+      "https://generativelanguage.googleapis.com/v1beta";
+  private static final String OPENAI_DEFAULT_ENDPOINT = "https://api.openai.com/v1";
   private static final String METADATA_IPV4_ADDRESS = "169.254.169.254";
 
   private final ZeroMailLlmByokProperties byokProperties;
@@ -70,13 +73,17 @@ public class ByokEndpointValidator {
   }
 
   public String validateOpenAiCompatible(String endpoint) {
-    String canonicalEndpoint = canonicalEndpoint(endpoint, OPENAI_COMPATIBLE_DEFAULT_ENDPOINT);
-    return validateOpenAiCompatibleEndpoint(canonicalEndpoint);
+    return validateOpenAi(endpoint);
+  }
+
+  public String validateOpenAi(String endpoint) {
+    String canonicalEndpoint = canonicalEndpoint(endpoint, OPENAI_DEFAULT_ENDPOINT);
+    return validateOpenAiEndpoint(canonicalEndpoint, false);
   }
 
   public String validateCustomOpenAiCompatible(String endpoint) {
-    String canonicalEndpoint = requiredCanonicalEndpoint(endpoint, BYOKProvider.OPENAI_COMPATIBLE);
-    return validateOpenAiCompatibleEndpoint(canonicalEndpoint);
+    String canonicalEndpoint = requiredCanonicalEndpoint(endpoint, BYOKProvider.OPENAI);
+    return validateOpenAiEndpoint(canonicalEndpoint, true);
   }
 
   public String validateAnthropicCompatible(String endpoint) {
@@ -92,15 +99,37 @@ public class ByokEndpointValidator {
     return canonicalEndpoint;
   }
 
-  private String validateOpenAiCompatibleEndpoint(String canonicalEndpoint) {
-    URI endpointUri = parseAndValidateUri(canonicalEndpoint, BYOKProvider.OPENAI_COMPATIBLE);
+  public String validateGoogleGenAi(String endpoint) {
+    String canonicalEndpoint = canonicalEndpoint(endpoint, GOOGLE_GENAI_DEFAULT_ENDPOINT);
+    URI endpointUri = parseAndValidateUri(canonicalEndpoint, BYOKProvider.GOOGLE_GENAI);
     String host = canonicalHost(endpointUri.getHost());
-    if (!isOpenAiCompatibleVendorHost(host)
-        && !allowedExtraHosts.contains(host)
-        && !byokProperties.allowNonVendorEndpoints()) {
-      throw rejected(BYOKProvider.OPENAI_COMPATIBLE);
+    if (!isGoogleGenAiHost(host)) {
+      throw rejected(BYOKProvider.GOOGLE_GENAI);
     }
-    rejectPrivateResolvedAddresses(host, BYOKProvider.OPENAI_COMPATIBLE);
+    rejectPrivateResolvedAddresses(host, BYOKProvider.GOOGLE_GENAI);
+    return canonicalEndpoint;
+  }
+
+  public String validateDeepSeek(String endpoint) {
+    String canonicalEndpoint = canonicalEndpoint(endpoint, DEEPSEEK_DEFAULT_ENDPOINT);
+    URI endpointUri = parseAndValidateUri(canonicalEndpoint, BYOKProvider.DEEPSEEK);
+    String host = canonicalHost(endpointUri.getHost());
+    if (!isDeepSeekHost(host)) {
+      throw rejected(BYOKProvider.DEEPSEEK);
+    }
+    rejectPrivateResolvedAddresses(host, BYOKProvider.DEEPSEEK);
+    return canonicalEndpoint;
+  }
+
+  private String validateOpenAiEndpoint(String canonicalEndpoint, boolean customEndpoint) {
+    URI endpointUri = parseAndValidateUri(canonicalEndpoint, BYOKProvider.OPENAI);
+    String host = canonicalHost(endpointUri.getHost());
+    if (!isOpenAiVendorHost(host)
+        && !allowedExtraHosts.contains(host)
+        && !(customEndpoint && byokProperties.allowNonVendorEndpoints())) {
+      throw rejected(BYOKProvider.OPENAI);
+    }
+    rejectPrivateResolvedAddresses(host, BYOKProvider.OPENAI);
     return canonicalEndpoint;
   }
 
@@ -177,11 +206,21 @@ public class ByokEndpointValidator {
         || host.endsWith(".anthropic.com");
   }
 
-  private static boolean isOpenAiCompatibleVendorHost(String host) {
+  private static boolean isOpenAiVendorHost(String host) {
     return host.equals("openai.com")
         || host.endsWith(".openai.com")
         || host.equals("openrouter.ai")
         || host.endsWith(".openrouter.ai");
+  }
+
+  private static boolean isGoogleGenAiHost(String host) {
+    return host.equals("generativelanguage.googleapis.com");
+  }
+
+  private static boolean isDeepSeekHost(String host) {
+    return host.equals("deepseek.com")
+        || host.equals("api.deepseek.com")
+        || host.endsWith(".deepseek.com");
   }
 
   private static String canonicalHost(String host) {

@@ -17,7 +17,7 @@ class ByokEndpointValidatorTest {
   void rejects_metadata_ip() {
     ByokEndpointValidator validator = defaultValidator();
 
-    assertThatThrownBy(() -> validator.validateOpenAiCompatible("https://169.254.169.254/v1"))
+    assertThatThrownBy(() -> validator.validateOpenAi("https://169.254.169.254/v1"))
         .isInstanceOf(InvalidByokException.class);
   }
 
@@ -25,7 +25,7 @@ class ByokEndpointValidatorTest {
   void rejects_rfc1918() {
     ByokEndpointValidator validator = defaultValidator();
 
-    assertThatThrownBy(() -> validator.validateOpenAiCompatible("https://10.0.0.5/v1"))
+    assertThatThrownBy(() -> validator.validateOpenAi("https://10.0.0.5/v1"))
         .isInstanceOf(InvalidByokException.class);
   }
 
@@ -75,8 +75,23 @@ class ByokEndpointValidatorTest {
             new ZeroMailLlmByokProperties(
                 true, List.of(), Duration.ofSeconds(5), Duration.ofSeconds(15)));
 
-    assertThat(validator.validateOpenAiCompatible("https://together.xyz/v1"))
+    assertThat(validator.validateCustomOpenAiCompatible("https://together.xyz/v1"))
         .isEqualTo("https://together.xyz/v1");
+  }
+
+  @Test
+  void google_genai_default_when_null() {
+    ByokEndpointValidator validator = defaultValidator();
+
+    assertThat(validator.validateGoogleGenAi(null))
+        .isEqualTo("https://generativelanguage.googleapis.com/v1beta");
+  }
+
+  @Test
+  void deepseek_default_when_null() {
+    ByokEndpointValidator validator = defaultValidator();
+
+    assertThat(validator.validateDeepSeek(null)).isEqualTo("https://api.deepseek.com");
   }
 
   @Test

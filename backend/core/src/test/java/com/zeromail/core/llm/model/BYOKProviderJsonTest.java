@@ -13,9 +13,9 @@ class BYOKProviderJsonTest {
 
     @Test
     void serializes_to_lowercase_id() throws Exception {
-        String serializedProvider = objectMapper.writeValueAsString(BYOKProvider.OPENAI_COMPATIBLE);
+        String serializedProvider = objectMapper.writeValueAsString(BYOKProvider.OPENAI);
 
-        assertThat(serializedProvider).isEqualTo("\"openai-compatible\"");
+        assertThat(serializedProvider).isEqualTo("\"openai\"");
     }
 
     @Test
@@ -28,10 +28,17 @@ class BYOKProviderJsonTest {
     @Test
     void round_trips_in_request_dto() throws Exception {
         BYOKProviderRequest request = objectMapper.readValue(
-                "{\"provider\":\"openai-compatible\",\"endpoint\":\"https://x\",\"apiKey\":\"k\"}",
+                "{\"provider\":\"openai\",\"endpoint\":\"https://x\",\"apiKey\":\"k\"}",
                 BYOKProviderRequest.class);
 
-        assertThat(request.provider()).isEqualTo(BYOKProvider.OPENAI_COMPATIBLE);
+        assertThat(request.provider()).isEqualTo(BYOKProvider.OPENAI);
+    }
+
+    @Test
+    void legacy_openai_compatible_id_deserializes_to_openai() throws Exception {
+        BYOKProvider provider = objectMapper.readValue("\"openai-compatible\"", BYOKProvider.class);
+
+        assertThat(provider).isEqualTo(BYOKProvider.OPENAI);
     }
 
     @Test

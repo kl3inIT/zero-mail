@@ -1256,6 +1256,8 @@
               "openrouter",
               "openai",
               "anthropic",
+              "google-genai",
+              "deepseek",
               "openai-compatible",
               "anthropic-compatible"
             ]
@@ -1294,6 +1296,8 @@
               "openrouter",
               "openai",
               "anthropic",
+              "google-genai",
+              "deepseek",
               "openai-compatible",
               "anthropic-compatible"
             ]
@@ -1468,7 +1472,7 @@
         "properties": {
           "provider": {
             "type": "string",
-            "enum": ["anthropic", "openai-compatible"]
+            "enum": ["anthropic", "deepseek", "google-genai", "openai"]
           },
           "endpointHost": {
             "type": "string"

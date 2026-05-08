@@ -10,7 +10,11 @@ import com.zeromail.core.shared.lang.IdentifiedEnum;
 public enum BYOKProvider implements IdentifiedEnum {
 
     ANTHROPIC("anthropic"),
-    OPENAI_COMPATIBLE("openai-compatible");
+    DEEPSEEK("deepseek"),
+    GOOGLE_GENAI("google-genai"),
+    OPENAI("openai");
+
+    private static final String LEGACY_OPENAI_COMPATIBLE_ID = "openai-compatible";
 
     private final String id;
 
@@ -26,6 +30,9 @@ public enum BYOKProvider implements IdentifiedEnum {
 
     @JsonCreator
     public static BYOKProvider fromId(String id) {
+        if (LEGACY_OPENAI_COMPATIBLE_ID.equals(id)) {
+            return OPENAI;
+        }
         return Stream.of(values())
                 .filter(provider -> provider.id().equals(id))
                 .findFirst()

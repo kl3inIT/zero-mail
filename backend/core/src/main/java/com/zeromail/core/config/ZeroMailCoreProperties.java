@@ -112,7 +112,7 @@ public record ZeroMailCoreProperties(
     }
 
     public ZeroMailLlmProperties {
-      provider = provider == null ? BYOKProvider.OPENAI_COMPATIBLE : provider;
+      provider = provider == null ? BYOKProvider.OPENAI : provider;
       baseUrl = baseUrl == null ? "https://openrouter.ai/api/v1" : baseUrl;
       compileModel = compileModel == null ? "openai/gpt-4o-mini" : compileModel;
       driftModel = driftModel == null ? "openai/gpt-4o-mini" : driftModel;

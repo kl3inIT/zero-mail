@@ -50,7 +50,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 **LLM routing & BYOK**
 - [ ] Default LLM traffic routes through OpenRouter behind a Spring AI abstraction
-- [ ] User can bring their own API key (OpenAI, Anthropic, etc.) — BYOK
+- [ ] User can bring their own API key (OpenAI, Anthropic, Google GenAI, DeepSeek, or compatible endpoint) — BYOK
 - [ ] BYOK usage bypasses platform LLM cost (user pays their provider directly)
 
 **Credits & billing (pay-as-you-go)**

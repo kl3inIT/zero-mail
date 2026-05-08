@@ -45,6 +45,8 @@ class ByokServiceTest extends PostgresContainerTest {
 
   private static final String OPENROUTER_MODEL = "anthropic/claude-3.5-sonnet";
   private static final String ANTHROPIC_MODEL = "claude-3-haiku-20240307";
+  private static final String GOOGLE_GENAI_MODEL = "gemini-2.0-flash";
+  private static final String DEEPSEEK_MODEL = "deepseek-chat";
 
   @Autowired JdbcTemplate jdbcTemplate;
 
@@ -196,6 +198,68 @@ class ByokServiceTest extends PostgresContainerTest {
   }
 
   @Test
+  void validate_google_genai_calls_models_endpoint() {
+    UUID tenantId = seedTenant();
+    mockRestServiceServer
+        .expect(once(), requestTo("https://generativelanguage.googleapis.com/v1beta/models"))
+        .andExpect(method(HttpMethod.GET))
+        .andExpect(header("x-goog-api-key", "google-key"))
+        .andRespond(
+            withSuccess(
+                """
+                {"models":[
+                  {"name":"models/gemini-2.0-flash","supportedGenerationMethods":["generateContent"]},
+                  {"name":"models/text-embedding-004","supportedGenerationMethods":["embedContent"]}
+                ]}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    ByokValidateResult result =
+        underTenant(
+            tenantId,
+            () ->
+                byokService.validate(
+                    tenantId,
+                    new ByokValidateCommand(
+                        ByokProviderPreset.GOOGLE_GENAI,
+                        null,
+                        GOOGLE_GENAI_MODEL,
+                        "google-key")));
+
+    assertThat(result.ok()).isTrue();
+    assertThat(result.models()).containsExactly(GOOGLE_GENAI_MODEL);
+    assertThat(result.reason()).isNull();
+    mockRestServiceServer.verify();
+  }
+
+  @Test
+  void validate_deepseek_calls_models_endpoint() {
+    UUID tenantId = seedTenant();
+    mockRestServiceServer
+        .expect(once(), requestTo("https://api.deepseek.com/models"))
+        .andExpect(method(HttpMethod.GET))
+        .andExpect(header("Authorization", "Bearer deepseek-key"))
+        .andRespond(
+            withSuccess(
+                "{\"data\":[{\"id\":\"deepseek-chat\"},{\"id\":\"deepseek-reasoner\"}]}",
+                MediaType.APPLICATION_JSON));
+
+    ByokValidateResult result =
+        underTenant(
+            tenantId,
+            () ->
+                byokService.validate(
+                    tenantId,
+                    new ByokValidateCommand(
+                        ByokProviderPreset.DEEPSEEK, null, DEEPSEEK_MODEL, "deepseek-key")));
+
+    assertThat(result.ok()).isTrue();
+    assertThat(result.models()).containsExactly("deepseek-chat", "deepseek-reasoner");
+    assertThat(result.reason()).isNull();
+    mockRestServiceServer.verify();
+  }
+
+  @Test
   void openrouter_validate_does_not_double_prefix_v1() {
     UUID tenantId = seedTenant();
     mockRestServiceServer
@@ -326,7 +390,7 @@ class ByokServiceTest extends PostgresContainerTest {
                     .filter(credentials -> credentials.getTenantId().equals(tenantId))
                     .toList());
     assertThat(allCredentials).hasSize(1);
-    assertThat(allCredentials.getFirst().getProvider()).isEqualTo(BYOKProvider.OPENAI_COMPATIBLE);
+    assertThat(allCredentials.getFirst().getProvider()).isEqualTo(BYOKProvider.OPENAI);
     assertThat(allCredentials.getFirst().getEndpoint()).isEqualTo("https://openrouter.ai/api/v1");
     assertThat(allCredentials.getFirst().getModel()).isEqualTo(OPENROUTER_MODEL);
     byte[] decryptedKey =
@@ -349,7 +413,7 @@ class ByokServiceTest extends PostgresContainerTest {
                 new TenantByokCredentialsEntity(
                     UUID.randomUUID(),
                     tenantId,
-                    BYOKProvider.OPENAI_COMPATIBLE,
+                    BYOKProvider.OPENAI,
                     "https://together.xyz/v1?query-never-stored",
                     OPENROUTER_MODEL,
                     encryptedEnvelope,
@@ -357,7 +421,7 @@ class ByokServiceTest extends PostgresContainerTest {
 
     ByokCurrent current = underTenant(tenantId, () -> byokService.current(tenantId).orElseThrow());
 
-    assertThat(current.provider()).isEqualTo(BYOKProvider.OPENAI_COMPATIBLE);
+    assertThat(current.provider()).isEqualTo(BYOKProvider.OPENAI);
     assertThat(current.endpointHost()).isEqualTo("together.xyz");
     assertThat(current.model()).isEqualTo(OPENROUTER_MODEL);
     assertThat(current.savedAt()).isNotNull();

@@ -61,7 +61,7 @@ class TenantByokCredentialsPersistenceWave0Test extends PostgresContainerTest {
         saveUnderTenant(tenantId, new TenantByokCredentialsEntity(
                 UUID.randomUUID(),
                 tenantId,
-                BYOKProvider.OPENAI_COMPATIBLE,
+                BYOKProvider.OPENAI,
                 "https://llm.example.test/v1",
                 "openai/gpt-4o-mini",
                 bytes32(),

@@ -74,13 +74,21 @@ class BYOKProviderRoundTripPersistenceTest extends PostgresContainerTest {
     }
 
     private static String providerEndpoint(BYOKProvider provider) {
-        return provider == BYOKProvider.OPENAI_COMPATIBLE ? "https://llm.example.test/v1" : null;
+        return switch (provider) {
+            case ANTHROPIC -> "https://api.anthropic.com/v1";
+            case DEEPSEEK -> "https://api.deepseek.com";
+            case GOOGLE_GENAI -> "https://generativelanguage.googleapis.com/v1beta";
+            case OPENAI -> "https://llm.example.test/v1";
+        };
     }
 
     private static String providerModel(BYOKProvider provider) {
-        return provider == BYOKProvider.OPENAI_COMPATIBLE
-                ? "openai/gpt-4o-mini"
-                : "claude-3-haiku-20240307";
+        return switch (provider) {
+            case ANTHROPIC -> "claude-3-haiku-20240307";
+            case DEEPSEEK -> "deepseek-chat";
+            case GOOGLE_GENAI -> "gemini-2.0-flash";
+            case OPENAI -> "openai/gpt-4o-mini";
+        };
     }
 
     private static byte[] bytes32() {

@@ -54,7 +54,10 @@ public class AnthropicByokModelClient implements ByokLlmModelClient {
 
   @Override
   public LlmChatResult call(byte[] decryptedKey, String endpoint, LlmChatRequest request) {
-    String canonicalEndpoint = byokEndpointValidator.validateAnthropic(endpoint);
+    String canonicalEndpoint =
+        endpoint == null || endpoint.isBlank()
+            ? byokEndpointValidator.validateAnthropic(endpoint)
+            : byokEndpointValidator.validateAnthropicCompatible(endpoint);
     String plaintextApiKey = new String(decryptedKey, StandardCharsets.UTF_8);
     try {
       AnthropicChatOptions.Builder chatOptionsBuilder = AnthropicChatOptions.builder();

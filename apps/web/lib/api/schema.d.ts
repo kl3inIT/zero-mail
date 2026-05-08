@@ -243,7 +243,7 @@ export interface components {
         };
         ByokSaveRequest: {
             /** @enum {string} */
-            preset: "openrouter" | "openai" | "anthropic" | "openai-compatible" | "anthropic-compatible";
+            preset: "openrouter" | "openai" | "anthropic" | "google-genai" | "deepseek" | "openai-compatible" | "anthropic-compatible";
             endpoint?: string;
             model: string;
             apiKey: string;
@@ -255,7 +255,7 @@ export interface components {
         };
         ByokValidateRequest: {
             /** @enum {string} */
-            preset: "openrouter" | "openai" | "anthropic" | "openai-compatible" | "anthropic-compatible";
+            preset: "openrouter" | "openai" | "anthropic" | "google-genai" | "deepseek" | "openai-compatible" | "anthropic-compatible";
             endpoint?: string;
             model: string;
             apiKey: string;
@@ -317,7 +317,7 @@ export interface components {
         };
         ByokCurrentResponse: {
             /** @enum {string} */
-            provider?: "anthropic" | "openai-compatible";
+            provider?: "anthropic" | "deepseek" | "google-genai" | "openai";
             endpointHost?: string;
             model?: string;
             /** Format: date-time */

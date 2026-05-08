@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: 020-byok-official-providers
+      author: zeromail
+      changes:
+        - sql:
+            comment: Normalize legacy OpenAI-compatible rows to the official OpenAI provider id.
+            sql: UPDATE tenant_byok_credentials SET provider = 'openai' WHERE provider = 'openai-compatible'
+        - sql:
+            comment: Replace BYOK provider check constraint with the official provider set.
+            sql: ALTER TABLE tenant_byok_credentials DROP CONSTRAINT ck_tenant_byok_credentials_provider
+        - sql:
+            comment: Check constraint for the allowed BYOK providers.
+            sql: ALTER TABLE tenant_byok_credentials ADD CONSTRAINT ck_tenant_byok_credentials_provider CHECK (provider IN ('anthropic','deepseek','google-genai','openai'))
+      rollback:
+        - sql:
+            sql: ALTER TABLE tenant_byok_credentials DROP CONSTRAINT ck_tenant_byok_credentials_provider
+        - sql:
+            sql: UPDATE tenant_byok_credentials SET provider = 'openai-compatible' WHERE provider = 'openai'
+        - sql:
+            sql: ALTER TABLE tenant_byok_credentials ADD CONSTRAINT ck_tenant_byok_credentials_provider CHECK (provider IN ('anthropic','openai-compatible'))
