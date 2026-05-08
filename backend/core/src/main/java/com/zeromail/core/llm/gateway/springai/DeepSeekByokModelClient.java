@@ -8,6 +8,7 @@ import org.springframework.ai.deepseek.DeepSeekChatModel;
 import org.springframework.ai.deepseek.DeepSeekChatOptions;
 import org.springframework.ai.deepseek.api.DeepSeekApi;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
 
 import com.zeromail.core.llm.byok.ByokEndpointValidator;
 import com.zeromail.core.llm.model.LlmChatRequest;
@@ -18,10 +19,13 @@ import com.zeromail.core.llm.service.ByokLlmModelClient;
 public class DeepSeekByokModelClient implements ByokLlmModelClient {
 
   private final ByokEndpointValidator byokEndpointValidator;
+  private final RestClient.Builder restClientBuilder;
   private final SpringAiByokChatSupport chatSupport = new SpringAiByokChatSupport();
 
-  public DeepSeekByokModelClient(ByokEndpointValidator byokEndpointValidator) {
+  public DeepSeekByokModelClient(
+      ByokEndpointValidator byokEndpointValidator, RestClient.Builder restClientBuilder) {
     this.byokEndpointValidator = byokEndpointValidator;
+    this.restClientBuilder = restClientBuilder;
   }
 
   @Override
@@ -32,7 +36,11 @@ public class DeepSeekByokModelClient implements ByokLlmModelClient {
     ChatClient derivedChatClient = null;
     try {
       DeepSeekApi deepSeekApi =
-          DeepSeekApi.builder().apiKey(plaintextApiKey).baseUrl(canonicalEndpoint).build();
+          DeepSeekApi.builder()
+              .apiKey(plaintextApiKey)
+              .baseUrl(canonicalEndpoint)
+              .restClientBuilder(restClientBuilder.clone())
+              .build();
       derivedModel =
           DeepSeekChatModel.builder()
               .deepSeekApi(deepSeekApi)

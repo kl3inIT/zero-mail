@@ -69,14 +69,25 @@ class ByokEndpointValidatorTest {
   }
 
   @Test
-  void openai_compat_accepts_with_operator_opt_in() {
+  void openai_compat_accepts_operator_allowed_host() {
     ByokEndpointValidator validator =
         new ByokEndpointValidator(
             new ZeroMailLlmByokProperties(
-                true, List.of(), Duration.ofSeconds(5), Duration.ofSeconds(15)));
+                true, List.of("together.xyz"), Duration.ofSeconds(5), Duration.ofSeconds(15)));
 
     assertThat(validator.validateCustomOpenAiCompatible("https://together.xyz/v1"))
         .isEqualTo("https://together.xyz/v1");
+  }
+
+  @Test
+  void openai_compat_rejects_non_allowlisted_host_even_when_custom_endpoints_enabled() {
+    ByokEndpointValidator validator =
+        new ByokEndpointValidator(
+            new ZeroMailLlmByokProperties(
+                true, List.of("operator.example"), Duration.ofSeconds(5), Duration.ofSeconds(15)));
+
+    assertThatThrownBy(() -> validator.validateCustomOpenAiCompatible("https://together.xyz/v1"))
+        .isInstanceOf(InvalidByokException.class);
   }
 
   @Test
@@ -95,11 +106,11 @@ class ByokEndpointValidatorTest {
   }
 
   @Test
-  void anthropic_compat_accepts_with_operator_opt_in() {
+  void anthropic_compat_accepts_operator_allowed_host() {
     ByokEndpointValidator validator =
         new ByokEndpointValidator(
             new ZeroMailLlmByokProperties(
-                true, List.of(), Duration.ofSeconds(5), Duration.ofSeconds(15)));
+                true, List.of("example.com"), Duration.ofSeconds(5), Duration.ofSeconds(15)));
 
     assertThat(validator.validateAnthropicCompatible("https://example.com/v1"))
         .isEqualTo("https://example.com/v1");

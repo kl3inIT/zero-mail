@@ -8,6 +8,8 @@ import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.stereotype.Component;
 
+import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmByokProperties;
 import com.zeromail.core.llm.byok.ByokEndpointValidator;
 import com.zeromail.core.llm.model.LlmChatRequest;
 import com.zeromail.core.llm.model.LlmChatResult;
@@ -17,10 +19,13 @@ import com.zeromail.core.llm.service.ByokLlmModelClient;
 public class OpenAiByokModelClient implements ByokLlmModelClient {
 
   private final ByokEndpointValidator byokEndpointValidator;
+  private final ZeroMailLlmByokProperties byokProperties;
   private final SpringAiByokChatSupport chatSupport = new SpringAiByokChatSupport();
 
-  public OpenAiByokModelClient(ByokEndpointValidator byokEndpointValidator) {
+  public OpenAiByokModelClient(
+      ByokEndpointValidator byokEndpointValidator, ZeroMailCoreProperties zeroMailCoreProperties) {
     this.byokEndpointValidator = byokEndpointValidator;
+    this.byokProperties = zeroMailCoreProperties.llm().byok();
   }
 
   @Override
@@ -38,6 +43,7 @@ public class OpenAiByokModelClient implements ByokLlmModelClient {
                       .baseUrl(canonicalEndpoint)
                       .model(request.model())
                       .temperature(request.temperature())
+                      .timeout(byokProperties.readTimeout())
                       .internalToolExecutionEnabled(false)
                       .build())
               .build();
@@ -67,6 +73,7 @@ public class OpenAiByokModelClient implements ByokLlmModelClient {
         OpenAiChatOptions.builder()
             .model(request.model())
             .temperature(request.temperature())
+            .timeout(byokProperties.readTimeout())
             .internalToolExecutionEnabled(false);
     if (request.toolChoiceRequired()) {
       chatOptionsBuilder.toolChoice("required");

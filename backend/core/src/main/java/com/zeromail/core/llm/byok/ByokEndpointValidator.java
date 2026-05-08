@@ -90,9 +90,7 @@ public class ByokEndpointValidator {
     String canonicalEndpoint = requiredCanonicalEndpoint(endpoint, BYOKProvider.ANTHROPIC);
     URI endpointUri = parseAndValidateUri(canonicalEndpoint, BYOKProvider.ANTHROPIC);
     String host = canonicalHost(endpointUri.getHost());
-    if (!isAnthropicHost(host)
-        && !allowedExtraHosts.contains(host)
-        && !byokProperties.allowNonVendorEndpoints()) {
+    if (!isAnthropicHost(host) && !isOperatorAllowedNonVendorHost(host)) {
       throw rejected(BYOKProvider.ANTHROPIC);
     }
     rejectPrivateResolvedAddresses(host, BYOKProvider.ANTHROPIC);
@@ -124,13 +122,15 @@ public class ByokEndpointValidator {
   private String validateOpenAiEndpoint(String canonicalEndpoint, boolean customEndpoint) {
     URI endpointUri = parseAndValidateUri(canonicalEndpoint, BYOKProvider.OPENAI);
     String host = canonicalHost(endpointUri.getHost());
-    if (!isOpenAiVendorHost(host)
-        && !allowedExtraHosts.contains(host)
-        && !(customEndpoint && byokProperties.allowNonVendorEndpoints())) {
+    if (!isOpenAiVendorHost(host) && !(customEndpoint && isOperatorAllowedNonVendorHost(host))) {
       throw rejected(BYOKProvider.OPENAI);
     }
     rejectPrivateResolvedAddresses(host, BYOKProvider.OPENAI);
     return canonicalEndpoint;
+  }
+
+  private boolean isOperatorAllowedNonVendorHost(String host) {
+    return byokProperties.allowNonVendorEndpoints() && allowedExtraHosts.contains(host);
   }
 
   private URI parseAndValidateUri(String canonicalEndpoint, BYOKProvider provider) {

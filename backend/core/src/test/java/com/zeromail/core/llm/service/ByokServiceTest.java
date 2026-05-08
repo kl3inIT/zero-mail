@@ -110,10 +110,7 @@ class ByokServiceTest extends PostgresContainerTest {
                 byokService.validate(
                     tenantId,
                     new ByokValidateCommand(
-                        ByokProviderPreset.OPENROUTER,
-                        null,
-                        OPENROUTER_MODEL,
-                        "revoked-key")));
+                        ByokProviderPreset.OPENROUTER, null, OPENROUTER_MODEL, "revoked-key")));
 
     assertThat(result.ok()).isFalse();
     assertThat(result.models()).isNull();
@@ -176,8 +173,7 @@ class ByokServiceTest extends PostgresContainerTest {
         .andExpect(header("anthropic-version", "2023-06-01"))
         .andRespond(
             withSuccess(
-                "{\"data\":[{\"id\":\"" + ANTHROPIC_MODEL + "\"}]}",
-                MediaType.APPLICATION_JSON));
+                "{\"data\":[{\"id\":\"" + ANTHROPIC_MODEL + "\"}]}", MediaType.APPLICATION_JSON));
 
     ByokValidateResult result =
         underTenant(
@@ -186,10 +182,7 @@ class ByokServiceTest extends PostgresContainerTest {
                 byokService.validate(
                     tenantId,
                     new ByokValidateCommand(
-                        ByokProviderPreset.ANTHROPIC,
-                        null,
-                        ANTHROPIC_MODEL,
-                        "anthropic-key")));
+                        ByokProviderPreset.ANTHROPIC, null, ANTHROPIC_MODEL, "anthropic-key")));
 
     assertThat(result.ok()).isTrue();
     assertThat(result.models()).containsExactly(ANTHROPIC_MODEL);
@@ -221,10 +214,7 @@ class ByokServiceTest extends PostgresContainerTest {
                 byokService.validate(
                     tenantId,
                     new ByokValidateCommand(
-                        ByokProviderPreset.GOOGLE_GENAI,
-                        null,
-                        GOOGLE_GENAI_MODEL,
-                        "google-key")));
+                        ByokProviderPreset.GOOGLE_GENAI, null, GOOGLE_GENAI_MODEL, "google-key")));
 
     assertThat(result.ok()).isTrue();
     assertThat(result.models()).containsExactly(GOOGLE_GENAI_MODEL);
@@ -273,10 +263,7 @@ class ByokServiceTest extends PostgresContainerTest {
             byokService.validate(
                 tenantId,
                 new ByokValidateCommand(
-                    ByokProviderPreset.OPENROUTER,
-                    null,
-                    OPENROUTER_MODEL,
-                    "openrouter-key")));
+                    ByokProviderPreset.OPENROUTER, null, OPENROUTER_MODEL, "openrouter-key")));
 
     mockRestServiceServer.verify();
   }
@@ -295,10 +282,7 @@ class ByokServiceTest extends PostgresContainerTest {
             byokService.validate(
                 tenantId,
                 new ByokValidateCommand(
-                    ByokProviderPreset.OPENAI,
-                    null,
-                    "gpt-4o-mini",
-                    "openai-key")));
+                    ByokProviderPreset.OPENAI, null, "gpt-4o-mini", "openai-key")));
 
     mockRestServiceServer.verify();
   }
@@ -337,10 +321,7 @@ class ByokServiceTest extends PostgresContainerTest {
                 byokService.save(
                     tenantId,
                     new ByokSaveCommand(
-                        ByokProviderPreset.OPENROUTER,
-                        null,
-                        OPENROUTER_MODEL,
-                        "plaintext-key")));
+                        ByokProviderPreset.OPENROUTER, null, OPENROUTER_MODEL, "plaintext-key")));
 
     assertThat(result.ok()).isTrue();
     TenantByokCredentialsEntity credentials = findCredentials(tenantId);
@@ -377,10 +358,7 @@ class ByokServiceTest extends PostgresContainerTest {
             byokService.save(
                 tenantId,
                 new ByokSaveCommand(
-                    ByokProviderPreset.OPENROUTER,
-                    null,
-                    OPENROUTER_MODEL,
-                    "replacement-key")));
+                    ByokProviderPreset.OPENROUTER, null, OPENROUTER_MODEL, "replacement-key")));
 
     List<TenantByokCredentialsEntity> allCredentials =
         underTenant(
@@ -523,8 +501,7 @@ class ByokServiceTest extends PostgresContainerTest {
         .andExpect(header("x-api-key", "anthropic-key"))
         .andRespond(
             withSuccess(
-                "{\"data\":[{\"id\":\"" + ANTHROPIC_MODEL + "\"}]}",
-                MediaType.APPLICATION_JSON));
+                "{\"data\":[{\"id\":\"" + ANTHROPIC_MODEL + "\"}]}", MediaType.APPLICATION_JSON));
 
     ByokSaveResult result =
         underTenant(
@@ -610,7 +587,10 @@ class ByokServiceTest extends PostgresContainerTest {
         refreshTokenCipher,
         new ByokEndpointValidator(
             new ZeroMailLlmByokProperties(
-                allowNonVendorEndpoints, List.of(), Duration.ofSeconds(5), Duration.ofSeconds(15))),
+                allowNonVendorEndpoints,
+                allowNonVendorEndpoints ? List.of("together.xyz", "example.com") : List.of(),
+                Duration.ofSeconds(5),
+                Duration.ofSeconds(15))),
         restClientBuilder);
   }
 
@@ -618,9 +598,10 @@ class ByokServiceTest extends PostgresContainerTest {
     mockRestServiceServer
         .expect(once(), requestTo(expectedUrl))
         .andExpect(method(HttpMethod.GET))
-        .andRespond(withSuccess(
-            "{\"data\":[{\"id\":\"" + OPENROUTER_MODEL + "\"},{\"id\":\"model-a\"}]}",
-            MediaType.APPLICATION_JSON));
+        .andRespond(
+            withSuccess(
+                "{\"data\":[{\"id\":\"" + OPENROUTER_MODEL + "\"},{\"id\":\"model-a\"}]}",
+                MediaType.APPLICATION_JSON));
   }
 
   private TenantByokCredentialsEntity findCredentials(UUID tenantId) {

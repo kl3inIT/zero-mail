@@ -18,6 +18,8 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.stereotype.Component;
 
+import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmByokProperties;
 import com.zeromail.core.llm.byok.ByokEndpointValidator;
 import com.zeromail.core.llm.model.LlmChatRequest;
 import com.zeromail.core.llm.model.LlmChatResult;
@@ -36,9 +38,12 @@ public class AnthropicByokModelClient implements ByokLlmModelClient {
 
   private final ChatClient parentAnthropicChatClient;
   private final ByokEndpointValidator byokEndpointValidator;
+  private final ZeroMailLlmByokProperties byokProperties;
   private final ObjectMapper objectMapper = new ObjectMapper();
 
-  public AnthropicByokModelClient(ByokEndpointValidator byokEndpointValidator) {
+  public AnthropicByokModelClient(
+      ByokEndpointValidator byokEndpointValidator, ZeroMailCoreProperties zeroMailCoreProperties) {
+    this.byokProperties = zeroMailCoreProperties.llm().byok();
     this.parentAnthropicChatClient =
         ChatClient.create(
             AnthropicChatModel.builder()
@@ -47,6 +52,7 @@ public class AnthropicByokModelClient implements ByokLlmModelClient {
                         .apiKey("unused-byok-placeholder")
                         .model(Model.of("claude-3-haiku-20240307"))
                         .maxTokens(MAX_TOKENS)
+                        .timeout(byokProperties.readTimeout())
                         .build())
                 .build());
     this.byokEndpointValidator = byokEndpointValidator;
@@ -66,6 +72,7 @@ public class AnthropicByokModelClient implements ByokLlmModelClient {
       chatOptionsBuilder.model(Model.of(request.model()));
       chatOptionsBuilder.temperature(request.temperature());
       chatOptionsBuilder.maxTokens(MAX_TOKENS);
+      chatOptionsBuilder.timeout(byokProperties.readTimeout());
       chatOptionsBuilder.internalToolExecutionEnabled(false);
       if (request.toolChoiceRequired()) {
         chatOptionsBuilder.toolChoice(ToolChoice.ofAny(ToolChoiceAny.builder().build()));
