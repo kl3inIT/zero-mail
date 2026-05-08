@@ -47,7 +47,7 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 - [x] **LLM-08**: Email content is truncated to a safe token budget (≤4k tokens) before any LLM call
 - [x] **LLM-09**: No raw email body, LLM prompt, or LLM completion is persisted beyond a short-lived in-memory cache
 - [x] **LLM-10**: Per-tenant daily LLM spend cap blocks further billable calls when exceeded
-- [ ] **LLM-11**: Golden-set drift detection runs on a fixed sample to catch silent model regressions
+- [x] **LLM-11**: Golden-set drift detection runs on a fixed sample to catch silent model regressions
 
 ### Billing (Prepaid Credits)
 
@@ -178,7 +178,7 @@ Each v1 requirement maps to exactly one phase.
 | LLM-08 | Phase 2C | Complete |
 | LLM-09 | Phase 2C | Complete |
 | LLM-10 | Phase 2C | Complete |
-| LLM-11 | Phase 2C | Pending |
+| LLM-11 | Phase 2C | Complete |
 | RULE-01 | Phase 3 | Pending |
 | RULE-02 | Phase 3 | Pending |
 | RULE-03 | Phase 3 | Pending |
