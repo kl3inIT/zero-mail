@@ -1,460 +1,66 @@
 {
-  "common": {
-    "app": {
-      "title": "Zero Mail",
-      "description": "Dọn hộp thư về zero mà vẫn giữ quyền kiểm soát."
-    },
-    "nav": {
-      "docs": "Tài liệu",
-      "signIn": "Đăng nhập"
-    },
-    "loading": "Đang tải...",
-    "loadingApp": "Đang tải thiết lập...",
-    "save": "Lưu",
-    "cancel": "Hủy",
-    "close": "Đóng",
-    "retry": "Thử lại thao tác",
-    "savingLanguage": "Đang cập nhật ngôn ngữ..."
-  },
-  "nav": {
-    "logoLabel": "Trang chủ Zero Mail",
-    "themeToLight": "Chuyển sang chế độ sáng",
-    "themeToDark": "Chuyển sang chế độ tối",
-    "languageSelector": "Ngôn ngữ",
-    "beta": "beta",
-    "how": "Cách hoạt động",
-    "features": "Tính năng",
-    "rules": "Quy tắc mẫu",
-    "trust": "Tin cậy & an toàn",
-    "waitlist": "Đăng ký danh sách chờ",
-    "signIn": "Đăng nhập",
-    "continueSetup": "Tiếp tục cài đặt",
-    "openApp": "Mở ứng dụng",
-    "onboardingProgress": "Tiến trình cài đặt"
-  },
-  "footer": {
-    "copyright": "© 2026 Zero Mail",
-    "privacy": "Bảo mật",
-    "terms": "Điều khoản",
-    "tagline": "Phân loại email tự động bằng AI mà bạn có thể tin tưởng giao cho hộp thư thật. Dành cho Gmail, do nhóm nhỏ ở Brooklyn & Berlin xây dựng.",
-    "product": "Sản phẩm",
-    "company": "Công ty",
-    "legal": "Pháp lý",
-    "about": "Giới thiệu",
-    "changelog": "Nhật ký thay đổi",
-    "careers": "Tuyển dụng",
-    "contact": "Liên hệ",
-    "security": "Bảo mật",
-    "dpa": "DPA",
-    "status": "Hệ thống hoạt động bình thường",
-    "version": "v1.0 · Gmail"
-  },
-  "landing": {
-    "heading": {
-      "line1": "Hộp thư gọn sạch,",
-      "line2": "không giao AI",
-      "accent": "nút gửi."
-    },
-    "tagline": "Zero Mail phân loại Gmail của bạn theo các quy tắc bạn viết bằng ngôn ngữ tự nhiên — gắn nhãn việc quan trọng, lưu trữ thư không cần thiết, và soạn sẵn những phản hồi đơn giản. Mọi thứ gửi đi đều phải qua bạn.",
-    "primaryCta": "Đăng nhập",
-    "waitlistCta": "Đăng ký danh sách chờ",
-    "secondaryCta": "Xem cách hoạt động",
-    "continueSetupCta": "Tiếp tục thiết lập",
-    "eyebrow": "Gmail · Private beta · v1",
-    "bullets": {
-      "noAutoSend": "Không tự gửi",
-      "readOnlyPrompts": "Prompt AI chỉ đọc",
-      "reversibleActions": "Hành động hoàn tác được"
-    },
-    "peek": {
-      "eyebrow": "Tiếp theo · Cách hoạt động",
-      "title": "Ba bước để đạt inbox zero — kết nối, mô tả, xem lại.",
-      "link": "Đọc walkthrough"
-    }
-  },
-  "how": {
-    "eyebrow": "Cách hoạt động",
-    "title": "Ba bước. Không cần học thêm hộp thư mới.",
-    "desc": "Zero Mail chạy ngay trong Gmail bạn đang dùng. Kết nối một lần, mô tả cách bạn muốn xử lý hộp thư bằng ngôn ngữ tự nhiên, rồi xem hàng đợi xử lý.",
-    "step1": {
-      "title": "Kết nối Gmail",
-      "desc": "Đăng nhập bằng Google. Zero Mail dùng quyền truy cập Gmail có giới hạn — không bao giờ là mật khẩu của bạn — và bạn có thể thu hồi quyền bất cứ lúc nào.",
-      "connected": "Đã kết nối",
-      "scope": "Quyền đọc & sửa · thu hồi bất cứ lúc nào trong tài khoản Google"
-    },
-    "step2": {
-      "title": "Viết quy tắc bằng ngôn ngữ tự nhiên",
-      "desc": "Mô tả thư nào nên lưu trữ, gắn nhãn, hay soạn nháp. Không bộ lọc, không toán tử logic — chỉ là câu chữ như giao việc cho trợ lý.",
-      "example": "Lưu trữ bản tin và biên lai dưới 500$",
-      "parsed": "Đã phân tích · sẵn sàng thử trên 7 ngày gần nhất"
-    },
-    "step3": {
-      "title": "Duyệt hàng đợi xử lý",
-      "desc": "Mọi thao tác đều được ghi lại và có thể hoàn tác. Duyệt thư nháp trước khi gửi đi. Không bao giờ có thư được gửi thay bạn."
-    },
-    "audit": {
-      "archived": "đã lưu trữ",
-      "labeled": "đã gắn nhãn",
-      "drafted": "đã soạn nháp",
-      "skipped": "đã bỏ qua",
-      "r1": "Biên lai Stripe — khớp \"biên lai\"",
-      "r2": "Maya R. → Nhà đầu tư",
-      "r3": "phản hồi Alex C. (chưa gửi)",
-      "r4": "Priya A. — \"giữ trong hộp thư\""
-    }
-  },
-  "feat": {
-    "eyebrow": "Bạn nhận được gì",
-    "title": "Những tính năng nhàm chán mà hộp thư bạn thực sự cần.",
-    "desc": "Không có agent. Không có quy trình nhiều bước. Năm công cụ lặng lẽ gỡ bớt quyết định khỏi buổi sáng của bạn.",
-    "labels": {
-      "title": "Nhãn AI",
-      "body": "Zero Mail đọc từng thư và áp đúng nhãn Gmail — nhà đầu tư, khách hàng, biên lai, nhà tuyển dụng — dựa trên quy tắc bạn viết, không phải một danh mục cố định."
-    },
-    "archive": {
-      "title": "Gợi ý lưu trữ",
-      "body": "Thư ít giá trị được xếp vào hàng chờ lưu trữ kèm lý do một dòng. Duyệt hàng loạt, hoặc để các kết quả độ tin cậy cao tự lưu trữ."
-    },
-    "draft": {
-      "title": "Soạn nháp phản hồi",
-      "body": "Thư nháp được viết theo giọng văn của bạn và lưu thẳng vào thư mục Nháp của Gmail. Bạn đọc từng chữ trước khi bất cứ thư nào được gửi.",
-      "head": "draft.zeromail · chưa gửi",
-      "ready": "sẵn sàng",
-      "to": "Đến",
-      "subject": "Tiêu đề",
-      "subjectVal": "Re: Phản hồi sau cuộc gọi của chúng ta",
-      "bodyText": "Cảm ơn Alex — tôi cũng rất thích cuộc trò chuyện vừa rồi. Tôi sẵn lòng chia sẻ định dạng deck mà anh đã nhắc đến. Thứ Tư lúc 2 giờ chiều giờ Thái Bình Dương có tiện cho buổi tiếp theo không?",
-      "edit": "Sửa",
-      "open": "Mở trong Gmail"
-    },
-    "tester": {
-      "title": "Kiểm thử quy tắc",
-      "body": "Trước khi quy tắc được áp dụng, hãy chạy thử trên 7 hoặc 30 ngày thư gần nhất. Xem chính xác thư nào sẽ bị lưu trữ, gắn nhãn hay soạn nháp — không có tác động phụ.",
-      "prompt": "thử quy tắc>",
-      "input": "lưu trữ bản tin và biên lai dưới 500$",
-      "r1": "biên lai",
-      "r2": "bản tin",
-      "r3": "hóa đơn",
-      "archive": "lưu trữ",
-      "keep": "giữ lại",
-      "over": "(trên 500$)",
-      "more": "thêm 7 kết quả..."
-    },
-    "audit": {
-      "title": "Nhật ký kiểm tra",
-      "body": "Mọi thao tác — lưu trữ, gắn nhãn, soạn nháp, bỏ qua — đều được ghi cùng quy tắc đã kích hoạt và một nút hoàn tác. 90 ngày lịch sử. Xuất CSV được."
-    },
-    "f1": {
-      "title": "Quy tắc bằng tiếng Việt",
-      "desc": "Viết logic triage như khi bạn nói với đồng nghiệp. Chúng tôi biên dịch thành matcher có cấu trúc."
-    },
-    "f2": {
-      "title": "Dùng API key riêng",
-      "desc": "Định tuyến qua OpenRouter hoặc cắm thẳng API key OpenAI / Anthropic. Ví của bạn, key của bạn."
-    },
-    "f3": {
-      "title": "Nhật ký minh bạch",
-      "desc": "Mọi nhãn, lưu trữ, hay bản nháp tự động đều được ghi lại kèm quy tắc đã kích hoạt và email nó đã xử lý."
-    },
-    "f4": {
-      "title": "Ưu tiên tiếng Việt",
-      "desc": "Giao diện song ngữ VI / EN gốc. Viết quy tắc bằng ngôn ngữ nào cũng được; chúng tôi triage cả hai."
-    },
-    "f5": {
-      "title": "Không tự động gửi",
-      "desc": "Zero Mail gắn nhãn, lưu trữ, lưu bản nháp. Sẽ không bao giờ gửi tin nhắn trước khi bạn xem lại."
-    },
-    "f6": {
-      "title": "Hủy quyền bất kỳ lúc nào",
-      "desc": "Ngắt Gmail hoặc xoá tài khoản trong phần Cài đặt. Token được xoá ngay lập tức."
-    }
-  },
-  "rules": {
-    "eyebrow": "Quy tắc mẫu",
-    "title": "Câu văn, không phải bộ lọc.",
-    "desc": "Năm quy tắc đủ cho hầu hết hộp thư công việc. Mỗi quy tắc đều có thể chỉnh, kiểm thử và hoàn tác.",
-    "tabs": {
-      "newsletters": "Bản tin & biên lai",
-      "investors": "Theo dõi nhà đầu tư",
-      "customer": "Khách hàng cần xử lý",
-      "recruiters": "Nhà tuyển dụng",
-      "calendar": "Thư mời lịch họp"
-    },
-    "ruleN": "Quy tắc 1 / 5",
-    "exampleQuote": "\"Lưu trữ bản tin, marketing và biên lai trừ khi khoản phí trên $500 hoặc đó là hoàn tiền.\"",
-    "r1": {
-      "a1": "stripe.com — biên lai 48$",
-      "a2": "linkedin.com — bản tin tuần",
-      "a3": "square.com — biên lai 612$",
-      "a4": "amex.com — thông báo hoàn tiền"
-    },
-    "q": {
-      "plain": "ngôn ngữ tự nhiên",
-      "tested": "đã thử 7 ngày",
-      "undo": "có hoàn tác"
-    },
-    "parses": {
-      "title": "Cách phân tích",
-      "body": "Zero Mail trích xuất ý định (lưu trữ, gắn nhãn, soạn nháp, thông báo), thực thể (bản tin, biên lai), và điều kiện (số tiền, người gửi, trạng thái chuỗi). Nó không bao giờ chạm vào thư không khớp."
-    },
-    "dryrun": "7 ngày gần nhất · chạy thử",
-    "matches": "4 kết quả"
-  },
+  "_generated": "DO NOT EDIT MANUALLY. Generated by apps/web/scripts/merge-feature-i18n.ts.",
   "action": {
+    "alert": "cảnh báo",
     "archive": "lưu trữ",
-    "label": "gắn nhãn",
     "draft": "soạn nháp",
     "keep": "giữ lại",
-    "notify": "thông báo",
-    "alert": "cảnh báo"
-  },
-  "cta": {
-    "eyebrow": "Truy cập sớm",
-    "title": {
-      "a": "Đạt inbox zero",
-      "b": "không còn lo lắng."
-    },
-    "desc": "Hãy đăng ký chờ. Mỗi tuần chúng tôi đón thêm 50 nhà sáng lập và quản lý vận hành theo thứ tự. Bạn sẽ nhận lời mời để cài đặt Zero Mail với tài khoản Gmail thật của mình.",
-    "emailPlaceholder": "ban@congty.com",
-    "button": "Đăng ký chờ",
-    "b1": "Miễn phí trong giai đoạn beta",
-    "b2": "Không cần thẻ",
-    "b3": "Hủy đăng ký bằng một cú nhấp",
-    "stats": {
-      "s1": "trong danh sách chờ",
-      "s2": "lời mời mỗi tuần",
-      "s3": "giảm hộp thư trung bình",
-      "s4": "email tự động gửi"
-    },
-    "note": {
-      "title": "Chỉ Gmail · v1",
-      "body": "Chúng tôi đào sâu vào Gmail trước khi mở rộng sang Outlook hay IMAP. Nếu bạn dùng hộp thư khác, để lại email và chúng tôi sẽ báo khi có hỗ trợ."
-    }
-  },
-  "trust": {
-    "eyebrow": "Tin cậy & an toàn",
-    "title": {
-      "a": "Hộp thư của bạn vẫn là của bạn.",
-      "b": "Luôn luôn."
-    },
-    "authTitle": "Ba cam kết, viết rõ ràng.",
-    "desc": "Tự động phân loại chỉ thực sự hữu ích khi bạn có thể tin tưởng giao cả hộp thư thật. Chúng tôi xây dựng Zero Mail xoay quanh ba cam kết cứng — và mọi cam kết đều có thể kiểm tra.",
-    "badges": {
-      "soc": "Đang xin SOC 2",
-      "casa": "Google CASA tier 2",
-      "regions": "Khu vực EU + US"
-    },
-    "proof": {
-      "audit": "Mở nhật ký",
-      "scopes": "Xem quyền Gmail",
-      "revoke": "Thu hồi từ Google"
-    },
-    "c1": {
-      "title": "Không bao giờ tự động gửi.",
-      "body": "Thư nháp được lưu vào thư mục Nháp của Gmail. Bạn đọc, sửa, rồi nhấn gửi. Không có tùy chọn nào cho phép AI gửi thư thay bạn."
-    },
-    "c2": {
-      "title": "Không lưu trữ dài hạn.",
-      "body": "Nội dung email gốc, prompt LLM, kết quả và embedding đều bị xóa sau mỗi lượt phân loại. Chỉ siêu dữ liệu và nhật ký kiểm tra của bạn được giữ lại."
-    },
-    "c3": {
-      "title": "Làm sạch trước khi AI nhìn thấy.",
-      "body": "Nội dung thư được loại bỏ tệp đính kèm, chữ ký, lịch sử trích dẫn, rồi cắt ngắn theo ngân sách token trước khi gửi đến mô hình."
-    },
-    "c4": {
-      "title": "Mọi thao tác đều hoàn tác được.",
-      "body": "Tạm dừng phân loại bằng một cú nhấp. Hoàn tác mọi lượt lưu trữ, gắn nhãn, hay soạn nháp từ nhật ký đầy đủ trong 90 ngày qua."
-    },
-    "p1": {
-      "title": "Chỉ soạn nháp — không bao giờ tự gửi",
-      "body": "Zero Mail không bao giờ gửi thư thay bạn. Phản hồi nằm trong thư mục Nháp của Gmail cho đến khi bạn nhấn Gửi."
-    },
-    "p2": {
-      "title": "Không lưu nội dung email",
-      "body": "Thư của bạn ở lại Gmail. Chúng tôi xử lý chúng trong bộ nhớ để áp quy tắc, sau đó chỉ giữ header và nhật ký hành động."
-    },
-    "p3": {
-      "title": "Thu hồi quyền bất cứ lúc nào",
-      "body": "Ngắt kết nối từ trong Zero Mail hoặc trực tiếp từ Tài khoản Google của bạn. Chúng tôi xoá dữ liệu trong vòng 24 giờ."
-    }
-  },
-  "docs": {
-    "indexHeading": "Tài liệu",
-    "backToList": "Quay lại danh sách tài liệu",
-    "empty": {
-      "heading": "Chưa có tài liệu",
-      "body": "Nội dung đang được chuẩn bị. Hãy quay lại sau."
-    },
-    "notFound": {
-      "body": "Không tìm thấy tài liệu này. Quay lại danh sách tài liệu."
-    }
-  },
-  "legal": {
-    "terms": {
-      "body": "Khi nhấn tiếp tục, bạn đồng ý với <terms>Điều khoản dịch vụ</terms> và <privacy>Chính sách bảo mật</privacy> của chúng tôi.",
-      "placeholderTitle": "Điều khoản dịch vụ",
-      "placeholderBody": "Nội dung pháp lý đầy đủ sẽ có trong Phase 6 (giai đoạn hardening trước khi launch). Trang stub này tồn tại để các liên kết trong footer pháp lý phân giải đúng và để Zero Mail không bị chặn yêu cầu xác minh Google OAuth (CASA)."
-    },
-    "privacy": {
-      "placeholderTitle": "Chính sách bảo mật",
-      "placeholderBody": "Chính sách bảo mật đầy đủ sẽ có trong Phase 6 (giai đoạn hardening trước khi launch). PROJECT.md mô tả cam kết ràng buộc về bảo mật: không lưu trữ lâu dài nội dung email, prompt, câu trả lời, hay embedding."
-    },
-    "googleApiPolicy": {
-      "body": "Việc Zero Mail sử dụng và chuyển giao thông tin nhận được từ Google API sang bất kỳ ứng dụng nào khác sẽ tuân thủ <link>Chính sách bảo mật dữ liệu người dùng của Google API</link>, bao gồm các yêu cầu Sử dụng có giới hạn (Limited Use)."
-    }
+    "label": "gắn nhãn",
+    "notify": "thông báo"
   },
   "auth": {
     "backToSite": "Quay lại trang chính",
-    "help": "Trợ giúp",
+    "error": {
+      "consent_denied": {
+        "body": "Zero Mail cần quyền truy cập Gmail để sắp xếp hộp thư của bạn. Nhấn Đăng nhập với Google để thử lại.",
+        "title": "Truy cập Gmail bị từ chối"
+      },
+      "gmail_scope_required": {
+        "body": "Đăng nhập thành công nhưng quyền Gmail chưa được cấp. Nhấn Đăng nhập với Google và cấp quyền Gmail để tiếp tục.",
+        "title": "Thiếu quyền Gmail"
+      }
+    },
     "everywhere": "Đầu-cuối · Đang xin SOC 2 Type II",
+    "help": "Trợ giúp",
     "login": {
-      "title": "Đăng nhập",
+      "body": "Zero Mail kết nối Gmail khi bạn đồng ý. Chúng tôi không bao giờ tự động gửi, và bạn có thể thu hồi quyền truy cập từ Google chỉ trong hai cú nhấp.",
+      "divider": "hoặc",
+      "googleButton": "Tiếp tục với Google",
+      "googleNote": "Bạn sẽ được chuyển sang Google để cấp quyền.",
       "headline": "Dọn hộp thư về zero mà vẫn giữ quyền kiểm soát.",
       "headlineA": "Chào mừng bạn quay lại",
       "headlineB": "với hộp thư.",
-      "body": "Zero Mail kết nối Gmail khi bạn đồng ý. Chúng tôi không bao giờ tự động gửi, và bạn có thể thu hồi quyền truy cập từ Google chỉ trong hai cú nhấp.",
-      "googleButton": "Tiếp tục với Google",
-      "googleNote": "Bạn sẽ được chuyển sang Google để cấp quyền.",
-      "divider": "hoặc",
-      "workEmail": "Đăng nhập bằng email công ty",
-      "termsPrefix": "Khi đăng nhập, bạn đồng ý với",
-      "terms": "Điều khoản",
-      "termsAnd": "và",
-      "privacy": "Chính sách bảo mật",
       "newUser": "Lần đầu sử dụng?",
-      "waitlist": "Đăng ký danh sách chờ →",
+      "privacy": "Chính sách bảo mật",
       "safety": {
         "noAutoSend": "Không tự động gửi email",
         "noLongTermStorage": "Không lưu lâu dài nội dung email",
         "revokeAnytime": "Bạn có thể thu hồi quyền truy cập bất cứ lúc nào"
-      }
-    },
-    "error": {
-      "consent_denied": {
-        "title": "Truy cập Gmail bị từ chối",
-        "body": "Zero Mail cần quyền truy cập Gmail để sắp xếp hộp thư của bạn. Nhấn Đăng nhập với Google để thử lại."
       },
-      "gmail_scope_required": {
-        "title": "Thiếu quyền Gmail",
-        "body": "Đăng nhập thành công nhưng quyền Gmail chưa được cấp. Nhấn Đăng nhập với Google và cấp quyền Gmail để tiếp tục."
-      }
+      "terms": "Điều khoản",
+      "termsAnd": "và",
+      "termsPrefix": "Khi đăng nhập, bạn đồng ý với",
+      "title": "Đăng nhập",
+      "waitlist": "Đăng ký danh sách chờ →",
+      "workEmail": "Đăng nhập bằng email công ty"
     }
   },
-  "permissions": {
-    "title": "Quyền bạn sẽ cấp",
-    "minimum": "3 quyền · tối thiểu",
-    "intro": "Google sẽ yêu cầu bạn duyệt các quyền Gmail sau. Mỗi quyền là tối thiểu cần cho một tính năng bạn điều khiển.",
-    "r1": {
-      "title": "Đọc thư và nhãn",
-      "body": "Dùng để áp quy tắc. Nội dung được xử lý trong bộ nhớ; chúng tôi chỉ giữ header và lịch sử hành động."
+  "common": {
+    "app": {
+      "description": "Dọn hộp thư về zero mà vẫn giữ quyền kiểm soát.",
+      "title": "Zero Mail"
     },
-    "r2": {
-      "title": "Thay đổi nhãn và lưu trữ",
-      "body": "Dùng để gắn nhãn, lưu trữ và bỏ lưu trữ — mọi hành động đều có thể hoàn tác từ nhật ký."
+    "cancel": "Hủy",
+    "close": "Đóng",
+    "loading": "Đang tải...",
+    "loadingApp": "Đang tải thiết lập...",
+    "nav": {
+      "docs": "Tài liệu",
+      "signIn": "Đăng nhập"
     },
-    "r3": {
-      "title": "Soạn thư nháp",
-      "body": "Dùng để viết nháp đợi trong thư mục Nháp của Gmail. Chúng tôi không có quyền gửi."
-    },
-    "notGranted": "Chúng tôi không yêu cầu: gửi thư, xóa vĩnh viễn hoặc danh bạ."
-  },
-  "onboarding": {
-    "loading": "Đang tải thiết lập...",
-    "connect": {
-      "eyebrow": "Bước 1 — Kết nối",
-      "heading": "Đã kết nối Gmail.",
-      "body": "Zero Mail cần quyền Gmail trước khi các giai đoạn sau có thể theo dõi, gắn nhãn, lưu trữ hoặc tạo bản nháp. Bạn có thể thu hồi quyền bất cứ lúc nào.",
-      "cta": "Kết nối Gmail",
-      "lastSync": "Đồng bộ · vừa xong",
-      "scopes": "3 quyền đã cấp",
-      "callout": "Chỉ soạn nháp, không tự gửi — phản hồi nằm trong Gmail Drafts cho đến khi bạn nhấn Gửi."
-    },
-    "template": {
-      "eyebrow": "Bước 2 — Quy tắc khởi đầu",
-      "heading": "Chọn vài điểm khởi đầu.",
-      "body": "Mẫu khởi đầu giúp Zero Mail hiểu cách bạn muốn xử lý hộp thư. Bạn có thể đổi mẫu sau trong phần Cài đặt.",
-      "saveCta": "Lưu mẫu khởi đầu"
-    },
-    "completion": {
-      "heading": "Đã sẵn sàng. Mở phần Cài đặt để xem lại lựa chọn của bạn.",
-      "body": "Zero Mail đang theo dõi hộp thư ở chế độ chỉ ghi nhận. Mở nhật ký bất cứ lúc nào để xem nó sẽ làm gì.",
-      "nextTitle": "Điều gì sẽ diễn ra",
-      "next1": "Chỉ ghi nhận trong 24 giờ — hành động được ghi, chưa áp.",
-      "next2": "Bạn sẽ nhận tóm tắt hằng ngày lúc 8h sáng.",
-      "next3": "Chuyển sang chế độ trực tiếp bất cứ lúc nào trong Cài đặt.",
-      "cta": "Mở cài đặt"
-    },
-    "steps": {
-      "gmailConnect": {
-        "shortLabel": "Kết nối Gmail"
-      },
-      "templateSelect": {
-        "shortLabel": "Chọn template"
-      },
-      "complete": {
-        "shortLabel": "Hoàn tất"
-      },
-      "progressLabel": "Bước {current} trên {total}"
-    }
-  },
-  "settings": {
-    "title": "Cài đặt",
-    "account": {
-      "heading": "Tài khoản"
-    },
-    "gmailConnection": {
-      "heading": "Kết nối Gmail",
-      "disconnectCta": "Ngắt kết nối Gmail",
-      "reconnectCta": "Kết nối lại Gmail",
-      "singleAccountNote": "Zero Mail v1 hỗ trợ một tài khoản Gmail — chính là email bạn đã đăng nhập. Hỗ trợ nhiều tài khoản đang nằm trong roadmap."
-    },
-    "triage": {
-      "pause": {
-        "title": "Tự động xử lý email",
-        "body": "Khi tắt, Zero Mail sẽ không tự động xử lý email mới",
-        "toggleLabel": "Tạm dừng tự động xử lý",
-        "banner": {
-          "heading": "Tự động xử lý đang tạm dừng",
-          "body": "Email mới vẫn được ghi nhận, nhưng Zero Mail sẽ không thực hiện hành động tự động.",
-          "unpause": "Bật lại"
-        }
-      }
-    },
-    "language": {
-      "label": "Ngôn ngữ",
-      "helper": "Lựa chọn ngôn ngữ này áp dụng cho tài khoản của bạn ở mọi thiết bị.",
-      "vi": "Tiếng Việt",
-      "en": "English",
-      "saveCta": "Cập nhật ngôn ngữ"
-    },
-    "privacy": {
-      "heading": "Quyền riêng tư và an toàn",
-      "noAutoSend": "Không tự động gửi email",
-      "noBodyStorage": "Không lưu lâu dài nội dung email, lời nhắc hay phản hồi từ AI",
-      "revokeAnytime": "Bạn có thể thu hồi quyền truy cập bất cứ lúc nào",
-      "byokPlanned": "Sắp tới: bạn có thể tự cung cấp khóa API (BYOK)"
-    },
-    "dangerZone": {
-      "heading": "Vùng nguy hiểm"
-    },
-    "deleteAccount": {
-      "cta": "Xóa tài khoản và dữ liệu",
-      "confirmPhrase": "delete my data"
-    }
-  },
-  "templates": {
-    "receipts": {
-      "title": "Hóa đơn và biên lai",
-      "description": "Gắn nhãn các email hóa đơn, biên lai, xác nhận đặt hàng để dễ tra cứu sau này."
-    },
-    "newsletters": {
-      "title": "Bản tin",
-      "description": "Tự động gắn nhãn bản tin để hộp thư chính luôn gọn gàng."
-    },
-    "calendarInvites": {
-      "title": "Lời mời lịch",
-      "description": "Đánh dấu các email mời họp để bạn không bỏ sót lịch."
-    }
+    "retry": "Thử lại thao tác",
+    "save": "Lưu",
+    "savingLanguage": "Đang cập nhật ngôn ngữ..."
   },
   "connectionHealth": {
     "connected": "Đã kết nối",
@@ -462,38 +68,103 @@
     "notConnected": "Chưa kết nối",
     "reconnectPrompt": "Quyền truy cập Google đã bị thu hồi hoặc hết hạn. Hãy kết nối lại Gmail để tiếp tục thiết lập."
   },
+  "cta": {
+    "b1": "Miễn phí trong giai đoạn beta",
+    "b2": "Không cần thẻ",
+    "b3": "Hủy đăng ký bằng một cú nhấp",
+    "button": "Đăng ký chờ",
+    "desc": "Hãy đăng ký chờ. Mỗi tuần chúng tôi đón thêm 50 nhà sáng lập và quản lý vận hành theo thứ tự. Bạn sẽ nhận lời mời để cài đặt Zero Mail với tài khoản Gmail thật của mình.",
+    "emailPlaceholder": "ban@congty.com",
+    "eyebrow": "Truy cập sớm",
+    "note": {
+      "body": "Chúng tôi đào sâu vào Gmail trước khi mở rộng sang Outlook hay IMAP. Nếu bạn dùng hộp thư khác, để lại email và chúng tôi sẽ báo khi có hỗ trợ.",
+      "title": "Chỉ Gmail · v1"
+    },
+    "stats": {
+      "s1": "trong danh sách chờ",
+      "s2": "lời mời mỗi tuần",
+      "s3": "giảm hộp thư trung bình",
+      "s4": "email tự động gửi"
+    },
+    "title": {
+      "a": "Đạt inbox zero",
+      "b": "không còn lo lắng."
+    }
+  },
   "deleteAccount": {
-    "title": "Xóa tài khoản và dữ liệu?",
     "body": "Thao tác này xóa tenant, kết nối Gmail, lựa chọn khởi đầu, phiên đăng nhập và token đã mã hóa. Không thể hoàn tác.",
+    "cancelCta": "Hủy",
+    "confirmCta": "Xóa tài khoản và dữ liệu",
     "confirmInputLabel": "Nhập 'delete my data' để xác nhận",
     "confirmInputPlaceholder": "delete my data",
-    "confirmCta": "Xóa tài khoản và dữ liệu",
-    "cancelCta": "Hủy",
-    "success": "Đã xóa tài khoản và dữ liệu của bạn."
+    "success": "Đã xóa tài khoản và dữ liệu của bạn.",
+    "title": "Xóa tài khoản và dữ liệu?"
+  },
+  "docs": {
+    "backToList": "Quay lại danh sách tài liệu",
+    "empty": {
+      "body": "Nội dung đang được chuẩn bị. Hãy quay lại sau.",
+      "heading": "Chưa có tài liệu"
+    },
+    "indexHeading": "Tài liệu",
+    "notFound": {
+      "body": "Không tìm thấy tài liệu này. Quay lại danh sách tài liệu."
+    }
   },
   "errors": {
+    "auth": {
+      "consent_denied": "Quyền truy cập Gmail bị từ chối. Hãy đăng nhập lại bằng Google và cấp quyền Gmail để tiếp tục.",
+      "currentUserNotFound": "Không tìm thấy tài khoản hiện tại. Hãy đăng nhập lại.",
+      "forbidden": "Bạn không có quyền thực hiện thao tác này.",
+      "gmail_scope_required": "Quyền Gmail chưa được cấp. Hãy đăng nhập lại bằng Google và cấp quyền Gmail để tiếp tục.",
+      "unauthorized": "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại bằng Google."
+    },
+    "badRequest": "Yêu cầu không hợp lệ. Hãy kiểm tra lại và thử lần nữa.",
+    "billing": {
+      "insufficient": "Số dư tín dụng không đủ — vui lòng nạp thêm để tiếp tục.",
+      "ledger": {
+        "invalidState": "Lỗi nội bộ trong sổ tín dụng — vui lòng thử lại sau."
+      },
+      "sepay": {
+        "auth_invalid": "Yêu cầu webhook không hợp lệ.",
+        "reference_invalid": "Mã tham chiếu giao dịch không hợp lệ."
+      }
+    },
     "boundary": {
-      "title": "Đã xảy ra lỗi",
       "body": "Vui lòng thử lại. Nếu lỗi tiếp tục xảy ra, hãy tải lại trang hoặc đăng nhập lại.",
-      "reset": "Thử lại"
+      "reset": "Thử lại",
+      "title": "Đã xảy ra lỗi"
     },
-    "notFound": {
-      "title": "Không tìm thấy trang",
-      "body": "Trang bạn đang tìm không tồn tại hoặc đã bị di chuyển.",
-      "backHome": "Về trang chủ"
-    },
-    "unknown": "Đã xảy ra lỗi chưa xác định. Hãy thử lại hoặc đăng nhập lại.",
+    "conflict": "Dữ liệu đã thay đổi trước khi thao tác hoàn tất. Hãy tải lại trang rồi thử lại.",
+    "dataIntegrity": "Không thể lưu thay đổi vì dữ liệu không hợp lệ.",
     "fallback": "Không thể hoàn tất thao tác. Hãy làm mới trang rồi thử lại.",
     "fieldFallback": "Giá trị này không hợp lệ. Hãy kiểm tra lại.",
-    "auth": {
-      "unauthorized": "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại bằng Google.",
-      "forbidden": "Bạn không có quyền thực hiện thao tác này.",
-      "currentUserNotFound": "Không tìm thấy tài khoản hiện tại. Hãy đăng nhập lại.",
-      "consent_denied": "Quyền truy cập Gmail bị từ chối. Hãy đăng nhập lại bằng Google và cấp quyền Gmail để tiếp tục.",
-      "gmail_scope_required": "Quyền Gmail chưa được cấp. Hãy đăng nhập lại bằng Google và cấp quyền Gmail để tiếp tục."
+    "gmail": {
+      "disconnected": "Quyền truy cập Google đã bị thu hồi hoặc hết hạn. Hãy kết nối lại Gmail."
     },
+    "llm": {
+      "byok": {
+        "invalid": "Khóa BYOK không hợp lệ. Kiểm tra nhà cung cấp, endpoint và khóa rồi thử lại.",
+        "validate_failed": "Không thể kiểm tra khóa BYOK. Kiểm tra nhà cung cấp và khóa rồi thử lại."
+      },
+      "byokValidateFailed": "Không thể kiểm tra khóa BYOK. Kiểm tra nhà cung cấp và khóa rồi thử lại.",
+      "insufficientCredits": {
+        "body": "Nạp thêm tín dụng hoặc lưu khóa BYOK hợp lệ để tiếp tục gọi AI.",
+        "title": "Tín dụng nền tảng đã hết"
+      },
+      "safety_violation": "Yêu cầu AI đã bị từ chối vì lý do an toàn.",
+      "safetyViolation": "Yêu cầu AI đã bị từ chối vì lý do an toàn.",
+      "sanitization_failed": "Không thể chuẩn hóa nội dung email trước khi gọi AI. Hãy thử lại.",
+      "sanitizationFailed": "Không thể chuẩn hóa nội dung email trước khi gọi AI. Hãy thử lại."
+    },
+    "notFound": {
+      "backHome": "Về trang chủ",
+      "body": "Trang bạn đang tìm không tồn tại hoặc đã bị di chuyển.",
+      "title": "Không tìm thấy trang"
+    },
+    "schemaMismatch": "Trang này cần hợp đồng API mới hơn. Hãy tạo lại typed client trước khi tiếp tục.",
+    "unknown": "Đã xảy ra lỗi chưa xác định. Hãy thử lại hoặc đăng nhập lại.",
     "validation": {
-      "generic": "Một hoặc nhiều trường không hợp lệ. Hãy kiểm tra lại.",
       "field": {
         "language": {
           "Pattern": "Ngôn ngữ này chưa được hỗ trợ. Hãy chọn Tiếng Việt hoặc English."
@@ -501,24 +172,410 @@
         "preferredLanguage": {
           "invalid": "Ngôn ngữ này chưa được hỗ trợ. Hãy chọn Tiếng Việt hoặc English."
         }
-      }
-    },
-    "gmail": {
-      "disconnected": "Quyền truy cập Google đã bị thu hồi hoặc hết hạn. Hãy kết nối lại Gmail."
-    },
-    "billing": {
-      "insufficient": "Số dư tín dụng không đủ — vui lòng nạp thêm để tiếp tục.",
-      "ledger": {
-        "invalidState": "Lỗi nội bộ trong sổ tín dụng — vui lòng thử lại sau."
       },
-      "sepay": {
-        "reference_invalid": "Mã tham chiếu giao dịch không hợp lệ.",
-        "auth_invalid": "Yêu cầu webhook không hợp lệ."
+      "generic": "Một hoặc nhiều trường không hợp lệ. Hãy kiểm tra lại."
+    }
+  },
+  "feat": {
+    "archive": {
+      "body": "Thư ít giá trị được xếp vào hàng chờ lưu trữ kèm lý do một dòng. Duyệt hàng loạt, hoặc để các kết quả độ tin cậy cao tự lưu trữ.",
+      "title": "Gợi ý lưu trữ"
+    },
+    "audit": {
+      "body": "Mọi thao tác — lưu trữ, gắn nhãn, soạn nháp, bỏ qua — đều được ghi cùng quy tắc đã kích hoạt và một nút hoàn tác. 90 ngày lịch sử. Xuất CSV được.",
+      "title": "Nhật ký kiểm tra"
+    },
+    "desc": "Không có agent. Không có quy trình nhiều bước. Năm công cụ lặng lẽ gỡ bớt quyết định khỏi buổi sáng của bạn.",
+    "draft": {
+      "body": "Thư nháp được viết theo giọng văn của bạn và lưu thẳng vào thư mục Nháp của Gmail. Bạn đọc từng chữ trước khi bất cứ thư nào được gửi.",
+      "bodyText": "Cảm ơn Alex — tôi cũng rất thích cuộc trò chuyện vừa rồi. Tôi sẵn lòng chia sẻ định dạng deck mà anh đã nhắc đến. Thứ Tư lúc 2 giờ chiều giờ Thái Bình Dương có tiện cho buổi tiếp theo không?",
+      "edit": "Sửa",
+      "head": "draft.zeromail · chưa gửi",
+      "open": "Mở trong Gmail",
+      "ready": "sẵn sàng",
+      "subject": "Tiêu đề",
+      "subjectVal": "Re: Phản hồi sau cuộc gọi của chúng ta",
+      "title": "Soạn nháp phản hồi",
+      "to": "Đến"
+    },
+    "eyebrow": "Bạn nhận được gì",
+    "f1": {
+      "desc": "Viết logic triage như khi bạn nói với đồng nghiệp. Chúng tôi biên dịch thành matcher có cấu trúc.",
+      "title": "Quy tắc bằng tiếng Việt"
+    },
+    "f2": {
+      "desc": "Định tuyến qua OpenRouter hoặc cắm thẳng API key OpenAI / Anthropic. Ví của bạn, key của bạn.",
+      "title": "Dùng API key riêng"
+    },
+    "f3": {
+      "desc": "Mọi nhãn, lưu trữ, hay bản nháp tự động đều được ghi lại kèm quy tắc đã kích hoạt và email nó đã xử lý.",
+      "title": "Nhật ký minh bạch"
+    },
+    "f4": {
+      "desc": "Giao diện song ngữ VI / EN gốc. Viết quy tắc bằng ngôn ngữ nào cũng được; chúng tôi triage cả hai.",
+      "title": "Ưu tiên tiếng Việt"
+    },
+    "f5": {
+      "desc": "Zero Mail gắn nhãn, lưu trữ, lưu bản nháp. Sẽ không bao giờ gửi tin nhắn trước khi bạn xem lại.",
+      "title": "Không tự động gửi"
+    },
+    "f6": {
+      "desc": "Ngắt Gmail hoặc xoá tài khoản trong phần Cài đặt. Token được xoá ngay lập tức.",
+      "title": "Hủy quyền bất kỳ lúc nào"
+    },
+    "labels": {
+      "body": "Zero Mail đọc từng thư và áp đúng nhãn Gmail — nhà đầu tư, khách hàng, biên lai, nhà tuyển dụng — dựa trên quy tắc bạn viết, không phải một danh mục cố định.",
+      "title": "Nhãn AI"
+    },
+    "tester": {
+      "archive": "lưu trữ",
+      "body": "Trước khi quy tắc được áp dụng, hãy chạy thử trên 7 hoặc 30 ngày thư gần nhất. Xem chính xác thư nào sẽ bị lưu trữ, gắn nhãn hay soạn nháp — không có tác động phụ.",
+      "input": "lưu trữ bản tin và biên lai dưới 500$",
+      "keep": "giữ lại",
+      "more": "thêm 7 kết quả...",
+      "over": "(trên 500$)",
+      "prompt": "thử quy tắc>",
+      "r1": "biên lai",
+      "r2": "bản tin",
+      "r3": "hóa đơn",
+      "title": "Kiểm thử quy tắc"
+    },
+    "title": "Những tính năng nhàm chán mà hộp thư bạn thực sự cần."
+  },
+  "footer": {
+    "about": "Giới thiệu",
+    "careers": "Tuyển dụng",
+    "changelog": "Nhật ký thay đổi",
+    "company": "Công ty",
+    "contact": "Liên hệ",
+    "copyright": "© 2026 Zero Mail",
+    "dpa": "DPA",
+    "legal": "Pháp lý",
+    "privacy": "Bảo mật",
+    "product": "Sản phẩm",
+    "security": "Bảo mật",
+    "status": "Hệ thống hoạt động bình thường",
+    "tagline": "Phân loại email tự động bằng AI mà bạn có thể tin tưởng giao cho hộp thư thật. Dành cho Gmail, do nhóm nhỏ ở Brooklyn & Berlin xây dựng.",
+    "terms": "Điều khoản",
+    "version": "v1.0 · Gmail"
+  },
+  "how": {
+    "audit": {
+      "archived": "đã lưu trữ",
+      "drafted": "đã soạn nháp",
+      "labeled": "đã gắn nhãn",
+      "r1": "Biên lai Stripe — khớp \"biên lai\"",
+      "r2": "Maya R. → Nhà đầu tư",
+      "r3": "phản hồi Alex C. (chưa gửi)",
+      "r4": "Priya A. — \"giữ trong hộp thư\"",
+      "skipped": "đã bỏ qua"
+    },
+    "desc": "Zero Mail chạy ngay trong Gmail bạn đang dùng. Kết nối một lần, mô tả cách bạn muốn xử lý hộp thư bằng ngôn ngữ tự nhiên, rồi xem hàng đợi xử lý.",
+    "eyebrow": "Cách hoạt động",
+    "step1": {
+      "connected": "Đã kết nối",
+      "desc": "Đăng nhập bằng Google. Zero Mail dùng quyền truy cập Gmail có giới hạn — không bao giờ là mật khẩu của bạn — và bạn có thể thu hồi quyền bất cứ lúc nào.",
+      "scope": "Quyền đọc & sửa · thu hồi bất cứ lúc nào trong tài khoản Google",
+      "title": "Kết nối Gmail"
+    },
+    "step2": {
+      "desc": "Mô tả thư nào nên lưu trữ, gắn nhãn, hay soạn nháp. Không bộ lọc, không toán tử logic — chỉ là câu chữ như giao việc cho trợ lý.",
+      "example": "Lưu trữ bản tin và biên lai dưới 500$",
+      "parsed": "Đã phân tích · sẵn sàng thử trên 7 ngày gần nhất",
+      "title": "Viết quy tắc bằng ngôn ngữ tự nhiên"
+    },
+    "step3": {
+      "desc": "Mọi thao tác đều được ghi lại và có thể hoàn tác. Duyệt thư nháp trước khi gửi đi. Không bao giờ có thư được gửi thay bạn.",
+      "title": "Duyệt hàng đợi xử lý"
+    },
+    "title": "Ba bước. Không cần học thêm hộp thư mới."
+  },
+  "landing": {
+    "bullets": {
+      "noAutoSend": "Không tự gửi",
+      "readOnlyPrompts": "Prompt AI chỉ đọc",
+      "reversibleActions": "Hành động hoàn tác được"
+    },
+    "continueSetupCta": "Tiếp tục thiết lập",
+    "eyebrow": "Gmail · Private beta · v1",
+    "heading": {
+      "accent": "nút gửi.",
+      "line1": "Hộp thư gọn sạch,",
+      "line2": "không giao AI"
+    },
+    "peek": {
+      "eyebrow": "Tiếp theo · Cách hoạt động",
+      "link": "Đọc walkthrough",
+      "title": "Ba bước để đạt inbox zero — kết nối, mô tả, xem lại."
+    },
+    "primaryCta": "Đăng nhập",
+    "secondaryCta": "Xem cách hoạt động",
+    "tagline": "Zero Mail phân loại Gmail của bạn theo các quy tắc bạn viết bằng ngôn ngữ tự nhiên — gắn nhãn việc quan trọng, lưu trữ thư không cần thiết, và soạn sẵn những phản hồi đơn giản. Mọi thứ gửi đi đều phải qua bạn.",
+    "waitlistCta": "Đăng ký danh sách chờ"
+  },
+  "legal": {
+    "googleApiPolicy": {
+      "body": "Việc Zero Mail sử dụng và chuyển giao thông tin nhận được từ Google API sang bất kỳ ứng dụng nào khác sẽ tuân thủ <link>Chính sách bảo mật dữ liệu người dùng của Google API</link>, bao gồm các yêu cầu Sử dụng có giới hạn (Limited Use)."
+    },
+    "privacy": {
+      "placeholderBody": "Chính sách bảo mật đầy đủ sẽ có trong Phase 6 (giai đoạn hardening trước khi launch). PROJECT.md mô tả cam kết ràng buộc về bảo mật: không lưu trữ lâu dài nội dung email, prompt, câu trả lời, hay embedding.",
+      "placeholderTitle": "Chính sách bảo mật"
+    },
+    "terms": {
+      "body": "Khi nhấn tiếp tục, bạn đồng ý với <terms>Điều khoản dịch vụ</terms> và <privacy>Chính sách bảo mật</privacy> của chúng tôi.",
+      "placeholderBody": "Nội dung pháp lý đầy đủ sẽ có trong Phase 6 (giai đoạn hardening trước khi launch). Trang stub này tồn tại để các liên kết trong footer pháp lý phân giải đúng và để Zero Mail không bị chặn yêu cầu xác minh Google OAuth (CASA).",
+      "placeholderTitle": "Điều khoản dịch vụ"
+    }
+  },
+  "llm": {
+    "byok": {
+      "apiKey": {
+        "label": "Khóa API",
+        "placeholder": "Dán khóa API"
+      },
+      "description": "Dùng khóa riêng của bạn để gọi OpenAI Compatible hoặc Anthropic. Zero Mail chỉ lưu khóa đã mã hóa và không trừ tín dụng nền tảng cho các lượt gọi BYOK.",
+      "empty": {
+        "body": "Chọn nhà cung cấp, dán khóa API, rồi kiểm tra trước khi lưu.",
+        "heading": "Chưa có khóa BYOK"
+      },
+      "endpoint": {
+        "label": "Endpoint OpenAI Compatible",
+        "placeholder": "https://openrouter.ai/api/v1"
+      },
+      "existing": {
+        "badge": "Đang dùng khóa riêng",
+        "creditNote": "Không trừ tín dụng nền tảng",
+        "replaceNotice": "Lưu khóa mới đã kiểm tra sẽ thay thế khóa đã mã hóa hiện tại."
+      },
+      "provider": {
+        "anthropic": "Anthropic",
+        "label": "Nhà cung cấp",
+        "openaiCompatible": "OpenAI Compatible"
+      },
+      "save": {
+        "error": "Không thể lưu khóa đã mã hóa. Tải lại trang rồi thử lại.",
+        "success": "Đã lưu khóa BYOK đã mã hóa. Các lượt gọi AI sẽ dùng khóa này cho đến khi bạn thay đổi."
+      },
+      "saveCta": "Lưu khóa API",
+      "saving": "Đang lưu khóa...",
+      "title": "Khóa API cho nhà cung cấp AI",
+      "validateCta": "Kiểm tra khóa API",
+      "validating": "Đang kiểm tra khóa...",
+      "validation": {
+        "invalid": "Không thể kiểm tra khóa này. Kiểm tra nhà cung cấp, endpoint và khóa API, rồi thử lại.",
+        "moreModels": "+{count} mô hình khác",
+        "success": "Khóa đã được kiểm tra. Bạn có thể lưu cấu hình này."
+      }
+    }
+  },
+  "nav": {
+    "beta": "beta",
+    "continueSetup": "Tiếp tục cài đặt",
+    "features": "Tính năng",
+    "how": "Cách hoạt động",
+    "languageSelector": "Ngôn ngữ",
+    "logoLabel": "Trang chủ Zero Mail",
+    "onboardingProgress": "Tiến trình cài đặt",
+    "openApp": "Mở ứng dụng",
+    "rules": "Quy tắc mẫu",
+    "signIn": "Đăng nhập",
+    "themeToDark": "Chuyển sang chế độ tối",
+    "themeToLight": "Chuyển sang chế độ sáng",
+    "trust": "Tin cậy & an toàn",
+    "waitlist": "Đăng ký danh sách chờ"
+  },
+  "onboarding": {
+    "completion": {
+      "body": "Zero Mail đang theo dõi hộp thư ở chế độ chỉ ghi nhận. Mở nhật ký bất cứ lúc nào để xem nó sẽ làm gì.",
+      "cta": "Mở cài đặt",
+      "heading": "Đã sẵn sàng. Mở phần Cài đặt để xem lại lựa chọn của bạn.",
+      "next1": "Chỉ ghi nhận trong 24 giờ — hành động được ghi, chưa áp.",
+      "next2": "Bạn sẽ nhận tóm tắt hằng ngày lúc 8h sáng.",
+      "next3": "Chuyển sang chế độ trực tiếp bất cứ lúc nào trong Cài đặt.",
+      "nextTitle": "Điều gì sẽ diễn ra"
+    },
+    "connect": {
+      "body": "Zero Mail cần quyền Gmail trước khi các giai đoạn sau có thể theo dõi, gắn nhãn, lưu trữ hoặc tạo bản nháp. Bạn có thể thu hồi quyền bất cứ lúc nào.",
+      "callout": "Chỉ soạn nháp, không tự gửi — phản hồi nằm trong Gmail Drafts cho đến khi bạn nhấn Gửi.",
+      "cta": "Kết nối Gmail",
+      "eyebrow": "Bước 1 — Kết nối",
+      "heading": "Đã kết nối Gmail.",
+      "lastSync": "Đồng bộ · vừa xong",
+      "scopes": "3 quyền đã cấp"
+    },
+    "loading": "Đang tải thiết lập...",
+    "steps": {
+      "complete": {
+        "shortLabel": "Hoàn tất"
+      },
+      "gmailConnect": {
+        "shortLabel": "Kết nối Gmail"
+      },
+      "progressLabel": "Bước {current} trên {total}",
+      "templateSelect": {
+        "shortLabel": "Chọn template"
       }
     },
-    "conflict": "Dữ liệu đã thay đổi trước khi thao tác hoàn tất. Hãy tải lại trang rồi thử lại.",
-    "dataIntegrity": "Không thể lưu thay đổi vì dữ liệu không hợp lệ.",
-    "badRequest": "Yêu cầu không hợp lệ. Hãy kiểm tra lại và thử lần nữa.",
-    "schemaMismatch": "Trang này cần hợp đồng API mới hơn. Hãy tạo lại typed client trước khi tiếp tục."
+    "template": {
+      "body": "Mẫu khởi đầu giúp Zero Mail hiểu cách bạn muốn xử lý hộp thư. Bạn có thể đổi mẫu sau trong phần Cài đặt.",
+      "eyebrow": "Bước 2 — Quy tắc khởi đầu",
+      "heading": "Chọn vài điểm khởi đầu.",
+      "saveCta": "Lưu mẫu khởi đầu"
+    }
+  },
+  "permissions": {
+    "intro": "Google sẽ yêu cầu bạn duyệt các quyền Gmail sau. Mỗi quyền là tối thiểu cần cho một tính năng bạn điều khiển.",
+    "minimum": "3 quyền · tối thiểu",
+    "notGranted": "Chúng tôi không yêu cầu: gửi thư, xóa vĩnh viễn hoặc danh bạ.",
+    "r1": {
+      "body": "Dùng để áp quy tắc. Nội dung được xử lý trong bộ nhớ; chúng tôi chỉ giữ header và lịch sử hành động.",
+      "title": "Đọc thư và nhãn"
+    },
+    "r2": {
+      "body": "Dùng để gắn nhãn, lưu trữ và bỏ lưu trữ — mọi hành động đều có thể hoàn tác từ nhật ký.",
+      "title": "Thay đổi nhãn và lưu trữ"
+    },
+    "r3": {
+      "body": "Dùng để viết nháp đợi trong thư mục Nháp của Gmail. Chúng tôi không có quyền gửi.",
+      "title": "Soạn thư nháp"
+    },
+    "title": "Quyền bạn sẽ cấp"
+  },
+  "rules": {
+    "desc": "Năm quy tắc đủ cho hầu hết hộp thư công việc. Mỗi quy tắc đều có thể chỉnh, kiểm thử và hoàn tác.",
+    "dryrun": "7 ngày gần nhất · chạy thử",
+    "exampleQuote": "\"Lưu trữ bản tin, marketing và biên lai trừ khi khoản phí trên $500 hoặc đó là hoàn tiền.\"",
+    "eyebrow": "Quy tắc mẫu",
+    "matches": "4 kết quả",
+    "parses": {
+      "body": "Zero Mail trích xuất ý định (lưu trữ, gắn nhãn, soạn nháp, thông báo), thực thể (bản tin, biên lai), và điều kiện (số tiền, người gửi, trạng thái chuỗi). Nó không bao giờ chạm vào thư không khớp.",
+      "title": "Cách phân tích"
+    },
+    "q": {
+      "plain": "ngôn ngữ tự nhiên",
+      "tested": "đã thử 7 ngày",
+      "undo": "có hoàn tác"
+    },
+    "r1": {
+      "a1": "stripe.com — biên lai 48$",
+      "a2": "linkedin.com — bản tin tuần",
+      "a3": "square.com — biên lai 612$",
+      "a4": "amex.com — thông báo hoàn tiền"
+    },
+    "ruleN": "Quy tắc 1 / 5",
+    "tabs": {
+      "calendar": "Thư mời lịch họp",
+      "customer": "Khách hàng cần xử lý",
+      "investors": "Theo dõi nhà đầu tư",
+      "newsletters": "Bản tin & biên lai",
+      "recruiters": "Nhà tuyển dụng"
+    },
+    "title": "Câu văn, không phải bộ lọc."
+  },
+  "settings": {
+    "account": {
+      "heading": "Tài khoản"
+    },
+    "dangerZone": {
+      "heading": "Vùng nguy hiểm"
+    },
+    "deleteAccount": {
+      "confirmPhrase": "delete my data",
+      "cta": "Xóa tài khoản và dữ liệu"
+    },
+    "gmailConnection": {
+      "disconnectCta": "Ngắt kết nối Gmail",
+      "heading": "Kết nối Gmail",
+      "reconnectCta": "Kết nối lại Gmail",
+      "singleAccountNote": "Zero Mail v1 hỗ trợ một tài khoản Gmail — chính là email bạn đã đăng nhập. Hỗ trợ nhiều tài khoản đang nằm trong roadmap."
+    },
+    "language": {
+      "en": "English",
+      "helper": "Lựa chọn ngôn ngữ này áp dụng cho tài khoản của bạn ở mọi thiết bị.",
+      "label": "Ngôn ngữ",
+      "saveCta": "Cập nhật ngôn ngữ",
+      "vi": "Tiếng Việt"
+    },
+    "privacy": {
+      "byokPlanned": "Sắp tới: bạn có thể tự cung cấp khóa API (BYOK)",
+      "heading": "Quyền riêng tư và an toàn",
+      "noAutoSend": "Không tự động gửi email",
+      "noBodyStorage": "Không lưu lâu dài nội dung email, lời nhắc hay phản hồi từ AI",
+      "revokeAnytime": "Bạn có thể thu hồi quyền truy cập bất cứ lúc nào"
+    },
+    "title": "Cài đặt",
+    "triage": {
+      "pause": {
+        "banner": {
+          "body": "Email mới vẫn được ghi nhận, nhưng Zero Mail sẽ không thực hiện hành động tự động.",
+          "heading": "Tự động xử lý đang tạm dừng",
+          "unpause": "Bật lại"
+        },
+        "body": "Khi tắt, Zero Mail sẽ không tự động xử lý email mới",
+        "title": "Tự động xử lý email",
+        "toggleLabel": "Tạm dừng tự động xử lý"
+      }
+    }
+  },
+  "templates": {
+    "calendarInvites": {
+      "description": "Đánh dấu các email mời họp để bạn không bỏ sót lịch.",
+      "title": "Lời mời lịch"
+    },
+    "newsletters": {
+      "description": "Tự động gắn nhãn bản tin để hộp thư chính luôn gọn gàng.",
+      "title": "Bản tin"
+    },
+    "receipts": {
+      "description": "Gắn nhãn các email hóa đơn, biên lai, xác nhận đặt hàng để dễ tra cứu sau này.",
+      "title": "Hóa đơn và biên lai"
+    }
+  },
+  "trust": {
+    "authTitle": "Ba cam kết, viết rõ ràng.",
+    "badges": {
+      "casa": "Google CASA tier 2",
+      "regions": "Khu vực EU + US",
+      "soc": "Đang xin SOC 2"
+    },
+    "c1": {
+      "body": "Thư nháp được lưu vào thư mục Nháp của Gmail. Bạn đọc, sửa, rồi nhấn gửi. Không có tùy chọn nào cho phép AI gửi thư thay bạn.",
+      "title": "Không bao giờ tự động gửi."
+    },
+    "c2": {
+      "body": "Nội dung email gốc, prompt LLM, kết quả và embedding đều bị xóa sau mỗi lượt phân loại. Chỉ siêu dữ liệu và nhật ký kiểm tra của bạn được giữ lại.",
+      "title": "Không lưu trữ dài hạn."
+    },
+    "c3": {
+      "body": "Nội dung thư được loại bỏ tệp đính kèm, chữ ký, lịch sử trích dẫn, rồi cắt ngắn theo ngân sách token trước khi gửi đến mô hình.",
+      "title": "Làm sạch trước khi AI nhìn thấy."
+    },
+    "c4": {
+      "body": "Tạm dừng phân loại bằng một cú nhấp. Hoàn tác mọi lượt lưu trữ, gắn nhãn, hay soạn nháp từ nhật ký đầy đủ trong 90 ngày qua.",
+      "title": "Mọi thao tác đều hoàn tác được."
+    },
+    "desc": "Tự động phân loại chỉ thực sự hữu ích khi bạn có thể tin tưởng giao cả hộp thư thật. Chúng tôi xây dựng Zero Mail xoay quanh ba cam kết cứng — và mọi cam kết đều có thể kiểm tra.",
+    "eyebrow": "Tin cậy & an toàn",
+    "p1": {
+      "body": "Zero Mail không bao giờ gửi thư thay bạn. Phản hồi nằm trong thư mục Nháp của Gmail cho đến khi bạn nhấn Gửi.",
+      "title": "Chỉ soạn nháp — không bao giờ tự gửi"
+    },
+    "p2": {
+      "body": "Thư của bạn ở lại Gmail. Chúng tôi xử lý chúng trong bộ nhớ để áp quy tắc, sau đó chỉ giữ header và nhật ký hành động.",
+      "title": "Không lưu nội dung email"
+    },
+    "p3": {
+      "body": "Ngắt kết nối từ trong Zero Mail hoặc trực tiếp từ Tài khoản Google của bạn. Chúng tôi xoá dữ liệu trong vòng 24 giờ.",
+      "title": "Thu hồi quyền bất cứ lúc nào"
+    },
+    "proof": {
+      "audit": "Mở nhật ký",
+      "revoke": "Thu hồi từ Google",
+      "scopes": "Xem quyền Gmail"
+    },
+    "title": {
+      "a": "Hộp thư của bạn vẫn là của bạn.",
+      "b": "Luôn luôn."
+    }
   }
 }
