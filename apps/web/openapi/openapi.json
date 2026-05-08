@@ -1250,18 +1250,28 @@
       "ByokSaveRequest": {
         "type": "object",
         "properties": {
-          "provider": {
+          "preset": {
             "type": "string",
-            "enum": ["anthropic", "openai-compatible"]
+            "enum": [
+              "openrouter",
+              "openai",
+              "anthropic",
+              "openai-compatible",
+              "anthropic-compatible"
+            ]
           },
           "endpoint": {
             "type": "string"
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1
           },
           "apiKey": {
             "type": "string"
           }
         },
-        "required": ["apiKey", "provider"]
+        "required": ["apiKey", "model", "preset"]
       },
       "ByokSaveResponse": {
         "type": "object",
@@ -1278,18 +1288,28 @@
       "ByokValidateRequest": {
         "type": "object",
         "properties": {
-          "provider": {
+          "preset": {
             "type": "string",
-            "enum": ["anthropic", "openai-compatible"]
+            "enum": [
+              "openrouter",
+              "openai",
+              "anthropic",
+              "openai-compatible",
+              "anthropic-compatible"
+            ]
           },
           "endpoint": {
             "type": "string"
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1
           },
           "apiKey": {
             "type": "string"
           }
         },
-        "required": ["apiKey", "provider"]
+        "required": ["apiKey", "model", "preset"]
       },
       "ByokValidateResponse": {
         "type": "object",
@@ -1451,6 +1471,9 @@
             "enum": ["anthropic", "openai-compatible"]
           },
           "endpointHost": {
+            "type": "string"
+          },
+          "model": {
             "type": "string"
           },
           "savedAt": {

@@ -18,7 +18,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import type { ByokProvider, ByokSaveResult, ByokValidateResult } from '@/features/llm/api/llm-api';
+import type {
+  ByokProvider,
+  ByokProviderPreset,
+  ByokSaveResult,
+  ByokValidateResult,
+} from '@/features/llm/api/llm-api';
 import {
   byokKeys,
   useCurrentByok,
@@ -27,11 +32,31 @@ import {
 } from '@/features/llm/hooks/use-byok';
 import { useLocalizedApiError, type ApiError } from '@/lib/api/errors';
 
-const DEFAULT_PROVIDER: ByokProvider = 'openai-compatible';
-const OPENAI_COMPATIBLE_ENDPOINT = 'https://openrouter.ai/api/v1';
+const DEFAULT_PRESET: ByokProviderPreset = 'openrouter';
+const OPENROUTER_DEFAULT_MODEL = 'openai/gpt-4o-mini';
+const OPENAI_DEFAULT_MODEL = 'gpt-4o-mini';
+const ANTHROPIC_DEFAULT_MODEL = 'claude-3-haiku-20240307';
 
-function isByokProvider(value: string): value is ByokProvider {
-  return value === 'anthropic' || value === 'openai-compatible';
+const MODEL_EXAMPLES: Record<ByokProviderPreset, string[]> = {
+  openrouter: ['openai/gpt-4o-mini', 'anthropic/claude-3.5-sonnet', 'google/gemini-flash-1.5'],
+  openai: ['gpt-4o-mini', 'gpt-4.1-mini', 'o4-mini'],
+  anthropic: ['claude-sonnet-4-20250514', 'claude-3-5-sonnet-latest', 'claude-3-haiku-20240307'],
+  'openai-compatible': ['gpt-4o-mini', 'llama-3.1-70b-instruct', 'mistral-large-latest'],
+  'anthropic-compatible': [
+    'claude-sonnet-4-20250514',
+    'claude-3-5-sonnet-latest',
+    'claude-3-haiku-20240307',
+  ],
+};
+
+function isByokProviderPreset(value: string): value is ByokProviderPreset {
+  return (
+    value === 'openrouter' ||
+    value === 'openai' ||
+    value === 'anthropic' ||
+    value === 'openai-compatible' ||
+    value === 'anthropic-compatible'
+  );
 }
 
 function readApiKey(form: HTMLFormElement | null): string {
@@ -51,12 +76,83 @@ function maybeApiError(error: unknown): ApiError | undefined {
   return undefined;
 }
 
+function isCompatiblePreset(preset: ByokProviderPreset): boolean {
+  return preset === 'openai-compatible' || preset === 'anthropic-compatible';
+}
+
+function endpointForPreset(preset: ByokProviderPreset, endpoint: string): string | undefined {
+  return isCompatiblePreset(preset) ? endpoint.trim() : undefined;
+}
+
+function defaultModelForPreset(preset: ByokProviderPreset): string {
+  if (preset === 'anthropic' || preset === 'anthropic-compatible') return ANTHROPIC_DEFAULT_MODEL;
+  if (preset === 'openai') return OPENAI_DEFAULT_MODEL;
+  return OPENROUTER_DEFAULT_MODEL;
+}
+
 function providerLabelKey(
   provider: ByokProvider,
-): 'llm.byok.provider.anthropic' | 'llm.byok.provider.openaiCompatible' {
-  return provider === 'anthropic'
-    ? 'llm.byok.provider.anthropic'
-    : 'llm.byok.provider.openaiCompatible';
+  endpointHost?: string,
+):
+  | 'llm.byok.provider.anthropic'
+  | 'llm.byok.provider.anthropicCompatible'
+  | 'llm.byok.provider.openai'
+  | 'llm.byok.provider.openrouter'
+  | 'llm.byok.provider.openaiCompatible' {
+  if (provider === 'anthropic') {
+    return endpointHost === 'api.anthropic.com'
+      ? 'llm.byok.provider.anthropic'
+      : 'llm.byok.provider.anthropicCompatible';
+  }
+  if (endpointHost === 'openrouter.ai') return 'llm.byok.provider.openrouter';
+  if (endpointHost === 'api.openai.com') return 'llm.byok.provider.openai';
+  return 'llm.byok.provider.openaiCompatible';
+}
+
+function endpointLabelKey(
+  preset: ByokProviderPreset,
+): 'llm.byok.endpoint.openaiCompatibleLabel' | 'llm.byok.endpoint.anthropicCompatibleLabel' {
+  return preset === 'anthropic-compatible'
+    ? 'llm.byok.endpoint.anthropicCompatibleLabel'
+    : 'llm.byok.endpoint.openaiCompatibleLabel';
+}
+
+function endpointPlaceholderKey(
+  preset: ByokProviderPreset,
+):
+  | 'llm.byok.endpoint.openaiCompatiblePlaceholder'
+  | 'llm.byok.endpoint.anthropicCompatiblePlaceholder' {
+  return preset === 'anthropic-compatible'
+    ? 'llm.byok.endpoint.anthropicCompatiblePlaceholder'
+    : 'llm.byok.endpoint.openaiCompatiblePlaceholder';
+}
+
+function validationMessageKey(
+  reason?: string,
+):
+  | 'llm.byok.validation.invalid'
+  | 'llm.byok.validation.endpointRejected'
+  | 'llm.byok.validation.connectionFailed'
+  | 'llm.byok.validation.timeout'
+  | 'llm.byok.validation.modelNotFound'
+  | 'llm.byok.validation.upstreamRejected'
+  | 'llm.byok.validation.modelRequired' {
+  switch (reason) {
+    case 'endpoint_rejected':
+      return 'llm.byok.validation.endpointRejected';
+    case 'connection_failed':
+      return 'llm.byok.validation.connectionFailed';
+    case 'timeout':
+      return 'llm.byok.validation.timeout';
+    case 'model_not_found':
+      return 'llm.byok.validation.modelNotFound';
+    case 'upstream_rejected':
+      return 'llm.byok.validation.upstreamRejected';
+    case 'model_required':
+      return 'llm.byok.validation.modelRequired';
+    default:
+      return 'llm.byok.validation.invalid';
+  }
 }
 
 export function ByokForm() {
@@ -70,8 +166,9 @@ export function ByokForm() {
   const validateMutation = useValidateByok();
   const saveMutation = useSaveByok();
 
-  const [provider, setProvider] = useState<ByokProvider>(DEFAULT_PROVIDER);
-  const [endpoint, setEndpoint] = useState(OPENAI_COMPATIBLE_ENDPOINT);
+  const [preset, setPreset] = useState<ByokProviderPreset>(DEFAULT_PRESET);
+  const [endpoint, setEndpoint] = useState('');
+  const [model, setModel] = useState(OPENROUTER_DEFAULT_MODEL);
   const [hasApiKey, setHasApiKey] = useState(false);
   const [hasEdited, setHasEdited] = useState(false);
   const [validationResult, setValidationResult] = useState<ByokValidateResult | null>(null);
@@ -80,8 +177,14 @@ export function ByokForm() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const isBusy = validateMutation.isPending || saveMutation.isPending;
-  const endpointRequired = provider === 'openai-compatible';
-  const canValidate = hasApiKey && (!endpointRequired || endpoint.trim().length > 0) && !isBusy;
+  const endpointRequired = isCompatiblePreset(preset);
+  const selectedEndpoint = endpointForPreset(preset, endpoint);
+  const modelExamples = MODEL_EXAMPLES[preset];
+  const canValidate =
+    hasApiKey &&
+    model.trim().length > 0 &&
+    (!endpointRequired || endpoint.trim().length > 0) &&
+    !isBusy;
   const canSave = validationResult?.ok === true && !isBusy;
   const existingConfig = currentByok.data;
 
@@ -123,14 +226,15 @@ export function ByokForm() {
     setSaveError(null);
     try {
       const result = await validateMutation.mutateAsync({
-        provider,
-        endpoint: endpointRequired ? endpoint.trim() : undefined,
+        preset,
+        endpoint: selectedEndpoint,
+        model: model.trim(),
         apiKey,
       });
       validateMutation.reset();
       setValidationResult(result);
       if (result.ok !== true) {
-        setValidationError(t('llm.byok.validation.invalid'));
+        setValidationError(t(validationMessageKey(result.reason)));
       }
     } catch (error) {
       validateMutation.reset();
@@ -154,14 +258,16 @@ export function ByokForm() {
 
     try {
       const result = await saveMutation.mutateAsync({
-        provider,
-        endpoint: endpointRequired ? endpoint.trim() : undefined,
+        preset,
+        endpoint: selectedEndpoint,
+        model: model.trim(),
         apiKey,
       });
       saveMutation.reset();
       formRef.current?.reset();
-      setProvider(DEFAULT_PROVIDER);
-      setEndpoint(OPENAI_COMPATIBLE_ENDPOINT);
+      setPreset(DEFAULT_PRESET);
+      setEndpoint('');
+      setModel(OPENROUTER_DEFAULT_MODEL);
       setHasApiKey(false);
       setHasEdited(false);
       setValidationResult(null);
@@ -204,11 +310,21 @@ export function ByokForm() {
             {existingConfig ? (
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="text-foreground font-medium">
-                  {t(providerLabelKey(existingConfig.provider as ByokProvider))}
+                  {t(
+                    providerLabelKey(
+                      existingConfig.provider as ByokProvider,
+                      existingConfig.endpointHost,
+                    ),
+                  )}
                 </span>
                 {existingConfig.endpointHost && (
                   <span className="max-w-full overflow-hidden text-ellipsis">
                     {existingConfig.endpointHost}
+                  </span>
+                )}
+                {existingConfig.model && (
+                  <span className="max-w-full overflow-hidden text-ellipsis">
+                    {existingConfig.model}
                   </span>
                 )}
                 {savedAtLabel && <time dateTime={savedAt ?? undefined}>{savedAtLabel}</time>}
@@ -226,36 +342,80 @@ export function ByokForm() {
             <div className="space-y-2">
               <Label>{t('llm.byok.provider.label')}</Label>
               <RadioGroup
-                value={provider}
+                value={preset}
                 onValueChange={(value) => {
-                  if (!isByokProvider(value)) return;
-                  setProvider(value);
+                  if (!isByokProviderPreset(value)) return;
+                  setPreset(value);
+                  setEndpoint('');
+                  setModel(defaultModelForPreset(value));
                   markEdited();
                 }}
                 className="grid gap-2"
                 aria-label={t('llm.byok.provider.label')}
                 disabled={isBusy}
               >
-                <Label
-                  htmlFor="byok-provider-openai-compatible"
-                  className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
-                >
-                  <RadioGroupItem id="byok-provider-openai-compatible" value="openai-compatible" />
-                  {t('llm.byok.provider.openaiCompatible')}
-                </Label>
-                <Label
-                  htmlFor="byok-provider-anthropic"
-                  className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
-                >
-                  <RadioGroupItem id="byok-provider-anthropic" value="anthropic" />
-                  {t('llm.byok.provider.anthropic')}
-                </Label>
+                <div className="space-y-2">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    {t('llm.byok.provider.officialGroup')}
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <Label
+                      htmlFor="byok-provider-openrouter"
+                      className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                    >
+                      <RadioGroupItem id="byok-provider-openrouter" value="openrouter" />
+                      {t('llm.byok.provider.openrouter')}
+                    </Label>
+                    <Label
+                      htmlFor="byok-provider-openai"
+                      className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                    >
+                      <RadioGroupItem id="byok-provider-openai" value="openai" />
+                      {t('llm.byok.provider.openai')}
+                    </Label>
+                    <Label
+                      htmlFor="byok-provider-anthropic"
+                      className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                    >
+                      <RadioGroupItem id="byok-provider-anthropic" value="anthropic" />
+                      {t('llm.byok.provider.anthropic')}
+                    </Label>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    {t('llm.byok.provider.compatibleGroup')}
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Label
+                      htmlFor="byok-provider-openai-compatible"
+                      className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                    >
+                      <RadioGroupItem
+                        id="byok-provider-openai-compatible"
+                        value="openai-compatible"
+                      />
+                      {t('llm.byok.provider.openaiCompatible')}
+                    </Label>
+                    <Label
+                      htmlFor="byok-provider-anthropic-compatible"
+                      className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                    >
+                      <RadioGroupItem
+                        id="byok-provider-anthropic-compatible"
+                        value="anthropic-compatible"
+                      />
+                      {t('llm.byok.provider.anthropicCompatible')}
+                    </Label>
+                  </div>
+                </div>
               </RadioGroup>
             </div>
 
             {endpointRequired && (
               <div className="space-y-2">
-                <Label htmlFor="byok-endpoint">{t('llm.byok.endpoint.label')}</Label>
+                <Label htmlFor="byok-endpoint">{t(endpointLabelKey(preset))}</Label>
                 <Input
                   id="byok-endpoint"
                   name="endpoint"
@@ -265,11 +425,32 @@ export function ByokForm() {
                     setEndpoint(event.currentTarget.value);
                     markEdited();
                   }}
-                  placeholder={t('llm.byok.endpoint.placeholder')}
+                  placeholder={t(endpointPlaceholderKey(preset))}
                   disabled={isBusy}
                 />
               </div>
             )}
+
+            <div className="space-y-2">
+              <Label htmlFor="byok-model">{t('llm.byok.model.label')}</Label>
+              <Input
+                id="byok-model"
+                name="model"
+                list="byok-model-options"
+                value={model}
+                onChange={(event) => {
+                  setModel(event.currentTarget.value);
+                  markEdited();
+                }}
+                placeholder={t('llm.byok.model.placeholder')}
+                disabled={isBusy}
+              />
+              <datalist id="byok-model-options">
+                {modelExamples.map((modelExample) => (
+                  <option key={modelExample} value={modelExample} />
+                ))}
+              </datalist>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="byok-api-key">{t('llm.byok.apiKey.label')}</Label>
@@ -289,8 +470,9 @@ export function ByokForm() {
           {process.env.NODE_ENV === 'test' && (
             <p data-testid="form-state-snapshot" hidden>
               {JSON.stringify({
-                provider,
+                preset,
                 endpoint,
+                model,
                 hasApiKey,
                 validationOk: validationResult?.ok === true,
               })}

@@ -2,10 +2,12 @@ package com.zeromail.core.llm.model;
 
 import java.util.Objects;
 
-public record ByokValidateCommand(BYOKProvider provider, String endpoint, String apiKey) {
+public record ByokValidateCommand(
+    ByokProviderPreset preset, String endpoint, String model, String apiKey) {
 
   public ByokValidateCommand {
-    Objects.requireNonNull(provider, "provider");
+    Objects.requireNonNull(preset, "preset");
+    Objects.requireNonNull(model, "model");
     Objects.requireNonNull(apiKey, "apiKey");
   }
 }

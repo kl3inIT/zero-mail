@@ -38,9 +38,17 @@ public class AnthropicByokModelClient implements ByokLlmModelClient {
   private final ByokEndpointValidator byokEndpointValidator;
   private final ObjectMapper objectMapper = new ObjectMapper();
 
-  public AnthropicByokModelClient(
-      AnthropicChatModel parentAnthropicChatModel, ByokEndpointValidator byokEndpointValidator) {
-    this.parentAnthropicChatClient = ChatClient.create(parentAnthropicChatModel);
+  public AnthropicByokModelClient(ByokEndpointValidator byokEndpointValidator) {
+    this.parentAnthropicChatClient =
+        ChatClient.create(
+            AnthropicChatModel.builder()
+                .options(
+                    AnthropicChatOptions.builder()
+                        .apiKey("unused-byok-placeholder")
+                        .model(Model.of("claude-3-haiku-20240307"))
+                        .maxTokens(MAX_TOKENS)
+                        .build())
+                .build());
     this.byokEndpointValidator = byokEndpointValidator;
   }
 
@@ -66,7 +74,7 @@ public class AnthropicByokModelClient implements ByokLlmModelClient {
               .system(request.systemPrompt())
               .user(request.userMessage())
               .toolCallbacks(translateTools(request.tools()))
-              .options(chatOptionsBuilder.build())
+              .options(chatOptionsBuilder)
               .call()
               .chatResponse();
       if (chatResponse == null) {

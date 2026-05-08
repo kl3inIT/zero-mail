@@ -1,20 +1,20 @@
 # Phase 2C: LLM Gateway - Research
 
 **Researched:** 2026-05-07
-**Domain:** Spring AI 2.0.0-M4 gateway abstraction, prompt-injection hardening, BYOK encrypted-at-rest, multi-tenant LLM spend caps, drift detection scaffold
-**Confidence:** HIGH on Spring AI M4 BYOK seam (Context7-verified against M3 docs + M4 source on GitHub), HIGH on jtokkit truncation API, HIGH on existing in-repo patterns (CallSite, CreditLedger, RefreshTokenCipher, ShedLock pattern), MEDIUM on Anthropic mutate/builder symmetry (M4 source confirms `AnthropicChatOptions.builder().apiKey().baseUrl()` per-request seam exists; `AnthropicApi.mutate()` is NOT documented, so the Anthropic BYOK seam differs from OpenAI).
+**Domain:** Spring AI 2.0.0-M5 gateway abstraction, prompt-injection hardening, BYOK encrypted-at-rest, multi-tenant LLM spend caps, drift detection scaffold
+**Confidence:** HIGH on the Spring AI M5 adapter seam now compiled in repo (`OpenAiChatModel.builder().options(...)`, `ChatClient.prompt().options(builder)`, `AnthropicChatOptions.builder().apiKey().baseUrl().model(...)`), HIGH on jtokkit truncation API, HIGH on existing in-repo patterns (CallSite, CreditLedger, RefreshTokenCipher, ShedLock pattern), MEDIUM-HIGH on M5 -> GA churn risk.
 
 ## Summary
 
-Phase 2C ships the single `LlmGateway` abstraction that gates all outgoing LLM traffic for Zero Mail. The locked design (CONTEXT D-A1..D-I4) uses two distinct BYOK seams: **(a) singleton `ChatClient` + dynamic `ApiKey` reading `TenantContext`** for the platform path, and **(b) per-call `OpenAiApi#mutate()` + `OpenAiChatModel#mutate()` derive-and-discard** for OpenAI-compatible BYOK with custom endpoints. Spring AI M4's documented public `mutate()` seam (verified against Context7 + GitHub source) makes this safe even with M4→GA churn looming.
+Phase 2C ships the single `LlmGateway` abstraction that gates all outgoing LLM traffic for Zero Mail. The current M5 design uses provider-specific Spring AI builders inside `core.llm.gateway.springai`: **(a) platform OpenAI-compatible path = singleton `ChatClient` backed by `OpenAiChatModel.builder().options(OpenAiChatOptions.builder().baseUrl(...).apiKey(...).model(...).build())`; (b) OpenAI-compatible BYOK = one-call `OpenAiChatModel` built with the tenant key/baseUrl/model; (c) Anthropic BYOK = parent `AnthropicChatModel` plus per-call `AnthropicChatOptions.builder().apiKey(...).baseUrl(...).model(...)` passed as a builder to `ChatClient.prompt().options(...)`.** This is the M5-compatible provider-builder seam that replaced the old low-level client-cloning approach.
 
-Research surfaced two substantive corrections to the CONTEXT and one important asymmetry the planner must internalize:
+Research surfaced three substantive corrections to the original pre-M5 CONTEXT:
 
 1. **Liquibase floor is 018, not 017.** Phase 2B's worker plan claimed changeset `017-shedlock-table.yaml` (verified in `db.changelog-master.yaml`). CONTEXT D-G1 names the BYOK changeset `017-tenant-byok-credentials.yaml` — that ID is taken. Use **`018-tenant-byok-credentials.yaml`**.
-2. **Spring AI observability property name has been renamed** in the `1.1` line that Spring AI M4 inherits behavior from: `spring.ai.chat.client.observations.include-prompt` → `spring.ai.chat.client.observations.log-prompt` (and `include-completion` → `log-completion`). Both default to `false`, but the LLM gateway should explicitly pin both to `false` in `application.yml` defensively.
-3. **OpenAI vs Anthropic BYOK seam asymmetry.** `OpenAiChatOptions` does **not** expose per-request `apiKey()` / `baseUrl()`; M4 source confirms only `httpHeaders()` + extra-body fields. To override BOTH apiKey and baseUrl per call, `OpenAiApi#mutate()` is required (D-A2 holds). `AnthropicChatOptions.builder()` **does** expose per-request `.apiKey()` and `.baseUrl()` directly (M4 source confirmed). This means `AnthropicByokFactory` can use a simpler runtime-options seam than `OpenAiCompatibleByokFactory` — plan-phase should adopt this and not force symmetry.
+2. **Spring AI M5 `ChatClient.prompt().options(...)` takes a builder**, not a built `ChatOptions` instance, so adapter code and tests must pass `OpenAiChatOptions.Builder` / `AnthropicChatOptions.Builder`.
+3. **OpenAI-compatible vs Anthropic BYOK seam asymmetry.** OpenAI-compatible BYOK now derives a one-call `OpenAiChatModel` with `OpenAiChatOptions.builder().apiKey(...).baseUrl(...).model(...)`. Anthropic BYOK keeps the per-request runtime-options seam with `AnthropicChatOptions.builder().apiKey(...).baseUrl(...).model(...)`. Both stay inside `core.llm.gateway.springai`; service/domain code sees only `ByokLlmModelClient`.
 
-**Primary recommendation:** Adopt CONTEXT decisions verbatim with three corrections — (a) renumber to `018-tenant-byok-credentials.yaml`, (b) explicitly pin `log-prompt: false` + `log-completion: false` in `application.yml` (both api and worker), (c) implement `AnthropicByokFactory` via per-request `AnthropicChatOptions.builder().apiKey(...).baseUrl(...)` rather than mutate; keep `OpenAiCompatibleByokFactory` on the documented `mutate()` seam.
+**Primary recommendation:** Treat Spring AI **2.0.0-M5** as the baseline. Keep all direct Spring AI imports in `core.llm.gateway.springai`, disable unused Spring AI auto-model beans in runnable `application.yml`, use builder-style runtime options, and persist BYOK `model` end-to-end.
 
 ## Architectural Responsibility Map
 
@@ -36,9 +36,9 @@ Research surfaced two substantive corrections to the CONTEXT and one important a
 ### Locked Decisions (D-A1..D-I4 — see 02C-CONTEXT.md for full text)
 
 **A. BYOK per-request key seam:**
-- D-A1: Platform path = singleton `ChatClient` + dynamic `ApiKey` impl reading `TenantContext` ScopedValue (resolved per HTTP send, not at bean construction).
-- D-A2: BYOK path = per-call `OpenAiApi#mutate().apiKey().baseUrl()` + `OpenAiChatModel#mutate().openAiApi(...)` derive-and-discard.
-- D-A3: BYOK provider abstraction = `BYOKChatModelFactory` interface in `core.llm.gateway.springai`. Two implementations: `OpenAiCompatibleByokFactory`, `AnthropicByokFactory`.
+- D-A1: Platform path = singleton `ChatClient` backed by `OpenAiChatModel.builder().options(OpenAiChatOptions.builder().baseUrl(...).apiKey(...).model(...).build())`.
+- D-A2: BYOK path = provider-specific `ByokLlmModelClient` implementations. OpenAI-compatible builds a one-call `OpenAiChatModel` from tenant `apiKey/baseUrl/model`; Anthropic passes `AnthropicChatOptions.Builder` with tenant `apiKey/baseUrl/model` per request.
+- D-A3: BYOK provider abstraction = `ByokLlmModelClient` interface in `core.llm.service`. Two implementations: `OpenAiCompatibleByokModelClient`, `AnthropicByokModelClient`.
 - D-A4: Caching of derived BYOK ChatClients deferred to Phase 4.
 - D-A5: BYOK encryption reuses `RefreshTokenCipher` verbatim (same `REFRESH_TOKEN_KEY_BASE64`, same envelope, tenantId-bound AAD).
 
@@ -87,9 +87,9 @@ Research surfaced two substantive corrections to the CONTEXT and one important a
 
 ### Claude's Discretion
 
-- Exact Spring AI `ApiKey` interface name in M4 (verify via Context7 at plan-phase) — **VERIFIED HIGH below.**
-- `OpenAiChatOptions` vs `AnthropicChatOptions` `toolChoice` exact builder method names — **VERIFIED HIGH below.**
-- `BYOKChatModelFactory` interface signature — **researcher recommends asymmetric sigs: see Plan Implications.**
+- Exact Spring AI M5 builder APIs — **VERIFIED by compile/test in implementation.**
+- `OpenAiChatOptions` vs `AnthropicChatOptions` `toolChoice` exact builder method names — **VERIFIED by adapter tests.**
+- `ByokLlmModelClient` interface signature — **implemented as `call(byte[] decryptedKey, String endpoint, LlmChatRequest request)`.**
 - `Action` enum `id()` lower-snake-case vs raw enum name — recommend lower-snake (`LABEL.id() == "label"`).
 - Exact `SanitizationContext.stepMetadata` map key conventions.
 - jtokkit version to pin — **VERIFIED 1.1.0 latest stable on Maven Central as of 2024-07-19; nothing newer exists.**
@@ -112,9 +112,9 @@ BYOK ChatClient caching; sealed `ToolCallResult` interface; `SanitizationAdvisor
 | LLM-04 | BYOK encrypted-at-rest, AES-GCM | `RefreshTokenCipher` exists at `core.gmail.persistence.crypto`; envelope `[key_version:int32 \| nonce:12 \| ciphertext]` with tenantId-bound AAD verified in source. Reusable verbatim. |
 | LLM-05 | HTML sanitization via Jsoup | `jsoup 1.22.2` already in `libs.versions.toml`. `Jsoup.clean(content, Safelist.none())` is the standard text-only stripper. |
 | LLM-06 | Unicode hardening — NFC + tag-strip U+E0000–U+E007F | Java built-in `java.text.Normalizer.normalize(content, Form.NFC)` + regex strip. No new dep. |
-| LLM-07 | Tool-call wrapping with allow-list | Spring AI M4 `ToolCallback` + `ChatClient.prompt().toolCallbacks(...)` + `internalToolExecutionEnabled(false)` + `toolChoice("required")` — all verified in M4 source. |
+| LLM-07 | Tool-call wrapping with allow-list | Spring AI M5 `ToolCallback` + `ChatClient.prompt().toolCallbacks(...)` + builder-style runtime options + `internalToolExecutionEnabled(false)` + `toolChoice("required")`. |
 | LLM-08 | Token budget ≤4k via jtokkit | jtokkit 1.1.0 `Encoding#encode(String, int) → EncodingResult{tokens, isTruncated, lastProcessedCharacterIndex}` — character-boundary truncation handles multi-byte/emoji safely. |
-| LLM-09 | No persistence of bodies/prompts/completions | Spring AI M4 properties `spring.ai.chat.client.observations.log-prompt: false` + `.log-completion: false` (default already false; pin defensively). `Sensitive<String>` ArchUnit deny-list already enforces `prompt`/`completion`/`body` field naming since Phase 1. |
+| LLM-09 | No persistence of bodies/prompts/completions | Spring AI observation properties `spring.ai.chat.client.observations.log-prompt: false` + `.log-completion: false` and `spring.ai.chat.observations.*` pinned defensively. `Sensitive<String>` ArchUnit deny-list already enforces `prompt`/`completion`/`body` field naming since Phase 1. |
 | LLM-10 | Per-tenant credit cap, hard reject + 402 | `CreditLedger.reserve(tenantId, CallSite.TRIAGE)` interface verified in `core.billing.service.CreditLedger`. `InsufficientCreditsException → 402` already mapped in `GlobalExceptionHandler` from Phase 2B. Phase 2C only ADDS the BYOK-skip check before calling `reserve`. |
 | LLM-11 | Drift detection scaffold | `CreditReserveWatchdog` pattern (`@Scheduled(fixedRate=...)` + `@SchedulerLock(name=..., lockAtLeastFor=PT30S, lockAtMostFor=PT2M)`) is the exact template to mirror. |
 
@@ -125,7 +125,7 @@ BYOK ChatClient caching; sealed `ToolCallResult` interface; `SanitizationAdvisor
 | Library | Version | Purpose | Why Standard |
 |---------|---------|---------|--------------|
 | Spring Boot | 4.0.6 | Framework | Locked |
-| Spring AI starter (OpenAI) | 2.0.0-M4 | LLM orchestration via OpenAI-compatible (OpenRouter default) | `springAi = "2.0.0-M4"` already in `libs.versions.toml`; library entries need to be added in this phase |
+| Spring AI starter (OpenAI) | 2.0.0-M5 | LLM orchestration via OpenAI-compatible (OpenRouter default) | `springAi = "2.0.0-M5"` is the current locked milestone in `libs.versions.toml`. |
 | Jsoup | 1.22.2 | HTML stripping | Already in `libs.versions.toml`; `Safelist.none()` is the standard text-only mode |
 | ShedLock Spring | 7.7.0 | `@SchedulerLock` | Phase 2A/2B already on this version; works with Spring Boot 4 + JVM 17+ |
 | Liquibase | 5.0.2 | YAML changesets | Existing pattern — see `backend/core/src/main/resources/db/changelog/changes/014-credit-ledger-entry.yaml` |
@@ -134,17 +134,17 @@ BYOK ChatClient caching; sealed `ToolCallResult` interface; `SanitizationAdvisor
 
 | Library | Version | Purpose | Notes |
 |---------|---------|---------|-------|
-| `org.springframework.ai:spring-ai-starter-model-openai` | 2.0.0-M4 | OpenAI-compatible client (OpenRouter default + OpenAI-compat BYOK) | Pulls `spring-ai-bom`. Pin via BOM only — never explicit version. **Add to `[libraries]` section of `libs.versions.toml`.** |
-| `org.springframework.ai:spring-ai-bom` | 2.0.0-M4 | BOM for transitive Spring AI deps | Add to `dependencyManagement` in `backend/core` and `backend/worker` Gradle build. |
-| `org.springframework.ai:spring-ai-starter-model-anthropic` | 2.0.0-M4 (optional) | Direct Anthropic adapter for BYOK Anthropic provider | Optional — if user only uses OpenAI-compatible/OpenRouter, this can be omitted. CONTEXT D-A3 calls for `AnthropicByokFactory`, so include it. |
+| `org.springframework.ai:spring-ai-starter-model-openai` | 2.0.0-M5 | OpenAI-compatible client (OpenRouter default + OpenAI-compat BYOK) | Pulls `spring-ai-bom`. Pin via BOM only — never explicit version. |
+| `org.springframework.ai:spring-ai-bom` | 2.0.0-M5 | BOM for transitive Spring AI deps | Imported in `backend/core/build.gradle.kts`. |
+| `org.springframework.ai:spring-ai-starter-model-anthropic` | 2.0.0-M5 | Direct Anthropic adapter for BYOK Anthropic provider | Included so native Anthropic BYOK can be supported beside OpenRouter. |
 | `com.knuddels:jtokkit` | 1.1.0 | Token counting + boundary truncation | Latest stable on Maven Central (2024-07-19). Add to `[versions]` and `[libraries]`. |
 
 ### Alternatives Considered
 
 | Instead of | Could Use | Tradeoff |
 |------------|-----------|----------|
-| `OpenAiApi#mutate()` for BYOK with custom endpoint | `OpenAiChatOptions.builder().httpHeaders(Map.of("Authorization", "Bearer "+key))` per request | Works only when BYOK uses the SAME baseUrl as platform (e.g., OpenRouter platform + user's OpenRouter key). Fails when BYOK provides a custom endpoint (Together.ai, Fireworks, self-hosted vLLM). Phase 2C BYOK explicitly supports custom OpenAI-compatible endpoints, so `mutate()` is required. |
-| `AnthropicApi#mutate()` for BYOK | `AnthropicChatOptions.builder().apiKey(...).baseUrl(...)` per request | **MUCH simpler.** M4 source confirms `AnthropicChatOptions` exposes both `apiKey` and `baseUrl` per-request. `AnthropicApi.mutate()` is NOT documented in M4 release. Use options-based seam for `AnthropicByokFactory`. |
+| One global OpenAI-compatible `ChatClient` with only per-request headers | One-call `OpenAiChatModel` built from tenant `apiKey/baseUrl/model` | Required because custom OpenAI-compatible BYOK can vary both endpoint and model; M5 exposes these on `OpenAiChatOptions.builder()`. |
+| Anthropic global auto-config model | Parent `AnthropicChatModel` inside adapter + per-call `AnthropicChatOptions.builder().apiKey(...).baseUrl(...).model(...)` | Avoids requiring a deployment-wide Anthropic key while still using Spring AI's native Anthropic client for BYOK calls. |
 | jtokkit (cl100k_base) for Anthropic | Anthropic `POST /v1/messages/count_tokens` | SPEC.md explicitly out-of-scope — extra HTTP round trip, leaks content to Anthropic for non-BYOK case (privacy violation). jtokkit estimate ±10–20% with 200-token safety headroom is sufficient. |
 | Sealed `ToolCallResult` interface w/ per-action records | `record ToolCallResult(Action, Map<String,Object>)` | Sealed gives strongest typing but couples gateway to Phase 4 action arg shapes that don't exist yet. Defer to v2 (CONTEXT-deferred). |
 | `RefreshTokenCipher` relocation to `core.shared.crypto` | Inject existing bean from `core.gmail.persistence.crypto` via Modulith `allowedDependencies` edge | **Researcher recommends defer relocation.** Reusing existing bean adds one Modulith edge (`core.llm` → `gmail`) but avoids touching Phase 1.5 OAuth callers. Relocation is mechanical refactoring that belongs in a focused tech-debt phase, not scoped into 2C. |
@@ -152,7 +152,7 @@ BYOK ChatClient caching; sealed `ToolCallResult` interface; `SanitizationAdvisor
 **Installation (Gradle Kotlin DSL):**
 ```kotlin
 // In libs.versions.toml [versions]
-springAi = "2.0.0-M4"  // already present
+springAi = "2.0.0-M5"  // current baseline
 jtokkit = "1.1.0"       // NEW
 
 // In libs.versions.toml [libraries]
@@ -163,7 +163,7 @@ jtokkit = { module = "com.knuddels:jtokkit", version.ref = "jtokkit" }
 ```
 
 **Version verification (executed during research):**
-- `spring-ai 2.0.0-M4` released 2026-03-26 per spring.io blog (Sources). Build-tested against Spring Boot 4.x.
+- `spring-ai 2.0.0-M5` is the current project baseline; M5 builder/runtime-options signatures were compile-tested in this repo.
 - `jtokkit 1.1.0` confirmed latest on Maven Central (2024-07-19). Zero deps; thread-safe.
 - `shedlock-spring 7.7.0` works with JVM 17+, tested on Spring 7.0/Boot 4.x per ShedLock README.
 
@@ -274,11 +274,10 @@ backend/core/src/main/java/com/zeromail/core/llm/
 ├── gateway/
 │   ├── springai/
 │   │   ├── LlmGatewayImpl.java               # @Service implementing LlmGateway
-│   │   ├── PlatformApiKey.java               # implements org.springframework.ai.openai.api.ApiKey
-│   │   ├── PlatformLlmConfig.java            # @Configuration with 1 ChatClient bean (OpenAI-compat) + optional Anthropic ChatClient
-│   │   ├── BYOKChatModelFactory.java         # interface
-│   │   ├── OpenAiCompatibleByokFactory.java  # OpenAiApi.mutate() seam
-│   │   └── AnthropicByokFactory.java         # AnthropicChatOptions per-request seam
+│   │   ├── PlatformChatClientConfig.java     # @Configuration with platform OpenAI-compatible ChatClient
+│   │   ├── ByokLlmModelClient.java           # provider adapter interface
+│   │   ├── OpenAiCompatibleByokModelClient.java # one-call OpenAiChatModel with tenant key/baseUrl/model
+│   │   └── AnthropicByokModelClient.java     # AnthropicChatOptions.Builder per-request seam
 │   └── sanitization/
 │       ├── Sanitizer.java                    # interface
 │       ├── SanitizationPipeline.java         # @Service composing List<Sanitizer>
@@ -323,102 +322,91 @@ apps/web/features/llm/
 apps/web/i18n/messages/{vi,en}.json          # merged: byok.*, error.llm.*
 ```
 
-### Pattern 1: Spring AI BYOK seam — OpenAI-compatible (mutate)
+### Pattern 1: Spring AI M5 BYOK seam — OpenAI-compatible
 
-**What:** Per-call `OpenAiApi#mutate()` + `OpenAiChatModel#mutate()` derive-and-discard for varying both `apiKey` AND `baseUrl` per call.
-**When to use:** OpenAI-compatible BYOK with a custom endpoint (Together.ai, Fireworks, self-hosted vLLM, OpenRouter with user's key, raw OpenAI with user's key).
-**Source:** Verified in M4 source `models/spring-ai-openai/src/main/java/org/springframework/ai/openai/api/OpenAiApi.java` and `OpenAiChatModel.java`. Documented in [Spring AI reference — Multiple OpenAI-Compatible API Endpoints](https://docs.spring.io/spring-ai/reference/api/chatclient.html).
+**What:** Build a one-call `OpenAiChatModel` from tenant `apiKey`, canonical `baseUrl`, and required `model`, then wrap it in `ChatClient.create(...)` inside the adapter package and discard after the call.
+**When to use:** OpenAI-compatible BYOK with a custom endpoint (OpenRouter preset, Together.ai, Fireworks, self-hosted vLLM, raw OpenAI-compatible proxy).
+**Source:** Verified against Spring AI M5 compile/tests in this repo and Context7 `/spring-projects/spring-ai` docs showing `OpenAiChatModel.builder().options(OpenAiChatOptions.builder().apiKey(...).model(...).build())`.
 
 ```java
-// Source: https://docs.spring.io/spring-ai/reference/api/chatclient.html (MultiModelService)
+// Spring AI 2.0.0-M5 pattern
 @Service
-public final class OpenAiCompatibleByokFactory implements BYOKChatModelFactory {
-    private final OpenAiApi parentOpenAiApi;
-    private final OpenAiChatModel parentChatModel;
-
+public final class OpenAiCompatibleByokModelClient implements ByokLlmModelClient {
     @Override
-    public ChatModel deriveModel(byte[] decryptedApiKey, String endpoint) {
-        OpenAiApi derivedApi = parentOpenAiApi.mutate()
-            .baseUrl(endpoint)
+    public LlmChatResponse call(byte[] decryptedApiKey, String endpoint, String model, LlmChatRequest request) {
+        OpenAiChatModel chatModel = OpenAiChatModel.builder()
+            .options(OpenAiChatOptions.builder()
             .apiKey(new String(decryptedApiKey, StandardCharsets.UTF_8))
+                .baseUrl(endpoint)
+                .model(model)
+                .temperature(0.0)
+                .toolChoice("required")
+                .internalToolExecutionEnabled(false)
+                .build())
             .build();
-        return parentChatModel.mutate()
-            .openAiApi(derivedApi)
-            .build();
+        return callWith(ChatClient.create(chatModel), request);
     }
 }
 ```
 
-### Pattern 2: Spring AI BYOK seam — Anthropic (per-request options)
+### Pattern 2: Spring AI M5 BYOK seam — Anthropic (per-request options builder)
 
-**What:** Anthropic BYOK uses simpler `AnthropicChatOptions.builder().apiKey(...).baseUrl(...)` per request.
+**What:** Anthropic BYOK uses `AnthropicChatOptions.builder().apiKey(...).baseUrl(...).model(...)` per request. In M5+, pass the builder to `ChatClient.prompt().options(...)`, not a built options object.
 **When to use:** Anthropic BYOK — runtime options carry the per-request override.
-**Source:** Verified in M4 `AnthropicChatOptions` source — `AbstractAnthropicOptions.Builder` exposes `apiKey(String)` and `baseUrl(String)`.
+**Source:** Verified in Spring AI M5 compile/tests and Context7 Spring AI upgrade notes: `ChatClient.options(...)` takes a `ChatOptions.Builder` runtime delta.
 
 ```java
-// Source: github.com/spring-projects/spring-ai/blob/v2.0.0-M4/models/spring-ai-anthropic/.../AnthropicChatOptions.java
+// Spring AI 2.0.0-M5 pattern
 @Service
-public final class AnthropicByokFactory implements BYOKChatModelFactory {
+public final class AnthropicByokModelClient implements ByokLlmModelClient {
     private final AnthropicChatModel parentChatModel;
 
     @Override
-    public Prompt buildBYOKPrompt(byte[] decryptedApiKey, String endpoint,
-                                  String userMessage, List<ToolCallback> toolCallbacks,
-                                  String model) {
-        AnthropicChatOptions options = AnthropicChatOptions.builder()
+    public LlmChatResponse call(byte[] decryptedApiKey, String endpoint, String model, LlmChatRequest request) {
+        AnthropicChatOptions.Builder options = AnthropicChatOptions.builder()
             .apiKey(new String(decryptedApiKey, StandardCharsets.UTF_8))
             .baseUrl(endpoint)  // null OK — defaults to https://api.anthropic.com
             .model(model)
             .toolChoice(new AnthropicApi.ToolChoiceAny())
             .toolCallbacks(toolCallbacks.toArray(ToolCallback[]::new))
             .internalToolExecutionEnabled(false)
-            .maxTokens(1024)
-            .build();
-        return new Prompt(userMessage, options);
+            .maxTokens(1024);
+
+        ChatResponse response = ChatClient.create(parentChatModel)
+            .prompt()
+            .user(request.userMessage())
+            .options(options)
+            .call()
+            .chatResponse();
+        return map(response);
     }
 }
 ```
 
-**Plan implication:** `BYOKChatModelFactory` interface has TWO valid contracts. Either:
-- (a) Both factories return `ChatModel` (force OpenAi mutate) — symmetric but wastes Anthropic's per-request seam.
-- (b) `BYOKChatModelFactory` returns a higher-level `ChatClient` or even a `Function<Prompt,ChatResponse>` that the gateway calls. Researcher recommends **(b)** — define `interface BYOKChatModelFactory { ChatResponse call(byte[] decryptedKey, String endpoint, String model, String userMessage, List<ToolCallback> toolCallbacks); }` so each impl picks its own seam internally.
+**Plan implication:** `ByokLlmModelClient` should expose a higher-level `call(byte[] decryptedKey, String endpoint, String model, LlmChatRequest request)` contract so each implementation can pick the correct M5 seam internally. Do not force OpenAI-compatible and Anthropic into a fake symmetric factory.
 
-### Pattern 3: Platform-path dynamic ApiKey
+### Pattern 3: Platform OpenAI-compatible ChatClient
 
-**What:** Singleton `ChatClient` + custom `ApiKey` impl reading `TenantContext` ScopedValue at HTTP send time.
+**What:** Singleton `ChatClient` backed by `OpenAiChatModel.builder().options(OpenAiChatOptions.builder().baseUrl(...).apiKey(...).model(...).build())`.
 **When to use:** Default platform path (no BYOK row).
-**Source:** Verified in [Spring AI reference — Custom OpenAI API Key Implementation](https://docs.spring.io/spring-ai/reference/api/chat/openai-chat.html).
+**Source:** Verified in Context7 Spring AI docs for creating `OpenAiChatModel` with `OpenAiChatOptions`, and compile-tested after upgrading the repo to M5.
 
 ```java
-// Source: https://docs.spring.io/spring-ai/reference/api/chat/openai-chat.html
-public final class PlatformApiKey implements ApiKey {  // org.springframework.ai.openai.api.ApiKey
-    private final ZeroMailLlmPlatformProperties properties;
-
-    public PlatformApiKey(ZeroMailLlmPlatformProperties properties) {
-        this.properties = properties;
-    }
-
-    @Override
-    public String getValue() {
-        // Resolved per HTTP send by Spring AI's RestClient, not at bean construction.
-        // TenantContext.currentOrThrow() works inside this call because Spring AI's
-        // outbound HTTP runs in the same thread/ScopedValue scope as the gateway caller.
-        return properties.apiKey();  // platform key — TenantContext is irrelevant for the value
-                                     // but binding sites *can* read it for logging/metrics.
-    }
-}
-
-// Bean wiring
 @Bean
-public OpenAiApi platformOpenAiApi(ZeroMailLlmPlatformProperties properties) {
-    return OpenAiApi.builder()
-        .baseUrl(properties.baseUrl())
-        .apiKey(new PlatformApiKey(properties))
+ChatClient platformChatClient(ZeroMailLlmPlatformProperties properties) {
+    OpenAiChatModel chatModel = OpenAiChatModel.builder()
+        .options(OpenAiChatOptions.builder()
+            .baseUrl(properties.baseUrl())
+            .apiKey(properties.apiKey())
+            .model(properties.triageModel())
+            .temperature(0.0)
+            .build())
         .build();
+    return ChatClient.create(chatModel);
 }
 ```
 
-**Note:** The `TenantContext.currentOrThrow()` lookup inside `PlatformApiKey.getValue()` is **not strictly necessary** because the platform key is the same for all tenants. The CONTEXT D-A1 mentions it for "resolved at HTTP send time, not bean construction" — that property is automatically true for any `ApiKey` impl. The plan-phase value is that `getValue()` CAN read `TenantContext` for per-tenant logging, but doesn't NEED to for the platform key itself.
+**Note:** The platform key is admin-scoped, not tenant-scoped. Tenant-specific key/model/endpoint behavior belongs only in the BYOK branch.
 
 ### Pattern 4: Tool-call enforcement — `internalToolExecutionEnabled(false)`
 
@@ -454,7 +442,7 @@ ChatResponse response = ChatClient.create(chatModel)
     .chatResponse();
 
 if (!response.hasToolCalls()) {
-    // Model returned free text despite toolChoice=required — model exploit attempt or M4 churn
+    // Model returned free text despite toolChoice=required — model exploit attempt or M5 churn
     throw new SafetyViolationException();
 }
 AssistantMessage.ToolCall toolCall = response.getResult().getOutput().getToolCalls().getFirst();
@@ -522,7 +510,7 @@ public class DriftDetectionJob {
 
 ### Anti-Patterns to Avoid
 
-- **Hand-rolling RestClient/HTTP for BYOK.** CLAUDE.md "Hard do not use" line: "Manually-built ChatClient per request for BYOK". The `mutate()` pattern reuses Spring AI's internal RestClient — this does NOT violate the rule. What WOULD violate it: building your own `RestClient` and calling Anthropic/OpenAI HTTP endpoints directly.
+- **Hand-rolling RestClient/HTTP for BYOK.** Keep BYOK outbound calls inside Spring AI adapter classes. The M5 implementation may build a short-lived provider model/client inside the adapter for custom OpenAI-compatible endpoints, but it must not bypass Spring AI with ad hoc `RestClient` calls to Anthropic/OpenAI HTTP endpoints.
 - **Using stateless JWT for the BYOK validate endpoint authorization.** Phase 1 D-G* locked Spring Session + Redis-backed cookie sessions. ByokController endpoints use the same session — DO NOT introduce a separate JWT path.
 - **Storing the validated key in browser local/sessionStorage.** Server-side AES-GCM encrypt-and-persist on the validate-then-save round trip; browser must drop the form value after submit.
 - **Logging the BYOK endpoint URL.** D-I2 forbids it (could be sensitive — e.g., a self-hosted vLLM endpoint reveals internal infrastructure).
@@ -535,7 +523,7 @@ public class DriftDetectionJob {
 
 | Problem | Don't Build | Use Instead | Why |
 |---------|-------------|-------------|-----|
-| Multi-tenant LLM client per request | Custom factory creating new `RestClient` + `ObjectMapper` per call | Spring AI `OpenAiApi#mutate()` / `AnthropicChatOptions.builder().apiKey()` | Reuses Spring AI's pooled HTTP infrastructure; survives M4→GA churn since `mutate()` is the public stable seam (issue #477 still open as workaround). |
+| Multi-tenant LLM client per request | Custom factory creating new `RestClient` + `ObjectMapper` per call | Spring AI M5 provider builders: one-call `OpenAiChatModel` for OpenAI-compatible endpoints; `AnthropicChatOptions.builder().apiKey()` runtime delta for Anthropic | Keeps provider calls in Spring AI and localizes M5→GA churn to `core.llm.gateway.springai`. |
 | HTML-to-text stripping | Regex-based tag stripper | `Jsoup.clean(content, Safelist.none())` | Jsoup handles malformed HTML, embedded CSS/JS, comment edge cases that hand-rolled regex misses. Already in `libs.versions.toml`. |
 | Tokenization | OpenAI's tiktoken via JS or per-byte estimation | jtokkit `Encoding#encode(text, maxTokens)` | jtokkit gives exact token counts for cl100k_base + character-boundary truncation that doesn't split UTF-8 multi-byte chars / emojis. |
 | AES-GCM envelope cipher | Hand-rolled `Cipher.getInstance("AES/GCM/NoPadding")` per call | Reuse `core.gmail.persistence.crypto.RefreshTokenCipher` | Already AAD-bound to tenantId, version-versioned envelope, audited for nonce reuse. |
@@ -545,22 +533,22 @@ public class DriftDetectionJob {
 | Scope checks via `@PreAuthorize` for BYOK endpoints | Hand-rolled annotation | Spring Security 7's existing session principal check (the same the rest of the protected API uses) | All `/api/llm/byok/*` endpoints are tenant-scoped via session — no extra annotation needed. |
 | ApiKey rotation drill | Custom rotation script | DEFER (CONTEXT-deferred — captured in STATE.md Blockers) | Same umbrella as `REFRESH_TOKEN_KEY_BASE64` rotation drill. Schema is already version-aware via envelope. |
 
-**Key insight:** Spring AI M4 already provides every seam Phase 2C needs (`mutate()`, `ApiKey` interface, `internalToolExecutionEnabled(false)`, `toolChoice("required")`, `ToolChoiceAny`, `httpHeaders()`). The Phase 2C value-add is composition — sanitization pipeline, ledger reserve, BYOK key encryption, ArchUnit isolation. **Do not extend Spring AI; wrap it.**
+**Key insight:** Spring AI M5 provides every seam Phase 2C needs (`OpenAiChatModel.builder().options(...)`, `ChatClient.prompt().options(ChatOptions.Builder)`, `internalToolExecutionEnabled(false)`, `toolChoice("required")`, `ToolChoiceAny`). The Phase 2C value-add is composition — sanitization pipeline, ledger reserve, BYOK key encryption, ArchUnit isolation. **Do not extend Spring AI; wrap it.**
 
 ## Common Pitfalls
 
-### Pitfall 1: M4 → GA churn breaks `mutate()` or tool-call APIs
+### Pitfall 1: M5 → GA churn breaks provider builder or tool-call APIs
 
-**What goes wrong:** Spring AI 2.0.0-GA drops or renames `OpenAiApi#mutate()`, `internalToolExecutionEnabled`, or `ToolCall` record fields. Production stops compiling on a routine BOM upgrade.
+**What goes wrong:** Spring AI 2.0.0-GA drops or renames `OpenAiChatModel.builder().options(...)`, `ChatClient.prompt().options(ChatOptions.Builder)`, `internalToolExecutionEnabled`, or `ToolCall` record fields. Production stops compiling on a routine BOM upgrade.
 
-**Why it happens:** M4 → GA can rename builder methods (M7 → M8 silently broke `tools()` per CLAUDE.md user feedback memory).
+**Why it happens:** M5 → GA can rename builder/runtime-option methods while the milestone line settles.
 
 **How to avoid:**
 - ArchUnit rule isolates ALL Spring AI imports to `core.llm.gateway.springai.*` and `core.llm.gateway.sanitization.*` (sanitization needs jtokkit + Jsoup, not Spring AI). One package, ~5 classes — when GA lands, only this surface needs updating.
 - Pin BOM version explicitly in `libs.versions.toml`; do NOT float to latest.
-- During plan-phase, re-run Context7 lookup against the M4 docs to lock the exact method signatures into a comment-block in `LlmGatewayImpl` so the GA migration has a precise diff target.
+- During any version bump, re-run Context7 lookup against the target docs and compile the focused Spring AI adapter tests before changing wider code.
 
-**Warning signs:** New build error mentioning `org.springframework.ai.openai.api.OpenAiApi.Builder`, `mutate()`, or `internalToolExecutionEnabled`.
+**Warning signs:** New build error mentioning `OpenAiChatModel.Builder`, `OpenAiChatOptions.Builder`, `ChatClient.options`, or `internalToolExecutionEnabled`.
 
 ### Pitfall 2: `toolChoice="required"` ignored by upstream provider routed via OpenRouter
 
@@ -610,13 +598,13 @@ public class DriftDetectionJob {
 
 ### Pitfall 6: BYOK plaintext key bytes lingering in heap after gateway call
 
-**What goes wrong:** `OpenAiApi#mutate().apiKey(plaintextKeyString).build()` retains the string in the derived `OpenAiApi` instance; instance is held by `ChatClient`; `ChatClient` may be retained by `ChatResponse` cache; key string stays in heap until GC.
+**What goes wrong:** `OpenAiChatOptions.builder().apiKey(plaintextKeyString).build()` retains the string in the per-call `OpenAiChatModel` options; a parent/client reference or response object could keep the key string reachable until GC.
 
 **Why it happens:** Java strings are interned; `String#getBytes()` does not zero original char[]. There is no Java idiom for true secret zeroing on String.
 
 **How to avoid:**
 - Do NOT cache derived `ChatClient` per tenant in Phase 2C (CONTEXT D-A4 — caching deferred to Phase 4). Each call re-derives, so the derived client falls out of scope at end of `chat()` method.
-- Treat heap presence between `decrypt → mutate → call → return` as acceptable for BYOK. Hardening the Java string handling is a Phase 6 / dedicated security hardening exercise.
+- Treat heap presence between `decrypt → build provider options → call → return` as acceptable for BYOK. Hardening the Java string handling is a Phase 6 / dedicated security hardening exercise.
 - DO NOT log the key. DO NOT include it in toString of any record.
 
 **Warning signs:** Heap dump in production showing reachable plaintext key strings older than active request.
@@ -933,29 +921,29 @@ databaseChangeLog:
 
 | Old Approach | Current Approach | When Changed | Impact |
 |--------------|------------------|--------------|--------|
-| `spring.ai.chat.client.observations.include-prompt` | `spring.ai.chat.client.observations.log-prompt` | Spring AI 1.1.x line (carried into 2.0.0-M4) | Pin the new key in `application.yml`. Both default to `false`, so default-behavior privacy invariant is automatic. |
-| `spring.ai.chat.client.observations.include-completion` | `spring.ai.chat.client.observations.log-completion` | Same | Same |
+| Legacy prompt-observation key | `spring.ai.chat.client.observations.log-prompt` | Spring AI 1.1.x line (carried into 2.0.0-M5) | Pin the new key in `application.yml`. Default false is not the privacy control; explicit false is. |
+| Legacy completion-observation key | `spring.ai.chat.client.observations.log-completion` | Same | Same |
 | `FunctionCallback.builder().function(name, handler)` | `FunctionToolCallback.builder(name, handler)` | Spring AI 1.0 → M3 | Use `FunctionToolCallback` to register tool-callbacks (Spring AI deprecated FunctionCallback). |
-| Per-request `OpenAiApi` rebuild via `new OpenAiApi(...)` | `parentOpenAiApi.mutate().apiKey(...).baseUrl(...).build()` | Spring AI 1.0 → M3+ | `mutate()` reuses parent's RestClient + interceptors, avoids per-call HTTP infrastructure rebuild. |
+| Per-request raw OpenAI HTTP client rebuild | M5 one-call `OpenAiChatModel` with `OpenAiChatOptions.builder().apiKey(...).baseUrl(...).model(...)` inside adapter | Spring AI 2.0.0-M5 | Keeps BYOK custom endpoint/model selection inside Spring AI without ad hoc HTTP. |
 | Anthropic per-request key via `httpHeaders(Map.of("x-api-key", key))` | `AnthropicChatOptions.builder().apiKey(key).baseUrl(url)` | Spring AI 1.1.x | Cleaner; Spring AI sets the correct `x-api-key` header internally. |
 
 **Deprecated/outdated:**
 - **Spring AI `FunctionCallback`**: deprecated in M3 in favor of `FunctionToolCallback`. Do not use.
-- **`OpenAiChatOptions.builder().apiKey()` per-request**: does not exist in M4 source. Use `OpenAiApi#mutate()` (for full apiKey+baseUrl override) or `httpHeaders(Authorization: Bearer ...)` (for apiKey-only override with same baseUrl).
+- **Passing built options into `ChatClient.prompt().options(...)` on M5+**: use the builder for ChatClient runtime deltas. Built options are still valid for `Prompt` construction or model defaults, but `ChatClient.options(...)` expects `ChatOptions.Builder` in M5+.
 
 ## Assumptions Log
 
 | # | Claim | Section | Risk if Wrong |
 |---|-------|---------|---------------|
-| A1 | Spring AI 2.0.0-GA will retain `OpenAiApi#mutate()` | Pattern 1, Pitfall 1 | Plan-time risk; ArchUnit isolation makes the migration localized. Recommend re-fetch via Context7 at execute-phase before writing `LlmGatewayImpl`. |
-| A2 | `AnthropicChatOptions.builder().apiKey(...).baseUrl(...)` per-request override is an idiomatic stable seam (vs. `AnthropicApi.mutate()` which is undocumented in M4) | Pattern 2 | LOW — verified in M4 source via WebFetch; underlying `AbstractAnthropicOptions.Builder` exposes both. |
+| A1 | Spring AI 2.0.0-GA will retain the M5 provider-builder seams used by `OpenAiCompatibleByokModelClient` and `AnthropicByokModelClient` | Pattern 1, Pitfall 1 | Plan-time risk; ArchUnit isolation makes the migration localized. Re-fetch via Context7 and run adapter tests before any version bump. |
+| A2 | `AnthropicChatOptions.builder().apiKey(...).baseUrl(...).model(...)` per-request override remains idiomatic for native Anthropic BYOK | Pattern 2 | LOW — verified by M5 compile/tests and Context7 upgrade notes. |
 | A3 | `commons-text` (~280KB) is the simplest Levenshtein dep choice | Don't Hand-Roll table | LOW — alternative is hand-rolled Wagner-Fischer (~30 LOC). Plan-phase can choose either. |
 | A4 | OpenRouter `/v1/models` endpoint requires API key (not public) — works for BYOK Validate | LLM-03 support | LOW — confirmed via OpenRouter docs (Sources). |
 | A5 | Anthropic `/v1/messages` with `max_tokens: 1` is a valid no-token-cost validation probe | LLM-03 support | LOW — confirmed via Anthropic docs (Sources). Note: `max_tokens=1` still costs the input prompt tokens (negligible for "test" payload). |
 | A6 | jtokkit `cl100k_base` ±10–20% accuracy on Anthropic models is acceptable per SPEC.md constraint | LLM-08 | Already locked by SPEC. |
 | A7 | `RefreshTokenCipher` relocation from `core.gmail.persistence.crypto` to `core.shared.crypto` should be DEFERRED (not done in 2C) | Don't Hand-Roll table | LOW — researcher recommendation; planner can override. The Modulith allowedDependencies edge `core.llm → core.gmail.persistence.crypto` is the cost of deferral; it is one extra entry in the allow-list. |
 
-**If this table is empty:** All claims in this research were verified or cited — no user confirmation needed. **(Not the case here — A1 has real M4→GA churn risk; mitigation = re-verify at execute-phase.)**
+**If this table is empty:** All claims in this research were verified or cited — no user confirmation needed. **(Not the case here — A1 has real M5→GA churn risk; mitigation = re-verify on any Spring AI version bump.)**
 
 ## Open Questions (RESOLVED)
 
@@ -990,7 +978,7 @@ databaseChangeLog:
 |------------|------------|-----------|---------|----------|
 | Java 25 LTS | Build/runtime | ✓ | (project toolchain) | — |
 | PostgreSQL 17.6 | `tenant_byok_credentials` schema | ✓ | (Testcontainers in CI; VPS install in prod) | — |
-| Spring AI 2.0.0-M4 starter on Spring Milestones repo | LLM gateway | ✓ | 2.0.0-M4 | None — locked by user directive |
+| Spring AI 2.0.0-M5 starter on Spring Milestones repo | LLM gateway | ✓ | 2.0.0-M5 | None — locked by user directive |
 | jtokkit 1.1.0 on Maven Central | Sanitization pipeline truncate step | ✓ | 1.1.0 | None — only stable Java tokenizer for cl100k_base; no viable alt |
 | ShedLock 7.7.0 | DriftDetectionJob lock | ✓ | (already in libs.versions.toml) | — |
 | Jsoup 1.22.2 | Sanitization HTML strip | ✓ | (already in libs.versions.toml) | — |
@@ -1075,7 +1063,7 @@ databaseChangeLog:
 | V13 API and Web Service | yes | OpenAPI spec includes new `/api/llm/byok/*` endpoints; CORS allow-list pinned via existing `ZEROMAIL_CORS_*` env; CSRF token applied (POST endpoints) |
 | V14 Configuration | yes | `:?` fail-fast for `ZEROMAIL_LLM_PLATFORM_API_KEY` in both `backend/api` and `backend/worker` `application.yml`; mirror Phase 1.5 CR-04 + Phase 2B D-F1 pattern |
 
-### Known Threat Patterns for Spring Boot 4 + Spring AI M4 + Multi-Tenant LLM
+### Known Threat Patterns for Spring Boot 4 + Spring AI M5 + Multi-Tenant LLM
 
 | Pattern | STRIDE | Standard Mitigation |
 |---------|--------|---------------------|
@@ -1088,23 +1076,20 @@ databaseChangeLog:
 | Credit-cap bypass via concurrent calls | Authorization | Phase 2B `pg_advisory_xact_lock(hashtext(tenant_id))` + `Propagation.REQUIRES_NEW` on `reserve` already enforce serialization |
 | Drift detection feedback loop — operator changes baseline to mask real drift | Repudiation | `golden-baseline.json` is committed to git; baseline regen requires git commit; reviewer checks diff |
 | Unbounded prompt size DoS | Denial of Service | jtokkit hard-cap 3896 tokens before send; Jsoup parses HTML in bounded memory |
-| Spring AI M4 → GA churn breaks gateway silently | Tampering / Denial | ArchUnit isolation + version pin in BOM + Context7 re-fetch at execute-phase + integration tests covering tool-call parsing path |
+| Spring AI M5 → GA churn breaks gateway silently | Tampering / Denial | ArchUnit isolation + version pin in BOM + Context7 re-fetch on version bump + integration tests covering tool-call parsing path |
 
 ## Sources
 
 ### Primary (HIGH confidence) — Context7-fetched + GitHub source verification
 
-- **Spring AI 2.0.0-M4 source — `OpenAiApi.java`**: `https://github.com/spring-projects/spring-ai/blob/v2.0.0-M4/models/spring-ai-openai/src/main/java/org/springframework/ai/openai/api/OpenAiApi.java` — verified `mutate()` returns `Builder`; Builder exposes `apiKey(ApiKey)`, `baseUrl(String)`.
-- **Spring AI 2.0.0-M4 source — `OpenAiChatModel.java`**: `https://github.com/spring-projects/spring-ai/blob/v2.0.0-M4/models/spring-ai-openai/src/main/java/org/springframework/ai/openai/OpenAiChatModel.java` — verified `mutate()` returns Builder; Builder exposes `openAiApi(OpenAiApi)` and `defaultOptions(OpenAiChatOptions)`.
-- **Spring AI 2.0.0-M4 source — `AnthropicChatOptions.java`**: `https://github.com/spring-projects/spring-ai/blob/v2.0.0-M4/models/spring-ai-anthropic/src/main/java/org/springframework/ai/anthropic/AnthropicChatOptions.java` — verified `apiKey`, `baseUrl`, `httpHeaders`, `toolChoice`, `internalToolExecutionEnabled`, `toolCallbacks` all on Builder.
-- **Spring AI 2.0.0-M4 source — `OpenAiChatOptions.java`**: `https://github.com/spring-projects/spring-ai/blob/v2.0.0-M4/models/spring-ai-openai/src/main/java/org/springframework/ai/openai/OpenAiChatOptions.java` — verified `toolChoice` is `Object` type accepting String "required"; `httpHeaders` exists; **NO `apiKey` field on options**.
-- **Spring AI reference docs — Chat Client API (Multiple OpenAI-Compatible Endpoints)**: `https://docs.spring.io/spring-ai/reference/api/chatclient.html` — `MultiModelService` example showing `OpenAiApi#mutate()` + `OpenAiChatModel#mutate()`.
-- **Spring AI reference docs — OpenAI Chat (Custom ApiKey)**: `https://docs.spring.io/spring-ai/reference/api/chat/openai-chat.html` — `ApiKey` interface example for dynamic key resolution.
+- **Spring AI 2.0.0-M5 release notes**: `https://github.com/spring-projects/spring-ai/releases/tag/v2.0.0-M5` — current project baseline.
+- **Spring AI 2.0.0-M5 announcement**: `https://spring.io/blog/2026/04/27/spring-ai-1-0-6-1-1-5-2-0-0-M5-available-now/` — confirms the M5 release line.
+- **Spring AI source/docs via Context7 `/spring-projects/spring-ai`** — verified M5+ `ChatClient.options(...)` builder runtime-delta semantics and `OpenAiChatModel.builder().options(OpenAiChatOptions.builder().apiKey(...).model(...).build())` pattern.
+- **Spring AI reference docs — OpenAI Chat**: `https://docs.spring.io/spring-ai/reference/api/chat/openai-chat.html` — OpenAI-compatible properties and `OpenAiChatOptions`.
 - **Spring AI reference docs — Tools (User-Controlled Execution)**: `https://docs.spring.io/spring-ai/reference/api/tools.html` — `internalToolExecutionEnabled(false)` + `chatResponse.hasToolCalls()` parsing pattern.
 - **Spring AI reference docs — Anthropic Chat (Tool Choice)**: `https://docs.spring.io/spring-ai/reference/api/chat/anthropic-chat.html` — `ToolChoiceAny`, `ToolChoiceTool`, `ToolChoiceAuto`, `ToolChoiceNone` enum values.
-- **Spring AI reference docs — Observability**: `https://docs.spring.io/spring-ai/reference/observability/index.html` — `spring.ai.chat.client.observations.log-prompt: false` (default) + `log-completion: false` (default); `include-prompt` deprecated.
-- **Spring AI reference docs — Upgrade Notes**: `https://docs.spring.io/spring-ai/reference/upgrade-notes.html` — confirms `include-prompt` → `log-prompt` rename.
-- **Spring AI 2.0.0-M4 release blog**: `https://spring.io/blog/2026/03/26/spring-ai-2-0-0-M4-and-1-1-4-and-1-0-5-available/`.
+- **Spring AI reference docs — Observability**: `https://docs.spring.io/spring-ai/reference/observability/index.html` — `spring.ai.chat.client.observations.log-prompt: false` (default) + `log-completion: false` (default); older prompt/completion observation key names are deprecated.
+- **Spring AI reference docs — Upgrade Notes**: `https://docs.spring.io/spring-ai/reference/upgrade-notes.html` — confirms M5+ `ChatClient.options(...)` builder semantics and the observation key history.
 - **JTokkit usage docs**: `https://github.com/knuddelsgmbh/jtokkit/blob/main/docs/docs/getting-started/usage.md` — `Encoding#encode(String, int)` with character-boundary truncation; latest 1.1.0.
 - **JTokkit Maven Central listing**: `https://central.sonatype.com/artifact/com.knuddels/jtokkit` — version 1.1.0 confirmed latest.
 - **OpenRouter API docs — List Models**: `https://openrouter.ai/docs/api/api-reference/models/get-models` — `GET /api/v1/models` requires Bearer auth.
@@ -1114,7 +1099,7 @@ databaseChangeLog:
 - **Spring AI `AssistantMessage.ToolCall` JavaDoc**: `https://docs.spring.io/spring-ai/docs/current/api/org/springframework/ai/chat/messages/AssistantMessage.ToolCall.html` — record with components `id`, `type`, `name`, `arguments` (String JSON).
 - **Spring AI `OpenAiChatOptions.Builder` JavaDoc (1.1.x)**: `https://docs.spring.io/spring-ai/docs/current/api/org/springframework/ai/openai/OpenAiChatOptions.Builder.html` — `toolChoice(Object)` accepts String.
 - **Spring AI Issue #1899**: `https://github.com/spring-projects/spring-ai/issues/1899` — `toolChoice` as Object resolved.
-- **Spring AI Issue #477**: `https://github.com/spring-projects/spring-ai/issues/477` — Dynamic API Key per request still open; `mutate()` is the maintainer-recommended workaround.
+- **Spring AI Issue #477**: `https://github.com/spring-projects/spring-ai/issues/477` — historical dynamic API-key discussion; M5 implementation now uses provider builder/options seams.
 - **Spring AI Issue #3409**: `https://github.com/spring-projects/spring-ai/issues/3409` — `OpenAiChatOptions.httpHeaders` for Authorization Bearer override pattern.
 
 ### Secondary (MEDIUM confidence) — In-repo verification
@@ -1184,8 +1169,8 @@ Concrete task hooks the planner should use:
 **Critical gotchas for the planner:**
 
 - **Liquibase floor is 018, not 017.** CONTEXT D-G1 is wrong — `017-shedlock-table.yaml` already exists.
-- **Property name is `log-prompt` / `log-completion`, not `include-prompt` / `include-completion`.** Pin in `application.yml` defensively even though defaults are already `false`.
-- **`AnthropicByokFactory` does NOT need `mutate()` — use `AnthropicChatOptions.builder().apiKey().baseUrl()`.** Only `OpenAiCompatibleByokFactory` uses the mutate seam. Plan-phase should NOT force symmetry; let each factory pick the simplest M4 seam.
+- **Property names are `log-prompt` / `log-completion`.** Pin in `application.yml` defensively even though defaults are already `false`.
+- **`AnthropicByokModelClient` uses `AnthropicChatOptions.builder().apiKey().baseUrl().model()` as a per-request builder.** `OpenAiCompatibleByokModelClient` builds a one-call `OpenAiChatModel` with tenant key/baseUrl/model. Do not force symmetry; let each provider adapter pick the simplest M5 seam.
 - **`commons-text` must be added to `libs.versions.toml`** (or implement Levenshtein in 30 LOC). Researcher recommends adding the dep.
 - **`golden-baseline.json` regeneration is a manual operator-side script**, not a CI step. Document the regen command in the phase outcome notes.
 - **`RefreshTokenCipher` relocation is DEFERRED.** `core.llm` declares `gmail` in `allowedDependencies` to import `core.gmail.persistence.crypto.RefreshTokenCipher`. This is one extra entry; cleaner long-term refactor belongs in a tech-debt phase.
@@ -1196,13 +1181,13 @@ Concrete task hooks the planner should use:
 ## Metadata
 
 **Confidence breakdown:**
-- Standard stack: HIGH — Spring AI BOM + jtokkit + Jsoup + ShedLock all confirmed against Maven Central + M4 source.
-- Architecture: HIGH — every Spring AI seam Phase 2C uses (`mutate()`, `ApiKey`, `internalToolExecutionEnabled`, `toolChoice`, `httpHeaders`) is documented and source-verified at v2.0.0-M4.
-- Pitfalls: MEDIUM — M4→GA churn risk is real but mitigated by ArchUnit isolation; concrete pitfalls (sanitization order, AAD binding, `@SchedulerLock` reuse) are all in-repo verified.
+- Standard stack: HIGH — Spring AI BOM + jtokkit + Jsoup + ShedLock all confirmed against Maven Central + M5 docs/compile.
+- Architecture: HIGH — every Spring AI seam Phase 2C uses (`OpenAiChatModel.builder().options(...)`, `ChatClient.prompt().options(builder)`, `internalToolExecutionEnabled`, `toolChoice`, `ToolChoiceAny`) is documented and compile-tested at v2.0.0-M5.
+- Pitfalls: MEDIUM — M5→GA churn risk is real but mitigated by ArchUnit isolation; concrete pitfalls (sanitization order, AAD binding, `@SchedulerLock` reuse) are all in-repo verified.
 - BYOK key handling: MEDIUM — happy-path is HIGH; heap-residue secret-zeroing is an accepted residual risk for v1.
 
 **Research date:** 2026-05-07
-**Valid until:** 2026-06-07 (30 days for Spring AI M4 — re-fetch via Context7 at execute-phase if M5 has shipped, since M4→M5/GA can rename builder methods).
+**Valid until:** 2026-06-07 (30 days for Spring AI M5 — re-fetch via Context7 before any M5→GA bump, since builder methods can still move).
 
 ---
 

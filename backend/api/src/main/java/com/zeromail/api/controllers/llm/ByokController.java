@@ -41,7 +41,8 @@ public class ByokController {
     ByokValidateResult result =
         byokService.validate(
             tenantId,
-            new ByokValidateCommand(request.provider(), request.endpoint(), request.apiKey()));
+            new ByokValidateCommand(
+                request.preset(), request.endpoint(), request.model(), request.apiKey()));
     return new ByokValidateResponse(result.ok(), result.models(), result.reason());
   }
 
@@ -51,7 +52,8 @@ public class ByokController {
     ByokSaveResult result =
         byokService.save(
             tenantId,
-            new ByokSaveCommand(request.provider(), request.endpoint(), request.apiKey()));
+            new ByokSaveCommand(
+                request.preset(), request.endpoint(), request.model(), request.apiKey()));
     return new ByokSaveResponse(result.ok(), result.savedAt());
   }
 
@@ -62,10 +64,11 @@ public class ByokController {
   }
 
   private static ByokCurrentResponse toResponse(ByokCurrent current) {
-    return new ByokCurrentResponse(current.provider(), current.endpointHost(), current.savedAt());
+    return new ByokCurrentResponse(
+        current.provider(), current.endpointHost(), current.model(), current.savedAt());
   }
 
   private static ByokCurrentResponse nullResponse() {
-    return new ByokCurrentResponse(null, null, null);
+    return new ByokCurrentResponse(null, null, null, null);
   }
 }

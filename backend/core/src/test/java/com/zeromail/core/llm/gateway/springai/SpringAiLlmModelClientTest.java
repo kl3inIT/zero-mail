@@ -37,7 +37,7 @@ class SpringAiLlmModelClientTest {
         when(chatClientRequestSpecification.user(anyString())).thenReturn(chatClientRequestSpecification);
         when(chatClientRequestSpecification.toolCallbacks(ArgumentMatchers.<List<ToolCallback>>any()))
                 .thenReturn(chatClientRequestSpecification);
-        when(chatClientRequestSpecification.options(any(OpenAiChatOptions.class)))
+        when(chatClientRequestSpecification.options(any(OpenAiChatOptions.Builder.class)))
                 .thenReturn(chatClientRequestSpecification);
         when(chatClientRequestSpecification.call()).thenReturn(callResponseSpecification);
         when(callResponseSpecification.chatResponse()).thenReturn(chatResponseWithToolCalls(List.of(
@@ -47,12 +47,12 @@ class SpringAiLlmModelClientTest {
 
         LlmChatResult chatResult = modelClient.call(request);
 
-        ArgumentCaptor<OpenAiChatOptions> openAiChatOptionsCaptor =
-                ArgumentCaptor.forClass(OpenAiChatOptions.class);
+        ArgumentCaptor<OpenAiChatOptions.Builder> openAiChatOptionsCaptor =
+                ArgumentCaptor.forClass(OpenAiChatOptions.Builder.class);
         verify(chatClientRequestSpecification).system(SystemPrompts.TRIAGE_SYSTEM_PROMPT);
         verify(chatClientRequestSpecification).user("sanitized-user-message");
         verify(chatClientRequestSpecification).options(openAiChatOptionsCaptor.capture());
-        OpenAiChatOptions capturedOptions = openAiChatOptionsCaptor.getValue();
+        OpenAiChatOptions capturedOptions = openAiChatOptionsCaptor.getValue().build();
         assertThat(capturedOptions.getToolChoice()).isEqualTo("required");
         assertThat(capturedOptions.getInternalToolExecutionEnabled()).isFalse();
         assertThat(capturedOptions.getModel()).isEqualTo("openai/gpt-4o-mini");
@@ -74,7 +74,7 @@ class SpringAiLlmModelClientTest {
         when(chatClientRequestSpecification.user(anyString())).thenReturn(chatClientRequestSpecification);
         when(chatClientRequestSpecification.toolCallbacks(ArgumentMatchers.<List<ToolCallback>>any()))
                 .thenReturn(chatClientRequestSpecification);
-        when(chatClientRequestSpecification.options(any(OpenAiChatOptions.class)))
+        when(chatClientRequestSpecification.options(any(OpenAiChatOptions.Builder.class)))
                 .thenReturn(chatClientRequestSpecification);
         when(chatClientRequestSpecification.call()).thenReturn(callResponseSpecification);
         when(callResponseSpecification.chatResponse()).thenReturn(chatResponseWithToolCalls(List.of()));

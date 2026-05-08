@@ -184,7 +184,7 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
         .contains("event=llm_byok_call_started tenantId=" + TENANT_ID)
         .contains("event=llm_byok_call_succeeded tenantId=" + TENANT_ID)
         .contains("provider=ANTHROPIC")
-        .contains("model=openai/gpt-4o-mini")
+        .contains("model=claude-3-haiku-20240307")
         .doesNotContain("sk-test-byok-secret", "Receipts", "https://");
   }
 
@@ -250,7 +250,13 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
     byte[] encryptedEnvelope = refreshTokenCipher.encrypt(plaintextKey, tenantId.toString());
     TenantByokCredentialsEntity credentials =
         new TenantByokCredentialsEntity(
-            UUID.randomUUID(), tenantId, provider, endpoint, encryptedEnvelope, (short) 1);
+            UUID.randomUUID(),
+            tenantId,
+            provider,
+            endpoint,
+            providerModel(provider),
+            encryptedEnvelope,
+            (short) 1);
     ScopedValue.where(TenantContext.TENANT, tenantId.toString())
         .run(() -> tenantByokCredentialsRepository.saveAndFlush(credentials));
     return encryptedEnvelope;
@@ -272,6 +278,12 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
                         tenantId,
                         startingCredits,
                         "SEPAY-BYOK-TEST-" + tenantId)));
+  }
+
+  private static String providerModel(BYOKProvider provider) {
+    return provider == BYOKProvider.OPENAI_COMPATIBLE
+        ? "openai/gpt-4o-mini"
+        : "claude-3-haiku-20240307";
   }
 
   private static LlmChatResult labelResult(String argumentsJson) {

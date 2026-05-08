@@ -36,6 +36,13 @@ async function mockSettingsApis(page: Page) {
     }
 
     if (url.pathname === '/api/llm/byok/validate' && request.method() === 'POST') {
+      const payload = request.postDataJSON();
+      expect(payload).toMatchObject({
+        preset: 'openrouter',
+        model: expect.any(String),
+        apiKey: 'sk-or-v1-test',
+      });
+      expect(payload).not.toHaveProperty('endpoint');
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -45,6 +52,13 @@ async function mockSettingsApis(page: Page) {
     }
 
     if (url.pathname === '/api/llm/byok' && request.method() === 'POST') {
+      const payload = request.postDataJSON();
+      expect(payload).toMatchObject({
+        preset: 'openrouter',
+        model: expect.any(String),
+        apiKey: 'sk-or-v1-test',
+      });
+      expect(payload).not.toHaveProperty('endpoint');
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -101,7 +115,7 @@ test('byok settings flow validates then saves without exposing the key in the UR
   expect(triageBox?.y ?? 0).toBeLessThan(byokBox?.y ?? 0);
   expect(byokBox?.y ?? 0).toBeLessThan(privacyBox?.y ?? Number.MAX_SAFE_INTEGER);
 
-  await page.getByLabel('OpenAI Compatible endpoint').fill('https://openrouter.ai/api/v1');
+  await page.getByLabel('Model').fill('anthropic/claude-3.5-sonnet');
   await page.getByLabel('API key').fill('sk-or-v1-test');
   await page.getByRole('button', { name: 'Validate API key' }).click();
 
@@ -117,7 +131,8 @@ test('byok settings card remains usable at 375x812', async ({ page }) => {
   await openSettings(page);
 
   await expect(page.getByText('AI provider key')).toBeVisible();
-  await page.getByLabel('OpenAI Compatible endpoint').fill('https://openrouter.ai/api/v1');
+  await expect(page.getByRole('radio', { name: 'OpenRouter' })).toBeChecked();
+  await expect(page.getByLabel('Model')).toBeVisible();
   await page.getByLabel('API key').fill('sk-or-v1-test');
   await expect(page.getByRole('button', { name: 'Validate API key' })).toBeEnabled();
 

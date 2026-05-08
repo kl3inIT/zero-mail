@@ -3,7 +3,6 @@ package com.zeromail.core.llm.gateway.springai;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -13,20 +12,15 @@ import com.zeromail.core.config.ZeroMailCoreProperties;
 class PlatformChatClientConfig {
 
   @Bean
-  OpenAiApi platformOpenAiApi(
-      ZeroMailCoreProperties zeroMailCoreProperties, PlatformApiKey platformApiKey) {
-    return OpenAiApi.builder()
-        .baseUrl(zeroMailCoreProperties.llm().platform().baseUrl())
-        .apiKey(platformApiKey)
-        .build();
-  }
-
-  @Bean
-  OpenAiChatModel platformOpenAiChatModel(OpenAiApi platformOpenAiApi) {
+  OpenAiChatModel platformOpenAiChatModel(ZeroMailCoreProperties zeroMailCoreProperties) {
+    ZeroMailCoreProperties.ZeroMailLlmProperties llmProperties =
+        zeroMailCoreProperties.llm().platform();
     return OpenAiChatModel.builder()
-        .openAiApi(platformOpenAiApi)
-        .defaultOptions(
+        .options(
             OpenAiChatOptions.builder()
+                .baseUrl(llmProperties.baseUrl())
+                .apiKey(llmProperties.apiKey())
+                .model(llmProperties.compileModel())
                 .temperature(0.0)
                 .internalToolExecutionEnabled(false)
                 .build())

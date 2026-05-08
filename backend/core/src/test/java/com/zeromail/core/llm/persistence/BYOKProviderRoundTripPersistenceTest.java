@@ -34,6 +34,7 @@ class BYOKProviderRoundTripPersistenceTest extends PostgresContainerTest {
                 tenantId,
                 provider,
                 providerEndpoint(provider),
+                providerModel(provider),
                 bytes32(),
                 (short) 1);
 
@@ -74,6 +75,12 @@ class BYOKProviderRoundTripPersistenceTest extends PostgresContainerTest {
 
     private static String providerEndpoint(BYOKProvider provider) {
         return provider == BYOKProvider.OPENAI_COMPATIBLE ? "https://llm.example.test/v1" : null;
+    }
+
+    private static String providerModel(BYOKProvider provider) {
+        return provider == BYOKProvider.OPENAI_COMPATIBLE
+                ? "openai/gpt-4o-mini"
+                : "claude-3-haiku-20240307";
     }
 
     private static byte[] bytes32() {

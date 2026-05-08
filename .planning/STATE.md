@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02C-07-PLAN.md
-last_updated: "2026-05-08T03:50:31.864Z"
+stopped_at: Completed quick task 260508-g41 BYOK OpenRouter preset and Spring AI M5 sync
+last_updated: "2026-05-08T06:54:50.500Z"
 last_activity: 2026-05-08
 progress:
   total_phases: 15
@@ -267,7 +267,7 @@ Recent decisions affecting current work:
 
 [Issues that affect future work]
 
-- Phase 2A and Phase 2C are both flagged for `/gsd-research-phase` before planning — do not skip (Gmail watch/history + OIDC verification for 2A; Spring AI 2.0.0-M4 BYOK builder API + tokenizer for 2C).
+- Phase 2A and Phase 2C are both flagged for `/gsd-research-phase` before planning — do not skip (Gmail watch/history + OIDC verification for 2A; Spring AI 2.0.0-M5 BYOK builder API + tokenizer for 2C).
 - CASA verification is a 4–12 week external clock — must be initiated during Phase 1 execution, not deferred.
 - Open decisions deferred to phase execution: credit unit economics (Phase 2B), tokenizer choice (Phase 2C), payment provider Stripe vs LemonSqueezy (Phase 2B), observability vendor (any), CASA tier (Phase 1/6).
 - **Refresh-token key rotation drill** (Phase 2C or dedicated security-ceremony phase) — verification protocol: deploy v2 key alongside v1 in the deployment secret source (current VPS baseline: Docker secrets / systemd credentials / locked-down env files; future production options may include GCP Secret Manager, AWS Secrets Manager, or HashiCorp Vault); verify multi-version decrypt path reads `key_version` byte from envelope and selects correct key; rotate v1 → v2 + re-encrypt all rows; verify v1 envelopes still decrypt during overlap window. Per CLAUDE.md TL;DR ("No GCP hosting baseline; do not add spring-cloud-gcp starters by default"), the drill must be deployment-source-agnostic.
@@ -277,6 +277,7 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260508-g41 | BYOK OpenRouter preset, model selection, Spring AI 2.0.0-M5 sync | 2026-05-08 | pending | [260508-g41-byok-openrouter-preset-and-per-tenant-mo](./quick/260508-g41-byok-openrouter-preset-and-per-tenant-mo/) |
 | 260507-4lb | Refactor frontend feature API, hooks, query keys, and tests | 2026-05-07 | a3c2966 | [260507-4lb-refactor-frontend-feature-api-hooks-quer](./quick/260507-4lb-refactor-frontend-feature-api-hooks-quer/) |
 | 260428-0hx | Rename core view records to projections | 2026-04-28 | 3ff9025 | [260428-0hx-rename-core-view-records-to-projections-](./quick/260428-0hx-rename-core-view-records-to-projections-/) |
 | 260506-n2x | Move billing CreditLedger interface into service package | 2026-05-06 | b2a97d5 | [260506-n2x-move-billing-creditledger-interface-into](./quick/260506-n2x-move-billing-creditledger-interface-into/) |
@@ -297,6 +298,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-08T03:50:31.846Z
-Stopped at: Completed 02C-07-PLAN.md
+Last session: 2026-05-08T06:54:50.500Z
+Stopped at: Completed quick task 260508-g41 BYOK OpenRouter preset and Spring AI M5 sync
 Resume file: None

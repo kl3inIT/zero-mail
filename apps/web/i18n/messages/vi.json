@@ -144,10 +144,10 @@
     },
     "llm": {
       "byok": {
-        "invalid": "Khóa BYOK không hợp lệ. Kiểm tra nhà cung cấp, endpoint và khóa rồi thử lại.",
-        "validate_failed": "Không thể kiểm tra khóa BYOK. Kiểm tra nhà cung cấp và khóa rồi thử lại."
+        "invalid": "Khóa BYOK không hợp lệ. Kiểm tra nhà cung cấp, endpoint, model và khóa rồi thử lại.",
+        "validate_failed": "Không thể kiểm tra khóa BYOK. Kiểm tra nhà cung cấp, model và khóa rồi thử lại."
       },
-      "byokValidateFailed": "Không thể kiểm tra khóa BYOK. Kiểm tra nhà cung cấp và khóa rồi thử lại.",
+      "byokValidateFailed": "Không thể kiểm tra khóa BYOK. Kiểm tra nhà cung cấp, model và khóa rồi thử lại.",
       "insufficientCredits": {
         "body": "Nạp thêm tín dụng hoặc lưu khóa BYOK hợp lệ để tiếp tục gọi AI.",
         "title": "Tín dụng nền tảng đã hết"
@@ -333,13 +333,17 @@
         "label": "Khóa API",
         "placeholder": "Dán khóa API"
       },
-      "description": "Dùng khóa riêng của bạn để gọi OpenAI Compatible hoặc Anthropic. Zero Mail chỉ lưu khóa đã mã hóa và không trừ tín dụng nền tảng cho các lượt gọi BYOK.",
+      "description": "Dùng khóa riêng của bạn cho OpenRouter, OpenAI, Anthropic hoặc endpoint compatible. Zero Mail chỉ lưu khóa đã mã hóa và không trừ tín dụng nền tảng cho các lượt gọi BYOK.",
       "empty": {
-        "body": "Chọn nhà cung cấp, dán khóa API, rồi kiểm tra trước khi lưu.",
+        "body": "Chọn nhà cung cấp, model, dán khóa API, rồi kiểm tra trước khi lưu.",
         "heading": "Chưa có khóa BYOK"
       },
       "endpoint": {
+        "anthropicCompatibleLabel": "Endpoint Anthropic compatible",
+        "anthropicCompatiblePlaceholder": "https://api.anthropic.com/v1",
         "label": "Endpoint OpenAI Compatible",
+        "openaiCompatibleLabel": "Endpoint OpenAI Compatible",
+        "openaiCompatiblePlaceholder": "https://openrouter.ai/api/v1",
         "placeholder": "https://openrouter.ai/api/v1"
       },
       "existing": {
@@ -347,10 +351,19 @@
         "creditNote": "Không trừ tín dụng nền tảng",
         "replaceNotice": "Lưu khóa mới đã kiểm tra sẽ thay thế khóa đã mã hóa hiện tại."
       },
+      "model": {
+        "label": "Model",
+        "placeholder": "Nhập mã model"
+      },
       "provider": {
         "anthropic": "Anthropic",
+        "anthropicCompatible": "Anthropic compatible",
+        "compatibleGroup": "Endpoint compatible",
         "label": "Nhà cung cấp",
-        "openaiCompatible": "OpenAI Compatible"
+        "officialGroup": "Nhà cung cấp chính thức",
+        "openai": "OpenAI",
+        "openaiCompatible": "OpenAI compatible",
+        "openrouter": "OpenRouter"
       },
       "save": {
         "error": "Không thể lưu khóa đã mã hóa. Tải lại trang rồi thử lại.",
@@ -362,9 +375,15 @@
       "validateCta": "Kiểm tra khóa API",
       "validating": "Đang kiểm tra khóa...",
       "validation": {
-        "invalid": "Không thể kiểm tra khóa này. Kiểm tra nhà cung cấp, endpoint và khóa API, rồi thử lại.",
+        "connectionFailed": "Không kết nối được tới endpoint đã chọn. Kiểm tra URL endpoint hoặc mạng rồi thử lại.",
+        "endpointRejected": "Endpoint này không hợp lệ hoặc không được phép. Hãy dùng HTTPS public URL đúng của provider.",
+        "invalid": "Không thể kiểm tra khóa này. Kiểm tra nhà cung cấp, endpoint, model và khóa API, rồi thử lại.",
+        "modelNotFound": "Model này không có trong danh sách model của provider hoặc key chưa có quyền dùng model đó.",
+        "modelRequired": "Hãy nhập mã model trước khi kiểm tra khóa.",
         "moreModels": "+{count} mô hình khác",
-        "success": "Khóa đã được kiểm tra. Bạn có thể lưu cấu hình này."
+        "success": "Khóa đã được kiểm tra. Bạn có thể lưu cấu hình này.",
+        "timeout": "Endpoint phản hồi quá chậm. Kiểm tra endpoint rồi thử lại.",
+        "upstreamRejected": "Provider đã từ chối yêu cầu. Khóa API có thể sai, bị thu hồi, hoặc không có quyền với model này."
       }
     }
   },

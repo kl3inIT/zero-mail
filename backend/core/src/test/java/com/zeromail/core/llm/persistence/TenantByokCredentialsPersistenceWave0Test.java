@@ -33,6 +33,7 @@ class TenantByokCredentialsPersistenceWave0Test extends PostgresContainerTest {
                 tenantId,
                 BYOKProvider.ANTHROPIC,
                 null,
+                "claude-3-haiku-20240307",
                 encryptedKey,
                 (short) 1);
 
@@ -47,6 +48,7 @@ class TenantByokCredentialsPersistenceWave0Test extends PostgresContainerTest {
 
         assertThat(foundCredentials.getProvider()).isEqualTo(BYOKProvider.ANTHROPIC);
         assertThat(foundCredentials.getEndpoint()).isNull();
+        assertThat(foundCredentials.getModel()).isEqualTo("claude-3-haiku-20240307");
         assertThat(foundCredentials.getKeyVersion()).isEqualTo((short) 1);
         assertThat(foundCredentials.getEncryptedKey()).containsExactly(encryptedKey);
         assertThat(rawEncryptedKey).containsExactly(encryptedKey);
@@ -61,6 +63,7 @@ class TenantByokCredentialsPersistenceWave0Test extends PostgresContainerTest {
                 tenantId,
                 BYOKProvider.OPENAI_COMPATIBLE,
                 "https://llm.example.test/v1",
+                "openai/gpt-4o-mini",
                 bytes32(),
                 (short) 1));
 
@@ -69,6 +72,7 @@ class TenantByokCredentialsPersistenceWave0Test extends PostgresContainerTest {
                 tenantId,
                 BYOKProvider.ANTHROPIC,
                 null,
+                "claude-3-haiku-20240307",
                 bytes32(),
                 (short) 1);
 

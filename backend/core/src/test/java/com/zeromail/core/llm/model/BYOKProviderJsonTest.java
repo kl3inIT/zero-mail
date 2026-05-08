@@ -34,5 +34,16 @@ class BYOKProviderJsonTest {
         assertThat(request.provider()).isEqualTo(BYOKProvider.OPENAI_COMPATIBLE);
     }
 
+    @Test
+    void preset_round_trips_from_lowercase_id() throws Exception {
+        BYOKPresetRequest request = objectMapper.readValue(
+                "{\"preset\":\"anthropic-compatible\",\"endpoint\":\"https://x\",\"apiKey\":\"k\"}",
+                BYOKPresetRequest.class);
+
+        assertThat(request.preset()).isEqualTo(ByokProviderPreset.ANTHROPIC_COMPATIBLE);
+    }
+
     record BYOKProviderRequest(BYOKProvider provider, String endpoint, String apiKey) {}
+
+    record BYOKPresetRequest(ByokProviderPreset preset, String endpoint, String apiKey) {}
 }

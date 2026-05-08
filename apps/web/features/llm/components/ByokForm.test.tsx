@@ -52,11 +52,24 @@ describe('ByokForm', () => {
     renderByokForm();
 
     expect(
-      screen.getByRole('radio', { name: viMessages.llm.byok.provider.openaiCompatible }),
+      screen.getByRole('radio', { name: viMessages.llm.byok.provider.openrouter }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('radio', { name: viMessages.llm.byok.provider.openai }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('radio', { name: viMessages.llm.byok.provider.anthropic }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('radio', { name: viMessages.llm.byok.provider.openaiCompatible }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('radio', { name: viMessages.llm.byok.provider.anthropicCompatible }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText(viMessages.llm.byok.endpoint.openaiCompatibleLabel)).toBeNull();
+    expect(screen.getByLabelText(viMessages.llm.byok.model.label)).toHaveValue(
+      'openai/gpt-4o-mini',
+    );
     expect(screen.getByRole('button', { name: viMessages.llm.byok.validateCta })).toBeDisabled();
     expect(screen.getByRole('button', { name: viMessages.llm.byok.saveCta })).toBeDisabled();
   });
@@ -87,8 +100,8 @@ describe('ByokForm', () => {
     });
     expect(screen.getByRole('button', { name: viMessages.llm.byok.saveCta })).toBeEnabled();
 
-    fireEvent.change(screen.getByLabelText(viMessages.llm.byok.endpoint.label), {
-      target: { value: 'https://openrouter.ai/api/v1/custom' },
+    fireEvent.change(screen.getByLabelText(viMessages.llm.byok.model.label), {
+      target: { value: 'anthropic/claude-3.5-sonnet' },
     });
 
     expect(screen.getByRole('button', { name: viMessages.llm.byok.saveCta })).toBeDisabled();
@@ -112,8 +125,9 @@ describe('ByokForm', () => {
       expect(apiMocks.saveByok).toHaveBeenCalled();
     });
     expect(apiMocks.saveByok.mock.calls[0]?.[0]).toEqual({
-      provider: 'openai-compatible',
-      endpoint: 'https://openrouter.ai/api/v1',
+      preset: 'openrouter',
+      endpoint: undefined,
+      model: 'openai/gpt-4o-mini',
       apiKey: 'sk-or-v1-test',
     });
     expect(apiKeyInput.value).toBe('');
@@ -122,8 +136,36 @@ describe('ByokForm', () => {
     });
   });
 
+  it('requires endpoint only for compatible presets', async () => {
+    apiMocks.validateByok.mockResolvedValue({ ok: true, models: ['gpt-4o-mini'] });
+    renderByokForm();
+
+    fireEvent.click(
+      screen.getByRole('radio', { name: viMessages.llm.byok.provider.openaiCompatible }),
+    );
+    expect(screen.getByLabelText(viMessages.llm.byok.endpoint.openaiCompatibleLabel)).toBeVisible();
+    fireEvent.change(screen.getByLabelText(viMessages.llm.byok.apiKey.label), {
+      target: { value: 'sk-compatible-test' },
+    });
+    expect(screen.getByRole('button', { name: viMessages.llm.byok.validateCta })).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(viMessages.llm.byok.endpoint.openaiCompatibleLabel), {
+      target: { value: 'https://together.xyz/v1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: viMessages.llm.byok.validateCta }));
+
+    await waitFor(() => {
+      expect(apiMocks.validateByok.mock.calls[0]?.[0]).toEqual({
+        preset: 'openai-compatible',
+        endpoint: 'https://together.xyz/v1',
+        model: 'openai/gpt-4o-mini',
+        apiKey: 'sk-compatible-test',
+      });
+    });
+  });
+
   it('renders a destructive validation alert when validation fails', async () => {
-    apiMocks.validateByok.mockResolvedValue({ ok: false, reason: 'invalid' });
+    apiMocks.validateByok.mockResolvedValue({ ok: false, reason: 'model_not_found' });
     renderByokForm();
 
     fireEvent.change(screen.getByLabelText(viMessages.llm.byok.apiKey.label), {
@@ -133,7 +175,9 @@ describe('ByokForm', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent(viMessages.errors.llm.byokValidateFailed);
-      expect(screen.getByRole('alert')).toHaveTextContent(viMessages.llm.byok.validation.invalid);
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        viMessages.llm.byok.validation.modelNotFound,
+      );
     });
   });
 });

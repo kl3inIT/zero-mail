@@ -71,6 +71,28 @@ public class ByokEndpointValidator {
 
   public String validateOpenAiCompatible(String endpoint) {
     String canonicalEndpoint = canonicalEndpoint(endpoint, OPENAI_COMPATIBLE_DEFAULT_ENDPOINT);
+    return validateOpenAiCompatibleEndpoint(canonicalEndpoint);
+  }
+
+  public String validateCustomOpenAiCompatible(String endpoint) {
+    String canonicalEndpoint = requiredCanonicalEndpoint(endpoint, BYOKProvider.OPENAI_COMPATIBLE);
+    return validateOpenAiCompatibleEndpoint(canonicalEndpoint);
+  }
+
+  public String validateAnthropicCompatible(String endpoint) {
+    String canonicalEndpoint = requiredCanonicalEndpoint(endpoint, BYOKProvider.ANTHROPIC);
+    URI endpointUri = parseAndValidateUri(canonicalEndpoint, BYOKProvider.ANTHROPIC);
+    String host = canonicalHost(endpointUri.getHost());
+    if (!isAnthropicHost(host)
+        && !allowedExtraHosts.contains(host)
+        && !byokProperties.allowNonVendorEndpoints()) {
+      throw rejected(BYOKProvider.ANTHROPIC);
+    }
+    rejectPrivateResolvedAddresses(host, BYOKProvider.ANTHROPIC);
+    return canonicalEndpoint;
+  }
+
+  private String validateOpenAiCompatibleEndpoint(String canonicalEndpoint) {
     URI endpointUri = parseAndValidateUri(canonicalEndpoint, BYOKProvider.OPENAI_COMPATIBLE);
     String host = canonicalHost(endpointUri.getHost());
     if (!isOpenAiCompatibleVendorHost(host)
@@ -102,6 +124,13 @@ public class ByokEndpointValidator {
   private static String canonicalEndpoint(String endpoint, String defaultEndpoint) {
     if (endpoint == null || endpoint.isBlank()) {
       return defaultEndpoint;
+    }
+    return endpoint.trim().replaceAll("/+$", "");
+  }
+
+  private String requiredCanonicalEndpoint(String endpoint, BYOKProvider provider) {
+    if (endpoint == null || endpoint.isBlank()) {
+      throw rejected(provider);
     }
     return endpoint.trim().replaceAll("/+$", "");
   }

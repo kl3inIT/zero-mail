@@ -144,10 +144,10 @@
     },
     "llm": {
       "byok": {
-        "invalid": "The BYOK key is invalid. Check provider, endpoint, and key, then retry.",
-        "validate_failed": "Could not validate the BYOK key. Check provider and key, then retry."
+        "invalid": "The BYOK key is invalid. Check provider, endpoint, model, and key, then retry.",
+        "validate_failed": "Could not validate the BYOK key. Check provider, model, and key, then retry."
       },
-      "byokValidateFailed": "Could not validate the BYOK key. Check provider and key, then retry.",
+      "byokValidateFailed": "Could not validate the BYOK key. Check provider, model, and key, then retry.",
       "insufficientCredits": {
         "body": "Top up credits or save a valid BYOK key to continue AI calls.",
         "title": "Platform credits depleted"
@@ -333,13 +333,17 @@
         "label": "API key",
         "placeholder": "Paste API key"
       },
-      "description": "Use your own key for OpenAI Compatible or Anthropic calls. Zero Mail stores only the encrypted key and does not spend platform credits for BYOK calls.",
+      "description": "Use your own key for OpenRouter, OpenAI, Anthropic, or a compatible endpoint. Zero Mail stores only the encrypted key and does not spend platform credits for BYOK calls.",
       "empty": {
-        "body": "Pick a provider, paste your API key, then validate before saving.",
+        "body": "Pick a provider and model, paste your API key, then validate before saving.",
         "heading": "No BYOK key saved"
       },
       "endpoint": {
+        "anthropicCompatibleLabel": "Anthropic compatible endpoint",
+        "anthropicCompatiblePlaceholder": "https://api.anthropic.com/v1",
         "label": "OpenAI Compatible endpoint",
+        "openaiCompatibleLabel": "OpenAI Compatible endpoint",
+        "openaiCompatiblePlaceholder": "https://openrouter.ai/api/v1",
         "placeholder": "https://openrouter.ai/api/v1"
       },
       "existing": {
@@ -347,10 +351,19 @@
         "creditNote": "No platform credit charged",
         "replaceNotice": "Saving a newly validated key will replace the existing encrypted key."
       },
+      "model": {
+        "label": "Model",
+        "placeholder": "Enter model ID"
+      },
       "provider": {
         "anthropic": "Anthropic",
+        "anthropicCompatible": "Anthropic compatible",
+        "compatibleGroup": "Compatible endpoints",
         "label": "Provider",
-        "openaiCompatible": "OpenAI Compatible"
+        "officialGroup": "Official providers",
+        "openai": "OpenAI",
+        "openaiCompatible": "OpenAI compatible",
+        "openrouter": "OpenRouter"
       },
       "save": {
         "error": "Could not save the encrypted key. Reload the page and retry.",
@@ -362,9 +375,15 @@
       "validateCta": "Validate API key",
       "validating": "Validating key...",
       "validation": {
-        "invalid": "Could not validate this key. Check provider, endpoint, and API key, then retry.",
+        "connectionFailed": "Could not reach the selected endpoint. Check the endpoint URL or network and retry.",
+        "endpointRejected": "This endpoint is invalid or not allowed. Use a valid public HTTPS provider URL.",
+        "invalid": "Could not validate this key. Check provider, endpoint, model, and API key, then retry.",
+        "modelNotFound": "This model is not listed by the provider, or the key does not have access to it.",
+        "modelRequired": "Enter a model ID before validating the key.",
         "moreModels": "+{count} more models",
-        "success": "Key validated. You can save this configuration."
+        "success": "Key validated. You can save this configuration.",
+        "timeout": "The endpoint took too long to respond. Check it and retry.",
+        "upstreamRejected": "The provider rejected the request. The API key may be wrong, revoked, or missing access to this model."
       }
     }
   },

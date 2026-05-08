@@ -9,10 +9,8 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
-import org.springframework.ai.model.SimpleApiKey;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.stereotype.Component;
@@ -31,17 +29,10 @@ import tools.jackson.databind.ObjectMapper;
 @Component
 public class OpenAiCompatibleByokModelClient implements ByokLlmModelClient {
 
-  private final OpenAiApi platformOpenAiApi;
-  private final OpenAiChatModel platformOpenAiChatModel;
   private final ByokEndpointValidator byokEndpointValidator;
   private final ObjectMapper objectMapper = new ObjectMapper();
 
-  public OpenAiCompatibleByokModelClient(
-      OpenAiApi platformOpenAiApi,
-      OpenAiChatModel platformOpenAiChatModel,
-      ByokEndpointValidator byokEndpointValidator) {
-    this.platformOpenAiApi = platformOpenAiApi;
-    this.platformOpenAiChatModel = platformOpenAiChatModel;
+  public OpenAiCompatibleByokModelClient(ByokEndpointValidator byokEndpointValidator) {
     this.byokEndpointValidator = byokEndpointValidator;
   }
 
@@ -49,16 +40,20 @@ public class OpenAiCompatibleByokModelClient implements ByokLlmModelClient {
   public LlmChatResult call(byte[] decryptedKey, String endpoint, LlmChatRequest request) {
     String canonicalEndpoint = byokEndpointValidator.validateOpenAiCompatible(endpoint);
     String plaintextApiKey = new String(decryptedKey, StandardCharsets.UTF_8);
-    OpenAiApi derivedApi = null;
     OpenAiChatModel derivedModel = null;
     ChatClient derivedChatClient = null;
     try {
-      derivedApi =
-          platformOpenAiApi.mutate()
-              .apiKey(new SimpleApiKey(plaintextApiKey))
-              .baseUrl(canonicalEndpoint)
+      derivedModel =
+          OpenAiChatModel.builder()
+              .options(
+                  OpenAiChatOptions.builder()
+                      .apiKey(plaintextApiKey)
+                      .baseUrl(canonicalEndpoint)
+                      .model(request.model())
+                      .temperature(request.temperature())
+                      .internalToolExecutionEnabled(false)
+                      .build())
               .build();
-      derivedModel = platformOpenAiChatModel.mutate().openAiApi(derivedApi).build();
       derivedChatClient = ChatClient.create(derivedModel);
       ChatResponse chatResponse =
           derivedChatClient
@@ -77,11 +72,10 @@ public class OpenAiCompatibleByokModelClient implements ByokLlmModelClient {
       plaintextApiKey = null;
       derivedChatClient = null;
       derivedModel = null;
-      derivedApi = null;
     }
   }
 
-  private OpenAiChatOptions chatOptions(LlmChatRequest request) {
+  private OpenAiChatOptions.Builder chatOptions(LlmChatRequest request) {
     OpenAiChatOptions.Builder chatOptionsBuilder =
         OpenAiChatOptions.builder()
             .model(request.model())
@@ -90,7 +84,7 @@ public class OpenAiCompatibleByokModelClient implements ByokLlmModelClient {
     if (request.toolChoiceRequired()) {
       chatOptionsBuilder.toolChoice("required");
     }
-    return chatOptionsBuilder.build();
+    return chatOptionsBuilder;
   }
 
   private List<ToolCallback> translateTools(List<LlmTool> tools) {

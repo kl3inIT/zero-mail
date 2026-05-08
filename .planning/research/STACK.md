@@ -2,7 +2,7 @@
 
 **Domain:** Multi-tenant AI Gmail-triage SaaS (Java 25 / Spring Boot 4 / Spring AI / Next.js)
 **Researched:** 2026-04-24
-**Overall confidence:** MEDIUM-HIGH overall. HIGH for Spring Boot 4.0.6, Liquibase YAML, and the GCP-managed runtime choices; MEDIUM on exact Spring AI 2.0.0-M4 APIs because the user explicitly chose a milestone build.
+**Overall confidence:** MEDIUM-HIGH overall. HIGH for Spring Boot 4.0.6, Liquibase YAML, and the GCP-managed runtime choices; MEDIUM on exact Spring AI 2.0.0-M5 APIs because the user explicitly chose a milestone build.
 
 ---
 
@@ -12,7 +12,7 @@
 - **Gradle 9.4.1** with **Kotlin DSL**, `libs.versions.toml` version catalog, multi-project (not composite) build.
 - **Spring Boot 4.0.6** (current GA; 4.1.0-RC1 exists — stay on 4.0.x for production).
 - **Spring Framework 7.0.7**, **Spring Security 7.0.5**, **Jakarta Servlet 6.1**, **Jakarta Persistence 3.2**, **Jackson 3.1.2** (managed by Spring Boot 4.0.6).
-- **Spring AI 2.0.0-M4** via `spring-ai-starter-model-openai`, pointed at OpenRouter (`base-url: https://openrouter.ai/api/v1`). Keep all direct Spring AI usage inside the LLM adapter because M4 -> GA churn is still likely.
+- **Spring AI 2.0.0-M5** via `spring-ai-starter-model-openai`, pointed at OpenRouter (`base-url: https://openrouter.ai/api/v1`). Keep all direct Spring AI usage inside the LLM adapter because M5 -> GA churn is still likely.
 - **spring-cloud-gcp 8.0.2** — keep it for **Secret Manager** integration. Do **not** add `spring-cloud-gcp-starter-pubsub` by default: Gmail push still arrives as **plain HTTP POSTs to a Spring MVC controller**, so the Pub/Sub starter adds little unless the app later needs Pub/Sub publish/admin flows from Java.
 - **PostgreSQL 17.6 on Cloud SQL** + **Liquibase 5.0.2 (YAML changelogs)** + **Spring Data JPA (Hibernate 7)** for aggregates, **Spring Data JDBC** for read-side and hot paths, **JSONB + jsonb_path_ops** for rule matchers, **pgcrypto / AES-GCM at app layer** for OAuth refresh-token encryption. Community PostgreSQL 18 exists, but Cloud SQL 18 is still Preview as of 2026-04-24.
 - **Redis 7.2 on Memorystore** (Spring Data Redis + Lettuce) for rate limiting, idempotency keys, session store, and per-tenant ChatModel cache — NOT as a task queue. OSS Redis 8.x exists, but GCP's managed service currently tops out at 7.2.
@@ -37,7 +37,7 @@
 | Spring Security | **7.0.5** (Boot-managed) | AuthN/Z, OAuth2 client | Google Workspace OAuth2, CSRF, session. **HIGH**. |
 | Spring Data JPA | 4.0.x (Boot-managed, Hibernate 7.x) | ORM for aggregates | Write-side (rules, users, tenants, audit). **HIGH**. |
 | Spring Data JDBC | 4.0.x | Read-side & hot paths | For triage-log lookups, analytics. Avoids N+1 / lazy-init traps in hot path. **MEDIUM** — optional; JPA alone is fine for v1. |
-| Spring AI | **2.0.0-M4** | LLM orchestration | User-locked milestone. `spring-ai-starter-model-openai` still gives the OpenAI-compatible/OpenRouter path. Keep Spring AI surface area isolated to one adapter module because M4 -> GA changes are still possible. **MEDIUM-HIGH**. |
+| Spring AI | **2.0.0-M5** | LLM orchestration | User-locked milestone. `spring-ai-starter-model-openai` still gives the OpenAI-compatible/OpenRouter path. Keep Spring AI surface area isolated to one adapter module because M5 -> GA changes are still possible. **MEDIUM-HIGH**. |
 | spring-cloud-gcp | **8.0.2** | GCP integration (Secret Manager first, Pub/Sub optional) | **First line that supports Spring Boot 4**. Use `spring-cloud-gcp-starter-secretmanager` by default. Gmail push receiving itself stays a plain HTTP controller, so the Pub/Sub starter is optional rather than foundational. **HIGH**. |
 | PostgreSQL | **17.6 on Cloud SQL** | Primary datastore | Cloud SQL PostgreSQL 18 is still Preview as of 2026-04-24. For a managed production v1 on GCP, 17.6 is the latest GA-safe line. **HIGH**. |
 | Redis | **7.2 on Memorystore** | Cache, sessions, rate limit, idempotency | Not a queue. Memorystore currently supports Redis through 7.2, so this is the latest managed option on GCP even though OSS Redis 8.x exists. **HIGH**. |
@@ -65,17 +65,17 @@
 
 | Artifact | Purpose | Notes |
 |---|---|---|
-| `org.springframework.ai:spring-ai-starter-model-openai` | **OpenRouter path** + direct OpenAI BYOK | Point `spring.ai.openai.base-url=https://openrouter.ai/api/v1`. Model IDs follow OpenRouter convention (`openai/gpt-4o-mini`, `anthropic/claude-3.5-sonnet`). **HIGH** for the provider wiring; **MEDIUM** on exact M4 runtime builder APIs. |
+| `org.springframework.ai:spring-ai-starter-model-openai` | **OpenRouter path** + direct OpenAI BYOK | Point `spring.ai.openai.base-url=https://openrouter.ai/api/v1`. Model IDs follow OpenRouter convention (`openai/gpt-4o-mini`, `anthropic/claude-3.5-sonnet`). **HIGH** for the provider wiring; **MEDIUM** on exact M5 runtime builder APIs. |
 | `org.springframework.ai:spring-ai-starter-model-anthropic` | Direct Anthropic BYOK | Only needed if you want to bypass OpenRouter when the user supplies an Anthropic key. Optional for v1 — OpenRouter already covers Anthropic routing. **MEDIUM**. |
 
 **OpenRouter + BYOK implementation pattern (prescribed):**
 
 1. **Default tenant path (platform-paid):** Autoconfigured OpenAI-compatible client with `spring.ai.openai.base-url=https://openrouter.ai/api/v1` and the platform OpenRouter key.
 2. **BYOK per-request path:** Keep Spring AI behind `LlmGateway` and pass tenant-specific model / auth overrides at request time rather than rebuilding full client graphs on every call.
-3. **Milestone caution:** Because the project is pinned to **Spring AI 2.0.0-M4**, re-verify the exact `OpenAiChatOptions` / per-request header API against the pinned starter before coding. The architecture should rely on the pattern, not on one speculative method signature.
+3. **Milestone caution:** Because the project is pinned to **Spring AI 2.0.0-M5**, keep the M5 adapter seams isolated and re-verify them before any M5→GA upgrade. Phase 2C compile-tests currently verify `OpenAiChatModel.builder().options(...)`, `OpenAiChatOptions.builder().apiKey().baseUrl().model()`, and `ChatClient.prompt().options(AnthropicChatOptions.builder()...)`.
 
-**Observability for LLM calls** (Spring AI 2.0.0-M4):
-- Keep prompt/completion capture disabled. Spans should record provider, model, token counts, latency, and stop reason, but **never** raw content. **HIGH** as a policy; **MEDIUM** on exact property names until implementation locks the M4 APIs.
+**Observability for LLM calls** (Spring AI 2.0.0-M5):
+- Keep prompt/completion capture disabled. Spans should record provider, model, token counts, latency, and stop reason, but **never** raw content. **HIGH** as a policy; **MEDIUM** on exact property names until implementation locks the M5 APIs.
 
 ### Gmail / Google Integration
 
@@ -210,7 +210,7 @@ kotlin {
 |---|---|---|
 | Metrics | **Micrometer** → Prometheus endpoint via actuator → **OTLP** (via Micrometer's OTLP registry) | **HIGH** |
 | Traces | **OpenTelemetry Java agent** (auto-instrumentation JAR attached at container start) | One env var enables it; auto-instruments Spring MVC, JDBC, Redis, Pub/Sub, HTTP clients used by Spring AI. **HIGH** |
-| LLM-specific | Spring AI chat observations wired through Boot + Micrometer | Emits `gen_ai.*`-style spans/metrics. Do **not** include prompt/completion content. **MEDIUM-HIGH** — exact M4 wiring should be re-checked at implementation time |
+| LLM-specific | Spring AI chat observations wired through Boot + Micrometer | Emits `gen_ai.*`-style spans/metrics. Do **not** include prompt/completion content. **MEDIUM-HIGH** — exact M5 wiring should be re-checked at implementation time |
 | Logs | Logback JSON encoder (`logstash-logback-encoder` 8.x) → stdout → Cloud Run Logs → OTLP forwarder to Grafana Loki | **HIGH** |
 | Backend | **Grafana Cloud** (Tempo + Loki + Mimir) free tier or **Honeycomb** (trace-first, pricier). Grafana Cloud is the 2026 default for this scale. | **MEDIUM** — not technical, just cost/UX |
 | Error tracking | **Sentry Java SDK 7.x** alongside OTel (captures exceptions with better grouping than raw traces) | Optional. **MEDIUM** |
@@ -239,8 +239,8 @@ kotlin {
 | **Jackson 2.x** assumptions | Spring Boot 4.0.6 BOM is already on **Jackson 3.1.x**; clinging to Jackson 2-era assumptions creates migration bugs. | Jackson 3.x APIs and annotations only; verify any namespace or module changes at implementation time. **HIGH**. |
 | **Spring WebFlux** for this app | You have no streaming endpoints; LLM streaming can ride SSE on MVC. Reactive adds cognitive tax and worse debuggability. | Spring MVC + **virtual threads** (`spring.threads.virtual.enabled=true`). **HIGH**. |
 | **javax.*** packages | Spring Boot 4 is Jakarta-only. | `jakarta.*` exclusively. **HIGH**. |
-| **Manually-built ChatClient per request** for BYOK | GC pressure, lost advisors, breaks observation. | One `ChatClient`, override `api-key` per request via `httpHeaders` option or `ApiKey` functional interface. **HIGH**. |
-| **Storing LLM prompts/completions in logs or DB** | Violates your explicit privacy constraint. | `include-prompt=false`, `include-completion=false` on Spring AI observations. Scrub logs. **HIGH**. |
+| **Raw HTTP LLM calls or vendor SDK usage outside the Spring AI adapter** | Bypasses gateway privacy, tool-call, and observation controls. | Keep provider-specific BYOK client derivation inside `core.llm.gateway.springai`; every caller uses `LlmGateway`. **HIGH**. |
+| **Storing LLM prompts/completions in logs or DB** | Violates your explicit privacy constraint. | `log-prompt=false`, `log-completion=false` on Spring AI observations. Scrub logs. **HIGH**. |
 | **Polling Gmail** | Kills API quota and user-perceived responsiveness. | Pub/Sub push + `users.watch` refresh job. **HIGH**. |
 | **`pgp_sym_encrypt` (pgcrypto) for OAuth tokens** | Key lives in app config → if DB leaks, tokens leak too. | App-layer AES-GCM with KMS-managed key. **HIGH**. |
 | **Running Gradle's Node plugin** for the Next.js build | Slow, buggy, fights with Turborepo's cache. | Separate pnpm workspace, CI runs Gradle + pnpm as independent steps. **HIGH**. |
@@ -268,7 +268,7 @@ kotlin {
 | Package | Compatible With | Notes |
 |---|---|---|
 | Spring Boot 4.0.6 | Java 17–26, Gradle 8.14+ or 9.x, Spring Framework 7.0.7+, Jakarta Servlet 6.1 | **HIGH** — verified. |
-| Spring AI 2.0.0-M4 | Spring Boot 4.0.x / 4.1.x | OpenAI-compatible `base-url` override still enables the OpenRouter path. **MEDIUM-HIGH** — milestone caveat remains. |
+| Spring AI 2.0.0-M5 | Spring Boot 4.0.x / 4.1.x | OpenAI-compatible `base-url` override still enables the OpenRouter path. **MEDIUM-HIGH** — milestone caveat remains. |
 | spring-cloud-gcp 8.0.2 | Spring Boot 4.0.x, Java 17+ | **First line** supporting Boot 4. Use Secret Manager starter by default; Pub/Sub starter is optional for this architecture. **HIGH**. |
 | Hibernate 7.2.x | JDK 17+, Jakarta Persistence 3.2 | Ambient via Boot 4.0.6. **HIGH**. |
 | Liquibase 5.0.2 | Spring Boot 4.0.6 BOM-managed | **HIGH**. |
@@ -282,7 +282,7 @@ kotlin {
 ```toml
 [versions]
 springBoot = "4.0.6"
-springAi = "2.0.0-M4"
+springAi = "2.0.0-M5"
 springCloudGcp = "8.0.2"
 googleApiGmail = "v1-rev20250331-2.0.0"
 googleAuth = "1.35.0"
@@ -330,7 +330,7 @@ liquibase-core = { module = "org.liquibase:liquibase-core", version.ref = "liqui
 
 - https://spring.io/blog/2026/04/23/spring-boot-4-0-6-available-now — Spring Boot 4.0.6 current GA as of 2026-04-24. **HIGH**.
 - https://docs.spring.io/spring-boot/system-requirements.html — Java 17–26, Gradle 8.14+ / 9.x, Spring Framework 7.0.7+, Servlet 6.1. **HIGH**.
-- https://github.com/spring-projects/spring-ai/releases/tag/v2.0.0-M4 — Spring AI 2.0.0-M4 release (2026-03-26). **HIGH**.
+- https://github.com/spring-projects/spring-ai/releases/tag/v2.0.0-M5 — Spring AI 2.0.0-M5 release (2026-04-27). **HIGH**.
 - https://docs.spring.io/spring-ai/reference/getting-started.html — Spring AI 2.0.x supports Spring Boot 4.0.x / 4.1.x. **HIGH**.
 - https://docs.liquibase.com/concepts/changelogs/yaml-format.html — Liquibase YAML changelog support. **HIGH**.
 - https://github.com/GoogleCloudPlatform/spring-cloud-gcp/releases/tag/v8.0.2 — spring-cloud-gcp 8.0.2 (2026-04-10), Boot 4 line. **HIGH**.
@@ -345,7 +345,7 @@ liquibase-core = { module = "org.liquibase:liquibase-core", version.ref = "liqui
 | Area | Confidence | Reason |
 |---|---|---|
 | Spring Boot 4.0.6 + Java 25 + Gradle 9.4.1 toolchain | **HIGH** | Verified via official Spring docs + Gradle current-version endpoint. |
-| Spring AI 2.0.0-M4 + OpenRouter (base-url swap) + BYOK abstraction | **MEDIUM-HIGH** | The provider path is verified; exact M4 per-request option APIs still need in-code confirmation. |
+| Spring AI 2.0.0-M5 + OpenRouter (base-url swap) + BYOK abstraction | **MEDIUM-HIGH** | The provider path and M5 builder/options seams are compile-tested; M5→GA churn remains the main risk. |
 | spring-cloud-gcp 8.0.2 for Secret Manager on Boot 4 | **HIGH** | Verified via GitHub releases (Apr 2026). |
 | Postgres-backed queue with SKIP LOCKED | **HIGH** | Standard pattern; QPS envelope verified against v1 user base assumption. |
 | Cloud Run as deployment target | **MEDIUM-HIGH** | Technically excellent fit; the main tradeoff is GCP managed-service lag versus community-latest Postgres/Redis versions. |

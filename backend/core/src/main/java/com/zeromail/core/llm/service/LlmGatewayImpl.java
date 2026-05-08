@@ -51,6 +51,7 @@ class LlmGatewayImpl implements LlmGateway {
   private static final Logger log = LoggerFactory.getLogger(LlmGatewayImpl.class);
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private static final CreditLedger NOOP_CREDIT_LEDGER = new NoopCreditLedger();
+  private static final String DEFAULT_ANTHROPIC_BYOK_MODEL = "claude-3-haiku-20240307";
 
   private final LlmModelClient platformLlmModelClient;
   private final SanitizationPipeline sanitizationPipeline;
@@ -356,8 +357,8 @@ class LlmGatewayImpl implements LlmGateway {
       CallSite callSite,
       List<LlmTool> tools) {
     UUID tenantId = byokRow.getTenantId();
-    String model = llmProperties.modelByCallSite().get(callSite);
     BYOKProvider provider = byokRow.getProvider();
+    String model = modelForByok(provider, byokRow.getModel(), callSite);
     ByokLlmModelClient byokLlmModelClient =
         switch (provider) {
           case ANTHROPIC -> anthropicByokModelClient;
@@ -425,6 +426,16 @@ class LlmGatewayImpl implements LlmGateway {
     } catch (JacksonException jsonParsingFailure) {
       throw new IllegalStateException("Unable to parse tool call arguments", jsonParsingFailure);
     }
+  }
+
+  private String modelForByok(BYOKProvider provider, String storedModel, CallSite callSite) {
+    if (storedModel != null && !storedModel.isBlank()) {
+      return storedModel.trim();
+    }
+    return switch (provider) {
+      case ANTHROPIC -> DEFAULT_ANTHROPIC_BYOK_MODEL;
+      case OPENAI_COMPATIBLE -> llmProperties.modelByCallSite().get(callSite);
+    };
   }
 
   private static final class NoopCreditLedger implements CreditLedger {

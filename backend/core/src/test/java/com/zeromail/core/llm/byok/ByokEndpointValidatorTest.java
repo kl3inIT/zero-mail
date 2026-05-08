@@ -61,6 +61,14 @@ class ByokEndpointValidatorTest {
   }
 
   @Test
+  void anthropic_compatible_rejects_blank_endpoint() {
+    ByokEndpointValidator validator = defaultValidator();
+
+    assertThatThrownBy(() -> validator.validateAnthropicCompatible(" "))
+        .isInstanceOf(InvalidByokException.class);
+  }
+
+  @Test
   void openai_compat_accepts_with_operator_opt_in() {
     ByokEndpointValidator validator =
         new ByokEndpointValidator(
@@ -69,6 +77,17 @@ class ByokEndpointValidatorTest {
 
     assertThat(validator.validateOpenAiCompatible("https://together.xyz/v1"))
         .isEqualTo("https://together.xyz/v1");
+  }
+
+  @Test
+  void anthropic_compat_accepts_with_operator_opt_in() {
+    ByokEndpointValidator validator =
+        new ByokEndpointValidator(
+            new ZeroMailLlmByokProperties(
+                true, List.of(), Duration.ofSeconds(5), Duration.ofSeconds(15)));
+
+    assertThat(validator.validateAnthropicCompatible("https://example.com/v1"))
+        .isEqualTo("https://example.com/v1");
   }
 
   private static ByokEndpointValidator defaultValidator() {

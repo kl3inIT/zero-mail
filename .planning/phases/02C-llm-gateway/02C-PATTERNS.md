@@ -162,7 +162,7 @@ class CreditLedgerService implements CreditLedger {
 ```java
 @Service
 class LlmGatewayImpl implements LlmGateway {
-    // Platform path: singleton ChatClient + dynamic ApiKey reading TenantContext
+    // Platform path: singleton ChatClient built from Spring AI M5 OpenAiChatModel options
     private final ChatClient platformOpenAiClient;
     private final SanitizationPipeline sanitizationPipeline;
     private final ActionValidator actionValidator;
@@ -882,7 +882,7 @@ spring:
 ```toml
 [versions]
 # ...existing entries...
-springAi = "2.0.0-M4"
+springAi = "2.0.0-M5"
 jtokkit  = "1.1.0"   # verify latest stable at plan-phase per CONTEXT Claude's Discretion
 
 [libraries]
@@ -994,7 +994,7 @@ Files with no close existing match — planner uses RESEARCH.md / AI-SPEC.md pat
 |---|---|---|
 | `core/llm/gateway/sanitization/{Jsoup,Nfc,UnicodeTagStrip,JtokkitTruncate}Sanitizer.java` | sanitizer step | First Spring AI / Jsoup integration in the repo. Use AI-SPEC pipeline shape; pure-JDK / library calls per step. |
 | `core/llm/gateway/sanitization/SanitizationPipeline.java` | orchestrator | First "ordered `List<Sanitizer>` fold" in the repo. Use Spring's `@Order` + `OrderComparator` (CONTEXT D-B1). |
-| `core/llm/gateway/springai/PlatformChatClientConfig.java` and `*ChatModelFactory*` | Spring AI bean wiring | First Spring AI usage. Verify `OpenAiApi#mutate()` / `AnthropicApi#mutate()` / `ApiKey` interface via Context7 at plan-phase per CONTEXT external specs list. RESEARCH.md `MultiModelService` example is the closest reference. |
+| `core/llm/gateway/springai/PlatformChatClientConfig.java` and `*ByokModelClient*` | Spring AI bean wiring | First Spring AI usage. M5 baseline uses `OpenAiChatModel.builder().options(...)` for platform/OpenAI-compatible BYOK and `ChatClient.prompt().options(AnthropicChatOptions.builder()...)` for native Anthropic BYOK. Re-check these builder seams with Context7 on any Spring AI version bump. |
 | `backend/core/src/main/resources/llm/golden-set.json` + `golden-baseline.json` | drift fixtures | First fixture of this kind. Structure dictated by CONTEXT D-H1/D-H2 (synthesized data, no PII). |
 | `apps/web/features/llm/messages.ts` | i18n co-location | First time a feature folder owns its translation contributions. Convention dictated by CONTEXT D-D5; format = `{vi, en}` shape merged build-time into `i18n/messages/{vi,en}.json`. |
 

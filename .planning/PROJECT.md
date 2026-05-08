@@ -103,8 +103,8 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Language/runtime**: Java 25 — locked by user directive.
 - **Framework**: Spring Boot 4 — locked by user directive.
 - **Build**: Gradle 9.x with Kotlin DSL — locked by user directive.
-- **Versioning policy**: Prefer the latest stable versions compatible with the chosen deployment platform. Only use a pre-release when explicitly pinned by the user. Current exception: **Spring AI 2.0.0-M4**.
-- **AI**: Spring AI **2.0.0-M4** for LLM orchestration (model abstraction, prompts, tool calls) — locked by user directive.
+- **Versioning policy**: Prefer the latest stable versions compatible with the chosen deployment platform. Only use a pre-release when explicitly pinned by the user. Current exception: **Spring AI 2.0.0-M5**.
+- **AI**: Spring AI **2.0.0-M5** for LLM orchestration (model abstraction, prompts, tool calls) — locked by user directive.
 - **Structure**: Monorepo / multi-module Gradle project — locked by user directive. Backend topology is now locked to **`backend/core` + `backend/api` + `backend/worker`**, with `apps/web` as the separate frontend module. Internal backend boundaries stay package-based inside `backend/core`, enforced by Spring Modulith verification and architectural tests.
 - **Frontend**: Next.js / React as a separate module inside the monorepo — locked by product decision.
 - **Mail provider (v1)**: Gmail / Google Workspace only, via Gmail API + Google Pub/Sub push — locked by product decision.

@@ -45,6 +45,7 @@ import com.zeromail.core.billing.model.CallSite;
 import com.zeromail.core.billing.service.CreditLedger;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.llm.model.BYOKProvider;
+import com.zeromail.core.llm.model.ByokProviderPreset;
 import com.zeromail.core.llm.model.ByokValidateCommand;
 import com.zeromail.core.llm.model.InvalidByokException;
 import com.zeromail.core.llm.model.SafetyViolationException;
@@ -105,8 +106,8 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
             .header(TestSessionSupport.HEADER_EMAIL, seed.email())
             .contentType(MediaType.APPLICATION_JSON)
             .body(
-                "{\"provider\":\"openai-compatible\","
-                    + "\"endpoint\":\"https://openrouter.ai/api/v1\","
+                "{\"preset\":\"openrouter\","
+                    + "\"model\":\"model-a\","
                     + "\"apiKey\":\"valid-key\"}")
             .retrieve()
             .toEntity(String.class);
@@ -130,8 +131,9 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
             .header(TestSessionSupport.HEADER_EMAIL, seed.email())
             .contentType(MediaType.APPLICATION_JSON)
             .body(
-                "{\"provider\":\"anthropic\","
+                "{\"preset\":\"anthropic-compatible\","
                     + "\"endpoint\":\"https://example.com/v1\","
+                    + "\"model\":\"claude-3-haiku-20240307\","
                     + "\"apiKey\":\"invalid-key\"}")
             .retrieve()
             .onStatus(HttpStatusCode::isError, (_, _) -> {})
@@ -195,8 +197,8 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
             .header(TestSessionSupport.HEADER_EMAIL, seed.email())
             .contentType(MediaType.APPLICATION_JSON)
             .body(
-                "{\"provider\":\"openai-compatible\","
-                    + "\"endpoint\":\"https://openrouter.ai/api/v1\","
+                "{\"preset\":\"openrouter\","
+                    + "\"model\":\"openai/gpt-4o-mini\","
                     + "\"apiKey\":\"revoked-key\"}")
             .retrieve()
             .onStatus(HttpStatusCode::isError, (_, _) -> {})
@@ -210,7 +212,7 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
   }
 
   @Test
-  void post_validate_accepts_lowercase_provider_id() {
+  void post_validate_accepts_lowercase_preset_id() {
     Seed seed = seedUser("byok-lower-provider");
     mockRestServiceServer
         .expect(times(1), requestTo("https://openrouter.ai/api/v1/models"))
@@ -225,8 +227,8 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
             .header(TestSessionSupport.HEADER_EMAIL, seed.email())
             .contentType(MediaType.APPLICATION_JSON)
             .body(
-                "{\"provider\":\"openai-compatible\","
-                    + "\"endpoint\":\"https://openrouter.ai/api/v1\","
+                "{\"preset\":\"openrouter\","
+                    + "\"model\":\"openai/gpt-4o-mini\","
                     + "\"apiKey\":\"k\"}")
             .retrieve()
             .toEntity(String.class);
@@ -235,7 +237,7 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
     ArgumentCaptor<ByokValidateCommand> commandCaptor =
         ArgumentCaptor.forClass(ByokValidateCommand.class);
     verify(byokService).validate(eq(seed.tenantId()), commandCaptor.capture());
-    assertThat(commandCaptor.getValue().provider()).isEqualTo(BYOKProvider.OPENAI_COMPATIBLE);
+    assertThat(commandCaptor.getValue().preset()).isEqualTo(ByokProviderPreset.OPENROUTER);
     mockRestServiceServer.verify();
 
     ResponseEntity<String> uppercaseResponse =
@@ -246,8 +248,8 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
             .header(TestSessionSupport.HEADER_EMAIL, seed.email())
             .contentType(MediaType.APPLICATION_JSON)
             .body(
-                "{\"provider\":\"OPENAI_COMPATIBLE\","
-                    + "\"endpoint\":\"https://openrouter.ai/api/v1\","
+                "{\"preset\":\"OPENROUTER\","
+                    + "\"model\":\"openai/gpt-4o-mini\","
                     + "\"apiKey\":\"k\"}")
             .retrieve()
             .onStatus(HttpStatusCode::isError, (_, _) -> {})
@@ -271,6 +273,7 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
                         seed.tenantId(),
                         BYOKProvider.ANTHROPIC,
                         "https://api.anthropic.com/v1",
+                        "claude-3-haiku-20240307",
                         encryptedEnvelope,
                         (short) 1)));
 

@@ -22,6 +22,9 @@ public class TenantByokCredentialsEntity extends AbstractTenantOwnedEntity {
   @Column(name = "endpoint", length = 512)
   private String endpoint;
 
+  @Column(name = "model", length = 128)
+  private String model;
+
   @Column(name = "encrypted_key", nullable = false)
   private byte[] encryptedKey;
 
@@ -37,11 +40,13 @@ public class TenantByokCredentialsEntity extends AbstractTenantOwnedEntity {
       UUID tenantId,
       BYOKProvider provider,
       String endpoint,
+      String model,
       byte[] encryptedKey,
       short keyVersion) {
     super(id, tenantId);
     this.provider = provider;
     this.endpoint = endpoint;
+    this.model = model;
     this.encryptedKey = copyEncryptedKey(encryptedKey);
     this.keyVersion = keyVersion;
   }
@@ -52,6 +57,10 @@ public class TenantByokCredentialsEntity extends AbstractTenantOwnedEntity {
 
   public String getEndpoint() {
     return endpoint;
+  }
+
+  public String getModel() {
+    return model;
   }
 
   public byte[] getEncryptedKey() {
@@ -70,10 +79,12 @@ public class TenantByokCredentialsEntity extends AbstractTenantOwnedEntity {
   public void replaceCredential(
       BYOKProvider newProvider,
       String newEndpoint,
+      String newModel,
       byte[] encryptedKeyEnvelope,
       short newKeyVersion) {
     provider = newProvider;
     endpoint = newEndpoint;
+    model = newModel;
     replaceKey(encryptedKeyEnvelope, newKeyVersion);
   }
 

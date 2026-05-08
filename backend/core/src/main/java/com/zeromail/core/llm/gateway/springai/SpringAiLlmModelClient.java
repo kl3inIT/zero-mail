@@ -26,7 +26,7 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Spring AI 2.0.0-M4 adapter for the platform-path model client.
+ * Spring AI adapter for the platform-path model client.
  *
  * <p>This class is the Spring AI boundary. Service-layer gateway code depends only on
  * project-local records and the {@link LlmModelClient} interface.
@@ -57,7 +57,7 @@ public class SpringAiLlmModelClient implements LlmModelClient {
         return toLlmChatResult(chatResponse);
     }
 
-    private OpenAiChatOptions chatOptions(LlmChatRequest request) {
+    private OpenAiChatOptions.Builder chatOptions(LlmChatRequest request) {
         OpenAiChatOptions.Builder chatOptionsBuilder = OpenAiChatOptions.builder()
                 .model(request.model())
                 .temperature(request.temperature())
@@ -65,7 +65,7 @@ public class SpringAiLlmModelClient implements LlmModelClient {
         if (request.toolChoiceRequired()) {
             chatOptionsBuilder.toolChoice("required");
         }
-        return chatOptionsBuilder.build();
+        return chatOptionsBuilder;
     }
 
     private List<ToolCallback> translateTools(List<LlmTool> tools) {

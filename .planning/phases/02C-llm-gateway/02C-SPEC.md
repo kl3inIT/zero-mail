@@ -6,7 +6,7 @@
 
 ## Goal
 
-Ship the single `LlmGateway` abstraction on Spring AI 2.0.0-M4 that all LLM traffic must traverse, with admin-configurable platform provider, full prompt-injection hardening, BYOK with encrypted-at-rest user keys + UI validate flow, metadata-only observability, per-tenant credit cap (wired to Phase 2B ledger) with hard reject + top-up prompt, and a drift detection scaffold ready to flip on in production.
+Ship the single `LlmGateway` abstraction on Spring AI 2.0.0-M5 that all LLM traffic must traverse, with admin-configurable platform provider, full prompt-injection hardening, BYOK with encrypted-at-rest user keys + UI validate flow, metadata-only observability, per-tenant credit cap (wired to Phase 2B ledger) with hard reject + top-up prompt, and a drift detection scaffold ready to flip on in production.
 
 ## Background
 
@@ -61,7 +61,7 @@ The codebase has zero LLM infrastructure today: no Spring AI dependency in `grad
 
 10. **No persistence of bodies/prompts/completions (LLM-09)**: Raw email body, LLM prompt, and LLM completion live only in short-lived in-memory cache; nothing in DB or logs.
     - Current: Logback scrub filter from Phase 1 already in place; no LLM code yet.
-    - Target: Spring AI observation config: `include-prompt: false`, `include-completion: false`. In-memory cache (e.g. Caffeine) sized to current request scope only — never written to disk, never serialized to Redis. ArchUnit rule: no `*Repository` accepts a parameter named `prompt`, `completion`, `messageBody`, or `emailBody`.
+- Target: Spring AI observation config: `log-prompt: false`, `log-completion: false`. In-memory cache (e.g. Caffeine) sized to current request scope only — never written to disk, never serialized to Redis. ArchUnit rule: no `*Repository` accepts a parameter named `prompt`, `completion`, `messageBody`, or `emailBody`.
     - Acceptance: Integration test inspects observation spans and asserts no prompt/completion content in any span attribute; Logback test confirms scrub filter strips `prompt=...` patterns from log lines.
 
 11. **Per-tenant credit cap, hard reject + 402 (LLM-10)**: When tenant credit ledger (Phase 2B) reaches zero for platform-key traffic, gateway rejects with HTTP 402 + UI top-up prompt; BYOK traffic is exempt; no separate time-window cap in v1.
@@ -77,7 +77,7 @@ The codebase has zero LLM infrastructure today: no Spring AI dependency in `grad
 ## Boundaries
 
 **In scope:**
-- `LlmGateway` interface + impl (Spring AI 2.0.0-M4 wrapper)
+- `LlmGateway` interface + impl (Spring AI 2.0.0-M5 wrapper)
 - ArchUnit rule banning direct `ChatClient` / vendor SDK use
 - Sanitization pipeline: Jsoup → NFC → tag-strip → jtokkit truncate ≤4k
 - Tool-call wrapping with allow-list (`{ label, archive, save_draft }`)
@@ -132,17 +132,17 @@ The asymmetry (sanitization runs, ledger doesn't) is intentional: sanitization p
 **Implementation locks:**
 - `ByokEndpointValidator.validate{OpenAiCompatible,Anthropic}` (Plan 05a) returns the canonical URL with version path included and trailing slash stripped.
 - `ByokService.validate / save` (Plan 05b) calls a centralized `joinPath(canonicalEndpoint, suffix)` helper that appends `/models` or `/messages` only.
-- `BYOK chat path` (Plan 05a `OpenAiCompatibleByokModelClient` / `AnthropicByokModelClient`) passes the same canonical endpoint into Spring AI `OpenAiApi.mutate().baseUrl(...)` / `AnthropicChatOptions.baseUrl(...)` — Spring AI handles the chat-completion/messages path appending internally; do NOT pre-pend `/v1/chat/completions` etc.
+- `BYOK chat path` (Plan 05a `OpenAiCompatibleByokModelClient` / `AnthropicByokModelClient`) passes the same canonical endpoint into Spring AI M5 provider options: `OpenAiChatOptions.builder().baseUrl(...)` for OpenAI-compatible/OpenRouter and `AnthropicChatOptions.builder().baseUrl(...)` for native Anthropic. Spring AI handles the chat-completion/messages path appending internally; do NOT pre-pend `/v1/chat/completions` etc.
 - Regression tests pinned in Plan 05b: `openrouter_validate_does_not_double_prefix_v1`, `openai_validate_uses_v1_models`, `trailing_slash_does_not_change_outbound_url`.
 
 ## Constraints
 
-- **Spring AI 2.0.0-M4 milestone caveat**: M4 → GA churn likely. Keep all direct Spring AI usage isolated in `com.zeromail.core.llm.gateway.springai` package; nothing else imports `org.springframework.ai.*`. ArchUnit enforces.
+- **Spring AI 2.0.0-M5 milestone caveat**: M5 → GA churn likely. Keep all direct Spring AI usage isolated in `com.zeromail.core.llm.gateway.springai` package; nothing else imports `org.springframework.ai.*`. ArchUnit enforces.
 - **Secret handling**: `ZEROMAIL_LLM_PLATFORM_API_KEY` and `REFRESH_TOKEN_KEY_BASE64` resolved from VPS deployment secrets only (Docker secret / systemd credential / locked-down env file). No `:?` fallback to plain env in prod profile (parity with Phase 1.5 + worker fail-fast pattern).
 - **Validate endpoint not exposed to browser raw**: Browser POSTs `{provider, endpoint, key}` to `POST /api/llm/byok/validate`; backend issues outbound call. Raw key never ends up in any client-side persistent storage; cleared from React state on success/failure.
 - **Tokenizer accuracy trade-off**: jtokkit accurate for OpenAI models; ~10–20% off for Anthropic. Truncation budget set to 4096 tokens with 200-token safety headroom for Anthropic estimates. Pipeline truncates to 3896 hard cap.
 - **Drift threshold defaults**: JSON struct equality required; on tool-call args, Levenshtein > 20% counts as drift. CI tests pin the threshold; production tuning deferred.
-- **No content in spans/logs**: Spring AI observation `include-prompt: false`, `include-completion: false`. Logback scrub filter from Phase 1 must extend coverage to `prompt=...`, `completion=...`, `messageBody=...` patterns.
+- **No content in spans/logs**: Spring AI observation `log-prompt: false`, `log-completion: false`. Logback scrub filter from Phase 1 must extend coverage to `prompt=...`, `completion=...`, `messageBody=...` patterns.
 
 ## Acceptance Criteria
 
@@ -160,7 +160,7 @@ The asymmetry (sanitization runs, ledger doesn't) is intentional: sanitization p
 - [ ] `golden-set.json` + `golden-baseline.json` exist; `DriftDetectionJob` is `@Scheduled` but gated on `zero-mail.llm.drift.enabled` (default `false`)
 - [ ] CI test runs `DriftDetectionJob` with mocked `ChatClient` matching baseline → no drift; second test with mismatched output → drift flagged
 - [ ] `REQUIREMENTS.md` LLM-04 wording updated (committed in same plan as BYOK schema changeset, or follow-up plan referenced in `02C-SPEC.md` Interview Log)
-- [ ] `gradle/libs.versions.toml` adds `spring-ai-bom` (2.0.0-M4), `spring-ai-starter-model-openai`, `spring-ai-starter-model-anthropic` (optional), and `jtokkit`
+- [ ] `gradle/libs.versions.toml` adds `spring-ai-bom` (2.0.0-M5), `spring-ai-starter-model-openai`, `spring-ai-starter-model-anthropic` (optional), and `jtokkit`
 
 ## Ambiguity Report
 
@@ -168,7 +168,7 @@ The asymmetry (sanitization runs, ledger doesn't) is intentional: sanitization p
 |--------------------|-------|------|--------|----------------------------------------------------------------------------------------------------------------------|
 | Goal Clarity       | 0.90  | 0.75 | ✓      | Gateway core + admin config + BYOK + spend cap + drift all locked                                                    |
 | Boundary Clarity   | 0.85  | 0.70 | ✓      | Explicit out-of-scope list with reasoning; deferred items noted                                                      |
-| Constraint Clarity | 0.80  | 0.65 | ✓      | jtokkit chosen, sanitization rules pinned, ledger pattern locked; M4 churn caveat acknowledged                       |
+| Constraint Clarity | 0.80  | 0.65 | ✓      | jtokkit chosen, sanitization rules pinned, ledger pattern locked; M5 churn caveat acknowledged                       |
 | Acceptance Criteria| 0.80  | 0.70 | ✓      | 14 pass/fail checkboxes; ArchUnit + Liquibase + CI assertions                                                        |
 | **Ambiguity**      | 0.15  | ≤0.20| ✓      |                                                                                                                      |
 
@@ -199,4 +199,4 @@ Status: ✓ = met minimum, ⚠ = below minimum (planner treats as assumption)
 
 *Phase: 02C-llm-gateway*
 *Spec created: 2026-05-05*
-*Next step: `/gsd-discuss-phase 2C` — implementation decisions (Spring AI M4 builder API per call site, jtokkit encoding choice, BYOK UI component composition with shadcn primitives, ledger interface seam)*
+*Next step: `/gsd-discuss-phase 2C` — implementation decisions (Spring AI M5 builder/options API per call site, jtokkit encoding choice, BYOK UI component composition with shadcn primitives, ledger interface seam)*

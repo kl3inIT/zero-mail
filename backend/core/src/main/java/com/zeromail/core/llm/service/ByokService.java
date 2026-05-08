@@ -7,13 +7,11 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.ResourceAccessException;
@@ -25,6 +23,7 @@ import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.llm.byok.ByokEndpointValidator;
 import com.zeromail.core.llm.model.BYOKProvider;
 import com.zeromail.core.llm.model.ByokCurrent;
+import com.zeromail.core.llm.model.ByokProviderPreset;
 import com.zeromail.core.llm.model.ByokSaveCommand;
 import com.zeromail.core.llm.model.ByokSaveResult;
 import com.zeromail.core.llm.model.ByokValidateCommand;
@@ -38,7 +37,6 @@ public class ByokService {
 
   private static final Logger log = LoggerFactory.getLogger(ByokService.class);
   private static final String ANTHROPIC_VERSION = "2023-06-01";
-  private static final String ANTHROPIC_VALIDATION_MODEL = "claude-3-haiku-20240307";
 
   private final TenantByokCredentialsRepository tenantByokCredentialsRepository;
   private final RefreshTokenCipher refreshTokenCipher;
@@ -57,22 +55,53 @@ public class ByokService {
   }
 
   public ByokValidateResult validate(UUID tenantId, ByokValidateCommand command) {
-    String canonicalEndpoint = canonicalEndpointFor(command.provider(), command.endpoint());
-    log.info("event=byok_validate_attempted tenantId={} provider={}", tenantId, command.provider());
+    String model;
+    try {
+      model = canonicalModel(command.model());
+    } catch (InvalidByokException invalidByokException) {
+      log.info(
+          "event=byok_validate_failed tenantId={} preset={} reason=model_required",
+          tenantId,
+          command.preset());
+      return new ByokValidateResult(false, null, "model_required");
+    }
+
+    ResolvedByokProvider resolvedProvider;
+    try {
+      resolvedProvider = resolveProvider(command.preset(), command.endpoint());
+    } catch (InvalidByokException invalidByokException) {
+      log.info(
+          "event=byok_validate_failed tenantId={} preset={} reason=endpoint_rejected",
+          tenantId,
+          command.preset());
+      return new ByokValidateResult(false, null, "endpoint_rejected");
+    }
+    log.info(
+        "event=byok_validate_attempted tenantId={} preset={} provider={}",
+        tenantId,
+        command.preset(),
+        resolvedProvider.provider());
     ByokValidateResult result =
-        probeUpstream(tenantId, command.provider(), canonicalEndpoint, command.apiKey());
+        probeUpstream(
+            tenantId,
+            resolvedProvider.provider(),
+            resolvedProvider.canonicalEndpoint(),
+            model,
+            command.apiKey());
     if (result.ok()) {
       int modelsCount = result.models() == null ? 0 : result.models().size();
       log.info(
-          "event=byok_validate_succeeded tenantId={} provider={} modelsCount={}",
+          "event=byok_validate_succeeded tenantId={} preset={} provider={} modelsCount={}",
           tenantId,
-          command.provider(),
+          command.preset(),
+          resolvedProvider.provider(),
           modelsCount);
     } else {
       log.info(
-          "event=byok_validate_failed tenantId={} provider={} reason={}",
+          "event=byok_validate_failed tenantId={} preset={} provider={} reason={}",
           tenantId,
-          command.provider(),
+          command.preset(),
+          resolvedProvider.provider(),
           result.reason());
     }
     return result;
@@ -85,9 +114,15 @@ public class ByokService {
    */
   @Transactional
   public ByokSaveResult save(UUID tenantId, ByokSaveCommand command) {
-    String canonicalEndpoint = canonicalEndpointFor(command.provider(), command.endpoint());
+    ResolvedByokProvider resolvedProvider = resolveProvider(command.preset(), command.endpoint());
+    String model = canonicalModel(command.model());
     ByokValidateResult upstreamValidation =
-        validateUpstreamKey(tenantId, command.provider(), canonicalEndpoint, command.apiKey());
+        validateUpstreamKey(
+            tenantId,
+            resolvedProvider.provider(),
+            resolvedProvider.canonicalEndpoint(),
+            model,
+            command.apiKey());
     if (!upstreamValidation.ok()) {
       throw new InvalidByokException();
     }
@@ -106,7 +141,11 @@ public class ByokService {
             .map(
                 existingCredentials -> {
                   existingCredentials.replaceCredential(
-                      command.provider(), canonicalEndpoint, encryptedEnvelope, keyVersion);
+                      resolvedProvider.provider(),
+                      resolvedProvider.canonicalEndpoint(),
+                      model,
+                      encryptedEnvelope,
+                      keyVersion);
                   return existingCredentials;
                 })
             .orElseGet(
@@ -114,8 +153,9 @@ public class ByokService {
                     new TenantByokCredentialsEntity(
                         UUID.randomUUID(),
                         tenantId,
-                        command.provider(),
-                        canonicalEndpoint,
+                        resolvedProvider.provider(),
+                        resolvedProvider.canonicalEndpoint(),
+                        model,
                         encryptedEnvelope,
                         keyVersion));
     TenantByokCredentialsEntity savedCredentials =
@@ -134,25 +174,31 @@ public class ByokService {
                 new ByokCurrent(
                     credentials.getProvider(),
                     endpointHost(credentials.getEndpoint()),
+                    credentials.getModel(),
                     credentials.getUpdatedAt() == null
                         ? credentials.getCreatedAt()
                         : credentials.getUpdatedAt()));
   }
 
   private ByokValidateResult validateUpstreamKey(
-      UUID tenantId, BYOKProvider provider, String canonicalEndpoint, String apiKey) {
-    return probeUpstream(tenantId, provider, canonicalEndpoint, apiKey);
+      UUID tenantId,
+      BYOKProvider provider,
+      String canonicalEndpoint,
+      String model,
+      String apiKey) {
+    return probeUpstream(tenantId, provider, canonicalEndpoint, model, apiKey);
   }
 
   private ByokValidateResult probeUpstream(
-      UUID tenantId, BYOKProvider provider, String canonicalEndpoint, String apiKey) {
+      UUID tenantId, BYOKProvider provider, String canonicalEndpoint, String model, String apiKey) {
     try {
       return switch (provider) {
-        case OPENAI_COMPATIBLE -> probeOpenAiCompatible(canonicalEndpoint, apiKey);
-        case ANTHROPIC -> probeAnthropic(canonicalEndpoint, apiKey);
+        case OPENAI_COMPATIBLE -> probeOpenAiCompatible(canonicalEndpoint, apiKey, model);
+        case ANTHROPIC -> probeAnthropic(canonicalEndpoint, apiKey, model);
       };
     } catch (RestClientResponseException upstreamRejection) {
-      return new ByokValidateResult(false, null, "upstream_rejected");
+      return new ByokValidateResult(
+          false, null, reasonForUpstreamRejection(provider, upstreamRejection));
     } catch (ResourceAccessException resourceAccessFailure) {
       return new ByokValidateResult(
           false, null, isTimeout(resourceAccessFailure) ? "timeout" : "connection_failed");
@@ -168,52 +214,90 @@ public class ByokService {
     }
   }
 
-  private ByokValidateResult probeOpenAiCompatible(String canonicalEndpoint, String apiKey) {
-    OpenAiModelsResponse response =
+  private ByokValidateResult probeOpenAiCompatible(
+      String canonicalEndpoint, String apiKey, String model) {
+    ModelsResponse response =
         restClientBuilder
             .build()
             .get()
             .uri(joinPath(canonicalEndpoint, "models"))
             .headers(headers -> headers.setBearerAuth(apiKey))
             .retrieve()
-            .body(OpenAiModelsResponse.class);
+            .body(ModelsResponse.class);
     List<String> modelIds =
         response == null || response.data() == null
             ? List.of()
-            : response.data().stream().map(OpenAiModel::id).toList();
+            : response.data().stream().map(ModelResource::id).toList();
+    if (!modelIds.isEmpty() && !modelIds.contains(model)) {
+      return new ByokValidateResult(false, modelIds, "model_not_found");
+    }
     return new ByokValidateResult(true, modelIds, null);
   }
 
-  private ByokValidateResult probeAnthropic(String canonicalEndpoint, String apiKey) {
-    restClientBuilder
-        .build()
-        .post()
-        .uri(joinPath(canonicalEndpoint, "messages"))
-        .contentType(MediaType.APPLICATION_JSON)
-        .header("x-api-key", apiKey)
-        .header("anthropic-version", ANTHROPIC_VERSION)
-        .body(
-            Map.of(
-                "model",
-                ANTHROPIC_VALIDATION_MODEL,
-                "max_tokens",
-                1,
-                "messages",
-                List.of(Map.of("role", "user", "content", "."))))
-        .retrieve()
-        .toBodilessEntity();
-    return new ByokValidateResult(true, null, null);
+  private ByokValidateResult probeAnthropic(String canonicalEndpoint, String apiKey, String model) {
+    ModelsResponse response =
+        restClientBuilder
+            .build()
+            .get()
+            .uri(joinPath(canonicalEndpoint, "models"))
+            .header("x-api-key", apiKey)
+            .header("anthropic-version", ANTHROPIC_VERSION)
+            .retrieve()
+            .body(ModelsResponse.class);
+    List<String> modelIds =
+        response == null || response.data() == null
+            ? List.of()
+            : response.data().stream().map(ModelResource::id).toList();
+    if (!modelIds.isEmpty() && !modelIds.contains(model)) {
+      return new ByokValidateResult(false, modelIds, "model_not_found");
+    }
+    return new ByokValidateResult(true, modelIds.isEmpty() ? List.of(model) : modelIds, null);
   }
 
-  private String canonicalEndpointFor(BYOKProvider provider, String endpoint) {
-    return switch (provider) {
-      case ANTHROPIC -> byokEndpointValidator.validateAnthropic(endpoint);
-      case OPENAI_COMPATIBLE -> byokEndpointValidator.validateOpenAiCompatible(endpoint);
-    };
+  private ResolvedByokProvider resolveProvider(ByokProviderPreset preset, String endpoint) {
+    String canonicalEndpoint =
+        switch (preset) {
+          case OPENROUTER, OPENAI ->
+              byokEndpointValidator.validateOpenAiCompatible(preset.fixedEndpoint());
+          case ANTHROPIC -> byokEndpointValidator.validateAnthropic(preset.fixedEndpoint());
+          case OPENAI_COMPATIBLE -> byokEndpointValidator.validateCustomOpenAiCompatible(endpoint);
+          case ANTHROPIC_COMPATIBLE -> byokEndpointValidator.validateAnthropicCompatible(endpoint);
+        };
+    return new ResolvedByokProvider(preset.provider(), canonicalEndpoint);
+  }
+
+  private String reasonForUpstreamRejection(
+      BYOKProvider provider, RestClientResponseException upstreamRejection) {
+    int upstreamStatus = upstreamRejection.getStatusCode().value();
+    if (upstreamStatus == 404) {
+      return "endpoint_rejected";
+    }
+    if (provider == BYOKProvider.ANTHROPIC && upstreamStatus == 400) {
+      return "model_not_found";
+    }
+    if (upstreamStatus == 422) {
+      return "model_not_found";
+    }
+    return "upstream_rejected";
+  }
+
+  private record ResolvedByokProvider(BYOKProvider provider, String canonicalEndpoint) {
+    private ResolvedByokProvider {
+      if (canonicalEndpoint == null || canonicalEndpoint.isBlank()) {
+        throw new InvalidByokException();
+      }
+    }
   }
 
   private String joinPath(String canonicalEndpoint, String suffix) {
     return canonicalEndpoint.replaceAll("/+$", "") + "/" + suffix.replaceAll("^/+", "");
+  }
+
+  private static String canonicalModel(String model) {
+    if (model == null || model.isBlank()) {
+      throw new InvalidByokException();
+    }
+    return model.trim();
   }
 
   private static String endpointHost(String endpoint) {
@@ -238,7 +322,7 @@ public class ByokService {
     return false;
   }
 
-  private record OpenAiModelsResponse(List<OpenAiModel> data) {}
+  private record ModelsResponse(List<ModelResource> data) {}
 
-  private record OpenAiModel(String id) {}
+  private record ModelResource(String id) {}
 }

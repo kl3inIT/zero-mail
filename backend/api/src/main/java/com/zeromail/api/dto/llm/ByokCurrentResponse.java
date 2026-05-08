@@ -4,4 +4,5 @@ import java.time.Instant;
 
 import com.zeromail.core.llm.model.BYOKProvider;
 
-public record ByokCurrentResponse(BYOKProvider provider, String endpointHost, Instant savedAt) {}
+public record ByokCurrentResponse(
+    BYOKProvider provider, String endpointHost, String model, Instant savedAt) {}

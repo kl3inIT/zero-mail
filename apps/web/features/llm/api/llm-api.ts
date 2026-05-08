@@ -6,7 +6,8 @@ export type ByokValidateResult = components['schemas']['ByokValidateResponse'];
 export type ByokSavePayload = components['schemas']['ByokSaveRequest'];
 export type ByokSaveResult = components['schemas']['ByokSaveResponse'];
 export type ByokCurrentResult = components['schemas']['ByokCurrentResponse'];
-export type ByokProvider = ByokValidatePayload['provider'];
+export type ByokProviderPreset = ByokValidatePayload['preset'];
+export type ByokProvider = NonNullable<ByokCurrentResult['provider']>;
 
 export async function validateByok(payload: ByokValidatePayload): Promise<ByokValidateResult> {
   const { data, error, response } = await api.POST('/api/llm/byok/validate', {

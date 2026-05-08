@@ -5,7 +5,7 @@
 **Confidence:** MEDIUM-HIGH
 - HIGH on the coarse-grained backend module split: `backend/core` + `backend/api` + `backend/worker`
 - HIGH on Spring Modulith as the mechanism to enforce package-based boundaries inside `backend/core`
-- MEDIUM on exact Spring AI `2.0.0-M4` request-option APIs until implementation confirms them
+- HIGH on the Spring AI `2.0.0-M5` adapter seams confirmed during Phase 2C (`OpenAiChatModel.builder().options(...)`, `ChatClient.prompt().options(builder)`, provider-specific BYOK model selection)
 - MEDIUM on the final shape of worker execution loops once real throughput is measured
 
 ---
