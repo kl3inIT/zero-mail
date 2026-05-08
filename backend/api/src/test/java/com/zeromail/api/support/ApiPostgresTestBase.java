@@ -39,6 +39,8 @@ public abstract class ApiPostgresTestBase {
     dynamicPropertyRegistry.add(
         "spring.liquibase.change-log", () -> "classpath:db/changelog/db.changelog-master.yaml");
     dynamicPropertyRegistry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
+    dynamicPropertyRegistry.add("spring.datasource.hikari.maximum-pool-size", () -> "2");
+    dynamicPropertyRegistry.add("spring.datasource.hikari.minimum-idle", () -> "0");
     // Session: still routed through Spring Session, but backed by an in-memory MapSessionRepository
     // contributed by TestSessionConfig instead of redis. SessionAutoConfiguration sees the bean and
     // skips redis lookup. Cookie name remains ZEROMAIL_SESSION from application.yml.

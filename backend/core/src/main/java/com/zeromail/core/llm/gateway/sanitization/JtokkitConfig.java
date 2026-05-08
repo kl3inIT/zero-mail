@@ -10,6 +10,6 @@ public class JtokkitConfig {
 
     @Bean
     EncodingRegistry encodingRegistry() {
-        return Encodings.newDefaultEncodingRegistry();
+        return Encodings.newLazyEncodingRegistry();
     }
 }

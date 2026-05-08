@@ -29,6 +29,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import com.zeromail.core.billing.model.CallSite;
+import com.zeromail.core.billing.persistence.CreditLedgerEntryEntity;
+import com.zeromail.core.billing.persistence.CreditLedgerEntryRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.llm.model.Action;
 import com.zeromail.core.llm.model.BYOKProvider;
@@ -52,6 +54,8 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
 
   @Autowired JdbcTemplate jdbcTemplate;
 
+  @Autowired CreditLedgerEntryRepository creditLedgerEntryRepository;
+
   @Autowired TenantByokCredentialsRepository tenantByokCredentialsRepository;
 
   @MockitoSpyBean RefreshTokenCipher refreshTokenCipher;
@@ -66,7 +70,14 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
 
   @BeforeEach
   void resetRows() {
-    jdbcTemplate.update("delete from tenant_byok_credentials where tenant_id = ?", TENANT_ID);
+    jdbcTemplate.update("delete from credit_ledger_entry where tenant_id = ?", TENANT_ID);
+    jdbcTemplate.update("delete from credit_reservation where tenant_id = ?", TENANT_ID);
+    ScopedValue.where(TenantContext.TENANT, TENANT_ID.toString())
+        .run(
+            () ->
+                tenantByokCredentialsRepository
+                    .findByTenantId(TENANT_ID)
+                    .ifPresent(tenantByokCredentialsRepository::delete));
     jdbcTemplate.update("delete from tenants where id = ?", TENANT_ID);
   }
 
@@ -87,7 +98,7 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
 
   @Test
   void no_byok_row_falls_through_to_platform() {
-    seedTenant(TENANT_ID);
+    seedTenantWithCredits(TENANT_ID, 5);
     when(platformLlmModelClient.call(any())).thenReturn(labelResult("{}"));
 
     ToolCallResult toolCallResult =
@@ -191,7 +202,7 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
             null,
             ("sk-byok-" + tenantId).getBytes(StandardCharsets.UTF_8));
       } else {
-        seedTenant(tenantId);
+        seedTenantWithCredits(tenantId, 5);
       }
     }
     ConcurrentHashMap<UUID, String> byokKeyByTenant = new ConcurrentHashMap<>();
@@ -248,6 +259,19 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
   private void seedTenant(UUID tenantId) {
     jdbcTemplate.update(
         "insert into tenants(id, display_name) values (?, ?)", tenantId, "tenant-" + tenantId);
+  }
+
+  private void seedTenantWithCredits(UUID tenantId, int startingCredits) {
+    seedTenant(tenantId);
+    ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+        .run(
+            () ->
+                creditLedgerEntryRepository.saveAndFlush(
+                    CreditLedgerEntryEntity.topup(
+                        UUID.randomUUID(),
+                        tenantId,
+                        startingCredits,
+                        "SEPAY-BYOK-TEST-" + tenantId)));
   }
 
   private static LlmChatResult labelResult(String argumentsJson) {

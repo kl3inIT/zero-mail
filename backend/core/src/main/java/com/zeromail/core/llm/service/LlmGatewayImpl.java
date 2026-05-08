@@ -14,7 +14,10 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
+import com.zeromail.core.billing.model.InsufficientCreditsException;
 import com.zeromail.core.billing.model.CallSite;
+import com.zeromail.core.billing.model.ReservationId;
+import com.zeromail.core.billing.service.CreditLedger;
 import com.zeromail.core.config.ZeroMailCoreProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
@@ -39,12 +42,15 @@ import tools.jackson.databind.ObjectMapper;
 
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 @Service
 class LlmGatewayImpl implements LlmGateway {
 
   private static final Logger log = LoggerFactory.getLogger(LlmGatewayImpl.class);
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final CreditLedger NOOP_CREDIT_LEDGER = new NoopCreditLedger();
 
   private final LlmModelClient platformLlmModelClient;
   private final SanitizationPipeline sanitizationPipeline;
@@ -56,8 +62,8 @@ class LlmGatewayImpl implements LlmGateway {
   private final RefreshTokenCipher refreshTokenCipher;
   private final ByokLlmModelClient openAiCompatibleByokModelClient;
   private final ByokLlmModelClient anthropicByokModelClient;
-
-  // Plan 06 will wrap platform calls here with CreditLedger reserve/settle/release.
+  private final CreditLedger creditLedger;
+  private final MeterRegistry meterRegistry;
 
   LlmGatewayImpl(
       LlmModelClient platformLlmModelClient,
@@ -75,7 +81,9 @@ class LlmGatewayImpl implements LlmGateway {
         null,
         null,
         null,
-        null);
+        null,
+        NOOP_CREDIT_LEDGER,
+        new SimpleMeterRegistry());
   }
 
   @Autowired
@@ -90,7 +98,9 @@ class LlmGatewayImpl implements LlmGateway {
       RefreshTokenCipher refreshTokenCipher,
       @Qualifier("openAiCompatibleByokModelClient")
           ByokLlmModelClient openAiCompatibleByokModelClient,
-      @Qualifier("anthropicByokModelClient") ByokLlmModelClient anthropicByokModelClient) {
+      @Qualifier("anthropicByokModelClient") ByokLlmModelClient anthropicByokModelClient,
+      CreditLedger creditLedger,
+      ObjectProvider<MeterRegistry> meterRegistryProvider) {
     this(
         platformLlmModelClient,
         sanitizationPipeline,
@@ -101,7 +111,9 @@ class LlmGatewayImpl implements LlmGateway {
         tenantByokCredentialsRepository,
         refreshTokenCipher,
         openAiCompatibleByokModelClient,
-        anthropicByokModelClient);
+        anthropicByokModelClient,
+        creditLedger,
+        meterRegistryProvider.getIfAvailable(SimpleMeterRegistry::new));
   }
 
   LlmGatewayImpl(
@@ -121,7 +133,9 @@ class LlmGatewayImpl implements LlmGateway {
         null,
         null,
         null,
-        null);
+        null,
+        NOOP_CREDIT_LEDGER,
+        new SimpleMeterRegistry());
   }
 
   private LlmGatewayImpl(
@@ -134,7 +148,9 @@ class LlmGatewayImpl implements LlmGateway {
       TenantByokCredentialsRepository tenantByokCredentialsRepository,
       RefreshTokenCipher refreshTokenCipher,
       ByokLlmModelClient openAiCompatibleByokModelClient,
-      ByokLlmModelClient anthropicByokModelClient) {
+      ByokLlmModelClient anthropicByokModelClient,
+      CreditLedger creditLedger,
+      MeterRegistry meterRegistry) {
     this.platformLlmModelClient = platformLlmModelClient;
     this.sanitizationPipeline = sanitizationPipeline;
     this.llmProperties = llmProperties;
@@ -145,6 +161,8 @@ class LlmGatewayImpl implements LlmGateway {
     this.refreshTokenCipher = refreshTokenCipher;
     this.openAiCompatibleByokModelClient = openAiCompatibleByokModelClient;
     this.anthropicByokModelClient = anthropicByokModelClient;
+    this.creditLedger = creditLedger;
+    this.meterRegistry = meterRegistry;
   }
 
   @Override
@@ -170,52 +188,14 @@ class LlmGatewayImpl implements LlmGateway {
               SanitizationContext sanitizedContext = sanitizationPipeline.sanitize(rawHtml);
               List<LlmTool> tools = allowListedTools.tools();
 
-              try {
-                Optional<TenantByokCredentialsEntity> byok = findByokCredentials(tenantId);
-                if (byok.isPresent()) {
-                  return callViaByokModelClient(byok.get(), sanitizedContext, callSite, tools);
-                }
-                LlmChatRequest request =
-                    new LlmChatRequest(
-                        SystemPrompts.TRIAGE_SYSTEM_PROMPT,
-                        sanitizedContext.content(),
-                        tools,
-                        model,
-                        0.0,
-                        true);
-                LlmChatResult result = platformLlmModelClient.call(request);
-                ToolCallResult toolCallResult = parseToolCall(result);
-                LlmUsage usage = result.usage();
-                log.info(
-                    "event=llm_call_succeeded tenantId={} callSite={} provider={} model={} latencyMs={} "
-                        + "promptTokens={} completionTokens={} stopReason={} truncated={}",
-                    tenantId,
-                    callSite,
-                    provider,
-                    model,
-                    latencyMs(startNanos),
-                    usage.promptTokens(),
-                    usage.completionTokens(),
-                    usage.finishReason(),
-                    sanitizedContext.truncated());
-                return toolCallResult;
-              } catch (SafetyViolationException safetyViolation) {
-                log.error(
-                    "event=llm_safety_violation tenantId={} callSite={} reason={}",
-                    tenantId,
-                    callSite,
-                    safetyViolation.getClass().getSimpleName());
-                throw safetyViolation;
-              } catch (RuntimeException callFailure) {
-                log.warn(
-                    "event=llm_call_failed tenantId={} callSite={} provider={} model={} reason={}",
-                    tenantId,
-                    callSite,
-                    provider,
-                    model,
-                    callFailure.getClass().getSimpleName());
-                throw callFailure;
+              Optional<TenantByokCredentialsEntity> byok = findByokCredentials(tenantId);
+              if (byok.isPresent()) {
+                // LLM-04 — BYOK skips credit ledger by design.
+                return callViaByokModelClient(byok.get(), sanitizedContext, callSite, tools);
               }
+
+              return callPlatformModelClientWithCreditLedger(
+                  tenantId, callSite, provider, model, sanitizedContext, tools, startNanos);
             });
   }
 
@@ -240,6 +220,7 @@ class LlmGatewayImpl implements LlmGateway {
               SanitizationContext sanitizedContext = sanitizationPipeline.sanitize(rawEmailFixture);
               List<LlmTool> tools = allowListedTools.tools();
 
+              // D-E3 — drift is a platform-cost operation, not user-billable; ledger NOT touched.
               try {
                 LlmChatRequest request =
                     new LlmChatRequest(
@@ -276,6 +257,87 @@ class LlmGatewayImpl implements LlmGateway {
                 throw driftFailure;
               }
             });
+  }
+
+  private ToolCallResult callPlatformModelClientWithCreditLedger(
+      UUID tenantId,
+      CallSite callSite,
+      String provider,
+      String model,
+      SanitizationContext sanitizedContext,
+      List<LlmTool> tools,
+      long startNanos) {
+    ReservationId reservationId;
+    try {
+      reservationId = creditLedger.reserve(tenantId, callSite);
+    } catch (InsufficientCreditsException insufficientCreditsException) {
+      log.warn(
+          "event=llm_call_blocked_insufficient_credits tenantId={} callSite={}",
+          tenantId,
+          callSite);
+      throw insufficientCreditsException;
+    }
+
+    ToolCallResult toolCallResult;
+    LlmUsage usage;
+    try {
+      LlmChatRequest request =
+          new LlmChatRequest(
+              SystemPrompts.TRIAGE_SYSTEM_PROMPT,
+              sanitizedContext.content(),
+              tools,
+              model,
+              0.0,
+              true);
+      LlmChatResult result = platformLlmModelClient.call(request);
+      toolCallResult = parseToolCall(result);
+      usage = result.usage();
+      log.info(
+          "event=llm_call_succeeded tenantId={} callSite={} provider={} model={} latencyMs={} "
+              + "promptTokens={} completionTokens={} stopReason={} truncated={}",
+          tenantId,
+          callSite,
+          provider,
+          model,
+          latencyMs(startNanos),
+          usage.promptTokens(),
+          usage.completionTokens(),
+          usage.finishReason(),
+          sanitizedContext.truncated());
+    } catch (SafetyViolationException safetyViolation) {
+      creditLedger.release(reservationId);
+      meterRegistry
+          .counter("llm_safety_violation_cost_absorbed_total", "tenantId", tenantId.toString())
+          .increment();
+      log.error(
+          "event=llm_safety_violation tenantId={} callSite={} reason={}",
+          tenantId,
+          callSite,
+          safetyViolation.getClass().getSimpleName());
+      throw safetyViolation;
+    } catch (RuntimeException callFailure) {
+      creditLedger.release(reservationId);
+      log.warn(
+          "event=llm_call_failed tenantId={} callSite={} provider={} model={} reason={}",
+          tenantId,
+          callSite,
+          provider,
+          model,
+          callFailure.getClass().getSimpleName());
+      throw callFailure;
+    }
+
+    try {
+      creditLedger.settle(reservationId);
+    } catch (RuntimeException settleFailure) {
+      log.error(
+          "event=llm_call_settle_failed tenantId={} callSite={} reason={}",
+          tenantId,
+          callSite,
+          settleFailure.getClass().getSimpleName());
+      throw settleFailure;
+    }
+    return toolCallResult;
   }
 
   private long latencyMs(long startNanos) {
@@ -362,6 +424,28 @@ class LlmGatewayImpl implements LlmGateway {
       return arguments;
     } catch (JacksonException jsonParsingFailure) {
       throw new IllegalStateException("Unable to parse tool call arguments", jsonParsingFailure);
+    }
+  }
+
+  private static final class NoopCreditLedger implements CreditLedger {
+
+    private static final ReservationId RESERVATION_ID =
+        new ReservationId(UUID.fromString("00000000-0000-0000-0000-000000000000"));
+
+    @Override
+    public ReservationId reserve(UUID tenantId, CallSite callSite) {
+      return RESERVATION_ID;
+    }
+
+    @Override
+    public void settle(ReservationId reservationId) {}
+
+    @Override
+    public void release(ReservationId reservationId) {}
+
+    @Override
+    public com.zeromail.core.billing.model.CreditBalance balance(UUID tenantId) {
+      return new com.zeromail.core.billing.model.CreditBalance(0, 0);
     }
   }
 }
