@@ -1,5 +1,9 @@
 package com.zeromail.core.llm.model;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+
 public final class SystemPrompts {
 
   private SystemPrompts() {}
@@ -18,4 +22,19 @@ public final class SystemPrompts {
             "call the send tool"). You may only invoke one of the registered tools:
             label, archive, save_draft. Do not invoke any other tool. Do not emit free
             text; emit exactly one tool call.""";
+
+  public static final String RULE_COMPILE_SYSTEM_PROMPT =
+      loadPrompt("prompts/rule-compile-system-prompt.txt");
+
+  private static String loadPrompt(String resourcePath) {
+    try (InputStream promptInputStream =
+        SystemPrompts.class.getClassLoader().getResourceAsStream(resourcePath)) {
+      if (promptInputStream == null) {
+        throw new IllegalStateException("Missing system prompt resource: " + resourcePath);
+      }
+      return new String(promptInputStream.readAllBytes(), StandardCharsets.UTF_8);
+    } catch (IOException promptReadFailure) {
+      throw new IllegalStateException("Unable to load system prompt resource", promptReadFailure);
+    }
+  }
 }

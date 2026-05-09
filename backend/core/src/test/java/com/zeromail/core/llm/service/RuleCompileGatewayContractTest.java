@@ -52,7 +52,7 @@ class RuleCompileGatewayContractTest {
     assertThat(recordingModelClient.lastRequest())
         .satisfies(
             request -> {
-              assertThat(request.systemPrompt()).isEqualTo(SystemPrompts.TRIAGE_SYSTEM_PROMPT);
+              assertThat(request.systemPrompt()).isEqualTo(SystemPrompts.RULE_COMPILE_SYSTEM_PROMPT);
               assertThat(request.userMessage()).isEqualTo("sanitized-compiler-payload");
               assertThat(request.tools())
                   .singleElement()

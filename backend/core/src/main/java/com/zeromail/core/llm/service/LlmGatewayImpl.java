@@ -270,7 +270,7 @@ class LlmGatewayImpl implements LlmGateway {
                     byok.get(),
                     sanitizedContext,
                     callSite,
-                    SystemPrompts.TRIAGE_SYSTEM_PROMPT,
+                    SystemPrompts.RULE_COMPILE_SYSTEM_PROMPT,
                     tools,
                     this::parseRuleCompileToolCall);
               }
@@ -281,7 +281,7 @@ class LlmGatewayImpl implements LlmGateway {
                   provider,
                   model,
                   sanitizedContext,
-                  SystemPrompts.TRIAGE_SYSTEM_PROMPT,
+                  SystemPrompts.RULE_COMPILE_SYSTEM_PROMPT,
                   tools,
                   startNanos,
                   this::parseRuleCompileToolCall);
