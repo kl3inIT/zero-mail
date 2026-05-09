@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.OptimisticLock;
 import org.hibernate.type.SqlTypes;
 
 import com.zeromail.core.rules.model.ActionIntentJsonValidator;
@@ -47,15 +48,18 @@ public class RuleEntity extends AbstractTenantOwnedEntity {
   private String actionIntents;
 
   @Column(name = "enabled", nullable = false)
+  @OptimisticLock(excluded = true)
   private boolean enabled = false;
 
   @Column(name = "order_index", nullable = false)
   private int orderIndex;
 
   @Column(name = "last_previewed_entity_version")
+  @OptimisticLock(excluded = true)
   private Integer lastPreviewedEntityVersion;
 
   @Column(name = "last_previewed_at")
+  @OptimisticLock(excluded = true)
   private Instant lastPreviewedAt;
 
   @Column(name = "template_key", length = 128)
@@ -190,6 +194,11 @@ public class RuleEntity extends AbstractTenantOwnedEntity {
   public void markPreviewed(Integer previewedEntityVersion, Instant previewedAt) {
     this.lastPreviewedEntityVersion = previewedEntityVersion;
     this.lastPreviewedAt = previewedAt;
+  }
+
+  public void clearPreview() {
+    this.lastPreviewedEntityVersion = null;
+    this.lastPreviewedAt = null;
   }
 
   public void markCustomized() {
