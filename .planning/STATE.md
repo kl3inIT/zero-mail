@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed quick task 260508-vlk Update project pnpm version pin to latest stable
-last_updated: "2026-05-08T06:54:50.500Z"
-last_activity: 2026-05-08
+stopped_at: Completed quick task 260509-til Fix Base UI RadioGroup controlled state warning on onboarding template select
+last_updated: "2026-05-09T14:15:06.359Z"
+last_activity: 2026-05-09
 progress:
   total_phases: 15
   completed_phases: 10
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 Phase: 02C (llm-gateway) — EXECUTING
 Plan: 9 of 9
 Status: Ready to execute
-Last activity: 2026-05-08 - Completed quick task 260508-vlk: Update project pnpm version pin to latest stable
+Last activity: 2026-05-09 - Completed quick task 260509-til: Fix Base UI RadioGroup controlled state warning on onboarding template select
 
 Progress: [██████████] 99%
 
@@ -277,6 +277,7 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260509-til | Fix Base UI RadioGroup controlled state warning on onboarding template select | 2026-05-09 | 9540921 | [260509-til-fix-base-ui-radiogroup-controlled-state-](./quick/260509-til-fix-base-ui-radiogroup-controlled-state-/) |
 | 260508-vlk | Update project pnpm version pin to latest stable | 2026-05-08 | pending | [260508-vlk-update-project-pnpm-version-pin-to-lates](./quick/260508-vlk-update-project-pnpm-version-pin-to-lates/) |
 | 260508-g41 | BYOK OpenRouter preset, model selection, Spring AI 2.0.0-M5 sync | 2026-05-08 | pending | [260508-g41-byok-openrouter-preset-and-per-tenant-mo](./quick/260508-g41-byok-openrouter-preset-and-per-tenant-mo/) |
 | 260507-4lb | Refactor frontend feature API, hooks, query keys, and tests | 2026-05-07 | a3c2966 | [260507-4lb-refactor-frontend-feature-api-hooks-quer](./quick/260507-4lb-refactor-frontend-feature-api-hooks-quer/) |
