@@ -1,7 +1,6 @@
 package com.zeromail.core.rules.service;
 
 import java.time.Instant;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -22,18 +21,18 @@ import com.zeromail.core.rules.model.RuleUpdateCommand;
 import com.zeromail.core.rules.model.RuleValidationException;
 import com.zeromail.core.rules.persistence.RuleEntity;
 import com.zeromail.core.rules.persistence.RuleRepository;
-
-import jakarta.persistence.EntityManager;
+import com.zeromail.core.rules.persistence.lowlevel.RuleNativeStateUpdater;
 
 @Service
 public class RuleManagementService {
 
   private final RuleRepository ruleRepository;
-  private final EntityManager entityManager;
+  private final RuleNativeStateUpdater ruleNativeStateUpdater;
 
-  public RuleManagementService(RuleRepository ruleRepository, EntityManager entityManager) {
+  public RuleManagementService(
+      RuleRepository ruleRepository, RuleNativeStateUpdater ruleNativeStateUpdater) {
     this.ruleRepository = ruleRepository;
-    this.entityManager = entityManager;
+    this.ruleNativeStateUpdater = ruleNativeStateUpdater;
   }
 
   @Transactional(readOnly = true)
@@ -98,28 +97,12 @@ public class RuleManagementService {
       throw RuleValidationException.versionMismatch();
     }
     Instant effectivePreviewedAt = previewedAt == null ? Instant.now() : previewedAt;
-    int updatedRows =
-        entityManager
-            .createNativeQuery(
-                """
-                update rules
-                set last_previewed_entity_version = ?,
-                    last_previewed_at = ?,
-                    updated_at = now()
-                where tenant_id = ?
-                  and id = ?
-                  and version = ?
-                """)
-            .setParameter(1, previewedEntityVersion)
-            .setParameter(2, Timestamp.from(effectivePreviewedAt))
-            .setParameter(3, tenantId)
-            .setParameter(4, ruleId)
-            .setParameter(5, previewedEntityVersion)
-            .executeUpdate();
-    if (updatedRows != 1) {
+    boolean previewMarked =
+        ruleNativeStateUpdater.markPreviewSucceeded(
+            tenantId, ruleId, previewedEntityVersion, effectivePreviewedAt);
+    if (!previewMarked) {
       throw RuleValidationException.versionMismatch();
     }
-    entityManager.clear();
     return findRuleOrThrow(tenantId, ruleId).toStatusView();
   }
 
@@ -190,26 +173,11 @@ public class RuleManagementService {
   }
 
   private void updateEnabled(UUID tenantId, UUID ruleId, boolean enabled, Integer entityVersion) {
-    int updatedRows =
-        entityManager
-            .createNativeQuery(
-                """
-                update rules
-                set enabled = ?,
-                    updated_at = now()
-                where tenant_id = ?
-                  and id = ?
-                  and version = ?
-                """)
-            .setParameter(1, enabled)
-            .setParameter(2, tenantId)
-            .setParameter(3, ruleId)
-            .setParameter(4, entityVersion)
-            .executeUpdate();
-    if (updatedRows != 1) {
+    boolean enabledUpdated =
+        ruleNativeStateUpdater.updateEnabled(tenantId, ruleId, enabled, entityVersion);
+    if (!enabledUpdated) {
       throw RuleValidationException.versionMismatch();
     }
-    entityManager.clear();
   }
 
   private static void normalizeOrder(List<RuleEntity> rules) {

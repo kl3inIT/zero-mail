@@ -269,15 +269,15 @@ public class RuleCompileResultValidator {
             yield new MatcherNode.GmailCategoryAbsentMatcher(nodeId, category);
           }
           case HAS_ATTACHMENT -> {
-            rejectUnknownFields(matcherArguments, Set.of(), matcherPath);
+            rejectUnknownFields(matcherArguments, fields(), matcherPath);
             yield new MatcherNode.HasAttachmentMatcher(nodeId);
           }
           case LIST_UNSUBSCRIBE_PRESENT -> {
-            rejectUnknownFields(matcherArguments, Set.of(), matcherPath);
+            rejectUnknownFields(matcherArguments, fields(), matcherPath);
             yield new MatcherNode.ListUnsubscribePresentMatcher(nodeId);
           }
           case NEWSLETTER_INDICATOR -> {
-            rejectUnknownFields(matcherArguments, Set.of(), matcherPath);
+            rejectUnknownFields(matcherArguments, fields(), matcherPath);
             yield new MatcherNode.NewsletterIndicatorMatcher(nodeId);
           }
           case MESSAGE_AGE -> {
