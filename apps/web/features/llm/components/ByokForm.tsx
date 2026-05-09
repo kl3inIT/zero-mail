@@ -294,12 +294,6 @@ export function ByokForm() {
     }
   }
 
-  const visibleModels = validationResult?.models?.slice(0, 5) ?? [];
-  const hiddenModelCount = Math.max(
-    (validationResult?.models?.length ?? 0) - visibleModels.length,
-    0,
-  );
-
   return (
     <Card>
       <form ref={formRef} onSubmit={(event) => event.preventDefault()}>
@@ -519,22 +513,6 @@ export function ByokForm() {
                 className="border-green/30 bg-green-soft/60 text-green dark:border-green/40 dark:bg-green-soft/40"
               >
                 <AlertTitle>{t('llm.byok.validation.success')}</AlertTitle>
-                {visibleModels.length > 0 && (
-                  <AlertDescription className="text-green/90">
-                    <span className="flex flex-wrap gap-1.5 pt-1">
-                      {visibleModels.map((model) => (
-                        <Badge key={model} variant="outline">
-                          {model}
-                        </Badge>
-                      ))}
-                      {hiddenModelCount > 0 && (
-                        <Badge variant="secondary">
-                          {t('llm.byok.validation.moreModels', { count: hiddenModelCount })}
-                        </Badge>
-                      )}
-                    </span>
-                  </AlertDescription>
-                )}
               </Alert>
             )}
 

@@ -92,8 +92,8 @@ describe('ByokForm', () => {
     expect(stateSnapshot).not.toHaveTextContent('sk-secret-test-value');
   });
 
-  it('enables save after validate succeeds and disables save again after field changes', async () => {
-    apiMocks.validateByok.mockResolvedValue({ ok: true, models: ['openai/gpt-4o-mini'] });
+  it('enables save after validate succeeds and keeps provider model inventory hidden', async () => {
+    apiMocks.validateByok.mockResolvedValue({ ok: true, models: ['provider/noisy-model'] });
     renderByokForm();
 
     fireEvent.change(screen.getByLabelText(viMessages.llm.byok.apiKey.label), {
@@ -109,6 +109,7 @@ describe('ByokForm', () => {
       'bg-green-soft/60',
       'text-green',
     );
+    expect(screen.queryByText('provider/noisy-model')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: viMessages.llm.byok.saveCta })).toBeEnabled();
 
     fireEvent.change(screen.getByLabelText(viMessages.llm.byok.model.label), {

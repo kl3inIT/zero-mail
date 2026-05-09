@@ -135,10 +135,6 @@ export const llmMessages = {
     vi: 'Provider đã từ chối yêu cầu. Khóa API có thể sai, bị thu hồi, hoặc không có quyền với model này.',
     en: 'The provider rejected the request. The API key may be wrong, revoked, or missing access to this model.',
   },
-  'llm.byok.validation.moreModels': {
-    vi: '+{count} mô hình khác',
-    en: '+{count} more models',
-  },
   'llm.byok.save.success': {
     vi: 'Đã lưu khóa BYOK đã mã hóa. Các lượt gọi AI sẽ dùng khóa này cho đến khi bạn thay đổi.',
     en: 'Encrypted BYOK key saved. AI calls will use this key until you change it.',
