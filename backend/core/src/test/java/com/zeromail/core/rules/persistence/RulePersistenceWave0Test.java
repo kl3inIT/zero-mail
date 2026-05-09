@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.UUID;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -13,26 +12,22 @@ import com.zeromail.core.support.PostgresContainerTest;
 
 class RulePersistenceWave0Test extends PostgresContainerTest {
 
-  private static final String PLAN_03_01_PERSISTENCE_MESSAGE =
-      "Plan 03-01 lands rules Liquibase tables, entities, and repositories";
   private static final String RULES_TABLE = "rules";
 
   @Autowired JdbcTemplate jdbcTemplate;
 
   @Test
-  @Disabled(PLAN_03_01_PERSISTENCE_MESSAGE)
   void liquibase_creates_rules_and_rule_template_tables_with_jsonb_contract_columns() {
     assertColumn("rules", "matcher_ast", "jsonb");
     assertColumn("rules", "action_intents", "jsonb");
     assertColumn("rules", "enabled", "boolean");
     assertColumn("rules", "template_key", "character varying");
     assertColumn("rules", "template_version", "integer");
-    assertColumn("rule_templates", "matcher_ast", "jsonb");
-    assertColumn("rule_templates", "action_intents", "jsonb");
+    assertColumn("rule_template_catalog", "matcher_ast", "jsonb");
+    assertColumn("rule_template_catalog", "action_intents", "jsonb");
   }
 
   @Test
-  @Disabled(PLAN_03_01_PERSISTENCE_MESSAGE)
   void new_rules_default_to_disabled_and_preserve_template_provenance_columns() {
     UUID tenantId = seedTenant("rules-default-disabled");
     UUID ruleId = UUID.randomUUID();
@@ -41,10 +36,11 @@ class RulePersistenceWave0Test extends PostgresContainerTest {
         "insert into "
             + RULES_TABLE
             + """
-        (id, tenant_id, display_name, source_text, matcher_ast, action_intents,
-          rule_order, template_key, template_version)
+        (id, tenant_id, display_name, source_text, source_language, schema_version,
+          matcher_ast, action_intents, order_index, template_key, template_version)
         values (?, ?, 'Archive receipts', 'Archive Stripe receipts',
-          '{"type":"SENDER_DOMAIN","domain":"stripe.com"}'::jsonb,
+          'en', 'rules.v1',
+          '{"schemaVersion":"rules.v1","type":"SENDER_DOMAIN","domain":"stripe.com"}'::jsonb,
           '[{"type":"archive"}]'::jsonb, 10, 'archive-receipts', 1)
         """,
         ruleId,
@@ -62,7 +58,6 @@ class RulePersistenceWave0Test extends PostgresContainerTest {
   }
 
   @Test
-  @Disabled(PLAN_03_01_PERSISTENCE_MESSAGE)
   void jsonb_matcher_and_action_intents_round_trip_without_raw_email_content_columns() {
     assertThat(columnExists("rules", "raw_body")).isFalse();
     assertThat(columnExists("rules", "snippet")).isFalse();
@@ -71,7 +66,6 @@ class RulePersistenceWave0Test extends PostgresContainerTest {
   }
 
   @Test
-  @Disabled(PLAN_03_01_PERSISTENCE_MESSAGE)
   void repository_contract_is_tenant_scoped_for_reads_and_mutations() throws Exception {
     Class<?> repositoryClass = Class.forName("com.zeromail.core.rules.persistence.RuleRepository");
 

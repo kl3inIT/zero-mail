@@ -1,0 +1,231 @@
+databaseChangeLog:
+  - changeSet:
+      id: 021-rules-engine-schema
+      author: zeromail
+      changes:
+        - createTable:
+            tableName: rules
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_rules_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: display_name
+                  type: varchar(160)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: source_text
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: source_language
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: schema_version
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: matcher_ast
+                  type: jsonb
+                  constraints:
+                    nullable: false
+              - column:
+                  name: action_intents
+                  type: jsonb
+                  constraints:
+                    nullable: false
+              - column:
+                  name: enabled
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: order_index
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_previewed_entity_version
+                  type: int
+              - column:
+                  name: last_previewed_at
+                  type: timestamptz
+              - column:
+                  name: template_key
+                  type: varchar(128)
+              - column:
+                  name: template_version
+                  type: int
+              - column:
+                  name: customized
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: rule_template_catalog
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: template_key
+                  type: varchar(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: template_version
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: display_name
+                  type: varchar(160)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: source_text
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: source_language
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: schema_version
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: matcher_ast
+                  type: jsonb
+                  constraints:
+                    nullable: false
+              - column:
+                  name: action_intents
+                  type: jsonb
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: rule_template_catalog
+            columnNames: template_key, template_version
+            constraintName: uq_rule_template_catalog_key_version
+        - createIndex:
+            tableName: rules
+            indexName: idx_rules_tenant_order
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: order_index
+        - createIndex:
+            tableName: rules
+            indexName: idx_rules_tenant_enabled_order
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: enabled
+              - column:
+                  name: order_index
+        - sql:
+            comment: Rules schema version is fail-closed for newly written rows.
+            sql: ALTER TABLE rules ADD CONSTRAINT ck_rules_schema_version CHECK (schema_version = 'rules.v1')
+        - sql:
+            comment: Rule template schema version is fail-closed for newly written rows.
+            sql: ALTER TABLE rule_template_catalog ADD CONSTRAINT ck_rule_template_catalog_schema_version CHECK (schema_version = 'rules.v1')
+        - sql:
+            comment: Rule languages match RuleLanguage ids.
+            sql: ALTER TABLE rules ADD CONSTRAINT ck_rules_source_language CHECK (source_language IN ('en','vi','unknown'))
+        - sql:
+            comment: Rule template languages match RuleLanguage ids.
+            sql: ALTER TABLE rule_template_catalog ADD CONSTRAINT ck_rule_template_catalog_source_language CHECK (source_language IN ('en','vi','unknown'))
+        - sql:
+            comment: Rule order is non-negative and service-normalized.
+            sql: ALTER TABLE rules ADD CONSTRAINT ck_rules_order_index_non_negative CHECK (order_index >= 0)
+        - sql:
+            comment: Rule template status matches RuleTemplateStatus ids.
+            sql: ALTER TABLE rule_template_catalog ADD CONSTRAINT ck_rule_template_catalog_status CHECK (status IN ('materializable','gallery_only','deprecated'))
+        - sql:
+            comment: Template materialization is idempotent per tenant/template key.
+            sql: CREATE UNIQUE INDEX uq_rules_tenant_template_key_present ON rules (tenant_id, template_key) WHERE template_key IS NOT NULL
+        - sql:
+            comment: JSONB matcher lookup support uses explicit jsonb_path_ops.
+            sql: CREATE INDEX idx_rules_matcher_ast_gin ON rules USING gin (matcher_ast jsonb_path_ops)
+        - sql:
+            comment: JSONB action lookup support uses explicit jsonb_path_ops.
+            sql: CREATE INDEX idx_rules_action_intents_gin ON rules USING gin (action_intents jsonb_path_ops)
+        - sql:
+            comment: Template matcher lookup support uses explicit jsonb_path_ops.
+            sql: CREATE INDEX idx_rule_template_catalog_matcher_ast_gin ON rule_template_catalog USING gin (matcher_ast jsonb_path_ops)
+        - sql:
+            comment: Template action lookup support uses explicit jsonb_path_ops.
+            sql: CREATE INDEX idx_rule_template_catalog_action_intents_gin ON rule_template_catalog USING gin (action_intents jsonb_path_ops)
+      rollback:
+        - dropTable:
+            tableName: rule_template_catalog
+        - dropTable:
+            tableName: rules
