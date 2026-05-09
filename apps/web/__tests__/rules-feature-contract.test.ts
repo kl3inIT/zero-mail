@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { toRuleCompileResult } from '@/features/rules/api/rules-api';
+
 const WEB_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const plannedRulesFiles = [
@@ -68,6 +70,33 @@ describe('rules feature source contract', () => {
     for (const copy of requiredRulesCopy) {
       expect(sourceText).toContain(copy);
     }
+  });
+
+  it('keeps compile clarification as a typed result instead of a ProblemDetail error', () => {
+    expect(
+      toRuleCompileResult({
+        status: 'clarificationRequired',
+        clarification: {
+          language: 'en',
+          question: 'Which newsletters should Zero Mail archive?',
+        },
+      }),
+    ).toMatchObject({
+      status: 'clarificationRequired',
+      clarification: {
+        question: 'Which newsletters should Zero Mail archive?',
+      },
+    });
+
+    expect(
+      toRuleCompileResult({
+        status: 'invalid',
+        invalid: { reason: 'unknown_matcher' },
+      }),
+    ).toMatchObject({
+      status: 'invalid',
+      invalid: { reason: 'unknown_matcher' },
+    });
   });
 
   it('requires the protected route and owned feature files once the route lands', () => {
