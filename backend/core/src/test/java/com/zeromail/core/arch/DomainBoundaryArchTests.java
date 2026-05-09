@@ -25,6 +25,9 @@ import com.tngtech.archunit.lang.ArchRule;
  * in ArchUnit 1.4.x — {@code haveNameMatching} returns {@code ClassesShouldConjunction}
  * which has no zero-arg {@code and()}. Predicate composition at the
  * {@link DescribedPredicate} level is the correct shape.
+ *
+ * <p>Phase 03 adds the future {@code core.rules} domain up front so Wave 1+ plans cannot take
+ * shortcuts through another domain's persistence repositories while the rules engine is landing.
  */
 @AnalyzeClasses(packages = "com.zeromail", importOptions = ImportOption.DoNotIncludeTests.class)
 public class DomainBoundaryArchTests {
@@ -46,7 +49,8 @@ public class DomainBoundaryArchTests {
                             "..core.gmail.persistence..",
                             "..core.tenant.persistence..",
                             "..core.billing.persistence..",
-                            "..core.llm.persistence..")))
+                            "..core.llm.persistence..",
+                            "..core.rules.persistence..")))
             .because("D-D1: cross-domain reads must go through the other domain's Service");
 
     @ArchTest
@@ -58,7 +62,8 @@ public class DomainBoundaryArchTests {
                             "..core.gmail.persistence..",
                             "..core.tenant.persistence..",
                             "..core.billing.persistence..",
-                            "..core.llm.persistence..")))
+                            "..core.llm.persistence..",
+                            "..core.rules.persistence..")))
             .because("D-D1: cross-domain reads must go through the other domain's Service");
 
     @ArchTest
@@ -70,7 +75,8 @@ public class DomainBoundaryArchTests {
                             "..core.onboarding.persistence..",
                             "..core.tenant.persistence..",
                             "..core.billing.persistence..",
-                            "..core.llm.persistence..")))
+                            "..core.llm.persistence..",
+                            "..core.rules.persistence..")))
             .because("D-D1: cross-domain reads must go through the other domain's Service");
 
     @ArchTest
@@ -82,7 +88,8 @@ public class DomainBoundaryArchTests {
                             "..core.onboarding.persistence..",
                             "..core.gmail.persistence..",
                             "..core.billing.persistence..",
-                            "..core.llm.persistence..")))
+                            "..core.llm.persistence..",
+                            "..core.rules.persistence..")))
             .because("D-D1: cross-domain reads must go through the other domain's Service");
 
     @ArchTest
@@ -94,7 +101,8 @@ public class DomainBoundaryArchTests {
                             "..core.onboarding.persistence..",
                             "..core.gmail.persistence..",
                             "..core.tenant.persistence..",
-                            "..core.llm.persistence..")))
+                            "..core.llm.persistence..",
+                            "..core.rules.persistence..")))
             .because("D-D1: cross-domain reads must go through the other domain's Service");
 
     @ArchTest
@@ -108,4 +116,18 @@ public class DomainBoundaryArchTests {
                             "..core.tenant.persistence..",
                             "..core.billing.persistence..")))
             .because("D-D1: cross-domain reads must go through the other domain's Service");
+
+    @ArchTest
+    static final ArchRule rules_no_cross_domain_repos = noClasses()
+            .that().resideInAPackage("..core.rules..")
+            .should().dependOnClassesThat(
+                    nameEndsWithRepository.and(resideInAnyPackage(
+                            "..core.account.persistence..",
+                            "..core.onboarding.persistence..",
+                            "..core.gmail.persistence..",
+                            "..core.tenant.persistence..",
+                            "..core.billing.persistence..",
+                            "..core.llm.persistence..")))
+            .because("D-D1: core.rules must read other domains through Services, not repositories")
+            .allowEmptyShould(true);
 }
