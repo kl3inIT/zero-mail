@@ -43,7 +43,7 @@ public abstract class PostgresContainerTest {
     // Test-only AES-256 key (32 zero bytes, base64-encoded). RefreshTokenCryptoConfig
     // requires this to construct the cipher bean during context boot.
     r.add(
-        "zeromail.crypto.refresh-token-key-base64",
+        "zero-mail.crypto.refresh-token-key-base64",
         () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
     // GmailApiClientFactory is in backend/core and is constructed by this test context.
     r.add(
@@ -52,9 +52,16 @@ public abstract class PostgresContainerTest {
         "spring.security.oauth2.client.registration.google.client-secret",
         () -> "test-google-secret");
     // ZeroMailCoreProperties.billing is loaded by core billing tests and requires SePay settings.
-    r.add("zeromail.billing.sepay.webhook-api-key", () -> "test-sepay-key-fixture");
-    r.add("zeromail.billing.vnd-per-credit", () -> "1000");
-    r.add("zeromail.billing.max-pending-intents-per-tenant", () -> "5");
-    r.add("zeromail.billing.intent-expiry", () -> "PT24H");
+    r.add("zero-mail.billing.sepay.webhook-api-key", () -> "test-sepay-key-fixture");
+    r.add("zero-mail.billing.vnd-per-credit", () -> "1000");
+    r.add("zero-mail.billing.max-pending-intents-per-tenant", () -> "5");
+    r.add("zero-mail.billing.intent-expiry", () -> "PT24H");
+    // Spring AI starters are on the core classpath in Phase 02C. The gateway adapter is not
+    // exercised by these persistence tests, but auto-configuration still needs placeholder keys.
+    r.add("spring.ai.openai.api-key", () -> "test-openai-key");
+    r.add("spring.ai.anthropic.api-key", () -> "test-anthropic-key");
+    r.add("spring.ai.google.genai.api-key", () -> "test-google-genai-key");
+    r.add("spring.ai.deepseek.api-key", () -> "test-deepseek-key");
+    r.add("zero-mail.llm.platform.api-key", () -> "test-platform-llm-key");
   }
 }

@@ -2,13 +2,13 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { accountKeys } from '@/features/account/api/keys';
-import { setTriagePaused } from '@/features/triage/api/triagePause';
+import { accountQueryKeys } from '@/features/account/query-keys';
+import { setTriagePaused } from '@/features/triage/api/triage-api';
 
 export function useToggleTriagePause() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (paused: boolean) => setTriagePaused(paused),
-    onSuccess: () => qc.invalidateQueries({ queryKey: accountKeys.me() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: accountQueryKeys.me() }),
   });
 }

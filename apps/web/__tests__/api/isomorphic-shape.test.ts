@@ -3,17 +3,16 @@ import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
 const APP_WEB = resolve(__dirname, '../..');
-const ME_FILE = resolve(APP_WEB, 'features/account/api/me.ts');
-const KEYS_FILE = resolve(APP_WEB, 'features/account/api/keys.ts');
+const ACCOUNT_API_FILE = resolve(APP_WEB, 'features/account/api/account-api.ts');
+const QUERY_KEYS_FILE = resolve(APP_WEB, 'features/account/query-keys.ts');
 const HOOK_FILE = resolve(APP_WEB, 'features/account/hooks/useCurrentUser.ts');
 const PROXY_FILE = resolve(APP_WEB, 'proxy.ts');
 const LAYOUT_FILE = resolve(APP_WEB, 'app/layout.tsx');
 
-describe('Phase 1.3 — Isomorphic /me API shape (D-B1, D-B4)', () => {
-  it('features/account/api/me.ts exists with isomorphic fetchCurrentUser signature (Phase 01.5 rename)', () => {
-    expect(existsSync(ME_FILE)).toBe(true);
-    const src = readFileSync(ME_FILE, 'utf8');
-    // Phase 01.5 HIGH-2: renamed to fetchCurrentUser (raw export); getCurrentUser = alias
+describe('Account current-user API shape', () => {
+  it('features/account/api/account-api.ts exposes the isomorphic current-user API', () => {
+    expect(existsSync(ACCOUNT_API_FILE)).toBe(true);
+    const src = readFileSync(ACCOUNT_API_FILE, 'utf8');
     expect(src).toMatch(/export\s+async\s+function\s+fetchCurrentUser/);
     expect(src).toMatch(/fetcher\??:/);
     expect(src).toMatch(/signal\??:/);
@@ -24,10 +23,10 @@ describe('Phase 1.3 — Isomorphic /me API shape (D-B1, D-B4)', () => {
     expect(src).toMatch(/export\s+const\s+getCurrentUser\s*=\s*fetchCurrentUser/);
   });
 
-  it('features/account/api/keys.ts exports accountKeys factory (D-B3)', () => {
-    expect(existsSync(KEYS_FILE)).toBe(true);
-    const src = readFileSync(KEYS_FILE, 'utf8');
-    expect(src).toMatch(/export\s+const\s+accountKeys/);
+  it('features/account/query-keys.ts exports accountQueryKeys factory', () => {
+    expect(existsSync(QUERY_KEYS_FILE)).toBe(true);
+    const src = readFileSync(QUERY_KEYS_FILE, 'utf8');
+    expect(src).toMatch(/export\s+const\s+accountQueryKeys/);
     expect(src).toMatch(/me\s*:\s*\(\s*\)\s*=>/);
   });
 
@@ -36,22 +35,21 @@ describe('Phase 1.3 — Isomorphic /me API shape (D-B1, D-B4)', () => {
     const src = readFileSync(HOOK_FILE, 'utf8');
     expect(src).toMatch(/useQuery/);
     expect(src).toMatch(/getCurrentUser/);
-    expect(src).toMatch(/accountKeys\.me\(\)/);
+    expect(src).toMatch(/accountQueryKeys\.me\(\)/);
   });
 
   it('proxy.ts no longer has inline fetch(`${apiBase}/me`); imports getCurrentUser', () => {
     const src = readFileSync(PROXY_FILE, 'utf8');
     expect(src).not.toMatch(/fetch\(`\$\{apiBase\}\/me`/);
     expect(src).toMatch(/getCurrentUser\s*\(/);
-    expect(src).toMatch(/from\s+['"]@\/features\/account\/api\/me['"]/);
+    expect(src).toMatch(/from\s+['"]@\/features\/account\/api\/account-api['"]/);
   });
 
-  it('app/layout.tsx no longer has inline fetch(`${apiBase}/me`); imports getCurrentUserCached (Phase 01.5)', () => {
+  it('app/layout.tsx no longer has inline fetch(`${apiBase}/me`); imports getCurrentUserCached', () => {
     const src = readFileSync(LAYOUT_FILE, 'utf8');
     expect(src).not.toMatch(/fetch\(`\$\{apiBase\}\/me`/);
-    // Phase 01.5 HIGH-2: layout uses the primitive-keyed cached wrapper
     expect(src).toMatch(/getCurrentUserCached\s*\(/);
-    expect(src).toMatch(/from\s+['"]@\/features\/account\/api\/me['"]/);
+    expect(src).toMatch(/from\s+['"]@\/features\/account\/api\/account-api['"]/);
   });
 
   it('proxy.ts avoids next-intl middleware rewrite and no longer needs the cast bridge', () => {

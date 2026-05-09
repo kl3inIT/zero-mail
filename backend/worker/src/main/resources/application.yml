@@ -24,12 +24,35 @@ spring:
     properties:
       hibernate:
         format_sql: false
-zeromail:
+  ai:
+    model:
+      # Zero Mail builds provider-specific Spring AI ChatModel instances inside
+      # core.llm.gateway.springai so BYOK can vary apiKey/baseUrl/model safely.
+      # Disable starter auto-model beans for unused modalities; otherwise M5
+      # eagerly creates OpenAI audio/image/embedding clients and requires extra credentials.
+      chat: none
+      embedding: none
+      embedding.text: none
+      embedding.multimodal: none
+      image: none
+      audio.speech: none
+      audio.transcription: none
+      moderation: none
+    chat:
+      client:
+        observations:
+          log-prompt: false
+          log-completion: false
+      observations:
+        log-prompt: false
+        log-completion: false
+zero-mail:
+  worker:
+    gmail:
+      pubsub:
+        topic-name: ${GOOGLE_PUBSUB_TOPIC_NAME:?GOOGLE_PUBSUB_TOPIC_NAME env var is required}
   crypto:
     refresh-token-key-base64: ${REFRESH_TOKEN_KEY_BASE64:?REFRESH_TOKEN_KEY_BASE64 must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
-  gmail:
-    pubsub:
-      topic-name: ${GOOGLE_PUBSUB_TOPIC_NAME:?GOOGLE_PUBSUB_TOPIC_NAME env var is required}
   billing:
     sepay:
       # Bare placeholder: Spring fails during placeholder resolution when the secret is absent.
@@ -37,6 +60,20 @@ zeromail:
     vnd-per-credit: 1000
     max-pending-intents-per-tenant: 5
     intent-expiry: PT24H
+  llm:
+    platform:
+      provider: openai
+      base-url: https://openrouter.ai/api/v1
+      api-key: ${ZEROMAIL_LLM_PLATFORM_API_KEY:?ZEROMAIL_LLM_PLATFORM_API_KEY must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
+      compile-model: openai/gpt-4o-mini
+      drift-model: openai/gpt-4o-mini
+      triage-model: openai/gpt-4o-mini
+      connect-timeout: 5s
+      read-timeout: 30s
+    drift:
+      enabled: ${ZEROMAIL_LLM_DRIFT_ENABLED:false}
+      fixed-tenant-id: 00000000-0000-0000-0000-000000000000
+      threshold-percent: 20
 server:
   port: 8081
 management:

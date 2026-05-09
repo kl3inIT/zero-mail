@@ -6,7 +6,7 @@ Project-wide coding conventions referenced by `CLAUDE.md` / `AGENTS.md`.
 
 ## 1. Thin controllers + service-owned `@Transactional`
 
-Controllers map domain view-model records to wire DTOs via private `toResponse(...)` helpers and never touch repositories directly. Transaction boundaries belong in `@Service` classes; controllers translate HTTP-shape ↔ domain-shape and forward to services. This keeps controllers cheap to test (no DB), centralizes transaction logic, and lets Spring Modulith + ArchUnit enforce domain boundaries cleanly. Any controller that injects a JPA repository directly creates a hidden transaction-scope bug and breaks domain isolation.
+Controllers never touch repositories directly. Transaction boundaries belong in `@Service` classes; controllers translate HTTP-shape ↔ domain-shape and forward to services. Response DTOs own projection/result-to-wire mapping through static `from(...)` factories, so controllers return `SomeResponse.from(domainResult)` instead of keeping private `toResponse(...)` helpers or constructing response DTOs inline. This keeps controllers cheap to test (no DB), centralizes transaction logic, and lets Spring Modulith + ArchUnit enforce domain boundaries cleanly. Any controller that injects a JPA repository directly creates a hidden transaction-scope bug and breaks domain isolation.
 
 **Example:** `backend/api/src/main/java/com/zeromail/api/controllers/TenantStatusController.java`
 
@@ -14,16 +14,12 @@ Controllers map domain view-model records to wire DTOs via private `toResponse(.
 @GetMapping("/gmail/connection/status")
 public GmailConnectionStatusResponse status() {
     UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
-    GmailConnectionView view = connectionService.currentStatus(tenantId);
-    return toResponse(view);
-}
-
-private static GmailConnectionStatusResponse toResponse(GmailConnectionView view) {
-    return new GmailConnectionStatusResponse(view.status(), view.googleEmail());
+    GmailConnectionProjection projection = connectionService.currentStatus(tenantId);
+    return GmailConnectionStatusResponse.from(projection);
 }
 ```
 
-**Anti-pattern:** controller injecting `UserRepository` or `GmailConnectionRepository` and calling `findById` / `save` directly — bypasses service-layer transaction boundary and exposes persistence internals to the HTTP layer.
+**Anti-pattern:** controller injecting `UserRepository` or `GmailConnectionRepository` and calling `findById` / `save` directly — bypasses service-layer transaction boundary and exposes persistence internals to the HTTP layer. Also avoid controller-local `private static toResponse(...)` helpers or inline `new SomeResponse(...)` mapping when the response DTO can own a `from(...)` factory.
 
 ---
 
@@ -114,3 +110,60 @@ Spring application events are local to one Spring application context. They do n
 Before building or refactoring UI, check whether shadcn/ui already provides the needed primitive (for example button, card, input, label, radio-group, toggle-group, tooltip, dialog, alert, separator, skeleton, badge). If the primitive exists and is not already present locally, install it from `apps/web` with `pnpm dlx shadcn@latest add <component>` and compose product-specific components around `@/components/ui/*` instead of hand-rolling the primitive.
 
 Treat `apps/web/components/ui/**` as copied shadcn primitive source. These files are ignored by ESLint and Prettier; edit them only when intentionally customizing the local primitive contract.
+
+---
+
+## 7. Frontend feature API, hooks, query keys, and tests
+
+Feature code in `apps/web/features/<feature>/` uses explicit ownership:
+
+- `api/<feature>-api.ts` contains the feature's small HTTP functions. Split into multiple API files only when the feature grows into distinct resources or the file becomes hard to scan.
+- `query-keys.ts` contains TanStack Query key factories for cached server data. Keep this file outside `api/` because query keys describe cache identity, not transport.
+- `hooks/useX.ts` stays one hook per use case. Hooks own TanStack Query behavior such as `queryKey`, `queryFn`, mutation invalidation, optimistic updates, and error behavior.
+- Do not create a `query-keys.ts` file for mutation-only features unless the feature actually owns cached query data.
+- Query keys are named for cached data, not UI actions. Example: `accountQueryKeys.me()` is correct for `/me`; a mutation that toggles triage pause invalidates `accountQueryKeys.me()` if the paused state is returned by `/me`.
+- Keep feature roots barrel-free. Import concrete files directly.
+
+Tests are split by runtime:
+
+- Vitest unit/component tests that belong to one feature may live beside that feature under `features/**`. App-wide contract tests live in `apps/web/__tests__/**`.
+- Playwright browser tests live only in `apps/web/e2e/**`.
+- Do not put Playwright specs under `__tests__/`; Vitest and Playwright use different runners.
+
+**Example:**
+
+```text
+features/account/
+  api/account-api.ts
+  query-keys.ts
+  hooks/useCurrentUser.ts
+  hooks/useDeleteAccount.ts
+  hooks/useUpdateLanguage.ts
+  components/DeleteAccountDialog.tsx
+```
+
+---
+
+## 8. Subproject-owned configuration files
+
+Each runnable subproject owns its own runtime configuration file. Do not move API-only,
+worker-only, or web-only properties into another module's configuration file just to avoid
+duplication.
+
+Backend examples:
+
+- API process properties belong in `backend/api/src/main/resources/application.yml`.
+- Worker process properties belong in `backend/worker/src/main/resources/application.yml`.
+- Shared typed configuration classes may live in `backend/core` when both API and worker bind the
+  same namespace, but each runnable module still declares the values/defaults it needs in its own
+  `application.yml`.
+
+Frontend examples:
+
+- Next.js environment and build/runtime configuration belongs under `apps/web`.
+- Backend Spring properties do not belong in `apps/web`, and frontend-only settings do not belong in
+  backend `application.yml` files.
+
+**Anti-pattern:** adding worker scheduler flags to API `application.yml`, adding API session/OAuth
+properties to worker `application.yml`, or creating a single monorepo-wide properties file that
+every subproject must parse.

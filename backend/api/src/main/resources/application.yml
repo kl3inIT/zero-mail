@@ -53,18 +53,46 @@ spring:
     properties:
       hibernate:
         format_sql: false
-zeromail:
-  web:
-    base-url: ${ZEROMAIL_WEB_BASE_URL:http://localhost:3000}
-  cors:
-    # JHipster-style dev CORS config for separated frontend/API ports.
-    allowed-origins: "${ZEROMAIL_CORS_ALLOWED_ORIGINS:http://localhost:3000}"
-    allowed-origin-patterns: "${ZEROMAIL_CORS_ALLOWED_ORIGIN_PATTERNS:}"
-    allowed-methods: "${ZEROMAIL_CORS_ALLOWED_METHODS:GET,POST,PUT,PATCH,DELETE,OPTIONS}"
-    allowed-headers: "${ZEROMAIL_CORS_ALLOWED_HEADERS:*}"
-    exposed-headers: "${ZEROMAIL_CORS_EXPOSED_HEADERS:XSRF-TOKEN}"
-    allow-credentials: ${ZEROMAIL_CORS_ALLOW_CREDENTIALS:true}
-    max-age: ${ZEROMAIL_CORS_MAX_AGE:1800}
+  ai:
+    model:
+      # Zero Mail builds provider-specific Spring AI ChatModel instances inside
+      # core.llm.gateway.springai so BYOK can vary apiKey/baseUrl/model safely.
+      # Disable starter auto-model beans for unused modalities; otherwise M5
+      # eagerly creates OpenAI audio/image/embedding clients and requires extra credentials.
+      chat: none
+      embedding: none
+      embedding.text: none
+      embedding.multimodal: none
+      image: none
+      audio.speech: none
+      audio.transcription: none
+      moderation: none
+    chat:
+      client:
+        observations:
+          log-prompt: false
+          log-completion: false
+      observations:
+        log-prompt: false
+        log-completion: false
+zero-mail:
+  api:
+    web:
+      base-url: ${ZEROMAIL_WEB_BASE_URL:http://localhost:3000}
+    cors:
+      # JHipster-style dev CORS config for separated frontend/API ports.
+      allowed-origins: "${ZEROMAIL_CORS_ALLOWED_ORIGINS:http://localhost:3000}"
+      allowed-origin-patterns: "${ZEROMAIL_CORS_ALLOWED_ORIGIN_PATTERNS:}"
+      allowed-methods: "${ZEROMAIL_CORS_ALLOWED_METHODS:GET,POST,PUT,PATCH,DELETE,OPTIONS}"
+      allowed-headers: "${ZEROMAIL_CORS_ALLOWED_HEADERS:*}"
+      exposed-headers: "${ZEROMAIL_CORS_EXPOSED_HEADERS:XSRF-TOKEN}"
+      allow-credentials: ${ZEROMAIL_CORS_ALLOW_CREDENTIALS:true}
+      max-age: ${ZEROMAIL_CORS_MAX_AGE:1800}
+    gmail:
+      pubsub:
+        push-audience-url: ${PUBSUB_PUSH_AUDIENCE_URL:?PUBSUB_PUSH_AUDIENCE_URL env var is required}
+        sa-principal-email: ${PUBSUB_SA_PRINCIPAL_EMAIL:?PUBSUB_SA_PRINCIPAL_EMAIL env var is required}
+        oidc-certificates-url: ${PUBSUB_OIDC_CERTIFICATES_URL:https://www.googleapis.com/oauth2/v3/certs}
   crypto:
     # Required deployment secret. For local dev, set REFRESH_TOKEN_KEY_BASE64 in .env or
     # docker-compose.yml environment block. For openapi-emit, build.gradle.kts supplies a dummy.
@@ -72,11 +100,6 @@ zeromail:
     # No GCP Secret Manager fallback — CLAUDE.md stack lock: secrets via Docker secret,
     # systemd credential, or locked-down env file on the VPS.
     refresh-token-key-base64: ${REFRESH_TOKEN_KEY_BASE64:?REFRESH_TOKEN_KEY_BASE64 must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
-  gmail:
-    pubsub:
-      push-audience-url: ${PUBSUB_PUSH_AUDIENCE_URL:?PUBSUB_PUSH_AUDIENCE_URL env var is required}
-      sa-principal-email: ${PUBSUB_SA_PRINCIPAL_EMAIL:?PUBSUB_SA_PRINCIPAL_EMAIL env var is required}
-      oidc-certificates-url: ${PUBSUB_OIDC_CERTIFICATES_URL:https://www.googleapis.com/oauth2/v3/certs}
   billing:
     sepay:
       # Bare placeholder: Spring fails during placeholder resolution when the secret is absent.
@@ -84,6 +107,21 @@ zeromail:
     vnd-per-credit: 1000
     max-pending-intents-per-tenant: 5
     intent-expiry: PT24H
+  llm:
+    platform:
+      provider: openai
+      base-url: https://openrouter.ai/api/v1
+      api-key: ${ZEROMAIL_LLM_PLATFORM_API_KEY:?ZEROMAIL_LLM_PLATFORM_API_KEY must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
+      compile-model: openai/gpt-4o-mini
+      drift-model: openai/gpt-4o-mini
+      triage-model: openai/gpt-4o-mini
+      connect-timeout: 5s
+      read-timeout: 30s
+    byok:
+      allow-non-vendor-endpoints: false
+      allowed-extra-hosts: []
+      connect-timeout: 5s
+      read-timeout: 15s
 server:
   port: 8080
   servlet:

@@ -25,6 +25,10 @@ import com.zeromail.api.error.FieldErrorDto;
 import com.zeromail.core.account.model.CurrentUserNotFoundException;
 import com.zeromail.core.billing.model.IllegalLedgerStateException;
 import com.zeromail.core.billing.model.InsufficientCreditsException;
+import com.zeromail.core.llm.model.InvalidByokException;
+import com.zeromail.core.llm.model.SafetyViolationException;
+import com.zeromail.core.llm.model.SanitizationException;
+import com.zeromail.core.tenant.TenantContext;
 
 import jakarta.validation.ConstraintViolationException;
 import org.jspecify.annotations.NonNull;
@@ -71,9 +75,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
   @ExceptionHandler(CurrentUserNotFoundException.class)
-  public ResponseEntity<ProblemDetail> onCurrentUserMissing(CurrentUserNotFoundException exception) {
+  public ResponseEntity<ProblemDetail> onCurrentUserMissing(
+      CurrentUserNotFoundException exception) {
     log.warn(
-        "Current user not found for tenant; rejecting with 401: {}", exception.getClass().getSimpleName());
+        "Current user not found for tenant; rejecting with 401: {}",
+        exception.getClass().getSimpleName());
     return problem(
         HttpStatus.UNAUTHORIZED,
         "Current user is not available",
@@ -109,7 +115,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     // SQLException's message + SQL state into the appender output, which violates the
     // Phase 1.1 "no SQL internals / PII in logs" invariant. Log only the exception
     // class name on the server side. (CR-01.)
-    log.warn("Data integrity violation translated to 409: {}", exception.getClass().getSimpleName());
+    log.warn(
+        "Data integrity violation translated to 409: {}", exception.getClass().getSimpleName());
     return problem(
         HttpStatus.CONFLICT,
         "Conflict",
@@ -118,7 +125,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   @ExceptionHandler(OptimisticLockingFailureException.class)
-  public ResponseEntity<ProblemDetail> onOptimisticLock(OptimisticLockingFailureException exception) {
+  public ResponseEntity<ProblemDetail> onOptimisticLock(
+      OptimisticLockingFailureException exception) {
     log.warn("Optimistic lock failure translated to 409: {}", exception.getClass().getSimpleName());
     return problem(
         HttpStatus.CONFLICT,
@@ -128,7 +136,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   @ExceptionHandler(InsufficientCreditsException.class)
-  public ResponseEntity<ProblemDetail> onInsufficientCredits(InsufficientCreditsException exception) {
+  public ResponseEntity<ProblemDetail> onInsufficientCredits(
+      InsufficientCreditsException exception) {
     log.warn("Insufficient credits translated to 402: {}", exception.getClass().getSimpleName());
     return problem(
         HttpStatus.valueOf(402),
@@ -139,12 +148,53 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
   @ExceptionHandler(IllegalLedgerStateException.class)
   public ResponseEntity<ProblemDetail> onIllegalLedgerState(IllegalLedgerStateException exception) {
-    log.error("Illegal ledger state transition translated to 500: {}", exception.getClass().getSimpleName());
+    log.error(
+        "Illegal ledger state transition translated to 500: {}",
+        exception.getClass().getSimpleName());
     return problem(
         HttpStatus.INTERNAL_SERVER_ERROR,
         "Ledger state invariant violated",
         "An internal billing-state transition was attempted in an invalid order.",
         ErrorCodes.BILLING_LEDGER_INVALID_STATE);
+  }
+
+  @ExceptionHandler(SafetyViolationException.class)
+  public ResponseEntity<ProblemDetail> onSafetyViolation(SafetyViolationException exception) {
+    log.error(
+        "event=llm_safety_violation tenantId={} reason={}",
+        tenantIdForLog(),
+        exception.getClass().getSimpleName());
+    return problem(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        "LLM safety violation",
+        "The model response violated the LLM safety policy.",
+        ErrorCodes.LLM_SAFETY_VIOLATION);
+  }
+
+  @ExceptionHandler(SanitizationException.class)
+  public ResponseEntity<ProblemDetail> onSanitizationFailed(SanitizationException exception) {
+    log.error(
+        "event=llm_sanitization_failed tenantId={} reason={}",
+        tenantIdForLog(),
+        exception.getClass().getSimpleName());
+    return problem(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        "LLM sanitization failed",
+        "The LLM request could not be sanitized safely.",
+        ErrorCodes.LLM_SANITIZATION_FAILED);
+  }
+
+  @ExceptionHandler(InvalidByokException.class)
+  public ResponseEntity<ProblemDetail> onInvalidByok(InvalidByokException exception) {
+    log.warn(
+        "event=llm_byok_invalid tenantId={} reason={}",
+        tenantIdForLog(),
+        exception.getClass().getSimpleName());
+    return problem(
+        HttpStatus.BAD_REQUEST,
+        "Invalid BYOK credentials",
+        "The BYOK provider, endpoint, or key could not be validated.",
+        ErrorCodes.LLM_BYOK_INVALID);
   }
 
   @ExceptionHandler(IllegalStateException.class)
@@ -159,7 +209,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
   @ExceptionHandler(IllegalArgumentException.class)
   public ResponseEntity<ProblemDetail> onIllegalArg(IllegalArgumentException exception) {
-    log.warn("IllegalArgumentException translated to 400: {}", exception.getClass().getSimpleName());
+    log.warn(
+        "IllegalArgumentException translated to 400: {}", exception.getClass().getSimpleName());
     return problem(
         HttpStatus.BAD_REQUEST,
         "Bad request",
@@ -168,7 +219,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   @ExceptionHandler(ConstraintViolationException.class)
-  public ResponseEntity<ProblemDetail> onConstraintViolation(ConstraintViolationException exception) {
+  public ResponseEntity<ProblemDetail> onConstraintViolation(
+      ConstraintViolationException exception) {
     // jakarta.validation path-style violations on @Validated method parameters /
     // path variables. Mirrors the @MethodArgumentNotValid shape: same code, same
     // fieldErrors[] array, with field paths like "method.argName".
@@ -187,7 +239,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                         "error.validation.field."
                             + constraintViolation.getPropertyPath().toString()
                             + "."
-                            + constraintViolation.getConstraintDescriptor()
+                            + constraintViolation
+                                .getConstraintDescriptor()
                                 .getAnnotation()
                                 .annotationType()
                                 .getSimpleName(),
@@ -218,7 +271,10 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 fieldError ->
                     new FieldErrorDto(
                         fieldError.getField(),
-                        "error.validation.field." + fieldError.getField() + "." + fieldError.getCode(),
+                        "error.validation.field."
+                            + fieldError.getField()
+                            + "."
+                            + fieldError.getCode(),
                         AllowedParamScalars.filter(fieldError.getArguments())))
             .toList());
     problemDetail.setProperty("message", ErrorCodes.VALIDATION);
@@ -243,7 +299,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     problemDetail.setDetail(detail);
     problemDetail.setProperty("code", code);
     problemDetail.setProperty("params", Map.of());
-    problemDetail.setProperty("message", code); // transitional alias of code (drop next phase per D-C1)
+    problemDetail.setProperty(
+        "message", code); // transitional alias of code (drop next phase per D-C1)
     return ResponseEntity.status(status).body(problemDetail);
+  }
+
+  private static String tenantIdForLog() {
+    try {
+      return TenantContext.currentOrThrow();
+    } catch (RuntimeException tenantContextMissing) {
+      return "unknown";
+    }
   }
 }

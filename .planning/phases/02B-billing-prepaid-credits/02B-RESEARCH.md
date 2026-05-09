@@ -1280,7 +1280,7 @@ Extracted from `D:\study-materials-summer-2026\EXE202\zero-mail\CLAUDE.md` — t
 4. **No `spring-cloud-gcp` baseline** — secrets resolve from Docker secrets / systemd credentials / locked-down env files, NOT GCP Secret Manager.
 5. **PostgreSQL 17.6 self-hosted on VPS** — no Cloud SQL.
 6. **Liquibase 5.0.2 with YAML changelogs** — locked.
-7. **Spring AI 2.0.0-M4** — N/A for this phase (no LLM).
+7. **Spring AI 2.0.0-M5** — N/A for this phase (no LLM).
 8. **No raw email body / prompt / completion in logs** — `event=opaque tenantId={}` format mandatory; same for SePay payload bytes.
 9. **Backend Java code uses domain-revealing names** — never `req`, `res`, `svc`, `ctx`, `tx`, `e`. Use `request`, `response`, `creditLedgerService`, `tenantContext`, `transactionTemplate`, `insufficientCreditsException`. Established acronyms (`ID`, `DTO`, `JPA`, `URL`, `URI`, `HTTP`) and intentionally ignored lambda params (`_`) are exceptions.
 10. **Thin controllers + service-owned `@Transactional`** — controllers translate HTTP shape ↔ domain shape; never inject repositories; transactions live in `@Service`.

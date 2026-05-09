@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { getCurrentUser } from '@/features/account/api/me';
+import { getCurrentUser } from '@/features/account/api/account-api';
 import { getApiBase } from '@/lib/api/base-url';
 import { LOCALE_COOKIE_MAX_AGE, NEXT_LOCALE_COOKIE, routing } from './i18n/routing';
 

@@ -1,0 +1,12 @@
+package com.zeromail.api.dto.llm;
+
+import com.zeromail.core.llm.model.ByokProviderPreset;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+public record ByokValidateRequest(
+    @NotNull ByokProviderPreset preset,
+    String endpoint,
+    @NotBlank String model,
+    @NotNull String apiKey) {}

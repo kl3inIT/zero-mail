@@ -1,11 +1,8 @@
-// Wave 0 RED scaffold — locks the login 2-col/1-col + legal footer e2e contract
+// Locks the login 2-col/1-col + legal footer e2e contract
 // (Phase 1.6 REQ-1.6-6 + REQ-1.6-8):
 //  - Desktop ≥768px renders 2-column shell with TrustPanel
 //  - Mobile <768px hides TrustPanel, shows single column
 //  - Legal footer always visible at every viewport width
-//
-// RED-by-design: login page does not yet have the 2-col layout or TrustPanel.
-// This spec becomes GREEN when Phase 1.6 Wave 2 lands.
 import { test, expect } from '@playwright/test';
 
 test.describe('/login shell', () => {

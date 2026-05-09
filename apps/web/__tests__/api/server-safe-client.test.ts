@@ -6,7 +6,7 @@ const APP_WEB = resolve(__dirname, '../..');
 const CLIENT_FILE = resolve(APP_WEB, 'lib/api/client.ts');
 const ERRORS_FILE = resolve(APP_WEB, 'lib/api/errors.ts');
 
-describe('Phase 1.3 — lib/api/client.ts is server-safe (REVIEWS Revision 1)', () => {
+describe('API client server-safety contract', () => {
   it('lib/api/client.ts has NO "use client" directive at top of file', () => {
     expect(existsSync(CLIENT_FILE)).toBe(true);
     const src = readFileSync(CLIENT_FILE, 'utf8');
@@ -15,7 +15,7 @@ describe('Phase 1.3 — lib/api/client.ts is server-safe (REVIEWS Revision 1)', 
     expect(head).not.toMatch(/['"]use client['"]/);
   });
 
-  it('lib/api/client.ts does NOT re-export from ./errors (split per Plan 04 Task 0)', () => {
+  it('lib/api/client.ts does not re-export client-localized error hooks', () => {
     const src = readFileSync(CLIENT_FILE, 'utf8');
     expect(src).not.toMatch(/from\s+['"]\.\/errors['"]/);
     expect(src).not.toMatch(/from\s+['"]@\/lib\/api\/errors['"]/);

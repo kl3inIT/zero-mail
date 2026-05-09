@@ -39,7 +39,7 @@ export function TemplateSelectClient() {
   const router = useRouter();
   const me = useCurrentUser();
   const selectMut = useSelectTemplate();
-  const [selected, setSelected] = useState<TemplateKey | null>(null);
+  const [selected, setSelected] = useState<TemplateKey | ''>('');
 
   useEffect(() => {
     if (!me.data) return;
@@ -70,7 +70,7 @@ export function TemplateSelectClient() {
       <p className="zm-auth-sub">{t('onboarding.template.body')}</p>
       <RadioGroup
         className="mt-7 gap-3"
-        value={selected ?? undefined}
+        value={selected}
         onValueChange={(value) => {
           if (isTemplateKey(value)) setSelected(value);
         }}

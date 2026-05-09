@@ -27,34 +27,42 @@ public abstract class PostgresContainerTest {
     GMAIL = new MockGmailHistoryServer();
     try {
       GMAIL.start();
-    } catch (IOException e) {
-      throw new ExceptionInInitializerError(e);
+    } catch (IOException ioException) {
+      throw new ExceptionInInitializerError(ioException);
     }
   }
 
   @DynamicPropertySource
-  static void props(DynamicPropertyRegistry r) {
-    r.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-    r.add("spring.datasource.username", POSTGRES::getUsername);
-    r.add("spring.datasource.password", POSTGRES::getPassword);
-    r.add("spring.liquibase.enabled", () -> "true");
-    r.add("spring.liquibase.change-log", () -> "classpath:db/changelog/db.changelog-master.yaml");
-    r.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
-    r.add(
+  static void props(DynamicPropertyRegistry dynamicPropertyRegistry) {
+    dynamicPropertyRegistry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+    dynamicPropertyRegistry.add("spring.datasource.username", POSTGRES::getUsername);
+    dynamicPropertyRegistry.add("spring.datasource.password", POSTGRES::getPassword);
+    dynamicPropertyRegistry.add("spring.liquibase.enabled", () -> "true");
+    dynamicPropertyRegistry.add(
+        "spring.liquibase.change-log", () -> "classpath:db/changelog/db.changelog-master.yaml");
+    dynamicPropertyRegistry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
+    dynamicPropertyRegistry.add(
         "spring.security.oauth2.client.registration.google.client-id", () -> "test-google-client");
-    r.add(
+    dynamicPropertyRegistry.add(
         "spring.security.oauth2.client.registration.google.client-secret",
         () -> "test-google-secret");
-    r.add(
-        "zeromail.crypto.refresh-token-key-base64",
+    dynamicPropertyRegistry.add(
+        "zero-mail.crypto.refresh-token-key-base64",
         () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
-    r.add("zeromail.gmail.pubsub.topic-name", () -> "projects/test/topics/gmail");
-    r.add("zeromail.gmail.api-root-url", GMAIL::baseUrl);
-    r.add("zeromail.gmail.oauth-token-url", () -> GMAIL.baseUrl() + "token");
-    r.add("zeromail.billing.sepay.webhook-api-key", () -> "test-sepay-key-fixture");
-    r.add("zeromail.billing.vnd-per-credit", () -> "1000");
-    r.add("zeromail.billing.max-pending-intents-per-tenant", () -> "5");
-    r.add("zeromail.billing.intent-expiry", () -> "PT24H");
+    dynamicPropertyRegistry.add(
+        "zero-mail.worker.gmail.pubsub.topic-name", () -> "projects/test/topics/gmail");
+    dynamicPropertyRegistry.add("zero-mail.gmail.api-root-url", GMAIL::baseUrl);
+    dynamicPropertyRegistry.add("zero-mail.gmail.oauth-token-url", () -> GMAIL.baseUrl() + "token");
+    dynamicPropertyRegistry.add(
+        "zero-mail.billing.sepay.webhook-api-key", () -> "test-sepay-key-fixture");
+    dynamicPropertyRegistry.add("zero-mail.billing.vnd-per-credit", () -> "1000");
+    dynamicPropertyRegistry.add("zero-mail.billing.max-pending-intents-per-tenant", () -> "5");
+    dynamicPropertyRegistry.add("zero-mail.billing.intent-expiry", () -> "PT24H");
+    // Spring AI starters are on the worker classpath in Phase 02C. Worker tests do not exercise
+    // the gateway adapter yet, but auto-configuration still requires placeholder keys.
+    dynamicPropertyRegistry.add("spring.ai.openai.api-key", () -> "test-openai-key");
+    dynamicPropertyRegistry.add("spring.ai.anthropic.api-key", () -> "test-anthropic-key");
+    dynamicPropertyRegistry.add("zero-mail.llm.platform.api-key", () -> "test-platform-llm-key");
   }
 
   protected byte[] encryptedRefreshToken(UUID tenantId) {

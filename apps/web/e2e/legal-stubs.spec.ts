@@ -1,8 +1,5 @@
-// Wave 0 RED scaffold — locks the legal stub routes 200 contract (Phase 1.6 REQ-1.6-8):
+// Locks the legal routes 200 contract (Phase 1.6 REQ-1.6-8):
 //  - /terms and /privacy return HTTP 200 with non-empty body
-//
-// RED-by-design: /terms and /privacy routes do not yet exist.
-// This spec becomes GREEN when Phase 1.6 Wave 2 lands.
 import { test, expect } from '@playwright/test';
 
 test.describe('legal stub routes', () => {

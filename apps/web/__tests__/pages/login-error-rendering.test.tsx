@@ -1,11 +1,10 @@
-// Wave 0 RED scaffold — locks the /login RSC searchParams error rendering contract
-// (Phase 01.5 D-B3, T-01.5-02-01 tamper-guard):
+// Locks the /login RSC searchParams error rendering contract
+// (Phase 01.5 D-B3, T-01.5-02-01 tamper guard):
 //  - No ?error → no role="alert" rendered
 //  - ?error=consent_denied → Alert with auth.login.error.consent_denied.{title,body} text
 //  - ?error=gmail_scope_required → Alert with auth.login.error.gmail_scope_required.{title,body} text
 //  - ?error=javascript:alert(1) (tamper) → no role="alert" rendered (closed-enum guard)
 //
-// RED-by-design: LoginPage does not accept searchParams yet (Plan 02 Task 2 wires it).
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 

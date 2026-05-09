@@ -4,12 +4,12 @@ Synthesis of `STACK.md`, `FEATURES.md`, `ARCHITECTURE.md`, `PITFALLS.md`. Consum
 
 ## Key Stack (pinned, non-negotiable)
 
-- Java 25 LTS · Spring Boot 4.0.6 · Spring AI **2.0.0-M4** behind `LlmGateway`
+- Java 25 LTS · Spring Boot 4.0.6 · Spring AI **2.0.0-M5** behind `LlmGateway`
 - spring-cloud-gcp 8.0.2 for **Secret Manager**; Gmail Pub/Sub push receiver stays a plain HTTP controller
 - Gradle 9.4.1 + Kotlin DSL · Cloud SQL Postgres 17.6 + Liquibase 5.0.2 (YAML) + JPA · Memorystore Redis 7.2 (cache / session / rate-limit only — not in billing critical path)
 - Monorepo layout locked to `apps/web` + `backend/core` + `backend/api` + `backend/worker`; internal backend boundaries enforced in `backend/core` via Spring Modulith + architecture tests
 - Cloud Run + Cloud SQL + Memorystore + Secret Manager
-- Next.js 16.2.4 / React 19.2.5 / Tailwind 4.2.4 / shadcn/ui / TanStack Query 5.100.1 / openapi-typescript 7.13.0; pnpm 10.33.2 + Turborepo 2.9.6 **outside Gradle**
+- Next.js 16.2.4 / React 19.2.5 / Tailwind 4.2.4 / shadcn/ui / TanStack Query 5.100.1 / openapi-typescript 7.13.0; pnpm 11.0.8 + Turborepo 2.9.6 **outside Gradle**
 - Cookie session (not JWT) · Virtual threads ON · **Scoped Values, never ThreadLocal** · no Lombok (Java records + pattern matching)
 
 ## v1 Feature Set
@@ -70,10 +70,10 @@ Phase 6 — Polish + CASA-verified launch
 
 - **Needs `/gsd-research-phase` before planning:**
   - Phase 2A — Gmail watch/history-id edge cases and OIDC push verification
-  - Phase 2C — Spring AI 2.0.0-M4 exact builder API for per-request key + tokenizer strategy
+- Phase 2C — Spring AI 2.0.0-M5 builder/options seams for BYOK model routing + tokenizer strategy
   - Phase 5A — privacy-safe stylometry (only if D2 tone-matching is in scope)
 - **Standard patterns — no extra research:** Phases 1, 2B, 3, 5B, 5C.
 
 ## Confidence
 
-Stack: **MEDIUM-HIGH** · Features: **MEDIUM-HIGH** · Architecture: **MEDIUM-HIGH** (Spring AI 2.0.0-M4 BYOK builder API still needs in-code verification) · Pitfalls: **HIGH**. **Overall MEDIUM-HIGH — ready to define requirements and generate the roadmap, with one explicit review item around GCP-managed Postgres/Redis lag versus community-latest releases.**
+Stack: **MEDIUM-HIGH** · Features: **MEDIUM-HIGH** · Architecture: **MEDIUM-HIGH** (Spring AI 2.0.0-M5 BYOK builder/options seams verified during Phase 2C; M5→GA churn remains) · Pitfalls: **HIGH**. **Overall MEDIUM-HIGH — ready to define requirements and generate the roadmap, with one explicit review item around GCP-managed Postgres/Redis lag versus community-latest releases.**

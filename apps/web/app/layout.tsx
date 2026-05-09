@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { cookies, headers } from 'next/headers';
 import { getLocale, getTranslations } from 'next-intl/server';
 
-import { getCurrentUserCached } from '@/features/account/api/me';
+import { getCurrentUserCached } from '@/features/account/api/account-api';
 import { routing } from '@/i18n/routing';
 import { getApiBase } from '@/lib/api/base-url';
 

@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Zero Mail Web
 
-## Getting Started
+Next.js App Router frontend for Zero Mail.
 
-First, run the development server:
+## Structure
+
+- `app/` - Next.js routes and route groups.
+  - `(public)/` - landing, docs, terms, privacy.
+  - `(auth)/` - login.
+  - `(protected)/` - authenticated product routes.
+  - `actions/` - route handlers for frontend actions.
+- `features/` - product feature modules.
+  - `api/<feature>-api.ts` - small HTTP functions for that feature.
+  - `query-keys.ts` - TanStack Query cache keys for cached server data.
+  - `hooks/useX.ts` - one TanStack Query hook per use case.
+  - `components/` - feature-owned UI.
+- `components/ui/` - shadcn/ui primitives.
+- `i18n/` - message bundles and i18n UI.
+- `lib/` - shared infrastructure such as API client and docs loading.
+- `e2e/` - Playwright browser tests.
+- `__tests__/` - app-wide Vitest unit, component, and contract tests.
+
+## Feature Rules
+
+Keep query keys outside `api/`; they describe cache identity, not transport.
+Mutation-only features do not need `query-keys.ts` unless they own cached query
+data. Query keys are named after data, not actions: invalidating
+`accountQueryKeys.me()` is correct when `/me` owns the changed state.
+
+Keep hooks one file per use case. A hook owns its TanStack Query behavior:
+`queryKey`, `queryFn`, mutation invalidation, optimistic updates, and error
+handling.
+
+Do not add feature root barrel files. Import concrete files directly.
+
+## Tests
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm --filter web run lint
+pnpm --filter web run typecheck
+pnpm --filter web run test
+pnpm --filter web run build
+pnpm --filter web run test:e2e
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Vitest collects `__tests__/**/*` and feature-owned `features/**/*` test files.
+Playwright collects only `e2e/**/*.spec.ts`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+CI keeps E2E separate:
 
-This project currently uses a system font stack for Vietnamese and English UI text so the landing page keeps mobile Lighthouse performance above the Phase 1.6 threshold.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `.github/workflows/ci.yml` - backend, frontend lint, typecheck, Vitest, build.
+- `.github/workflows/e2e.yml` - Playwright browser tests.

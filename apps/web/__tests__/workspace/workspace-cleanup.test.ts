@@ -15,9 +15,9 @@ describe('Phase 1.3 — Workspace cleanup (D-E1..D-E4)', () => {
     expect(existsSync(resolve(APP_WEB, 'pnpm-workspace.yaml'))).toBe(false);
   });
 
-  it('root pnpm-workspace.yaml has ignoredBuiltDependencies with sharp + unrs-resolver', () => {
+  it('root pnpm-workspace.yaml uses pnpm 11 allowBuilds for dependency build policy', () => {
     const src = readFileSync(resolve(REPO_ROOT, 'pnpm-workspace.yaml'), 'utf8');
-    expect(src).toMatch(/ignoredBuiltDependencies/);
+    expect(src).toMatch(/allowBuilds/);
     expect(src).toMatch(/sharp/);
     expect(src).toMatch(/unrs-resolver/);
   });

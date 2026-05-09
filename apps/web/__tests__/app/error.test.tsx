@@ -1,4 +1,3 @@
-// Wave 0 RED scaffold — references implementation that lands in Plan 05.
 // Locks the segment error.tsx boundary contract (CONTEXT.md D-D2 + D-D3,
 // UI-SPEC §Interaction & State Contracts):
 //  - renders title + body via next-intl (errors.boundary.{title,body,reset})
@@ -9,7 +8,6 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 
-// RED-by-design: @/app/(protected)/error does not exist yet (Plan 05 lands it).
 import ProtectedError from '@/app/(protected)/error';
 
 const messages = {

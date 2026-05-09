@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: "Phase 02B shipped — PR #20"
-stopped_at: Completed Phase 02B billing-prepaid-credits
-last_updated: "2026-05-06T19:29:38.948Z"
-last_activity: 2026-05-07
+status: executing
+stopped_at: Completed Phase 02C GAP-01 BYOK validation success gap closure
+last_updated: "2026-05-09T14:41:22.688Z"
+last_activity: 2026-05-09 -- Phase 02C GAP-01 gap closure completed
 progress:
   total_phases: 15
   completed_phases: 10
-  total_plans: 71
-  completed_plans: 68
-  percent: 67
+  total_plans: 81
+  completed_plans: 80
+  percent: 99
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 
 ## Current Position
 
-Phase: 02C
-Plan: Not started
-Status: Phase 02B shipped — PR #20
-Last activity: 2026-05-07
+Phase: 02C (llm-gateway) — EXECUTING
+Plan: 10 of 10
+Status: Gap closure complete
+Last activity: 2026-05-09 -- Phase 02C GAP-01 gap closure completed
 
-Progress: [███████░░░] 67%
+Progress: [██████████] 99%
 
 ## Performance Metrics
 
@@ -103,6 +103,14 @@ Progress: [███████░░░] 67%
 | Phase 02A P05 | 20min | 2 tasks | 11 files |
 | Phase 02B P00 | 13min | 4 tasks | 20 files |
 | Phase 02B P03 | 14min | 3 tasks | 25 files |
+| Phase 02C P01 | 45min | 1 tasks | 42 files |
+| Phase 02C P02 | 13min | 2 tasks | 16 files |
+| Phase 02C P03 | 75min | 1 tasks | 39 files |
+| Phase 02C P04 | 16min | 2 tasks | 13 files |
+| Phase 02C P05a | 47min | 1 tasks | 8 files |
+| Phase 02C P05b | 64min | 1 tasks | 46 files |
+| Phase 02C P06 | 90 min | 1 tasks | 5 files |
+| Phase 02C P07 | 20 min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -115,6 +123,9 @@ Recent decisions affecting current work:
 - Roadmap: Phase 2C (LLM Gateway) hard-gated by Phase 1 safety infrastructure — prompt injection + log bleed are product-killing
 - Roadmap: Phase 4 (Triage) hard-gated by Phase 2C — no triage without sanitization, Unicode strip, allow-list
 - Roadmap: CASA restricted-scope verification tracked as external parallel track, initiated in Phase 1 (FND-07), closed before Phase 6 launch
+- [Phase 02C]: Plan 02 uses an @Order 10/20/30/40 List<Sanitizer> fold for Jsoup, NFC, Unicode-control strip, and jtokkit CL100K_BASE truncation at 3896 tokens.
+- [Phase 02C]: Plan 02 SanitizationException has no message payload; it preserves stepName and cause without inheriting potentially content-bearing cause text.
+- [Phase 02C]: Plan 03 should inject SanitizationPipeline into LlmGatewayImpl and call sanitize(rawHtml) first under TenantContext before constructing any model request.
 - [Phase ?]: Use RestClient + LocalServerPort (not MockMvc.webAppContextSetup) for backend tests requiring TenantContext ScopedValue — MockMvc skips servlet filters and the test auth filter never binds the ScopedValue
 - [Phase ?]: Phase 1.1 P06: Vitest dedupes react/react-dom + LanguageSwitcher inlines SVG/native button to escape pnpm's duplicate React install
 - [Phase ?]: Phase 1.1 P07: Playwright must live at workspace root because Next.js declares @playwright/test as an optional peer dep — installing under apps/web doubles the next install on disk and breaks tsc at the next-intl/middleware boundary
@@ -219,6 +230,20 @@ Recent decisions affecting current work:
 - [Phase 02B]: SepayWebhookMismatchAuditEventTest uses valid Crockford code ABCD2345 for the amount-mismatch audit path. — This guards the cycle-3 review fix so future implementation resolves by payload code instead of referenceCode or an invalid test fixture.
 - [Phase 02B]: Top-up code uniqueness uses tenant-bypassing lookup — billing_topup_intent.code is globally unique while standard JPA findByCode is tenant-filtered.
 - [Phase 02B]: BillingProperties masks SePay secret in toString — The configuration record carries zero-mail.billing.sepay.webhook-api-key and must not expose the API key through accidental bean logging.
+- [Phase 02C]: [Phase 02C Plan 01] Keep RefreshTokenCipher at core.gmail.persistence.crypto and declare core.llm -> gmail.persistence.crypto Modulith dependency for BYOK encryption reuse. — Matches D-A5 and avoids relocating Gmail token crypto in Plan 01.
+- [Phase 02C]: [Phase 02C Plan 01] Use pure-Java LlmModelClient seam and records so Spring AI imports stay confined to core.llm.gateway.springai. — Satisfies the strict ArchUnit no-exemption import boundary for LLM-01.
+- [Phase 02C]: [Phase 02C Plan 01] Add test-only Spring AI placeholder keys to SpringBootTest contexts because starters auto-configure model beans even when gateway behavior is not exercised. — Required to keep core/API/worker tests booting after adding Spring AI starters.
+- [Phase 02C]: Plan 03 keeps LlmGatewayImpl Spring-AI-free; all org.springframework.ai imports stay in core.llm.gateway.springai behind the pure-Java LlmModelClient seam.
+- [Phase 02C]: Plan 03 pins Spring AI observation log-prompt/log-completion false in API and worker YAML and verifies span/log content stays metadata-only.
+- [Phase 02C]: Plan 03 applies Logback secret-scrub hardening in the shared backend/core logback-spring.xml because API/worker-specific logback files do not exist.
+- [Phase 02C]: Plan 04 keeps toolChoice/internalToolExecution enforcement inside SpringAiLlmModelClient while LlmGatewayImpl remains Spring-AI-free and validates post-parse tool calls through ActionValidator. — Preserves the strict LLM-01 Spring AI adapter boundary from Plan 03 while satisfying LLM-07 defense-in-depth.
+- [Phase 02C]: Plan 04 SafetyViolationException has only a no-arg constructor. — Rejected action names, tool-call args, model output, and cause messages cannot be carried accidentally.
+- [Phase 02C]: Plan 05a keeps BYOK gateway Spring AI imports behind core.llm.gateway.springai adapters; LlmGatewayImpl remains Spring-AI-free.
+- [Phase 02C]: Plan 05a uses tenantByokCredentialsRepository instead of byokRepo to comply with the project no-repo-abbreviation Java naming rule.
+- [Phase 02C]: Plan 05a leaves Logback scrub filters unchanged because BYOK gateway logs contain only tenant/provider/model/tokens/latency/truncation metadata.
+- [Phase 02C]: Plan 05a canonicalizes BYOK endpoints by trimming trailing slashes and uses URI.create(...).getHost() for host extraction instead of ad hoc parsing.
+- [Phase 02C]: Plan 05b exposes BYOK validate/save/current over REST while keeping core service signatures on core command records, not API DTOs.
+- [Phase 02C]: Plan 05b changes app configuration to canonical kebab-case `zero-mail.*`; API-only settings bind under `zero-mail.api.*`, worker-only settings bind under `zero-mail.worker.*`, and shared LLM platform/BYOK settings are nested under `ZeroMailCoreProperties`.
 
 ### Roadmap Evolution
 
@@ -242,7 +267,7 @@ Recent decisions affecting current work:
 
 [Issues that affect future work]
 
-- Phase 2A and Phase 2C are both flagged for `/gsd-research-phase` before planning — do not skip (Gmail watch/history + OIDC verification for 2A; Spring AI 2.0.0-M4 BYOK builder API + tokenizer for 2C).
+- Phase 2A and Phase 2C are both flagged for `/gsd-research-phase` before planning — do not skip (Gmail watch/history + OIDC verification for 2A; Spring AI 2.0.0-M5 BYOK builder API + tokenizer for 2C).
 - CASA verification is a 4–12 week external clock — must be initiated during Phase 1 execution, not deferred.
 - Open decisions deferred to phase execution: credit unit economics (Phase 2B), tokenizer choice (Phase 2C), payment provider Stripe vs LemonSqueezy (Phase 2B), observability vendor (any), CASA tier (Phase 1/6).
 - **Refresh-token key rotation drill** (Phase 2C or dedicated security-ceremony phase) — verification protocol: deploy v2 key alongside v1 in the deployment secret source (current VPS baseline: Docker secrets / systemd credentials / locked-down env files; future production options may include GCP Secret Manager, AWS Secrets Manager, or HashiCorp Vault); verify multi-version decrypt path reads `key_version` byte from envelope and selects correct key; rotate v1 → v2 + re-encrypt all rows; verify v1 envelopes still decrypt during overlap window. Per CLAUDE.md TL;DR ("No GCP hosting baseline; do not add spring-cloud-gcp starters by default"), the drill must be deployment-source-agnostic.
@@ -252,6 +277,10 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260509-til | Fix Base UI RadioGroup controlled state warning on onboarding template select | 2026-05-09 | 9540921 | [260509-til-fix-base-ui-radiogroup-controlled-state-](./quick/260509-til-fix-base-ui-radiogroup-controlled-state-/) |
+| 260508-vlk | Update project pnpm version pin to latest stable | 2026-05-08 | pending | [260508-vlk-update-project-pnpm-version-pin-to-lates](./quick/260508-vlk-update-project-pnpm-version-pin-to-lates/) |
+| 260508-g41 | BYOK OpenRouter preset, model selection, Spring AI 2.0.0-M5 sync | 2026-05-08 | pending | [260508-g41-byok-openrouter-preset-and-per-tenant-mo](./quick/260508-g41-byok-openrouter-preset-and-per-tenant-mo/) |
+| 260507-4lb | Refactor frontend feature API, hooks, query keys, and tests | 2026-05-07 | a3c2966 | [260507-4lb-refactor-frontend-feature-api-hooks-quer](./quick/260507-4lb-refactor-frontend-feature-api-hooks-quer/) |
 | 260428-0hx | Rename core view records to projections | 2026-04-28 | 3ff9025 | [260428-0hx-rename-core-view-records-to-projections-](./quick/260428-0hx-rename-core-view-records-to-projections-/) |
 | 260506-n2x | Move billing CreditLedger interface into service package | 2026-05-06 | b2a97d5 | [260506-n2x-move-billing-creditledger-interface-into](./quick/260506-n2x-move-billing-creditledger-interface-into/) |
 | 260427-9n3 | cài Dependabot cho tôi | 2026-04-27 | 600fef4 | [260427-9n3-c-i-dependabot-cho-t-i](./quick/260427-9n3-c-i-dependabot-cho-t-i/) |
@@ -271,6 +300,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-06T06:02:36.797Z
-Stopped at: Completed 02B-03-credit-ledger-service-PLAN.md
+Last session: 2026-05-08T06:54:50.500Z
+Stopped at: Completed quick task 260508-g41 BYOK OpenRouter preset and Spring AI M5 sync
 Resume file: None

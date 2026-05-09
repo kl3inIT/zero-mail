@@ -1,4 +1,3 @@
-// Wave 0 RED scaffold — references implementation that lands in Plan 05.
 // Locks the global-error.tsx contract (CONTEXT.md D-D2 + D-D3, UI-SPEC):
 //  - renders own <html>/<body> (replaces root layout when root itself throws)
 //  - English-only fallback (no next-intl provider available)
@@ -10,7 +9,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 
-// RED-by-design: @/app/global-error does not exist yet (Plan 05 lands it).
 import GlobalError from '@/app/global-error';
 
 afterEach(() => {
@@ -45,8 +43,7 @@ describe('global-error.tsx', () => {
     const src = readFileSync(resolve(__dirname, '../../app/global-error.tsx'), 'utf8');
     expect(src).toMatch(/<html\b/);
     expect(src).toMatch(/<body\b/);
-    // Touch the import so the RED-by-design contract still requires the
-    // module to resolve (Plan 01 SUMMARY: "Failed to resolve import" check).
+    // Touch the import so the module-resolution contract stays active.
     expect(typeof GlobalError).toBe('function');
   });
 

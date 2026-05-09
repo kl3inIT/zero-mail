@@ -4,15 +4,17 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "pnpm i18n:build && next build",
     "start": "next start",
     "lint": "eslint",
     "generate:api": "tsx scripts/generate-api.ts",
+    "i18n:build": "tsx scripts/merge-feature-i18n.ts",
     "i18n:check": "tsx scripts/check-i18n.ts",
     "test": "vitest run",
     "test:run": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
+    "e2e": "pnpm test:e2e",
     "test:e2e": "node ../../node_modules/@playwright/test/cli.js test"
   },
   "dependencies": {

@@ -1,5 +1,5 @@
 {
-  "model_profile": "balanced",
+  "model_profile": "inherit",
   "commit_docs": true,
   "parallelization": true,
   "search_gitignored": false,
@@ -17,7 +17,7 @@
     "plan_check": true,
     "verifier": true,
     "nyquist_validation": true,
-    "auto_advance": false,
+    "auto_advance": true,
     "use_worktrees": true,
     "worktree_skip_hooks": false,
     "node_repair": true,
@@ -31,7 +31,7 @@
     "security_block_on": "high",
     "tdd_mode": false,
     "text_mode": false,
-    "research_before_questions": false,
+    "research_before_questions": true,
     "discuss_mode": "discuss",
     "max_discuss_passes": 3,
     "skip_discuss": false,
@@ -63,5 +63,11 @@
   "claude_md_path": "./CLAUDE.md",
   "resolve_model_ids": "omit",
   "mode": "yolo",
-  "granularity": "standard"
+  "granularity": "standard",
+  "intel": {
+    "enabled": true
+  },
+  "graphify": {
+    "enabled": true
+  }
 }

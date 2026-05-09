@@ -10,6 +10,7 @@ import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useTenantStatus } from '@/features/gmail/hooks/useTenantStatus';
 import { useDisconnectGmail } from '@/features/gmail/hooks/useDisconnectGmail';
 import { useDeleteAccount } from '@/features/account/hooks/useDeleteAccount';
+import { ByokForm } from '@/features/llm/components/ByokForm';
 import { useToggleTriagePause } from '@/features/triage/hooks/useToggleTriagePause';
 import { Button } from '@/components/ui/button';
 import {
@@ -163,6 +164,8 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      <ByokForm />
+
       {/* Privacy */}
       <Card>
         <CardHeader>
@@ -173,7 +176,6 @@ export default function SettingsPage() {
             <li>{t('settings.privacy.noBodyStorage')}</li>
             <li>{t('settings.privacy.noAutoSend')}</li>
             <li>{t('settings.privacy.revokeAnytime')}</li>
-            <li>{t('settings.privacy.byokPlanned')}</li>
           </ul>
         </CardContent>
       </Card>

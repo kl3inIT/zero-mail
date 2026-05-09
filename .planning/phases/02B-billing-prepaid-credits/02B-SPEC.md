@@ -122,7 +122,7 @@ Constraints carried in: shared base entity hierarchy from Phase 1.2.1 (`Abstract
 - **Watchdog runs in `backend/worker`, not `backend/api`** — same module split as Phase 2A's Gmail watch/history processors; `backend/worker` already has scheduling enabled and Modulith-aware entity scanning.
 - **Integer credits only** — no fractional credits. Rounding loss on TOPUP (e.g., 999 VND with 1000 VND/credit = 0 credits) is logged with `vndLost` only and not auto-refunded in v1; manual/admin reconciliation handles edge cases during beta.
 - **`CreditLedger.reserve` is `Propagation.REQUIRES_NEW`** to avoid being rolled back by an outer transaction that fails after the reserve. Settle/release run in the caller's transaction.
-- **Spring AI 2.0.0-M4 milestone caveat does not apply here** — Phase 2B has no Spring AI dependency.
+- **Spring AI 2.0.0-M5 milestone caveat does not apply here** — Phase 2B has no Spring AI dependency.
 - **`@SchedulerLock` (or equivalent) on the watchdog** to prevent two worker pods double-releasing during horizontal scale (single-VPS today, but the lock is cheap and forward-compatible).
 - **No content / PII / payment payload in logs** — only metadata (`tenantId`, `reservationId`, `transactionId`, `kind`, `amount_credits`).
 

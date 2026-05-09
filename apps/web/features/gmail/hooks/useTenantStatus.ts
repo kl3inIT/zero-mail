@@ -2,12 +2,12 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { getTenantStatus } from '@/features/gmail/api/status';
-import { gmailKeys } from '@/features/gmail/api/keys';
+import { getTenantStatus } from '@/features/gmail/api/gmail-api';
+import { gmailQueryKeys } from '@/features/gmail/query-keys';
 
 export function useTenantStatus() {
   return useQuery({
-    queryKey: gmailKeys.status(),
+    queryKey: gmailQueryKeys.status(),
     queryFn: ({ signal }) => getTenantStatus({ signal }),
   });
 }

@@ -50,3 +50,12 @@ databaseChangeLog:
   - include:
       file: changes/017-shedlock-table.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/018-tenant-byok-credentials.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/019-tenant-byok-model.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/020-byok-official-providers.yaml
+      relativeToChangelogFile: true

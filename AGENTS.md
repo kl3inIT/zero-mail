@@ -13,8 +13,8 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Language/runtime**: Java 25 — locked by user directive.
 - **Framework**: Spring Boot 4 — locked by user directive.
 - **Build**: Gradle 9.x with Kotlin DSL — locked by user directive.
-- **Versioning policy**: Prefer the latest stable versions compatible with the chosen deployment platform. Only use a pre-release when explicitly pinned by the user. Current exception: **Spring AI 2.0.0-M4**.
-- **AI**: Spring AI **2.0.0-M4** for LLM orchestration (model abstraction, prompts, tool calls) — locked by user directive.
+- **Versioning policy**: Prefer the latest stable versions compatible with the chosen deployment platform. Only use a pre-release when explicitly pinned by the user. Current exception: **Spring AI 2.0.0-M5**.
+- **AI**: Spring AI **2.0.0-M5** for LLM orchestration (model abstraction, prompts, tool calls) — locked by user directive.
 - **Structure**: Monorepo / multi-module Gradle project — locked by user directive. Backend topology is locked to **`backend/core` + `backend/api` + `backend/worker`**, with `apps/web` as the separate frontend module. Internal backend boundaries stay package-based inside `backend/core`, enforced by Spring Modulith verification and architectural tests.
 - **Frontend**: Next.js / React as a separate module inside the monorepo — locked by product decision.
 - **Mail provider (v1)**: Gmail / Google Workspace only, via Gmail API + Google Pub/Sub push — locked by product decision.
@@ -42,12 +42,12 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Gradle 9.4.1** + **Kotlin DSL** + `libs.versions.toml` catalog, multi-project (not composite).
 - **Spring Boot 4.0.6** (current GA — stay on 4.0.x for production).
 - **Spring Framework 7.0.7**, **Spring Security 7.0.5**, **Jakarta Servlet 6.1**, **Jakarta Persistence 3.2**, **Jackson 3.1.2** (Boot-managed).
-- **Spring AI 2.0.0-M4** via `spring-ai-starter-model-openai`, pointed at OpenRouter (`base-url: https://openrouter.ai/api/v1`). Keep all direct Spring AI usage inside one LLM adapter module — M4 → GA churn still possible.
+- **Spring AI 2.0.0-M5** via OpenAI, Anthropic, Google GenAI, and DeepSeek starters. Platform OpenRouter routing uses the OpenAI adapter with `base-url: https://openrouter.ai/api/v1`; official BYOK providers use their native Spring AI adapters where available. Keep all direct Spring AI usage inside one LLM adapter module — M5 → GA churn still possible.
 - **No GCP hosting baseline** — do **not** add `spring-cloud-gcp` starters by default. Gmail push arrives as plain HTTP POSTs to a Spring MVC controller on the VPS.
 - **PostgreSQL 17.6 self-hosted on VPS** + **Liquibase 5.0.2 (YAML changelogs)** + **Spring Data JPA (Hibernate 7)** for aggregates, **Spring Data JDBC** for read-side and hot paths, **JSONB + jsonb_path_ops** for rule matchers, **AES-GCM at app layer** for OAuth refresh-token encryption.
 - **Redis 7.2 self-hosted on VPS** (Spring Data Redis + Lettuce) for rate limiting, idempotency, session store, per-tenant ChatModel cache — **NOT a queue**.
 - **Queue = Postgres-backed** (single `outbox` + `processing_job` table with `SKIP LOCKED`). No Kafka, no RabbitMQ in v1. Pub/Sub already handles ingress retries.
-- **Next.js 16.2.4 (App Router) + React 19.2.5** in `apps/web`, **pnpm 10.33.2 + Turborepo 2.9.6**, **TanStack Query 5.100.1**, **shadcn/ui + Tailwind CSS 4.2.4**, typed client via **OpenAPI codegen** (`openapi-typescript` 7.13.0 + `openapi-fetch` 0.17.0) from Spring's `springdoc-openapi` output.
+- **Next.js 16.2.4 (App Router) + React 19.2.5** in `apps/web`, **pnpm 11.0.8 + Turborepo 2.9.6**, **TanStack Query 5.100.1**, **shadcn/ui + Tailwind CSS 4.2.4**, typed client via **OpenAPI codegen** (`openapi-typescript` 7.13.0 + `openapi-fetch` 0.17.0) from Spring's `springdoc-openapi` output.
 - **Auth**: Spring Security OAuth2 Client (Google), **server-issued signed session cookie** (not stateless JWT). Same-origin to Next.js; `HttpOnly`, `SameSite=Lax`, `Secure`. Spring Session backed by Redis.
 - **Deploy**: **single VPS** hosting reverse proxy + `apps/web` + `backend/api` + `backend/worker` + PostgreSQL + Redis. Public HTTPS endpoint for Gmail Pub/Sub push, OIDC token verification in the controller.
 - **Container**: `eclipse-temurin:25-jre-noble` built via Spring Boot CDS + AOT layered images.
@@ -59,7 +59,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Jackson 2.x assumptions** (Boot 4 ships Jackson 3.x).
 - **Spring WebFlux** (use Spring MVC + virtual threads via `spring.threads.virtual.enabled=true`).
 - **`javax.*`** packages (Jakarta-only).
-- **Manually-built `ChatClient` per request** for BYOK (use one client + per-request `httpHeaders` / `ApiKey` override).
+- **Raw HTTP LLM calls or vendor SDK usage outside the Spring AI adapter**. Provider-specific BYOK client derivation is allowed only inside `core.llm.gateway.springai` when Spring AI M5 requires it.
 - **Storing LLM prompts/completions in logs or DB** (privacy constraint).
 - **Polling Gmail** (use Pub/Sub push + `users.watch` refresh).
 - **`pgp_sym_encrypt` (pgcrypto) for OAuth tokens** (key in DB → key leak on DB leak; use app-layer AES-GCM).
@@ -82,6 +82,8 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 4. **Privacy logging format** — every log line is `event=<name> tenantId={}` + structured fields; no email, no Google subject, no token bytes, no message body, no prompts/completions.
 5. **Direct calls vs Spring Modulith events** — use direct service calls for commands needing immediate results or transaction safety (OAuth provisioning, credit reserve/settle/release, Pub/Sub ingestion, account deletion cleanup). Use Spring Modulith events for in-process after-commit side effects such as message-observed → future triage/rules work, Gmail state changes, top-up credited, onboarding completed, and non-critical account-deleted reactions. Spring events do **not** cross `backend/api` ↔ `backend/worker` processes; cross-process handoff must use PostgreSQL-backed outbox / processing tables. Domain events shared by API/worker/future modules belong in `backend/core`, not `backend/api`.
 6. **UI primitive selection** — check shadcn/ui first; install via `pnpm dlx shadcn@latest add <component>`; compose around `@/components/ui/*`. Treat `apps/web/components/ui/**` as copied primitive source (excluded from ESLint/Prettier).
+7. **Frontend feature API/hooks/query keys/tests** — keep small feature HTTP functions in `features/<feature>/api/<feature>-api.ts`, TanStack Query key factories in `features/<feature>/query-keys.ts`, and one hook file per use case. Do not create query keys for mutation-only features unless they own cached data. Playwright specs live only in `apps/web/e2e/**`; Vitest feature tests live beside feature code or in `apps/web/__tests__/**` for app-wide contracts.
+8. **Subproject-owned configuration files** — each runnable subproject owns its own runtime config. API-only properties belong in `backend/api/src/main/resources/application.yml`; worker-only properties belong in `backend/worker/src/main/resources/application.yml`; Next.js/web config belongs under `apps/web`. Shared typed config classes may live in `backend/core`, but each runnable module still declares its own values/defaults in its own config file.
 
 <!-- GSD:conventions-end -->
 

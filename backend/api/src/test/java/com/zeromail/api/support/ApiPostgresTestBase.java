@@ -31,45 +31,54 @@ public abstract class ApiPostgresTestBase {
   }
 
   @DynamicPropertySource
-  static void props(DynamicPropertyRegistry r) {
-    r.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-    r.add("spring.datasource.username", POSTGRES::getUsername);
-    r.add("spring.datasource.password", POSTGRES::getPassword);
-    r.add("spring.liquibase.enabled", () -> "true");
-    r.add("spring.liquibase.change-log", () -> "classpath:db/changelog/db.changelog-master.yaml");
-    r.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
+  static void props(DynamicPropertyRegistry dynamicPropertyRegistry) {
+    dynamicPropertyRegistry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+    dynamicPropertyRegistry.add("spring.datasource.username", POSTGRES::getUsername);
+    dynamicPropertyRegistry.add("spring.datasource.password", POSTGRES::getPassword);
+    dynamicPropertyRegistry.add("spring.liquibase.enabled", () -> "true");
+    dynamicPropertyRegistry.add(
+        "spring.liquibase.change-log", () -> "classpath:db/changelog/db.changelog-master.yaml");
+    dynamicPropertyRegistry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
+    dynamicPropertyRegistry.add("spring.datasource.hikari.maximum-pool-size", () -> "2");
+    dynamicPropertyRegistry.add("spring.datasource.hikari.minimum-idle", () -> "0");
     // Session: still routed through Spring Session, but backed by an in-memory MapSessionRepository
     // contributed by TestSessionConfig instead of redis. SessionAutoConfiguration sees the bean and
     // skips redis lookup. Cookie name remains ZEROMAIL_SESSION from application.yml.
-    r.add(
+    dynamicPropertyRegistry.add(
         "spring.autoconfigure.exclude",
         () ->
             "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.session.RedisSessionAutoConfiguration");
-    r.add("spring.session.store-type", () -> "none");
+    dynamicPropertyRegistry.add("spring.session.store-type", () -> "none");
     // Stub Google OAuth client registrations so OAuth2 client autoconfig picks up no-op values
     // (we never actually contact Google in tests).
-    r.add(
+    dynamicPropertyRegistry.add(
         "spring.security.oauth2.client.registration.google.client-id", () -> "test-google-client");
-    r.add(
+    dynamicPropertyRegistry.add(
         "spring.security.oauth2.client.registration.google.client-secret",
         () -> "test-google-secret");
     // Phase 01.5: google-gmail registration deleted — single bundled google registration only.
     // Test-only AES-256 key (32 zero bytes, base64-encoded).
-    r.add(
-        "zeromail.crypto.refresh-token-key-base64",
+    dynamicPropertyRegistry.add(
+        "zero-mail.crypto.refresh-token-key-base64",
         () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
-    r.add(
-        "zeromail.gmail.pubsub.push-audience-url",
+    dynamicPropertyRegistry.add(
+        "zero-mail.api.gmail.pubsub.push-audience-url",
         () -> "https://test.example/internal/pubsub/gmail");
-    r.add(
-        "zeromail.gmail.pubsub.sa-principal-email",
+    dynamicPropertyRegistry.add(
+        "zero-mail.api.gmail.pubsub.sa-principal-email",
         () -> "pubsub-sa@test-project.iam.gserviceaccount.com");
-    r.add("zeromail.billing.sepay.webhook-api-key", () -> "test-sepay-key-fixture");
-    r.add("zeromail.billing.vnd-per-credit", () -> "1000");
-    r.add("zeromail.billing.max-pending-intents-per-tenant", () -> "5");
-    r.add("zeromail.billing.intent-expiry", () -> "PT24H");
+    dynamicPropertyRegistry.add(
+        "zero-mail.billing.sepay.webhook-api-key", () -> "test-sepay-key-fixture");
+    dynamicPropertyRegistry.add("zero-mail.billing.vnd-per-credit", () -> "1000");
+    dynamicPropertyRegistry.add("zero-mail.billing.max-pending-intents-per-tenant", () -> "5");
+    dynamicPropertyRegistry.add("zero-mail.billing.intent-expiry", () -> "PT24H");
+    // Spring AI starters are present transitively in API test contexts after Phase 02C wiring. The
+    // gateway itself is not exercised here, but model auto-configuration still requires keys.
+    dynamicPropertyRegistry.add("spring.ai.openai.api-key", () -> "test-openai-key");
+    dynamicPropertyRegistry.add("spring.ai.anthropic.api-key", () -> "test-anthropic-key");
+    dynamicPropertyRegistry.add("zero-mail.llm.platform.api-key", () -> "test-platform-llm-key");
   }
 
   @BeforeEach

@@ -1,11 +1,16 @@
 package com.zeromail.core.config;
 
-import java.time.Duration;
 import java.net.URI;
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
+
+import com.zeromail.core.billing.model.CallSite;
+import com.zeromail.core.llm.model.BYOKProvider;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -13,15 +18,17 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.jspecify.annotations.NonNull;
 
-@ConfigurationProperties(prefix = "zeromail")
+@ConfigurationProperties(prefix = "zero-mail")
 @Validated
 public record ZeroMailCoreProperties(
     @Valid @NotNull CryptoProperties crypto,
     @Valid GmailProperties gmail,
-    @Valid @NotNull BillingProperties billing) {
+    @Valid @NotNull BillingProperties billing,
+    @Valid LlmProperties llm) {
 
   public ZeroMailCoreProperties {
     gmail = gmail == null ? GmailProperties.defaults() : gmail;
+    llm = llm == null ? LlmProperties.defaults() : llm;
   }
 
   public record CryptoProperties(@NotBlank String refreshTokenKeyBase64) {}
@@ -56,7 +63,7 @@ public record ZeroMailCoreProperties(
             || lowerCaseWebhookApiKey.contains("must be set")
             || lowerCaseWebhookApiKey.contains("must be supplied")) {
           throw new IllegalStateException(
-              "zeromail.billing.sepay.webhook-api-key looks like an unresolved placeholder default. "
+              "zero-mail.billing.sepay.webhook-api-key looks like an unresolved placeholder default. "
                   + "Set SEPAY_WEBHOOK_API_KEY to the real SePay webhook API key from the "
                   + "deployment secret source.");
         }
@@ -77,8 +84,74 @@ public record ZeroMailCoreProperties(
     }
   }
 
+  public record LlmProperties(
+      @Valid ZeroMailLlmProperties platform, @Valid ZeroMailLlmByokProperties byok) {
+
+    static LlmProperties defaults() {
+      return new LlmProperties(null, null);
+    }
+
+    public LlmProperties {
+      platform = platform == null ? ZeroMailLlmProperties.defaults() : platform;
+      byok = byok == null ? ZeroMailLlmByokProperties.defaults() : byok;
+    }
+  }
+
+  public record ZeroMailLlmProperties(
+      BYOKProvider provider,
+      String baseUrl,
+      @NotBlank String apiKey,
+      String compileModel,
+      String driftModel,
+      String triageModel,
+      Duration connectTimeout,
+      Duration readTimeout) {
+
+    static ZeroMailLlmProperties defaults() {
+      return new ZeroMailLlmProperties(null, null, null, null, null, null, null, null);
+    }
+
+    public ZeroMailLlmProperties {
+      provider = provider == null ? BYOKProvider.OPENAI : provider;
+      baseUrl = baseUrl == null ? "https://openrouter.ai/api/v1" : baseUrl;
+      compileModel = compileModel == null ? "openai/gpt-4o-mini" : compileModel;
+      driftModel = driftModel == null ? "openai/gpt-4o-mini" : driftModel;
+      triageModel = triageModel == null ? "openai/gpt-4o-mini" : triageModel;
+      connectTimeout = connectTimeout == null ? Duration.ofSeconds(5) : connectTimeout;
+      readTimeout = readTimeout == null ? Duration.ofSeconds(30) : readTimeout;
+    }
+
+    public Map<CallSite, String> modelByCallSite() {
+      return Map.of(
+          CallSite.TRIAGE, triageModel,
+          CallSite.DRAFT, compileModel,
+          CallSite.PREVIEW, compileModel);
+    }
+  }
+
+  public record ZeroMailLlmByokProperties(
+      boolean allowNonVendorEndpoints,
+      List<String> allowedExtraHosts,
+      Duration connectTimeout,
+      Duration readTimeout) {
+
+    static ZeroMailLlmByokProperties defaults() {
+      return new ZeroMailLlmByokProperties(false, List.of(), null, null);
+    }
+
+    public ZeroMailLlmByokProperties {
+      allowedExtraHosts = allowedExtraHosts == null ? List.of() : List.copyOf(allowedExtraHosts);
+      connectTimeout = connectTimeout == null ? Duration.ofSeconds(5) : connectTimeout;
+      readTimeout = readTimeout == null ? Duration.ofSeconds(15) : readTimeout;
+    }
+  }
+
   @Override
   public @NonNull String toString() {
-    return "ZeroMailCoreProperties[crypto=****, gmail=" + gmail + ", billing=" + billing + "]";
+    return "ZeroMailCoreProperties[crypto=****, gmail="
+        + gmail
+        + ", billing="
+        + billing
+        + ", llm=****]";
   }
 }

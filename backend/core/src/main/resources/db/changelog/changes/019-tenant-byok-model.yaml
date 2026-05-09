@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 019-tenant-byok-model
+      author: zeromail
+      changes:
+        - addColumn:
+            tableName: tenant_byok_credentials
+            columns:
+              - column:
+                  name: model
+                  type: varchar(128)
+      rollback:
+        - dropColumn:
+            tableName: tenant_byok_credentials
+            columnName: model

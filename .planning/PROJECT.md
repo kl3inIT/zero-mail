@@ -50,7 +50,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 **LLM routing & BYOK**
 - [ ] Default LLM traffic routes through OpenRouter behind a Spring AI abstraction
-- [ ] User can bring their own API key (OpenAI, Anthropic, etc.) — BYOK
+- [ ] User can bring their own API key (OpenAI, Anthropic, Google GenAI, DeepSeek, or compatible endpoint) — BYOK
 - [ ] BYOK usage bypasses platform LLM cost (user pays their provider directly)
 
 **Credits & billing (pay-as-you-go)**
@@ -103,8 +103,8 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Language/runtime**: Java 25 — locked by user directive.
 - **Framework**: Spring Boot 4 — locked by user directive.
 - **Build**: Gradle 9.x with Kotlin DSL — locked by user directive.
-- **Versioning policy**: Prefer the latest stable versions compatible with the chosen deployment platform. Only use a pre-release when explicitly pinned by the user. Current exception: **Spring AI 2.0.0-M4**.
-- **AI**: Spring AI **2.0.0-M4** for LLM orchestration (model abstraction, prompts, tool calls) — locked by user directive.
+- **Versioning policy**: Prefer the latest stable versions compatible with the chosen deployment platform. Only use a pre-release when explicitly pinned by the user. Current exception: **Spring AI 2.0.0-M5**.
+- **AI**: Spring AI **2.0.0-M5** for LLM orchestration (model abstraction, prompts, tool calls) — locked by user directive.
 - **Structure**: Monorepo / multi-module Gradle project — locked by user directive. Backend topology is now locked to **`backend/core` + `backend/api` + `backend/worker`**, with `apps/web` as the separate frontend module. Internal backend boundaries stay package-based inside `backend/core`, enforced by Spring Modulith verification and architectural tests.
 - **Frontend**: Next.js / React as a separate module inside the monorepo — locked by product decision.
 - **Mail provider (v1)**: Gmail / Google Workspace only, via Gmail API + Google Pub/Sub push — locked by product decision.
@@ -132,7 +132,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 | Name "Zero Mail" — placeholder | Directory-derived; final brand will be chosen before public launch to avoid rework | Pending rename before launch |
 | Single bundled Google OAuth registration | Phase 01.5 removed the separate `google-gmail` leg; login now requests Gmail scopes up front and persists the Gmail connection during provisioning | Chosen |
 | Single VPS deployment baseline | Current deployment runs app, worker, web, PostgreSQL, and Redis together on one VPS; no GCP hosting baseline or `spring-cloud-gcp` starter by default | Chosen |
-| Billing configuration under `ZeroMailCoreProperties` | Phase 02B follows the existing backend properties convention: core-owned settings stay under one core properties root and bind as `zeromail.billing.*`, avoiding separate per-domain properties/configuration classes | Chosen |
+| Billing configuration under `ZeroMailCoreProperties` | Phase 02B follows the existing backend properties convention: core-owned settings stay under one core properties root and bind as `zero-mail.billing.*`, avoiding separate per-domain properties/configuration classes | Chosen |
 
 ## Evolution
 

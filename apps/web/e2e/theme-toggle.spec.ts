@@ -1,9 +1,6 @@
-// Wave 0 RED scaffold — locks the theme persistence e2e contract (Phase 1.6 REQ-1.6-7):
+// Locks the theme persistence e2e contract (Phase 1.6 REQ-1.6-7):
 //  - Toggling theme writes zm-theme cookie and survives reload
 //  - New tab inherits theme from cookie
-//
-// RED-by-design: ThemeToggle component and zm-theme cookie handling do not yet exist.
-// This spec becomes GREEN when Phase 1.6 Wave 1 lands.
 import { test, expect } from '@playwright/test';
 
 test.describe('theme persistence', () => {

@@ -1,6 +1,6 @@
 [versions]
 springBoot = "4.0.6"
-springAi = "2.0.0-M4"
+springAi = "2.0.0-M5"
 # Spring Modulith: Boot-4-compatible 2.x line has no milestone/RC on Spring's milestone repo
 # as of 2026-04-24 — only tracked snapshots (latest 2.0.7-SNAPSHOT). We pin to the tracked
 # 2.0.7-SNAPSHOT rather than floating `2.0.0-SNAPSHOT` so rebuilds resolve a deterministic
@@ -15,6 +15,7 @@ testcontainers = "1.21.3"
 springdoc = "3.0.3"
 jsoup = "1.22.2"
 shedlock = "7.7.0"
+jtokkit = "1.1.0"
 
 [libraries]
 spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "springBoot" }
@@ -26,6 +27,12 @@ testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", ve
 springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
 liquibase-core = { module = "org.liquibase:liquibase-core", version.ref = "liquibase" }
 jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
+spring-ai-bom = { module = "org.springframework.ai:spring-ai-bom", version.ref = "springAi" }
+spring-ai-starter-model-openai = { module = "org.springframework.ai:spring-ai-starter-model-openai", version.ref = "springAi" }
+spring-ai-starter-model-anthropic = { module = "org.springframework.ai:spring-ai-starter-model-anthropic", version.ref = "springAi" }
+spring-ai-starter-model-google-genai = { module = "org.springframework.ai:spring-ai-starter-model-google-genai", version.ref = "springAi" }
+spring-ai-starter-model-deepseek = { module = "org.springframework.ai:spring-ai-starter-model-deepseek", version.ref = "springAi" }
+jtokkit = { module = "com.knuddels:jtokkit", version.ref = "jtokkit" }
 google-auth-library-oauth2-http = { module = "com.google.auth:google-auth-library-oauth2-http", version.ref = "googleAuthLibrary" }
 google-api-services-gmail = { module = "com.google.apis:google-api-services-gmail", version.ref = "gmailApi" }
 shedlock-provider-jdbc-template = { module = "net.javacrumbs.shedlock:shedlock-provider-jdbc-template", version.ref = "shedlock" }

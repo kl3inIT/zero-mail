@@ -1,6 +1,4 @@
-// Plan 06 Task 1 — RED stub then GREEN.
-// Locks the LanguageSwitcher behavior (CONTEXT.md decisions D-A4 + D-D6 + RESEARCH.md
-// Pattern 5):
+// Locks the LanguageSwitcher behavior:
 //  - optimistic NEXT_LOCALE cookie write before any network call
 //  - PATCH /me/language only when authenticated; rolls back cookie on error
 //  - router.refresh() invoked after success path (no full-page reload)
