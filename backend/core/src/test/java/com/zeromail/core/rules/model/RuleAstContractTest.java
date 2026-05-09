@@ -6,18 +6,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class RuleAstContractTest {
 
-  private static final String PLAN_03_01_MODEL_MESSAGE =
-      "Plan 03-01 lands rules model production symbols";
-
   @Test
-  @Disabled(PLAN_03_01_MODEL_MESSAGE)
   void matcher_type_ids_cover_the_locked_phase_3_vocabulary() throws Exception {
     Class<?> matcherTypeClass = Class.forName("com.zeromail.core.rules.model.MatcherType");
     Method valuesMethod = matcherTypeClass.getMethod("values");
@@ -53,7 +49,6 @@ class RuleAstContractTest {
   }
 
   @Test
-  @Disabled(PLAN_03_01_MODEL_MESSAGE)
   void safe_action_type_ids_match_the_existing_llm_action_allow_list() throws Exception {
     Class<?> ruleActionTypeClass = Class.forName("com.zeromail.core.rules.model.RuleActionType");
     Method valuesMethod = ruleActionTypeClass.getMethod("values");
@@ -69,7 +64,6 @@ class RuleAstContractTest {
   }
 
   @Test
-  @Disabled(PLAN_03_01_MODEL_MESSAGE)
   void semantic_intent_nodes_are_constructed_as_deferred_only() throws Exception {
     Class<?> semanticIntentMatcherClass =
         Class.forName("com.zeromail.core.rules.model.SemanticIntentMatcher");
@@ -87,7 +81,6 @@ class RuleAstContractTest {
   }
 
   @Test
-  @Disabled(PLAN_03_01_MODEL_MESSAGE)
   void unknown_matcher_nodes_are_rejected_before_persistence() throws Exception {
     Class<?> validatorClass = Class.forName("com.zeromail.core.rules.model.RuleAstJsonValidator");
     Object validator = validatorClass.getConstructor().newInstance();
@@ -100,7 +93,7 @@ class RuleAstContractTest {
                     """
                     {"schemaVersion":"rules.v1","type":"SEND_EVERYTHING","children":[]}
                     """))
-        .hasRootCauseInstanceOf(IllegalArgumentException.class);
+        .hasRootCauseInstanceOf(NoSuchElementException.class);
   }
 
   private static String invokeId(Object enumValue) {

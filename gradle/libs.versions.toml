@@ -16,6 +16,7 @@ springdoc = "3.0.3"
 jsoup = "1.22.2"
 shedlock = "7.7.0"
 jtokkit = "1.1.0"
+re2j = "1.8"
 
 [libraries]
 spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "springBoot" }
@@ -33,6 +34,7 @@ spring-ai-starter-model-anthropic = { module = "org.springframework.ai:spring-ai
 spring-ai-starter-model-google-genai = { module = "org.springframework.ai:spring-ai-starter-model-google-genai", version.ref = "springAi" }
 spring-ai-starter-model-deepseek = { module = "org.springframework.ai:spring-ai-starter-model-deepseek", version.ref = "springAi" }
 jtokkit = { module = "com.knuddels:jtokkit", version.ref = "jtokkit" }
+google-re2j = { module = "com.google.re2j:re2j", version.ref = "re2j" }
 google-auth-library-oauth2-http = { module = "com.google.auth:google-auth-library-oauth2-http", version.ref = "googleAuthLibrary" }
 google-api-services-gmail = { module = "com.google.apis:google-api-services-gmail", version.ref = "gmailApi" }
 shedlock-provider-jdbc-template = { module = "net.javacrumbs.shedlock:shedlock-provider-jdbc-template", version.ref = "shedlock" }
