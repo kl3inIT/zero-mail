@@ -279,28 +279,28 @@ Plans:
 
 Plans:
 **Wave 0 — validation spine**
-- [ ] 03-00-PLAN.md — Wave 0 contract tests for AST, persistence, compiler, evaluator, preview, templates, API, UI, and boundary rules
+- [x] 03-00-PLAN.md — Wave 0 contract tests for AST, persistence, compiler, evaluator, preview, templates, API, UI, and boundary rules
 
 **Wave 1 — foundations**
-- [ ] 03-01-PLAN.md — Rules Modulith package, model vocabulary, Liquibase/JPA persistence, template catalog seed data, and D-D1 boundary extension
-- [ ] 03-02-PLAN.md — Gateway-owned `RULE_COMPILE` tool path, dedicated compile result, and prompt fixture for structured rule compilation
+- [x] 03-01-PLAN.md — Rules Modulith package, model vocabulary, Liquibase/JPA persistence, template catalog seed data, and D-D1 boundary extension
+- [x] 03-02-PLAN.md — Gateway-owned `RULE_COMPILE` tool path, dedicated compile result, and prompt fixture for structured rule compilation
 
 **Wave 2 — core behavior**
-- [ ] 03-03-PLAN.md — Rule compiler, result validation, CRUD, reorder, enable/disable, and preview-before-enable state transitions
-- [ ] 03-04-PLAN.md — Deterministic tri-state evaluator and action proposal merge/conflict handling
+- [x] 03-03-PLAN.md — Rule compiler, result validation, CRUD, reorder, enable/disable, and preview-before-enable state transitions
+- [x] 03-04-PLAN.md — Deterministic tri-state evaluator and action proposal merge/conflict handling
 
 **Wave 3 — preview and templates**
-- [ ] 03-05-PLAN.md — Side-effect-free recent-message preview with transient Gmail reads and privacy assertions
-- [ ] 03-06-PLAN.md — DB-backed template catalog and idempotent onboarding-template materialization through `OnboardingService`
+- [x] 03-05-PLAN.md — Side-effect-free recent-message preview with transient Gmail reads and privacy assertions
+- [x] 03-06-PLAN.md — DB-backed template catalog and idempotent onboarding-template materialization through `OnboardingService`
 
 **Wave 4 — API**
-- [ ] 03-07-PLAN.md — Thin rules controller, DTO/error mapping, tenant/privacy tests, and regenerated OpenAPI/schema artifacts
+- [x] 03-07-PLAN.md — Thin rules controller, DTO/error mapping, tenant/privacy tests, and regenerated OpenAPI/schema artifacts
 
 **Wave 5 — frontend**
-- [ ] 03-08-PLAN.md — Protected `/rules` page, typed feature API/hooks, i18n, Vitest contracts, and Playwright desktop/mobile flow
+- [x] 03-08-PLAN.md — Protected `/rules` page, typed feature API/hooks, i18n, Vitest contracts, and Playwright desktop/mobile flow
 
 **Wave 6 — closure**
-- [ ] 03-09-PLAN.md — Full verification, privacy/architecture audit, requirement traceability, UAT, and Phase 4 handoff
+- [x] 03-09-PLAN.md — Full verification, privacy/architecture audit, requirement traceability, UAT, and Phase 4 handoff
 
 Cross-cutting constraints:
 - `core.rules` must not import Spring AI/vendor SDKs; all model interaction stays behind `LlmGateway`.
@@ -372,7 +372,7 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 2A. Mail Ingestion | 6/6 | Complete | 2026-04-29 |
 | 2B. Billing (Prepaid Credits) | 7/7 | Complete | 2026-05-06 |
 | 2C. LLM Gateway | 0/8 | Not started | - |
-| 3. Rules Engine | 0/10 | Planned | - |
+| 3. Rules Engine | 10/10 | Complete | 2026-05-10 |
 | 4. Triage Convergence (Hero) | 0/TBD | Not started | - |
 | 5. User Surface — Drafts, Analytics, Web UI | 0/TBD | Not started | - |
 | 6. Polish & CASA-Verified Launch | 0/TBD | Not started | - |
