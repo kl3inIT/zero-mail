@@ -38,7 +38,7 @@ public class RulePreviewDataService {
     return fetchPreviewInputs(tenantId, matcherNode.requiresBodyEvidence(), sampleSize);
   }
 
-  List<PreviewInput> fetchPreviewInputs(
+  public List<PreviewInput> fetchPreviewInputs(
       UUID tenantId, boolean requiresBodyEvidence, PreviewSampleSize sampleSize) {
     Objects.requireNonNull(tenantId, "tenantId must not be null");
     Objects.requireNonNull(sampleSize, "sampleSize must not be null");
