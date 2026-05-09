@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed Phase 02C GAP-01 BYOK validation success gap closure
-last_updated: "2026-05-09T14:41:22.688Z"
-last_activity: 2026-05-09 -- Phase 02C GAP-01 gap closure completed
+last_updated: "2026-05-09T16:01:17.731Z"
+last_activity: 2026-05-09 -- Completed quick task 260509-vsp: Fix flaky SepayWebhookMismatchAuditEventTest assertion after CI rerun passes
 progress:
   total_phases: 15
   completed_phases: 10
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 Phase: 02C (llm-gateway) — EXECUTING
 Plan: 10 of 10
 Status: Gap closure complete
-Last activity: 2026-05-09 -- Phase 02C GAP-01 gap closure completed
+Last activity: 2026-05-09 -- Completed quick task 260509-vsp: Fix flaky SepayWebhookMismatchAuditEventTest assertion after CI rerun passes
 
 Progress: [██████████] 99%
 
@@ -277,6 +277,7 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260509-vsp | Fix flaky SepayWebhookMismatchAuditEventTest assertion after CI rerun passes | 2026-05-09 | fc6f234 | [260509-vsp-fix-flaky-sepaywebhookmismatchauditevent](./quick/260509-vsp-fix-flaky-sepaywebhookmismatchauditevent/) |
 | 260509-til | Fix Base UI RadioGroup controlled state warning on onboarding template select | 2026-05-09 | 9540921 | [260509-til-fix-base-ui-radiogroup-controlled-state-](./quick/260509-til-fix-base-ui-radiogroup-controlled-state-/) |
 | 260508-vlk | Update project pnpm version pin to latest stable | 2026-05-08 | pending | [260508-vlk-update-project-pnpm-version-pin-to-lates](./quick/260508-vlk-update-project-pnpm-version-pin-to-lates/) |
 | 260508-g41 | BYOK OpenRouter preset, model selection, Spring AI 2.0.0-M5 sync | 2026-05-08 | pending | [260508-g41-byok-openrouter-preset-and-per-tenant-mo](./quick/260508-g41-byok-openrouter-preset-and-per-tenant-mo/) |
