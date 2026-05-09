@@ -1,88 +1,85 @@
+import { NextIntlClientProvider } from 'next-intl';
+import type { ReactNode } from 'react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-const FUTURE_RULES_WORKSPACE_MODULE = '@/features/rules/components/RulesWorkspace';
-
-const rulesWorkspaceCopy = {
-  compileRule: 'Compile rule',
-  saveDisabledRule: 'Save disabled rule',
-  previewRule: 'Preview rule',
-  enableRule: 'Enable rule',
-  answerClarification: 'Answer clarification',
-  templateBadge: 'Template',
-  customizedBadge: 'Customized',
-  noGmailChanges: 'No Gmail changes were made.',
-} as const;
-
-const mockedRulesHooks = {
-  useRules: vi.fn(),
-  useCompileRule: vi.fn(),
-  usePreviewRule: vi.fn(),
-  useSaveRule: vi.fn(),
-  useReorderRules: vi.fn(),
-} as const;
+import enMessages from '@/i18n/messages/en.json';
+import { RuleComposer } from '@/features/rules/components/RuleComposer';
+import { RuleList } from '@/features/rules/components/RuleList';
 
 describe('RulesWorkspace Wave 0 contract', () => {
-  it('pins UI-SPEC visible copy for future component tests', () => {
-    expect(Object.values(rulesWorkspaceCopy)).toContain('No Gmail changes were made.');
-    expect(rulesWorkspaceCopy).toMatchObject({
-      compileRule: 'Compile rule',
-      previewRule: 'Preview rule',
-      enableRule: 'Enable rule',
-    });
+  it('renders one inline clarification prompt under the original source textarea', () => {
+    renderWithMessages(
+      <RuleComposer
+        sourceText="Archive receipts from Stripe"
+        clarificationAnswer=""
+        compileResult={{
+          status: 'clarificationRequired',
+          clarification: {
+            language: 'en',
+            question: 'Which receipts should Zero Mail archive?',
+          },
+          priorCompileContext: 'Which receipts should Zero Mail archive?',
+        }}
+        compileError={null}
+        insufficientCreditError={null}
+        isCompiling={false}
+        isSaving={false}
+        onSourceTextChange={vi.fn()}
+        onClarificationAnswerChange={vi.fn()}
+        onCompile={vi.fn()}
+        onAnswerClarification={vi.fn()}
+        onSaveDisabledRule={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText('Rule text')).toHaveValue('Archive receipts from Stripe');
+    expect(screen.getByText('Which receipts should Zero Mail archive?')).toBeInTheDocument();
+    expect(screen.getByLabelText('Clarification answer')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Answer clarification' })).toBeDisabled();
   });
 
-  it.skip('[Plan 03-08] renders composer source state and compile action from mocked hooks', async () => {
-    mockedRulesHooks.useRules.mockReturnValue({ rules: [] });
-    const modulePath = FUTURE_RULES_WORKSPACE_MODULE;
-    const rulesWorkspaceModule = await import(/* @vite-ignore */ modulePath);
-    const RulesWorkspace = rulesWorkspaceModule.RulesWorkspace;
+  it('renders HTML-looking rule names as text instead of injected markup', () => {
+    const { container } = renderWithMessages(
+      <RuleList
+        rules={[
+          {
+            ruleId: 'rule-html',
+            displayName: '<img src=x onerror=alert(1)>',
+            sourceText: 'Archive receipts',
+            enabled: false,
+            orderIndex: 1,
+            entityVersion: 1,
+          },
+        ]}
+        selectedRuleId="rule-html"
+        isLoading={false}
+        pendingRuleId={null}
+        canEnableRule={() => false}
+        onSelectRule={vi.fn()}
+        onMoveRule={vi.fn()}
+        onEditRule={vi.fn()}
+        onToggleEnabled={vi.fn()}
+        onDeleteRule={vi.fn()}
+      />,
+    );
 
-    expect(RulesWorkspace).toBeDefined();
-    expect(rulesWorkspaceCopy.compileRule).toBe('Compile rule');
+    expect(screen.getByText('<img src=x onerror=alert(1)>')).toBeInTheDocument();
+    expect(container.querySelector('img')).toBeNull();
   });
 
-  it.skip('[Plan 03-08] renders one clarification state and blocks save while ambiguous', async () => {
-    mockedRulesHooks.useCompileRule.mockReturnValue({
-      clarification: { question: 'Which newsletters should Zero Mail archive?' },
-    });
-    const modulePath = FUTURE_RULES_WORKSPACE_MODULE;
-    const rulesWorkspaceModule = await import(/* @vite-ignore */ modulePath);
-
-    expect(rulesWorkspaceModule.RulesWorkspace).toBeDefined();
-    expect(rulesWorkspaceCopy.answerClarification).toBe('Answer clarification');
-  });
-
-  it.skip('[Plan 03-08] keeps enable disabled until a successful preview exists', async () => {
-    mockedRulesHooks.usePreviewRule.mockReturnValue({ data: null, isSuccess: false });
-    const modulePath = FUTURE_RULES_WORKSPACE_MODULE;
-    const rulesWorkspaceModule = await import(/* @vite-ignore */ modulePath);
-
-    expect(rulesWorkspaceModule.RulesWorkspace).toBeDefined();
-    expect(rulesWorkspaceCopy.previewRule).toBe('Preview rule');
-  });
-
-  it.skip('[Plan 03-08] renders template and customized provenance badges', async () => {
-    mockedRulesHooks.useRules.mockReturnValue({
-      rules: [
-        { id: 'template-rule', templateKey: 'archive-receipts', customized: false },
-        { id: 'customized-rule', templateKey: 'label-newsletters', customized: true },
-      ],
-    });
-    const modulePath = FUTURE_RULES_WORKSPACE_MODULE;
-    const rulesWorkspaceModule = await import(/* @vite-ignore */ modulePath);
-
-    expect(rulesWorkspaceModule.RulesWorkspace).toBeDefined();
-    expect(rulesWorkspaceCopy.templateBadge).toBe('Template');
-    expect(rulesWorkspaceCopy.customizedBadge).toBe('Customized');
-  });
-
-  it.skip('[Plan 03-08] rolls back optimistic reorder rendering when the mutation fails', async () => {
-    mockedRulesHooks.useReorderRules.mockReturnValue({
-      mutateAsync: vi.fn().mockRejectedValue(new Error('reorder failed')),
-    });
-    const modulePath = FUTURE_RULES_WORKSPACE_MODULE;
-    const rulesWorkspaceModule = await import(/* @vite-ignore */ modulePath);
-
-    expect(rulesWorkspaceModule.RulesWorkspace).toBeDefined();
+  it('pins UI-SPEC visible copy for component tests', () => {
+    expect(enMessages.rules.preview.noWriteNotice).toBe('No Gmail changes were made.');
+    expect(enMessages.rules.composer.compileCta).toBe('Compile rule');
+    expect(enMessages.rules.preview.previewCta).toBe('Preview rule');
+    expect(enMessages.rules.preview.enableCta).toBe('Enable rule');
   });
 });
+
+function renderWithMessages(children: ReactNode) {
+  return render(
+    <NextIntlClientProvider locale="en" messages={enMessages}>
+      {children}
+    </NextIntlClientProvider>,
+  );
+}
