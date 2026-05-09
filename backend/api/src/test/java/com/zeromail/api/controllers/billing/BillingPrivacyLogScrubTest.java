@@ -65,6 +65,8 @@ class BillingPrivacyLogScrubTest extends ApiPostgresTestBase {
   @Test
   void successful_topup_happy_path_logs_no_payload_bytes() {
     UUID tenantId = seedTenant();
+    long sensitiveSepayTransactionId = 987_654_321_987_654_321L;
+    String sensitiveAccountNumber = "PRIVATE-ACCOUNT-SENTINEL";
     seedPendingIntent(tenantId, "LOG12345", 100_000L);
 
     RestClient.create("http://localhost:" + port)
@@ -74,10 +76,10 @@ class BillingPrivacyLogScrubTest extends ApiPostgresTestBase {
         .contentType(MediaType.APPLICATION_JSON)
         .body(
             new SepayWebhookPayload(
-                999L,
+                sensitiveSepayTransactionId,
                 "VCB",
                 "2026-05-05 12:00:00",
-                "0123",
+                sensitiveAccountNumber,
                 "LOG12345",
                 "LOG12345 nap tien zeromail",
                 "in",
@@ -93,8 +95,8 @@ class BillingPrivacyLogScrubTest extends ApiPostgresTestBase {
     assertThat(combinedLogOutput)
         .doesNotContain("100000")
         .doesNotContain("Apikey ")
-        .doesNotContain("999")
-        .doesNotContain("0123")
+        .doesNotContain(String.valueOf(sensitiveSepayTransactionId))
+        .doesNotContain(sensitiveAccountNumber)
         .doesNotContain("bank sms");
   }
 
