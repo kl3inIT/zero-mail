@@ -61,6 +61,7 @@ class LlmGatewayImpl implements LlmGateway {
   private final ZeroMailLlmProperties llmProperties;
   private final AllowListedTools allowListedTools;
   private final ActionValidator actionValidator;
+  private final RuleCompileToolValidator ruleCompileToolValidator;
   private final ObservationRegistry observationRegistry;
   private final TenantByokCredentialsRepository tenantByokCredentialsRepository;
   private final RefreshTokenCipher refreshTokenCipher;
@@ -83,6 +84,7 @@ class LlmGatewayImpl implements LlmGateway {
         llmProperties,
         allowListedTools,
         actionValidator,
+        new RuleCompileToolValidator(),
         ObservationRegistry.create(),
         null,
         null,
@@ -101,6 +103,7 @@ class LlmGatewayImpl implements LlmGateway {
       ZeroMailCoreProperties zeroMailCoreProperties,
       AllowListedTools allowListedTools,
       ActionValidator actionValidator,
+      RuleCompileToolValidator ruleCompileToolValidator,
       ObjectProvider<ObservationRegistry> observationRegistryProvider,
       TenantByokCredentialsRepository tenantByokCredentialsRepository,
       RefreshTokenCipher refreshTokenCipher,
@@ -116,6 +119,7 @@ class LlmGatewayImpl implements LlmGateway {
         zeroMailCoreProperties.llm().platform(),
         allowListedTools,
         actionValidator,
+        ruleCompileToolValidator,
         observationRegistryProvider.getIfAvailable(ObservationRegistry::create),
         tenantByokCredentialsRepository,
         refreshTokenCipher,
@@ -140,6 +144,7 @@ class LlmGatewayImpl implements LlmGateway {
         llmProperties,
         allowListedTools,
         actionValidator,
+        new RuleCompileToolValidator(),
         observationRegistry,
         null,
         null,
@@ -157,6 +162,7 @@ class LlmGatewayImpl implements LlmGateway {
       ZeroMailLlmProperties llmProperties,
       AllowListedTools allowListedTools,
       ActionValidator actionValidator,
+      RuleCompileToolValidator ruleCompileToolValidator,
       ObservationRegistry observationRegistry,
       TenantByokCredentialsRepository tenantByokCredentialsRepository,
       RefreshTokenCipher refreshTokenCipher,
@@ -171,6 +177,7 @@ class LlmGatewayImpl implements LlmGateway {
     this.llmProperties = llmProperties;
     this.allowListedTools = allowListedTools;
     this.actionValidator = actionValidator;
+    this.ruleCompileToolValidator = ruleCompileToolValidator;
     this.observationRegistry = observationRegistry;
     this.tenantByokCredentialsRepository = tenantByokCredentialsRepository;
     this.refreshTokenCipher = refreshTokenCipher;
@@ -490,11 +497,8 @@ class LlmGatewayImpl implements LlmGateway {
       throw new SafetyViolationException();
     }
     RawToolCall rawToolCall = result.toolCalls().getFirst();
-    if (!RuleCompileGatewayResult.TOOL_NAME.equals(rawToolCall.functionName())) {
-      throw new SafetyViolationException();
-    }
-    return new RuleCompileGatewayResult(
-        rawToolCall.functionName(), model, parseJsonArgs(rawToolCall.argsJson()));
+    String toolName = ruleCompileToolValidator.validate(rawToolCall.functionName());
+    return new RuleCompileGatewayResult(toolName, model, parseJsonArgs(rawToolCall.argsJson()));
   }
 
   private Map<String, Object> parseJsonArgs(String argumentsJson) {
