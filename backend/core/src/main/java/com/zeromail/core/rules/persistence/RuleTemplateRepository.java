@@ -22,4 +22,25 @@ public interface RuleTemplateRepository extends JpaRepository<RuleTemplateEntity
       """)
   List<RuleTemplateEntity> findByStatusIdOrderByTemplateKeyAscTemplateVersionAsc(
       @Param("statusId") String statusId);
+
+  @Query(
+      """
+      SELECT ruleTemplateEntity
+      FROM RuleTemplateEntity ruleTemplateEntity
+      WHERE ruleTemplateEntity.statusId IN :statusIds
+      ORDER BY ruleTemplateEntity.templateKey ASC, ruleTemplateEntity.templateVersion DESC
+      """)
+  List<RuleTemplateEntity> findByStatusIdsOrderByTemplateKeyAscTemplateVersionDesc(
+      @Param("statusIds") List<String> statusIds);
+
+  @Query(
+      """
+      SELECT ruleTemplateEntity
+      FROM RuleTemplateEntity ruleTemplateEntity
+      WHERE ruleTemplateEntity.templateKey = :templateKey
+        AND ruleTemplateEntity.statusId IN :statusIds
+      ORDER BY ruleTemplateEntity.templateVersion DESC
+      """)
+  List<RuleTemplateEntity> findByTemplateKeyAndStatusIdsOrderByTemplateVersionDesc(
+      @Param("templateKey") String templateKey, @Param("statusIds") List<String> statusIds);
 }
