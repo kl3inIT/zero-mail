@@ -102,6 +102,13 @@ public class RulePreviewService {
         RulePreviewCommand.draft(tenantId, matcherNode, actionIntents, requestedSampleSize));
   }
 
+  @Transactional(readOnly = true)
+  public RulePreviewResult previewDraft(
+      UUID tenantId, String matcherAst, String actionIntents, Integer requestedSampleSize) {
+    return previewDraft(
+        tenantId, parseMatcher(matcherAst), parseActionIntents(actionIntents), requestedSampleSize);
+  }
+
   @Transactional
   public RulePreviewResult preview(RulePreviewCommand command) {
     Objects.requireNonNull(command, "command must not be null");

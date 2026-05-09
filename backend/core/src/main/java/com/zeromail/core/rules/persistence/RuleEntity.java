@@ -156,12 +156,19 @@ public class RuleEntity extends AbstractTenantOwnedEntity {
     return new RuleStatusView(
         new com.zeromail.core.rules.model.RuleId(getId()),
         displayName,
+        sourceText,
         enabled,
         orderIndex,
+        getSourceLanguage(),
         getSchemaVersion(),
+        getMatcherAst(),
+        getActionIntents(),
         getEntityVersion(),
         lastPreviewedEntityVersion,
-        lastPreviewedAt);
+        lastPreviewedAt,
+        templateKey,
+        templateVersion,
+        customized);
   }
 
   public void replaceDefinition(

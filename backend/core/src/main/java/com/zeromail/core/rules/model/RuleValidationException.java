@@ -25,6 +25,10 @@ public class RuleValidationException extends RuntimeException {
     return new RuleValidationException(Reason.INVALID_REORDER);
   }
 
+  public static RuleValidationException unsafeAction() {
+    return new RuleValidationException(Reason.UNSAFE_ACTION);
+  }
+
   public Reason reason() {
     return reason;
   }
@@ -33,7 +37,8 @@ public class RuleValidationException extends RuntimeException {
     NOT_FOUND("rules.not_found"),
     PREVIEW_REQUIRED("rules.preview_required"),
     VERSION_MISMATCH("rules.version_mismatch"),
-    INVALID_REORDER("rules.invalid_reorder");
+    INVALID_REORDER("rules.invalid_reorder"),
+    UNSAFE_ACTION("rules.unsafe_action");
 
     private final String message;
 

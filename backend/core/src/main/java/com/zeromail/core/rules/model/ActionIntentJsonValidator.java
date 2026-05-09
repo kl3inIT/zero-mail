@@ -1,5 +1,7 @@
 package com.zeromail.core.rules.model;
 
+import java.util.NoSuchElementException;
+
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -15,7 +17,11 @@ public class ActionIntentJsonValidator {
       throw new IllegalArgumentException("actionIntentsJson must be a non-empty JSON array");
     }
     for (JsonNode actionIntentNode : actionIntentRoot) {
-      RuleActionType.fromId(actionType(actionIntentNode));
+      try {
+        RuleActionType.fromId(actionType(actionIntentNode));
+      } catch (NoSuchElementException unsafeActionFailure) {
+        throw RuleValidationException.unsafeAction();
+      }
     }
   }
 

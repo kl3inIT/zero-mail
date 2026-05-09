@@ -88,6 +88,25 @@ public class RuleTemplateMaterializationService {
     return materializationResult;
   }
 
+  public RuleTemplateMaterializationResult materializeTemplate(UUID tenantId, String templateKey) {
+    Objects.requireNonNull(tenantId, "tenantId");
+    if (templateKey == null || templateKey.isBlank()) {
+      throw new IllegalArgumentException("templateKey must not be blank");
+    }
+    TemplateMaterializationOutcome materializationOutcome =
+        materializeTemplateWithRetry(tenantId, templateKey.trim());
+    List<RuleStatusView> createdRules =
+        materializationOutcome.createdRule().map(List::of).orElseGet(List::of);
+    List<SkippedTemplate> skippedTemplates =
+        materializationOutcome.skippedTemplate().map(List::of).orElseGet(List::of);
+    return new RuleTemplateMaterializationResult(
+        createdRules.size(),
+        skippedTemplates.size(),
+        materializationOutcome.customizedPreserved() ? 1 : 0,
+        createdRules,
+        skippedTemplates);
+  }
+
   private TemplateMaterializationOutcome materializeTemplateWithRetry(
       UUID tenantId, String templateKey) {
     try {
@@ -160,7 +179,9 @@ public class RuleTemplateMaterializationService {
   private <T> T executeInTenantTransaction(UUID tenantId, Supplier<T> operation) {
     return executeInTenantScope(
         tenantId,
-        () -> Objects.requireNonNull(transactionTemplate.execute(transactionStatus -> operation.get())));
+        () ->
+            Objects.requireNonNull(
+                transactionTemplate.execute(transactionStatus -> operation.get())));
   }
 
   private static <T> T executeInTenantScope(UUID tenantId, Supplier<T> operation) {
