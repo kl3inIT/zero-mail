@@ -513,10 +513,14 @@ export function ByokForm() {
             )}
 
             {validationResult?.ok === true && (
-              <Alert role="status">
+              <Alert
+                role="status"
+                data-testid="byok-validation-success-alert"
+                className="border-green/30 bg-green-soft/60 text-green dark:border-green/40 dark:bg-green-soft/40"
+              >
                 <AlertTitle>{t('llm.byok.validation.success')}</AlertTitle>
                 {visibleModels.length > 0 && (
-                  <AlertDescription>
+                  <AlertDescription className="text-green/90">
                     <span className="flex flex-wrap gap-1.5 pt-1">
                       {visibleModels.map((model) => (
                         <Badge key={model} variant="outline">

@@ -104,8 +104,8 @@ export const llmMessages = {
     en: 'Pick a provider and model, paste your API key, then validate before saving.',
   },
   'llm.byok.validation.success': {
-    vi: 'Khóa đã được kiểm tra. Bạn có thể lưu cấu hình này.',
-    en: 'Key validated. You can save this configuration.',
+    vi: 'Khóa API và cấu hình API hợp lệ. Bạn có thể lưu cấu hình này.',
+    en: 'API key and API configuration are valid. You can save this configuration.',
   },
   'llm.byok.validation.invalid': {
     vi: 'Không thể kiểm tra khóa này. Kiểm tra nhà cung cấp, endpoint, model và khóa API, rồi thử lại.',

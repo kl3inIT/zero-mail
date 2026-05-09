@@ -383,7 +383,7 @@
         "modelNotFound": "This model is not listed by the provider, or the key does not have access to it.",
         "modelRequired": "Enter a model ID before validating the key.",
         "moreModels": "+{count} more models",
-        "success": "Key validated. You can save this configuration.",
+        "success": "API key and API configuration are valid. You can save this configuration.",
         "timeout": "The endpoint took too long to respond. Check it and retry.",
         "upstreamRejected": "The provider rejected the request. The API key may be wrong, revoked, or missing access to this model."
       }

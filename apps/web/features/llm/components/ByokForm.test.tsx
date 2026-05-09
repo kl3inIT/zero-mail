@@ -104,6 +104,11 @@ describe('ByokForm', () => {
     await waitFor(() => {
       expect(screen.getByRole('status')).toHaveTextContent(viMessages.llm.byok.validation.success);
     });
+    expect(screen.getByTestId('byok-validation-success-alert')).toHaveClass(
+      'border-green/30',
+      'bg-green-soft/60',
+      'text-green',
+    );
     expect(screen.getByRole('button', { name: viMessages.llm.byok.saveCta })).toBeEnabled();
 
     fireEvent.change(screen.getByLabelText(viMessages.llm.byok.model.label), {

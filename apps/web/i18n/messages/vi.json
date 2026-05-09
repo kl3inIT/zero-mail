@@ -383,7 +383,7 @@
         "modelNotFound": "Model này không có trong danh sách model của provider hoặc key chưa có quyền dùng model đó.",
         "modelRequired": "Hãy nhập mã model trước khi kiểm tra khóa.",
         "moreModels": "+{count} mô hình khác",
-        "success": "Khóa đã được kiểm tra. Bạn có thể lưu cấu hình này.",
+        "success": "Khóa API và cấu hình API hợp lệ. Bạn có thể lưu cấu hình này.",
         "timeout": "Endpoint phản hồi quá chậm. Kiểm tra endpoint rồi thử lại.",
         "upstreamRejected": "Provider đã từ chối yêu cầu. Khóa API có thể sai, bị thu hồi, hoặc không có quyền với model này."
       }

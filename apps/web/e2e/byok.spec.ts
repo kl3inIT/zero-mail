@@ -119,7 +119,8 @@ test('byok settings flow validates then saves without exposing the key in the UR
   await page.getByLabel('API key').fill('sk-or-v1-test');
   await page.getByRole('button', { name: 'Validate API key' }).click();
 
-  await expect(page.getByRole('status')).toContainText('Key validated');
+  await expect(page.getByRole('status')).toContainText('API key and API configuration are valid');
+  await expect(page.getByTestId('byok-validation-success-alert')).toHaveClass(/bg-green-soft/);
   await page.getByRole('button', { name: 'Save API key' }).click();
   await expect(page.getByRole('status')).toContainText('Encrypted BYOK key saved');
   await expect(page.getByLabel('API key')).toHaveValue('');
