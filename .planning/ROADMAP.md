@@ -283,7 +283,7 @@ Plans:
 
 **Wave 1 — foundations**
 - [ ] 03-01-PLAN.md — Rules Modulith package, model vocabulary, Liquibase/JPA persistence, template catalog seed data, and D-D1 boundary extension
-- [ ] 03-02-PLAN.md — Gateway-owned `RULE_COMPILE` tool profile and `ToolCallResult` shape for structured rule compilation
+- [ ] 03-02-PLAN.md — Gateway-owned `RULE_COMPILE` tool path, dedicated compile result, and prompt fixture for structured rule compilation
 
 **Wave 2 — core behavior**
 - [ ] 03-03-PLAN.md — Rule compiler, result validation, CRUD, reorder, enable/disable, and preview-before-enable state transitions
@@ -306,6 +306,8 @@ Cross-cutting constraints:
 - `core.rules` must not import Spring AI/vendor SDKs; all model interaction stays behind `LlmGateway`.
 - No raw Gmail headers, snippets, bodies, prompts, completions, tool args, or token bytes may be persisted, logged, or returned.
 - Rules stay disabled until a successful preview for the exact saved rule version.
+- Edited rules clear preview eligibility and require a fresh preview for the current entity version before enablement.
+- Rule reordering uses tenant-qualified optimistic version checks and fails all-or-nothing on conflicts.
 - Cross-domain reads use owning services, not another domain's repositories; onboarding template selections are exposed through `OnboardingService`.
 **UI hint**: yes
 

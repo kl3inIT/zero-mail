@@ -320,16 +320,16 @@ const mutation = useMutation({
 </sota_updates>
 
 <open_questions>
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Should Phase 3 introduce a dedicated `rule_compile` gateway tool or reuse the existing action tool names with richer arguments?**
+1. **Should Phase 3 introduce a dedicated `rule_compile` gateway tool or reuse the existing action tool names with richer arguments?** — RESOLVED in review replan: Plan 03-02 introduces a dedicated `LlmGateway.compileRule(CallSite.PREVIEW, payload)` method and `RuleCompileGatewayResult`, leaving existing safe-action `ToolCallResult` callers unchanged.
    - What we know: Current action tools cannot express a whole AST cleanly.
-   - What's unclear: Whether the existing `ToolCallResult(Action action, Map<String,Object> args)` should grow a neutral compile action or a new project-local result type.
+   - Resolved decision: Use a new project-local result type and gateway method to reduce Phase 2C/worker/BYOK blast radius.
    - Recommendation: Plan 02 should keep changes inside `core.llm` and expose only a stable `LlmGateway` result that `core.rules` can validate. Do not parse free text.
 
-2. **Does preview need Gmail body fetch in Phase 3?**
+2. **Does preview need Gmail body fetch in Phase 3?** — RESOLVED in review replan: Plans 03-01, 03-04, and 03-05 add `MatcherNode.requiresBodyEvidence()` and keep preview metadata-only unless a matcher explicitly requires request-scoped sanitized body-derived evidence.
    - What we know: Header-first is locked; body is fetched only if a matcher needs body evidence. The locked matcher vocabulary in SPEC does not require full body search explicitly.
-   - What's unclear: Whether newsletter/list-unsubscribe and attachment evidence can be satisfied from metadata/headers alone for all starter templates.
+   - Resolved decision: Newsletter/list-unsubscribe/attachment evidence is metadata/header-driven; body-derived evidence is opt-in by matcher capability and remains transient.
    - Recommendation: Build preview data service with a capability flag: metadata-only by default, body fetch method present and tested as transient if/when a matcher declares `requiresBodyEvidence`.
 </open_questions>
 
