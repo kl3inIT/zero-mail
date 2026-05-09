@@ -3,6 +3,7 @@ phase: 02C-llm-gateway
 plan: GAP-01
 type: execute
 mode: gap_closure
+gap_closure: true
 depends_on: [08]
 files_modified:
   - apps/web/features/llm/components/ByokForm.tsx

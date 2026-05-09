@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 phase: 02C-llm-gateway
 source: [02C-01-SUMMARY.md, 02C-02-SUMMARY.md, 02C-03-SUMMARY.md, 02C-04-SUMMARY.md, 02C-05a-SUMMARY.md, 02C-05b-SUMMARY.md, 02C-06-SUMMARY.md, 02C-07-SUMMARY.md, 02C-08-SUMMARY.md]
 started: 2026-05-09T20:52:23.6525899+07:00
-updated: 2026-05-09T21:34:10.3281507+07:00
+updated: 2026-05-09T21:39:41.7768834+07:00
 ---
 
 ## Current Test
@@ -66,7 +66,7 @@ blocked: 0
 ## Gaps
 
 - truth: "On /settings, validation clearly communicates whether the API key and API URL are valid, with success styled as a green valid-key state and failure styled as an invalid-key state."
-  status: failed
+  status: resolved
   reason: "User reported: thanh cong hay that bai thi phai noi ro ra chu viec kiem tra nay de biet apikey va url api co hop le k ma vi du thanh cong thi bao apikey hop le mau xanh la"
   severity: major
   test: 5
@@ -85,3 +85,10 @@ blocked: 0
     - "Apply green success styling to validation success and save success alerts using existing semantic green tokens/classes."
     - "Update component and Playwright tests to require explicit valid-key wording and success styling."
   debug_session: "inline-gsd-verify-work-02C-2026-05-09"
+  resolved_by: ".planning/phases/02C-llm-gateway/02C-GAP-01-SUMMARY.md"
+  verification:
+    - "pnpm -C apps/web i18n:check"
+    - "pnpm -C apps/web exec vitest run features/llm/components/ByokForm.test.tsx __tests__/byok-key-handling.test.ts __tests__/i18n-erase-protection.test.ts"
+    - "pnpm -C apps/web exec playwright test e2e/byok.spec.ts --reporter=line"
+    - "pnpm -C apps/web typecheck"
+    - "pnpm -C apps/web lint"
