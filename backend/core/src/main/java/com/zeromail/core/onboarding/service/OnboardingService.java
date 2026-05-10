@@ -47,21 +47,19 @@ public class OnboardingService {
   }
 
   public List<String> selectedEnabledTemplateKeys(UUID tenantId) {
-    try {
-      return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-          .call(
-              () ->
-                  onboardingSelectionRepository.findByTenantId(tenantId).stream()
-                      .filter(OnboardingSelectionEntity::isEnabled)
-                      .map(OnboardingSelectionEntity::getTemplateKey)
-                      .distinct()
-                      .sorted()
-                      .toList());
-    } catch (RuntimeException runtimeFailure) {
-      throw runtimeFailure;
-    } catch (Exception checkedFailure) {
-      throw new IllegalStateException("Selected onboarding templates could not be read", checkedFailure);
-    }
+    // ScopedValue.get(Supplier) is the unchecked Java 25 variant; the
+    // .call(Callable) form declares throws Exception and forces a
+    // hand-written rethrow-or-wrap that would silently downgrade
+    // future checked exceptions to IllegalStateException.
+    return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+        .get(
+            () ->
+                onboardingSelectionRepository.findByTenantId(tenantId).stream()
+                    .filter(OnboardingSelectionEntity::isEnabled)
+                    .map(OnboardingSelectionEntity::getTemplateKey)
+                    .distinct()
+                    .sorted()
+                    .toList());
   }
 
   @Transactional

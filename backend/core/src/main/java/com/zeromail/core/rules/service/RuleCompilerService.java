@@ -56,14 +56,14 @@ public class RuleCompilerService {
   }
 
   private RuleCompileGatewayResult callGateway(RuleCompileCommand command, String compilerPayload) {
-    try {
-      return ScopedValue.where(TenantContext.TENANT, command.tenantId().toString())
-          .call(() -> llmGateway.compileRule(CallSite.PREVIEW, compilerPayload));
-    } catch (RuntimeException runtimeFailure) {
-      throw runtimeFailure;
-    } catch (Exception checkedFailure) {
-      throw new IllegalStateException("Rule compile gateway failed", checkedFailure);
-    }
+    // Use ScopedValue.where(...).get(Supplier) (Java 25 unchecked variant)
+    // so the compiler enforces unchecked-only at the call site. The earlier
+    // .call(Callable) variant declares throws Exception, which forced a
+    // hand-written rethrow-or-wrap that would silently downgrade any future
+    // checked exception added to LlmGateway.compileRule to IllegalStateException
+    // and break GlobalExceptionHandler routing.
+    return ScopedValue.where(TenantContext.TENANT, command.tenantId().toString())
+        .get(() -> llmGateway.compileRule(CallSite.PREVIEW, compilerPayload));
   }
 
   private static String buildCompilerPayload(RuleCompileCommand command, RuleLanguage languageHint) {

@@ -185,13 +185,11 @@ public class RuleTemplateMaterializationService {
   }
 
   private static <T> T executeInTenantScope(UUID tenantId, Supplier<T> operation) {
-    try {
-      return ScopedValue.where(TenantContext.TENANT, tenantId.toString()).call(operation::get);
-    } catch (RuntimeException runtimeFailure) {
-      throw runtimeFailure;
-    } catch (Exception checkedFailure) {
-      throw new IllegalStateException("Template materialization failed", checkedFailure);
-    }
+    // Use ScopedValue.where(...).get(Supplier) (Java 25 unchecked variant)
+    // so the compiler enforces unchecked-only at the call site and any
+    // future checked exception added downstream surfaces with its real
+    // type rather than being wrapped in IllegalStateException.
+    return ScopedValue.where(TenantContext.TENANT, tenantId.toString()).get(operation);
   }
 
   private record TemplateMaterializationOutcome(
