@@ -162,6 +162,31 @@
       "body": "The page you're looking for doesn't exist or has been moved.",
       "title": "Page not found"
     },
+    "rules": {
+      "compile": {
+        "clarification_required": "This rule needs one clarification answer before it can be saved.",
+        "invalid": "Zero Mail could not compile this rule. Edit the wording or answer the clarification, then compile again."
+      },
+      "gmail": {
+        "unavailable": "Gmail preview is unavailable. Reconnect Gmail and try again."
+      },
+      "gmailUnavailable": "Gmail preview is unavailable. Reconnect Gmail and try again.",
+      "insufficientCredits": "Platform credits are depleted. Top up credits or save a valid BYOK key before compiling or previewing rules.",
+      "invalidSampleSize": "Preview sample size must be 10, 25, or 50.",
+      "not_found": "This rule could not be found. Reload the rules list.",
+      "notFound": "This rule could not be found. Reload the rules list.",
+      "preview": {
+        "generic": "Preview could not finish. Check Gmail connection and credits, then preview the rule again.",
+        "invalid_sample_size": "Preview sample size must be 10, 25, or 50.",
+        "required": "Preview the current rule version before enabling it."
+      },
+      "reorder": {
+        "invalid": "Could not save rule order. Reload the list and try again."
+      },
+      "unsafe_action": "This rule asks for an action that is not allowed in v1.",
+      "version_mismatch": "The rule changed before the action finished. Reload and try again.",
+      "versionMismatch": "The rule changed before the action finished. Reload and try again."
+    },
     "schemaMismatch": "This page needs a newer API contract. Regenerate the typed client before continuing.",
     "unknown": "An unknown error occurred. Try again or sign in again.",
     "validation": {
@@ -463,14 +488,80 @@
     "title": "What you'll grant"
   },
   "rules": {
+    "composer": {
+      "actionReview": "Actions",
+      "answerClarification": "Answer clarification",
+      "answerLabel": "Clarification answer",
+      "compileCta": "Compile rule",
+      "compiledReview": "What Zero Mail understood",
+      "compiling": "Compiling...",
+      "invalid": "This rule is not ready to save. Edit the wording or answer the clarification.",
+      "matcherReview": "Matchers",
+      "saveDisabledCta": "Save disabled rule",
+      "saving": "Saving...",
+      "sourceLabel": "Rule text",
+      "sourcePlaceholder": "Example: Archive receipts from Stripe and label them Finance",
+      "title": "Rule composer"
+    },
+    "delete": {
+      "body": "This removes the rule definition. Gmail will not be changed, but this rule will no longer appear in previews.",
+      "confirm": "Delete rule",
+      "dismiss": "Keep rule",
+      "title": "Delete this rule?"
+    },
     "desc": "Five rules cover most professional inboxes. Each one is editable, testable, and reversible.",
     "dryrun": "Last 7 days · dry run",
     "exampleQuote": "\"Archive newsletters, marketing, and receipts unless a charge is over $500 or it's a refund.\"",
     "eyebrow": "Example rules",
+    "list": {
+      "customizedBadge": "Customized",
+      "delete": "Delete rule",
+      "disabled": "Disabled",
+      "edit": "Edit rule",
+      "empty": {
+        "body": "Write your first rule or start from a Gmail template. New rules stay disabled until you preview them.",
+        "heading": "No rules yet"
+      },
+      "enabled": "Enabled",
+      "moveDown": "Move rule down",
+      "moveUp": "Move rule up",
+      "previewReady": "Previewed",
+      "previewRequired": "Preview required",
+      "templateBadge": "Template",
+      "title": "Rule order"
+    },
     "matches": "4 matches",
+    "page": {
+      "intro": "Write rules in plain language, preview what would match, then enable only the rules you trust.",
+      "safetyNote": "New rules are saved disabled. Preview never changes Gmail.",
+      "title": "Rules"
+    },
     "parses": {
       "body": "Zero Mail extracts intents (archive, label, draft, notify), entities (newsletter, receipt), and conditions (amount, sender, thread state). It never touches mail that doesn't match.",
       "title": "How it parses"
+    },
+    "preview": {
+      "conflicts": "{count} conflicts",
+      "conflictWarning": "This preview found action conflicts. Review the matched rules before enabling.",
+      "deferred": "{count} deferred",
+      "deferredSemantic": "Deferred semantic check",
+      "deferredTooltip": "Phase 03 stores this check, but evaluation is deferred.",
+      "disableCta": "Disable rule",
+      "empty": {
+        "body": "Run a preview against recent Gmail messages before enabling this rule.",
+        "heading": "No preview run yet"
+      },
+      "enableCta": "Enable rule",
+      "evidence": "Evidence",
+      "gmailLabels": "Gmail labels",
+      "matched": "{count} matched",
+      "noWriteNotice": "No Gmail changes were made.",
+      "previewCta": "Preview rule",
+      "previewing": "Previewing...",
+      "proposedActions": "Proposed actions",
+      "sampled": "{count} sampled",
+      "sampleSize": "Sample size",
+      "title": "Safe preview"
     },
     "q": {
       "plain": "plain English",
@@ -490,6 +581,12 @@
       "investors": "Investor follow-ups",
       "newsletters": "Newsletters & receipts",
       "recruiters": "Recruiters"
+    },
+    "templates": {
+      "disabledByDefault": "Saved disabled until previewed",
+      "materialized": "Materialized",
+      "title": "Starter templates",
+      "useStarter": "Use starter rule"
     },
     "title": "Sentences, not filters."
   },

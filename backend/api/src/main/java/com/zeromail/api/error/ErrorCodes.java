@@ -33,6 +33,17 @@ public final class ErrorCodes {
   public static final String LLM_SANITIZATION_FAILED = "error.llm.sanitization_failed";
   public static final String LLM_BYOK_INVALID = "error.llm.byok.invalid";
   public static final String LLM_BYOK_VALIDATE_FAILED = "error.llm.byok.validate_failed";
+  public static final String RULES_COMPILE_INVALID = "error.rules.compile.invalid";
+  public static final String RULES_COMPILE_CLARIFICATION_REQUIRED =
+      "error.rules.compile.clarification_required";
+  public static final String RULES_NOT_FOUND = "error.rules.not_found";
+  public static final String RULES_PREVIEW_REQUIRED = "error.rules.preview.required";
+  public static final String RULES_PREVIEW_INVALID_SAMPLE_SIZE =
+      "error.rules.preview.invalid_sample_size";
+  public static final String RULES_REORDER_INVALID = "error.rules.reorder.invalid";
+  public static final String RULES_VERSION_MISMATCH = "error.rules.version_mismatch";
+  public static final String RULES_UNSAFE_ACTION = "error.rules.unsafe_action";
+  public static final String RULES_GMAIL_UNAVAILABLE = "error.rules.gmail.unavailable";
 
   private ErrorCodes() {}
 }

@@ -3,7 +3,7 @@ package com.zeromail.core.billing.persistence;
 import java.time.Instant;
 import java.util.UUID;
 
-import com.zeromail.core.billing.model.BillingTopupIntentStatus;
+import com.zeromail.core.billing.domain.BillingTopupIntentStatus;
 import com.zeromail.core.shared.persistence.AbstractTenantOwnedEntity;
 
 import jakarta.persistence.Column;

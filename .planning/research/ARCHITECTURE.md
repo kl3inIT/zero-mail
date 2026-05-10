@@ -88,20 +88,15 @@ This is the right tradeoff for a small team:
 ### Recommended package layout inside `backend/core`
 
 ```text
-backend/core/src/main/java/com/zeromail/
+backend/core/src/main/java/com/zeromail/core/
 ├── shared/
-├── identity/
-├── mail/
-├── rules/
-├── triage/
-├── drafting/
+├── tenant/
+├── account/
+├── gmail/
+├── onboarding/
 ├── billing/
-├── analytics/
-└── integration/
-    ├── gmail/
-    ├── llm/
-    ├── persistence/
-    └── payments/
+├── llm/
+└── rules/
 ```
 
 ### Practical reading of those packages
@@ -109,19 +104,31 @@ backend/core/src/main/java/com/zeromail/
 | Package | Owns |
 |---|---|
 | `shared` | IDs, money/credits, common errors, crypto helpers, clocks |
-| `identity` | user, tenant, OAuth grant lifecycle |
-| `mail` | Gmail account, watch expiry, history checkpoint, inbound notification records |
-| `rules` | rule aggregate, matcher AST, compile-preview logic |
-| `triage` | triage orchestrator, safety policy, action execution flow |
-| `drafting` | draft generation flow and result model |
+| `tenant` | tenant context, tenant persistence, tenant-scoped runtime guardrails |
+| `account` | users, OAuth provisioning, current-user projections, account deletion |
+| `gmail` | Gmail account connection, watch/history state, inbound notification records |
+| `onboarding` | onboarding state machine and template selection |
 | `billing` | credit ledger, reserve/settle/release, top-up state |
-| `analytics` | metadata-only projections and counters |
-| `integration.gmail` | Gmail API adapter, push payload parsing, watch renew helper |
-| `integration.llm` | Spring AI/OpenRouter/BYOK adapter |
-| `integration.persistence` | repositories, outbox mappings, queue tables |
-| `integration.payments` | Stripe/LemonSqueezy adapter |
+| `llm` | model gateway, BYOK, sanitization, Spring AI/OpenRouter adapters |
+| `rules` | rule matcher/action domain, compile-preview logic, template materialization |
 
 The key idea is: **bounded contexts still exist**, but they are package-based modules inside `backend/core`, not separate Gradle subprojects.
+
+Inside each bounded context, use responsibility packages instead of ambiguous `model` buckets:
+
+```text
+core/<domain>/
+├── domain/       business vocabulary, value objects, enums
+├── application/  use-case services, command inputs, operation results
+├── projection/   read-side snapshots for query/list/status flows
+├── exception/    business/application exceptions
+├── persistence/  entities, repositories, converters, low-level SQL/JDBC helpers
+└── service/      existing Spring services when not yet folded into application
+```
+
+Create only folders that have real classes. `Projection` means read state; `Result` means the
+outcome of an operation. New code should not introduce `core.<domain>.model.*`, and read-side
+classes should use `*Projection`, not `*View`.
 
 ---
 
@@ -188,6 +195,10 @@ HTTP request
 | Payment webhooks | Yes | external HTTP boundary |
 | Triage scoring rules | No | belongs in core |
 | Credit ledger logic | No | belongs in core |
+
+Controllers stay under `api/controllers/<domain>/`, while request/response records stay under
+`api/dto/<domain>/`. Shared API problem-detail/error classes remain in `api/error`, and security
+filters/config remain in `api/security`.
 
 ---
 

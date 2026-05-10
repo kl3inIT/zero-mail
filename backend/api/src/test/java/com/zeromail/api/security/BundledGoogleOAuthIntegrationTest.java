@@ -31,7 +31,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import com.zeromail.api.support.ApiPostgresTestBase;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.gmail.service.GmailConnectionService;
-import com.zeromail.core.onboarding.model.OnboardingStep;
+import com.zeromail.core.onboarding.domain.OnboardingStep;
 import com.zeromail.core.tenant.persistence.TenantRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;

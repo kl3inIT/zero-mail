@@ -21,7 +21,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] **Phase 2A: Mail Ingestion** _(completed 2026-04-29)_ - Gmail `users.watch` + Pub/Sub push + OIDC verification + idempotent history processing + global pause
 - [x] **Phase 2B: Billing (Prepaid Credits)** _(completed 2026-05-06)_ - Double-entry Postgres ledger, reserve/settle/release, credit-hold watchdog, SePay/VietQR top-up intent + webhook, balance API hooks
 - [ ] **Phase 2C: LLM Gateway** - Spring AI 2.0.0-M5 `LlmGateway` with sanitize → Unicode strip → structured tool-call + allow-list → BYOK per-request options → daily spend cap → drift detection
-- [ ] **Phase 3: Rules Engine** - NL → structured matcher AST via Spring AI tool-call, deterministic evaluator, live preview, CRUD + reorder, template gallery
+- [x] **Phase 3: Rules Engine** _(completed 2026-05-10)_ - NL → structured matcher AST via Spring AI tool-call, deterministic evaluator, live preview, CRUD + reorder, template gallery
 - [ ] **Phase 4: Triage Convergence (Hero)** - Orchestrator, safety policy layer, audit + undo, shadow mode for new tenants, sender safety net
 - [ ] **Phase 5: User Surface (Drafts, Analytics, Web UI)** - AI-drafted replies, metadata-only analytics + daily digest, Next.js 16 / React 19 frontend covering all flows
 - [ ] **Phase 6: Polish & CASA-Verified Launch** - End-to-end integration hardening, CASA Tier verification sign-off, launch readiness
@@ -274,7 +274,41 @@ Plans:
   3. A user can preview a rule against the last N recent messages and see exactly which would match, before enabling the rule.
   4. A user can enable, disable, reorder, edit, and delete rules, and the changes take effect on the next message processed.
   5. A new user sees a template gallery of common v1 rules (receipts, newsletters, calendar invites) and can enable one with a single click.
-**Plans**: TBD
+**Plans**: 10 plans
+**Research flag**: COMPLETE — Phase 3 research, AI-SPEC, UI-SPEC, validation strategy, and implementation patterns are available in `.planning/phases/03-rules-engine/`.
+
+Plans:
+**Wave 0 — validation spine**
+- [x] 03-00-PLAN.md — Wave 0 contract tests for AST, persistence, compiler, evaluator, preview, templates, API, UI, and boundary rules
+
+**Wave 1 — foundations**
+- [x] 03-01-PLAN.md — Rules Modulith package, model vocabulary, Liquibase/JPA persistence, template catalog seed data, and D-D1 boundary extension
+- [x] 03-02-PLAN.md — Gateway-owned `RULE_COMPILE` tool path, dedicated compile result, and prompt fixture for structured rule compilation
+
+**Wave 2 — core behavior**
+- [x] 03-03-PLAN.md — Rule compiler, result validation, CRUD, reorder, enable/disable, and preview-before-enable state transitions
+- [x] 03-04-PLAN.md — Deterministic tri-state evaluator and action proposal merge/conflict handling
+
+**Wave 3 — preview and templates**
+- [x] 03-05-PLAN.md — Side-effect-free recent-message preview with transient Gmail reads and privacy assertions
+- [x] 03-06-PLAN.md — DB-backed template catalog and idempotent onboarding-template materialization through `OnboardingService`
+
+**Wave 4 — API**
+- [x] 03-07-PLAN.md — Thin rules controller, DTO/error mapping, tenant/privacy tests, and regenerated OpenAPI/schema artifacts
+
+**Wave 5 — frontend**
+- [x] 03-08-PLAN.md — Protected `/rules` page, typed feature API/hooks, i18n, Vitest contracts, and Playwright desktop/mobile flow
+
+**Wave 6 — closure**
+- [x] 03-09-PLAN.md — Full verification, privacy/architecture audit, requirement traceability, UAT, and Phase 4 handoff
+
+Cross-cutting constraints:
+- `core.rules` must not import Spring AI/vendor SDKs; all model interaction stays behind `LlmGateway`.
+- No raw Gmail headers, snippets, bodies, prompts, completions, tool args, or token bytes may be persisted, logged, or returned.
+- Rules stay disabled until a successful preview for the exact saved rule version.
+- Edited rules clear preview eligibility and require a fresh preview for the current entity version before enablement.
+- Rule reordering uses tenant-qualified optimistic version checks and fails all-or-nothing on conflicts.
+- Cross-domain reads use owning services, not another domain's repositories; onboarding template selections are exposed through `OnboardingService`.
 **UI hint**: yes
 
 ### Phase 4: Triage Convergence (Hero)
@@ -338,7 +372,7 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 2A. Mail Ingestion | 6/6 | Complete | 2026-04-29 |
 | 2B. Billing (Prepaid Credits) | 7/7 | Complete | 2026-05-06 |
 | 2C. LLM Gateway | 0/8 | Not started | - |
-| 3. Rules Engine | 0/TBD | Not started | - |
+| 3. Rules Engine | 10/10 | Complete | 2026-05-10 |
 | 4. Triage Convergence (Hero) | 0/TBD | Not started | - |
 | 5. User Surface — Drafts, Analytics, Web UI | 0/TBD | Not started | - |
 | 6. Polish & CASA-Verified Launch | 0/TBD | Not started | - |

@@ -25,5 +25,4 @@
         displayName = "Billing",
         allowedDependencies = {"tenant", "shared.persistence", "shared.lang"})
 package com.zeromail.core.billing;
-
 import org.springframework.modulith.ApplicationModule;

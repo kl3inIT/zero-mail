@@ -162,6 +162,31 @@
       "body": "Trang bạn đang tìm không tồn tại hoặc đã bị di chuyển.",
       "title": "Không tìm thấy trang"
     },
+    "rules": {
+      "compile": {
+        "clarification_required": "Quy tắc này cần một câu trả lời làm rõ trước khi có thể lưu.",
+        "invalid": "Zero Mail không thể biên dịch quy tắc này. Hãy sửa cách diễn đạt hoặc trả lời câu hỏi làm rõ rồi biên dịch lại."
+      },
+      "gmail": {
+        "unavailable": "Không thể chạy thử qua Gmail lúc này. Kết nối lại Gmail rồi thử lại."
+      },
+      "gmailUnavailable": "Không thể chạy thử qua Gmail lúc này. Kết nối lại Gmail rồi thử lại.",
+      "insufficientCredits": "Tín dụng nền tảng đã hết. Hãy nạp thêm tín dụng hoặc lưu khóa BYOK hợp lệ trước khi biên dịch hoặc chạy thử quy tắc.",
+      "invalidSampleSize": "Cỡ mẫu chạy thử phải là 10, 25 hoặc 50.",
+      "not_found": "Không tìm thấy quy tắc này. Hãy tải lại danh sách quy tắc.",
+      "notFound": "Không tìm thấy quy tắc này. Hãy tải lại danh sách quy tắc.",
+      "preview": {
+        "generic": "Không thể chạy thử. Kiểm tra kết nối Gmail và tín dụng, rồi chạy thử lại.",
+        "invalid_sample_size": "Cỡ mẫu chạy thử phải là 10, 25 hoặc 50.",
+        "required": "Hãy chạy thử phiên bản quy tắc hiện tại trước khi bật."
+      },
+      "reorder": {
+        "invalid": "Không thể lưu thứ tự quy tắc. Hãy tải lại danh sách rồi thử lại."
+      },
+      "unsafe_action": "Quy tắc này yêu cầu hành động không được phép trong v1.",
+      "version_mismatch": "Quy tắc đã thay đổi trước khi thao tác hoàn tất. Tải lại rồi thử lại.",
+      "versionMismatch": "Quy tắc đã thay đổi trước khi thao tác hoàn tất. Tải lại rồi thử lại."
+    },
     "schemaMismatch": "Trang này cần hợp đồng API mới hơn. Hãy tạo lại typed client trước khi tiếp tục.",
     "unknown": "Đã xảy ra lỗi chưa xác định. Hãy thử lại hoặc đăng nhập lại.",
     "validation": {
@@ -463,14 +488,80 @@
     "title": "Quyền bạn sẽ cấp"
   },
   "rules": {
+    "composer": {
+      "actionReview": "Hành động dự kiến",
+      "answerClarification": "Trả lời câu hỏi làm rõ",
+      "answerLabel": "Câu trả lời làm rõ",
+      "compileCta": "Biên dịch quy tắc",
+      "compiledReview": "Zero Mail đã hiểu",
+      "compiling": "Đang biên dịch...",
+      "invalid": "Quy tắc này chưa thể lưu. Hãy sửa cách diễn đạt hoặc trả lời câu hỏi làm rõ.",
+      "matcherReview": "Điều kiện khớp",
+      "saveDisabledCta": "Lưu quy tắc đang tắt",
+      "saving": "Đang lưu...",
+      "sourceLabel": "Nội dung quy tắc",
+      "sourcePlaceholder": "Ví dụ: Lưu trữ biên lai từ Stripe và gắn nhãn Finance",
+      "title": "Soạn quy tắc"
+    },
+    "delete": {
+      "body": "Thao tác này xóa định nghĩa quy tắc. Gmail sẽ không thay đổi, nhưng quy tắc này sẽ không còn xuất hiện trong các lượt chạy thử.",
+      "confirm": "Xóa quy tắc",
+      "dismiss": "Giữ quy tắc",
+      "title": "Xóa quy tắc này?"
+    },
     "desc": "Năm quy tắc đủ cho hầu hết hộp thư công việc. Mỗi quy tắc đều có thể chỉnh, kiểm thử và hoàn tác.",
     "dryrun": "7 ngày gần nhất · chạy thử",
     "exampleQuote": "\"Lưu trữ bản tin, marketing và biên lai trừ khi khoản phí trên $500 hoặc đó là hoàn tiền.\"",
     "eyebrow": "Quy tắc mẫu",
+    "list": {
+      "customizedBadge": "Đã tùy chỉnh",
+      "delete": "Xóa quy tắc",
+      "disabled": "Đang tắt",
+      "edit": "Sửa quy tắc",
+      "empty": {
+        "body": "Viết quy tắc đầu tiên hoặc bắt đầu từ template Gmail. Quy tắc mới luôn tắt cho đến khi bạn chạy thử.",
+        "heading": "Chưa có quy tắc"
+      },
+      "enabled": "Đang bật",
+      "moveDown": "Di chuyển quy tắc xuống",
+      "moveUp": "Di chuyển quy tắc lên",
+      "previewReady": "Đã chạy thử",
+      "previewRequired": "Cần chạy thử",
+      "templateBadge": "Template",
+      "title": "Thứ tự quy tắc"
+    },
     "matches": "4 kết quả",
+    "page": {
+      "intro": "Viết quy tắc bằng ngôn ngữ tự nhiên, xem trước thư nào sẽ khớp, rồi chỉ bật các quy tắc bạn tin tưởng.",
+      "safetyNote": "Quy tắc mới luôn được lưu ở trạng thái tắt. Chạy thử không thay đổi Gmail.",
+      "title": "Quy tắc"
+    },
     "parses": {
       "body": "Zero Mail trích xuất ý định (lưu trữ, gắn nhãn, soạn nháp, thông báo), thực thể (bản tin, biên lai), và điều kiện (số tiền, người gửi, trạng thái chuỗi). Nó không bao giờ chạm vào thư không khớp.",
       "title": "Cách phân tích"
+    },
+    "preview": {
+      "conflicts": "{count} xung đột",
+      "conflictWarning": "Lượt chạy thử này có xung đột hành động. Hãy xem các quy tắc khớp trước khi bật.",
+      "deferred": "{count} kiểm tra trì hoãn",
+      "deferredSemantic": "Kiểm tra ngữ nghĩa trì hoãn",
+      "deferredTooltip": "Phase 03 lưu kiểm tra này, nhưng việc đánh giá được trì hoãn.",
+      "disableCta": "Tắt quy tắc",
+      "empty": {
+        "body": "Chạy thử trên các email Gmail gần đây trước khi bật quy tắc này.",
+        "heading": "Chưa chạy thử"
+      },
+      "enableCta": "Bật quy tắc",
+      "evidence": "Bằng chứng khớp",
+      "gmailLabels": "Nhãn Gmail",
+      "matched": "{count} khớp",
+      "noWriteNotice": "Không có thay đổi nào được áp dụng lên Gmail.",
+      "previewCta": "Chạy thử quy tắc",
+      "previewing": "Đang chạy thử...",
+      "proposedActions": "Hành động dự kiến",
+      "sampled": "{count} thư đã lấy mẫu",
+      "sampleSize": "Cỡ mẫu",
+      "title": "Chạy thử an toàn"
     },
     "q": {
       "plain": "ngôn ngữ tự nhiên",
@@ -490,6 +581,12 @@
       "investors": "Theo dõi nhà đầu tư",
       "newsletters": "Bản tin & biên lai",
       "recruiters": "Nhà tuyển dụng"
+    },
+    "templates": {
+      "disabledByDefault": "Lưu ở trạng thái tắt cho đến khi chạy thử",
+      "materialized": "Đã tạo",
+      "title": "Template khởi đầu",
+      "useStarter": "Dùng quy tắc khởi đầu"
     },
     "title": "Câu văn, không phải bộ lọc."
   },

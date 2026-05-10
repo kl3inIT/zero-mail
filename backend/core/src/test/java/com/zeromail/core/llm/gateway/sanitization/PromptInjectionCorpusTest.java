@@ -3,7 +3,7 @@ package com.zeromail.core.llm.gateway.sanitization;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.knuddels.jtokkit.Encodings;
-import com.zeromail.core.llm.model.SanitizationContext;
+import com.zeromail.core.llm.application.SanitizationContext;
 import com.zeromail.core.tenant.TenantContext;
 import java.io.IOException;
 import java.io.InputStream;

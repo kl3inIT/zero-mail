@@ -1,0 +1,66 @@
+databaseChangeLog:
+  - changeSet:
+      id: 022-rule-template-catalog-seed
+      author: zeromail
+      changes:
+        - sql:
+            splitStatements: false
+            comment: Seed v1 starter rule templates. Materializable keys mirror onboarding selections.
+            sql: |
+              INSERT INTO rule_template_catalog (
+                id, template_key, template_version, display_name, source_text, source_language,
+                schema_version, matcher_ast, action_intents, status
+              )
+              VALUES
+                (
+                  '00000000-0000-0000-0000-000000003001'::uuid,
+                  'archive-receipts',
+                  1,
+                  'Archive receipts',
+                  'Archive receipts from payment processors and stores after labeling them as receipts.',
+                  'en',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"ANY","children":[{"type":"SENDER_DOMAIN","domain":"stripe.com"},{"type":"SUBJECT_CONTAINS","text":"receipt"},{"type":"SUBJECT_CONTAINS","text":"invoice"}]}'::jsonb,
+                  '[{"type":"label","labelName":"Receipts"},{"type":"archive"}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003002'::uuid,
+                  'label-newsletters',
+                  1,
+                  'Label newsletters',
+                  'Label newsletters and mailing-list updates so they are grouped away from personal mail.',
+                  'en',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"ANY","children":[{"type":"LIST_UNSUBSCRIBE_PRESENT"},{"type":"NEWSLETTER_INDICATOR"}]}'::jsonb,
+                  '[{"type":"label","labelName":"Newsletters"}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003003'::uuid,
+                  'pin-calendar',
+                  1,
+                  'Pin calendar mail',
+                  'Label calendar invitations and schedule updates so they stay visible.',
+                  'en',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"ANY","children":[{"type":"GMAIL_CATEGORY_PRESENT","category":"CATEGORY_PERSONAL"},{"type":"SUBJECT_CONTAINS","text":"invitation"},{"type":"SUBJECT_CONTAINS","text":"calendar"}]}'::jsonb,
+                  '[{"type":"label","labelName":"Calendar"}]'::jsonb,
+                  'materializable'
+                ),
+                (
+                  '00000000-0000-0000-0000-000000003004'::uuid,
+                  'calendar-invites',
+                  1,
+                  'Calendar invites',
+                  'Label direct calendar invitations without auto-archiving them.',
+                  'en',
+                  'rules.v1',
+                  '{"schemaVersion":"rules.v1","type":"ANY","children":[{"type":"SUBJECT_CONTAINS","text":"invited"},{"type":"SUBJECT_CONTAINS","text":"calendar invitation"}]}'::jsonb,
+                  '[{"type":"label","labelName":"Calendar"}]'::jsonb,
+                  'gallery_only'
+                )
+              ON CONFLICT (template_key, template_version) DO NOTHING
+      rollback:
+        - sql:
+            sql: DELETE FROM rule_template_catalog WHERE template_key IN ('archive-receipts','label-newsletters','pin-calendar','calendar-invites')

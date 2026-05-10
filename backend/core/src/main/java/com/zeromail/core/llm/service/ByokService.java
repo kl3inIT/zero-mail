@@ -21,14 +21,14 @@ import org.springframework.web.client.RestClientResponseException;
 
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.llm.byok.ByokEndpointValidator;
-import com.zeromail.core.llm.model.BYOKProvider;
-import com.zeromail.core.llm.model.ByokCurrent;
-import com.zeromail.core.llm.model.ByokProviderPreset;
-import com.zeromail.core.llm.model.ByokSaveCommand;
-import com.zeromail.core.llm.model.ByokSaveResult;
-import com.zeromail.core.llm.model.ByokValidateCommand;
-import com.zeromail.core.llm.model.ByokValidateResult;
-import com.zeromail.core.llm.model.InvalidByokException;
+import com.zeromail.core.llm.domain.BYOKProvider;
+import com.zeromail.core.llm.application.ByokCurrent;
+import com.zeromail.core.llm.domain.ByokProviderPreset;
+import com.zeromail.core.llm.application.ByokSaveCommand;
+import com.zeromail.core.llm.application.ByokSaveResult;
+import com.zeromail.core.llm.application.ByokValidateCommand;
+import com.zeromail.core.llm.application.ByokValidateResult;
+import com.zeromail.core.llm.exception.InvalidByokException;
 import com.zeromail.core.llm.persistence.TenantByokCredentialsEntity;
 import com.zeromail.core.llm.persistence.TenantByokCredentialsRepository;
 

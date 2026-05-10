@@ -15,7 +15,7 @@ import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.gmail.service.GmailConnectionService;
-import com.zeromail.core.onboarding.model.OnboardingStep;
+import com.zeromail.core.onboarding.domain.OnboardingStep;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.service.TenantService;
 

@@ -10,10 +10,10 @@ import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 
-import com.zeromail.core.llm.model.LlmChatResult;
-import com.zeromail.core.llm.model.LlmTool;
-import com.zeromail.core.llm.model.LlmUsage;
-import com.zeromail.core.llm.model.RawToolCall;
+import com.zeromail.core.llm.application.LlmChatResult;
+import com.zeromail.core.llm.application.LlmTool;
+import com.zeromail.core.llm.application.LlmUsage;
+import com.zeromail.core.llm.application.RawToolCall;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;

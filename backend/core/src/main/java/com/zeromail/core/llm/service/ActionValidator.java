@@ -5,8 +5,8 @@ import java.util.NoSuchElementException;
 
 import org.springframework.stereotype.Component;
 
-import com.zeromail.core.llm.model.Action;
-import com.zeromail.core.llm.model.SafetyViolationException;
+import com.zeromail.core.llm.domain.Action;
+import com.zeromail.core.llm.exception.SafetyViolationException;
 
 @Component
 public class ActionValidator {

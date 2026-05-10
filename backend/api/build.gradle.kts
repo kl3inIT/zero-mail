@@ -34,8 +34,8 @@ openApi {
     // need a live backend. The plugin starts Spring context, writes the spec,
     // and shuts down — hermetic and Windows-compatible (no PID files / kill).
     //
-    // Bind to an unusual port (58080) so the emit task never collides with a
-    // dev `bootRun` (8080) or any other local service the developer is running.
+    // Bind to an unusual port (59080) so the emit task never collides with a
+    // dev `bootRun` (8080) or Windows Hyper-V's common excluded port ranges.
     customBootRun {
         // Pass the docker-compose file as an absolute path so the working
         // directory of the forked JVM does not matter (setting workingDir
@@ -44,7 +44,7 @@ openApi {
         // at configuration time from the rootProject layout.
         args.set(
             listOf(
-                "--server.port=58080",
+                "--server.port=59080",
                 "--spring.docker.compose.file=" + rootProject.file("docker-compose.yml").absolutePath,
                 // Dummy OAuth2 + crypto credentials so the boot succeeds without real env
                 // vars. The spec emit only needs the controllers/DTOs introspected — runtime
@@ -68,7 +68,7 @@ openApi {
             )
         )
     }
-    apiDocsUrl.set("http://localhost:58080/v3/api-docs")
+    apiDocsUrl.set("http://localhost:59080/v3/api-docs")
     outputDir.set(rootProject.file("apps/web/openapi"))
     outputFileName.set("openapi.json")
     waitTimeInSeconds.set(180)

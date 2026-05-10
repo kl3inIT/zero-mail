@@ -61,13 +61,13 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 
 ### Rules Engine
 
-- [ ] **RULE-01**: User writes rules in plain English (e.g., "Archive receipts from Stripe and label them Finance")
-- [ ] **RULE-02**: Spring AI tool-call compiles NL rules into a structured matcher AST (no free-form LLM output at runtime)
-- [ ] **RULE-03**: The evaluator runs deterministic matchers without an LLM call
-- [ ] **RULE-04**: Matchers marked `SEMANTIC_INTENT` are deferred to the triage convergence phase for LLM evaluation (batched)
-- [ ] **RULE-05**: User can preview a rule against the last N recent messages before enabling it
-- [ ] **RULE-06**: User can enable, disable, reorder, edit, and delete rules
-- [ ] **RULE-07**: A template rule gallery ships with common v1 rules (receipts, newsletters, calendar invites, etc.)
+- [x] **RULE-01**: User writes rules in plain English (e.g., "Archive receipts from Stripe and label them Finance")
+- [x] **RULE-02**: Spring AI tool-call compiles NL rules into a structured matcher AST (no free-form LLM output at runtime)
+- [x] **RULE-03**: The evaluator runs deterministic matchers without an LLM call
+- [x] **RULE-04**: Matchers marked `SEMANTIC_INTENT` are deferred to the triage convergence phase for LLM evaluation (batched)
+- [x] **RULE-05**: User can preview a rule against the last N recent messages before enabling it
+- [x] **RULE-06**: User can enable, disable, reorder, edit, and delete rules
+- [x] **RULE-07**: A template rule gallery ships with common v1 rules (receipts, newsletters, calendar invites, etc.)
 
 ### Triage Convergence (Hero)
 
@@ -179,13 +179,13 @@ Each v1 requirement maps to exactly one phase.
 | LLM-09 | Phase 2C | Complete |
 | LLM-10 | Phase 2C | Complete |
 | LLM-11 | Phase 2C | Complete |
-| RULE-01 | Phase 3 | Pending |
-| RULE-02 | Phase 3 | Pending |
-| RULE-03 | Phase 3 | Pending |
-| RULE-04 | Phase 3 | Pending |
-| RULE-05 | Phase 3 | Pending |
-| RULE-06 | Phase 3 | Pending |
-| RULE-07 | Phase 3 | Pending |
+| RULE-01 | Phase 3 | Complete |
+| RULE-02 | Phase 3 | Complete |
+| RULE-03 | Phase 3 | Complete |
+| RULE-04 | Phase 3 | Complete |
+| RULE-05 | Phase 3 | Complete |
+| RULE-06 | Phase 3 | Complete |
+| RULE-07 | Phase 3 | Complete |
 | TRG-01 | Phase 4 | Pending |
 | TRG-02 | Phase 4 | Pending |
 | TRG-03 | Phase 4 | Pending |

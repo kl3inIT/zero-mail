@@ -2,7 +2,7 @@ package com.zeromail.core.llm.gateway.sanitization;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.zeromail.core.llm.model.SanitizationContext;
+import com.zeromail.core.llm.application.SanitizationContext;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 

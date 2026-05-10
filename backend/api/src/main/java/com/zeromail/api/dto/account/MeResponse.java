@@ -1,7 +1,6 @@
 package com.zeromail.api.dto.account;
-
-import com.zeromail.core.account.model.CurrentUserProjection;
-import com.zeromail.core.gmail.model.GmailConnectionProjection;
+import com.zeromail.core.account.projection.CurrentUserProjection;
+import com.zeromail.core.gmail.projection.GmailConnectionProjection;
 
 public record MeResponse(
     String userId,

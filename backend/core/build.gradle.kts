@@ -22,6 +22,7 @@ dependencies {
     implementation(libs.google.auth.library.oauth2.http)
     implementation(libs.jtokkit)
     implementation(libs.jsoup)
+    implementation(libs.google.re2j)
     runtimeOnly("org.eclipse:yasson")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
     runtimeOnly("org.postgresql:postgresql")

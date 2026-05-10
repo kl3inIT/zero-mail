@@ -1,5 +1,6 @@
 package com.zeromail.api.config;
 
+
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -22,12 +23,15 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import com.zeromail.api.error.AllowedParamScalars;
 import com.zeromail.api.error.ErrorCodes;
 import com.zeromail.api.error.FieldErrorDto;
-import com.zeromail.core.account.model.CurrentUserNotFoundException;
-import com.zeromail.core.billing.model.IllegalLedgerStateException;
-import com.zeromail.core.billing.model.InsufficientCreditsException;
-import com.zeromail.core.llm.model.InvalidByokException;
-import com.zeromail.core.llm.model.SafetyViolationException;
-import com.zeromail.core.llm.model.SanitizationException;
+import com.zeromail.api.error.RuleApiException;
+import com.zeromail.core.account.exception.CurrentUserNotFoundException;
+import com.zeromail.core.billing.exception.IllegalLedgerStateException;
+import com.zeromail.core.billing.exception.InsufficientCreditsException;
+import com.zeromail.core.llm.exception.InvalidByokException;
+import com.zeromail.core.llm.exception.SafetyViolationException;
+import com.zeromail.core.llm.exception.SanitizationException;
+import com.zeromail.core.rules.exception.GmailPreviewUnavailableException;
+import com.zeromail.core.rules.exception.RuleValidationException;
 import com.zeromail.core.tenant.TenantContext;
 
 import jakarta.validation.ConstraintViolationException;
@@ -197,6 +201,99 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         ErrorCodes.LLM_BYOK_INVALID);
   }
 
+  @ExceptionHandler(RuleApiException.class)
+  public ResponseEntity<ProblemDetail> onRuleApiException(RuleApiException exception) {
+    log.warn(
+        "event=rules_api_rejected tenantId={} reason={}", tenantIdForLog(), exception.reason());
+    return switch (exception.reason()) {
+      case INVALID_COMPILE_OUTPUT ->
+          problem(
+              HttpStatus.BAD_REQUEST,
+              "Invalid rule compile output",
+              "The compiled rule payload is invalid.",
+              ErrorCodes.RULES_COMPILE_INVALID);
+      case CLARIFICATION_REQUIRED ->
+          problem(
+              HttpStatus.BAD_REQUEST,
+              "Rule clarification required",
+              "The rule must be clarified before this operation can continue.",
+              ErrorCodes.RULES_COMPILE_CLARIFICATION_REQUIRED);
+      case INVALID_SAMPLE_SIZE ->
+          problem(
+              HttpStatus.BAD_REQUEST,
+              "Invalid preview sample size",
+              "Preview sample size must be one of the allowed values.",
+              ErrorCodes.RULES_PREVIEW_INVALID_SAMPLE_SIZE);
+      case INVALID_REORDER ->
+          problem(
+              HttpStatus.BAD_REQUEST,
+              "Invalid rule order",
+              "The reorder request must include the full current rule list.",
+              ErrorCodes.RULES_REORDER_INVALID);
+      case UNSAFE_ACTION ->
+          problem(
+              HttpStatus.BAD_REQUEST,
+              "Unsafe rule action",
+              "The rule contains an action outside the safe action allow-list.",
+              ErrorCodes.RULES_UNSAFE_ACTION);
+    };
+  }
+
+  @ExceptionHandler(RuleValidationException.class)
+  public ResponseEntity<ProblemDetail> onRuleValidation(RuleValidationException exception) {
+    log.warn(
+        "event=rules_validation_rejected tenantId={} reason={}",
+        tenantIdForLog(),
+        exception.reason());
+    return switch (exception.reason()) {
+      case NOT_FOUND ->
+          problem(
+              HttpStatus.NOT_FOUND,
+              "Rule not found",
+              "The requested rule was not found for the current tenant.",
+              ErrorCodes.RULES_NOT_FOUND);
+      case PREVIEW_REQUIRED ->
+          problem(
+              HttpStatus.CONFLICT,
+              "Rule preview required",
+              "The current rule version must be previewed before enabling.",
+              ErrorCodes.RULES_PREVIEW_REQUIRED);
+      case VERSION_MISMATCH ->
+          problem(
+              HttpStatus.CONFLICT,
+              "Rule version mismatch",
+              "The rule version changed before the request completed.",
+              ErrorCodes.RULES_VERSION_MISMATCH);
+      case INVALID_REORDER ->
+          problem(
+              HttpStatus.BAD_REQUEST,
+              "Invalid rule order",
+              "The reorder request must include the full current rule list.",
+              ErrorCodes.RULES_REORDER_INVALID);
+      case UNSAFE_ACTION ->
+          problem(
+              HttpStatus.BAD_REQUEST,
+              "Unsafe rule action",
+              "The rule contains an action outside the safe action allow-list.",
+              ErrorCodes.RULES_UNSAFE_ACTION);
+    };
+  }
+
+  @ExceptionHandler(GmailPreviewUnavailableException.class)
+  public ResponseEntity<ProblemDetail> onGmailPreviewUnavailable(
+      GmailPreviewUnavailableException exception) {
+    log.warn(
+        "event=rules_gmail_preview_unavailable tenantId={} reason={}",
+        tenantIdForLog(),
+        exception.reason().id());
+    return problem(
+        HttpStatus.SERVICE_UNAVAILABLE,
+        "Gmail preview unavailable",
+        "Gmail preview data is not currently available.",
+        ErrorCodes.RULES_GMAIL_UNAVAILABLE,
+        Map.of("reason", exception.reason().id()));
+  }
+
   @ExceptionHandler(IllegalStateException.class)
   public ResponseEntity<ProblemDetail> onIllegalState(IllegalStateException exception) {
     log.warn("IllegalStateException translated to 409: {}", exception.getClass().getSimpleName());
@@ -294,11 +391,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
    */
   private static ResponseEntity<ProblemDetail> problem(
       HttpStatus status, String title, String detail, String code) {
+    return problem(status, title, detail, code, Map.of());
+  }
+
+  private static ResponseEntity<ProblemDetail> problem(
+      HttpStatus status, String title, String detail, String code, Map<String, Object> params) {
     ProblemDetail problemDetail = ProblemDetail.forStatus(status);
     problemDetail.setTitle(title);
     problemDetail.setDetail(detail);
     problemDetail.setProperty("code", code);
-    problemDetail.setProperty("params", Map.of());
+    problemDetail.setProperty("params", params);
     problemDetail.setProperty(
         "message", code); // transitional alias of code (drop next phase per D-C1)
     return ResponseEntity.status(status).body(problemDetail);

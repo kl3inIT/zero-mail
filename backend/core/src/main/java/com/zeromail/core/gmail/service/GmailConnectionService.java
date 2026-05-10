@@ -11,9 +11,9 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.zeromail.core.gmail.model.GmailConnectionStatus;
-import com.zeromail.core.gmail.model.GmailIngestionHealth;
-import com.zeromail.core.gmail.model.GmailConnectionProjection;
+import com.zeromail.core.gmail.domain.GmailConnectionStatus;
+import com.zeromail.core.gmail.domain.GmailIngestionHealth;
+import com.zeromail.core.gmail.projection.GmailConnectionProjection;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;

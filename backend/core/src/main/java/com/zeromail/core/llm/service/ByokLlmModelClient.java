@@ -1,7 +1,7 @@
 package com.zeromail.core.llm.service;
 
-import com.zeromail.core.llm.model.LlmChatRequest;
-import com.zeromail.core.llm.model.LlmChatResult;
+import com.zeromail.core.llm.application.LlmChatRequest;
+import com.zeromail.core.llm.application.LlmChatResult;
 
 /**
  * Pure-Java seam for per-call BYOK model clients.

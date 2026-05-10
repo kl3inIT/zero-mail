@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.BiFunction;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,25 +15,27 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
-import com.zeromail.core.billing.model.InsufficientCreditsException;
-import com.zeromail.core.billing.model.CallSite;
-import com.zeromail.core.billing.model.ReservationId;
+import com.zeromail.core.billing.exception.InsufficientCreditsException;
+import com.zeromail.core.billing.domain.CallSite;
+import com.zeromail.core.billing.domain.ReservationId;
 import com.zeromail.core.billing.service.CreditLedger;
 import com.zeromail.core.config.ZeroMailCoreProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
-import com.zeromail.core.llm.model.BYOKProvider;
-import com.zeromail.core.llm.model.Action;
-import com.zeromail.core.llm.model.LlmChatRequest;
-import com.zeromail.core.llm.model.LlmChatResult;
-import com.zeromail.core.llm.model.LlmTool;
-import com.zeromail.core.llm.model.LlmUsage;
-import com.zeromail.core.llm.model.RawToolCall;
-import com.zeromail.core.llm.model.SafetyViolationException;
-import com.zeromail.core.llm.model.SanitizationContext;
-import com.zeromail.core.llm.model.SystemPrompts;
-import com.zeromail.core.llm.model.ToolCallResult;
+import com.zeromail.core.llm.domain.BYOKProvider;
+import com.zeromail.core.llm.domain.Action;
+import com.zeromail.core.llm.application.LlmChatRequest;
+import com.zeromail.core.llm.application.LlmChatResult;
+import com.zeromail.core.llm.application.LlmTool;
+import com.zeromail.core.llm.domain.LlmToolProfile;
+import com.zeromail.core.llm.application.LlmUsage;
+import com.zeromail.core.llm.application.RawToolCall;
+import com.zeromail.core.llm.application.RuleCompileGatewayResult;
+import com.zeromail.core.llm.exception.SafetyViolationException;
+import com.zeromail.core.llm.application.SanitizationContext;
+import com.zeromail.core.llm.application.SystemPrompts;
+import com.zeromail.core.llm.application.ToolCallResult;
 import com.zeromail.core.llm.persistence.TenantByokCredentialsEntity;
 import com.zeromail.core.llm.persistence.TenantByokCredentialsRepository;
 import com.zeromail.core.tenant.TenantContext;
@@ -58,6 +61,7 @@ class LlmGatewayImpl implements LlmGateway {
   private final ZeroMailLlmProperties llmProperties;
   private final AllowListedTools allowListedTools;
   private final ActionValidator actionValidator;
+  private final RuleCompileToolValidator ruleCompileToolValidator;
   private final ObservationRegistry observationRegistry;
   private final TenantByokCredentialsRepository tenantByokCredentialsRepository;
   private final RefreshTokenCipher refreshTokenCipher;
@@ -80,6 +84,7 @@ class LlmGatewayImpl implements LlmGateway {
         llmProperties,
         allowListedTools,
         actionValidator,
+        new RuleCompileToolValidator(),
         ObservationRegistry.create(),
         null,
         null,
@@ -98,6 +103,7 @@ class LlmGatewayImpl implements LlmGateway {
       ZeroMailCoreProperties zeroMailCoreProperties,
       AllowListedTools allowListedTools,
       ActionValidator actionValidator,
+      RuleCompileToolValidator ruleCompileToolValidator,
       ObjectProvider<ObservationRegistry> observationRegistryProvider,
       TenantByokCredentialsRepository tenantByokCredentialsRepository,
       RefreshTokenCipher refreshTokenCipher,
@@ -113,6 +119,7 @@ class LlmGatewayImpl implements LlmGateway {
         zeroMailCoreProperties.llm().platform(),
         allowListedTools,
         actionValidator,
+        ruleCompileToolValidator,
         observationRegistryProvider.getIfAvailable(ObservationRegistry::create),
         tenantByokCredentialsRepository,
         refreshTokenCipher,
@@ -137,6 +144,7 @@ class LlmGatewayImpl implements LlmGateway {
         llmProperties,
         allowListedTools,
         actionValidator,
+        new RuleCompileToolValidator(),
         observationRegistry,
         null,
         null,
@@ -154,6 +162,7 @@ class LlmGatewayImpl implements LlmGateway {
       ZeroMailLlmProperties llmProperties,
       AllowListedTools allowListedTools,
       ActionValidator actionValidator,
+      RuleCompileToolValidator ruleCompileToolValidator,
       ObservationRegistry observationRegistry,
       TenantByokCredentialsRepository tenantByokCredentialsRepository,
       RefreshTokenCipher refreshTokenCipher,
@@ -168,6 +177,7 @@ class LlmGatewayImpl implements LlmGateway {
     this.llmProperties = llmProperties;
     this.allowListedTools = allowListedTools;
     this.actionValidator = actionValidator;
+    this.ruleCompileToolValidator = ruleCompileToolValidator;
     this.observationRegistry = observationRegistry;
     this.tenantByokCredentialsRepository = tenantByokCredentialsRepository;
     this.refreshTokenCipher = refreshTokenCipher;
@@ -200,16 +210,86 @@ class LlmGatewayImpl implements LlmGateway {
                   model);
 
               SanitizationContext sanitizedContext = sanitizationPipeline.sanitize(rawHtml);
-              List<LlmTool> tools = allowListedTools.tools();
+              List<LlmTool> tools = allowListedTools.tools(LlmToolProfile.SAFE_ACTIONS);
 
               Optional<TenantByokCredentialsEntity> byok = findByokCredentials(tenantId);
               if (byok.isPresent()) {
                 // LLM-04 — BYOK skips credit ledger by design.
-                return callViaByokModelClient(byok.get(), sanitizedContext, callSite, tools);
+                return callViaByokModelClient(
+                    byok.get(),
+                    sanitizedContext,
+                    callSite,
+                    SystemPrompts.TRIAGE_SYSTEM_PROMPT,
+                    tools,
+                    (_, result) -> parseSafeActionToolCall(result));
               }
 
               return callPlatformModelClientWithCreditLedger(
-                  tenantId, callSite, provider, model, sanitizedContext, tools, startNanos);
+                  tenantId,
+                  callSite,
+                  provider,
+                  model,
+                  sanitizedContext,
+                  SystemPrompts.TRIAGE_SYSTEM_PROMPT,
+                  tools,
+                  startNanos,
+                  (_, result) -> parseSafeActionToolCall(result));
+            });
+  }
+
+  @Override
+  public RuleCompileGatewayResult compileRule(CallSite callSite, String compilerPayload) {
+    if (callSite != CallSite.PREVIEW) {
+      throw new IllegalArgumentException("Rule compilation is only supported for PREVIEW");
+    }
+
+    UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+    String model = llmProperties.modelByCallSite().get(callSite);
+    String provider = llmProperties.provider().id();
+    long startNanos = System.nanoTime();
+    return Observation.createNotStarted("zero_mail.llm.gateway.rule_compile", observationRegistry)
+        .lowCardinalityKeyValue("tenantId", tenantId.toString())
+        .lowCardinalityKeyValue("callSite", callSite.id())
+        .lowCardinalityKeyValue("provider", provider)
+        .lowCardinalityKeyValue("model", model)
+        .observe(
+            () -> {
+              log.info(
+                  "event=llm_rule_compile_started tenantId={} callSite={} provider={} model={}",
+                  tenantId,
+                  callSite,
+                  provider,
+                  model);
+
+              // Use structured-JSON sanitization here: compilerPayload is a
+              // JSON envelope, not raw HTML. Running Jsoup HTML-strip would
+              // silently delete '<...>' substrings inside user sourceText
+              // (quoted angle addresses, regex literals, "<reply requested>").
+              SanitizationContext sanitizedContext =
+                  sanitizationPipeline.sanitizeStructuredJson(compilerPayload);
+              List<LlmTool> tools = allowListedTools.tools(LlmToolProfile.RULE_COMPILE);
+
+              Optional<TenantByokCredentialsEntity> byok = findByokCredentials(tenantId);
+              if (byok.isPresent()) {
+                return callViaByokModelClient(
+                    byok.get(),
+                    sanitizedContext,
+                    callSite,
+                    SystemPrompts.RULE_COMPILE_SYSTEM_PROMPT,
+                    tools,
+                    this::parseRuleCompileToolCall);
+              }
+
+              return callPlatformModelClientWithCreditLedger(
+                  tenantId,
+                  callSite,
+                  provider,
+                  model,
+                  sanitizedContext,
+                  SystemPrompts.RULE_COMPILE_SYSTEM_PROMPT,
+                  tools,
+                  startNanos,
+                  this::parseRuleCompileToolCall);
             });
   }
 
@@ -232,7 +312,7 @@ class LlmGatewayImpl implements LlmGateway {
                   model);
 
               SanitizationContext sanitizedContext = sanitizationPipeline.sanitize(rawEmailFixture);
-              List<LlmTool> tools = allowListedTools.tools();
+              List<LlmTool> tools = allowListedTools.tools(LlmToolProfile.SAFE_ACTIONS);
 
               // D-E3 — drift is a platform-cost operation, not user-billable; ledger NOT touched.
               try {
@@ -245,7 +325,7 @@ class LlmGatewayImpl implements LlmGateway {
                         0.0,
                         true);
                 LlmChatResult result = platformLlmModelClient.call(request);
-                ToolCallResult toolCallResult = parseToolCall(result);
+                ToolCallResult toolCallResult = parseSafeActionToolCall(result);
                 log.info(
                     "event=llm_drift_call_succeeded tenantId={} provider={} model={} latencyMs={} "
                         + "truncated={}",
@@ -273,14 +353,16 @@ class LlmGatewayImpl implements LlmGateway {
             });
   }
 
-  private ToolCallResult callPlatformModelClientWithCreditLedger(
+  private <T> T callPlatformModelClientWithCreditLedger(
       UUID tenantId,
       CallSite callSite,
       String provider,
       String model,
       SanitizationContext sanitizedContext,
+      String systemPrompt,
       List<LlmTool> tools,
-      long startNanos) {
+      long startNanos,
+      BiFunction<String, LlmChatResult, T> resultParser) {
     ReservationId reservationId;
     try {
       reservationId = creditLedger.reserve(tenantId, callSite);
@@ -292,19 +374,13 @@ class LlmGatewayImpl implements LlmGateway {
       throw insufficientCreditsException;
     }
 
-    ToolCallResult toolCallResult;
+    T gatewayResult;
     LlmUsage usage;
     try {
       LlmChatRequest request =
-          new LlmChatRequest(
-              SystemPrompts.TRIAGE_SYSTEM_PROMPT,
-              sanitizedContext.content(),
-              tools,
-              model,
-              0.0,
-              true);
+          new LlmChatRequest(systemPrompt, sanitizedContext.content(), tools, model, 0.0, true);
       LlmChatResult result = platformLlmModelClient.call(request);
-      toolCallResult = parseToolCall(result);
+      gatewayResult = resultParser.apply(model, result);
       usage = result.usage();
       log.info(
           "event=llm_call_succeeded tenantId={} callSite={} provider={} model={} latencyMs={} "
@@ -351,7 +427,7 @@ class LlmGatewayImpl implements LlmGateway {
           settleFailure.getClass().getSimpleName());
       throw settleFailure;
     }
-    return toolCallResult;
+    return gatewayResult;
   }
 
   private long latencyMs(long startNanos) {
@@ -364,11 +440,13 @@ class LlmGatewayImpl implements LlmGateway {
         : tenantByokCredentialsRepository.findByTenantId(tenantId);
   }
 
-  private ToolCallResult callViaByokModelClient(
+  private <T> T callViaByokModelClient(
       TenantByokCredentialsEntity byokRow,
       SanitizationContext sanitizedContext,
       CallSite callSite,
-      List<LlmTool> tools) {
+      String systemPrompt,
+      List<LlmTool> tools,
+      BiFunction<String, LlmChatResult, T> resultParser) {
     UUID tenantId = byokRow.getTenantId();
     BYOKProvider provider = byokRow.getProvider();
     String model = modelForByok(provider, byokRow.getModel(), callSite);
@@ -389,15 +467,23 @@ class LlmGatewayImpl implements LlmGateway {
           provider,
           model);
       LlmChatRequest request =
-          new LlmChatRequest(
-              SystemPrompts.TRIAGE_SYSTEM_PROMPT,
-              sanitizedContext.content(),
-              tools,
-              model,
-              0.0,
-              true);
-      LlmChatResult result = byokLlmModelClient.call(decryptedKey, byokRow.getEndpoint(), request);
-      ToolCallResult toolCallResult = parseToolCall(result);
+          new LlmChatRequest(systemPrompt, sanitizedContext.content(), tools, model, 0.0, true);
+      LlmChatResult result;
+      T gatewayResult;
+      try {
+        result = byokLlmModelClient.call(decryptedKey, byokRow.getEndpoint(), request);
+        gatewayResult = resultParser.apply(model, result);
+      } catch (SafetyViolationException safetyViolation) {
+        // Symmetric with callPlatformModelClientWithCreditLedger so
+        // operators correlating safety-violation rates by call-site
+        // also see BYOK violations with the call-site label.
+        log.error(
+            "event=llm_safety_violation tenantId={} callSite={} reason={}",
+            tenantId,
+            callSite,
+            safetyViolation.getClass().getSimpleName());
+        throw safetyViolation;
+      }
       LlmUsage usage = result.usage();
       log.info(
           "event=llm_byok_call_succeeded tenantId={} provider={} model={} latencyMs={} "
@@ -410,19 +496,28 @@ class LlmGatewayImpl implements LlmGateway {
           usage.completionTokens(),
           usage.finishReason(),
           sanitizedContext.truncated());
-      return toolCallResult;
+      return gatewayResult;
     } finally {
       Arrays.fill(decryptedKey, (byte) 0);
     }
   }
 
-  private ToolCallResult parseToolCall(LlmChatResult result) {
+  private ToolCallResult parseSafeActionToolCall(LlmChatResult result) {
     if (result.toolCalls() == null || result.toolCalls().isEmpty()) {
       throw new SafetyViolationException();
     }
     RawToolCall rawToolCall = result.toolCalls().getFirst();
     Action action = actionValidator.validate(rawToolCall.functionName());
     return new ToolCallResult(action, parseJsonArgs(rawToolCall.argsJson()));
+  }
+
+  private RuleCompileGatewayResult parseRuleCompileToolCall(String model, LlmChatResult result) {
+    if (result.toolCalls() == null || result.toolCalls().isEmpty()) {
+      throw new SafetyViolationException();
+    }
+    RawToolCall rawToolCall = result.toolCalls().getFirst();
+    String toolName = ruleCompileToolValidator.validate(rawToolCall.functionName());
+    return new RuleCompileGatewayResult(toolName, model, parseJsonArgs(rawToolCall.argsJson()));
   }
 
   private Map<String, Object> parseJsonArgs(String argumentsJson) {
@@ -472,8 +567,8 @@ class LlmGatewayImpl implements LlmGateway {
     public void release(ReservationId reservationId) {}
 
     @Override
-    public com.zeromail.core.billing.model.CreditBalance balance(UUID tenantId) {
-      return new com.zeromail.core.billing.model.CreditBalance(0, 0);
+    public com.zeromail.core.billing.domain.CreditBalance balance(UUID tenantId) {
+      return new com.zeromail.core.billing.domain.CreditBalance(0, 0);
     }
   }
 }

@@ -11,7 +11,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.zeromail.api.security.events.GmailConnectionRevokedEvent;
 import com.zeromail.api.security.events.OAuth2TokenRefreshFailed;
-import com.zeromail.core.gmail.model.GmailConnectionStatus;
+import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.tenant.TenantContext;
 

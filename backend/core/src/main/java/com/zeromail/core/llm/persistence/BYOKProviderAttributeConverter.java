@@ -1,6 +1,6 @@
 package com.zeromail.core.llm.persistence;
 
-import com.zeromail.core.llm.model.BYOKProvider;
+import com.zeromail.core.llm.domain.BYOKProvider;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;

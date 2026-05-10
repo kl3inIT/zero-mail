@@ -1,5 +1,4 @@
 package com.zeromail.worker.billing;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.sql.Timestamp;
@@ -12,8 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import com.zeromail.core.billing.model.CallSite;
-import com.zeromail.core.billing.model.CreditReservationStatus;
+import com.zeromail.core.billing.domain.CallSite;
+import com.zeromail.core.billing.domain.CreditReservationStatus;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryEntity;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryRepository;
 import com.zeromail.core.billing.persistence.CreditReservationEntity;

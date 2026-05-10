@@ -12,7 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import com.zeromail.core.llm.model.BYOKProvider;
+import com.zeromail.core.llm.domain.BYOKProvider;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
 

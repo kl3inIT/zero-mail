@@ -11,8 +11,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import com.zeromail.core.llm.byok.ByokEndpointValidator;
-import com.zeromail.core.llm.model.LlmChatRequest;
-import com.zeromail.core.llm.model.LlmChatResult;
+import com.zeromail.core.llm.application.LlmChatRequest;
+import com.zeromail.core.llm.application.LlmChatResult;
 import com.zeromail.core.llm.service.ByokLlmModelClient;
 
 @Component

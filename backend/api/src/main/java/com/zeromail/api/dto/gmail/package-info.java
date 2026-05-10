@@ -2,7 +2,7 @@
  * Gmail-domain HTTP wire DTOs ({@code GmailConnectionStatusResponse}).
  *
  * <p>Exposed as part of the {@code dto} application module's public API so
- * {@code com.zeromail.api.controllers.TenantStatusController} can reach the records
+ * {@code com.zeromail.api.controllers.tenant.TenantStatusController} can reach the records
  * across module boundaries (Phase 1.2.1 D-D1 group-by-domain reorg pushed
  * the DTOs into nested packages — by Spring Modulith default those types
  * would be internal; the {@link org.springframework.modulith.NamedInterface}

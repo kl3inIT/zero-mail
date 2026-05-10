@@ -59,3 +59,12 @@ databaseChangeLog:
   - include:
       file: changes/020-byok-official-providers.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/021-rules-engine-schema.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/022-rule-template-catalog-seed.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/023-fix-pin-calendar-category.yaml
+      relativeToChangelogFile: true

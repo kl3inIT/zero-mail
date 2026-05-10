@@ -3,39 +3,16 @@ import createClient from 'openapi-fetch';
 import { getApiBase } from './base-url';
 import type { paths } from './schema';
 
-const typedApi = createClient<paths>({
+// Real, typed openapi-fetch client. The earlier LooseClient cast was a
+// placeholder from when `schema.d.ts` had no `paths` and route components
+// needed an ergonomic untyped surface. `pnpm generate:api` now produces
+// a full `paths` map, so the cast is no longer needed and was actively
+// stripping path-parameter validation and request-body shape checking
+// from every callsite (REVIEW WR-10).
+export const api = createClient<paths>({
   baseUrl: getApiBase(),
   credentials: 'include',
 });
-
-// Loose-typed surface for the placeholder schema. Once `pnpm generate:api`
-// produces real `paths`, route components automatically get strong typing
-// via `typedApi`. The cast below keeps the call sites in routes ergonomic
-// while the placeholder is in effect.
-type LooseClient = {
-  GET: (
-    path: string,
-    init?: Record<string, unknown>,
-  ) => Promise<{ data: unknown; error?: unknown; response: Response }>;
-  POST: (
-    path: string,
-    init?: Record<string, unknown>,
-  ) => Promise<{ data: unknown; error?: unknown; response: Response }>;
-  PUT: (
-    path: string,
-    init?: Record<string, unknown>,
-  ) => Promise<{ data: unknown; error?: unknown; response: Response }>;
-  DELETE: (
-    path: string,
-    init?: Record<string, unknown>,
-  ) => Promise<{ data: unknown; error?: unknown; response: Response }>;
-  PATCH: (
-    path: string,
-    init?: Record<string, unknown>,
-  ) => Promise<{ data: unknown; error?: unknown; response: Response }>;
-};
-
-export const api = typedApi as unknown as LooseClient;
 
 export function xsrfHeader(): HeadersInit {
   if (typeof document === 'undefined') return {};
