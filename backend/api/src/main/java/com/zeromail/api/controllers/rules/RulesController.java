@@ -64,9 +64,6 @@ public class RulesController {
   @GetMapping
   public ResponseEntity<RuleDtos.RulesListResponse> listRules() {
     UUID tenantId = currentTenantId();
-    RuleDtos.RuleTemplateMaterializationResponse materialization =
-        RuleDtos.RuleTemplateMaterializationResponse.from(
-            ruleTemplateMaterializationService.materializeSelectedTemplates(tenantId));
     RuleDtos.RulesListResponse response =
         new RuleDtos.RulesListResponse(
             ruleManagementService.listOrdered(tenantId).stream()
@@ -75,7 +72,7 @@ public class RulesController {
             ruleTemplateCatalogService.listActiveTemplates(tenantId).stream()
                 .map(RuleDtos.RuleTemplateResponse::from)
                 .toList(),
-            materialization);
+            RuleDtos.RuleTemplateMaterializationResponse.empty());
     return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(response);
   }
 
@@ -180,6 +177,7 @@ public class RulesController {
   @PostMapping("/preview")
   public RuleDtos.RulePreviewResponse previewDraftRule(
       @Valid @RequestBody RuleDtos.RuleDraftPreviewRequest request) {
+    Integer normalizedSampleSize = normalizedPreviewSampleSize(request.sampleSize());
     RuleCompileResult compileResult = compiledPayloadOrThrow(request.compiled());
     try {
       return RuleDtos.RulePreviewResponse.from(
@@ -187,7 +185,7 @@ public class RulesController {
               currentTenantId(),
               compileResult.matcherAst(),
               compileResult.actionIntents(),
-              request.sampleSize()));
+              normalizedSampleSize));
     } catch (IllegalArgumentException invalidPreviewPayload) {
       throw RuleApiException.invalidCompileOutput();
     }
@@ -208,8 +206,22 @@ public class RulesController {
         ruleTemplateMaterializationService.materializeTemplate(currentTenantId(), templateKey));
   }
 
+  @PostMapping("/templates/materialize-selected")
+  public RuleDtos.RuleTemplateMaterializationResponse materializeSelectedTemplates() {
+    return RuleDtos.RuleTemplateMaterializationResponse.from(
+        ruleTemplateMaterializationService.materializeSelectedTemplates(currentTenantId()));
+  }
+
   private static UUID currentTenantId() {
     return UUID.fromString(TenantContext.currentOrThrow());
+  }
+
+  private Integer normalizedPreviewSampleSize(Integer requestedSampleSize) {
+    try {
+      return rulePreviewService.normalizeSampleSize(requestedSampleSize);
+    } catch (IllegalArgumentException invalidSampleSize) {
+      throw RuleApiException.invalidSampleSize();
+    }
   }
 
   private static RuleCompileResult compiledPayloadOrThrow(

@@ -129,7 +129,10 @@ findings:
   warning: 3
   info: 0
   total: 6
-status: issues_found
+status: issues_resolved
+remediation:
+  status: fixed
+  verified: true
 ---
 
 # Phase 03: Code Review Report
@@ -137,11 +140,24 @@ status: issues_found
 **Reviewed:** 2026-05-09T23:21:09Z
 **Depth:** standard
 **Files Reviewed:** 120
-**Status:** issues_found
+**Status:** issues_resolved
 
 ## Summary
 
 Reviewed the Phase 03 rules engine source changes with focus on server-side rule safety, privacy, tenant isolation, transaction boundaries, API contract consistency, generated client consistency, frontend flow defects, and test coverage. The implementation has multiple release-blocking issues: client-supplied compiled rule JSON is not fully validated before persistence, rules mutations can miss CSRF headers in fresh sessions, and a GET endpoint performs durable writes.
+
+## Remediation Update
+
+All six findings were fixed after this review:
+
+- CR-01: matcher/action persistence validators now reject unknown/private fields, enforce required leaf/action payloads, and bound matcher tree shape before save.
+- CR-02: rules API client headers now call `xsrfHeader()` per mutation request.
+- CR-03: `GET /api/rules` is read-only; selected onboarding template materialization moved to `POST /api/rules/templates/materialize-selected`.
+- WR-01: draft preview sample size errors now map to `error.rules.preview.invalid_sample_size`.
+- WR-02: dirty selected-rule previews use the draft preview endpoint instead of the saved persisted rule.
+- WR-03: materialized templates, including customized ones, have the starter action disabled.
+
+Remediation verification passed with `.\gradlew.bat clean check`, OpenAPI regeneration, web lint/typecheck/unit tests, i18n check, and `apps/web/e2e/rules.spec.ts`.
 
 ## Critical Issues
 

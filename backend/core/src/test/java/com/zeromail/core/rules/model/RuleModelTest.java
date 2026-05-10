@@ -1,6 +1,7 @@
 package com.zeromail.core.rules.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalDate;
@@ -48,6 +49,74 @@ class RuleModelTest {
                     {"schemaVersion":"rules.v2","type":"SENDER_DOMAIN","domain":"stripe.com"}
                     """))
         .isInstanceOf(NoSuchElementException.class);
+  }
+
+  @Test
+  void matcher_json_validation_rejects_missing_leaf_fields_and_unknown_fields() {
+    RuleAstJsonValidator validator = new RuleAstJsonValidator();
+
+    assertThatThrownBy(
+            () ->
+                validator.validateMatcherJson(
+                    """
+                    {"schemaVersion":"rules.v1","type":"SENDER_DOMAIN"}
+                    """))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    assertThatThrownBy(
+            () ->
+                validator.validateMatcherJson(
+                    """
+                    {
+                      "schemaVersion":"rules.v1",
+                      "type":"SENDER_DOMAIN",
+                      "domain":"stripe.com",
+                      "prompt":"hidden"
+                    }
+                    """))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void matcher_json_validation_accepts_zero_field_matchers_but_bounds_tree_depth() {
+    RuleAstJsonValidator validator = new RuleAstJsonValidator();
+
+    assertThatCode(
+            () ->
+                validator.validateMatcherJson(
+                    """
+                    {"schemaVersion":"rules.v1","type":"HAS_ATTACHMENT"}
+                    """))
+        .doesNotThrowAnyException();
+
+    String nestedMatcherNode = "{\"type\":\"HAS_ATTACHMENT\"}";
+    for (int nestingLevel = 0; nestingLevel < 9; nestingLevel++) {
+      nestedMatcherNode = "{\"type\":\"NOT\",\"child\":" + nestedMatcherNode + "}";
+    }
+    String deeplyNestedMatcher = "{\"schemaVersion\":\"rules.v1\"," + nestedMatcherNode.substring(1);
+    assertThatThrownBy(() -> validator.validateMatcherJson(deeplyNestedMatcher))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void action_intent_json_validation_rejects_missing_required_fields_and_unknown_fields() {
+    ActionIntentJsonValidator validator = new ActionIntentJsonValidator();
+
+    assertThatThrownBy(() -> validator.validateActionIntentsJson("[{\"type\":\"label\"}]"))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () ->
+                validator.validateActionIntentsJson(
+                    """
+                    [
+                      {
+                        "type":"save_draft",
+                        "instruction":"Draft a reply",
+                        "prompt":"hidden"
+                      }
+                    ]
+                    """))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

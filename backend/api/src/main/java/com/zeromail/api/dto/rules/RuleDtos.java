@@ -206,6 +206,10 @@ public final class RuleDtos {
       List<RuleResponse> createdRules,
       List<SkippedTemplateResponse> skippedTemplates) {
 
+    public static RuleTemplateMaterializationResponse empty() {
+      return new RuleTemplateMaterializationResponse(0, 0, 0, List.of(), List.of());
+    }
+
     public static RuleTemplateMaterializationResponse from(
         RuleTemplateMaterializationResult materializationResult) {
       return new RuleTemplateMaterializationResponse(

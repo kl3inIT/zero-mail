@@ -46,7 +46,13 @@ type ApiMethodResult<T> = {
   response: Response;
 };
 
-const JSON_HEADERS = { 'Content-Type': 'application/json', ...xsrfHeader() };
+function jsonHeaders(): HeadersInit {
+  return { 'Content-Type': 'application/json', ...xsrfHeader() };
+}
+
+function unsafeHeaders(): HeadersInit {
+  return { ...xsrfHeader() };
+}
 
 function throwIfFailed<T>(
   result: ApiMethodResult<T>,
@@ -106,7 +112,7 @@ export async function getRule(ruleId: string): Promise<RuleResponse> {
 export async function compileRule(payload: RuleCompileRequest): Promise<RuleCompileResult> {
   const result = (await api.POST('/api/rules/compile', {
     body: payload,
-    headers: JSON_HEADERS,
+    headers: jsonHeaders(),
   })) as ApiMethodResult<RuleCompileResponse>;
   throwIfFailed(result, `/api/rules/compile failed: ${result.response.status}`);
   return toRuleCompileResult(result.data);
@@ -115,7 +121,7 @@ export async function compileRule(payload: RuleCompileRequest): Promise<RuleComp
 export async function createRule(payload: RuleCreateRequest): Promise<RuleResponse> {
   const result = (await api.POST('/api/rules', {
     body: payload,
-    headers: JSON_HEADERS,
+    headers: jsonHeaders(),
   })) as ApiMethodResult<RuleResponse>;
   throwIfFailed(result, `/api/rules create failed: ${result.response.status}`);
   return result.data;
@@ -128,7 +134,7 @@ export async function updateRule(
   const result = (await api.PUT('/api/rules/{ruleId}', {
     params: { path: { ruleId } },
     body: payload,
-    headers: JSON_HEADERS,
+    headers: jsonHeaders(),
   })) as ApiMethodResult<RuleResponse>;
   throwIfFailed(result, `/api/rules/${ruleId} update failed: ${result.response.status}`);
   return result.data;
@@ -141,7 +147,7 @@ export async function updateRuleEnabled(
   const result = (await api.PATCH('/api/rules/{ruleId}/enabled', {
     params: { path: { ruleId } },
     body: payload,
-    headers: JSON_HEADERS,
+    headers: jsonHeaders(),
   })) as ApiMethodResult<RuleResponse>;
   throwIfFailed(result, `/api/rules/${ruleId}/enabled failed: ${result.response.status}`);
   return result.data;
@@ -150,7 +156,7 @@ export async function updateRuleEnabled(
 export async function reorderRules(payload: RuleReorderRequest): Promise<RuleResponse[]> {
   const result = (await api.PUT('/api/rules/reorder', {
     body: payload,
-    headers: JSON_HEADERS,
+    headers: jsonHeaders(),
   })) as ApiMethodResult<RuleResponse[]>;
   throwIfFailed(result, `/api/rules/reorder failed: ${result.response.status}`);
   return result.data;
@@ -159,7 +165,7 @@ export async function reorderRules(payload: RuleReorderRequest): Promise<RuleRes
 export async function deleteRule(ruleId: string): Promise<void> {
   const result = (await api.DELETE('/api/rules/{ruleId}', {
     params: { path: { ruleId } },
-    headers: { ...xsrfHeader() },
+    headers: unsafeHeaders(),
   })) as ApiMethodResult<void>;
   if (result.error || !result.response.ok) {
     throw (
@@ -175,7 +181,7 @@ export async function previewSavedRule(
   const result = (await api.POST('/api/rules/{ruleId}/preview', {
     params: { path: { ruleId } },
     body: payload,
-    headers: JSON_HEADERS,
+    headers: jsonHeaders(),
   })) as ApiMethodResult<RulePreviewResponse>;
   throwIfFailed(result, `/api/rules/${ruleId}/preview failed: ${result.response.status}`);
   return result.data;
@@ -186,7 +192,7 @@ export async function previewDraftRule(
 ): Promise<RulePreviewResponse> {
   const result = (await api.POST('/api/rules/preview', {
     body: payload,
-    headers: JSON_HEADERS,
+    headers: jsonHeaders(),
   })) as ApiMethodResult<RulePreviewResponse>;
   throwIfFailed(result, `/api/rules/preview failed: ${result.response.status}`);
   return result.data;
@@ -205,11 +211,22 @@ export async function materializeRuleTemplate(
 ): Promise<RuleTemplateMaterializationResponse> {
   const result = (await api.POST('/api/rules/templates/{templateKey}/materialize', {
     params: { path: { templateKey } },
-    headers: { ...xsrfHeader() },
+    headers: unsafeHeaders(),
   })) as ApiMethodResult<RuleTemplateMaterializationResponse>;
   throwIfFailed(
     result,
     `/api/rules/templates/${templateKey}/materialize failed: ${result.response.status}`,
+  );
+  return result.data;
+}
+
+export async function materializeSelectedRuleTemplates(): Promise<RuleTemplateMaterializationResponse> {
+  const result = (await api.POST('/api/rules/templates/materialize-selected', {
+    headers: unsafeHeaders(),
+  })) as ApiMethodResult<RuleTemplateMaterializationResponse>;
+  throwIfFailed(
+    result,
+    `/api/rules/templates/materialize-selected failed: ${result.response.status}`,
   );
   return result.data;
 }

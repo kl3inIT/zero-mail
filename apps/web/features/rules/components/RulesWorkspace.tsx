@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -20,6 +20,7 @@ import {
   useCreateRule,
   useDeleteRule,
   useMaterializeRuleTemplate,
+  useMaterializeSelectedRuleTemplates,
   usePreviewDraftRule,
   usePreviewSavedRule,
   useReorderRules,
@@ -44,6 +45,8 @@ export function RulesWorkspace() {
   const previewDraftRuleMutation = usePreviewDraftRule();
   const updateEnabledMutation = useUpdateRuleEnabled();
   const materializeTemplateMutation = useMaterializeRuleTemplate();
+  const { mutateAsync: materializeSelectedTemplates } = useMaterializeSelectedRuleTemplates();
+  const selectedTemplatesMaterializationStarted = useRef(false);
 
   const rules = useMemo(
     () => [...(rulesQuery.data?.rules ?? [])].sort(compareRulesByOrder),
@@ -75,6 +78,14 @@ export function RulesWorkspace() {
       selectRule(rules[0]);
     }
   }, [rules, selectedRuleId]);
+
+  useEffect(() => {
+    if (!rulesQuery.isSuccess || selectedTemplatesMaterializationStarted.current) return;
+    selectedTemplatesMaterializationStarted.current = true;
+    void materializeSelectedTemplates().catch(() => {
+      selectedTemplatesMaterializationStarted.current = false;
+    });
+  }, [materializeSelectedTemplates, rulesQuery.isSuccess]);
 
   function updateSourceText(nextSourceText: string) {
     setSourceText(nextSourceText);
@@ -152,8 +163,9 @@ export function RulesWorkspace() {
     setGmailUnavailableError(null);
 
     try {
+      const draftPreviewRequired = isDirtySelectedDraft(selectedRule, sourceText, compileResult);
       const result =
-        selectedRule?.ruleId !== undefined
+        selectedRule?.ruleId !== undefined && !draftPreviewRequired
           ? await previewSavedRuleMutation.mutateAsync({
               ruleId: selectedRule.ruleId,
               payload: { sampleSize },
@@ -167,7 +179,7 @@ export function RulesWorkspace() {
 
       if (result) {
         setPreview(result);
-        if (selectedRule?.ruleId) {
+        if (selectedRule?.ruleId && !draftPreviewRequired) {
           setLastPreviewedRule({
             ruleId: selectedRule.ruleId,
             entityVersion: selectedRule.entityVersion,
@@ -304,7 +316,7 @@ export function RulesWorkspace() {
             gmailUnavailableError={gmailUnavailableError}
             isPreviewing={previewSavedRuleMutation.isPending || previewDraftRuleMutation.isPending}
             isToggling={updateEnabledMutation.isPending}
-            canPreview={Boolean(selectedRule?.ruleId || compileResult?.status === 'compiled')}
+            canPreview={canPreviewRule(selectedRule, sourceText, compileResult)}
             canEnable={selectedRule ? canEnableRule(selectedRule) : false}
             sampleSize={sampleSize}
             onSampleSizeChange={setSampleSize}
@@ -340,6 +352,33 @@ function compiledResultFromRule(rule: RuleResponse): RuleCompileResult | null {
 
 function fallbackDisplayName(sourceText: string): string {
   return sourceText.trim().split(/\s+/).slice(0, 6).join(' ');
+}
+
+function canPreviewRule(
+  selectedRule: RuleResponse | null,
+  sourceText: string,
+  compileResult: RuleCompileResult | null,
+): boolean {
+  if (!selectedRule?.ruleId) return compileResult?.status === 'compiled';
+  if (isDirtySelectedDraft(selectedRule, sourceText, compileResult)) {
+    return compileResult?.status === 'compiled';
+  }
+  return true;
+}
+
+function isDirtySelectedDraft(
+  selectedRule: RuleResponse | null,
+  sourceText: string,
+  compileResult: RuleCompileResult | null,
+): boolean {
+  if (!selectedRule?.ruleId) return false;
+  if ((selectedRule.sourceText ?? '') !== sourceText) return true;
+  if (compileResult?.status !== 'compiled') return false;
+  return (
+    compileResult.compiled.matcherAst !== selectedRule.matcherAst ||
+    compileResult.compiled.actionIntents !== selectedRule.actionIntents ||
+    compileResult.compiled.schemaVersion !== selectedRule.schemaVersion
+  );
 }
 
 function apiErrorCode(error: unknown): string | undefined {

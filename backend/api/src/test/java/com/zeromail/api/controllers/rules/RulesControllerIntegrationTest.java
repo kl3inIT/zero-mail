@@ -184,8 +184,7 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
   }
 
   @Test
-  void list_rules_materializes_onboarding_templates_idempotently_with_no_store_cache()
-      throws Exception {
+  void list_rules_is_read_only_for_selected_templates_and_uses_no_store_cache() throws Exception {
     SeedData seedData = seedUser("rules-api-materialize-list");
     insertSelection(seedData.tenantId(), "archive-receipts", true);
     insertSelection(seedData.tenantId(), "label-newsletters", true);
@@ -198,9 +197,29 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
     assertThat(firstResponse.getHeaders().getCacheControl()).isEqualTo("no-store");
     JsonNode firstResponseJson = objectMapper.readTree(firstResponse.getBody());
     JsonNode secondResponseJson = objectMapper.readTree(secondResponse.getBody());
-    assertThat(firstResponseJson.path("materialization").path("createdCount").asInt()).isEqualTo(2);
+    assertThat(firstResponseJson.path("materialization").path("createdCount").asInt()).isZero();
     assertThat(secondResponseJson.path("materialization").path("createdCount").asInt()).isZero();
-    assertThat(secondResponseJson.path("rules").size()).isEqualTo(2);
+    assertThat(secondResponseJson.path("rules").size()).isZero();
+    assertThat(ruleCount(seedData.tenantId())).isZero();
+  }
+
+  @Test
+  void materialize_selected_templates_is_explicit_post_and_idempotent() throws Exception {
+    SeedData seedData = seedUser("rules-api-materialize-selected");
+    insertSelection(seedData.tenantId(), "archive-receipts", true);
+    insertSelection(seedData.tenantId(), "label-newsletters", true);
+
+    JsonNode firstMaterializationJson =
+        postJson(
+            authenticatedClient(seedData), "/api/rules/templates/materialize-selected", Map.of());
+    JsonNode secondMaterializationJson =
+        postJson(
+            authenticatedClient(seedData), "/api/rules/templates/materialize-selected", Map.of());
+
+    assertThat(firstMaterializationJson.path("createdCount").asInt()).isEqualTo(2);
+    assertThat(secondMaterializationJson.path("createdCount").asInt()).isZero();
+    assertThat(secondMaterializationJson.path("skippedCount").asInt()).isEqualTo(2);
+    assertThat(ruleCount(seedData.tenantId())).isEqualTo(2);
   }
 
   @Test
@@ -276,6 +295,55 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
   }
 
   @Test
+  void tampered_compiled_rule_payloads_are_rejected_before_persistence() throws Exception {
+    SeedData seedData = seedUser("rules-api-tampered-compiled");
+
+    JsonNode missingMatcherFieldProblem =
+        postProblem(
+            authenticatedClient(seedData),
+            "/api/rules",
+            ruleSaveBody(
+                "Tampered matcher",
+                "Archive Stripe",
+                compiledPayload(
+                    "{\"schemaVersion\":\"rules.v1\",\"type\":\"SENDER_DOMAIN\"}",
+                    ARCHIVE_ACTIONS_JSON)));
+    JsonNode unknownMatcherFieldProblem =
+        postProblem(
+            authenticatedClient(seedData),
+            "/api/rules",
+            ruleSaveBody(
+                "Prompt leak",
+                "Archive Stripe",
+                compiledPayload(
+                    """
+                    {
+                      "schemaVersion":"rules.v1",
+                      "type":"SENDER_DOMAIN",
+                      "domain":"stripe.com",
+                      "prompt":"hidden"
+                    }
+                    """,
+                    ARCHIVE_ACTIONS_JSON)));
+    JsonNode missingActionFieldProblem =
+        postProblem(
+            authenticatedClient(seedData),
+            "/api/rules",
+            ruleSaveBody(
+                "Missing label",
+                "Label Stripe",
+                compiledPayload(STRIPE_MATCHER_JSON, "[{\"type\":\"label\"}]")));
+
+    assertThat(missingMatcherFieldProblem.path("code").asString())
+        .isEqualTo("error.rules.compile.invalid");
+    assertThat(unknownMatcherFieldProblem.path("code").asString())
+        .isEqualTo("error.rules.compile.invalid");
+    assertThat(missingActionFieldProblem.path("code").asString())
+        .isEqualTo("error.rules.compile.invalid");
+    assertThat(ruleCount(seedData.tenantId())).isZero();
+  }
+
+  @Test
   void openapi_declares_rules_paths_and_reorder_entity_version_shape() throws Exception {
     JsonNode openApiJson =
         getJson(RestClient.create("http://localhost:" + serverPort), "/v3/api-docs");
@@ -288,6 +356,8 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
     assertThat(openApiJson.path("paths").has("/api/rules/{ruleId}/enabled")).isTrue();
     assertThat(openApiJson.path("paths").has("/api/rules/templates")).isTrue();
     assertThat(openApiJson.path("paths").has("/api/rules/templates/{templateKey}/materialize"))
+        .isTrue();
+    assertThat(openApiJson.path("paths").has("/api/rules/templates/materialize-selected"))
         .isTrue();
     String openApiBody = openApiJson.toString();
     assertThat(openApiBody).contains("RuleOrderEntryRequest", "ruleId", "entityVersion");
@@ -429,6 +499,13 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
         tenantId,
         templateKey,
         enabled);
+  }
+
+  private int ruleCount(UUID tenantId) {
+    Integer count =
+        jdbcTemplate.queryForObject(
+            "select count(*) from rules where tenant_id = ?", Integer.class, tenantId);
+    return count == null ? 0 : count;
   }
 
   private static RulePreviewDataService.PreviewInput previewInput() {

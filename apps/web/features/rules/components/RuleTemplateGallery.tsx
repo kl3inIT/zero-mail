@@ -39,7 +39,7 @@ export function RuleTemplateGallery({
         <div className="space-y-2">
           {templates.map((template) => {
             const pending = pendingTemplateKey === template.templateKey;
-            const disabled = template.materialized && !template.customized;
+            const disabled = Boolean(template.materialized);
 
             return (
               <article
