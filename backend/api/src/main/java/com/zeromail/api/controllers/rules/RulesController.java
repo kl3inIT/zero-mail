@@ -271,7 +271,11 @@ public class RulesController {
           RuleSchemaVersion.fromId(compiledPayload.schemaVersion()),
           compiledPayload.matcherAst(),
           compiledPayload.actionIntents());
-    } catch (RuntimeException invalidCompilePayload) {
+    } catch (IllegalArgumentException | java.util.NoSuchElementException invalidCompilePayload) {
+      // Narrow catch: only client-driven payload errors map to a 400.
+      // Unexpected runtime errors (NPE, ISE) propagate to
+      // GlobalExceptionHandler so operators see them in logs and the
+      // client receives a generic 5xx instead of a misleading 400.
       throw RuleApiException.invalidCompileOutput();
     }
   }
