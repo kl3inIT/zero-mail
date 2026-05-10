@@ -40,12 +40,6 @@ export type RuleCompileResult =
   | RuleCompileClarificationResult
   | RuleCompileInvalidResult;
 
-type ApiMethodResult<T> = {
-  data: T | null;
-  error?: unknown;
-  response: Response;
-};
-
 function jsonHeaders(): HeadersInit {
   return { 'Content-Type': 'application/json', ...xsrfHeader() };
 }
@@ -54,13 +48,23 @@ function unsafeHeaders(): HeadersInit {
   return { ...xsrfHeader() };
 }
 
-function throwIfFailed<T>(
-  result: ApiMethodResult<T>,
+/**
+ * Narrow the discriminated `{ data, error, response }` shape returned by
+ * openapi-fetch into a non-error data branch. Throws on transport
+ * failure or non-2xx so callers can `await` and use the result directly.
+ *
+ * Throwing the structured `error` (a typed ApiError) keeps the existing
+ * client-side error-localization contract: hooks switch on `error.code`,
+ * never on a thrown Error message.
+ */
+function unwrap<T>(
+  result: { data?: T; error?: unknown; response: Response },
   fallbackMessage: string,
-): asserts result is ApiMethodResult<T> & { data: T } {
-  if (result.error || !result.response.ok) {
+): T {
+  if (result.error || !result.response.ok || result.data === undefined) {
     throw result.error ?? new Error(fallbackMessage);
   }
+  return result.data;
 }
 
 export function toRuleCompileResult(response: RuleCompileResponse): RuleCompileResult {
@@ -96,77 +100,71 @@ export function compiledResponseToRequest(
 }
 
 export async function listRules(): Promise<RuleListResponse> {
-  const result = (await api.GET('/api/rules', {})) as ApiMethodResult<RuleListResponse>;
-  throwIfFailed(result, `/api/rules list failed: ${result.response.status}`);
-  return result.data;
+  const result = await api.GET('/api/rules', {});
+  return unwrap(result, `/api/rules list failed: ${result.response.status}`);
 }
 
 export async function getRule(ruleId: string): Promise<RuleResponse> {
-  const result = (await api.GET('/api/rules/{ruleId}', {
+  const result = await api.GET('/api/rules/{ruleId}', {
     params: { path: { ruleId } },
-  })) as ApiMethodResult<RuleResponse>;
-  throwIfFailed(result, `/api/rules/${ruleId} get failed: ${result.response.status}`);
-  return result.data;
+  });
+  return unwrap(result, `/api/rules/${ruleId} get failed: ${result.response.status}`);
 }
 
 export async function compileRule(payload: RuleCompileRequest): Promise<RuleCompileResult> {
-  const result = (await api.POST('/api/rules/compile', {
+  const result = await api.POST('/api/rules/compile', {
     body: payload,
     headers: jsonHeaders(),
-  })) as ApiMethodResult<RuleCompileResponse>;
-  throwIfFailed(result, `/api/rules/compile failed: ${result.response.status}`);
-  return toRuleCompileResult(result.data);
+  });
+  const data = unwrap(result, `/api/rules/compile failed: ${result.response.status}`);
+  return toRuleCompileResult(data);
 }
 
 export async function createRule(payload: RuleCreateRequest): Promise<RuleResponse> {
-  const result = (await api.POST('/api/rules', {
+  const result = await api.POST('/api/rules', {
     body: payload,
     headers: jsonHeaders(),
-  })) as ApiMethodResult<RuleResponse>;
-  throwIfFailed(result, `/api/rules create failed: ${result.response.status}`);
-  return result.data;
+  });
+  return unwrap(result, `/api/rules create failed: ${result.response.status}`);
 }
 
 export async function updateRule(
   ruleId: string,
   payload: RuleUpdateRequest,
 ): Promise<RuleResponse> {
-  const result = (await api.PUT('/api/rules/{ruleId}', {
+  const result = await api.PUT('/api/rules/{ruleId}', {
     params: { path: { ruleId } },
     body: payload,
     headers: jsonHeaders(),
-  })) as ApiMethodResult<RuleResponse>;
-  throwIfFailed(result, `/api/rules/${ruleId} update failed: ${result.response.status}`);
-  return result.data;
+  });
+  return unwrap(result, `/api/rules/${ruleId} update failed: ${result.response.status}`);
 }
 
 export async function updateRuleEnabled(
   ruleId: string,
   payload: RuleEnabledRequest,
 ): Promise<RuleResponse> {
-  const result = (await api.PATCH('/api/rules/{ruleId}/enabled', {
+  const result = await api.PATCH('/api/rules/{ruleId}/enabled', {
     params: { path: { ruleId } },
     body: payload,
     headers: jsonHeaders(),
-  })) as ApiMethodResult<RuleResponse>;
-  throwIfFailed(result, `/api/rules/${ruleId}/enabled failed: ${result.response.status}`);
-  return result.data;
+  });
+  return unwrap(result, `/api/rules/${ruleId}/enabled failed: ${result.response.status}`);
 }
 
 export async function reorderRules(payload: RuleReorderRequest): Promise<RuleResponse[]> {
-  const result = (await api.PUT('/api/rules/reorder', {
+  const result = await api.PUT('/api/rules/reorder', {
     body: payload,
     headers: jsonHeaders(),
-  })) as ApiMethodResult<RuleResponse[]>;
-  throwIfFailed(result, `/api/rules/reorder failed: ${result.response.status}`);
-  return result.data;
+  });
+  return unwrap(result, `/api/rules/reorder failed: ${result.response.status}`);
 }
 
 export async function deleteRule(ruleId: string): Promise<void> {
-  const result = (await api.DELETE('/api/rules/{ruleId}', {
+  const result = await api.DELETE('/api/rules/{ruleId}', {
     params: { path: { ruleId } },
     headers: unsafeHeaders(),
-  })) as ApiMethodResult<void>;
+  });
   if (result.error || !result.response.ok) {
     throw (
       result.error ?? new Error(`/api/rules/${ruleId} delete failed: ${result.response.status}`)
@@ -178,55 +176,48 @@ export async function previewSavedRule(
   ruleId: string,
   payload: RulePreviewRequest,
 ): Promise<RulePreviewResponse> {
-  const result = (await api.POST('/api/rules/{ruleId}/preview', {
+  const result = await api.POST('/api/rules/{ruleId}/preview', {
     params: { path: { ruleId } },
     body: payload,
     headers: jsonHeaders(),
-  })) as ApiMethodResult<RulePreviewResponse>;
-  throwIfFailed(result, `/api/rules/${ruleId}/preview failed: ${result.response.status}`);
-  return result.data;
+  });
+  return unwrap(result, `/api/rules/${ruleId}/preview failed: ${result.response.status}`);
 }
 
 export async function previewDraftRule(
   payload: RuleDraftPreviewRequest,
 ): Promise<RulePreviewResponse> {
-  const result = (await api.POST('/api/rules/preview', {
+  const result = await api.POST('/api/rules/preview', {
     body: payload,
     headers: jsonHeaders(),
-  })) as ApiMethodResult<RulePreviewResponse>;
-  throwIfFailed(result, `/api/rules/preview failed: ${result.response.status}`);
-  return result.data;
+  });
+  return unwrap(result, `/api/rules/preview failed: ${result.response.status}`);
 }
 
 export async function listRuleTemplates(): Promise<RuleTemplateResponse[]> {
-  const result = (await api.GET('/api/rules/templates', {})) as ApiMethodResult<
-    RuleTemplateResponse[]
-  >;
-  throwIfFailed(result, `/api/rules/templates failed: ${result.response.status}`);
-  return result.data;
+  const result = await api.GET('/api/rules/templates', {});
+  return unwrap(result, `/api/rules/templates failed: ${result.response.status}`);
 }
 
 export async function materializeRuleTemplate(
   templateKey: string,
 ): Promise<RuleTemplateMaterializationResponse> {
-  const result = (await api.POST('/api/rules/templates/{templateKey}/materialize', {
+  const result = await api.POST('/api/rules/templates/{templateKey}/materialize', {
     params: { path: { templateKey } },
     headers: unsafeHeaders(),
-  })) as ApiMethodResult<RuleTemplateMaterializationResponse>;
-  throwIfFailed(
+  });
+  return unwrap(
     result,
     `/api/rules/templates/${templateKey}/materialize failed: ${result.response.status}`,
   );
-  return result.data;
 }
 
 export async function materializeSelectedRuleTemplates(): Promise<RuleTemplateMaterializationResponse> {
-  const result = (await api.POST('/api/rules/templates/materialize-selected', {
+  const result = await api.POST('/api/rules/templates/materialize-selected', {
     headers: unsafeHeaders(),
-  })) as ApiMethodResult<RuleTemplateMaterializationResponse>;
-  throwIfFailed(
+  });
+  return unwrap(
     result,
     `/api/rules/templates/materialize-selected failed: ${result.response.status}`,
   );
-  return result.data;
 }
