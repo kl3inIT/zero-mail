@@ -36,7 +36,12 @@ public class RuleNativeStateUpdater {
             .setParameter(4, ruleId)
             .setParameter(5, entityVersion)
             .executeUpdate();
-    entityManager.clear();
+    // Do NOT clear the whole persistence context - that detaches every
+    // entity loaded earlier in the outer @Transactional flow (e.g. the
+    // ordered-rules list materialized by RulePreviewService.preview).
+    // Callers reload the row whose version+timestamp we just bumped via
+    // a fresh findByIdAndTenantId, so first-level cache staleness for
+    // that single row does not leak.
     return updatedRows == 1;
   }
 
@@ -57,7 +62,9 @@ public class RuleNativeStateUpdater {
             .setParameter(3, ruleId)
             .setParameter(4, entityVersion)
             .executeUpdate();
-    entityManager.clear();
+    // See markPreviewSucceeded: clearing the persistence context here
+    // would detach unrelated entities still in use by the outer
+    // transaction. Callers reload the row by id+tenant after this call.
     return updatedRows == 1;
   }
 }
