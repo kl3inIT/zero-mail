@@ -1,7 +1,9 @@
 package com.zeromail.core.rules.service;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -46,15 +48,37 @@ public class RuleTemplateCatalogService {
    */
   @Transactional(readOnly = true)
   public List<RuleTemplateProjection> listActiveTemplates(UUID tenantId) {
-    return ruleTemplateRepository
-        .findByStatusIdsOrderByTemplateKeyAscTemplateVersionDesc(activeStatusIds())
-        .stream()
-        .sorted(
-            Comparator.comparingInt(RuleTemplateCatalogService::statusSortWeight)
-                .thenComparing(RuleTemplateEntity::getTemplateKey)
-                .thenComparing(
-                    Comparator.comparingInt(RuleTemplateEntity::getTemplateVersion).reversed()))
-        .map(ruleTemplateEntity -> toView(tenantId, ruleTemplateEntity))
+    List<RuleTemplateEntity> orderedTemplates =
+        ruleTemplateRepository
+            .findByStatusIdsOrderByTemplateKeyAscTemplateVersionDesc(activeStatusIds())
+            .stream()
+            .sorted(
+                Comparator.comparingInt(RuleTemplateCatalogService::statusSortWeight)
+                    .thenComparing(RuleTemplateEntity::getTemplateKey)
+                    .thenComparing(
+                        Comparator.comparingInt(RuleTemplateEntity::getTemplateVersion).reversed()))
+            .toList();
+    // Batch the per-template materialization lookup into a single query
+    // keyed by templateKey. Avoids N+1 SELECTs as the catalog grows.
+    List<String> templateKeys =
+        orderedTemplates.stream().map(RuleTemplateEntity::getTemplateKey).distinct().toList();
+    Map<String, RuleEntity> materializedRulesByTemplateKey = new LinkedHashMap<>();
+    if (!templateKeys.isEmpty()) {
+      for (RuleEntity materializedRule :
+          ruleRepository.findByTenantIdAndTemplateKeyIn(tenantId, templateKeys)) {
+        // RuleEntity.templateKey is unique per (tenantId, templateKey)
+        // by the schema constraint, so putIfAbsent is defensive only.
+        materializedRulesByTemplateKey.putIfAbsent(
+            materializedRule.getTemplateKey(), materializedRule);
+      }
+    }
+    return orderedTemplates.stream()
+        .map(
+            ruleTemplateEntity ->
+                toView(
+                    ruleTemplateEntity,
+                    Optional.ofNullable(
+                        materializedRulesByTemplateKey.get(ruleTemplateEntity.getTemplateKey()))))
         .toList();
   }
 
@@ -82,9 +106,8 @@ public class RuleTemplateCatalogService {
         .findFirst();
   }
 
-  private RuleTemplateProjection toView(UUID tenantId, RuleTemplateEntity ruleTemplateEntity) {
-    Optional<RuleEntity> materializedRule =
-        ruleRepository.findByTenantIdAndTemplateKey(tenantId, ruleTemplateEntity.getTemplateKey());
+  private RuleTemplateProjection toView(
+      RuleTemplateEntity ruleTemplateEntity, Optional<RuleEntity> materializedRule) {
     return new RuleTemplateProjection(
         ruleTemplateEntity.getTemplateKey(),
         ruleTemplateEntity.getTemplateVersion(),

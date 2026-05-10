@@ -1,4 +1,5 @@
 package com.zeromail.core.rules.persistence;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -23,4 +24,6 @@ public interface RuleRepository extends JpaRepository<RuleEntity, UUID> {
   long deleteByIdAndTenantId(UUID ruleId, UUID tenantId);
 
   Optional<RuleEntity> findByTenantIdAndTemplateKey(UUID tenantId, String templateKey);
+
+  List<RuleEntity> findByTenantIdAndTemplateKeyIn(UUID tenantId, Collection<String> templateKeys);
 }
