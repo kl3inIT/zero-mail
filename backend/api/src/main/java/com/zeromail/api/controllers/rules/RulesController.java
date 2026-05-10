@@ -140,7 +140,12 @@ public class RulesController {
       return RuleResponse.from(
           ruleManagementService.update(
               new RuleUpdateCommand(
-                  tenantId, ruleId, request.displayName(), request.sourceText(), compileResult)));
+                  tenantId,
+                  ruleId,
+                  request.displayName(),
+                  request.sourceText(),
+                  compileResult,
+                  request.entityVersion())));
     } catch (IllegalArgumentException invalidCompilePayload) {
       throw RuleApiException.invalidCompileOutput();
     }

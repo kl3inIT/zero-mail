@@ -131,12 +131,17 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
             Map.of("enabled", false));
     assertThat(disabledRuleJson.path("enabled").asBoolean()).isFalse();
 
+    JsonNode currentRuleBeforeUpdate =
+        getJson(authenticatedClient(seedData), "/api/rules/" + firstRuleId);
     JsonNode updatedRuleJson =
         putJson(
             authenticatedClient(seedData),
             "/api/rules/" + firstRuleId,
             ruleSaveBody(
-                "Archive Stripe mail", "Archive all Stripe mail", compileJson.path("compiled")));
+                "Archive Stripe mail",
+                "Archive all Stripe mail",
+                compileJson.path("compiled"),
+                currentRuleBeforeUpdate.path("entityVersion").asInt()));
     assertThat(updatedRuleJson.path("displayName").asString()).isEqualTo("Archive Stripe mail");
     assertThat(updatedRuleJson.path("lastPreviewedEntityVersion").isNull()).isTrue();
 
@@ -375,6 +380,16 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
       String displayName, String sourceText, Object compiledPayload) {
     return Map.of(
         "displayName", displayName, "sourceText", sourceText, "compiled", compiledPayload);
+  }
+
+  private Map<String, Object> ruleSaveBody(
+      String displayName, String sourceText, Object compiledPayload, int entityVersion) {
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("displayName", displayName);
+    body.put("sourceText", sourceText);
+    body.put("compiled", compiledPayload);
+    body.put("entityVersion", entityVersion);
+    return body;
   }
 
   private Map<String, Object> compiledPayload(String matcherAst, String actionIntents) {

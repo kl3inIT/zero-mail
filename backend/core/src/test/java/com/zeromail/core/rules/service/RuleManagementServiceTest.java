@@ -92,6 +92,8 @@ class RuleManagementServiceTest extends PostgresContainerTest {
             "Label Stripe receipts",
             "{\"schemaVersion\":\"rules.v1\",\"type\":\"SENDER_DOMAIN\",\"domain\":\"stripe.com\"}",
             "[{\"type\":\"label\",\"labelName\":\"Finance\"}]");
+    RuleStatusProjection currentBeforeUpdate =
+        withTenant(tenantId, () -> ruleManagementService.get(tenantId, createdRule.ruleId().value()));
     withTenant(
         tenantId,
         () ->
@@ -101,7 +103,8 @@ class RuleManagementServiceTest extends PostgresContainerTest {
                     createdRule.ruleId().value(),
                     "Label Stripe receipts",
                     "Label Stripe receipts as Finance",
-                    updatedCompileResult)));
+                    updatedCompileResult,
+                    currentBeforeUpdate.entityVersion())));
 
     RuleEntity updatedRule =
         withTenant(
@@ -184,7 +187,8 @@ class RuleManagementServiceTest extends PostgresContainerTest {
                                 tenantARule.ruleId().value(),
                                 "Mutated",
                                 "Mutated",
-                                compiled("Mutated")))))
+                                compiled("Mutated"),
+                                tenantARule.entityVersion()))))
         .isInstanceOf(RuleValidationException.class);
     assertThatThrownBy(
             () ->

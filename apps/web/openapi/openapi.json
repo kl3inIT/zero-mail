@@ -2415,9 +2415,14 @@
           },
           "compiled": {
             "$ref": "#/components/schemas/CompiledPayloadRequest"
+          },
+          "entityVersion": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
           }
         },
-        "required": ["compiled", "displayName", "sourceText"]
+        "required": ["compiled", "displayName", "sourceText", "entityVersion"]
       },
       "RuleResponse": {
         "type": "object",

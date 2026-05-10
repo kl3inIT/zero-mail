@@ -71,6 +71,9 @@ public class RuleManagementService {
   @Transactional
   public RuleStatusProjection update(RuleUpdateCommand command) {
     RuleEntity ruleEntity = findRuleOrThrow(command.tenantId(), command.ruleId());
+    if (!Objects.equals(ruleEntity.getEntityVersion(), command.expectedEntityVersion())) {
+      throw RuleValidationException.versionMismatch();
+    }
     boolean customizedDefinition =
         !Objects.equals(ruleEntity.getSourceText(), command.sourceText())
             || !Objects.equals(ruleEntity.getMatcherAst(), command.compileResult().matcherAst())

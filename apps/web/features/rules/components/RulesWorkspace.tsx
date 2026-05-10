@@ -137,16 +137,24 @@ export function RulesWorkspace() {
   async function handleSaveDisabledRule() {
     if (compileResult?.status !== 'compiled') return;
 
-    const payload = {
+    const basePayload = {
       displayName: compileResult.compiled.displayName ?? fallbackDisplayName(sourceText),
       sourceText,
       compiled: compiledResponseToRequest(compileResult.compiled),
     };
 
-    const savedRule =
-      selectedRule?.ruleId && selectedRule.sourceText
-        ? await updateRuleMutation.mutateAsync({ ruleId: selectedRule.ruleId, payload })
-        : await createRuleMutation.mutateAsync(payload);
+    let savedRule;
+    if (selectedRule?.ruleId && selectedRule.sourceText) {
+      savedRule = await updateRuleMutation.mutateAsync({
+        ruleId: selectedRule.ruleId,
+        payload: {
+          ...basePayload,
+          entityVersion: selectedRule.entityVersion ?? 0,
+        },
+      });
+    } else {
+      savedRule = await createRuleMutation.mutateAsync(basePayload);
+    }
 
     selectRule(savedRule);
     setLastPreviewedRule(null);

@@ -409,6 +409,8 @@ export interface components {
             displayName: string;
             sourceText: string;
             compiled: components["schemas"]["CompiledPayloadRequest"];
+            /** Format: int32 */
+            entityVersion: number;
         };
         RuleResponse: {
             /** Format: uuid */

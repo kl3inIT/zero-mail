@@ -6,7 +6,8 @@ public record RuleUpdateCommand(
     UUID ruleId,
     String displayName,
     String sourceText,
-    RuleCompileResult compileResult) {
+    RuleCompileResult compileResult,
+    Integer expectedEntityVersion) {
 
   public RuleUpdateCommand {
     if (tenantId == null) {
@@ -18,5 +19,8 @@ public record RuleUpdateCommand(
     displayName = RuleCreateCommand.requireBoundedText(displayName, "displayName", 160);
     sourceText = RuleCreateCommand.requireBoundedText(sourceText, "sourceText", 4_000);
     RuleCreateCommand.requireCompiled(compileResult);
+    if (expectedEntityVersion == null || expectedEntityVersion < 0) {
+      throw new IllegalArgumentException("expectedEntityVersion must be a non-negative integer");
+    }
   }
 }
