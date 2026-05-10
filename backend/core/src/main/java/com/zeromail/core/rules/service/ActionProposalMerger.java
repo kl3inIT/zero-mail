@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import com.zeromail.core.gmail.domain.GmailCategory;
 import com.zeromail.core.rules.domain.ActionIntent;
 import com.zeromail.core.rules.domain.ActionProposal;
 import com.zeromail.core.rules.domain.MatcherEvaluationState;
@@ -22,8 +23,9 @@ import com.zeromail.core.rules.domain.RuleEvaluationResult;
 
 public class ActionProposalMerger {
 
-  private static final Set<String> GMAIL_CATEGORY_NAMES =
-      Set.of("primary", "promotions", "social", "updates", "forums");
+  // Sourced from GmailCategory.CANONICAL_IDS so the seed catalog and the
+  // conflict detector cannot drift (REVIEW IN-03).
+  private static final Set<String> GMAIL_CATEGORY_NAMES = GmailCategory.CANONICAL_IDS;
 
   private final RuleEvaluator ruleEvaluator;
 

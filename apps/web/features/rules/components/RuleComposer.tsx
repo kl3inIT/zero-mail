@@ -208,7 +208,11 @@ function summarizeCompiledJson(jsonText: string | undefined, fallback: string): 
       .slice(0, 6);
     return values.length > 0 ? values : [fallback];
   } catch {
-    return [jsonText.slice(0, 80)];
+    // If the server ever returns a string that is not valid JSON, render
+    // the generic fallback rather than a raw 80-char slice of the
+    // payload (which would surface fragments like `{"schemaVersion":...`
+    // as a chip in the "What Zero Mail understood" review card).
+    return [fallback];
   }
 }
 

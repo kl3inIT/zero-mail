@@ -107,7 +107,10 @@ public class RulePreviewService {
         tenantId, parseMatcher(matcherAst), parseActionIntents(actionIntents), requestedSampleSize);
   }
 
-  @Transactional
+  // No @Transactional here on purpose: preview(...) is only invoked via
+  // self-invocation from previewSavedRule / previewDraft, so Spring's
+  // transactional proxy is bypassed and the annotation has no runtime
+  // effect. The active transaction is owned by the public entry points.
   public RulePreviewResult preview(RulePreviewCommand command) {
     Objects.requireNonNull(command, "command must not be null");
     PreviewSampleSize sampleSize = PreviewSampleSize.normalize(command.requestedSampleSize());
