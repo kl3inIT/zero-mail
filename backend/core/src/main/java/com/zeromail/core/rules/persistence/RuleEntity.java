@@ -1,5 +1,7 @@
 package com.zeromail.core.rules.persistence;
 
+
+import com.zeromail.core.rules.domain.RuleId;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -7,11 +9,11 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.OptimisticLock;
 import org.hibernate.type.SqlTypes;
 
-import com.zeromail.core.rules.model.ActionIntentJsonValidator;
-import com.zeromail.core.rules.model.RuleAstJsonValidator;
-import com.zeromail.core.rules.model.RuleLanguage;
-import com.zeromail.core.rules.model.RuleSchemaVersion;
-import com.zeromail.core.rules.model.RuleStatusView;
+import com.zeromail.core.rules.domain.ActionIntentJsonValidator;
+import com.zeromail.core.rules.domain.RuleAstJsonValidator;
+import com.zeromail.core.rules.domain.RuleLanguage;
+import com.zeromail.core.rules.domain.RuleSchemaVersion;
+import com.zeromail.core.rules.projection.RuleStatusProjection;
 import com.zeromail.core.shared.persistence.AbstractTenantOwnedEntity;
 
 import jakarta.persistence.Column;
@@ -152,9 +154,9 @@ public class RuleEntity extends AbstractTenantOwnedEntity {
     return getVersion();
   }
 
-  public RuleStatusView toStatusView() {
-    return new RuleStatusView(
-        new com.zeromail.core.rules.model.RuleId(getId()),
+  public RuleStatusProjection toStatusProjection() {
+    return new RuleStatusProjection(
+        new com.zeromail.core.rules.domain.RuleId(getId()),
         displayName,
         sourceText,
         enabled,

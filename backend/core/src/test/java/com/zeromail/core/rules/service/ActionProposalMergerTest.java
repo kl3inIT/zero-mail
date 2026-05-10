@@ -1,5 +1,4 @@
 package com.zeromail.core.rules.service;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
@@ -10,11 +9,11 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
-import com.zeromail.core.rules.model.ActionIntent;
-import com.zeromail.core.rules.model.ActionProposal;
-import com.zeromail.core.rules.model.MatcherNode;
-import com.zeromail.core.rules.model.RuleConflictType;
-import com.zeromail.core.rules.model.RuleEvaluationInput;
+import com.zeromail.core.rules.domain.ActionIntent;
+import com.zeromail.core.rules.domain.ActionProposal;
+import com.zeromail.core.rules.domain.MatcherNode;
+import com.zeromail.core.rules.domain.RuleConflictType;
+import com.zeromail.core.rules.domain.RuleEvaluationInput;
 import com.zeromail.core.rules.service.ActionProposalMerger.ActionProposalMergeResult;
 import com.zeromail.core.rules.service.ActionProposalMerger.RuleActionCandidate;
 

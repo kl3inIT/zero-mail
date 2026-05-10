@@ -10,12 +10,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.zeromail.core.billing.model.CallSite;
-import com.zeromail.core.billing.model.CreditBalance;
-import com.zeromail.core.billing.model.CreditReservationStatus;
-import com.zeromail.core.billing.model.IllegalLedgerStateException;
-import com.zeromail.core.billing.model.InsufficientCreditsException;
-import com.zeromail.core.billing.model.ReservationId;
+import com.zeromail.core.billing.domain.CallSite;
+import com.zeromail.core.billing.domain.CreditBalance;
+import com.zeromail.core.billing.domain.CreditReservationStatus;
+import com.zeromail.core.billing.exception.IllegalLedgerStateException;
+import com.zeromail.core.billing.exception.InsufficientCreditsException;
+import com.zeromail.core.billing.domain.ReservationId;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryEntity;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryRepository;
 import com.zeromail.core.billing.persistence.CreditReservationEntity;

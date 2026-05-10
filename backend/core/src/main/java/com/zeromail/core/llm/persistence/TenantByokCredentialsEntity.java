@@ -3,7 +3,7 @@ package com.zeromail.core.llm.persistence;
 import java.util.Arrays;
 import java.util.UUID;
 
-import com.zeromail.core.llm.model.BYOKProvider;
+import com.zeromail.core.llm.domain.BYOKProvider;
 import com.zeromail.core.shared.persistence.AbstractTenantOwnedEntity;
 
 import jakarta.persistence.Column;

@@ -19,7 +19,7 @@ import com.zeromail.api.security.TestSessionSupport;
 import com.zeromail.api.support.ApiPostgresTestBase;
 import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
-import com.zeromail.core.billing.model.CallSite;
+import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.billing.service.CreditLedger;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.persistence.TenantEntity;

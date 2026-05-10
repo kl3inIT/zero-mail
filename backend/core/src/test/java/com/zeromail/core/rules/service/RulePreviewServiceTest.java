@@ -1,5 +1,7 @@
 package com.zeromail.core.rules.service;
 
+
+import com.zeromail.core.rules.domain.RuleEvaluationInput;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
@@ -17,15 +19,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import com.zeromail.core.rules.model.ActionIntent;
-import com.zeromail.core.rules.model.MatcherNode;
-import com.zeromail.core.rules.model.PreviewSampleSize;
-import com.zeromail.core.rules.model.RuleCompileResult;
-import com.zeromail.core.rules.model.RuleCreateCommand;
-import com.zeromail.core.rules.model.RuleLanguage;
-import com.zeromail.core.rules.model.RulePreviewCommand;
-import com.zeromail.core.rules.model.RulePreviewResult;
-import com.zeromail.core.rules.model.RuleSchemaVersion;
+import com.zeromail.core.rules.domain.ActionIntent;
+import com.zeromail.core.rules.domain.MatcherNode;
+import com.zeromail.core.rules.domain.PreviewSampleSize;
+import com.zeromail.core.rules.application.RuleCompileResult;
+import com.zeromail.core.rules.application.RuleCreateCommand;
+import com.zeromail.core.rules.domain.RuleLanguage;
+import com.zeromail.core.rules.application.RulePreviewCommand;
+import com.zeromail.core.rules.application.RulePreviewResult;
+import com.zeromail.core.rules.domain.RuleSchemaVersion;
 import com.zeromail.core.rules.persistence.RuleEntity;
 import com.zeromail.core.rules.persistence.RuleRepository;
 import com.zeromail.core.support.PostgresContainerTest;
@@ -200,7 +202,7 @@ class RulePreviewServiceTest extends PostgresContainerTest {
             "Receipt from Stripe",
             Instant.parse("2026-05-09T10:00:00Z"),
             List.of("INBOX")),
-        new com.zeromail.core.rules.model.RuleEvaluationInput(
+        new com.zeromail.core.rules.domain.RuleEvaluationInput(
             "billing@stripe.com",
             "stripe.com",
             List.of("founder@example.test"),

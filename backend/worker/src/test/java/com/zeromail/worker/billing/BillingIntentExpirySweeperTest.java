@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import com.zeromail.core.billing.model.BillingTopupIntentStatus;
+import com.zeromail.core.billing.domain.BillingTopupIntentStatus;
 import com.zeromail.core.billing.persistence.BillingTopupIntentEntity;
 import com.zeromail.core.billing.persistence.BillingTopupIntentRepository;
 import com.zeromail.core.tenant.TenantContext;

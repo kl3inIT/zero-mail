@@ -15,27 +15,27 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
-import com.zeromail.core.billing.model.InsufficientCreditsException;
-import com.zeromail.core.billing.model.CallSite;
-import com.zeromail.core.billing.model.ReservationId;
+import com.zeromail.core.billing.exception.InsufficientCreditsException;
+import com.zeromail.core.billing.domain.CallSite;
+import com.zeromail.core.billing.domain.ReservationId;
 import com.zeromail.core.billing.service.CreditLedger;
 import com.zeromail.core.config.ZeroMailCoreProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
-import com.zeromail.core.llm.model.BYOKProvider;
-import com.zeromail.core.llm.model.Action;
-import com.zeromail.core.llm.model.LlmChatRequest;
-import com.zeromail.core.llm.model.LlmChatResult;
-import com.zeromail.core.llm.model.LlmTool;
-import com.zeromail.core.llm.model.LlmToolProfile;
-import com.zeromail.core.llm.model.LlmUsage;
-import com.zeromail.core.llm.model.RawToolCall;
-import com.zeromail.core.llm.model.RuleCompileGatewayResult;
-import com.zeromail.core.llm.model.SafetyViolationException;
-import com.zeromail.core.llm.model.SanitizationContext;
-import com.zeromail.core.llm.model.SystemPrompts;
-import com.zeromail.core.llm.model.ToolCallResult;
+import com.zeromail.core.llm.domain.BYOKProvider;
+import com.zeromail.core.llm.domain.Action;
+import com.zeromail.core.llm.application.LlmChatRequest;
+import com.zeromail.core.llm.application.LlmChatResult;
+import com.zeromail.core.llm.application.LlmTool;
+import com.zeromail.core.llm.domain.LlmToolProfile;
+import com.zeromail.core.llm.application.LlmUsage;
+import com.zeromail.core.llm.application.RawToolCall;
+import com.zeromail.core.llm.application.RuleCompileGatewayResult;
+import com.zeromail.core.llm.exception.SafetyViolationException;
+import com.zeromail.core.llm.application.SanitizationContext;
+import com.zeromail.core.llm.application.SystemPrompts;
+import com.zeromail.core.llm.application.ToolCallResult;
 import com.zeromail.core.llm.persistence.TenantByokCredentialsEntity;
 import com.zeromail.core.llm.persistence.TenantByokCredentialsRepository;
 import com.zeromail.core.tenant.TenantContext;
@@ -221,7 +221,7 @@ class LlmGatewayImpl implements LlmGateway {
                     callSite,
                     SystemPrompts.TRIAGE_SYSTEM_PROMPT,
                     tools,
-                    (_model, result) -> parseSafeActionToolCall(result));
+                    (_, result) -> parseSafeActionToolCall(result));
               }
 
               return callPlatformModelClientWithCreditLedger(
@@ -233,7 +233,7 @@ class LlmGatewayImpl implements LlmGateway {
                   SystemPrompts.TRIAGE_SYSTEM_PROMPT,
                   tools,
                   startNanos,
-                  (_model, result) -> parseSafeActionToolCall(result));
+                  (_, result) -> parseSafeActionToolCall(result));
             });
   }
 
@@ -548,8 +548,8 @@ class LlmGatewayImpl implements LlmGateway {
     public void release(ReservationId reservationId) {}
 
     @Override
-    public com.zeromail.core.billing.model.CreditBalance balance(UUID tenantId) {
-      return new com.zeromail.core.billing.model.CreditBalance(0, 0);
+    public com.zeromail.core.billing.domain.CreditBalance balance(UUID tenantId) {
+      return new com.zeromail.core.billing.domain.CreditBalance(0, 0);
     }
   }
 }

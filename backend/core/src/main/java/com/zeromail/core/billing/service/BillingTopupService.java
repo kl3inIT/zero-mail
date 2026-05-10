@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import com.zeromail.core.billing.model.BillingTopupIntentStatus;
+import com.zeromail.core.billing.domain.BillingTopupIntentStatus;
 import com.zeromail.core.billing.persistence.BillingTopupIntentEntity;
 import com.zeromail.core.billing.persistence.BillingTopupIntentRepository;
 import com.zeromail.core.billing.persistence.BillingTopupIntentTenantLookup;

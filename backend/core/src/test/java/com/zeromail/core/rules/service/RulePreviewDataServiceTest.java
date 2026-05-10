@@ -1,5 +1,4 @@
 package com.zeromail.core.rules.service;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -22,12 +21,12 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
-import com.zeromail.core.gmail.model.GmailConnectionProjection;
+import com.zeromail.core.gmail.projection.GmailConnectionProjection;
 import com.zeromail.core.gmail.service.GmailConnectionService;
 import com.zeromail.core.gmail.service.GmailPreviewReadService;
-import com.zeromail.core.rules.model.GmailPreviewUnavailableException;
-import com.zeromail.core.rules.model.MatcherNode;
-import com.zeromail.core.rules.model.PreviewSampleSize;
+import com.zeromail.core.rules.exception.GmailPreviewUnavailableException;
+import com.zeromail.core.rules.domain.MatcherNode;
+import com.zeromail.core.rules.domain.PreviewSampleSize;
 
 class RulePreviewDataServiceTest {
 

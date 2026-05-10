@@ -18,7 +18,7 @@ import org.springframework.web.client.RestClient;
 
 import com.zeromail.api.dto.billing.SepayWebhookPayload;
 import com.zeromail.api.support.ApiPostgresTestBase;
-import com.zeromail.core.billing.model.BillingTopupIntentStatus;
+import com.zeromail.core.billing.domain.BillingTopupIntentStatus;
 import com.zeromail.core.billing.persistence.BillingTopupIntentEntity;
 import com.zeromail.core.billing.persistence.BillingTopupIntentRepository;
 import com.zeromail.core.tenant.TenantContext;

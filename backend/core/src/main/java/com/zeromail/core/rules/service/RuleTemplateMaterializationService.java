@@ -16,10 +16,10 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.zeromail.core.onboarding.service.OnboardingService;
-import com.zeromail.core.rules.model.RuleStatusView;
-import com.zeromail.core.rules.model.RuleTemplateMaterializationResult;
-import com.zeromail.core.rules.model.RuleTemplateMaterializationResult.SkippedTemplate;
-import com.zeromail.core.rules.model.RuleTemplateMaterializationResult.SkippedTemplateReason;
+import com.zeromail.core.rules.projection.RuleStatusProjection;
+import com.zeromail.core.rules.application.RuleTemplateMaterializationResult;
+import com.zeromail.core.rules.application.RuleTemplateMaterializationResult.SkippedTemplate;
+import com.zeromail.core.rules.application.RuleTemplateMaterializationResult.SkippedTemplateReason;
 import com.zeromail.core.rules.persistence.RuleEntity;
 import com.zeromail.core.rules.persistence.RuleRepository;
 import com.zeromail.core.rules.persistence.RuleTemplateEntity;
@@ -51,7 +51,7 @@ public class RuleTemplateMaterializationService {
   public RuleTemplateMaterializationResult materializeSelectedTemplates(UUID tenantId) {
     Objects.requireNonNull(tenantId, "tenantId");
     List<String> selectedTemplateKeys = onboardingService.selectedEnabledTemplateKeys(tenantId);
-    List<RuleStatusView> createdRules = new ArrayList<>();
+    List<RuleStatusProjection> createdRules = new ArrayList<>();
     List<SkippedTemplate> skippedTemplates = new ArrayList<>();
     int customizedPreservedCount = 0;
 
@@ -95,7 +95,7 @@ public class RuleTemplateMaterializationService {
     }
     TemplateMaterializationOutcome materializationOutcome =
         materializeTemplateWithRetry(tenantId, templateKey.trim());
-    List<RuleStatusView> createdRules =
+    List<RuleStatusProjection> createdRules =
         materializationOutcome.createdRule().map(List::of).orElseGet(List::of);
     List<SkippedTemplate> skippedTemplates =
         materializationOutcome.skippedTemplate().map(List::of).orElseGet(List::of);
@@ -153,7 +153,7 @@ public class RuleTemplateMaterializationService {
             ruleTemplateEntity.getTemplateVersion());
 
     RuleEntity savedRule = ruleRepository.saveAndFlush(ruleEntity);
-    return TemplateMaterializationOutcome.created(savedRule.toStatusView());
+    return TemplateMaterializationOutcome.created(savedRule.toStatusProjection());
   }
 
   private TemplateMaterializationOutcome reloadAfterConcurrentMaterialization(
@@ -195,11 +195,11 @@ public class RuleTemplateMaterializationService {
   }
 
   private record TemplateMaterializationOutcome(
-      Optional<RuleStatusView> createdRule,
+      Optional<RuleStatusProjection> createdRule,
       Optional<SkippedTemplate> skippedTemplate,
       boolean customizedPreserved) {
 
-    private static TemplateMaterializationOutcome created(RuleStatusView createdRule) {
+    private static TemplateMaterializationOutcome created(RuleStatusProjection createdRule) {
       return new TemplateMaterializationOutcome(Optional.of(createdRule), Optional.empty(), false);
     }
 

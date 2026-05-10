@@ -1,5 +1,4 @@
 package com.zeromail.core.rules.persistence;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -12,9 +11,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import com.zeromail.core.rules.model.RuleLanguage;
-import com.zeromail.core.rules.model.RuleSchemaVersion;
-import com.zeromail.core.rules.model.RuleTemplateStatus;
+import com.zeromail.core.rules.domain.RuleLanguage;
+import com.zeromail.core.rules.domain.RuleSchemaVersion;
+import com.zeromail.core.rules.domain.RuleTemplateStatus;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
 

@@ -1,5 +1,4 @@
 package com.zeromail.core.rules.persistence;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.UUID;

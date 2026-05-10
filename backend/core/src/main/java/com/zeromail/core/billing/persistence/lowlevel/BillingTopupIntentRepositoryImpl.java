@@ -7,7 +7,7 @@ import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import com.zeromail.core.billing.model.BillingTopupIntentStatus;
+import com.zeromail.core.billing.domain.BillingTopupIntentStatus;
 import com.zeromail.core.billing.persistence.BillingTopupIntentTenantLookup;
 import com.zeromail.core.billing.persistence.BillingTopupIntentTenantLookupFragment;
 

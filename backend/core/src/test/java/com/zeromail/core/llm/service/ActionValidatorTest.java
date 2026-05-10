@@ -3,8 +3,8 @@ package com.zeromail.core.llm.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.zeromail.core.llm.model.Action;
-import com.zeromail.core.llm.model.SafetyViolationException;
+import com.zeromail.core.llm.domain.Action;
+import com.zeromail.core.llm.exception.SafetyViolationException;
 import org.junit.jupiter.api.Test;
 
 class ActionValidatorTest {

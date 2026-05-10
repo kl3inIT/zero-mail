@@ -11,13 +11,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import com.zeromail.core.billing.model.CallSite;
-import com.zeromail.core.llm.model.RuleCompileGatewayResult;
-import com.zeromail.core.llm.model.ToolCallResult;
+import com.zeromail.core.billing.domain.CallSite;
+import com.zeromail.core.llm.application.RuleCompileGatewayResult;
+import com.zeromail.core.llm.application.ToolCallResult;
 import com.zeromail.core.llm.service.LlmGateway;
-import com.zeromail.core.rules.model.RuleCompileCommand;
-import com.zeromail.core.rules.model.RuleCompileResult;
-import com.zeromail.core.rules.model.RuleLanguage;
+import com.zeromail.core.rules.application.RuleCompileCommand;
+import com.zeromail.core.rules.application.RuleCompileResult;
+import com.zeromail.core.rules.domain.RuleLanguage;
 import com.zeromail.core.tenant.TenantContext;
 
 class RuleCompilerServiceTest {

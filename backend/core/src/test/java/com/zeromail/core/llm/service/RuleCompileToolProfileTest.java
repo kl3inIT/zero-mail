@@ -12,19 +12,19 @@ import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
-import com.zeromail.core.billing.model.CallSite;
+import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
 import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
 import com.zeromail.core.llm.gateway.sanitization.Sanitizer;
-import com.zeromail.core.llm.model.BYOKProvider;
-import com.zeromail.core.llm.model.LlmChatRequest;
-import com.zeromail.core.llm.model.LlmChatResult;
-import com.zeromail.core.llm.model.LlmTool;
-import com.zeromail.core.llm.model.LlmToolProfile;
-import com.zeromail.core.llm.model.LlmUsage;
-import com.zeromail.core.llm.model.RawToolCall;
-import com.zeromail.core.llm.model.SafetyViolationException;
-import com.zeromail.core.llm.model.SanitizationContext;
+import com.zeromail.core.llm.domain.BYOKProvider;
+import com.zeromail.core.llm.application.LlmChatRequest;
+import com.zeromail.core.llm.application.LlmChatResult;
+import com.zeromail.core.llm.application.LlmTool;
+import com.zeromail.core.llm.domain.LlmToolProfile;
+import com.zeromail.core.llm.application.LlmUsage;
+import com.zeromail.core.llm.application.RawToolCall;
+import com.zeromail.core.llm.exception.SafetyViolationException;
+import com.zeromail.core.llm.application.SanitizationContext;
 import com.zeromail.core.tenant.TenantContext;
 
 class RuleCompileToolProfileTest {

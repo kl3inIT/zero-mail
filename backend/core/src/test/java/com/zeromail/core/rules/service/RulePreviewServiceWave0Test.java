@@ -1,5 +1,7 @@
 package com.zeromail.core.rules.service;
 
+
+import com.zeromail.core.llm.domain.Action;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.fail;

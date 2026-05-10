@@ -5,10 +5,10 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.zeromail.core.account.model.CurrentUserNotFoundException;
-import com.zeromail.core.account.model.CurrentUserProjection;
+import com.zeromail.core.account.exception.CurrentUserNotFoundException;
+import com.zeromail.core.account.projection.CurrentUserProjection;
 import com.zeromail.core.account.persistence.UserRepository;
-import com.zeromail.core.onboarding.model.OnboardingStep;
+import com.zeromail.core.onboarding.domain.OnboardingStep;
 
 /**
  * Owns tenant-scoped account state transitions that controllers used to perform inline.

@@ -1,5 +1,4 @@
 package com.zeromail.api.controllers.rules;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -29,9 +28,9 @@ import com.zeromail.api.security.TestSessionSupport;
 import com.zeromail.api.support.ApiPostgresTestBase;
 import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
-import com.zeromail.core.rules.model.GmailPreviewUnavailableException;
-import com.zeromail.core.rules.model.PreviewSampleSize;
-import com.zeromail.core.rules.model.RuleEvaluationInput;
+import com.zeromail.core.rules.exception.GmailPreviewUnavailableException;
+import com.zeromail.core.rules.domain.PreviewSampleSize;
+import com.zeromail.core.rules.domain.RuleEvaluationInput;
 import com.zeromail.core.rules.service.RulePreviewDataService;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.persistence.TenantEntity;

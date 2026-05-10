@@ -1,7 +1,7 @@
 package com.zeromail.core.llm.gateway.sanitization;
 
-import com.zeromail.core.llm.model.SanitizationContext;
-import com.zeromail.core.llm.model.SanitizationException;
+import com.zeromail.core.llm.application.SanitizationContext;
+import com.zeromail.core.llm.exception.SanitizationException;
 import com.zeromail.core.tenant.TenantContext;
 import java.util.ArrayList;
 import java.util.List;

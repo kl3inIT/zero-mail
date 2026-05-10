@@ -3,8 +3,8 @@ package com.zeromail.core.billing.persistence;
 import java.time.Instant;
 import java.util.UUID;
 
-import com.zeromail.core.billing.model.CallSite;
-import com.zeromail.core.billing.model.CreditReservationStatus;
+import com.zeromail.core.billing.domain.CallSite;
+import com.zeromail.core.billing.domain.CreditReservationStatus;
 import com.zeromail.core.shared.persistence.AbstractTenantOwnedEntity;
 
 import jakarta.persistence.Column;

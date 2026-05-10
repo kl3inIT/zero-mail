@@ -9,7 +9,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmByokProperties;
-import com.zeromail.core.llm.model.InvalidByokException;
+import com.zeromail.core.llm.exception.InvalidByokException;
 
 class ByokEndpointValidatorTest {
 

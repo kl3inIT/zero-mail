@@ -1,5 +1,4 @@
 package com.zeromail.core.rules.persistence.lowlevel;
-
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;

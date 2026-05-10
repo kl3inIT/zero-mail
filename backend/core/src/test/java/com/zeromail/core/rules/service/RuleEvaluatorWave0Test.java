@@ -1,5 +1,4 @@
 package com.zeromail.core.rules.service;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.reflect.Method;

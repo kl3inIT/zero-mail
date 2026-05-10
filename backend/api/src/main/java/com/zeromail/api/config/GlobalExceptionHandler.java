@@ -1,5 +1,6 @@
 package com.zeromail.api.config;
 
+
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -23,14 +24,14 @@ import com.zeromail.api.error.AllowedParamScalars;
 import com.zeromail.api.error.ErrorCodes;
 import com.zeromail.api.error.FieldErrorDto;
 import com.zeromail.api.error.RuleApiException;
-import com.zeromail.core.account.model.CurrentUserNotFoundException;
-import com.zeromail.core.billing.model.IllegalLedgerStateException;
-import com.zeromail.core.billing.model.InsufficientCreditsException;
-import com.zeromail.core.llm.model.InvalidByokException;
-import com.zeromail.core.llm.model.SafetyViolationException;
-import com.zeromail.core.llm.model.SanitizationException;
-import com.zeromail.core.rules.model.GmailPreviewUnavailableException;
-import com.zeromail.core.rules.model.RuleValidationException;
+import com.zeromail.core.account.exception.CurrentUserNotFoundException;
+import com.zeromail.core.billing.exception.IllegalLedgerStateException;
+import com.zeromail.core.billing.exception.InsufficientCreditsException;
+import com.zeromail.core.llm.exception.InvalidByokException;
+import com.zeromail.core.llm.exception.SafetyViolationException;
+import com.zeromail.core.llm.exception.SanitizationException;
+import com.zeromail.core.rules.exception.GmailPreviewUnavailableException;
+import com.zeromail.core.rules.exception.RuleValidationException;
 import com.zeromail.core.tenant.TenantContext;
 
 import jakarta.validation.ConstraintViolationException;

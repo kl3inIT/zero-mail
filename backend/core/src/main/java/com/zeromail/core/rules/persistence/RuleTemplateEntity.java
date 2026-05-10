@@ -5,11 +5,11 @@ import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import com.zeromail.core.rules.model.ActionIntentJsonValidator;
-import com.zeromail.core.rules.model.RuleAstJsonValidator;
-import com.zeromail.core.rules.model.RuleLanguage;
-import com.zeromail.core.rules.model.RuleSchemaVersion;
-import com.zeromail.core.rules.model.RuleTemplateStatus;
+import com.zeromail.core.rules.domain.ActionIntentJsonValidator;
+import com.zeromail.core.rules.domain.RuleAstJsonValidator;
+import com.zeromail.core.rules.domain.RuleLanguage;
+import com.zeromail.core.rules.domain.RuleSchemaVersion;
+import com.zeromail.core.rules.domain.RuleTemplateStatus;
 import com.zeromail.core.shared.persistence.AbstractAuditableEntity;
 
 import jakarta.persistence.Column;

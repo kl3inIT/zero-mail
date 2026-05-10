@@ -8,7 +8,7 @@ Project-wide coding conventions referenced by `CLAUDE.md` / `AGENTS.md`.
 
 Controllers never touch repositories directly. Transaction boundaries belong in `@Service` classes; controllers translate HTTP-shape ↔ domain-shape and forward to services. Response DTOs own projection/result-to-wire mapping through static `from(...)` factories, so controllers return `SomeResponse.from(domainResult)` instead of keeping private `toResponse(...)` helpers or constructing response DTOs inline. This keeps controllers cheap to test (no DB), centralizes transaction logic, and lets Spring Modulith + ArchUnit enforce domain boundaries cleanly. Any controller that injects a JPA repository directly creates a hidden transaction-scope bug and breaks domain isolation.
 
-**Example:** `backend/api/src/main/java/com/zeromail/api/controllers/TenantStatusController.java`
+**Example:** `backend/api/src/main/java/com/zeromail/api/controllers/tenant/TenantStatusController.java`
 
 ```java
 @GetMapping("/gmail/connection/status")
@@ -23,7 +23,35 @@ public GmailConnectionStatusResponse status() {
 
 ---
 
-## 2. Records for DTOs, classes for entities, Lombok-free
+## 2. Backend domain package layout
+
+`backend/core` uses package-based modular monolith boundaries. Do not create ambiguous `model`
+packages for new backend code. Inside each bounded context, create only the responsibility folders
+that are actually needed:
+
+- `domain/` — core business vocabulary: value objects, domain enums, matcher/action concepts.
+- `application/` — use-case services plus command inputs and operation results.
+- `projection/` — read-side snapshots returned by query/list/status services.
+- `exception/` — business/application exceptions owned by the domain.
+- `persistence/` — JPA entities, repositories, converters, and `lowlevel/` SQL/JDBC helpers.
+
+For example, rules code uses `core.rules.domain.MatcherNode`,
+`core.rules.application.RuleCompileResult`, `core.rules.projection.RuleStatusProjection`, and
+`core.rules.exception.RuleValidationException`. `Projection` means read state; `Result` means the
+outcome of an operation. A `POST` can still return a projection when the API returns the current
+state after a mutation.
+
+`backend/api` keeps its horizontal layer layout (`controllers`, `dto`, `error`, `security`,
+`config`), but controllers are grouped by domain under `api/controllers/<domain>/`. DTOs stay under
+`api/dto/<domain>/`, and large aggregate DTO files are split into focused request/response records.
+
+**Anti-pattern:** adding `core.<domain>.model.*`, naming read-side types `*View`, placing business
+exceptions in `backend/api`, or keeping all endpoint contracts for a domain in one monolithic DTO
+container such as `RuleDtos`.
+
+---
+
+## 3. Records for DTOs, classes for entities, Lombok-free
 
 Java 25 records cover all DTO and value-object use cases — immutable, `equals`/`hashCode`/`toString` for free, exhaustive deconstruction patterns. Entities stay `class` because Hibernate proxies require a no-args constructor and mutable fields. Lombok is banned project-wide because it lags JDK releases by 3–12 months and Java 25 features (flexible constructors, module imports) can trip it. If a builder is needed, write an explicit nested `Builder` class.
 
@@ -50,11 +78,11 @@ public class UserEntity extends AbstractTenantOwnedEntity {
 
 ---
 
-## 3. Enum state machines via `OrderedEnum` / `IdentifiedEnum` + static `fromId` fail-loud
+## 4. Enum state machines via `OrderedEnum` / `IdentifiedEnum` + static `fromId` fail-loud
 
 Domain enums never rely on `name()` for DB storage ordering or `ordinal()` for comparison. Implement `core.shared.lang.OrderedEnum` (carries `id()` + `weight()` + `labelKey()`) for ordered state machines, or `IdentifiedEnum` for unordered identity sets. Storage uses `id()` (which equals `name()` by the D-C2 invariant), so DB rows survive enum reordering via weight-gap inserts. Lookup uses a static `fromId(String)` that throws `NoSuchElementException` on unknown ids — never returns null, never silently maps to a default.
 
-**Example:** `backend/core/src/main/java/com/zeromail/core/onboarding/model/OnboardingStep.java`
+**Example:** `backend/core/src/main/java/com/zeromail/core/onboarding/domain/OnboardingStep.java`
 
 ```java
 public enum OnboardingStep implements OrderedEnum {
@@ -71,7 +99,7 @@ public enum OnboardingStep implements OrderedEnum {
 
 ---
 
-## 4. Privacy logging format
+## 5. Privacy logging format
 
 Every log statement emits an opaque `event=` name plus structured fields — never raw email address, Google subject, OAuth refresh-token bytes, OAuth access-token bytes, message body, LLM prompt, or LLM completion. Tenant context is the only stable identifier and is logged as a UUID via `tenantId={}`. ArchUnit rules (Phase 1 FND-04) and a Logback scrub filter (FND-03) catch most violations at build/runtime, but the convention is the first line of defense.
 
@@ -93,7 +121,7 @@ log.warn("Gmail body: " + emailBody);                             // content in 
 
 ---
 
-## 5. Direct calls vs Spring Modulith events
+## 6. Direct calls vs Spring Modulith events
 
 Use direct service calls for commands that need an immediate result, strong transaction semantics, or fail-fast behavior. Controllers and workers should call `backend/core` services directly; examples include OAuth bundled provisioning, credit reservation/settlement/release, Pub/Sub delivery ingestion, account deletion cleanup, and Gmail connection status reads. Do not replace these command paths with events just to appear more decoupled.
 
@@ -105,7 +133,7 @@ Spring application events are local to one Spring application context. They do n
 
 ---
 
-## 6. UI primitive selection
+## 7. UI primitive selection
 
 Before building or refactoring UI, check whether shadcn/ui already provides the needed primitive (for example button, card, input, label, radio-group, toggle-group, tooltip, dialog, alert, separator, skeleton, badge). If the primitive exists and is not already present locally, install it from `apps/web` with `pnpm dlx shadcn@latest add <component>` and compose product-specific components around `@/components/ui/*` instead of hand-rolling the primitive.
 
@@ -113,7 +141,7 @@ Treat `apps/web/components/ui/**` as copied shadcn primitive source. These files
 
 ---
 
-## 7. Frontend feature API, hooks, query keys, and tests
+## 8. Frontend feature API, hooks, query keys, and tests
 
 Feature code in `apps/web/features/<feature>/` uses explicit ownership:
 
@@ -144,7 +172,7 @@ features/account/
 
 ---
 
-## 8. Subproject-owned configuration files
+## 9. Subproject-owned configuration files
 
 Each runnable subproject owns its own runtime configuration file. Do not move API-only,
 worker-only, or web-only properties into another module's configuration file just to avoid

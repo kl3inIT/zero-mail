@@ -16,8 +16,8 @@ import org.springframework.stereotype.Component;
 
 import com.zeromail.core.config.ZeroMailCoreProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmByokProperties;
-import com.zeromail.core.llm.model.BYOKProvider;
-import com.zeromail.core.llm.model.InvalidByokException;
+import com.zeromail.core.llm.domain.BYOKProvider;
+import com.zeromail.core.llm.exception.InvalidByokException;
 import com.zeromail.core.tenant.TenantContext;
 
 /**

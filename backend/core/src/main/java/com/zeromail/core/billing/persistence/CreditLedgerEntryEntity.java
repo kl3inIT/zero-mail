@@ -1,5 +1,4 @@
 package com.zeromail.core.billing.persistence;
-
 import java.util.UUID;
 
 import com.zeromail.core.shared.persistence.AbstractTenantOwnedEntity;

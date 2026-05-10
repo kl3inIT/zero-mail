@@ -1,5 +1,6 @@
 package com.zeromail.core.rules.service;
 
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -13,12 +14,12 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.zeromail.core.rules.model.RuleCreateCommand;
-import com.zeromail.core.rules.model.RuleOrderEntry;
-import com.zeromail.core.rules.model.RuleReorderCommand;
-import com.zeromail.core.rules.model.RuleStatusView;
-import com.zeromail.core.rules.model.RuleUpdateCommand;
-import com.zeromail.core.rules.model.RuleValidationException;
+import com.zeromail.core.rules.application.RuleCreateCommand;
+import com.zeromail.core.rules.application.RuleOrderEntry;
+import com.zeromail.core.rules.application.RuleReorderCommand;
+import com.zeromail.core.rules.projection.RuleStatusProjection;
+import com.zeromail.core.rules.application.RuleUpdateCommand;
+import com.zeromail.core.rules.exception.RuleValidationException;
 import com.zeromail.core.rules.persistence.RuleEntity;
 import com.zeromail.core.rules.persistence.RuleRepository;
 import com.zeromail.core.rules.persistence.lowlevel.RuleNativeStateUpdater;
@@ -36,17 +37,19 @@ public class RuleManagementService {
   }
 
   @Transactional(readOnly = true)
-  public List<RuleStatusView> listOrdered(UUID tenantId) {
-    return ruleRepository.findOrderedByTenantId(tenantId).stream().map(RuleEntity::toStatusView).toList();
+  public List<RuleStatusProjection> listOrdered(UUID tenantId) {
+    return ruleRepository.findOrderedByTenantId(tenantId).stream()
+        .map(RuleEntity::toStatusProjection)
+        .toList();
   }
 
   @Transactional(readOnly = true)
-  public RuleStatusView get(UUID tenantId, UUID ruleId) {
-    return findRuleOrThrow(tenantId, ruleId).toStatusView();
+  public RuleStatusProjection get(UUID tenantId, UUID ruleId) {
+    return findRuleOrThrow(tenantId, ruleId).toStatusProjection();
   }
 
   @Transactional
-  public RuleStatusView create(RuleCreateCommand command) {
+  public RuleStatusProjection create(RuleCreateCommand command) {
     int orderIndex = ruleRepository.findOrderedByTenantId(command.tenantId()).size();
     RuleEntity ruleEntity =
         new RuleEntity(
@@ -62,11 +65,11 @@ public class RuleManagementService {
             command.templateKey(),
             command.templateVersion());
     RuleEntity savedRule = ruleRepository.saveAndFlush(ruleEntity);
-    return savedRule.toStatusView();
+    return savedRule.toStatusProjection();
   }
 
   @Transactional
-  public RuleStatusView update(RuleUpdateCommand command) {
+  public RuleStatusProjection update(RuleUpdateCommand command) {
     RuleEntity ruleEntity = findRuleOrThrow(command.tenantId(), command.ruleId());
     boolean customizedDefinition =
         !Objects.equals(ruleEntity.getSourceText(), command.sourceText())
@@ -86,11 +89,11 @@ public class RuleManagementService {
       ruleEntity.markCustomized();
     }
     ruleRepository.flush();
-    return ruleEntity.toStatusView();
+    return ruleEntity.toStatusProjection();
   }
 
   @Transactional
-  public RuleStatusView markPreviewSucceeded(
+  public RuleStatusProjection markPreviewSucceeded(
       UUID tenantId, UUID ruleId, Integer previewedEntityVersion, Instant previewedAt) {
     RuleEntity ruleEntity = findRuleOrThrow(tenantId, ruleId);
     if (!Objects.equals(ruleEntity.getEntityVersion(), previewedEntityVersion)) {
@@ -103,24 +106,24 @@ public class RuleManagementService {
     if (!previewMarked) {
       throw RuleValidationException.versionMismatch();
     }
-    return findRuleOrThrow(tenantId, ruleId).toStatusView();
+    return findRuleOrThrow(tenantId, ruleId).toStatusProjection();
   }
 
   @Transactional
-  public RuleStatusView enable(UUID tenantId, UUID ruleId) {
+  public RuleStatusProjection enable(UUID tenantId, UUID ruleId) {
     RuleEntity ruleEntity = findRuleOrThrow(tenantId, ruleId);
     if (!Objects.equals(ruleEntity.getLastPreviewedEntityVersion(), ruleEntity.getEntityVersion())) {
       throw RuleValidationException.previewRequired();
     }
     updateEnabled(tenantId, ruleId, true, ruleEntity.getEntityVersion());
-    return findRuleOrThrow(tenantId, ruleId).toStatusView();
+    return findRuleOrThrow(tenantId, ruleId).toStatusProjection();
   }
 
   @Transactional
-  public RuleStatusView disable(UUID tenantId, UUID ruleId) {
+  public RuleStatusProjection disable(UUID tenantId, UUID ruleId) {
     RuleEntity ruleEntity = findRuleOrThrow(tenantId, ruleId);
     updateEnabled(tenantId, ruleId, false, ruleEntity.getEntityVersion());
-    return findRuleOrThrow(tenantId, ruleId).toStatusView();
+    return findRuleOrThrow(tenantId, ruleId).toStatusProjection();
   }
 
   @Transactional
@@ -133,7 +136,7 @@ public class RuleManagementService {
   }
 
   @Transactional
-  public List<RuleStatusView> reorder(RuleReorderCommand command) {
+  public List<RuleStatusProjection> reorder(RuleReorderCommand command) {
     List<RuleEntity> currentRules = ruleRepository.findOrderedByTenantId(command.tenantId());
     Map<UUID, RuleEntity> currentRulesById = new LinkedHashMap<>();
     for (RuleEntity currentRule : currentRules) {
@@ -165,7 +168,7 @@ public class RuleManagementService {
       reorderedRules.add(ruleEntity);
     }
     ruleRepository.flush();
-    return reorderedRules.stream().map(RuleEntity::toStatusView).toList();
+    return reorderedRules.stream().map(RuleEntity::toStatusProjection).toList();
   }
 
   private RuleEntity findRuleOrThrow(UUID tenantId, UUID ruleId) {

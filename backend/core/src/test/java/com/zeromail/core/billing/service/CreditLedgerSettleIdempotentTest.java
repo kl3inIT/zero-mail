@@ -10,9 +10,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import com.zeromail.core.billing.model.CallSite;
-import com.zeromail.core.billing.model.IllegalLedgerStateException;
-import com.zeromail.core.billing.model.ReservationId;
+import com.zeromail.core.billing.domain.CallSite;
+import com.zeromail.core.billing.exception.IllegalLedgerStateException;
+import com.zeromail.core.billing.domain.ReservationId;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryEntity;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryRepository;
 import com.zeromail.core.support.PostgresContainerTest;

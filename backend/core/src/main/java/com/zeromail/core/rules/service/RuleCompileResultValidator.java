@@ -1,5 +1,4 @@
 package com.zeromail.core.rules.service;
-
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -13,16 +12,16 @@ import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
-import com.zeromail.core.llm.model.RuleCompileGatewayResult;
-import com.zeromail.core.rules.model.ActionIntent;
-import com.zeromail.core.rules.model.MatcherNode;
-import com.zeromail.core.rules.model.MatcherType;
-import com.zeromail.core.rules.model.RuleActionType;
-import com.zeromail.core.rules.model.RuleClarificationQuestion;
-import com.zeromail.core.rules.model.RuleCompileResult;
-import com.zeromail.core.rules.model.RuleLanguage;
-import com.zeromail.core.rules.model.RuleSchemaVersion;
-import com.zeromail.core.rules.model.SemanticIntentMatcher;
+import com.zeromail.core.llm.application.RuleCompileGatewayResult;
+import com.zeromail.core.rules.domain.ActionIntent;
+import com.zeromail.core.rules.domain.MatcherNode;
+import com.zeromail.core.rules.domain.MatcherType;
+import com.zeromail.core.rules.domain.RuleActionType;
+import com.zeromail.core.rules.application.RuleClarificationQuestion;
+import com.zeromail.core.rules.application.RuleCompileResult;
+import com.zeromail.core.rules.domain.RuleLanguage;
+import com.zeromail.core.rules.domain.RuleSchemaVersion;
+import com.zeromail.core.rules.domain.SemanticIntentMatcher;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;

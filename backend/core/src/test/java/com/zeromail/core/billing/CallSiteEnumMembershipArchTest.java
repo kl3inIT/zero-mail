@@ -6,7 +6,7 @@ import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
 
-import com.zeromail.core.billing.model.CallSite;
+import com.zeromail.core.billing.domain.CallSite;
 
 class CallSiteEnumMembershipArchTest {
 

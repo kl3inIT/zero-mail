@@ -2,11 +2,11 @@ package com.zeromail.core.billing.service;
 
 import java.util.UUID;
 
-import com.zeromail.core.billing.model.CallSite;
-import com.zeromail.core.billing.model.CreditBalance;
-import com.zeromail.core.billing.model.IllegalLedgerStateException;
-import com.zeromail.core.billing.model.InsufficientCreditsException;
-import com.zeromail.core.billing.model.ReservationId;
+import com.zeromail.core.billing.domain.CallSite;
+import com.zeromail.core.billing.domain.CreditBalance;
+import com.zeromail.core.billing.exception.IllegalLedgerStateException;
+import com.zeromail.core.billing.exception.InsufficientCreditsException;
+import com.zeromail.core.billing.domain.ReservationId;
 
 /**
  * Prepaid credit ledger: the cross-phase contract that Phase 2C ({@code core.llm.LlmGateway})

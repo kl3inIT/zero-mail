@@ -9,8 +9,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
-import com.zeromail.core.billing.model.CallSite;
-import com.zeromail.core.llm.model.BYOKProvider;
+import com.zeromail.core.billing.domain.CallSite;
+import com.zeromail.core.llm.domain.BYOKProvider;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;

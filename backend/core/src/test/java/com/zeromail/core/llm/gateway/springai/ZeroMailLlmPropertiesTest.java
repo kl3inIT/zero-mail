@@ -8,10 +8,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Configuration;
 
-import com.zeromail.core.billing.model.CallSite;
+import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.config.ZeroMailCoreProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
-import com.zeromail.core.llm.model.BYOKProvider;
+import com.zeromail.core.llm.domain.BYOKProvider;
 
 class ZeroMailLlmPropertiesTest {
 

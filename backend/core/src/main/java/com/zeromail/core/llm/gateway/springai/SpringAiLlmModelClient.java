@@ -15,11 +15,11 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
-import com.zeromail.core.llm.model.LlmChatRequest;
-import com.zeromail.core.llm.model.LlmChatResult;
-import com.zeromail.core.llm.model.LlmTool;
-import com.zeromail.core.llm.model.LlmUsage;
-import com.zeromail.core.llm.model.RawToolCall;
+import com.zeromail.core.llm.application.LlmChatRequest;
+import com.zeromail.core.llm.application.LlmChatResult;
+import com.zeromail.core.llm.application.LlmTool;
+import com.zeromail.core.llm.application.LlmUsage;
+import com.zeromail.core.llm.application.RawToolCall;
 import com.zeromail.core.llm.service.LlmModelClient;
 
 import tools.jackson.core.JacksonException;

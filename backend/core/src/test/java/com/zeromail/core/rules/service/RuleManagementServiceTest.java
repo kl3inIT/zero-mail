@@ -1,5 +1,4 @@
 package com.zeromail.core.rules.service;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -12,15 +11,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import com.zeromail.core.rules.model.RuleCompileResult;
-import com.zeromail.core.rules.model.RuleCreateCommand;
-import com.zeromail.core.rules.model.RuleLanguage;
-import com.zeromail.core.rules.model.RuleOrderEntry;
-import com.zeromail.core.rules.model.RuleReorderCommand;
-import com.zeromail.core.rules.model.RuleSchemaVersion;
-import com.zeromail.core.rules.model.RuleStatusView;
-import com.zeromail.core.rules.model.RuleUpdateCommand;
-import com.zeromail.core.rules.model.RuleValidationException;
+import com.zeromail.core.rules.application.RuleCompileResult;
+import com.zeromail.core.rules.application.RuleCreateCommand;
+import com.zeromail.core.rules.domain.RuleLanguage;
+import com.zeromail.core.rules.application.RuleOrderEntry;
+import com.zeromail.core.rules.application.RuleReorderCommand;
+import com.zeromail.core.rules.domain.RuleSchemaVersion;
+import com.zeromail.core.rules.projection.RuleStatusProjection;
+import com.zeromail.core.rules.application.RuleUpdateCommand;
+import com.zeromail.core.rules.exception.RuleValidationException;
 import com.zeromail.core.rules.persistence.RuleEntity;
 import com.zeromail.core.rules.persistence.RuleRepository;
 import com.zeromail.core.support.PostgresContainerTest;
@@ -37,7 +36,7 @@ class RuleManagementServiceTest extends PostgresContainerTest {
   @Test
   void new_rule_cannot_be_enabled_until_current_version_is_previewed() throws Exception {
     UUID tenantId = seedTenant("rules-enable-preview");
-    RuleStatusView createdRule =
+    RuleStatusProjection createdRule =
         withTenant(
             tenantId,
             () ->
@@ -51,7 +50,7 @@ class RuleManagementServiceTest extends PostgresContainerTest {
         .extracting("reason")
         .isEqualTo(RuleValidationException.Reason.PREVIEW_REQUIRED);
 
-    RuleStatusView previewedRule =
+    RuleStatusProjection previewedRule =
         withTenant(
             tenantId,
             () ->
@@ -60,7 +59,7 @@ class RuleManagementServiceTest extends PostgresContainerTest {
                     createdRule.ruleId().value(),
                     createdRule.entityVersion(),
                     Instant.parse("2026-05-10T00:00:00Z")));
-    RuleStatusView enabledRule =
+    RuleStatusProjection enabledRule =
         withTenant(tenantId, () -> ruleManagementService.enable(tenantId, createdRule.ruleId().value()));
 
     assertThat(previewedRule.lastPreviewedEntityVersion()).isEqualTo(createdRule.entityVersion());
@@ -71,7 +70,7 @@ class RuleManagementServiceTest extends PostgresContainerTest {
   void updating_enabled_rule_disables_it_clears_preview_and_marks_template_customized()
       throws Exception {
     UUID tenantId = seedTenant("rules-update-reset");
-    RuleStatusView createdRule =
+    RuleStatusProjection createdRule =
         withTenant(
             tenantId,
             () ->
@@ -118,13 +117,13 @@ class RuleManagementServiceTest extends PostgresContainerTest {
   @Test
   void preview_enable_disable_and_reorder_do_not_mark_template_rule_customized() throws Exception {
     UUID tenantId = seedTenant("rules-customized-unchanged");
-    RuleStatusView firstRule =
+    RuleStatusProjection firstRule =
         withTenant(
             tenantId,
             () ->
                 ruleManagementService.create(
                     createCommand(tenantId, "Archive receipts", "Archive Stripe receipts", "archive-receipts")));
-    RuleStatusView secondRule =
+    RuleStatusProjection secondRule =
         withTenant(
             tenantId,
             () ->
@@ -138,9 +137,9 @@ class RuleManagementServiceTest extends PostgresContainerTest {
                 tenantId, firstRule.ruleId().value(), firstRule.entityVersion(), Instant.now()));
     withTenant(tenantId, () -> ruleManagementService.enable(tenantId, firstRule.ruleId().value()));
     withTenant(tenantId, () -> ruleManagementService.disable(tenantId, firstRule.ruleId().value()));
-    RuleStatusView currentFirstRule =
+    RuleStatusProjection currentFirstRule =
         withTenant(tenantId, () -> ruleManagementService.get(tenantId, firstRule.ruleId().value()));
-    RuleStatusView currentSecondRule =
+    RuleStatusProjection currentSecondRule =
         withTenant(tenantId, () -> ruleManagementService.get(tenantId, secondRule.ruleId().value()));
     withTenant(
         tenantId,
@@ -163,7 +162,7 @@ class RuleManagementServiceTest extends PostgresContainerTest {
   void cross_tenant_get_update_delete_and_reorder_do_not_mutate_rows() throws Exception {
     UUID tenantAId = seedTenant("rules-tenant-a");
     UUID tenantBId = seedTenant("rules-tenant-b");
-    RuleStatusView tenantARule =
+    RuleStatusProjection tenantARule =
         withTenant(
             tenantAId,
             () ->
@@ -201,7 +200,7 @@ class RuleManagementServiceTest extends PostgresContainerTest {
             () -> withTenantVoid(tenantBId, () -> ruleManagementService.delete(tenantBId, tenantARule.ruleId().value())))
         .isInstanceOf(RuleValidationException.class);
 
-    RuleStatusView unchangedRule =
+    RuleStatusProjection unchangedRule =
         withTenant(tenantAId, () -> ruleManagementService.get(tenantAId, tenantARule.ruleId().value()));
     assertThat(unchangedRule.displayName()).isEqualTo("Archive receipts");
     assertThat(unchangedRule.orderIndex()).isZero();
@@ -210,15 +209,15 @@ class RuleManagementServiceTest extends PostgresContainerTest {
   @Test
   void reorder_is_version_checked_all_or_nothing_and_delete_normalizes_order() throws Exception {
     UUID tenantId = seedTenant("rules-reorder");
-    RuleStatusView firstRule =
+    RuleStatusProjection firstRule =
         withTenant(
             tenantId,
             () -> ruleManagementService.create(createCommand(tenantId, "First rule", "First rule", null)));
-    RuleStatusView secondRule =
+    RuleStatusProjection secondRule =
         withTenant(
             tenantId,
             () -> ruleManagementService.create(createCommand(tenantId, "Second rule", "Second rule", null)));
-    RuleStatusView thirdRule =
+    RuleStatusProjection thirdRule =
         withTenant(
             tenantId,
             () -> ruleManagementService.create(createCommand(tenantId, "Third rule", "Third rule", null)));
@@ -239,14 +238,14 @@ class RuleManagementServiceTest extends PostgresContainerTest {
         .extracting("reason")
         .isEqualTo(RuleValidationException.Reason.VERSION_MISMATCH);
     assertThat(withTenant(tenantId, () -> ruleManagementService.listOrdered(tenantId)))
-        .extracting(RuleStatusView::displayName)
+        .extracting(RuleStatusProjection::displayName)
         .containsExactly("First rule", "Second rule", "Third rule");
 
-    RuleStatusView currentFirstRule =
+    RuleStatusProjection currentFirstRule =
         withTenant(tenantId, () -> ruleManagementService.get(tenantId, firstRule.ruleId().value()));
-    RuleStatusView currentSecondRule =
+    RuleStatusProjection currentSecondRule =
         withTenant(tenantId, () -> ruleManagementService.get(tenantId, secondRule.ruleId().value()));
-    RuleStatusView currentThirdRule =
+    RuleStatusProjection currentThirdRule =
         withTenant(tenantId, () -> ruleManagementService.get(tenantId, thirdRule.ruleId().value()));
     withTenant(
         tenantId,
@@ -260,7 +259,7 @@ class RuleManagementServiceTest extends PostgresContainerTest {
                         new RuleOrderEntry(currentFirstRule.ruleId().value(), currentFirstRule.entityVersion())))));
 
     assertThat(withTenant(tenantId, () -> ruleManagementService.listOrdered(tenantId)))
-        .extracting(RuleStatusView::displayName, RuleStatusView::orderIndex)
+        .extracting(RuleStatusProjection::displayName, RuleStatusProjection::orderIndex)
         .containsExactly(
             org.assertj.core.groups.Tuple.tuple("Third rule", 0),
             org.assertj.core.groups.Tuple.tuple("Second rule", 1),
@@ -269,7 +268,7 @@ class RuleManagementServiceTest extends PostgresContainerTest {
     withTenantVoid(tenantId, () -> ruleManagementService.delete(tenantId, currentSecondRule.ruleId().value()));
 
     assertThat(withTenant(tenantId, () -> ruleManagementService.listOrdered(tenantId)))
-        .extracting(RuleStatusView::orderIndex)
+        .extracting(RuleStatusProjection::orderIndex)
         .containsExactly(0, 1);
   }
 

@@ -1,6 +1,6 @@
 package com.zeromail.api.dto.gmail;
 
-import com.zeromail.core.gmail.model.GmailConnectionProjection;
+import com.zeromail.core.gmail.projection.GmailConnectionProjection;
 
 /**
  * Response body for {@code GET /gmail/connection/status}. Phase 1.2.1 D-D4 rename from

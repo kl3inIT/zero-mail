@@ -1,6 +1,6 @@
 package com.zeromail.api.dto.billing;
 
-import com.zeromail.core.billing.model.CreditBalance;
+import com.zeromail.core.billing.domain.CreditBalance;
 
 public record BillingBalanceResponse(int availableCredits, int heldCredits, String currency) {
 

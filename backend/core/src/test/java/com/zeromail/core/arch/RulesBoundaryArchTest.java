@@ -1,5 +1,4 @@
 package com.zeromail.core.arch;
-
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 import org.junit.jupiter.api.Test;

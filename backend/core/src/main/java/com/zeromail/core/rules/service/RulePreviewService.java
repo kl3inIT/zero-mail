@@ -1,12 +1,10 @@
 package com.zeromail.core.rules.service;
-
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -14,17 +12,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.zeromail.core.rules.model.ActionIntent;
-import com.zeromail.core.rules.model.ActionProposal;
-import com.zeromail.core.rules.model.MatcherEvaluationState;
-import com.zeromail.core.rules.model.MatcherNode;
-import com.zeromail.core.rules.model.MatcherType;
-import com.zeromail.core.rules.model.PreviewSampleSize;
-import com.zeromail.core.rules.model.RuleActionType;
-import com.zeromail.core.rules.model.RulePreviewCommand;
-import com.zeromail.core.rules.model.RulePreviewResult;
-import com.zeromail.core.rules.model.RuleValidationException;
-import com.zeromail.core.rules.model.SemanticIntentMatcher;
+import com.zeromail.core.rules.domain.ActionIntent;
+import com.zeromail.core.rules.domain.ActionProposal;
+import com.zeromail.core.rules.domain.MatcherEvaluationState;
+import com.zeromail.core.rules.domain.MatcherNode;
+import com.zeromail.core.rules.domain.MatcherType;
+import com.zeromail.core.rules.domain.PreviewSampleSize;
+import com.zeromail.core.rules.domain.RuleActionType;
+import com.zeromail.core.rules.application.RulePreviewCommand;
+import com.zeromail.core.rules.application.RulePreviewResult;
+import com.zeromail.core.rules.exception.RuleValidationException;
+import com.zeromail.core.rules.domain.SemanticIntentMatcher;
 import com.zeromail.core.rules.persistence.RuleEntity;
 import com.zeromail.core.rules.persistence.RuleRepository;
 

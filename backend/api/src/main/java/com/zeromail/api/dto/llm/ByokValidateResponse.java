@@ -2,7 +2,7 @@ package com.zeromail.api.dto.llm;
 
 import java.util.List;
 
-import com.zeromail.core.llm.model.ByokValidateResult;
+import com.zeromail.core.llm.application.ByokValidateResult;
 
 public record ByokValidateResponse(boolean ok, List<String> models, String reason) {
 

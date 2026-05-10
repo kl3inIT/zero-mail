@@ -8,7 +8,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import com.zeromail.core.onboarding.service.OnboardingService;
-import com.zeromail.core.rules.model.RuleTemplateMaterializationResult;
+import com.zeromail.core.rules.application.RuleTemplateMaterializationResult;
 
 class RuleTemplateMaterializationWave0Test {
 

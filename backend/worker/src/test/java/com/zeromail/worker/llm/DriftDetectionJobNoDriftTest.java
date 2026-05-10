@@ -15,8 +15,8 @@ import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
-import com.zeromail.core.llm.model.Action;
-import com.zeromail.core.llm.model.ToolCallResult;
+import com.zeromail.core.llm.domain.Action;
+import com.zeromail.core.llm.application.ToolCallResult;
 import com.zeromail.core.llm.service.LlmGateway;
 import com.zeromail.worker.config.ZeroMailLlmDriftProperties;
 

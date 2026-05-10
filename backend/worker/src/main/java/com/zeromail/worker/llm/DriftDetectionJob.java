@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import com.zeromail.core.llm.model.ToolCallResult;
+import com.zeromail.core.llm.application.ToolCallResult;
 import com.zeromail.core.llm.service.LlmGateway;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.worker.config.ZeroMailLlmDriftProperties;

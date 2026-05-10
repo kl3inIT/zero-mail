@@ -1,5 +1,4 @@
 package com.zeromail.core.rules.persistence;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

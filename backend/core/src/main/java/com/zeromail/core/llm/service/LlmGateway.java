@@ -1,8 +1,8 @@
 package com.zeromail.core.llm.service;
 
-import com.zeromail.core.billing.model.CallSite;
-import com.zeromail.core.llm.model.RuleCompileGatewayResult;
-import com.zeromail.core.llm.model.ToolCallResult;
+import com.zeromail.core.billing.domain.CallSite;
+import com.zeromail.core.llm.application.RuleCompileGatewayResult;
+import com.zeromail.core.llm.application.ToolCallResult;
 
 /**
  * Single chokepoint for all LLM traffic in Zero Mail. Phase 3 (Rules Engine) and Phase 4 (Triage)

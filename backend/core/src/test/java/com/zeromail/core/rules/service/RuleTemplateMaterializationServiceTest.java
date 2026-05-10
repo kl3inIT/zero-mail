@@ -2,7 +2,6 @@ package com.zeromail.core.rules.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -13,9 +12,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import com.zeromail.core.rules.model.RuleTemplateMaterializationResult;
-import com.zeromail.core.rules.model.RuleTemplateMaterializationResult.SkippedTemplate;
-import com.zeromail.core.rules.model.RuleTemplateMaterializationResult.SkippedTemplateReason;
+import com.zeromail.core.rules.application.RuleTemplateMaterializationResult;
+import com.zeromail.core.rules.application.RuleTemplateMaterializationResult.SkippedTemplate;
+import com.zeromail.core.rules.application.RuleTemplateMaterializationResult.SkippedTemplateReason;
 import com.zeromail.core.rules.persistence.RuleEntity;
 import com.zeromail.core.rules.persistence.RuleRepository;
 import com.zeromail.core.support.PostgresContainerTest;

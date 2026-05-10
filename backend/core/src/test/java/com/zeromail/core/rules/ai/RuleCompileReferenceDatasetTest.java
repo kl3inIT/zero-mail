@@ -1,5 +1,4 @@
 package com.zeromail.core.rules.ai;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.LinkedHashMap;
@@ -10,10 +9,10 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
-import com.zeromail.core.llm.model.RuleCompileGatewayResult;
-import com.zeromail.core.rules.model.RuleCompileResult;
-import com.zeromail.core.rules.model.RuleCompileResult.Status;
-import com.zeromail.core.rules.model.RuleLanguage;
+import com.zeromail.core.llm.application.RuleCompileGatewayResult;
+import com.zeromail.core.rules.application.RuleCompileResult;
+import com.zeromail.core.rules.application.RuleCompileResult.Status;
+import com.zeromail.core.rules.domain.RuleLanguage;
 import com.zeromail.core.rules.service.RuleCompileResultValidator;
 
 class RuleCompileReferenceDatasetTest {

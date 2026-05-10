@@ -9,18 +9,18 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
-import com.zeromail.core.billing.model.CallSite;
+import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
 import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
 import com.zeromail.core.llm.gateway.sanitization.Sanitizer;
-import com.zeromail.core.llm.model.BYOKProvider;
-import com.zeromail.core.llm.model.LlmChatRequest;
-import com.zeromail.core.llm.model.LlmChatResult;
-import com.zeromail.core.llm.model.LlmUsage;
-import com.zeromail.core.llm.model.RawToolCall;
-import com.zeromail.core.llm.model.RuleCompileGatewayResult;
-import com.zeromail.core.llm.model.SanitizationContext;
-import com.zeromail.core.llm.model.SystemPrompts;
+import com.zeromail.core.llm.domain.BYOKProvider;
+import com.zeromail.core.llm.application.LlmChatRequest;
+import com.zeromail.core.llm.application.LlmChatResult;
+import com.zeromail.core.llm.application.LlmUsage;
+import com.zeromail.core.llm.application.RawToolCall;
+import com.zeromail.core.llm.application.RuleCompileGatewayResult;
+import com.zeromail.core.llm.application.SanitizationContext;
+import com.zeromail.core.llm.application.SystemPrompts;
 import com.zeromail.core.tenant.TenantContext;
 
 class RuleCompileGatewayContractTest {

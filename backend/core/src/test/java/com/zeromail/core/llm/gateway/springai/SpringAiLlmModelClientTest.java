@@ -1,5 +1,4 @@
 package com.zeromail.core.llm.gateway.springai;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -9,10 +8,10 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 
-import com.zeromail.core.llm.model.LlmChatRequest;
-import com.zeromail.core.llm.model.LlmChatResult;
-import com.zeromail.core.llm.model.LlmTool;
-import com.zeromail.core.llm.model.SystemPrompts;
+import com.zeromail.core.llm.application.LlmChatRequest;
+import com.zeromail.core.llm.application.LlmChatResult;
+import com.zeromail.core.llm.application.LlmTool;
+import com.zeromail.core.llm.application.SystemPrompts;
 import com.zeromail.core.llm.service.AllowListedTools;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;

@@ -1,5 +1,4 @@
 package com.zeromail.core.rules.service;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -9,9 +8,9 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.zeromail.core.rules.model.RuleActionType;
-import com.zeromail.core.rules.model.RuleTemplateStatus;
-import com.zeromail.core.rules.model.RuleTemplateView;
+import com.zeromail.core.rules.domain.RuleActionType;
+import com.zeromail.core.rules.domain.RuleTemplateStatus;
+import com.zeromail.core.rules.projection.RuleTemplateProjection;
 import com.zeromail.core.rules.persistence.RuleEntity;
 import com.zeromail.core.rules.persistence.RuleRepository;
 import com.zeromail.core.rules.persistence.RuleTemplateEntity;
@@ -46,7 +45,7 @@ public class RuleTemplateCatalogService {
    * existing tenant rules in Phase 3.
    */
   @Transactional(readOnly = true)
-  public List<RuleTemplateView> listActiveTemplates(UUID tenantId) {
+  public List<RuleTemplateProjection> listActiveTemplates(UUID tenantId) {
     return ruleTemplateRepository
         .findByStatusIdsOrderByTemplateKeyAscTemplateVersionDesc(activeStatusIds())
         .stream()
@@ -83,10 +82,10 @@ public class RuleTemplateCatalogService {
         .findFirst();
   }
 
-  private RuleTemplateView toView(UUID tenantId, RuleTemplateEntity ruleTemplateEntity) {
+  private RuleTemplateProjection toView(UUID tenantId, RuleTemplateEntity ruleTemplateEntity) {
     Optional<RuleEntity> materializedRule =
         ruleRepository.findByTenantIdAndTemplateKey(tenantId, ruleTemplateEntity.getTemplateKey());
-    return new RuleTemplateView(
+    return new RuleTemplateProjection(
         ruleTemplateEntity.getTemplateKey(),
         ruleTemplateEntity.getTemplateVersion(),
         ruleTemplateEntity.getDisplayName(),

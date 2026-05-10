@@ -6,9 +6,9 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.zeromail.core.account.model.CurrentUserNotFoundException;
+import com.zeromail.core.account.exception.CurrentUserNotFoundException;
 import com.zeromail.core.account.service.AccountService;
-import com.zeromail.core.onboarding.model.OnboardingStep;
+import com.zeromail.core.onboarding.domain.OnboardingStep;
 import com.zeromail.core.onboarding.persistence.OnboardingSelectionEntity;
 import com.zeromail.core.onboarding.persistence.OnboardingSelectionRepository;
 import com.zeromail.core.tenant.TenantContext;

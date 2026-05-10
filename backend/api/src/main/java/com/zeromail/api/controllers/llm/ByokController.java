@@ -13,10 +13,10 @@ import com.zeromail.api.dto.llm.ByokSaveRequest;
 import com.zeromail.api.dto.llm.ByokSaveResponse;
 import com.zeromail.api.dto.llm.ByokValidateRequest;
 import com.zeromail.api.dto.llm.ByokValidateResponse;
-import com.zeromail.core.llm.model.ByokSaveCommand;
-import com.zeromail.core.llm.model.ByokSaveResult;
-import com.zeromail.core.llm.model.ByokValidateCommand;
-import com.zeromail.core.llm.model.ByokValidateResult;
+import com.zeromail.core.llm.application.ByokSaveCommand;
+import com.zeromail.core.llm.application.ByokSaveResult;
+import com.zeromail.core.llm.application.ByokValidateCommand;
+import com.zeromail.core.llm.application.ByokValidateResult;
 import com.zeromail.core.llm.service.ByokService;
 import com.zeromail.core.tenant.TenantContext;
 

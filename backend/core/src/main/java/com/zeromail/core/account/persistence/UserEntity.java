@@ -2,7 +2,7 @@ package com.zeromail.core.account.persistence;
 
 import java.util.UUID;
 
-import com.zeromail.core.onboarding.model.OnboardingStep;
+import com.zeromail.core.onboarding.domain.OnboardingStep;
 import com.zeromail.core.shared.persistence.AbstractTenantOwnedEntity;
 
 import jakarta.persistence.Column;

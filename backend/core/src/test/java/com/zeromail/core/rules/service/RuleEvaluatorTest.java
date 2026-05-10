@@ -14,11 +14,11 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import com.zeromail.core.llm.service.LlmGateway;
-import com.zeromail.core.rules.model.MatcherEvaluationState;
-import com.zeromail.core.rules.model.MatcherNode;
-import com.zeromail.core.rules.model.RuleEvaluationInput;
-import com.zeromail.core.rules.model.RuleEvaluationResult;
-import com.zeromail.core.rules.model.SemanticIntentMatcher;
+import com.zeromail.core.rules.domain.MatcherEvaluationState;
+import com.zeromail.core.rules.domain.MatcherNode;
+import com.zeromail.core.rules.domain.RuleEvaluationInput;
+import com.zeromail.core.rules.domain.RuleEvaluationResult;
+import com.zeromail.core.rules.domain.SemanticIntentMatcher;
 
 class RuleEvaluatorTest {
 

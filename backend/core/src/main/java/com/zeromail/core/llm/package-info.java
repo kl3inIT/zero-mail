@@ -27,5 +27,8 @@
         displayName = "LLM Gateway",
         allowedDependencies = {"tenant", "billing", "shared.persistence", "shared.lang", "gmail.persistence.crypto"})
 package com.zeromail.core.llm;
-
+import com.zeromail.core.llm.application.SanitizationContext;
+import com.zeromail.core.llm.application.ToolCallResult;
+import com.zeromail.core.llm.domain.Action;
+import com.zeromail.core.llm.domain.BYOKProvider;
 import org.springframework.modulith.ApplicationModule;

@@ -1,12 +1,11 @@
 package com.zeromail.core.llm.service;
-
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
-import com.zeromail.core.llm.model.LlmTool;
-import com.zeromail.core.llm.model.LlmToolProfile;
+import com.zeromail.core.llm.application.LlmTool;
+import com.zeromail.core.llm.domain.LlmToolProfile;
 
 @Component
 public class AllowListedTools {

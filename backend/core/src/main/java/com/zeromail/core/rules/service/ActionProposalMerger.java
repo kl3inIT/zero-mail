@@ -1,5 +1,4 @@
 package com.zeromail.core.rules.service;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -13,13 +12,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import com.zeromail.core.rules.model.ActionIntent;
-import com.zeromail.core.rules.model.ActionProposal;
-import com.zeromail.core.rules.model.MatcherEvaluationState;
-import com.zeromail.core.rules.model.MatcherNode;
-import com.zeromail.core.rules.model.RuleConflictType;
-import com.zeromail.core.rules.model.RuleEvaluationInput;
-import com.zeromail.core.rules.model.RuleEvaluationResult;
+import com.zeromail.core.rules.domain.ActionIntent;
+import com.zeromail.core.rules.domain.ActionProposal;
+import com.zeromail.core.rules.domain.MatcherEvaluationState;
+import com.zeromail.core.rules.domain.MatcherNode;
+import com.zeromail.core.rules.domain.RuleConflictType;
+import com.zeromail.core.rules.domain.RuleEvaluationInput;
+import com.zeromail.core.rules.domain.RuleEvaluationResult;
 
 public class ActionProposalMerger {
 

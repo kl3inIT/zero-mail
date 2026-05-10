@@ -3,8 +3,8 @@ package com.zeromail.core.gmail.persistence;
 import java.time.Instant;
 import java.util.UUID;
 
-import com.zeromail.core.gmail.model.GmailIngestionHealth;
-import com.zeromail.core.gmail.model.GmailConnectionStatus;
+import com.zeromail.core.gmail.domain.GmailIngestionHealth;
+import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.shared.persistence.AbstractTenantOwnedEntity;
 
 import jakarta.persistence.Column;

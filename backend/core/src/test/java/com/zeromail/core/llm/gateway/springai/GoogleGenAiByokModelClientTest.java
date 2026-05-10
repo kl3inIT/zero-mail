@@ -15,9 +15,9 @@ import com.zeromail.core.config.ZeroMailCoreProperties.LlmProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmByokProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
 import com.zeromail.core.llm.byok.ByokEndpointValidator;
-import com.zeromail.core.llm.model.LlmChatRequest;
-import com.zeromail.core.llm.model.SafetyViolationException;
-import com.zeromail.core.llm.model.SystemPrompts;
+import com.zeromail.core.llm.application.LlmChatRequest;
+import com.zeromail.core.llm.exception.SafetyViolationException;
+import com.zeromail.core.llm.application.SystemPrompts;
 
 class GoogleGenAiByokModelClientTest {
 

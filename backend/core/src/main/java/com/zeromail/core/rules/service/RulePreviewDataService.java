@@ -7,13 +7,13 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
-import com.zeromail.core.gmail.model.GmailConnectionStatus;
+import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.service.GmailConnectionService;
 import com.zeromail.core.gmail.service.GmailPreviewReadService;
-import com.zeromail.core.rules.model.GmailPreviewUnavailableException;
-import com.zeromail.core.rules.model.MatcherNode;
-import com.zeromail.core.rules.model.PreviewSampleSize;
-import com.zeromail.core.rules.model.RuleEvaluationInput;
+import com.zeromail.core.rules.exception.GmailPreviewUnavailableException;
+import com.zeromail.core.rules.domain.MatcherNode;
+import com.zeromail.core.rules.domain.PreviewSampleSize;
+import com.zeromail.core.rules.domain.RuleEvaluationInput;
 
 @Service
 public class RulePreviewDataService {

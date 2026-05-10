@@ -1,5 +1,7 @@
 package com.zeromail.core.rules.service;
 
+
+import com.zeromail.core.rules.application.RuleCompileCommand;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -9,7 +11,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import com.zeromail.core.billing.model.CallSite;
+import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.llm.service.LlmGateway;
 
 class RuleCompilerServiceWave0Test {
@@ -23,7 +25,7 @@ class RuleCompilerServiceWave0Test {
   @Disabled(PLAN_03_02_GATEWAY_MESSAGE)
   void compiler_uses_preview_call_site_on_the_gateway_owned_compile_method() throws Exception {
     Class<?> compilerPayloadClass =
-        Class.forName("com.zeromail.core.llm.model.RuleCompilerPayload");
+        Class.forName("com.zeromail.core.llm.application.RuleCompilerPayload");
     Method compileRuleMethod =
         LlmGateway.class.getMethod("compileRule", CallSite.class, compilerPayloadClass);
 
@@ -38,7 +40,7 @@ class RuleCompilerServiceWave0Test {
     Method compileMethod =
         compilerService
             .getClass()
-            .getMethod("compile", Class.forName("com.zeromail.core.rules.model.RuleCompileCommand"));
+            .getMethod("compile", Class.forName("com.zeromail.core.rules.application.RuleCompileCommand"));
 
     assertThatThrownBy(() -> compileMethod.invoke(compilerService, unknownToolCommand()))
         .hasRootCauseInstanceOf(IllegalArgumentException.class);
@@ -72,12 +74,12 @@ class RuleCompilerServiceWave0Test {
   @Disabled(PLAN_03_03_COMPILER_MESSAGE)
   void ambiguous_compile_returns_one_clarification_and_persists_nothing() throws Exception {
     Class<?> clarificationClass =
-        Class.forName("com.zeromail.core.rules.model.RuleCompileClarification");
+        Class.forName("com.zeromail.core.rules.application.RuleCompileClarification");
     Object compilerService = newFutureCompilerServiceWithRepositoryProbe();
     Method compileMethod =
         compilerService
             .getClass()
-            .getMethod("compile", Class.forName("com.zeromail.core.rules.model.RuleCompileCommand"));
+            .getMethod("compile", Class.forName("com.zeromail.core.rules.application.RuleCompileCommand"));
 
     Object compileResult = compileMethod.invoke(compilerService, ambiguousCommand());
     Method clarificationMethod = compileResult.getClass().getMethod("clarification");

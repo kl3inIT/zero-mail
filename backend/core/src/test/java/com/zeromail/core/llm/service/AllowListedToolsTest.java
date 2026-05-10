@@ -8,8 +8,8 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
-import com.zeromail.core.llm.model.Action;
-import com.zeromail.core.llm.model.LlmTool;
+import com.zeromail.core.llm.domain.Action;
+import com.zeromail.core.llm.application.LlmTool;
 
 class AllowListedToolsTest {
 

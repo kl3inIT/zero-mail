@@ -9,7 +9,7 @@ import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import com.zeromail.core.billing.model.CallSite;
+import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.billing.persistence.CreditReservationStaleScanFragment;
 import com.zeromail.core.billing.persistence.StaleReservation;
 

@@ -1,5 +1,4 @@
 package com.zeromail.api.controllers.rules;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.UUID;

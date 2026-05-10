@@ -1,5 +1,6 @@
 package com.zeromail.api.controllers.rules;
 
+
 import java.util.List;
 import java.util.UUID;
 
@@ -16,16 +17,30 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.zeromail.api.dto.rules.RuleDtos;
+import com.zeromail.api.dto.rules.CompiledPayloadRequest;
+import com.zeromail.api.dto.rules.RuleCompileRequest;
+import com.zeromail.api.dto.rules.RuleCompileResponse;
+import com.zeromail.api.dto.rules.RuleCompileStatus;
+import com.zeromail.api.dto.rules.RuleCreateRequest;
+import com.zeromail.api.dto.rules.RuleDraftPreviewRequest;
+import com.zeromail.api.dto.rules.RuleEnabledRequest;
+import com.zeromail.api.dto.rules.RulePreviewRequest;
+import com.zeromail.api.dto.rules.RulePreviewResponse;
+import com.zeromail.api.dto.rules.RuleReorderRequest;
+import com.zeromail.api.dto.rules.RuleResponse;
+import com.zeromail.api.dto.rules.RuleTemplateMaterializationResponse;
+import com.zeromail.api.dto.rules.RuleTemplateResponse;
+import com.zeromail.api.dto.rules.RuleUpdateRequest;
+import com.zeromail.api.dto.rules.RulesListResponse;
 import com.zeromail.api.error.RuleApiException;
-import com.zeromail.core.rules.model.RuleCompileCommand;
-import com.zeromail.core.rules.model.RuleCompileResult;
-import com.zeromail.core.rules.model.RuleCreateCommand;
-import com.zeromail.core.rules.model.RuleLanguage;
-import com.zeromail.core.rules.model.RuleOrderEntry;
-import com.zeromail.core.rules.model.RuleReorderCommand;
-import com.zeromail.core.rules.model.RuleSchemaVersion;
-import com.zeromail.core.rules.model.RuleUpdateCommand;
+import com.zeromail.core.rules.application.RuleCompileCommand;
+import com.zeromail.core.rules.application.RuleCompileResult;
+import com.zeromail.core.rules.application.RuleCreateCommand;
+import com.zeromail.core.rules.domain.RuleLanguage;
+import com.zeromail.core.rules.application.RuleOrderEntry;
+import com.zeromail.core.rules.application.RuleReorderCommand;
+import com.zeromail.core.rules.domain.RuleSchemaVersion;
+import com.zeromail.core.rules.application.RuleUpdateCommand;
 import com.zeromail.core.rules.service.RuleCompilerService;
 import com.zeromail.core.rules.service.RuleManagementService;
 import com.zeromail.core.rules.service.RulePreviewService;
@@ -62,28 +77,28 @@ public class RulesController {
   }
 
   @GetMapping
-  public ResponseEntity<RuleDtos.RulesListResponse> listRules() {
+  public ResponseEntity<RulesListResponse> listRules() {
     UUID tenantId = currentTenantId();
-    RuleDtos.RulesListResponse response =
-        new RuleDtos.RulesListResponse(
+    RulesListResponse response =
+        new RulesListResponse(
             ruleManagementService.listOrdered(tenantId).stream()
-                .map(RuleDtos.RuleResponse::from)
+                .map(RuleResponse::from)
                 .toList(),
             ruleTemplateCatalogService.listActiveTemplates(tenantId).stream()
-                .map(RuleDtos.RuleTemplateResponse::from)
+                .map(RuleTemplateResponse::from)
                 .toList(),
-            RuleDtos.RuleTemplateMaterializationResponse.empty());
+            RuleTemplateMaterializationResponse.empty());
     return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(response);
   }
 
   @GetMapping("/{ruleId}")
-  public RuleDtos.RuleResponse getRule(@PathVariable UUID ruleId) {
-    return RuleDtos.RuleResponse.from(ruleManagementService.get(currentTenantId(), ruleId));
+  public RuleResponse getRule(@PathVariable UUID ruleId) {
+    return RuleResponse.from(ruleManagementService.get(currentTenantId(), ruleId));
   }
 
   @PostMapping("/compile")
-  public RuleDtos.RuleCompileResponse compile(
-      @Valid @RequestBody RuleDtos.RuleCompileRequest request) {
+  public RuleCompileResponse compile(
+      @Valid @RequestBody RuleCompileRequest request) {
     UUID tenantId = currentTenantId();
     RuleCompileResult compileResult =
         ruleCompilerService.compile(
@@ -92,15 +107,15 @@ public class RulesController {
                 request.sourceText(),
                 request.clarificationAnswer(),
                 request.priorCompileContext()));
-    return RuleDtos.RuleCompileResponse.from(compileResult);
+    return RuleCompileResponse.from(compileResult);
   }
 
   @PostMapping
-  public RuleDtos.RuleResponse createRule(@Valid @RequestBody RuleDtos.RuleCreateRequest request) {
+  public RuleResponse createRule(@Valid @RequestBody RuleCreateRequest request) {
     UUID tenantId = currentTenantId();
     RuleCompileResult compileResult = compiledPayloadOrThrow(request.compiled());
     try {
-      return RuleDtos.RuleResponse.from(
+      return RuleResponse.from(
           ruleManagementService.create(
               new RuleCreateCommand(
                   tenantId, request.displayName(), request.sourceText(), compileResult)));
@@ -110,12 +125,12 @@ public class RulesController {
   }
 
   @PutMapping("/{ruleId}")
-  public RuleDtos.RuleResponse updateRule(
-      @PathVariable UUID ruleId, @Valid @RequestBody RuleDtos.RuleUpdateRequest request) {
+  public RuleResponse updateRule(
+      @PathVariable UUID ruleId, @Valid @RequestBody RuleUpdateRequest request) {
     UUID tenantId = currentTenantId();
     RuleCompileResult compileResult = compiledPayloadOrThrow(request.compiled());
     try {
-      return RuleDtos.RuleResponse.from(
+      return RuleResponse.from(
           ruleManagementService.update(
               new RuleUpdateCommand(
                   tenantId, ruleId, request.displayName(), request.sourceText(), compileResult)));
@@ -125,18 +140,18 @@ public class RulesController {
   }
 
   @PatchMapping("/{ruleId}/enabled")
-  public RuleDtos.RuleResponse updateEnabled(
-      @PathVariable UUID ruleId, @Valid @RequestBody RuleDtos.RuleEnabledRequest request) {
+  public RuleResponse updateEnabled(
+      @PathVariable UUID ruleId, @Valid @RequestBody RuleEnabledRequest request) {
     UUID tenantId = currentTenantId();
     if (request.enabled()) {
-      return RuleDtos.RuleResponse.from(ruleManagementService.enable(tenantId, ruleId));
+      return RuleResponse.from(ruleManagementService.enable(tenantId, ruleId));
     }
-    return RuleDtos.RuleResponse.from(ruleManagementService.disable(tenantId, ruleId));
+    return RuleResponse.from(ruleManagementService.disable(tenantId, ruleId));
   }
 
   @PutMapping("/reorder")
-  public List<RuleDtos.RuleResponse> reorderRules(
-      @Valid @RequestBody RuleDtos.RuleReorderRequest request) {
+  public List<RuleResponse> reorderRules(
+      @Valid @RequestBody RuleReorderRequest request) {
     UUID tenantId = currentTenantId();
     try {
       return ruleManagementService
@@ -150,7 +165,7 @@ public class RulesController {
                                   orderedEntry.ruleId(), orderedEntry.entityVersion()))
                       .toList()))
           .stream()
-          .map(RuleDtos.RuleResponse::from)
+          .map(RuleResponse::from)
           .toList();
     } catch (IllegalArgumentException invalidReorderRequest) {
       throw RuleApiException.invalidReorder();
@@ -164,10 +179,10 @@ public class RulesController {
   }
 
   @PostMapping("/{ruleId}/preview")
-  public RuleDtos.RulePreviewResponse previewSavedRule(
-      @PathVariable UUID ruleId, @Valid @RequestBody RuleDtos.RulePreviewRequest request) {
+  public RulePreviewResponse previewSavedRule(
+      @PathVariable UUID ruleId, @Valid @RequestBody RulePreviewRequest request) {
     try {
-      return RuleDtos.RulePreviewResponse.from(
+      return RulePreviewResponse.from(
           rulePreviewService.previewSavedRule(currentTenantId(), ruleId, request.sampleSize()));
     } catch (IllegalArgumentException invalidSampleSize) {
       throw RuleApiException.invalidSampleSize();
@@ -175,12 +190,12 @@ public class RulesController {
   }
 
   @PostMapping("/preview")
-  public RuleDtos.RulePreviewResponse previewDraftRule(
-      @Valid @RequestBody RuleDtos.RuleDraftPreviewRequest request) {
+  public RulePreviewResponse previewDraftRule(
+      @Valid @RequestBody RuleDraftPreviewRequest request) {
     Integer normalizedSampleSize = normalizedPreviewSampleSize(request.sampleSize());
     RuleCompileResult compileResult = compiledPayloadOrThrow(request.compiled());
     try {
-      return RuleDtos.RulePreviewResponse.from(
+      return RulePreviewResponse.from(
           rulePreviewService.previewDraft(
               currentTenantId(),
               compileResult.matcherAst(),
@@ -192,23 +207,23 @@ public class RulesController {
   }
 
   @GetMapping("/templates")
-  public List<RuleDtos.RuleTemplateResponse> listTemplates() {
+  public List<RuleTemplateResponse> listTemplates() {
     UUID tenantId = currentTenantId();
     return ruleTemplateCatalogService.listActiveTemplates(tenantId).stream()
-        .map(RuleDtos.RuleTemplateResponse::from)
+        .map(RuleTemplateResponse::from)
         .toList();
   }
 
   @PostMapping("/templates/{templateKey}/materialize")
-  public RuleDtos.RuleTemplateMaterializationResponse materializeTemplate(
+  public RuleTemplateMaterializationResponse materializeTemplate(
       @PathVariable String templateKey) {
-    return RuleDtos.RuleTemplateMaterializationResponse.from(
+    return RuleTemplateMaterializationResponse.from(
         ruleTemplateMaterializationService.materializeTemplate(currentTenantId(), templateKey));
   }
 
   @PostMapping("/templates/materialize-selected")
-  public RuleDtos.RuleTemplateMaterializationResponse materializeSelectedTemplates() {
-    return RuleDtos.RuleTemplateMaterializationResponse.from(
+  public RuleTemplateMaterializationResponse materializeSelectedTemplates() {
+    return RuleTemplateMaterializationResponse.from(
         ruleTemplateMaterializationService.materializeSelectedTemplates(currentTenantId()));
   }
 
@@ -225,16 +240,18 @@ public class RulesController {
   }
 
   private static RuleCompileResult compiledPayloadOrThrow(
-      RuleDtos.CompiledPayloadRequest compiledPayload) {
+      CompiledPayloadRequest compiledPayload) {
+    if (compiledPayload.status() == null) {
+      throw RuleApiException.invalidCompileOutput();
+    }
     return switch (compiledPayload.status()) {
-      case RuleDtos.STATUS_COMPILED -> compiledPayload(compiledPayload);
-      case RuleDtos.STATUS_CLARIFICATION_REQUIRED -> throw RuleApiException.clarificationRequired();
-      case RuleDtos.STATUS_INVALID -> throw RuleApiException.invalidCompileOutput();
+      case RuleCompileStatus.COMPILED -> compiledPayload(compiledPayload);
+      case RuleCompileStatus.CLARIFICATION_REQUIRED -> throw RuleApiException.clarificationRequired();
       default -> throw RuleApiException.invalidCompileOutput();
     };
   }
 
-  private static RuleCompileResult compiledPayload(RuleDtos.CompiledPayloadRequest compiledPayload) {
+  private static RuleCompileResult compiledPayload(CompiledPayloadRequest compiledPayload) {
     try {
       return RuleCompileResult.compiled(
           RuleLanguage.fromId(compiledPayload.sourceLanguage()),

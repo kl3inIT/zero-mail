@@ -9,10 +9,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import com.zeromail.core.rules.model.RuleLanguage;
-import com.zeromail.core.rules.model.RuleSchemaVersion;
-import com.zeromail.core.rules.model.RuleTemplateStatus;
-import com.zeromail.core.rules.model.RuleTemplateView;
+import com.zeromail.core.rules.domain.RuleLanguage;
+import com.zeromail.core.rules.domain.RuleSchemaVersion;
+import com.zeromail.core.rules.domain.RuleTemplateStatus;
+import com.zeromail.core.rules.projection.RuleTemplateProjection;
 import com.zeromail.core.rules.service.RuleTemplateCatalogService;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
@@ -36,16 +36,16 @@ class RuleTemplateCatalogTest extends PostgresContainerTest {
   void db_backed_catalog_lists_active_templates_with_onboarding_source_metadata() throws Exception {
     UUID tenantId = seedTenant("template-catalog-list");
 
-    List<RuleTemplateView> templateViews =
+    List<RuleTemplateProjection> templateViews =
         withTenant(tenantId, () -> ruleTemplateCatalogService.listActiveTemplates(tenantId));
 
     assertThat(templateViews)
-        .extracting(RuleTemplateView::templateKey)
+        .extracting(RuleTemplateProjection::templateKey)
         .containsExactly(
             ARCHIVE_RECEIPTS_KEY, LABEL_NEWSLETTERS_KEY, PIN_CALENDAR_KEY, CALENDAR_INVITES_KEY);
     assertThat(templateViews)
-        .filteredOn(RuleTemplateView::sourcedFromOnboarding)
-        .extracting(RuleTemplateView::templateKey)
+        .filteredOn(RuleTemplateProjection::sourcedFromOnboarding)
+        .extracting(RuleTemplateProjection::templateKey)
         .containsExactly(ARCHIVE_RECEIPTS_KEY, LABEL_NEWSLETTERS_KEY, PIN_CALENDAR_KEY);
     assertThat(templateViews)
         .filteredOn(templateView -> !templateView.sourcedFromOnboarding())
@@ -62,11 +62,11 @@ class RuleTemplateCatalogTest extends PostgresContainerTest {
       throws Exception {
     UUID tenantId = seedTenant("template-catalog-safe");
 
-    List<RuleTemplateView> templateViews =
+    List<RuleTemplateProjection> templateViews =
         withTenant(tenantId, () -> ruleTemplateCatalogService.listActiveTemplates(tenantId));
 
     assertThat(templateViews).isNotEmpty();
-    for (RuleTemplateView templateView : templateViews) {
+    for (RuleTemplateProjection templateView : templateViews) {
       assertThat(templateView.localizedCopyKey()).startsWith("rules.templates.");
       assertThat(templateView.actionSummary())
           .doesNotContain("{", "}", "matcher", "prompt", "completion");
@@ -95,7 +95,7 @@ class RuleTemplateCatalogTest extends PostgresContainerTest {
     ruleEntity.markCustomized();
     withTenant(tenantId, () -> ruleRepository.saveAndFlush(ruleEntity));
 
-    RuleTemplateView archiveTemplate =
+    RuleTemplateProjection archiveTemplate =
         withTenant(tenantId, () -> ruleTemplateCatalogService.listActiveTemplates(tenantId))
             .stream()
             .filter(templateView -> ARCHIVE_RECEIPTS_KEY.equals(templateView.templateKey()))

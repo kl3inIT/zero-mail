@@ -2,8 +2,8 @@ package com.zeromail.core.llm.service;
 
 import org.springframework.stereotype.Component;
 
-import com.zeromail.core.llm.model.RuleCompileGatewayResult;
-import com.zeromail.core.llm.model.SafetyViolationException;
+import com.zeromail.core.llm.application.RuleCompileGatewayResult;
+import com.zeromail.core.llm.exception.SafetyViolationException;
 
 @Component
 public class RuleCompileToolValidator {
