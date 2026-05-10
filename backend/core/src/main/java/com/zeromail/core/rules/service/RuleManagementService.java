@@ -109,7 +109,8 @@ public class RuleManagementService {
     if (!previewMarked) {
       throw RuleValidationException.versionMismatch();
     }
-    return findRuleOrThrow(tenantId, ruleId).toStatusProjection();
+    ruleNativeStateUpdater.refresh(ruleEntity);
+    return ruleEntity.toStatusProjection();
   }
 
   @Transactional
@@ -118,15 +119,15 @@ public class RuleManagementService {
     if (!Objects.equals(ruleEntity.getLastPreviewedEntityVersion(), ruleEntity.getEntityVersion())) {
       throw RuleValidationException.previewRequired();
     }
-    updateEnabled(tenantId, ruleId, true, ruleEntity.getEntityVersion());
-    return findRuleOrThrow(tenantId, ruleId).toStatusProjection();
+    updateEnabled(tenantId, ruleEntity, true);
+    return ruleEntity.toStatusProjection();
   }
 
   @Transactional
   public RuleStatusProjection disable(UUID tenantId, UUID ruleId) {
     RuleEntity ruleEntity = findRuleOrThrow(tenantId, ruleId);
-    updateEnabled(tenantId, ruleId, false, ruleEntity.getEntityVersion());
-    return findRuleOrThrow(tenantId, ruleId).toStatusProjection();
+    updateEnabled(tenantId, ruleEntity, false);
+    return ruleEntity.toStatusProjection();
   }
 
   @Transactional
@@ -178,12 +179,14 @@ public class RuleManagementService {
     return ruleRepository.findByIdAndTenantId(ruleId, tenantId).orElseThrow(RuleValidationException::notFound);
   }
 
-  private void updateEnabled(UUID tenantId, UUID ruleId, boolean enabled, Integer entityVersion) {
+  private void updateEnabled(UUID tenantId, RuleEntity ruleEntity, boolean enabled) {
     boolean enabledUpdated =
-        ruleNativeStateUpdater.updateEnabled(tenantId, ruleId, enabled, entityVersion);
+        ruleNativeStateUpdater.updateEnabled(
+            tenantId, ruleEntity.getId(), enabled, ruleEntity.getEntityVersion());
     if (!enabledUpdated) {
       throw RuleValidationException.versionMismatch();
     }
+    ruleNativeStateUpdater.refresh(ruleEntity);
   }
 
   private static void normalizeOrder(List<RuleEntity> rules) {

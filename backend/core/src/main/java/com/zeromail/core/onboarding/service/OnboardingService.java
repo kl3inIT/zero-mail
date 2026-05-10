@@ -2,6 +2,7 @@ package com.zeromail.core.onboarding.service;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,19 +48,18 @@ public class OnboardingService {
   }
 
   public List<String> selectedEnabledTemplateKeys(UUID tenantId) {
-    // ScopedValue.get(Supplier) is the unchecked Java 25 variant; the
-    // .call(Callable) form declares throws Exception and forces a
-    // hand-written rethrow-or-wrap that would silently downgrade
-    // future checked exceptions to IllegalStateException.
-    return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-        .get(
+    AtomicReference<List<String>> selectedTemplateKeys = new AtomicReference<>();
+    ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+        .run(
             () ->
-                onboardingSelectionRepository.findByTenantId(tenantId).stream()
-                    .filter(OnboardingSelectionEntity::isEnabled)
-                    .map(OnboardingSelectionEntity::getTemplateKey)
-                    .distinct()
-                    .sorted()
-                    .toList());
+                selectedTemplateKeys.set(
+                    onboardingSelectionRepository.findByTenantId(tenantId).stream()
+                        .filter(OnboardingSelectionEntity::isEnabled)
+                        .map(OnboardingSelectionEntity::getTemplateKey)
+                        .distinct()
+                        .sorted()
+                        .toList()));
+    return selectedTemplateKeys.get();
   }
 
   @Transactional

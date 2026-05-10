@@ -3,6 +3,7 @@ package com.zeromail.core.rules.service;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,14 +57,10 @@ public class RuleCompilerService {
   }
 
   private RuleCompileGatewayResult callGateway(RuleCompileCommand command, String compilerPayload) {
-    // Use ScopedValue.where(...).get(Supplier) (Java 25 unchecked variant)
-    // so the compiler enforces unchecked-only at the call site. The earlier
-    // .call(Callable) variant declares throws Exception, which forced a
-    // hand-written rethrow-or-wrap that would silently downgrade any future
-    // checked exception added to LlmGateway.compileRule to IllegalStateException
-    // and break GlobalExceptionHandler routing.
-    return ScopedValue.where(TenantContext.TENANT, command.tenantId().toString())
-        .get(() -> llmGateway.compileRule(CallSite.PREVIEW, compilerPayload));
+    AtomicReference<RuleCompileGatewayResult> gatewayResult = new AtomicReference<>();
+    ScopedValue.where(TenantContext.TENANT, command.tenantId().toString())
+        .run(() -> gatewayResult.set(llmGateway.compileRule(CallSite.PREVIEW, compilerPayload)));
+    return gatewayResult.get();
   }
 
   private static String buildCompilerPayload(RuleCompileCommand command, RuleLanguage languageHint) {

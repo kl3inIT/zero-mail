@@ -3,8 +3,8 @@ package com.zeromail.core.rules.domain;
 import java.util.NoSuchElementException;
 import java.util.stream.Stream;
 
-import tools.jackson.annotation.JsonCreator;
-import tools.jackson.annotation.JsonValue;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.zeromail.core.llm.domain.Action;
 import com.zeromail.core.shared.lang.IdentifiedEnum;
 

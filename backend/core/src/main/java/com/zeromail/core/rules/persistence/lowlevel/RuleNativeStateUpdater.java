@@ -5,6 +5,8 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Repository;
 
+import com.zeromail.core.rules.persistence.RuleEntity;
+
 import jakarta.persistence.EntityManager;
 
 @Repository
@@ -36,12 +38,6 @@ public class RuleNativeStateUpdater {
             .setParameter(4, ruleId)
             .setParameter(5, entityVersion)
             .executeUpdate();
-    // Do NOT clear the whole persistence context - that detaches every
-    // entity loaded earlier in the outer @Transactional flow (e.g. the
-    // ordered-rules list materialized by RulePreviewService.preview).
-    // Callers reload the row whose version+timestamp we just bumped via
-    // a fresh findByIdAndTenantId, so first-level cache staleness for
-    // that single row does not leak.
     return updatedRows == 1;
   }
 
@@ -62,9 +58,10 @@ public class RuleNativeStateUpdater {
             .setParameter(3, ruleId)
             .setParameter(4, entityVersion)
             .executeUpdate();
-    // See markPreviewSucceeded: clearing the persistence context here
-    // would detach unrelated entities still in use by the outer
-    // transaction. Callers reload the row by id+tenant after this call.
     return updatedRows == 1;
+  }
+
+  public void refresh(RuleEntity ruleEntity) {
+    entityManager.refresh(ruleEntity);
   }
 }

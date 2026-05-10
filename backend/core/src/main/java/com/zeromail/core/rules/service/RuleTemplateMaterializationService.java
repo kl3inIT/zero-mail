@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -185,11 +186,10 @@ public class RuleTemplateMaterializationService {
   }
 
   private static <T> T executeInTenantScope(UUID tenantId, Supplier<T> operation) {
-    // Use ScopedValue.where(...).get(Supplier) (Java 25 unchecked variant)
-    // so the compiler enforces unchecked-only at the call site and any
-    // future checked exception added downstream surfaces with its real
-    // type rather than being wrapped in IllegalStateException.
-    return ScopedValue.where(TenantContext.TENANT, tenantId.toString()).get(operation);
+    AtomicReference<T> scopedResult = new AtomicReference<>();
+    ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+        .run(() -> scopedResult.set(operation.get()));
+    return scopedResult.get();
   }
 
   private record TemplateMaterializationOutcome(

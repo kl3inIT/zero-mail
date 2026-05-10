@@ -33,7 +33,7 @@ the review notes or have prerequisites outside the current fix scope).
 
 **Files modified:** `backend/core/src/main/java/com/zeromail/core/rules/persistence/lowlevel/RuleNativeStateUpdater.java`
 **Commit:** 6ec7fb5
-**Applied fix:** Removed the `entityManager.clear()` call from both `markPreviewSucceeded` and `updateEnabled`. Replaced with explanatory comments documenting that callers reload the affected row by id+tenant after the native UPDATE, so first-level cache staleness for that single row does not leak. The defensive clear() was unnecessary and dangerous because it detached every entity loaded earlier in the outer @Transactional flow (e.g. orderedRules in RulePreviewService.preview).
+**Applied fix:** Removed the broad `entityManager.clear()` call from both `markPreviewSucceeded` and `updateEnabled`, then refreshed only the touched `RuleEntity` after each successful native UPDATE. The defensive clear() was dangerous because it detached every entity loaded earlier in the outer `@Transactional` flow (e.g. ordered rules in `RulePreviewService.preview`), while the targeted refresh keeps the response projection aligned with the native update without detaching unrelated managed entities.
 
 ### CR-02: Rule-compile JSON payload passes through `JsoupHtmlStripSanitizer`
 
@@ -81,7 +81,7 @@ the review notes or have prerequisites outside the current fix scope).
 
 **Files modified:** 9 enum files in `backend/core/src/main/java/com/zeromail/core/{rules,llm}/domain/`
 **Commit:** 55159a7
-**Applied fix:** Migrated `@JsonCreator` and `@JsonValue` imports from `com.fasterxml.jackson.annotation.*` to `tools.jackson.annotation.*` across `MatcherEvaluationState`, `MatcherType`, `RuleActionType`, `RuleConflictType`, `RuleLanguage`, `RuleSchemaVersion`, `RuleTemplateStatus`, `BYOKProvider`, `ByokProviderPreset`. Gmail-DTO imports of `JsonIgnoreProperties` (out of WR-06's stated scope) were left for a future cleanup pass.
+**Applied fix:** Verified the enum `@JsonCreator` and `@JsonValue` imports across `MatcherEvaluationState`, `MatcherType`, `RuleActionType`, `RuleConflictType`, `RuleLanguage`, `RuleSchemaVersion`, `RuleTemplateStatus`, `BYOKProvider`, `ByokProviderPreset`. Jackson 3 moves most packages to `tools.jackson.*`, but `jackson-annotations` is the documented exception, so these annotations intentionally remain under `com.fasterxml.jackson.annotation.*`. Gmail-DTO imports of `JsonIgnoreProperties` (out of WR-06's stated scope) were left for a future cleanup pass.
 
 ### WR-07: `RuleTemplateCatalogService.toView` issues N+1 lookups
 
@@ -99,7 +99,7 @@ the review notes or have prerequisites outside the current fix scope).
 
 **Files modified:** `backend/core/src/main/java/com/zeromail/core/rules/service/RuleCompilerService.java`, `backend/core/src/main/java/com/zeromail/core/onboarding/service/OnboardingService.java`, `backend/core/src/main/java/com/zeromail/core/rules/service/RuleTemplateMaterializationService.java`
 **Commit:** e95a05d
-**Applied fix:** Replaced `ScopedValue.where(...).call(Callable)` with `ScopedValue.where(...).get(Supplier)` in all three locations. Removed the hand-written try/catch that rethrew `RuntimeException` and wrapped checked exceptions in `IllegalStateException`. Now any future checked exception added to `LlmGateway.compileRule` will surface as a compile error rather than disappearing at runtime.
+**Applied fix:** Replaced the hand-written `ScopedValue.where(...).call(Callable)` wrappers with `ScopedValue.where(...).run(...)` plus local result holders in all three locations. This keeps the scoped operations on the unchecked `Runnable` carrier API and avoids the previous catch block that rethrew `RuntimeException` but wrapped checked exceptions in `IllegalStateException`.
 
 ### WR-10: `LooseClient` cast in `lib/api/client.ts`
 

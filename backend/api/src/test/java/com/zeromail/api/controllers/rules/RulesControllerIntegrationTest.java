@@ -188,7 +188,7 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
   }
 
   @Test
-  void list_rules_is_read_only_for_selected_templates_and_uses_no_store_cache() throws Exception {
+  void list_rules_materializes_selected_templates_and_uses_no_store_cache() throws Exception {
     SeedData seedData = seedUser("rules-api-materialize-list");
     insertSelection(seedData.tenantId(), "archive-receipts", true);
     insertSelection(seedData.tenantId(), "label-newsletters", true);
@@ -201,10 +201,12 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
     assertThat(firstResponse.getHeaders().getCacheControl()).isEqualTo("no-store");
     JsonNode firstResponseJson = objectMapper.readTree(firstResponse.getBody());
     JsonNode secondResponseJson = objectMapper.readTree(secondResponse.getBody());
-    assertThat(firstResponseJson.path("materialization").path("createdCount").asInt()).isZero();
+    assertThat(firstResponseJson.path("materialization").path("createdCount").asInt()).isEqualTo(2);
+    assertThat(firstResponseJson.path("rules").size()).isEqualTo(2);
     assertThat(secondResponseJson.path("materialization").path("createdCount").asInt()).isZero();
-    assertThat(secondResponseJson.path("rules").size()).isZero();
-    assertThat(ruleCount(seedData.tenantId())).isZero();
+    assertThat(secondResponseJson.path("materialization").path("skippedCount").asInt()).isEqualTo(2);
+    assertThat(secondResponseJson.path("rules").size()).isEqualTo(2);
+    assertThat(ruleCount(seedData.tenantId())).isEqualTo(2);
   }
 
   @Test

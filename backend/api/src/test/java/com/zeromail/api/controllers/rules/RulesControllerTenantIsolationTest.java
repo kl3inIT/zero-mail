@@ -1,6 +1,7 @@
 package com.zeromail.api.controllers.rules;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -59,7 +60,7 @@ class RulesControllerTenantIsolationTest extends ApiPostgresTestBase {
         putProblem(
             authenticatedClient(tenantA),
             "/api/rules/" + tenantBRuleId,
-            ruleSaveBody("Hijacked", "Hijacked source"));
+            ruleUpdateBody("Hijacked", "Hijacked source", tenantBRule.path("entityVersion").asInt()));
     assertThat(updateProblem.path("code").asString()).isEqualTo("error.rules.not_found");
 
     JsonNode deleteProblem = deleteProblem(authenticatedClient(tenantA), tenantBRuleId);
@@ -149,6 +150,13 @@ class RulesControllerTenantIsolationTest extends ApiPostgresTestBase {
             MATCHER_JSON,
             "actionIntents",
             ACTIONS_JSON));
+  }
+
+  private Map<String, Object> ruleUpdateBody(
+      String displayName, String sourceText, int entityVersion) {
+    Map<String, Object> body = new LinkedHashMap<>(ruleSaveBody(displayName, sourceText));
+    body.put("entityVersion", entityVersion);
+    return body;
   }
 
   private JsonNode getJson(RestClient restClient, String uri) throws Exception {
