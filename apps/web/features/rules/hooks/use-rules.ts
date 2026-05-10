@@ -110,7 +110,7 @@ export function useReorderRules() {
         if (!currentList) return currentList;
         return {
           ...currentList,
-          rules: orderedRules.map((rule, index) => ({ ...rule, orderIndex: index + 1 })),
+          rules: orderedRules.map((rule, index) => ({ ...rule, orderIndex: index })),
         };
       });
 
