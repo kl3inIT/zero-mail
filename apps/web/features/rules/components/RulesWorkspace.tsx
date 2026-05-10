@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ErrorCode } from '@/lib/api/error-codes';
 import { RuleComposer } from '@/features/rules/components/RuleComposer';
 import { RuleList } from '@/features/rules/components/RuleList';
 import { RulePreviewPanel } from '@/features/rules/components/RulePreviewPanel';
@@ -392,10 +393,9 @@ function apiErrorCode(error: unknown): string | undefined {
 }
 
 function isInsufficientCredit(error: unknown): boolean {
-  const code = apiErrorCode(error);
-  return code === 'error.billing.insufficient' || code === 'error.rules.insufficient_credits';
+  return apiErrorCode(error) === ErrorCode.BillingInsufficient;
 }
 
 function isGmailUnavailable(error: unknown): boolean {
-  return apiErrorCode(error) === 'error.rules.gmail.unavailable';
+  return apiErrorCode(error) === ErrorCode.RulesGmailUnavailable;
 }
