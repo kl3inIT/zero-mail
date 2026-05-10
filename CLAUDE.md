@@ -56,7 +56,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 ### Hard "do not use" list
 
 - **Lombok** (lags JDK; use records + explicit builders).
-- **Jackson 2.x assumptions** (Boot 4 ships Jackson 3.x).
+- **Unverified Spring Boot 4 / Jackson 3 migration assumptions**. Boot 4 ships Jackson 3.x, but major-version namespace changes have exceptions. Verify with Context7/current docs and Gradle dependency insight before changing imports or configuration. Example: Jackson core/databind moved to `tools.jackson.*`, but `jackson-annotations` remains `com.fasterxml.jackson.annotation.*`; `@JsonCreator`, `@JsonValue`, `@JsonIgnoreProperties`, etc. must not be changed to a non-existent `tools.jackson.annotation.*` package.
 - **Spring WebFlux** (use Spring MVC + virtual threads via `spring.threads.virtual.enabled=true`).
 - **`javax.*`** packages (Jakarta-only).
 - **Raw HTTP LLM calls or vendor SDK usage outside the Spring AI adapter**. Provider-specific BYOK client derivation is allowed only inside `core.llm.gateway.springai` when Spring AI M5 requires it.

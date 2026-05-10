@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: "Phase 03 shipped — PR #22"
 stopped_at: Phase 03 closure complete
-last_updated: "2026-05-10T11:52:32.727Z"
-last_activity: 2026-05-10
+last_updated: "2026-05-10T12:21:27.614Z"
+last_activity: 2026-05-10 - Completed quick task 260510-qvv: Document Boot 4/Jackson migration verification guidance in CLAUDE.md and AGENTS.md
 progress:
   total_phases: 15
   completed_phases: 12
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 Phase: 4
 Plan: Not started
 Status: Phase 03 shipped — PR #22
-Last activity: 2026-05-10
+Last activity: 2026-05-10 - Completed quick task 260510-qvv: Document Boot 4/Jackson migration verification guidance in CLAUDE.md and AGENTS.md
 
 Progress: [██████████] 100% for Phase 03
 
@@ -278,6 +278,7 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260510-qvv | Document Boot 4/Jackson migration verification guidance in CLAUDE.md and AGENTS.md | 2026-05-10 | pending | [260510-qvv-document-boot-4-jackson-migration-verifi](./quick/260510-qvv-document-boot-4-jackson-migration-verifi/) |
 | 260510-mid | Refactor backend domain package boundaries and sync architecture conventions | 2026-05-10 | pending | [260510-mid-refactor-backend-domain-package-boundari](./quick/260510-mid-refactor-backend-domain-package-boundari/) |
 | 260509-vsp | Fix flaky SepayWebhookMismatchAuditEventTest assertion after CI rerun passes | 2026-05-09 | fc6f234 | [260509-vsp-fix-flaky-sepaywebhookmismatchauditevent](./quick/260509-vsp-fix-flaky-sepaywebhookmismatchauditevent/) |
 | 260509-til | Fix Base UI RadioGroup controlled state warning on onboarding template select | 2026-05-09 | 9540921 | [260509-til-fix-base-ui-radiogroup-controlled-state-](./quick/260509-til-fix-base-ui-radiogroup-controlled-state-/) |
