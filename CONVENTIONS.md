@@ -195,3 +195,46 @@ Frontend examples:
 **Anti-pattern:** adding worker scheduler flags to API `application.yml`, adding API session/OAuth
 properties to worker `application.yml`, or creating a single monorepo-wide properties file that
 every subproject must parse.
+
+---
+
+## 10. Frontend i18n: per-feature `messages.ts` + generated locale bundles
+
+The runtime i18n bundles `apps/web/i18n/messages/{vi,en}.json` are **generated artifacts**, not
+source-of-truth files. The source of truth is per-feature `apps/web/features/<feature>/messages.ts`,
+which is merged into the locale JSON bundles by `apps/web/scripts/merge-feature-i18n.ts`.
+
+### Where to add new strings
+
+- **Add or edit keys only in** `apps/web/features/<feature>/messages.ts`.
+- Each `messages.ts` exports an object whose top-level shape is `{ vi: {...}, en: {...} }`.
+- Co-locating strings with feature code is the standard pattern (see Convention 8); the merge step
+  is what makes them visible to next-intl at runtime.
+
+### Generated outputs
+
+- `apps/web/i18n/messages/vi.json` and `apps/web/i18n/messages/en.json` are written by
+  `pnpm i18n:build` (which runs `merge-feature-i18n.ts`). The header comment in each generated
+  file marks them as `DO NOT EDIT MANUALLY`.
+- **Editing the JSON files directly is forbidden** - the next `pnpm build` will overwrite the change.
+- If a string needs to ship in only one locale (e.g. a Vietnamese-only legal page), still author it
+  inside the feature's `messages.ts` with the other locale set to a fallback or empty string.
+
+### Build pipeline
+
+- `pnpm i18n:build` regenerates the bundles from every `features/**/messages.ts`.
+- `pnpm build` runs `i18n:build` automatically via `prebuild`, so production bundles are always in
+  sync with feature source.
+- `pnpm i18n:check` is a drift detector - it regenerates the bundles into a temp file and fails if
+  the output differs from the committed JSON. Run it locally before opening a PR; CI runs it as
+  part of the standard frontend gate.
+
+### Anti-patterns
+
+- Editing `apps/web/i18n/messages/vi.json` or `en.json` to fix a translation. Edit `messages.ts`
+  in the relevant feature folder instead.
+- Forgetting to add a key to `messages.ts` and assuming it will be picked up - if a key is not in
+  any feature's `messages.ts`, it disappears from the bundle on the next `i18n:build`.
+- Putting feature-scoped strings into a global `apps/web/messages.ts` instead of
+  `apps/web/features/<feature>/messages.ts`. The merge script walks per-feature files; centralized
+  strings break the co-location convention and are easier to leave stale when a feature is deleted.
