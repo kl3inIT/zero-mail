@@ -468,8 +468,22 @@ class LlmGatewayImpl implements LlmGateway {
           model);
       LlmChatRequest request =
           new LlmChatRequest(systemPrompt, sanitizedContext.content(), tools, model, 0.0, true);
-      LlmChatResult result = byokLlmModelClient.call(decryptedKey, byokRow.getEndpoint(), request);
-      T gatewayResult = resultParser.apply(model, result);
+      LlmChatResult result;
+      T gatewayResult;
+      try {
+        result = byokLlmModelClient.call(decryptedKey, byokRow.getEndpoint(), request);
+        gatewayResult = resultParser.apply(model, result);
+      } catch (SafetyViolationException safetyViolation) {
+        // Symmetric with callPlatformModelClientWithCreditLedger so
+        // operators correlating safety-violation rates by call-site
+        // also see BYOK violations with the call-site label.
+        log.error(
+            "event=llm_safety_violation tenantId={} callSite={} reason={}",
+            tenantId,
+            callSite,
+            safetyViolation.getClass().getSimpleName());
+        throw safetyViolation;
+      }
       LlmUsage usage = result.usage();
       log.info(
           "event=llm_byok_call_succeeded tenantId={} provider={} model={} latencyMs={} "
