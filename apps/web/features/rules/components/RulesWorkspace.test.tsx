@@ -21,7 +21,6 @@ const rulesHooks = vi.hoisted(() => ({
   usePreviewDraftRule: vi.fn(),
   useUpdateRuleEnabled: vi.fn(),
   useMaterializeRuleTemplate: vi.fn(),
-  useMaterializeSelectedRuleTemplates: vi.fn(),
 }));
 
 vi.mock('@/features/rules/hooks/use-rules', () => rulesHooks);
@@ -200,16 +199,6 @@ function mockRulesWorkspaceHooks({
   rulesHooks.useUpdateRuleEnabled.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
   rulesHooks.useMaterializeRuleTemplate.mockReturnValue({
     mutateAsync: vi.fn(),
-    isPending: false,
-  });
-  rulesHooks.useMaterializeSelectedRuleTemplates.mockReturnValue({
-    mutateAsync: vi.fn().mockResolvedValue({
-      createdCount: 0,
-      skippedCount: 0,
-      customizedPreservedCount: 0,
-      createdRules: [],
-      skippedTemplates: [],
-    }),
     isPending: false,
   });
 }

@@ -39,6 +39,7 @@ import com.zeromail.core.rules.application.RuleCreateCommand;
 import com.zeromail.core.rules.domain.RuleLanguage;
 import com.zeromail.core.rules.application.RuleOrderEntry;
 import com.zeromail.core.rules.application.RuleReorderCommand;
+import com.zeromail.core.rules.application.RuleTemplateMaterializationResult;
 import com.zeromail.core.rules.domain.RuleSchemaVersion;
 import com.zeromail.core.rules.application.RuleUpdateCommand;
 import com.zeromail.core.rules.service.RuleCompilerService;
@@ -79,6 +80,12 @@ public class RulesController {
   @GetMapping
   public ResponseEntity<RulesListResponse> listRules() {
     UUID tenantId = currentTenantId();
+    // Locked decision D-C2: GET /api/rules is the source of truth and
+    // must materialize selected templates idempotently. Other clients
+    // (mobile, CLI, future worker bootstrap) must observe template-derived
+    // rules without depending on a frontend-only POST.
+    RuleTemplateMaterializationResult materializationResult =
+        ruleTemplateMaterializationService.materializeSelectedTemplates(tenantId);
     RulesListResponse response =
         new RulesListResponse(
             ruleManagementService.listOrdered(tenantId).stream()
@@ -87,7 +94,7 @@ public class RulesController {
             ruleTemplateCatalogService.listActiveTemplates(tenantId).stream()
                 .map(RuleTemplateResponse::from)
                 .toList(),
-            RuleTemplateMaterializationResponse.empty());
+            RuleTemplateMaterializationResponse.from(materializationResult));
     return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(response);
   }
 

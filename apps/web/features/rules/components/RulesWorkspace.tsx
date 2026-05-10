@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -20,7 +20,6 @@ import {
   useCreateRule,
   useDeleteRule,
   useMaterializeRuleTemplate,
-  useMaterializeSelectedRuleTemplates,
   usePreviewDraftRule,
   usePreviewSavedRule,
   useReorderRules,
@@ -45,8 +44,11 @@ export function RulesWorkspace() {
   const previewDraftRuleMutation = usePreviewDraftRule();
   const updateEnabledMutation = useUpdateRuleEnabled();
   const materializeTemplateMutation = useMaterializeRuleTemplate();
-  const { mutateAsync: materializeSelectedTemplates } = useMaterializeSelectedRuleTemplates();
-  const selectedTemplatesMaterializationStarted = useRef(false);
+
+  // Locked decision D-C2: server-side GET /api/rules materializes
+  // selected templates idempotently. The frontend does NOT POST
+  // /api/rules/templates/materialize-selected here - the list query
+  // is the single source of truth for template-derived rules.
 
   const rules = useMemo(
     () => [...(rulesQuery.data?.rules ?? [])].sort(compareRulesByOrder),
@@ -78,14 +80,6 @@ export function RulesWorkspace() {
       selectRule(rules[0]);
     }
   }, [rules, selectedRuleId]);
-
-  useEffect(() => {
-    if (!rulesQuery.isSuccess || selectedTemplatesMaterializationStarted.current) return;
-    selectedTemplatesMaterializationStarted.current = true;
-    void materializeSelectedTemplates().catch(() => {
-      selectedTemplatesMaterializationStarted.current = false;
-    });
-  }, [materializeSelectedTemplates, rulesQuery.isSuccess]);
 
   function updateSourceText(nextSourceText: string) {
     setSourceText(nextSourceText);
