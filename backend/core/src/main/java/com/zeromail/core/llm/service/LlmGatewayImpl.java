@@ -261,7 +261,12 @@ class LlmGatewayImpl implements LlmGateway {
                   provider,
                   model);
 
-              SanitizationContext sanitizedContext = sanitizationPipeline.sanitize(compilerPayload);
+              // Use structured-JSON sanitization here: compilerPayload is a
+              // JSON envelope, not raw HTML. Running Jsoup HTML-strip would
+              // silently delete '<...>' substrings inside user sourceText
+              // (quoted angle addresses, regex literals, "<reply requested>").
+              SanitizationContext sanitizedContext =
+                  sanitizationPipeline.sanitizeStructuredJson(compilerPayload);
               List<LlmTool> tools = allowListedTools.tools(LlmToolProfile.RULE_COMPILE);
 
               Optional<TenantByokCredentialsEntity> byok = findByokCredentials(tenantId);
