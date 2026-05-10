@@ -1,0 +1,47 @@
+databaseChangeLog:
+  - changeSet:
+      id: 023-fix-pin-calendar-category
+      author: zeromail
+      comment: |
+        Fix `pin-calendar` template seed: the v1 seed in 022 emitted
+        `{"type":"GMAIL_CATEGORY_PRESENT","category":"CATEGORY_PERSONAL"}`,
+        but Gmail's category taxonomy is Primary/Promotions/Social/
+        Updates/Forums - there is no `personal` category id in
+        `ActionProposalMerger.GMAIL_CATEGORY_NAMES`, so the conflict
+        detector silently skipped category-vs-label warnings and the
+        matcher would never fire on real Gmail messages. Replace the
+        category with `CATEGORY_UPDATES`, which is in the recognized
+        set and is the closest semantic match for schedule/calendar
+        updates Gmail itself routes into Updates.
+        Liquibase changelogs are immutable, so this is a forward-only
+        fix; pre-existing tenant rows materialized from the old seed
+        are NOT migrated here (they are tenant-specific and tenants
+        can re-trigger materialization through the rules workspace).
+      changes:
+        - sql:
+            splitStatements: false
+            comment: Replace pin-calendar matcher's CATEGORY_PERSONAL with CATEGORY_UPDATES.
+            sql: |
+              UPDATE rule_template_catalog
+              SET matcher_ast = jsonb_set(
+                    matcher_ast,
+                    '{children,0,category}',
+                    '"CATEGORY_UPDATES"'::jsonb,
+                    false
+                  )
+              WHERE template_key = 'pin-calendar'
+                AND template_version = 1
+                AND matcher_ast #>> '{children,0,category}' = 'CATEGORY_PERSONAL'
+      rollback:
+        - sql:
+            sql: |
+              UPDATE rule_template_catalog
+              SET matcher_ast = jsonb_set(
+                    matcher_ast,
+                    '{children,0,category}',
+                    '"CATEGORY_PERSONAL"'::jsonb,
+                    false
+                  )
+              WHERE template_key = 'pin-calendar'
+                AND template_version = 1
+                AND matcher_ast #>> '{children,0,category}' = 'CATEGORY_UPDATES'

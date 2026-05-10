@@ -65,3 +65,6 @@ databaseChangeLog:
   - include:
       file: changes/022-rule-template-catalog-seed.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/023-fix-pin-calendar-category.yaml
+      relativeToChangelogFile: true
