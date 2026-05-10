@@ -144,13 +144,20 @@ public class GmailPreviewReadService {
         order by internal_date desc nulls last, observed_at desc
         limit ?
         """,
-        (resultSet, rowNumber) ->
-            new ObservedPreviewMessage(
-                resultSet.getString("gmail_message_id"),
-                resultSet.getString("gmail_thread_id"),
-                (String[]) resultSet.getArray("label_ids").getArray(),
-                resultSet.getObject("internal_date", Long.class),
-                resultSet.getTimestamp("observed_at").toInstant()),
+        (resultSet, rowNumber) -> {
+              java.sql.Array labelIdsArray = resultSet.getArray("label_ids");
+              String[] labelIds =
+                  labelIdsArray == null ? new String[0] : (String[]) labelIdsArray.getArray();
+              java.sql.Timestamp observedAtTimestamp = resultSet.getTimestamp("observed_at");
+              Instant observedAt =
+                  observedAtTimestamp == null ? Instant.EPOCH : observedAtTimestamp.toInstant();
+              return new ObservedPreviewMessage(
+                  resultSet.getString("gmail_message_id"),
+                  resultSet.getString("gmail_thread_id"),
+                  labelIds,
+                  resultSet.getObject("internal_date", Long.class),
+                  observedAt);
+            },
         tenantId,
         sampleSize);
   }
