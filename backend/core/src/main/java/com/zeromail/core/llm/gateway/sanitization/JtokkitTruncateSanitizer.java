@@ -12,22 +12,40 @@ import org.springframework.stereotype.Component;
 @Order(40)
 public class JtokkitTruncateSanitizer implements Sanitizer {
 
-    // CONTEXT D-B4: 4096-token budget minus 200-token Anthropic safety headroom.
-    public static final int HARD_CAP_TOKENS = 3896;
+  // CONTEXT D-B4: 4096-token budget minus 200-token Anthropic safety headroom.
+  public static final int HARD_CAP_TOKENS = 3896;
 
-    private final Encoding cl100kBase;
+  private final EncodingRegistry encodingRegistry;
+  private volatile Encoding cl100kBase;
 
-    public JtokkitTruncateSanitizer(EncodingRegistry encodingRegistry) {
-        this.cl100kBase = encodingRegistry.getEncoding(EncodingType.CL100K_BASE);
+  public JtokkitTruncateSanitizer(EncodingRegistry encodingRegistry) {
+    this.encodingRegistry = encodingRegistry;
+  }
+
+  @Override
+  public SanitizationContext apply(SanitizationContext context) {
+    Encoding cl100kBaseEncoding = cl100kBase();
+    EncodingResult encodingResult = cl100kBaseEncoding.encode(context.content(), HARD_CAP_TOKENS);
+    String truncated =
+        encodingResult.isTruncated()
+            ? cl100kBaseEncoding.decode(encodingResult.getTokens())
+            : context.content();
+    return context
+        .withContent(truncated)
+        .withTokenCount(encodingResult.getTokens().size(), encodingResult.isTruncated());
+  }
+
+  private Encoding cl100kBase() {
+    Encoding currentEncoding = cl100kBase;
+    if (currentEncoding == null) {
+      synchronized (this) {
+        currentEncoding = cl100kBase;
+        if (currentEncoding == null) {
+          currentEncoding = encodingRegistry.getEncoding(EncodingType.CL100K_BASE);
+          cl100kBase = currentEncoding;
+        }
+      }
     }
-
-    @Override
-    public SanitizationContext apply(SanitizationContext context) {
-        EncodingResult encodingResult = cl100kBase.encode(context.content(), HARD_CAP_TOKENS);
-        String truncated = encodingResult.isTruncated()
-                ? cl100kBase.decode(encodingResult.getTokens())
-                : context.content();
-        return context.withContent(truncated)
-                .withTokenCount(encodingResult.getTokens().size(), encodingResult.isTruncated());
-    }
+    return currentEncoding;
+  }
 }
