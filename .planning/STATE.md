@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-05-11T10:54:07.162Z"
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-05-11T11:25:57.379Z"
 last_activity: 2026-05-11
 progress:
   total_phases: 15
   completed_phases: 12
   total_plans: 100
-  completed_plans: 93
-  percent: 93
+  completed_plans: 94
+  percent: 94
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 04 (triage-convergence-hero) — EXECUTING
-Plan: 3 of 9
+Plan: 4 of 9
 Status: Ready to execute
 Last activity: 2026-05-11
 
-Progress: [█████████░] 93%
+Progress: [█████████░] 94%
 
 ## Performance Metrics
 
@@ -114,6 +114,7 @@ Progress: [█████████░] 93%
 | Phase 02C P07 | 20 min | 2 tasks | 9 files |
 | Phase 04 P00 | 30min | 3 tasks | 23 files |
 | Phase 04 P01 | 12min | 3 tasks | 14 files |
+| Phase 04 P02 | 29 min | 3 tasks | 34 files |
 
 ## Accumulated Context
 
@@ -253,7 +254,9 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-01 uses Spring Modulith JDBC v2 event_publication schema from pinned 2.0.7-SNAPSHOT; Liquibase owns the table and schema auto-init remains unset. — Pinned source shows the default v2 schema and the actual property key spring.modulith.events.jdbc.schema-initialization.enabled.
 - [Phase 04]: 04-01 MailMessageObserved publishes only after insertObservedIfAbsent returns 1 and carries ids plus observedAt only. — This preserves duplicate-delivery idempotency and the no-content privacy invariant.
 - [Phase 04]: 04-01 core.triage allowedDependencies = {rules, gmail, llm, billing, tenant, shared.persistence, shared.lang}; no direct crypto edge. — Future triage code must consume Gmail capabilities through core.gmail facades rather than reaching into Gmail crypto internals.
-
+- [Phase 04]: 04-02 maps TriageAuditEntity inherited id to audit_id with @AttributeOverride instead of redeclaring a second @Id.
+- [Phase 04]: 04-02 uses native @Query without @Modifying for INSERT ... RETURNING audit methods so Optional<UUID> result mapping works; @Modifying stays on update transitions only.
+- [Phase 04]: 04-02 makes TriageAuditWriter the required validation/canonicalization seam before native triage_audit inserts and records protected senders in tenant_protected_sender_observation.
 ### Roadmap Evolution
 
 - Phase 1.1 inserted after Phase 1: Vietnamese-first i18n and error-handling foundation — default Vietnamese / secondary English, language switcher, stable frontend-localizable API error contract; references local JHipster patterns; preserves all Phase 1 privacy/safety constraints (URGENT)
@@ -313,6 +316,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-11T10:54:07.141Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-05-11T11:25:46.145Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
