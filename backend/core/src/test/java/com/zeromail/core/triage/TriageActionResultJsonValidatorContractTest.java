@@ -4,16 +4,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.lang.reflect.Method;
 import java.util.NoSuchElementException;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+
+import com.zeromail.core.triage.domain.SenderEmailCanonicalizer;
+import com.zeromail.core.triage.domain.TriageActionArgsCanonicalizer;
+import com.zeromail.core.triage.domain.TriageActionResult;
+import com.zeromail.core.triage.domain.TriageActionResultJsonValidator;
+import com.zeromail.core.triage.domain.TriageDecision;
+import com.zeromail.core.triage.exception.TriageSafetyViolationException;
 
 class TriageActionResultJsonValidatorContractTest {
 
-    private static final String PLAN_04_ACTION_JSON_MESSAGE =
-            "Wave 0 contract - enabled by 04-02 when triage action JSON types land";
     private static final String TRIAGE_ACTION_RESULT =
             "com.zeromail.core.triage.domain.TriageActionResult";
     private static final String TRIAGE_ACTION_RESULT_JSON_VALIDATOR =
@@ -32,45 +35,89 @@ class TriageActionResultJsonValidatorContractTest {
     }
 
     @Test
-    @Disabled(PLAN_04_ACTION_JSON_MESSAGE)
-    void unknown_discriminator_fails_loudly_with_no_silent_noop() throws Exception {
-        Object validator = Class.forName(TRIAGE_ACTION_RESULT_JSON_VALIDATOR).getConstructor().newInstance();
-        Method validateMethod = validator.getClass().getMethod("validateActionArgsJson", String.class);
+    void unknown_discriminator_fails_loudly_with_no_silent_noop() {
+        TriageActionResultJsonValidator validator = new TriageActionResultJsonValidator();
 
-        assertThatThrownBy(() -> validateMethod.invoke(validator, """
+        assertThatThrownBy(() -> validator.validateActionArgsJson("""
                 {"type":"send","messageId":"unsafe"}
                 """))
-                .hasRootCauseInstanceOf(NoSuchElementException.class);
+                .isInstanceOf(NoSuchElementException.class);
     }
 
     @Test
-    @Disabled(PLAN_04_ACTION_JSON_MESSAGE)
-    void unknown_fields_are_rejected_per_action_type_on_write() throws Exception {
-        Object validator = Class.forName(TRIAGE_ACTION_RESULT_JSON_VALIDATOR).getConstructor().newInstance();
-        Method validateMethod = validator.getClass().getMethod("validateActionArgsJson", String.class);
+    void unknown_fields_are_rejected_per_action_type_on_write() {
+        TriageActionResultJsonValidator validator = new TriageActionResultJsonValidator();
 
-        assertThatThrownBy(() -> validateMethod.invoke(validator, """
+        assertThatThrownBy(() -> validator.validateActionArgsJson("""
                 {"type":"archive","extra":"not-allowed"}
                 """))
-                .hasRootCauseInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    @Disabled(PLAN_04_ACTION_JSON_MESSAGE)
-    void save_draft_hash_is_stable_before_and_after_gmail_returns_draft_id() throws Exception {
-        Object canonicalizer = Class.forName(TRIAGE_ACTION_ARGS_CANONICALIZER)
-                .getConstructor()
-                .newInstance();
-        Method canonicalHashMethod = canonicalizer.getClass().getMethod("canonicalHash", String.class);
+    void save_draft_hash_is_stable_before_and_after_gmail_returns_draft_id() {
+        TriageActionArgsCanonicalizer canonicalizer = new TriageActionArgsCanonicalizer();
 
-        Object preWriteHash = canonicalHashMethod.invoke(canonicalizer, """
+        byte[] preWriteHash = canonicalizer.canonicalHash("""
                 {"type":"save_draft","instruction":"draft politely","draftId":null,"threadId":"thread-1"}
                 """);
-        Object postWriteHash = canonicalHashMethod.invoke(canonicalizer, """
+        byte[] postWriteHash = canonicalizer.canonicalHash("""
                 {"threadId":"thread-1","draftId":"draft-1","instruction":"draft politely","type":"save_draft"}
                 """);
 
-        assertThat(postWriteHash).isEqualTo(preWriteHash);
+        assertThat(postWriteHash).isEqualTo(preWriteHash).hasSize(32);
+    }
+
+    @Test
+    void validator_serializes_persisted_action_json_without_jackson_type_metadata() {
+        TriageActionResultJsonValidator validator = new TriageActionResultJsonValidator();
+
+        String serializedJson =
+                validator.toJson(new TriageActionResult.Label("Label_123", "Finance"));
+
+        assertThat(serializedJson)
+                .contains("\"type\":\"label\"", "\"labelId\":\"Label_123\"", "\"labelName\":\"Finance\"")
+                .doesNotContain("@class", "JsonTypeInfo");
+        assertThatCode(() -> validator.validateActionArgsJson(serializedJson)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void sender_email_canonicalizer_normalizes_hashes_and_quotes_sender_addresses() {
+        SenderEmailCanonicalizer canonicalizer = new SenderEmailCanonicalizer();
+
+        String canonicalEmail = canonicalizer.canonicalize("Boss <Boss@Example.COM> ");
+
+        assertThat(canonicalEmail).isEqualTo("boss@example.com");
+        assertThat(canonicalizer.redisCacheKeyComponent(canonicalEmail))
+                .hasSize(64)
+                .doesNotContain("boss", "example");
+        assertThat(canonicalizer.gmailSearchToken(canonicalEmail)).isEqualTo("\"boss@example.com\"");
+        assertThatThrownBy(() -> canonicalizer.canonicalize("not-an-address"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void triage_decision_fails_loudly_for_unknown_ids() {
+        assertThat(TriageDecision.fromId("APPLIED")).isEqualTo(TriageDecision.APPLIED);
+        assertThat(TriageDecision.values())
+                .extracting(TriageDecision::id)
+                .containsExactly(
+                        "PENDING",
+                        "APPLIED",
+                        "SHADOW_LOGGED",
+                        "REJECTED_BY_SAFETY_NET",
+                        "REJECTED_BY_SAFETY_POLICY",
+                        "FAILED",
+                        "REVERTED");
+        assertThatThrownBy(() -> TriageDecision.fromId("NOPE"))
+                .isInstanceOf(NoSuchElementException.class);
+    }
+
+    @Test
+    void triage_safety_violation_exception_has_only_no_arg_constructor() {
+        assertThat(TriageSafetyViolationException.class.getConstructors())
+                .singleElement()
+                .satisfies(constructor -> assertThat(constructor.getParameterCount()).isZero());
     }
 
     private static void assertFutureTypePresent(String futureTypeName) {
