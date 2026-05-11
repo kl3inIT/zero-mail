@@ -329,7 +329,7 @@ Cross-cutting constraints:
 Plans:
 **Wave 1**
 - [x] 04-00-PLAN.md — [BLOCKING] Wave 0: spring-modulith-starter-jdbc dependency + RED test spine (core/api/worker scaffolds, 4 ArchUnit guards, CallSite membership 3->5, eval-harness dir marker)
-- [ ] 04-01-PLAN.md — Modulith JDBC event spine: MailMessageObserved event + publish site + Liquibase 024 (event_publication) + core.triage package skeleton + TenantContext.runWith
+- [x] 04-01-PLAN.md — Modulith JDBC event spine: MailMessageObserved event + publish site + Liquibase 024 (event_publication) + core.triage package skeleton + TenantContext.runWith
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 04-02-PLAN.md — Triage persistence + domain: Liquibase 025-027 + TriageActionResult sealed type + validator + canonicalizer + TriageDecision + TriageAuditEntity/Repository + TenantSenderOptInEntity/Repository + 5 exceptions + CallSite extension + TenantEntity.triageShadowMode + TenantService accessors
@@ -401,6 +401,6 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 2B. Billing (Prepaid Credits) | 7/7 | Complete | 2026-05-06 |
 | 2C. LLM Gateway | 0/8 | Not started | - |
 | 3. Rules Engine | 10/10 | Complete | 2026-05-10 |
-| 4. Triage Convergence (Hero) | 0/9 | Planned | - |
+| 4. Triage Convergence (Hero) | 2/9 | In Progress | - |
 | 5. User Surface — Drafts, Analytics, Web UI | 0/TBD | Not started | - |
 | 6. Polish & CASA-Verified Launch | 0/TBD | Not started | - |

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-00-PLAN.md
-last_updated: "2026-05-11T10:37:15.562Z"
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-05-11T10:54:07.162Z"
 last_activity: 2026-05-11
 progress:
   total_phases: 15
   completed_phases: 12
   total_plans: 100
-  completed_plans: 92
-  percent: 92
+  completed_plans: 93
+  percent: 93
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 04 (triage-convergence-hero) — EXECUTING
-Plan: 2 of 9
+Plan: 3 of 9
 Status: Ready to execute
 Last activity: 2026-05-11
 
-Progress: [█████████░] 92%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -113,6 +113,7 @@ Progress: [█████████░] 92%
 | Phase 02C P06 | 90 min | 1 tasks | 5 files |
 | Phase 02C P07 | 20 min | 2 tasks | 9 files |
 | Phase 04 P00 | 30min | 3 tasks | 23 files |
+| Phase 04 P01 | 12min | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -249,6 +250,9 @@ Recent decisions affecting current work:
 - [Phase 04]: Plan 00 Wave 0 triage tests reference future production types by FQN strings/reflection so compileTestJava stays green while execution is RED. — Later plans can run targeted tests without the entire test source set failing to compile before production classes exist.
 - [Phase 04]: Plan 00 CallSiteEnumMembershipArchTest is intentionally RED until 04-02 adds TRIAGE_PLATFORM_LLM and TRIAGE_DETERMINISTIC. — Locks Phase 4 credit-accounting call-site expansion as an executable contract.
 - [Phase 04]: Plan 00 uses spring-modulith-starter-jdbc without a version pin; the existing Spring Modulith BOM supplies 2.0.7-SNAPSHOT. — Keeps the new event-registry dependency aligned with the existing Modulith BOM and avoids ad-hoc version drift.
+- [Phase 04]: 04-01 uses Spring Modulith JDBC v2 event_publication schema from pinned 2.0.7-SNAPSHOT; Liquibase owns the table and schema auto-init remains unset. — Pinned source shows the default v2 schema and the actual property key spring.modulith.events.jdbc.schema-initialization.enabled.
+- [Phase 04]: 04-01 MailMessageObserved publishes only after insertObservedIfAbsent returns 1 and carries ids plus observedAt only. — This preserves duplicate-delivery idempotency and the no-content privacy invariant.
+- [Phase 04]: 04-01 core.triage allowedDependencies = {rules, gmail, llm, billing, tenant, shared.persistence, shared.lang}; no direct crypto edge. — Future triage code must consume Gmail capabilities through core.gmail facades rather than reaching into Gmail crypto internals.
 
 ### Roadmap Evolution
 
@@ -309,6 +313,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-11T10:37:15.539Z
-Stopped at: Completed 04-00-PLAN.md
+Last session: 2026-05-11T10:54:07.141Z
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None
