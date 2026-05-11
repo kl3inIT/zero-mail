@@ -15,6 +15,7 @@ dependencies {
     api(libs.google.api.services.gmail)
     api("net.logstash.logback:logstash-logback-encoder:9.0")
     implementation(platform(libs.spring.ai.bom))
+    implementation(libs.spring.modulith.starter.jdbc)
     implementation(libs.spring.ai.starter.model.openai)
     implementation(libs.spring.ai.starter.model.anthropic)
     implementation(libs.spring.ai.starter.model.google.genai)
