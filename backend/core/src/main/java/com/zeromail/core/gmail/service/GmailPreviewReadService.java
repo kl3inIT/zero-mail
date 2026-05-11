@@ -16,6 +16,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -38,6 +40,8 @@ import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 @Service
 public class GmailPreviewReadService {
 
+  private static final Logger log = LoggerFactory.getLogger(GmailPreviewReadService.class);
+
   private static final List<String> METADATA_HEADERS =
       List.of(
           "From",
@@ -52,6 +56,8 @@ public class GmailPreviewReadService {
   private static final String METADATA_FIELDS =
       "id,threadId,labelIds,internalDate,payload/headers,payload/parts/filename,"
           + "payload/parts/mimeType";
+  private static final String TRIAGE_METADATA_FIELDS =
+      "id,threadId,labelIds,internalDate,payload/headers";
   private static final String FULL_FIELDS =
       "id,threadId,labelIds,internalDate,payload/headers,payload/body/size,"
           + "payload/parts(filename,mimeType,body/size,parts)";
@@ -125,6 +131,43 @@ public class GmailPreviewReadService {
     } catch (InvalidGrantException invalidGrantException) {
       throw new GmailPreviewReadUnavailableException(UnavailableReason.REVOKED);
     } catch (GoogleJsonResponseException googleResponseException) {
+      if (googleResponseException.getStatusCode() == 401
+          || googleResponseException.getStatusCode() == 403) {
+        throw new GmailPreviewReadUnavailableException(UnavailableReason.NO_READ_GRANT);
+      }
+      throw new GmailPreviewReadUnavailableException(UnavailableReason.GMAIL_UNAVAILABLE);
+    } catch (IOException ioException) {
+      throw new GmailPreviewReadUnavailableException(UnavailableReason.GMAIL_UNAVAILABLE);
+    }
+  }
+
+  @Transactional(readOnly = true)
+  public Optional<GmailPreviewMessage> fetchTriageInput(
+      UUID tenantId, String gmailMessageId, String gmailThreadId, Instant observedAt) {
+    Objects.requireNonNull(tenantId, "tenantId must not be null");
+    Objects.requireNonNull(gmailMessageId, "gmailMessageId must not be null");
+    Objects.requireNonNull(gmailThreadId, "gmailThreadId must not be null");
+    Objects.requireNonNull(observedAt, "observedAt must not be null");
+
+    ObservedPreviewMessage observedMessage =
+        new ObservedPreviewMessage(gmailMessageId, gmailThreadId, new String[0], null, observedAt);
+    try {
+      Gmail gmail = gmailApiClientFactory.buildClientForTenant(tenantId);
+      Message gmailMessage = triageMessageGetRequest(gmail, gmailMessageId).execute();
+      GmailPreviewMessage previewMessage = toPreviewMessage(observedMessage, gmailMessage, false);
+      log.info(
+          "event=triage_input_fetched tenantId={} gmailMessageId={}",
+          tenantId,
+          gmailMessageId);
+      return Optional.of(previewMessage);
+    } catch (GoogleJsonResponseException googleResponseException) {
+      if (googleResponseException.getStatusCode() == 404) {
+        log.info(
+            "event=triage_input_fetch_message_gone tenantId={} gmailMessageId={}",
+            tenantId,
+            gmailMessageId);
+        return Optional.empty();
+      }
       if (googleResponseException.getStatusCode() == 401
           || googleResponseException.getStatusCode() == 403) {
         throw new GmailPreviewReadUnavailableException(UnavailableReason.NO_READ_GRANT);
@@ -253,6 +296,19 @@ public class GmailPreviewReadService {
     if (!includeBodyEvidence) {
       messageGetRequest.setMetadataHeaders(METADATA_HEADERS);
     }
+    return messageGetRequest;
+  }
+
+  private static Gmail.Users.Messages.Get triageMessageGetRequest(Gmail gmail, String gmailMessageId)
+      throws IOException {
+    Gmail.Users.Messages.Get messageGetRequest =
+        gmail
+            .users()
+            .messages()
+            .get("me", gmailMessageId)
+            .setFormat("metadata")
+            .setFields(TRIAGE_METADATA_FIELDS);
+    messageGetRequest.setMetadataHeaders(METADATA_HEADERS);
     return messageGetRequest;
   }
 
