@@ -341,7 +341,7 @@ Plans:
 - [x] 04-04-PLAN.md — Triage services: TriageSafetyPolicy (allow-list gate) + TriageGmailWriter (single Gmail-write call site, send-free) + SenderSafetyNetService (sent-history heuristic + Redis 24h cache + opt-in override) + core.gmail Gmail-client facade + Redis bean wiring
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 04-05-PLAN.md — TriageOrchestratorService (@ApplicationModuleListener hero: tenant rebind -> rules -> inline SEMANTIC_INTENT via LlmGateway -> safety gate -> sender net -> two-phase PENDING->APPLIED audit loop -> Gmail/shadow) + metadata-only input facade + worker.triage package-info
+- [x] 04-05-PLAN.md — TriageOrchestratorService (@ApplicationModuleListener hero: tenant rebind -> rules -> inline SEMANTIC_INTENT via LlmGateway -> safety gate -> sender net -> two-phase PENDING->APPLIED audit loop -> Gmail/shadow) + metadata-only input facade + worker.triage package-info
 - [ ] 04-06-PLAN.md — TriageUndoService (compute-inverse, 30d window, exhaustive switch) + 3 thin triage controllers (undo / shadow-mode / sender-safety-net) + DTOs + ErrorCodes + GlobalExceptionHandler + vi/en i18n + schema.d.ts regen
 
 **Wave 6** *(blocked on Wave 5 completion)*

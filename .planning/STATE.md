@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 04-04-PLAN.md
-last_updated: "2026-05-11T12:23:58.761Z"
+last_updated: "2026-05-11T12:51:04.482Z"
 last_activity: 2026-05-11
 progress:
   total_phases: 15
   completed_phases: 12
   total_plans: 100
-  completed_plans: 96
-  percent: 96
+  completed_plans: 97
+  percent: 97
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 04 (triage-convergence-hero) — EXECUTING
-Plan: 6 of 9
+Plan: 7 of 9
 Status: Ready to execute
 Last activity: 2026-05-11
 
-Progress: [██████████] 96%
+Progress: [██████████] 97%
 
 ## Performance Metrics
 
@@ -117,6 +117,7 @@ Progress: [██████████] 96%
 | Phase 04 P02 | 29 min | 3 tasks | 34 files |
 | Phase 04 P03 | 19 min | 3 tasks | 13 files |
 | Phase 04 P04 | 20min | 3 tasks | 11 files |
+| Phase 04 P05 | 25min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -265,6 +266,9 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-04 keeps RefreshTokenCipher inside core.gmail by adding GmailApiClientFactory.buildClientForTenant(UUID) for triage callers.
 - [Phase 04]: 04-04 makes TriageGmailWriter the sole triage Gmail write adapter and keeps it send-free.
 - [Phase 04]: 04-04 sender safety net uses optional Boot StringRedisTemplate with hashed keys and fail-safe protected=true on Gmail lookup failure.
+- [Phase 04]: Plan 05 kept the single @ApplicationModuleListener on TriageOrchestratorService because worker component scanning already includes com.zeromail.core.
+- [Phase 04]: Plan 05 leaves platform LLM credit reservation inside LlmGateway.evaluateSemanticIntents; the orchestrator only reserves deterministic zero-cost messages.
+- [Phase 04]: Plan 05 added worker triage retry/cleanup/reaper marker types for contracts only; scheduled behavior remains owned by plan 04-07.
 
 ### Roadmap Evolution
 
@@ -325,6 +329,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-11T12:23:58.714Z
+Last session: 2026-05-11T12:49:47.891Z
 Stopped at: Completed 04-04-PLAN.md
 Resume file: None
