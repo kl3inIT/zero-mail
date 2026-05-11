@@ -1,9 +1,9 @@
 ---
 phase: 4
 phase_dir: .planning/phases/04-triage-convergence-hero
-convergence_cycle: 1
+convergence_cycle: 2
 reviewers: [codex, opencode]
-reviewed_at: 2026-05-11T06:37:24Z
+reviewed_at: 2026-05-11T09:39:09Z
 plans_reviewed:
   - 04-00-PLAN.md
   - 04-01-PLAN.md
@@ -14,163 +14,251 @@ plans_reviewed:
   - 04-06-PLAN.md
   - 04-07-PLAN.md
   - 04-08-PLAN.md
-current_high: 6
+current_high: 2
 ---
 
-# Cross-AI Plan Review — Phase 4: Triage Convergence (Hero)
+# Cross-AI Plan Review -- Phase 4: Triage Convergence (Hero) -- Convergence Cycle 2
 
-Reviewed by 2 AI systems: **Codex** (gpt-5.x via `codex exec`) and **OpenCode** (`minimax-m2.5-free`). Claude CLI not available in this environment (running inside Claude Code — skipped for independence). OpenCode's default `nemotron-3-super-free` model returned a provider error; review obtained via `minimax-m2.5-free` fallback.
+Reviewed by 2 AI systems: **Codex** (`gpt-5.x` via `codex exec`) and **OpenCode** (`minimax-m2.5-free`). Claude CLI not available in this environment (running inside Claude Code -- skipped for independence). OpenCode's default `nemotron-3-super-free` model returned a provider error again; review obtained via `minimax-m2.5-free` fallback.
+
+Cycle 1 raised **6 HIGH** concerns. This cycle assessed whether the revised plans address them, plus surfaced new issues.
 
 ---
 
 ## Codex Review
 
-## Summary
-The plan set is unusually thorough and covers the right architectural pillars: Modulith event durability, explicit no-send guards, audit-first idempotency, shadow mode, undo, sender safety net, and closure verification. I would not execute it as-is yet. The biggest risks are in the audit mini-saga transaction boundaries, `SAVE_DRAFT` idempotency/state capture, repository methods missing for non-APPLIED decisions, and sender-safety-net data modeling. These are fixable, but several are phase-goal risks rather than polish issues.
+**Summary**
 
-## Strengths
-- Good defense-in-depth for auto-send: runtime allow-list, Gmail writer boundary, repo-wide send ban, and `RuleActionType.SEND` existence guard.
-- Strong privacy posture: metadata-only event payloads, no prompt/completion storage, content-free logs, and a closure privacy sweep.
-- Modulith JDBC event registry is the right tool for durable in-process after-commit handoff.
-- The unique `args_hash` idea correctly avoids collapsing multi-label actions from one rule.
-- Closure plan is solid: full `clean check`, Wave-0 contract convergence, requirements traceability, validation sign-off, UAT doc.
+The revised plans materially improve the cycle 1 version. Most prior HIGH issues are now addressed with concrete plan changes: `NULLS NOT DISTINCT`, a `TriageAuditWriter` validation seam, `gmail_change_token`, terminal audit inserts, protected-sender observations, and all-action sender-net gating. The main remaining risk is the audit mini-saga: the plan now names the right phases, but because `@ApplicationModuleListener` itself is transactional, the Gmail write may still run inside the listener’s ambient transaction unless explicitly suspended. The plan also still admits a `SAVE_DRAFT` duplicate-draft residual after a post-Gmail/pre-finalize crash.
 
-## Concerns
-- **[HIGH] 04-05-PLAN: PENDING → Gmail → APPLIED inside `@ApplicationModuleListener` is transactionally unsafe.** `@ApplicationModuleListener` runs in a new transaction. If PENDING insert, Gmail call, and markApplied happen inside that same transaction, the reservation is not durable before the external side effect. A crash after `drafts.create` but before commit can create duplicate drafts on retry. The saga needs explicit small transactions: reserve PENDING commit, external Gmail call outside DB transaction, then mark APPLIED/FAILED in a second transaction.
+**Prior HIGH Concerns — Resolution Status**
 
-- **[HIGH] 04-05-PLAN / 04-07-PLAN: existing PENDING conflict handling can lose actions.** The plan says empty `RETURNING` means "skip Gmail". If a previous attempt committed PENDING but crashed before Gmail, retry skips forever and the reaper marks FAILED. Define lease/attempt semantics, or make retry able to reclaim stale PENDING rows.
+| Prior concern | Status | Evidence |
+|---|---:|---|
+| PENDING → Gmail → APPLIED transaction boundaries unsafe | **PARTIALLY RESOLVED** | 04-05 Task 2 introduces `TriageAuditSaga` with reserve/finalize as `REQUIRES_NEW` and Gmail write as a plain non-transactional phase. However 04-05 Task 3 also keeps `@ApplicationModuleListener`, which the plan says expands to `@Transactional(REQUIRES_NEW)`. A plain method called inside that listener still runs under the ambient listener transaction unless transaction propagation is explicitly suspended. 04-05 threat model also admits duplicate `drafts.create` can still occur after a phase-2 crash that actually succeeded. |
+| Existing PENDING conflict handling can lose actions | **FULLY RESOLVED** | 04-02 Task 1 adds `attempt_count` / `last_attempt_at`; 04-02 Task 3 adds `reclaimStalePending`; 04-05 Task 2 uses stale-lease reclaim instead of skip-forever; 04-07 Task 3 adds a pending reaper. |
+| `SAVE_DRAFT` idempotency hash cannot include `draftId` | **FULLY RESOLVED** | 04-02 Task 2 states `args_hash` is over pre-write intent only and asserts `SaveDraft(instr,null,thr)` hashes equal to `SaveDraft(instr,"draft-123",thr)`. 04-05 Task 2 stores `draftId` as `external_ref` after Gmail success. |
+| Audit repository surface incomplete: shadow/rejected states and `gmail_change_token` | **FULLY RESOLVED, with cleanup needed** | 04-02 Task 3 adds `markApplied(auditId, tenantId, externalRef, gmailChangeToken)`, `insertAuditTerminalIfAbsent`, and `markShadowLogged`; 04-05 Task 2/3 use direct terminal inserts for `SHADOW_LOGGED`, `REJECTED_BY_SAFETY_NET`, and `REJECTED_BY_SAFETY_POLICY`. Minor inconsistency: 04-02 must-haves mention `markRejectedBySafetyNet/Policy`, but the task body intentionally uses `insertTerminal` instead. |
+| Native audit insert bypasses entity validation | **FULLY RESOLVED** | 04-02 Task 3 introduces `TriageAuditWriter` as the only sanctioned native-insert path, validating and canonicalizing before `insertAuditPendingIfAbsent` / `insertAuditTerminalIfAbsent`. |
+| Nullable `rule_id` breaks idempotency unique index | **FULLY RESOLVED** | 04-02 Task 1 requires a PostgreSQL `NULLS NOT DISTINCT` unique index on `(tenant_id, gmail_message_id, rule_id, action_type, args_hash)` and a Testcontainers assertion. |
+| Sender-safety-net endpoint has no protected-sender source | **FULLY RESOLVED** | 04-02 Task 1 adds `tenant_protected_sender_observation`; 04-04 Task 3 upserts protected observations; 04-06 Task 2 makes `GET /api/triage/sender-safety-net` read that source joined with opt-ins. |
+| Sender safety net only gates archive/save-draft | **FULLY RESOLVED** | 04-04 objective/must-haves and 04-05 Task 3 explicitly gate **all** actions, including label, when `senderProtected` is true. |
 
-- **[HIGH] 04-02-PLAN / 04-05-PLAN: `SAVE_DRAFT` idempotency hash cannot include `draftId`.** `TriageActionResult.SaveDraft` requires `draftId`, but `args_hash` is computed before Gmail creates the draft. Split stable request args from Gmail result state, or compute `args_hash` only from pre-write action intent and store `draftId` separately after success.
+**Strengths**
 
-- **[HIGH] 04-02-PLAN / 04-05-PLAN: repository surface does not support all decisions.** 04-02 only plans `insertAuditPendingIfAbsent`, `markApplied`, `markFailed`, `markReverted`. 04-05 needs `SHADOW_LOGGED`, `REJECTED_BY_SAFETY_NET`, and `REJECTED_BY_SAFETY_POLICY`. Add explicit narrow insert/transition methods and update the ArchUnit allow-list.
+- Stronger audit model: terminal rejected/shadow rows, `gmail_change_token`, `decided_at`, lease columns, and purge coverage are now planned explicitly.
+- Sender safety net is now product-complete for backend/REST: protected observations, hashed Redis key, escaped Gmail query token, opt-in override, and all-action suppression.
+- Test-spine revisions address the compile-RED problem by using reflection/FQN strings, so targeted test runs remain usable.
+- Privacy posture is reinforced by `semanticEvalContent` constraints, hashed sender logs, prompt/completion observation disabling, and a final `TriagePrivacySweepTest`.
+- Closure plan is much better: full `clean check`, no orphaned Wave-0 disables, validation sign-off, and UAT coverage labels.
 
-- **[HIGH] 04-02-PLAN: native audit insert bypasses entity validation.** `@PrePersist`/getter validation on `TriageAuditEntity` will not protect `insertAuditPendingIfAbsent` native SQL. Put validation/canonicalization in a custom repository/service method before the native insert.
+**New Concerns**
 
-- **[HIGH] 04-02-PLAN: nullable `rule_id` breaks the unique idempotency index.** PostgreSQL unique indexes treat NULLs as distinct unless `NULLS NOT DISTINCT` is used. Either make `rule_id` non-null for every proposal-derived audit row, or define a null-safe unique index.
+- **[HIGH] Gmail writes may still run inside the listener transaction.** 04-05 Task 3 says `@ApplicationModuleListener` is transactional; 04-05 Task 2 says the Gmail phase is non-transactional, but non-transactional code invoked inside a transactional listener still participates in the ambient transaction. Use `@Transactional(propagation = NOT_SUPPORTED)` around the Gmail phase, move the listener annotation to a non-transactional adapter, or use a transaction template that suspends the listener transaction.
 
-- **[HIGH] 04-04-PLAN / 04-06-PLAN: sender safety net endpoint has no real protected-sender source.** `GET /api/triage/sender-safety-net` is planned to list opt-ins, not protected senders discovered by triage. To meet TRG-08, persist protected sender observations or query audit rows with enough sender metadata.
+- **[HIGH] The 2-minute reaper/lease can mark a live Gmail attempt as FAILED.** 04-05 Task 2 uses a 2-minute lease; 04-07 Task 3 flips stale PENDING rows to FAILED at the same cutoff. If Gmail or the process stalls past 2 minutes, the reaper can mark FAILED while the original write later succeeds, leaving Gmail changed but audit non-undoable.
 
-- **[HIGH] 04-05-PLAN: sender safety net only gates archive/save-draft.** The requirement says frequent/important senders are "not auto-acted on" until opt-in. Applying a label is still an automated Gmail write. Either gate all actions or explicitly amend the requirement.
+- **[MEDIUM] Unsupported action proposals may fail before `REJECTED_BY_SAFETY_POLICY` is written.** 04-05 Task 3 builds `TriageActionResult preWriteIntent` before calling `TriageSafetyPolicy.gate`. If a future/non-allow-listed action has no `TriageActionResult` variant, conversion can throw before the safety-policy audit row is inserted.
 
-- **[MEDIUM] 04-04-PLAN: Redis key leaks raw sender email.** The value stores only a boolean, but the key includes `{lower(senderEmail)}`. Use a keyed hash in the Redis key and keep raw email only where the product needs to display it.
+- **[MEDIUM] RuleActionType naming is inconsistent across plans.** 04-04 uses `{LABEL, ARCHIVE, SAVE_DRAFT}` while 04-05 uses `APPLY_LABEL` / `ARCHIVE_SKIP_INBOX`. Normalize the exact enum constants before execution.
 
-- **[MEDIUM] 04-04-PLAN: Gmail search query needs input hardening.** `to:<senderEmail>` is built from untrusted input. Validate/canonicalize the email and quote/escape it for Gmail search. Also prefer request body/query param over a path variable for opt-in.
+- **[MEDIUM] `SaveDraft.draftId` storage contract is inconsistent.** 04-02 says post-write `draftId` lives in `action_args_json`, but `markApplied` only updates `external_ref`. Undo can use `external_ref`, but the JSON contract should be changed or an update added.
 
-- **[MEDIUM] 04-07-PLAN: failed Modulith publications are not retried.** The plan mentions `FailedEventPublications` but only schedules `IncompleteEventPublications`. If listener failures move to failed publications, the retry job misses them.
+**Suggestions**
 
-- **[MEDIUM] 04-07-PLAN: purge timestamp is wrong for shadow/rejected rows.** Purge uses `applied_at`, but `SHADOW_LOGGED` and rejected rows likely have null `applied_at`. Use `created_at`, `decided_at`, or `COALESCE(applied_at, created_at)` for retention.
+- Make the saga’s Gmail phase explicitly `NOT_SUPPORTED` and add a test/assertion that no transaction is active during `TriageGmailWriter` calls.
+- Add a lease owner token and longer lease timeout, or have the reaper only mark rows FAILED after a much longer abandoned threshold.
+- Gate action type before converting to `TriageActionResult`; for rejected unsupported actions, store a minimal safe rejected payload.
+- Replace the stale `markRejectedBy*` references in 04-02 must-haves with the chosen `insertTerminal` design.
+- Add a plan invariant that the listener is worker-only, or document why API cannot accidentally register the core listener.
 
-- **[MEDIUM] 04-00-PLAN: compile-RED test scaffolds can block later targeted tests.** Later waves run `:backend:core:test --tests ...`, but Gradle still compiles all test sources. Avoid unresolved imports in default test source sets; use reflection/string FQNs, separate source set, or real placeholders.
+**Risk Assessment**
 
-- **[MEDIUM] 04-05-PLAN: possible duplicate listeners.** If both `TriageOrchestratorService` and `TriageOrchestratorAdapter` carry `@ApplicationModuleListener`, events can be handled twice. Decide one listener location.
+Overall risk: **MEDIUM-HIGH**. Most cycle 1 structural gaps are fixed, but the transaction-suspension issue is still directly on the trust-critical Gmail write path, and the pending reaper can create false audit state under slow external calls.
 
-## Suggestions
-- Add a dedicated "audit saga transaction design" task before 04-05: reserve/claim, external call, finalization, stale PENDING retry semantics, and special `SAVE_DRAFT` crash handling.
-- Redesign audit payloads as `action_request_json` plus `action_result_json` or keep `args_hash` strictly based on pre-write stable inputs.
-- Add explicit repository methods for `markShadowLogged`, `markRejectedBySafetyNet`, `markRejectedBySafetyPolicy`, and make the ArchUnit rule whitelist only those narrow transitions.
-- Add a sender-safety-net persistence model for "protected sender observed" if the REST list must be accurate.
-- Canonicalize and validate sender emails once, then reuse the normalized form for Gmail query, opt-in uniqueness, audit/list display, and cache hashing.
-- Replace Bash-style verification snippets (`grep`, `tail`, `test`) with Gradle assertions or PowerShell-safe commands for this Windows workspace.
-- Add execution-time checks against Spring AI and Spring Modulith docs in 04-01/04-03, not just 04-07.
+Remaining HIGH count: **2**  
+This includes **1 partially resolved prior HIGH** and **1 new HIGH**.
 
-## Risk Assessment
-**Overall risk: HIGH until the audit saga and sender-safety-net gaps are fixed.** The plan is directionally strong and security-conscious, but the current PENDING transaction design can either duplicate drafts or lose actions, which cuts directly against the hero feature's trust promise. After fixing the saga boundaries, `SAVE_DRAFT` state model, rejected/shadow audit transitions, and sender-safety-net persistence, the risk drops to MEDIUM.
-
-Docs checked: Spring Modulith event APIs and `@ApplicationModuleListener`; Spring AI structured JSON output; Gmail `drafts.create` and `messages.modify`; PostgreSQL `INSERT ... ON CONFLICT ... RETURNING`.
 
 ---
 
 ## OpenCode Review
 
-## Phase 4 Plan Review
+# Cross-AI Plan Review — Phase 4: Triage Convergence (Hero) — Cycle 2
 
-### Summary
+## Summary
 
-Phase 4 is a well-engineered hero convergence with 9 plans across 7 waves. The architectural spine — Modulith JDBC event registry for atomic event publication, two-phase PENDING→APPLIED audit loop, sealed `TriageActionResult` preserving the "SEND forbidden" invariant, and sender-safety-net with graceful Redis degradation — is defensively designed for a trust-critical product. Most gaps are minor naming ambiguities or underspecified internal method signatures; none are show-stoppers but 04-05 needs a clarification before execution.
+The current plan set (04-00 through 04-08) demonstrates substantial revision since Cycle 1, with detailed implementation guidance for each wave. The plans now include explicit transaction boundaries for the audit saga, lease/reclaim semantics for PENDING rows, the `gmail_change_token` population in `markApplied`, full repository transition surface including all terminal decision states, the `NULLS NOT DISTINCT` index for nullable `rule_id`, and the protected sender observation persistence. However, several concerns remain partially resolved or introduce new gaps that need clarification before execution.
 
-### Strengths
+---
 
-- **Correct idempotency pattern** — two-phase PENDING→APPLIED with `ON CONFLICT DO NOTHING RETURNING` correctly handles `users.drafts.create` (non-idempotent on Google's side) while avoiding orphan audit rows on retry
-- **Privacy-safe event payload** — `MailMessageObserved` is ids+timestamp only; `semanticEvalContent` is subject excerpt + content-free flag summary with no body/raw headers/sender display name; sender email logged hashed-only
-- **Defense-in-depth SEND prevention** — sealed `TriageActionResult` (no SEND variant) + exhaustive switch in `TriageUndoService` + `NoGmailSendAllowedTest` + `TriageGmailWriteBoundaryTest` + `RuleActionType.SEND` existence assertion; compile-time + runtime + ArchUnit layers stacked
-- **`args_hash` (raw SHA-256)** — correct rejection of the SPEC-suggested simpler unique key; canonical JSON + 32-byte hash handles the legitimate multi-label-same-rule case without collapsing it
-- **Redis graceful degradation** — `SenderSafetyNetService` uses `ObjectProvider<StringRedisTemplate>` and fails-safe (returns `protected=true`) on both Redis unavailability and Gmail outage; cache stores only a boolean, never sent counts
-- **`@Transactional` proxy-boundary correctness** — all purge/reaper schedulers follow the `CreditReserveWatchdog`/`CreditReserveWatchdogBatch` split; self-invocation trap (RESEARCH Pitfall 6) is explicitly mitigated
-- **LLM failure containment** — `DEFERRED-(error)` per node treated as `NOT_MATCHED`; deterministic-only actions still fire; no `decision=FAILED` from semantic failures alone; booleans never defaulted to false
+## Prior HIGH Concerns — Resolution Status
 
-### Concerns
+### 1. PENDING → Gmail → APPLIED inside `@ApplicationModuleListener` is transactionally unsafe
 
-**1. `gmail_change_token` not populated on PENDING→APPLIED transition** *(04-05, HIGH)*
-The orchestrator step 9f says `markApplied(reservedAuditId, tenantId, gmailDraftIdOrNull)` and notes "if `markApplied` doesn't carry the change token, add a narrow update." But `TriageAuditRepository` (04-02) only defines `markApplied(auditId, tenantId, externalRef)` — no `gmail_change_token` parameter. For **undo to work**, `restoreToInbox` needs `{"removedLabelIds":["INBOX"]}` and `removeLabel` needs `{"addedLabelId":"Label_xxx"}` from the audit row. The token must be set post-write. Two clean options: (a) extend `markApplied` signature to `markApplied(auditId, tenantId, externalRef, String gmailChangeTokenJson)` or (b) add a narrow `updateGmailChangeToken(auditId, tenantId, changeTokenJson)` called after the Gmail success. Option (a) is simpler. **Recommendation:** extend `markApplied` in 04-05 with a `gmailChangeToken` parameter, and update 04-02's `TriageAuditRepository` signature accordingly. Without this, archive/label undo is broken.
+**Status:** PARTIALLY RESOLVED
 
-**2. `markShadowLogged` repository method missing from Wave 2** *(04-02/04-05, HIGH)*
-04-05 step 9e says "transition it to SHADOW_LOGGED via a narrow `mark*` method" but 04-02's `TriageAuditRepository` only defines `markApplied` / `markFailed` / `markReverted`. There's no `markShadowLogged(UUID auditId, UUID tenantId)` with `WHERE decision='PENDING'`. Two options: (a) add `markShadowLogged` to 04-02 (cleaner — the repo knows all transitions) or (b) do the SHADOW_LOGGED insert directly in the orchestrator (skip the PENDING insert when shadow mode is known upfront, which is cleaner for shadow mode anyway). Option (b) avoids a wasted PENDING insert and is simpler: if `isTriageShadowMode`, insert directly as `decision='SHADOW_LOGGED'` and `gmail_change_token=null`; skip the two-phase loop entirely. **Recommendation:** document this clearly in 04-05 — either add `markShadowLogged` to 04-02's repo or handle direct SHADOW_LOGGED insert in the orchestrator (preferred, avoids an extra DB row + UPDATE for shadow mode).
+**Evidence:** 04-05-PLAN.md Task 2 creates `TriageAuditSaga` as a SEPARATE `@Component` with explicit `@Transactional(propagation = REQUIRES_NEW)` methods (`reservePhase`, `finalizePhase`), and the Gmail-write phase (`gmailWritePhase`) has NO `@Transactional`. The plan explicitly states: "The transaction COMMITS here — the PENDING reservation + lease are durable before any external call" and "NO DB write happens in this phase." This addresses the transaction boundary concern. However, the plan relies on a `@Lazy` self-reference to trigger the proxy, which is an anti-pattern compared to injecting a separate saga bean directly into the orchestrator. The OpenCode review suggestion to "handle direct SHADOW_LOGGED insert in the orchestrator (preferred, avoids an extra DB row + UPDATE for shadow mode)" is implemented, but the self-reference trick is fragile.
 
-**3. `TriageGmailWriteBoundaryTest` in Wave 0 vs Wave 4** *(04-00/04-04, MEDIUM)*
-04-00 Task 3 says "Modify `CallSiteEnumMembershipArchTest`" but for `TriageGmailWriteBoundaryTest` it says "Create... Wave-0 — names `TriageGmailWriter` as the single permitted Gmail-write call site; **this task makes it GREEN against a real class**." But `TriageGmailWriter` doesn't exist in Wave 0 — it's landed in 04-04. So the test created in 04-00 must compile-RED (referencing a non-existent class) and turn GREEN in 04-04. The acceptance criteria says "`./gradlew :backend:core:test --tests "*TriageGmailWriteBoundaryTest"` PASSES" after Wave 4. This is correct but the 04-00 task description is slightly misleading — it should explicitly say "create as a compile-RED stub that turns GREEN when 04-04 lands `TriageGmailWriter`." No fix needed, just clarity.
+### 2. PENDING conflict handling can lose actions (lease/attempt semantics)
 
-**4. UAT is backend+REST only; Phase 5 owns the UI** *(04-08, MEDIUM)*
-04-08 UAT creation must explicitly state that AC items like "user sees per-message audit trail" (AC #5) and "user can undo" (AC #7) are **not manually UATable** in Phase 4 — they're verified by automated contract tests. Only the REST endpoint behavior (200/409/404 responses) is UATable. If the executor creates UAT scenarios as manual steps, they should be clearly labeled "automated contract test coverage: YES / manual coverage: NO." Recommend 04-08-UAT.md use a "Coverage" column distinguishing automated vs manual.
+**Status:** FULLY RESOLVED
 
-**5. Event retry window vs daily cleanup edge case** *(04-07, LOW)*
-`TriageEventRetryJob` resubmits incomplete publications older than **5 minutes**. `TriageEventCleanupJob` deletes completed publications older than **7 days** daily at 3 AM. An event that fails repeatedly for ~5 minutes (exactly at the resubmit threshold) could be in the INCOMPLETE→resubmit→fail→INCOMPLETE cycle when the 3 AM cleanup fires. Since the 3 AM cleanup deletes **completed** publications and the cycle never reaches COMPLETED status, this is not a real issue. However, the 3 AM cron means there's no retry-after-3AM window — a stuck event could theoretically sit for ~24h. Recommend adding a counter or log line `event=triage_event_cleanup_skipped_incomplete_count` so this is observable.
+**Evidence:** 04-02-PLAN.md Task 3 adds `attempt_count` and `last_attempt_at` columns to `triage_audit` (Lease columns), and defines `reclaimStalePending(UUID auditId, UUID tenantId)` in `TriageAuditRepository` with the exact semantics: "UPDATE ... SET attempt_count = attempt_count + 1, last_attempt_at = NOW() WHERE ... AND decision = 'PENDING' AND (last_attempt_at IS NULL OR last_attempt_at < NOW() - INTERVAL '2 minutes')" returning `int` (1 = lease claimed, 0 = fresh lease held). 04-05-PLAN.md Task 2 implements the three-phase logic: fresh insert → claim lease via `reclaimStalePending`; existing PENDING → try to reclaim stale; if reclaimed → attempt Gmail; if not → skip. This directly addresses the Codex HIGH concern.
 
-### Suggestions
+### 3. SAVE_DRAFT idempotency hash cannot include `draftId`
 
-**A. Verify `spring-modulith-starter-jdbc` resolves from the existing BOM** *(04-00, MEDIUM)*
-The plan says the version "is supplied by the `spring-modulith-bom` already imported by the `zeromail.modulith-conventions` build plugin." This needs to be verified at execute time via `./gradlew :backend:core:dependencies`. If the pinned snapshot doesn't publish the JDBC starter, the plan surfaces this in the SUMMARY and stops. Good hedge, but the Research assumption (RESEARCH A1) should be re-read against Spring Modulith 2.0.6 release notes before execution.
+**Status:** FULLY RESOLVED
 
-**B. Consider adding `markApplied` overload with `gmailChangeToken`** *(04-02, MEDIUM)*
-Rather than leaving the gmail_change_token gap as a 04-05 problem, 04-02 could add a second `markApplied` overload: `markApplied(UUID auditId, UUID tenantId, String externalRef, String gmailChangeTokenJson)` alongside the existing one. This keeps the repo declaring all transitions (cleaner for the ArchUnit whitelist) and makes 04-05's orchestrator step unambiguous.
+**Evidence:** 04-02-PLAN.md Task 2 creates `TriageActionArgsCanonicalizer` with explicit Javadoc: "the hash is over pre-write action intent only — never the Gmail-returned `draftId`/`labelId`", and the canonicalizer "asserts or normalizes-away a non-null `SaveDraft.draftId` so the hash is stable across the pre-write→post-write transition." The acceptance criteria includes: "unit-asserted: `canonicalHash(SaveDraft(instr, null, thr)) == canonicalHash(SaveDraft(instr, "draft-123", thr))`." This is fully resolved.
 
-**C. `semanticEvalContent` Javadoc lock-in** *(04-05, MEDIUM)*
-The Javadoc note documenting the "v1 limitation — semantic-intent matchers see only the sanitized subject excerpt + derived flags (metadata-only triage fetch carries no body)" is critical for future maintainers. Recommend it be placed at the field declaration, the method that builds it, AND the class-level Javadoc. Also recommend adding a code comment: `// NOTE: do NOT add body/snippet/raw-header fetch here — that would require a richer Gmail API call and re-review under privacy+latency constraints.`
+### 4. Repository surface does not support all decisions
 
-**D. Consider `isTriageShadowMode` fast-path before inserting PENDING row** *(04-05, LOW)*
-If shadow mode is ON, skip the PENDING insert entirely and write directly to `decision='SHADOW_LOGGED'` with `gmail_change_token=null`. This avoids one wasted INSERT + one wasted UPDATE per shadow-mode action. Low impact in v1 (shadow mode is opt-in default-OFF) but it's cleaner.
+**Status:** FULLY RESOLVED
 
-**E. `SEND` existence assertion vs `RuleActionType.SEND` future-proofing** *(04-00, MEDIUM)*
-`NoGmailSendAllowedTest` asserts `RuleActionType.valueOf("SEND")` → `IllegalArgumentException`. If a future phase adds `RuleActionType.SEND` for v2 (auto-send), this test would fail the build — which is correct. However, the test name and message should clarify that the assertion is "SEND must not exist in the enum." Consider a separate ArchUnit rule: `noClasses().should().accessField(RuleActionType.class, "SEND")` as a more durable guard.
+**Evidence:** 04-02-PLAN.md Task 3 defines the FULL transition surface in `TriageAuditRepository`: `insertAuditPendingIfAbsent`, `insertAuditTerminalIfAbsent`, `reclaimStalePending`, `markApplied(auditId, tenantId, externalRef, gmailChangeToken)`, `markFailed`, `markReverted`, `markShadowLogged`, plus NEW methods for `markRejectedBySafetyNet` and `markRejectedBySafetyPolicy`. The `TriageAuditRepositoryBoundaryArchTest` whitelist is updated to include all seven methods. Additionally, 04-05-PLAN.md Task 2 implements `recordTerminal(SagaContext, TriageDecision)` which calls `TriageAuditWriter.insertTerminal` for direct terminal inserts (shadow/rejected), so the orchestrator never needs to transition PENDING → terminal.
 
-**F. Add `triage.semantic_eval.fanout.per_rule` Micrometer counter** *(04-05, LOW)*
-Adding a `triage.semantic_eval.fanout.per_rule.count` counter helps distinguish "how often does the fallback fire?" from "how much does the fallback cost?" This feeds the v2 adaptive-token-budget decision.
+### 5. Native audit insert bypasses entity validation
 
-### Risk Assessment
+**Status:** FULLY RESOLVED
+
+**Evidence:** 04-02-PLAN.md Task 3 creates `TriageAuditWriter` as a `@Component` that is the ONLY sanctioned way to create triage_audit rows. The writer "validates + canonicalizes + hashes a pre-write `TriageActionResult` BEFORE calling `insertAuditPendingIfAbsent`", ensuring native SQL never bypasses validation. The entity `TriageAuditEntity` also invokes the validator in its getter: "its `getActionArgsJson()` invokes `TriageActionResultJsonValidator`." This is fully resolved.
+
+### 6. Nullable `rule_id` breaks unique idempotency index
+
+**Status:** FULLY RESOLVED
+
+**Evidence:** 04-02-PLAN.md Task 1 creates `025-triage-audit.yaml` with the idempotency index declared as a raw `sql`/`createIndex` changeset using `NULLS NOT DISTINCT`: "emit it as a raw `sql`/`createIndex` changeset using `NULLS NOT DISTINCT` so NULL `rule_id` rows still conflict (PG 15+)." The acceptance criteria confirms: "a unique index on `(tenant_id, gmail_message_id, rule_id, action_type, args_hash)` declared `NULLS NOT DISTINCT`."
+
+### 7. (Divergent) Sender safety net endpoint has no protected-sender source
+
+**Status:** FULLY RESOLVED
+
+**Evidence:** 04-02-PLAN.md Task 1 creates `028-tenant-protected-sender-observation.yaml` with `tenant_protected_sender_observation` table storing canonicalized sender email + counters. 04-04-PLAN.md Task 3 implements `SenderSafetyNetService.isProtected` which "upserts a `tenant_protected_sender_observation` row for `(tenantId, canonical)`" on a protected verdict, and `listProtectedSenders` returns rows from this table. 04-06-PLAN.md Task 2 maps this to `GET /api/triage/sender-safety-net`.
+
+### 8. (Divergent) Sender safety net only gates archive/save-draft
+
+**Status:** FULLY RESOLVED
+
+**Evidence:** 04-04-PLAN.md Task 3 Javadoc explicitly states: "a protected verdict suppresses ALL auto-actions on the message (label/archive/save-draft), not just the destructive tiers — SPEC §req 8 point b says 'skip Gmail writes' with no per-tier carve-out." 04-05-PLAN.md Task 3 implements: "if `senderProtected` → `recordTerminal(sagaContext, TriageDecision.REJECTED_BY_SAFETY_NET)` for ANY action type (label included)." This is resolved per the SPEC text.
+
+### 9. (NEW from OpenCode) gmail_change_token not populated on PENDING→APPLIED
+
+**Status:** FULLY RESOLVED
+
+**Evidence:** 04-02-PLAN.md Task 3 defines `markApplied(auditId, tenantId, externalRef, gmailChangeTokenJson)` with the signature: `@Param("gmailChangeToken") String`. 04-05-PLAN.md Task 2 implements `finalizePhase` which calls `markApplied` with "the post-write change token: `{"addedLabelId":...}` / `{"removedLabelIds":["INBOX"]}` / null". This is fully resolved.
+
+---
+
+## Strengths
+
+- **Explicit three-phase audit saga** with committed REQUIRES_NEW transactions for reserve and finalize, and NO transaction around the Gmail call — this is the correct design.
+- **Lease/reclaim semantics** with `attempt_count`/`last_attempt_at` columns and the `reclaimStalePending` method resolve the "lost action on PENDING conflict" concern definitively.
+- **Pre-write-only args_hash** with the canonicalizer assertion ensures stable idempotency keys across the pre-write→post-write transition.
+- **NULLS NOT DISTINCT** index explicitly handles nullable `rule_id` in the unique constraint.
+- **Protected sender observation table** provides a real data source for the GET endpoint (TRG-08 point c).
+- **All-action sender-net gating** explicitly gates labels too, per SPEC text.
+- **TriageAuditWriter as mandatory validation seam** ensures no native SQL bypasses validation.
+- **Wave 7 closure plan** includes a privacy sweep test analogous to FND-03.
+
+---
+
+## New Concerns
+
+### HIGH
+
+1. **04-05-PLAN Task 2 uses @Lazy self-reference to trigger REQUIRES_NEW proxy** — The plan creates `TriageAuditSaga` as a SEPARATE `@Component` (correct) but then calls `self.reservePhase(...)` / `self.finalizePhase(...)` via `@Lazy TriageAuditSaga self` to ensure the proxy fires. This is an anti-pattern — the cleaner approach is for the caller (`TriageOrchestratorService`) to inject both the orchestrator and the saga, and call saga methods directly on the injected reference. The current design is fragile and could silently degrade to self-invocation (no transaction) if the `@Lazy` is removed or if the bean is ever looked up differently.
+
+### MEDIUM
+
+2. **04-04-PLAN Task 3 sender-net cache key uses HEX SHA-256, not a keyed hash** — The concern stated "Use a keyed hash in the Redis key" but the plan uses `redisCacheKeyComponent(canonical)` which returns "a hex SHA-256 (not the raw address)". This is acceptable but the term "keyed hash" (e.g., HMAC) would provide better protection against rainbow-table attacks. Current implementation is reasonable but not ideal.
+
+3. **04-05-PLAN Task 1 metadata-only fetch may not expose sanitized sender email** — The plan says "CHECK whether `RuleEvaluationInput` already exposes the sanitized FULL sender email address (not just `sanitizedSenderDomain`)" and if not, returns a wrapper. This needs verification — if `RuleEvaluationInput` doesn't carry the full sender, the wrapper approach is fine, but this is a potential gap.
+
+4. **04-07-PLAN Task 1 failed Modulith publications retry** — The plan states "CONFIRM at execute time" whether the Spring Modulith version exposes failed publications as a distinct bean. This is a research gap left to execution time, which may cause the plan to need adjustment if the version doesn't support failed publication resubmission.
+
+### LOW
+
+5. **04-08-PLAN Task 2 orphaned @Disabled check may miss tests in default source sets** — The grep "for orphaned `@Disabled("Wave 0 ...")` in the triage test trees" is good, but Gradle compiles all test sources before running targeted tests per the Wave-0 contract. The plan correctly acknowledges this but the verification should be explicit.
+
+---
+
+## Suggestions
+
+- **Refactor TriageAuditSaga injection** — Instead of using `@Lazy` self-reference, inject `TriageAuditSaga` directly into `TriageOrchestratorService` and call `saga.reservePhase(...)` / `saga.finalizePhase(...)` on the injected reference. This is cleaner and avoids the proxy-trigger trick.
+
+- **Verify RuleEvaluationInput sender field** — Confirm in 04-05 Task 1 whether `RuleEvaluationInput` carries the full sanitized sender email. If not, the wrapper approach is acceptable but should be documented clearly.
+
+- **Confirm Spring Modulith failed publication API at execute time** — Run a quick test in 04-07 to verify whether `FailedEventPublications` exists as a distinct bean or if failed publications surface through `IncompleteEventPublications`. Adjust 04-07 Task 1 accordingly.
+
+- **Add Micrometer counter for stale-PENDING reaper flips** — 04-07 Task 3 logs `triage_pending_reaped` but should also increment a counter for observability.
+
+---
+
+## Risk Assessment
 
 **Overall: MEDIUM**
 
-The architecture is sound and the threat model is thorough (T-04-01 through T-04-08 cover the STRIDE space well). The two HIGH concerns — `gmail_change_token` population gap and missing `markShadowLogged` — are **fixable within the existing plan structure** without architectural changes, but they need clarification before Wave 5 executes to avoid rework.
+The plan set is substantially stronger than Cycle 1, with all 9 prior HIGH concerns either fully resolved or addressed with acceptable trade-offs. The remaining risks are:
 
-The highest residual risk is the **Spring Modulith JDBC starter version verification** (RESEARCH A1). If `spring-modulith-starter-jdbc` is not in the existing BOM/pin, the plan correctly surfaces this and stops, but resolving it requires a discuss-phase decision.
+- **1 PARTIALLY RESOLVED** (transaction proxy via @Lazy self-reference — fragile pattern)
+- **0 UNRESOLVED** prior HIGHs
+- **1 NEW HIGH** (the @Lazy self-reference anti-pattern)
+- **3 NEW MEDIUM** concerns (cache key hashing, metadata-only sender field verification, Modulith API confirmation deferred)
 
-The secondary risk is **execution scope creep** — Wave 5 (`TriageOrchestratorService`) is the most complex single class in Phase 4 (10-step orchestration, 3 exception paths, credit accounting, two-phase loop, shadow mode branch, sender-net gating, per-rule fan-out). The RED-by-design test spine is the right mechanism for catching nuances.
+The transaction boundary design is now correct, the lease/reclaim semantics are solid, and the idempotency model is complete. The main residual risk is the fragile self-reference injection pattern in the audit saga, which could silently break if the codebase evolves. The execution-blocking research gaps (Modulith failed publications API) are low-likelihood to derail but should be verified early.
 
-No HIGH-severity security regressions: the privacy invariant, SEND-forbidden enforcement, tenant isolation (FND-05), and sender-data handling all have multi-layer mitigations.
+Count of HIGH concerns remaining: **1** (new HIGH - @Lazy self-reference) + **0** (unresolved prior HIGHs) + **0** (partially resolved prior HIGHs counted as unresolved) = **1**
+
 
 ---
 
 ## Consensus Summary
 
-Both reviewers agree the plan set is architecturally strong and security-conscious — defense-in-depth for the no-auto-send invariant, metadata-only privacy posture, Modulith JDBC event registry for durable handoff, the `args_hash` design that avoids collapsing multi-label actions, and a thorough closure plan. The disagreement is on overall risk level: Codex rates **HIGH** (audit saga + sender-safety-net gaps are phase-goal risks), OpenCode rates **MEDIUM** (the HIGHs are fixable within the existing structure without architectural changes). Both want clarifications landed before Wave 5 executes.
+Both reviewers agree the cycle-1 -> cycle-2 revision is **substantial and effective**: 7-9 of the prior HIGH concerns (depending on how the divergent-view items are counted) are now **FULLY RESOLVED** in the current plans -- `NULLS NOT DISTINCT` idempotency index, the `TriageAuditWriter` validation seam, `gmail_change_token` plumbed through `markApplied`, terminal audit inserts for shadow/rejected states, lease/reclaim (`attempt_count` / `last_attempt_at` + `reclaimStalePending`), pre-write-only `args_hash`, the `tenant_protected_sender_observation` table behind `GET /api/triage/sender-safety-net`, and all-action sender-net gating (label included). Neither reviewer found any cycle-1 HIGH still flatly UNRESOLVED.
+
+The disagreement is on **overall risk** and **the residual count**: Codex rates **MEDIUM-HIGH** and counts **2 remaining HIGH** (1 partially-resolved prior HIGH on the audit-saga transaction boundary + 1 new HIGH on the reaper/lease window); OpenCode rates **MEDIUM** and counts **1 remaining HIGH** (the same audit-saga concern, framed as the fragile `@Lazy` self-reference proxy trick). Taking the union of reviewer-flagged HIGHs, **2 HIGH concerns remain** before this phase is execution-ready.
 
 ### Agreed Strengths
-- Multi-layer SEND prevention (sealed `TriageActionResult`, exhaustive switch, runtime allow-list, ArchUnit boundary tests, `RuleActionType.SEND` existence guard).
-- Privacy-safe event payload — `MailMessageObserved` ids+timestamp only; no body/prompt/completion storage; content-free / hashed-sender logs; closure privacy sweep.
-- Modulith JDBC event registry is the right tool for durable in-process after-commit handoff.
-- `args_hash` (canonical JSON + raw SHA-256) correctly handles the multi-label-same-rule case rather than collapsing it.
-- `@Transactional` proxy-boundary correctness on purge/reaper schedulers (watchdog/batch split, self-invocation trap mitigated).
-- Solid closure plan: full `clean check`, Wave-0 contract convergence, requirements traceability, validation sign-off, UAT doc.
+
+- Multi-layer SEND prevention preserved (sealed `TriageActionResult`, exhaustive switch, runtime allow-list, ArchUnit boundary tests, `RuleActionType.SEND` existence guard).
+- Privacy posture reinforced: metadata-only `MailMessageObserved` / `semanticEvalContent`, hashed sender logs, prompt/completion observation disabled, closure `TriagePrivacySweepTest`.
+- Lease/reclaim semantics (`attempt_count` / `last_attempt_at` + `reclaimStalePending`) definitively close the "lost action on PENDING conflict" gap.
+- Pre-write-only `args_hash` with the canonicalizer equality assertion gives stable idempotency keys across the pre-write->post-write transition.
+- `NULLS NOT DISTINCT` unique index correctly handles nullable `rule_id`.
+- `TriageAuditWriter` as the sole sanctioned native-insert path closes the entity-validation-bypass gap.
+- `tenant_protected_sender_observation` table gives `GET /api/triage/sender-safety-net` a real protected-sender source (TRG-08); all-action gating matches the SPEC text.
+- Test-spine revisions (reflection / FQN strings) keep targeted `--tests` runs usable despite the Wave-0 RED scaffold.
+- Closure plan: full `clean check`, no orphaned `@Disabled` Wave-0 markers, validation sign-off, UAT with coverage labels.
 
 ### Agreed Concerns (highest priority)
-1. **[HIGH] 04-02/04-05 — Audit repository surface is incomplete.** The repo only declares `insertAuditPendingIfAbsent`/`markApplied`/`markFailed`/`markReverted`. The orchestrator additionally needs `SHADOW_LOGGED`, `REJECTED_BY_SAFETY_NET`, `REJECTED_BY_SAFETY_POLICY` transitions and a way to set `gmail_change_token` post-write (needed for undo to work). Add explicit narrow methods (or direct inserts) and update the ArchUnit allow-list. *(Both reviewers; Codex frames it as missing transitions, OpenCode frames it as the `gmail_change_token` + `markShadowLogged` gap — same root issue.)*
-2. **[HIGH] 04-05 — Two-phase PENDING→Gmail→APPLIED transaction boundaries.** PENDING reservation must be durably committed before the external Gmail call; the call must run outside a DB transaction; APPLIED/FAILED must be a separate transaction. Also define lease/attempt semantics so a crashed-mid-write PENDING row can be reclaimed rather than skipped forever (which would lose the action). *(Codex HIGH; OpenCode touches the same retry-window edge case at LOW.)*
-3. **[HIGH] 04-02 — Native audit insert bypasses entity validation.** `@PrePersist`/getter validation on `TriageAuditEntity` won't run for the `insertAuditPendingIfAbsent` native SQL — move validation/canonicalization into a service/custom-repo method before the native insert. *(Codex; consistent with OpenCode's note that the orchestrator is the most complex class and needs the test spine.)*
-4. **[MEDIUM] 04-00 — Compile-RED test scaffolds vs targeted test runs.** Later waves run `--tests ...` but Gradle still compiles all test sources; unresolved imports in the default test source set can break the build. Use reflection/string FQNs, a separate source set, or real placeholder classes. Both reviewers flag the Wave-0 RED spine clarity (OpenCode specifically for `TriageGmailWriteBoundaryTest`).
-5. **[MEDIUM] 04-00 — Verify `spring-modulith-starter-jdbc` resolves from the existing BOM/pin** before Wave 1; re-read RESEARCH A1 against current Spring Modulith release notes. Both reviewers call this out as the top execution-blocking risk.
-6. **[MEDIUM] 04-04 — Sender-email handling needs hardening.** Codex: Redis key leaks raw lowercased sender email (hash the key); Gmail `to:<senderEmail>` search is built from untrusted input (validate/canonicalize/escape; prefer query param over path variable). OpenCode endorses canonicalize-once-reuse-everywhere.
+
+1. **[HIGH] Audit-saga transaction boundary is not airtight.** Both reviewers flag the same root issue from different angles. Codex: `@ApplicationModuleListener` is itself transactional (the plan expands it to `@Transactional(REQUIRES_NEW)`), so the "non-transactional" Gmail-write phase invoked inside it still participates in the ambient listener transaction unless propagation is explicitly suspended -- fix with `@Transactional(propagation = NOT_SUPPORTED)` around the Gmail phase, or move the listener annotation to a non-transactional adapter, or use a `TransactionTemplate` that suspends. OpenCode: the `@Lazy TriageAuditSaga self` self-reference proxy trick used to fire `REQUIRES_NEW` is fragile and could silently degrade to a no-transaction self-invocation -- inject the saga bean directly into `TriageOrchestratorService` instead. The plan's own threat model still admits a duplicate `drafts.create` residual after a post-Gmail / pre-finalize crash. -> counts as **1 partially-resolved prior HIGH**.
+2. **[HIGH -- Codex only] 2-minute reaper/lease can mark a live Gmail attempt FAILED.** 04-05 Task 2 uses a 2-minute lease; 04-07 Task 3's pending reaper flips stale PENDING rows to FAILED at the same cutoff. A Gmail/process stall past 2 minutes lets the reaper mark FAILED while the original write later succeeds -- Gmail changed but audit non-undoable. Fix: lease owner token + longer abandoned threshold than the retry lease, or only FAILED-flip after a much longer window. -> counts as **1 new HIGH**.
+
+### Other Concerns (MEDIUM / LOW)
+
+- **[MEDIUM] Unsupported-action proposals may throw before `REJECTED_BY_SAFETY_POLICY` is written** -- 04-05 Task 3 builds `TriageActionResult preWriteIntent` before `TriageSafetyPolicy.gate`; a non-allow-listed action with no `TriageActionResult` variant can throw before the safety-policy audit row exists. Gate the action *type* before conversion; store a minimal safe rejected payload. (Codex)
+- **[MEDIUM] `RuleActionType` constant names inconsistent across plans** -- 04-04 uses `{LABEL, ARCHIVE, SAVE_DRAFT}`; 04-05 uses `APPLY_LABEL` / `ARCHIVE_SKIP_INBOX`. Normalize before execution. (Codex)
+- **[MEDIUM] `SaveDraft.draftId` storage contract inconsistent** -- 04-02 says post-write `draftId` lives in `action_args_json`; `markApplied` only updates `external_ref`. Pick one. (Codex)
+- **[MEDIUM] 04-02 must-haves still reference `markRejectedBySafetyNet/Policy` while the task body uses `insertTerminal`** -- stale reference; reconcile. (Codex; OpenCode reads the resolved `insertTerminal`/`recordTerminal` design as already in place.)
+- **[MEDIUM] Sender-net Redis cache key uses hex SHA-256, not a keyed hash (HMAC)** -- acceptable, but HMAC would harden against rainbow-table lookups of known addresses. (OpenCode)
+- **[MEDIUM] `RuleEvaluationInput` may not expose the full sanitized sender email** -- 04-05 Task 1 leaves this as an execute-time CHECK with a wrapper fallback; verify early. (OpenCode)
+- **[MEDIUM] Spring Modulith failed-publications retry API unconfirmed** -- 04-07 Task 1 defers to execute time whether `FailedEventPublications` is a distinct bean or failures surface via `IncompleteEventPublications`; could force a plan tweak. (OpenCode; echoes a cycle-1 MEDIUM not fully closed.)
+- **[LOW] Wave-0 `@Disabled` orphan check** -- Gradle compiles all test sources before targeted runs; the grep-for-orphans check is good but should be explicit. (OpenCode)
 
 ### Divergent Views
-- **Overall risk level:** Codex says HIGH (the audit-saga and sender-safety-net data-model gaps cut against the hero feature's trust promise); OpenCode says MEDIUM (fixable in place, the RED test spine catches the rest). Worth resolving by landing the audit-repository + saga-boundary clarifications, then re-rating.
-- **Sender safety net data source (TRG-08):** Codex flags as HIGH that `GET /api/triage/sender-safety-net` lists *opt-ins* but has no source of *protected senders discovered by triage* — to truly meet TRG-08 it needs a "protected sender observed" persistence model or audit-row query. OpenCode does not raise this. Needs a planner decision: is the endpoint listing opt-ins (current plan) sufficient for TRG-08, or does the spec require surfacing the auto-detected protected set?
-- **Sender safety net action scope:** Codex flags as HIGH that the net only gates archive/save-draft while label writes still proceed — the requirement says protected senders are "not auto-acted on." Either gate all actions on protected senders or explicitly amend the requirement. OpenCode does not raise this. Needs a planner/requirement decision.
-- **Modulith failed-publications retry:** Codex flags (MEDIUM) that `TriageEventRetryJob` only schedules `IncompleteEventPublications`, not `FailedEventPublications`. OpenCode treats the retry/cleanup interaction as a non-issue at LOW. Worth confirming which registry view actually holds listener-failure rows in Spring Modulith 2.0.x.
+
+- **Overall risk:** Codex says **MEDIUM-HIGH** (the saga transaction-suspension issue is still on the trust-critical Gmail write path and the reaper can create false audit state); OpenCode says **MEDIUM** (the design is correct in shape, only the `@Lazy` injection pattern is fragile). Resolved by landing the saga-boundary fix (explicit `NOT_SUPPORTED` / direct saga injection) and the reaper-lease separation, then re-rating.
+- **Reaper/lease window as a HIGH:** Codex raises it as a new HIGH; OpenCode considered lease/reclaim "fully resolved" and did not flag the FAILED-flip-vs-live-attempt race. Worth a planner decision: separate the reaper's "abandoned" threshold from the retry lease, or accept the residual.
+- **Audit-saga concern severity:** Codex frames it as a *partially-resolved prior HIGH* (transaction boundary still leaky); OpenCode frames the *same* code as a *new HIGH* about the `@Lazy` anti-pattern but otherwise marks the prior boundary concern resolved. Same fix closes both framings.
+
+---
+
+## Recommendation
+
+Run `/gsd-plan-phase 4 --reviews` to fold these in. Two HIGH items to land before execution:
+1. Make the audit saga's Gmail-write phase explicitly transaction-suspending (`@Transactional(propagation = NOT_SUPPORTED)` or a suspending `TransactionTemplate`), and inject `TriageAuditSaga` directly into the orchestrator rather than via a `@Lazy` self-reference; add a test asserting no transaction is active during `TriageGmailWriter` calls.
+2. Decouple the pending reaper's "abandoned" threshold from the 2-minute retry lease (longer window + lease owner token) so a slow-but-live Gmail attempt is never flipped to FAILED.
+
+Then re-run `/gsd-review --phase 4` for cycle 3 to confirm `current_high` reaches 0.
