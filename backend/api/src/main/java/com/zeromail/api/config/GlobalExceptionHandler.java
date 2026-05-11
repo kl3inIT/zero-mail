@@ -1,6 +1,5 @@
 package com.zeromail.api.config;
 
-
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -33,6 +32,13 @@ import com.zeromail.core.llm.exception.SanitizationException;
 import com.zeromail.core.rules.exception.GmailPreviewUnavailableException;
 import com.zeromail.core.rules.exception.RuleValidationException;
 import com.zeromail.core.tenant.TenantContext;
+import com.zeromail.core.triage.exception.TriageAuditException;
+import com.zeromail.core.triage.exception.TriageAuditNotFoundException;
+import com.zeromail.core.triage.exception.TriageSafetyViolationException;
+import com.zeromail.core.triage.exception.TriageUndoAlreadyDoneException;
+import com.zeromail.core.triage.exception.TriageUndoExpiredException;
+import com.zeromail.core.triage.exception.TriageUndoUnsupportedActionException;
+import com.zeromail.core.triage.exception.TriageUndoWriteFailedException;
 
 import jakarta.validation.ConstraintViolationException;
 import org.jspecify.annotations.NonNull;
@@ -292,6 +298,103 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         "Gmail preview data is not currently available.",
         ErrorCodes.RULES_GMAIL_UNAVAILABLE,
         Map.of("reason", exception.reason().id()));
+  }
+
+  @ExceptionHandler(TriageUndoExpiredException.class)
+  public ResponseEntity<ProblemDetail> onTriageUndoExpired(TriageUndoExpiredException exception) {
+    log.warn(
+        "event=triage_undo_rejected tenantId={} reason={}",
+        tenantIdForLog(),
+        exception.getClass().getSimpleName());
+    return problem(
+        HttpStatus.CONFLICT,
+        "Triage undo expired",
+        "The triage action can no longer be undone.",
+        ErrorCodes.TRIAGE_UNDO_EXPIRED);
+  }
+
+  @ExceptionHandler(TriageUndoAlreadyDoneException.class)
+  public ResponseEntity<ProblemDetail> onTriageUndoAlreadyDone(
+      TriageUndoAlreadyDoneException exception) {
+    log.warn(
+        "event=triage_undo_rejected tenantId={} reason={}",
+        tenantIdForLog(),
+        exception.getClass().getSimpleName());
+    return problem(
+        HttpStatus.CONFLICT,
+        "Triage undo unavailable",
+        "The triage action is not in an undoable state.",
+        ErrorCodes.TRIAGE_UNDO_ALREADY_DONE);
+  }
+
+  @ExceptionHandler(TriageAuditException.class)
+  public ResponseEntity<ProblemDetail> onTriageAuditException(TriageAuditException exception) {
+    log.warn(
+        "event=triage_audit_rejected tenantId={} reason={}", tenantIdForLog(), exception.reason());
+    return switch (exception.reason()) {
+      case UNSUPPORTED_ACTION_TYPE ->
+          problem(
+              HttpStatus.CONFLICT,
+              "Triage undo unsupported",
+              "The triage action type cannot be undone safely.",
+              ErrorCodes.TRIAGE_UNDO_UNSUPPORTED_ACTION);
+    };
+  }
+
+  @ExceptionHandler(TriageUndoUnsupportedActionException.class)
+  public ResponseEntity<ProblemDetail> onTriageUndoUnsupportedAction(
+      TriageUndoUnsupportedActionException exception) {
+    log.warn(
+        "event=triage_undo_rejected tenantId={} reason={}",
+        tenantIdForLog(),
+        exception.getClass().getSimpleName());
+    return problem(
+        HttpStatus.CONFLICT,
+        "Triage undo unsupported",
+        "The triage action type cannot be undone safely.",
+        ErrorCodes.TRIAGE_UNDO_UNSUPPORTED_ACTION);
+  }
+
+  @ExceptionHandler(TriageAuditNotFoundException.class)
+  public ResponseEntity<ProblemDetail> onTriageAuditNotFound(
+      TriageAuditNotFoundException exception) {
+    log.warn(
+        "event=triage_audit_not_found tenantId={} reason={}",
+        tenantIdForLog(),
+        exception.getClass().getSimpleName());
+    return problem(
+        HttpStatus.NOT_FOUND,
+        "Triage audit not found",
+        "The requested triage audit entry was not found.",
+        ErrorCodes.BAD_REQUEST);
+  }
+
+  @ExceptionHandler(TriageUndoWriteFailedException.class)
+  public ResponseEntity<ProblemDetail> onTriageUndoWriteFailed(
+      TriageUndoWriteFailedException exception) {
+    log.error(
+        "event=triage_undo_write_failed tenantId={} reason={}",
+        tenantIdForLog(),
+        exception.getClass().getSimpleName());
+    return problem(
+        HttpStatus.BAD_GATEWAY,
+        "Triage undo write failed",
+        "The triage action could not be undone right now.",
+        ErrorCodes.CONFLICT);
+  }
+
+  @ExceptionHandler(TriageSafetyViolationException.class)
+  public ResponseEntity<ProblemDetail> onTriageSafetyViolation(
+      TriageSafetyViolationException exception) {
+    log.error(
+        "event=triage_safety_violation tenantId={} reason={}",
+        tenantIdForLog(),
+        exception.getClass().getSimpleName());
+    return problem(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        "Triage safety violation",
+        "The triage action violated the safety policy.",
+        ErrorCodes.TRIAGE_SAFETY_VIOLATION);
   }
 
   @ExceptionHandler(IllegalStateException.class)

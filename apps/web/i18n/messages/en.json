@@ -188,6 +188,14 @@
       "versionMismatch": "The rule changed before the action finished. Reload and try again."
     },
     "schemaMismatch": "This page needs a newer API contract. Regenerate the typed client before continuing.",
+    "triage": {
+      "safety_violation": "The triage action was blocked by a safety constraint.",
+      "undo": {
+        "already_done": "This email action has already been undone or is no longer undoable.",
+        "expired": "Triage actions can only be undone within 30 days after they are applied.",
+        "unsupported_action": "Zero Mail cannot safely undo this triage action type."
+      }
+    },
     "unknown": "An unknown error occurred. Try again or sign in again.",
     "validation": {
       "field": {
