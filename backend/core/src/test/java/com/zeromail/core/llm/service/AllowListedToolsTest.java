@@ -2,14 +2,12 @@ package com.zeromail.core.llm.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.zeromail.core.llm.application.LlmTool;
+import com.zeromail.core.llm.domain.Action;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.junit.jupiter.api.Test;
-
-import com.zeromail.core.llm.domain.Action;
-import com.zeromail.core.llm.application.LlmTool;
 
 class AllowListedToolsTest {
 
@@ -18,23 +16,23 @@ class AllowListedToolsTest {
         Set<String> toolNames = toolNames();
 
         assertThat(toolNames).containsExactlyInAnyOrder("label", "archive", "save_draft");
-        assertThat(toolNames).allSatisfy(toolName ->
-                assertThat(Action.fromFunctionName(toolName)).isNotNull());
+        assertThat(toolNames)
+                .allSatisfy(toolName -> assertThat(Action.fromFunctionName(toolName)).isNotNull());
     }
 
     @Test
     void tool_name_set_matches_action_enum() {
         Set<String> toolNames = toolNames();
-        Set<String> actionFunctionNames = Arrays.stream(Action.values())
-                .map(Action::functionName)
-                .collect(Collectors.toUnmodifiableSet());
+        Set<String> actionFunctionNames =
+                Arrays.stream(Action.values())
+                        .map(Action::functionName)
+                        .collect(Collectors.toUnmodifiableSet());
 
         assertThat(toolNames).isEqualTo(actionFunctionNames);
     }
 
     private Set<String> toolNames() {
-        return new AllowListedTools().tools().stream()
-                .map(LlmTool::name)
-                .collect(Collectors.toUnmodifiableSet());
+        return new AllowListedTools()
+                .tools().stream().map(LlmTool::name).collect(Collectors.toUnmodifiableSet());
     }
 }

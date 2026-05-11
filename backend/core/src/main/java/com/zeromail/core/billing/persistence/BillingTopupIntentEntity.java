@@ -1,16 +1,14 @@
 package com.zeromail.core.billing.persistence;
 
-import java.time.Instant;
-import java.util.UUID;
-
 import com.zeromail.core.billing.domain.BillingTopupIntentStatus;
 import com.zeromail.core.shared.persistence.AbstractTenantOwnedEntity;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "billing_topup_intent")

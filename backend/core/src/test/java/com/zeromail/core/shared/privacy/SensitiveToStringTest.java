@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
-
 import tools.jackson.databind.json.JsonMapper;
 
 class SensitiveToStringTest {
@@ -20,11 +19,13 @@ class SensitiveToStringTest {
     @Test
     void jackson_serializes_redacted() throws Exception {
         var om = JsonMapper.builder().addModule(new SensitiveJacksonModule()).build();
-        assertThat(om.writeValueAsString(Sensitive.of("super-secret"))).isEqualTo("\"***REDACTED***\"");
+        assertThat(om.writeValueAsString(Sensitive.of("super-secret")))
+                .isEqualTo("\"***REDACTED***\"");
     }
 
     @Test
     void null_value_rejected() {
-        assertThatThrownBy(() -> new Sensitive<>(null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new Sensitive<>(null))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

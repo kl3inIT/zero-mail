@@ -1,9 +1,9 @@
 package com.zeromail.api.controllers.gmail;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * W-3 mitigation: minimal unit test for {@link ConnectGmailController}.
@@ -25,15 +25,15 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ConnectGmailControllerTest {
 
-  @Test
-  void connect_redirects_to_oauth_authorization_with_reconnect_signal() {
-    var controller = new ConnectGmailController();
+    @Test
+    void connect_redirects_to_oauth_authorization_with_reconnect_signal() {
+        var controller = new ConnectGmailController();
 
-    var response = controller.connect();
+        var response = controller.connect();
 
-    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FOUND);
-    assertThat(response.getHeaders().getLocation())
-        .as("CR-03 + D-A5: must redirect to bundled OAuth with reconnect=true signal")
-        .hasToString("/oauth2/authorization/google?reconnect=true");
-  }
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FOUND);
+        assertThat(response.getHeaders().getLocation())
+                .as("CR-03 + D-A5: must redirect to bundled OAuth with reconnect=true signal")
+                .hasToString("/oauth2/authorization/google?reconnect=true");
+    }
 }

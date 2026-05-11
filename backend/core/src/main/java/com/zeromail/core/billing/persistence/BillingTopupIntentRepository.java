@@ -1,19 +1,18 @@
 package com.zeromail.core.billing.persistence;
 
+import com.zeromail.core.billing.domain.BillingTopupIntentStatus;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.zeromail.core.billing.domain.BillingTopupIntentStatus;
-
 public interface BillingTopupIntentRepository
-        extends JpaRepository<BillingTopupIntentEntity, UUID>, BillingTopupIntentTenantLookupFragment {
+        extends JpaRepository<BillingTopupIntentEntity, UUID>,
+                BillingTopupIntentTenantLookupFragment {
 
     Optional<BillingTopupIntentEntity> findByCode(String code);
 
@@ -24,13 +23,16 @@ public interface BillingTopupIntentRepository
 
     @Modifying
     @Transactional
-    @Query(value = """
+    @Query(
+            value =
+                    """
             UPDATE billing_topup_intent
                SET status = 'EXPIRED',
                    updated_at = CURRENT_TIMESTAMP
              WHERE status = 'PENDING'
                AND expires_at < :now
-            """, nativeQuery = true)
+            """,
+            nativeQuery = true)
     int expireStale(@Param("now") Instant now);
 
     /**
@@ -44,7 +46,9 @@ public interface BillingTopupIntentRepository
      * {@code updated_at} is set in the query as well.
      */
     @Modifying
-    @Query(value = """
+    @Query(
+            value =
+                    """
             UPDATE billing_topup_intent
                SET status = 'PAID',
                    paid_at = CURRENT_TIMESTAMP,
@@ -53,7 +57,8 @@ public interface BillingTopupIntentRepository
                    version = version + 1
              WHERE id = :intentId
                AND status = 'PENDING'
-            """, nativeQuery = true)
+            """,
+            nativeQuery = true)
     int markPaidIfPending(
             @Param("intentId") UUID intentId,
             @Param("sepayTransactionId") String sepayTransactionId);

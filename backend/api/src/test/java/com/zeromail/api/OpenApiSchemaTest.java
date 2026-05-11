@@ -1,17 +1,16 @@
 package com.zeromail.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.zeromail.api.security.TestSessionSupport;
+import com.zeromail.api.support.ApiPostgresTestBase;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.RestClient;
-
-import com.zeromail.api.security.TestSessionSupport;
-import com.zeromail.api.support.ApiPostgresTestBase;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @ActiveProfiles("test")
 @Import(TestSessionSupport.class)

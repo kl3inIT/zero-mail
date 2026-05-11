@@ -2,9 +2,7 @@ package com.zeromail.core.llm.application;
 
 import java.util.Objects;
 
-/**
- * Vendor-neutral tool-call result emitted by a model adapter.
- */
+/** Vendor-neutral tool-call result emitted by a model adapter. */
 public record RawToolCall(String functionName, String argsJson) {
 
     public RawToolCall {

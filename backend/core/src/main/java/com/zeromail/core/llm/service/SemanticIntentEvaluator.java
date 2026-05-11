@@ -11,6 +11,6 @@ import java.util.Map;
  */
 public interface SemanticIntentEvaluator {
 
-  Map<String, Boolean> evaluate(
-      CallSite callSite, String sanitizedMessageContent, List<SemanticIntentRequest> intents);
+    Map<String, Boolean> evaluate(
+            CallSite callSite, String sanitizedMessageContent, List<SemanticIntentRequest> intents);
 }

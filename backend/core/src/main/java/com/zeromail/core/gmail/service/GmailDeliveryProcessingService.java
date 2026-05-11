@@ -1,17 +1,5 @@
 package com.zeromail.core.gmail.service;
 
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.History;
@@ -25,6 +13,16 @@ import com.zeromail.core.gmail.persistence.MailMessageObservedRepository;
 import com.zeromail.core.gmail.persistence.PubSubDeliveryEntity;
 import com.zeromail.core.gmail.persistence.PubSubDeliveryRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
@@ -40,13 +38,14 @@ public class GmailDeliveryProcessingService {
     private final RefreshTokenCipher refreshTokenCipher;
     private final ApplicationEventPublisher applicationEventPublisher;
 
-    public GmailDeliveryProcessingService(PubSubDeliveryRepository deliveryRepository,
-                                          MailMessageObservedRepository observedRepository,
-                                          GmailConnectionService connectionService,
-                                          GmailConnectionRepository connectionRepository,
-                                          GmailApiClientFactory gmailApiClientFactory,
-                                          RefreshTokenCipher refreshTokenCipher,
-                                          ApplicationEventPublisher applicationEventPublisher) {
+    public GmailDeliveryProcessingService(
+            PubSubDeliveryRepository deliveryRepository,
+            MailMessageObservedRepository observedRepository,
+            GmailConnectionService connectionService,
+            GmailConnectionRepository connectionRepository,
+            GmailApiClientFactory gmailApiClientFactory,
+            RefreshTokenCipher refreshTokenCipher,
+            ApplicationEventPublisher applicationEventPublisher) {
         this.deliveryRepository = deliveryRepository;
         this.observedRepository = observedRepository;
         this.connectionService = connectionService;
@@ -61,12 +60,19 @@ public class GmailDeliveryProcessingService {
         long webhookHistoryId = delivery.getHistoryId();
 
         try {
-            GmailConnectionEntity connection = connectionRepository.findByTenantId(tenantId)
-                    .orElseThrow(() -> new IllegalStateException("No connection for tenantId: " + tenantId));
+            GmailConnectionEntity connection =
+                    connectionRepository
+                            .findByTenantId(tenantId)
+                            .orElseThrow(
+                                    () ->
+                                            new IllegalStateException(
+                                                    "No connection for tenantId: " + tenantId));
 
-            String decryptedRefreshToken = new String(
-                    refreshTokenCipher.decrypt(connection.getRefreshTokenEncrypted(), tenantId.toString()),
-                    StandardCharsets.UTF_8);
+            String decryptedRefreshToken =
+                    new String(
+                            refreshTokenCipher.decrypt(
+                                    connection.getRefreshTokenEncrypted(), tenantId.toString()),
+                            StandardCharsets.UTF_8);
             GmailApiClientFactory.TokenRefreshResult tokenResult =
                     gmailApiClientFactory.refreshAccessToken(decryptedRefreshToken);
             Gmail gmail = gmailApiClientFactory.buildGmailClient(tokenResult.accessToken().value());
@@ -75,20 +81,24 @@ public class GmailDeliveryProcessingService {
             if (savedHistoryPointer == null) {
                 connectionService.markHistoryLost(tenantId, webhookHistoryId);
                 deliveryRepository.updateStatus(delivery.getId(), "PROCESSED");
-                log.warn("event=gmail_history_missing_pointer tenantId={} new_pointer={}", tenantId, webhookHistoryId);
+                log.warn(
+                        "event=gmail_history_missing_pointer tenantId={} new_pointer={}",
+                        tenantId,
+                        webhookHistoryId);
                 return;
             }
 
             int newObservations = 0;
             String pageToken = null;
             do {
-                var historyListRequest = gmail.users()
-                        .history()
-                        .list("me")
-                        .setStartHistoryId(BigInteger.valueOf(savedHistoryPointer))
-                        .setHistoryTypes(List.of("messageAdded"))
-                        .setLabelId("INBOX")
-                        .setMaxResults(500L);
+                var historyListRequest =
+                        gmail.users()
+                                .history()
+                                .list("me")
+                                .setStartHistoryId(BigInteger.valueOf(savedHistoryPointer))
+                                .setHistoryTypes(List.of("messageAdded"))
+                                .setLabelId("INBOX")
+                                .setMaxResults(500L);
                 if (pageToken != null) {
                     historyListRequest.setPageToken(pageToken);
                 }
@@ -99,14 +109,19 @@ public class GmailDeliveryProcessingService {
 
             connectionRepository.updateLastSyncedHistoryIdMonotonic(tenantId, webhookHistoryId);
             deliveryRepository.updateStatus(delivery.getId(), "PROCESSED");
-            log.info("event=gmail_history_processed tenantId={} batch_size=1 new_observations={}",
-                    tenantId, newObservations);
+            log.info(
+                    "event=gmail_history_processed tenantId={} batch_size=1 new_observations={}",
+                    tenantId,
+                    newObservations);
         } catch (GoogleJsonResponseException googleResponseException) {
             if (googleResponseException.getStatusCode() == 404) {
                 connectionService.markHistoryLost(tenantId, webhookHistoryId);
                 deliveryRepository.updateStatus(delivery.getId(), "PROCESSED");
-                log.warn("event=gmail_history_lost tenantId={} expired_history_id={} new_pointer={}",
-                        tenantId, delivery.getHistoryId(), webhookHistoryId);
+                log.warn(
+                        "event=gmail_history_lost tenantId={} expired_history_id={} new_pointer={}",
+                        tenantId,
+                        delivery.getHistoryId(),
+                        webhookHistoryId);
             } else {
                 handleRetryableFailure(delivery, tenantId);
             }
@@ -119,7 +134,8 @@ public class GmailDeliveryProcessingService {
         }
     }
 
-    private int observeInboxMessages(Gmail gmail, UUID tenantId, ListHistoryResponse historyResponse)
+    private int observeInboxMessages(
+            Gmail gmail, UUID tenantId, ListHistoryResponse historyResponse)
             throws java.io.IOException {
         int newObservations = 0;
         List<History> historyList = historyResponse.getHistory();
@@ -137,34 +153,39 @@ public class GmailDeliveryProcessingService {
                     continue;
                 }
 
-                Message gmailMessage = gmail.users()
-                        .messages()
-                        .get("me", historyMessage.getId())
-                        .setFormat("metadata")
-                        .setFields("id,threadId,labelIds,internalDate")
-                        .execute();
+                Message gmailMessage =
+                        gmail.users()
+                                .messages()
+                                .get("me", historyMessage.getId())
+                                .setFormat("metadata")
+                                .setFields("id,threadId,labelIds,internalDate")
+                                .execute();
                 List<String> labelIds = gmailMessage.getLabelIds();
                 if (labelIds == null || !labelIds.contains("INBOX")) {
                     continue;
                 }
 
-                int insertedCount = observedRepository.insertObservedIfAbsent(
-                        tenantId,
-                        gmailMessage.getId(),
-                        gmailMessage.getThreadId(),
-                        history.getId().longValueExact(),
-                        labelIds.toArray(new String[0]),
-                        gmailMessage.getInternalDate());
+                int insertedCount =
+                        observedRepository.insertObservedIfAbsent(
+                                tenantId,
+                                gmailMessage.getId(),
+                                gmailMessage.getThreadId(),
+                                history.getId().longValueExact(),
+                                labelIds.toArray(new String[0]),
+                                gmailMessage.getInternalDate());
                 if (insertedCount == 1) {
                     newObservations++;
                     Instant observedAt = Instant.now();
-                    applicationEventPublisher.publishEvent(new MailMessageObserved(
+                    applicationEventPublisher.publishEvent(
+                            new MailMessageObserved(
+                                    tenantId,
+                                    gmailMessage.getId(),
+                                    gmailMessage.getThreadId(),
+                                    observedAt));
+                    log.info(
+                            "event=mail_message_observed_published tenantId={} gmailMessageId={}",
                             tenantId,
-                            gmailMessage.getId(),
-                            gmailMessage.getThreadId(),
-                            observedAt));
-                    log.info("event=mail_message_observed_published tenantId={} gmailMessageId={}",
-                            tenantId, gmailMessage.getId());
+                            gmailMessage.getId());
                 }
             }
         }

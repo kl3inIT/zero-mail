@@ -3,27 +3,26 @@ package com.zeromail.core.llm.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
-
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.zeromail.core.billing.domain.CallSite;
-import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
-import com.zeromail.core.llm.gateway.sanitization.Sanitizer;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
-import com.zeromail.core.llm.domain.Action;
-import com.zeromail.core.llm.domain.BYOKProvider;
 import com.zeromail.core.llm.application.LlmChatRequest;
 import com.zeromail.core.llm.application.LlmChatResult;
 import com.zeromail.core.llm.application.LlmUsage;
 import com.zeromail.core.llm.application.RawToolCall;
-import com.zeromail.core.llm.exception.SafetyViolationException;
 import com.zeromail.core.llm.application.SanitizationContext;
 import com.zeromail.core.llm.application.SystemPrompts;
 import com.zeromail.core.llm.application.ToolCallResult;
+import com.zeromail.core.llm.domain.Action;
+import com.zeromail.core.llm.domain.BYOKProvider;
+import com.zeromail.core.llm.exception.SafetyViolationException;
+import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
+import com.zeromail.core.llm.gateway.sanitization.Sanitizer;
 import com.zeromail.core.tenant.TenantContext;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
@@ -33,10 +32,11 @@ class LlmGatewayActionValidatorTest {
 
     @Test
     void rejects_send_action_at_validator() {
-        RecordingLlmModelClient recordingModelClient = new RecordingLlmModelClient(
-                new LlmChatResult(
-                        List.of(new RawToolCall("send", "{\"to\":\"a@b\"}")),
-                        new LlmUsage(1, 1, "stop")));
+        RecordingLlmModelClient recordingModelClient =
+                new RecordingLlmModelClient(
+                        new LlmChatResult(
+                                List.of(new RawToolCall("send", "{\"to\":\"a@b\"}")),
+                                new LlmUsage(1, 1, "stop")));
         LlmGateway gateway = gateway(recordingModelClient);
 
         assertThatThrownBy(() -> chatWithTenant(gateway))
@@ -45,10 +45,11 @@ class LlmGatewayActionValidatorTest {
 
     @Test
     void accepts_label_action() {
-        RecordingLlmModelClient recordingModelClient = new RecordingLlmModelClient(
-                new LlmChatResult(
-                        List.of(new RawToolCall("label", "{\"value\":\"Receipts\"}")),
-                        new LlmUsage(1, 1, "stop")));
+        RecordingLlmModelClient recordingModelClient =
+                new RecordingLlmModelClient(
+                        new LlmChatResult(
+                                List.of(new RawToolCall("label", "{\"value\":\"Receipts\"}")),
+                                new LlmUsage(1, 1, "stop")));
         LlmGateway gateway = gateway(recordingModelClient);
 
         ToolCallResult toolCallResult = chatWithTenant(gateway);
@@ -59,10 +60,11 @@ class LlmGatewayActionValidatorTest {
 
     @Test
     void emits_safety_violation_log() {
-        RecordingLlmModelClient recordingModelClient = new RecordingLlmModelClient(
-                new LlmChatResult(
-                        List.of(new RawToolCall("send", "{\"to\":\"a@b\"}")),
-                        new LlmUsage(1, 1, "stop")));
+        RecordingLlmModelClient recordingModelClient =
+                new RecordingLlmModelClient(
+                        new LlmChatResult(
+                                List.of(new RawToolCall("send", "{\"to\":\"a@b\"}")),
+                                new LlmUsage(1, 1, "stop")));
         LlmGateway gateway = gateway(recordingModelClient);
         ch.qos.logback.classic.Logger gatewayLogger =
                 (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(LlmGatewayImpl.class);
@@ -77,9 +79,13 @@ class LlmGatewayActionValidatorTest {
             gatewayLogger.detachAppender(listAppender);
         }
 
-        String formattedMessages = listAppender.list.stream()
-                .map(ILoggingEvent::getFormattedMessage)
-                .reduce("", (combinedMessages, formattedMessage) -> combinedMessages + "\n" + formattedMessage);
+        String formattedMessages =
+                listAppender.list.stream()
+                        .map(ILoggingEvent::getFormattedMessage)
+                        .reduce(
+                                "",
+                                (combinedMessages, formattedMessage) ->
+                                        combinedMessages + "\n" + formattedMessage);
 
         assertThat(formattedMessages)
                 .contains("event=llm_safety_violation tenantId=" + TENANT_ID)
@@ -90,25 +96,29 @@ class LlmGatewayActionValidatorTest {
 
     @Test
     void requests_tool_choice_required() {
-        RecordingLlmModelClient recordingModelClient = new RecordingLlmModelClient(
-                new LlmChatResult(
-                        List.of(new RawToolCall("label", "{\"value\":\"Receipts\"}")),
-                        new LlmUsage(1, 1, "stop")));
+        RecordingLlmModelClient recordingModelClient =
+                new RecordingLlmModelClient(
+                        new LlmChatResult(
+                                List.of(new RawToolCall("label", "{\"value\":\"Receipts\"}")),
+                                new LlmUsage(1, 1, "stop")));
         LlmGateway gateway = gateway(recordingModelClient);
 
         chatWithTenant(gateway);
 
         assertThat(recordingModelClient.lastRequest())
-                .satisfies(request -> {
-                    assertThat(request.toolChoiceRequired()).isTrue();
-                    assertThat(request.systemPrompt()).isEqualTo(SystemPrompts.TRIAGE_SYSTEM_PROMPT);
-                });
+                .satisfies(
+                        request -> {
+                            assertThat(request.toolChoiceRequired()).isTrue();
+                            assertThat(request.systemPrompt())
+                                    .isEqualTo(SystemPrompts.TRIAGE_SYSTEM_PROMPT);
+                        });
     }
 
     @Test
     void fails_when_no_tool_call_returned() {
-        RecordingLlmModelClient recordingModelClient = new RecordingLlmModelClient(
-                new LlmChatResult(List.of(), new LlmUsage(1, 1, "stop")));
+        RecordingLlmModelClient recordingModelClient =
+                new RecordingLlmModelClient(
+                        new LlmChatResult(List.of(), new LlmUsage(1, 1, "stop")));
         LlmGateway gateway = gateway(recordingModelClient);
 
         assertThatThrownBy(() -> chatWithTenant(gateway))
@@ -131,7 +141,7 @@ class LlmGatewayActionValidatorTest {
 
     private ZeroMailLlmProperties llmProperties() {
         return new ZeroMailLlmProperties(
-        BYOKProvider.OPENAI,
+                BYOKProvider.OPENAI,
                 "https://openrouter.ai/api/v1",
                 "test-platform-key",
                 "openai/gpt-4o-mini",

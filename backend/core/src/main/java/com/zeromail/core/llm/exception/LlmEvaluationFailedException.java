@@ -6,14 +6,14 @@ package com.zeromail.core.llm.exception;
  */
 public class LlmEvaluationFailedException extends RuntimeException {
 
-  private static final String MESSAGE = "LLM semantic intent evaluation failed";
+    private static final String MESSAGE = "LLM semantic intent evaluation failed";
 
-  public LlmEvaluationFailedException(Throwable cause) {
-    super(MESSAGE, cause);
-  }
+    public LlmEvaluationFailedException(Throwable cause) {
+        super(MESSAGE, cause);
+    }
 
-  @Override
-  public String getMessage() {
-    return MESSAGE;
-  }
+    @Override
+    public String getMessage() {
+        return MESSAGE;
+    }
 }

@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.NoSuchElementException;
-
 import org.junit.jupiter.api.Test;
 
 class GmailIngestionHealthTest {
@@ -19,8 +18,10 @@ class GmailIngestionHealthTest {
     @Test
     void fromId_validValues_succeed() {
         assertThat(GmailIngestionHealth.fromId("HEALTHY")).isEqualTo(GmailIngestionHealth.HEALTHY);
-        assertThat(GmailIngestionHealth.fromId("WATCH_UNHEALTHY")).isEqualTo(GmailIngestionHealth.WATCH_UNHEALTHY);
-        assertThat(GmailIngestionHealth.fromId("HISTORY_LOST")).isEqualTo(GmailIngestionHealth.HISTORY_LOST);
+        assertThat(GmailIngestionHealth.fromId("WATCH_UNHEALTHY"))
+                .isEqualTo(GmailIngestionHealth.WATCH_UNHEALTHY);
+        assertThat(GmailIngestionHealth.fromId("HISTORY_LOST"))
+                .isEqualTo(GmailIngestionHealth.HISTORY_LOST);
     }
 
     @Test

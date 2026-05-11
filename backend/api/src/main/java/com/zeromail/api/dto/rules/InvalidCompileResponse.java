@@ -4,7 +4,7 @@ import com.zeromail.core.rules.application.RuleCompileResult;
 
 public record InvalidCompileResponse(String reason) {
 
-  static InvalidCompileResponse from(RuleCompileResult compileResult) {
-    return new InvalidCompileResponse(compileResult.failureReason());
-  }
+    static InvalidCompileResponse from(RuleCompileResult compileResult) {
+        return new InvalidCompileResponse(compileResult.failureReason());
+    }
 }

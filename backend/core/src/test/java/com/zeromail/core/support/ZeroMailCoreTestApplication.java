@@ -7,13 +7,14 @@ import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 /**
- * Minimal {@code @SpringBootApplication} entrypoint for backend/core's integration tests.
- * Real Boot apps live in backend/api and backend/worker; this class exists only so that
+ * Minimal {@code @SpringBootApplication} entrypoint for backend/core's integration tests. Real Boot
+ * apps live in backend/api and backend/worker; this class exists only so that
  * {@code @SpringBootTest} can boot a Postgres-backed context against the persistence module.
  *
  * <p>Explicit {@code @EntityScan} / {@code @EnableJpaRepositories} are required because the
- * application classes scanned by {@code @SpringBootApplication} (e.g. AccountService) inject repositories that live in
- * a sibling package; relying on Boot's auto-config default base package is not enough.
+ * application classes scanned by {@code @SpringBootApplication} (e.g. AccountService) inject
+ * repositories that live in a sibling package; relying on Boot's auto-config default base package
+ * is not enough.
  */
 @SpringBootApplication(scanBasePackages = "com.zeromail.core")
 @ConfigurationPropertiesScan(basePackages = "com.zeromail.core")

@@ -3,7 +3,6 @@ package com.zeromail.core.gmail.persistence;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -16,21 +15,26 @@ public interface GmailConnectionRepository extends JpaRepository<GmailConnection
 
     Optional<GmailConnectionEntity> findByGoogleEmailIgnoreCase(String googleEmail);
 
-    @Query(value = """
+    @Query(
+            value =
+                    """
             SELECT * FROM gmail_connections
             WHERE status = 'CONNECTED'
               AND (watch_expires_at IS NULL OR watch_expires_at < NOW() + INTERVAL '24 hours')
             ORDER BY watch_renewed_at NULLS FIRST
             LIMIT :limit
             FOR UPDATE SKIP LOCKED
-            """, nativeQuery = true)
+            """,
+            nativeQuery = true)
     @Transactional
     List<GmailConnectionEntity> findConnectionsNeedingWatchRenewal(@Param("limit") int limit);
 
     @Modifying
-    @Query("UPDATE GmailConnectionEntity c SET c.lastSyncedHistoryId = :newId "
-            + "WHERE c.tenantId = :tenantId AND "
-            + "(c.lastSyncedHistoryId IS NULL OR c.lastSyncedHistoryId < :newId)")
+    @Query(
+            "UPDATE GmailConnectionEntity c SET c.lastSyncedHistoryId = :newId "
+                    + "WHERE c.tenantId = :tenantId AND "
+                    + "(c.lastSyncedHistoryId IS NULL OR c.lastSyncedHistoryId < :newId)")
     @Transactional
-    int updateLastSyncedHistoryIdMonotonic(@Param("tenantId") UUID tenantId, @Param("newId") Long newId);
+    int updateLastSyncedHistoryIdMonotonic(
+            @Param("tenantId") UUID tenantId, @Param("newId") Long newId);
 }

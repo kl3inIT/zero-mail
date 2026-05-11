@@ -13,18 +13,25 @@ import org.junit.jupiter.api.Test;
 class JtokkitTruncateSanitizerTest {
 
     private final EncodingRegistry encodingRegistry = Encodings.newDefaultEncodingRegistry();
-    private final Encoding cl100kBaseEncoding = encodingRegistry.getEncoding(EncodingType.CL100K_BASE);
-    private final JtokkitTruncateSanitizer sanitizer = new JtokkitTruncateSanitizer(encodingRegistry);
+    private final Encoding cl100kBaseEncoding =
+            encodingRegistry.getEncoding(EncodingType.CL100K_BASE);
+    private final JtokkitTruncateSanitizer sanitizer =
+            new JtokkitTruncateSanitizer(encodingRegistry);
 
     @Test
     void truncates_long_input() {
         String longInput = "token ".repeat(10000) + "\uD83C\uDF55";
 
-        SanitizationContext sanitizedContext = sanitizer.apply(SanitizationContext.initial(longInput));
+        SanitizationContext sanitizedContext =
+                sanitizer.apply(SanitizationContext.initial(longInput));
 
-        assertThat(sanitizedContext.tokenCount()).isLessThanOrEqualTo(JtokkitTruncateSanitizer.HARD_CAP_TOKENS);
+        assertThat(sanitizedContext.tokenCount())
+                .isLessThanOrEqualTo(JtokkitTruncateSanitizer.HARD_CAP_TOKENS);
         assertThat(sanitizedContext.truncated()).isTrue();
-        assertThat(new String(sanitizedContext.content().getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8))
+        assertThat(
+                        new String(
+                                sanitizedContext.content().getBytes(StandardCharsets.UTF_8),
+                                StandardCharsets.UTF_8))
                 .isEqualTo(sanitizedContext.content());
         assertThat(sanitizedContext.content()).doesNotContain("\uFFFD");
     }
@@ -33,7 +40,8 @@ class JtokkitTruncateSanitizerTest {
     void under_budget_passes_through() {
         String underBudgetInput = "hello ".repeat(100);
 
-        SanitizationContext sanitizedContext = sanitizer.apply(SanitizationContext.initial(underBudgetInput));
+        SanitizationContext sanitizedContext =
+                sanitizer.apply(SanitizationContext.initial(underBudgetInput));
 
         assertThat(sanitizedContext.truncated()).isFalse();
         assertThat(sanitizedContext.content()).isEqualTo(underBudgetInput);
@@ -45,6 +53,7 @@ class JtokkitTruncateSanitizerTest {
 
         SanitizationContext sanitizedContext = sanitizer.apply(SanitizationContext.initial(input));
 
-        assertThat(sanitizedContext.tokenCount()).isEqualTo(cl100kBaseEncoding.encode(input).size());
+        assertThat(sanitizedContext.tokenCount())
+                .isEqualTo(cl100kBaseEncoding.encode(input).size());
     }
 }

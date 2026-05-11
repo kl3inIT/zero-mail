@@ -1,16 +1,13 @@
 package com.zeromail.api.controllers.onboarding;
 
-import java.util.UUID;
-
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.zeromail.api.dto.onboarding.SelectTemplateRequest;
 import com.zeromail.core.onboarding.service.OnboardingService;
 import com.zeromail.core.tenant.TenantContext;
-
 import jakarta.validation.Valid;
+import java.util.UUID;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class OnboardingController {

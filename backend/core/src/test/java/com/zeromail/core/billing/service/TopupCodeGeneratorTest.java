@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.junit.jupiter.api.Test;
 
 class TopupCodeGeneratorTest {
@@ -33,9 +32,9 @@ class TopupCodeGeneratorTest {
         TopupCodeGenerator codeGenerator = new TopupCodeGenerator();
         AtomicInteger attemptCounter = new AtomicInteger();
 
-        String acceptedCode = codeGenerator.generateUniqueCode(
-                candidateCode -> attemptCounter.incrementAndGet() == 3,
-                3);
+        String acceptedCode =
+                codeGenerator.generateUniqueCode(
+                        candidateCode -> attemptCounter.incrementAndGet() == 3, 3);
 
         assertThat(acceptedCode).matches(CROCKFORD_EIGHT_CHARACTER_PATTERN);
         assertThat(attemptCounter).hasValue(3);

@@ -26,38 +26,38 @@ import java.util.Map;
  */
 public interface LlmGateway {
 
-  // Gateway owns tools; callers cannot pass arbitrary tool definitions.
-  ToolCallResult chat(CallSite callSite, String rawHtml);
+    // Gateway owns tools; callers cannot pass arbitrary tool definitions.
+    ToolCallResult chat(CallSite callSite, String rawHtml);
 
-  /**
-   * Rules-engine compile path. The gateway owns the rule-compile tool profile; callers pass only a
-   * sanitized compiler payload and never pass arbitrary tool definitions.
-   */
-  RuleCompileGatewayResult compileRule(CallSite callSite, String compilerPayload);
+    /**
+     * Rules-engine compile path. The gateway owns the rule-compile tool profile; callers pass only
+     * a sanitized compiler payload and never pass arbitrary tool definitions.
+     */
+    RuleCompileGatewayResult compileRule(CallSite callSite, String compilerPayload);
 
-  /**
-   * Resolves a batch of {@code SEMANTIC_INTENT} matchers for one message in one
-   * structured-output LLM call.
-   *
-   * <p>The {@code rawMessageContent} parameter is whatever sanitizable text the caller has. In
-   * the Phase 4 triage path, the caller builds {@code semanticEvalContent} from
-   * {@code RuleEvaluationInput.sanitizedSubjectExcerpt()} plus a deterministic content-free flag
-   * summary; the Gmail metadata-only fetch carries no body. Implementations re-run the Phase 2C
-   * sanitization pipeline and perform the prompt-budget check before reserving platform credits.
-   * BYOK callers bypass the platform credit ledger.
-   *
-   * @throws TokenBudgetExceededException when sanitized content plus intent/schema overhead exceeds
-   *     the 3896-token cap before any model call
-   * @throws SafetyViolationException when the model returns an unknown or missing node id
-   * @throws LlmEvaluationFailedException when the gateway's internal retry path is exhausted
-   */
-  Map<String, Boolean> evaluateSemanticIntents(
-      CallSite callSite, String rawMessageContent, List<SemanticIntentRequest> intents);
+    /**
+     * Resolves a batch of {@code SEMANTIC_INTENT} matchers for one message in one structured-output
+     * LLM call.
+     *
+     * <p>The {@code rawMessageContent} parameter is whatever sanitizable text the caller has. In
+     * the Phase 4 triage path, the caller builds {@code semanticEvalContent} from {@code
+     * RuleEvaluationInput.sanitizedSubjectExcerpt()} plus a deterministic content-free flag
+     * summary; the Gmail metadata-only fetch carries no body. Implementations re-run the Phase 2C
+     * sanitization pipeline and perform the prompt-budget check before reserving platform credits.
+     * BYOK callers bypass the platform credit ledger.
+     *
+     * @throws TokenBudgetExceededException when sanitized content plus intent/schema overhead
+     *     exceeds the 3896-token cap before any model call
+     * @throws SafetyViolationException when the model returns an unknown or missing node id
+     * @throws LlmEvaluationFailedException when the gateway's internal retry path is exhausted
+     */
+    Map<String, Boolean> evaluateSemanticIntents(
+            CallSite callSite, String rawMessageContent, List<SemanticIntentRequest> intents);
 
-  /**
-   * Drift detection path. It uses the same sanitization pipeline, system prompt, and allow-list as
-   * {@link #chat(CallSite, String)}, but is pinned to the drift model and bypasses future user
-   * credit reservation.
-   */
-  ToolCallResult driftCheck(String rawEmailFixture);
+    /**
+     * Drift detection path. It uses the same sanitization pipeline, system prompt, and allow-list
+     * as {@link #chat(CallSite, String)}, but is pinned to the drift model and bypasses future user
+     * credit reservation.
+     */
+    ToolCallResult driftCheck(String rawEmailFixture);
 }

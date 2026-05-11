@@ -2,23 +2,22 @@ package com.zeromail.core.llm.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.StructuredTaskScope;
-import java.util.stream.IntStream;
-
 import com.zeromail.core.billing.domain.CallSite;
-import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
-import com.zeromail.core.llm.gateway.sanitization.Sanitizer;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
-import com.zeromail.core.llm.domain.BYOKProvider;
 import com.zeromail.core.llm.application.LlmChatRequest;
 import com.zeromail.core.llm.application.LlmChatResult;
 import com.zeromail.core.llm.application.LlmUsage;
 import com.zeromail.core.llm.application.RawToolCall;
 import com.zeromail.core.llm.application.SanitizationContext;
 import com.zeromail.core.llm.application.ToolCallResult;
+import com.zeromail.core.llm.domain.BYOKProvider;
+import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
+import com.zeromail.core.llm.gateway.sanitization.Sanitizer;
 import com.zeromail.core.tenant.TenantContext;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.StructuredTaskScope;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 class LlmGatewayMultiTenantLeakTest {
@@ -29,15 +28,30 @@ class LlmGatewayMultiTenantLeakTest {
     void concurrent_virtual_thread_requests_never_cross_tenant() throws Exception {
         int requestCount = 100;
         LlmGateway gateway = gateway();
-        List<Seed> seeds = IntStream.range(0, requestCount)
-                .mapToObj(index -> new Seed(UUID.randomUUID(), "hello-" + index))
-                .toList();
+        List<Seed> seeds =
+                IntStream.range(0, requestCount)
+                        .mapToObj(index -> new Seed(UUID.randomUUID(), "hello-" + index))
+                        .toList();
 
         try (var scope = StructuredTaskScope.<ToolCallResult>open()) {
-            var subtasks = seeds.stream()
-                    .map(seed -> scope.fork(() -> ScopedValue.where(TenantContext.TENANT, seed.tenantId().toString())
-                            .call(() -> gateway.chat(CallSite.PREVIEW, seed.rawHtml()))))
-                    .toList();
+            var subtasks =
+                    seeds.stream()
+                            .map(
+                                    seed ->
+                                            scope.fork(
+                                                    () ->
+                                                            ScopedValue.where(
+                                                                            TenantContext.TENANT,
+                                                                            seed.tenantId()
+                                                                                    .toString())
+                                                                    .call(
+                                                                            () ->
+                                                                                    gateway.chat(
+                                                                                            CallSite
+                                                                                                    .PREVIEW,
+                                                                                            seed
+                                                                                                    .rawHtml()))))
+                            .toList();
             scope.join();
             for (int index = 0; index < requestCount; index++) {
                 ToolCallResult toolCallResult = subtasks.get(index).get();
@@ -52,7 +66,7 @@ class LlmGatewayMultiTenantLeakTest {
                 new TenantEchoLlmModelClient(),
                 new SanitizationPipeline(List.of(new PassThroughSanitizer())),
                 new ZeroMailLlmProperties(
-        BYOKProvider.OPENAI,
+                        BYOKProvider.OPENAI,
                         "https://openrouter.ai/api/v1",
                         "test-platform-key",
                         "openai/gpt-4o-mini",

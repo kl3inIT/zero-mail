@@ -4,16 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.NoSuchElementException;
-
-import org.junit.jupiter.api.Test;
-
 import com.zeromail.core.triage.domain.SenderEmailCanonicalizer;
 import com.zeromail.core.triage.domain.TriageActionArgsCanonicalizer;
 import com.zeromail.core.triage.domain.TriageActionResult;
 import com.zeromail.core.triage.domain.TriageActionResultJsonValidator;
 import com.zeromail.core.triage.domain.TriageDecision;
 import com.zeromail.core.triage.exception.TriageSafetyViolationException;
+import java.util.NoSuchElementException;
+import org.junit.jupiter.api.Test;
 
 class TriageActionResultJsonValidatorContractTest {
 
@@ -23,8 +21,7 @@ class TriageActionResultJsonValidatorContractTest {
             "com.zeromail.core.triage.domain.TriageActionResultJsonValidator";
     private static final String TRIAGE_ACTION_ARGS_CANONICALIZER =
             "com.zeromail.core.triage.domain.TriageActionArgsCanonicalizer";
-    private static final String TRIAGE_DECISION =
-            "com.zeromail.core.triage.domain.TriageDecision";
+    private static final String TRIAGE_DECISION = "com.zeromail.core.triage.domain.TriageDecision";
 
     @Test
     void future_action_json_contract_types_are_present() {
@@ -38,7 +35,10 @@ class TriageActionResultJsonValidatorContractTest {
     void unknown_discriminator_fails_loudly_with_no_silent_noop() {
         TriageActionResultJsonValidator validator = new TriageActionResultJsonValidator();
 
-        assertThatThrownBy(() -> validator.validateActionArgsJson("""
+        assertThatThrownBy(
+                        () ->
+                                validator.validateActionArgsJson(
+                                        """
                 {"type":"send","messageId":"unsafe"}
                 """))
                 .isInstanceOf(NoSuchElementException.class);
@@ -48,7 +48,10 @@ class TriageActionResultJsonValidatorContractTest {
     void unknown_fields_are_rejected_per_action_type_on_write() {
         TriageActionResultJsonValidator validator = new TriageActionResultJsonValidator();
 
-        assertThatThrownBy(() -> validator.validateActionArgsJson("""
+        assertThatThrownBy(
+                        () ->
+                                validator.validateActionArgsJson(
+                                        """
                 {"type":"archive","extra":"not-allowed"}
                 """))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -58,10 +61,14 @@ class TriageActionResultJsonValidatorContractTest {
     void save_draft_hash_is_stable_before_and_after_gmail_returns_draft_id() {
         TriageActionArgsCanonicalizer canonicalizer = new TriageActionArgsCanonicalizer();
 
-        byte[] preWriteHash = canonicalizer.canonicalHash("""
+        byte[] preWriteHash =
+                canonicalizer.canonicalHash(
+                        """
                 {"type":"save_draft","instruction":"draft politely","draftId":null,"threadId":"thread-1"}
                 """);
-        byte[] postWriteHash = canonicalizer.canonicalHash("""
+        byte[] postWriteHash =
+                canonicalizer.canonicalHash(
+                        """
                 {"threadId":"thread-1","draftId":"draft-1","instruction":"draft politely","type":"save_draft"}
                 """);
 
@@ -76,9 +83,13 @@ class TriageActionResultJsonValidatorContractTest {
                 validator.toJson(new TriageActionResult.Label("Label_123", "Finance"));
 
         assertThat(serializedJson)
-                .contains("\"type\":\"label\"", "\"labelId\":\"Label_123\"", "\"labelName\":\"Finance\"")
+                .contains(
+                        "\"type\":\"label\"",
+                        "\"labelId\":\"Label_123\"",
+                        "\"labelName\":\"Finance\"")
                 .doesNotContain("@class", "JsonTypeInfo");
-        assertThatCode(() -> validator.validateActionArgsJson(serializedJson)).doesNotThrowAnyException();
+        assertThatCode(() -> validator.validateActionArgsJson(serializedJson))
+                .doesNotThrowAnyException();
     }
 
     @Test
@@ -91,7 +102,8 @@ class TriageActionResultJsonValidatorContractTest {
         assertThat(canonicalizer.redisCacheKeyComponent(canonicalEmail))
                 .hasSize(64)
                 .doesNotContain("boss", "example");
-        assertThat(canonicalizer.gmailSearchToken(canonicalEmail)).isEqualTo("\"boss@example.com\"");
+        assertThat(canonicalizer.gmailSearchToken(canonicalEmail))
+                .isEqualTo("\"boss@example.com\"");
         assertThatThrownBy(() -> canonicalizer.canonicalize("not-an-address"))
                 .isInstanceOf(IllegalArgumentException.class);
     }

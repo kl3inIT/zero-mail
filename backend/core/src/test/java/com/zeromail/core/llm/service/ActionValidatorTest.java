@@ -57,9 +57,10 @@ class ActionValidatorTest {
     void safety_violation_exception_has_only_no_arg_constructor() {
         assertThat(SafetyViolationException.class.getDeclaredConstructors())
                 .singleElement()
-                .satisfies(constructor -> {
-                    assertThat(constructor.getParameterCount()).isZero();
-                    assertThat(constructor.getParameterTypes()).isEmpty();
-                });
+                .satisfies(
+                        constructor -> {
+                            assertThat(constructor.getParameterCount()).isZero();
+                            assertThat(constructor.getParameterTypes()).isEmpty();
+                        });
     }
 }

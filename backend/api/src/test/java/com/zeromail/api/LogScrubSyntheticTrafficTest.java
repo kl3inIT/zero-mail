@@ -1,10 +1,26 @@
 package com.zeromail.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import com.zeromail.api.security.TestSessionSupport;
+import com.zeromail.api.support.ApiPostgresTestBase;
+import com.zeromail.core.account.persistence.UserEntity;
+import com.zeromail.core.account.persistence.UserRepository;
+import com.zeromail.core.gmail.domain.GmailConnectionStatus;
+import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
+import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
+import com.zeromail.core.shared.privacy.Sensitive;
+import com.zeromail.core.shared.privacy.SensitiveMarkerScrubFilter;
+import com.zeromail.core.tenant.TenantContext;
+import com.zeromail.core.tenant.persistence.TenantEntity;
+import com.zeromail.core.tenant.persistence.TenantRepository;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,33 +33,14 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.RestClient;
 
-import com.zeromail.api.security.TestSessionSupport;
-import com.zeromail.api.support.ApiPostgresTestBase;
-import com.zeromail.core.gmail.domain.GmailConnectionStatus;
-import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
-import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
-import com.zeromail.core.account.persistence.UserEntity;
-import com.zeromail.core.account.persistence.UserRepository;
-import com.zeromail.core.shared.privacy.Sensitive;
-import com.zeromail.core.shared.privacy.SensitiveMarkerScrubFilter;
-import com.zeromail.core.tenant.TenantContext;
-import com.zeromail.core.tenant.persistence.TenantEntity;
-import com.zeromail.core.tenant.persistence.TenantRepository;
-
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-
-import static org.assertj.core.api.Assertions.assertThat;
-
 /**
- * FND-03 runtime grep-for-bodies verification, driven through real authenticated requests
- * against Phase 1 endpoints. Seeds sentinel values (subject, email, refresh-token plaintext)
- * onto persistent rows, then drives /me, /gmail/connection/status, and /onboarding/select-template via
- * an HTTP client. Captures every emitted log line through a ROOT-logger ListAppender and
- * asserts: (1) zero sentinel occurrences in the captured stream, (2) the SensitiveMarkerScrubFilter
- * actually fires when a Sensitive(...) marker is emitted (proves the plan-03 TurboFilter is wired
- * end-to-end and not just unit-tested in isolation).
+ * FND-03 runtime grep-for-bodies verification, driven through real authenticated requests against
+ * Phase 1 endpoints. Seeds sentinel values (subject, email, refresh-token plaintext) onto
+ * persistent rows, then drives /me, /gmail/connection/status, and /onboarding/select-template via
+ * an HTTP client. Captures every emitted log line through a ROOT-logger ListAppender and asserts:
+ * (1) zero sentinel occurrences in the captured stream, (2) the SensitiveMarkerScrubFilter actually
+ * fires when a Sensitive(...) marker is emitted (proves the plan-03 TurboFilter is wired end-to-end
+ * and not just unit-tested in isolation).
  */
 @ActiveProfiles("test")
 @Import(TestSessionSupport.class)
@@ -84,39 +81,60 @@ class LogScrubSyntheticTrafficTest extends ApiPostgresTestBase {
     void real_request_traffic_never_leaks_sensitive_content() {
         UUID tenantId = UUID.randomUUID();
         tenants.save(new TenantEntity(tenantId, "leak-probe-tenant"));
-        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() -> {
-            users.save(new UserEntity(UUID.randomUUID(), tenantId, LEAK_PROBE_SUBJECT, LEAK_PROBE_EMAIL));
-            var gc = new GmailConnectionEntity(
-                    UUID.randomUUID(), tenantId, LEAK_PROBE_EMAIL, GmailConnectionStatus.CONNECTED);
-            gc.setConnectedAt(Instant.now());
-            // Test-only: store the sentinel plaintext directly so any naive log-the-entity
-            // path would leak. In production, plan 06's cipher writes an AES-GCM envelope.
-            gc.setRefreshTokenEncrypted(LEAK_PROBE_REFRESH_TOKEN.getBytes(StandardCharsets.UTF_8));
-            conns.save(gc);
-        });
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(
+                        () -> {
+                            users.save(
+                                    new UserEntity(
+                                            UUID.randomUUID(),
+                                            tenantId,
+                                            LEAK_PROBE_SUBJECT,
+                                            LEAK_PROBE_EMAIL));
+                            var gc =
+                                    new GmailConnectionEntity(
+                                            UUID.randomUUID(),
+                                            tenantId,
+                                            LEAK_PROBE_EMAIL,
+                                            GmailConnectionStatus.CONNECTED);
+                            gc.setConnectedAt(Instant.now());
+                            // Test-only: store the sentinel plaintext directly so any naive
+                            // log-the-entity
+                            // path would leak. In production, plan 06's cipher writes an AES-GCM
+                            // envelope.
+                            gc.setRefreshTokenEncrypted(
+                                    LEAK_PROBE_REFRESH_TOKEN.getBytes(StandardCharsets.UTF_8));
+                            conns.save(gc);
+                        });
 
         minter.mint(LEAK_PROBE_SUBJECT, LEAK_PROBE_EMAIL);
         RestClient client = RestClient.create("http://localhost:" + port);
 
-        client.get().uri("/me")
+        client.get()
+                .uri("/me")
                 .header(TestSessionSupport.HEADER_SUBJECT, LEAK_PROBE_SUBJECT)
                 .header(TestSessionSupport.HEADER_EMAIL, LEAK_PROBE_EMAIL)
                 .retrieve()
-                .onStatus(HttpStatusCode::isError, (req, resp) -> { /* ignore for log inspection */ })
+                .onStatus(
+                        HttpStatusCode::isError,
+                        (req, resp) -> {
+                            /* ignore for log inspection */
+                        })
                 .toBodilessEntity();
-        client.get().uri("/gmail/connection/status")
+        client.get()
+                .uri("/gmail/connection/status")
                 .header(TestSessionSupport.HEADER_SUBJECT, LEAK_PROBE_SUBJECT)
                 .header(TestSessionSupport.HEADER_EMAIL, LEAK_PROBE_EMAIL)
                 .retrieve()
-                .onStatus(HttpStatusCode::isError, (req, resp) -> { })
+                .onStatus(HttpStatusCode::isError, (req, resp) -> {})
                 .toBodilessEntity();
-        client.post().uri("/onboarding/select-template")
+        client.post()
+                .uri("/onboarding/select-template")
                 .header(TestSessionSupport.HEADER_SUBJECT, LEAK_PROBE_SUBJECT)
                 .header(TestSessionSupport.HEADER_EMAIL, LEAK_PROBE_EMAIL)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body("{\"templateKey\":\"archive-receipts\"}")
                 .retrieve()
-                .onStatus(HttpStatusCode::isError, (req, resp) -> { })
+                .onStatus(HttpStatusCode::isError, (req, resp) -> {})
                 .toBodilessEntity();
 
         // Emit a synthetic line whose rendered message contains the literal Sensitive(...)
@@ -130,9 +148,10 @@ class LogScrubSyntheticTrafficTest extends ApiPostgresTestBase {
         // Also exercise the Sensitive.toString() redaction contract on a real value.
         probeLogger.info("redaction-contract value={}", Sensitive.of(LEAK_PROBE_REFRESH_TOKEN));
 
-        List<String> capturedLines = appender.list.stream()
-                .map(ev -> ev.getFormattedMessage() + " " + ev.getMDCPropertyMap())
-                .toList();
+        List<String> capturedLines =
+                appender.list.stream()
+                        .map(ev -> ev.getFormattedMessage() + " " + ev.getMDCPropertyMap())
+                        .toList();
         String combined = String.join("\n", capturedLines);
 
         assertThat(combined)
@@ -148,6 +167,7 @@ class LogScrubSyntheticTrafficTest extends ApiPostgresTestBase {
 
         assertThat(appender.list)
                 .as("at least one log event carries scrubbed=true MDC key")
-                .anySatisfy(ev -> assertThat(ev.getMDCPropertyMap()).containsEntry("scrubbed", "true"));
+                .anySatisfy(
+                        ev -> assertThat(ev.getMDCPropertyMap()).containsEntry("scrubbed", "true"));
     }
 }

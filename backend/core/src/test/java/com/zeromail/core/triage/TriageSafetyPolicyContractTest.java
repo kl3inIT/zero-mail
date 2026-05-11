@@ -4,16 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.List;
-import java.util.UUID;
-
-import org.junit.jupiter.api.Test;
-
 import com.zeromail.core.rules.domain.ActionIntent;
 import com.zeromail.core.rules.domain.ActionProposal;
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.triage.exception.TriageSafetyViolationException;
 import com.zeromail.core.triage.service.TriageSafetyPolicy;
+import java.util.List;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
 
 class TriageSafetyPolicyContractTest {
 
@@ -49,16 +47,19 @@ class TriageSafetyPolicyContractTest {
                 .isEqualTo(RuleActionType.LABEL);
         assertThat(safetyPolicy.gate(proposal(new ActionIntent.Archive())))
                 .isEqualTo(RuleActionType.ARCHIVE);
-        assertThat(safetyPolicy.gate(proposal(new ActionIntent.SaveDraft("Draft a reply for review"))))
+        assertThat(
+                        safetyPolicy.gate(
+                                proposal(new ActionIntent.SaveDraft("Draft a reply for review"))))
                 .isEqualTo(RuleActionType.SAVE_DRAFT);
     }
 
     @Test
     void rejected_actions_are_recorded_as_safety_policy_audit_decisions() throws Exception {
-        Class<?> triageDecisionClass = Class.forName("com.zeromail.core.triage.domain.TriageDecision");
-        Object rejectedBySafetyPolicy = Enum.valueOf(
-                triageDecisionClass.asSubclass(Enum.class),
-                "REJECTED_BY_SAFETY_POLICY");
+        Class<?> triageDecisionClass =
+                Class.forName("com.zeromail.core.triage.domain.TriageDecision");
+        Object rejectedBySafetyPolicy =
+                Enum.valueOf(
+                        triageDecisionClass.asSubclass(Enum.class), "REJECTED_BY_SAFETY_POLICY");
 
         assertThat(rejectedBySafetyPolicy.toString()).isEqualTo("REJECTED_BY_SAFETY_POLICY");
     }

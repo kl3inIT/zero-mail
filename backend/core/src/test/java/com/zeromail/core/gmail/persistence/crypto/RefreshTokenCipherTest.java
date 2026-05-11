@@ -5,9 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.security.SecureRandom;
 import java.util.Map;
-
 import javax.crypto.spec.SecretKeySpec;
-
 import org.junit.jupiter.api.Test;
 
 class RefreshTokenCipherTest {
@@ -38,7 +36,10 @@ class RefreshTokenCipherTest {
     void unknown_version_rejected() {
         var cipher = c();
         byte[] env = cipher.encrypt("x".getBytes(), "t");
-        env[0] = 0; env[1] = 0; env[2] = 0; env[3] = 9; // mangle version
+        env[0] = 0;
+        env[1] = 0;
+        env[2] = 0;
+        env[3] = 9; // mangle version
         assertThatThrownBy(() -> cipher.decrypt(env, "t"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("unknown key version 9");

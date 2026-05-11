@@ -4,7 +4,6 @@ import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -14,25 +13,25 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class TriageAuditPurgeBatch {
 
-  private static final Duration AUDIT_RETENTION = Duration.ofDays(30);
+    private static final Duration AUDIT_RETENTION = Duration.ofDays(30);
 
-  private final JdbcTemplate jdbcTemplate;
-  private final Clock clock;
+    private final JdbcTemplate jdbcTemplate;
+    private final Clock clock;
 
-  public TriageAuditPurgeBatch(JdbcTemplate jdbcTemplate, Clock clock) {
-    this.jdbcTemplate = jdbcTemplate;
-    this.clock = clock;
-  }
-
-  @Transactional(propagation = Propagation.REQUIRED)
-  public int purgeExpiredOnce(int batchLimit) {
-    if (batchLimit <= 0) {
-      throw new IllegalArgumentException("batchLimit must be positive");
+    public TriageAuditPurgeBatch(JdbcTemplate jdbcTemplate, Clock clock) {
+        this.jdbcTemplate = jdbcTemplate;
+        this.clock = clock;
     }
 
-    Instant cutoff = clock.instant().minus(AUDIT_RETENTION);
-    return jdbcTemplate.update(
-        """
+    @Transactional(propagation = Propagation.REQUIRED)
+    public int purgeExpiredOnce(int batchLimit) {
+        if (batchLimit <= 0) {
+            throw new IllegalArgumentException("batchLimit must be positive");
+        }
+
+        Instant cutoff = clock.instant().minus(AUDIT_RETENTION);
+        return jdbcTemplate.update(
+                """
         WITH expired_audit AS (
           SELECT audit_id
             FROM triage_audit
@@ -52,7 +51,7 @@ public class TriageAuditPurgeBatch {
         DELETE FROM triage_audit
          WHERE audit_id IN (SELECT audit_id FROM expired_audit)
         """,
-        Timestamp.from(cutoff),
-        batchLimit);
-  }
+                Timestamp.from(cutoff),
+                batchLimit);
+    }
 }

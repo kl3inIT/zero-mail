@@ -8,7 +8,7 @@ package com.zeromail.core.llm.exception;
  */
 public class InvalidByokException extends RuntimeException {
 
-  public InvalidByokException() {
-    super();
-  }
+    public InvalidByokException() {
+        super();
+    }
 }

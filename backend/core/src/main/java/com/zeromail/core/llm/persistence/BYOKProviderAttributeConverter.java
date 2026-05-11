@@ -1,13 +1,10 @@
 package com.zeromail.core.llm.persistence;
 
 import com.zeromail.core.llm.domain.BYOKProvider;
-
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 
-/**
- * Maps BYOKProvider enum constants to their lowercase database ids.
- */
+/** Maps BYOKProvider enum constants to their lowercase database ids. */
 @Converter(autoApply = false)
 public class BYOKProviderAttributeConverter implements AttributeConverter<BYOKProvider, String> {
 

@@ -1,9 +1,8 @@
 package com.zeromail.core.billing.persistence;
 
+import com.zeromail.core.billing.domain.BillingTopupIntentStatus;
 import java.time.OffsetDateTime;
 import java.util.UUID;
-
-import com.zeromail.core.billing.domain.BillingTopupIntentStatus;
 
 /**
  * Webhook-only projection that carries tenant id before the request thread has a bound
@@ -15,5 +14,4 @@ public record BillingTopupIntentTenantLookup(
         String code,
         long amountVnd,
         BillingTopupIntentStatus status,
-        OffsetDateTime expiresAt) {
-}
+        OffsetDateTime expiresAt) {}

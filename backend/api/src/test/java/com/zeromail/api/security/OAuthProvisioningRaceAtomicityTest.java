@@ -1,34 +1,32 @@
 package com.zeromail.api.security;
 
-import java.util.UUID;
+import static org.assertj.core.api.Assertions.assertThat;
 
+import com.zeromail.api.support.ApiPostgresTestBase;
+import com.zeromail.core.account.service.OAuthProvisioningService;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import com.zeromail.api.support.ApiPostgresTestBase;
-import com.zeromail.core.account.service.OAuthProvisioningService;
-
-import static org.assertj.core.api.Assertions.assertThat;
-
 /**
  * Regression test for CR-01 fix: race-loser path must NOT open a second transaction.
  *
- * <p>Simulates a concurrent first-login by: provisioning a user normally (as the "winner"),
- * then calling provisionBundledOAuth again with the same googleSubject (as the "loser" that
- * would have hit DataIntegrityViolationException if it ran truly concurrently).
+ * <p>Simulates a concurrent first-login by: provisioning a user normally (as the "winner"), then
+ * calling provisionBundledOAuth again with the same googleSubject (as the "loser" that would have
+ * hit DataIntegrityViolationException if it ran truly concurrently).
  *
- * <p>After the second call the DB must have exactly 1 user, 1 tenant, 1 gmail_connection —
- * never 2 of any — confirming the loser observed the winner's state without writing.
+ * <p>After the second call the DB must have exactly 1 user, 1 tenant, 1 gmail_connection — never 2
+ * of any — confirming the loser observed the winner's state without writing.
  *
- * <p><b>W-1 test-scope note:</b> This test verifies sequential second-login idempotency via
- * the FAST-PATH (findByGoogleSubject returns the existing user before save). The
- * DataIntegrityViolationException catch block is verified by static inspection: after the
- * CR-01 fix, {@code grep -c "bundledTx.executeWithoutResult"} in the catch block returns 0,
- * and the catch block only calls {@code users.findByGoogleSubject} + returns winner state.
- * True concurrent race testing would require thread synchronization at the Postgres constraint
- * level which cannot be reliably reproduced in test containers.
+ * <p><b>W-1 test-scope note:</b> This test verifies sequential second-login idempotency via the
+ * FAST-PATH (findByGoogleSubject returns the existing user before save). The
+ * DataIntegrityViolationException catch block is verified by static inspection: after the CR-01
+ * fix, {@code grep -c "bundledTx.executeWithoutResult"} in the catch block returns 0, and the catch
+ * block only calls {@code users.findByGoogleSubject} + returns winner state. True concurrent race
+ * testing would require thread synchronization at the Postgres constraint level which cannot be
+ * reliably reproduced in test containers.
  *
  * <p>Privacy: all fixture values use obviously-fake prefixes per threat T-01.5-06-01.
  */
@@ -66,7 +64,8 @@ class OAuthProvisioningRaceAtomicityTest extends ApiPostgresTestBase {
         // finds the winner on the fast-path (existing user) before even attempting save.
         // This is the observable post-race-fix behavior: no second tx, returns winner's state.
         OAuthProvisioningService.BundledProvisioningResult loser =
-                provisioning.provisionBundledOAuth(subject, email, "fake-loser-rt-do-not-use", scopes);
+                provisioning.provisionBundledOAuth(
+                        subject, email, "fake-loser-rt-do-not-use", scopes);
 
         // Loser MUST return winner's tenant and user IDs with firstLogin=false.
         assertThat(loser.firstLogin())
@@ -121,21 +120,25 @@ class OAuthProvisioningRaceAtomicityTest extends ApiPostgresTestBase {
 
         OAuthProvisioningService.BundledProvisioningResult firstLogin =
                 provisioning.provisionBundledOAuth(subject, email, FAKE_REFRESH_TOKEN, scopes);
-        jdbc.update("""
+        jdbc.update(
+                """
                 UPDATE gmail_connections
                 SET ingestion_health = 'HISTORY_LOST',
                     last_synced_history_id = 99,
                     watch_history_id = 120
                 WHERE tenant_id = ?
-                """, firstLogin.tenantId());
+                """,
+                firstLogin.tenantId());
 
         OAuthProvisioningService.BundledProvisioningResult ordinaryLogin =
                 provisioning.provisionBundledOAuth(subject, email, null, scopes);
 
         assertThat(ordinaryLogin.firstLogin()).isFalse();
         assertThat(ordinaryLogin.tenantId()).isEqualTo(firstLogin.tenantId());
-        assertThat(connectionColumn(firstLogin.tenantId(), "ingestion_health")).isEqualTo("HISTORY_LOST");
-        assertThat(connectionColumn(firstLogin.tenantId(), "last_synced_history_id")).isEqualTo(99L);
+        assertThat(connectionColumn(firstLogin.tenantId(), "ingestion_health"))
+                .isEqualTo("HISTORY_LOST");
+        assertThat(connectionColumn(firstLogin.tenantId(), "last_synced_history_id"))
+                .isEqualTo(99L);
         assertThat(connectionColumn(firstLogin.tenantId(), "watch_history_id")).isEqualTo(120L);
     }
 
@@ -152,7 +155,8 @@ class OAuthProvisioningRaceAtomicityTest extends ApiPostgresTestBase {
     }
 
     private Object connectionColumn(UUID tenantId, String columnName) {
-        return jdbc.queryForObject("SELECT " + columnName + " FROM gmail_connections WHERE tenant_id = ?",
+        return jdbc.queryForObject(
+                "SELECT " + columnName + " FROM gmail_connections WHERE tenant_id = ?",
                 Object.class,
                 tenantId);
     }

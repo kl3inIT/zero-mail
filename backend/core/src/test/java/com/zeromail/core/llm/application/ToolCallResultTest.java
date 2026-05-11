@@ -2,12 +2,10 @@ package com.zeromail.core.llm.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.zeromail.core.llm.domain.Action;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.junit.jupiter.api.Test;
-
-import com.zeromail.core.llm.domain.Action;
 
 class ToolCallResultTest {
 

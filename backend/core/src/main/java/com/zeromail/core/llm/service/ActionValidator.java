@@ -1,12 +1,10 @@
 package com.zeromail.core.llm.service;
 
-import java.util.EnumSet;
-import java.util.NoSuchElementException;
-
-import org.springframework.stereotype.Component;
-
 import com.zeromail.core.llm.domain.Action;
 import com.zeromail.core.llm.exception.SafetyViolationException;
+import java.util.EnumSet;
+import java.util.NoSuchElementException;
+import org.springframework.stereotype.Component;
 
 @Component
 public class ActionValidator {

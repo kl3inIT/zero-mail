@@ -1,4 +1,5 @@
 package com.zeromail.core.llm.gateway.springai;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -6,13 +7,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.List;
-
 import com.zeromail.core.llm.application.LlmChatRequest;
 import com.zeromail.core.llm.application.LlmChatResult;
 import com.zeromail.core.llm.application.LlmTool;
 import com.zeromail.core.llm.application.SystemPrompts;
 import com.zeromail.core.llm.service.AllowListedTools;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
@@ -30,17 +30,28 @@ class SpringAiLlmModelClientTest {
         ChatClient platformChatClient = mock(ChatClient.class);
         ChatClient.ChatClientRequestSpec chatClientRequestSpecification =
                 mock(ChatClient.ChatClientRequestSpec.class);
-        ChatClient.CallResponseSpec callResponseSpecification = mock(ChatClient.CallResponseSpec.class);
+        ChatClient.CallResponseSpec callResponseSpecification =
+                mock(ChatClient.CallResponseSpec.class);
         when(platformChatClient.prompt()).thenReturn(chatClientRequestSpecification);
-        when(chatClientRequestSpecification.system(anyString())).thenReturn(chatClientRequestSpecification);
-        when(chatClientRequestSpecification.user(anyString())).thenReturn(chatClientRequestSpecification);
-        when(chatClientRequestSpecification.toolCallbacks(ArgumentMatchers.<List<ToolCallback>>any()))
+        when(chatClientRequestSpecification.system(anyString()))
+                .thenReturn(chatClientRequestSpecification);
+        when(chatClientRequestSpecification.user(anyString()))
+                .thenReturn(chatClientRequestSpecification);
+        when(chatClientRequestSpecification.toolCallbacks(
+                        ArgumentMatchers.<List<ToolCallback>>any()))
                 .thenReturn(chatClientRequestSpecification);
         when(chatClientRequestSpecification.options(any(OpenAiChatOptions.Builder.class)))
                 .thenReturn(chatClientRequestSpecification);
         when(chatClientRequestSpecification.call()).thenReturn(callResponseSpecification);
-        when(callResponseSpecification.chatResponse()).thenReturn(chatResponseWithToolCalls(List.of(
-                new AssistantMessage.ToolCall("call-1", "function", "label", "{\"value\":\"Receipts\"}"))));
+        when(callResponseSpecification.chatResponse())
+                .thenReturn(
+                        chatResponseWithToolCalls(
+                                List.of(
+                                        new AssistantMessage.ToolCall(
+                                                "call-1",
+                                                "function",
+                                                "label",
+                                                "{\"value\":\"Receipts\"}"))));
         SpringAiLlmModelClient modelClient = new SpringAiLlmModelClient(platformChatClient);
         LlmChatRequest request = request();
 
@@ -56,10 +67,14 @@ class SpringAiLlmModelClientTest {
         assertThat(capturedOptions.getInternalToolExecutionEnabled()).isFalse();
         assertThat(capturedOptions.getModel()).isEqualTo("openai/gpt-4o-mini");
         assertThat(capturedOptions.getTemperature()).isEqualTo(0.0);
-        assertThat(chatResult.toolCalls()).singleElement().satisfies(rawToolCall -> {
-            assertThat(rawToolCall.functionName()).isEqualTo("label");
-            assertThat(rawToolCall.argsJson()).isEqualTo("{\"value\":\"Receipts\"}");
-        });
+        assertThat(chatResult.toolCalls())
+                .singleElement()
+                .satisfies(
+                        rawToolCall -> {
+                            assertThat(rawToolCall.functionName()).isEqualTo("label");
+                            assertThat(rawToolCall.argsJson())
+                                    .isEqualTo("{\"value\":\"Receipts\"}");
+                        });
     }
 
     @Test
@@ -67,16 +82,21 @@ class SpringAiLlmModelClientTest {
         ChatClient platformChatClient = mock(ChatClient.class);
         ChatClient.ChatClientRequestSpec chatClientRequestSpecification =
                 mock(ChatClient.ChatClientRequestSpec.class);
-        ChatClient.CallResponseSpec callResponseSpecification = mock(ChatClient.CallResponseSpec.class);
+        ChatClient.CallResponseSpec callResponseSpecification =
+                mock(ChatClient.CallResponseSpec.class);
         when(platformChatClient.prompt()).thenReturn(chatClientRequestSpecification);
-        when(chatClientRequestSpecification.system(anyString())).thenReturn(chatClientRequestSpecification);
-        when(chatClientRequestSpecification.user(anyString())).thenReturn(chatClientRequestSpecification);
-        when(chatClientRequestSpecification.toolCallbacks(ArgumentMatchers.<List<ToolCallback>>any()))
+        when(chatClientRequestSpecification.system(anyString()))
+                .thenReturn(chatClientRequestSpecification);
+        when(chatClientRequestSpecification.user(anyString()))
+                .thenReturn(chatClientRequestSpecification);
+        when(chatClientRequestSpecification.toolCallbacks(
+                        ArgumentMatchers.<List<ToolCallback>>any()))
                 .thenReturn(chatClientRequestSpecification);
         when(chatClientRequestSpecification.options(any(OpenAiChatOptions.Builder.class)))
                 .thenReturn(chatClientRequestSpecification);
         when(chatClientRequestSpecification.call()).thenReturn(callResponseSpecification);
-        when(callResponseSpecification.chatResponse()).thenReturn(chatResponseWithToolCalls(List.of()));
+        when(callResponseSpecification.chatResponse())
+                .thenReturn(chatResponseWithToolCalls(List.of()));
         SpringAiLlmModelClient modelClient = new SpringAiLlmModelClient(platformChatClient);
 
         LlmChatResult chatResult = modelClient.call(request());
@@ -96,9 +116,7 @@ class SpringAiLlmModelClientTest {
     }
 
     private ChatResponse chatResponseWithToolCalls(List<AssistantMessage.ToolCall> toolCalls) {
-        AssistantMessage assistantMessage = AssistantMessage.builder()
-                .toolCalls(toolCalls)
-                .build();
+        AssistantMessage assistantMessage = AssistantMessage.builder().toolCalls(toolCalls).build();
         return ChatResponse.builder()
                 .generations(List.of(new Generation(assistantMessage)))
                 .build();

@@ -1,20 +1,5 @@
 package com.zeromail.core.gmail.service;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URLEncoder;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.UUID;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.json.gson.GsonFactory;
@@ -27,7 +12,19 @@ import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.shared.privacy.Sensitive;
-
+import java.io.IOException;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -42,8 +39,10 @@ public class GmailApiClientFactory {
     private final RefreshTokenCipher refreshTokenCipher;
 
     public GmailApiClientFactory(
-            @Value("${spring.security.oauth2.client.registration.google.client-id}") String clientId,
-            @Value("${spring.security.oauth2.client.registration.google.client-secret}") String clientSecret,
+            @Value("${spring.security.oauth2.client.registration.google.client-id}")
+                    String clientId,
+            @Value("${spring.security.oauth2.client.registration.google.client-secret}")
+                    String clientSecret,
             ZeroMailCoreProperties properties,
             GmailConnectionRepository gmailConnectionRepository,
             RefreshTokenCipher refreshTokenCipher) {
@@ -57,11 +56,13 @@ public class GmailApiClientFactory {
 
     public Gmail buildGmailClient(String accessToken) throws IOException {
         try {
-            GoogleCredentials credentials = GoogleCredentials.create(new AccessToken(accessToken, null));
+            GoogleCredentials credentials =
+                    GoogleCredentials.create(new AccessToken(accessToken, null));
             HttpRequestInitializer requestInitializer = new HttpCredentialsAdapter(credentials);
-            return new Gmail.Builder(GoogleNetHttpTransport.newTrustedTransport(),
-                    GsonFactory.getDefaultInstance(),
-                    requestInitializer)
+            return new Gmail.Builder(
+                            GoogleNetHttpTransport.newTrustedTransport(),
+                            GsonFactory.getDefaultInstance(),
+                            requestInitializer)
                     .setApplicationName("ZeroMail")
                     .setRootUrl(apiRootUrl)
                     .build();
@@ -71,16 +72,24 @@ public class GmailApiClientFactory {
     }
 
     public Gmail buildClientForTenant(UUID tenantId) throws IOException {
-        GmailConnectionEntity gmailConnection = gmailConnectionRepository.findByTenantId(tenantId)
-                .orElseThrow(() -> new IllegalStateException("No connection for tenantId: " + tenantId));
+        GmailConnectionEntity gmailConnection =
+                gmailConnectionRepository
+                        .findByTenantId(tenantId)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalStateException(
+                                                "No connection for tenantId: " + tenantId));
         return buildClientForConnection(gmailConnection, tenantId);
     }
 
-    public Gmail buildClientForConnection(GmailConnectionEntity gmailConnection, UUID tenantId) throws IOException {
+    public Gmail buildClientForConnection(GmailConnectionEntity gmailConnection, UUID tenantId)
+            throws IOException {
         byte[] decryptedRefreshTokenBytes =
-                refreshTokenCipher.decrypt(gmailConnection.getRefreshTokenEncrypted(), tenantId.toString());
+                refreshTokenCipher.decrypt(
+                        gmailConnection.getRefreshTokenEncrypted(), tenantId.toString());
         try {
-            String decryptedRefreshToken = new String(decryptedRefreshTokenBytes, StandardCharsets.UTF_8);
+            String decryptedRefreshToken =
+                    new String(decryptedRefreshTokenBytes, StandardCharsets.UTF_8);
             TokenRefreshResult tokenResult = refreshAccessToken(decryptedRefreshToken);
             return buildGmailClient(tokenResult.accessToken().value());
         } finally {
@@ -92,15 +101,20 @@ public class GmailApiClientFactory {
 
     public TokenRefreshResult refreshAccessToken(String decryptedRefreshToken) throws IOException {
         HttpClient httpClient = HttpClient.newHttpClient();
-        String requestBody = "grant_type=refresh_token"
-                + "&client_id=" + URLEncoder.encode(clientId, StandardCharsets.UTF_8)
-                + "&client_secret=" + URLEncoder.encode(clientSecret, StandardCharsets.UTF_8)
-                + "&refresh_token=" + URLEncoder.encode(decryptedRefreshToken, StandardCharsets.UTF_8);
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(tokenEndpoint)
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                .build();
+        String requestBody =
+                "grant_type=refresh_token"
+                        + "&client_id="
+                        + URLEncoder.encode(clientId, StandardCharsets.UTF_8)
+                        + "&client_secret="
+                        + URLEncoder.encode(clientSecret, StandardCharsets.UTF_8)
+                        + "&refresh_token="
+                        + URLEncoder.encode(decryptedRefreshToken, StandardCharsets.UTF_8);
+        HttpRequest request =
+                HttpRequest.newBuilder()
+                        .uri(tokenEndpoint)
+                        .header("Content-Type", "application/x-www-form-urlencoded")
+                        .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                        .build();
         HttpResponse<String> response;
         try {
             response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());

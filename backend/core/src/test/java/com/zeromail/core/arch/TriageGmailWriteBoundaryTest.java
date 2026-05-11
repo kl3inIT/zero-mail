@@ -20,35 +20,52 @@ class TriageGmailWriteBoundaryTest {
     private static final String GMAIL_DRAFTS_OWNER = "Gmail.Users.Drafts";
 
     @ArchTest
-    static final ArchRule only_triage_gmail_writer_calls_gmail_write_apis = classes()
-            .that().resideInAPackage("..core.triage..")
-            .should(new ArchCondition<JavaClass>(
-                    "call Gmail write APIs only from " + TRIAGE_GMAIL_WRITER) {
-                @Override
-                public void check(JavaClass javaClass, ConditionEvents conditionEvents) {
-                    if (javaClass.getName().equals(TRIAGE_GMAIL_WRITER)) {
-                        return;
-                    }
-                    javaClass.getMethodCallsFromSelf().forEach(methodCall -> {
-                        if (!isGmailWriteCall(methodCall.getTargetOwner().getName(), methodCall.getName())) {
-                            return;
-                        }
-                        conditionEvents.add(SimpleConditionEvent.violated(
-                                methodCall,
-                                "Only " + TRIAGE_GMAIL_WRITER + " may call Gmail write APIs; found "
-                                        + methodCall.getSourceCodeLocation()));
-                    });
-                }
-            })
-            .because("TRG-02: triage Gmail writes are centralized behind the audited writer.")
-            .allowEmptyShould(true);
+    static final ArchRule only_triage_gmail_writer_calls_gmail_write_apis =
+            classes()
+                    .that()
+                    .resideInAPackage("..core.triage..")
+                    .should(
+                            new ArchCondition<JavaClass>(
+                                    "call Gmail write APIs only from " + TRIAGE_GMAIL_WRITER) {
+                                @Override
+                                public void check(
+                                        JavaClass javaClass, ConditionEvents conditionEvents) {
+                                    if (javaClass.getName().equals(TRIAGE_GMAIL_WRITER)) {
+                                        return;
+                                    }
+                                    javaClass
+                                            .getMethodCallsFromSelf()
+                                            .forEach(
+                                                    methodCall -> {
+                                                        if (!isGmailWriteCall(
+                                                                methodCall
+                                                                        .getTargetOwner()
+                                                                        .getName(),
+                                                                methodCall.getName())) {
+                                                            return;
+                                                        }
+                                                        conditionEvents.add(
+                                                                SimpleConditionEvent.violated(
+                                                                        methodCall,
+                                                                        "Only "
+                                                                                + TRIAGE_GMAIL_WRITER
+                                                                                + " may call Gmail write APIs; found "
+                                                                                + methodCall
+                                                                                        .getSourceCodeLocation()));
+                                                    });
+                                }
+                            })
+                    .because(
+                            "TRG-02: triage Gmail writes are centralized behind the audited writer.")
+                    .allowEmptyShould(true);
 
     private static boolean isGmailWriteCall(String targetOwnerName, String methodName) {
         String normalizedOwnerName = targetOwnerName.replace('$', '.');
-        boolean messageModify = normalizedOwnerName.endsWith(GMAIL_MESSAGES_OWNER)
-                && methodName.equals("modify");
-        boolean draftCreateOrDelete = normalizedOwnerName.endsWith(GMAIL_DRAFTS_OWNER)
-                && (methodName.equals("create") || methodName.equals("delete"));
+        boolean messageModify =
+                normalizedOwnerName.endsWith(GMAIL_MESSAGES_OWNER) && methodName.equals("modify");
+        boolean draftCreateOrDelete =
+                normalizedOwnerName.endsWith(GMAIL_DRAFTS_OWNER)
+                        && (methodName.equals("create") || methodName.equals("delete"));
         return messageModify || draftCreateOrDelete;
     }
 }

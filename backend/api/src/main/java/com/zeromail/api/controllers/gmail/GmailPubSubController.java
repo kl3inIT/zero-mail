@@ -1,18 +1,15 @@
 package com.zeromail.api.controllers.gmail;
 
+import com.zeromail.api.dto.gmail.GmailNotification;
+import com.zeromail.api.dto.gmail.PubSubPushEnvelope;
+import com.zeromail.core.gmail.service.PubSubIngestionService;
+import io.swagger.v3.oas.annotations.Hidden;
 import java.util.Base64;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-
-import com.zeromail.api.dto.gmail.GmailNotification;
-import com.zeromail.api.dto.gmail.PubSubPushEnvelope;
-import com.zeromail.core.gmail.service.PubSubIngestionService;
-
-import io.swagger.v3.oas.annotations.Hidden;
 import tools.jackson.databind.ObjectMapper;
 
 @Hidden
@@ -24,7 +21,8 @@ public class GmailPubSubController {
     private final PubSubIngestionService ingestionService;
     private final ObjectMapper objectMapper;
 
-    public GmailPubSubController(PubSubIngestionService ingestionService, ObjectMapper objectMapper) {
+    public GmailPubSubController(
+            PubSubIngestionService ingestionService, ObjectMapper objectMapper) {
         this.ingestionService = ingestionService;
         this.objectMapper = objectMapper;
     }

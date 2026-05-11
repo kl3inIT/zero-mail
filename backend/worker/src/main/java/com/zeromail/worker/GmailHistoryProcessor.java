@@ -1,14 +1,12 @@
 package com.zeromail.worker;
 
-import java.util.List;
-
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
-
 import com.zeromail.core.gmail.persistence.PubSubDeliveryEntity;
 import com.zeromail.core.gmail.persistence.PubSubDeliveryRepository;
 import com.zeromail.core.gmail.service.GmailDeliveryProcessingService;
 import com.zeromail.core.tenant.TenantContext;
+import java.util.List;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
 
 @Component
 public class GmailHistoryProcessor {
@@ -19,15 +17,17 @@ public class GmailHistoryProcessor {
     private final PubSubDeliveryRepository deliveryRepository;
     private final GmailDeliveryProcessingService deliveryProcessingService;
 
-    public GmailHistoryProcessor(PubSubDeliveryRepository deliveryRepository,
-                                 GmailDeliveryProcessingService deliveryProcessingService) {
+    public GmailHistoryProcessor(
+            PubSubDeliveryRepository deliveryRepository,
+            GmailDeliveryProcessingService deliveryProcessingService) {
         this.deliveryRepository = deliveryRepository;
         this.deliveryProcessingService = deliveryProcessingService;
     }
 
     @Scheduled(fixedDelay = 1_000L)
     public void tick() {
-        List<PubSubDeliveryEntity> batch = deliveryRepository.claimPendingBatch(BATCH_SIZE, LOCK_SECONDS);
+        List<PubSubDeliveryEntity> batch =
+                deliveryRepository.claimPendingBatch(BATCH_SIZE, LOCK_SECONDS);
         for (PubSubDeliveryEntity delivery : batch) {
             ScopedValue.where(TenantContext.TENANT, delivery.getTenantId().toString())
                     .run(() -> deliveryProcessingService.processDelivery(delivery));

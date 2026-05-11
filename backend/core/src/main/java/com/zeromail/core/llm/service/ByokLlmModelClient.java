@@ -12,5 +12,5 @@ import com.zeromail.core.llm.application.LlmChatResult;
  */
 public interface ByokLlmModelClient {
 
-  LlmChatResult call(byte[] decryptedKey, String endpoint, LlmChatRequest request);
+    LlmChatResult call(byte[] decryptedKey, String endpoint, LlmChatRequest request);
 }

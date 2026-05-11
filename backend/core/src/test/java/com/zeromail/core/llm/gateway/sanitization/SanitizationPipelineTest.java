@@ -24,11 +24,13 @@ class SanitizationPipelineTest {
     @Test
     void runs_steps_in_order_10_20_30_40() throws Exception {
         List<String> callOrder = new ArrayList<>();
-        SanitizationPipeline sanitizationPipeline = new SanitizationPipeline(List.of(
-                new TruncateRecordingSanitizer(callOrder),
-                new TagRecordingSanitizer(callOrder),
-                new NfcRecordingSanitizer(callOrder),
-                new JsoupRecordingSanitizer(callOrder)));
+        SanitizationPipeline sanitizationPipeline =
+                new SanitizationPipeline(
+                        List.of(
+                                new TruncateRecordingSanitizer(callOrder),
+                                new TagRecordingSanitizer(callOrder),
+                                new NfcRecordingSanitizer(callOrder),
+                                new JsoupRecordingSanitizer(callOrder)));
 
         sanitizeWithTenant(sanitizationPipeline, "body");
 
@@ -39,7 +41,8 @@ class SanitizationPipelineTest {
     void happy_path_strips_and_returns_context() throws Exception {
         SanitizationPipeline sanitizationPipeline = productionPipeline();
 
-        SanitizationContext sanitizedContext = sanitizeWithTenant(sanitizationPipeline, "<p>hi</p>");
+        SanitizationContext sanitizedContext =
+                sanitizeWithTenant(sanitizationPipeline, "<p>hi</p>");
 
         assertThat(sanitizedContext.content()).isEqualTo("hi");
         assertThat(sanitizedContext.tokenCount()).isPositive();
@@ -50,18 +53,23 @@ class SanitizationPipelineTest {
     void aborts_with_SanitizationException_on_step_failure() {
         RuntimeException stepFailure = new IllegalStateException("planned failure");
         AtomicBoolean laterStepInvoked = new AtomicBoolean(false);
-        SanitizationPipeline sanitizationPipeline = new SanitizationPipeline(List.of(
-                new FailingSanitizer(stepFailure),
-                context -> {
-                    laterStepInvoked.set(true);
-                    return context;
-                }));
+        SanitizationPipeline sanitizationPipeline =
+                new SanitizationPipeline(
+                        List.of(
+                                new FailingSanitizer(stepFailure),
+                                context -> {
+                                    laterStepInvoked.set(true);
+                                    return context;
+                                }));
 
         assertThatThrownBy(() -> sanitizeWithTenant(sanitizationPipeline, "private body"))
-                .isInstanceOfSatisfying(SanitizationException.class, sanitizationException -> {
-                    assertThat(sanitizationException.stepName()).isEqualTo("FailingSanitizer");
-                    assertThat(sanitizationException.getCause()).isSameAs(stepFailure);
-                });
+                .isInstanceOfSatisfying(
+                        SanitizationException.class,
+                        sanitizationException -> {
+                            assertThat(sanitizationException.stepName())
+                                    .isEqualTo("FailingSanitizer");
+                            assertThat(sanitizationException.getCause()).isSameAs(stepFailure);
+                        });
         assertThat(laterStepInvoked).isFalse();
     }
 
@@ -74,14 +82,19 @@ class SanitizationPipelineTest {
         pipelineLogger.addAppender(listAppender);
 
         try {
-            sanitizeWithTenant(productionPipeline(), "<script>alert(1)</script><p>sensitive private body</p>");
+            sanitizeWithTenant(
+                    productionPipeline(), "<script>alert(1)</script><p>sensitive private body</p>");
         } finally {
             pipelineLogger.detachAppender(listAppender);
         }
 
-        String formattedMessages = listAppender.list.stream()
-                .map(ILoggingEvent::getFormattedMessage)
-                .reduce("", (combinedMessages, formattedMessage) -> combinedMessages + "\n" + formattedMessage);
+        String formattedMessages =
+                listAppender.list.stream()
+                        .map(ILoggingEvent::getFormattedMessage)
+                        .reduce(
+                                "",
+                                (combinedMessages, formattedMessage) ->
+                                        combinedMessages + "\n" + formattedMessage);
 
         assertThat(formattedMessages)
                 .contains("event=sanitization_completed tenantId=" + TENANT_ID)
@@ -91,15 +104,16 @@ class SanitizationPipelineTest {
     }
 
     private SanitizationPipeline productionPipeline() {
-        return new SanitizationPipeline(List.of(
-                new JsoupHtmlStripSanitizer(),
-                new NfcNormalizeSanitizer(),
-                new UnicodeTagStripSanitizer(),
-                new JtokkitTruncateSanitizer(Encodings.newDefaultEncodingRegistry())));
+        return new SanitizationPipeline(
+                List.of(
+                        new JsoupHtmlStripSanitizer(),
+                        new NfcNormalizeSanitizer(),
+                        new UnicodeTagStripSanitizer(),
+                        new JtokkitTruncateSanitizer(Encodings.newDefaultEncodingRegistry())));
     }
 
-    private SanitizationContext sanitizeWithTenant(SanitizationPipeline sanitizationPipeline, String rawHtml)
-            throws Exception {
+    private SanitizationContext sanitizeWithTenant(
+            SanitizationPipeline sanitizationPipeline, String rawHtml) throws Exception {
         return ScopedValue.where(TenantContext.TENANT, TENANT_ID.toString())
                 .call(() -> sanitizationPipeline.sanitize(rawHtml));
     }

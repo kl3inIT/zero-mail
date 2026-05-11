@@ -4,10 +4,7 @@ import java.util.Map;
 import java.util.Objects;
 
 public record SanitizationContext(
-        String content,
-        int tokenCount,
-        boolean truncated,
-        Map<String, Object> stepMetadata) {
+        String content, int tokenCount, boolean truncated, Map<String, Object> stepMetadata) {
 
     public SanitizationContext {
         Objects.requireNonNull(content, "content");

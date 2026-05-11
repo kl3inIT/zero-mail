@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -12,18 +11,18 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 public interface TenantProtectedSenderObservationRepository
-    extends JpaRepository<TenantProtectedSenderObservationEntity, UUID> {
+        extends JpaRepository<TenantProtectedSenderObservationEntity, UUID> {
 
-  Optional<TenantProtectedSenderObservationEntity> findByTenantIdAndSenderEmail(
-      UUID tenantId, String senderEmail);
+    Optional<TenantProtectedSenderObservationEntity> findByTenantIdAndSenderEmail(
+            UUID tenantId, String senderEmail);
 
-  List<TenantProtectedSenderObservationEntity> findByTenantId(UUID tenantId);
+    List<TenantProtectedSenderObservationEntity> findByTenantId(UUID tenantId);
 
-  @Modifying
-  @Transactional
-  @Query(
-      value =
-          """
+    @Modifying
+    @Transactional
+    @Query(
+            value =
+                    """
           INSERT INTO tenant_protected_sender_observation AS protected_sender_observation (
             id,
             tenant_id,
@@ -53,10 +52,10 @@ public interface TenantProtectedSenderObservationRepository
             updated_at = EXCLUDED.updated_at,
             version = protected_sender_observation.version + 1
           """,
-      nativeQuery = true)
-  int upsertObservation(
-      @Param("id") UUID id,
-      @Param("tenantId") UUID tenantId,
-      @Param("senderEmail") String senderEmail,
-      @Param("observedAt") Instant observedAt);
+            nativeQuery = true)
+    int upsertObservation(
+            @Param("id") UUID id,
+            @Param("tenantId") UUID tenantId,
+            @Param("senderEmail") String senderEmail,
+            @Param("observedAt") Instant observedAt);
 }

@@ -6,7 +6,9 @@ package com.zeromail.core.llm.exception;
  */
 public class TokenBudgetExceededException extends RuntimeException {
 
-  public TokenBudgetExceededException(int estimatedTokens, int tokenCap) {
-    super("Estimated prompt tokens %d exceed token cap %d".formatted(estimatedTokens, tokenCap));
-  }
+    public TokenBudgetExceededException(int estimatedTokens, int tokenCap) {
+        super(
+                "Estimated prompt tokens %d exceed token cap %d"
+                        .formatted(estimatedTokens, tokenCap));
+    }
 }

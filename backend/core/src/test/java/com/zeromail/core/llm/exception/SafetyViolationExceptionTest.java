@@ -3,7 +3,6 @@ package com.zeromail.core.llm.exception;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Arrays;
-
 import org.junit.jupiter.api.Test;
 
 class SafetyViolationExceptionTest {
@@ -15,9 +14,10 @@ class SafetyViolationExceptionTest {
         assertThat(safetyViolationException.getMessage()).isNull();
         assertThat(SafetyViolationException.class.getDeclaredConstructors())
                 .singleElement()
-                .satisfies(constructor -> {
-                    assertThat(constructor.getParameterCount()).isZero();
-                    assertThat(Arrays.asList(constructor.getParameterTypes())).isEmpty();
-                });
+                .satisfies(
+                        constructor -> {
+                            assertThat(constructor.getParameterCount()).isZero();
+                            assertThat(Arrays.asList(constructor.getParameterTypes())).isEmpty();
+                        });
     }
 }

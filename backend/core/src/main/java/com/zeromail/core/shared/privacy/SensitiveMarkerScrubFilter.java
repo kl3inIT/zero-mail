@@ -1,15 +1,14 @@
 package com.zeromail.core.shared.privacy;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.classic.spi.LoggingEvent;
+import ch.qos.logback.core.filter.Filter;
+import ch.qos.logback.core.spi.FilterReply;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.classic.spi.LoggingEvent;
-import ch.qos.logback.core.filter.Filter;
-import ch.qos.logback.core.spi.FilterReply;
 
 /**
  * Defense-in-depth catch for stray {@code Sensitive(...)} tokens that bypassed {@link
@@ -31,87 +30,93 @@ import ch.qos.logback.core.spi.FilterReply;
  */
 public class SensitiveMarkerScrubFilter extends Filter<ILoggingEvent> {
 
-  private static final String TOKEN = "Sensitive(";
-  private static final List<ScrubPattern> SECRET_PATTERNS =
-      List.of(
-          new ScrubPattern(Pattern.compile("apiKey=([^\\s,;]+)"), "apiKey=***REDACTED***"),
-          new ScrubPattern(
-              Pattern.compile("Bearer\\s+([A-Za-z0-9_\\-.]+)"), "Bearer ***REDACTED***"),
-          new ScrubPattern(
-              Pattern.compile("x-api-key[\\s:=]+([^\\s,;]+)", Pattern.CASE_INSENSITIVE),
-              "x-api-key: ***REDACTED***"));
+    private static final String TOKEN = "Sensitive(";
+    private static final List<ScrubPattern> SECRET_PATTERNS =
+            List.of(
+                    new ScrubPattern(
+                            Pattern.compile("apiKey=([^\\s,;]+)"), "apiKey=***REDACTED***"),
+                    new ScrubPattern(
+                            Pattern.compile("Bearer\\s+([A-Za-z0-9_\\-.]+)"),
+                            "Bearer ***REDACTED***"),
+                    new ScrubPattern(
+                            Pattern.compile(
+                                    "x-api-key[\\s:=]+([^\\s,;]+)", Pattern.CASE_INSENSITIVE),
+                            "x-api-key: ***REDACTED***"));
 
-  @Override
-  public FilterReply decide(ILoggingEvent event) {
-    if (event == null) {
-      return FilterReply.NEUTRAL;
+    @Override
+    public FilterReply decide(ILoggingEvent event) {
+        if (event == null) {
+            return FilterReply.NEUTRAL;
+        }
+        String message = event.getFormattedMessage();
+        if (message == null) {
+            return FilterReply.NEUTRAL;
+        }
+        ScrubResult scrubResult = scrubSecrets(message);
+        if (!message.contains(TOKEN) && !scrubResult.changed()) {
+            return FilterReply.NEUTRAL;
+        }
+        if (scrubResult.changed()) {
+            replaceFormattedMessage(event, scrubResult.message());
+        }
+        stampScrubbed(event, scrubResult.changed() ? "secret_token" : "sensitive_marker");
+        return FilterReply.NEUTRAL;
     }
-    String message = event.getFormattedMessage();
-    if (message == null) {
-      return FilterReply.NEUTRAL;
-    }
-    ScrubResult scrubResult = scrubSecrets(message);
-    if (!message.contains(TOKEN) && !scrubResult.changed()) {
-      return FilterReply.NEUTRAL;
-    }
-    if (scrubResult.changed()) {
-      replaceFormattedMessage(event, scrubResult.message());
-    }
-    stampScrubbed(event, scrubResult.changed() ? "secret_token" : "sensitive_marker");
-    return FilterReply.NEUTRAL;
-  }
 
-  private static ScrubResult scrubSecrets(String message) {
-    String scrubbedMessage = message;
-    for (ScrubPattern scrubPattern : SECRET_PATTERNS) {
-      scrubbedMessage =
-          scrubPattern.pattern().matcher(scrubbedMessage).replaceAll(scrubPattern.replacement());
+    private static ScrubResult scrubSecrets(String message) {
+        String scrubbedMessage = message;
+        for (ScrubPattern scrubPattern : SECRET_PATTERNS) {
+            scrubbedMessage =
+                    scrubPattern
+                            .pattern()
+                            .matcher(scrubbedMessage)
+                            .replaceAll(scrubPattern.replacement());
+        }
+        return new ScrubResult(scrubbedMessage, !scrubbedMessage.equals(message));
     }
-    return new ScrubResult(scrubbedMessage, !scrubbedMessage.equals(message));
-  }
 
-  private static void replaceFormattedMessage(ILoggingEvent event, String scrubbedMessage) {
-    if (!(event instanceof LoggingEvent classic)) {
-      return;
+    private static void replaceFormattedMessage(ILoggingEvent event, String scrubbedMessage) {
+        if (!(event instanceof LoggingEvent classic)) {
+            return;
+        }
+        try {
+            Field formattedMessageField = LoggingEvent.class.getDeclaredField("formattedMessage");
+            formattedMessageField.setAccessible(true);
+            formattedMessageField.set(classic, scrubbedMessage);
+        } catch (NoSuchFieldException | IllegalAccessException reflectionException) {
+            throw new IllegalStateException(
+                    "Logback LoggingEvent layout changed; SensitiveMarkerScrubFilter needs update",
+                    reflectionException);
+        }
     }
-    try {
-      Field formattedMessageField = LoggingEvent.class.getDeclaredField("formattedMessage");
-      formattedMessageField.setAccessible(true);
-      formattedMessageField.set(classic, scrubbedMessage);
-    } catch (NoSuchFieldException | IllegalAccessException reflectionException) {
-      throw new IllegalStateException(
-          "Logback LoggingEvent layout changed; SensitiveMarkerScrubFilter needs update",
-          reflectionException);
-    }
-  }
 
-  private static void stampScrubbed(ILoggingEvent event, String scrubReason) {
-    // We copy-on-write: build a new map containing the existing MDC snapshot plus the
-    // scrubbed/scrub_reason markers, then install it as the event's mdcPropertyMap.
-    // Logback's public LoggingEvent#setMDCPropertyMap rejects re-assignment after the
-    // event captured MDC, so we set the field reflectively. This mutation applies ONLY
-    // to this event and never touches thread-local MDC, so subsequent events stay clean.
-    if (!(event instanceof LoggingEvent classic)) {
-      return;
+    private static void stampScrubbed(ILoggingEvent event, String scrubReason) {
+        // We copy-on-write: build a new map containing the existing MDC snapshot plus the
+        // scrubbed/scrub_reason markers, then install it as the event's mdcPropertyMap.
+        // Logback's public LoggingEvent#setMDCPropertyMap rejects re-assignment after the
+        // event captured MDC, so we set the field reflectively. This mutation applies ONLY
+        // to this event and never touches thread-local MDC, so subsequent events stay clean.
+        if (!(event instanceof LoggingEvent classic)) {
+            return;
+        }
+        Map<String, String> existing = classic.getMDCPropertyMap();
+        Map<String, String> copy = existing == null ? new HashMap<>() : new HashMap<>(existing);
+        copy.put("scrubbed", "true");
+        copy.put("scrub_reason", scrubReason);
+        try {
+            Field mdcPropertyMapField = LoggingEvent.class.getDeclaredField("mdcPropertyMap");
+            mdcPropertyMapField.setAccessible(true);
+            mdcPropertyMapField.set(classic, copy);
+        } catch (NoSuchFieldException | IllegalAccessException reflectionException) {
+            // If the Logback layout ever changes the field name we want to know about it
+            // loudly during tests/CI, but never break a production log emission for it.
+            throw new IllegalStateException(
+                    "Logback LoggingEvent layout changed; SensitiveMarkerScrubFilter needs update",
+                    reflectionException);
+        }
     }
-    Map<String, String> existing = classic.getMDCPropertyMap();
-    Map<String, String> copy = existing == null ? new HashMap<>() : new HashMap<>(existing);
-    copy.put("scrubbed", "true");
-    copy.put("scrub_reason", scrubReason);
-    try {
-      Field mdcPropertyMapField = LoggingEvent.class.getDeclaredField("mdcPropertyMap");
-      mdcPropertyMapField.setAccessible(true);
-      mdcPropertyMapField.set(classic, copy);
-    } catch (NoSuchFieldException | IllegalAccessException reflectionException) {
-      // If the Logback layout ever changes the field name we want to know about it
-      // loudly during tests/CI, but never break a production log emission for it.
-      throw new IllegalStateException(
-          "Logback LoggingEvent layout changed; SensitiveMarkerScrubFilter needs update",
-          reflectionException);
-    }
-  }
 
-  private record ScrubPattern(Pattern pattern, String replacement) {}
+    private record ScrubPattern(Pattern pattern, String replacement) {}
 
-  private record ScrubResult(String message, boolean changed) {}
+    private record ScrubResult(String message, boolean changed) {}
 }

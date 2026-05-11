@@ -21,7 +21,8 @@ public final class TenantContext {
     }
 
     /**
-     * Canonical tenant rebind helper for asynchronous consumers such as triage orchestrators and worker schedulers.
+     * Canonical tenant rebind helper for asynchronous consumers such as triage orchestrators and
+     * worker schedulers.
      */
     public static void runWith(UUID tenantId, Runnable action) {
         ScopedValue.where(TENANT, tenantId.toString()).run(action);

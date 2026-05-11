@@ -6,7 +6,7 @@ package com.zeromail.core.triage.exception;
  */
 public class TriageSafetyViolationException extends RuntimeException {
 
-  public TriageSafetyViolationException() {
-    super();
-  }
+    public TriageSafetyViolationException() {
+        super();
+    }
 }

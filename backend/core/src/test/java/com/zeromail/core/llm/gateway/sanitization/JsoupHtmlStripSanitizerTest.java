@@ -11,16 +11,16 @@ class JsoupHtmlStripSanitizerTest {
 
     @Test
     void strips_html_tags_and_scripts() {
-        SanitizationContext sanitizedContext = sanitizer.apply(
-                SanitizationContext.initial("<script>alert(1)</script><p>hi</p>"));
+        SanitizationContext sanitizedContext =
+                sanitizer.apply(SanitizationContext.initial("<script>alert(1)</script><p>hi</p>"));
 
         assertThat(sanitizedContext.content()).isEqualTo("hi");
     }
 
     @Test
     void preserves_plain_text() {
-        SanitizationContext sanitizedContext = sanitizer.apply(
-                SanitizationContext.initial("Plain text without HTML"));
+        SanitizationContext sanitizedContext =
+                sanitizer.apply(SanitizationContext.initial("Plain text without HTML"));
 
         assertThat(sanitizedContext.content()).isEqualTo("Plain text without HTML");
     }

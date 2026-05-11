@@ -2,8 +2,14 @@ package com.zeromail.api.controllers.tenant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.zeromail.api.security.TestSessionSupport;
+import com.zeromail.api.support.ApiPostgresTestBase;
+import com.zeromail.core.account.persistence.UserEntity;
+import com.zeromail.core.account.persistence.UserRepository;
+import com.zeromail.core.tenant.TenantContext;
+import com.zeromail.core.tenant.persistence.TenantEntity;
+import com.zeromail.core.tenant.persistence.TenantRepository;
 import java.util.UUID;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,14 +21,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.RestClient;
-
-import com.zeromail.api.security.TestSessionSupport;
-import com.zeromail.api.support.ApiPostgresTestBase;
-import com.zeromail.core.account.persistence.UserEntity;
-import com.zeromail.core.account.persistence.UserRepository;
-import com.zeromail.core.tenant.TenantContext;
-import com.zeromail.core.tenant.persistence.TenantEntity;
-import com.zeromail.core.tenant.persistence.TenantRepository;
 
 @ActiveProfiles("test")
 @Import(TestSessionSupport.class)
@@ -39,13 +37,15 @@ class TriagePauseControllerTest extends ApiPostgresTestBase {
         RestClient client = RestClient.create("http://localhost:" + port);
         Seed seed = seedUser("triage-pause-true");
 
-        String raw = client.put().uri("/tenant/triage-pause")
-                .header(TestSessionSupport.HEADER_SUBJECT, seed.googleSubject())
-                .header(TestSessionSupport.HEADER_EMAIL, seed.email())
-                .contentType(MediaType.APPLICATION_JSON)
-                .body("{\"paused\":true}")
-                .retrieve()
-                .body(String.class);
+        String raw =
+                client.put()
+                        .uri("/tenant/triage-pause")
+                        .header(TestSessionSupport.HEADER_SUBJECT, seed.googleSubject())
+                        .header(TestSessionSupport.HEADER_EMAIL, seed.email())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"paused\":true}")
+                        .retrieve()
+                        .body(String.class);
 
         assertThat(raw).contains("\"paused\":true");
         assertThat(triagePaused(seed.tenantId())).isTrue();
@@ -58,13 +58,15 @@ class TriagePauseControllerTest extends ApiPostgresTestBase {
         Seed seed = seedUser("triage-pause-false");
         jdbc.update("UPDATE tenants SET triage_paused = true WHERE id = ?", seed.tenantId());
 
-        String raw = client.put().uri("/tenant/triage-pause")
-                .header(TestSessionSupport.HEADER_SUBJECT, seed.googleSubject())
-                .header(TestSessionSupport.HEADER_EMAIL, seed.email())
-                .contentType(MediaType.APPLICATION_JSON)
-                .body("{\"paused\":false}")
-                .retrieve()
-                .body(String.class);
+        String raw =
+                client.put()
+                        .uri("/tenant/triage-pause")
+                        .header(TestSessionSupport.HEADER_SUBJECT, seed.googleSubject())
+                        .header(TestSessionSupport.HEADER_EMAIL, seed.email())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"paused\":false}")
+                        .retrieve()
+                        .body(String.class);
 
         assertThat(raw).contains("\"paused\":false");
         assertThat(triagePaused(seed.tenantId())).isFalse();
@@ -75,12 +77,14 @@ class TriagePauseControllerTest extends ApiPostgresTestBase {
     void putTriagePause_missingTestAuth_returns401() {
         RestClient client = RestClient.create("http://localhost:" + port);
 
-        ResponseEntity<String> res = client.put().uri("/tenant/triage-pause")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body("{\"paused\":true}")
-                .retrieve()
-                .onStatus(HttpStatusCode::is4xxClientError, (_, _) -> { })
-                .toEntity(String.class);
+        ResponseEntity<String> res =
+                client.put()
+                        .uri("/tenant/triage-pause")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"paused\":true}")
+                        .retrieve()
+                        .onStatus(HttpStatusCode::is4xxClientError, (_, _) -> {})
+                        .toEntity(String.class);
 
         assertThat(res.getStatusCode().value()).isEqualTo(401);
     }
@@ -91,13 +95,14 @@ class TriagePauseControllerTest extends ApiPostgresTestBase {
         UUID userId = UUID.randomUUID();
         String subject = "sub-" + label;
         String email = label + "@example.com";
-        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() ->
-                users.save(new UserEntity(userId, tenantId, subject, email)));
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(() -> users.save(new UserEntity(userId, tenantId, subject, email)));
         return new Seed(tenantId, subject, email);
     }
 
     private Boolean triagePaused(UUID tenantId) {
-        return jdbc.queryForObject("SELECT triage_paused FROM tenants WHERE id = ?", Boolean.class, tenantId);
+        return jdbc.queryForObject(
+                "SELECT triage_paused FROM tenants WHERE id = ?", Boolean.class, tenantId);
     }
 
     private record Seed(UUID tenantId, String googleSubject, String email) {}

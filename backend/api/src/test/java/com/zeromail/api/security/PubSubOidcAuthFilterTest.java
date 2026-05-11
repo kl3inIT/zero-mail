@@ -2,6 +2,7 @@ package com.zeromail.api.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.zeromail.api.support.MockGoogleOidcServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,12 +11,11 @@ import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
-import com.zeromail.api.support.MockGoogleOidcServer;
-
 class PubSubOidcAuthFilterTest {
 
     private static final String AUDIENCE = "https://test.example/internal/pubsub/gmail";
-    private static final String SERVICE_ACCOUNT_EMAIL = "pubsub-sa@test-project.iam.gserviceaccount.com";
+    private static final String SERVICE_ACCOUNT_EMAIL =
+            "pubsub-sa@test-project.iam.gserviceaccount.com";
     private static final String ISSUER = "https://accounts.google.com";
     private static final String OIDC_EVENT = "pubsub_oidc";
 
@@ -35,7 +35,8 @@ class PubSubOidcAuthFilterTest {
     @Test
     void validToken_passes() throws Exception {
         PubSubOidcAuthFilter filter = filter();
-        MockHttpServletRequest request = pubsubRequest(oidc.sign(AUDIENCE, SERVICE_ACCOUNT_EMAIL, ISSUER, 300));
+        MockHttpServletRequest request =
+                pubsubRequest(oidc.sign(AUDIENCE, SERVICE_ACCOUNT_EMAIL, ISSUER, 300));
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain();
 
@@ -47,35 +48,47 @@ class PubSubOidcAuthFilterTest {
 
     @Test
     void wrongAudience_returns401() throws Exception {
-        MockHttpServletResponse response = execute(oidc.sign("https://wrong.example/push", SERVICE_ACCOUNT_EMAIL, ISSUER, 300));
+        MockHttpServletResponse response =
+                execute(
+                        oidc.sign(
+                                "https://wrong.example/push", SERVICE_ACCOUNT_EMAIL, ISSUER, 300));
 
         assertThat(response.getStatus()).isEqualTo(401);
     }
 
     @Test
     void wrongEmail_returns401() throws Exception {
-        MockHttpServletResponse response = execute(oidc.sign(AUDIENCE, "wrong@test-project.iam.gserviceaccount.com", ISSUER, 300));
+        MockHttpServletResponse response =
+                execute(
+                        oidc.sign(
+                                AUDIENCE,
+                                "wrong@test-project.iam.gserviceaccount.com",
+                                ISSUER,
+                                300));
 
         assertThat(response.getStatus()).isEqualTo(401);
     }
 
     @Test
     void wrongIssuer_returns401() throws Exception {
-        MockHttpServletResponse response = execute(oidc.sign(AUDIENCE, SERVICE_ACCOUNT_EMAIL, "https://evil.example", 300));
+        MockHttpServletResponse response =
+                execute(oidc.sign(AUDIENCE, SERVICE_ACCOUNT_EMAIL, "https://evil.example", 300));
 
         assertThat(response.getStatus()).isEqualTo(401);
     }
 
     @Test
     void expiredToken_returns401() throws Exception {
-        MockHttpServletResponse response = execute(oidc.sign(AUDIENCE, SERVICE_ACCOUNT_EMAIL, ISSUER, -60));
+        MockHttpServletResponse response =
+                execute(oidc.sign(AUDIENCE, SERVICE_ACCOUNT_EMAIL, ISSUER, -60));
 
         assertThat(response.getStatus()).isEqualTo(401);
     }
 
     @Test
     void badSignature_returns401() throws Exception {
-        MockHttpServletResponse response = execute(oidc.signWithWrongKey(AUDIENCE, SERVICE_ACCOUNT_EMAIL));
+        MockHttpServletResponse response =
+                execute(oidc.signWithWrongKey(AUDIENCE, SERVICE_ACCOUNT_EMAIL));
 
         assertThat(response.getStatus()).isEqualTo(401);
     }
@@ -108,7 +121,8 @@ class PubSubOidcAuthFilterTest {
     }
 
     private static MockHttpServletRequest pubsubRequest(String token) {
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/internal/pubsub/gmail");
+        MockHttpServletRequest request =
+                new MockHttpServletRequest("POST", "/internal/pubsub/gmail");
         request.setServletPath("/internal/pubsub/gmail");
         request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
         return request;

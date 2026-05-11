@@ -1,12 +1,10 @@
 package com.zeromail.api.controllers.gmail;
 
-import java.util.UUID;
-
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.zeromail.core.gmail.service.GmailConnectionService;
 import com.zeromail.core.tenant.TenantContext;
+import java.util.UUID;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class DisconnectController {

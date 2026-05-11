@@ -4,19 +4,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.UUID;
-
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
-
 import com.zeromail.core.billing.domain.CallSite;
-import com.zeromail.core.billing.exception.IllegalLedgerStateException;
 import com.zeromail.core.billing.domain.ReservationId;
+import com.zeromail.core.billing.exception.IllegalLedgerStateException;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryEntity;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryRepository;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 class CreditLedgerSettleIdempotentTest extends PostgresContainerTest {
 
@@ -29,10 +27,13 @@ class CreditLedgerSettleIdempotentTest extends PostgresContainerTest {
         UUID tenantId = seedTenantWithCredits(10);
         ReservationId reservationId = reserveTriage(tenantId);
 
-        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() -> {
-            creditLedger.settle(reservationId);
-            assertThatCode(() -> creditLedger.settle(reservationId)).doesNotThrowAnyException();
-        });
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(
+                        () -> {
+                            creditLedger.settle(reservationId);
+                            assertThatCode(() -> creditLedger.settle(reservationId))
+                                    .doesNotThrowAnyException();
+                        });
 
         assertThat(countFinalizers(tenantId, reservationId, "SETTLE")).isEqualTo(1L);
     }
@@ -42,10 +43,13 @@ class CreditLedgerSettleIdempotentTest extends PostgresContainerTest {
         UUID tenantId = seedTenantWithCredits(10);
         ReservationId reservationId = reserveTriage(tenantId);
 
-        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() -> {
-            creditLedger.release(reservationId);
-            assertThatCode(() -> creditLedger.release(reservationId)).doesNotThrowAnyException();
-        });
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(
+                        () -> {
+                            creditLedger.release(reservationId);
+                            assertThatCode(() -> creditLedger.release(reservationId))
+                                    .doesNotThrowAnyException();
+                        });
 
         assertThat(countFinalizers(tenantId, reservationId, "RELEASE")).isEqualTo(1L);
     }
@@ -55,11 +59,13 @@ class CreditLedgerSettleIdempotentTest extends PostgresContainerTest {
         UUID tenantId = seedTenantWithCredits(10);
         ReservationId reservationId = reserveTriage(tenantId);
 
-        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() ->
-                creditLedger.settle(reservationId));
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(() -> creditLedger.settle(reservationId));
 
-        assertThatThrownBy(() -> ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() ->
-                creditLedger.release(reservationId)))
+        assertThatThrownBy(
+                        () ->
+                                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                                        .run(() -> creditLedger.release(reservationId)))
                 .isInstanceOf(IllegalLedgerStateException.class);
     }
 
@@ -68,21 +74,31 @@ class CreditLedgerSettleIdempotentTest extends PostgresContainerTest {
         UUID tenantId = seedTenantWithCredits(10);
         ReservationId reservationId = reserveTriage(tenantId);
 
-        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() ->
-                creditLedger.release(reservationId));
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(() -> creditLedger.release(reservationId));
 
-        assertThatThrownBy(() -> ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() ->
-                creditLedger.settle(reservationId)))
+        assertThatThrownBy(
+                        () ->
+                                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                                        .run(() -> creditLedger.settle(reservationId)))
                 .isInstanceOf(IllegalLedgerStateException.class);
     }
 
     private UUID seedTenantWithCredits(int startingCredits) {
         UUID tenantId = UUID.randomUUID();
-        jdbcTemplate.update("INSERT INTO tenants(id, display_name) VALUES (?, ?)",
-                tenantId, "billing-settle-" + tenantId);
-        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() ->
-                creditLedgerEntryRepository.saveAndFlush(CreditLedgerEntryEntity.topup(
-                        UUID.randomUUID(), tenantId, startingCredits, "SEPAY-SEED-" + tenantId)));
+        jdbcTemplate.update(
+                "INSERT INTO tenants(id, display_name) VALUES (?, ?)",
+                tenantId,
+                "billing-settle-" + tenantId);
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(
+                        () ->
+                                creditLedgerEntryRepository.saveAndFlush(
+                                        CreditLedgerEntryEntity.topup(
+                                                UUID.randomUUID(),
+                                                tenantId,
+                                                startingCredits,
+                                                "SEPAY-SEED-" + tenantId)));
         return tenantId;
     }
 

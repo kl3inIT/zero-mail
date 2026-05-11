@@ -2,12 +2,9 @@ package com.zeromail.core.billing.service;
 
 import java.security.SecureRandom;
 import java.util.function.Predicate;
-
 import org.springframework.stereotype.Component;
 
-/**
- * Generates 8-character Crockford-base32 top-up codes for bank-transfer memos.
- */
+/** Generates 8-character Crockford-base32 top-up codes for bank-transfer memos. */
 @Component
 public class TopupCodeGenerator {
 
@@ -23,7 +20,8 @@ public class TopupCodeGenerator {
                 return candidateCode;
             }
         }
-        throw new IllegalStateException("Failed to generate unique top-up code after " + maxAttempts + " attempts");
+        throw new IllegalStateException(
+                "Failed to generate unique top-up code after " + maxAttempts + " attempts");
     }
 
     private String newCode() {

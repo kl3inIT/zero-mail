@@ -2,16 +2,14 @@ package com.zeromail.worker;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.zeromail.worker.test.MockGmailHistoryServer;
+import com.zeromail.worker.test.MockGmailHistoryServer.HistoryMessageResponse;
 import java.util.List;
 import java.util.UUID;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
-
-import com.zeromail.worker.test.MockGmailHistoryServer;
-import com.zeromail.worker.test.MockGmailHistoryServer.HistoryMessageResponse;
 
 class GmailHistoryProcessorTest extends PostgresContainerTest {
 
@@ -35,7 +33,8 @@ class GmailHistoryProcessorTest extends PostgresContainerTest {
     void processDelivery_insertsMailMessageObserved() {
         UUID tenantId = seedConnectedGmail("history-insert@example.test", 10L);
         seedDelivery(tenantId, "delivery-insert", 11L);
-        gmail.stubHistoryList(10L, List.of(new HistoryMessageResponse("gmail-1", "thread-1", List.of(), null)));
+        gmail.stubHistoryList(
+                10L, List.of(new HistoryMessageResponse("gmail-1", "thread-1", List.of(), null)));
         gmail.stubMessageMetadata("gmail-1", "thread-1", List.of("INBOX"), 1_700_000_000_000L);
 
         processor.tick();
@@ -62,17 +61,21 @@ class GmailHistoryProcessorTest extends PostgresContainerTest {
         UUID tenantId = seedConnectedGmail("history-dupe@example.test", 10L);
         seedDelivery(tenantId, "delivery-dupe-1", 11L);
         seedDelivery(tenantId, "delivery-dupe-2", 12L);
-        gmail.stubHistoryList(10L, List.of(new HistoryMessageResponse("gmail-dupe", "thread-dupe", List.of(), null)));
-        gmail.stubMessageMetadata("gmail-dupe", "thread-dupe", List.of("INBOX"), 1_700_000_000_000L);
+        gmail.stubHistoryList(
+                10L,
+                List.of(new HistoryMessageResponse("gmail-dupe", "thread-dupe", List.of(), null)));
+        gmail.stubMessageMetadata(
+                "gmail-dupe", "thread-dupe", List.of("INBOX"), 1_700_000_000_000L);
 
         processor.tick();
         processor.tick();
 
-        Long count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM mail_message_observed WHERE tenant_id = ? AND gmail_message_id = ?",
-                Long.class,
-                tenantId,
-                "gmail-dupe");
+        Long count =
+                jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM mail_message_observed WHERE tenant_id = ? AND gmail_message_id = ?",
+                        Long.class,
+                        tenantId,
+                        "gmail-dupe");
         assertThat(count).isEqualTo(1L);
     }
 
@@ -83,13 +86,19 @@ class GmailHistoryProcessorTest extends PostgresContainerTest {
         gmail.stubHistoryListPage(
                 10L,
                 "page-2",
-                List.of(new HistoryMessageResponse("gmail-page-1", "thread-page-1", List.of(), null)));
+                List.of(
+                        new HistoryMessageResponse(
+                                "gmail-page-1", "thread-page-1", List.of(), null)));
         gmail.stubHistoryListPageToken(
                 "page-2",
                 11L,
-                List.of(new HistoryMessageResponse("gmail-page-2", "thread-page-2", List.of(), null)));
-        gmail.stubMessageMetadata("gmail-page-1", "thread-page-1", List.of("INBOX"), 1_700_000_000_000L);
-        gmail.stubMessageMetadata("gmail-page-2", "thread-page-2", List.of("INBOX"), 1_700_000_000_001L);
+                List.of(
+                        new HistoryMessageResponse(
+                                "gmail-page-2", "thread-page-2", List.of(), null)));
+        gmail.stubMessageMetadata(
+                "gmail-page-1", "thread-page-1", List.of("INBOX"), 1_700_000_000_000L);
+        gmail.stubMessageMetadata(
+                "gmail-page-2", "thread-page-2", List.of("INBOX"), 1_700_000_000_001L);
 
         processor.tick();
 
@@ -105,8 +114,10 @@ class GmailHistoryProcessorTest extends PostgresContainerTest {
         UUID tenantB = seedConnectedGmail("history-b@example.test", 20L);
         seedDelivery(tenantA, "delivery-a", 11L);
         seedDelivery(tenantB, "delivery-b", 21L);
-        gmail.stubHistoryList(10L, List.of(new HistoryMessageResponse("gmail-a", "thread-a", List.of(), null)));
-        gmail.stubHistoryList(20L, List.of(new HistoryMessageResponse("gmail-b", "thread-b", List.of(), null)));
+        gmail.stubHistoryList(
+                10L, List.of(new HistoryMessageResponse("gmail-a", "thread-a", List.of(), null)));
+        gmail.stubHistoryList(
+                20L, List.of(new HistoryMessageResponse("gmail-b", "thread-b", List.of(), null)));
         gmail.stubMessageMetadata("gmail-a", "thread-a", List.of("INBOX"), 1_700_000_000_000L);
         gmail.stubMessageMetadata("gmail-b", "thread-b", List.of("INBOX"), 1_700_000_000_001L);
 
@@ -135,50 +146,70 @@ class GmailHistoryProcessorTest extends PostgresContainerTest {
     void processDelivery_historyListMessageWithoutLabels_fetchesMetadataBeforeInboxFilter() {
         UUID tenantId = seedConnectedGmail("metadata-fetch@example.test", 10L);
         seedDelivery(tenantId, "delivery-metadata", 11L);
-        gmail.stubHistoryList(10L, List.of(new HistoryMessageResponse("gmail-metadata", "thread-metadata", List.of(), null)));
-        gmail.stubMessageMetadata("gmail-metadata", "thread-metadata", List.of("INBOX"), 1_700_000_000_000L);
+        gmail.stubHistoryList(
+                10L,
+                List.of(
+                        new HistoryMessageResponse(
+                                "gmail-metadata", "thread-metadata", List.of(), null)));
+        gmail.stubMessageMetadata(
+                "gmail-metadata", "thread-metadata", List.of("INBOX"), 1_700_000_000_000L);
 
         processor.tick();
 
-        Long internalDate = jdbc.queryForObject(
-                "SELECT internal_date FROM mail_message_observed WHERE tenant_id = ? AND gmail_message_id = ?",
-                Long.class,
-                tenantId,
-                "gmail-metadata");
+        Long internalDate =
+                jdbc.queryForObject(
+                        "SELECT internal_date FROM mail_message_observed WHERE tenant_id = ? AND gmail_message_id = ?",
+                        Long.class,
+                        tenantId,
+                        "gmail-metadata");
         assertThat(internalDate).isEqualTo(1_700_000_000_000L);
     }
 
     private UUID seedConnectedGmail(String email, long lastSyncedHistoryId) {
         UUID tenantId = UUID.randomUUID();
-        jdbc.update("INSERT INTO tenants(id, display_name) VALUES (?, ?)", tenantId, "tenant-" + tenantId);
-        jdbc.update("""
+        jdbc.update(
+                "INSERT INTO tenants(id, display_name) VALUES (?, ?)",
+                tenantId,
+                "tenant-" + tenantId);
+        jdbc.update(
+                """
                 INSERT INTO gmail_connections(
                     id, tenant_id, google_email, status, refresh_token_encrypted, last_synced_history_id, ingestion_health
                 )
                 VALUES (?, ?, ?, 'CONNECTED', ?, ?, 'HEALTHY')
-                """, UUID.randomUUID(), tenantId, email, encryptedRefreshToken(tenantId), lastSyncedHistoryId);
+                """,
+                UUID.randomUUID(),
+                tenantId,
+                email,
+                encryptedRefreshToken(tenantId),
+                lastSyncedHistoryId);
         return tenantId;
     }
 
     private void seedDelivery(UUID tenantId, String messageId, long historyId) {
-        jdbc.update("""
+        jdbc.update(
+                """
                 INSERT INTO pubsub_delivery(id, tenant_id, pubsub_message_id, history_id, payload, status)
                 VALUES (?, ?, ?, ?, '{}'::jsonb, 'PENDING')
-                """, UUID.randomUUID(), tenantId, messageId, historyId);
+                """,
+                UUID.randomUUID(),
+                tenantId,
+                messageId,
+                historyId);
     }
 
     private Long count(String table, UUID tenantId) {
-        return jdbc.queryForObject("SELECT COUNT(*) FROM " + table + " WHERE tenant_id = ?",
-                Long.class,
-                tenantId);
+        return jdbc.queryForObject(
+                "SELECT COUNT(*) FROM " + table + " WHERE tenant_id = ?", Long.class, tenantId);
     }
 
     private boolean messageExists(UUID tenantId, String gmailMessageId) {
-        Long count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM mail_message_observed WHERE tenant_id = ? AND gmail_message_id = ?",
-                Long.class,
-                tenantId,
-                gmailMessageId);
+        Long count =
+                jdbc.queryForObject(
+                        "SELECT COUNT(*) FROM mail_message_observed WHERE tenant_id = ? AND gmail_message_id = ?",
+                        Long.class,
+                        tenantId,
+                        gmailMessageId);
         return count != null && count > 0;
     }
 
@@ -190,7 +221,8 @@ class GmailHistoryProcessorTest extends PostgresContainerTest {
     }
 
     private Object gmailConnectionColumn(UUID tenantId, String column) {
-        return jdbc.queryForObject("SELECT " + column + " FROM gmail_connections WHERE tenant_id = ?",
+        return jdbc.queryForObject(
+                "SELECT " + column + " FROM gmail_connections WHERE tenant_id = ?",
                 Object.class,
                 tenantId);
     }
