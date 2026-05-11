@@ -60,4 +60,19 @@ public class TenantService {
                 .map(TenantEntity::isTriagePaused)
                 .orElse(false);
     }
+
+    @Transactional
+    public void setTriageShadowMode(UUID tenantId, boolean enabled) {
+        tenantRepository.findById(tenantId).ifPresent(tenant -> {
+            tenant.setTriageShadowMode(enabled);
+            tenantRepository.save(tenant);
+        });
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isTriageShadowMode(UUID tenantId) {
+        return tenantRepository.findById(tenantId)
+                .map(TenantEntity::isTriageShadowMode)
+                .orElse(false);
+    }
 }

@@ -14,6 +14,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatusCode;
 
 import com.zeromail.core.config.ZeroMailCoreProperties.BillingProperties;
+import com.zeromail.core.config.ZeroMailCoreProperties.BillingProperties.BillingCostProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.BillingProperties.BillingSepayProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.CryptoProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.LlmProperties;
@@ -69,7 +70,11 @@ class RestClientConfigTest {
         new CryptoProperties("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="),
         null,
         new BillingProperties(
-            new BillingSepayProperties("test-sepay-key-fixture"), 1000, 5, Duration.ofHours(24)),
+            new BillingSepayProperties("test-sepay-key-fixture"),
+            new BillingCostProperties(0),
+            1000,
+            5,
+            Duration.ofHours(24)),
         new LlmProperties(
             new ZeroMailLlmProperties(
                 null,

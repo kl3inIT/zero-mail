@@ -18,6 +18,9 @@ public class TenantEntity extends AbstractEntity {
     @Column(name = "triage_paused", nullable = false)
     private boolean triagePaused = false;
 
+    @Column(name = "triage_shadow_mode", nullable = false)
+    private boolean triageShadowMode = false;
+
     protected TenantEntity() {}
 
     public TenantEntity(UUID id, String displayName) {
@@ -35,5 +38,13 @@ public class TenantEntity extends AbstractEntity {
 
     public void setTriagePaused(boolean triagePaused) {
         this.triagePaused = triagePaused;
+    }
+
+    public boolean isTriageShadowMode() {
+        return triageShadowMode;
+    }
+
+    public void setTriageShadowMode(boolean triageShadowMode) {
+        this.triageShadowMode = triageShadowMode;
     }
 }

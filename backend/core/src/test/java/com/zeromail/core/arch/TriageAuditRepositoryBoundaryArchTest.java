@@ -7,7 +7,6 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class TriageAuditRepositoryBoundaryArchTest {
@@ -26,7 +25,6 @@ class TriageAuditRepositoryBoundaryArchTest {
     private static final Pattern AD_HOC_MUTATION_NAME = Pattern.compile("(?i).*(delete|update).*");
 
     @Test
-    @Disabled("Wave 0 contract - enabled by 04-02 when TriageAuditRepository exists")
     void triage_audit_repository_exposes_only_narrow_whitelisted_mutations() throws Exception {
         Class<?> repositoryClass = Class.forName(TRIAGE_AUDIT_REPOSITORY);
 

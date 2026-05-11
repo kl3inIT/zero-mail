@@ -45,6 +45,7 @@ public record ZeroMailCoreProperties(
 
   public record BillingProperties(
       @Valid @NotNull BillingSepayProperties sepay,
+      @Valid @NotNull BillingCostProperties cost,
       @Min(1) @DefaultValue("1000") long vndPerCredit,
       @Min(1) @DefaultValue("5") int maxPendingIntentsPerTenant,
       @DefaultValue("PT24H") Duration intentExpiry) {
@@ -55,6 +56,7 @@ public record ZeroMailCoreProperties(
      * by mistake.
      */
     public BillingProperties {
+      cost = cost == null ? BillingCostProperties.defaults() : cost;
       if (sepay != null && sepay.webhookApiKey() != null) {
         String webhookApiKey = sepay.webhookApiKey();
         String lowerCaseWebhookApiKey = webhookApiKey.toLowerCase();
@@ -72,10 +74,19 @@ public record ZeroMailCoreProperties(
 
     public record BillingSepayProperties(@NotBlank String webhookApiKey) {}
 
+    public record BillingCostProperties(@Min(0) @DefaultValue("0") int triageDeterministic) {
+
+      static BillingCostProperties defaults() {
+        return new BillingCostProperties(0);
+      }
+    }
+
     @Override
     public @NonNull String toString() {
       return "BillingProperties[sepay=****, vndPerCredit="
           + vndPerCredit
+          + ", cost="
+          + cost
           + ", maxPendingIntentsPerTenant="
           + maxPendingIntentsPerTenant
           + ", intentExpiry="
@@ -125,7 +136,9 @@ public record ZeroMailCoreProperties(
       return Map.of(
           CallSite.TRIAGE, triageModel,
           CallSite.DRAFT, compileModel,
-          CallSite.PREVIEW, compileModel);
+          CallSite.PREVIEW, compileModel,
+          CallSite.TRIAGE_PLATFORM_LLM, triageModel,
+          CallSite.TRIAGE_DETERMINISTIC, triageModel);
     }
   }
 

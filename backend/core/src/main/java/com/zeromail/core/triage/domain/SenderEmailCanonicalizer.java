@@ -7,6 +7,9 @@ import java.util.HexFormat;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+import org.springframework.stereotype.Component;
+
+@Component
 public class SenderEmailCanonicalizer {
 
   private static final Pattern PLAUSIBLE_EMAIL_PATTERN =

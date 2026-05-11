@@ -8,8 +8,11 @@ import java.util.TreeMap;
 
 import com.zeromail.core.rules.domain.RuleActionType;
 
+import org.springframework.stereotype.Component;
+
 import tools.jackson.databind.JsonNode;
 
+@Component
 public class TriageActionArgsCanonicalizer {
 
   private final TriageActionResultJsonValidator actionResultJsonValidator;

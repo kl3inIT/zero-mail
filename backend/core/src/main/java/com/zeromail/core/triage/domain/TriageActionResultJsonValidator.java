@@ -5,6 +5,8 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.springframework.stereotype.Component;
+
 import com.zeromail.core.rules.domain.RuleActionType;
 
 import tools.jackson.core.JacksonException;
@@ -12,6 +14,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
+@Component
 public class TriageActionResultJsonValidator {
 
   private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder().build();

@@ -49,7 +49,11 @@ class ZeroMailLlmPropertiesTest {
               assertThat(llmProperties.modelByCallSite())
                   .containsEntry(CallSite.PREVIEW, "openai/gpt-4o-mini")
                   .containsEntry(CallSite.DRAFT, "openai/gpt-4o-mini")
-                  .containsEntry(CallSite.TRIAGE, "anthropic/claude-3.5-sonnet");
+                  .containsEntry(CallSite.TRIAGE, "anthropic/claude-3.5-sonnet")
+                  .containsEntry(CallSite.TRIAGE_PLATFORM_LLM, "anthropic/claude-3.5-sonnet")
+                  .containsEntry(CallSite.TRIAGE_DETERMINISTIC, "anthropic/claude-3.5-sonnet");
+              assertThat(applicationContext.getBean(ZeroMailCoreProperties.class).billing().cost().triageDeterministic())
+                  .isZero();
             });
   }
 

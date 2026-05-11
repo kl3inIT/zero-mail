@@ -31,5 +31,7 @@ class CallSiteEnumMembershipArchTest {
         assertThat(CallSite.TRIAGE.cost()).isEqualTo(1);
         assertThat(CallSite.DRAFT.cost()).isEqualTo(2);
         assertThat(CallSite.PREVIEW.cost()).isEqualTo(1);
+        assertThat(CallSite.TRIAGE_PLATFORM_LLM.cost()).isEqualTo(1);
+        assertThat(CallSite.TRIAGE_DETERMINISTIC.cost()).isZero();
     }
 }
