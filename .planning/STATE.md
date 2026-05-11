@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-05-11T11:25:57.379Z"
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-05-11T11:55:21.549Z"
 last_activity: 2026-05-11
 progress:
   total_phases: 15
   completed_phases: 12
   total_plans: 100
-  completed_plans: 94
-  percent: 94
+  completed_plans: 95
+  percent: 95
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 04 (triage-convergence-hero) — EXECUTING
-Plan: 4 of 9
+Plan: 5 of 9
 Status: Ready to execute
 Last activity: 2026-05-11
 
-Progress: [█████████░] 94%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
@@ -115,6 +115,7 @@ Progress: [█████████░] 94%
 | Phase 04 P00 | 30min | 3 tasks | 23 files |
 | Phase 04 P01 | 12min | 3 tasks | 14 files |
 | Phase 04 P02 | 29 min | 3 tasks | 34 files |
+| Phase 04 P03 | 19 min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -257,6 +258,10 @@ Recent decisions affecting current work:
 - [Phase 04]: 04-02 maps TriageAuditEntity inherited id to audit_id with @AttributeOverride instead of redeclaring a second @Id.
 - [Phase 04]: 04-02 uses native @Query without @Modifying for INSERT ... RETURNING audit methods so Optional<UUID> result mapping works; @Modifying stays on update transitions only.
 - [Phase 04]: 04-02 makes TriageAuditWriter the required validation/canonicalization seam before native triage_audit inserts and records protected senders in tenant_protected_sender_observation.
+- [Phase 04]: Apply the semantic triage model pin to zero-mail.llm.platform.triage-model. — This codebase constructs the platform ChatModel from ZeroMailCoreProperties rather than spring.ai.openai.chat.options.model.
+- [Phase 04]: Use the pinned local Spring AI M6 API shape: OpenAiChatModel.ResponseFormat.builder() and ChatClient.options(OpenAiChatOptions.Builder). — Context7 and local source verification showed M6 API drift from the AI-SPEC sample; compile passed with the local shape while preserving JSON_SCHEMA behavior.
+- [Phase 04]: Add a pure-Java core.llm.service.SemanticIntentEvaluator seam so LlmGatewayImpl remains Spring-AI-free and Task 1 compiles independently. — Matches the existing LlmModelClient adapter pattern and preserves the Phase 2C Spring AI boundary while allowing staged task commits.
+
 ### Roadmap Evolution
 
 - Phase 1.1 inserted after Phase 1: Vietnamese-first i18n and error-handling foundation — default Vietnamese / secondary English, language switcher, stable frontend-localizable API error contract; references local JHipster patterns; preserves all Phase 1 privacy/safety constraints (URGENT)
@@ -316,6 +321,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-11T11:25:46.145Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-05-11T11:55:21.528Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None

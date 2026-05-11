@@ -335,7 +335,7 @@ Plans:
 - [x] 04-02-PLAN.md — Triage persistence + domain: Liquibase 025-027 + TriageActionResult sealed type + validator + canonicalizer + TriageDecision + TriageAuditEntity/Repository + TenantSenderOptInEntity/Repository + 5 exceptions + CallSite extension + TenantEntity.triageShadowMode + TenantService accessors
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 04-03-PLAN.md — LlmGateway.evaluateSemanticIntents (strict-JSON-Schema classifier) + SemanticIntentEvaluator/Response + SemanticIntentRequest + 2 gateway exceptions + worker model pin gpt-5.4-nano + semanticIntentEval Gradle task
+- [x] 04-03-PLAN.md — LlmGateway.evaluateSemanticIntents (strict-JSON-Schema classifier) + SemanticIntentEvaluator/Response + SemanticIntentRequest + 2 gateway exceptions + worker model pin gpt-5.4-nano + semanticIntentEval Gradle task
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 04-04-PLAN.md — Triage services: TriageSafetyPolicy (allow-list gate) + TriageGmailWriter (single Gmail-write call site, send-free) + SenderSafetyNetService (sent-history heuristic + Redis 24h cache + opt-in override) + core.gmail Gmail-client facade + Redis bean wiring
