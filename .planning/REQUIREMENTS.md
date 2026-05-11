@@ -71,14 +71,14 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 
 ### Triage Convergence (Hero)
 
-- [ ] **TRG-01**: On each new message, the orchestrator runs matchers in rule order and collects candidate actions
-- [ ] **TRG-02**: A safety policy layer rejects any action outside the allow-list (label / archive / save-draft)
-- [ ] **TRG-03**: Auto-send is blocked at the gateway layer — no code path can send mail on behalf of the user
-- [ ] **TRG-04**: Applied actions are Gmail write calls: label, archive (skip inbox), or save draft
-- [ ] **TRG-05**: Every triage action writes an immutable audit entry (message ref, rule, action, reason, timestamp)
-- [ ] **TRG-06**: User can undo any automated action from the audit log within retention window
-- [ ] **TRG-07**: New tenants start in shadow mode — first N triages are logged but not applied until user confirms
-- [ ] **TRG-08**: Sender safety net suppresses automated actions on messages from the user's frequent/important senders until user opts in
+- [x] **TRG-01**: On each new message, the orchestrator runs matchers in rule order and collects candidate actions
+- [x] **TRG-02**: A safety policy layer rejects any action outside the allow-list (label / archive / save-draft)
+- [x] **TRG-03**: Auto-send is blocked at the gateway layer — no code path can send mail on behalf of the user
+- [x] **TRG-04**: Applied actions are Gmail write calls: label, archive (skip inbox), or save draft
+- [x] **TRG-05**: Every triage action writes an immutable audit entry (message ref, rule, action, reason, timestamp)
+- [x] **TRG-06**: User can undo any automated action from the audit log within retention window
+- [x] **TRG-07**: New tenants start in shadow mode — first N triages are logged but not applied until user confirms
+- [x] **TRG-08**: Sender safety net suppresses automated actions on messages from the user's frequent/important senders until user opts in
 
 ### Draft Replies
 
@@ -186,14 +186,14 @@ Each v1 requirement maps to exactly one phase.
 | RULE-05 | Phase 3 | Complete |
 | RULE-06 | Phase 3 | Complete |
 | RULE-07 | Phase 3 | Complete |
-| TRG-01 | Phase 4 | Pending |
-| TRG-02 | Phase 4 | Pending |
-| TRG-03 | Phase 4 | Pending |
-| TRG-04 | Phase 4 | Pending |
-| TRG-05 | Phase 4 | Pending |
-| TRG-06 | Phase 4 | Pending |
-| TRG-07 | Phase 4 | Pending |
-| TRG-08 | Phase 4 | Pending |
+| TRG-01 | Phase 4 | Complete |
+| TRG-02 | Phase 4 | Complete |
+| TRG-03 | Phase 4 | Complete |
+| TRG-04 | Phase 4 | Complete |
+| TRG-05 | Phase 4 | Complete |
+| TRG-06 | Phase 4 | Complete |
+| TRG-07 | Phase 4 | Complete |
+| TRG-08 | Phase 4 | Complete |
 | DRFT-01 | Phase 5 | Pending |
 | DRFT-02 | Phase 5 | Pending |
 | DRFT-03 | Phase 5 | Pending |

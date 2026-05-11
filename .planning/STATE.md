@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 4 context gathered
-last_updated: "2026-05-11T10:02:06.603Z"
-last_activity: 2026-05-11 -- Phase 04 execution started
+stopped_at: Completed 04-00-PLAN.md
+last_updated: "2026-05-11T10:37:15.562Z"
+last_activity: 2026-05-11
 progress:
   total_phases: 15
   completed_phases: 12
   total_plans: 100
-  completed_plans: 91
-  percent: 91
+  completed_plans: 92
+  percent: 92
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 04 (triage-convergence-hero) — EXECUTING
-Plan: 1 of 9
-Status: Executing Phase 04
-Last activity: 2026-05-11 -- Phase 04 execution started
+Plan: 2 of 9
+Status: Ready to execute
+Last activity: 2026-05-11
 
-Progress: [██████████] 100% for Phase 03
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -112,6 +112,7 @@ Progress: [██████████] 100% for Phase 03
 | Phase 02C P05b | 64min | 1 tasks | 46 files |
 | Phase 02C P06 | 90 min | 1 tasks | 5 files |
 | Phase 02C P07 | 20 min | 2 tasks | 9 files |
+| Phase 04 P00 | 30min | 3 tasks | 23 files |
 
 ## Accumulated Context
 
@@ -245,6 +246,9 @@ Recent decisions affecting current work:
 - [Phase 02C]: Plan 05a canonicalizes BYOK endpoints by trimming trailing slashes and uses URI.create(...).getHost() for host extraction instead of ad hoc parsing.
 - [Phase 02C]: Plan 05b exposes BYOK validate/save/current over REST while keeping core service signatures on core command records, not API DTOs.
 - [Phase 02C]: Plan 05b changes app configuration to canonical kebab-case `zero-mail.*`; API-only settings bind under `zero-mail.api.*`, worker-only settings bind under `zero-mail.worker.*`, and shared LLM platform/BYOK settings are nested under `ZeroMailCoreProperties`.
+- [Phase 04]: Plan 00 Wave 0 triage tests reference future production types by FQN strings/reflection so compileTestJava stays green while execution is RED. — Later plans can run targeted tests without the entire test source set failing to compile before production classes exist.
+- [Phase 04]: Plan 00 CallSiteEnumMembershipArchTest is intentionally RED until 04-02 adds TRIAGE_PLATFORM_LLM and TRIAGE_DETERMINISTIC. — Locks Phase 4 credit-accounting call-site expansion as an executable contract.
+- [Phase 04]: Plan 00 uses spring-modulith-starter-jdbc without a version pin; the existing Spring Modulith BOM supplies 2.0.7-SNAPSHOT. — Keeps the new event-registry dependency aligned with the existing Modulith BOM and avoids ad-hoc version drift.
 
 ### Roadmap Evolution
 
@@ -305,6 +309,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-11T03:03:21.502Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-triage-convergence-hero/04-CONTEXT.md
+Last session: 2026-05-11T10:37:15.539Z
+Stopped at: Completed 04-00-PLAN.md
+Resume file: None
