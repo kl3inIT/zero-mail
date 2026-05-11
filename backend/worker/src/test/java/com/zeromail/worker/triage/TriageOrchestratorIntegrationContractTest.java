@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 class TriageOrchestratorIntegrationContractTest {
 
     private static final String TRIAGE_ORCHESTRATOR_SERVICE =
-            "com.zeromail.core.triage.application.TriageOrchestratorService";
+            "com.zeromail.core.triage.usecases.TriageOrchestratorService";
     private static final String MAIL_MESSAGE_OBSERVED =
             "com.zeromail.core.gmail.event.MailMessageObserved";
     private static final String TRIAGE_EVENT_RETRY_JOB =

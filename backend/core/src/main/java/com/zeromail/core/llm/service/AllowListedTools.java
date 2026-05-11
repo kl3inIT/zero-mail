@@ -1,7 +1,7 @@
 package com.zeromail.core.llm.service;
 
-import com.zeromail.core.llm.application.LlmTool;
 import com.zeromail.core.llm.domain.LlmToolProfile;
+import com.zeromail.core.llm.usecases.LlmTool;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Component;

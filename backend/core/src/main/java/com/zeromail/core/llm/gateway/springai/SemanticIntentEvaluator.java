@@ -1,8 +1,8 @@
 package com.zeromail.core.llm.gateway.springai;
 
 import com.zeromail.core.billing.domain.CallSite;
-import com.zeromail.core.llm.application.SemanticIntentRequest;
 import com.zeromail.core.llm.exception.SafetyViolationException;
+import com.zeromail.core.llm.usecases.SemanticIntentRequest;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;

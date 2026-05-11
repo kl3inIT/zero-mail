@@ -2,11 +2,11 @@ package com.zeromail.core.rules.ai;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.zeromail.core.llm.application.RuleCompileGatewayResult;
-import com.zeromail.core.rules.application.RuleCompileResult;
-import com.zeromail.core.rules.application.RuleCompileResult.Status;
+import com.zeromail.core.llm.usecases.RuleCompileGatewayResult;
 import com.zeromail.core.rules.domain.RuleLanguage;
 import com.zeromail.core.rules.service.RuleCompileResultValidator;
+import com.zeromail.core.rules.usecases.RuleCompileResult;
+import com.zeromail.core.rules.usecases.RuleCompileResult.Status;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;

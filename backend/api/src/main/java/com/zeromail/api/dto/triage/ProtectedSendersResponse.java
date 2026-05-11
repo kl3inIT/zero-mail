@@ -1,6 +1,6 @@
 package com.zeromail.api.dto.triage;
 
-import com.zeromail.core.triage.application.ProtectedSenderListItem;
+import com.zeromail.core.triage.usecases.ProtectedSenderListItem;
 import java.util.List;
 
 public record ProtectedSendersResponse(List<ProtectedSenderResponse> senders) {

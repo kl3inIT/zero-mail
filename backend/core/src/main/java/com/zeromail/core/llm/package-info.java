@@ -2,7 +2,7 @@
  * LLM Gateway domain (Phase 02C). Single chokepoint for all LLM traffic in Zero Mail.
  *
  * <p><b>Cross-phase contract.</b> Phase 3 (Rules Engine) and Phase 4 (Triage) import {@link
- * com.zeromail.core.llm.service.LlmGateway} verbatim and call {@code chat(callSite, rawHtml)} for
+ * com.zeromail.core.llm.usecases.LlmGateway} verbatim and call {@code chat(callSite, rawHtml)} for
  * every LLM call.
  *
  * <p><b>Modulith boundary.</b> Allowed dependencies:
@@ -18,14 +18,15 @@
  * <p><b>Sub-packages:</b>
  *
  * <ul>
- *   <li>{@code model} - public records, enums, exceptions (Action, BYOKProvider, ToolCallResult,
- *       SanitizationContext, *Exception)
- *   <li>{@code service} - public service contract (LlmGateway interface) + impl + ActionValidator +
- *       ByokService
+ *   <li>{@code domain} - framework-free domain vocabulary, enums, validators (Action, BYOKProvider,
+ *       ToolCallResult, SanitizationContext, ActionValidator, AllowListedTools,
+ *       RuleCompileToolValidator, *Exception)
+ *   <li>{@code usecases} - public service contract (LlmGateway interface) + impl + ByokService +
+ *       use-case commands and results
  *   <li>{@code persistence} - TenantByokCredentialsEntity + Repository
- *   <li>{@code gateway.springai} - Spring AI vendor adapter (ArchUnit-isolated)
- *   <li>{@code gateway.sanitization} - sanitization pipeline (ArchUnit-isolated for jsoup +
- *       jtokkit)
+ *   <li>{@code gateway} - external-service adapters (Spring AI vendor adapters under {@code
+ *       gateway.springai}; sanitization pipeline under {@code gateway.sanitization}, both
+ *       ArchUnit-isolated for vendor SDKs)
  * </ul>
  */
 @ApplicationModule(

@@ -7,11 +7,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.zeromail.core.llm.application.LlmChatRequest;
-import com.zeromail.core.llm.application.LlmChatResult;
-import com.zeromail.core.llm.application.LlmTool;
-import com.zeromail.core.llm.application.SystemPrompts;
 import com.zeromail.core.llm.service.AllowListedTools;
+import com.zeromail.core.llm.usecases.LlmChatRequest;
+import com.zeromail.core.llm.usecases.LlmChatResult;
+import com.zeromail.core.llm.usecases.LlmTool;
+import com.zeromail.core.llm.usecases.SystemPrompts;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;

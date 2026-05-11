@@ -1,14 +1,14 @@
 package com.zeromail.core.rules.service;
 
-import com.zeromail.core.rules.application.RuleCreateCommand;
-import com.zeromail.core.rules.application.RuleOrderEntry;
-import com.zeromail.core.rules.application.RuleReorderCommand;
-import com.zeromail.core.rules.application.RuleUpdateCommand;
 import com.zeromail.core.rules.exception.RuleValidationException;
 import com.zeromail.core.rules.persistence.RuleEntity;
 import com.zeromail.core.rules.persistence.RuleRepository;
 import com.zeromail.core.rules.persistence.lowlevel.RuleNativeStateUpdater;
 import com.zeromail.core.rules.projection.RuleStatusProjection;
+import com.zeromail.core.rules.usecases.RuleCreateCommand;
+import com.zeromail.core.rules.usecases.RuleOrderEntry;
+import com.zeromail.core.rules.usecases.RuleReorderCommand;
+import com.zeromail.core.rules.usecases.RuleUpdateCommand;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

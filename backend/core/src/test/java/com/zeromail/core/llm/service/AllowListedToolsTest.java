@@ -2,8 +2,8 @@ package com.zeromail.core.llm.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.zeromail.core.llm.application.LlmTool;
 import com.zeromail.core.llm.domain.Action;
+import com.zeromail.core.llm.usecases.LlmTool;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;

@@ -4,7 +4,7 @@ import com.knuddels.jtokkit.api.Encoding;
 import com.knuddels.jtokkit.api.EncodingRegistry;
 import com.knuddels.jtokkit.api.EncodingResult;
 import com.knuddels.jtokkit.api.EncodingType;
-import com.zeromail.core.llm.application.SanitizationContext;
+import com.zeromail.core.llm.usecases.SanitizationContext;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 

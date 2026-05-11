@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 class TriageShadowModeContractTest {
 
     private static final String TRIAGE_ORCHESTRATOR_SERVICE =
-            "com.zeromail.core.triage.application.TriageOrchestratorService";
+            "com.zeromail.core.triage.usecases.TriageOrchestratorService";
     private static final String TRIAGE_DECISION = "com.zeromail.core.triage.domain.TriageDecision";
     private static final String TRIAGE_GMAIL_WRITER =
             "com.zeromail.core.triage.service.TriageGmailWriter";

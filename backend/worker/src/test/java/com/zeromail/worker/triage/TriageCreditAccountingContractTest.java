@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 class TriageCreditAccountingContractTest {
 
     private static final String TRIAGE_ORCHESTRATOR_SERVICE =
-            "com.zeromail.core.triage.application.TriageOrchestratorService";
+            "com.zeromail.core.triage.usecases.TriageOrchestratorService";
     private static final String CREDIT_LEDGER = "com.zeromail.core.billing.service.CreditLedger";
     private static final String TRIAGE_PLATFORM_LLM = "TRIAGE_PLATFORM_LLM";
     private static final String TRIAGE_DETERMINISTIC = "TRIAGE_DETERMINISTIC";

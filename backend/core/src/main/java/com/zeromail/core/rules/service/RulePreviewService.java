@@ -1,7 +1,5 @@
 package com.zeromail.core.rules.service;
 
-import com.zeromail.core.rules.application.RulePreviewCommand;
-import com.zeromail.core.rules.application.RulePreviewResult;
 import com.zeromail.core.rules.domain.ActionIntent;
 import com.zeromail.core.rules.domain.ActionProposal;
 import com.zeromail.core.rules.domain.MatcherEvaluationState;
@@ -13,6 +11,8 @@ import com.zeromail.core.rules.domain.SemanticIntentMatcher;
 import com.zeromail.core.rules.exception.RuleValidationException;
 import com.zeromail.core.rules.persistence.RuleEntity;
 import com.zeromail.core.rules.persistence.RuleRepository;
+import com.zeromail.core.rules.usecases.RulePreviewCommand;
+import com.zeromail.core.rules.usecases.RulePreviewResult;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;

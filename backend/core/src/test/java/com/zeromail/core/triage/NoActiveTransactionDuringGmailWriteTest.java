@@ -7,10 +7,10 @@ import static org.mockito.Mockito.doAnswer;
 
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.support.PostgresContainerTest;
-import com.zeromail.core.triage.application.TriageAuditSaga;
-import com.zeromail.core.triage.application.TriageAuditSaga.TriageAuditCommand;
 import com.zeromail.core.triage.domain.TriageActionResult;
 import com.zeromail.core.triage.service.TriageGmailWriter;
+import com.zeromail.core.triage.usecases.TriageAuditSaga;
+import com.zeromail.core.triage.usecases.TriageAuditSaga.TriageAuditCommand;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.UUID;

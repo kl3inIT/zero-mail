@@ -1,6 +1,6 @@
 package com.zeromail.api.dto.rules;
 
-import com.zeromail.core.rules.application.RulePreviewResult;
+import com.zeromail.core.rules.usecases.RulePreviewResult;
 import java.time.Instant;
 import java.util.List;
 

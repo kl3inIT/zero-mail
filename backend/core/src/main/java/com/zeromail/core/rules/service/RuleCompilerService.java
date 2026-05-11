@@ -1,14 +1,14 @@
 package com.zeromail.core.rules.service;
 
 import com.zeromail.core.billing.domain.CallSite;
-import com.zeromail.core.llm.application.RuleCompileGatewayResult;
 import com.zeromail.core.llm.service.LlmGateway;
-import com.zeromail.core.rules.application.RuleCompileCommand;
-import com.zeromail.core.rules.application.RuleCompileResult;
+import com.zeromail.core.llm.usecases.RuleCompileGatewayResult;
 import com.zeromail.core.rules.domain.MatcherType;
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.rules.domain.RuleLanguage;
 import com.zeromail.core.rules.domain.RuleSchemaVersion;
+import com.zeromail.core.rules.usecases.RuleCompileCommand;
+import com.zeromail.core.rules.usecases.RuleCompileResult;
 import com.zeromail.core.tenant.TenantContext;
 import java.util.Arrays;
 import java.util.LinkedHashMap;

@@ -3,7 +3,7 @@ package com.zeromail.core.rules.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zeromail.core.onboarding.service.OnboardingService;
-import com.zeromail.core.rules.application.RuleTemplateMaterializationResult;
+import com.zeromail.core.rules.usecases.RuleTemplateMaterializationResult;
 import java.lang.reflect.Method;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;

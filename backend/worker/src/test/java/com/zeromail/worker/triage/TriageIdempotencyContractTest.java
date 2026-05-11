@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 class TriageIdempotencyContractTest {
 
     private static final String TRIAGE_ORCHESTRATOR_SERVICE =
-            "com.zeromail.core.triage.application.TriageOrchestratorService";
+            "com.zeromail.core.triage.usecases.TriageOrchestratorService";
     private static final String TRIAGE_AUDIT_REPOSITORY =
             "com.zeromail.core.triage.persistence.TriageAuditRepository";
     private static final String TRIAGE_GMAIL_WRITER =

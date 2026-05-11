@@ -1,7 +1,7 @@
 package com.zeromail.api.dto.llm;
 
-import com.zeromail.core.llm.application.ByokCurrent;
 import com.zeromail.core.llm.domain.BYOKProvider;
+import com.zeromail.core.llm.usecases.ByokCurrent;
 import java.time.Instant;
 
 public record ByokCurrentResponse(

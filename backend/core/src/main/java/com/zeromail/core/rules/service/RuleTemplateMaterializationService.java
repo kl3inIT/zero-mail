@@ -1,13 +1,13 @@
 package com.zeromail.core.rules.service;
 
 import com.zeromail.core.onboarding.service.OnboardingService;
-import com.zeromail.core.rules.application.RuleTemplateMaterializationResult;
-import com.zeromail.core.rules.application.RuleTemplateMaterializationResult.SkippedTemplate;
-import com.zeromail.core.rules.application.RuleTemplateMaterializationResult.SkippedTemplateReason;
 import com.zeromail.core.rules.persistence.RuleEntity;
 import com.zeromail.core.rules.persistence.RuleRepository;
 import com.zeromail.core.rules.persistence.RuleTemplateEntity;
 import com.zeromail.core.rules.projection.RuleStatusProjection;
+import com.zeromail.core.rules.usecases.RuleTemplateMaterializationResult;
+import com.zeromail.core.rules.usecases.RuleTemplateMaterializationResult.SkippedTemplate;
+import com.zeromail.core.rules.usecases.RuleTemplateMaterializationResult.SkippedTemplateReason;
 import com.zeromail.core.tenant.TenantContext;
 import java.util.ArrayList;
 import java.util.List;

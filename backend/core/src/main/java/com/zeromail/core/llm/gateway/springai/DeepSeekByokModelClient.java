@@ -1,9 +1,9 @@
 package com.zeromail.core.llm.gateway.springai;
 
-import com.zeromail.core.llm.application.LlmChatRequest;
-import com.zeromail.core.llm.application.LlmChatResult;
 import com.zeromail.core.llm.byok.ByokEndpointValidator;
 import com.zeromail.core.llm.service.ByokLlmModelClient;
+import com.zeromail.core.llm.usecases.LlmChatRequest;
+import com.zeromail.core.llm.usecases.LlmChatResult;
 import java.nio.charset.StandardCharsets;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;

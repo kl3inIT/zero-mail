@@ -21,7 +21,7 @@ class RuleCompilerServiceWave0Test {
     @Disabled(PLAN_03_02_GATEWAY_MESSAGE)
     void compiler_uses_preview_call_site_on_the_gateway_owned_compile_method() throws Exception {
         Class<?> compilerPayloadClass =
-                Class.forName("com.zeromail.core.llm.application.RuleCompilerPayload");
+                Class.forName("com.zeromail.core.llm.usecases.RuleCompilerPayload");
         Method compileRuleMethod =
                 LlmGateway.class.getMethod("compileRule", CallSite.class, compilerPayloadClass);
 
@@ -39,7 +39,7 @@ class RuleCompilerServiceWave0Test {
                         .getMethod(
                                 "compile",
                                 Class.forName(
-                                        "com.zeromail.core.rules.application.RuleCompileCommand"));
+                                        "com.zeromail.core.rules.usecases.RuleCompileCommand"));
 
         assertThatThrownBy(() -> compileMethod.invoke(compilerService, unknownToolCommand()))
                 .hasRootCauseInstanceOf(IllegalArgumentException.class);
@@ -74,7 +74,7 @@ class RuleCompilerServiceWave0Test {
     @Disabled(PLAN_03_03_COMPILER_MESSAGE)
     void ambiguous_compile_returns_one_clarification_and_persists_nothing() throws Exception {
         Class<?> clarificationClass =
-                Class.forName("com.zeromail.core.rules.application.RuleCompileClarification");
+                Class.forName("com.zeromail.core.rules.usecases.RuleCompileClarification");
         Object compilerService = newFutureCompilerServiceWithRepositoryProbe();
         Method compileMethod =
                 compilerService
@@ -82,7 +82,7 @@ class RuleCompilerServiceWave0Test {
                         .getMethod(
                                 "compile",
                                 Class.forName(
-                                        "com.zeromail.core.rules.application.RuleCompileCommand"));
+                                        "com.zeromail.core.rules.usecases.RuleCompileCommand"));
 
         Object compileResult = compileMethod.invoke(compilerService, ambiguousCommand());
         Method clarificationMethod = compileResult.getClass().getMethod("clarification");

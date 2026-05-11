@@ -1,17 +1,17 @@
 package com.zeromail.core.llm.service;
 
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
-import com.zeromail.core.llm.application.ByokCurrent;
-import com.zeromail.core.llm.application.ByokSaveCommand;
-import com.zeromail.core.llm.application.ByokSaveResult;
-import com.zeromail.core.llm.application.ByokValidateCommand;
-import com.zeromail.core.llm.application.ByokValidateResult;
 import com.zeromail.core.llm.byok.ByokEndpointValidator;
 import com.zeromail.core.llm.domain.BYOKProvider;
 import com.zeromail.core.llm.domain.ByokProviderPreset;
 import com.zeromail.core.llm.exception.InvalidByokException;
 import com.zeromail.core.llm.persistence.TenantByokCredentialsEntity;
 import com.zeromail.core.llm.persistence.TenantByokCredentialsRepository;
+import com.zeromail.core.llm.usecases.ByokCurrent;
+import com.zeromail.core.llm.usecases.ByokSaveCommand;
+import com.zeromail.core.llm.usecases.ByokSaveResult;
+import com.zeromail.core.llm.usecases.ByokValidateCommand;
+import com.zeromail.core.llm.usecases.ByokValidateResult;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.nio.ByteBuffer;

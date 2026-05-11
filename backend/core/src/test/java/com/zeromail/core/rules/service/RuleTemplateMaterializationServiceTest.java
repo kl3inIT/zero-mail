@@ -2,11 +2,11 @@ package com.zeromail.core.rules.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.zeromail.core.rules.application.RuleTemplateMaterializationResult;
-import com.zeromail.core.rules.application.RuleTemplateMaterializationResult.SkippedTemplate;
-import com.zeromail.core.rules.application.RuleTemplateMaterializationResult.SkippedTemplateReason;
 import com.zeromail.core.rules.persistence.RuleEntity;
 import com.zeromail.core.rules.persistence.RuleRepository;
+import com.zeromail.core.rules.usecases.RuleTemplateMaterializationResult;
+import com.zeromail.core.rules.usecases.RuleTemplateMaterializationResult.SkippedTemplate;
+import com.zeromail.core.rules.usecases.RuleTemplateMaterializationResult.SkippedTemplateReason;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
 import java.util.UUID;

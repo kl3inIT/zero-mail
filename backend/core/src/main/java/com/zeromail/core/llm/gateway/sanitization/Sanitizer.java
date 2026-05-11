@@ -1,6 +1,6 @@
 package com.zeromail.core.llm.gateway.sanitization;
 
-import com.zeromail.core.llm.application.SanitizationContext;
+import com.zeromail.core.llm.usecases.SanitizationContext;
 
 @FunctionalInterface
 public interface Sanitizer {

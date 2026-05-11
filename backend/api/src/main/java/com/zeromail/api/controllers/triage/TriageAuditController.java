@@ -2,9 +2,9 @@ package com.zeromail.api.controllers.triage;
 
 import com.zeromail.api.dto.triage.UndoAuditResponse;
 import com.zeromail.core.tenant.TenantContext;
-import com.zeromail.core.triage.application.TriageUndoService;
-import com.zeromail.core.triage.application.UndoAuditCommand;
-import com.zeromail.core.triage.application.UndoAuditResult;
+import com.zeromail.core.triage.usecases.TriageUndoService;
+import com.zeromail.core.triage.usecases.UndoAuditCommand;
+import com.zeromail.core.triage.usecases.UndoAuditResult;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 import org.slf4j.Logger;

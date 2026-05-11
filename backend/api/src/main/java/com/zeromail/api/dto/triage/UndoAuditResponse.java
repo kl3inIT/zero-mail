@@ -1,6 +1,6 @@
 package com.zeromail.api.dto.triage;
 
-import com.zeromail.core.triage.application.UndoAuditResult;
+import com.zeromail.core.triage.usecases.UndoAuditResult;
 import java.time.Instant;
 import java.util.UUID;
 

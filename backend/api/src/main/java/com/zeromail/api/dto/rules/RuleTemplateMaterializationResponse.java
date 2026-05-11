@@ -1,6 +1,6 @@
 package com.zeromail.api.dto.rules;
 
-import com.zeromail.core.rules.application.RuleTemplateMaterializationResult;
+import com.zeromail.core.rules.usecases.RuleTemplateMaterializationResult;
 import java.util.List;
 
 public record RuleTemplateMaterializationResponse(

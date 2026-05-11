@@ -10,7 +10,7 @@ class TriageTenantControllerContractTest {
     private static final String TRIAGE_TENANT_CONTROLLER =
             "com.zeromail.api.controllers.triage.TriageTenantController";
     private static final String TRIAGE_ORCHESTRATOR_SERVICE =
-            "com.zeromail.core.triage.application.TriageOrchestratorService";
+            "com.zeromail.core.triage.usecases.TriageOrchestratorService";
 
     @Test
     void future_tenant_controller_contract_types_are_present() {

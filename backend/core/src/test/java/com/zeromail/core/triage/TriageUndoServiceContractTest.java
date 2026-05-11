@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 class TriageUndoServiceContractTest {
 
     private static final String TRIAGE_UNDO_SERVICE =
-            "com.zeromail.core.triage.application.TriageUndoService";
+            "com.zeromail.core.triage.usecases.TriageUndoService";
     private static final String TRIAGE_GMAIL_WRITER =
             "com.zeromail.core.triage.service.TriageGmailWriter";
     private static final String TRIAGE_UNDO_EXPIRED_EXCEPTION =
@@ -38,7 +38,7 @@ class TriageUndoServiceContractTest {
     void undo_computes_inverse_for_each_supported_action_result() throws Exception {
         Class<?> undoServiceClass = Class.forName(TRIAGE_UNDO_SERVICE);
         Class<?> undoCommandClass =
-                Class.forName("com.zeromail.core.triage.application.UndoAuditCommand");
+                Class.forName("com.zeromail.core.triage.usecases.UndoAuditCommand");
         Method undoMethod = undoServiceClass.getMethod("undo", undoCommandClass);
 
         assertThat(undoMethod).isNotNull();

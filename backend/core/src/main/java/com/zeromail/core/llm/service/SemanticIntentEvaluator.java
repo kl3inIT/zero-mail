@@ -1,7 +1,7 @@
 package com.zeromail.core.llm.service;
 
 import com.zeromail.core.billing.domain.CallSite;
-import com.zeromail.core.llm.application.SemanticIntentRequest;
+import com.zeromail.core.llm.usecases.SemanticIntentRequest;
 import java.util.List;
 import java.util.Map;
 

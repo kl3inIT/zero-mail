@@ -1,12 +1,12 @@
 package com.zeromail.core.llm.service;
 
 import com.zeromail.core.billing.domain.CallSite;
-import com.zeromail.core.llm.application.RuleCompileGatewayResult;
-import com.zeromail.core.llm.application.SemanticIntentRequest;
-import com.zeromail.core.llm.application.ToolCallResult;
 import com.zeromail.core.llm.exception.LlmEvaluationFailedException;
 import com.zeromail.core.llm.exception.SafetyViolationException;
 import com.zeromail.core.llm.exception.TokenBudgetExceededException;
+import com.zeromail.core.llm.usecases.RuleCompileGatewayResult;
+import com.zeromail.core.llm.usecases.SemanticIntentRequest;
+import com.zeromail.core.llm.usecases.ToolCallResult;
 import java.util.List;
 import java.util.Map;
 

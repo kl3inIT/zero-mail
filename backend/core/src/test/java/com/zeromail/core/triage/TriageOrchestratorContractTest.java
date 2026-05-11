@@ -13,11 +13,11 @@ import org.junit.jupiter.api.Test;
 class TriageOrchestratorContractTest {
 
     private static final String TRIAGE_ORCHESTRATOR_SERVICE =
-            "com.zeromail.core.triage.application.TriageOrchestratorService";
+            "com.zeromail.core.triage.usecases.TriageOrchestratorService";
     private static final String MAIL_MESSAGE_OBSERVED =
             "com.zeromail.core.gmail.event.MailMessageObserved";
     private static final String SEMANTIC_INTENT_REQUEST =
-            "com.zeromail.core.llm.application.SemanticIntentRequest";
+            "com.zeromail.core.llm.usecases.SemanticIntentRequest";
     private static final String LLM_GATEWAY = "com.zeromail.core.llm.service.LlmGateway";
     private static final String TRIAGE_DECISION = "com.zeromail.core.triage.domain.TriageDecision";
     private static final String TRIAGE_AUDIT_WRITER =
