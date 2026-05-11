@@ -156,7 +156,9 @@ Hard-locked by CLAUDE.md (`Spring AI 2.0.0-M5` is on the project's locked-by-use
 | LlamaIndex / Haystack (RAG) | Privacy invariant forbids embeddings and vector DBs; no retrieval step exists in the design. |
 | Direct vendor SDKs (`openai-java`, `com.theokanning.openai`) | CLAUDE.md "Hard do not use": raw HTTP LLM calls or vendor SDK usage outside the Spring AI adapter. |
 
-**Vendor Lock-In Accepted:** Partial — locked to Spring AI as the JVM AI orchestration layer; model provider stays swappable through OpenRouter (default) and the Phase 2C BYOK path, so swapping `gpt-4o-mini` for another OpenRouter model is config-only.
+**Vendor Lock-In Accepted:** Partial — locked to Spring AI as the JVM AI orchestration layer; model provider stays swappable through OpenRouter (default) and the Phase 2C BYOK path, so swapping `gpt-5.4-nano` for another OpenRouter model is config-only.
+
+**Platform model default (Phase 4 raises the Phase 2C pin):** `openai/gpt-5.4-nano` via OpenRouter. Phase 2C originally pinned `openai/gpt-4o-mini` as the platform default. Phase 4 raises this to `gpt-5.4-nano` because (a) `gpt-5.4-nano` is the cheapest tier that supports OpenAI's native `response_format=json_schema, strict=true` reliably — load-bearing for the node-id set-equality guardrail; (b) ~3.6-3.7× cheaper than `gpt-5.4-mini` at $0.20 / $1.25 per M tokens vs $0.75 / $4.50, while keeping the same Structured Outputs family behavior; (c) keeps the OpenAI BPE tokenizer (jtokkit), so the Phase 2C sanitization pipeline's 3896-token cap math stays correct — switching to Gemini/Claude would invalidate the budget pre-check (Section 1 failure mode #4); (d) lower latency than `mini`, giving headroom against the 7s LLM-call timeout. Phase 4 implementation MUST update `spring.ai.openai.chat.options.model` in `backend/worker/src/main/resources/application.yml` from `openai/gpt-4o-mini` → `openai/gpt-5.4-nano`. BYOK tenants continue to supply their own model id at call time. Rejected cheaper alternatives: `google/gemini-2.5-flash-lite` ($0.10 / $0.40) — non-OpenAI strict JSON schema flakiness reports on OpenRouter's OpenAI-compat layer, plus different tokenizer family breaks the existing budget math.
 
 ---
 
@@ -189,7 +191,7 @@ spring:
       api-key: ${ZERO_MAIL_OPENROUTER_API_KEY}
       chat:
         options:
-          model: openai/gpt-4o-mini   # default; per-tenant BYOK overrides at call time
+          model: openai/gpt-5.4-nano   # Phase 4 default — raises Phase 2C pin from gpt-4o-mini; per-tenant BYOK overrides at call time
           temperature: 0.0
 ```
 
@@ -251,7 +253,7 @@ class SemanticIntentEvaluator {
     String jsonSchema = outputConverter.getJsonSchema();
 
     OpenAiChatOptions runtimeOptions = OpenAiChatOptions.builder()
-        .model("openai/gpt-4o-mini")
+        .model("openai/gpt-5.4-nano")
         .temperature(0.0)
         .maxTokens(512)
         .responseFormat(ResponseFormat.builder()
@@ -319,7 +321,7 @@ class SemanticIntentEvaluator {
 3. **Using `responseFormat("json_object")` instead of `JSON_SCHEMA`.** `json_object` only forces "valid JSON", not "valid against this schema" — the model still hallucinates keys. OpenRouter passes both modes through to underlying providers; only `JSON_SCHEMA` (with a schema string) gives the strict guarantee.
 4. **Leaving `temperature` unset.** Spring AI inherits the auto-config default. For classification with strict schema, hard-pin `temperature(0.0)` per call — same value Phase 2C uses for rule compile.
 5. **Skipping `internalToolExecutionEnabled(false)`.** Phase 2C sets this on the platform model bean for the tool path. For `evaluateSemanticIntents` you are NOT using tools, so this flag is irrelevant — but if you copy-paste the Phase 2C `OpenAiChatOptions` builder, do not propagate `.toolCallbacks(...)` calls into the classifier path.
-6. **Setting `maxTokens` and `maxCompletionTokens` together.** OpenAI rejects the request. Reasoning models (`o1`, `o3`) need `maxCompletionTokens`; non-reasoning (`gpt-4o-mini`, the default) needs `maxTokens`. Phase 4 default model is non-reasoning → use `maxTokens`. If the model registry is ever pointed at an `o*` model, flip the field — do not set both.
+6. **Setting `maxTokens` and `maxCompletionTokens` together.** OpenAI rejects the request. Reasoning models (`o1`, `o3`, `o4`) need `maxCompletionTokens`; non-reasoning (`gpt-5.4-nano`, the Phase 4 default) needs `maxTokens`. Phase 4 default model is non-reasoning → use `maxTokens`. If the model registry is ever pointed at an `o*` reasoning model, flip the field — do not set both.
 7. **Reading `entity()` and `chatResponse()` from the same call twice.** `ChatClient.call()` returns a one-shot pipeline. Pick one: `.call().chatResponse()` if you need metadata (credit settlement via token usage), then convert the text yourself with the explicit `outputConverter.convert(...)`. Do not chain `.entity(T.class)` AND then try to fetch token usage — the chain has already consumed the response.
 8. **Spring AI M5 → GA churn in `BeanOutputConverter` package.** M5 ships `org.springframework.ai.converter.BeanOutputConverter`. GA candidates may relocate. Keep all imports inside `core.llm.gateway.springai` (ArchUnit-enforced) so a future rename is one-file blast radius.
 
@@ -356,7 +358,7 @@ backend/core/src/main/java/com/zeromail/core/llm/
 
 | Parameter | Value | Why |
 |-----------|-------|-----|
-| `model` (platform default) | `openai/gpt-4o-mini` (via OpenRouter) | Cheapest OpenAI-compatible model that supports `response_format=json_schema` reliably; Phase 2C already pins this for the platform tier. BYOK paths supply their own model id at call time. |
+| `model` (platform default) | `openai/gpt-5.4-nano` (via OpenRouter) | Cheapest OpenAI model that supports native `response_format=json_schema, strict=true` (load-bearing for the node-id set-equality guardrail). Phase 4 raises the Phase 2C pin from `gpt-4o-mini` → `gpt-5.4-nano`: same OpenAI BPE tokenizer (jtokkit budget math stays valid), ~3.6-3.7× cheaper than `gpt-5.4-mini`, lower latency, newer-generation calibration matters for HIGH-stakes triage. BYOK paths supply their own model id at call time. |
 | `temperature` | `0.0` | Classification is deterministic-by-intent; matches Phase 2C convention; eliminates 90%+ of variance across re-runs in the eval set. |
 | `maxTokens` | `512` | Upper bound for the JSON output: `~32 nodeMatches × ~16 tokens/entry + overhead` covers a tenant with deeply-batched rules. Setting it explicitly prevents an unbounded-completion bill spike on a model that hallucinates a long string. |
 | `topP` | unset (defaults to `1.0`) | Temperature `0.0` already collapses sampling; touching `topP` adds an axis we don't need. |
@@ -475,7 +477,7 @@ BeanOutputConverter<SemanticIntentResponse> converter =
     new BeanOutputConverter<>(SemanticIntentResponse.class);
 
 OpenAiChatOptions options = OpenAiChatOptions.builder()
-    .model("openai/gpt-4o-mini")
+    .model("openai/gpt-5.4-nano")
     .responseFormat(ResponseFormat.builder()
         .type(ResponseFormat.Type.JSON_SCHEMA)
         .jsonSchema(converter.getJsonSchema())
@@ -556,16 +558,16 @@ chatClient.prompt()
 
 ### 4b.5 Cost and Latency Budget
 
-**Per-call cost estimate (default platform path, `openai/gpt-4o-mini` via OpenRouter, May 2026 list pricing — verify in OpenRouter dashboard before locking):**
+**Per-call cost estimate (default platform path, `openai/gpt-5.4-nano` via OpenRouter, May 2026 list pricing — verify in OpenRouter dashboard before locking):**
 
 | Component | Tokens (typical) | Cost ($/1M tokens) | Per-call cost |
 |-----------|------------------|--------------------|---------------|
-| Input — sanitized email | 800-1200 | $0.15 | ~$0.00012-0.00018 |
-| Input — system prompt + intent list + schema | 400-800 | $0.15 | ~$0.00006-0.00012 |
-| Output — JSON response (~16 tokens × N nodes, N ≤ 32) | 50-500 | $0.60 | ~$0.00003-0.00030 |
-| **Total per message (batched path)** | ~1300-2500 in / ~50-500 out | — | **~$0.0002-0.0006** |
+| Input — sanitized email | 800-1200 | $0.20 | ~$0.00016-0.00024 |
+| Input — system prompt + intent list + schema | 400-800 | $0.20 | ~$0.00008-0.00016 |
+| Output — JSON response (~16 tokens × N nodes, N ≤ 32) | 50-500 | $1.25 | ~$0.00006-0.00063 |
+| **Total per message (batched path)** | ~1300-2500 in / ~50-500 out | — | **~$0.0003-0.0010** |
 
-At **10,000 triaged messages / tenant / month** (busy professional with high inbox volume): **~$2-6 / tenant / month** in raw LLM cost. The per-rule fallback path multiplies output cost by N (number of rules) but keeps input cost stable (sanitized email is one copy).
+At **10,000 triaged messages / tenant / month** (busy professional with high inbox volume): **~$3-10 / tenant / month** in raw LLM cost on `gpt-5.4-nano`. (Reference: `gpt-5.4-mini` at the same volume would be ~$11-37/tenant/mo, ~3.6× higher — rejected as default for cost. `gemini-2.5-flash-lite` would be ~$1.5-5/tenant/mo but is rejected because its non-OpenAI tokenizer breaks the Phase 2C jtokkit 3896-token budget cap math and its strict-JSON-Schema reliability on OpenRouter's OpenAI-compat layer is unproven.) The per-rule fallback path multiplies output cost by N (number of rules) but keeps input cost stable (sanitized email is one copy).
 
 **Caching strategy.**
 - **Exact-match cache: NO.** Privacy invariant forbids storing prompts and completions. Cannot key a cache on email content.
@@ -574,7 +576,7 @@ At **10,000 triaged messages / tenant / month** (busy professional with high inb
 - **Per-tenant `ChatClient` cache: YES** (already in place via Phase 2C — locks one `OpenAiChatModel` per BYOK credential set so request-bound model creation isn't on the hot path).
 
 **Cheaper-model routing.**
-- **Default:** `openai/gpt-4o-mini` for the platform path. Already the cheap tier of the OpenAI-compatible models OpenRouter exposes with strict JSON-Schema support.
+- **Default:** `openai/gpt-5.4-nano` for the platform path. The cheapest OpenAI-native model with `response_format=json_schema, strict=true` support; Phase 4 raises this from the Phase 2C `gpt-4o-mini` pin. Same OpenAI BPE tokenizer (jtokkit) keeps the Phase 2C 3896-token sanitization cap math valid.
 - **Per-tenant BYOK override:** the tenant chooses their own model + provider (Phase 2C contract). The gateway does not second-guess the choice — token cost is the tenant's bill.
 - **Routing inside Phase 4:** none. No two-tier "use a tiny model for easy cases, escalate to a big model" pattern — adds latency budget the 10s SLO cannot absorb. The deterministic rule engine is the "tiny model" — pure-deterministic messages skip the LLM entirely (D-D3 `CallSite.TRIAGE_DETERMINISTIC` at ~0 credits).
 - **Drift / eval models:** Phase 2C convention pins an eval-only model for `LlmGateway.driftCheck(...)`. Phase 4's evaluation set (Section 5) reuses that hook — do NOT introduce a third model id on the production path.
@@ -685,7 +687,7 @@ ZEROMAIL_EVAL_LIVE_BUDGET_USD=0.50 \
 - **Primary labeller:** Product owner (per Section 1b's domain-expert role table — this is a small-team exploratory project; product owner plays both "practitioner" and "product owner" roles). For each fixture, the product owner records the expected per-`nodeId` boolean alongside a one-line justification in plain English ("would archive a newsletter the user has not opened in 90 days" / "must NOT archive — calendar reschedule"). The justifications are not consumed by the eval, but make the rubric auditable.
 - **LLM-judge usage** is limited to Dim 5 (prompt injection): the *baseline* response (no injection) is generated once, signed off by the product owner, and committed; the *with-injection* run is compared mechanically. The LLM judge is therefore only judging "did these two responses differ?" — a degenerate, code-shaped use of an LLM judge that does not need calibration.
 - **Adversarial fixtures (Dim 5):** authored from documented prompt-injection corpora (OWASP LLM Top 10 LLM01, Simon Willison's prompt-injection write-ups, the `inbox-zero` reference repo's own injection test patterns). Reviewed by the security/privacy reviewer role (Section 1b table) before commit.
-- **Refresh cadence:** monthly. New fixtures are appended when (a) a production undo within 30 days reveals a new false-positive shape (Phase 6 production-sampling reviewer role), or (b) a model swap (e.g., BYOK tenant moves off `openai/gpt-4o-mini`) introduces a new regression. No fixture is ever sourced from real user mail; all fixtures are hand-authored or anonymised reference patterns. Privacy-reviewer sign-off is required for any fixture added from anonymisation.
+- **Refresh cadence:** monthly. New fixtures are appended when (a) a production undo within 30 days reveals a new false-positive shape (Phase 6 production-sampling reviewer role), or (b) a model swap (e.g., BYOK tenant moves off `openai/gpt-5.4-nano`) introduces a new regression. No fixture is ever sourced from real user mail; all fixtures are hand-authored or anonymised reference patterns. Privacy-reviewer sign-off is required for any fixture added from anonymisation.
 
 ---
 
@@ -737,12 +739,12 @@ ZEROMAIL_EVAL_LIVE_BUDGET_USD=0.50 \
 
 | Alert | Threshold | Severity | First-response action |
 |-------|-----------|----------|----------------------|
-| **Triage p95 latency > 7s for 30 min** | Tempo histogram, sliding window | **page** | Inspect `path=per_rule` fanout rate; consider switching `spring.ai.openai.chat.options.model` to a faster gpt-4o-mini-equivalent OpenRouter route. |
+| **Triage p95 latency > 7s for 30 min** | Tempo histogram, sliding window | **page** | Inspect `path=per_rule` fanout rate; consider switching `spring.ai.openai.chat.options.model` to a faster `gpt-5.4-nano`-equivalent OpenRouter route (or fall back to a higher-tier OpenAI model if the slowness traces to capacity, not the nano-class throughput envelope). |
 | **`SafetyViolationException{reason=unknown_node_id}` count > 0 in any 10-min window** | Counter delta | **page** | Capture the request envelope (safe fields only: `tenant_id_hash`, `requested_node_ids`, `returned_unknown_id`); add a fixture; verify Spring AI / OpenRouter response-format setting did not regress to `json_object`. |
 | **`DEFERRED-(error)` rate > 1% sustained over 60 min** | Ratio | **page** | Likely upstream LLM provider; switch model id, keep cassettes for diff. |
 | **30-day archive-undo rate > 2% trailing 7d** | Per-tenant + global rollup | **ticket (P1)** | Pull undone rows, request anonymisation consent from affected tenants, append new `must_stay_in_inbox` fixtures. |
 | **30-day draft-undo rate > 5% trailing 7d** | Per-tenant + global rollup | **ticket (P2)** | Review rule templates; check if a specific rule is over-firing. |
-| **Per-tenant LLM cost > 3× $6/mo envelope** | `triage.semantic_eval.cost_usd` per tenant per month | **ticket (P3)** | Per-tenant rule trim recommendation; not blocking. |
+| **Per-tenant LLM cost > 3× $10/mo envelope** | `triage.semantic_eval.cost_usd` per tenant per month | **ticket (P3)** | Per-tenant rule trim recommendation; not blocking. Envelope sized for `gpt-5.4-nano` platform default. |
 | **`CreditReserveWatchdog.stuck.count` > 0 on triage call site** | Existing Phase 2B alert; add the new `CallSite` values | **page** | Reservation leaked through an unhandled exception path; investigate the most recent `triage.semantic_eval.duration{outcome=...}` series. |
 
 **Smart Sampling Strategy:**
