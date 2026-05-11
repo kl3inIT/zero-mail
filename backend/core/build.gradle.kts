@@ -5,6 +5,25 @@ plugins {
     id("zeromail.sensitive-log-guard")
 }
 
+tasks.named<Test>("test") {
+    useJUnitPlatform {
+        excludeTags("semantic-intent-eval")
+    }
+}
+
+tasks.register<Test>("semanticIntentEval") {
+    val testSourceSet = project.extensions.getByType<org.gradle.api.tasks.SourceSetContainer>()["test"]
+
+    group = "verification"
+    description = "Offline LLM semantic-intent eval harness (recorded cassettes, no live LLM)."
+    testClassesDirs = testSourceSet.output.classesDirs
+    classpath = testSourceSet.runtimeClasspath
+    useJUnitPlatform {
+        includeTags("semantic-intent-eval")
+    }
+    shouldRunAfter(tasks.named("test"))
+}
+
 dependencies {
     api("org.springframework.boot:spring-boot-starter")
     api("org.springframework.boot:spring-boot-starter-data-jpa")
