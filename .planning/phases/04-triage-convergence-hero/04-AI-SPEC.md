@@ -140,17 +140,17 @@ Directly relevant constraints. Not an exhaustive privacy survey — only the rul
 
 **Selected Framework:** Spring AI (via existing `LlmGateway` adapter in `core.llm.gateway.springai`)
 
-**Version:** Spring AI 2.0.0-M5 (`spring-ai-starter-model-openai` pointed at OpenRouter `base-url: https://openrouter.ai/api/v1`)
+**Version:** Spring AI 2.0.0-M6 (`spring-ai-starter-model-openai` pointed at OpenRouter `base-url: https://openrouter.ai/api/v1`)
 
 **Rationale:**
-Hard-locked by CLAUDE.md (`Spring AI 2.0.0-M5` is on the project's locked-by-user-directive list) and by the Phase 2C ArchUnit boundary that confines all direct Spring AI usage to `core.llm.gateway.springai`. Phase 4's AI surface — a single per-message structured-output classification call returning `Map<nodeId, boolean>` — is exactly the tool-call / structured-output use case Spring AI's `ChatClient` + tools API targets, on the only JVM stack the project allows (Java 25 / Spring Boot 4). Phase 4 EXTENDS the gateway with a new `evaluateSemanticIntents(CallSite, sanitizedContent, List<SemanticIntentRequest>) → Map<String, Boolean>` method; no new framework is admissible. Phase 2C already wired Spring AI to OpenRouter via the OpenAI-compatible starter, so M5 → GA churn is the same blast-radius problem Phase 2C already owns — adding a method does not widen it.
+Hard-locked by CLAUDE.md (`Spring AI 2.0.0-M6` is on the project's locked-by-user-directive list) and by the Phase 2C ArchUnit boundary that confines all direct Spring AI usage to `core.llm.gateway.springai`. Phase 4's AI surface — a single per-message structured-output classification call returning `Map<nodeId, boolean>` — is exactly the tool-call / structured-output use case Spring AI's `ChatClient` + tools API targets, on the only JVM stack the project allows (Java 25 / Spring Boot 4). Phase 4 EXTENDS the gateway with a new `evaluateSemanticIntents(CallSite, sanitizedContent, List<SemanticIntentRequest>) → Map<String, Boolean>` method; no new framework is admissible. Phase 2C already wired Spring AI to OpenRouter via the OpenAI-compatible starter, so M6 → GA churn is the same blast-radius problem Phase 2C already owns — adding a method does not widen it.
 
 **Alternatives Considered:**
 
 | Framework | Ruled Out Because |
 |-----------|------------------|
 | LangChain4j | Would duplicate Spring AI's role and split the gateway abstraction; the project already standardized on Spring AI in Phase 2C and ArchUnit-bans vendor SDK usage outside `core.llm.gateway.springai`. |
-| Raw OpenRouter HTTP client | Sanctioned only as an escape hatch if M5 → GA structured-output churn breaks production; preserves the LlmGateway boundary, sanitization, allow-list, and credit-ledger. Not the default because it duplicates Spring AI's structured-output mapping. |
+| Raw OpenRouter HTTP client | Sanctioned only as an escape hatch if M6 → GA structured-output churn breaks production; preserves the LlmGateway boundary, sanitization, allow-list, and credit-ledger. Not the default because it duplicates Spring AI's structured-output mapping. |
 | Spring AI Alibaba | Same JVM family but trails Spring AI on Boot 4 / Jackson 3 readiness; no value for this single classification call. |
 | LangGraph / CrewAI / Spring AI Agents | This is NOT an agent — it is one classification call per message with deterministic post-processing. Multi-agent frameworks add orchestration cost we don't need and don't reduce the work we do. |
 | LlamaIndex / Haystack (RAG) | Privacy invariant forbids embeddings and vector DBs; no retrieval step exists in the design. |
@@ -164,17 +164,17 @@ Hard-locked by CLAUDE.md (`Spring AI 2.0.0-M5` is on the project's locked-by-use
 
 ## 3. Framework Quick Reference
 
-> Fetched from official Spring AI 2.0.0-M5 reference by `gsd-ai-researcher`. Distilled for `evaluateSemanticIntents(...)` — a JSON-Schema-strict structured-output classifier behind the existing `LlmGateway`.
+> Fetched from official Spring AI 2.0.0-M6 reference by `gsd-ai-researcher`. Distilled for `evaluateSemanticIntents(...)` — a JSON-Schema-strict structured-output classifier behind the existing `LlmGateway`.
 > Phase 4 does NOT introduce a new framework — it adds one method on the Phase 2C `LlmGateway` and one new `ChatClient` call path inside the existing `core.llm.gateway.springai` ArchUnit boundary.
 
 ### Installation
 
-Spring AI 2.0.0-M5 is already on the classpath via Phase 2C. Phase 4 adds **no new starter** — the OpenAI-compatible starter is reused against OpenRouter. The relevant Gradle Kotlin DSL dependency (already declared) is:
+Spring AI 2.0.0-M6 is already on the classpath via Phase 2C. Phase 4 adds **no new starter** — the OpenAI-compatible starter is reused against OpenRouter. The relevant Gradle Kotlin DSL dependency (already declared) is:
 
 ```kotlin
 // backend/core/build.gradle.kts — already wired in Phase 2C, shown here for reference only
 dependencies {
-    implementation(platform("org.springframework.ai:spring-ai-bom:2.0.0-M5"))
+    implementation(platform("org.springframework.ai:spring-ai-bom:2.0.0-M6"))
     implementation("org.springframework.ai:spring-ai-starter-model-openai")
 }
 
@@ -198,7 +198,7 @@ spring:
 ### Core Imports
 
 ```java
-// Spring AI 2.0.0-M5 — structured output + chat client (used by the new evaluateSemanticIntents path)
+// Spring AI 2.0.0-M6 — structured output + chat client (used by the new evaluateSemanticIntents path)
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -323,7 +323,7 @@ class SemanticIntentEvaluator {
 5. **Skipping `internalToolExecutionEnabled(false)`.** Phase 2C sets this on the platform model bean for the tool path. For `evaluateSemanticIntents` you are NOT using tools, so this flag is irrelevant — but if you copy-paste the Phase 2C `OpenAiChatOptions` builder, do not propagate `.toolCallbacks(...)` calls into the classifier path.
 6. **Setting `maxTokens` and `maxCompletionTokens` together.** OpenAI rejects the request. Reasoning models (`o1`, `o3`, `o4`) need `maxCompletionTokens`; non-reasoning (`gpt-5.4-nano`, the Phase 4 default) needs `maxTokens`. Phase 4 default model is non-reasoning → use `maxTokens`. If the model registry is ever pointed at an `o*` reasoning model, flip the field — do not set both.
 7. **Reading `entity()` and `chatResponse()` from the same call twice.** `ChatClient.call()` returns a one-shot pipeline. Pick one: `.call().chatResponse()` if you need metadata (credit settlement via token usage), then convert the text yourself with the explicit `outputConverter.convert(...)`. Do not chain `.entity(T.class)` AND then try to fetch token usage — the chain has already consumed the response.
-8. **Spring AI M5 → GA churn in `BeanOutputConverter` package.** M5 ships `org.springframework.ai.converter.BeanOutputConverter`. GA candidates may relocate. Keep all imports inside `core.llm.gateway.springai` (ArchUnit-enforced) so a future rename is one-file blast radius.
+8. **Spring AI M6 → GA churn in `BeanOutputConverter` package.** M6 ships `org.springframework.ai.converter.BeanOutputConverter`. GA candidates may relocate. Keep all imports inside `core.llm.gateway.springai` (ArchUnit-enforced) so a future rename is one-file blast radius.
 
 ### Recommended Project Structure
 
@@ -470,7 +470,7 @@ record SemanticIntentResponse(
 }
 ```
 
-**Framework integration.** Spring AI 2.0.0-M5's `BeanOutputConverter` derives a JSON Schema from the record reflectively and feeds it into `OpenAiChatOptions.responseFormat`:
+**Framework integration.** Spring AI 2.0.0-M6's `BeanOutputConverter` derives a JSON Schema from the record reflectively and feeds it into `OpenAiChatOptions.responseFormat`:
 
 ```java
 BeanOutputConverter<SemanticIntentResponse> converter =
@@ -497,7 +497,7 @@ OpenAiChatOptions options = OpenAiChatOptions.builder()
 
 ### 4b.2 Async-First Design
 
-**How async works in Spring AI 2.0.0-M5 on this project.** Spring Boot 4 runs with `spring.threads.virtual.enabled=true` (project-wide). `ChatClient.call()` is synchronous-looking but executes on a virtual thread when invoked from a virtual-thread carrier (the Modulith listener is annotated `@ApplicationModuleListener`, which itself runs on a virtual thread). No `reactor`, no `Flux`, no `CompletableFuture` chaining is needed for the batched path.
+**How async works in Spring AI 2.0.0-M6 on this project.** Spring Boot 4 runs with `spring.threads.virtual.enabled=true` (project-wide). `ChatClient.call()` is synchronous-looking but executes on a virtual thread when invoked from a virtual-thread carrier (the Modulith listener is annotated `@ApplicationModuleListener`, which itself runs on a virtual thread). No `reactor`, no `Flux`, no `CompletableFuture` chaining is needed for the batched path.
 
 **The one common mistake.** Reaching for `ChatClient.stream()` because "streaming is faster". Streaming on a JSON-Schema-strict response is **wrong** — the converter needs the full response text to parse, and partial JSON cannot be schema-validated. `stream()` is for UX-facing text rendering only. Phase 4 has no UI, no token-level streaming requirement, and a strict structured output. Use `.call()` exclusively.
 
@@ -624,7 +624,7 @@ Dim 1 + Dim 5 + Dim 9 are the three "build-breaking" criticals: if any of these 
 **Primary Tool:** Project-existing **Micrometer + OpenTelemetry Java agent → Grafana Cloud (Tempo / Loki / Mimir)** for production tracing, plus **JUnit 5 + Spring AI's `BeanOutputConverter` against recorded-response fixtures** for the offline eval harness. **Arize Phoenix is explicitly rejected** for this project's reality:
 
 - Phoenix is Python-native; running it for a Java backend adds a second observability tool on top of the already-paid-for OTLP → Grafana Cloud pipe.
-- Grafana Tempo already receives Spring AI's `ChatClient` observation spans via the OTel Java agent (Spring AI 2.0.0-M5 emits OTel-compatible spans on the standard semantic conventions for `gen_ai.*` once `management.observations.enabled=true`).
+- Grafana Tempo already receives Spring AI's `ChatClient` observation spans via the OTel Java agent (Spring AI 2.0.0-M6 emits OTel-compatible spans on the standard semantic conventions for `gen_ai.*` once `management.observations.enabled=true`).
 - The privacy invariant requires `spring.ai.chat.client.observations.log-prompt=false` and `...log-completion=false`. Phoenix's headline value (per-call prompt/completion inspection) is therefore intentionally *unavailable* even if it were installed. Tempo gives us latency, token-usage, model-id, and call-site dimensions without ever seeing content — which is exactly what we want.
 - **Langfuse** considered; same content-capture concern, and adds a self-hosted service to the single-VPS topology for marginal benefit over Tempo.
 - **Promptfoo** considered for prompt-regression CI; rejected because it expects to drive live LLM calls and assert on completions — at our latency budget and privacy posture, the JVM-native fixture harness against a recorded cassette is strictly cheaper. Promptfoo can be revisited in v2 if the eval set grows past ~100 fixtures.
@@ -721,7 +721,7 @@ ZEROMAIL_EVAL_LIVE_BUDGET_USD=0.50 \
 
 ## 7. Production Monitoring
 
-**Tracing Tool:** **Existing project Micrometer + OpenTelemetry Java agent 2.16.0 → Grafana Cloud (Tempo / Loki / Mimir)** — already deployed per CLAUDE.md / STACK.md. **No new tracing tool installed for Phase 4.** Spring AI 2.0.0-M5 emits OTel-conformant `gen_ai.*` spans on the `ChatClient` chain; the agent forwards them to Tempo. Prompt and completion capture **MUST stay disabled** (`spring.ai.chat.client.observations.log-prompt=false`, `...log-completion=false` — CLAUDE.md hard rule, privacy invariant). What we see in Tempo is dimension-only data: model id, call site, token usage, latency, error class. That is enough to monitor the system without storing user content.
+**Tracing Tool:** **Existing project Micrometer + OpenTelemetry Java agent 2.16.0 → Grafana Cloud (Tempo / Loki / Mimir)** — already deployed per CLAUDE.md / STACK.md. **No new tracing tool installed for Phase 4.** Spring AI 2.0.0-M6 emits OTel-conformant `gen_ai.*` spans on the `ChatClient` chain; the agent forwards them to Tempo. Prompt and completion capture **MUST stay disabled** (`spring.ai.chat.client.observations.log-prompt=false`, `...log-completion=false` — CLAUDE.md hard rule, privacy invariant). What we see in Tempo is dimension-only data: model id, call site, token usage, latency, error class. That is enough to monitor the system without storing user content.
 
 **Key Metrics to Track:**
 

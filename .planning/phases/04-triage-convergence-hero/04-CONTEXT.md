@@ -71,7 +71,7 @@ Downstream agents MUST read `04-SPEC.md` before planning or implementing. Requir
   - `record Label(String labelId, String labelName) implements TriageActionResult`
   - `record Archive() implements TriageActionResult`
   - `record SaveDraft(String instruction, String draftId, String threadId) implements TriageActionResult`
-  Reuse of `core.rules.domain.ActionIntent` is REJECTED — triage_audit must round-trip Gmail response state (the returned `draftId` for `drafts.delete` on undo; the resolved `labelId` because users rename labels). Polluting `ActionIntent` with audit-only fields breaks the rules-domain boundary; Jackson polymorphic `@JsonTypeInfo` is REJECTED because it diverges from the established manual-validator pattern (`ActionIntentJsonValidator`) and would fragment the codebase mid M5→GA churn.
+  Reuse of `core.rules.domain.ActionIntent` is REJECTED — triage_audit must round-trip Gmail response state (the returned `draftId` for `drafts.delete` on undo; the resolved `labelId` because users rename labels). Polluting `ActionIntent` with audit-only fields breaks the rules-domain boundary; Jackson polymorphic `@JsonTypeInfo` is REJECTED because it diverges from the established manual-validator pattern (`ActionIntentJsonValidator`) and would fragment the codebase mid M6→GA churn.
 - **D-B2: Persistence shape.** `TriageAuditEntity.actionArgsJson` is `String` typed with `@JdbcTypeCode(SqlTypes.JSON)` + `columnDefinition = "jsonb"` — same Hibernate 7 wiring already proven by `RuleEntity.actionIntents`. Jackson 3 `tools.jackson.databind.JsonMapper` for read/write; annotations stay in `com.fasterxml.jackson.annotation.*` (the `@JsonValue` / `@JsonCreator` on type-id enum, per CLAUDE.md Boot 4 / Jackson 3 split). Yasson JSON-B (locked from Phase 02A-01) covers runtime mapping for JSONB columns at the Hibernate layer.
 - **D-B3: Validation = two layers, NO DB CHECK.**
   - Layer 1: new `TriageActionResultJsonValidator` in `com.zeromail.core.triage.domain`. Mirrors `ActionIntentJsonValidator`: rejects unknown discriminators (`NoSuchElementException`), rejects unknown fields per type on write, and runs from a `@PrePersist` hook (or the entity constructor) so no path can persist an invalid row.
@@ -158,17 +158,17 @@ Downstream agents MUST read `04-SPEC.md` before planning or implementing. Requir
 - `.planning/phases/04-triage-convergence-hero/04-SPEC.md` — Locked requirements (8), boundaries (in/out), constraints (privacy, latency, idempotency, tenant isolation, auto-send forbidden), acceptance criteria (13), interview log. MUST read before planning.
 
 ### Project-level (in-repo, locked)
-- `CLAUDE.md` §Constraints, §Backend Code Style, §Conventions, §"Hard do not use" list — Java 25, Spring Boot 4.0.6, Spring AI 2.0.0-M5, Jackson 3 split (annotations in `com.fasterxml.jackson.annotation.*`, core/databind in `tools.jackson.*`), no Lombok, enterprise-readability naming, no email body/prompt/completion in logs, allow-listed write actions only.
+- `CLAUDE.md` §Constraints, §Backend Code Style, §Conventions, §"Hard do not use" list — Java 25, Spring Boot 4.0.6, Spring AI 2.0.0-M6, Jackson 3 split (annotations in `com.fasterxml.jackson.annotation.*`, core/databind in `tools.jackson.*`), no Lombok, enterprise-readability naming, no email body/prompt/completion in logs, allow-listed write actions only.
 - `CLAUDE.md` §Conventions #6 — Spring Modulith events for in-process after-commit side effects (message-observed → triage). Direct service calls do NOT cross `backend/api` ↔ `backend/worker` boundaries; both Phase 4 producer and consumer are inside `backend/worker`.
 - `CONVENTIONS.md` — Detailed examples for thin controllers, service-owned `@Transactional`, record DTOs, JPA entities as classes, `IdentifiedEnum` + `fromId` fail-loud, privacy logging format.
 - `.planning/PROJECT.md` — Trust posture ("trust is the product"), no auto-send write-action allow-list, no embeddings, single-VPS deployment baseline.
 - `.planning/REQUIREMENTS.md` — `TRG-01..TRG-08` (Phase 4 requirements) plus upstream `MAIL-*`, `BILL-*`, `LLM-*`, `RULE-*` that Phase 4 consumes.
 - `.planning/ROADMAP.md` — Phase 4 goal ("hero triage orchestrator"), dependency on Phase 2C, success criterion #1 (triage within a few seconds).
-- `.planning/research/STACK.md` — Spring Boot 4.0.6, Hibernate 7, PostgreSQL 17.6 + Liquibase 5.0.2 YAML, Redis 7.2 (rate-limit + cache + session ONLY, NOT a queue), OpenRouter via Spring AI M5.
+- `.planning/research/STACK.md` — Spring Boot 4.0.6, Hibernate 7, PostgreSQL 17.6 + Liquibase 5.0.2 YAML, Redis 7.2 (rate-limit + cache + session ONLY, NOT a queue), OpenRouter via Spring AI M6.
 
 ### Prior-phase context (decisive for this phase)
 - `.planning/phases/03-rules-engine/03-CONTEXT.md` — `core.rules.domain.ActionIntent` sealed type, `ActionIntentJsonValidator` pattern, `RuleEvaluator` tri-state (`MATCHED/NOT_MATCHED/DEFERRED`), `ActionProposal` + `ActionProposalMerger`, `SemanticIntentMatcher` `{nodeId, intent, deferred}` storage shape, rule `display_order` semantics.
-- `.planning/phases/02C-llm-gateway/02C-CONTEXT.md` — `LlmGateway` contract, `ActionValidator` allow-list, `SanitizationPipeline` 4-step + 3896-token cap, BYOK + credit-cap behavior, ArchUnit boundary on `core.llm.gateway.springai`, M5→GA churn caveat.
+- `.planning/phases/02C-llm-gateway/02C-CONTEXT.md` — `LlmGateway` contract, `ActionValidator` allow-list, `SanitizationPipeline` 4-step + 3896-token cap, BYOK + credit-cap behavior, ArchUnit boundary on `core.llm.gateway.springai`, M6→GA churn caveat.
 - `.planning/phases/02B-billing-prepaid-credits/02B-CONTEXT.md` — `CreditLedger.reserve → settle/release` lifecycle, `CallSite` enum membership (locked by ArchUnit; Phase 4 additions follow that pattern), `BillingProperties` extension shape for new call-site costs.
 - `.planning/phases/02A-mail-ingestion/02A-CONTEXT.md` — `MailMessageObservedRepository.insertObservedIfAbsent` ON CONFLICT precedent (mirror in `TriageAuditRepository.insertAuditPendingIfAbsent`), `GmailDeliveryProcessingService.processDelivery` publish site, `GmailApiClientFactory.buildGmailClient(...)` reuse for Gmail writes, ShedLock + worker `@Scheduled` patterns.
 - `.planning/phases/01-foundation-safety-infrastructure/01-CONTEXT.md` — `TenantContext` ScopedValue rebind pattern, `MultiTenantLeakIntegrationTest` regression target, Logback scrub filter, `@TenantId` Hibernate filter.
@@ -206,7 +206,7 @@ Downstream agents MUST read `04-SPEC.md` before planning or implementing. Requir
 - **Method: users.drafts.create | Gmail API** — https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.drafts/create — confirms NON-idempotent semantics; load-bearing for D-C3 two-phase rationale.
 - **Method: users.messages.modify | Gmail API** — https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/modify — confirms idempotent label add/remove.
 - **PostgreSQL INSERT … ON CONFLICT … RETURNING** — https://www.postgresql.org/docs/17/sql-insert.html — verify RETURNING semantics in conjunction with DO NOTHING (returns empty result set on conflict).
-- **Spring AI 2.0.0-M5 — Tools / Tool Calling** — https://docs.spring.io/spring-ai/reference/api/tools.html — verify the structured-output pattern for `Map<nodeId, boolean>` return shape inside `evaluateSemanticIntents(...)`.
+- **Spring AI 2.0.0-M6 — Tools / Tool Calling** — https://docs.spring.io/spring-ai/reference/api/tools.html — verify the structured-output pattern for `Map<nodeId, boolean>` return shape inside `evaluateSemanticIntents(...)`.
 - **OpenRouter API docs** — https://openrouter.ai/docs — confirm batched-classification pricing model and rate limits.
 
 ### Local references

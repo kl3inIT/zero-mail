@@ -20,7 +20,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] **Phase 1.5: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED)** _(completed 2026-04-28)_ - Remaining heavy Phase 1.5 work: single Google OAuth upfront Gmail scope, remove google-gmail mismatch architecture, merge Gmail token provisioning, simplify onboarding/consent UX, deflate frontend primitives, polish landing/login/onboarding/settings/ReconnectPrompt, and close surviving REVIEW cleanup; excludes quick tasks already completed
 - [x] **Phase 2A: Mail Ingestion** _(completed 2026-04-29)_ - Gmail `users.watch` + Pub/Sub push + OIDC verification + idempotent history processing + global pause
 - [x] **Phase 2B: Billing (Prepaid Credits)** _(completed 2026-05-06)_ - Double-entry Postgres ledger, reserve/settle/release, credit-hold watchdog, SePay/VietQR top-up intent + webhook, balance API hooks
-- [ ] **Phase 2C: LLM Gateway** - Spring AI 2.0.0-M5 `LlmGateway` with sanitize → Unicode strip → structured tool-call + allow-list → BYOK per-request options → daily spend cap → drift detection
+- [ ] **Phase 2C: LLM Gateway** - Spring AI 2.0.0-M6 `LlmGateway` with sanitize → Unicode strip → structured tool-call + allow-list → BYOK per-request options → daily spend cap → drift detection
 - [x] **Phase 3: Rules Engine** _(completed 2026-05-10)_ - NL → structured matcher AST via Spring AI tool-call, deterministic evaluator, live preview, CRUD + reorder, template gallery
 - [ ] **Phase 4: Triage Convergence (Hero)** - Orchestrator, safety policy layer, audit + undo, shadow mode for new tenants, sender safety net
 - [ ] **Phase 5: User Surface (Drafts, Analytics, Web UI)** - AI-drafted replies, metadata-only analytics + daily digest, Next.js 16 / React 19 frontend covering all flows
@@ -85,7 +85,7 @@ Plans:
   2. Backend error responses follow a stable contract (machine-readable code + parameters) that the frontend localizes — no human-readable Vietnamese/English strings are constructed server-side for user-facing errors.
   3. Both Vietnamese and English message bundles cover every user-facing string in scope (auth, onboarding, settings, errors); a CI check fails the build on missing keys.
   4. ArchUnit and log-scrub guarantees from Phase 1 still pass; no localized error message contains PII, email body, prompt, or completion content.
-  5. The JHipster reference patterns adopted are documented in CONTEXT.md with a clear "what we kept / what we adapted / what we rejected" note (Spring Boot 4 / Spring AI 2.0.0-M5 / Next.js 16 fit).
+  5. The JHipster reference patterns adopted are documented in CONTEXT.md with a clear "what we kept / what we adapted / what we rejected" note (Spring Boot 4 / Spring AI 2.0.0-M6 / Next.js 16 fit).
 **Plans**: 8 plans
 - [x] 01.1-01-PLAN.md — [BLOCKING] Wave 0 test scaffolding + Liquibase changelog 006-users-preferred-language + JPA field + Vitest config
 - [x] 01.1-02-PLAN.md — Backend error contract: ErrorCodes, ApiError, FieldErrorDto, AllowedParamScalars, GlobalExceptionHandler upgrade (extends ResponseEntityExceptionHandler)
@@ -242,7 +242,7 @@ Plans:
 **UI hint**: yes
 
 ### Phase 2C: LLM Gateway
-**Goal**: Ship the single `LlmGateway` abstraction on Spring AI 2.0.0-M5 that all LLM traffic must traverse, with full prompt-injection hardening, BYOK routing, metadata-only observability, per-tenant spend caps, and drift detection — the contract that Phase 4 triage will be built on.
+**Goal**: Ship the single `LlmGateway` abstraction on Spring AI 2.0.0-M6 that all LLM traffic must traverse, with full prompt-injection hardening, BYOK routing, metadata-only observability, per-tenant spend caps, and drift detection — the contract that Phase 4 triage will be built on.
 **Depends on**: Phase 1 (hard gate — safety infrastructure must ship first)
 **Requirements**: LLM-01, LLM-02, LLM-03, LLM-04, LLM-05, LLM-06, LLM-07, LLM-08, LLM-09, LLM-10, LLM-11
 **Success Criteria** (what must be TRUE):
@@ -252,7 +252,7 @@ Plans:
   4. A user-provided BYOK key (OpenAI, Anthropic, OpenRouter) is used for that user's calls without any server-side persistence of the key beyond the request scope, and BYOK calls bypass platform credit deduction.
   5. Per-tenant daily LLM spend cap blocks further billable calls when exceeded, no raw body/prompt/completion is persisted beyond the short-lived in-memory cache, and the golden-set drift job flags any regression on the fixed sample on schedule.
 **Plans**: 8 plans
-**Research flag**: COMPLETE — Spring AI 2.0.0-M5 BYOK seam (`OpenAiChatModel.builder().options(...)` for platform/OpenAI-compatible, `ChatClient.prompt().options(builder)` for runtime deltas, `AnthropicChatOptions.builder().apiKey().baseUrl().model()` for Anthropic), jtokkit 1.1.0 + cl100k_base, Liquibase floor 019, all verified in 02C-RESEARCH.md and implementation.
+**Research flag**: COMPLETE — Spring AI 2.0.0-M6 BYOK seam (`OpenAiChatModel.builder().options(...)` for platform/OpenAI-compatible, `ChatClient.prompt().options(builder)` for runtime deltas, `AnthropicChatOptions.builder().apiKey().baseUrl().model()` for Anthropic), jtokkit 1.1.0 + cl100k_base, Liquibase floor 019, all verified in 02C-RESEARCH.md and implementation.
 
 Plans:
 - [x] 02C-01-PLAN.md — Wave 1 foundation: package skeleton + libs.versions.toml (Spring AI BOM + jtokkit) + Liquibase 018 BYOK schema + ArchUnit boundary test + Wave 0 RED scaffolds
