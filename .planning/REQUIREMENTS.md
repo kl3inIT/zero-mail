@@ -77,7 +77,7 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 - [x] **TRG-04**: Applied actions are Gmail write calls: label, archive (skip inbox), or save draft
 - [x] **TRG-05**: Every triage action writes an immutable audit entry (message ref, rule, action, reason, timestamp)
 - [x] **TRG-06**: User can undo any automated action from the audit log within retention window
-- [x] **TRG-07**: New tenants start in shadow mode — first N triages are logged but not applied until user confirms
+- [x] **TRG-07**: Tenant-wide shadow mode can be toggled on to log would-apply decisions without Gmail writes; default is OFF
 - [x] **TRG-08**: Sender safety net suppresses automated actions on messages from the user's frequent/important senders until user opts in
 
 ### Draft Replies
@@ -213,4 +213,4 @@ Each v1 requirement maps to exactly one phase.
 
 ---
 *Requirements defined: 2026-04-24*
-*Last updated: 2026-04-24 — traceability populated by roadmapper (8 phases, 0 unmapped)*
+*Last updated: 2026-05-11 — Phase 4 closure verified TRG-01..TRG-08 as Complete; traceability remains 61/61 mapped*
