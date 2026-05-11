@@ -8,6 +8,7 @@ plugins {
 dependencies {
     implementation(project(":backend:core"))
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation(libs.spring.modulith.starter.jdbc)
     implementation(platform(libs.spring.ai.bom))

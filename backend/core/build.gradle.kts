@@ -29,6 +29,7 @@ dependencies {
     api("org.springframework.boot:spring-boot-starter-data-jpa")
     api("org.springframework.boot:spring-boot-starter-validation")
     api("org.springframework.boot:spring-boot-starter-jdbc")
+    api("org.springframework.boot:spring-boot-starter-data-redis")
     api("org.springframework.boot:spring-boot-starter-liquibase")
     api("org.liquibase:liquibase-core:5.0.2")
     api(libs.google.api.services.gmail)
