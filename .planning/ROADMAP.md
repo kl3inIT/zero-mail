@@ -327,14 +327,27 @@ Cross-cutting constraints:
 **Research flag**: COMPLETE — `04-SPEC.md`, `04-CONTEXT.md`, `04-AI-SPEC.md`, `04-RESEARCH.md`, `04-PATTERNS.md`, `04-VALIDATION.md` in `.planning/phases/04-triage-convergence-hero/`.
 
 Plans:
+**Wave 1**
 - [ ] 04-00-PLAN.md — [BLOCKING] Wave 0: spring-modulith-starter-jdbc dependency + RED test spine (core/api/worker scaffolds, 4 ArchUnit guards, CallSite membership 3->5, eval-harness dir marker)
 - [ ] 04-01-PLAN.md — Modulith JDBC event spine: MailMessageObserved event + publish site + Liquibase 024 (event_publication) + core.triage package skeleton + TenantContext.runWith
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 04-02-PLAN.md — Triage persistence + domain: Liquibase 025-027 + TriageActionResult sealed type + validator + canonicalizer + TriageDecision + TriageAuditEntity/Repository + TenantSenderOptInEntity/Repository + 5 exceptions + CallSite extension + TenantEntity.triageShadowMode + TenantService accessors
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 04-03-PLAN.md — LlmGateway.evaluateSemanticIntents (strict-JSON-Schema classifier) + SemanticIntentEvaluator/Response + SemanticIntentRequest + 2 gateway exceptions + worker model pin gpt-5.4-nano + semanticIntentEval Gradle task
+
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 04-04-PLAN.md — Triage services: TriageSafetyPolicy (allow-list gate) + TriageGmailWriter (single Gmail-write call site, send-free) + SenderSafetyNetService (sent-history heuristic + Redis 24h cache + opt-in override) + core.gmail Gmail-client facade + Redis bean wiring
+
+**Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 04-05-PLAN.md — TriageOrchestratorService (@ApplicationModuleListener hero: tenant rebind -> rules -> inline SEMANTIC_INTENT via LlmGateway -> safety gate -> sender net -> two-phase PENDING->APPLIED audit loop -> Gmail/shadow) + metadata-only input facade + worker.triage package-info
 - [ ] 04-06-PLAN.md — TriageUndoService (compute-inverse, 30d window, exhaustive switch) + 3 thin triage controllers (undo / shadow-mode / sender-safety-net) + DTOs + ErrorCodes + GlobalExceptionHandler + vi/en i18n + schema.d.ts regen
+
+**Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 04-07-PLAN.md — worker.triage jobs: TriageEventRetryJob + TriageEventCleanupJob + TriageAuditPurgeJob/Batch (30d retention) + TriagePendingReaperJob/Batch (PENDING never lives forever) - all ShedLock-coordinated
+
+**Wave 7** *(blocked on Wave 6 completion)*
 - [ ] 04-08-PLAN.md — Closure: TriagePrivacySweepTest (FND-03-analogous) + ./gradlew clean check green + TRG-01..TRG-08 -> Complete + 04-VALIDATION.md sign-off + 04-UAT.md
 
 **UI hint**: yes (Phase 5)
