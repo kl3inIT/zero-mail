@@ -111,4 +111,3 @@ The Wave-0 RED contract spine (plan 04-00) — must exist before Waves 1–7 imp
 - [ ] `wave_0_complete: true` set in frontmatter — **pending** (flipped once Wave 0 lands and the RED scaffolds compile)
 
 **Approval:** pending (closure plan 04-08 Task 2 verifies `./gradlew clean check` GREEN, flips `nyquist_compliant: true` + `wave_0_complete: true`, sets `status: approved` with the completion date).
-</content>

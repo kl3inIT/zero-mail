@@ -187,7 +187,7 @@ Downstream agents MUST read `04-SPEC.md` before planning or implementing. Requir
 - `backend/core/src/main/java/com/zeromail/core/rules/service/ActionProposalMerger.java` — Phase 4 orchestrator calls `evaluateAndMerge(...)` to obtain the final `List<ActionProposal>` per message.
 - `backend/core/src/main/java/com/zeromail/core/llm/service/LlmGateway.java` — Extend with `evaluateSemanticIntents(...)`; existing `chat(...)` method stays untouched.
 - `backend/core/src/main/java/com/zeromail/core/billing/service/CreditLedger.java` — Reserve/settle/release contract; `core.triage` injects this for credit gating.
-- `backend/core/src/main/java/com/zeromail/core/billing/model/CallSite.java` — Add `TRIAGE_PLATFORM_LLM` and `TRIAGE_DETERMINISTIC`; update Phase 2B ArchUnit rule that locks enum membership.
+- `backend/core/src/main/java/com/zeromail/core/billing/domain/CallSite.java` — Add `TRIAGE_PLATFORM_LLM` and `TRIAGE_DETERMINISTIC`; update Phase 2B ArchUnit rule that locks enum membership.
 - `backend/core/src/main/java/com/zeromail/core/tenant/` — `TenantContext.runWith(tenantId, ...)` rebind pattern for ScopedValue inside the Modulith listener.
 - `backend/core/src/main/resources/db/changelog/changes/` — Floor is `024` (last committed: `023-fix-pin-calendar-category.yaml`).
 - `backend/core/src/main/resources/db/changelog/db.changelog-master.yaml` — Append new includes in numbered order.
