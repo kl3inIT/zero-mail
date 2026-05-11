@@ -13,6 +13,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.llm.application.RuleCompileGatewayResult;
+import com.zeromail.core.llm.application.SemanticIntentRequest;
 import com.zeromail.core.llm.application.ToolCallResult;
 import com.zeromail.core.llm.service.LlmGateway;
 import com.zeromail.core.rules.application.RuleCompileCommand;
@@ -237,6 +238,12 @@ class RuleCompilerServiceTest {
       lastCallSite.set(callSite);
       lastCompilerPayload.set(compilerPayload);
       return compileResult;
+    }
+
+    @Override
+    public Map<String, Boolean> evaluateSemanticIntents(
+        CallSite callSite, String rawMessageContent, List<SemanticIntentRequest> intents) {
+      throw new AssertionError("Rule compiler must call compileRule");
     }
 
     @Override

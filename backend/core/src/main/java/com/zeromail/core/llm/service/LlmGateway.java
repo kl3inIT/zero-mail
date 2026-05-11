@@ -2,7 +2,13 @@ package com.zeromail.core.llm.service;
 
 import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.llm.application.RuleCompileGatewayResult;
+import com.zeromail.core.llm.application.SemanticIntentRequest;
 import com.zeromail.core.llm.application.ToolCallResult;
+import com.zeromail.core.llm.exception.LlmEvaluationFailedException;
+import com.zeromail.core.llm.exception.SafetyViolationException;
+import com.zeromail.core.llm.exception.TokenBudgetExceededException;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Single chokepoint for all LLM traffic in Zero Mail. Phase 3 (Rules Engine) and Phase 4 (Triage)
@@ -28,6 +34,25 @@ public interface LlmGateway {
    * sanitized compiler payload and never pass arbitrary tool definitions.
    */
   RuleCompileGatewayResult compileRule(CallSite callSite, String compilerPayload);
+
+  /**
+   * Resolves a batch of {@code SEMANTIC_INTENT} matchers for one message in one
+   * structured-output LLM call.
+   *
+   * <p>The {@code rawMessageContent} parameter is whatever sanitizable text the caller has. In
+   * the Phase 4 triage path, the caller builds {@code semanticEvalContent} from
+   * {@code RuleEvaluationInput.sanitizedSubjectExcerpt()} plus a deterministic content-free flag
+   * summary; the Gmail metadata-only fetch carries no body. Implementations re-run the Phase 2C
+   * sanitization pipeline and perform the prompt-budget check before reserving platform credits.
+   * BYOK callers bypass the platform credit ledger.
+   *
+   * @throws TokenBudgetExceededException when sanitized content plus intent/schema overhead exceeds
+   *     the 3896-token cap before any model call
+   * @throws SafetyViolationException when the model returns an unknown or missing node id
+   * @throws LlmEvaluationFailedException when the gateway's internal retry path is exhausted
+   */
+  Map<String, Boolean> evaluateSemanticIntents(
+      CallSite callSite, String rawMessageContent, List<SemanticIntentRequest> intents);
 
   /**
    * Drift detection path. It uses the same sanitization pipeline, system prompt, and allow-list as

@@ -32,10 +32,14 @@ import com.zeromail.core.llm.domain.LlmToolProfile;
 import com.zeromail.core.llm.application.LlmUsage;
 import com.zeromail.core.llm.application.RawToolCall;
 import com.zeromail.core.llm.application.RuleCompileGatewayResult;
+import com.zeromail.core.llm.application.SemanticIntentRequest;
 import com.zeromail.core.llm.exception.SafetyViolationException;
+import com.zeromail.core.llm.exception.LlmEvaluationFailedException;
+import com.zeromail.core.llm.exception.TokenBudgetExceededException;
 import com.zeromail.core.llm.application.SanitizationContext;
 import com.zeromail.core.llm.application.SystemPrompts;
 import com.zeromail.core.llm.application.ToolCallResult;
+import com.zeromail.core.llm.gateway.sanitization.JtokkitTruncateSanitizer;
 import com.zeromail.core.llm.persistence.TenantByokCredentialsEntity;
 import com.zeromail.core.llm.persistence.TenantByokCredentialsRepository;
 import com.zeromail.core.tenant.TenantContext;
@@ -55,8 +59,15 @@ class LlmGatewayImpl implements LlmGateway {
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private static final CreditLedger NOOP_CREDIT_LEDGER = new NoopCreditLedger();
   private static final String DEFAULT_ANTHROPIC_BYOK_MODEL = "claude-3-haiku-20240307";
+  private static final int SANITIZATION_TOKEN_CAP = JtokkitTruncateSanitizer.HARD_CAP_TOKENS;
+  private static final int TOOL_SCHEMA_OVERHEAD_TOKENS = 600;
+  private static final SemanticIntentEvaluator UNAVAILABLE_SEMANTIC_INTENT_EVALUATOR =
+      (callSite, sanitizedMessageContent, intents) -> {
+        throw new IllegalStateException("Semantic intent evaluator is unavailable");
+      };
 
   private final LlmModelClient platformLlmModelClient;
+  private final SemanticIntentEvaluator semanticIntentEvaluator;
   private final SanitizationPipeline sanitizationPipeline;
   private final ZeroMailLlmProperties llmProperties;
   private final AllowListedTools allowListedTools;
@@ -80,6 +91,7 @@ class LlmGatewayImpl implements LlmGateway {
       ActionValidator actionValidator) {
     this(
         platformLlmModelClient,
+        UNAVAILABLE_SEMANTIC_INTENT_EVALUATOR,
         sanitizationPipeline,
         llmProperties,
         allowListedTools,
@@ -99,6 +111,7 @@ class LlmGatewayImpl implements LlmGateway {
   @Autowired
   LlmGatewayImpl(
       LlmModelClient platformLlmModelClient,
+      ObjectProvider<SemanticIntentEvaluator> semanticIntentEvaluatorProvider,
       SanitizationPipeline sanitizationPipeline,
       ZeroMailCoreProperties zeroMailCoreProperties,
       AllowListedTools allowListedTools,
@@ -115,6 +128,8 @@ class LlmGatewayImpl implements LlmGateway {
       ObjectProvider<MeterRegistry> meterRegistryProvider) {
     this(
         platformLlmModelClient,
+        semanticIntentEvaluatorProvider.getIfAvailable(
+            () -> UNAVAILABLE_SEMANTIC_INTENT_EVALUATOR),
         sanitizationPipeline,
         zeroMailCoreProperties.llm().platform(),
         allowListedTools,
@@ -140,6 +155,7 @@ class LlmGatewayImpl implements LlmGateway {
       ObservationRegistry observationRegistry) {
     this(
         platformLlmModelClient,
+        UNAVAILABLE_SEMANTIC_INTENT_EVALUATOR,
         sanitizationPipeline,
         llmProperties,
         allowListedTools,
@@ -158,6 +174,7 @@ class LlmGatewayImpl implements LlmGateway {
 
   private LlmGatewayImpl(
       LlmModelClient platformLlmModelClient,
+      SemanticIntentEvaluator semanticIntentEvaluator,
       SanitizationPipeline sanitizationPipeline,
       ZeroMailLlmProperties llmProperties,
       AllowListedTools allowListedTools,
@@ -173,6 +190,7 @@ class LlmGatewayImpl implements LlmGateway {
       CreditLedger creditLedger,
       MeterRegistry meterRegistry) {
     this.platformLlmModelClient = platformLlmModelClient;
+    this.semanticIntentEvaluator = semanticIntentEvaluator;
     this.sanitizationPipeline = sanitizationPipeline;
     this.llmProperties = llmProperties;
     this.allowListedTools = allowListedTools;
@@ -290,6 +308,47 @@ class LlmGatewayImpl implements LlmGateway {
                   tools,
                   startNanos,
                   this::parseRuleCompileToolCall);
+            });
+  }
+
+  @Override
+  public Map<String, Boolean> evaluateSemanticIntents(
+      CallSite callSite, String rawMessageContent, List<SemanticIntentRequest> intents) {
+    UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+    String model = llmProperties.modelByCallSite().get(callSite);
+    String provider = llmProperties.provider().id();
+    long startNanos = System.nanoTime();
+    return Observation.createNotStarted("zero_mail.llm.gateway.semantic_intent", observationRegistry)
+        .lowCardinalityKeyValue("tenantId", tenantId.toString())
+        .lowCardinalityKeyValue("callSite", callSite.id())
+        .lowCardinalityKeyValue("provider", provider)
+        .lowCardinalityKeyValue("model", model)
+        .observe(
+            () -> {
+              log.info(
+                  "event=llm_semantic_eval_started tenantId={} callSite={} provider={} model={} intentCount={}",
+                  tenantId,
+                  callSite,
+                  provider,
+                  model,
+                  intents.size());
+
+              SanitizationContext sanitizedContext = sanitizationPipeline.sanitize(rawMessageContent);
+              int promptTokenEstimate =
+                  saturatedPromptEstimate(sanitizedContext.tokenCount(), intents);
+              if (promptTokenEstimate > SANITIZATION_TOKEN_CAP) {
+                throw new TokenBudgetExceededException(
+                    promptTokenEstimate, SANITIZATION_TOKEN_CAP);
+              }
+
+              Optional<TenantByokCredentialsEntity> byok = findByokCredentials(tenantId);
+              if (byok.isPresent()) {
+                return evaluateSemanticIntentsWithoutCreditLedger(
+                    tenantId, callSite, provider, model, sanitizedContext, intents, startNanos);
+              }
+
+              return evaluateSemanticIntentsWithCreditLedger(
+                  tenantId, callSite, provider, model, sanitizedContext, intents, startNanos);
             });
   }
 
@@ -428,6 +487,129 @@ class LlmGatewayImpl implements LlmGateway {
       throw settleFailure;
     }
     return gatewayResult;
+  }
+
+  private Map<String, Boolean> evaluateSemanticIntentsWithCreditLedger(
+      UUID tenantId,
+      CallSite callSite,
+      String provider,
+      String model,
+      SanitizationContext sanitizedContext,
+      List<SemanticIntentRequest> intents,
+      long startNanos) {
+    ReservationId reservationId;
+    try {
+      reservationId = creditLedger.reserve(tenantId, callSite);
+    } catch (InsufficientCreditsException insufficientCreditsException) {
+      log.warn(
+          "event=llm_call_blocked_insufficient_credits tenantId={} callSite={}",
+          tenantId,
+          callSite);
+      throw insufficientCreditsException;
+    }
+
+    Map<String, Boolean> semanticIntentMatches;
+    try {
+      semanticIntentMatches =
+          semanticIntentEvaluator.evaluate(callSite, sanitizedContext.content(), intents);
+      log.info(
+          "event=llm_semantic_eval_succeeded tenantId={} callSite={} provider={} model={} latencyMs={} intentCount={} truncated={}",
+          tenantId,
+          callSite,
+          provider,
+          model,
+          latencyMs(startNanos),
+          intents.size(),
+          sanitizedContext.truncated());
+    } catch (SafetyViolationException safetyViolation) {
+      creditLedger.release(reservationId);
+      meterRegistry
+          .counter("llm_safety_violation_cost_absorbed_total", "tenantId", tenantId.toString())
+          .increment();
+      log.error(
+          "event=llm_safety_violation tenantId={} callSite={} reason={}",
+          tenantId,
+          callSite,
+          safetyViolation.getClass().getSimpleName());
+      throw safetyViolation;
+    } catch (RuntimeException semanticEvaluationFailure) {
+      creditLedger.release(reservationId);
+      log.warn(
+          "event=llm_semantic_eval_failed tenantId={} callSite={} intentCount={} errorClass={}",
+          tenantId,
+          callSite,
+          intents.size(),
+          semanticEvaluationFailure.getClass().getSimpleName());
+      throw new LlmEvaluationFailedException(semanticEvaluationFailure);
+    }
+
+    try {
+      creditLedger.settle(reservationId);
+    } catch (RuntimeException settleFailure) {
+      log.error(
+          "event=llm_call_settle_failed tenantId={} callSite={} reason={}",
+          tenantId,
+          callSite,
+          settleFailure.getClass().getSimpleName());
+      throw settleFailure;
+    }
+    return semanticIntentMatches;
+  }
+
+  private Map<String, Boolean> evaluateSemanticIntentsWithoutCreditLedger(
+      UUID tenantId,
+      CallSite callSite,
+      String provider,
+      String model,
+      SanitizationContext sanitizedContext,
+      List<SemanticIntentRequest> intents,
+      long startNanos) {
+    try {
+      Map<String, Boolean> semanticIntentMatches =
+          semanticIntentEvaluator.evaluate(callSite, sanitizedContext.content(), intents);
+      log.info(
+          "event=llm_semantic_eval_succeeded tenantId={} callSite={} provider={} model={} latencyMs={} intentCount={} truncated={}",
+          tenantId,
+          callSite,
+          provider,
+          model,
+          latencyMs(startNanos),
+          intents.size(),
+          sanitizedContext.truncated());
+      return semanticIntentMatches;
+    } catch (SafetyViolationException safetyViolation) {
+      log.error(
+          "event=llm_safety_violation tenantId={} callSite={} reason={}",
+          tenantId,
+          callSite,
+          safetyViolation.getClass().getSimpleName());
+      throw safetyViolation;
+    } catch (RuntimeException semanticEvaluationFailure) {
+      log.warn(
+          "event=llm_semantic_eval_failed tenantId={} callSite={} intentCount={} errorClass={}",
+          tenantId,
+          callSite,
+          intents.size(),
+          semanticEvaluationFailure.getClass().getSimpleName());
+      throw new LlmEvaluationFailedException(semanticEvaluationFailure);
+    }
+  }
+
+  private int saturatedPromptEstimate(
+      int sanitizedTokenCount, List<SemanticIntentRequest> intents) {
+    long estimatedTokens = sanitizedTokenCount + TOOL_SCHEMA_OVERHEAD_TOKENS;
+    for (SemanticIntentRequest intentRequest : intents) {
+      estimatedTokens += estimateIntentTokens(intentRequest);
+      if (estimatedTokens > Integer.MAX_VALUE) {
+        return Integer.MAX_VALUE;
+      }
+    }
+    return (int) estimatedTokens;
+  }
+
+  private int estimateIntentTokens(SemanticIntentRequest intentRequest) {
+    // Conservative: count characters as tokens so the pre-call guard never underestimates.
+    return intentRequest.nodeId().length() + intentRequest.intent().length() + 12;
   }
 
   private long latencyMs(long startNanos) {
