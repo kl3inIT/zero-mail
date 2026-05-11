@@ -1,0 +1,5 @@
+# Revisions intentionally ignored by `git blame` (see `git config blame.ignoreRevsFile`).
+# Bulk mechanical reformats only — no semantic changes.
+#
+# style: reformat backend Java to google-java-format AOSP (4-space)
+5e4481b9ab0c112526ab5bd5d42cc154d15e2ac6
