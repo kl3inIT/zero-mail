@@ -60,7 +60,7 @@ completed: 2026-05-11T12:48:29Z
 - **Duration:** 25 min
 - **Started:** 2026-05-11T12:24:00Z
 - **Completed:** 2026-05-11T12:48:29Z
-- **Tasks:** 2
+- **Tasks:** 3
 - **Files modified:** 11
 
 ## Accomplishments
@@ -73,7 +73,8 @@ completed: 2026-05-11T12:48:29Z
 ## Task Commits
 
 1. **Task 1: TriageRuleEvaluationInputFactory metadata-only facade** - `be61baf`
-2. **Task 2: TriageAuditSaga and orchestrator hero flow** - `e92c059`
+2. **Task 2: TriageAuditSaga reserve/write/finalize flow** - `e92c059`
+3. **Task 3: TriageOrchestratorService application module listener flow** - `e92c059`
 
 ## Files Created/Modified
 
@@ -91,6 +92,7 @@ completed: 2026-05-11T12:48:29Z
 - The orchestrator annotation stays on `TriageOrchestratorService`; no worker adapter was added because worker component scanning already includes `com.zeromail.core`.
 - Platform LLM credit reservation remains inside `LlmGateway.evaluateSemanticIntents`; the orchestrator only reserves deterministic zero-cost messages.
 - Label actions map `labelId` to the rule label name for now because no Gmail label resolver exists in the current phase.
+- Task 2 and Task 3 share commit `e92c059` because the saga and orchestrator had to be wired together atomically to keep the transaction-boundary tests meaningful.
 
 ## Deviations from Plan
 
