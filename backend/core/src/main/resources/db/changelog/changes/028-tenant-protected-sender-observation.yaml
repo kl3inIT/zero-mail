@@ -1,0 +1,75 @@
+databaseChangeLog:
+  - changeSet:
+      id: 028-tenant-protected-sender-observation
+      author: zeromail
+      comment: >
+        Stores only a canonicalized sender address plus first/last observation timestamps and a
+        counter. It never stores message content, subjects, snippets, or sender display names;
+        the table exists so GET /api/triage/sender-safety-net can list senders triage actually
+        flagged as protected.
+      changes:
+        - createTable:
+            tableName: tenant_protected_sender_observation
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_tenant_protected_sender_observation_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: sender_email
+                  type: varchar(320)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: first_observed_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_observed_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: observation_count
+                  type: int
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: tenant_protected_sender_observation
+            columnNames: tenant_id, sender_email
+            constraintName: uq_tenant_protected_sender_observation_tenant_sender
+      rollback:
+        - dropTable:
+            tableName: tenant_protected_sender_observation

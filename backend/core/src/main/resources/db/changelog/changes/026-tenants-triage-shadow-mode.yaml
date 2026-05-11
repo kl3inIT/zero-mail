@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 026-tenants-triage-shadow-mode
+      author: zeromail
+      changes:
+        - addColumn:
+            tableName: tenants
+            columns:
+              - column:
+                  name: triage_shadow_mode
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropColumn:
+            tableName: tenants
+            columnName: triage_shadow_mode

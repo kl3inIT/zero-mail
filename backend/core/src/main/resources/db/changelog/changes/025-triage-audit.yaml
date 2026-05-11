@@ -1,0 +1,151 @@
+databaseChangeLog:
+  - changeSet:
+      id: 025-triage-audit
+      author: zeromail
+      comment: >
+        Triage audit rows store one immutable action decision per message/action. args_hash is
+        the 32-byte SHA-256 of the pre-write action intent only, never Gmail-returned draftId or
+        label mutation state. The idempotency index uses PostgreSQL NULLS NOT DISTINCT so rows
+        with null rule_id still conflict. rule_id/rule_name_snapshot are denormalized provenance
+        and intentionally have no FK to rules so audit rows survive rule deletion. The
+        attempt_count/last_attempt_at/lease_owner triple backs PENDING reclaim: the saga retry
+        lease is 2 minutes, shorter than the 04-07 stuck-PENDING reaper abandoned threshold of
+        30 minutes, so a slow-but-live Gmail attempt is not reaped to FAILED.
+      changes:
+        - createTable:
+            tableName: triage_audit
+            columns:
+              - column:
+                  name: audit_id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_triage_audit_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: gmail_message_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: gmail_thread_id
+                  type: varchar(255)
+              - column:
+                  name: rule_id
+                  type: uuid
+              - column:
+                  name: rule_name_snapshot
+                  type: varchar(160)
+              - column:
+                  name: action_type
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: args_hash
+                  type: bytea
+                  constraints:
+                    nullable: false
+              - column:
+                  name: action_args_json
+                  type: jsonb
+                  constraints:
+                    nullable: false
+              - column:
+                  name: gmail_change_token
+                  type: jsonb
+              - column:
+                  name: reason
+                  type: varchar(512)
+              - column:
+                  name: decision
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: external_ref
+                  type: varchar(255)
+              - column:
+                  name: failure_reason
+                  type: varchar(255)
+              - column:
+                  name: decided_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: applied_at
+                  type: timestamptz
+              - column:
+                  name: reverted_at
+                  type: timestamptz
+              - column:
+                  name: attempt_count
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_attempt_at
+                  type: timestamptz
+              - column:
+                  name: lease_owner
+                  type: varchar(255)
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            comment: Triage decision values match TriageDecision ids.
+            sql: ALTER TABLE triage_audit ADD CONSTRAINT ck_triage_audit_decision CHECK (decision IN ('PENDING','APPLIED','SHADOW_LOGGED','REJECTED_BY_SAFETY_NET','REJECTED_BY_SAFETY_POLICY','FAILED','REVERTED'))
+        - sql:
+            comment: args_hash stores raw SHA-256 bytes.
+            sql: ALTER TABLE triage_audit ADD CONSTRAINT ck_triage_audit_args_hash_length CHECK (octet_length(args_hash) = 32)
+        - sql:
+            comment: Nullable rule_id must still participate in idempotency conflicts.
+            sql: CREATE UNIQUE INDEX ux_triage_audit_idem ON triage_audit (tenant_id, gmail_message_id, rule_id, action_type, args_hash) NULLS NOT DISTINCT
+        - createIndex:
+            tableName: triage_audit
+            indexName: idx_triage_audit_tenant_message
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: gmail_message_id
+        - createIndex:
+            tableName: triage_audit
+            indexName: idx_triage_audit_tenant_decided_at
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: decided_at
+        - sql:
+            comment: Partial index for stale PENDING reclaim and reaper scans.
+            sql: CREATE INDEX idx_triage_audit_pending_last_attempt ON triage_audit (last_attempt_at) WHERE decision = 'PENDING'
+      rollback:
+        - dropTable:
+            tableName: triage_audit

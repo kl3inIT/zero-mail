@@ -71,3 +71,15 @@ databaseChangeLog:
   - include:
       file: changes/024-modulith-event-publication.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/025-triage-audit.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/026-tenants-triage-shadow-mode.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/027-tenant-sender-opt-in.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/028-tenant-protected-sender-observation.yaml
+      relativeToChangelogFile: true
