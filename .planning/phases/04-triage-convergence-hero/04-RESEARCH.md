@@ -646,26 +646,32 @@ Map<String, Boolean> evaluateSemanticIntents(
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> Resolved at plan-phase (2026-05-11). Each question below carries the resolution adopted by the Phase 4 plan set (plans 04-01 / 04-04 / 04-05 / 04-07).
 
 1. **Does `core.triage` need a Modulith `allowedDependencies` edge to `core.gmail.persistence.crypto` (`RefreshTokenCipher`)?**
    - What we know: `core.llm` declares `gmail.persistence.crypto` as an allowed dependency for BYOK. `GmailDeliveryProcessingService` and `GmailPreviewReadService` (both in `core.gmail`) already do the decrypt-then-build-client dance.
    - What's unclear: whether `TriageGmailWriter` and `SenderSafetyNetService` build their own Gmail client (needing the cipher) or call a facade on `core.gmail` (e.g., a new `GmailTriageReadService` / a `buildAuthenticatedClient(tenantId)` helper) so the cipher stays inside `core.gmail`.
    - Recommendation (also CONTEXT.md's): NO direct edge — add a thin facade method on `core.gmail.service` (`GmailApiClientFactory` could expose `buildClientForTenant(tenantId)` that does the decrypt+refresh+build internally, or `GmailPreviewReadService` exposes `fetchTriageInput(...)`). `core.triage`'s `allowedDependencies` then = `{rules, gmail, llm, billing, tenant, shared.persistence, shared.lang}`. The planner makes the call when designing `TriageGmailWriter`.
+   - **RESOLVED:** No `core.triage -> core.gmail.persistence.crypto` Modulith edge. `core.gmail` exposes a `GmailApiClientFactory.buildClientForTenant(tenantId)` facade (added in plan 04-04) that does the decrypt + refresh + build internally; `GmailPreviewReadService` exposes a `fetchTriageInput(...)`-style triage facade (plan 04-05). `core.triage`'s `allowedDependencies` = `{rules, gmail, llm, billing, tenant, shared.persistence, shared.lang}` — the cipher stays inside `core.gmail`.
 
 2. **`TriageOrchestratorService` package + AOT detection.**
    - What we know: CONVENTIONS #2 says use-case services live in `application/`. `@ApplicationModuleListener` requires the bean to be component-scanned (the worker scans `com.zeromail.core` + `com.zeromail.worker`).
    - What's unclear: whether Spring AOT / native-hint detection in the worker behaves identically for a listener bean defined in `core` vs `worker`.
    - Recommendation: put it in `core.triage.application` (the worker already scans `com.zeromail.core`); if AOT detection misbehaves in CI, add a thin `worker`-side `@Component` adapter that delegates. Verify the worker boots and processes an event in an integration test.
+   - **RESOLVED:** `TriageOrchestratorService` lives in `core.triage.application` (per CONVENTIONS #2); the worker already scans `com.zeromail.core`, so the `@ApplicationModuleListener` bean is component-scanned without any extra wiring (plan 04-05). A thin `worker.triage.TriageOrchestratorAdapter` `@Component` delegate is the fallback only if AOT/native-hint detection misbehaves in CI — verified by the worker integration contract test that boots the worker and dispatches an event.
 
 3. **Is the stuck-`PENDING` reaper (D-C5) in scope for Phase 4 or a follow-up plan?**
    - What we know: CONTEXT.md says it "may be deferred to a follow-up plan if the planner judges the failure window narrow enough; but `PENDING` rows must NEVER live forever."
    - Recommendation: include at least a minimal version (flip `PENDING` older than N minutes to `FAILED` without the Gmail re-verification, leaving the re-verification as the follow-up) so the invariant holds from day one. The planner picks the cut.
+   - **RESOLVED:** In scope, minimal version. Plan 04-07 ships a `TriagePendingReaperJob` + `TriagePendingReaperBatch` (ShedLock-coordinated) that flips `triage_audit` rows stuck in `PENDING` past a TTL to `FAILED` — no Gmail re-verification (that richer reconciliation is a documented follow-up). The invariant 'PENDING rows never live forever' holds from day one.
 
 4. **Exact `event_publication` Liquibase changeset content.**
    - What we know: floor is `024`; the Spring Modulith reference ships a canonical per-database schema.
    - What's unclear (intentionally — verify before authoring): the exact column set/types/indexes for the pinned snapshot version.
    - Recommendation: do the dev-DB auto-init dump (Pitfall 2) and mirror it; do not author from memory.
+   - **RESOLVED:** Plan 04-01 dumps the auto-created Spring Modulith `event_publication` DDL from a throwaway dev DB (Pitfall 2) and mirrors it in Liquibase changelog `024-modulith-event-publication.yaml` (with `spring.modulith.events.jdbc.schema-initialization.enabled=false`), rather than authoring the schema from memory.
 
 ---
 
