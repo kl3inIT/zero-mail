@@ -295,6 +295,7 @@ Recent decisions affecting current work:
 
 - WR-06: dedicated test-profile SecurityConfig slice (so OAuth filter chain is exercised under integration tests) — `.planning/todos/pending/2026-04-28-wr-06-test-profile-securityconfig-slice.md`
 - Apply `:?` fail-fast to `backend/worker/src/main/resources/application.yml:10` (CR-04 parity with api module) — `.planning/todos/pending/2026-04-28-worker-application-yml-fail-fast-parity.md`
+- Make backend/core context API surfaces explicit with Spring Modulith `@NamedInterface("api")` (+ low-pri: Spotless `ratchetFrom`, vertical-slice split of `rules`/`llm` if folders grow) — `.planning/todos/pending/2026-05-12-make-backend-core-context-api-surfaces-explicit-with-namedin.md`
 
 ### Blockers/Concerns
 
