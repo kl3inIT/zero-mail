@@ -5,7 +5,7 @@ status: approved
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-05-11
-updated: 2026-05-11
+updated: 2026-05-12
 ---
 
 # Phase 4 — Validation Strategy
@@ -45,7 +45,7 @@ updated: 2026-05-11
 | 04-00-02 | 00 | 0 | TRG-01..TRG-08 | — | RED-by-design contract scaffolds referencing future Phase 4 classes (Nyquist Wave-0) | scaffold (RED) | `test -f .../gmail/event/MailMessageObservedContractTest.java && test -f .../worker/triage/TriageOrchestratorIntegrationContractTest.java && test -f .../api/.../triage/TriageUndoControllerContractTest.java && test -f .../semantic-intent-eval/README.md` | ✅ | ✅ green |
 | 04-00-03 | 00 | 0 | TRG-02, TRG-03, TRG-05 | T-04-05-03 | ArchUnit guards: no Gmail `send`; only `TriageGmailWriter` calls Gmail write APIs; no UPDATE/DELETE on `triage_audit` except `markApplied`/`markFailed`/`markReverted`; `CallSite` = 5 members | ArchUnit (RED until impl) | `test -f .../arch/NoGmailSendAllowedTest.java && test -f .../arch/TriageGmailWriteBoundaryTest.java && test -f .../arch/TriageAuditRepositoryBoundaryArchTest.java && grep -q "TRIAGE_PLATFORM_LLM" .../billing/CallSiteEnumMembershipArchTest.java` | ✅ | ✅ green |
 | 04-01-01 | 01 | 1 | TRG-01 | T-04-05-* | `MailMessageObserved` event published after-commit from `core.gmail`; payload = ids + timestamp only (no body/snippet/display-name) | unit + compile | `./gradlew :backend:core:compileJava && grep -q "publishEvent" .../GmailDeliveryProcessingService.java && grep -q "record MailMessageObserved" .../gmail/event/MailMessageObserved.java` | ✅ | ✅ green |
-| 04-01-02 | 01 | 1 | TRG-01 | — | `event_publication` table owned by Liquibase `024` (DDL dumped from dev DB, auto-init disabled) — events persist, no Liquibase/auto-init conflict | integration (Liquibase validation) | `test -f .../changes/024-modulith-event-publication.yaml && grep -q "event_publication" .../024-modulith-event-publication.yaml && grep -q "024-modulith-event-publication" .../db.changelog-master.yaml && ./gradlew :backend:core:test --tests "*LiquibaseChangelogValidationTest"` | ✅ | ✅ green |
+| 04-01-02 | 01 | 1 | TRG-01 | — | `event_publication` table owned by Liquibase `024` (DDL dumped from dev DB, auto-init disabled) — events persist, no Liquibase/auto-init conflict | integration (Liquibase validation) | `test -f .../changes/024-modulith-event-publication.yaml && grep -q "event_publication" .../024-modulith-event-publication.yaml && grep -q "024-modulith-event-publication" .../db.changelog-master.yaml && ./gradlew :backend:core:test --tests "*LiquibaseMigrationTest"` | ✅ | ✅ green |
 | 04-01-03 | 01 | 1 | TRG-01 | T-04-05-02 | `core.triage` Modulith package + `allowedDependencies` = `{rules, gmail, llm, billing, tenant, shared.*}`; `TenantContext.runWith` rebind helper | Modulith verification | `./gradlew :backend:core:compileJava && grep -q "allowedDependencies" .../triage/package-info.java && grep -q "runWith" .../tenant/TenantContext.java && ./gradlew :backend:core:test --tests "*ApplicationModulesTest"` | ✅ | ✅ green |
 | 04-02-01 | 02 | 2 | TRG-04, TRG-05, TRG-07, TRG-08 | T-04-05-01 | Liquibase `025` (`triage_audit` + unique idempotency index `(tenant, message, rule, action_type, args_hash)`), `026` (`tenants.triage_shadow_mode`), `027` (`tenant_sender_opt_in`) — additive YAML, no destructive ops | integration (Liquibase) | `test -f .../changes/025-triage-audit.yaml && grep -q "ux_triage_audit_idem\|args_hash" .../025-triage-audit.yaml && grep -q "triage_shadow_mode" .../026-tenants-triage-shadow-mode.yaml && grep -q "tenant_sender_opt_in" .../027-tenant-sender-opt-in.yaml` | ✅ | ✅ green |
 | 04-02-02 | 02 | 2 | TRG-05, TRG-06 | T-04-05-05 | `TriageActionResult` sealed type + JSON validator (rejects unknown discriminators/fields) + SHA-256 canonicalizer (idempotency key) + `TriageDecision` enum + triage exceptions | unit | `./gradlew :backend:core:compileJava && grep -q "sealed interface TriageActionResult" .../TriageActionResult.java && grep -q "SHA-256" .../TriageActionArgsCanonicalizer.java && ./gradlew :backend:core:test --tests "*TriageActionResultJsonValidatorContractTest"` | ✅ | ✅ green |
@@ -111,3 +111,19 @@ The Wave-0 RED contract spine (plan 04-00) — must exist before Waves 1–7 imp
 - [x] `wave_0_complete: true` set in frontmatter — **YES** (no remaining Wave-0 `@Disabled` in triage/arch test trees)
 
 **Approval:** approved 2026-05-11 (`./gradlew clean check` and `:backend:core:semanticIntentEval` both green; no orphaned Wave-0 `@Disabled` annotations remain).
+
+---
+
+## Validation Audit 2026-05-12
+
+| Metric | Count |
+|--------|-------|
+| Coverage gaps found | 0 |
+| Generated tests | 0 |
+| Validation doc drift corrected | 1 |
+| Escalated | 0 |
+
+**Audit notes:**
+- Existing per-task coverage still maps TRG-01..TRG-08 to automated tests; no new test files were needed.
+- Corrected stale Liquibase validation command from `*LiquibaseChangelogValidationTest` to the current green `*LiquibaseMigrationTest`.
+- `./gradlew clean check --console=plain` and `./gradlew clean check --console=plain --max-workers=1` were attempted but the API test JVM crashed from local native-memory exhaustion before any assertion failure. Phase-specific constrained reruns passed.
