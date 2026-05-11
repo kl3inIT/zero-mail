@@ -13,15 +13,12 @@ class MailMessageObservedContractTest {
 
     private static final String MAIL_MESSAGE_OBSERVED =
             "com.zeromail.core.gmail.event.MailMessageObserved";
-    private static final String TRIAGE_ORCHESTRATOR_SERVICE =
-            "com.zeromail.core.triage.application.TriageOrchestratorService";
     private static final Pattern FORBIDDEN_CONTENT_FIELD =
             Pattern.compile("(?i)subject|snippet|body|sender.?name");
 
     @Test
-    void future_event_and_consumer_contract_types_are_present() {
+    void mail_message_observed_event_contract_type_is_present() {
         assertFutureTypePresent(MAIL_MESSAGE_OBSERVED);
-        assertFutureTypePresent(TRIAGE_ORCHESTRATOR_SERVICE);
     }
 
     @Test

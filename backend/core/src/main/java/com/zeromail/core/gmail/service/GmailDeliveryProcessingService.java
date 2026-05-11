@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,7 @@ import com.google.api.services.gmail.model.History;
 import com.google.api.services.gmail.model.HistoryMessageAdded;
 import com.google.api.services.gmail.model.ListHistoryResponse;
 import com.google.api.services.gmail.model.Message;
+import com.zeromail.core.gmail.event.MailMessageObserved;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.MailMessageObservedRepository;
@@ -36,19 +38,22 @@ public class GmailDeliveryProcessingService {
     private final GmailConnectionRepository connectionRepository;
     private final GmailApiClientFactory gmailApiClientFactory;
     private final RefreshTokenCipher refreshTokenCipher;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     public GmailDeliveryProcessingService(PubSubDeliveryRepository deliveryRepository,
                                           MailMessageObservedRepository observedRepository,
                                           GmailConnectionService connectionService,
                                           GmailConnectionRepository connectionRepository,
                                           GmailApiClientFactory gmailApiClientFactory,
-                                          RefreshTokenCipher refreshTokenCipher) {
+                                          RefreshTokenCipher refreshTokenCipher,
+                                          ApplicationEventPublisher applicationEventPublisher) {
         this.deliveryRepository = deliveryRepository;
         this.observedRepository = observedRepository;
         this.connectionService = connectionService;
         this.connectionRepository = connectionRepository;
         this.gmailApiClientFactory = gmailApiClientFactory;
         this.refreshTokenCipher = refreshTokenCipher;
+        this.applicationEventPublisher = applicationEventPublisher;
     }
 
     public void processDelivery(PubSubDeliveryEntity delivery) {
@@ -152,6 +157,14 @@ public class GmailDeliveryProcessingService {
                         gmailMessage.getInternalDate());
                 if (insertedCount == 1) {
                     newObservations++;
+                    Instant observedAt = Instant.now();
+                    applicationEventPublisher.publishEvent(new MailMessageObserved(
+                            tenantId,
+                            gmailMessage.getId(),
+                            gmailMessage.getThreadId(),
+                            observedAt));
+                    log.info("event=mail_message_observed_published tenantId={} gmailMessageId={}",
+                            tenantId, gmailMessage.getId());
                 }
             }
         }
