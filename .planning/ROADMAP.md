@@ -345,7 +345,7 @@ Plans:
 - [x] 04-06-PLAN.md — TriageUndoService (compute-inverse, 30d window, exhaustive switch) + 3 thin triage controllers (undo / shadow-mode / sender-safety-net) + DTOs + ErrorCodes + GlobalExceptionHandler + vi/en i18n + schema.d.ts regen
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 04-07-PLAN.md — worker.triage jobs: TriageEventRetryJob + TriageEventCleanupJob + TriageAuditPurgeJob/Batch (30d retention) + TriagePendingReaperJob/Batch (PENDING never lives forever) - all ShedLock-coordinated
+- [x] 04-07-PLAN.md — worker.triage jobs: TriageEventRetryJob + TriageEventCleanupJob + TriageAuditPurgeJob/Batch (30d retention) + TriagePendingReaperJob/Batch (PENDING never lives forever) - all ShedLock-coordinated
 
 **Wave 7** *(blocked on Wave 6 completion)*
 - [ ] 04-08-PLAN.md — Closure: TriagePrivacySweepTest (FND-03-analogous) + ./gradlew clean check green + TRG-01..TRG-08 -> Complete + 04-VALIDATION.md sign-off + 04-UAT.md
