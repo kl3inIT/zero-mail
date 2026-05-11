@@ -22,7 +22,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] **Phase 2B: Billing (Prepaid Credits)** _(completed 2026-05-06)_ - Double-entry Postgres ledger, reserve/settle/release, credit-hold watchdog, SePay/VietQR top-up intent + webhook, balance API hooks
 - [ ] **Phase 2C: LLM Gateway** - Spring AI 2.0.0-M6 `LlmGateway` with sanitize → Unicode strip → structured tool-call + allow-list → BYOK per-request options → daily spend cap → drift detection
 - [x] **Phase 3: Rules Engine** _(completed 2026-05-10)_ - NL → structured matcher AST via Spring AI tool-call, deterministic evaluator, live preview, CRUD + reorder, template gallery
-- [ ] **Phase 4: Triage Convergence (Hero)** - Orchestrator, safety policy layer, audit + undo, shadow mode for new tenants, sender safety net
+- [x] **Phase 4: Triage Convergence (Hero)** _(completed 2026-05-11)_ - Orchestrator, safety policy layer, audit + undo, shadow mode for new tenants, sender safety net
 - [ ] **Phase 5: User Surface (Drafts, Analytics, Web UI)** - AI-drafted replies, metadata-only analytics + daily digest, Next.js 16 / React 19 frontend covering all flows
 - [ ] **Phase 6: Polish & CASA-Verified Launch** - End-to-end integration hardening, CASA Tier verification sign-off, launch readiness
 
@@ -348,7 +348,7 @@ Plans:
 - [x] 04-07-PLAN.md — worker.triage jobs: TriageEventRetryJob + TriageEventCleanupJob + TriageAuditPurgeJob/Batch (30d retention) + TriagePendingReaperJob/Batch (PENDING never lives forever) - all ShedLock-coordinated
 
 **Wave 7** *(blocked on Wave 6 completion)*
-- [ ] 04-08-PLAN.md — Closure: TriagePrivacySweepTest (FND-03-analogous) + ./gradlew clean check green + TRG-01..TRG-08 -> Complete + 04-VALIDATION.md sign-off + 04-UAT.md
+- [x] 04-08-PLAN.md — Closure: TriagePrivacySweepTest (FND-03-analogous) + ./gradlew clean check green + TRG-01..TRG-08 -> Complete + 04-VALIDATION.md sign-off + 04-UAT.md
 
 **UI hint**: yes (Phase 5)
 
@@ -401,6 +401,6 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 2B. Billing (Prepaid Credits) | 7/7 | Complete | 2026-05-06 |
 | 2C. LLM Gateway | 0/8 | Not started | - |
 | 3. Rules Engine | 10/10 | Complete | 2026-05-10 |
-| 4. Triage Convergence (Hero) | 2/9 | In Progress | - |
+| 4. Triage Convergence (Hero) | 9/9 | Complete | 2026-05-11 |
 | 5. User Surface — Drafts, Analytics, Web UI | 0/TBD | Not started | - |
 | 6. Polish & CASA-Verified Launch | 0/TBD | Not started | - |
