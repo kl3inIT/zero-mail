@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-05-11T11:55:21.549Z"
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-05-11T12:23:58.761Z"
 last_activity: 2026-05-11
 progress:
   total_phases: 15
   completed_phases: 12
   total_plans: 100
-  completed_plans: 95
-  percent: 95
+  completed_plans: 96
+  percent: 96
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 04 (triage-convergence-hero) — EXECUTING
-Plan: 5 of 9
+Plan: 6 of 9
 Status: Ready to execute
 Last activity: 2026-05-11
 
-Progress: [██████████] 95%
+Progress: [██████████] 96%
 
 ## Performance Metrics
 
@@ -116,6 +116,7 @@ Progress: [██████████] 95%
 | Phase 04 P01 | 12min | 3 tasks | 14 files |
 | Phase 04 P02 | 29 min | 3 tasks | 34 files |
 | Phase 04 P03 | 19 min | 3 tasks | 13 files |
+| Phase 04 P04 | 20min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -261,6 +262,9 @@ Recent decisions affecting current work:
 - [Phase 04]: Apply the semantic triage model pin to zero-mail.llm.platform.triage-model. — This codebase constructs the platform ChatModel from ZeroMailCoreProperties rather than spring.ai.openai.chat.options.model.
 - [Phase 04]: Use the pinned local Spring AI M6 API shape: OpenAiChatModel.ResponseFormat.builder() and ChatClient.options(OpenAiChatOptions.Builder). — Context7 and local source verification showed M6 API drift from the AI-SPEC sample; compile passed with the local shape while preserving JSON_SCHEMA behavior.
 - [Phase 04]: Add a pure-Java core.llm.service.SemanticIntentEvaluator seam so LlmGatewayImpl remains Spring-AI-free and Task 1 compiles independently. — Matches the existing LlmModelClient adapter pattern and preserves the Phase 2C Spring AI boundary while allowing staged task commits.
+- [Phase 04]: 04-04 keeps RefreshTokenCipher inside core.gmail by adding GmailApiClientFactory.buildClientForTenant(UUID) for triage callers.
+- [Phase 04]: 04-04 makes TriageGmailWriter the sole triage Gmail write adapter and keeps it send-free.
+- [Phase 04]: 04-04 sender safety net uses optional Boot StringRedisTemplate with hashed keys and fail-safe protected=true on Gmail lookup failure.
 
 ### Roadmap Evolution
 
@@ -321,6 +325,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-11T11:55:21.528Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-05-11T12:23:58.714Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None
