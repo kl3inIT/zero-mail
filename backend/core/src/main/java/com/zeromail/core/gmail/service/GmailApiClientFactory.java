@@ -9,6 +9,8 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -21,6 +23,9 @@ import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
+import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
+import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.shared.privacy.Sensitive;
 
 import tools.jackson.databind.JsonNode;
@@ -33,15 +38,21 @@ public class GmailApiClientFactory {
     private final String clientSecret;
     private final String apiRootUrl;
     private final URI tokenEndpoint;
+    private final GmailConnectionRepository gmailConnectionRepository;
+    private final RefreshTokenCipher refreshTokenCipher;
 
     public GmailApiClientFactory(
             @Value("${spring.security.oauth2.client.registration.google.client-id}") String clientId,
             @Value("${spring.security.oauth2.client.registration.google.client-secret}") String clientSecret,
-            ZeroMailCoreProperties properties) {
+            ZeroMailCoreProperties properties,
+            GmailConnectionRepository gmailConnectionRepository,
+            RefreshTokenCipher refreshTokenCipher) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.apiRootUrl = properties.gmail().apiRootUrl();
         this.tokenEndpoint = properties.gmail().oauthTokenUrl();
+        this.gmailConnectionRepository = gmailConnectionRepository;
+        this.refreshTokenCipher = refreshTokenCipher;
     }
 
     public Gmail buildGmailClient(String accessToken) throws IOException {
@@ -56,6 +67,24 @@ public class GmailApiClientFactory {
                     .build();
         } catch (GeneralSecurityException securityException) {
             throw new IOException("Unable to initialize Gmail HTTP transport", securityException);
+        }
+    }
+
+    public Gmail buildClientForTenant(UUID tenantId) throws IOException {
+        GmailConnectionEntity gmailConnection = gmailConnectionRepository.findByTenantId(tenantId)
+                .orElseThrow(() -> new IllegalStateException("No connection for tenantId: " + tenantId));
+        return buildClientForConnection(gmailConnection, tenantId);
+    }
+
+    public Gmail buildClientForConnection(GmailConnectionEntity gmailConnection, UUID tenantId) throws IOException {
+        byte[] decryptedRefreshTokenBytes =
+                refreshTokenCipher.decrypt(gmailConnection.getRefreshTokenEncrypted(), tenantId.toString());
+        try {
+            String decryptedRefreshToken = new String(decryptedRefreshTokenBytes, StandardCharsets.UTF_8);
+            TokenRefreshResult tokenResult = refreshAccessToken(decryptedRefreshToken);
+            return buildGmailClient(tokenResult.accessToken().value());
+        } finally {
+            Arrays.fill(decryptedRefreshTokenBytes, (byte) 0);
         }
     }
 
