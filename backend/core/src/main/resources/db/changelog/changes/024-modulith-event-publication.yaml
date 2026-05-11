@@ -1,0 +1,58 @@
+databaseChangeLog:
+  - changeSet:
+      id: 024-modulith-event-publication
+      author: zeromail
+      changes:
+        - createTable:
+            tableName: event_publication
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: listener_id
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event_type
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: serialized_event
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: publication_date
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: completion_date
+                  type: timestamptz
+              - column:
+                  name: status
+                  type: text
+              - column:
+                  name: completion_attempts
+                  type: int
+              - column:
+                  name: last_resubmission_date
+                  type: timestamptz
+        - sql:
+            comment: Spring Modulith JDBC registry uses a PostgreSQL hash index for serialized event lookup.
+            sql: CREATE INDEX event_publication_serialized_event_hash_idx ON event_publication USING hash (serialized_event)
+        - createIndex:
+            tableName: event_publication
+            indexName: event_publication_by_completion_date_idx
+            columns:
+              - column:
+                  name: completion_date
+      rollback:
+        - dropTable:
+            tableName: event_publication

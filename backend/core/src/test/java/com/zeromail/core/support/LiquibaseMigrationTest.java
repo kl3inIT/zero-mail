@@ -28,6 +28,11 @@ class LiquibaseMigrationTest extends PostgresContainerTest {
                 seen.add(md.getString("TABLE_NAME"));
             }
         }
-        assertThat(seen).contains("tenants", "users", "gmail_connections", "onboarding_selections");
+        assertThat(seen).contains(
+                "tenants",
+                "users",
+                "gmail_connections",
+                "onboarding_selections",
+                "event_publication");
     }
 }
