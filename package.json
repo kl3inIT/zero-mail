@@ -35,6 +35,7 @@
     }
   },
   "lint-staged": {
+    "backend/**/*.java": "./gradlew spotlessApply -q",
     "apps/web/**/*.{ts,tsx,js,jsx}": [
       "pnpm --filter web exec eslint --fix",
       "pnpm --filter web exec prettier --write"
