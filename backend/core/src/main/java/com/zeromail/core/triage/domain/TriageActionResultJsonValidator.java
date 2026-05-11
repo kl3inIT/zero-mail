@@ -54,7 +54,8 @@ public class TriageActionResultJsonValidator {
         jsonFields.put("labelId", label.labelId());
         jsonFields.put("labelName", label.labelName());
       }
-      case TriageActionResult.Archive ignored -> jsonFields.put("type", RuleActionType.ARCHIVE.id());
+      case TriageActionResult.Archive ignored ->
+          jsonFields.put("type", RuleActionType.ARCHIVE.id());
       case TriageActionResult.SaveDraft saveDraft -> {
         jsonFields.put("type", RuleActionType.SAVE_DRAFT.id());
         jsonFields.put("instruction", saveDraft.instruction());
@@ -105,7 +106,8 @@ public class TriageActionResultJsonValidator {
     try {
       return OBJECT_MAPPER.writeValueAsString(jsonFields);
     } catch (JacksonException jacksonException) {
-      throw new IllegalArgumentException("actionArgsJson could not be serialized", jacksonException);
+      throw new IllegalArgumentException(
+          "actionArgsJson could not be serialized", jacksonException);
     }
   }
 

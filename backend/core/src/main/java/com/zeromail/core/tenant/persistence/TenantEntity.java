@@ -12,39 +12,39 @@ import jakarta.persistence.Table;
 @Table(name = "tenants")
 public class TenantEntity extends AbstractEntity {
 
-    @Column(name = "display_name", nullable = false)
-    private String displayName;
+  @Column(name = "display_name", nullable = false)
+  private String displayName;
 
-    @Column(name = "triage_paused", nullable = false)
-    private boolean triagePaused = false;
+  @Column(name = "triage_paused", nullable = false)
+  private boolean triagePaused = false;
 
-    @Column(name = "triage_shadow_mode", nullable = false)
-    private boolean triageShadowMode = false;
+  @Column(name = "triage_shadow_mode", nullable = false)
+  private boolean triageShadowMode = false;
 
-    protected TenantEntity() {}
+  protected TenantEntity() {}
 
-    public TenantEntity(UUID id, String displayName) {
-        super(id);
-        this.displayName = displayName;
-    }
+  public TenantEntity(UUID id, String displayName) {
+    super(id);
+    this.displayName = displayName;
+  }
 
-    public String getDisplayName() {
-        return displayName;
-    }
+  public String getDisplayName() {
+    return displayName;
+  }
 
-    public boolean isTriagePaused() {
-        return triagePaused;
-    }
+  public boolean isTriagePaused() {
+    return triagePaused;
+  }
 
-    public void setTriagePaused(boolean triagePaused) {
-        this.triagePaused = triagePaused;
-    }
+  public void setTriagePaused(boolean triagePaused) {
+    this.triagePaused = triagePaused;
+  }
 
-    public boolean isTriageShadowMode() {
-        return triageShadowMode;
-    }
+  public boolean isTriageShadowMode() {
+    return triageShadowMode;
+  }
 
-    public void setTriageShadowMode(boolean triageShadowMode) {
-        this.triageShadowMode = triageShadowMode;
-    }
+  public void setTriageShadowMode(boolean triageShadowMode) {
+    this.triageShadowMode = triageShadowMode;
+  }
 }

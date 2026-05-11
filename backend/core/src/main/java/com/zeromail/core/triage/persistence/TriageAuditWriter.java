@@ -15,9 +15,9 @@ import com.zeromail.core.triage.domain.TriageDecision;
 /**
  * The validation seam for native triage-audit inserts.
  *
- * <p>Repository native SQL bypasses entity lifecycle validation. Every creator of
- * {@code triage_audit} rows must go through this component so action JSON is validated,
- * canonicalized, and hashed before a row can be inserted.
+ * <p>Repository native SQL bypasses entity lifecycle validation. Every creator of {@code
+ * triage_audit} rows must go through this component so action JSON is validated, canonicalized, and
+ * hashed before a row can be inserted.
  */
 @Component
 public class TriageAuditWriter {

@@ -52,7 +52,12 @@ class ZeroMailLlmPropertiesTest {
                   .containsEntry(CallSite.TRIAGE, "anthropic/claude-3.5-sonnet")
                   .containsEntry(CallSite.TRIAGE_PLATFORM_LLM, "anthropic/claude-3.5-sonnet")
                   .containsEntry(CallSite.TRIAGE_DETERMINISTIC, "anthropic/claude-3.5-sonnet");
-              assertThat(applicationContext.getBean(ZeroMailCoreProperties.class).billing().cost().triageDeterministic())
+              assertThat(
+                      applicationContext
+                          .getBean(ZeroMailCoreProperties.class)
+                          .billing()
+                          .cost()
+                          .triageDeterministic())
                   .isZero();
             });
   }

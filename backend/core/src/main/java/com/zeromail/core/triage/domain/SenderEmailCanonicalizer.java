@@ -32,9 +32,8 @@ public class SenderEmailCanonicalizer {
   }
 
   public String gmailSearchToken(String canonicalizedEmail) {
-    String safeAddress = canonicalize(canonicalizedEmail)
-        .replace("\\", "\\\\")
-        .replace("\"", "\\\"");
+    String safeAddress =
+        canonicalize(canonicalizedEmail).replace("\\", "\\\\").replace("\"", "\\\"");
     return "\"" + safeAddress + "\"";
   }
 

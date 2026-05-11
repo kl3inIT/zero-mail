@@ -52,8 +52,8 @@ public class TriageAuditEntity extends AbstractTenantOwnedEntity {
   private String actionArgsJson;
 
   /**
-   * Stores what Zero Mail changed, not a full Gmail label snapshot. This is set after a Gmail
-   * write succeeds and remains null for save-draft, shadow, rejected, and failed decisions.
+   * Stores what Zero Mail changed, not a full Gmail label snapshot. This is set after a Gmail write
+   * succeeds and remains null for save-draft, shadow, rejected, and failed decisions.
    */
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "gmail_change_token", columnDefinition = "jsonb")

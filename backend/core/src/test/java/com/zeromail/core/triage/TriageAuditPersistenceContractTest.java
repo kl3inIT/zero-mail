@@ -119,8 +119,7 @@ class TriageAuditPersistenceContractTest extends PostgresContainerTest {
     UUID tenantId = seedTenant("triage-audit-lease");
     UUID auditId = insertPendingArchive(tenantId, "gmail-message-lease");
 
-    int firstClaim =
-        triageAuditRepository.reclaimStalePending(auditId, tenantId, "worker-initial");
+    int firstClaim = triageAuditRepository.reclaimStalePending(auditId, tenantId, "worker-initial");
     int freshLeaseClaim =
         triageAuditRepository.reclaimStalePending(auditId, tenantId, "worker-fresh");
     jdbcTemplate.update(
@@ -241,7 +240,9 @@ class TriageAuditPersistenceContractTest extends PostgresContainerTest {
     assertThat(
             withTenant(
                 tenantId,
-                () -> tenantSenderOptInRepository.existsByTenantIdAndSenderEmail(tenantId, senderEmail)))
+                () ->
+                    tenantSenderOptInRepository.existsByTenantIdAndSenderEmail(
+                        tenantId, senderEmail)))
         .isTrue();
     assertThat(
             withTenant(
@@ -252,7 +253,8 @@ class TriageAuditPersistenceContractTest extends PostgresContainerTest {
         .isPresent();
     assertThat(
             withTenant(
-                tenantId, () -> tenantProtectedSenderObservationRepository.findByTenantId(tenantId)))
+                tenantId,
+                () -> tenantProtectedSenderObservationRepository.findByTenantId(tenantId)))
         .extracting(TenantProtectedSenderObservationEntity::getSenderEmail)
         .containsExactly(senderEmail);
   }
