@@ -14,7 +14,8 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 <!-- Shipped and confirmed valuable. -->
 
-(None yet — ship to validate)
+- Phase 4 backend triage convergence validated: observed Gmail messages flow into the orchestrator, rules are evaluated in order, semantic-intent matchers route through `LlmGateway`, and only allow-listed Gmail writes (label, archive, save draft) can execute.
+- Phase 4 safety and audit validated: auto-send remains architecturally blocked, every backend triage decision writes an audit row, undo/shadow-mode/sender-safety-net REST surfaces exist, and privacy sweep/full `clean check` passed on 2026-05-11.
 
 ### Active
 
@@ -27,10 +28,10 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 **AI triage (hero feature)**
 - [ ] System receives near-real-time new-mail notifications via Gmail Pub/Sub push
-- [ ] System classifies each new message against the user's active rules using an LLM
-- [ ] System can apply labels to messages automatically
-- [ ] System can archive (skip inbox) messages automatically
-- [ ] System can save a draft reply in Gmail (never auto-sends in v1)
+- [x] System classifies each new message against the user's active rules using an LLM
+- [x] System can apply labels to messages automatically
+- [x] System can archive (skip inbox) messages automatically
+- [x] System can save a draft reply in Gmail (never auto-sends in v1)
 - [ ] User sees a per-message audit trail of what triage did and why
 
 **Natural-language user rules**
@@ -152,4 +153,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-06 after Phase 02B*
+*Last updated: 2026-05-11 after Phase 04*
