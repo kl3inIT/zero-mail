@@ -342,7 +342,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [x] 04-05-PLAN.md — TriageOrchestratorService (@ApplicationModuleListener hero: tenant rebind -> rules -> inline SEMANTIC_INTENT via LlmGateway -> safety gate -> sender net -> two-phase PENDING->APPLIED audit loop -> Gmail/shadow) + metadata-only input facade + worker.triage package-info
-- [ ] 04-06-PLAN.md — TriageUndoService (compute-inverse, 30d window, exhaustive switch) + 3 thin triage controllers (undo / shadow-mode / sender-safety-net) + DTOs + ErrorCodes + GlobalExceptionHandler + vi/en i18n + schema.d.ts regen
+- [x] 04-06-PLAN.md — TriageUndoService (compute-inverse, 30d window, exhaustive switch) + 3 thin triage controllers (undo / shadow-mode / sender-safety-net) + DTOs + ErrorCodes + GlobalExceptionHandler + vi/en i18n + schema.d.ts regen
 
 **Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 04-07-PLAN.md — worker.triage jobs: TriageEventRetryJob + TriageEventCleanupJob + TriageAuditPurgeJob/Batch (30d retention) + TriagePendingReaperJob/Batch (PENDING never lives forever) - all ShedLock-coordinated

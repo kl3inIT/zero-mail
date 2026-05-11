@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-04-PLAN.md
-last_updated: "2026-05-11T12:51:04.482Z"
+stopped_at: Completed 04-06-PLAN.md
+last_updated: "2026-05-11T13:26:54.120Z"
 last_activity: 2026-05-11
 progress:
   total_phases: 15
   completed_phases: 12
   total_plans: 100
-  completed_plans: 97
-  percent: 97
+  completed_plans: 98
+  percent: 98
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 04 (triage-convergence-hero) — EXECUTING
-Plan: 7 of 9
+Plan: 8 of 9
 Status: Ready to execute
 Last activity: 2026-05-11
 
-Progress: [██████████] 97%
+Progress: [██████████] 98%
 
 ## Performance Metrics
 
@@ -118,6 +118,7 @@ Progress: [██████████] 97%
 | Phase 04 P03 | 19 min | 3 tasks | 13 files |
 | Phase 04 P04 | 20min | 3 tasks | 11 files |
 | Phase 04 P05 | 25min | 2 tasks | 11 files |
+| Phase 04-triage-convergence-hero P06 | 24min | 2 tasks | 22 files |
 
 ## Accumulated Context
 
@@ -269,6 +270,8 @@ Recent decisions affecting current work:
 - [Phase 04]: Plan 05 kept the single @ApplicationModuleListener on TriageOrchestratorService because worker component scanning already includes com.zeromail.core.
 - [Phase 04]: Plan 05 leaves platform LLM credit reservation inside LlmGateway.evaluateSemanticIntents; the orchestrator only reserves deterministic zero-cost messages.
 - [Phase 04]: Plan 05 added worker triage retry/cleanup/reaper marker types for contracts only; scheduled behavior remains owned by plan 04-07.
+- [Phase 04-06]: Use error.triage.* dotted codes with generated errors.triage.* frontend messages.
+- [Phase 04-06]: Move the springdoc emit port from 59080 to 59280 because 59080 is inside this Windows TCP excluded range.
 
 ### Roadmap Evolution
 
@@ -329,6 +332,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-11T12:49:47.891Z
-Stopped at: Completed 04-04-PLAN.md
+Last session: 2026-05-11T13:26:54.098Z
+Stopped at: Completed 04-06-PLAN.md
 Resume file: None
