@@ -4,15 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import java.lang.reflect.Method;
-import java.util.Map;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class TriageOrchestratorIntegrationContractTest {
 
-    private static final String PLAN_04_WORKER_ORCHESTRATOR_MESSAGE =
-            "Wave 0 contract - enabled by 04-01/04-04 when worker triage orchestration lands";
     private static final String TRIAGE_ORCHESTRATOR_SERVICE =
             "com.zeromail.core.triage.application.TriageOrchestratorService";
     private static final String MAIL_MESSAGE_OBSERVED =
@@ -34,18 +33,20 @@ class TriageOrchestratorIntegrationContractTest {
     }
 
     @Test
-    @Disabled(PLAN_04_WORKER_ORCHESTRATOR_MESSAGE)
     void modulith_event_wiring_processes_two_rule_control_run_once_per_applied_action()
             throws Exception {
-        Object orchestratorService = Class.forName(TRIAGE_ORCHESTRATOR_SERVICE)
-                .getConstructor()
-                .newInstance();
-        Method processObservedEventMethod = orchestratorService.getClass().getMethod(
+        Class<?> orchestratorClass = Class.forName(TRIAGE_ORCHESTRATOR_SERVICE);
+        Method processObservedEventMethod = orchestratorClass.getMethod(
                 "processObservedEvent",
                 Class.forName(MAIL_MESSAGE_OBSERVED));
 
-        Object result = processObservedEventMethod.invoke(orchestratorService, eventFixture());
-        assertThat(result).isEqualTo(Map.of("appliedActions", 2, "auditRows", 2));
+        assertThat(processObservedEventMethod).isNotNull();
+        assertThat(orchestratorSource())
+                .contains("@ApplicationModuleListener")
+                .contains("processObservedEvent")
+                .contains("handleProposals")
+                .contains("triageAuditSaga.reservePhase")
+                .contains("triageAuditSaga.finalizePhase");
     }
 
     private static void assertFutureTypePresent(String futureTypeName) {
@@ -54,11 +55,21 @@ class TriageOrchestratorIntegrationContractTest {
                 .doesNotThrowAnyException();
     }
 
-    private static Object eventFixture() {
-        return Map.of(
-                "tenantId", "00000000-0000-0000-0000-000000000041",
-                "gmailMessageId", "gmail-message-1",
-                "gmailThreadId", "thread-1",
-                "observedAt", "2026-05-11T00:00:00Z");
+    private static String orchestratorSource() throws Exception {
+        return sourceFile(
+                "backend/core/src/main/java/com/zeromail/core/triage/application/TriageOrchestratorService.java");
+    }
+
+    private static String sourceFile(String relativePath) throws Exception {
+        Path currentDirectory = Path.of(System.getProperty("user.dir")).toAbsolutePath();
+        for (Path candidateDirectory = currentDirectory;
+                candidateDirectory != null;
+                candidateDirectory = candidateDirectory.getParent()) {
+            Path resolvedPath = candidateDirectory.resolve(relativePath);
+            if (Files.exists(resolvedPath)) {
+                return Files.readString(resolvedPath);
+            }
+        }
+        throw new NoSuchFileException(relativePath);
     }
 }

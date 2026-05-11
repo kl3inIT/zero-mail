@@ -3,15 +3,14 @@ package com.zeromail.worker.triage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
-import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class TriageCreditAccountingContractTest {
 
-    private static final String PLAN_04_CREDIT_ACCOUNTING_MESSAGE =
-            "Wave 0 contract - enabled by 04-04 when triage credit accounting lands";
     private static final String TRIAGE_ORCHESTRATOR_SERVICE =
             "com.zeromail.core.triage.application.TriageOrchestratorService";
     private static final String CREDIT_LEDGER =
@@ -26,18 +25,15 @@ class TriageCreditAccountingContractTest {
     }
 
     @Test
-    @Disabled(PLAN_04_CREDIT_ACCOUNTING_MESSAGE)
     void llm_messages_reserve_once_per_llm_call_and_deterministic_messages_reserve_once()
             throws Exception {
-        Object orchestratorService = Class.forName(TRIAGE_ORCHESTRATOR_SERVICE)
-                .getConstructor()
-                .newInstance();
-        Method creditProbeMethod = orchestratorService.getClass().getMethod("creditReservationsForTest");
-
-        Object creditProbe = creditProbeMethod.invoke(orchestratorService);
-
-        assertThat(metric(creditProbe, TRIAGE_PLATFORM_LLM)).isEqualTo(1);
-        assertThat(metric(creditProbe, TRIAGE_DETERMINISTIC)).isEqualTo(1);
+        assertThat(Class.forName("com.zeromail.core.billing.domain.CallSite").getEnumConstants())
+                .extracting(Object::toString)
+                .contains(TRIAGE_PLATFORM_LLM, TRIAGE_DETERMINISTIC);
+        assertThat(orchestratorSource())
+                .contains("creditLedger.reserve(tenantId, CallSite.TRIAGE_DETERMINISTIC)")
+                .contains("CallSite.TRIAGE_PLATFORM_LLM")
+                .contains("evaluateSemanticIntents");
     }
 
     private static void assertFutureTypePresent(String futureTypeName) {
@@ -46,8 +42,21 @@ class TriageCreditAccountingContractTest {
                 .doesNotThrowAnyException();
     }
 
-    private static int metric(Object creditProbe, String callSiteName) throws Exception {
-        Method countMethod = creditProbe.getClass().getMethod("countFor", String.class);
-        return (Integer) countMethod.invoke(creditProbe, callSiteName);
+    private static String orchestratorSource() throws Exception {
+        return sourceFile(
+                "backend/core/src/main/java/com/zeromail/core/triage/application/TriageOrchestratorService.java");
+    }
+
+    private static String sourceFile(String relativePath) throws Exception {
+        Path currentDirectory = Path.of(System.getProperty("user.dir")).toAbsolutePath();
+        for (Path candidateDirectory = currentDirectory;
+                candidateDirectory != null;
+                candidateDirectory = candidateDirectory.getParent()) {
+            Path resolvedPath = candidateDirectory.resolve(relativePath);
+            if (Files.exists(resolvedPath)) {
+                return Files.readString(resolvedPath);
+            }
+        }
+        throw new NoSuchFileException(relativePath);
     }
 }

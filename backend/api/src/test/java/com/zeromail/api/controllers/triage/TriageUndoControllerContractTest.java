@@ -5,13 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import java.util.List;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class TriageUndoControllerContractTest {
 
-    private static final String PLAN_04_UNDO_CONTROLLER_MESSAGE =
-            "Wave 0 contract - enabled by 04-06 when triage undo API lands";
     private static final String TRIAGE_AUDIT_CONTROLLER =
             "com.zeromail.api.controllers.triage.TriageAuditController";
     private static final String TRIAGE_UNDO_SERVICE =
@@ -27,7 +24,6 @@ class TriageUndoControllerContractTest {
     }
 
     @Test
-    @Disabled(PLAN_04_UNDO_CONTROLLER_MESSAGE)
     void undo_endpoint_maps_success_conflicts_and_cross_tenant_not_found() throws Exception {
         Class<?> errorCodesClass = Class.forName(ERROR_CODES);
 

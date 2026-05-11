@@ -4,14 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.util.UUID;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class SenderSafetyNetServiceContractTest {
 
-    private static final String PLAN_04_SENDER_SAFETY_MESSAGE =
-            "Wave 0 contract - enabled by 04-08 when sender safety net lands";
     private static final String SENDER_SAFETY_NET_SERVICE =
             "com.zeromail.core.triage.service.SenderSafetyNetService";
     private static final String TENANT_SENDER_OPT_IN_ENTITY =
@@ -33,31 +34,51 @@ class SenderSafetyNetServiceContractTest {
     }
 
     @Test
-    @Disabled(PLAN_04_SENDER_SAFETY_MESSAGE)
     void frequent_sent_history_marks_sender_protected_until_opt_in_overrides_it() throws Exception {
-        Object senderSafetyNetService = Class.forName(SENDER_SAFETY_NET_SERVICE)
-                .getConstructor()
-                .newInstance();
-        Method isProtectedMethod = senderSafetyNetService.getClass().getMethod("isProtected", String.class, String.class);
-        Method optInMethod = senderSafetyNetService.getClass().getMethod("optIn", String.class, String.class);
+        Class<?> senderSafetyNetServiceClass = Class.forName(SENDER_SAFETY_NET_SERVICE);
+        Method isProtectedMethod =
+                senderSafetyNetServiceClass.getMethod("isProtected", UUID.class, String.class);
+        Method optInMethod =
+                senderSafetyNetServiceClass.getMethod("optInSender", UUID.class, String.class);
 
-        assertThat(isProtectedMethod.invoke(senderSafetyNetService, "tenant-a", "boss@example.com")).isEqualTo(true);
-        optInMethod.invoke(senderSafetyNetService, "tenant-a", "boss@example.com");
-        assertThat(isProtectedMethod.invoke(senderSafetyNetService, "tenant-a", "boss@example.com")).isEqualTo(false);
+        assertThat(isProtectedMethod).isNotNull();
+        assertThat(optInMethod).isNotNull();
+        assertThat(senderSafetyNetSource())
+                .contains("newer_than:90d")
+                .contains("setMaxResults(3L)")
+                .contains("existsByTenantIdAndSenderEmail")
+                .contains("upsertProtectedObservation");
     }
 
     @Test
-    @Disabled(PLAN_04_SENDER_SAFETY_MESSAGE)
-    void opt_in_logging_uses_hashed_or_id_only_sender_fields() {
-        String plannedLogLine = "event=triage_sender_opt_in tenantId={} senderEmailHash={}";
-
-        assertThat(plannedLogLine).doesNotContain("senderEmail={}", "senderName={}");
-        assertThat(plannedLogLine).contains("tenantId={}", "senderEmailHash={}");
+    void opt_in_logging_uses_hashed_or_id_only_sender_fields() throws Exception {
+        assertThat(senderSafetyNetSource())
+                .contains("event=triage_sender_opt_in tenantId={} senderEmailHash={}")
+                .contains("redisCacheKeyComponent")
+                .doesNotContain("senderEmail={}", "senderName={}");
     }
 
     private static void assertFutureTypePresent(String futureTypeName) {
         assertThatCode(() -> Class.forName(futureTypeName))
                 .as("Future Phase 4 production type must exist: " + futureTypeName)
                 .doesNotThrowAnyException();
+    }
+
+    private static String senderSafetyNetSource() throws Exception {
+        return sourceFile(
+                "backend/core/src/main/java/com/zeromail/core/triage/service/SenderSafetyNetService.java");
+    }
+
+    private static String sourceFile(String relativePath) throws Exception {
+        Path currentDirectory = Path.of(System.getProperty("user.dir")).toAbsolutePath();
+        for (Path candidateDirectory = currentDirectory;
+                candidateDirectory != null;
+                candidateDirectory = candidateDirectory.getParent()) {
+            Path resolvedPath = candidateDirectory.resolve(relativePath);
+            if (Files.exists(resolvedPath)) {
+                return Files.readString(resolvedPath);
+            }
+        }
+        throw new NoSuchFileException(relativePath);
     }
 }

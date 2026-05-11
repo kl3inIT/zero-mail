@@ -5,13 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import java.util.List;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class SenderSafetyNetControllerContractTest {
 
-    private static final String PLAN_04_SENDER_CONTROLLER_MESSAGE =
-            "Wave 0 contract - enabled by 04-08 when sender safety net API lands";
     private static final String SENDER_SAFETY_NET_CONTROLLER =
             "com.zeromail.api.controllers.triage.SenderSafetyNetController";
     private static final String SENDER_SAFETY_NET_SERVICE =
@@ -27,7 +24,6 @@ class SenderSafetyNetControllerContractTest {
     }
 
     @Test
-    @Disabled(PLAN_04_SENDER_CONTROLLER_MESSAGE)
     void sender_safety_net_endpoints_list_observations_and_persist_opt_in_override() {
         assertThat(List.of(
                 "GET /api/triage/sender-safety-net",
