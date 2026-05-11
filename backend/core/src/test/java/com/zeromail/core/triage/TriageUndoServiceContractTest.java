@@ -14,7 +14,7 @@ class TriageUndoServiceContractTest {
     private static final String TRIAGE_UNDO_SERVICE =
             "com.zeromail.core.triage.usecases.TriageUndoService";
     private static final String TRIAGE_GMAIL_WRITER =
-            "com.zeromail.core.triage.service.TriageGmailWriter";
+            "com.zeromail.core.triage.usecases.TriageGmailWriter";
     private static final String TRIAGE_UNDO_EXPIRED_EXCEPTION =
             "com.zeromail.core.triage.exception.TriageUndoExpiredException";
     private static final String TRIAGE_UNDO_ALREADY_DONE_EXCEPTION =
@@ -76,7 +76,7 @@ class TriageUndoServiceContractTest {
 
     private static String undoServiceSource() throws Exception {
         return sourceFile(
-                "backend/core/src/main/java/com/zeromail/core/triage/application/TriageUndoService.java");
+                "backend/core/src/main/java/com/zeromail/core/triage/usecases/TriageUndoService.java");
     }
 
     private static String sourceFile(String relativePath) throws Exception {

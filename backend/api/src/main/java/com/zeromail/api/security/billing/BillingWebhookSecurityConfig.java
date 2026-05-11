@@ -1,6 +1,6 @@
 package com.zeromail.api.security.billing;
 
-import com.zeromail.core.billing.service.SepayApiKeyVerifier;
+import com.zeromail.core.billing.usecases.SepayApiKeyVerifier;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

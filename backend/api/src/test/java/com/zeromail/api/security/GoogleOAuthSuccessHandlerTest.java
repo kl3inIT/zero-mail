@@ -9,7 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.zeromail.api.config.ZeroMailApiProperties;
 import com.zeromail.core.account.persistence.UserRepository;
-import com.zeromail.core.account.service.OAuthProvisioningService;
+import com.zeromail.core.account.usecases.OAuthProvisioningService;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Map;

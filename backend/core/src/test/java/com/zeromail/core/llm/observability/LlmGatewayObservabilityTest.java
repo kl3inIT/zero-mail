@@ -4,15 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
+import com.zeromail.core.llm.domain.ActionValidator;
+import com.zeromail.core.llm.domain.AllowListedTools;
 import com.zeromail.core.llm.domain.BYOKProvider;
 import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
 import com.zeromail.core.llm.gateway.sanitization.Sanitizer;
-import com.zeromail.core.llm.service.ActionValidator;
-import com.zeromail.core.llm.service.AllowListedTools;
-import com.zeromail.core.llm.service.LlmGateway;
-import com.zeromail.core.llm.service.LlmModelClient;
 import com.zeromail.core.llm.usecases.LlmChatRequest;
 import com.zeromail.core.llm.usecases.LlmChatResult;
+import com.zeromail.core.llm.usecases.LlmGateway;
+import com.zeromail.core.llm.usecases.LlmModelClient;
 import com.zeromail.core.llm.usecases.LlmUsage;
 import com.zeromail.core.llm.usecases.RawToolCall;
 import com.zeromail.core.llm.usecases.SanitizationContext;
@@ -79,7 +79,7 @@ class LlmGatewayObservabilityTest {
             ObservationRegistry observationRegistry)
             throws Exception {
         Class<?> implementationClass =
-                Class.forName("com.zeromail.core.llm.service.LlmGatewayImpl");
+                Class.forName("com.zeromail.core.llm.usecases.LlmGatewayImpl");
         java.lang.reflect.Constructor<?> constructor =
                 implementationClass.getDeclaredConstructor(
                         LlmModelClient.class,

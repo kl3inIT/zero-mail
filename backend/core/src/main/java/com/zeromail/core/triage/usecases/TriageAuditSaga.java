@@ -5,7 +5,6 @@ import com.zeromail.core.triage.domain.TriageActionResult;
 import com.zeromail.core.triage.domain.TriageDecision;
 import com.zeromail.core.triage.persistence.TriageAuditRepository;
 import com.zeromail.core.triage.persistence.TriageAuditWriter;
-import com.zeromail.core.triage.service.TriageGmailWriter;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;

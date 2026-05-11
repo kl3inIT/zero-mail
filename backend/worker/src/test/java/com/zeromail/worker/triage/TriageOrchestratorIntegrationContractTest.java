@@ -56,7 +56,7 @@ class TriageOrchestratorIntegrationContractTest {
 
     private static String orchestratorSource() throws Exception {
         return sourceFile(
-                "backend/core/src/main/java/com/zeromail/core/triage/application/TriageOrchestratorService.java");
+                "backend/core/src/main/java/com/zeromail/core/triage/usecases/TriageOrchestratorService.java");
     }
 
     private static String sourceFile(String relativePath) throws Exception {

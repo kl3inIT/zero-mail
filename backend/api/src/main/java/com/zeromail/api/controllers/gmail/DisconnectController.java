@@ -1,6 +1,6 @@
 package com.zeromail.api.controllers.gmail;
 
-import com.zeromail.core.gmail.service.GmailConnectionService;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.tenant.TenantContext;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.PostMapping;

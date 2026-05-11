@@ -11,7 +11,7 @@ class SenderSafetyNetControllerContractTest {
     private static final String SENDER_SAFETY_NET_CONTROLLER =
             "com.zeromail.api.controllers.triage.SenderSafetyNetController";
     private static final String SENDER_SAFETY_NET_SERVICE =
-            "com.zeromail.core.triage.service.SenderSafetyNetService";
+            "com.zeromail.core.triage.usecases.SenderSafetyNetService";
     private static final String TENANT_PROTECTED_SENDER_OBSERVATION_REPOSITORY =
             "com.zeromail.core.triage.persistence.TenantProtectedSenderObservationRepository";
 

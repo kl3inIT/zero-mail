@@ -18,7 +18,7 @@ class TriageIdempotencyContractTest {
     private static final String TRIAGE_AUDIT_REPOSITORY =
             "com.zeromail.core.triage.persistence.TriageAuditRepository";
     private static final String TRIAGE_GMAIL_WRITER =
-            "com.zeromail.core.triage.service.TriageGmailWriter";
+            "com.zeromail.core.triage.usecases.TriageGmailWriter";
     private static final String TRIAGE_PENDING_REAPER_JOB =
             "com.zeromail.worker.triage.TriagePendingReaperJob";
 
@@ -68,12 +68,12 @@ class TriageIdempotencyContractTest {
 
     private static String triageOrchestratorSource() throws Exception {
         return sourceFile(
-                "backend/core/src/main/java/com/zeromail/core/triage/application/TriageOrchestratorService.java");
+                "backend/core/src/main/java/com/zeromail/core/triage/usecases/TriageOrchestratorService.java");
     }
 
     private static String triageAuditSagaSource() throws Exception {
         return sourceFile(
-                "backend/core/src/main/java/com/zeromail/core/triage/application/TriageAuditSaga.java");
+                "backend/core/src/main/java/com/zeromail/core/triage/usecases/TriageAuditSaga.java");
     }
 
     private static String sourceFile(String relativePath) throws Exception {

@@ -7,8 +7,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.zeromail.core.rules.domain.ActionIntent;
 import com.zeromail.core.rules.domain.ActionProposal;
 import com.zeromail.core.rules.domain.RuleActionType;
+import com.zeromail.core.triage.domain.TriageSafetyPolicy;
 import com.zeromail.core.triage.exception.TriageSafetyViolationException;
-import com.zeromail.core.triage.service.TriageSafetyPolicy;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 class TriageSafetyPolicyContractTest {
 
     private static final String TRIAGE_SAFETY_POLICY =
-            "com.zeromail.core.triage.service.TriageSafetyPolicy";
+            "com.zeromail.core.triage.domain.TriageSafetyPolicy";
     private static final String TRIAGE_SAFETY_VIOLATION_EXCEPTION =
             "com.zeromail.core.triage.exception.TriageSafetyViolationException";
     private static final String TRIAGE_AUDIT_WRITER =

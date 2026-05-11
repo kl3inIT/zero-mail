@@ -1,7 +1,7 @@
 package com.zeromail.api.controllers.billing;
 
 import com.zeromail.api.dto.billing.SepayWebhookPayload;
-import com.zeromail.core.billing.service.BillingTopupService;
+import com.zeromail.core.billing.usecases.BillingTopupService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Map;
 import org.slf4j.Logger;

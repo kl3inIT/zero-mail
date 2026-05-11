@@ -2,7 +2,7 @@ package com.zeromail.worker;
 
 import com.zeromail.core.gmail.persistence.PubSubDeliveryEntity;
 import com.zeromail.core.gmail.persistence.PubSubDeliveryRepository;
-import com.zeromail.core.gmail.service.GmailDeliveryProcessingService;
+import com.zeromail.core.gmail.usecases.GmailDeliveryProcessingService;
 import com.zeromail.core.tenant.TenantContext;
 import java.util.List;
 import org.springframework.scheduling.annotation.Scheduled;

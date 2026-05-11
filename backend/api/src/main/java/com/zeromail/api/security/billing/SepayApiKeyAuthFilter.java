@@ -1,6 +1,6 @@
 package com.zeromail.api.security.billing;
 
-import com.zeromail.core.billing.service.SepayApiKeyVerifier;
+import com.zeromail.core.billing.usecases.SepayApiKeyVerifier;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

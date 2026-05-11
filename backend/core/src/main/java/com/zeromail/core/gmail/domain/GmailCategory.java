@@ -11,11 +11,11 @@ import java.util.stream.Stream;
  * Social, Updates, Forums.
  *
  * <p>Source of truth (REVIEW IN-03): the same five ids are referenced by {@link
- * com.zeromail.core.rules.service.ActionProposalMerger} (when normalizing category-vs-label
- * mismatch warnings), the rule-template catalog seed (Liquibase 022/023), and any future matcher
- * validator. Centralizing them here prevents the seed and the merger from drifting (the original
- * {@code pin-calendar} seed referenced {@code CATEGORY_PERSONAL}, an id not in this set, and the
- * conflict detector silently skipped it - see WR-03).
+ * com.zeromail.core.rules.domain.ActionProposalMerger} (when normalizing category-vs-label mismatch
+ * warnings), the rule-template catalog seed (Liquibase 022/023), and any future matcher validator.
+ * Centralizing them here prevents the seed and the merger from drifting (the original {@code
+ * pin-calendar} seed referenced {@code CATEGORY_PERSONAL}, an id not in this set, and the conflict
+ * detector silently skipped it - see WR-03).
  *
  * <p>Implements {@link IdentifiedEnum} only - categories are unordered, so per project D-B5 we do
  * NOT extend {@code OrderedEnum}.

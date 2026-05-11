@@ -6,12 +6,12 @@ import static org.mockito.Mockito.when;
 
 import com.zeromail.core.rules.domain.RuleLanguage;
 import com.zeromail.core.rules.domain.RuleSchemaVersion;
-import com.zeromail.core.rules.service.RuleManagementService;
-import com.zeromail.core.rules.service.RulePreviewDataService;
-import com.zeromail.core.rules.service.RulePreviewService;
 import com.zeromail.core.rules.usecases.RuleCompileResult;
 import com.zeromail.core.rules.usecases.RuleCreateCommand;
+import com.zeromail.core.rules.usecases.RuleManagementService;
+import com.zeromail.core.rules.usecases.RulePreviewDataService;
 import com.zeromail.core.rules.usecases.RulePreviewResult;
+import com.zeromail.core.rules.usecases.RulePreviewService;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
 import java.time.Instant;

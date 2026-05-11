@@ -3,7 +3,7 @@ package com.zeromail.api.controllers.triage;
 import com.zeromail.api.dto.triage.TriageShadowModeRequest;
 import com.zeromail.api.dto.triage.TriageShadowModeResponse;
 import com.zeromail.core.tenant.TenantContext;
-import com.zeromail.core.tenant.service.TenantService;
+import com.zeromail.core.tenant.usecases.TenantService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;

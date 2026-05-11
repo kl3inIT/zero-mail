@@ -2,7 +2,7 @@ package com.zeromail.api.controllers.gmail;
 
 import com.zeromail.api.dto.gmail.GmailNotification;
 import com.zeromail.api.dto.gmail.PubSubPushEnvelope;
-import com.zeromail.core.gmail.service.PubSubIngestionService;
+import com.zeromail.core.gmail.usecases.PubSubIngestionService;
 import io.swagger.v3.oas.annotations.Hidden;
 import java.util.Base64;
 import org.slf4j.Logger;

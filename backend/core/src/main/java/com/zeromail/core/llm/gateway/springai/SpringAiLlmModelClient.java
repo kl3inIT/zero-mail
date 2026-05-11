@@ -1,8 +1,8 @@
 package com.zeromail.core.llm.gateway.springai;
 
-import com.zeromail.core.llm.service.LlmModelClient;
 import com.zeromail.core.llm.usecases.LlmChatRequest;
 import com.zeromail.core.llm.usecases.LlmChatResult;
+import com.zeromail.core.llm.usecases.LlmModelClient;
 import com.zeromail.core.llm.usecases.LlmTool;
 import com.zeromail.core.llm.usecases.LlmUsage;
 import com.zeromail.core.llm.usecases.RawToolCall;

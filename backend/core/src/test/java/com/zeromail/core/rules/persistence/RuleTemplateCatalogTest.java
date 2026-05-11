@@ -6,7 +6,7 @@ import com.zeromail.core.rules.domain.RuleLanguage;
 import com.zeromail.core.rules.domain.RuleSchemaVersion;
 import com.zeromail.core.rules.domain.RuleTemplateStatus;
 import com.zeromail.core.rules.projection.RuleTemplateProjection;
-import com.zeromail.core.rules.service.RuleTemplateCatalogService;
+import com.zeromail.core.rules.usecases.RuleTemplateCatalogService;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
 import java.util.List;

@@ -12,7 +12,7 @@ class TriageCreditAccountingContractTest {
 
     private static final String TRIAGE_ORCHESTRATOR_SERVICE =
             "com.zeromail.core.triage.usecases.TriageOrchestratorService";
-    private static final String CREDIT_LEDGER = "com.zeromail.core.billing.service.CreditLedger";
+    private static final String CREDIT_LEDGER = "com.zeromail.core.billing.usecases.CreditLedger";
     private static final String TRIAGE_PLATFORM_LLM = "TRIAGE_PLATFORM_LLM";
     private static final String TRIAGE_DETERMINISTIC = "TRIAGE_DETERMINISTIC";
 
@@ -42,7 +42,7 @@ class TriageCreditAccountingContractTest {
 
     private static String orchestratorSource() throws Exception {
         return sourceFile(
-                "backend/core/src/main/java/com/zeromail/core/triage/application/TriageOrchestratorService.java");
+                "backend/core/src/main/java/com/zeromail/core/triage/usecases/TriageOrchestratorService.java");
     }
 
     private static String sourceFile(String relativePath) throws Exception {

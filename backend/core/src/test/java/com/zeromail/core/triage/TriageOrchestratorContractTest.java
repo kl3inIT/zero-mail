@@ -18,7 +18,7 @@ class TriageOrchestratorContractTest {
             "com.zeromail.core.gmail.event.MailMessageObserved";
     private static final String SEMANTIC_INTENT_REQUEST =
             "com.zeromail.core.llm.usecases.SemanticIntentRequest";
-    private static final String LLM_GATEWAY = "com.zeromail.core.llm.service.LlmGateway";
+    private static final String LLM_GATEWAY = "com.zeromail.core.llm.usecases.LlmGateway";
     private static final String TRIAGE_DECISION = "com.zeromail.core.triage.domain.TriageDecision";
     private static final String TRIAGE_AUDIT_WRITER =
             "com.zeromail.core.triage.persistence.TriageAuditWriter";
@@ -89,7 +89,7 @@ class TriageOrchestratorContractTest {
 
     private static String orchestratorSource() throws Exception {
         return sourceFile(
-                "backend/core/src/main/java/com/zeromail/core/triage/application/TriageOrchestratorService.java");
+                "backend/core/src/main/java/com/zeromail/core/triage/usecases/TriageOrchestratorService.java");
     }
 
     private static String sourceFile(String relativePath) throws Exception {

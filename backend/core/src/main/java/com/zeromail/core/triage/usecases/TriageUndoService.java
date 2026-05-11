@@ -11,7 +11,6 @@ import com.zeromail.core.triage.exception.TriageUndoExpiredException;
 import com.zeromail.core.triage.exception.TriageUndoWriteFailedException;
 import com.zeromail.core.triage.persistence.TriageAuditEntity;
 import com.zeromail.core.triage.persistence.TriageAuditRepository;
-import com.zeromail.core.triage.service.TriageGmailWriter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;

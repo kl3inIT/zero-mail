@@ -7,7 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.zeromail.core.llm.service.AllowListedTools;
+import com.zeromail.core.llm.domain.AllowListedTools;
 import com.zeromail.core.llm.usecases.LlmChatRequest;
 import com.zeromail.core.llm.usecases.LlmChatResult;
 import com.zeromail.core.llm.usecases.LlmTool;

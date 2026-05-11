@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class SemanticIntentEvaluator
-        implements com.zeromail.core.llm.service.SemanticIntentEvaluator {
+        implements com.zeromail.core.llm.usecases.SemanticIntentEvaluator {
 
     private static final String MODEL = "openai/gpt-5.4-nano";
     private static final String SYSTEM_MESSAGE =

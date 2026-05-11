@@ -2,7 +2,7 @@ package com.zeromail.api.controllers.tenant;
 
 import com.zeromail.api.dto.gmail.GmailConnectionStatusResponse;
 import com.zeromail.core.gmail.projection.GmailConnectionProjection;
-import com.zeromail.core.gmail.service.GmailConnectionService;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.tenant.TenantContext;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;

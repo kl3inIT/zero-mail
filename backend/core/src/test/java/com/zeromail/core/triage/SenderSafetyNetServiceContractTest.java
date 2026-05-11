@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 class SenderSafetyNetServiceContractTest {
 
     private static final String SENDER_SAFETY_NET_SERVICE =
-            "com.zeromail.core.triage.service.SenderSafetyNetService";
+            "com.zeromail.core.triage.usecases.SenderSafetyNetService";
     private static final String TENANT_SENDER_OPT_IN_ENTITY =
             "com.zeromail.core.triage.persistence.TenantSenderOptInEntity";
     private static final String TENANT_SENDER_OPT_IN_REPOSITORY =

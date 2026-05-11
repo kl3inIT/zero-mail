@@ -29,7 +29,7 @@ class BillingDomainBoundaryArchTest {
     }
 
     @Test
-    void credit_ledger_service_not_instantiated_outside_billing_service() {
+    void credit_ledger_service_not_instantiated_outside_billing_usecases() {
         var importedClasses =
                 new ClassFileImporter()
                         .withImportOption(new ImportOption.DoNotIncludeTests())
@@ -37,10 +37,10 @@ class BillingDomainBoundaryArchTest {
 
         noClasses()
                 .that()
-                .resideOutsideOfPackage("..core.billing.service..")
+                .resideOutsideOfPackage("..core.billing.usecases..")
                 .should()
                 .dependOnClassesThat()
-                .haveFullyQualifiedName("com.zeromail.core.billing.service.CreditLedgerService")
+                .haveFullyQualifiedName("com.zeromail.core.billing.usecases.CreditLedgerService")
                 .because("callers depend on CreditLedger, not the package-private implementation")
                 .check(importedClasses);
     }

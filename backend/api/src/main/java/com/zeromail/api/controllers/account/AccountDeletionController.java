@@ -1,10 +1,10 @@
 package com.zeromail.api.controllers.account;
 
-import com.zeromail.core.account.service.AccountService;
-import com.zeromail.core.gmail.service.GmailConnectionService;
-import com.zeromail.core.onboarding.service.OnboardingService;
+import com.zeromail.core.account.usecases.AccountService;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
+import com.zeromail.core.onboarding.usecases.OnboardingService;
 import com.zeromail.core.tenant.TenantContext;
-import com.zeromail.core.tenant.service.TenantService;
+import com.zeromail.core.tenant.usecases.TenantService;
 import java.util.UUID;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;

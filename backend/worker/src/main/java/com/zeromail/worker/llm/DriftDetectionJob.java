@@ -1,6 +1,6 @@
 package com.zeromail.worker.llm;
 
-import com.zeromail.core.llm.service.LlmGateway;
+import com.zeromail.core.llm.usecases.LlmGateway;
 import com.zeromail.core.llm.usecases.ToolCallResult;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.worker.config.ZeroMailLlmDriftProperties;

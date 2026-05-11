@@ -4,7 +4,7 @@ import com.zeromail.api.dto.triage.ProtectedSendersResponse;
 import com.zeromail.api.dto.triage.SenderOptInResponse;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.triage.domain.SenderEmailCanonicalizer;
-import com.zeromail.core.triage.service.SenderSafetyNetService;
+import com.zeromail.core.triage.usecases.SenderSafetyNetService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 import org.slf4j.Logger;

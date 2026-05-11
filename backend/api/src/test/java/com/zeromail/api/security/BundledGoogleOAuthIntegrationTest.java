@@ -7,7 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.zeromail.api.support.ApiPostgresTestBase;
 import com.zeromail.core.account.persistence.UserRepository;
-import com.zeromail.core.gmail.service.GmailConnectionService;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.onboarding.domain.OnboardingStep;
 import com.zeromail.core.tenant.persistence.TenantRepository;
 import java.time.Instant;

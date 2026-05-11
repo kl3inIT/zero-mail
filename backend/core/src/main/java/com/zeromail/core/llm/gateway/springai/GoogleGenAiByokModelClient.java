@@ -6,7 +6,7 @@ import com.zeromail.core.config.ZeroMailCoreProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmByokProperties;
 import com.zeromail.core.llm.byok.ByokEndpointValidator;
 import com.zeromail.core.llm.exception.SafetyViolationException;
-import com.zeromail.core.llm.service.ByokLlmModelClient;
+import com.zeromail.core.llm.usecases.ByokLlmModelClient;
 import com.zeromail.core.llm.usecases.LlmChatRequest;
 import com.zeromail.core.llm.usecases.LlmChatResult;
 import java.nio.charset.StandardCharsets;

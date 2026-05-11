@@ -2,7 +2,7 @@ package com.zeromail.api.security;
 
 import com.zeromail.api.config.ZeroMailApiProperties;
 import com.zeromail.core.account.persistence.UserRepository;
-import com.zeromail.core.account.service.OAuthProvisioningService;
+import com.zeromail.core.account.usecases.OAuthProvisioningService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

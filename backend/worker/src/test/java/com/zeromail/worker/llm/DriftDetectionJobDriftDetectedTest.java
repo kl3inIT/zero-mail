@@ -6,7 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.zeromail.core.llm.domain.Action;
-import com.zeromail.core.llm.service.LlmGateway;
+import com.zeromail.core.llm.usecases.LlmGateway;
 import com.zeromail.core.llm.usecases.ToolCallResult;
 import com.zeromail.worker.config.ZeroMailLlmDriftProperties;
 import java.util.Map;

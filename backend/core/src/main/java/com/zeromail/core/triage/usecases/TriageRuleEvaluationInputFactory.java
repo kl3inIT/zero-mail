@@ -1,8 +1,8 @@
 package com.zeromail.core.triage.usecases;
 
 import com.zeromail.core.gmail.event.MailMessageObserved;
-import com.zeromail.core.gmail.service.GmailPreviewReadService;
-import com.zeromail.core.gmail.service.GmailPreviewReadService.GmailPreviewMessage;
+import com.zeromail.core.gmail.usecases.GmailPreviewReadService;
+import com.zeromail.core.gmail.usecases.GmailPreviewReadService.GmailPreviewMessage;
 import com.zeromail.core.rules.domain.RuleEvaluationInput;
 import java.util.Optional;
 import java.util.UUID;

@@ -3,7 +3,7 @@ package com.zeromail.api.security;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zeromail.api.support.ApiPostgresTestBase;
-import com.zeromail.core.account.service.OAuthProvisioningService;
+import com.zeromail.core.account.usecases.OAuthProvisioningService;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

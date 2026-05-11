@@ -8,7 +8,7 @@ import com.zeromail.core.billing.persistence.CreditLedgerEntryEntity;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryRepository;
 import com.zeromail.core.billing.persistence.CreditReservationEntity;
 import com.zeromail.core.billing.persistence.CreditReservationRepository;
-import com.zeromail.core.billing.service.CreditLedger;
+import com.zeromail.core.billing.usecases.CreditLedger;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.worker.PostgresContainerTest;
 import java.sql.Timestamp;

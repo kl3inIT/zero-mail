@@ -15,7 +15,7 @@ import com.tngtech.archunit.lang.SimpleConditionEvent;
 class TriageGmailWriteBoundaryTest {
 
     private static final String TRIAGE_GMAIL_WRITER =
-            "com.zeromail.core.triage.service.TriageGmailWriter";
+            "com.zeromail.core.triage.usecases.TriageGmailWriter";
     private static final String GMAIL_MESSAGES_OWNER = "Gmail.Users.Messages";
     private static final String GMAIL_DRAFTS_OWNER = "Gmail.Users.Drafts";
 

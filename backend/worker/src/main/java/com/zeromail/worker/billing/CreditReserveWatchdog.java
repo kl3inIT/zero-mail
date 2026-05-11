@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
  * scan-and-release method lived on this class and was invoked via {@code tick()}, Spring's proxy
  * would not fire on the self-invocation and the {@code FOR UPDATE SKIP LOCKED} row locks would be
  * released the instant the JDBC autocommit query returned, before the loop could call {@link
- * com.zeromail.core.billing.service.CreditLedger#release}. The collaborator boundary is what
+ * com.zeromail.core.billing.usecases.CreditLedger#release}. The collaborator boundary is what
  * guarantees the locks stay held across the loop.
  */
 @Component

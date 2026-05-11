@@ -2,33 +2,32 @@ package com.zeromail.core.triage.usecases;
 
 import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.billing.domain.ReservationId;
-import com.zeromail.core.billing.service.CreditLedger;
+import com.zeromail.core.billing.usecases.CreditLedger;
 import com.zeromail.core.gmail.event.MailMessageObserved;
 import com.zeromail.core.llm.exception.LlmEvaluationFailedException;
 import com.zeromail.core.llm.exception.SafetyViolationException;
 import com.zeromail.core.llm.exception.TokenBudgetExceededException;
-import com.zeromail.core.llm.service.LlmGateway;
+import com.zeromail.core.llm.usecases.LlmGateway;
 import com.zeromail.core.llm.usecases.SemanticIntentRequest;
 import com.zeromail.core.rules.domain.ActionIntent;
 import com.zeromail.core.rules.domain.ActionProposal;
+import com.zeromail.core.rules.domain.ActionProposalMerger;
 import com.zeromail.core.rules.domain.MatcherEvaluationState;
 import com.zeromail.core.rules.domain.MatcherNode;
 import com.zeromail.core.rules.domain.MatcherType;
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.rules.domain.RuleEvaluationInput;
 import com.zeromail.core.rules.domain.RuleEvaluationResult;
+import com.zeromail.core.rules.domain.RuleEvaluator;
 import com.zeromail.core.rules.domain.SemanticIntentMatcher;
 import com.zeromail.core.rules.persistence.RuleEntity;
 import com.zeromail.core.rules.persistence.RuleRepository;
-import com.zeromail.core.rules.service.ActionProposalMerger;
-import com.zeromail.core.rules.service.RuleEvaluator;
 import com.zeromail.core.tenant.TenantContext;
-import com.zeromail.core.tenant.service.TenantService;
+import com.zeromail.core.tenant.usecases.TenantService;
 import com.zeromail.core.triage.domain.TriageActionResult;
 import com.zeromail.core.triage.domain.TriageDecision;
+import com.zeromail.core.triage.domain.TriageSafetyPolicy;
 import com.zeromail.core.triage.exception.TriageSafetyViolationException;
-import com.zeromail.core.triage.service.SenderSafetyNetService;
-import com.zeromail.core.triage.service.TriageSafetyPolicy;
 import com.zeromail.core.triage.usecases.TriageAuditSaga.GmailWriteResult;
 import com.zeromail.core.triage.usecases.TriageAuditSaga.ReservePhaseResult;
 import com.zeromail.core.triage.usecases.TriageAuditSaga.TriageAuditCommand;
@@ -87,7 +86,6 @@ public class TriageOrchestratorService {
             RuleRepository ruleRepository,
             LlmGateway llmGateway,
             CreditLedger creditLedger,
-            TriageSafetyPolicy triageSafetyPolicy,
             SenderSafetyNetService senderSafetyNetService,
             TriageAuditSaga triageAuditSaga,
             ObjectProvider<MeterRegistry> meterRegistryProvider) {
@@ -98,7 +96,7 @@ public class TriageOrchestratorService {
         this.creditLedger = creditLedger;
         this.actionProposalMerger = new ActionProposalMerger();
         this.ruleEvaluator = new RuleEvaluator();
-        this.triageSafetyPolicy = triageSafetyPolicy;
+        this.triageSafetyPolicy = new TriageSafetyPolicy();
         this.senderSafetyNetService = senderSafetyNetService;
         this.triageAuditSaga = triageAuditSaga;
         this.meterRegistry = meterRegistryProvider.getIfAvailable(SimpleMeterRegistry::new);

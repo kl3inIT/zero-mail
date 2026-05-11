@@ -1,7 +1,7 @@
 package com.zeromail.api.controllers.onboarding;
 
 import com.zeromail.api.dto.onboarding.SelectTemplateRequest;
-import com.zeromail.core.onboarding.service.OnboardingService;
+import com.zeromail.core.onboarding.usecases.OnboardingService;
 import com.zeromail.core.tenant.TenantContext;
 import jakarta.validation.Valid;
 import java.util.UUID;

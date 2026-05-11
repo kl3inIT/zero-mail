@@ -2,7 +2,7 @@
  * Billing domain: prepaid credit ledger with reserve, settle, and release semantics.
  *
  * <p><b>Cross-phase contract.</b> Phase 2C ({@code core.llm.LlmGateway}) imports {@link
- * com.zeromail.core.billing.service.CreditLedger} verbatim and calls {@code reserve(tenantId,
+ * com.zeromail.core.billing.usecases.CreditLedger} verbatim and calls {@code reserve(tenantId,
  * callSite)} on the gateway pre-call path when no BYOK credential exists for the tenant.
  *
  * <p><b>Modulith boundary (D-G1).</b> Allowed dependencies are restricted to {@code tenant}
