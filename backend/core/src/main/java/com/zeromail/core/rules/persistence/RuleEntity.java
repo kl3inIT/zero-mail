@@ -1,10 +1,10 @@
 package com.zeromail.core.rules.persistence;
 
-import com.zeromail.core.rules.domain.ActionIntentJsonValidator;
-import com.zeromail.core.rules.domain.RuleAstJsonValidator;
 import com.zeromail.core.rules.domain.RuleLanguage;
 import com.zeromail.core.rules.domain.RuleSchemaVersion;
 import com.zeromail.core.rules.projection.RuleStatusProjection;
+import com.zeromail.core.rules.usecases.ActionIntentJsonValidator;
+import com.zeromail.core.rules.usecases.RuleAstJsonValidator;
 import com.zeromail.core.shared.persistence.AbstractTenantOwnedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

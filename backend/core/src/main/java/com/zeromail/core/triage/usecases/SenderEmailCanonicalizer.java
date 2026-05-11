@@ -1,4 +1,4 @@
-package com.zeromail.core.triage.domain;
+package com.zeromail.core.triage.usecases;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

@@ -5,7 +5,6 @@ import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.usecases.InvalidGrantException;
-import com.zeromail.core.triage.domain.SenderEmailCanonicalizer;
 import com.zeromail.core.triage.persistence.TenantProtectedSenderObservationEntity;
 import com.zeromail.core.triage.persistence.TenantProtectedSenderObservationRepository;
 import com.zeromail.core.triage.persistence.TenantSenderOptInEntity;

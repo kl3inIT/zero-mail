@@ -1,6 +1,9 @@
-package com.zeromail.core.rules.domain;
+package com.zeromail.core.rules.usecases;
 
 import com.google.re2j.Pattern;
+import com.zeromail.core.rules.domain.MatcherNode;
+import com.zeromail.core.rules.domain.MatcherType;
+import com.zeromail.core.rules.domain.RuleSchemaVersion;
 import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.Objects;

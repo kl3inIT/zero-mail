@@ -83,7 +83,7 @@ class RuleAstContractTest {
     @Test
     void unknown_matcher_nodes_are_rejected_before_persistence() throws Exception {
         Class<?> validatorClass =
-                Class.forName("com.zeromail.core.rules.domain.RuleAstJsonValidator");
+                Class.forName("com.zeromail.core.rules.usecases.RuleAstJsonValidator");
         Object validator = validatorClass.getConstructor().newInstance();
         Method validateMethod = validatorClass.getMethod("validateMatcherJson", String.class);
 

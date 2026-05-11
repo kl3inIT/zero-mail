@@ -2,7 +2,6 @@ package com.zeromail.core.triage.usecases;
 
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.triage.domain.TriageActionResult;
-import com.zeromail.core.triage.domain.TriageActionResultJsonValidator;
 import com.zeromail.core.triage.domain.TriageDecision;
 import com.zeromail.core.triage.exception.TriageAuditException;
 import com.zeromail.core.triage.exception.TriageAuditNotFoundException;

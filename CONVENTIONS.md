@@ -25,18 +25,32 @@ public GmailConnectionStatusResponse status() {
 
 ## 2. Backend domain package layout
 
-`backend/core` uses package-based modular monolith boundaries. Do not create ambiguous `model`
-packages for new backend code. Inside each bounded context, create only the responsibility folders
-that are actually needed:
+Zero Mail's backend follows DDD strategic design (Spring Modulith bounded contexts) + DDD tactical
+patterns in `domain/` (framework-free, ArchUnit-enforced) + a Clean Architecture use-case layer in
+`usecases/` + Hexagonal ports/adapters (a port interface lives next to its owner; adapters are
+role-named packages — `persistence/` for DB, `gateway/` for external services); the Dependency Rule
+is enforced by ArchUnit. Deliberate, documented deviations from textbook: CQRS-lite (Spring Data
+JPA for writes, Spring Data JDBC for reads), and repository-per-entity rather than
+repository-per-aggregate-root.
 
-- `domain/` — core business vocabulary: value objects, domain enums, matcher/action concepts.
-- `application/` — use-case services plus command inputs and operation results.
+`backend/core` uses package-based modular monolith boundaries. Do not create ambiguous `model`
+packages for new backend code, and do not create a `service` catch-all package. Inside each bounded
+context, create only the responsibility folders that are actually needed:
+
+- `domain/` — core business vocabulary: value objects, domain enums, matcher/action concepts. This
+  package MUST stay framework-free: no `org.springframework`, `tools.jackson`, `jakarta.persistence`,
+  or `org.hibernate` dependencies. `DomainPurityArchTest` enforces this with no whitelist — a class
+  that needs a framework dependency belongs in `usecases/`, not `domain/`.
+- `usecases/` — use-case services plus command inputs and operation results. Spring `@Service` /
+  `@Component` beans, transaction boundaries, and port interfaces that callers depend on live here.
 - `projection/` — read-side snapshots returned by query/list/status services.
 - `exception/` — business/application exceptions owned by the domain.
 - `persistence/` — JPA entities, repositories, converters, and `lowlevel/` SQL/JDBC helpers.
+- `gateway/` — external-service adapters (currently `llm` and `gmail`); vendor SDKs are
+  ArchUnit-isolated under sub-packages (e.g. `gateway/springai`, `gateway/sanitization`).
 
 For example, rules code uses `core.rules.domain.MatcherNode`,
-`core.rules.application.RuleCompileResult`, `core.rules.projection.RuleStatusProjection`, and
+`core.rules.usecases.RuleCompileResult`, `core.rules.projection.RuleStatusProjection`, and
 `core.rules.exception.RuleValidationException`. `Projection` means read state; `Result` means the
 outcome of an operation. A `POST` can still return a projection when the API returns the current
 state after a mutation.
@@ -45,9 +59,10 @@ state after a mutation.
 `config`), but controllers are grouped by domain under `api/controllers/<domain>/`. DTOs stay under
 `api/dto/<domain>/`, and large aggregate DTO files are split into focused request/response records.
 
-**Anti-pattern:** adding `core.<domain>.model.*`, naming read-side types `*View`, placing business
-exceptions in `backend/api`, or keeping all endpoint contracts for a domain in one monolithic DTO
-container such as `RuleDtos`.
+**Anti-pattern:** adding `core.<domain>.model.*` or a `core.<domain>.service.*` catch-all, naming
+read-side types `*View`, placing business exceptions in `backend/api`, putting a framework-coupled
+class in `domain/`, or keeping all endpoint contracts for a domain in one monolithic DTO container
+such as `RuleDtos`.
 
 ---
 

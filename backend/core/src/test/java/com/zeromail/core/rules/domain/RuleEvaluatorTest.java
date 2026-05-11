@@ -137,8 +137,7 @@ class RuleEvaluatorTest {
             throws Exception {
         String source =
                 Files.readString(
-                        Path.of(
-                                "src/main/java/com/zeromail/core/rules/service/RuleEvaluator.java"));
+                        Path.of("src/main/java/com/zeromail/core/rules/domain/RuleEvaluator.java"));
 
         assertThat(source).contains("com.google.re2j.Pattern");
         assertThat(source).doesNotContain("java.util.regex.Pattern");

@@ -2,8 +2,8 @@ package com.zeromail.core.triage.persistence;
 
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.shared.persistence.AbstractTenantOwnedEntity;
-import com.zeromail.core.triage.domain.TriageActionResultJsonValidator;
 import com.zeromail.core.triage.domain.TriageDecision;
+import com.zeromail.core.triage.usecases.TriageActionResultJsonValidator;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

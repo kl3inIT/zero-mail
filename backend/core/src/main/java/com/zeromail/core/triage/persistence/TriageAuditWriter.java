@@ -1,10 +1,10 @@
 package com.zeromail.core.triage.persistence;
 
 import com.zeromail.core.rules.domain.RuleActionType;
-import com.zeromail.core.triage.domain.TriageActionArgsCanonicalizer;
 import com.zeromail.core.triage.domain.TriageActionResult;
-import com.zeromail.core.triage.domain.TriageActionResultJsonValidator;
 import com.zeromail.core.triage.domain.TriageDecision;
+import com.zeromail.core.triage.usecases.TriageActionArgsCanonicalizer;
+import com.zeromail.core.triage.usecases.TriageActionResultJsonValidator;
 import java.util.EnumSet;
 import java.util.Optional;
 import java.util.UUID;

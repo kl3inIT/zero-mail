@@ -65,7 +65,7 @@ class SenderSafetyNetServiceContractTest {
 
     private static String senderSafetyNetSource() throws Exception {
         return sourceFile(
-                "backend/core/src/main/java/com/zeromail/core/triage/service/SenderSafetyNetService.java");
+                "backend/core/src/main/java/com/zeromail/core/triage/usecases/SenderSafetyNetService.java");
     }
 
     private static String sourceFile(String relativePath) throws Exception {

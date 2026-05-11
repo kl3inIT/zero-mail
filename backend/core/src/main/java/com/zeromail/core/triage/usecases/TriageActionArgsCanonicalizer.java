@@ -1,6 +1,7 @@
-package com.zeromail.core.triage.domain;
+package com.zeromail.core.triage.usecases;
 
 import com.zeromail.core.rules.domain.RuleActionType;
+import com.zeromail.core.triage.domain.TriageActionResult;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

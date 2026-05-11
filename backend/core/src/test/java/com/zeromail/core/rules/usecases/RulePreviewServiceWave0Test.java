@@ -27,7 +27,8 @@ class RulePreviewServiceWave0Test {
     @Test
     void preview_service_sources_do_not_depend_on_gmail_write_or_action_executor_types()
             throws Exception {
-        Path rulesServiceRoot = findCoreProductionRoot().resolve("com/zeromail/core/rules/service");
+        Path rulesServiceRoot =
+                findCoreProductionRoot().resolve("com/zeromail/core/rules/usecases");
         if (!Files.isDirectory(rulesServiceRoot)) {
             return;
         }

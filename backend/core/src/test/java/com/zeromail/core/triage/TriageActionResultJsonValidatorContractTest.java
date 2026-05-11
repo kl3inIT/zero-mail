@@ -4,12 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.zeromail.core.triage.domain.SenderEmailCanonicalizer;
-import com.zeromail.core.triage.domain.TriageActionArgsCanonicalizer;
 import com.zeromail.core.triage.domain.TriageActionResult;
-import com.zeromail.core.triage.domain.TriageActionResultJsonValidator;
 import com.zeromail.core.triage.domain.TriageDecision;
 import com.zeromail.core.triage.exception.TriageSafetyViolationException;
+import com.zeromail.core.triage.usecases.SenderEmailCanonicalizer;
+import com.zeromail.core.triage.usecases.TriageActionArgsCanonicalizer;
+import com.zeromail.core.triage.usecases.TriageActionResultJsonValidator;
 import java.util.NoSuchElementException;
 import org.junit.jupiter.api.Test;
 
@@ -18,9 +18,9 @@ class TriageActionResultJsonValidatorContractTest {
     private static final String TRIAGE_ACTION_RESULT =
             "com.zeromail.core.triage.domain.TriageActionResult";
     private static final String TRIAGE_ACTION_RESULT_JSON_VALIDATOR =
-            "com.zeromail.core.triage.domain.TriageActionResultJsonValidator";
+            "com.zeromail.core.triage.usecases.TriageActionResultJsonValidator";
     private static final String TRIAGE_ACTION_ARGS_CANONICALIZER =
-            "com.zeromail.core.triage.domain.TriageActionArgsCanonicalizer";
+            "com.zeromail.core.triage.usecases.TriageActionArgsCanonicalizer";
     private static final String TRIAGE_DECISION = "com.zeromail.core.triage.domain.TriageDecision";
 
     @Test

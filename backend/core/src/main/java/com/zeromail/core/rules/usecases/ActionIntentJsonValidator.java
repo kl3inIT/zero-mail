@@ -1,5 +1,6 @@
-package com.zeromail.core.rules.domain;
+package com.zeromail.core.rules.usecases;
 
+import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.rules.exception.RuleValidationException;
 import java.util.LinkedHashSet;
 import java.util.NoSuchElementException;
