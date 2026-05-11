@@ -11,14 +11,19 @@ import com.zeromail.core.billing.domain.CallSite;
 class CallSiteEnumMembershipArchTest {
 
     @Test
-    void callsite_has_exactly_three_members() {
-        assertThat(CallSite.values()).hasSize(3);
+    void callsite_has_exactly_five_members() {
+        assertThat(CallSite.values()).hasSize(5);
     }
 
     @Test
-    void callsite_members_locked_to_TRIAGE_DRAFT_PREVIEW() {
+    void callsite_members_locked_to_TRIAGE_DRAFT_PREVIEW_AND_TRIAGE_EXECUTION_CALLSITES() {
         assertThat(Arrays.stream(CallSite.values()).map(Enum::name))
-                .containsExactlyInAnyOrder("TRIAGE", "DRAFT", "PREVIEW");
+                .containsExactlyInAnyOrder(
+                        "TRIAGE",
+                        "DRAFT",
+                        "PREVIEW",
+                        "TRIAGE_PLATFORM_LLM",
+                        "TRIAGE_DETERMINISTIC");
     }
 
     @Test
