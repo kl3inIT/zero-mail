@@ -321,8 +321,23 @@ Cross-cutting constraints:
   3. Every automated action has an audit entry (message reference, rule, action, reason, timestamp) visible to the user, and the user can undo any action within the retention window and see the inverse Gmail change.
   4. A brand-new tenant's first N triage decisions are logged as would-apply but never written to Gmail until the user explicitly exits shadow mode.
   5. Messages from senders identified as frequent/important are not auto-acted on until the user opts that sender into automation, visible in a sender-safety-net UI.
-**Plans**: TBD
-**UI hint**: yes
+
+  Note (interview round 1, 2026-05-11): shadow mode is reframed to an opt-in tenant-wide toggle (default OFF), not a count-based auto-unlock; all triage UI (audit log, undo button, shadow toggle, sender-safety-net management) is deferred to Phase 5 — Phase 4 ships backend + REST only.
+**Plans**: 9 plans
+**Research flag**: COMPLETE — `04-SPEC.md`, `04-CONTEXT.md`, `04-AI-SPEC.md`, `04-RESEARCH.md`, `04-PATTERNS.md`, `04-VALIDATION.md` in `.planning/phases/04-triage-convergence-hero/`.
+
+Plans:
+- [ ] 04-00-PLAN.md — [BLOCKING] Wave 0: spring-modulith-starter-jdbc dependency + RED test spine (core/api/worker scaffolds, 4 ArchUnit guards, CallSite membership 3->5, eval-harness dir marker)
+- [ ] 04-01-PLAN.md — Modulith JDBC event spine: MailMessageObserved event + publish site + Liquibase 024 (event_publication) + core.triage package skeleton + TenantContext.runWith
+- [ ] 04-02-PLAN.md — Triage persistence + domain: Liquibase 025-027 + TriageActionResult sealed type + validator + canonicalizer + TriageDecision + TriageAuditEntity/Repository + TenantSenderOptInEntity/Repository + 5 exceptions + CallSite extension + TenantEntity.triageShadowMode + TenantService accessors
+- [ ] 04-03-PLAN.md — LlmGateway.evaluateSemanticIntents (strict-JSON-Schema classifier) + SemanticIntentEvaluator/Response + SemanticIntentRequest + 2 gateway exceptions + worker model pin gpt-5.4-nano + semanticIntentEval Gradle task
+- [ ] 04-04-PLAN.md — Triage services: TriageSafetyPolicy (allow-list gate) + TriageGmailWriter (single Gmail-write call site, send-free) + SenderSafetyNetService (sent-history heuristic + Redis 24h cache + opt-in override) + core.gmail Gmail-client facade + Redis bean wiring
+- [ ] 04-05-PLAN.md — TriageOrchestratorService (@ApplicationModuleListener hero: tenant rebind -> rules -> inline SEMANTIC_INTENT via LlmGateway -> safety gate -> sender net -> two-phase PENDING->APPLIED audit loop -> Gmail/shadow) + metadata-only input facade + worker.triage package-info
+- [ ] 04-06-PLAN.md — TriageUndoService (compute-inverse, 30d window, exhaustive switch) + 3 thin triage controllers (undo / shadow-mode / sender-safety-net) + DTOs + ErrorCodes + GlobalExceptionHandler + vi/en i18n + schema.d.ts regen
+- [ ] 04-07-PLAN.md — worker.triage jobs: TriageEventRetryJob + TriageEventCleanupJob + TriageAuditPurgeJob/Batch (30d retention) + TriagePendingReaperJob/Batch (PENDING never lives forever) - all ShedLock-coordinated
+- [ ] 04-08-PLAN.md — Closure: TriagePrivacySweepTest (FND-03-analogous) + ./gradlew clean check green + TRG-01..TRG-08 -> Complete + 04-VALIDATION.md sign-off + 04-UAT.md
+
+**UI hint**: yes (Phase 5)
 
 ### Phase 5: User Surface — Drafts, Analytics, Web UI
 **Goal**: Deliver the complete user-facing surface: AI-drafted replies in Gmail, metadata-only analytics with a daily digest, and the Next.js 16 / React 19 frontend that ties every flow (onboarding, rules, audit, drafts, analytics, billing, privacy) together.
@@ -373,6 +388,6 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 2B. Billing (Prepaid Credits) | 7/7 | Complete | 2026-05-06 |
 | 2C. LLM Gateway | 0/8 | Not started | - |
 | 3. Rules Engine | 10/10 | Complete | 2026-05-10 |
-| 4. Triage Convergence (Hero) | 0/TBD | Not started | - |
+| 4. Triage Convergence (Hero) | 0/9 | Planned | - |
 | 5. User Surface — Drafts, Analytics, Web UI | 0/TBD | Not started | - |
 | 6. Polish & CASA-Verified Launch | 0/TBD | Not started | - |
