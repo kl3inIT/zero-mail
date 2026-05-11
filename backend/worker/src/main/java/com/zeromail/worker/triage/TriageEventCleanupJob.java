@@ -14,6 +14,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 
 @Component
+@SuppressWarnings("SqlResolve")
 public class TriageEventCleanupJob {
 
   private static final Logger log = LoggerFactory.getLogger(TriageEventCleanupJob.class);
@@ -58,7 +59,7 @@ public class TriageEventCleanupJob {
     Integer outstandingPublicationCount =
         jdbcTemplate.queryForObject(
             """
-            SELECT COUNT(id)
+            SELECT COUNT(*)
               FROM event_publication
              WHERE completion_date IS NULL
                 OR (status IS NOT NULL AND status != 'COMPLETED')
