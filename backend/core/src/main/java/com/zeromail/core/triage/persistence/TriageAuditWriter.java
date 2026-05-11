@@ -88,6 +88,20 @@ public class TriageAuditWriter {
         terminalDecision.id());
   }
 
+  public Optional<UUID> findPendingAuditId(
+      UUID tenantId,
+      String gmailMessageId,
+      UUID ruleId,
+      RuleActionType actionType,
+      TriageActionResult preWriteIntent) {
+    return triageAuditRepository.findPendingAuditIdByKey(
+        tenantId,
+        gmailMessageId,
+        ruleId,
+        actionType.id(),
+        canonicalHash(actionType, preWriteIntent));
+  }
+
   private byte[] canonicalHash(RuleActionType actionType, TriageActionResult preWriteIntent) {
     actionResultJsonValidator.validate(preWriteIntent);
     if (actionTypeFor(preWriteIntent) != actionType) {

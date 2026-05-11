@@ -73,6 +73,26 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
       @Param("reason") String reason,
       @Param("decision") String decision);
 
+  @Query(
+      value =
+          """
+          SELECT audit_id
+          FROM triage_audit
+          WHERE tenant_id = :tenantId
+            AND gmail_message_id = :gmailMessageId
+            AND rule_id = :ruleId
+            AND action_type = :actionType
+            AND args_hash = :argsHash
+            AND decision = 'PENDING'
+          """,
+      nativeQuery = true)
+  Optional<UUID> findPendingAuditIdByKey(
+      @Param("tenantId") UUID tenantId,
+      @Param("gmailMessageId") String gmailMessageId,
+      @Param("ruleId") UUID ruleId,
+      @Param("actionType") String actionType,
+      @Param("argsHash") byte[] argsHash);
+
   @Modifying
   @Query(
       value =
