@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 Phase: 5
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-05-11
+Last activity: 2026-05-11 - Completed quick task 260511-vok: Adopt google-java-format AOSP (4-space) for the backend plus wire enforcement
 
 Progress: [████████████████████] 100/100 plans (100%)
 
@@ -310,6 +310,7 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260511-vok | Adopt google-java-format AOSP (4-space) for the backend plus wire enforcement (Spotless plugin, lint-staged, git-blame-ignore-revs) | 2026-05-11 | 1b79fa2 | [260511-vok-adopt-google-java-format-aosp-4-space-fo](./quick/260511-vok-adopt-google-java-format-aosp-4-space-fo/) |
 | 260511-jrq | Spring AI 2.0.0-M6 upgrade and sync safe Dependabot dependency PRs | 2026-05-11 | 297f681 | [260511-jrq-spring-ai-2-0-0-m6-upgrade-and-sync-safe](./quick/260511-jrq-spring-ai-2-0-0-m6-upgrade-and-sync-safe/) |
 | 260510-qvv | Document Boot 4/Jackson migration verification guidance in CLAUDE.md and AGENTS.md | 2026-05-10 | pending | [260510-qvv-document-boot-4-jackson-migration-verifi](./quick/260510-qvv-document-boot-4-jackson-migration-verifi/) |
 | 260510-mid | Refactor backend domain package boundaries and sync architecture conventions | 2026-05-10 | pending | [260510-mid-refactor-backend-domain-package-boundari](./quick/260510-mid-refactor-backend-domain-package-boundari/) |
