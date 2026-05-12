@@ -6,7 +6,6 @@ import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { LoadingState } from '@/components/states/LoadingState';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LedgerTable } from '@/features/billing/components/LedgerTable';
 import { useLedgerHistory } from '@/features/billing/hooks/useLedgerHistory';
 
 export function LedgerHistory() {
@@ -59,9 +58,6 @@ export function LedgerHistory() {
           heading={t('billing.ledger.empty.heading')}
           body={t('billing.ledger.empty.body')}
         />
-        <div className="sr-only">
-          <LedgerTable rows={[]} />
-        </div>
       </CardContent>
     </Card>
   );

@@ -31,7 +31,7 @@ export function useTopupCreditWatch({
   enabled = true,
 }: UseTopupCreditWatchOptions) {
   const query = useQuery({
-    queryKey: billingKeys.balance(),
+    queryKey: billingKeys.topupBalanceWatch(),
     queryFn: ({ signal }) => getBillingBalance({ signal }),
     enabled,
     // GAP: no intent-status endpoint as of 05A, so credited is inferred from balance rising.

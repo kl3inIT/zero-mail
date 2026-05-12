@@ -45,8 +45,6 @@ export type ShadowModeState = {
   readUnavailable: boolean;
 };
 
-let shadowModeSnapshot: ShadowModeState = { enabled: false, readUnavailable: true };
-
 function jsonHeaders(): HeadersInit {
   return { 'Content-Type': 'application/json', ...xsrfHeader() };
 }
@@ -86,7 +84,7 @@ export async function getAuditLog(options: { cursor?: string | null } = {}): Pro
 // no shadow-mode read endpoint. The UI starts from a known false default and
 // updates from the authoritative PATCH response after the user changes it.
 export async function getShadowMode(): Promise<ShadowModeState> {
-  return shadowModeSnapshot;
+  return { enabled: false, readUnavailable: true };
 }
 
 export async function setShadowMode(enabled: boolean): Promise<ShadowModeState> {
@@ -95,8 +93,7 @@ export async function setShadowMode(enabled: boolean): Promise<ShadowModeState> 
     headers: jsonHeaders(),
   });
   const data = unwrap(result, `/api/tenant/triage/shadow-mode failed: ${result.response.status}`);
-  shadowModeSnapshot = { enabled: data.enabled ?? enabled, readUnavailable: false };
-  return shadowModeSnapshot;
+  return { enabled: data.enabled ?? enabled, readUnavailable: false };
 }
 
 export async function undoAuditEntry(auditId: string): Promise<UndoAuditResponse> {

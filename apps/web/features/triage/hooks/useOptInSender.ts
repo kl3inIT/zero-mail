@@ -10,7 +10,7 @@ export function useOptInSender() {
 
   return useMutation({
     mutationFn: (senderEmail: string) => optInSender(senderEmail),
-    onSuccess: async (response, senderEmail) => {
+    onSuccess: (response, senderEmail) => {
       queryClient.setQueryData<ProtectedSendersResponse>(
         triageKeys.senderSafetyNet(),
         (currentResponse) => ({
@@ -21,7 +21,6 @@ export function useOptInSender() {
           ),
         }),
       );
-      await queryClient.invalidateQueries({ queryKey: triageKeys.senderSafetyNet() });
     },
   });
 }

@@ -1,13 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import {
+  API_ROUTE_PATTERN,
   expectAppShellChrome,
   expectNoClaySkinClasses,
   expectNoHorizontalOverflow,
 } from './chrome-test-utils';
 
 async function mockSettingsApis(page: Page) {
-  await page.route('http://localhost:8080/**', async (route) => {
+  await page.route(API_ROUTE_PATTERN, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
 

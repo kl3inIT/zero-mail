@@ -64,7 +64,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" data-testid="app-sidebar">
       <SidebarHeader className="border-sidebar-border border-b">
         <Link
-          href="/rules"
+          href="/triage"
           aria-label={t('nav.logoLabel')}
           className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring flex h-10 min-w-0 items-center gap-2 rounded-md px-2 outline-hidden focus-visible:ring-2"
         >

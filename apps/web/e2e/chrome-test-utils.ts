@@ -12,6 +12,8 @@ export type ChromeMockState = {
   pauseRequests: Array<{ paused: boolean }>;
 };
 
+export const API_ROUTE_PATTERN = /^https?:\/\/[^/]+\/(?:me|api\/|gmail\/|tenant\/).*$/;
+
 export function createChromeMockState(overrides: Partial<ChromeMockState> = {}): ChromeMockState {
   return {
     triagePaused: false,
@@ -47,7 +49,7 @@ export async function seedAuthenticatedSession(page: Page) {
 }
 
 export async function installChromeApiMock(page: Page, state: ChromeMockState) {
-  await page.route('http://localhost:8080/**', async (route) => {
+  await page.route(API_ROUTE_PATTERN, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
 

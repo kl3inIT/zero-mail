@@ -1,6 +1,10 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 
-import { expectNoHorizontalOverflow, seedAuthenticatedSession } from './chrome-test-utils';
+import {
+  API_ROUTE_PATTERN,
+  expectNoHorizontalOverflow,
+  seedAuthenticatedSession,
+} from './chrome-test-utils';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -88,7 +92,7 @@ async function openTriage(
 }
 
 async function installTriageApiMock(page: Page, state: TriageMockState) {
-  await page.route('http://localhost:8080/**', async (route) => {
+  await page.route(API_ROUTE_PATTERN, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
 

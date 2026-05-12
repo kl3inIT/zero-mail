@@ -49,7 +49,7 @@ export function TopupClient() {
 
   const restart = useCallback(() => {
     if (activeIntent?.code) {
-      sessionStorage.removeItem(storageKey(activeIntent.code));
+      safeRemoveStoredIntent(activeIntent.code);
       setClearedCode(activeIntent.code);
     }
     setCurrentIntent(null);
@@ -61,7 +61,7 @@ export function TopupClient() {
   const handleIntentCreated = useCallback(
     (createdIntent: TopupIntentDetails, baselineCredits: number) => {
       const storedIntent: StoredTopupIntent = { ...createdIntent, baselineCredits };
-      sessionStorage.setItem(storageKey(createdIntent.code), JSON.stringify(storedIntent));
+      safeSetStoredIntent(createdIntent.code, storedIntent);
       setCurrentIntent(storedIntent);
       setClearedCode(null);
       setCreditedBalance(null);
@@ -76,7 +76,7 @@ export function TopupClient() {
   const handleCredited = useCallback(
     (newBalance: number) => {
       if (activeIntent?.code) {
-        sessionStorage.removeItem(storageKey(activeIntent.code));
+        safeRemoveStoredIntent(activeIntent.code);
         setClearedCode(activeIntent.code);
       }
       setCurrentIntent(null);
@@ -137,6 +137,24 @@ function readStoredIntentJson(code: string): string | null {
     return window.sessionStorage.getItem(storageKey(code));
   } catch {
     return null;
+  }
+}
+
+function safeRemoveStoredIntent(code: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.removeItem(storageKey(code));
+  } catch {
+    // Storage can be unavailable in private browsing or locked-down contexts.
+  }
+}
+
+function safeSetStoredIntent(code: string, intent: StoredTopupIntent): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(storageKey(code), JSON.stringify(intent));
+  } catch {
+    // The in-memory state still drives the current flow when storage is unavailable.
   }
 }
 

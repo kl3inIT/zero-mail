@@ -61,8 +61,8 @@ function SenderSafetyNetView({ senders }: { senders: ProtectedSenderResponse[] }
           />
         ) : (
           <div className="divide-border rounded-lg border" data-testid="sender-safety-net-list">
-            {senders.map((sender) => (
-              <SenderRow key={sender.senderEmail ?? 'unknown-sender'} sender={sender} />
+            {senders.map((sender, index) => (
+              <SenderRow key={sender.senderEmail ?? `unknown-sender-${index}`} sender={sender} />
             ))}
           </div>
         )}

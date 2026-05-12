@@ -54,28 +54,12 @@ export function MessageRef({ entry }: { entry: AuditEntry }) {
   const t = useTranslations();
   const subject = entry.messageRef?.subject || t('triage.audit.message.untitled');
   const sender = entry.messageRef?.sender || t('triage.audit.message.unknownSender');
-  const gmailMessageId = entry.messageRef?.gmailMessageId;
 
-  const content = (
+  return (
     <span className="grid min-w-0 gap-0.5">
       <span className="text-foreground truncate text-sm font-medium">{subject}</span>
       <span className="text-muted-foreground truncate text-xs">{sender}</span>
     </span>
-  );
-
-  if (!gmailMessageId) {
-    return content;
-  }
-
-  return (
-    <a
-      href={`https://mail.google.com/mail/u/0/#inbox/${encodeURIComponent(gmailMessageId)}`}
-      target="_blank"
-      rel="noreferrer"
-      className="hover:text-primary block min-w-0 underline-offset-4 hover:underline"
-    >
-      {content}
-    </a>
   );
 }
 

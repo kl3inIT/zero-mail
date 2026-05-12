@@ -12,8 +12,20 @@ import { TemplateCard } from '@/features/onboarding/components/TemplateCard';
 import { useSelectTemplate } from '@/features/onboarding/hooks/useSelectTemplate';
 
 type TemplateKey = 'archive-receipts' | 'label-newsletters' | 'pin-calendar';
+type TemplateTitleKey =
+  | 'templates.receipts.title'
+  | 'templates.newsletters.title'
+  | 'templates.calendarInvites.title';
+type TemplateDescriptionKey =
+  | 'templates.receipts.description'
+  | 'templates.newsletters.description'
+  | 'templates.calendarInvites.description';
 
-const templates: { key: TemplateKey; titleKey: string; descKey: string }[] = [
+const templates: {
+  key: TemplateKey;
+  titleKey: TemplateTitleKey;
+  descKey: TemplateDescriptionKey;
+}[] = [
   {
     key: 'archive-receipts',
     titleKey: 'templates.receipts.title',
@@ -81,8 +93,8 @@ export function TemplateSelectClient() {
           <TemplateCard
             key={tpl.key}
             templateKey={tpl.key}
-            title={t(tpl.titleKey as never)}
-            description={t(tpl.descKey as never)}
+            title={t(tpl.titleKey)}
+            description={t(tpl.descKey)}
             selected={selected === tpl.key}
           />
         ))}

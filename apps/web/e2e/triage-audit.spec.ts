@@ -1,6 +1,10 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 
-import { expectNoHorizontalOverflow, seedAuthenticatedSession } from './chrome-test-utils';
+import {
+  API_ROUTE_PATTERN,
+  expectNoHorizontalOverflow,
+  seedAuthenticatedSession,
+} from './chrome-test-utils';
 
 // GAP: the triage-audit list endpoint does not exist in the backend as of 05A.
 // This e2e covers the real production degradation state: the audit tab renders
@@ -57,7 +61,7 @@ async function openTriage(page: Page, path: '/triage' | '/triage?tab=shadow') {
 }
 
 async function installTriageApiMock(page: Page) {
-  await page.route('http://localhost:8080/**', async (route) => {
+  await page.route(API_ROUTE_PATTERN, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
 

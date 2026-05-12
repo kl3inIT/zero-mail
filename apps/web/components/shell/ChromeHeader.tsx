@@ -107,7 +107,7 @@ function BalancePill() {
     return new Intl.NumberFormat(locale === 'vi' ? 'vi-VN' : 'en-US').format(availableCredits);
   }, [balance.data?.availableCredits, locale]);
 
-  if (balance.isLoading) {
+  if (balance.isPending) {
     return <Skeleton className="h-9 w-20 rounded-md" data-testid="balance-pill-loading" />;
   }
 

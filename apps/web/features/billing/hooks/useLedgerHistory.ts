@@ -15,6 +15,7 @@ export function useLedgerHistory() {
     queryKey: billingKeys.ledger(),
     queryFn: () => getLedgerHistory(),
     initialPageParam: null as string | null,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    getNextPageParam: (lastPage) =>
+      lastPage.unavailable ? undefined : (lastPage.nextCursor ?? undefined),
   });
 }

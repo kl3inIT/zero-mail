@@ -2,7 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { getShadowMode, setShadowMode } from '@/features/triage/api/triage-api';
+import {
+  getShadowMode,
+  setShadowMode,
+  type ShadowModeState,
+} from '@/features/triage/api/triage-api';
 import { triageKeys } from '@/features/triage/query-keys';
 
 export function useShadowModeState() {
@@ -14,9 +18,8 @@ export function useSetShadowMode() {
 
   return useMutation({
     mutationFn: (enabled: boolean) => setShadowMode(enabled),
-    onSuccess: async (state) => {
-      queryClient.setQueryData(triageKeys.shadowMode(), state);
-      await queryClient.invalidateQueries({ queryKey: triageKeys.shadowMode() });
+    onSuccess: (state) => {
+      queryClient.setQueryData<ShadowModeState>(triageKeys.shadowMode(), state);
     },
   });
 }

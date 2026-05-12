@@ -1,6 +1,10 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 
-import { expectNoHorizontalOverflow, seedAuthenticatedSession } from './chrome-test-utils';
+import {
+  API_ROUTE_PATTERN,
+  expectNoHorizontalOverflow,
+  seedAuthenticatedSession,
+} from './chrome-test-utils';
 
 // Phase 05A billing e2e contract:
 // - The backend has no ledger-history endpoint, so this covers the production
@@ -184,7 +188,7 @@ async function openBilling(
 }
 
 async function installBillingApiMock(page: Page, state: BillingMockState) {
-  await page.route('http://localhost:8080/**', async (route) => {
+  await page.route(API_ROUTE_PATTERN, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
 

@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 
 import {
+  API_ROUTE_PATTERN,
   expectAppShellChrome,
   expectNoClaySkinClasses,
   expectNoHorizontalOverflow,
@@ -124,7 +125,7 @@ async function mockRulesApis(page: Page, mode: MockMode) {
     mode === 'error-flow' || mode === 'mobile-flow' ? [createStripeRule()] : [];
   const templates = createTemplates(false);
 
-  await page.route('http://localhost:8080/**', async (route) => {
+  await page.route(API_ROUTE_PATTERN, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
 

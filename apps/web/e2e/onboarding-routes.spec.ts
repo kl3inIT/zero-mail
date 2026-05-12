@@ -6,6 +6,7 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 
 import {
+  API_ROUTE_PATTERN,
   expectChromeSuppressed,
   expectNoClaySkinClasses,
   expectNoHorizontalOverflow,
@@ -88,7 +89,7 @@ async function installOnboardingApiMock(
   page: Page,
   onboardingStep: 'GMAIL_CONNECTED' | 'TEMPLATE_SELECTED',
 ) {
-  await page.route('http://localhost:8080/**', async (route) => {
+  await page.route(API_ROUTE_PATTERN, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
 
