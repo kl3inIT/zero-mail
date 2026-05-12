@@ -44,6 +44,8 @@ dependencies {
     implementation(libs.jtokkit)
     implementation(libs.jsoup)
     implementation(libs.google.re2j)
+    implementation(libs.jakarta.mail.api)
+    runtimeOnly(libs.angus.mail)
     runtimeOnly("org.eclipse:yasson")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
     runtimeOnly("org.postgresql:postgresql")
