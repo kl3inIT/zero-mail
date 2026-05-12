@@ -551,6 +551,7 @@
     "how": "How it works",
     "languageSelector": "Language",
     "logoLabel": "Zero Mail home",
+    "needsReply": "Needs reply",
     "onboardingProgress": "Onboarding progress",
     "openApp": "Open app",
     "privacy": "Privacy",
@@ -562,6 +563,72 @@
     "triage": "Triage",
     "trust": "Trust & safety",
     "waitlist": "Join the waitlist"
+  },
+  "needsReply": {
+    "action": {
+      "draftReply": "Draft reply",
+      "generating": "Generating…",
+      "markResolved": "Mark resolved",
+      "openInGmail": "Open in Gmail",
+      "regenerateDraft": "Regenerate draft",
+      "regenerating": "Regenerating…"
+    },
+    "banner": {
+      "updating": "Updating your needs-reply list…"
+    },
+    "columns": {
+      "actions": "Actions",
+      "draft": "Draft",
+      "lastActivity": "Last activity",
+      "otherParty": "From / other party",
+      "subject": "Subject"
+    },
+    "dialog": {
+      "cancel": "Cancel",
+      "replace": "Replace draft",
+      "replaceDescription": "The draft currently in Gmail will be discarded and a new one generated.",
+      "replaceTitle": "Replace the current draft?"
+    },
+    "empty": {
+      "awaiting": {
+        "body": "No threads are waiting on the other party.",
+        "title": "Nothing awaiting"
+      },
+      "resolved": {
+        "body": "No resolved threads yet."
+      },
+      "toReply": {
+        "body": "Nothing needs a reply right now.",
+        "title": "Inbox zero 🎉"
+      }
+    },
+    "error": {
+      "body": "Something went wrong fetching your threads. Try again.",
+      "retry": "Try again",
+      "title": "Couldn't load your needs-reply list"
+    },
+    "notice": {
+      "draftInFlight": "A draft is already being generated for this thread."
+    },
+    "page": {
+      "description": "Threads waiting on a reply — yours or theirs. Review and send drafts in Gmail.",
+      "title": "Needs reply"
+    },
+    "status": {
+      "draftReady": "Draft ready",
+      "draftSent": "Draft sent",
+      "noDraft": "No draft"
+    },
+    "tabs": {
+      "awaitingReply": "Awaiting reply",
+      "label": "Needs-reply buckets",
+      "resolved": "Resolved",
+      "toReply": "To reply"
+    },
+    "toast": {
+      "draftFailed": "Couldn't generate a draft. Try again in a moment.",
+      "draftSaved": "Draft saved in Gmail — review and send it there."
+    }
   },
   "onboarding": {
     "completion": {
@@ -855,21 +922,26 @@
         "timestamp": "Time",
         "undo": "Undo"
       },
+      "draftAction": "Draft reply",
       "empty": {
         "body": "When Zero Mail processes email, decisions and reasons will appear here.",
         "title": "No triage activity yet"
       },
+      "endOfList": "That's everything.",
       "error": {
         "body": "Retry the list before deciding whether to undo an action.",
         "retry": "Retry",
         "title": "Could not load triage history"
       },
+      "loadingMore": "Loading...",
       "loadingOlder": "Loading...",
+      "loadMore": "Load more",
       "loadOlder": "Load older entries",
       "message": {
         "unknownSender": "Unknown sender",
         "untitled": "Untitled message"
       },
+      "regenerateDraftAction": "Regenerate draft",
       "unavailable": {
         "body": "The backend currently exposes undo for individual audit entries, but not the audit-list endpoint. Zero Mail will show the history here when that endpoint exists.",
         "title": "Audit history is not available yet"
