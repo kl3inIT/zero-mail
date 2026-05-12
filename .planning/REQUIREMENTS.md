@@ -194,17 +194,17 @@ Each v1 requirement maps to exactly one phase.
 | TRG-06 | Phase 4 | Complete |
 | TRG-07 | Phase 4 | Complete |
 | TRG-08 | Phase 4 | Complete |
-| DRFT-01 | Phase 5 | Pending |
-| DRFT-02 | Phase 5 | Pending |
-| DRFT-03 | Phase 5 | Pending |
-| DRFT-04 | Phase 5 | Pending |
-| ANL-01 | Phase 5 | Pending |
-| ANL-02 | Phase 5 | Pending |
-| ANL-03 | Phase 5 | Pending |
-| WEB-01 | Phase 5 | Pending |
-| WEB-02 | Phase 5 | Pending |
-| WEB-03 | Phase 5 | Pending |
-| WEB-04 | Phase 5 | Pending |
+| DRFT-01 | Phase 5B | Pending |
+| DRFT-02 | Phase 5B | Pending |
+| DRFT-03 | Phase 5B | Pending |
+| DRFT-04 | Phase 5B | Pending |
+| ANL-01 | Phase 5C | Pending |
+| ANL-02 | Phase 5C | Pending |
+| ANL-03 | Phase 5C | Pending |
+| WEB-01 | Phase 5A | Pending |
+| WEB-02 | Phase 5A (draft-review screen 5B, analytics screen 5C) | Pending |
+| WEB-03 | Phase 5A | Pending |
+| WEB-04 | Phase 5A | Pending |
 
 **Coverage:**
 - v1 requirements: 61 total

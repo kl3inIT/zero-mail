@@ -7,7 +7,7 @@ stopped_at: Phase 5A UI-SPEC approved
 last_updated: "2026-05-12T04:18:45.046Z"
 last_activity: "2026-05-12 - Completed quick task 260512-dx4: Fix Frontend Web CI workspace cleanup lint-staged config assertion for PR #29"
 progress:
-  total_phases: 15
+  total_phases: 17
   completed_phases: 13
   total_plans: 100
   completed_plans: 100
@@ -21,11 +21,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 5 — user-surface-—-drafts,-analytics,-web-ui
+**Current focus:** Phase 5A — user-surface-web-ui-core
 
 ## Current Position
 
-Phase: 5
+Phase: 5A
 Plan: Not started
 Status: Phase 04 shipped - PR #29
 Last activity: 2026-05-12 - Completed quick task 260512-dx4: Fix Frontend Web CI workspace cleanup lint-staged config assertion for PR #29
