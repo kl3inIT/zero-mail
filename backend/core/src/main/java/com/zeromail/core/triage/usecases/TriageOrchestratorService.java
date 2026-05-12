@@ -24,6 +24,7 @@ import com.zeromail.core.rules.persistence.RuleEntity;
 import com.zeromail.core.rules.persistence.RuleRepository;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.usecases.TenantService;
+import com.zeromail.core.triage.domain.ReplyHeaders;
 import com.zeromail.core.triage.domain.TriageActionResult;
 import com.zeromail.core.triage.domain.TriageDecision;
 import com.zeromail.core.triage.domain.TriageSafetyPolicy;
@@ -124,7 +125,8 @@ public class TriageOrchestratorService {
             return OrchestrationResult.empty();
         }
 
-        RuleEvaluationInput ruleEvaluationInput = triageInput.get().evaluationInput();
+        TriageRuleEvaluationInput triageRuleEvaluationInput = triageInput.get();
+        RuleEvaluationInput ruleEvaluationInput = triageRuleEvaluationInput.evaluationInput();
         List<RuleExecutionCandidate> ruleExecutionCandidates = loadEnabledCandidates(tenantId);
         if (ruleExecutionCandidates.isEmpty()) {
             return OrchestrationResult.empty();
@@ -155,7 +157,8 @@ public class TriageOrchestratorService {
                 handleProposals(
                         tenantId,
                         observedEvent.gmailMessageId(),
-                        triageInput.get().gmailThreadId(),
+                        triageRuleEvaluationInput.gmailThreadId(),
+                        triageRuleEvaluationInput,
                         mergeResult.proposals(),
                         shadowMode,
                         senderProtected);
@@ -206,6 +209,7 @@ public class TriageOrchestratorService {
             UUID tenantId,
             String gmailMessageId,
             String gmailThreadId,
+            TriageRuleEvaluationInput triageRuleEvaluationInput,
             List<ActionProposal> actionProposals,
             boolean shadowMode,
             boolean senderProtected) {
@@ -221,13 +225,20 @@ public class TriageOrchestratorService {
                                 actionProposal,
                                 gmailMessageId,
                                 gmailThreadId,
+                                triageRuleEvaluationInput,
                                 actionProposal.type());
                 triageAuditSaga.recordTerminal(command, TriageDecision.REJECTED_BY_SAFETY_POLICY);
                 continue;
             }
 
             TriageAuditCommand command =
-                    commandFor(tenantId, actionProposal, gmailMessageId, gmailThreadId, actionType);
+                    commandFor(
+                            tenantId,
+                            actionProposal,
+                            gmailMessageId,
+                            gmailThreadId,
+                            triageRuleEvaluationInput,
+                            actionType);
             if (senderProtected) {
                 triageAuditSaga.recordTerminal(command, TriageDecision.REJECTED_BY_SAFETY_NET);
                 continue;
@@ -264,7 +275,10 @@ public class TriageOrchestratorService {
             ActionProposal actionProposal,
             String gmailMessageId,
             String gmailThreadId,
+            TriageRuleEvaluationInput triageRuleEvaluationInput,
             RuleActionType actionType) {
+        TriageActionResult preWriteIntent =
+                preWriteIntent(actionProposal.actionIntent(), gmailThreadId);
         return new TriageAuditCommand(
                 tenantId,
                 gmailMessageId,
@@ -272,7 +286,8 @@ public class TriageOrchestratorService {
                 firstContributingRuleId(actionProposal),
                 firstContributingRuleName(actionProposal),
                 actionType,
-                preWriteIntent(actionProposal.actionIntent(), gmailThreadId),
+                preWriteIntent,
+                replyHeadersFor(preWriteIntent, triageRuleEvaluationInput),
                 reasonEvidence(actionProposal));
     }
 
@@ -284,6 +299,20 @@ public class TriageOrchestratorService {
             case ActionIntent.SaveDraft saveDraft ->
                     new TriageActionResult.SaveDraft(saveDraft.instruction(), null, gmailThreadId);
         };
+    }
+
+    private ReplyHeaders replyHeadersFor(
+            TriageActionResult preWriteIntent,
+            TriageRuleEvaluationInput triageRuleEvaluationInput) {
+        if (!(preWriteIntent instanceof TriageActionResult.SaveDraft)) {
+            return null;
+        }
+        return ReplyHeaders.of(
+                triageRuleEvaluationInput.rfcMessageId(),
+                triageRuleEvaluationInput.references(),
+                triageRuleEvaluationInput.evaluationInput().sanitizedSubjectExcerpt(),
+                triageRuleEvaluationInput.replyToAddress(),
+                triageRuleEvaluationInput.gmailThreadId());
     }
 
     private boolean senderProtected(

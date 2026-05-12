@@ -47,6 +47,10 @@ public class GmailPreviewReadService {
                     "To",
                     "Cc",
                     "Subject",
+                    "Message-ID",
+                    "References",
+                    "In-Reply-To",
+                    "Reply-To",
                     "List-Unsubscribe",
                     "List-Id",
                     "Precedence",
@@ -191,7 +195,7 @@ public class GmailPreviewReadService {
         order by internal_date desc nulls last, observed_at desc
         limit ?
         """,
-                (resultSet, rowNumber) -> {
+                (resultSet, _) -> {
                     java.sql.Array labelIdsArray = resultSet.getArray("label_ids");
                     String[] labelIds =
                             labelIdsArray == null
@@ -353,12 +357,17 @@ public class GmailPreviewReadService {
                         ? List.of(observedMessage.labelIds())
                         : List.copyOf(gmailMessage.getLabelIds());
         String fromHeader = headerValue(payload, "From").orElse("");
+        String replyToHeader = headerValue(payload, "Reply-To").orElse(fromHeader);
         String senderEmail = sanitizeEmail(extractEmailAddress(fromHeader));
+        String replyToAddress = sanitizeEmail(extractEmailAddress(replyToHeader));
         String senderDomain =
                 senderEmail.contains("@")
                         ? senderEmail.substring(senderEmail.indexOf('@') + 1)
                         : "";
         String subjectExcerpt = excerpt(headerValue(payload, "Subject").orElse(""));
+        String rfcMessageId = sanitizedText(headerValue(payload, "Message-ID").orElse(""));
+        String references = sanitizedText(headerValue(payload, "References").orElse(""));
+        String inReplyTo = sanitizedText(headerValue(payload, "In-Reply-To").orElse(""));
         List<String> toRecipients = parseRecipients(headerValue(payload, "To").orElse(""));
         List<String> ccRecipients = parseRecipients(headerValue(payload, "Cc").orElse(""));
         boolean hasAttachment = hasAttachment(payload);
@@ -391,6 +400,10 @@ public class GmailPreviewReadService {
                 toRecipients,
                 ccRecipients,
                 subjectExcerpt,
+                rfcMessageId,
+                references,
+                inReplyTo,
+                replyToAddress,
                 labelIds,
                 gmailCategories(labelIds),
                 toInstant(
@@ -533,6 +546,10 @@ public class GmailPreviewReadService {
             List<String> sanitizedToRecipientEmails,
             List<String> sanitizedCcRecipientEmails,
             String sanitizedSubjectExcerpt,
+            String rfcMessageId,
+            String references,
+            String inReplyTo,
+            String replyToAddress,
             List<String> gmailLabelIds,
             List<String> gmailCategories,
             Instant internalDate,
@@ -546,6 +563,13 @@ public class GmailPreviewReadService {
         public GmailPreviewMessage {
             Objects.requireNonNull(gmailMessageId, "gmailMessageId must not be null");
             Objects.requireNonNull(gmailThreadId, "gmailThreadId must not be null");
+            sanitizedSenderEmail = Objects.requireNonNullElse(sanitizedSenderEmail, "");
+            sanitizedSenderDomain = Objects.requireNonNullElse(sanitizedSenderDomain, "");
+            sanitizedSubjectExcerpt = Objects.requireNonNullElse(sanitizedSubjectExcerpt, "");
+            rfcMessageId = Objects.requireNonNullElse(rfcMessageId, "");
+            references = Objects.requireNonNullElse(references, "");
+            inReplyTo = Objects.requireNonNullElse(inReplyTo, "");
+            replyToAddress = Objects.requireNonNullElse(replyToAddress, "");
             sanitizedToRecipientEmails =
                     List.copyOf(
                             Objects.requireNonNull(
