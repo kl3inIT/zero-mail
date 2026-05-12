@@ -1,7 +1,7 @@
 ---
 phase: 5B
 slug: user-surface-ai-draft-replies
-status: draft
+status: approved
 shadcn_initialized: true
 preset: base-nova
 created: 2026-05-13
@@ -221,11 +221,11 @@ No third-party registries declared for this phase. If a planner later wants one,
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved
