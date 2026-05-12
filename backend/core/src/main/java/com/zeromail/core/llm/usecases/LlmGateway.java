@@ -27,6 +27,18 @@ public interface LlmGateway {
     ToolCallResult chat(CallSite callSite, String rawHtml);
 
     /**
+     * Draft-reply path. Callers pass only sanitized inbound content plus primitive tone hints; the
+     * gateway owns the draft-only tool profile and must return exactly one {@code save_draft} tool
+     * call.
+     */
+    ToolCallResult chatForDraft(
+            CallSite callSite,
+            SanitizationContext inbound,
+            String toneDescriptorBlock,
+            List<String> toneStyleSnippets,
+            String inboundSubject);
+
+    /**
      * Rules-engine compile path. The gateway owns the rule-compile tool profile; callers pass only
      * a sanitized compiler payload and never pass arbitrary tool definitions.
      */

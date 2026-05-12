@@ -1,0 +1,81 @@
+package com.zeromail.core.draft.usecases;
+
+import com.zeromail.core.billing.domain.CallSite;
+import com.zeromail.core.draft.domain.ToneContext;
+import com.zeromail.core.llm.domain.Action;
+import com.zeromail.core.llm.exception.SafetyViolationException;
+import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
+import com.zeromail.core.llm.usecases.LlmGateway;
+import com.zeromail.core.llm.usecases.SanitizationContext;
+import com.zeromail.core.llm.usecases.ToolCallResult;
+import com.zeromail.core.tenant.TenantContext;
+import java.util.Objects;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+@Service
+public class DraftBodyGenerator {
+
+    private static final Logger log = LoggerFactory.getLogger(DraftBodyGenerator.class);
+
+    private final SanitizationPipeline sanitizationPipeline;
+    private final ToneContextBuilder toneContextBuilder;
+    private final LlmGateway llmGateway;
+
+    public DraftBodyGenerator(
+            SanitizationPipeline sanitizationPipeline,
+            ToneContextBuilder toneContextBuilder,
+            LlmGateway llmGateway) {
+        this.sanitizationPipeline =
+                Objects.requireNonNull(
+                        sanitizationPipeline, "sanitizationPipeline must not be null");
+        this.toneContextBuilder =
+                Objects.requireNonNull(toneContextBuilder, "toneContextBuilder must not be null");
+        this.llmGateway = Objects.requireNonNull(llmGateway, "llmGateway must not be null");
+    }
+
+    public String generate(
+            UUID tenantId, String gmailThreadId, String inboundRawHtml, String inboundSubject) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        String threadId = requireText(gmailThreadId, "gmailThreadId");
+        return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .call(
+                        () ->
+                                generateWithTenantBound(
+                                        tenantId, threadId, inboundRawHtml, inboundSubject));
+    }
+
+    private String generateWithTenantBound(
+            UUID tenantId, String gmailThreadId, String inboundRawHtml, String inboundSubject) {
+        SanitizationContext sanitizedInbound = sanitizationPipeline.sanitize(inboundRawHtml);
+        ToneContext toneContext = toneContextBuilder.buildForCurrentTenant();
+        ToolCallResult toolCallResult =
+                llmGateway.chatForDraft(
+                        CallSite.DRAFT,
+                        sanitizedInbound,
+                        toneContext.descriptorBlock(),
+                        toneContext.styleSnippets(),
+                        Objects.requireNonNullElse(inboundSubject, ""));
+        if (toolCallResult.action() != Action.SAVE_DRAFT) {
+            throw new SafetyViolationException();
+        }
+        Object draftBody = toolCallResult.args().get("body");
+        if (!(draftBody instanceof String body) || body.isBlank()) {
+            throw new SafetyViolationException();
+        }
+        log.info(
+                "event=draft_body_generated tenantId={} gmailThreadId={}", tenantId, gmailThreadId);
+        return body.trim();
+    }
+
+    private static String requireText(String value, String fieldName) {
+        Objects.requireNonNull(value, fieldName + " must not be null");
+        String trimmedValue = value.trim();
+        if (trimmedValue.isBlank()) {
+            throw new IllegalArgumentException(fieldName + " must not be blank");
+        }
+        return trimmedValue;
+    }
+}

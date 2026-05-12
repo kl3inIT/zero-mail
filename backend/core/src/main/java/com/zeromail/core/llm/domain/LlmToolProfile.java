@@ -6,7 +6,8 @@ import java.util.stream.Stream;
 
 public enum LlmToolProfile implements IdentifiedEnum {
     SAFE_ACTIONS("safe-actions"),
-    RULE_COMPILE("rule-compile");
+    RULE_COMPILE("rule-compile"),
+    SAVE_DRAFT_ONLY("save-draft-only");
 
     private final String profileId;
 

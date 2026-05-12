@@ -93,15 +93,37 @@ class DraftPathArchUnitTest {
         ArchRule rule =
                 noClasses()
                         .that()
-                        .resideInAnyPackage("..core.thread..")
+                        .resideInAnyPackage("..core.draft..", "..core.thread..")
                         .should()
                         .dependOnClassesThat()
                         .resideInAnyPackage("jakarta.mail..")
                         .because(
-                                "Thread classification is metadata-only and must not own MIME building.")
+                                "Draft generation and thread classification must not own MIME building.")
                         .allowEmptyShould(true);
 
         rule.check(importProductionClasses());
+    }
+
+    @Test
+    void llm_gateway_draft_seam_is_invoked_only_from_draft_package() {
+        assertThat(
+                        importProductionClasses().stream()
+                                .flatMap(javaClass -> javaClass.getMethodCallsFromSelf().stream())
+                                .filter(methodCall -> methodCall.getName().equals("chatForDraft"))
+                                .filter(
+                                        methodCall ->
+                                                methodCall
+                                                        .getTargetOwner()
+                                                        .getName()
+                                                        .equals(
+                                                                "com.zeromail.core.llm.usecases.LlmGateway"))
+                                .allMatch(
+                                        methodCall ->
+                                                methodCall
+                                                        .getOriginOwner()
+                                                        .getPackageName()
+                                                        .startsWith("com.zeromail.core.draft")))
+                .isTrue();
     }
 
     private static com.tngtech.archunit.core.domain.JavaClasses importProductionClasses() {
