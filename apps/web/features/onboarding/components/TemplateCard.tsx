@@ -32,7 +32,7 @@ export function TemplateCard({ templateKey, title, description, selected }: Prop
         <div className="grid grid-cols-[auto_1fr] gap-3">
           <RadioGroupItem id={`template-${templateKey}`} value={templateKey} className="mt-1" />
           <div>
-            <h3 className="text-lg font-semibold">{title}</h3>
+            <h3 className="text-xl font-semibold">{title}</h3>
             <p className="text-muted-foreground mt-2 text-sm">{description}</p>
           </div>
         </div>

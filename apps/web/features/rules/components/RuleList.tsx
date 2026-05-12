@@ -15,6 +15,8 @@ import {
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/states/EmptyState';
+import { LoadingState } from '@/components/states/LoadingState';
 import {
   Dialog,
   DialogClose,
@@ -60,21 +62,19 @@ export function RuleList({
     <section className="bg-card rounded-xl border p-3">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold">{t('rules.list.title')}</h2>
+          <h2 className="text-xl font-semibold">{t('rules.list.title')}</h2>
           <p className="text-muted-foreground text-sm">{t('rules.page.safetyNote')}</p>
         </div>
       </div>
 
       {isLoading ? (
-        <div className="space-y-2">
-          <div className="bg-muted h-16 animate-pulse rounded-lg" />
-          <div className="bg-muted h-16 animate-pulse rounded-lg" />
-        </div>
+        <LoadingState count={2} />
       ) : rules.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-4">
-          <p className="font-medium">{t('rules.list.empty.heading')}</p>
-          <p className="text-muted-foreground mt-1 text-sm">{t('rules.list.empty.body')}</p>
-        </div>
+        <EmptyState
+          heading={t('rules.list.empty.heading')}
+          body={t('rules.list.empty.body')}
+          className="min-h-32 px-4 py-8"
+        />
       ) : (
         <TooltipProvider>
           <ol className="space-y-2">

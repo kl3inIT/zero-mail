@@ -15,17 +15,30 @@ import type { AppLocale } from '@/i18n/routing';
 type Props = {
   backHref?: string;
   children?: ReactNode;
+  surface?: 'auth' | 'protected';
 };
 
-export default async function AuthTopBar({ backHref = '/', children }: Props) {
+export default async function AuthTopBar({ backHref = '/', children, surface = 'auth' }: Props) {
   const t = await getTranslations();
   const locale = (await getLocale()) as AppLocale;
   const cookieStore = await cookies();
   const theme: 'light' | 'dark' = cookieStore.get('zm-theme')?.value === 'dark' ? 'dark' : 'light';
 
   return (
-    <header className="zm-auth-topbar">
-      <nav className="zm-auth-topbar-inner">
+    <header
+      className={
+        surface === 'auth'
+          ? 'zm-auth-topbar'
+          : 'border-border bg-background/95 sticky top-0 z-50 border-b backdrop-blur'
+      }
+    >
+      <nav
+        className={
+          surface === 'auth'
+            ? 'zm-auth-topbar-inner'
+            : 'relative z-[1] mx-auto flex h-[60px] w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8'
+        }
+      >
         <Link href={backHref} aria-label={`zeromail - ${t('nav.logoLabel')}`} className="zm-brand">
           <span className="zm-brand-mark">
             <ZMLogoMark size={15} />
@@ -36,7 +49,7 @@ export default async function AuthTopBar({ backHref = '/', children }: Props) {
           </span>
         </Link>
         {children ? <div className="hidden md:block">{children}</div> : null}
-        <div className="zm-auth-actions">
+        <div className={surface === 'auth' ? 'zm-auth-actions' : 'flex items-center gap-2'}>
           <Link
             href={backHref}
             className={cn(

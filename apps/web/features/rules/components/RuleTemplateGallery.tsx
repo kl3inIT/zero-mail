@@ -26,7 +26,7 @@ export function RuleTemplateGallery({
   return (
     <section className="bg-card rounded-xl border p-3">
       <div className="mb-3">
-        <h2 className="text-base font-semibold">{t('rules.templates.title')}</h2>
+        <h2 className="text-xl font-semibold">{t('rules.templates.title')}</h2>
         <p className="text-muted-foreground text-sm">{t('rules.templates.disabledByDefault')}</p>
       </div>
 
