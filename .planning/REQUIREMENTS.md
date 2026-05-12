@@ -83,9 +83,9 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 ### Draft Replies
 
 - [x] **DRFT-01**: User can request an AI-generated draft reply for a thread
-- [ ] **DRFT-02**: Draft is saved in Gmail as a normal draft with correct `In-Reply-To` and `References` headers
+- [x] **DRFT-02**: Draft is saved in Gmail as a normal draft with correct `In-Reply-To` and `References` headers
 - [ ] **DRFT-03**: Draft tone is matched from recent sent mail via lightweight in-request features (no persisted embeddings)
-- [ ] **DRFT-04**: Draft generation never auto-sends and always requires user review in Gmail
+- [x] **DRFT-04**: Draft generation never auto-sends and always requires user review in Gmail
 
 ### Analytics
 
@@ -195,9 +195,9 @@ Each v1 requirement maps to exactly one phase.
 | TRG-07 | Phase 4 | Complete |
 | TRG-08 | Phase 4 | Complete |
 | DRFT-01 | Phase 5B | Complete |
-| DRFT-02 | Phase 5B | Pending |
+| DRFT-02 | Phase 5B | Complete |
 | DRFT-03 | Phase 5B | Pending |
-| DRFT-04 | Phase 5B | Pending |
+| DRFT-04 | Phase 5B | Complete |
 | ANL-01 | Phase 5C | Pending |
 | ANL-02 | Phase 5C | Pending |
 | ANL-03 | Phase 5C | Pending |
