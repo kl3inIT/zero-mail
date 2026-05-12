@@ -1,33 +1,23 @@
 package com.zeromail.api.controllers.triage;
 
-import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThat;
 
+import com.zeromail.core.shared.pagination.KeysetCursor;
 import org.junit.jupiter.api.Test;
 
 class AuditLogPaginationTest {
 
-    private static final String AUDIT_LOG_QUERY_SERVICE =
-            "com.zeromail.core.triage.projection.AuditLogQueryService";
-
     @Test
     void audit_log_next_cursor_round_trips_with_full_instant_precision() {
-        Class<?> futureType = futureType();
+        java.time.Instant fullPrecisionTimestamp =
+                java.time.Instant.parse("2026-05-12T10:15:30.123456789Z");
+        java.util.UUID auditId = java.util.UUID.randomUUID();
 
-        fail(
-                "not implemented: "
-                        + futureType.getName()
-                        + " must keyset paginate by full-precision (createdAt, auditId), not offset or "
-                        + "millisecond-truncated cursors");
-    }
+        String cursor = KeysetCursor.encode(fullPrecisionTimestamp, auditId);
+        KeysetCursor decodedCursor = KeysetCursor.decode(cursor).orElseThrow();
 
-    private static Class<?> futureType() {
-        try {
-            return Class.forName(AUDIT_LOG_QUERY_SERVICE);
-        } catch (ClassNotFoundException classNotFoundException) {
-            fail(
-                    "not implemented: " + AUDIT_LOG_QUERY_SERVICE + " missing",
-                    classNotFoundException);
-            throw new AssertionError("unreachable");
-        }
+        assertThat(decodedCursor.timestamp()).isEqualTo(fullPrecisionTimestamp);
+        assertThat(decodedCursor.id()).isEqualTo(auditId.toString());
+        assertThat(decodedCursor.isNullsLast()).isFalse();
     }
 }

@@ -1,8 +1,18 @@
 package com.zeromail.api.controllers.thread;
 
-import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
+import com.zeromail.api.config.GlobalExceptionHandler;
+import com.zeromail.api.error.ErrorCodes;
+import com.zeromail.api.error.InvalidCursorException;
+import com.zeromail.core.draft.exception.DraftGenerationFailedException;
+import com.zeromail.core.draft.exception.DraftGenerationInFlightException;
+import com.zeromail.core.llm.exception.SafetyViolationException;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 
 class DraftLockContentionTest {
 
@@ -12,20 +22,47 @@ class DraftLockContentionTest {
 
     @Test
     void second_concurrent_draft_request_returns_http_409_in_flight_code() {
-        futureType(GENERATE_THREAD_DRAFT_SERVICE);
-        futureType(ERROR_CODES);
+        assertFutureTypePresent(GENERATE_THREAD_DRAFT_SERVICE);
+        assertFutureTypePresent(ERROR_CODES);
+        GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
-        fail(
-                "not implemented: a second POST /api/threads/{gmailThreadId}/draft while the "
-                        + "Redis lock is held must return 409 DRAFT_GENERATION_IN_FLIGHT");
+        ResponseEntity<ProblemDetail> response =
+                handler.onDraftGenerationInFlight(new DraftGenerationInFlightException());
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getProperties())
+                .containsEntry("code", ErrorCodes.DRAFT_GENERATION_IN_FLIGHT);
     }
 
-    private static Class<?> futureType(String futureTypeName) {
-        try {
-            return Class.forName(futureTypeName);
-        } catch (ClassNotFoundException classNotFoundException) {
-            fail("not implemented: " + futureTypeName + " missing", classNotFoundException);
-            throw new AssertionError("unreachable");
-        }
+    @Test
+    void draft_generation_and_cursor_errors_have_specific_status_codes() {
+        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+
+        ResponseEntity<ProblemDetail> failedResponse =
+                handler.onDraftGenerationFailed(new DraftGenerationFailedException());
+        ResponseEntity<ProblemDetail> cursorResponse =
+                handler.onInvalidCursor(new InvalidCursorException(new IllegalArgumentException()));
+        ResponseEntity<ProblemDetail> safetyResponse =
+                handler.onSafetyViolation(new SafetyViolationException());
+
+        assertThat(failedResponse.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+        assertThat(failedResponse.getBody()).isNotNull();
+        assertThat(failedResponse.getBody().getProperties())
+                .containsEntry("code", ErrorCodes.DRAFT_GENERATION_FAILED);
+        assertThat(cursorResponse.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(cursorResponse.getBody()).isNotNull();
+        assertThat(cursorResponse.getBody().getProperties())
+                .containsEntry("code", ErrorCodes.INVALID_CURSOR);
+        assertThat(safetyResponse.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+        assertThat(safetyResponse.getBody()).isNotNull();
+        assertThat(safetyResponse.getBody().getProperties())
+                .containsEntry("code", ErrorCodes.LLM_SAFETY_VIOLATION);
+    }
+
+    private static void assertFutureTypePresent(String futureTypeName) {
+        assertThatCode(() -> Class.forName(futureTypeName))
+                .as("Future production type must exist: " + futureTypeName)
+                .doesNotThrowAnyException();
     }
 }

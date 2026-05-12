@@ -9,6 +9,7 @@ import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
 import com.google.api.services.gmail.model.MessagePartHeader;
+import com.google.api.services.gmail.model.Thread;
 import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
@@ -29,6 +30,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,6 +63,10 @@ public class GmailPreviewReadService {
                     + "payload/parts/mimeType";
     private static final String TRIAGE_METADATA_FIELDS =
             "id,threadId,labelIds,internalDate,payload/headers";
+    private static final List<String> THREAD_DISPLAY_METADATA_HEADERS =
+            List.of("From", "To", "Cc", "Subject");
+    private static final String THREAD_DISPLAY_FIELDS =
+            "id,messages(id,threadId,internalDate,payload/headers)";
     private static final String FULL_FIELDS =
             "id,threadId,labelIds,internalDate,payload/headers,payload/body/size,"
                     + "payload/parts(filename,mimeType,body/size,parts)";
@@ -184,6 +190,140 @@ public class GmailPreviewReadService {
         } catch (IOException ioException) {
             throw new GmailPreviewReadUnavailableException(UnavailableReason.GMAIL_UNAVAILABLE);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, GmailThreadDisplay> fetchThreadDisplays(
+            UUID tenantId, List<String> gmailThreadIds, Duration fetchBudget) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(fetchBudget, "fetchBudget must not be null");
+        List<String> requestedThreadIds =
+                gmailThreadIds == null
+                        ? List.of()
+                        : gmailThreadIds.stream()
+                                .filter(Objects::nonNull)
+                                .map(String::trim)
+                                .filter(threadId -> !threadId.isBlank())
+                                .distinct()
+                                .toList();
+        if (requestedThreadIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Optional<GmailConnectionEntity> optionalConnection =
+                gmailConnectionRepository.findByTenantId(tenantId);
+        if (optionalConnection.isEmpty()) {
+            log.info(
+                    "event=thread_display_fetch_skipped tenantId={} reason=not_connected",
+                    tenantId);
+            return Map.of();
+        }
+        GmailConnectionEntity connection = optionalConnection.orElseThrow();
+        if (connection.getStatus() != GmailConnectionStatus.CONNECTED
+                || connection.getRefreshTokenEncrypted() == null) {
+            log.info(
+                    "event=thread_display_fetch_skipped tenantId={} reason=disconnected", tenantId);
+            return Map.of();
+        }
+
+        try {
+            Gmail gmail = gmailApiClientFactory.buildClientForConnection(connection, tenantId);
+            return fetchThreadDisplaysWithBatch(
+                    gmail, requestedThreadIds, connection.getGoogleEmail(), fetchBudget);
+        } catch (InvalidGrantException invalidGrantException) {
+            log.warn("event=thread_display_fetch_failed tenantId={} reason=revoked", tenantId);
+            return Map.of();
+        } catch (IOException | GmailPreviewReadUnavailableException displayFetchException) {
+            log.warn(
+                    "event=thread_display_fetch_failed tenantId={} reason={}",
+                    tenantId,
+                    displayFetchException.getClass().getSimpleName());
+            return Map.of();
+        }
+    }
+
+    private Map<String, GmailThreadDisplay> fetchThreadDisplaysWithBatch(
+            Gmail gmail, List<String> gmailThreadIds, String selfEmail, Duration fetchBudget)
+            throws IOException {
+        Instant deadline = clock.instant().plus(fetchBudget);
+        BatchRequest batchRequest = gmail.batch();
+        LinkedHashMap<String, GmailThreadDisplay> displaysByThreadId = new LinkedHashMap<>();
+
+        for (String gmailThreadId : gmailThreadIds) {
+            assertWithinBudget(deadline);
+            JsonBatchCallback<Thread> callback =
+                    new JsonBatchCallback<>() {
+                        @Override
+                        public void onSuccess(Thread gmailThread, HttpHeaders responseHeaders) {
+                            toThreadDisplay(gmailThreadId, gmailThread, selfEmail)
+                                    .ifPresent(
+                                            display ->
+                                                    displaysByThreadId.put(gmailThreadId, display));
+                        }
+
+                        @Override
+                        public void onFailure(
+                                GoogleJsonError googleJsonError, HttpHeaders responseHeaders) {
+                            log.info(
+                                    "event=thread_display_row_unavailable gmailThreadId={}",
+                                    gmailThreadId);
+                        }
+                    };
+            threadGetRequest(gmail, gmailThreadId).queue(batchRequest, callback);
+        }
+        batchRequest.execute();
+        return Map.copyOf(displaysByThreadId);
+    }
+
+    private static Gmail.Users.Threads.Get threadGetRequest(Gmail gmail, String gmailThreadId)
+            throws IOException {
+        Gmail.Users.Threads.Get threadGetRequest =
+                gmail.users()
+                        .threads()
+                        .get("me", gmailThreadId)
+                        .setFormat("metadata")
+                        .setFields(THREAD_DISPLAY_FIELDS);
+        threadGetRequest.setMetadataHeaders(THREAD_DISPLAY_METADATA_HEADERS);
+        return threadGetRequest;
+    }
+
+    private static Optional<GmailThreadDisplay> toThreadDisplay(
+            String requestedThreadId, Thread gmailThread, String selfEmail) {
+        if (gmailThread == null || gmailThread.getMessages() == null) {
+            return Optional.empty();
+        }
+        Message latestMessage =
+                gmailThread.getMessages().stream()
+                        .filter(Objects::nonNull)
+                        .max(
+                                java.util.Comparator.comparingLong(
+                                        message ->
+                                                Objects.requireNonNullElse(
+                                                        message.getInternalDate(), 0L)))
+                        .orElse(null);
+        if (latestMessage == null) {
+            return Optional.empty();
+        }
+        MessagePart payload = latestMessage.getPayload();
+        String subject = excerpt(headerValue(payload, "Subject").orElse(""));
+        String otherParty = otherParty(payload, selfEmail);
+        Instant lastActivityAt = toInstant(latestMessage.getInternalDate());
+        return Optional.of(
+                new GmailThreadDisplay(requestedThreadId, subject, otherParty, lastActivityAt));
+    }
+
+    private static String otherParty(MessagePart payload, String selfEmail) {
+        String normalizedSelfEmail = sanitizeEmail(selfEmail);
+        List<String> participants =
+                Stream.of(
+                                headerValue(payload, "From").orElse(""),
+                                headerValue(payload, "To").orElse(""),
+                                headerValue(payload, "Cc").orElse(""))
+                        .flatMap(header -> parseRecipients(header).stream())
+                        .filter(participant -> !participant.isBlank())
+                        .filter(participant -> !participant.equals(normalizedSelfEmail))
+                        .toList();
+        return participants.isEmpty() ? null : participants.getFirst();
     }
 
     private List<ObservedPreviewMessage> findRecentObservedMessages(UUID tenantId, int sampleSize) {
@@ -596,6 +736,16 @@ public class GmailPreviewReadService {
                     Set.copyOf(
                             Objects.requireNonNull(
                                     bodyDerivedFlags, "bodyDerivedFlags must not be null"));
+        }
+    }
+
+    public record GmailThreadDisplay(
+            String gmailThreadId, String subject, String otherParty, Instant lastActivityAt) {
+
+        public GmailThreadDisplay {
+            Objects.requireNonNull(gmailThreadId, "gmailThreadId must not be null");
+            subject = subject == null || subject.isBlank() ? null : subject;
+            otherParty = otherParty == null || otherParty.isBlank() ? null : otherParty;
         }
     }
 

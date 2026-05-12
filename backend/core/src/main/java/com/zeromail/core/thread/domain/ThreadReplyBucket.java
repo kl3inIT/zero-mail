@@ -1,6 +1,7 @@
 package com.zeromail.core.thread.domain;
 
 import com.zeromail.core.shared.lang.IdentifiedEnum;
+import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.stream.Stream;
 
@@ -34,8 +35,12 @@ public enum ThreadReplyBucket implements IdentifiedEnum {
     }
 
     public static ThreadReplyBucket fromPublicSlug(String publicSlug) {
+        String normalizedPublicSlug =
+                publicSlug == null ? "" : publicSlug.trim().toLowerCase(Locale.ROOT);
         return Stream.of(values())
-                .filter(threadReplyBucket -> threadReplyBucket.publicSlug().equals(publicSlug))
+                .filter(
+                        threadReplyBucket ->
+                                threadReplyBucket.publicSlug().equals(normalizedPublicSlug))
                 .findFirst()
                 .orElseThrow(
                         () ->

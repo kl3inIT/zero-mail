@@ -1,9 +1,17 @@
 package com.zeromail.api.controllers.thread;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
+import com.zeromail.api.dto.thread.NeedsReplyListResponse;
+import com.zeromail.api.dto.thread.ThreadDraftResponse;
+import com.zeromail.core.thread.domain.ThreadReplyBucket;
+import java.lang.reflect.RecordComponent;
+import java.util.Arrays;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 class ThreadDraftControllerContractTest {
 
@@ -17,35 +25,55 @@ class ThreadDraftControllerContractTest {
             "com.zeromail.api.dto.thread.NeedsReplyListResponse";
 
     @Test
-    void draft_endpoint_returns_no_body_and_links_to_gmail() {
-        futureType(THREAD_DRAFT_CONTROLLER);
-        futureType(THREAD_DRAFT_RESPONSE);
+    void draft_endpoint_returns_no_body_and_links_to_gmail() throws Exception {
+        assertFutureTypePresent(THREAD_DRAFT_CONTROLLER);
+        assertFutureTypePresent(THREAD_DRAFT_RESPONSE);
 
-        assertThat("/api/threads/{gmailThreadId}/draft")
-                .isEqualTo("/api/threads/{gmailThreadId}/draft");
-        fail(
-                "not implemented: POST /api/threads/{gmailThreadId}/draft must return draftId, "
-                        + "gmailThreadId, status, and openInGmailUrl with no draft body field");
+        RequestMapping controllerMapping =
+                ThreadDraftController.class.getAnnotation(RequestMapping.class);
+        PostMapping draftMapping =
+                ThreadDraftController.class
+                        .getMethod("generateDraft", String.class)
+                        .getAnnotation(PostMapping.class);
+        assertThat(controllerMapping.value()).containsExactly("/api/threads");
+        assertThat(draftMapping.value()).containsExactly("/{gmailThreadId}/draft");
+        assertThat(recordComponentNames(ThreadDraftResponse.class))
+                .containsExactly("draftId", "gmailThreadId", "status", "openInGmailUrl");
+        assertThat(recordComponentNames(ThreadDraftResponse.class)).doesNotContain("body");
     }
 
     @Test
-    void needs_reply_endpoint_uses_hyphenated_public_bucket_slugs() {
-        futureType(NEEDS_REPLY_INBOX_CONTROLLER);
-        futureType(NEEDS_REPLY_LIST_RESPONSE);
+    void needs_reply_endpoint_uses_hyphenated_public_bucket_slugs() throws Exception {
+        assertFutureTypePresent(NEEDS_REPLY_INBOX_CONTROLLER);
+        assertFutureTypePresent(NEEDS_REPLY_LIST_RESPONSE);
 
+        RequestMapping controllerMapping =
+                NeedsReplyInboxController.class.getAnnotation(RequestMapping.class);
+        GetMapping getMapping =
+                NeedsReplyInboxController.class
+                        .getMethod("list", String.class, String.class, int.class, boolean.class)
+                        .getAnnotation(GetMapping.class);
+        assertThat(controllerMapping.value()).containsExactly("/api/threads");
+        assertThat(getMapping.value()).isEmpty();
         assertThat("to-reply").isEqualTo("to-reply");
         assertThat("awaiting-their-reply").isEqualTo("awaiting-their-reply");
-        fail(
-                "not implemented: GET /api/threads?bucket=to-reply must return cursor-paginated rows "
-                        + "and toReplyCount");
+        assertThat(ThreadReplyBucket.fromPublicSlug("TO-REPLY"))
+                .isEqualTo(ThreadReplyBucket.TO_REPLY);
+        assertThat(ThreadReplyBucket.fromPublicSlug("awaiting-their-reply"))
+                .isEqualTo(ThreadReplyBucket.AWAITING_THEIR_REPLY);
+        assertThat(recordComponentNames(NeedsReplyListResponse.class))
+                .containsExactly("items", "nextCursor", "toReplyCount");
     }
 
-    private static Class<?> futureType(String futureTypeName) {
-        try {
-            return Class.forName(futureTypeName);
-        } catch (ClassNotFoundException classNotFoundException) {
-            fail("not implemented: " + futureTypeName + " missing", classNotFoundException);
-            throw new AssertionError("unreachable");
-        }
+    private static void assertFutureTypePresent(String futureTypeName) {
+        assertThatCode(() -> Class.forName(futureTypeName))
+                .as("Future production type must exist: " + futureTypeName)
+                .doesNotThrowAnyException();
+    }
+
+    private static java.util.List<String> recordComponentNames(Class<?> recordType) {
+        return Arrays.stream(recordType.getRecordComponents())
+                .map(RecordComponent::getName)
+                .toList();
     }
 }
