@@ -47,8 +47,10 @@ must_haves:
 <objective>
 Build the CQRS-lite read side for the audit list and the needs-reply inbox: a `core.triage.projection.AuditLogQueryService` (JDBC keyset query over `triage_audit`, closing the 5A `GET /api/triage/audit` gap), a `core.thread.projection.NeedsReplyInboxQueryService` (JDBC keyset query over `thread_reply_status` by bucket + a `countByBucketAndResolvedFalse` for the sidebar badge), a shared `KeysetCursor` codec helper in `core.shared.pagination` (two encode overloads — `(Instant, UUID)` for the audit table whose `audit_id` is a UUID, `(Instant, String)` for the needs-reply table whose `gmail_thread_id` is a string), and a `MarkThreadResolvedService` (flips `resolved` on the current tenant's row). Inbox *display* fields (subject, participants, last-activity) are NOT persisted — Plan 05's controller (or this query service) fetches them live from Gmail `threads.get(metadata)` per row; this plan provides the projection rows (ids + bucket + draft status + `lastClassifiedAt`).
 
+This plan adds the new `core.shared.pagination` leaf module and the two `core.triage.projection` / `core.thread.projection` sub-packages. The `shared.pagination` edge on the PARENT modules (`core/triage/package-info.java` and `core/thread/package-info.java` `allowedDependencies`) is added by Plan 03 in the same commit that wires the `triage → thread` Modulith edge — this plan must NOT edit those two parent `package-info.java` files. By the time this plan runs (same wave, but `05B-03` owns those two files), the edges are already in place.
+
 Purpose: Read endpoints (Plan 05) and the needs-reply UI (Plan 06) depend on these query services. Cursor pagination (no `OFFSET`/`COUNT(*)`) is a project convention (D-13/D-17).
-Output: `core.triage.projection` + `core.thread.projection` packages, `KeysetCursor`, `MarkThreadResolvedService`.
+Output: `core.triage.projection` + `core.thread.projection` packages, `core.shared.pagination` leaf module + `KeysetCursor`, `MarkThreadResolvedService`.
 </objective>
 
 <execution_context>
@@ -79,6 +81,8 @@ Output: `core.triage.projection` + `core.thread.projection` packages, `KeysetCur
 `ThreadReplyStatusRepository` (core.thread.persistence, Plan 02): `countByBucketAndResolvedFalse(ThreadReplyBucket)` for the badge, `findByGmailThreadId(String)` for mark-resolved.
 
 `TenantContext.currentOrThrow()` → tenant id string; query services take `UUID tenantId` as the first param.
+
+Modulith note: `core/triage/package-info.java` and `core/thread/package-info.java` already list `shared.pagination` in `allowedDependencies` (added by Plan 03) by the time this plan runs. This plan only declares the new `core.shared.pagination` leaf `package-info.java` and the two `core.*.projection` `package-info.java` files. Do NOT touch the two parent `package-info.java` files.
 </interfaces>
 
 <tasks>
@@ -107,7 +111,7 @@ Output: `core.triage.projection` + `core.thread.projection` packages, `KeysetCur
     - `AuditLogQueryService.page(UUID tenantId, AuditLogPageQuery query)` — `@Transactional(readOnly=true)`; `created_at` on `triage_audit` is NOT NULL, so the keyset is the simple `(created_at, audit_id)` tuple — no NULLS handling needed here. SQL: `select audit_id, gmail_thread_id, gmail_message_id, rule_name_snapshot, action_type, reason, decision, external_ref, created_at from triage_audit where tenant_id = ? and (? is null or action_type = ?) and (? is null or created_at >= ?) and (? is null or created_at < ?) and (created_at, audit_id) < (?, ?) order by created_at desc, audit_id desc limit ?+1` — the `(created_at, audit_id) < (cursorTs, cursorId)` predicate is included only when a cursor is supplied (decoded), else omitted. When `limit+1` rows return, drop the last, set `nextCursor = KeysetCursor.encode(last-kept.createdAt, last-kept.auditId)`; else `nextCursor = null`. `RowMapper` maps to `AuditLogRow`. Never `OFFSET`, never `COUNT(*)`.
   </behavior>
   <action>
-    Create `KeysetCursor` (record + the two `encode` overloads + `decode` + the `nullsLast()` sentinel) + its leaf module in `core.shared.pagination`. Create the `core.triage.projection` package with `AuditLogQueryService`, `AuditLogRow`, `AuditLogPage`, `AuditLogPageQuery`, and `package-info.java` (declare `@ApplicationModule` if `core.triage` isn't already auto-detected as one — the triage module already exists, so this is a sub-package; add a `@NamedInterface` re-exposure if the project's pattern requires it for `backend/api` to consume the projection records). Add `shared.pagination` to `core.triage`'s `allowedDependencies` if needed. Make `KeysetCursorTest` pass and the (RED, in `backend/api`) audit-list tests pass once Plan 05's controller wires this service.
+    Create `KeysetCursor` (record + the two `encode` overloads + `decode` + the `nullsLast()` sentinel) + its leaf module `package-info.java` in `core.shared.pagination`. Create the `core.triage.projection` package with `AuditLogQueryService`, `AuditLogRow`, `AuditLogPage`, `AuditLogPageQuery`, and its `package-info.java` (declare `@ApplicationModule` if `core.triage` isn't already auto-detected as one — the triage module already exists, so this is a sub-package; add a `@NamedInterface` re-exposure if the project's pattern requires it for `backend/api` to consume the projection records). Do NOT edit `core/triage/package-info.java` — Plan 03 already added `shared.pagination` to its `allowedDependencies`. Make `KeysetCursorTest` pass and the (RED, in `backend/api`) audit-list tests pass once Plan 05's controller wires this service. Run `ApplicationModulesTest`.
   </action>
   <verify>
     <automated>cd "$REPO" && ./gradlew :backend:core:test --tests "*KeysetCursor*" --tests "*AuditLogQuery*" --tests "*ApplicationModules*" 2>&1 | tail -10</automated>
@@ -116,7 +120,7 @@ Output: `core.triage.projection` + `core.thread.projection` packages, `KeysetCur
     - `KeysetCursor.encode(Instant,UUID)` and `encode(Instant,String)` both round-trip through `decode(...)`; malformed input → `IllegalArgumentException`; null/blank → empty; an id containing `:` survives the round-trip
     - `AuditLogQueryService.page(...)` returns at most `limit` rows ordered `(created_at desc, audit_id desc)`; `nextCursor` decodes back to the keyset of the last returned row; SQL contains no `OFFSET` and no `COUNT(*)`; the query filters by `tenant_id`, optional `action_type`, optional `created_at` range
     - `AuditLogRow.draftId` is populated from `external_ref` and is null for non-`save_draft` rows
-    - `core.shared.pagination/package-info.java` is a leaf `@ApplicationModule`; `ApplicationModulesTest` + `DomainBoundaryArchTests` green
+    - `core.shared.pagination/package-info.java` is a leaf `@ApplicationModule`; this plan did not edit `core/triage/package-info.java`; `ApplicationModulesTest` + `DomainBoundaryArchTests` green
     - `mcp__jetbrains__get_file_problems` on new files clean
   </acceptance_criteria>
   <done>Cursor codec (UUID + String key variants) + audit-list read service land; the 5A `GET /api/triage/audit` gap can now be closed by Plan 05.</done>
@@ -146,7 +150,7 @@ Output: `core.triage.projection` + `core.thread.projection` packages, `KeysetCur
     - `MarkThreadResolvedService.markResolved(UUID tenantId, String gmailThreadId)` — `@Transactional`; `findByGmailThreadId(...)` (tenant-filtered) → set `resolved=true` → save; if no row, no-op (a benign housekeeping action never errors). Logs `event=thread_marked_resolved tenantId={} gmailThreadId={}` only.
   </behavior>
   <action>
-    Create the `core.thread.projection` package mirroring `core.triage.projection`'s keyset-query shape, using `KeysetCursor.encode(Instant, String)` + the `nullsLast()` sentinel for the string `gmail_thread_id` key and the explicit `NULLS LAST` keyset predicate described above. Add `MarkThreadResolvedService` in `core.thread.usecases`. `package-info.java` for `core.thread.projection` (or rely on the existing `core.thread` module — sub-package; add `@NamedInterface` re-exposure if needed for `backend/api`). Run `ApplicationModulesTest`.
+    Create the `core.thread.projection` package mirroring `core.triage.projection`'s keyset-query shape, using `KeysetCursor.encode(Instant, String)` + the `nullsLast()` sentinel for the string `gmail_thread_id` key and the explicit `NULLS LAST` keyset predicate described above. Add `MarkThreadResolvedService` in `core.thread.usecases`. Create `package-info.java` for `core.thread.projection` (or rely on the existing `core.thread` module — sub-package; add `@NamedInterface` re-exposure if needed for `backend/api`). Do NOT edit `core/thread/package-info.java` — Plan 03 already added `shared.pagination` to its `allowedDependencies`. Run `ApplicationModulesTest`.
   </action>
   <verify>
     <automated>cd "$REPO" && ./gradlew :backend:core:test --tests "*NeedsReplyInboxQuery*" --tests "*MarkThreadResolved*" --tests "*ApplicationModules*" 2>&1 | tail -10</automated>
@@ -156,7 +160,7 @@ Output: `core.triage.projection` + `core.thread.projection` packages, `KeysetCur
     - `toReplyCount(tenantId)` uses `countByBucketAndResolvedFalse(TO_REPLY)` (partial index)
     - `NeedsReplyRow` carries only ids/status — no subject/participant/body columns selected
     - `MarkThreadResolvedService.markResolved(...)` flips `resolved` for the current tenant's row only; missing row → no-op; logs metadata-only
-    - `ApplicationModulesTest` + `DomainBoundaryArchTests` green; `mcp__jetbrains__get_file_problems` on new files clean
+    - this plan did not edit `core/thread/package-info.java`; `ApplicationModulesTest` + `DomainBoundaryArchTests` green; `mcp__jetbrains__get_file_problems` on new files clean
   </acceptance_criteria>
   <done>Needs-reply inbox read service (NULLS-LAST keyset over a string thread id) + count badge + mark-resolved land; Plan 05 wires them to controllers.</done>
 </task>
@@ -185,13 +189,15 @@ Output: `core.triage.projection` + `core.thread.projection` packages, `KeysetCur
 <verification>
 - `./gradlew :backend:core:test --tests "*KeysetCursor*" --tests "*AuditLogQuery*" --tests "*NeedsReplyInboxQuery*" --tests "*MarkThreadResolved*" --tests "*ApplicationModules*"` all green
 - `grep -rni "offset\b\|count(\*)" backend/core/src/main/java/com/zeromail/core/triage/projection backend/core/src/main/java/com/zeromail/core/thread/projection` returns nothing (paging) — the only `count` allowed is the repository's `countByBucketAndResolvedFalse`
+- `git diff --name-only` for this plan does NOT include `backend/core/src/main/java/com/zeromail/core/triage/package-info.java` or `backend/core/src/main/java/com/zeromail/core/thread/package-info.java` (Plan 03 owns those)
 - `mcp__jetbrains__get_file_problems` on all new projection + pagination + `MarkThreadResolvedService` files — no problems
 </verification>
 
 <success_criteria>
-Read side complete: cursor-paginated `AuditLogQueryService` (closes the 5A gap) + `NeedsReplyInboxQueryService` (NULLS-LAST keyset over the string `gmail_thread_id`) + `toReplyCount` badge query + `MarkThreadResolvedService`, all tenant-scoped, keyset-paginated, projection rows metadata-only. Plan 05 wires them to REST.
+Read side complete: cursor-paginated `AuditLogQueryService` (closes the 5A gap) + `NeedsReplyInboxQueryService` (NULLS-LAST keyset over the string `gmail_thread_id`) + `toReplyCount` badge query + `MarkThreadResolvedService`, all tenant-scoped, keyset-paginated, projection rows metadata-only; the new `core.shared.pagination` leaf module + the two `core.*.projection` sub-packages land here, while the parent-module `allowedDependencies` edge to `shared.pagination` was added by Plan 03. Plan 05 wires them to REST.
 </success_criteria>
 
 <output>
 After completion, create `.planning/phases/05B-user-surface-ai-draft-replies/05B-04-SUMMARY.md`
 </output>
+</content>
