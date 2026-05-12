@@ -32,11 +32,10 @@ created: 2026-05-12
 
 ## Spacing Scale
 
-8-point base scale. Use Tailwind spacing utilities only; never arbitrary px values for layout gaps.
+8-point base scale (12 included as 4×3). Use Tailwind spacing utilities only; never arbitrary px values for layout gaps.
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| 3xs | 2px | Hairline insets only (badge optical centering, dot offsets) |
 | 2xs | 4px | Icon-to-label gaps, inline chip padding |
 | xs | 8px | Compact element spacing, table cell vertical padding (dense mode), list item gaps |
 | sm | 12px | Form field internal padding, card list item gaps, tab padding |
@@ -45,6 +44,10 @@ created: 2026-05-12
 | xl | 32px | Page content gutters (desktop), gap between major sections |
 | 2xl | 48px | Major section breaks, empty-state vertical centering padding |
 | 3xl | 64px | Page-level top/bottom rhythm on wide layouts |
+
+Layout spacing scale, cleanly: **4 / 8 / 12 / 16 / 24 / 32 / 48 / 64**.
+
+**Optical micro-adjustments (not part of the layout spacing scale):** a `2px` (`3xs`) nudge is permitted *only* for badge optical centering, status-dot offsets, and similar hairline insets — **never used for layout gaps, padding, or margins between elements**.
 
 **Touch targets:** all interactive controls in the persistent chrome (pause toggle, balance pill if clickable, health indicator, `SidebarTrigger`) and all per-row Undo buttons render with a **minimum 40px hit area** (44px on the 320px breakpoint) even if the visual element is smaller — pad the hit area, not the glyph.
 
@@ -57,18 +60,20 @@ created: 2026-05-12
 
 ## Typography
 
-Four roles. Geist Sans for everything except the rare serif headline accent and mono for data/code/reference fields.
+Exactly **4 type sizes**. Geist Sans for everything except the rare serif headline accent and Geist Mono for data/code/reference fields. Role differentiation between card titles and section headings vs. page headings is done with **weight and color**, not extra sizes.
 
-| Role | Size | Weight | Line Height | Notes |
-|------|------|--------|-------------|-------|
-| Body | 14px | 400 (regular) | 1.5 | Default UI text, table cells, descriptions, card body, form labels' helper text. (UI-dense product surface — 14px body, not 16px; matches the existing app and shadcn `base-nova` defaults.) |
+| Role | Size | Weight | Line Height | Covers |
+|------|------|--------|-------------|--------|
 | Label / small | 12px | 500 (medium) | 1.4 | Form field labels, badge text, table column headers, eyebrow/section kickers (uppercase, 0.06em tracking), nav item labels, "Undo window closed" muted note. |
-| Heading | 20px | 600 (semibold) | 1.25 | Page titles (`/triage`, `/billing`, `/settings/privacy`), card titles use 16px/600. Section headings within a page = 16px/600. |
+| Body | 14px | 400 (regular) | 1.5 | Default UI text, table cells, descriptions, card body, helper text. (UI-dense product surface — 14px body, not 16px; matches the existing app and shadcn `base-nova` defaults.) |
+| Heading | 20px | 600 (semibold) | 1.25 | **Page headings** (`/triage`, `/billing`, `/settings/privacy`), **section headings within a page**, and **card titles**. Differentiate the three tiers with weight (600 vs. 500) and color (`--foreground` vs. `--muted-foreground`), not size — e.g. page heading = 20px/600/`--foreground`, section heading = 20px/600/`--foreground` with more leading above, card title = 20px/500–600/`--foreground` tighter. |
 | Display | 28px | 600 (semibold) | 1.2 | Reserved for the largest in-product moments only — the credit balance figure on `/billing`, the top-up success amount, an onboarding completion headline. Not used on routine screens. |
+
+Type scale, restated: **12 / 14 / 20 / 28** — four sizes, no more. There is no 16px text size anywhere in this contract.
 
 Weights are **400 and 600 only** (medium 500 is permitted *solely* for the Label role and nav items, mirroring the existing globals.css usage — treat 500 as a sub-variant of the Label role, not a third general weight). No light, no extrabold, no black.
 
-**Mono (`--font-mono`) usage** (data, not body): timestamps in the audit/ledger tables, the VietQR memo/reference code and account number on the top-up screen, credit amounts in the ledger rows, intent IDs, the eyebrow kickers if a kicker is monospaced (consistent with `.zm-eyebrow`). Mono size: 11.5–12px.
+**Mono (`--font-mono`) usage** (data, not body): timestamps in the audit/ledger tables, the VietQR memo/reference code and account number on the top-up screen, credit amounts in the ledger rows, intent IDs, the eyebrow kickers if a kicker is monospaced (consistent with `.zm-eyebrow`). Mono renders at the **12px Label step** (visually ~11.5–12px Geist Mono) — it is the **data-typeface variant of the existing 12px size**, not a fifth size.
 
 **Serif (`--font-serif`, Instrument Serif italic) usage**: optional, at most one italicized accent word in a single page-level headline (e.g. an onboarding-complete "*done*"). Never in body, never in tables, never in chrome.
 
@@ -98,6 +103,18 @@ Weights are **400 and 600 only** (medium 500 is permitted *solely* for the Label
 - Small "AI"/automated-action markers in the audit log (the mono `AI`-style tag, accent-colored, like `.zm-gm-ai`).
 
 **Status-color discipline:** the Gmail health indicator uses exactly three states — `Connected` (green dot), `Action needed` (amber dot + reconnect affordance), `Disconnected` (red/destructive dot + prominent `ReconnectPrompt`). The pause toggle "ON/paused" state is **amber**, never red — pausing is a deliberate safe state, not an error. The audit-log action `Badge` colors map: label action → accent-soft, archive/skip-inbox → neutral/muted, draft-saved → blue-soft, undone → muted with strikethrough-adjacent treatment.
+
+---
+
+## Visual Hierarchy — Primary Anchor Per Screen
+
+Each key screen has **one** focal element that the layout subordinates everything else to:
+- **`/triage`** — the audit `Table` (desktop) / card list (mobile) is the focal element; chrome, tabs, and filters frame it but never compete with it.
+- **`/billing`** — the **credit-balance figure** (Display type) is the focal element on the balance screen; the ledger and top-up CTA sit beneath/beside it.
+- **Top-up screen** — the copyable VietQR block (image + memo + account + amount) is the focal element of the waiting state; the success state's focal element is the new balance figure (Display type).
+- **`/rules`** — the **rule composer** (the natural-language rule input + its preview) is the focal element; the rule list is secondary.
+- **`/settings/privacy`** — the "What we never store" section is the focal element; other sections are supporting context.
+- **App shell (any route)** — within the chrome itself, the **active nav item** + the page heading are the hierarchy anchors; the balance pill, health dot, and pause toggle are peripheral status, not focal.
 
 ---
 
