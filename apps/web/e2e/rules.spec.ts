@@ -1,5 +1,11 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 
+import {
+  expectAppShellChrome,
+  expectNoClaySkinClasses,
+  expectNoHorizontalOverflow,
+} from './chrome-test-utils';
+
 test.describe.configure({ mode: 'serial' });
 
 /**
@@ -331,7 +337,9 @@ test('rules desktop flow compiles, clarifies, saves disabled, previews, toggles,
 }) => {
   await openRules(page);
 
-  await expect(page.getByRole('heading', { name: 'Rules' })).toBeVisible();
+  await expectAppShellChrome(page, { sidebarVisible: true });
+  await expectNoClaySkinClasses(page);
+  await expect(page.getByRole('heading', { name: 'Rules', exact: true })).toBeVisible();
   await expect(page.getByText('No rules yet')).toBeVisible();
 
   const ruleText = page.getByLabel('Rule text');
@@ -380,19 +388,19 @@ test('template gallery materializes a disabled starter rule with provenance', as
   await expect(page.getByText('Disabled').first()).toBeVisible();
 });
 
-test('rules workspace remains usable at 375x812 without horizontal overflow', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
+test('rules workspace remains in-shell and usable at 320px without horizontal overflow', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 740 });
   await openRules(page, 'mobile-flow');
 
-  await expect(page.getByRole('heading', { name: 'Rules' })).toBeVisible();
+  await expectAppShellChrome(page);
+  await expectNoClaySkinClasses(page);
+  await expect(page.getByRole('heading', { name: 'Rules', exact: true })).toBeVisible();
   await expect(page.getByText('Rule composer')).toBeVisible();
   await expect(page.getByText('Safe preview')).toBeVisible();
   await expect(page.getByText('Rule order')).toBeVisible();
-
-  const horizontalOverflow = await page.evaluate(
-    () => document.documentElement.scrollWidth > window.innerWidth,
-  );
-  expect(horizontalOverflow).toBe(false);
+  await expectNoHorizontalOverflow(page);
 });
 
 test('rules errors keep compile billing alerts in composer and Gmail preview errors in preview panel', async ({

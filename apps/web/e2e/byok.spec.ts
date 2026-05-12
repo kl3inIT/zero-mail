@@ -1,5 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import {
+  expectAppShellChrome,
+  expectNoClaySkinClasses,
+  expectNoHorizontalOverflow,
+} from './chrome-test-utils';
+
 async function mockSettingsApis(page: Page) {
   await page.route('http://localhost:8080/**', async (route) => {
     const request = route.request();
@@ -14,7 +20,7 @@ async function mockSettingsApis(page: Page) {
           tenantId: 'tenant-1',
           email: 'founder@example.com',
           preferredLanguage: 'en',
-          onboardingStep: 'complete',
+          onboardingStep: 'COMPLETE',
           triagePaused: false,
           gmailConnectionStatus: {
             status: 'CONNECTED',
@@ -109,6 +115,8 @@ test('byok settings flow validates then saves without exposing the key in the UR
 }) => {
   await openSettings(page);
 
+  await expectAppShellChrome(page, { sidebarVisible: true });
+  await expectNoClaySkinClasses(page);
   const triageBox = await page.getByText('Automated triage', { exact: true }).boundingBox();
   const byokBox = await page.getByText('AI provider key', { exact: true }).boundingBox();
   const privacyBox = await page.getByText('Privacy and safety', { exact: true }).boundingBox();
@@ -127,18 +135,17 @@ test('byok settings flow validates then saves without exposing the key in the UR
   expect(page.url()).not.toContain('sk-or-v1-test');
 });
 
-test('byok settings card remains usable at 375x812', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
+test('byok settings card remains in-shell and usable at 320px', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
   await openSettings(page);
 
+  await expectAppShellChrome(page);
+  await expectNoClaySkinClasses(page);
   await expect(page.getByText('AI provider key')).toBeVisible();
   await expect(page.getByRole('radio', { name: 'OpenRouter' })).toBeChecked();
   await expect(page.getByLabel('Model')).toBeVisible();
   await page.getByLabel('API key').fill('sk-or-v1-test');
   await expect(page.getByRole('button', { name: 'Validate API key' })).toBeEnabled();
 
-  const horizontalOverflow = await page.evaluate(
-    () => document.documentElement.scrollWidth > window.innerWidth,
-  );
-  expect(horizontalOverflow).toBe(false);
+  await expectNoHorizontalOverflow(page);
 });
