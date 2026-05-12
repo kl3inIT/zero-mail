@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** Transactional batch collaborator for the triage audit retention purge. */
 @Component
+@SuppressWarnings("SqlResolve")
 public class TriageAuditPurgeBatch {
 
     private static final Duration AUDIT_RETENTION = Duration.ofDays(30);
@@ -24,13 +25,13 @@ public class TriageAuditPurgeBatch {
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
-    public int purgeExpiredOnce(int batchLimit) {
+    public PurgeBatchResult purgeExpiredOnce(int batchLimit) {
         if (batchLimit <= 0) {
             throw new IllegalArgumentException("batchLimit must be positive");
         }
 
         Instant cutoff = clock.instant().minus(AUDIT_RETENTION);
-        return jdbcTemplate.update(
+        return jdbcTemplate.queryForObject(
                 """
         WITH expired_audit AS (
           SELECT audit_id
@@ -47,11 +48,23 @@ public class TriageAuditPurgeBatch {
            ORDER BY decided_at ASC, audit_id ASC
            LIMIT ?
              FOR UPDATE SKIP LOCKED
+        ),
+        deleted_audit AS (
+          DELETE FROM triage_audit
+           WHERE audit_id IN (SELECT audit_id FROM expired_audit)
+           RETURNING audit_id
         )
-        DELETE FROM triage_audit
-         WHERE audit_id IN (SELECT audit_id FROM expired_audit)
+        SELECT
+          (SELECT COUNT(*) FROM expired_audit) AS selected_count,
+          (SELECT COUNT(*) FROM deleted_audit) AS deleted_count
         """,
+                (resultSet, rowNumber) ->
+                        new PurgeBatchResult(
+                                resultSet.getInt("selected_count"),
+                                resultSet.getInt("deleted_count")),
                 Timestamp.from(cutoff),
                 batchLimit);
     }
+
+    public record PurgeBatchResult(int selectedCount, int deletedCount) {}
 }

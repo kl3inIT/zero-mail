@@ -122,6 +122,11 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
               decided_at = NOW(),
               decision = 'APPLIED',
               external_ref = :externalRef,
+              action_args_json =
+                CASE
+                  WHEN :resolvedActionArgsJson IS NULL THEN action_args_json
+                  ELSE CAST(:resolvedActionArgsJson AS jsonb)
+                END,
               gmail_change_token =
                 CASE
                   WHEN :gmailChangeToken IS NULL THEN NULL
@@ -139,7 +144,8 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
             @Param("auditId") UUID auditId,
             @Param("tenantId") UUID tenantId,
             @Param("externalRef") String externalRef,
-            @Param("gmailChangeToken") String gmailChangeToken);
+            @Param("gmailChangeToken") String gmailChangeToken,
+            @Param("resolvedActionArgsJson") String resolvedActionArgsJson);
 
     @Modifying
     @Query(
@@ -167,12 +173,28 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
             value =
                     """
           UPDATE triage_audit
+          SET decision = 'REVERT_PENDING',
+              last_attempt_at = NOW(),
+              updated_at = NOW()
+          WHERE audit_id = :auditId
+            AND tenant_id = :tenantId
+            AND decision = 'APPLIED'
+          """,
+            nativeQuery = true)
+    @Transactional
+    int markRevertPending(@Param("auditId") UUID auditId, @Param("tenantId") UUID tenantId);
+
+    @Modifying
+    @Query(
+            value =
+                    """
+          UPDATE triage_audit
           SET decision = 'REVERTED',
               reverted_at = :revertedAt,
               updated_at = NOW()
           WHERE audit_id = :auditId
             AND tenant_id = :tenantId
-            AND decision = 'APPLIED'
+            AND decision = 'REVERT_PENDING'
           """,
             nativeQuery = true)
     @Transactional

@@ -34,11 +34,13 @@ public class TriagePendingReaperJob {
 
     public int reap() {
         int totalProcessed = 0;
-        int processedCount;
+        int selectedCount;
         do {
-            processedCount = triagePendingReaperBatch.reapStuckPendingOnce(BATCH_LIMIT);
-            totalProcessed += processedCount;
-        } while (processedCount == BATCH_LIMIT);
+            TriagePendingReaperBatch.ReaperBatchResult batchResult =
+                    triagePendingReaperBatch.reapStuckPendingOnce(BATCH_LIMIT);
+            selectedCount = batchResult.selectedCount();
+            totalProcessed += batchResult.reapedCount();
+        } while (selectedCount == BATCH_LIMIT);
 
         if (totalProcessed > 0) {
             rowsProcessedCounter.increment(totalProcessed);

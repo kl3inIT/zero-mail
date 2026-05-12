@@ -83,3 +83,6 @@ databaseChangeLog:
   - include:
       file: changes/028-tenant-protected-sender-observation.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/029-triage-revert-pending.yaml
+      relativeToChangelogFile: true

@@ -7,15 +7,23 @@ import static org.mockito.Mockito.doAnswer;
 
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.support.PostgresContainerTest;
+import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.triage.domain.TriageActionResult;
+import com.zeromail.core.triage.persistence.TriageAuditRepository;
+import com.zeromail.core.triage.persistence.TriageAuditWriter;
+import com.zeromail.core.triage.usecases.TriageActionResultJsonValidator;
 import com.zeromail.core.triage.usecases.TriageAuditSaga;
+import com.zeromail.core.triage.usecases.TriageAuditSaga.GmailWriteResult;
 import com.zeromail.core.triage.usecases.TriageAuditSaga.TriageAuditCommand;
 import com.zeromail.core.triage.usecases.TriageGmailWriter;
+import com.zeromail.core.triage.usecases.TriageUndoService;
+import com.zeromail.core.triage.usecases.UndoAuditCommand;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -29,6 +37,16 @@ class NoActiveTransactionDuringGmailWriteTest extends PostgresContainerTest {
 
     @Autowired TriageAuditSaga triageAuditSaga;
 
+    @Autowired TriageUndoService triageUndoService;
+
+    @Autowired TriageAuditWriter triageAuditWriter;
+
+    @Autowired TriageAuditRepository triageAuditRepository;
+
+    @Autowired TriageActionResultJsonValidator actionResultJsonValidator;
+
+    @Autowired JdbcTemplate jdbcTemplate;
+
     @Autowired TransactionTemplate transactionTemplate;
 
     @MockitoBean TriageGmailWriter triageGmailWriter;
@@ -41,10 +59,10 @@ class NoActiveTransactionDuringGmailWriteTest extends PostgresContainerTest {
                         invocation -> {
                             transactionActiveAtWriter.add(
                                     TransactionSynchronizationManager.isActualTransactionActive());
-                            return null;
+                            return "Label_123";
                         })
                 .when(triageGmailWriter)
-                .applyLabel(eq(TENANT_ID), eq(GMAIL_MESSAGE_ID), eq("Label_123"));
+                .applyLabel(eq(TENANT_ID), eq(GMAIL_MESSAGE_ID), eq("Finance"));
         doAnswer(
                         invocation -> {
                             transactionActiveAtWriter.add(
@@ -65,20 +83,56 @@ class NoActiveTransactionDuringGmailWriteTest extends PostgresContainerTest {
                         any(TriageActionResult.SaveDraft.class),
                         eq(GMAIL_THREAD_ID));
 
-        executeInsideOuterTransaction(labelCommand());
-        executeInsideOuterTransaction(archiveCommand());
+        GmailWriteResult labelResult = executeInsideOuterTransaction(labelCommand());
+        GmailWriteResult archiveResult = executeInsideOuterTransaction(archiveCommand());
         executeInsideOuterTransaction(saveDraftCommand());
 
         assertThat(transactionActiveAtWriter).containsExactly(false, false, false);
+        assertThat(labelResult.gmailChangeToken())
+                .contains("\"addedLabelId\":\"Label_123\"")
+                .doesNotContain("\"labelId\"");
+        assertThat(archiveResult.gmailChangeToken())
+                .contains("\"removedLabelIds\":[\"INBOX\"]")
+                .doesNotContain("\"removedLabelId\"");
     }
 
-    private void executeInsideOuterTransaction(TriageAuditCommand command) {
-        transactionTemplate.executeWithoutResult(
+    @Test
+    void undo_suspends_outer_transaction_before_inverse_gmail_write() throws Exception {
+        seedTenant();
+        UUID auditId = seedAppliedLabelAudit();
+        ArrayList<Boolean> transactionActiveAtWriter = new ArrayList<>();
+        doAnswer(
+                        invocation -> {
+                            transactionActiveAtWriter.add(
+                                    TransactionSynchronizationManager.isActualTransactionActive());
+                            return "Label_123";
+                        })
+                .when(triageGmailWriter)
+                .removeLabel(eq(TENANT_ID), eq(GMAIL_MESSAGE_ID), eq("Label_123"));
+
+        ScopedValue.where(TenantContext.TENANT, TENANT_ID.toString())
+                .run(
+                        () ->
+                                transactionTemplate.executeWithoutResult(
+                                        transactionStatus -> {
+                                            assertThat(
+                                                            TransactionSynchronizationManager
+                                                                    .isActualTransactionActive())
+                                                    .isTrue();
+                                            triageUndoService.undo(
+                                                    new UndoAuditCommand(auditId, TENANT_ID));
+                                        }));
+
+        assertThat(transactionActiveAtWriter).containsExactly(false);
+    }
+
+    private GmailWriteResult executeInsideOuterTransaction(TriageAuditCommand command) {
+        return transactionTemplate.execute(
                 transactionStatus -> {
                     assertThat(TransactionSynchronizationManager.isActualTransactionActive())
                             .isTrue();
                     try {
-                        triageAuditSaga.gmailWritePhase(command);
+                        return triageAuditSaga.gmailWritePhase(command);
                     } catch (IOException ioException) {
                         throw new AssertionError(ioException);
                     }
@@ -111,5 +165,40 @@ class NoActiveTransactionDuringGmailWriteTest extends PostgresContainerTest {
                 actionType,
                 actionResult,
                 "evidenceIds=transaction-boundary");
+    }
+
+    private UUID seedAppliedLabelAudit() {
+        return ScopedValue.where(TenantContext.TENANT, TENANT_ID.toString())
+                .call(
+                        () -> {
+                            UUID auditId =
+                                    triageAuditWriter
+                                            .insertPending(
+                                                    TENANT_ID,
+                                                    GMAIL_MESSAGE_ID,
+                                                    GMAIL_THREAD_ID,
+                                                    RULE_ID,
+                                                    "Transaction boundary rule",
+                                                    RuleActionType.LABEL,
+                                                    new TriageActionResult.Label(
+                                                            "Finance", "Finance"),
+                                                    "evidenceIds=transaction-boundary")
+                                            .orElseThrow();
+                            triageAuditRepository.markApplied(
+                                    auditId,
+                                    TENANT_ID,
+                                    GMAIL_MESSAGE_ID,
+                                    "{\"addedLabelId\":\"Label_123\"}",
+                                    actionResultJsonValidator.toJson(
+                                            new TriageActionResult.Label("Label_123", "Finance")));
+                            return auditId;
+                        });
+    }
+
+    private void seedTenant() {
+        jdbcTemplate.update(
+                "insert into tenants(id, display_name) values (?, ?) on conflict (id) do nothing",
+                TENANT_ID,
+                "transaction-boundary");
     }
 }

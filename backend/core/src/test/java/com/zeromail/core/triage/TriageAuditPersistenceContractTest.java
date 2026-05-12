@@ -153,11 +153,15 @@ class TriageAuditPersistenceContractTest extends PostgresContainerTest {
                 .isEqualTo(1);
         assertThat(
                         triageAuditRepository.markApplied(
-                                auditId, otherTenantId, null, "{\"removedLabelIds\":[\"INBOX\"]}"))
+                                auditId,
+                                otherTenantId,
+                                null,
+                                "{\"removedLabelIds\":[\"INBOX\"]}",
+                                null))
                 .isZero();
         assertThat(
                         triageAuditRepository.markApplied(
-                                auditId, tenantId, null, "{\"removedLabelIds\":[\"INBOX\"]}"))
+                                auditId, tenantId, null, "{\"removedLabelIds\":[\"INBOX\"]}", null))
                 .isEqualTo(1);
 
         TriageAuditEntity appliedAudit =
@@ -165,6 +169,11 @@ class TriageAuditPersistenceContractTest extends PostgresContainerTest {
         assertThat(appliedAudit.getDecision()).isEqualTo(TriageDecision.APPLIED);
         assertThat(appliedAudit.getLeaseOwner()).isNull();
         assertThat(appliedAudit.getGmailChangeToken()).contains("removedLabelIds");
+
+        assertThat(triageAuditRepository.markRevertPending(auditId, tenantId)).isEqualTo(1);
+        TriageAuditEntity revertPendingAudit =
+                withTenant(tenantId, () -> triageAuditRepository.findById(auditId).orElseThrow());
+        assertThat(revertPendingAudit.getDecision()).isEqualTo(TriageDecision.REVERT_PENDING);
 
         assertThat(triageAuditRepository.markReverted(auditId, tenantId, Instant.now()))
                 .isEqualTo(1);

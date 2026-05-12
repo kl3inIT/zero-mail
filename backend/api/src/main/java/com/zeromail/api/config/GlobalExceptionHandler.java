@@ -18,7 +18,6 @@ import com.zeromail.core.triage.exception.TriageAuditNotFoundException;
 import com.zeromail.core.triage.exception.TriageSafetyViolationException;
 import com.zeromail.core.triage.exception.TriageUndoAlreadyDoneException;
 import com.zeromail.core.triage.exception.TriageUndoExpiredException;
-import com.zeromail.core.triage.exception.TriageUndoUnsupportedActionException;
 import com.zeromail.core.triage.exception.TriageUndoWriteFailedException;
 import jakarta.validation.ConstraintViolationException;
 import java.util.Map;
@@ -348,20 +347,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         };
     }
 
-    @ExceptionHandler(TriageUndoUnsupportedActionException.class)
-    public ResponseEntity<ProblemDetail> onTriageUndoUnsupportedAction(
-            TriageUndoUnsupportedActionException exception) {
-        log.warn(
-                "event=triage_undo_rejected tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.getClass().getSimpleName());
-        return problem(
-                HttpStatus.CONFLICT,
-                "Triage undo unsupported",
-                "The triage action type cannot be undone safely.",
-                ErrorCodes.TRIAGE_UNDO_UNSUPPORTED_ACTION);
-    }
-
     @ExceptionHandler(TriageAuditNotFoundException.class)
     public ResponseEntity<ProblemDetail> onTriageAuditNotFound(
             TriageAuditNotFoundException exception) {
@@ -373,7 +358,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 HttpStatus.NOT_FOUND,
                 "Triage audit not found",
                 "The requested triage audit entry was not found.",
-                ErrorCodes.BAD_REQUEST);
+                ErrorCodes.TRIAGE_AUDIT_NOT_FOUND);
     }
 
     @ExceptionHandler(TriageUndoWriteFailedException.class)
@@ -387,7 +372,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 HttpStatus.BAD_GATEWAY,
                 "Triage undo write failed",
                 "The triage action could not be undone right now.",
-                ErrorCodes.CONFLICT);
+                ErrorCodes.TRIAGE_UNDO_WRITE_FAILED);
     }
 
     @ExceptionHandler(TriageSafetyViolationException.class)

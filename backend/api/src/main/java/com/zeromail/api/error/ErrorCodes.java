@@ -48,6 +48,8 @@ public final class ErrorCodes {
     public static final String TRIAGE_UNDO_ALREADY_DONE = "error.triage.undo.already_done";
     public static final String TRIAGE_UNDO_UNSUPPORTED_ACTION =
             "error.triage.undo.unsupported_action";
+    public static final String TRIAGE_UNDO_WRITE_FAILED = "error.triage.undo.write_failed";
+    public static final String TRIAGE_AUDIT_NOT_FOUND = "error.triage.audit.not_found";
     public static final String TRIAGE_SAFETY_VIOLATION = "error.triage.safety_violation";
 
     private ErrorCodes() {}

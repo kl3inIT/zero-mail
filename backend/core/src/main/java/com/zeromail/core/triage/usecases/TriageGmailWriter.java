@@ -3,6 +3,8 @@ package com.zeromail.core.triage.usecases;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Draft;
+import com.google.api.services.gmail.model.Label;
+import com.google.api.services.gmail.model.ListLabelsResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.ModifyMessageRequest;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
@@ -11,6 +13,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,21 +40,23 @@ public class TriageGmailWriter {
         this.gmailApiClientFactory = gmailApiClientFactory;
     }
 
-    public void applyLabel(UUID tenantId, String gmailMessageId, String labelId)
+    public String applyLabel(UUID tenantId, String gmailMessageId, String labelName)
             throws IOException {
-        executeGmailWrite(
+        return executeGmailWrite(
                 tenantId,
                 "applyLabel",
                 gmail -> {
+                    String resolvedLabelId = resolveOrCreateLabelId(gmail, labelName);
                     gmail.users()
                             .messages()
                             .modify(
                                     USER_ID,
                                     gmailMessageId,
-                                    new ModifyMessageRequest().setAddLabelIds(List.of(labelId)))
+                                    new ModifyMessageRequest()
+                                            .setAddLabelIds(List.of(resolvedLabelId)))
                             .execute();
                     logMessageWrite(tenantId, gmailMessageId, "applyLabel");
-                    return null;
+                    return resolvedLabelId;
                 });
     }
 
@@ -137,7 +142,19 @@ public class TriageGmailWriter {
                 tenantId,
                 "deleteDraft",
                 gmail -> {
-                    gmail.users().drafts().delete(USER_ID, draftId).execute();
+                    try {
+                        gmail.users().drafts().delete(USER_ID, draftId).execute();
+                    } catch (GoogleJsonResponseException googleResponseException) {
+                        if (googleResponseException.getStatusCode() == 404) {
+                            log.info(
+                                    "event=triage_gmail_write_idempotent_skip tenantId={} draftId={} op={}",
+                                    tenantId,
+                                    draftId,
+                                    "deleteDraft");
+                            return null;
+                        }
+                        throw googleResponseException;
+                    }
                     log.info(
                             "event=triage_gmail_write tenantId={} draftId={} op={}",
                             tenantId,
@@ -164,6 +181,54 @@ public class TriageGmailWriter {
             log.warn("event=triage_gmail_write_failed tenantId={} op={}", tenantId, operation);
             throw ioException;
         }
+    }
+
+    private static String resolveOrCreateLabelId(Gmail gmail, String labelName) throws IOException {
+        requireText(labelName, "labelName");
+        if (isLikelyGmailLabelId(labelName)) {
+            return labelName;
+        }
+        Optional<String> existingLabelId = findLabelIdByName(gmail, labelName);
+        if (existingLabelId.isPresent()) {
+            return existingLabelId.get();
+        }
+        try {
+            Label createdLabel =
+                    gmail.users()
+                            .labels()
+                            .create(
+                                    USER_ID,
+                                    new Label()
+                                            .setName(labelName)
+                                            .setLabelListVisibility("labelShow")
+                                            .setMessageListVisibility("show"))
+                            .execute();
+            return requireText(createdLabel.getId(), "createdLabelId");
+        } catch (GoogleJsonResponseException googleResponseException) {
+            if (googleResponseException.getStatusCode() == 409) {
+                return findLabelIdByName(gmail, labelName)
+                        .orElseThrow(() -> googleResponseException);
+            }
+            throw googleResponseException;
+        }
+    }
+
+    private static Optional<String> findLabelIdByName(Gmail gmail, String labelName)
+            throws IOException {
+        ListLabelsResponse labelsResponse = gmail.users().labels().list(USER_ID).execute();
+        List<Label> gmailLabels = labelsResponse.getLabels();
+        if (gmailLabels == null) {
+            return Optional.empty();
+        }
+        return gmailLabels.stream()
+                .filter(gmailLabel -> labelName.equals(gmailLabel.getName()))
+                .map(Label::getId)
+                .filter(TriageGmailWriter::hasText)
+                .findFirst();
+    }
+
+    private static boolean isLikelyGmailLabelId(String labelName) {
+        return labelName.startsWith("Label_") || INBOX_LABEL_ID.equals(labelName);
     }
 
     private static Message draftMessage(String instruction, String gmailThreadId) {
@@ -194,6 +259,17 @@ public class TriageGmailWriter {
                 tenantId,
                 gmailThreadId,
                 "saveDraft");
+    }
+
+    private static String requireText(String text, String fieldName) throws IOException {
+        if (!hasText(text)) {
+            throw new IOException(fieldName + " must not be blank");
+        }
+        return text;
+    }
+
+    private static boolean hasText(String text) {
+        return text != null && !text.isBlank();
     }
 
     @FunctionalInterface

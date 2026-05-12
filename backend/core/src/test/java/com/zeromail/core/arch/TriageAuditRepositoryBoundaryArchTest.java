@@ -17,6 +17,7 @@ class TriageAuditRepositoryBoundaryArchTest {
                     "reclaimStalePending",
                     "markApplied",
                     "markFailed",
+                    "markRevertPending",
                     "markReverted",
                     "markShadowLogged");
 
@@ -39,7 +40,7 @@ class TriageAuditRepositoryBoundaryArchTest {
 
         assertThat(adHocMutationMethods)
                 .as(
-                        "triage_audit is insert-only except the explicit PENDING/APPLIED/FAILED/REVERTED transitions")
+                        "triage_audit is insert-only except the explicit PENDING/APPLIED/FAILED/REVERT_PENDING/REVERTED transitions")
                 .isEmpty();
     }
 
@@ -52,6 +53,7 @@ class TriageAuditRepositoryBoundaryArchTest {
                         "reclaimStalePending",
                         "markApplied",
                         "markFailed",
+                        "markRevertPending",
                         "markReverted",
                         "markShadowLogged");
         assertThat(TRIAGE_AUDIT_REPOSITORY)

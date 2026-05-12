@@ -189,11 +189,15 @@
     },
     "schemaMismatch": "This page needs a newer API contract. Regenerate the typed client before continuing.",
     "triage": {
+      "audit": {
+        "not_found": "This triage audit entry could not be found. Reload the list."
+      },
       "safety_violation": "The triage action was blocked by a safety constraint.",
       "undo": {
         "already_done": "This email action has already been undone or is no longer undoable.",
         "expired": "Triage actions can only be undone within 30 days after they are applied.",
-        "unsupported_action": "Zero Mail cannot safely undo this triage action type."
+        "unsupported_action": "Zero Mail cannot safely undo this triage action type.",
+        "write_failed": "This email action could not be undone right now. Try again later."
       }
     },
     "unknown": "An unknown error occurred. Try again or sign in again.",

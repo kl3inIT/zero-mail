@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -71,26 +72,12 @@ public class TriageUndoService {
         this.meterRegistry = meterRegistry;
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public UndoAuditResult undo(UndoAuditCommand command) {
-        TriageAuditEntity auditRow =
-                triageAuditRepository
-                        .findByAuditIdAndTenantId(command.auditId(), command.tenantId())
-                        .orElseThrow(TriageAuditNotFoundException::new);
-
-        if (auditRow.getDecision() != TriageDecision.APPLIED) {
-            throw new TriageUndoAlreadyDoneException();
-        }
-
-        Instant appliedAt = auditRow.getAppliedAt();
-        Instant revertedAt = clock.instant();
-        if (appliedAt == null || appliedAt.isBefore(revertedAt.minus(UNDO_WINDOW))) {
-            throw new TriageUndoExpiredException();
-        }
-
-        RuleActionType actionType = actionType(auditRow);
-        TriageActionResult actionResult = actionResult(auditRow);
-        validateActionTypeMatchesResult(actionType, actionResult);
+        UndoPreparation undoPreparation = prepareUndo(command);
+        TriageAuditEntity auditRow = undoPreparation.auditRow();
+        RuleActionType actionType = undoPreparation.actionType();
+        TriageActionResult actionResult = undoPreparation.actionResult();
 
         try {
             executeInverse(command.tenantId(), auditRow, actionResult);
@@ -103,6 +90,7 @@ public class TriageUndoService {
             throw new TriageUndoWriteFailedException();
         }
 
+        Instant revertedAt = clock.instant();
         int revertedRows =
                 triageAuditRepository.markReverted(
                         command.auditId(), command.tenantId(), revertedAt);
@@ -110,6 +98,7 @@ public class TriageUndoService {
             throw new TriageUndoAlreadyDoneException();
         }
 
+        Instant appliedAt = undoPreparation.appliedAt();
         long daysAfterApply = Math.max(0L, ChronoUnit.DAYS.between(appliedAt, revertedAt));
         meterRegistry
                 .counter(
@@ -127,6 +116,44 @@ public class TriageUndoService {
                 daysAfterApply);
 
         return new UndoAuditResult(command.auditId(), TriageDecision.REVERTED, revertedAt);
+    }
+
+    private UndoPreparation prepareUndo(UndoAuditCommand command) {
+        TriageAuditEntity auditRow =
+                triageAuditRepository
+                        .findByAuditIdAndTenantId(command.auditId(), command.tenantId())
+                        .orElseThrow(TriageAuditNotFoundException::new);
+
+        TriageDecision decision = auditRow.getDecision();
+        if (decision != TriageDecision.APPLIED && decision != TriageDecision.REVERT_PENDING) {
+            throw new TriageUndoAlreadyDoneException();
+        }
+
+        Instant appliedAt = auditRow.getAppliedAt();
+        Instant now = clock.instant();
+        if (appliedAt == null || appliedAt.isBefore(now.minus(UNDO_WINDOW))) {
+            throw new TriageUndoExpiredException();
+        }
+
+        RuleActionType actionType = actionType(auditRow);
+        TriageActionResult actionResult = actionResult(auditRow);
+        validateActionTypeMatchesResult(actionType, actionResult);
+
+        if (decision == TriageDecision.APPLIED) {
+            int revertPendingRows =
+                    triageAuditRepository.markRevertPending(command.auditId(), command.tenantId());
+            if (revertPendingRows != 1) {
+                auditRow =
+                        triageAuditRepository
+                                .findByAuditIdAndTenantId(command.auditId(), command.tenantId())
+                                .orElseThrow(TriageAuditNotFoundException::new);
+                if (auditRow.getDecision() != TriageDecision.REVERT_PENDING) {
+                    throw new TriageUndoAlreadyDoneException();
+                }
+            }
+        }
+
+        return new UndoPreparation(auditRow, actionType, actionResult, appliedAt);
     }
 
     private void executeInverse(
@@ -243,4 +270,10 @@ public class TriageUndoService {
         }
         return "over_30";
     }
+
+    private record UndoPreparation(
+            TriageAuditEntity auditRow,
+            RuleActionType actionType,
+            TriageActionResult actionResult,
+            Instant appliedAt) {}
 }

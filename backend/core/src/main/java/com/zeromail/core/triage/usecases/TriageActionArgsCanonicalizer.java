@@ -57,6 +57,9 @@ public class TriageActionArgsCanonicalizer {
             }
             case SAVE_DRAFT -> {
                 canonicalFields.put("instruction", requiredText(actionResultNode, "instruction"));
+                // Draft idempotency is intentionally thread-scoped: one draft per matched thread
+                // and
+                // instruction, even when multiple messages in that thread trigger the same rule.
                 canonicalFields.put("threadId", requiredText(actionResultNode, "threadId"));
             }
         }

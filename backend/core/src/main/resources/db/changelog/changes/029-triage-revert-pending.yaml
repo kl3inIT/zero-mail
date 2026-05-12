@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: 029-triage-revert-pending
+      author: zeromail
+      comment: Add an undo in-flight state so Gmail inverse writes happen outside the APPLIED row transition.
+      changes:
+        - sql:
+            comment: Extend the triage decision check constraint for undo's crash-safe in-flight state.
+            sql: >-
+              ALTER TABLE triage_audit
+              DROP CONSTRAINT ck_triage_audit_decision,
+              ADD CONSTRAINT ck_triage_audit_decision
+              CHECK (decision IN ('PENDING','APPLIED','SHADOW_LOGGED','REJECTED_BY_SAFETY_NET','REJECTED_BY_SAFETY_POLICY','FAILED','REVERT_PENDING','REVERTED'))
+      rollback:
+        - sql:
+            comment: Restore the previous triage decision check constraint.
+            sql: >-
+              ALTER TABLE triage_audit
+              DROP CONSTRAINT ck_triage_audit_decision,
+              ADD CONSTRAINT ck_triage_audit_decision
+              CHECK (decision IN ('PENDING','APPLIED','SHADOW_LOGGED','REJECTED_BY_SAFETY_NET','REJECTED_BY_SAFETY_POLICY','FAILED','REVERTED'))

@@ -133,7 +133,7 @@ public record ZeroMailCoreProperties(
         public Map<CallSite, String> modelByCallSite() {
             return Map.of(
                     CallSite.TRIAGE, triageModel,
-                    CallSite.DRAFT, compileModel,
+                    CallSite.DRAFT, triageModel,
                     CallSite.PREVIEW, compileModel,
                     CallSite.TRIAGE_PLATFORM_LLM, triageModel,
                     CallSite.TRIAGE_DETERMINISTIC, triageModel);

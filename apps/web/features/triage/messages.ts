@@ -11,6 +11,14 @@ export const triageMessages = {
     vi: 'Zero Mail không thể hoàn tác loại hành động triage này một cách an toàn.',
     en: 'Zero Mail cannot safely undo this triage action type.',
   },
+  'errors.triage.undo.write_failed': {
+    vi: 'Chưa thể hoàn tác hành động email lúc này. Hãy thử lại sau.',
+    en: 'This email action could not be undone right now. Try again later.',
+  },
+  'errors.triage.audit.not_found': {
+    vi: 'Không tìm thấy bản ghi triage này. Hãy tải lại danh sách.',
+    en: 'This triage audit entry could not be found. Reload the list.',
+  },
   'errors.triage.safety_violation': {
     vi: 'Hành động triage bị chặn vì vi phạm ràng buộc an toàn.',
     en: 'The triage action was blocked by a safety constraint.',

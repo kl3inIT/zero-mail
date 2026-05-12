@@ -19,8 +19,6 @@ class TriageUndoServiceContractTest {
             "com.zeromail.core.triage.exception.TriageUndoExpiredException";
     private static final String TRIAGE_UNDO_ALREADY_DONE_EXCEPTION =
             "com.zeromail.core.triage.exception.TriageUndoAlreadyDoneException";
-    private static final String TRIAGE_UNDO_UNSUPPORTED_ACTION_EXCEPTION =
-            "com.zeromail.core.triage.exception.TriageUndoUnsupportedActionException";
     private static final String TRIAGE_AUDIT_EXCEPTION =
             "com.zeromail.core.triage.exception.TriageAuditException";
 
@@ -30,7 +28,6 @@ class TriageUndoServiceContractTest {
         assertFutureTypePresent(TRIAGE_GMAIL_WRITER);
         assertFutureTypePresent(TRIAGE_UNDO_EXPIRED_EXCEPTION);
         assertFutureTypePresent(TRIAGE_UNDO_ALREADY_DONE_EXCEPTION);
-        assertFutureTypePresent(TRIAGE_UNDO_UNSUPPORTED_ACTION_EXCEPTION);
         assertFutureTypePresent(TRIAGE_AUDIT_EXCEPTION);
     }
 
@@ -55,7 +52,6 @@ class TriageUndoServiceContractTest {
             throws Exception {
         assertThat(throwableType(TRIAGE_UNDO_EXPIRED_EXCEPTION)).isNotNull();
         assertThat(throwableType(TRIAGE_UNDO_ALREADY_DONE_EXCEPTION)).isNotNull();
-        assertThat(throwableType(TRIAGE_UNDO_UNSUPPORTED_ACTION_EXCEPTION)).isNotNull();
         assertThat(undoServiceSource())
                 .contains("Duration.ofDays(30)")
                 .contains("throw new TriageUndoExpiredException")

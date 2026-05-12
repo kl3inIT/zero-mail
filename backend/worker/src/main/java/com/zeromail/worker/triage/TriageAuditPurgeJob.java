@@ -34,11 +34,13 @@ public class TriageAuditPurgeJob {
 
     public int purge() {
         int totalDeleted = 0;
-        int deletedCount;
+        int selectedCount;
         do {
-            deletedCount = triageAuditPurgeBatch.purgeExpiredOnce(BATCH_LIMIT);
-            totalDeleted += deletedCount;
-        } while (deletedCount == BATCH_LIMIT);
+            TriageAuditPurgeBatch.PurgeBatchResult batchResult =
+                    triageAuditPurgeBatch.purgeExpiredOnce(BATCH_LIMIT);
+            selectedCount = batchResult.selectedCount();
+            totalDeleted += batchResult.deletedCount();
+        } while (selectedCount == BATCH_LIMIT);
 
         if (totalDeleted > 0) {
             purgedRowsCounter.increment(totalDeleted);

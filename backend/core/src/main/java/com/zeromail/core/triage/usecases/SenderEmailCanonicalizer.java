@@ -27,12 +27,14 @@ public class SenderEmailCanonicalizer {
     }
 
     public String redisCacheKeyComponent(String canonicalizedEmail) {
-        return HexFormat.of().formatHex(sha256(canonicalize(canonicalizedEmail)));
+        return HexFormat.of().formatHex(sha256(requireCanonicalizedEmail(canonicalizedEmail)));
     }
 
     public String gmailSearchToken(String canonicalizedEmail) {
         String safeAddress =
-                canonicalize(canonicalizedEmail).replace("\\", "\\\\").replace("\"", "\\\"");
+                requireCanonicalizedEmail(canonicalizedEmail)
+                        .replace("\\", "\\\\")
+                        .replace("\"", "\\\"");
         return "\"" + safeAddress + "\"";
     }
 
@@ -46,6 +48,13 @@ public class SenderEmailCanonicalizer {
             return senderEmail.substring(leftAngle + 1, rightAngle).trim();
         }
         return senderEmail;
+    }
+
+    private static String requireCanonicalizedEmail(String canonicalizedEmail) {
+        if (canonicalizedEmail == null || canonicalizedEmail.isBlank()) {
+            throw new IllegalArgumentException("canonicalizedEmail must not be blank");
+        }
+        return canonicalizedEmail;
     }
 
     private static byte[] sha256(String value) {

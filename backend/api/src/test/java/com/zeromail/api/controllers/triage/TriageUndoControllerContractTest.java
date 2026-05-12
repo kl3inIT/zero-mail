@@ -31,11 +31,15 @@ class TriageUndoControllerContractTest {
                         List.of(
                                 errorCode(errorCodesClass, "TRIAGE_UNDO_ALREADY_DONE"),
                                 errorCode(errorCodesClass, "TRIAGE_UNDO_EXPIRED"),
-                                errorCode(errorCodesClass, "TRIAGE_UNDO_UNSUPPORTED_ACTION")))
+                                errorCode(errorCodesClass, "TRIAGE_UNDO_UNSUPPORTED_ACTION"),
+                                errorCode(errorCodesClass, "TRIAGE_UNDO_WRITE_FAILED"),
+                                errorCode(errorCodesClass, "TRIAGE_AUDIT_NOT_FOUND")))
                 .containsExactly(
                         "error.triage.undo.already_done",
                         "error.triage.undo.expired",
-                        "error.triage.undo.unsupported_action");
+                        "error.triage.undo.unsupported_action",
+                        "error.triage.undo.write_failed",
+                        "error.triage.audit.not_found");
         assertThat(404).as("Cross-tenant audit ids must be returned as not found").isEqualTo(404);
     }
 

@@ -7,8 +7,6 @@ import com.zeromail.core.triage.usecases.SenderEmailCanonicalizer;
 import com.zeromail.core.triage.usecases.SenderSafetyNetService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,8 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @Tag(name = "triage")
 public class SenderSafetyNetController {
-
-    private static final Logger log = LoggerFactory.getLogger(SenderSafetyNetController.class);
 
     private final SenderEmailCanonicalizer senderEmailCanonicalizer;
     private final SenderSafetyNetService senderSafetyNetService;
@@ -40,13 +36,7 @@ public class SenderSafetyNetController {
     public SenderOptInResponse optIn(@PathVariable String senderEmail) {
         UUID tenantId = currentTenantId();
         String canonicalSenderEmail = senderEmailCanonicalizer.canonicalize(senderEmail);
-        String senderEmailHash =
-                senderEmailCanonicalizer.redisCacheKeyComponent(canonicalSenderEmail);
         senderSafetyNetService.optInSender(tenantId, canonicalSenderEmail);
-        log.info(
-                "event=triage_sender_opt_in tenantId={} senderEmailHash={}",
-                tenantId,
-                senderEmailHash);
         return SenderOptInResponse.from(canonicalSenderEmail, true);
     }
 

@@ -42,7 +42,7 @@ public class TriagePendingReaperBatch {
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
-    public int reapStuckPendingOnce(int batchLimit) {
+    public ReaperBatchResult reapStuckPendingOnce(int batchLimit) {
         if (batchLimit <= 0) {
             throw new IllegalArgumentException("batchLimit must be positive");
         }
@@ -67,6 +67,8 @@ public class TriagePendingReaperBatch {
                         triageAudit.getLastAttemptAt());
             }
         }
-        return reapedCount;
+        return new ReaperBatchResult(stuckPendingAudits.size(), reapedCount);
     }
+
+    public record ReaperBatchResult(int selectedCount, int reapedCount) {}
 }

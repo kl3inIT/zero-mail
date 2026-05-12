@@ -14,7 +14,9 @@ import java.util.stream.Stream;
  * documents the BYOK skip path.
  *
  * <p><b>Costs:</b> TRIAGE = 1, DRAFT = 2, PREVIEW = 1, TRIAGE_PLATFORM_LLM = 1,
- * TRIAGE_DETERMINISTIC = 0.
+ * TRIAGE_DETERMINISTIC = 0. The v1 triage orchestrator charges TRIAGE_PLATFORM_LLM for semantic
+ * matching and TRIAGE_DETERMINISTIC for deterministic-only processing; TRIAGE and DRAFT remain
+ * stable public ledger sites for non-orchestrator AI calls.
  */
 public enum CallSite implements IdentifiedEnum {
     TRIAGE(1),

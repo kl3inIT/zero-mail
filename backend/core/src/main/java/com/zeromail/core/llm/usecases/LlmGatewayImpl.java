@@ -493,6 +493,7 @@ class LlmGatewayImpl implements LlmGateway {
         try {
             creditLedger.settle(reservationId);
         } catch (RuntimeException settleFailure) {
+            releaseAfterSettleFailure(tenantId, callSite, reservationId);
             log.error(
                     "event=llm_call_settle_failed tenantId={} callSite={} reason={}",
                     tenantId,
@@ -563,6 +564,7 @@ class LlmGatewayImpl implements LlmGateway {
         try {
             creditLedger.settle(reservationId);
         } catch (RuntimeException settleFailure) {
+            releaseAfterSettleFailure(tenantId, callSite, reservationId);
             log.error(
                     "event=llm_call_settle_failed tenantId={} callSite={} reason={}",
                     tenantId,
@@ -571,6 +573,19 @@ class LlmGatewayImpl implements LlmGateway {
             throw settleFailure;
         }
         return semanticIntentMatches;
+    }
+
+    private void releaseAfterSettleFailure(
+            UUID tenantId, CallSite callSite, ReservationId reservationId) {
+        try {
+            creditLedger.release(reservationId);
+        } catch (RuntimeException releaseFailure) {
+            log.warn(
+                    "event=llm_call_settle_release_failed tenantId={} callSite={} reason={}",
+                    tenantId,
+                    callSite,
+                    releaseFailure.getClass().getSimpleName());
+        }
     }
 
     private Map<String, Boolean> evaluateSemanticIntentsWithoutCreditLedger(

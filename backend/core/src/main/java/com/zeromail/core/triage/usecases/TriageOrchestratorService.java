@@ -134,7 +134,7 @@ public class TriageOrchestratorService {
         // metadata
         // flags only.
         String semanticEvalContent = buildSemanticEvalContent(ruleEvaluationInput);
-        Map<String, Boolean> semanticMatches =
+        Map<String, MatcherEvaluationState> semanticMatches =
                 resolveSemanticMatches(ruleExecutionCandidates, semanticEvalContent);
         if (semanticMatches.isEmpty()) {
             reserveDeterministicMessageCredit(tenantId);
@@ -179,7 +179,7 @@ public class TriageOrchestratorService {
     private List<ActionProposal> evaluateRules(
             List<RuleExecutionCandidate> ruleExecutionCandidates,
             RuleEvaluationInput ruleEvaluationInput,
-            Map<String, Boolean> semanticMatches) {
+            Map<String, MatcherEvaluationState> semanticMatches) {
         ArrayList<ActionProposal> orderedProposals = new ArrayList<>();
         for (RuleExecutionCandidate ruleExecutionCandidate : ruleExecutionCandidates) {
             RuleEvaluationResult evaluationResult =
@@ -306,7 +306,7 @@ public class TriageOrchestratorService {
         }
     }
 
-    private Map<String, Boolean> resolveSemanticMatches(
+    private Map<String, MatcherEvaluationState> resolveSemanticMatches(
             List<RuleExecutionCandidate> ruleExecutionCandidates, String semanticEvalContent) {
         List<RuleSemanticRequests> semanticRequestsByRule =
                 ruleExecutionCandidates.stream()
@@ -331,8 +331,11 @@ public class TriageOrchestratorService {
                                         ruleSemanticRequests.semanticRequests().stream())
                         .toList();
         try {
-            return llmGateway.evaluateSemanticIntents(
-                    CallSite.TRIAGE_PLATFORM_LLM, semanticEvalContent, allSemanticRequests);
+            return semanticEvaluationStates(
+                    llmGateway.evaluateSemanticIntents(
+                            CallSite.TRIAGE_PLATFORM_LLM,
+                            semanticEvalContent,
+                            allSemanticRequests));
         } catch (TokenBudgetExceededException tokenBudgetExceededException) {
             return resolveSemanticMatchesPerRule(semanticRequestsByRule, semanticEvalContent);
         } catch (LlmEvaluationFailedException | SafetyViolationException semanticFailure) {
@@ -341,17 +344,18 @@ public class TriageOrchestratorService {
         }
     }
 
-    private Map<String, Boolean> resolveSemanticMatchesPerRule(
+    private Map<String, MatcherEvaluationState> resolveSemanticMatchesPerRule(
             List<RuleSemanticRequests> semanticRequestsByRule, String semanticEvalContent) {
-        LinkedHashMap<String, Boolean> semanticMatches = new LinkedHashMap<>();
+        LinkedHashMap<String, MatcherEvaluationState> semanticMatches = new LinkedHashMap<>();
         for (RuleSemanticRequests ruleSemanticRequests : semanticRequestsByRule) {
             meterRegistry.counter("triage.semantic_eval.fanout.per_rule").increment();
             try {
                 semanticMatches.putAll(
-                        llmGateway.evaluateSemanticIntents(
-                                CallSite.TRIAGE_PLATFORM_LLM,
-                                semanticEvalContent,
-                                ruleSemanticRequests.semanticRequests()));
+                        semanticEvaluationStates(
+                                llmGateway.evaluateSemanticIntents(
+                                        CallSite.TRIAGE_PLATFORM_LLM,
+                                        semanticEvalContent,
+                                        ruleSemanticRequests.semanticRequests())));
             } catch (TokenBudgetExceededException
                     | LlmEvaluationFailedException
                     | SafetyViolationException semanticFailure) {
@@ -364,11 +368,25 @@ public class TriageOrchestratorService {
         return Map.copyOf(semanticMatches);
     }
 
-    private Map<String, Boolean> failedSemanticMatches(
+    private Map<String, MatcherEvaluationState> semanticEvaluationStates(
+            Map<String, Boolean> semanticMatches) {
+        LinkedHashMap<String, MatcherEvaluationState> semanticEvaluationStates =
+                new LinkedHashMap<>();
+        semanticMatches.forEach(
+                (nodeId, matched) ->
+                        semanticEvaluationStates.put(
+                                nodeId,
+                                matched
+                                        ? MatcherEvaluationState.MATCHED
+                                        : MatcherEvaluationState.NOT_MATCHED));
+        return Map.copyOf(semanticEvaluationStates);
+    }
+
+    private Map<String, MatcherEvaluationState> failedSemanticMatches(
             List<SemanticIntentRequest> semanticIntentRequests, String failureClassName) {
-        LinkedHashMap<String, Boolean> semanticMatches = new LinkedHashMap<>();
+        LinkedHashMap<String, MatcherEvaluationState> semanticMatches = new LinkedHashMap<>();
         for (SemanticIntentRequest semanticIntentRequest : semanticIntentRequests) {
-            semanticMatches.put(semanticIntentRequest.nodeId(), false);
+            semanticMatches.put(semanticIntentRequest.nodeId(), MatcherEvaluationState.DEFERRED);
             log.warn(
                     "event=triage_semantic_deferred_error nodeId={} failureClass={}",
                     semanticIntentRequest.nodeId(),
@@ -412,14 +430,22 @@ public class TriageOrchestratorService {
     private RuleEvaluationResult evaluateResolvedMatcher(
             MatcherNode matcherNode,
             RuleEvaluationInput ruleEvaluationInput,
-            Map<String, Boolean> semanticMatches) {
+            Map<String, MatcherEvaluationState> semanticMatches) {
         if (matcherNode instanceof SemanticIntentMatcher semanticIntentMatcher) {
-            boolean matched = semanticMatches.getOrDefault(semanticIntentMatcher.nodeId(), false);
-            return matched
-                    ? RuleEvaluationResult.matched(
-                            semanticIntentMatcher.nodeId(), "semantic_intent_matched")
-                    : RuleEvaluationResult.notMatched(
-                            semanticIntentMatcher.nodeId(), "semantic_intent_not_matched");
+            MatcherEvaluationState semanticState =
+                    semanticMatches.getOrDefault(
+                            semanticIntentMatcher.nodeId(), MatcherEvaluationState.NOT_MATCHED);
+            return switch (semanticState) {
+                case MATCHED ->
+                        RuleEvaluationResult.matched(
+                                semanticIntentMatcher.nodeId(), "semantic_intent_matched");
+                case NOT_MATCHED ->
+                        RuleEvaluationResult.notMatched(
+                                semanticIntentMatcher.nodeId(), "semantic_intent_not_matched");
+                case DEFERRED ->
+                        RuleEvaluationResult.deferred(
+                                semanticIntentMatcher.nodeId(), "semantic_intent_deferred");
+            };
         }
         if (matcherNode instanceof MatcherNode.AllMatcher allMatcher) {
             return evaluateAll(allMatcher, ruleEvaluationInput, semanticMatches);
@@ -436,7 +462,7 @@ public class TriageOrchestratorService {
     private RuleEvaluationResult evaluateAll(
             MatcherNode.AllMatcher allMatcher,
             RuleEvaluationInput ruleEvaluationInput,
-            Map<String, Boolean> semanticMatches) {
+            Map<String, MatcherEvaluationState> semanticMatches) {
         ArrayList<RuleEvaluationResult> childResults = new ArrayList<>();
         MatcherEvaluationState status = MatcherEvaluationState.MATCHED;
         for (MatcherNode childMatcherNode : allMatcher.children()) {
@@ -456,7 +482,7 @@ public class TriageOrchestratorService {
     private RuleEvaluationResult evaluateAny(
             MatcherNode.AnyMatcher anyMatcher,
             RuleEvaluationInput ruleEvaluationInput,
-            Map<String, Boolean> semanticMatches) {
+            Map<String, MatcherEvaluationState> semanticMatches) {
         ArrayList<RuleEvaluationResult> childResults = new ArrayList<>();
         boolean anyMatched = false;
         boolean anyDeferred = false;
@@ -479,7 +505,7 @@ public class TriageOrchestratorService {
     private RuleEvaluationResult evaluateNot(
             MatcherNode.NotMatcher notMatcher,
             RuleEvaluationInput ruleEvaluationInput,
-            Map<String, Boolean> semanticMatches) {
+            Map<String, MatcherEvaluationState> semanticMatches) {
         RuleEvaluationResult childResult =
                 evaluateResolvedMatcher(notMatcher.child(), ruleEvaluationInput, semanticMatches);
         MatcherEvaluationState status =

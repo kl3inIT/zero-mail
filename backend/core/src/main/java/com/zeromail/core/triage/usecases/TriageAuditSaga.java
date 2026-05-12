@@ -6,6 +6,7 @@ import com.zeromail.core.triage.domain.TriageDecision;
 import com.zeromail.core.triage.persistence.TriageAuditRepository;
 import com.zeromail.core.triage.persistence.TriageAuditWriter;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -98,28 +99,33 @@ public class TriageAuditSaga {
         Objects.requireNonNull(command, "command must not be null");
         return switch (command.preWriteIntent()) {
             case TriageActionResult.Label label -> {
-                triageGmailWriter.applyLabel(
-                        command.tenantId(), command.gmailMessageId(), label.labelId());
+                String resolvedLabelId =
+                        triageGmailWriter.applyLabel(
+                                command.tenantId(), command.gmailMessageId(), label.labelName());
+                TriageActionResult.Label resolvedLabel =
+                        new TriageActionResult.Label(resolvedLabelId, label.labelName());
                 yield GmailWriteResult.applied(
                         command.gmailMessageId(),
-                        changeToken(Map.of("operation", "applyLabel", "labelId", label.labelId())));
+                        changeToken(Map.of("addedLabelId", resolvedLabelId)),
+                        actionArgsJson(resolvedLabel));
             }
             case TriageActionResult.Archive ignored -> {
                 triageGmailWriter.archiveSkipInbox(command.tenantId(), command.gmailMessageId());
                 yield GmailWriteResult.applied(
                         ARCHIVE_EXTERNAL_REF,
-                        changeToken(
-                                Map.of(
-                                        "operation",
-                                        "archiveSkipInbox",
-                                        "removedLabelId",
-                                        "INBOX")));
+                        changeToken(Map.of("removedLabelIds", List.of("INBOX"))),
+                        null);
             }
             case TriageActionResult.SaveDraft saveDraft -> {
                 String draftId =
                         triageGmailWriter.saveDraft(
                                 command.tenantId(), saveDraft, command.gmailThreadId());
-                yield GmailWriteResult.applied(draftId, null);
+                yield GmailWriteResult.applied(
+                        draftId,
+                        null,
+                        actionArgsJson(
+                                new TriageActionResult.SaveDraft(
+                                        saveDraft.instruction(), draftId, saveDraft.threadId())));
             }
         };
     }
@@ -135,7 +141,8 @@ public class TriageAuditSaga {
                     auditId,
                     tenantId,
                     gmailWriteResult.externalRef(),
-                    gmailWriteResult.gmailChangeToken());
+                    gmailWriteResult.gmailChangeToken(),
+                    gmailWriteResult.resolvedActionArgsJson());
             log.info("event=triage_audit_applied tenantId={} auditId={}", tenantId, auditId);
             return;
         }
@@ -170,13 +177,17 @@ public class TriageAuditSaga {
         return auditId;
     }
 
-    private static String changeToken(Map<String, String> fields) {
+    private static String changeToken(Map<String, ?> fields) {
         try {
             return OBJECT_MAPPER.writeValueAsString(fields);
         } catch (JacksonException jacksonException) {
             throw new IllegalStateException(
                     "Unable to serialize Gmail change token", jacksonException);
         }
+    }
+
+    private static String actionArgsJson(TriageActionResult actionResult) {
+        return new TriageActionResultJsonValidator().toJson(actionResult);
     }
 
     private static String requireText(String text, String fieldName) {
@@ -224,15 +235,21 @@ public class TriageAuditSaga {
     }
 
     public record GmailWriteResult(
-            boolean applied, String externalRef, String gmailChangeToken, String failureReason) {
+            boolean applied,
+            String externalRef,
+            String gmailChangeToken,
+            String resolvedActionArgsJson,
+            String failureReason) {
 
-        static GmailWriteResult applied(String externalRef, String gmailChangeToken) {
-            return new GmailWriteResult(true, externalRef, gmailChangeToken, null);
+        static GmailWriteResult applied(
+                String externalRef, String gmailChangeToken, String resolvedActionArgsJson) {
+            return new GmailWriteResult(
+                    true, externalRef, gmailChangeToken, resolvedActionArgsJson, null);
         }
 
         public static GmailWriteResult failed(String failureReason) {
             return new GmailWriteResult(
-                    false, null, null, requireText(failureReason, "failureReason"));
+                    false, null, null, null, requireText(failureReason, "failureReason"));
         }
     }
 }

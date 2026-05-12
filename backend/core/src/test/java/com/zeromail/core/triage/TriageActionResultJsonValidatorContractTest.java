@@ -120,6 +120,7 @@ class TriageActionResultJsonValidatorContractTest {
                         "REJECTED_BY_SAFETY_NET",
                         "REJECTED_BY_SAFETY_POLICY",
                         "FAILED",
+                        "REVERT_PENDING",
                         "REVERTED");
         assertThatThrownBy(() -> TriageDecision.fromId("NOPE"))
                 .isInstanceOf(NoSuchElementException.class);

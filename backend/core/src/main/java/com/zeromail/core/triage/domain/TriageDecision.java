@@ -11,6 +11,7 @@ public enum TriageDecision implements IdentifiedEnum {
     REJECTED_BY_SAFETY_NET,
     REJECTED_BY_SAFETY_POLICY,
     FAILED,
+    REVERT_PENDING,
     REVERTED;
 
     @Override

@@ -53,7 +53,7 @@ class ZeroMailLlmPropertiesTest {
                                     .isEqualTo("anthropic/claude-3.5-sonnet");
                             assertThat(llmProperties.modelByCallSite())
                                     .containsEntry(CallSite.PREVIEW, "openai/gpt-4o-mini")
-                                    .containsEntry(CallSite.DRAFT, "openai/gpt-4o-mini")
+                                    .containsEntry(CallSite.DRAFT, "anthropic/claude-3.5-sonnet")
                                     .containsEntry(CallSite.TRIAGE, "anthropic/claude-3.5-sonnet")
                                     .containsEntry(
                                             CallSite.TRIAGE_PLATFORM_LLM,
