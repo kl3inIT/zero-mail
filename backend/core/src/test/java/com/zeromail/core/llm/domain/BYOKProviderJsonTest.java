@@ -3,7 +3,6 @@ package com.zeromail.core.llm.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
-
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -27,9 +26,10 @@ class BYOKProviderJsonTest {
 
     @Test
     void round_trips_in_request_dto() throws Exception {
-        BYOKProviderRequest request = objectMapper.readValue(
-                "{\"provider\":\"openai\",\"endpoint\":\"https://x\",\"apiKey\":\"k\"}",
-                BYOKProviderRequest.class);
+        BYOKProviderRequest request =
+                objectMapper.readValue(
+                        "{\"provider\":\"openai\",\"endpoint\":\"https://x\",\"apiKey\":\"k\"}",
+                        BYOKProviderRequest.class);
 
         assertThat(request.provider()).isEqualTo(BYOKProvider.OPENAI);
     }
@@ -43,9 +43,10 @@ class BYOKProviderJsonTest {
 
     @Test
     void preset_round_trips_from_lowercase_id() throws Exception {
-        BYOKPresetRequest request = objectMapper.readValue(
-                "{\"preset\":\"anthropic-compatible\",\"endpoint\":\"https://x\",\"apiKey\":\"k\"}",
-                BYOKPresetRequest.class);
+        BYOKPresetRequest request =
+                objectMapper.readValue(
+                        "{\"preset\":\"anthropic-compatible\",\"endpoint\":\"https://x\",\"apiKey\":\"k\"}",
+                        BYOKPresetRequest.class);
 
         assertThat(request.preset()).isEqualTo(ByokProviderPreset.ANTHROPIC_COMPATIBLE);
     }

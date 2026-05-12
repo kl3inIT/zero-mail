@@ -1,0 +1,53 @@
+databaseChangeLog:
+  - changeSet:
+      id: 027-tenant-sender-opt-in
+      author: zeromail
+      comment: Sender emails are stored only after SenderEmailCanonicalizer lower-cases and canonicalizes them.
+      changes:
+        - createTable:
+            tableName: tenant_sender_opt_in
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_tenant_sender_opt_in_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: sender_email
+                  type: varchar(320)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: tenant_sender_opt_in
+            columnNames: tenant_id, sender_email
+            constraintName: uq_tenant_sender_opt_in_tenant_sender
+      rollback:
+        - dropTable:
+            tableName: tenant_sender_opt_in

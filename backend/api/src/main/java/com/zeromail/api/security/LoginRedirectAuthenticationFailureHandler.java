@@ -1,7 +1,11 @@
 package com.zeromail.api.security;
 
+import com.zeromail.api.config.ZeroMailApiProperties;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.AuthenticationException;
@@ -10,13 +14,6 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
-
-import com.zeromail.api.config.ZeroMailApiProperties;
-
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import org.jspecify.annotations.NonNull;
 
 /**
  * Single OAuth2 failure handler wired into {@code
@@ -43,73 +40,79 @@ import org.jspecify.annotations.NonNull;
  */
 @Component
 public class LoginRedirectAuthenticationFailureHandler
-    extends SimpleUrlAuthenticationFailureHandler {
+        extends SimpleUrlAuthenticationFailureHandler {
 
-  private static final Logger log =
-      LoggerFactory.getLogger(LoginRedirectAuthenticationFailureHandler.class);
+    private static final Logger log =
+            LoggerFactory.getLogger(LoginRedirectAuthenticationFailureHandler.class);
 
-  private final OAuth2AuthorizedClientService authorizedClientService;
-  private final ZeroMailApiProperties properties;
+    private final OAuth2AuthorizedClientService authorizedClientService;
+    private final ZeroMailApiProperties properties;
 
-  public LoginRedirectAuthenticationFailureHandler(
-      OAuth2AuthorizedClientService authorizedClientService, ZeroMailApiProperties properties) {
-    this.authorizedClientService = authorizedClientService;
-    this.properties = properties;
-  }
-
-  @Override
-  public void onAuthenticationFailure(
-      @NonNull HttpServletRequest request,
-      @NonNull HttpServletResponse response,
-      @NonNull AuthenticationException authenticationException)
-      throws IOException, ServletException {
-    if (authenticationException instanceof OAuth2AuthenticationException oauthException) {
-      switch (oauthException.getError().getErrorCode()) {
-        case "access_denied", "consent_denied" -> {
-          log.info("event=login_consent_denied");
-          getRedirectStrategy().sendRedirect(request, response, buildLoginUrl("consent_denied"));
-          return;
-        }
-        case "gmail_scope_required" -> {
-          // Best-effort cleanup of any partial AuthorizedClient Spring may have stored
-          // before the exception was raised.
-          try {
-            authorizedClientService.removeAuthorizedClient("google", currentPrincipalName(request));
-          } catch (Exception _) {
-            // Best-effort — never log the principal name (privacy contract).
-          }
-          log.info("event=login_gmail_scope_missing");
-          getRedirectStrategy().sendRedirect(request, response, buildLoginUrl("gmail_scope_required"));
-          return;
-        }
-        default -> {
-          /* fall through to super */
-        }
-      }
+    public LoginRedirectAuthenticationFailureHandler(
+            OAuth2AuthorizedClientService authorizedClientService,
+            ZeroMailApiProperties properties) {
+        this.authorizedClientService = authorizedClientService;
+        this.properties = properties;
     }
-    super.onAuthenticationFailure(request, response, authenticationException);
-  }
 
-  /**
-   * Build a /login redirect URL with an {@code ?error=} query param using {@link
-   * UriComponentsBuilder} so URI semantics are preserved regardless of input shape. String concat
-   * (the previous implementation) malformed the URL when {@code baseUrl} contained an existing
-   * query string (WR-05 fix).
-   */
-  private String buildLoginUrl(String errorCode) {
-    return UriComponentsBuilder.fromUri(properties.web().baseUrl())
-        .path("/login")
-        .queryParam("error", errorCode)
-        .build()
-        .toUriString();
-  }
+    @Override
+    public void onAuthenticationFailure(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull AuthenticationException authenticationException)
+            throws IOException, ServletException {
+        if (authenticationException instanceof OAuth2AuthenticationException oauthException) {
+            switch (oauthException.getError().getErrorCode()) {
+                case "access_denied", "consent_denied" -> {
+                    log.info("event=login_consent_denied");
+                    getRedirectStrategy()
+                            .sendRedirect(request, response, buildLoginUrl("consent_denied"));
+                    return;
+                }
+                case "gmail_scope_required" -> {
+                    // Best-effort cleanup of any partial AuthorizedClient Spring may have stored
+                    // before the exception was raised.
+                    try {
+                        authorizedClientService.removeAuthorizedClient(
+                                "google", currentPrincipalName(request));
+                    } catch (Exception _) {
+                        // Best-effort — never log the principal name (privacy contract).
+                    }
+                    log.info("event=login_gmail_scope_missing");
+                    getRedirectStrategy()
+                            .sendRedirect(request, response, buildLoginUrl("gmail_scope_required"));
+                    return;
+                }
+                default -> {
+                    /* fall through to super */
+                }
+            }
+        }
+        super.onAuthenticationFailure(request, response, authenticationException);
+    }
 
-  /**
-   * Best-effort principal-name resolution for the {@code removeAuthorizedClient} call. Falls back
-   * to a sentinel so {@code removeAuthorizedClient} no-ops cleanly when the principal name does not
-   * match any stored client.
-   */
-  private static String currentPrincipalName(HttpServletRequest request) {
-    return request.getUserPrincipal() != null ? request.getUserPrincipal().getName() : "anonymous";
-  }
+    /**
+     * Build a /login redirect URL with an {@code ?error=} query param using {@link
+     * UriComponentsBuilder} so URI semantics are preserved regardless of input shape. String concat
+     * (the previous implementation) malformed the URL when {@code baseUrl} contained an existing
+     * query string (WR-05 fix).
+     */
+    private String buildLoginUrl(String errorCode) {
+        return UriComponentsBuilder.fromUri(properties.web().baseUrl())
+                .path("/login")
+                .queryParam("error", errorCode)
+                .build()
+                .toUriString();
+    }
+
+    /**
+     * Best-effort principal-name resolution for the {@code removeAuthorizedClient} call. Falls back
+     * to a sentinel so {@code removeAuthorizedClient} no-ops cleanly when the principal name does
+     * not match any stored client.
+     */
+    private static String currentPrincipalName(HttpServletRequest request) {
+        return request.getUserPrincipal() != null
+                ? request.getUserPrincipal().getName()
+                : "anonymous";
+    }
 }

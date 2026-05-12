@@ -1,12 +1,10 @@
 package com.zeromail.core.onboarding.persistence;
 
-import java.util.UUID;
-
 import com.zeromail.core.shared.persistence.AbstractTenantOwnedEntity;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import java.util.UUID;
 
 @Entity
 @Table(name = "onboarding_selections")
@@ -25,7 +23,15 @@ public class OnboardingSelectionEntity extends AbstractTenantOwnedEntity {
         this.templateKey = templateKey;
     }
 
-    public String getTemplateKey() { return templateKey; }
-    public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
+    public String getTemplateKey() {
+        return templateKey;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
 }

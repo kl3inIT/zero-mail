@@ -1,8 +1,15 @@
 package com.zeromail.api.controllers.account;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.zeromail.api.security.TestSessionSupport;
+import com.zeromail.api.support.ApiPostgresTestBase;
+import com.zeromail.core.account.persistence.UserEntity;
+import com.zeromail.core.account.persistence.UserRepository;
+import com.zeromail.core.tenant.TenantContext;
+import com.zeromail.core.tenant.persistence.TenantEntity;
+import com.zeromail.core.tenant.persistence.TenantRepository;
 import java.util.UUID;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,14 +20,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.RestClient;
-
-import com.zeromail.api.security.TestSessionSupport;
-import com.zeromail.api.support.ApiPostgresTestBase;
-import com.zeromail.core.account.persistence.UserEntity;
-import com.zeromail.core.account.persistence.UserRepository;
-import com.zeromail.core.tenant.TenantContext;
-import com.zeromail.core.tenant.persistence.TenantEntity;
-import com.zeromail.core.tenant.persistence.TenantRepository;
 
 @ActiveProfiles("test")
 @Import(TestSessionSupport.class)
@@ -67,12 +66,13 @@ class MeControllerTest extends ApiPostgresTestBase {
     @Test
     @DisplayName("GET /me without test auth returns 401")
     void me_missingTestAuth_returns401() {
-        ResponseEntity<String> res = RestClient.create("http://localhost:" + port)
-                .get()
-                .uri("/me")
-                .retrieve()
-                .onStatus(HttpStatusCode::is4xxClientError, (_, _) -> { })
-                .toEntity(String.class);
+        ResponseEntity<String> res =
+                RestClient.create("http://localhost:" + port)
+                        .get()
+                        .uri("/me")
+                        .retrieve()
+                        .onStatus(HttpStatusCode::is4xxClientError, (_, _) -> {})
+                        .toEntity(String.class);
 
         assertThat(res.getStatusCode().value()).isEqualTo(401);
     }
@@ -95,13 +95,17 @@ class MeControllerTest extends ApiPostgresTestBase {
         UUID userId = UUID.randomUUID();
         String subject = "sub-" + label;
         String email = label + "@example.com";
-        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() ->
-                users.save(new UserEntity(userId, tenantId, subject, email)));
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(() -> users.save(new UserEntity(userId, tenantId, subject, email)));
         if (unhealthyGmail) {
-            jdbc.update("""
+            jdbc.update(
+                    """
                     INSERT INTO gmail_connections(id, tenant_id, google_email, status, connected_at, ingestion_health)
                     VALUES (?, ?, ?, 'CONNECTED', NOW(), 'WATCH_UNHEALTHY')
-                    """, UUID.randomUUID(), tenantId, email);
+                    """,
+                    UUID.randomUUID(),
+                    tenantId,
+                    email);
         }
         return new Seed(tenantId, subject, email);
     }

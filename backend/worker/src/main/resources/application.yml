@@ -8,6 +8,10 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/zeromail}
     username: ${DB_USER:zeromail}
     password: ${DB_PASSWORD:zeromail}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   security:
     oauth2:
       client:
@@ -46,6 +50,8 @@ spring:
       observations:
         log-prompt: false
         log-completion: false
+    retry:
+      max-attempts: 2
 zero-mail:
   worker:
     gmail:
@@ -67,7 +73,7 @@ zero-mail:
       api-key: ${ZEROMAIL_LLM_PLATFORM_API_KEY:?ZEROMAIL_LLM_PLATFORM_API_KEY must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
       compile-model: openai/gpt-4o-mini
       drift-model: openai/gpt-4o-mini
-      triage-model: openai/gpt-4o-mini
+      triage-model: openai/gpt-5.4-nano
       connect-timeout: 5s
       read-timeout: 30s
     drift:
@@ -77,6 +83,11 @@ zero-mail:
 server:
   port: 8081
 management:
+  observations:
+    enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
   endpoints:
     web:
       exposure:

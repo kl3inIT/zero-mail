@@ -2,17 +2,17 @@
 
 **Domain:** Multi-tenant AI Gmail-triage SaaS (Java 25 / Spring Boot 4 / Spring AI / Next.js)
 **Researched:** 2026-04-24
-**Overall confidence:** MEDIUM-HIGH overall. HIGH for Spring Boot 4.0.6, Liquibase YAML, and the GCP-managed runtime choices; MEDIUM on exact Spring AI 2.0.0-M5 APIs because the user explicitly chose a milestone build.
+**Overall confidence:** MEDIUM-HIGH overall. HIGH for Spring Boot 4.0.6, Liquibase YAML, and the GCP-managed runtime choices; MEDIUM on exact Spring AI 2.0.0-M6 APIs because the user explicitly chose a milestone build.
 
 ---
 
 ## TL;DR — The Prescriptive Stack
 
 - **JDK 25 LTS** (GA 2025-09-16) managed via Gradle toolchains.
-- **Gradle 9.4.1** with **Kotlin DSL**, `libs.versions.toml` version catalog, multi-project (not composite) build.
+- **Gradle 9.5.0** with **Kotlin DSL**, `libs.versions.toml` version catalog, multi-project (not composite) build.
 - **Spring Boot 4.0.6** (current GA; 4.1.0-RC1 exists — stay on 4.0.x for production).
 - **Spring Framework 7.0.7**, **Spring Security 7.0.5**, **Jakarta Servlet 6.1**, **Jakarta Persistence 3.2**, **Jackson 3.1.2** (managed by Spring Boot 4.0.6).
-- **Spring AI 2.0.0-M5** via OpenAI, Anthropic, Google GenAI, and DeepSeek starters. Platform OpenRouter routing uses the OpenAI adapter (`base-url: https://openrouter.ai/api/v1`); official BYOK providers use native Spring AI adapters where available. Keep all direct Spring AI usage inside the LLM adapter because M5 -> GA churn is still likely.
+- **Spring AI 2.0.0-M6** via OpenAI, Anthropic, Google GenAI, and DeepSeek starters. Platform OpenRouter routing uses the OpenAI adapter (`base-url: https://openrouter.ai/api/v1`); official BYOK providers use native Spring AI adapters where available. Keep all direct Spring AI usage inside the LLM adapter because M6 -> GA churn is still likely.
 - **spring-cloud-gcp 8.0.2** — keep it for **Secret Manager** integration. Do **not** add `spring-cloud-gcp-starter-pubsub` by default: Gmail push still arrives as **plain HTTP POSTs to a Spring MVC controller**, so the Pub/Sub starter adds little unless the app later needs Pub/Sub publish/admin flows from Java.
 - **PostgreSQL 17.6 on Cloud SQL** + **Liquibase 5.0.2 (YAML changelogs)** + **Spring Data JPA (Hibernate 7)** for aggregates, **Spring Data JDBC** for read-side and hot paths, **JSONB + jsonb_path_ops** for rule matchers, **pgcrypto / AES-GCM at app layer** for OAuth refresh-token encryption. Community PostgreSQL 18 exists, but Cloud SQL 18 is still Preview as of 2026-04-24.
 - **Redis 7.2 on Memorystore** (Spring Data Redis + Lettuce) for rate limiting, idempotency keys, session store, and per-tenant ChatModel cache — NOT as a task queue. OSS Redis 8.x exists, but GCP's managed service currently tops out at 7.2.
@@ -37,7 +37,7 @@
 | Spring Security | **7.0.5** (Boot-managed) | AuthN/Z, OAuth2 client | Google Workspace OAuth2, CSRF, session. **HIGH**. |
 | Spring Data JPA | 4.0.x (Boot-managed, Hibernate 7.x) | ORM for aggregates | Write-side (rules, users, tenants, audit). **HIGH**. |
 | Spring Data JDBC | 4.0.x | Read-side & hot paths | For triage-log lookups, analytics. Avoids N+1 / lazy-init traps in hot path. **MEDIUM** — optional; JPA alone is fine for v1. |
-| Spring AI | **2.0.0-M5** | LLM orchestration | User-locked milestone. `spring-ai-starter-model-openai` still gives the OpenRouter/OpenAI path; native Anthropic, Google GenAI, and DeepSeek starters back official BYOK presets. Keep Spring AI surface area isolated to one adapter module because M5 -> GA changes are still possible. **MEDIUM-HIGH**. |
+| Spring AI | **2.0.0-M6** | LLM orchestration | User-locked milestone. `spring-ai-starter-model-openai` still gives the OpenRouter/OpenAI path; native Anthropic, Google GenAI, and DeepSeek starters back official BYOK presets. Keep Spring AI surface area isolated to one adapter module because M6 -> GA changes are still possible. **MEDIUM-HIGH**. |
 | spring-cloud-gcp | **8.0.2** | GCP integration (Secret Manager first, Pub/Sub optional) | **First line that supports Spring Boot 4**. Use `spring-cloud-gcp-starter-secretmanager` by default. Gmail push receiving itself stays a plain HTTP controller, so the Pub/Sub starter is optional rather than foundational. **HIGH**. |
 | PostgreSQL | **17.6 on Cloud SQL** | Primary datastore | Cloud SQL PostgreSQL 18 is still Preview as of 2026-04-24. For a managed production v1 on GCP, 17.6 is the latest GA-safe line. **HIGH**. |
 | Redis | **7.2 on Memorystore** | Cache, sessions, rate limit, idempotency | Not a queue. Memorystore currently supports Redis through 7.2, so this is the latest managed option on GCP even though OSS Redis 8.x exists. **HIGH**. |
@@ -65,7 +65,7 @@
 
 | Artifact | Purpose | Notes |
 |---|---|---|
-| `org.springframework.ai:spring-ai-starter-model-openai` | **OpenRouter path** + direct OpenAI BYOK | Point `spring.ai.openai.base-url=https://openrouter.ai/api/v1` for the platform path; BYOK OpenAI/OpenRouter/custom OpenAI-compatible endpoints pass tenant key/base URL/model through the adapter. **HIGH** for the provider wiring; **MEDIUM** on exact M5 runtime builder APIs. |
+| `org.springframework.ai:spring-ai-starter-model-openai` | **OpenRouter path** + direct OpenAI BYOK | Point `spring.ai.openai.base-url=https://openrouter.ai/api/v1` for the platform path; BYOK OpenAI/OpenRouter/custom OpenAI-compatible endpoints pass tenant key/base URL/model through the adapter. **HIGH** for the provider wiring; **MEDIUM** on exact M6 runtime builder APIs. |
 | `org.springframework.ai:spring-ai-starter-model-anthropic` | Direct Anthropic BYOK | Native Anthropic BYOK uses `AnthropicChatOptions` with tenant key/base URL/model instead of converting Claude traffic through OpenAI-compatible requests. **MEDIUM-HIGH**. |
 | `org.springframework.ai:spring-ai-starter-model-google-genai` | Direct Google GenAI BYOK | Native Google GenAI BYOK uses the Google GenAI `Client` + `GoogleGenAiChatModel`; model IDs remain user-entered and validated against the models endpoint. **MEDIUM**. |
 | `org.springframework.ai:spring-ai-starter-model-deepseek` | Direct DeepSeek BYOK | Native DeepSeek BYOK uses `DeepSeekApi` + `DeepSeekChatModel`; endpoint defaults to `https://api.deepseek.com`. **MEDIUM**. |
@@ -74,17 +74,17 @@
 
 1. **Default tenant path (platform-paid):** Autoconfigured OpenAI-compatible client with `spring.ai.openai.base-url=https://openrouter.ai/api/v1` and the platform OpenRouter key.
 2. **BYOK per-request path:** Keep Spring AI behind `LlmGateway` and pass tenant-specific model / auth overrides at request time rather than rebuilding full client graphs on every call.
-3. **Milestone caution:** Because the project is pinned to **Spring AI 2.0.0-M5**, keep the M5 adapter seams isolated and re-verify them before any M5→GA upgrade. Phase 2C compile-tests currently verify `OpenAiChatModel.builder().options(...)`, `OpenAiChatOptions.builder().apiKey().baseUrl().model()`, `ChatClient.prompt().options(AnthropicChatOptions.builder()...)`, `GoogleGenAiChatModel.builder()`, and `DeepSeekChatModel.builder()`.
+3. **Milestone caution:** Because the project is pinned to **Spring AI 2.0.0-M6**, keep the M6 adapter seams isolated and re-verify them before any M6→GA upgrade. Phase 2C compile-tests currently verify `OpenAiChatModel.builder().options(...)`, `OpenAiChatOptions.builder().apiKey().baseUrl().model()`, `ChatClient.prompt().options(AnthropicChatOptions.builder()...)`, `GoogleGenAiChatModel.builder()`, and `DeepSeekChatModel.builder()`.
 
-**Observability for LLM calls** (Spring AI 2.0.0-M5):
-- Keep prompt/completion capture disabled. Spans should record provider, model, token counts, latency, and stop reason, but **never** raw content. **HIGH** as a policy; **MEDIUM** on exact property names until implementation locks the M5 APIs.
+**Observability for LLM calls** (Spring AI 2.0.0-M6):
+- Keep prompt/completion capture disabled. Spans should record provider, model, token counts, latency, and stop reason, but **never** raw content. **HIGH** as a policy; **MEDIUM** on exact property names until implementation locks the M6 APIs.
 
 ### Gmail / Google Integration
 
 | Library | Version | Purpose | Notes |
 |---|---|---|---|
 | `com.google.apis:google-api-services-gmail` | **v1-rev20250331-2.0.0** | Gmail REST client | Generated client. Used for `users.watch`, `messages.get`, `labels`, `drafts`. **HIGH**. |
-| `com.google.auth:google-auth-library-oauth2-http` | **1.35.0** | OAuth2 credentials + ID-token verification | Used to **verify OIDC tokens** on Pub/Sub push requests (critical — without this, anyone can POST to your push endpoint). **HIGH**. |
+| `com.google.auth:google-auth-library-oauth2-http` | **1.47.0** | OAuth2 credentials + ID-token verification | Used to **verify OIDC tokens** on Pub/Sub push requests (critical — without this, anyone can POST to your push endpoint). **HIGH**. |
 | `com.google.cloud:google-cloud-pubsub` | Optional | Native Pub/Sub client | Not required for the core Gmail push receiver. Add only if the app later needs Pub/Sub publish/admin flows from Java. For push **receiving**, you just have a `@PostMapping` controller — Google POSTs JSON to it. **HIGH**. |
 | `com.google.api-client:google-api-client` | Transitive | Shared infra | — |
 
@@ -212,7 +212,7 @@ kotlin {
 |---|---|---|
 | Metrics | **Micrometer** → Prometheus endpoint via actuator → **OTLP** (via Micrometer's OTLP registry) | **HIGH** |
 | Traces | **OpenTelemetry Java agent** (auto-instrumentation JAR attached at container start) | One env var enables it; auto-instruments Spring MVC, JDBC, Redis, Pub/Sub, HTTP clients used by Spring AI. **HIGH** |
-| LLM-specific | Spring AI chat observations wired through Boot + Micrometer | Emits `gen_ai.*`-style spans/metrics. Do **not** include prompt/completion content. **MEDIUM-HIGH** — exact M5 wiring should be re-checked at implementation time |
+| LLM-specific | Spring AI chat observations wired through Boot + Micrometer | Emits `gen_ai.*`-style spans/metrics. Do **not** include prompt/completion content. **MEDIUM-HIGH** — exact M6 wiring should be re-checked at implementation time |
 | Logs | Logback JSON encoder (`logstash-logback-encoder` 8.x) → stdout → Cloud Run Logs → OTLP forwarder to Grafana Loki | **HIGH** |
 | Backend | **Grafana Cloud** (Tempo + Loki + Mimir) free tier or **Honeycomb** (trace-first, pricier). Grafana Cloud is the 2026 default for this scale. | **MEDIUM** — not technical, just cost/UX |
 | Error tracking | **Sentry Java SDK 7.x** alongside OTel (captures exceptions with better grouping than raw traces) | Optional. **MEDIUM** |
@@ -270,7 +270,7 @@ kotlin {
 | Package | Compatible With | Notes |
 |---|---|---|
 | Spring Boot 4.0.6 | Java 17–26, Gradle 8.14+ or 9.x, Spring Framework 7.0.7+, Jakarta Servlet 6.1 | **HIGH** — verified. |
-| Spring AI 2.0.0-M5 | Spring Boot 4.0.x / 4.1.x | OpenAI-compatible `base-url` override still enables the OpenRouter path. **MEDIUM-HIGH** — milestone caveat remains. |
+| Spring AI 2.0.0-M6 | Spring Boot 4.0.x / 4.1.x | OpenAI-compatible `base-url` override still enables the OpenRouter path. **MEDIUM-HIGH** — milestone caveat remains. |
 | spring-cloud-gcp 8.0.2 | Spring Boot 4.0.x, Java 17+ | **First line** supporting Boot 4. Use Secret Manager starter by default; Pub/Sub starter is optional for this architecture. **HIGH**. |
 | Hibernate 7.2.x | JDK 17+, Jakarta Persistence 3.2 | Ambient via Boot 4.0.6. **HIGH**. |
 | Liquibase 5.0.2 | Spring Boot 4.0.6 BOM-managed | **HIGH**. |
@@ -284,10 +284,10 @@ kotlin {
 ```toml
 [versions]
 springBoot = "4.0.6"
-springAi = "2.0.0-M5"
+springAi = "2.0.0-M6"
 springCloudGcp = "8.0.2"
 googleApiGmail = "v1-rev20250331-2.0.0"
-googleAuth = "1.35.0"
+googleAuth = "1.47.0"
 liquibase = "5.0.2"
 otelAgent = "2.16.0"
 
@@ -332,13 +332,13 @@ liquibase-core = { module = "org.liquibase:liquibase-core", version.ref = "liqui
 
 - https://spring.io/blog/2026/04/23/spring-boot-4-0-6-available-now — Spring Boot 4.0.6 current GA as of 2026-04-24. **HIGH**.
 - https://docs.spring.io/spring-boot/system-requirements.html — Java 17–26, Gradle 8.14+ / 9.x, Spring Framework 7.0.7+, Servlet 6.1. **HIGH**.
-- https://github.com/spring-projects/spring-ai/releases/tag/v2.0.0-M5 — Spring AI 2.0.0-M5 release (2026-04-27). **HIGH**.
+- https://github.com/spring-projects/spring-ai/releases/tag/v2.0.0-M6 — Spring AI 2.0.0-M6 release (2026-05-08). **HIGH**.
 - https://docs.spring.io/spring-ai/reference/getting-started.html — Spring AI 2.0.x supports Spring Boot 4.0.x / 4.1.x. **HIGH**.
 - https://docs.liquibase.com/concepts/changelogs/yaml-format.html — Liquibase YAML changelog support. **HIGH**.
 - https://github.com/GoogleCloudPlatform/spring-cloud-gcp/releases/tag/v8.0.2 — spring-cloud-gcp 8.0.2 (2026-04-10), Boot 4 line. **HIGH**.
 - https://cloud.google.com/sql/docs/postgres/db-versions — Cloud SQL PostgreSQL 17.6 is current GA; PostgreSQL 18 is Preview as of 2026-04-24. **HIGH**.
 - https://cloud.google.com/memorystore/docs/redis/supported-versions — Memorystore supports Redis up to 7.2 as of 2026-04-24. **HIGH**.
-- https://services.gradle.org/versions/current — Gradle 9.4.1 current stable. **HIGH**.
+- https://services.gradle.org/versions/current — Gradle 9.5.0 current stable. **HIGH**.
 - npm registry on 2026-04-24 for `next`, `react`, `react-dom`, `@tanstack/react-query`, `tailwindcss`, `openapi-typescript`, `openapi-fetch`, `turbo`, `pnpm`, `zod`. **HIGH**.
 - Training-data + framework familiarity for: Grafana Cloud defaults, Sentry integration, HikariCP defaults, Hibernate `@TenantId`. **MEDIUM** — common-knowledge patterns, not version-sensitive.
 
@@ -346,8 +346,8 @@ liquibase-core = { module = "org.liquibase:liquibase-core", version.ref = "liqui
 
 | Area | Confidence | Reason |
 |---|---|---|
-| Spring Boot 4.0.6 + Java 25 + Gradle 9.4.1 toolchain | **HIGH** | Verified via official Spring docs + Gradle current-version endpoint. |
-| Spring AI 2.0.0-M5 + OpenRouter (base-url swap) + BYOK abstraction | **MEDIUM-HIGH** | The provider path and M5 builder/options seams are compile-tested; M5→GA churn remains the main risk. |
+| Spring Boot 4.0.6 + Java 25 + Gradle 9.5.0 toolchain | **HIGH** | Verified via official Spring docs + Gradle current-version endpoint. |
+| Spring AI 2.0.0-M6 + OpenRouter (base-url swap) + BYOK abstraction | **MEDIUM-HIGH** | The provider path and M6 builder/options seams are compile-tested; M6→GA churn remains the main risk. |
 | spring-cloud-gcp 8.0.2 for Secret Manager on Boot 4 | **HIGH** | Verified via GitHub releases (Apr 2026). |
 | Postgres-backed queue with SKIP LOCKED | **HIGH** | Standard pattern; QPS envelope verified against v1 user base assumption. |
 | Cloud Run as deployment target | **MEDIUM-HIGH** | Technically excellent fit; the main tradeoff is GCP managed-service lag versus community-latest Postgres/Redis versions. |

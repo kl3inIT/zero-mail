@@ -2,34 +2,31 @@ package com.zeromail.core.llm.observability;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.zeromail.core.billing.domain.CallSite;
+import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
+import com.zeromail.core.llm.domain.ActionValidator;
+import com.zeromail.core.llm.domain.AllowListedTools;
+import com.zeromail.core.llm.domain.BYOKProvider;
+import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
+import com.zeromail.core.llm.gateway.sanitization.Sanitizer;
+import com.zeromail.core.llm.usecases.LlmChatRequest;
+import com.zeromail.core.llm.usecases.LlmChatResult;
+import com.zeromail.core.llm.usecases.LlmGateway;
+import com.zeromail.core.llm.usecases.LlmModelClient;
+import com.zeromail.core.llm.usecases.LlmUsage;
+import com.zeromail.core.llm.usecases.RawToolCall;
+import com.zeromail.core.llm.usecases.SanitizationContext;
+import com.zeromail.core.tenant.TenantContext;
+import io.micrometer.common.KeyValue;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationHandler;
+import io.micrometer.observation.ObservationRegistry;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
 import org.junit.jupiter.api.Test;
-
-import com.zeromail.core.billing.domain.CallSite;
-import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
-import com.zeromail.core.llm.gateway.sanitization.Sanitizer;
-import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
-import com.zeromail.core.llm.domain.BYOKProvider;
-import com.zeromail.core.llm.application.LlmChatRequest;
-import com.zeromail.core.llm.application.LlmChatResult;
-import com.zeromail.core.llm.application.LlmUsage;
-import com.zeromail.core.llm.application.RawToolCall;
-import com.zeromail.core.llm.application.SanitizationContext;
-import com.zeromail.core.llm.service.ActionValidator;
-import com.zeromail.core.llm.service.AllowListedTools;
-import com.zeromail.core.llm.service.LlmGateway;
-import com.zeromail.core.llm.service.LlmModelClient;
-import com.zeromail.core.tenant.TenantContext;
-
-import io.micrometer.common.KeyValue;
-import io.micrometer.observation.Observation;
-import io.micrometer.observation.ObservationRegistry;
-import io.micrometer.observation.ObservationHandler;
 
 class LlmGatewayObservabilityTest {
 
@@ -39,20 +36,24 @@ class LlmGatewayObservabilityTest {
         InMemorySpanExporter inMemorySpanExporter = new InMemorySpanExporter();
         ObservationRegistry observationRegistry = ObservationRegistry.create();
         observationRegistry.observationConfig().observationHandler(inMemorySpanExporter);
-        LlmGateway gateway = gateway(
-                new EchoingModelClient(sentinel),
-                new SanitizationPipeline(List.of(new PassThroughSanitizer())),
-                llmProperties(),
-                new AllowListedTools(),
-                observationRegistry);
+        LlmGateway gateway =
+                gateway(
+                        new EchoingModelClient(sentinel),
+                        new SanitizationPipeline(List.of(new PassThroughSanitizer())),
+                        llmProperties(),
+                        new AllowListedTools(),
+                        observationRegistry);
 
-        ScopedValue.where(TenantContext.TENANT, UUID.randomUUID().toString()).run(() -> {
-            try {
-                gateway.chat(CallSite.PREVIEW, "<p>" + sentinel + "</p>");
-            } catch (RuntimeException ignoredRuntimeException) {
-                // Span metadata is the assertion target; the model result may be invalid here.
-            }
-        });
+        ScopedValue.where(TenantContext.TENANT, UUID.randomUUID().toString())
+                .run(
+                        () -> {
+                            try {
+                                gateway.chat(CallSite.PREVIEW, "<p>" + sentinel + "</p>");
+                            } catch (RuntimeException ignoredRuntimeException) {
+                                // Span metadata is the assertion target; the model result may be
+                                // invalid here.
+                            }
+                        });
 
         List<SpanData> spans = inMemorySpanExporter.getFinishedSpanItems();
         assertThat(spans).isNotEmpty();
@@ -77,22 +78,25 @@ class LlmGatewayObservabilityTest {
             AllowListedTools allowListedTools,
             ObservationRegistry observationRegistry)
             throws Exception {
-        Class<?> implementationClass = Class.forName("com.zeromail.core.llm.service.LlmGatewayImpl");
-        java.lang.reflect.Constructor<?> constructor = implementationClass.getDeclaredConstructor(
-                LlmModelClient.class,
-                SanitizationPipeline.class,
-                ZeroMailLlmProperties.class,
-                AllowListedTools.class,
-                ActionValidator.class,
-                ObservationRegistry.class);
+        Class<?> implementationClass =
+                Class.forName("com.zeromail.core.llm.usecases.LlmGatewayImpl");
+        java.lang.reflect.Constructor<?> constructor =
+                implementationClass.getDeclaredConstructor(
+                        LlmModelClient.class,
+                        SanitizationPipeline.class,
+                        ZeroMailLlmProperties.class,
+                        AllowListedTools.class,
+                        ActionValidator.class,
+                        ObservationRegistry.class);
         constructor.setAccessible(true);
-        return (LlmGateway) constructor.newInstance(
-                modelClient,
-                sanitizationPipeline,
-                llmProperties,
-                allowListedTools,
-                new ActionValidator(),
-                observationRegistry);
+        return (LlmGateway)
+                constructor.newInstance(
+                        modelClient,
+                        sanitizationPipeline,
+                        llmProperties,
+                        allowListedTools,
+                        new ActionValidator(),
+                        observationRegistry);
     }
 
     private static ZeroMailLlmProperties llmProperties() {
@@ -131,7 +135,8 @@ class LlmGatewayObservabilityTest {
         }
     }
 
-    private static final class InMemorySpanExporter implements ObservationHandler<Observation.Context> {
+    private static final class InMemorySpanExporter
+            implements ObservationHandler<Observation.Context> {
 
         private final List<SpanData> finishedSpanItems = new ArrayList<>();
 

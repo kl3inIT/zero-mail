@@ -1,7 +1,15 @@
 package com.zeromail.api.i18n;
 
-import java.util.UUID;
+import static org.assertj.core.api.Assertions.assertThat;
 
+import com.zeromail.api.security.TestSessionSupport;
+import com.zeromail.api.support.ApiPostgresTestBase;
+import com.zeromail.core.account.persistence.UserEntity;
+import com.zeromail.core.account.persistence.UserRepository;
+import com.zeromail.core.tenant.TenantContext;
+import com.zeromail.core.tenant.persistence.TenantEntity;
+import com.zeromail.core.tenant.persistence.TenantRepository;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,33 +21,21 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.RestClient;
-
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
-import com.zeromail.api.security.TestSessionSupport;
-import com.zeromail.api.support.ApiPostgresTestBase;
-import com.zeromail.core.account.persistence.UserEntity;
-import com.zeromail.core.account.persistence.UserRepository;
-import com.zeromail.core.tenant.TenantContext;
-import com.zeromail.core.tenant.persistence.TenantEntity;
-import com.zeromail.core.tenant.persistence.TenantRepository;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Wave-0 invariant lock for the locale-resolution backend half. Plan 04 turned this
- * GREEN by wiring {@code MeController.me} to expose {@code preferredLanguage} and
- * adding {@code PATCH /me/language}. The companion {@code MeLanguageIntegrationTest}
- * carries the cross-tenant + sentinel coverage; this class keeps the original three
- * Wave-0 invariants in their own focused asserts so anyone reading the i18n test
- * package sees the locked contract at a glance.
+ * Wave-0 invariant lock for the locale-resolution backend half. Plan 04 turned this GREEN by wiring
+ * {@code MeController.me} to expose {@code preferredLanguage} and adding {@code PATCH
+ * /me/language}. The companion {@code MeLanguageIntegrationTest} carries the cross-tenant +
+ * sentinel coverage; this class keeps the original three Wave-0 invariants in their own focused
+ * asserts so anyone reading the i18n test package sees the locked contract at a glance.
  *
- * <p>Drives a live Tomcat via {@code RestClient} so the test auth filter +
- * {@code TenantContext} ScopedValue binding run end-to-end (MockMvc's standalone setup
- * skips servlet filters).
+ * <p>Drives a live Tomcat via {@code RestClient} so the test auth filter + {@code TenantContext}
+ * ScopedValue binding run end-to-end (MockMvc's standalone setup skips servlet filters).
  *
- * <p>Sentinels: {@code "zz"} is the disallowed-locale marker. No raw user content,
- * no refresh-token shapes, no exception class names appear in any fixture.
+ * <p>Sentinels: {@code "zz"} is the disallowed-locale marker. No raw user content, no refresh-token
+ * shapes, no exception class names appear in any fixture.
  */
 @ActiveProfiles("test")
 @Import(TestSessionSupport.class)
@@ -62,9 +58,15 @@ class LocaleResolutionTest extends ApiPostgresTestBase {
         UUID tenantId = UUID.randomUUID();
         tenants.save(new TenantEntity(tenantId, label));
         UUID userId = UUID.randomUUID();
-        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() ->
-                users.save(new UserEntity(userId, tenantId, "sub-" + label, label + "@example.com"))
-        );
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(
+                        () ->
+                                users.save(
+                                        new UserEntity(
+                                                userId,
+                                                tenantId,
+                                                "sub-" + label,
+                                                label + "@example.com")));
         minter.mint("sub-" + label, label + "@example.com");
         return new Seed(tenantId, userId, "sub-" + label, label + "@example.com");
     }
@@ -74,21 +76,23 @@ class LocaleResolutionTest extends ApiPostgresTestBase {
     void patch_me_language_persists_preferredLanguage_to_db() {
         Seed s = seed("locres-persist");
 
-        ResponseEntity<String> res = client().patch()
-                .uri("/me/language")
-                .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
-                .header(TestSessionSupport.HEADER_EMAIL, s.email())
-                .contentType(MediaType.APPLICATION_JSON)
-                .body("{\"language\":\"en\"}")
-                .retrieve()
-                .toEntity(String.class);
+        ResponseEntity<String> res =
+                client().patch()
+                        .uri("/me/language")
+                        .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
+                        .header(TestSessionSupport.HEADER_EMAIL, s.email())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"language\":\"en\"}")
+                        .retrieve()
+                        .toEntity(String.class);
 
         assertThat(res.getStatusCode().value()).isEqualTo(200);
 
-        String dbValue = jdbc.queryForObject(
-                "SELECT preferred_language FROM users WHERE id = ?",
-                String.class,
-                s.userId());
+        String dbValue =
+                jdbc.queryForObject(
+                        "SELECT preferred_language FROM users WHERE id = ?",
+                        String.class,
+                        s.userId());
         assertThat(dbValue).isEqualTo("en");
     }
 
@@ -97,12 +101,13 @@ class LocaleResolutionTest extends ApiPostgresTestBase {
     void get_me_returns_preferred_language() throws Exception {
         Seed s = seed("locres-get");
 
-        ResponseEntity<String> res = client().get()
-                .uri("/me")
-                .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
-                .header(TestSessionSupport.HEADER_EMAIL, s.email())
-                .retrieve()
-                .toEntity(String.class);
+        ResponseEntity<String> res =
+                client().get()
+                        .uri("/me")
+                        .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
+                        .header(TestSessionSupport.HEADER_EMAIL, s.email())
+                        .retrieve()
+                        .toEntity(String.class);
 
         assertThat(res.getStatusCode().value()).isEqualTo(200);
         JsonNode json = new ObjectMapper().readTree(res.getBody());
@@ -114,18 +119,24 @@ class LocaleResolutionTest extends ApiPostgresTestBase {
     void patch_me_language_rejects_value_outside_allow_list() throws Exception {
         Seed s = seed("locres-reject");
 
-        ResponseEntity<String> res = client().patch()
-                .uri("/me/language")
-                .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
-                .header(TestSessionSupport.HEADER_EMAIL, s.email())
-                .contentType(MediaType.APPLICATION_JSON)
-                .body("{\"language\":\"zz\"}")
-                .retrieve()
-                .onStatus(HttpStatusCode::is4xxClientError, (_, _) -> { /* swallow default error handler */ })
-                .toEntity(String.class);
+        ResponseEntity<String> res =
+                client().patch()
+                        .uri("/me/language")
+                        .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
+                        .header(TestSessionSupport.HEADER_EMAIL, s.email())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"language\":\"zz\"}")
+                        .retrieve()
+                        .onStatus(
+                                HttpStatusCode::is4xxClientError,
+                                (_, _) -> {
+                                    /* swallow default error handler */
+                                })
+                        .toEntity(String.class);
 
         assertThat(res.getStatusCode().value()).isEqualTo(400);
-        assertThat(String.valueOf(res.getHeaders().getContentType())).startsWith("application/problem+json");
+        assertThat(String.valueOf(res.getHeaders().getContentType()))
+                .startsWith("application/problem+json");
 
         JsonNode json = new ObjectMapper().readTree(res.getBody());
         assertThat(json.path("code").asString()).isEqualTo("error.validation");

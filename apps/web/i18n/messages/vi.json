@@ -188,6 +188,18 @@
       "versionMismatch": "Quy tắc đã thay đổi trước khi thao tác hoàn tất. Tải lại rồi thử lại."
     },
     "schemaMismatch": "Trang này cần hợp đồng API mới hơn. Hãy tạo lại typed client trước khi tiếp tục.",
+    "triage": {
+      "audit": {
+        "not_found": "Không tìm thấy bản ghi triage này. Hãy tải lại danh sách."
+      },
+      "safety_violation": "Hành động triage bị chặn vì vi phạm ràng buộc an toàn.",
+      "undo": {
+        "already_done": "Hành động email này đã được hoàn tác hoặc không còn ở trạng thái có thể hoàn tác.",
+        "expired": "Chỉ có thể hoàn tác hành động triage trong vòng 30 ngày sau khi áp dụng.",
+        "unsupported_action": "Zero Mail không thể hoàn tác loại hành động triage này một cách an toàn.",
+        "write_failed": "Chưa thể hoàn tác hành động email lúc này. Hãy thử lại sau."
+      }
+    },
     "unknown": "Đã xảy ra lỗi chưa xác định. Hãy thử lại hoặc đăng nhập lại.",
     "validation": {
       "field": {

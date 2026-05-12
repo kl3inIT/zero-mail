@@ -592,10 +592,10 @@ Aggressive defaults, no cold-start caution, no confidence threshold.
 
 ---
 
-### Pitfall 23: Spring AI milestone churn when pinning 2.0.0-M5 early
+### Pitfall 23: Spring AI milestone churn when pinning 2.0.0-M6 early
 
 **What goes wrong:**
-The project is intentionally pinned to **Spring AI 2.0.0-M5** (released on **April 27, 2026**) so it lines up with Spring Boot 4 now instead of waiting for 2.0 GA. That is defensible, but it means the LLM adapter is sitting on a moving API surface. A seemingly harmless upgrade from `2.0.0-M5` to the eventual `2.0.0` GA can still break option builders, observation wiring, or provider-specific request overrides.
+The project is intentionally pinned to **Spring AI 2.0.0-M6** (M5 GA'd **April 27, 2026**; M6 released **May 8, 2026**) so it lines up with Spring Boot 4 now instead of waiting for 2.0 GA. That is defensible, but it means the LLM adapter is sitting on a moving API surface. A seemingly harmless upgrade from `2.0.0-M6` to the eventual `2.0.0` GA can still break option builders, observation wiring, or provider-specific request overrides.
 
 Concrete breakages to expect on any milestone -> GA jump:
 - `ChatClient` / request-option builder signatures move.
@@ -606,8 +606,8 @@ Concrete breakages to expect on any milestone -> GA jump:
 AI library APIs are still rapidly evolving in 2025–2026.
 
 **How to avoid:**
-- Pin to **exactly `2.0.0-M5`**. No `2.0.+`, no floating milestone ranges.
-- Wrap Spring AI types behind a thin internal abstraction (`LlmGateway`, `ChatSession`) so the M5 -> GA migration touches one module, not 50.
+- Pin to **exactly `2.0.0-M6`**. No `2.0.+`, no floating milestone ranges.
+- Wrap Spring AI types behind a thin internal abstraction (`LlmGateway`, `ChatSession`) so the M6 -> GA migration touches one module, not 50.
 - Budget an explicit post-GA upgrade pass once Spring AI 2.0 final ships. Do not let that happen as "ambient dependency maintenance."
 - Monitor Spring AI release notes weekly while on a milestone, not monthly.
 
@@ -618,7 +618,7 @@ AI library APIs are still rapidly evolving in 2025–2026.
 
 **Phase to address:** `LLM Gateway` (foundation)
 
-Sources: [Spring AI 2.0.0-M5 release](https://github.com/spring-projects/spring-ai/releases/tag/v2.0.0-M5), [Spring AI 2.0.0-M5 announcement](https://spring.io/blog/2026/04/27/spring-ai-1-0-6-1-1-5-2-0-0-M5-available-now/), [Spring AI releases on GitHub](https://github.com/spring-projects/spring-ai/releases), [Spring AI getting started](https://docs.spring.io/spring-ai/reference/getting-started.html), [HeroDevs: Spring AI 2.0 coming May 28, 2026](https://www.herodevs.com/blog-posts/spring-ai-2-0-is-coming-may-28-here-is-why-that-makes-the-june-30-deadline-more-urgent-not-less).
+Sources: [Spring AI 2.0.0-M6 release](https://github.com/spring-projects/spring-ai/releases/tag/v2.0.0-M6), [Spring AI 2.0.0-M5 announcement](https://spring.io/blog/2026/04/27/spring-ai-1-0-6-1-1-5-2-0-0-M5-available-now/), [Spring AI releases on GitHub](https://github.com/spring-projects/spring-ai/releases), [Spring AI getting started](https://docs.spring.io/spring-ai/reference/getting-started.html), [HeroDevs: Spring AI 2.0 coming May 28, 2026](https://www.herodevs.com/blog-posts/spring-ai-2-0-is-coming-may-28-here-is-why-that-makes-the-june-30-deadline-more-urgent-not-less).
 
 ---
 
@@ -695,7 +695,7 @@ Teams rely on "it's an internal URL" — but Pub/Sub push endpoints are public b
 | **Gmail draft threading** | Set only `threadId` | Set `threadId` + `In-Reply-To` + `References` |
 | **OpenRouter model routing** | Accept fallbacks and variants | Pin exact slug, disable fallbacks, compare returned model |
 | **BYOK keys** | Pass through as-is | Envelope-encrypt at rest; opaque `ByokKey` wrapper in code |
-| **Spring AI** | Float across milestones or wire Spring AI types into domain code | Pin exact `2.0.0-M5`; abstract behind `LlmGateway`; schedule an explicit M5 -> GA upgrade pass |
+| **Spring AI** | Float across milestones or wire Spring AI types into domain code | Pin exact `2.0.0-M6`; abstract behind `LlmGateway`; schedule an explicit M6 -> GA upgrade pass |
 | **Google Cloud KMS / Secret Manager** | One key for all tenants | Envelope per tenant or per key-purpose; rotate quarterly |
 
 ---
@@ -813,7 +813,7 @@ Teams rely on "it's an internal URL" — but Pub/Sub push endpoints are public b
 | 20 | AI drafts sound generic | `Draft Replies` | User-study check; tone-signal extraction present in prompt |
 | 21 | No audit trail / no undo | `Triage Engine` / `UX/Product` | Audit row per action; UI undo verified for every action type |
 | 22 | First bad auto-action | `UX/Product` / `Triage Engine` | Shadow-mode feature flag default ON for new tenants |
-| 23 | Spring AI version churn | `LLM Gateway` | `LlmGateway` abstraction exists; pinned to exact Spring AI `2.0.0-M5`; M5 -> GA pass is planned |
+| 23 | Spring AI version churn | `LLM Gateway` | `LlmGateway` abstraction exists; pinned to exact Spring AI `2.0.0-M6`; M6 -> GA pass is planned |
 | 24 | Tool-call loops | `LLM Gateway` / `Triage Engine` | Max-iteration cap; per-action max-count |
 | 25 | Push webhook authentication | `Pub/Sub Ingestion` / `Auth/OAuth` | Forged-push test returns 401 |
 
@@ -846,7 +846,7 @@ Teams rely on "it's an internal URL" — but Pub/Sub push endpoints are public b
 - [HackerOne: Invisible Prompt Injection disclosure](https://hackerone.com/reports/2372363)
 
 **Spring AI / Spring Boot / Java 25:**
-- [Spring AI 2.0.0-M5 release](https://github.com/spring-projects/spring-ai/releases/tag/v2.0.0-M5)
+- [Spring AI 2.0.0-M6 release](https://github.com/spring-projects/spring-ai/releases/tag/v2.0.0-M6)
 - [Spring AI releases on GitHub](https://github.com/spring-projects/spring-ai/releases)
 - [Spring AI getting started](https://docs.spring.io/spring-ai/reference/getting-started.html)
 - [HeroDevs: Spring AI 2.0 coming May 28, 2026 (requires Spring Boot 4)](https://www.herodevs.com/blog-posts/spring-ai-2-0-is-coming-may-28-here-is-why-that-makes-the-june-30-deadline-more-urgent-not-less)

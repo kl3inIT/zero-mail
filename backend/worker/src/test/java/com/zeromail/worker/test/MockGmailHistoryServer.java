@@ -1,5 +1,7 @@
 package com.zeromail.worker.test;
 
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -11,9 +13,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.GZIPInputStream;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpServer;
-
 public class MockGmailHistoryServer implements AutoCloseable {
 
     private final Map<String, Response> responses = new ConcurrentHashMap<>();
@@ -21,10 +20,7 @@ public class MockGmailHistoryServer implements AutoCloseable {
     private volatile String lastWatchRequestBody;
 
     public record HistoryMessageResponse(
-            String messageId,
-            String threadId,
-            List<String> labelIds,
-            Long internalDate) {}
+            String messageId, String threadId, List<String> labelIds, Long internalDate) {}
 
     public void start() throws IOException {
         if (server != null) {
@@ -49,7 +45,8 @@ public class MockGmailHistoryServer implements AutoCloseable {
 
     public String baseUrl() {
         if (server == null) {
-            throw new IllegalStateException("MockGmailHistoryServer must be started before baseUrl()");
+            throw new IllegalStateException(
+                    "MockGmailHistoryServer must be started before baseUrl()");
         }
         return "http://127.0.0.1:" + server.getAddress().getPort() + "/";
     }
@@ -64,45 +61,65 @@ public class MockGmailHistoryServer implements AutoCloseable {
     }
 
     public void stubTokenSuccess() {
-        responses.put("/token",
+        responses.put(
+                "/token",
                 new Response(200, "{\"access_token\":\"test-access-token\",\"expires_in\":3600}"));
     }
 
     public void stubTokenInvalidGrant() {
-        responses.put("/token",
-                new Response(400, "{\"error\":\"invalid_grant\"}"));
+        responses.put("/token", new Response(400, "{\"error\":\"invalid_grant\"}"));
     }
 
     public void stubHistoryList(long startHistoryId, List<HistoryMessageResponse> messages) {
-        responses.put(historyStartKey(startHistoryId), new Response(200, historyResponse(startHistoryId, messages, null)));
-        responses.put("/gmail/v1/users/me/history", new Response(200, historyResponse(startHistoryId, messages, null)));
+        responses.put(
+                historyStartKey(startHistoryId),
+                new Response(200, historyResponse(startHistoryId, messages, null)));
+        responses.put(
+                "/gmail/v1/users/me/history",
+                new Response(200, historyResponse(startHistoryId, messages, null)));
     }
 
-    public void stubHistoryListPage(long startHistoryId, String nextPageToken, List<HistoryMessageResponse> messages) {
-        responses.put(historyStartKey(startHistoryId),
+    public void stubHistoryListPage(
+            long startHistoryId, String nextPageToken, List<HistoryMessageResponse> messages) {
+        responses.put(
+                historyStartKey(startHistoryId),
                 new Response(200, historyResponse(startHistoryId, messages, nextPageToken)));
     }
 
-    public void stubHistoryListPageToken(String pageToken, long historyId, List<HistoryMessageResponse> messages) {
-        responses.put(historyPageKey(pageToken), new Response(200, historyResponse(historyId, messages, null)));
+    public void stubHistoryListPageToken(
+            String pageToken, long historyId, List<HistoryMessageResponse> messages) {
+        responses.put(
+                historyPageKey(pageToken),
+                new Response(200, historyResponse(historyId, messages, null)));
     }
 
     public void stubHistoryList404() {
-        responses.put("/gmail/v1/users/me/history", new Response(404, "{\"error\":{\"code\":404}}"));
+        responses.put(
+                "/gmail/v1/users/me/history", new Response(404, "{\"error\":{\"code\":404}}"));
     }
 
-    public void stubMessageMetadata(String messageId, String threadId, List<String> labelIds, Long internalDate) {
-        responses.put("/gmail/v1/users/me/messages/" + messageId,
+    public void stubMessageMetadata(
+            String messageId, String threadId, List<String> labelIds, Long internalDate) {
+        responses.put(
+                "/gmail/v1/users/me/messages/" + messageId,
                 new Response(200, messageResponse(messageId, threadId, labelIds, internalDate)));
     }
 
     public void stubWatchSuccess(long historyId, long expirationMs) {
-        responses.put("/gmail/v1/users/me/watch",
-                new Response(200, "{\"historyId\":\"" + historyId + "\",\"expiration\":\"" + expirationMs + "\"}"));
+        responses.put(
+                "/gmail/v1/users/me/watch",
+                new Response(
+                        200,
+                        "{\"historyId\":\""
+                                + historyId
+                                + "\",\"expiration\":\""
+                                + expirationMs
+                                + "\"}"));
     }
 
     public void stubWatchFailure(int statusCode) {
-        responses.put("/gmail/v1/users/me/watch",
+        responses.put(
+                "/gmail/v1/users/me/watch",
                 new Response(statusCode, "{\"error\":{\"code\":" + statusCode + "}}"));
     }
 
@@ -111,8 +128,11 @@ public class MockGmailHistoryServer implements AutoCloseable {
         if (path.endsWith("/watch")) {
             lastWatchRequestBody = new String(readRequestBody(exchange), StandardCharsets.UTF_8);
         }
-        Response response = responses.getOrDefault(responseKey(exchange), responses.getOrDefault(path,
-                new Response(404, "{\"error\":{\"code\":404}}")));
+        Response response =
+                responses.getOrDefault(
+                        responseKey(exchange),
+                        responses.getOrDefault(
+                                path, new Response(404, "{\"error\":{\"code\":404}}")));
         byte[] body = response.body().getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().add("Content-Type", "application/json");
         exchange.sendResponseHeaders(response.status(), body.length);
@@ -157,29 +177,49 @@ public class MockGmailHistoryServer implements AutoCloseable {
         return "/gmail/v1/users/me/history?pageToken=" + pageToken;
     }
 
-    private static String historyResponse(long startHistoryId, List<HistoryMessageResponse> messages, String nextPageToken) {
+    private static String historyResponse(
+            long startHistoryId, List<HistoryMessageResponse> messages, String nextPageToken) {
         List<String> added = new ArrayList<>();
         for (HistoryMessageResponse message : messages) {
-            added.add("{\"message\":" + messageShape(message.messageId(), message.threadId(), message.labelIds(), null) + "}");
+            added.add(
+                    "{\"message\":"
+                            + messageShape(
+                                    message.messageId(),
+                                    message.threadId(),
+                                    message.labelIds(),
+                                    null)
+                            + "}");
         }
-        String json = "{\"history\":[{\"id\":\"" + startHistoryId + "\",\"messagesAdded\":["
-                + String.join(",", added)
-                + "]}],\"historyId\":\"" + startHistoryId + "\"";
+        String json =
+                "{\"history\":[{\"id\":\""
+                        + startHistoryId
+                        + "\",\"messagesAdded\":["
+                        + String.join(",", added)
+                        + "]}],\"historyId\":\""
+                        + startHistoryId
+                        + "\"";
         if (nextPageToken != null) {
             json += ",\"nextPageToken\":\"" + escape(nextPageToken) + "\"";
         }
         return json + "}";
     }
 
-    private static String messageResponse(String messageId, String threadId, List<String> labelIds, Long internalDate) {
+    private static String messageResponse(
+            String messageId, String threadId, List<String> labelIds, Long internalDate) {
         return messageShape(messageId, threadId, labelIds, internalDate);
     }
 
-    private static String messageShape(String messageId, String threadId, List<String> labelIds, Long internalDate) {
+    private static String messageShape(
+            String messageId, String threadId, List<String> labelIds, Long internalDate) {
         StringBuilder json = new StringBuilder();
-        json.append("{\"id\":\"").append(escape(messageId)).append("\",")
-                .append("\"threadId\":\"").append(escape(threadId)).append("\",")
-                .append("\"labelIds\":").append(labels(labelIds));
+        json.append("{\"id\":\"")
+                .append(escape(messageId))
+                .append("\",")
+                .append("\"threadId\":\"")
+                .append(escape(threadId))
+                .append("\",")
+                .append("\"labelIds\":")
+                .append(labels(labelIds));
         if (internalDate != null) {
             json.append(",\"internalDate\":\"").append(internalDate).append("\"");
         }

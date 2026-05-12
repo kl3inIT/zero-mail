@@ -6,6 +6,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record RuleCreateRequest(
-    @NotBlank @Size(max = 160) String displayName,
-    @NotBlank @Size(max = 4000) String sourceText,
-    @Valid @NotNull CompiledPayloadRequest compiled) {}
+        @NotBlank @Size(max = 160) String displayName,
+        @NotBlank @Size(max = 4000) String sourceText,
+        @Valid @NotNull CompiledPayloadRequest compiled) {}

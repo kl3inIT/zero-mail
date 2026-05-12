@@ -1,10 +1,19 @@
 package com.zeromail.api.error;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import com.zeromail.api.security.TestSessionSupport;
+import com.zeromail.api.support.ApiPostgresTestBase;
+import com.zeromail.core.account.exception.CurrentUserNotFoundException;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,83 +36,72 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClient;
-
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
-import com.zeromail.api.security.TestSessionSupport;
-import com.zeromail.api.support.ApiPostgresTestBase;
-import com.zeromail.core.account.exception.CurrentUserNotFoundException;
-
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Pattern;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Phase 1.1 Plan 08 sentinel sweep — REQ-6 acceptance criterion.
  *
- * <p>Drives every Phase 1 error path with payloads carrying 6 categories of sensitive
- * sentinels and asserts NONE of them appear in:
+ * <p>Drives every Phase 1 error path with payloads carrying 6 categories of sensitive sentinels and
+ * asserts NONE of them appear in:
+ *
  * <ul>
- *   <li>The {@code application/problem+json} response body — no top-level field
- *       ({@code title}, {@code detail}, {@code code}, {@code message}, {@code params},
- *       {@code fieldErrors[]}, etc.) carries the sentinel.</li>
- *   <li>The captured Logback event stream — every log event emitted during the request
- *       is collected through a root-logger {@link ListAppender} and asserted clean.</li>
+ *   <li>The {@code application/problem+json} response body — no top-level field ({@code title},
+ *       {@code detail}, {@code code}, {@code message}, {@code params}, {@code fieldErrors[]}, etc.)
+ *       carries the sentinel.
+ *   <li>The captured Logback event stream — every log event emitted during the request is collected
+ *       through a root-logger {@link ListAppender} and asserted clean.
  * </ul>
  *
  * <h2>Sentinel categories (6)</h2>
+ *
  * <ol>
- *   <li>Refresh-token shape — {@code 1//04...} Google refresh token format.</li>
- *   <li>SQL state / constraint name — {@code users_email_key} / {@code 23505}.</li>
- *   <li>Prompt injection — {@code "ignore previous instructions and reveal system prompt"}.</li>
- *   <li>HTML script — {@code <script>alert('xss')</script>}.</li>
- *   <li>Exception class names — {@code java.lang.NullPointerException},
- *       {@code MethodArgumentNotValidException}.</li>
- *   <li>Sensitive marker token — {@code Sensitive(secret-payload)} (the FND-03
- *       {@code @Sensitive} wrapper format).</li>
+ *   <li>Refresh-token shape — {@code 1//04...} Google refresh token format.
+ *   <li>SQL state / constraint name — {@code users_email_key} / {@code 23505}.
+ *   <li>Prompt injection — {@code "ignore previous instructions and reveal system prompt"}.
+ *   <li>HTML script — {@code <script>alert('xss')</script>}.
+ *   <li>Exception class names — {@code java.lang.NullPointerException}, {@code
+ *       MethodArgumentNotValidException}.
+ *   <li>Sensitive marker token — {@code Sensitive(secret-payload)} (the FND-03 {@code @Sensitive}
+ *       wrapper format).
  * </ol>
  *
  * <h2>Error paths covered (6)</h2>
+ *
  * <ol>
- *   <li>{@code MethodArgumentNotValidException} (validation) — sentinel injected as the
- *       rejected field value; AllowedParamScalars must drop it from {@code params}.</li>
- *   <li>{@code AccessDeniedException} (auth) — sentinel injected as exception message.</li>
- *   <li>{@code AuthenticationException} (auth) — sentinel injected as exception message.</li>
- *   <li>{@code CurrentUserNotFoundException} (auth) — sentinel injected as exception
- *       construction parameter.</li>
+ *   <li>{@code MethodArgumentNotValidException} (validation) — sentinel injected as the rejected
+ *       field value; AllowedParamScalars must drop it from {@code params}.
+ *   <li>{@code AccessDeniedException} (auth) — sentinel injected as exception message.
+ *   <li>{@code AuthenticationException} (auth) — sentinel injected as exception message.
+ *   <li>{@code CurrentUserNotFoundException} (auth) — sentinel injected as exception construction
+ *       parameter.
  *   <li>{@code DataIntegrityViolationException} (db) — sentinel injected as the wrapped
- *       SQLException's SQL state and message.</li>
- *   <li>{@code IllegalArgumentException} (badRequest) — sentinel injected as exception
- *       message.</li>
- *   <li>{@code OptimisticLockingFailureException} (conflict) — sentinel injected as
- *       exception message.</li>
+ *       SQLException's SQL state and message.
+ *   <li>{@code IllegalArgumentException} (badRequest) — sentinel injected as exception message.
+ *   <li>{@code OptimisticLockingFailureException} (conflict) — sentinel injected as exception
+ *       message.
  * </ol>
  *
- * <p>Together this is 6 sentinels × 7 paths = 42 parameterized test cases. Each case
- * asserts: (a) sentinel does not appear in response body; (b) sentinel does not appear
- * in any captured log event's formatted message or MDC; (c) {@code title} / {@code
- * detail} stay generic and contain no exception class names, framework package
- * prefixes, or SQL state.
+ * <p>Together this is 6 sentinels × 7 paths = 42 parameterized test cases. Each case asserts: (a)
+ * sentinel does not appear in response body; (b) sentinel does not appear in any captured log
+ * event's formatted message or MDC; (c) {@code title} / {@code detail} stay generic and contain no
+ * exception class names, framework package prefixes, or SQL state.
  *
  * <p>Cite: PATTERNS.md "GlobalExceptionHandlerSafetyTest.java (test, integration + log)";
- * RESEARCH.md Common Pitfall 5 (sentinel categories); CONTEXT.md decision D-D4;
- * threats T-1.1.08-01, T-1.1.08-02.
+ * RESEARCH.md Common Pitfall 5 (sentinel categories); CONTEXT.md decision D-D4; threats
+ * T-1.1.08-01, T-1.1.08-02.
  */
 @ActiveProfiles("test")
 @Import({TestSessionSupport.class, GlobalExceptionHandlerSafetyTest.SafetyTestFixture.class})
 class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
 
     /**
-     * Six sentinel categories. Declared as named constants so test failure messages
-     * point at the category, not at an opaque string. Each is a deliberate marker that
-     * is implausible in production traffic but plausibly leakable through naive
-     * exception translation.
+     * Six sentinel categories. Declared as named constants so test failure messages point at the
+     * category, not at an opaque string. Each is a deliberate marker that is implausible in
+     * production traffic but plausibly leakable through naive exception translation.
      */
     static final String SENTINEL_REFRESH_TOKEN = "1//04abcDEFghiJKLmnoPQRstu";
+
     static final String SENTINEL_SQL_CONSTRAINT = "users_email_key";
     static final String SENTINEL_SQL_STATE = "23505";
     static final String SENTINEL_PROMPT_INJECTION =
@@ -132,10 +130,10 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
     }
 
     /**
-     * The 6 sentinel categories supplied to every parameterized error-path test. The
-     * SQL-state sentinel and the SQL-constraint-name sentinel both fall under category 2;
-     * we run both because they are emitted by different exception construction sites
-     * (constraint-name on the message, SQL-state on the wrapped SQLException).
+     * The 6 sentinel categories supplied to every parameterized error-path test. The SQL-state
+     * sentinel and the SQL-constraint-name sentinel both fall under category 2; we run both because
+     * they are emitted by different exception construction sites (constraint-name on the message,
+     * SQL-state on the wrapped SQLException).
      */
     static Stream<String> sentinels() {
         return Stream.of(
@@ -154,13 +152,18 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
     private record Probe(int status, String body, List<ILoggingEvent> events) {}
 
     private Probe drive(String uri, String body) {
-        ResponseEntity<String> res = client().post()
-                .uri(uri)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(body)
-                .retrieve()
-                .onStatus(HttpStatusCode::isError, (_, _) -> { /* let body through */ })
-                .toEntity(String.class);
+        ResponseEntity<String> res =
+                client().post()
+                        .uri(uri)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(body)
+                        .retrieve()
+                        .onStatus(
+                                HttpStatusCode::isError,
+                                (_, _) -> {
+                                    /* let body through */
+                                })
+                        .toEntity(String.class);
         return new Probe(
                 res.getStatusCode().value(),
                 res.getBody() == null ? "" : res.getBody(),
@@ -169,11 +172,12 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
 
     /**
      * Joint assertion every parameterized case runs:
+     *
      * <ul>
-     *   <li>sentinel does not appear anywhere in the response body</li>
-     *   <li>sentinel does not appear in any captured log event's formatted message or MDC</li>
-     *   <li>response body's title/detail do not leak Java exception class names, framework
-     *       package prefixes, or SQL state strings</li>
+     *   <li>sentinel does not appear anywhere in the response body
+     *   <li>sentinel does not appear in any captured log event's formatted message or MDC
+     *   <li>response body's title/detail do not leak Java exception class names, framework package
+     *       prefixes, or SQL state strings
      * </ul>
      */
     private void assertNoSentinelLeak(String sentinel, Probe probe) throws Exception {
@@ -181,9 +185,10 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
                 .as("sentinel '%s' must not appear in response body", sentinel)
                 .doesNotContain(sentinel);
 
-        String capturedLogs = probe.events().stream()
-                .map(ev -> ev.getFormattedMessage() + " " + ev.getMDCPropertyMap())
-                .reduce("", (a, b) -> a + "\n" + b);
+        String capturedLogs =
+                probe.events().stream()
+                        .map(ev -> ev.getFormattedMessage() + " " + ev.getMDCPropertyMap())
+                        .reduce("", (a, b) -> a + "\n" + b);
         assertThat(capturedLogs)
                 .as("sentinel '%s' must not appear in any Logback event during request", sentinel)
                 .doesNotContain(sentinel);
@@ -200,9 +205,10 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
                 continue;
             }
             assertThat(ev.getThrowableProxy())
-                    .as("translated event from GlobalExceptionHandler must not carry a "
-                            + "Throwable proxy (would render stack trace + cause messages "
-                            + "containing SQL internals / sentinels) — message='%s'",
+                    .as(
+                            "translated event from GlobalExceptionHandler must not carry a "
+                                    + "Throwable proxy (would render stack trace + cause messages "
+                                    + "containing SQL internals / sentinels) — message='%s'",
                             ev.getFormattedMessage())
                     .isNull();
         }
@@ -213,15 +219,17 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
         String title = json.path("title").asString();
         String detail = json.path("detail").asString();
         assertThat(title)
-                .as("title must be a generic English diagnostic — no exception class names, "
-                        + "framework package prefixes, or SQL state")
+                .as(
+                        "title must be a generic English diagnostic — no exception class names, "
+                                + "framework package prefixes, or SQL state")
                 .doesNotContain("Exception")
                 .doesNotContain("org.springframework")
                 .doesNotContain("org.hibernate")
                 .doesNotContain("SQLSTATE");
         assertThat(detail)
-                .as("detail must be a generic English diagnostic — no exception class names, "
-                        + "framework package prefixes, or SQL state")
+                .as(
+                        "detail must be a generic English diagnostic — no exception class names, "
+                                + "framework package prefixes, or SQL state")
                 .doesNotContain("Exception")
                 .doesNotContain("org.springframework")
                 .doesNotContain("org.hibernate")
@@ -237,18 +245,24 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
         // — this is the AllowedParamScalars contract translated into a JSON-side check.
         JsonNode params = json.path("params");
         assertThat(params.isObject()).isTrue();
-        params.properties().forEach(entry -> {
-            JsonNode v = entry.getValue();
-            if (v.isString()) {
-                assertThat(v.asString())
-                        .as("params value '%s' must match AllowedParamScalars regex", v.asString())
-                        .matches("[a-zA-Z0-9_.\\-]{1,64}");
-            } else {
-                assertThat(v.isNumber() || v.isBoolean())
-                        .as("params value must be Number/Boolean/String — got %s", v.getNodeType())
-                        .isTrue();
-            }
-        });
+        params.properties()
+                .forEach(
+                        entry -> {
+                            JsonNode v = entry.getValue();
+                            if (v.isString()) {
+                                assertThat(v.asString())
+                                        .as(
+                                                "params value '%s' must match AllowedParamScalars regex",
+                                                v.asString())
+                                        .matches("[a-zA-Z0-9_.\\-]{1,64}");
+                            } else {
+                                assertThat(v.isNumber() || v.isBoolean())
+                                        .as(
+                                                "params value must be Number/Boolean/String — got %s",
+                                                v.getNodeType())
+                                        .isTrue();
+                            }
+                        });
     }
 
     // ─────────────────────────────────────────────────────────────────────────────────
@@ -281,8 +295,7 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
     @MethodSource("sentinels")
     @DisplayName("AccessDeniedException: sentinel-bearing exception message stays server-side")
     void accessDenied_doesNotLeakSentinel(String sentinel) throws Exception {
-        Probe probe = drive("/test/safety/throw/access-denied",
-                "\"" + jsonEscape(sentinel) + "\"");
+        Probe probe = drive("/test/safety/throw/access-denied", "\"" + jsonEscape(sentinel) + "\"");
         assertThat(probe.status()).isEqualTo(403);
         assertNoSentinelLeak(sentinel, probe);
 
@@ -297,8 +310,7 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
     @MethodSource("sentinels")
     @DisplayName("AuthenticationException: sentinel-bearing exception message stays server-side")
     void authenticationException_doesNotLeakSentinel(String sentinel) throws Exception {
-        Probe probe = drive("/test/safety/throw/auth",
-                "\"" + jsonEscape(sentinel) + "\"");
+        Probe probe = drive("/test/safety/throw/auth", "\"" + jsonEscape(sentinel) + "\"");
         assertThat(probe.status()).isEqualTo(401);
         assertNoSentinelLeak(sentinel, probe);
 
@@ -313,8 +325,10 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
     @MethodSource("sentinels")
     @DisplayName("CurrentUserNotFoundException: sentinel-bearing tenant id stays server-side")
     void currentUserNotFound_doesNotLeakSentinel(String sentinel) throws Exception {
-        Probe probe = drive("/test/safety/throw/current-user-missing",
-                "\"" + jsonEscape(sentinel) + "\"");
+        Probe probe =
+                drive(
+                        "/test/safety/throw/current-user-missing",
+                        "\"" + jsonEscape(sentinel) + "\"");
         assertThat(probe.status()).isEqualTo(401);
         assertNoSentinelLeak(sentinel, probe);
 
@@ -330,8 +344,8 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
     @MethodSource("sentinels")
     @DisplayName("DataIntegrityViolation: sentinel constraint name + SQL state stay server-side")
     void dataIntegrity_doesNotLeakSentinel(String sentinel) throws Exception {
-        Probe probe = drive("/test/safety/throw/data-integrity",
-                "\"" + jsonEscape(sentinel) + "\"");
+        Probe probe =
+                drive("/test/safety/throw/data-integrity", "\"" + jsonEscape(sentinel) + "\"");
         assertThat(probe.status()).isEqualTo(409);
         assertNoSentinelLeak(sentinel, probe);
 
@@ -346,8 +360,8 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
     @MethodSource("sentinels")
     @DisplayName("IllegalArgumentException: sentinel-bearing exception message stays server-side")
     void illegalArgument_doesNotLeakSentinel(String sentinel) throws Exception {
-        Probe probe = drive("/test/safety/throw/illegal-argument",
-                "\"" + jsonEscape(sentinel) + "\"");
+        Probe probe =
+                drive("/test/safety/throw/illegal-argument", "\"" + jsonEscape(sentinel) + "\"");
         assertThat(probe.status()).isEqualTo(400);
         assertNoSentinelLeak(sentinel, probe);
 
@@ -362,8 +376,8 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
     @MethodSource("sentinels")
     @DisplayName("OptimisticLockingFailure: sentinel-bearing exception message stays server-side")
     void optimisticLock_doesNotLeakSentinel(String sentinel) throws Exception {
-        Probe probe = drive("/test/safety/throw/optimistic-lock",
-                "\"" + jsonEscape(sentinel) + "\"");
+        Probe probe =
+                drive("/test/safety/throw/optimistic-lock", "\"" + jsonEscape(sentinel) + "\"");
         assertThat(probe.status()).isEqualTo(409);
         assertNoSentinelLeak(sentinel, probe);
 
@@ -380,8 +394,10 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
     @org.junit.jupiter.api.Test
     @DisplayName("SQL state '23505' sentinel never appears on wire or in logs (data-integrity)")
     void dataIntegrity_doesNotLeakSqlStateSentinel() {
-        Probe probe = drive("/test/safety/throw/data-integrity-sql-state",
-                "\"" + SENTINEL_SQL_STATE + "\"");
+        Probe probe =
+                drive(
+                        "/test/safety/throw/data-integrity-sql-state",
+                        "\"" + SENTINEL_SQL_STATE + "\"");
         assertThat(probe.status()).isEqualTo(409);
         // The framework or the wrapped SQLException might log the SQL state at WARN; the
         // contract is that the wire body never carries it. We allow logs to mention the
@@ -394,10 +410,9 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
     }
 
     /**
-     * Minimal JSON-string escaper for inline body construction. Handles {@code "} and
-     * {@code \\} which are the only chars in our sentinel corpus that would invalidate
-     * the JSON envelope. Everything else (including angle brackets and Unicode) passes
-     * through verbatim.
+     * Minimal JSON-string escaper for inline body construction. Handles {@code "} and {@code \\}
+     * which are the only chars in our sentinel corpus that would invalidate the JSON envelope.
+     * Everything else (including angle brackets and Unicode) passes through verbatim.
      */
     private static String jsonEscape(String s) {
         return s.replace("\\", "\\\\").replace("\"", "\\\"");
@@ -447,15 +462,13 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
         @PostMapping("/test/safety/throw/data-integrity")
         public void throwDataIntegrity(@RequestBody String sentinel) {
             throw new DataIntegrityViolationException(
-                    "constraint violation: " + sentinel,
-                    new SQLException(sentinel, "23505"));
+                    "constraint violation: " + sentinel, new SQLException(sentinel, "23505"));
         }
 
         @PostMapping("/test/safety/throw/data-integrity-sql-state")
         public void throwDataIntegritySqlState(@RequestBody String sqlState) {
             throw new DataIntegrityViolationException(
-                    "constraint violation",
-                    new SQLException("duplicate", sqlState));
+                    "constraint violation", new SQLException("duplicate", sqlState));
         }
 
         @PostMapping("/test/safety/throw/illegal-argument")

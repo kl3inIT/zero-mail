@@ -8,16 +8,16 @@ import tools.jackson.databind.deser.std.StdDeserializer;
 
 public class FlexibleLongDeserializer extends StdDeserializer<Long> {
 
-  public FlexibleLongDeserializer() {
-    super(Long.class);
-  }
-
-  @Override
-  public Long deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
-      throws JacksonException {
-    if (jsonParser.currentToken() == JsonToken.VALUE_STRING) {
-      return Long.parseLong(jsonParser.getString().trim());
+    public FlexibleLongDeserializer() {
+        super(Long.class);
     }
-    return jsonParser.getLongValue();
-  }
+
+    @Override
+    public Long deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
+            throws JacksonException {
+        if (jsonParser.currentToken() == JsonToken.VALUE_STRING) {
+            return Long.parseLong(jsonParser.getString().trim());
+        }
+        return jsonParser.getLongValue();
+    }
 }

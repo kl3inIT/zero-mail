@@ -1,8 +1,12 @@
 package com.zeromail.api.security;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.util.List;
 import java.util.Map;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
@@ -10,19 +14,14 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 /**
- * Wave 0 RED scaffold — exercises {@link GoogleAuthorizationRequestResolver} behaviour:
- * {@code prompt=consent} added only when {@code ?reconnect=true}, omitted on first-time login;
- * {@code access_type=offline} and {@code include_granted_scopes=true} always present.
- * Login_hint injection removed (Phase 01.5 D-A3 — same-account guarantee no longer needed).
+ * Wave 0 RED scaffold — exercises {@link GoogleAuthorizationRequestResolver} behaviour: {@code
+ * prompt=consent} added only when {@code ?reconnect=true}, omitted on first-time login; {@code
+ * access_type=offline} and {@code include_granted_scopes=true} always present. Login_hint injection
+ * removed (Phase 01.5 D-A3 — same-account guarantee no longer needed).
  *
- * <p>Tests fail to compile until Task 2 creates {@link GoogleAuthorizationRequestResolver}.
- * Once Task 2 lands, all tests must turn GREEN.
+ * <p>Tests fail to compile until Task 2 creates {@link GoogleAuthorizationRequestResolver}. Once
+ * Task 2 lands, all tests must turn GREEN.
  */
 class GoogleAuthorizationRequestResolverTest {
 
@@ -105,21 +104,23 @@ class GoogleAuthorizationRequestResolverTest {
     }
 
     private ClientRegistrationRepository mockGoogleRegistry() {
-        ClientRegistration registration = ClientRegistration.withRegistrationId(GOOGLE_REGISTRATION_ID)
-                .clientId("test-google-client")
-                .clientSecret("test-google-secret")
-                .clientName("google")
-                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .redirectUri("http://localhost/login/oauth2/code/google")
-                .scope(List.of(
-                        "openid",
-                        "profile",
-                        "email",
-                        "https://www.googleapis.com/auth/gmail.modify",
-                        "https://www.googleapis.com/auth/gmail.settings.basic"))
-                .authorizationUri("https://accounts.google.com/o/oauth2/v2/auth")
-                .tokenUri("https://oauth2.googleapis.com/token")
-                .build();
+        ClientRegistration registration =
+                ClientRegistration.withRegistrationId(GOOGLE_REGISTRATION_ID)
+                        .clientId("test-google-client")
+                        .clientSecret("test-google-secret")
+                        .clientName("google")
+                        .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                        .redirectUri("http://localhost/login/oauth2/code/google")
+                        .scope(
+                                List.of(
+                                        "openid",
+                                        "profile",
+                                        "email",
+                                        "https://www.googleapis.com/auth/gmail.modify",
+                                        "https://www.googleapis.com/auth/gmail.settings.basic"))
+                        .authorizationUri("https://accounts.google.com/o/oauth2/v2/auth")
+                        .tokenUri("https://oauth2.googleapis.com/token")
+                        .build();
         ClientRegistrationRepository repo = mock(ClientRegistrationRepository.class);
         when(repo.findByRegistrationId(eq(GOOGLE_REGISTRATION_ID))).thenReturn(registration);
         return repo;

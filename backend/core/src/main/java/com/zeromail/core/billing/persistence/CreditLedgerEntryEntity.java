@@ -1,11 +1,10 @@
 package com.zeromail.core.billing.persistence;
-import java.util.UUID;
 
 import com.zeromail.core.shared.persistence.AbstractTenantOwnedEntity;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import java.util.UUID;
 
 /**
  * Append-only journal row. Created through static factories so the kind/sign invariant stays
@@ -32,12 +31,7 @@ public class CreditLedgerEntryEntity extends AbstractTenantOwnedEntity {
     }
 
     private CreditLedgerEntryEntity(
-            UUID id,
-            UUID tenantId,
-            String kind,
-            int amountCredits,
-            String refType,
-            String refId) {
+            UUID id, UUID tenantId, String kind, int amountCredits, String refType, String refId) {
         super(id, tenantId);
         this.kind = kind;
         this.amountCredits = amountCredits;
@@ -45,29 +39,36 @@ public class CreditLedgerEntryEntity extends AbstractTenantOwnedEntity {
         this.refId = refId;
     }
 
-    public static CreditLedgerEntryEntity topup(UUID id, UUID tenantId, int amountCredits, String sepayTransactionId) {
+    public static CreditLedgerEntryEntity topup(
+            UUID id, UUID tenantId, int amountCredits, String sepayTransactionId) {
         if (amountCredits <= 0) {
             throw new IllegalArgumentException("TOPUP amountCredits must be positive");
         }
-        return new CreditLedgerEntryEntity(id, tenantId, "TOPUP", amountCredits, "PAYMENT_SEPAY", sepayTransactionId);
+        return new CreditLedgerEntryEntity(
+                id, tenantId, "TOPUP", amountCredits, "PAYMENT_SEPAY", sepayTransactionId);
     }
 
-    public static CreditLedgerEntryEntity reserve(UUID id, UUID tenantId, int costCredits, UUID reservationId) {
+    public static CreditLedgerEntryEntity reserve(
+            UUID id, UUID tenantId, int costCredits, UUID reservationId) {
         if (costCredits <= 0) {
             throw new IllegalArgumentException("RESERVE costCredits must be positive");
         }
-        return new CreditLedgerEntryEntity(id, tenantId, "RESERVE", -costCredits, "RESERVATION", reservationId.toString());
+        return new CreditLedgerEntryEntity(
+                id, tenantId, "RESERVE", -costCredits, "RESERVATION", reservationId.toString());
     }
 
     public static CreditLedgerEntryEntity settle(UUID id, UUID tenantId, UUID reservationId) {
-        return new CreditLedgerEntryEntity(id, tenantId, "SETTLE", 0, "RESERVATION", reservationId.toString());
+        return new CreditLedgerEntryEntity(
+                id, tenantId, "SETTLE", 0, "RESERVATION", reservationId.toString());
     }
 
-    public static CreditLedgerEntryEntity release(UUID id, UUID tenantId, int amountCredits, UUID reservationId) {
+    public static CreditLedgerEntryEntity release(
+            UUID id, UUID tenantId, int amountCredits, UUID reservationId) {
         if (amountCredits <= 0) {
             throw new IllegalArgumentException("RELEASE amountCredits must be positive");
         }
-        return new CreditLedgerEntryEntity(id, tenantId, "RELEASE", amountCredits, "RESERVATION", reservationId.toString());
+        return new CreditLedgerEntryEntity(
+                id, tenantId, "RELEASE", amountCredits, "RESERVATION", reservationId.toString());
     }
 
     public String getKind() {

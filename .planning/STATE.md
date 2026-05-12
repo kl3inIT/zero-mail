@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: "Phase 03 shipped — PR #22"
-stopped_at: Phase 03 closure complete
-last_updated: "2026-05-10T12:21:27.614Z"
-last_activity: 2026-05-10 - Completed quick task 260510-qvv: Document Boot 4/Jackson migration verification guidance in CLAUDE.md and AGENTS.md
+status: "Phase 04 shipped - PR #29"
+stopped_at: Phase 04 complete, ready to discuss Phase 5
+last_updated: "2026-05-12T02:56:11.418Z"
+last_activity: 2026-05-12
 progress:
   total_phases: 15
-  completed_phases: 12
-  total_plans: 91
-  completed_plans: 91
+  completed_phases: 13
+  total_plans: 100
+  completed_plans: 100
   percent: 100
 ---
 
@@ -18,25 +18,25 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-28)
+See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 04 — triage-convergence
+**Current focus:** Phase 5 — user-surface-—-drafts,-analytics,-web-ui
 
 ## Current Position
 
-Phase: 4
+Phase: 5
 Plan: Not started
-Status: Phase 03 shipped — PR #22
-Last activity: 2026-05-10 - Completed quick task 260510-qvv: Document Boot 4/Jackson migration verification guidance in CLAUDE.md and AGENTS.md
+Status: Phase 04 shipped - PR #29
+Last activity: 2026-05-12 - Completed quick task 260512-dx4: Fix Frontend Web CI workspace cleanup lint-staged config assertion for PR #29
 
-Progress: [██████████] 100% for Phase 03
+Progress: [████████████████████] 100/100 plans (100%)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 34
+- Total plans completed: 43
 - Average duration: —
 - Total execution time: 0.0 hours
 
@@ -47,6 +47,7 @@ Progress: [██████████] 100% for Phase 03
 | 01.5 | 9 | - | - |
 | 02B | 7 | - | - |
 | 03 | 10 | - | - |
+| 04 | 9 | - | - |
 
 **Recent Trend:**
 
@@ -112,6 +113,14 @@ Progress: [██████████] 100% for Phase 03
 | Phase 02C P05b | 64min | 1 tasks | 46 files |
 | Phase 02C P06 | 90 min | 1 tasks | 5 files |
 | Phase 02C P07 | 20 min | 2 tasks | 9 files |
+| Phase 04 P00 | 30min | 3 tasks | 23 files |
+| Phase 04 P01 | 12min | 3 tasks | 14 files |
+| Phase 04 P02 | 29 min | 3 tasks | 34 files |
+| Phase 04 P03 | 19 min | 3 tasks | 13 files |
+| Phase 04 P04 | 20min | 3 tasks | 11 files |
+| Phase 04 P05 | 25min | 2 tasks | 11 files |
+| Phase 04-triage-convergence-hero P06 | 24min | 2 tasks | 22 files |
+| Phase 04 P07 | 23min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -245,6 +254,29 @@ Recent decisions affecting current work:
 - [Phase 02C]: Plan 05a canonicalizes BYOK endpoints by trimming trailing slashes and uses URI.create(...).getHost() for host extraction instead of ad hoc parsing.
 - [Phase 02C]: Plan 05b exposes BYOK validate/save/current over REST while keeping core service signatures on core command records, not API DTOs.
 - [Phase 02C]: Plan 05b changes app configuration to canonical kebab-case `zero-mail.*`; API-only settings bind under `zero-mail.api.*`, worker-only settings bind under `zero-mail.worker.*`, and shared LLM platform/BYOK settings are nested under `ZeroMailCoreProperties`.
+- [Phase 04]: Plan 00 Wave 0 triage tests reference future production types by FQN strings/reflection so compileTestJava stays green while execution is RED. — Later plans can run targeted tests without the entire test source set failing to compile before production classes exist.
+- [Phase 04]: Plan 00 CallSiteEnumMembershipArchTest is intentionally RED until 04-02 adds TRIAGE_PLATFORM_LLM and TRIAGE_DETERMINISTIC. — Locks Phase 4 credit-accounting call-site expansion as an executable contract.
+- [Phase 04]: Plan 00 uses spring-modulith-starter-jdbc without a version pin; the existing Spring Modulith BOM supplies 2.0.7-SNAPSHOT. — Keeps the new event-registry dependency aligned with the existing Modulith BOM and avoids ad-hoc version drift.
+- [Phase 04]: 04-01 uses Spring Modulith JDBC v2 event_publication schema from pinned 2.0.7-SNAPSHOT; Liquibase owns the table and schema auto-init remains unset. — Pinned source shows the default v2 schema and the actual property key spring.modulith.events.jdbc.schema-initialization.enabled.
+- [Phase 04]: 04-01 MailMessageObserved publishes only after insertObservedIfAbsent returns 1 and carries ids plus observedAt only. — This preserves duplicate-delivery idempotency and the no-content privacy invariant.
+- [Phase 04]: 04-01 core.triage allowedDependencies = {rules, gmail, llm, billing, tenant, shared.persistence, shared.lang}; no direct crypto edge. — Future triage code must consume Gmail capabilities through core.gmail facades rather than reaching into Gmail crypto internals.
+- [Phase 04]: 04-02 maps TriageAuditEntity inherited id to audit_id with @AttributeOverride instead of redeclaring a second @Id.
+- [Phase 04]: 04-02 uses native @Query without @Modifying for INSERT ... RETURNING audit methods so Optional<UUID> result mapping works; @Modifying stays on update transitions only.
+- [Phase 04]: 04-02 makes TriageAuditWriter the required validation/canonicalization seam before native triage_audit inserts and records protected senders in tenant_protected_sender_observation.
+- [Phase 04]: Apply the semantic triage model pin to zero-mail.llm.platform.triage-model. — This codebase constructs the platform ChatModel from ZeroMailCoreProperties rather than spring.ai.openai.chat.options.model.
+- [Phase 04]: Use the pinned local Spring AI M6 API shape: OpenAiChatModel.ResponseFormat.builder() and ChatClient.options(OpenAiChatOptions.Builder). — Context7 and local source verification showed M6 API drift from the AI-SPEC sample; compile passed with the local shape while preserving JSON_SCHEMA behavior.
+- [Phase 04]: Add a pure-Java core.llm.service.SemanticIntentEvaluator seam so LlmGatewayImpl remains Spring-AI-free and Task 1 compiles independently. — Matches the existing LlmModelClient adapter pattern and preserves the Phase 2C Spring AI boundary while allowing staged task commits.
+- [Phase 04]: 04-04 keeps RefreshTokenCipher inside core.gmail by adding GmailApiClientFactory.buildClientForTenant(UUID) for triage callers.
+- [Phase 04]: 04-04 makes TriageGmailWriter the sole triage Gmail write adapter and keeps it send-free.
+- [Phase 04]: 04-04 sender safety net uses optional Boot StringRedisTemplate with hashed keys and fail-safe protected=true on Gmail lookup failure.
+- [Phase 04]: Plan 05 kept the single @ApplicationModuleListener on TriageOrchestratorService because worker component scanning already includes com.zeromail.core.
+- [Phase 04]: Plan 05 leaves platform LLM credit reservation inside LlmGateway.evaluateSemanticIntents; the orchestrator only reserves deterministic zero-cost messages.
+- [Phase 04]: Plan 05 added worker triage retry/cleanup/reaper marker types for contracts only; scheduled behavior remains owned by plan 04-07.
+- [Phase 04-06]: Use error.triage.* dotted codes with generated errors.triage.* frontend messages.
+- [Phase 04-06]: Move the springdoc emit port from 59080 to 59280 because 59080 is inside this Windows TCP excluded range.
+- [Phase 04]: Plan 07 retry uses distinct FailedEventPublications — Local Spring Modulith 2.0.7-SNAPSHOT exposes FailedEventPublications; TriageEventRetryJob resubmits incomplete publications older than PT5M and failed publications via ResubmissionOptions.withMinAge(PT5M).
+- [Phase 04]: Plan 07 cleanup counts outstanding publications with JdbcTemplate — The public incomplete and failed publication views do not expose counts on the worker compile classpath; counting against the Liquibase-owned event_publication table keeps cleanup observability compile-safe.
+- [Phase 04]: Plan 07 pending reaper ships conservative FAILED transition — Metadata verification to APPLIED remains optional and deferred; the shipped PT30M abandoned threshold is guarded to stay above the PT2M saga retry lease.
 
 ### Roadmap Evolution
 
@@ -263,6 +295,7 @@ Recent decisions affecting current work:
 
 - WR-06: dedicated test-profile SecurityConfig slice (so OAuth filter chain is exercised under integration tests) — `.planning/todos/pending/2026-04-28-wr-06-test-profile-securityconfig-slice.md`
 - Apply `:?` fail-fast to `backend/worker/src/main/resources/application.yml:10` (CR-04 parity with api module) — `.planning/todos/pending/2026-04-28-worker-application-yml-fail-fast-parity.md`
+- Make backend/core context API surfaces explicit with Spring Modulith `@NamedInterface("api")` (+ low-pri: Spotless `ratchetFrom`, vertical-slice split of `rules`/`llm` if folders grow) — `.planning/todos/pending/2026-05-12-make-backend-core-context-api-surfaces-explicit-with-namedin.md`
 
 ### Blockers/Concerns
 
@@ -276,8 +309,12 @@ Recent decisions affecting current work:
 
 ### Quick Tasks Completed
 
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
+| # | Description | Date | Commit | Status | Directory |
+|---|-------------|------|--------|--------|-----------|
+| 260512-dx4 | Fix Frontend Web CI workspace cleanup lint-staged config assertion for PR #29 | 2026-05-12 | 4ecd071 | Verified | [260512-dx4-fix-frontend-web-ci-workspace-cleanup-li](./quick/260512-dx4-fix-frontend-web-ci-workspace-cleanup-li/) |
+| 260511-wc4 | Backend core package restructure: rename application→usecases, dissolve service/, enforce framework-free domain/, clean up empties, sync docs, fix cross-platform lint-staged | 2026-05-12 | e7cc431 | Verified | [260511-wc4-backend-core-package-restructure-rename-](./quick/260511-wc4-backend-core-package-restructure-rename-/) |
+| 260511-vok | Adopt google-java-format AOSP (4-space) for the backend plus wire enforcement (Spotless plugin, lint-staged, git-blame-ignore-revs) | 2026-05-11 | 1b79fa2 |  | [260511-vok-adopt-google-java-format-aosp-4-space-fo](./quick/260511-vok-adopt-google-java-format-aosp-4-space-fo/) |
+| 260511-jrq | Spring AI 2.0.0-M6 upgrade and sync safe Dependabot dependency PRs | 2026-05-11 | 297f681 | [260511-jrq-spring-ai-2-0-0-m6-upgrade-and-sync-safe](./quick/260511-jrq-spring-ai-2-0-0-m6-upgrade-and-sync-safe/) |
 | 260510-qvv | Document Boot 4/Jackson migration verification guidance in CLAUDE.md and AGENTS.md | 2026-05-10 | pending | [260510-qvv-document-boot-4-jackson-migration-verifi](./quick/260510-qvv-document-boot-4-jackson-migration-verifi/) |
 | 260510-mid | Refactor backend domain package boundaries and sync architecture conventions | 2026-05-10 | pending | [260510-mid-refactor-backend-domain-package-boundari](./quick/260510-mid-refactor-backend-domain-package-boundari/) |
 | 260509-vsp | Fix flaky SepayWebhookMismatchAuditEventTest assertion after CI rerun passes | 2026-05-09 | fc6f234 | [260509-vsp-fix-flaky-sepaywebhookmismatchauditevent](./quick/260509-vsp-fix-flaky-sepaywebhookmismatchauditevent/) |
@@ -304,6 +341,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-09T23:10:49Z
-Stopped at: Phase 03 closure complete
-Resume file: .planning/phases/03-rules-engine/03-09-SUMMARY.md
+Last session: 2026-05-11T22:46:12.2160638+07:00
+Stopped at: Phase 04 complete, ready to discuss Phase 5
+Resume file: None

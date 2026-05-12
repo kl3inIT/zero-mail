@@ -2,24 +2,22 @@ package com.zeromail.core.shared.privacy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-
 /**
- * Verifies the per-event filter:
- *  - clean events stay clean (no scrubbed marker carried over from prior sensitive events),
- *  - sensitive events carry {@code scrubbed=true} on their OWN MDC snapshot,
- *  - the redaction contract (Sensitive.toString) still produces ***REDACTED*** content.
+ * Verifies the per-event filter: - clean events stay clean (no scrubbed marker carried over from
+ * prior sensitive events), - sensitive events carry {@code scrubbed=true} on their OWN MDC
+ * snapshot, - the redaction contract (Sensitive.toString) still produces ***REDACTED*** content.
  *
- * <p>The filter is wired against the appender (not as a TurboFilter) so it sees fully built
- * {@link ILoggingEvent}s and mutates only that event's per-event MDC map.
+ * <p>The filter is wired against the appender (not as a TurboFilter) so it sees fully built {@link
+ * ILoggingEvent}s and mutates only that event's per-event MDC map.
  */
 class SensitiveMarkerScrubFilterTest {
 
@@ -46,10 +44,12 @@ class SensitiveMarkerScrubFilterTest {
     void sensitive_argument_is_scrubbed() {
         Sensitive<String> s = Sensitive.of("plaintext-secret");
         logger.info("token={}", s);
-        assertThat(appender.list).anySatisfy(ev -> {
-            assertThat(ev.getFormattedMessage()).doesNotContain("plaintext-secret");
-            assertThat(ev.getFormattedMessage()).contains("***REDACTED***");
-        });
+        assertThat(appender.list)
+                .anySatisfy(
+                        ev -> {
+                            assertThat(ev.getFormattedMessage()).doesNotContain("plaintext-secret");
+                            assertThat(ev.getFormattedMessage()).contains("***REDACTED***");
+                        });
     }
 
     @Test
@@ -58,17 +58,20 @@ class SensitiveMarkerScrubFilterTest {
         // The per-event filter inspects the formatted message and stamps the marker into the
         // event's own MDC map (not thread-local MDC).
         logger.info("raw={}", "Sensitive(foo)");
-        assertThat(appender.list).anySatisfy(ev -> {
-            assertThat(ev.getMDCPropertyMap()).containsEntry("scrubbed", "true");
-            assertThat(ev.getMDCPropertyMap()).containsEntry("scrub_reason", "sensitive_marker");
-        });
+        assertThat(appender.list)
+                .anySatisfy(
+                        ev -> {
+                            assertThat(ev.getMDCPropertyMap()).containsEntry("scrubbed", "true");
+                            assertThat(ev.getMDCPropertyMap())
+                                    .containsEntry("scrub_reason", "sensitive_marker");
+                        });
     }
 
     @Test
     void clean_message_does_not_stamp_marker() {
         logger.info("safe message with no token");
-        assertThat(appender.list).allSatisfy(ev ->
-                assertThat(ev.getMDCPropertyMap()).doesNotContainKey("scrubbed"));
+        assertThat(appender.list)
+                .allSatisfy(ev -> assertThat(ev.getMDCPropertyMap()).doesNotContainKey("scrubbed"));
     }
 
     @Test

@@ -3,7 +3,6 @@ package com.zeromail.core.llm.gateway.springai;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.junit.jupiter.api.Test;
 
 class PlatformApiKeyTest {

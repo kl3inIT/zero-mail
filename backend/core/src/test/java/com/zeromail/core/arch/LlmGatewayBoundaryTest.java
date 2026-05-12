@@ -2,11 +2,10 @@ package com.zeromail.core.arch;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
-import org.junit.jupiter.api.Test;
-
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
+import org.junit.jupiter.api.Test;
 
 class LlmGatewayBoundaryTest {
 
@@ -15,13 +14,16 @@ class LlmGatewayBoundaryTest {
         JavaClasses importedClasses = importProductionClasses();
 
         noClasses()
-                .that().resideOutsideOfPackage("..core.llm.gateway.springai..")
-                .should().dependOnClassesThat()
+                .that()
+                .resideOutsideOfPackage("..core.llm.gateway.springai..")
+                .should()
+                .dependOnClassesThat()
                 .resideInAnyPackage("org.springframework.ai..")
-                .because("LLM-01: Spring AI imports MUST be confined to core.llm.gateway.springai. "
-                        + "LlmGatewayImpl depends only on the pure-Java LlmModelClient seam; "
-                        + "SpringAiLlmModelClient is the single adapter that imports Spring AI types. "
-                        + "NO EXEMPTION.")
+                .because(
+                        "LLM-01: Spring AI imports MUST be confined to core.llm.gateway.springai. "
+                                + "LlmGatewayImpl depends only on the pure-Java LlmModelClient seam; "
+                                + "SpringAiLlmModelClient is the single adapter that imports Spring AI types. "
+                                + "NO EXEMPTION.")
                 .check(importedClasses);
     }
 
@@ -30,11 +32,14 @@ class LlmGatewayBoundaryTest {
         JavaClasses importedClasses = importProductionClasses();
 
         noClasses()
-                .that().resideOutsideOfPackage("..core.llm.gateway.springai..")
-                .should().dependOnClassesThat()
+                .that()
+                .resideOutsideOfPackage("..core.llm.gateway.springai..")
+                .should()
+                .dependOnClassesThat()
                 .resideInAnyPackage("com.openai..", "com.anthropic..")
-                .because("LLM-01: vendor SDK imports MUST be confined to core.llm.gateway.springai. "
-                        + "NO EXEMPTION.")
+                .because(
+                        "LLM-01: vendor SDK imports MUST be confined to core.llm.gateway.springai. "
+                                + "NO EXEMPTION.")
                 .check(importedClasses);
     }
 
@@ -43,10 +48,13 @@ class LlmGatewayBoundaryTest {
         JavaClasses importedClasses = importProductionClasses();
 
         noClasses()
-                .that().resideOutsideOfPackage("..core.llm.gateway.sanitization..")
-                .should().dependOnClassesThat()
+                .that()
+                .resideOutsideOfPackage("..core.llm.gateway.sanitization..")
+                .should()
+                .dependOnClassesThat()
                 .resideInAnyPackage("org.jsoup..", "com.knuddels.jtokkit..")
-                .because("LLM-05: HTML and tokenizer dependencies must stay inside the sanitization pipeline.")
+                .because(
+                        "LLM-05: HTML and tokenizer dependencies must stay inside the sanitization pipeline.")
                 .check(importedClasses);
     }
 

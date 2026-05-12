@@ -1,5 +1,7 @@
 package com.zeromail.api.support;
 
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
@@ -12,9 +14,6 @@ import java.security.Signature;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Instant;
 import java.util.Base64;
-
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpServer;
 
 public class MockGoogleOidcServer implements AutoCloseable {
 
@@ -50,36 +49,55 @@ public class MockGoogleOidcServer implements AutoCloseable {
 
     public String jwksUrl() {
         if (server == null) {
-            throw new IllegalStateException("MockGoogleOidcServer must be started before jwksUrl()");
+            throw new IllegalStateException(
+                    "MockGoogleOidcServer must be started before jwksUrl()");
         }
         return "http://127.0.0.1:" + server.getAddress().getPort() + "/jwks";
     }
 
     public String sign(String audience, String email, String issuer, long expiresInSeconds) {
         long now = Instant.now().getEpochSecond();
-        String payload = "{"
-                + "\"iss\":\"" + json(issuer) + "\","
-                + "\"aud\":\"" + json(audience) + "\","
-                + "\"email\":\"" + json(email) + "\","
-                + "\"email_verified\":true,"
-                + "\"sub\":\"pubsub-test-subject\","
-                + "\"iat\":" + now + ","
-                + "\"exp\":" + (now + expiresInSeconds)
-                + "}";
+        String payload =
+                "{"
+                        + "\"iss\":\""
+                        + json(issuer)
+                        + "\","
+                        + "\"aud\":\""
+                        + json(audience)
+                        + "\","
+                        + "\"email\":\""
+                        + json(email)
+                        + "\","
+                        + "\"email_verified\":true,"
+                        + "\"sub\":\"pubsub-test-subject\","
+                        + "\"iat\":"
+                        + now
+                        + ","
+                        + "\"exp\":"
+                        + (now + expiresInSeconds)
+                        + "}";
         return signPayload(payload, signingKey.getPrivate(), KEY_ID);
     }
 
     public String signWithWrongKey(String audience, String email) {
         long now = Instant.now().getEpochSecond();
-        String payload = "{"
-                + "\"iss\":\"https://accounts.google.com\","
-                + "\"aud\":\"" + json(audience) + "\","
-                + "\"email\":\"" + json(email) + "\","
-                + "\"email_verified\":true,"
-                + "\"sub\":\"pubsub-test-subject\","
-                + "\"iat\":" + now + ","
-                + "\"exp\":" + (now + 300)
-                + "}";
+        String payload =
+                "{"
+                        + "\"iss\":\"https://accounts.google.com\","
+                        + "\"aud\":\""
+                        + json(audience)
+                        + "\","
+                        + "\"email\":\""
+                        + json(email)
+                        + "\","
+                        + "\"email_verified\":true,"
+                        + "\"sub\":\"pubsub-test-subject\","
+                        + "\"iat\":"
+                        + now
+                        + ","
+                        + "\"exp\":"
+                        + (now + 300)
+                        + "}";
         return signPayload(payload, generateKeyPair().getPrivate(), "wrong-key");
     }
 
@@ -96,18 +114,26 @@ public class MockGoogleOidcServer implements AutoCloseable {
         RSAPublicKey publicKey = (RSAPublicKey) signingKey.getPublic();
         return "{\"keys\":[{"
                 + "\"kty\":\"RSA\","
-                + "\"kid\":\"" + KEY_ID + "\","
+                + "\"kid\":\""
+                + KEY_ID
+                + "\","
                 + "\"use\":\"sig\","
                 + "\"alg\":\"RS256\","
-                + "\"n\":\"" + base64Url(unsigned(publicKey.getModulus())) + "\","
-                + "\"e\":\"" + base64Url(unsigned(publicKey.getPublicExponent())) + "\""
+                + "\"n\":\""
+                + base64Url(unsigned(publicKey.getModulus()))
+                + "\","
+                + "\"e\":\""
+                + base64Url(unsigned(publicKey.getPublicExponent()))
+                + "\""
                 + "}]}";
     }
 
     private static String signPayload(String payloadJson, PrivateKey privateKey, String kid) {
         String header = "{\"alg\":\"RS256\",\"typ\":\"JWT\",\"kid\":\"" + kid + "\"}";
-        String signingInput = base64Url(header.getBytes(StandardCharsets.UTF_8))
-                + "." + base64Url(payloadJson.getBytes(StandardCharsets.UTF_8));
+        String signingInput =
+                base64Url(header.getBytes(StandardCharsets.UTF_8))
+                        + "."
+                        + base64Url(payloadJson.getBytes(StandardCharsets.UTF_8));
         try {
             Signature signature = Signature.getInstance("SHA256withRSA");
             signature.initSign(privateKey);

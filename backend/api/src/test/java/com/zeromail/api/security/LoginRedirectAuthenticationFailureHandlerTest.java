@@ -1,7 +1,14 @@
 package com.zeromail.api.security;
 
-import java.net.URI;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
+import com.zeromail.api.config.ZeroMailApiProperties;
+import java.net.URI;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -10,26 +17,17 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 
-import com.zeromail.api.config.ZeroMailApiProperties;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-
 /**
- * Wave 0 RED scaffold — tests fail to compile until Task 2 creates
- * {@link LoginRedirectAuthenticationFailureHandler}.
- * Once Task 2 lands, all tests must turn GREEN.
+ * Wave 0 RED scaffold — tests fail to compile until Task 2 creates {@link
+ * LoginRedirectAuthenticationFailureHandler}. Once Task 2 lands, all tests must turn GREEN.
  */
 class LoginRedirectAuthenticationFailureHandlerTest {
 
-    private static final ZeroMailApiProperties PROPS = new ZeroMailApiProperties(
-            new ZeroMailApiProperties.WebProperties(URI.create("http://localhost:3000")),
-            null /* null triggers CorsProperties defaults via compact constructor */,
-            null /* null triggers GmailProperties defaults via compact constructor */);
+    private static final ZeroMailApiProperties PROPS =
+            new ZeroMailApiProperties(
+                    new ZeroMailApiProperties.WebProperties(URI.create("http://localhost:3000")),
+                    null /* null triggers CorsProperties defaults via compact constructor */,
+                    null /* null triggers GmailProperties defaults via compact constructor */);
 
     @Test
     void access_denied_redirects_to_login_consent_denied() throws Exception {

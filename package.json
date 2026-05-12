@@ -25,7 +25,7 @@
     "lint-staged": "16.4.0",
     "prettier": "3.8.3",
     "prettier-plugin-tailwindcss": "0.8.0",
-    "turbo": "2.9.9"
+    "turbo": "2.9.12"
   },
   "pnpm": {
     "peerDependencyRules": {
@@ -33,21 +33,5 @@
         "@playwright/test"
       ]
     }
-  },
-  "lint-staged": {
-    "apps/web/**/*.{ts,tsx,js,jsx}": [
-      "pnpm --filter web exec eslint --fix",
-      "pnpm --filter web exec prettier --write"
-    ],
-    "apps/web/messages/*.json": [
-      "pnpm --filter web exec prettier --write",
-      "pnpm --filter web run i18n:check"
-    ],
-    "apps/web/!(messages)/**/*.{md,mdx,json,css}": [
-      "pnpm --filter web exec prettier --write"
-    ],
-    "apps/web/*.{md,json,css}": [
-      "pnpm --filter web exec prettier --write"
-    ]
   }
 }

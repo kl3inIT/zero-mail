@@ -2,16 +2,14 @@ package com.zeromail.worker;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.zeromail.worker.test.MockGmailHistoryServer;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
-
-import com.zeromail.worker.test.MockGmailHistoryServer;
 
 class GmailWatchSchedulerTest extends PostgresContainerTest {
 
@@ -46,7 +44,8 @@ class GmailWatchSchedulerTest extends PostgresContainerTest {
 
     @Test
     void renew_expiryWithin24h_issuersWatch() {
-        UUID tenantId = seedConnectedGmail(100L, Instant.now().plusSeconds(23 * 60 * 60), "HEALTHY", 0);
+        UUID tenantId =
+                seedConnectedGmail(100L, Instant.now().plusSeconds(23 * 60 * 60), "HEALTHY", 0);
         gmail.stubWatchSuccess(201L, Instant.now().plusSeconds(604800).toEpochMilli());
 
         scheduler.tick();
@@ -89,7 +88,8 @@ class GmailWatchSchedulerTest extends PostgresContainerTest {
 
     @Test
     void renew_existingHistoryPointer_doesNotAdvanceLastSyncedHistoryId() {
-        UUID tenantId = seedConnectedGmail(100L, Instant.now().plusSeconds(23 * 60 * 60), "HEALTHY", 0);
+        UUID tenantId =
+                seedConnectedGmail(100L, Instant.now().plusSeconds(23 * 60 * 60), "HEALTHY", 0);
         seedPendingDelivery(tenantId, 110L);
         gmail.stubWatchSuccess(200L, Instant.now().plusSeconds(604800).toEpochMilli());
 
@@ -101,7 +101,9 @@ class GmailWatchSchedulerTest extends PostgresContainerTest {
 
     @Test
     void watchRenewal_historyLost_doesNotClearIngestionHealth() {
-        UUID tenantId = seedConnectedGmail(100L, Instant.now().plusSeconds(23 * 60 * 60), "HISTORY_LOST", 0);
+        UUID tenantId =
+                seedConnectedGmail(
+                        100L, Instant.now().plusSeconds(23 * 60 * 60), "HISTORY_LOST", 0);
         gmail.stubWatchSuccess(203L, Instant.now().plusSeconds(604800).toEpochMilli());
 
         scheduler.tick();
@@ -109,16 +111,27 @@ class GmailWatchSchedulerTest extends PostgresContainerTest {
         assertThat(connectionColumn(tenantId, "ingestion_health")).isEqualTo("HISTORY_LOST");
     }
 
-    private UUID seedConnectedGmail(Long lastSyncedHistoryId, Instant watchExpiresAt, String ingestionHealth, int failures) {
+    private UUID seedConnectedGmail(
+            Long lastSyncedHistoryId,
+            Instant watchExpiresAt,
+            String ingestionHealth,
+            int failures) {
         UUID tenantId = UUID.randomUUID();
-        jdbc.update("INSERT INTO tenants(id, display_name) VALUES (?, ?)", tenantId, "tenant-" + tenantId);
-        jdbc.update("""
+        jdbc.update(
+                "INSERT INTO tenants(id, display_name) VALUES (?, ?)",
+                tenantId,
+                "tenant-" + tenantId);
+        jdbc.update(
+                """
                 INSERT INTO gmail_connections(
                     id, tenant_id, google_email, status, refresh_token_encrypted, last_synced_history_id, watch_expires_at,
                     ingestion_health, watch_consecutive_failures
                 )
                 VALUES (?, ?, ?, 'CONNECTED', ?, ?, ?, ?, ?)
-                """, UUID.randomUUID(), tenantId, "watch-" + tenantId + "@example.test",
+                """,
+                UUID.randomUUID(),
+                tenantId,
+                "watch-" + tenantId + "@example.test",
                 encryptedRefreshToken(tenantId),
                 lastSyncedHistoryId,
                 watchExpiresAt == null ? null : Timestamp.from(watchExpiresAt),
@@ -128,14 +141,20 @@ class GmailWatchSchedulerTest extends PostgresContainerTest {
     }
 
     private void seedPendingDelivery(UUID tenantId, long historyId) {
-        jdbc.update("""
+        jdbc.update(
+                """
                 INSERT INTO pubsub_delivery(id, tenant_id, pubsub_message_id, history_id, payload, status)
                 VALUES (?, ?, ?, ?, '{}'::jsonb, 'PENDING')
-                """, UUID.randomUUID(), tenantId, "watch-delivery-" + historyId, historyId);
+                """,
+                UUID.randomUUID(),
+                tenantId,
+                "watch-delivery-" + historyId,
+                historyId);
     }
 
     private Object connectionColumn(UUID tenantId, String column) {
-        return jdbc.queryForObject("SELECT " + column + " FROM gmail_connections WHERE tenant_id = ?",
+        return jdbc.queryForObject(
+                "SELECT " + column + " FROM gmail_connections WHERE tenant_id = ?",
                 Object.class,
                 tenantId);
     }

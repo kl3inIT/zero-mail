@@ -8,8 +8,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
- * JHipster-style CORS wiring: keep the policy property-driven and let Spring Security
- * consume the {@link UrlBasedCorsConfigurationSource} via {@code http.cors()}.
+ * JHipster-style CORS wiring: keep the policy property-driven and let Spring Security consume the
+ * {@link UrlBasedCorsConfigurationSource} via {@code http.cors()}.
  */
 @Configuration
 @Profile("!test")

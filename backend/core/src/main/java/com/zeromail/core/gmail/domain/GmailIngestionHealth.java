@@ -1,12 +1,10 @@
 package com.zeromail.core.gmail.domain;
 
+import com.zeromail.core.shared.lang.IdentifiedEnum;
 import java.util.NoSuchElementException;
 import java.util.stream.Stream;
 
-import com.zeromail.core.shared.lang.IdentifiedEnum;
-
 public enum GmailIngestionHealth implements IdentifiedEnum {
-
     HEALTHY,
     WATCH_UNHEALTHY,
     HISTORY_LOST;
@@ -20,6 +18,7 @@ public enum GmailIngestionHealth implements IdentifiedEnum {
         return Stream.of(values())
                 .filter(e -> e.id().equals(id))
                 .findFirst()
-                .orElseThrow(() -> new NoSuchElementException("Unknown GmailIngestionHealth id: " + id));
+                .orElseThrow(
+                        () -> new NoSuchElementException("Unknown GmailIngestionHealth id: " + id));
     }
 }

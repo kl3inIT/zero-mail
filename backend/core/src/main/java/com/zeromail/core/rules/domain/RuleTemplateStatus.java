@@ -1,34 +1,34 @@
 package com.zeromail.core.rules.domain;
 
-import java.util.NoSuchElementException;
-import java.util.stream.Stream;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.zeromail.core.shared.lang.IdentifiedEnum;
+import java.util.NoSuchElementException;
+import java.util.stream.Stream;
 
 public enum RuleTemplateStatus implements IdentifiedEnum {
-  MATERIALIZABLE("materializable"),
-  GALLERY_ONLY("gallery_only"),
-  DEPRECATED("deprecated");
+    MATERIALIZABLE("materializable"),
+    GALLERY_ONLY("gallery_only"),
+    DEPRECATED("deprecated");
 
-  private final String id;
+    private final String id;
 
-  RuleTemplateStatus(String id) {
-    this.id = id;
-  }
+    RuleTemplateStatus(String id) {
+        this.id = id;
+    }
 
-  @JsonValue
-  @Override
-  public String id() {
-    return id;
-  }
+    @JsonValue
+    @Override
+    public String id() {
+        return id;
+    }
 
-  @JsonCreator
-  public static RuleTemplateStatus fromId(String id) {
-    return Stream.of(values())
-        .filter(ruleTemplateStatus -> ruleTemplateStatus.id().equals(id))
-        .findFirst()
-        .orElseThrow(() -> new NoSuchElementException("Unknown RuleTemplateStatus id: " + id));
-  }
+    @JsonCreator
+    public static RuleTemplateStatus fromId(String id) {
+        return Stream.of(values())
+                .filter(ruleTemplateStatus -> ruleTemplateStatus.id().equals(id))
+                .findFirst()
+                .orElseThrow(
+                        () -> new NoSuchElementException("Unknown RuleTemplateStatus id: " + id));
+    }
 }

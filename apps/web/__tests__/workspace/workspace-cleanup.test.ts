@@ -22,11 +22,19 @@ describe('Phase 1.3 — Workspace cleanup (D-E1..D-E4)', () => {
     expect(src).toMatch(/unrs-resolver/);
   });
 
-  it('root package.json has prepare:"husky" + lint-staged config', () => {
+  it('root package.json has prepare:"husky" and root lint-staged config exists', () => {
     const pkg = JSON.parse(readFileSync(resolve(REPO_ROOT, 'package.json'), 'utf8'));
     expect(pkg.scripts?.prepare).toBe('husky');
-    expect(pkg['lint-staged']).toBeDefined();
-    expect(typeof pkg['lint-staged']).toBe('object');
+
+    const lintStagedConfigPath = resolve(REPO_ROOT, 'lint-staged.config.mjs');
+    expect(existsSync(lintStagedConfigPath)).toBe(true);
+    const lintStagedConfig = readFileSync(lintStagedConfigPath, 'utf8');
+    expect(lintStagedConfig).toMatch(/backend\/\*\*\/\*\.java/);
+    expect(lintStagedConfig).toMatch(/spotlessApply/);
+    expect(lintStagedConfig).toMatch(/apps\/web\/\*\*\/\*\.\{ts,tsx,js,jsx\}/);
+    expect(lintStagedConfig).toMatch(/eslint --fix/);
+    expect(lintStagedConfig).toMatch(/prettier --write/);
+    expect(lintStagedConfig).toMatch(/i18n:check/);
   });
 
   it('.husky/pre-commit exists at repo root and runs lint-staged', () => {

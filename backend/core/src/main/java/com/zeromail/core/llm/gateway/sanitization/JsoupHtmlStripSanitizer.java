@@ -1,6 +1,6 @@
 package com.zeromail.core.llm.gateway.sanitization;
 
-import com.zeromail.core.llm.application.SanitizationContext;
+import com.zeromail.core.llm.usecases.SanitizationContext;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
 import org.springframework.core.annotation.Order;

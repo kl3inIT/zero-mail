@@ -1,12 +1,10 @@
 package com.zeromail.core.tenant.persistence;
 
-import java.util.UUID;
-
 import com.zeromail.core.shared.persistence.AbstractEntity;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import java.util.UUID;
 
 @Entity
 @Table(name = "tenants")
@@ -17,6 +15,9 @@ public class TenantEntity extends AbstractEntity {
 
     @Column(name = "triage_paused", nullable = false)
     private boolean triagePaused = false;
+
+    @Column(name = "triage_shadow_mode", nullable = false)
+    private boolean triageShadowMode = false;
 
     protected TenantEntity() {}
 
@@ -35,5 +36,13 @@ public class TenantEntity extends AbstractEntity {
 
     public void setTriagePaused(boolean triagePaused) {
         this.triagePaused = triagePaused;
+    }
+
+    public boolean isTriageShadowMode() {
+        return triageShadowMode;
+    }
+
+    public void setTriageShadowMode(boolean triageShadowMode) {
+        this.triageShadowMode = triageShadowMode;
     }
 }

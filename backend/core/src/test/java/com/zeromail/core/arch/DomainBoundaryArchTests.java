@@ -11,20 +11,18 @@ import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
 /**
- * D-D1 boundary enforcement: a class in {@code core.<domainA>} must NOT import any
- * {@code *Repository} from {@code core.<domainB>.persistence} where A != B.
- * Cross-domain reads MUST go through the owning domain's {@code @Service} class.
+ * D-D1 boundary enforcement: a class in {@code core.<domainA>} must NOT import any {@code
+ * *Repository} from {@code core.<domainB>.persistence} where A != B. Cross-domain reads MUST go
+ * through the owning domain's {@code @Service} class.
  *
- * <p>ArchUnit's fluent DSL has no "same-package-as-caller" predicate, so the rule
- * is expressed as four explicit per-domain ArchRules (Pitfall 4 in 01.2-RESEARCH.md).
- * Each new domain in Phase 2A/2B/2C/3/4 adds one more rule + extends the other rules'
- * exclusion arrays.
+ * <p>ArchUnit's fluent DSL has no "same-package-as-caller" predicate, so the rule is expressed as
+ * four explicit per-domain ArchRules (Pitfall 4 in 01.2-RESEARCH.md). Each new domain in Phase
+ * 2A/2B/2C/3/4 adds one more rule + extends the other rules' exclusion arrays.
  *
- * <p>The {@code dependOnClassesThat(predicate)} overload is used because the fluent
- * builder ({@code .haveNameMatching(...).and().resideInAnyPackage(...)}) is not chainable
- * in ArchUnit 1.4.x — {@code haveNameMatching} returns {@code ClassesShouldConjunction}
- * which has no zero-arg {@code and()}. Predicate composition at the
- * {@link DescribedPredicate} level is the correct shape.
+ * <p>The {@code dependOnClassesThat(predicate)} overload is used because the fluent builder ({@code
+ * .haveNameMatching(...).and().resideInAnyPackage(...)}) is not chainable in ArchUnit 1.4.x —
+ * {@code haveNameMatching} returns {@code ClassesShouldConjunction} which has no zero-arg {@code
+ * and()}. Predicate composition at the {@link DescribedPredicate} level is the correct shape.
  *
  * <p>Phase 03 adds the future {@code core.rules} domain up front so Wave 1+ plans cannot take
  * shortcuts through another domain's persistence repositories while the rules engine is landing.
@@ -41,93 +39,122 @@ public class DomainBoundaryArchTests {
             };
 
     @ArchTest
-    static final ArchRule account_no_cross_domain_repos = noClasses()
-            .that().resideInAPackage("..core.account..")
-            .should().dependOnClassesThat(
-                    nameEndsWithRepository.and(resideInAnyPackage(
-                            "..core.onboarding.persistence..",
-                            "..core.gmail.persistence..",
-                            "..core.tenant.persistence..",
-                            "..core.billing.persistence..",
-                            "..core.llm.persistence..",
-                            "..core.rules.persistence..")))
-            .because("D-D1: cross-domain reads must go through the other domain's Service");
+    static final ArchRule account_no_cross_domain_repos =
+            noClasses()
+                    .that()
+                    .resideInAPackage("..core.account..")
+                    .should()
+                    .dependOnClassesThat(
+                            nameEndsWithRepository.and(
+                                    resideInAnyPackage(
+                                            "..core.onboarding.persistence..",
+                                            "..core.gmail.persistence..",
+                                            "..core.tenant.persistence..",
+                                            "..core.billing.persistence..",
+                                            "..core.llm.persistence..",
+                                            "..core.rules.persistence..")))
+                    .because("D-D1: cross-domain reads must go through the other domain's Service");
 
     @ArchTest
-    static final ArchRule onboarding_no_cross_domain_repos = noClasses()
-            .that().resideInAPackage("..core.onboarding..")
-            .should().dependOnClassesThat(
-                    nameEndsWithRepository.and(resideInAnyPackage(
-                            "..core.account.persistence..",
-                            "..core.gmail.persistence..",
-                            "..core.tenant.persistence..",
-                            "..core.billing.persistence..",
-                            "..core.llm.persistence..",
-                            "..core.rules.persistence..")))
-            .because("D-D1: cross-domain reads must go through the other domain's Service");
+    static final ArchRule onboarding_no_cross_domain_repos =
+            noClasses()
+                    .that()
+                    .resideInAPackage("..core.onboarding..")
+                    .should()
+                    .dependOnClassesThat(
+                            nameEndsWithRepository.and(
+                                    resideInAnyPackage(
+                                            "..core.account.persistence..",
+                                            "..core.gmail.persistence..",
+                                            "..core.tenant.persistence..",
+                                            "..core.billing.persistence..",
+                                            "..core.llm.persistence..",
+                                            "..core.rules.persistence..")))
+                    .because("D-D1: cross-domain reads must go through the other domain's Service");
 
     @ArchTest
-    static final ArchRule gmail_no_cross_domain_repos = noClasses()
-            .that().resideInAPackage("..core.gmail..")
-            .should().dependOnClassesThat(
-                    nameEndsWithRepository.and(resideInAnyPackage(
-                            "..core.account.persistence..",
-                            "..core.onboarding.persistence..",
-                            "..core.tenant.persistence..",
-                            "..core.billing.persistence..",
-                            "..core.llm.persistence..",
-                            "..core.rules.persistence..")))
-            .because("D-D1: cross-domain reads must go through the other domain's Service");
+    static final ArchRule gmail_no_cross_domain_repos =
+            noClasses()
+                    .that()
+                    .resideInAPackage("..core.gmail..")
+                    .should()
+                    .dependOnClassesThat(
+                            nameEndsWithRepository.and(
+                                    resideInAnyPackage(
+                                            "..core.account.persistence..",
+                                            "..core.onboarding.persistence..",
+                                            "..core.tenant.persistence..",
+                                            "..core.billing.persistence..",
+                                            "..core.llm.persistence..",
+                                            "..core.rules.persistence..")))
+                    .because("D-D1: cross-domain reads must go through the other domain's Service");
 
     @ArchTest
-    static final ArchRule tenant_no_cross_domain_repos = noClasses()
-            .that().resideInAPackage("..core.tenant..")
-            .should().dependOnClassesThat(
-                    nameEndsWithRepository.and(resideInAnyPackage(
-                            "..core.account.persistence..",
-                            "..core.onboarding.persistence..",
-                            "..core.gmail.persistence..",
-                            "..core.billing.persistence..",
-                            "..core.llm.persistence..",
-                            "..core.rules.persistence..")))
-            .because("D-D1: cross-domain reads must go through the other domain's Service");
+    static final ArchRule tenant_no_cross_domain_repos =
+            noClasses()
+                    .that()
+                    .resideInAPackage("..core.tenant..")
+                    .should()
+                    .dependOnClassesThat(
+                            nameEndsWithRepository.and(
+                                    resideInAnyPackage(
+                                            "..core.account.persistence..",
+                                            "..core.onboarding.persistence..",
+                                            "..core.gmail.persistence..",
+                                            "..core.billing.persistence..",
+                                            "..core.llm.persistence..",
+                                            "..core.rules.persistence..")))
+                    .because("D-D1: cross-domain reads must go through the other domain's Service");
 
     @ArchTest
-    static final ArchRule billing_no_cross_domain_repos = noClasses()
-            .that().resideInAPackage("..core.billing..")
-            .should().dependOnClassesThat(
-                    nameEndsWithRepository.and(resideInAnyPackage(
-                            "..core.account.persistence..",
-                            "..core.onboarding.persistence..",
-                            "..core.gmail.persistence..",
-                            "..core.tenant.persistence..",
-                            "..core.llm.persistence..",
-                            "..core.rules.persistence..")))
-            .because("D-D1: cross-domain reads must go through the other domain's Service");
+    static final ArchRule billing_no_cross_domain_repos =
+            noClasses()
+                    .that()
+                    .resideInAPackage("..core.billing..")
+                    .should()
+                    .dependOnClassesThat(
+                            nameEndsWithRepository.and(
+                                    resideInAnyPackage(
+                                            "..core.account.persistence..",
+                                            "..core.onboarding.persistence..",
+                                            "..core.gmail.persistence..",
+                                            "..core.tenant.persistence..",
+                                            "..core.llm.persistence..",
+                                            "..core.rules.persistence..")))
+                    .because("D-D1: cross-domain reads must go through the other domain's Service");
 
     @ArchTest
-    static final ArchRule llm_no_cross_domain_repos = noClasses()
-            .that().resideInAPackage("..core.llm..")
-            .should().dependOnClassesThat(
-                    nameEndsWithRepository.and(resideInAnyPackage(
-                            "..core.account.persistence..",
-                            "..core.onboarding.persistence..",
-                            "..core.gmail.persistence..",
-                            "..core.tenant.persistence..",
-                            "..core.billing.persistence..")))
-            .because("D-D1: cross-domain reads must go through the other domain's Service");
+    static final ArchRule llm_no_cross_domain_repos =
+            noClasses()
+                    .that()
+                    .resideInAPackage("..core.llm..")
+                    .should()
+                    .dependOnClassesThat(
+                            nameEndsWithRepository.and(
+                                    resideInAnyPackage(
+                                            "..core.account.persistence..",
+                                            "..core.onboarding.persistence..",
+                                            "..core.gmail.persistence..",
+                                            "..core.tenant.persistence..",
+                                            "..core.billing.persistence..")))
+                    .because("D-D1: cross-domain reads must go through the other domain's Service");
 
     @ArchTest
-    static final ArchRule rules_no_cross_domain_repos = noClasses()
-            .that().resideInAPackage("..core.rules..")
-            .should().dependOnClassesThat(
-                    nameEndsWithRepository.and(resideInAnyPackage(
-                            "..core.account.persistence..",
-                            "..core.onboarding.persistence..",
-                            "..core.gmail.persistence..",
-                            "..core.tenant.persistence..",
-                            "..core.billing.persistence..",
-                            "..core.llm.persistence..")))
-            .because("D-D1: core.rules must read other domains through Services, not repositories")
-            .allowEmptyShould(true);
+    static final ArchRule rules_no_cross_domain_repos =
+            noClasses()
+                    .that()
+                    .resideInAPackage("..core.rules..")
+                    .should()
+                    .dependOnClassesThat(
+                            nameEndsWithRepository.and(
+                                    resideInAnyPackage(
+                                            "..core.account.persistence..",
+                                            "..core.onboarding.persistence..",
+                                            "..core.gmail.persistence..",
+                                            "..core.tenant.persistence..",
+                                            "..core.billing.persistence..",
+                                            "..core.llm.persistence..")))
+                    .because(
+                            "D-D1: core.rules must read other domains through Services, not repositories")
+                    .allowEmptyShould(true);
 }

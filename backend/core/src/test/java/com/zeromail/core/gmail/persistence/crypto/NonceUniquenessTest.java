@@ -7,9 +7,7 @@ import java.security.SecureRandom;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.Map;
-
 import javax.crypto.spec.SecretKeySpec;
-
 import org.junit.jupiter.api.Test;
 
 class NonceUniquenessTest {

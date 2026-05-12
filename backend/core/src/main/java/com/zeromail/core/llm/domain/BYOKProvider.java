@@ -1,14 +1,12 @@
 package com.zeromail.core.llm.domain;
 
-import java.util.NoSuchElementException;
-import java.util.stream.Stream;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.zeromail.core.shared.lang.IdentifiedEnum;
+import java.util.NoSuchElementException;
+import java.util.stream.Stream;
 
 public enum BYOKProvider implements IdentifiedEnum {
-
     ANTHROPIC("anthropic"),
     DEEPSEEK("deepseek"),
     GOOGLE_GENAI("google-genai"),

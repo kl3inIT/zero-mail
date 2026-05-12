@@ -1,15 +1,13 @@
 package com.zeromail.api.security;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.stereotype.Component;
-
-import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Single-registration authorization-request resolver for the bundled {@code google} OAuth2 client
@@ -37,43 +35,45 @@ import jakarta.servlet.http.HttpServletRequest;
 @Component
 public class GoogleAuthorizationRequestResolver implements OAuth2AuthorizationRequestResolver {
 
-  private static final String RECONNECT_PARAMETER = "reconnect";
+    private static final String RECONNECT_PARAMETER = "reconnect";
 
-  private final DefaultOAuth2AuthorizationRequestResolver defaultAuthorizationRequestResolver;
+    private final DefaultOAuth2AuthorizationRequestResolver defaultAuthorizationRequestResolver;
 
-  public GoogleAuthorizationRequestResolver(ClientRegistrationRepository clientRegistrationRepository) {
-    this.defaultAuthorizationRequestResolver =
-        new DefaultOAuth2AuthorizationRequestResolver(
-            clientRegistrationRepository, "/oauth2/authorization");
-  }
-
-  @Override
-  public OAuth2AuthorizationRequest resolve(HttpServletRequest servletRequest) {
-    return customizeAuthorizationRequest(
-        defaultAuthorizationRequestResolver.resolve(servletRequest), servletRequest);
-  }
-
-  @Override
-  public OAuth2AuthorizationRequest resolve(
-      HttpServletRequest servletRequest, String clientRegistrationId) {
-    return customizeAuthorizationRequest(
-        defaultAuthorizationRequestResolver.resolve(servletRequest, clientRegistrationId),
-        servletRequest);
-  }
-
-  private OAuth2AuthorizationRequest customizeAuthorizationRequest(
-      OAuth2AuthorizationRequest authorizationRequest, HttpServletRequest servletRequest) {
-    if (authorizationRequest == null) return null;
-    var additionalParameters = new HashMap<>(authorizationRequest.getAdditionalParameters());
-    additionalParameters.put("access_type", "offline");
-    additionalParameters.put("include_granted_scopes", "true");
-    // D-A5: prompt=consent only on reconnect path (forces re-consent + new refresh token).
-    // First-time login: NO prompt — smooth UX, refresh token issued on first offline grant anyway.
-    if ("true".equals(servletRequest.getParameter(RECONNECT_PARAMETER))) {
-      additionalParameters.put("prompt", "consent");
+    public GoogleAuthorizationRequestResolver(
+            ClientRegistrationRepository clientRegistrationRepository) {
+        this.defaultAuthorizationRequestResolver =
+                new DefaultOAuth2AuthorizationRequestResolver(
+                        clientRegistrationRepository, "/oauth2/authorization");
     }
-    return OAuth2AuthorizationRequest.from(authorizationRequest)
-        .additionalParameters(Map.copyOf(additionalParameters))
-        .build();
-  }
+
+    @Override
+    public OAuth2AuthorizationRequest resolve(HttpServletRequest servletRequest) {
+        return customizeAuthorizationRequest(
+                defaultAuthorizationRequestResolver.resolve(servletRequest), servletRequest);
+    }
+
+    @Override
+    public OAuth2AuthorizationRequest resolve(
+            HttpServletRequest servletRequest, String clientRegistrationId) {
+        return customizeAuthorizationRequest(
+                defaultAuthorizationRequestResolver.resolve(servletRequest, clientRegistrationId),
+                servletRequest);
+    }
+
+    private OAuth2AuthorizationRequest customizeAuthorizationRequest(
+            OAuth2AuthorizationRequest authorizationRequest, HttpServletRequest servletRequest) {
+        if (authorizationRequest == null) return null;
+        var additionalParameters = new HashMap<>(authorizationRequest.getAdditionalParameters());
+        additionalParameters.put("access_type", "offline");
+        additionalParameters.put("include_granted_scopes", "true");
+        // D-A5: prompt=consent only on reconnect path (forces re-consent + new refresh token).
+        // First-time login: NO prompt — smooth UX, refresh token issued on first offline grant
+        // anyway.
+        if ("true".equals(servletRequest.getParameter(RECONNECT_PARAMETER))) {
+            additionalParameters.put("prompt", "consent");
+        }
+        return OAuth2AuthorizationRequest.from(authorizationRequest)
+                .additionalParameters(Map.copyOf(additionalParameters))
+                .build();
+    }
 }

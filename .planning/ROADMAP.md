@@ -20,9 +20,9 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] **Phase 1.5: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED)** _(completed 2026-04-28)_ - Remaining heavy Phase 1.5 work: single Google OAuth upfront Gmail scope, remove google-gmail mismatch architecture, merge Gmail token provisioning, simplify onboarding/consent UX, deflate frontend primitives, polish landing/login/onboarding/settings/ReconnectPrompt, and close surviving REVIEW cleanup; excludes quick tasks already completed
 - [x] **Phase 2A: Mail Ingestion** _(completed 2026-04-29)_ - Gmail `users.watch` + Pub/Sub push + OIDC verification + idempotent history processing + global pause
 - [x] **Phase 2B: Billing (Prepaid Credits)** _(completed 2026-05-06)_ - Double-entry Postgres ledger, reserve/settle/release, credit-hold watchdog, SePay/VietQR top-up intent + webhook, balance API hooks
-- [ ] **Phase 2C: LLM Gateway** - Spring AI 2.0.0-M5 `LlmGateway` with sanitize → Unicode strip → structured tool-call + allow-list → BYOK per-request options → daily spend cap → drift detection
+- [ ] **Phase 2C: LLM Gateway** - Spring AI 2.0.0-M6 `LlmGateway` with sanitize → Unicode strip → structured tool-call + allow-list → BYOK per-request options → daily spend cap → drift detection
 - [x] **Phase 3: Rules Engine** _(completed 2026-05-10)_ - NL → structured matcher AST via Spring AI tool-call, deterministic evaluator, live preview, CRUD + reorder, template gallery
-- [ ] **Phase 4: Triage Convergence (Hero)** - Orchestrator, safety policy layer, audit + undo, shadow mode for new tenants, sender safety net
+- [x] **Phase 4: Triage Convergence (Hero)** _(completed 2026-05-11)_ - Orchestrator, safety policy layer, audit + undo, shadow mode for new tenants, sender safety net
 - [ ] **Phase 5: User Surface (Drafts, Analytics, Web UI)** - AI-drafted replies, metadata-only analytics + daily digest, Next.js 16 / React 19 frontend covering all flows
 - [ ] **Phase 6: Polish & CASA-Verified Launch** - End-to-end integration hardening, CASA Tier verification sign-off, launch readiness
 
@@ -85,7 +85,7 @@ Plans:
   2. Backend error responses follow a stable contract (machine-readable code + parameters) that the frontend localizes — no human-readable Vietnamese/English strings are constructed server-side for user-facing errors.
   3. Both Vietnamese and English message bundles cover every user-facing string in scope (auth, onboarding, settings, errors); a CI check fails the build on missing keys.
   4. ArchUnit and log-scrub guarantees from Phase 1 still pass; no localized error message contains PII, email body, prompt, or completion content.
-  5. The JHipster reference patterns adopted are documented in CONTEXT.md with a clear "what we kept / what we adapted / what we rejected" note (Spring Boot 4 / Spring AI 2.0.0-M5 / Next.js 16 fit).
+  5. The JHipster reference patterns adopted are documented in CONTEXT.md with a clear "what we kept / what we adapted / what we rejected" note (Spring Boot 4 / Spring AI 2.0.0-M6 / Next.js 16 fit).
 **Plans**: 8 plans
 - [x] 01.1-01-PLAN.md — [BLOCKING] Wave 0 test scaffolding + Liquibase changelog 006-users-preferred-language + JPA field + Vitest config
 - [x] 01.1-02-PLAN.md — Backend error contract: ErrorCodes, ApiError, FieldErrorDto, AllowedParamScalars, GlobalExceptionHandler upgrade (extends ResponseEntityExceptionHandler)
@@ -242,7 +242,7 @@ Plans:
 **UI hint**: yes
 
 ### Phase 2C: LLM Gateway
-**Goal**: Ship the single `LlmGateway` abstraction on Spring AI 2.0.0-M5 that all LLM traffic must traverse, with full prompt-injection hardening, BYOK routing, metadata-only observability, per-tenant spend caps, and drift detection — the contract that Phase 4 triage will be built on.
+**Goal**: Ship the single `LlmGateway` abstraction on Spring AI 2.0.0-M6 that all LLM traffic must traverse, with full prompt-injection hardening, BYOK routing, metadata-only observability, per-tenant spend caps, and drift detection — the contract that Phase 4 triage will be built on.
 **Depends on**: Phase 1 (hard gate — safety infrastructure must ship first)
 **Requirements**: LLM-01, LLM-02, LLM-03, LLM-04, LLM-05, LLM-06, LLM-07, LLM-08, LLM-09, LLM-10, LLM-11
 **Success Criteria** (what must be TRUE):
@@ -252,7 +252,7 @@ Plans:
   4. A user-provided BYOK key (OpenAI, Anthropic, OpenRouter) is used for that user's calls without any server-side persistence of the key beyond the request scope, and BYOK calls bypass platform credit deduction.
   5. Per-tenant daily LLM spend cap blocks further billable calls when exceeded, no raw body/prompt/completion is persisted beyond the short-lived in-memory cache, and the golden-set drift job flags any regression on the fixed sample on schedule.
 **Plans**: 8 plans
-**Research flag**: COMPLETE — Spring AI 2.0.0-M5 BYOK seam (`OpenAiChatModel.builder().options(...)` for platform/OpenAI-compatible, `ChatClient.prompt().options(builder)` for runtime deltas, `AnthropicChatOptions.builder().apiKey().baseUrl().model()` for Anthropic), jtokkit 1.1.0 + cl100k_base, Liquibase floor 019, all verified in 02C-RESEARCH.md and implementation.
+**Research flag**: COMPLETE — Spring AI 2.0.0-M6 BYOK seam (`OpenAiChatModel.builder().options(...)` for platform/OpenAI-compatible, `ChatClient.prompt().options(builder)` for runtime deltas, `AnthropicChatOptions.builder().apiKey().baseUrl().model()` for Anthropic), jtokkit 1.1.0 + cl100k_base, Liquibase floor 019, all verified in 02C-RESEARCH.md and implementation.
 
 Plans:
 - [x] 02C-01-PLAN.md — Wave 1 foundation: package skeleton + libs.versions.toml (Spring AI BOM + jtokkit) + Liquibase 018 BYOK schema + ArchUnit boundary test + Wave 0 RED scaffolds
@@ -321,8 +321,36 @@ Cross-cutting constraints:
   3. Every automated action has an audit entry (message reference, rule, action, reason, timestamp) visible to the user, and the user can undo any action within the retention window and see the inverse Gmail change.
   4. A brand-new tenant's first N triage decisions are logged as would-apply but never written to Gmail until the user explicitly exits shadow mode.
   5. Messages from senders identified as frequent/important are not auto-acted on until the user opts that sender into automation, visible in a sender-safety-net UI.
-**Plans**: TBD
-**UI hint**: yes
+
+  Note (interview round 1, 2026-05-11): shadow mode is reframed to an opt-in tenant-wide toggle (default OFF), not a count-based auto-unlock; all triage UI (audit log, undo button, shadow toggle, sender-safety-net management) is deferred to Phase 5 — Phase 4 ships backend + REST only.
+**Plans**: 9 plans
+**Research flag**: COMPLETE — `04-SPEC.md`, `04-CONTEXT.md`, `04-AI-SPEC.md`, `04-RESEARCH.md`, `04-PATTERNS.md`, `04-VALIDATION.md` in `.planning/phases/04-triage-convergence-hero/`.
+
+Plans:
+**Wave 1**
+- [x] 04-00-PLAN.md — [BLOCKING] Wave 0: spring-modulith-starter-jdbc dependency + RED test spine (core/api/worker scaffolds, 4 ArchUnit guards, CallSite membership 3->5, eval-harness dir marker)
+- [x] 04-01-PLAN.md — Modulith JDBC event spine: MailMessageObserved event + publish site + Liquibase 024 (event_publication) + core.triage package skeleton + TenantContext.runWith
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [x] 04-02-PLAN.md — Triage persistence + domain: Liquibase 025-027 + TriageActionResult sealed type + validator + canonicalizer + TriageDecision + TriageAuditEntity/Repository + TenantSenderOptInEntity/Repository + 5 exceptions + CallSite extension + TenantEntity.triageShadowMode + TenantService accessors
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [x] 04-03-PLAN.md — LlmGateway.evaluateSemanticIntents (strict-JSON-Schema classifier) + SemanticIntentEvaluator/Response + SemanticIntentRequest + 2 gateway exceptions + worker model pin gpt-5.4-nano + semanticIntentEval Gradle task
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [x] 04-04-PLAN.md — Triage services: TriageSafetyPolicy (allow-list gate) + TriageGmailWriter (single Gmail-write call site, send-free) + SenderSafetyNetService (sent-history heuristic + Redis 24h cache + opt-in override) + core.gmail Gmail-client facade + Redis bean wiring
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [x] 04-05-PLAN.md — TriageOrchestratorService (@ApplicationModuleListener hero: tenant rebind -> rules -> inline SEMANTIC_INTENT via LlmGateway -> safety gate -> sender net -> two-phase PENDING->APPLIED audit loop -> Gmail/shadow) + metadata-only input facade + worker.triage package-info
+- [x] 04-06-PLAN.md — TriageUndoService (compute-inverse, 30d window, exhaustive switch) + 3 thin triage controllers (undo / shadow-mode / sender-safety-net) + DTOs + ErrorCodes + GlobalExceptionHandler + vi/en i18n + schema.d.ts regen
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [x] 04-07-PLAN.md — worker.triage jobs: TriageEventRetryJob + TriageEventCleanupJob + TriageAuditPurgeJob/Batch (30d retention) + TriagePendingReaperJob/Batch (PENDING never lives forever) - all ShedLock-coordinated
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [x] 04-08-PLAN.md — Closure: TriagePrivacySweepTest (FND-03-analogous) + ./gradlew clean check green + TRG-01..TRG-08 -> Complete + 04-VALIDATION.md sign-off + 04-UAT.md
+
+**UI hint**: yes (Phase 5)
 
 ### Phase 5: User Surface — Drafts, Analytics, Web UI
 **Goal**: Deliver the complete user-facing surface: AI-drafted replies in Gmail, metadata-only analytics with a daily digest, and the Next.js 16 / React 19 frontend that ties every flow (onboarding, rules, audit, drafts, analytics, billing, privacy) together.
@@ -373,6 +401,6 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 2B. Billing (Prepaid Credits) | 7/7 | Complete | 2026-05-06 |
 | 2C. LLM Gateway | 0/8 | Not started | - |
 | 3. Rules Engine | 10/10 | Complete | 2026-05-10 |
-| 4. Triage Convergence (Hero) | 0/TBD | Not started | - |
+| 4. Triage Convergence (Hero) | 9/9 | Complete | 2026-05-11 |
 | 5. User Surface — Drafts, Analytics, Web UI | 0/TBD | Not started | - |
 | 6. Polish & CASA-Verified Launch | 0/TBD | Not started | - |

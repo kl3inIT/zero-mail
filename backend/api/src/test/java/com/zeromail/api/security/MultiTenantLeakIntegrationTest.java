@@ -1,16 +1,6 @@
 package com.zeromail.api.security;
 
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.StructuredTaskScope;
-import java.util.stream.IntStream;
-
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.web.client.RestClient;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zeromail.api.support.ApiPostgresTestBase;
 import com.zeromail.core.account.persistence.UserEntity;
@@ -18,8 +8,16 @@ import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.persistence.TenantEntity;
 import com.zeromail.core.tenant.persistence.TenantRepository;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.StructuredTaskScope;
+import java.util.stream.IntStream;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.web.client.RestClient;
 
 @ActiveProfiles("test")
 @Import(TestSessionSupport.class)
@@ -35,15 +33,12 @@ class MultiTenantLeakIntegrationTest extends ApiPostgresTestBase {
     @Test
     void concurrent_virtual_thread_requests_never_cross_tenant() throws Exception {
         int N = 100;
-        List<Seed> seeds = IntStream.range(0, N)
-                .mapToObj(i -> seedTenant("t-" + i))
-                .toList();
+        List<Seed> seeds = IntStream.range(0, N).mapToObj(i -> seedTenant("t-" + i)).toList();
         RestClient client = RestClient.create("http://localhost:" + port);
 
         try (var scope = StructuredTaskScope.<String>open()) {
-            var subtasks = seeds.stream()
-                    .map(s -> scope.fork(() -> fetchTenantEcho(client, s)))
-                    .toList();
+            var subtasks =
+                    seeds.stream().map(s -> scope.fork(() -> fetchTenantEcho(client, s))).toList();
             scope.join();
             for (int i = 0; i < N; i++) {
                 String observed = subtasks.get(i).get();
@@ -55,9 +50,16 @@ class MultiTenantLeakIntegrationTest extends ApiPostgresTestBase {
     private Seed seedTenant(String label) {
         UUID tenantId = UUID.randomUUID();
         tenants.save(new TenantEntity(tenantId, label));
-        var user = ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                .call(() -> users.save(new UserEntity(
-                        UUID.randomUUID(), tenantId, "sub-" + label, label + "@example.com")));
+        var user =
+                ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                        .call(
+                                () ->
+                                        users.save(
+                                                new UserEntity(
+                                                        UUID.randomUUID(),
+                                                        tenantId,
+                                                        "sub-" + label,
+                                                        label + "@example.com")));
         // Register the seed so TestSessionSupport's auth filter picks up the headers below.
         minter.mint(user.getGoogleSubject(), user.getEmail());
         return new Seed(tenantId, user.getGoogleSubject(), user.getEmail());

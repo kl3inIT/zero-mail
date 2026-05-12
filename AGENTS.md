@@ -13,8 +13,8 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Language/runtime**: Java 25 — locked by user directive.
 - **Framework**: Spring Boot 4 — locked by user directive.
 - **Build**: Gradle 9.x with Kotlin DSL — locked by user directive.
-- **Versioning policy**: Prefer the latest stable versions compatible with the chosen deployment platform. Only use a pre-release when explicitly pinned by the user. Current exception: **Spring AI 2.0.0-M5**.
-- **AI**: Spring AI **2.0.0-M5** for LLM orchestration (model abstraction, prompts, tool calls) — locked by user directive.
+- **Versioning policy**: Prefer the latest stable versions compatible with the chosen deployment platform. Only use a pre-release when explicitly pinned by the user. Current exception: **Spring AI 2.0.0-M6**.
+- **AI**: Spring AI **2.0.0-M6** for LLM orchestration (model abstraction, prompts, tool calls) — locked by user directive.
 - **Structure**: Monorepo / multi-module Gradle project — locked by user directive. Backend topology is locked to **`backend/core` + `backend/api` + `backend/worker`**, with `apps/web` as the separate frontend module. Internal backend boundaries stay package-based inside `backend/core`, enforced by Spring Modulith verification and architectural tests.
 - **Frontend**: Next.js / React as a separate module inside the monorepo — locked by product decision.
 - **Mail provider (v1)**: Gmail / Google Workspace only, via Gmail API + Google Pub/Sub push — locked by product decision.
@@ -39,10 +39,10 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 > Full tables, alternatives, version compatibility, and sources live in [`.planning/research/STACK.md`](.planning/research/STACK.md). Keep this section as the **prescriptive TL;DR** only.
 
 - **JDK 25 LTS** (GA 2025-09-16) via Gradle toolchains.
-- **Gradle 9.4.1** + **Kotlin DSL** + `libs.versions.toml` catalog, multi-project (not composite).
+- **Gradle 9.5.0** + **Kotlin DSL** + `libs.versions.toml` catalog, multi-project (not composite).
 - **Spring Boot 4.0.6** (current GA — stay on 4.0.x for production).
 - **Spring Framework 7.0.7**, **Spring Security 7.0.5**, **Jakarta Servlet 6.1**, **Jakarta Persistence 3.2**, **Jackson 3.1.2** (Boot-managed).
-- **Spring AI 2.0.0-M5** via OpenAI, Anthropic, Google GenAI, and DeepSeek starters. Platform OpenRouter routing uses the OpenAI adapter with `base-url: https://openrouter.ai/api/v1`; official BYOK providers use their native Spring AI adapters where available. Keep all direct Spring AI usage inside one LLM adapter module — M5 → GA churn still possible.
+- **Spring AI 2.0.0-M6** via OpenAI, Anthropic, Google GenAI, and DeepSeek starters. Platform OpenRouter routing uses the OpenAI adapter with `base-url: https://openrouter.ai/api/v1`; official BYOK providers use their native Spring AI adapters where available. Keep all direct Spring AI usage inside one LLM adapter module — M6 → GA churn still possible.
 - **No GCP hosting baseline** — do **not** add `spring-cloud-gcp` starters by default. Gmail push arrives as plain HTTP POSTs to a Spring MVC controller on the VPS.
 - **PostgreSQL 17.6 self-hosted on VPS** + **Liquibase 5.0.2 (YAML changelogs)** + **Spring Data JPA (Hibernate 7)** for aggregates, **Spring Data JDBC** for read-side and hot paths, **JSONB + jsonb_path_ops** for rule matchers, **AES-GCM at app layer** for OAuth refresh-token encryption.
 - **Redis 7.2 self-hosted on VPS** (Spring Data Redis + Lettuce) for rate limiting, idempotency, session store, per-tenant ChatModel cache — **NOT a queue**.
@@ -59,7 +59,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Unverified Spring Boot 4 / Jackson 3 migration assumptions**. Boot 4 ships Jackson 3.x, but major-version namespace changes have exceptions. Verify with Context7/current docs and Gradle dependency insight before changing imports or configuration. Example: Jackson core/databind moved to `tools.jackson.*`, but `jackson-annotations` remains `com.fasterxml.jackson.annotation.*`; `@JsonCreator`, `@JsonValue`, `@JsonIgnoreProperties`, etc. must not be changed to a non-existent `tools.jackson.annotation.*` package.
 - **Spring WebFlux** (use Spring MVC + virtual threads via `spring.threads.virtual.enabled=true`).
 - **`javax.*`** packages (Jakarta-only).
-- **Raw HTTP LLM calls or vendor SDK usage outside the Spring AI adapter**. Provider-specific BYOK client derivation is allowed only inside `core.llm.gateway.springai` when Spring AI M5 requires it.
+- **Raw HTTP LLM calls or vendor SDK usage outside the Spring AI adapter**. Provider-specific BYOK client derivation is allowed only inside `core.llm.gateway.springai` when Spring AI M6 requires it.
 - **Storing LLM prompts/completions in logs or DB** (privacy constraint).
 - **Polling Gmail** (use Pub/Sub push + `users.watch` refresh).
 - **`pgp_sym_encrypt` (pgcrypto) for OAuth tokens** (key in DB → key leak on DB leak; use app-layer AES-GCM).

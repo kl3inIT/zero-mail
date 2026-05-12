@@ -1,16 +1,16 @@
 package com.zeromail.core.tenant.concurrency;
 
+import com.zeromail.core.tenant.TenantContext;
 import java.util.concurrent.Callable;
 import java.util.concurrent.StructuredTaskScope;
-
-import com.zeromail.core.tenant.TenantContext;
 
 public final class TenantAwareTaskScope implements AutoCloseable {
 
     private final StructuredTaskScope<Object, Void> structuredTaskScope;
     private final String tenantId;
 
-    private TenantAwareTaskScope(String tenantId, StructuredTaskScope<Object, Void> structuredTaskScope) {
+    private TenantAwareTaskScope(
+            String tenantId, StructuredTaskScope<Object, Void> structuredTaskScope) {
         this.tenantId = tenantId;
         this.structuredTaskScope = structuredTaskScope;
     }
@@ -21,7 +21,8 @@ public final class TenantAwareTaskScope implements AutoCloseable {
     }
 
     public <T> StructuredTaskScope.Subtask<T> fork(Callable<T> task) {
-        return structuredTaskScope.fork(() -> ScopedValue.where(TenantContext.TENANT, tenantId).call(task::call));
+        return structuredTaskScope.fork(
+                () -> ScopedValue.where(TenantContext.TENANT, tenantId).call(task::call));
     }
 
     public void join() throws InterruptedException {

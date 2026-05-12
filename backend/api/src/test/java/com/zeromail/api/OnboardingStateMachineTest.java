@@ -1,10 +1,6 @@
 package com.zeromail.api;
 
-import java.util.UUID;
-
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ActiveProfiles;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zeromail.api.controllers.onboarding.OnboardingController;
 import com.zeromail.api.dto.onboarding.SelectTemplateRequest;
@@ -15,8 +11,10 @@ import com.zeromail.core.onboarding.domain.OnboardingStep;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.persistence.TenantEntity;
 import com.zeromail.core.tenant.persistence.TenantRepository;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ActiveProfiles;
 
 @ActiveProfiles("test")
 class OnboardingStateMachineTest extends ApiPostgresTestBase {
@@ -30,18 +28,28 @@ class OnboardingStateMachineTest extends ApiPostgresTestBase {
         UUID tenantId = UUID.randomUUID();
         tenants.save(new TenantEntity(tenantId, "t"));
 
-        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(() -> {
-            var u = users.save(new UserEntity(UUID.randomUUID(), tenantId, "gs-x", "x@example.com"));
-            // Phase 01.5 D-B1: entry state is GMAIL_CONNECTED (SIGNED_IN dropped)
-            assertThat(u.getOnboardingStep()).isEqualTo(OnboardingStep.GMAIL_CONNECTED);
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(
+                        () -> {
+                            var u =
+                                    users.save(
+                                            new UserEntity(
+                                                    UUID.randomUUID(),
+                                                    tenantId,
+                                                    "gs-x",
+                                                    "x@example.com"));
+                            // Phase 01.5 D-B1: entry state is GMAIL_CONNECTED (SIGNED_IN dropped)
+                            assertThat(u.getOnboardingStep())
+                                    .isEqualTo(OnboardingStep.GMAIL_CONNECTED);
 
-            onboarding.selectTemplate(new SelectTemplateRequest("archive-receipts"));
-            assertThat(users.findById(u.getId()).orElseThrow().getOnboardingStep())
-                    .isEqualTo(OnboardingStep.TEMPLATE_SELECTED);
+                            onboarding.selectTemplate(
+                                    new SelectTemplateRequest("archive-receipts"));
+                            assertThat(users.findById(u.getId()).orElseThrow().getOnboardingStep())
+                                    .isEqualTo(OnboardingStep.TEMPLATE_SELECTED);
 
-            onboarding.complete();
-            assertThat(users.findById(u.getId()).orElseThrow().getOnboardingStep())
-                    .isEqualTo(OnboardingStep.COMPLETE);
-        });
+                            onboarding.complete();
+                            assertThat(users.findById(u.getId()).orElseThrow().getOnboardingStep())
+                                    .isEqualTo(OnboardingStep.COMPLETE);
+                        });
     }
 }
