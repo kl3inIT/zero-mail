@@ -45,6 +45,114 @@
       "workEmail": "Đăng nhập bằng email công ty"
     }
   },
+  "billing": {
+    "balance": {
+      "description": "Số dư dùng cho các tác vụ AI của Zero Mail.",
+      "error": {
+        "body": "Có lỗi khi lấy số dư tín dụng. Hãy thử lại.",
+        "retry": "Thử lại",
+        "title": "Không tải được số dư"
+      },
+      "held": "Đang giữ",
+      "label": "Tín dụng hiện có",
+      "refreshLabel": "Tự cập nhật",
+      "refreshValue": "Mỗi 45 giây",
+      "topupCta": "Nạp tín dụng",
+      "unit": "tín dụng"
+    },
+    "copy": {
+      "aria": "Sao chép {label}",
+      "cta": "Sao chép",
+      "done": "Đã sao chép"
+    },
+    "ledger": {
+      "columns": {
+        "amount": "Tín dụng",
+        "balance": "Số dư",
+        "description": "Mô tả",
+        "reference": "Tham chiếu",
+        "timestamp": "Thời gian",
+        "type": "Loại"
+      },
+      "description": "Các lượt nạp, giữ và trừ tín dụng sẽ được liệt kê ở đây.",
+      "empty": {
+        "body": "Các lượt nạp và sử dụng tín dụng sẽ xuất hiện ở đây. Hãy nạp tín dụng để bắt đầu.",
+        "heading": "Chưa có giao dịch"
+      },
+      "error": {
+        "body": "Có lỗi khi lấy dữ liệu giao dịch. Hãy thử lại.",
+        "retry": "Thử lại",
+        "title": "Không tải được lịch sử giao dịch"
+      },
+      "title": "Lịch sử giao dịch",
+      "type": {
+        "adjustment": "Điều chỉnh",
+        "release": "Hoàn giữ",
+        "reserve": "Giữ",
+        "settle": "Trừ",
+        "topup": "Nạp"
+      },
+      "unavailable": {
+        "body": "Zero Mail đã có số dư tín dụng, nhưng danh sách giao dịch chi tiết sẽ được bật trong một bản cập nhật sau.",
+        "heading": "Lịch sử giao dịch chưa khả dụng"
+      },
+      "valueMissing": "—"
+    },
+    "page": {
+      "description": "Theo dõi số dư tín dụng, tạo mã nạp VietQR và xem lịch sử giao dịch khi backend sẵn sàng.",
+      "title": "Thanh toán"
+    },
+    "topup": {
+      "amount": {
+        "body": "Bạn sẽ nhận một mã VietQR dùng cho đúng số tiền này.",
+        "cta": "Tiếp tục thanh toán",
+        "error": {
+          "generic": "Không tạo được mã nạp. Hãy thử lại.",
+          "invalidResponse": "Backend chưa trả đủ thông tin VietQR. Hãy thử lại.",
+          "minimum": "Nhập số tiền lớn hơn 0 VND."
+        },
+        "label": "Số tiền nạp",
+        "preview": "Số tiền chuyển khoản: {amount}",
+        "submitting": "Đang tạo mã",
+        "title": "Chọn số tiền nạp"
+      },
+      "amountVnd": {
+        "label": "Số tiền VND"
+      },
+      "emv": {
+        "label": "Nội dung VietQR EMV"
+      },
+      "expired": {
+        "body": "Zero Mail không thấy chuyển khoản đúng hạn, nên mã này không còn được theo dõi. Hãy tạo mã mới.",
+        "cta": "Tạo mã nạp mới",
+        "heading": "Mã nạp này đã hết hạn"
+      },
+      "expiresAt": {
+        "label": "Hết hạn lúc"
+      },
+      "expiresIn": "Hết hạn sau {time}",
+      "page": {
+        "description": "Tạo mã chuyển khoản VietQR, quét bằng ứng dụng ngân hàng và Zero Mail sẽ tự cập nhật số dư.",
+        "title": "Nạp tín dụng"
+      },
+      "qr": {
+        "body": "Mã VietQR đã bao gồm tài khoản nhận, số tiền và mã tham chiếu.",
+        "heading": "Quét mã QR bằng ứng dụng ngân hàng"
+      },
+      "reference": {
+        "label": "Mã tham chiếu"
+      },
+      "success": {
+        "backCta": "Quay lại thanh toán",
+        "body": "Số dư tín dụng đã tăng. Bạn có thể tiếp tục dùng Zero Mail.",
+        "heading": "Đã cộng tín dụng"
+      },
+      "waiting": {
+        "body": "Zero Mail sẽ tự cập nhật số dư khi webhook ghi nhận giao dịch.",
+        "heading": "Đang chờ ghi nhận chuyển khoản"
+      }
+    }
+  },
   "common": {
     "app": {
       "description": "Dọn hộp thư về zero mà vẫn giữ quyền kiểm soát.",
@@ -428,6 +536,7 @@
   },
   "nav": {
     "beta": "beta",
+    "billing": "Thanh toán",
     "continueSetup": "Tiếp tục cài đặt",
     "features": "Tính năng",
     "how": "Cách hoạt động",
@@ -435,10 +544,13 @@
     "logoLabel": "Trang chủ Zero Mail",
     "onboardingProgress": "Tiến trình cài đặt",
     "openApp": "Mở ứng dụng",
-    "rules": "Quy tắc mẫu",
+    "privacy": "Quyền riêng tư",
+    "rules": "Quy tắc",
+    "settings": "Cài đặt",
     "signIn": "Đăng nhập",
     "themeToDark": "Chuyển sang chế độ tối",
     "themeToLight": "Chuyển sang chế độ sáng",
+    "triage": "Triage",
     "trust": "Tin cậy & an toàn",
     "waitlist": "Đăng ký danh sách chờ"
   },
@@ -498,6 +610,31 @@
       "title": "Soạn thư nháp"
     },
     "title": "Quyền bạn sẽ cấp"
+  },
+  "privacy": {
+    "byok": {
+      "body": "Bạn có thể dùng khóa mô hình riêng trong Cài đặt. Khóa của bạn, nhà cung cấp của bạn, hóa đơn của bạn.",
+      "heading": "Dùng khóa AI riêng của bạn (BYOK)"
+    },
+    "capabilities": {
+      "body": "Zero Mail có thể gắn nhãn, lưu trữ và lưu bản nháp Gmail. Zero Mail không thể gửi email thay bạn — không bao giờ.",
+      "heading": "Zero Mail có thể và không thể làm gì"
+    },
+    "neverStore": {
+      "body": "Chúng tôi không lưu lâu dài nội dung email, prompt AI, phản hồi AI hoặc embedding từ email của bạn. Nội dung được làm sạch, rút gọn, gia cố chống prompt injection rồi bị loại bỏ.",
+      "heading": "Những gì chúng tôi không bao giờ lưu"
+    },
+    "page": {
+      "intro": "Zero Mail xử lý hộp thư bằng dữ liệu tối thiểu, giữ quyền kiểm soát trong tay bạn.",
+      "title": "Quyền riêng tư trong sản phẩm"
+    },
+    "publicPolicyIntro": "Cần bản pháp lý đầy đủ?",
+    "publicPolicyLink": "Xem trang quyền riêng tư công khai",
+    "settingsLink": {
+      "body": "Xem cách Zero Mail xử lý nội dung email, giới hạn hành động tự động và BYOK.",
+      "cta": "Mở quyền riêng tư",
+      "heading": "Quyền riêng tư và xử lý dữ liệu"
+    }
   },
   "rules": {
     "composer": {
@@ -647,6 +784,43 @@
       }
     }
   },
+  "shell": {
+    "balance": {
+      "label": "Tín dụng"
+    },
+    "connection": {
+      "connected": "Gmail đã kết nối",
+      "degraded": "Gmail cần chú ý",
+      "disconnected": "Gmail đã ngắt kết nối",
+      "reconnect": "Kết nối lại"
+    },
+    "pause": {
+      "confirm": {
+        "body": "Zero Mail sẽ ngừng áp dụng hành động mới cho đến khi bạn bật lại.",
+        "cancel": "Tiếp tục chạy",
+        "cta": "Tạm dừng",
+        "title": "Tạm dừng triage tự động?"
+      },
+      "label": "Triage tự động",
+      "paused": "Đang tạm dừng",
+      "running": "Đang chạy",
+      "toast": {
+        "paused": "Triage tự động đã tạm dừng",
+        "running": "Triage tự động đang chạy lại"
+      }
+    },
+    "sidebar": {
+      "toggle": "Mở điều hướng"
+    },
+    "userMenu": {
+      "english": "Tiếng Anh",
+      "label": "Tài khoản",
+      "language": "Ngôn ngữ",
+      "settings": "Cài đặt",
+      "signOut": "Đăng xuất",
+      "vietnamese": "Tiếng Việt"
+    }
+  },
   "templates": {
     "calendarInvites": {
       "description": "Đánh dấu các email mời họp để bạn không bỏ sót lịch.",
@@ -659,6 +833,96 @@
     "receipts": {
       "description": "Gắn nhãn các email hóa đơn, biên lai, xác nhận đặt hàng để dễ tra cứu sau này.",
       "title": "Hóa đơn và biên lai"
+    }
+  },
+  "triage": {
+    "audit": {
+      "boundary": "Cũ hơn 30 ngày - không thể hoàn tác",
+      "columns": {
+        "action": "Hành động",
+        "message": "Email",
+        "reason": "Lý do",
+        "rule": "Quy tắc",
+        "timestamp": "Thời gian",
+        "undo": "Hoàn tác"
+      },
+      "empty": {
+        "body": "Khi Zero Mail xử lý email, các quyết định và lý do sẽ xuất hiện ở đây.",
+        "title": "Chưa có hoạt động triage"
+      },
+      "error": {
+        "body": "Hãy thử tải lại danh sách trước khi quyết định hoàn tác.",
+        "retry": "Tải lại",
+        "title": "Không tải được nhật ký triage"
+      },
+      "loadingOlder": "Đang tải...",
+      "loadOlder": "Tải mục cũ hơn",
+      "message": {
+        "unknownSender": "Người gửi không rõ",
+        "untitled": "Email không tiêu đề"
+      },
+      "unavailable": {
+        "body": "Backend hiện chỉ có endpoint hoàn tác từng bản ghi, chưa có endpoint danh sách nhật ký. Zero Mail sẽ hiển thị lịch sử tại đây khi endpoint đó được bổ sung.",
+        "title": "Chưa có lịch sử triage trong giao diện"
+      },
+      "undo": {
+        "cancel": "Giữ nguyên",
+        "confirm": "Hoàn tác hành động này",
+        "cta": "Hoàn tác",
+        "dialogDescription": "Zero Mail sẽ thực hiện hành động ngược lại: {action}",
+        "dialogTitle": "Hoàn tác hành động triage này?",
+        "error": "Chưa thể hoàn tác hành động này.",
+        "success": "Đã hoàn tác hành động triage.",
+        "undone": "Đã hoàn tác",
+        "windowClosed": "Đã hết hạn hoàn tác",
+        "windowTooltip": "Hành động triage chỉ có thể hoàn tác trong vòng 30 ngày."
+      }
+    },
+    "page": {
+      "description": "Kiểm tra những gì AI đã làm, chạy thử shadow mode, và kiểm soát các người gửi được bảo vệ trước khi cho phép tự động hóa.",
+      "title": "Triage"
+    },
+    "senders": {
+      "body": "Những người gửi quan trọng được giữ an toàn cho đến khi bạn cho phép tự động hóa.",
+      "empty": {
+        "body": "Khi Zero Mail phát hiện người gửi quan trọng, họ sẽ xuất hiện tại đây.",
+        "title": "Chưa có người gửi được bảo vệ"
+      },
+      "error": {
+        "body": "Hãy thử lại trước khi thay đổi tự động hóa cho người gửi.",
+        "retry": "Tải lại",
+        "title": "Không tải được danh sách người gửi"
+      },
+      "optedIn": "Đã cho phép",
+      "optIn": "Cho phép tự động hóa",
+      "title": "Người gửi được bảo vệ",
+      "unknown": "Người gửi không rõ"
+    },
+    "shadow": {
+      "badgeOn": "Shadow mode đang bật",
+      "body": "Chạy triage như một bản nháp an toàn: Zero Mail ghi nhận quyết định nhưng không thay đổi Gmail.",
+      "confirm": {
+        "action": "Tắt shadow mode",
+        "body": "Sau khi tắt, Zero Mail có thể áp dụng các hành động Gmail được phép.",
+        "cancel": "Giữ shadow mode",
+        "title": "Tắt shadow mode?"
+      },
+      "error": {
+        "body": "Hãy thử lại trước khi thay đổi chế độ chạy triage.",
+        "retry": "Tải lại",
+        "title": "Không tải được shadow mode"
+      },
+      "offBody": "Các hành động triage được phép sẽ được áp dụng sau khi qua kiểm tra an toàn.",
+      "onBody": "Zero Mail sẽ đánh giá email nhưng không áp dụng nhãn, lưu draft, hoặc archive.",
+      "readUnavailable": "Trạng thái ban đầu đang dùng mặc định cục bộ vì backend chưa có endpoint đọc shadow mode.",
+      "title": "Shadow mode",
+      "toggleLabel": "Bật shadow mode"
+    },
+    "tabs": {
+      "audit": "Nhật ký",
+      "label": "Khu vực triage",
+      "senders": "Người gửi",
+      "shadow": "Shadow mode"
     }
   },
   "trust": {
