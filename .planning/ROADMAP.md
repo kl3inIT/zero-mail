@@ -24,7 +24,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] **Phase 2C: LLM Gateway** _(completed 2026-05-09)_ - Spring AI 2.0.0-M6 `LlmGateway` with sanitize → Unicode strip → structured tool-call + allow-list → BYOK per-request options → daily spend cap → drift detection
 - [x] **Phase 3: Rules Engine** _(completed 2026-05-10)_ - NL → structured matcher AST via Spring AI tool-call, deterministic evaluator, live preview, CRUD + reorder, template gallery
 - [x] **Phase 4: Triage Convergence (Hero)** _(completed 2026-05-11)_ - Orchestrator, safety policy layer, audit + undo, shadow mode for new tenants, sender safety net
-- [ ] **Phase 5A: User Surface — Web UI Core** - Next.js 16 / React 19 frontend for already-built backends: onboarding, rule CRUD + live preview, triage audit log + undo, billing, privacy page, persistent chrome (pause / credit balance / connection health)
+- [x] **Phase 5A: User Surface — Web UI Core** _(completed 2026-05-12)_ - Next.js 16 / React 19 frontend for already-built backends: onboarding, rule CRUD + live preview, triage audit log + undo, billing, privacy page, persistent chrome (pause / credit balance / connection health)
 - [ ] **Phase 5B: User Surface — AI Draft Replies** - AI-drafted replies saved as Gmail drafts (correct threading headers, tone-matched, never auto-sent) + "Draft reply" trigger in the web UI
 - [ ] **Phase 5C: User Surface — Analytics & Daily Digest** - Metadata-only analytics screen (volume, time saved, top senders, rule hits over a window) + daily digest email
 - [ ] **Phase 6: Polish & CASA-Verified Launch** - End-to-end integration hardening, CASA Tier verification sign-off, launch readiness
@@ -428,7 +428,7 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 2C. LLM Gateway | 8/8 | Complete | 2026-05-09 |
 | 3. Rules Engine | 10/10 | Complete | 2026-05-10 |
 | 4. Triage Convergence (Hero) | 9/9 | Complete | 2026-05-11 |
-| 5A. User Surface — Web UI Core | 5/6 | In Progress | - |
+| 5A. User Surface — Web UI Core | 6/6 | Complete | 2026-05-12 |
 | 5B. User Surface — AI Draft Replies | 0/TBD | Not started | - |
 | 5C. User Surface — Analytics & Daily Digest | 0/TBD | Not started | - |
 | 6. Polish & CASA-Verified Launch | 0/TBD | Not started | - |
