@@ -21,7 +21,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] **Phase 1.5: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED)** _(completed 2026-04-28)_ - Remaining heavy Phase 1.5 work: single Google OAuth upfront Gmail scope, remove google-gmail mismatch architecture, merge Gmail token provisioning, simplify onboarding/consent UX, deflate frontend primitives, polish landing/login/onboarding/settings/ReconnectPrompt, and close surviving REVIEW cleanup; excludes quick tasks already completed
 - [x] **Phase 2A: Mail Ingestion** _(completed 2026-04-29)_ - Gmail `users.watch` + Pub/Sub push + OIDC verification + idempotent history processing + global pause
 - [x] **Phase 2B: Billing (Prepaid Credits)** _(completed 2026-05-06)_ - Double-entry Postgres ledger, reserve/settle/release, credit-hold watchdog, SePay/VietQR top-up intent + webhook, balance API hooks
-- [ ] **Phase 2C: LLM Gateway** - Spring AI 2.0.0-M6 `LlmGateway` with sanitize → Unicode strip → structured tool-call + allow-list → BYOK per-request options → daily spend cap → drift detection
+- [x] **Phase 2C: LLM Gateway** _(completed 2026-05-09)_ - Spring AI 2.0.0-M6 `LlmGateway` with sanitize → Unicode strip → structured tool-call + allow-list → BYOK per-request options → daily spend cap → drift detection
 - [x] **Phase 3: Rules Engine** _(completed 2026-05-10)_ - NL → structured matcher AST via Spring AI tool-call, deterministic evaluator, live preview, CRUD + reorder, template gallery
 - [x] **Phase 4: Triage Convergence (Hero)** _(completed 2026-05-11)_ - Orchestrator, safety policy layer, audit + undo, shadow mode for new tenants, sender safety net
 - [ ] **Phase 5A: User Surface — Web UI Core** - Next.js 16 / React 19 frontend for already-built backends: onboarding, rule CRUD + live preview, triage audit log + undo, billing, privacy page, persistent chrome (pause / credit balance / connection health)
@@ -244,7 +244,7 @@ Plans:
 - [x] 02B-06-verification-closure-PLAN.md — DomainBoundaryArchTests (5th billing rule) + BillingDomainBoundaryArchTest GREEN + CallSiteEnumMembershipArchTest GREEN + REQUIREMENTS.md BILL-01..BILL-07 flip + ./gradlew clean check
 **UI hint**: yes
 
-### Phase 2C: LLM Gateway
+### Phase 2C: LLM Gateway _(completed 2026-05-09)_
 **Goal**: Ship the single `LlmGateway` abstraction on Spring AI 2.0.0-M6 that all LLM traffic must traverse, with full prompt-injection hardening, BYOK routing, metadata-only observability, per-tenant spend caps, and drift detection — the contract that Phase 4 triage will be built on.
 **Depends on**: Phase 1 (hard gate — safety infrastructure must ship first)
 **Requirements**: LLM-01, LLM-02, LLM-03, LLM-04, LLM-05, LLM-06, LLM-07, LLM-08, LLM-09, LLM-10, LLM-11
@@ -419,7 +419,7 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 1.5. Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED) | 7/8 | In Progress|  |
 | 2A. Mail Ingestion | 6/6 | Complete | 2026-04-29 |
 | 2B. Billing (Prepaid Credits) | 7/7 | Complete | 2026-05-06 |
-| 2C. LLM Gateway | 0/8 | Not started | - |
+| 2C. LLM Gateway | 8/8 | Complete | 2026-05-09 |
 | 3. Rules Engine | 10/10 | Complete | 2026-05-10 |
 | 4. Triage Convergence (Hero) | 9/9 | Complete | 2026-05-11 |
 | 5A. User Surface — Web UI Core | 0/TBD | Not started | - |
