@@ -69,7 +69,7 @@ Downstream agents MUST read `05B-SPEC.md` before planning or implementing. Requi
 ### Needs-reply inbox UX (apps/web)
 - **D-18:** Layout = raw shadcn `Tabs` — "To reply" / "Awaiting reply" (+ optional "Resolved"), count badge on each trigger. New top-level sidebar item ("Needs reply") in the Phase 5A authenticated app shell, with a TO_REPLY count badge (the product's "inbox zero progress" signal, fed by the partial-index count query). No custom wrapper components — reuse the existing `features/triage` `AuditTable`-style table shape; new code under `features/needs-reply/` with TanStack Query key factory + per-use-case hooks.
 - **D-19:** Each row shows: subject, the other party (not self), relative last-activity time, draft-status badge (`No draft` / `Draft ready` / `Draft sent`), an "Open in Gmail" external deep link (`https://mail.google.com/mail/u/0/#all/<threadId>`), the action button (`Draft reply` when no draft → `Regenerate draft` when a draft exists), and a secondary `Mark resolved` (X icon). Keeping body rendering in Gmail is intentional — good for privacy and OAuth scope.
-- **D-20:** States: loading = shadcn `Skeleton` rows; empty (TO_REPLY) = "Inbox zero 🎉 — nothing needs a reply"; empty (AWAITING) = "Nothing awaiting"; error = shadcn `Alert` (destructive) + retry; a "classifying…" banner if a backfill/recompute is in flight. Responsive to 320px: single-column rows, participants + time collapse to a second line, action button + Gmail link become icon-only, tabs horizontally scrollable (`useIsMobile`/CSS branch). Use the `frontend-design` skill when building this UI.
+- **D-20:** States: loading = shadcn `Skeleton` rows; empty (TO_REPLY) = "Inbox zero 🎉 — nothing needs a reply"; empty (AWAITING) = "Nothing awaiting"; error = shadcn `Alert` (destructive) + retry; a "classifying…" banner if a backfill/recompute is in flight. Responsive to 320px: single-column rows, participants + time collapse to a second line, action button + Gmail link become icon-only, tabs horizontally scrollable (`useIsMobile`/CSS branch).
 
 ### Claude's Discretion
 - Reply-status classifier mechanism (heuristic-only vs hybrid) — researcher/planner picks from the research; recommendation is heuristic-only v1 (D-10).
@@ -138,7 +138,7 @@ Downstream agents MUST read `05B-SPEC.md` before planning or implementing. Requi
 - Privacy logging: `event=<name> tenantId={}` + structured fields; no email content/addresses/Google subject/token bytes/bodies/prompts/completions.
 - Direct service calls for transaction-critical commands; Modulith events for after-commit side effects (reclassification fits the latter).
 - Liquibase YAML changelogs for all schema changes (the `thread_reply_status` table).
-- Frontend: shadcn primitives first (`pnpm dlx shadcn@latest add ...`), raw primitives not custom wrappers; feature folders own `api/`, `query-keys.ts`, one hook per use case; Playwright specs in `apps/web/e2e/**`; `frontend-design` skill before writing UI.
+- Frontend: shadcn primitives first (`pnpm dlx shadcn@latest add ...`), raw primitives not custom wrappers; feature folders own `api/`, `query-keys.ts`, one hook per use case; Playwright specs in `apps/web/e2e/**`.
 - Subproject-owned config: worker-only props in `backend/worker/.../application.yml`, api-only in `backend/api/.../application.yml`.
 
 ### Integration Points

@@ -83,7 +83,7 @@ When the triage engine decides a `save_draft` action (and on explicit user reque
 - Gmail writes limited to the v1 allow-list (label / archive / save-draft); `users.drafts.send` and `users.drafts.update` are not added.
 - Gmail-only mail provider; Gmail API + existing Pub/Sub ingestion model unchanged.
 - Backend Java enterprise-readability naming conventions; records for DTOs, classes for entities, Lombok-free; Java 25 / Spring Boot 4 / Spring AI 2.0.0-M6.
-- Frontend uses `apps/web` Next.js 16 / React 19, typed OpenAPI client, shadcn/ui primitives first; `frontend-design` skill applies to new UI.
+- Frontend uses `apps/web` Next.js 16 / React 19, typed OpenAPI client, and shadcn/ui primitives first.
 
 ## Acceptance Criteria
 

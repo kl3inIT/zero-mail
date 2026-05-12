@@ -43,7 +43,6 @@ function isGmailConnectionStatus(value: string | undefined): value is GmailConne
 /**
  * /settings (client). Phase 01.5 Plan 02 — deflated from PageShell/SectionCard
  * to raw shadcn Card chains (D-C1, D-C2).
- * Phase 01.5 Plan 04 — visual polish via frontend-design skill (D-D1).
  *
  * Design intent (Plan 04):
  *  - Section rhythm: max-w-2xl (tighter than max-w-3xl for form-heavy pages),
