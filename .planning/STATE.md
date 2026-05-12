@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05A-04-PLAN.md
-last_updated: "2026-05-12T12:44:27.508Z"
+stopped_at: Completed 05A-05-PLAN.md
+last_updated: "2026-05-12T13:32:05.298Z"
 last_activity: 2026-05-12
 progress:
   total_phases: 17
   completed_phases: 13
   total_plans: 106
-  completed_plans: 104
-  percent: 97
+  completed_plans: 105
+  percent: 99
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 ## Current Position
 
 Phase: 05A (user-surface-web-ui-core) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-05-12
 
-Progress: [██████████] 97%
+Progress: [██████████] 99%
 
 ## Performance Metrics
 
@@ -48,7 +48,7 @@ Progress: [██████████] 97%
 | 02B | 7 | - | - |
 | 03 | 10 | - | - |
 | 04 | 9 | - | - |
-| 05A | 4 | - | - |
+| 05A | 5 | - | - |
 
 **Recent Trend:**
 
@@ -126,6 +126,7 @@ Progress: [██████████] 97%
 | Phase 05A P02 | 93min | 3 tasks | 25 files |
 | Phase 05A P03 | 32min | 3 tasks | 21 files |
 | Phase 05A P04 | 95min | 2 tasks | 14 app/test files + 3 planning artifacts |
+| Phase 05A P05 | 41min | 3 tasks | 21 app/test files + 1 planning artifact |
 
 ## Accumulated Context
 
@@ -141,6 +142,9 @@ Recent decisions affecting current work:
 - [Phase 05A]: Plan 04 ships `/billing` as its own protected app route with a focal balance card, distinct ledger-unavailable panel, and `/billing/top-up` as a dedicated route rather than a modal.
 - [Phase 05A]: Plan 04 confirmed BillingController has no ledger-history endpoint, TopupIntentResponse has no `intentId`, and no intent-status endpoint exists. Billing degrades through `LedgerHistory`'s `{unavailable:true}` sentinel and `?code=` + sessionStorage pending intent rehydration; credited means `/api/billing/balance` rises.
 - [Phase 05A]: Plan 04 intentionally adds no QR dependency and renders `qrPayload` only as copyable React text. No bank account/name/account-holder fields are shown because the response exposes only `code`, `amountVnd`, `expiresAt`, and `qrPayload`.
+- [Phase 05A]: Plan 05 keeps the sidebar flat; `/settings/privacy` is reachable through the existing Settings nav item plus a Settings-page `Privacy & data handling` link.
+- [Phase 05A]: Plan 05 uses `AuthTopBar surface="protected"` and tokenized onboarding panels so protected onboarding keeps focused chrome without rendering `.zm-auth`/`.zm-proto` classes.
+- [Phase 05A]: Plan 05 intentionally leaves regenerated `apps/web/i18n/messages/{en,vi}.json` uncommitted; Plan 06 owns canonical locale bundle regeneration.
 - [Phase 02C]: Plan 02 uses an @Order 10/20/30/40 List<Sanitizer> fold for Jsoup, NFC, Unicode-control strip, and jtokkit CL100K_BASE truncation at 3896 tokens.
 - [Phase 02C]: Plan 02 SanitizationException has no message payload; it preserves stepName and cause without inheriting potentially content-bearing cause text.
 - [Phase 02C]: Plan 03 should inject SanitizationPipeline into LlmGatewayImpl and call sanitize(rawHtml) first under TenantContext before constructing any model request.
@@ -349,6 +353,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-12T11:49:21.130Z
-Stopped at: Completed 05A-03-PLAN.md
+Last session: 2026-05-12T13:32:05.279Z
+Stopped at: Completed 05A-05-PLAN.md
 Resume file: None

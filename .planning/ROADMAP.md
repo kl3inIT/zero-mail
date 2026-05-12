@@ -368,7 +368,7 @@ Plans:
 - [x] 05A-02-PLAN.md — App shell rewrite ((protected)/layout.tsx + AppShell/AppSidebar/ChromeHeader), onboarding chrome-suppression, pause single-source-of-truth (D-13), chrome balance/health widgets
 - [x] 05A-03-PLAN.md — /triage page: Tabs + ?tab=, audit log + undo (responsive hybrid renderer, 30-day boundary, AlertDialog), shadow-mode toggle, sender safety net (audit-list endpoint gap-flagged)
 - [x] 05A-04-PLAN.md — /billing page (balance + ledger gap-flagged) + /billing/top-up flow (amount → intent → VietQR EMV payload/code/amount/expiry → balance-rise success/expired, ?code= rehydration)
-- [ ] 05A-05-PLAN.md — In-product /settings/privacy page (vi+en, three mandatory points) + convergence pass (rules/onboarding×3/settings onto shell + 1.6 tokens + shared states + 320px)
+- [x] 05A-05-PLAN.md — In-product /settings/privacy page (vi+en, three mandatory points) + convergence pass (rules/onboarding×3/settings onto shell + 1.6 tokens + shared states + 320px)
 - [ ] 05A-06-PLAN.md — Phase closure: full apps/web suite green, frontend-design visual-review note rollup, 05A-GAPS.md register, 05A-VALIDATION.md sign-off, flip WEB-01..04
 **UI hint**: yes
 
@@ -428,7 +428,7 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 2C. LLM Gateway | 8/8 | Complete | 2026-05-09 |
 | 3. Rules Engine | 10/10 | Complete | 2026-05-10 |
 | 4. Triage Convergence (Hero) | 9/9 | Complete | 2026-05-11 |
-| 5A. User Surface — Web UI Core | 0/TBD | Not started | - |
+| 5A. User Surface — Web UI Core | 5/6 | In Progress | - |
 | 5B. User Surface — AI Draft Replies | 0/TBD | Not started | - |
 | 5C. User Surface — Analytics & Daily Digest | 0/TBD | Not started | - |
 | 6. Polish & CASA-Verified Launch | 0/TBD | Not started | - |
