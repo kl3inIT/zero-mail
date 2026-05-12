@@ -378,7 +378,18 @@ Plans:
 **Requirements**: DRFT-01, DRFT-02, DRFT-03, DRFT-04 (also satisfies the "draft review" portion of WEB-02)
 **Success Criteria** (what must be TRUE):
   1. A user can request an AI draft reply for a thread, find it in Gmail as a normal draft with correct `In-Reply-To` and `References` headers and recognizable tone-matched phrasing, and must review before sending — no code path auto-sends.
-**Plans**: TBD
+**Plans**: 8 plans
+
+Plans:
+- [ ] 05B-00-PLAN.md — [BLOCKING] Wave 0: jakarta.mail dep + `030-thread-reply-status` Liquibase changelog + ~14 RED test scaffolds (backend + frontend) + ArchUnit guards + EN_SCAN_FILES
+- [ ] 05B-01-PLAN.md — Threading-header retrofit in `TriageGmailWriter` (jakarta.mail `MimeMessage`) + `ReplyHeaders` + `ThreadingHeaderValidator` (fail-closed on missing `Message-ID`) + `TriageOrchestratorService` wiring
+- [ ] 05B-02-PLAN.md — `core.thread` package: `ThreadReplyBucket` IdentifiedEnum + `thread_reply_status` entity/repo/converter + heuristic `ClassifyThreadReplyStatusService` (inbound sub-step + Modulith draft-saved reaction) + account-deletion cleanup
+- [ ] 05B-03-PLAN.md — `core.draft` package: `ToneContextBuilder` (in-request sent-mail fetch + strip + sanitize, degrade-to-descriptors) + `GenerateThreadDraftService` (Redis lock → delete-then-recreate → `LlmGateway` `CallSite.DRAFT` → threaded `saveDraft` → persist + upsert) + `RedisDistributedLock` + `LlmGateway` draft seam + `SAVE_DRAFT_ONLY` profile
+- [ ] 05B-04-PLAN.md — CQRS-lite read side: `AuditLogQueryService` (closes the 5A `GET /api/triage/audit` gap) + `NeedsReplyInboxQueryService` + `toReplyCount` + `KeysetCursor` codec + `MarkThreadResolvedService`
+- [ ] 05B-05-PLAN.md — backend/api: `GET /api/triage/audit` + `POST /api/threads/{id}/draft` (409 on contention) + `POST .../resolve` + `GET /api/threads?bucket=...` + DTOs + `GlobalExceptionHandler`/`ErrorCodes` + vi/en error i18n + OpenAPI regen
+- [ ] 05B-06-PLAN.md — apps/web: `features/needs-reply/` (API/keys/hooks/components) + `/needs-reply` route + "Needs reply" sidebar item + `TO_REPLY` badge + "Draft reply/Regenerate draft" action (inbox + now-live audit rows) + remove 5A GAP sentinels + i18n
+- [ ] 05B-07-PLAN.md — closure: `:backend:core:aiEval` source set + deterministic eval dims 4/6/7/8 + synthetic fixtures + `DraftPrivacySweepTest` + full `check` + apps/web gates + `05B-VALIDATION.md`/`05B-UAT.md` + flip DRFT-01..04 + ROADMAP
+
 **UI hint**: yes
 
 ### Phase 5C: User Surface — Analytics & Daily Digest
@@ -429,6 +440,6 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 3. Rules Engine | 10/10 | Complete | 2026-05-10 |
 | 4. Triage Convergence (Hero) | 9/9 | Complete | 2026-05-11 |
 | 5A. User Surface — Web UI Core | 6/6 | Complete | 2026-05-12 |
-| 5B. User Surface — AI Draft Replies | 0/TBD | Not started | - |
+| 5B. User Surface — AI Draft Replies | 0/8 | Not started | - |
 | 5C. User Surface — Analytics & Daily Digest | 0/TBD | Not started | - |
 | 6. Polish & CASA-Verified Launch | 0/TBD | Not started | - |
