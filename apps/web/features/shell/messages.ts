@@ -43,6 +43,18 @@ export const shellMessages = {
     vi: 'Tạm dừng',
     en: 'Pause',
   },
+  'shell.pause.confirm.cancel': {
+    vi: 'Tiếp tục chạy',
+    en: 'Keep it running',
+  },
+  'shell.pause.toast.paused': {
+    vi: 'Triage tự động đã tạm dừng',
+    en: 'Automatic triage paused',
+  },
+  'shell.pause.toast.running': {
+    vi: 'Triage tự động đang chạy lại',
+    en: 'Automatic triage resumed',
+  },
   'shell.balance.label': {
     vi: 'Tín dụng',
     en: 'Credits',
@@ -66,5 +78,29 @@ export const shellMessages = {
   'shell.userMenu.label': {
     vi: 'Tài khoản',
     en: 'Account',
+  },
+  'shell.sidebar.toggle': {
+    vi: 'Mở điều hướng',
+    en: 'Toggle navigation',
+  },
+  'shell.userMenu.language': {
+    vi: 'Ngôn ngữ',
+    en: 'Language',
+  },
+  'shell.userMenu.vietnamese': {
+    vi: 'Tiếng Việt',
+    en: 'Vietnamese',
+  },
+  'shell.userMenu.english': {
+    vi: 'Tiếng Anh',
+    en: 'English',
+  },
+  'shell.userMenu.settings': {
+    vi: 'Cài đặt',
+    en: 'Settings',
+  },
+  'shell.userMenu.signOut': {
+    vi: 'Đăng xuất',
+    en: 'Sign out',
   },
 } as const;

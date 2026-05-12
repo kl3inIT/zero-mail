@@ -11,6 +11,7 @@ import { useTenantStatus } from '@/features/gmail/hooks/useTenantStatus';
 import { useDisconnectGmail } from '@/features/gmail/hooks/useDisconnectGmail';
 import { useDeleteAccount } from '@/features/account/hooks/useDeleteAccount';
 import { ByokForm } from '@/features/llm/components/ByokForm';
+import { useTriagePauseState } from '@/features/triage/hooks/useTriagePauseState';
 import { useToggleTriagePause } from '@/features/triage/hooks/useToggleTriagePause';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,8 +23,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { getApiUrl } from '@/lib/api/base-url';
-import { cn } from '@/lib/utils';
 
 import type { AppLocale } from '@/i18n/routing';
 
@@ -65,6 +66,7 @@ export default function SettingsPage() {
   const status = useTenantStatus();
   const disconnect = useDisconnectGmail();
   const del = useDeleteAccount();
+  const pauseState = useTriagePauseState();
   const togglePause = useToggleTriagePause();
 
   const gmailConnection = me.data?.gmailConnectionStatus;
@@ -72,14 +74,14 @@ export default function SettingsPage() {
     ? gmailConnection.status
     : (status.data?.connectionStatus ?? 'NOT_CONNECTED');
   const ingestionHealth = gmailConnection?.ingestionHealth ?? 'HEALTHY';
-  const triagePaused = me.data?.triagePaused ?? false;
+  const triagePaused = pauseState.data ?? false;
   const preferredLanguage = (me.data?.preferredLanguage === 'en' ? 'en' : 'vi') as AppLocale;
   const reconnect = () => {
     window.location.href = getApiUrl('/tenant/connect-gmail');
   };
 
   return (
-    <main className="mx-auto max-w-2xl space-y-4 p-6">
+    <div className="mx-auto max-w-2xl space-y-4 p-4 sm:p-6">
       {/* Account */}
       <Card>
         <CardHeader>
@@ -143,24 +145,14 @@ export default function SettingsPage() {
           <span className="text-foreground text-sm font-medium">
             {t('settings.triage.pause.toggleLabel')}
           </span>
-          <button
-            type="button"
-            aria-pressed={triagePaused}
+          <Switch
+            checked={!triagePaused}
             aria-label={t('settings.triage.pause.toggleLabel')}
-            disabled={!me.data || togglePause.isPending}
-            onClick={() => togglePause.mutate(!triagePaused)}
-            className={cn(
-              'focus-visible:ring-ring relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
-              triagePaused ? 'border-warning bg-warning' : 'border-border bg-muted',
-            )}
-          >
-            <span
-              className={cn(
-                'bg-background size-5 rounded-full shadow-sm transition-transform',
-                triagePaused ? 'translate-x-5' : 'translate-x-0',
-              )}
-            />
-          </button>
+            disabled={pauseState.isLoading || togglePause.isPending}
+            onCheckedChange={(running) => togglePause.mutate(!running)}
+            className="data-unchecked:bg-warning/80"
+            data-testid="settings-pause-switch"
+          />
         </CardContent>
       </Card>
 
@@ -203,6 +195,6 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }

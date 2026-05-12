@@ -28,9 +28,10 @@ const SUBDIRS = ['api', 'components', 'hooks'] as const;
 // Reviews Revision 1: route page locations after Plan 05 route-group migration.
 // We check both pre- and post-migration paths so the test runs across plan waves.
 function readSettingsPage(): string {
+  const appGrouped = resolve(APP_WEB, 'app/(protected)/(app)/settings/page.tsx');
   const grouped = resolve(APP_WEB, 'app/(protected)/settings/page.tsx');
   const flat = resolve(APP_WEB, 'app/settings/page.tsx');
-  const path = existsSync(grouped) ? grouped : flat;
+  const path = existsSync(appGrouped) ? appGrouped : existsSync(grouped) ? grouped : flat;
   return existsSync(path) ? readFileSync(path, 'utf8') : '';
 }
 function readOnboardingPage(): string {

@@ -13,13 +13,13 @@ import { LOCALE_COOKIE_MAX_AGE, NEXT_LOCALE_COOKIE, routing } from './i18n/routi
  *     `/vi/login` internally, which requires an `app/[locale]` mirror tree.
  *     Phase 1.3 keeps clean route groups instead, so i18n/request.ts reads the
  *     cookie directly and this proxy only maintains the cookie value.
- *  2. Phase 1 auth gate — keeps the existing `/onboarding` + `/settings`
+ *  2. Phase 1 auth gate — keeps app routes and onboarding behind the
  *     redirect-to-/login behavior when the ZEROMAIL_SESSION cookie is missing.
  *
  * NO next-intl middleware here. This is deliberate: locale is data, not route
  * structure, in this app.
  */
-const PROTECTED = ['/onboarding', '/settings'];
+const PROTECTED = ['/onboarding', '/rules', '/settings', '/triage', '/billing'];
 
 function setLocaleCookie(response: NextResponse, value: (typeof routing.locales)[number]) {
   response.cookies.set(NEXT_LOCALE_COOKIE, value, {

@@ -3,18 +3,18 @@
 import { useTranslations } from 'next-intl';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
+import { useTriagePauseState } from '@/features/triage/hooks/useTriagePauseState';
 import { useToggleTriagePause } from '@/features/triage/hooks/useToggleTriagePause';
 
 export function PauseBanner() {
-  const { data: user } = useCurrentUser();
+  const pauseState = useTriagePauseState();
   const t = useTranslations();
   const { mutate: togglePause, isPending } = useToggleTriagePause();
 
-  if (!user?.triagePaused) return null;
+  if (pauseState.data !== true) return null;
 
   return (
-    <div className="mx-auto max-w-2xl px-6 pt-6">
+    <div className="mx-auto w-full max-w-2xl px-4 pt-4 sm:px-6 sm:pt-6" data-testid="pause-banner">
       <Alert variant="warning" role="alert">
         <AlertTitle>{t('settings.triage.pause.banner.heading')}</AlertTitle>
         <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

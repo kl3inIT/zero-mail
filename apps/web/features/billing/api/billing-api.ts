@@ -1,4 +1,5 @@
 import { api, xsrfHeader } from '@/lib/api/client';
+import { getApiUrl } from '@/lib/api/base-url';
 import type { components } from '@/lib/api/schema';
 
 /**
@@ -22,6 +23,12 @@ export type LedgerHistoryUnavailablePage = {
 
 export type LedgerHistoryPage = LedgerHistoryUnavailablePage;
 
+export interface BillingBalanceOptions {
+  fetcher?: typeof fetch;
+  signal?: AbortSignal;
+  headers?: HeadersInit;
+}
+
 function jsonHeaders(): HeadersInit {
   return { 'Content-Type': 'application/json', ...xsrfHeader() };
 }
@@ -37,8 +44,22 @@ function unwrap<T>(
 }
 
 export async function getBillingBalance({
+  fetcher,
   signal,
-}: { signal?: AbortSignal } = {}): Promise<BillingBalanceResponse> {
+  headers,
+}: BillingBalanceOptions = {}): Promise<BillingBalanceResponse> {
+  if (fetcher || headers) {
+    const response = await (fetcher ?? fetch)(getApiUrl('/api/billing/balance'), {
+      headers,
+      cache: 'no-store',
+      signal,
+    });
+    if (!response.ok) {
+      throw new Error(`/api/billing/balance failed: ${response.status}`);
+    }
+    return response.json() as Promise<BillingBalanceResponse>;
+  }
+
   const result = await api.GET('/api/billing/balance', { signal });
   return unwrap(result, `/api/billing/balance failed: ${result.response.status}`);
 }

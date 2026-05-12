@@ -6,11 +6,11 @@ import enMessages from '@/i18n/messages/en.json';
 
 const mocks = vi.hoisted(() => ({
   mutate: vi.fn(),
-  useCurrentUser: vi.fn(),
+  useTriagePauseState: vi.fn(),
 }));
 
-vi.mock('@/features/account/hooks/useCurrentUser', () => ({
-  useCurrentUser: mocks.useCurrentUser,
+vi.mock('@/features/triage/hooks/useTriagePauseState', () => ({
+  useTriagePauseState: mocks.useTriagePauseState,
 }));
 
 vi.mock('@/features/triage/hooks/useToggleTriagePause', () => ({
@@ -30,14 +30,11 @@ function renderBanner() {
 describe('PauseBanner', () => {
   beforeEach(() => {
     mocks.mutate.mockReset();
-    mocks.useCurrentUser.mockReset();
+    mocks.useTriagePauseState.mockReset();
   });
 
   it('renders_when_triagePaused_true', () => {
-    mocks.useCurrentUser.mockReturnValue({
-      triagePaused: true,
-      data: { triagePaused: true },
-    });
+    mocks.useTriagePauseState.mockReturnValue({ data: true });
 
     renderBanner();
 
@@ -47,10 +44,7 @@ describe('PauseBanner', () => {
   });
 
   it('notRendered_when_triagePaused_false', () => {
-    mocks.useCurrentUser.mockReturnValue({
-      triagePaused: false,
-      data: { triagePaused: false },
-    });
+    mocks.useTriagePauseState.mockReturnValue({ data: false });
 
     renderBanner();
 
@@ -58,10 +52,7 @@ describe('PauseBanner', () => {
   });
 
   it('unpauses_on_cta_click', () => {
-    mocks.useCurrentUser.mockReturnValue({
-      triagePaused: true,
-      data: { triagePaused: true },
-    });
+    mocks.useTriagePauseState.mockReturnValue({ data: true });
 
     renderBanner();
     fireEvent.click(
