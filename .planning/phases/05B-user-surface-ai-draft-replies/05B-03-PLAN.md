@@ -20,6 +20,9 @@ files_modified:
   - backend/core/src/main/java/com/zeromail/core/llm/usecases/LlmGateway.java
   - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/SpringAiLlmGateway.java
   - backend/core/src/main/java/com/zeromail/core/llm/domain/AllowListedTools.java
+  - backend/core/src/main/java/com/zeromail/core/triage/usecases/TriageOrchestratorService.java
+  - backend/core/src/main/java/com/zeromail/core/triage/package-info.java
+  - backend/core/src/main/java/com/zeromail/core/thread/package-info.java
 autonomous: true
 requirements: [DRFT-02, DRFT-03, DRFT-04]
 must_haves:
@@ -30,6 +33,7 @@ must_haves:
     - "On TokenBudgetExceededException the tone build degrades to descriptors-only and the draft still proceeds"
     - "Regenerate = delete-then-recreate; at most one Zero-Mail draft per thread; no drafts.update / drafts.send"
     - "A double-clicked regenerate cannot race two drafts.create — a per-(tenant,thread) Redis SETNX lock guards it; held → 409"
+    - "The triage inbound-message path calls ClassifyThreadReplyStatusService.classify(...) as a sub-step (the triage → thread Modulith edge is declared here)"
   artifacts:
     - path: "backend/core/src/main/java/com/zeromail/core/draft/usecases/GenerateThreadDraftService.java"
       provides: "the on-demand + triage-shared draft generation use case (lock → existing-draft delete → LlmGateway → saveDraft with threading headers → persist draftId → upsert thread_reply_status)"
@@ -50,13 +54,17 @@ must_haves:
       to: "ClassifyThreadReplyStatusService / ThreadReplyStatusRepository"
       via: "upsert thread_reply_status hasDraft=true, draftId after a draft is saved"
       pattern: "ThreadReplyStatus|ClassifyThreadReplyStatus"
+    - from: "backend/core/src/main/java/com/zeromail/core/triage/usecases/TriageOrchestratorService.java"
+      to: "ClassifyThreadReplyStatusService.classify"
+      via: "sub-step on the inbound-message path; triage → thread Modulith edge declared in core/triage/package-info.java"
+      pattern: "ClassifyThreadReplyStatusService"
 ---
 
 <objective>
-Create the `core.draft` domain package — `ToneContextBuilder` (in-request sent-mail fetch, quote/signature strip, `SanitizationPipeline`, ≤3 snippets + ~100-token descriptors; degrades to descriptors-only on `TokenBudgetExceededException`) and `GenerateThreadDraftService` (the use case for both the on-demand `POST /api/threads/{threadId}/draft` endpoint and any future triage-time draft generation: per-`(tenantId, gmailThreadId)` Redis lock → delete existing draft if any → `LlmGateway` draft call with a `save_draft`-only tool exposure and tone context in the prompt → `TriageGmailWriter.saveDraft(...)` with threading headers from Plan 01 → persist `draftId` → upsert `thread_reply_status`). Add a small `RedisDistributedLock` helper (no analog exists). Extend `LlmGateway` with a draft-specific seam (a new method or a `SAVE_DRAFT_ONLY` tool profile) — all Spring AI specifics stay inside `core.llm.gateway.springai`. **Reuse the existing `CallSite.DRAFT` (cost 2) — do NOT add a new enum value.**
+Create the `core.draft` domain package — `ToneContextBuilder` (in-request sent-mail fetch, quote/signature strip, `SanitizationPipeline`, ≤3 snippets + ~100-token descriptors; degrades to descriptors-only on `TokenBudgetExceededException`) and `GenerateThreadDraftService` (the use case for both the on-demand `POST /api/threads/{threadId}/draft` endpoint and any future triage-time draft generation: per-`(tenantId, gmailThreadId)` Redis lock → delete existing draft if any → `LlmGateway` draft call with a `save_draft`-only tool exposure and tone context in the prompt → `TriageGmailWriter.saveDraft(...)` with threading headers from Plan 01 → persist `draftId` → upsert `thread_reply_status`). Add a small `RedisDistributedLock` helper (no analog exists). Extend `LlmGateway` with a draft-specific seam (a new method or a `SAVE_DRAFT_ONLY` tool profile) — all Spring AI specifics stay inside `core.llm.gateway.springai`. **Reuse the existing `CallSite.DRAFT` (cost 2) — do NOT add a new enum value.** Also wire the triage inbound-message sub-step: `TriageOrchestratorService` calls `ClassifyThreadReplyStatusService.classify(...)` after the existing triage work, and `core/triage/package-info.java` gains the `triage → thread` `allowedDependencies` edge (Plan 02 deliberately left this edge to this plan, which already depends on both Plan 01 and Plan 02, so the `TriageOrchestratorService.java` edit lives in exactly one plan).
 
-Purpose: Closes DRFT-02, DRFT-03, and the no-auto-send/one-draft-per-thread invariants of DRFT-04.
-Output: New `core.draft` package, `RedisDistributedLock` in `core.shared.lock`, `LlmGateway` draft seam + adapter implementation, `AllowListedTools` `SAVE_DRAFT_ONLY` profile.
+Purpose: Closes DRFT-02, DRFT-03, and the no-auto-send/one-draft-per-thread invariants of DRFT-04, plus wires the triage-side reply-status sub-step.
+Output: New `core.draft` package, `RedisDistributedLock` in `core.shared.lock`, `LlmGateway` draft seam + adapter implementation, `AllowListedTools` `SAVE_DRAFT_ONLY` profile, `TriageOrchestratorService` sub-step + `core.triage` Modulith edge to `thread`.
 </objective>
 
 <execution_context>
@@ -88,7 +96,9 @@ Output: New `core.draft` package, `RedisDistributedLock` in `core.shared.lock`, 
 
 `TriageGmailWriter` (core.triage.usecases, widened by Plan 01): `String saveDraft(UUID tenantId, ReplyHeaders replyHeaders, String body, String gmailThreadId)` (threaded MIME, validator-gated); `void deleteDraft(UUID tenantId, String draftId)` (404-idempotent).
 
-`ThreadReplyStatusRepository` / `ClassifyThreadReplyStatusService` (core.thread, Plan 02): upsert a thread's `thread_reply_status` row with `hasDraft=true`, `draftId`.
+`ThreadReplyStatusRepository` / `ClassifyThreadReplyStatusService` (core.thread, Plan 02): `public classify(ThreadReplyClassificationInput)` — call it directly from `TriageOrchestratorService`'s inbound path and from `GenerateThreadDraftService` after a draft is saved (with `hasZeroMailDraft=true`); upsert a thread's `thread_reply_status` row with `hasDraft=true`, `draftId`.
+
+`TriageOrchestratorService` (core.triage.usecases): the `@ApplicationModuleListener` inbound-message handler — Plan 02 deliberately did NOT touch this file; this plan adds a `classify(...)` sub-step after the existing triage work, inside the same transaction scope as the audit write (or document why separate). `core/triage/package-info.java` `@ApplicationModule` `allowedDependencies` must gain `thread`.
 
 `GmailPreviewReadService` (core.gmail.usecases): the `users.messages.list(labelIds=[SENT])` + `BatchRequest` batch-`get` pattern, the `Duration` fetch-budget guard, and the `messages.get(format=METADATA)` shape — copy these.
 
@@ -118,7 +128,7 @@ Output: New `core.draft` package, `RedisDistributedLock` in `core.shared.lock`, 
     - `core.draft/package-info.java` declares `@ApplicationModule(displayName="Draft", allowedDependencies={ llm, triage, gmail, thread, tenant, shared.persistence, shared.lang, ... })` — set to exactly what the service touches; `core.shared.lock/package-info.java` declares a leaf `@ApplicationModule(displayName="Lock", allowedDependencies={})`.
   </behavior>
   <action>
-    Create the `core.draft.domain` records, `ToneContextBuilder` in `core.draft.usecases`, `RedisDistributedLock` in a new `core.shared.lock` leaf module, and the two `package-info.java` Modulith declarations. Reuse the existing Redis bean (no new Redis config). Make `ToneContextBuilderTest` pass (stub the Gmail client; assert quote/signature strip, ≤3 snippets, descriptors present, `TokenBudgetExceededException` → descriptors-only path, no persistence holds snippet content). Run `ApplicationModulesTest` — add `thread` / `lock` to any module's `allowedDependencies` that newly depends on them, atomically.
+    Create the `core.draft.domain` records, `ToneContextBuilder` in `core.draft.usecases`, `RedisDistributedLock` in a new `core.shared.lock` leaf module, and the two `package-info.java` Modulith declarations. Reuse the existing Redis bean (no new Redis config). Make `ToneContextBuilderTest` pass (stub the Gmail client; assert quote/signature strip, ≤3 snippets, descriptors present, `TokenBudgetExceededException` → descriptors-only path, no persistence holds snippet content). Run `ApplicationModulesTest` — add `thread` / `lock` to any module's `allowedDependencies` that newly depends on them, atomically (the `triage → thread` edge is added in Task 2).
   </action>
   <verify>
     <automated>cd "$REPO" && ./gradlew :backend:core:test --tests "*ToneContextBuilder*" --tests "*RedisDistributedLock*" --tests "*ApplicationModules*" 2>&1 | tail -10</automated>
@@ -134,8 +144,8 @@ Output: New `core.draft` package, `RedisDistributedLock` in `core.shared.lock`, 
 </task>
 
 <task type="auto" tdd="true">
-  <name>Task 2: LlmGateway draft seam (adapter) + GenerateThreadDraftService</name>
-  <files>backend/core/src/main/java/com/zeromail/core/llm/usecases/LlmGateway.java, backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/SpringAiLlmGateway.java, backend/core/src/main/java/com/zeromail/core/llm/domain/AllowListedTools.java, backend/core/src/main/java/com/zeromail/core/draft/usecases/GenerateThreadDraftService.java, backend/core/src/main/java/com/zeromail/core/draft/usecases/GenerateThreadDraftCommand.java, backend/core/src/main/java/com/zeromail/core/draft/usecases/GenerateThreadDraftResult.java, backend/core/src/main/java/com/zeromail/core/draft/exception/DraftGenerationInFlightException.java, backend/core/src/main/java/com/zeromail/core/draft/exception/DraftGenerationFailedException.java</files>
+  <name>Task 2: LlmGateway draft seam (adapter) + GenerateThreadDraftService + TriageOrchestrator classify sub-step</name>
+  <files>backend/core/src/main/java/com/zeromail/core/llm/usecases/LlmGateway.java, backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/SpringAiLlmGateway.java, backend/core/src/main/java/com/zeromail/core/llm/domain/AllowListedTools.java, backend/core/src/main/java/com/zeromail/core/draft/usecases/GenerateThreadDraftService.java, backend/core/src/main/java/com/zeromail/core/draft/usecases/GenerateThreadDraftCommand.java, backend/core/src/main/java/com/zeromail/core/draft/usecases/GenerateThreadDraftResult.java, backend/core/src/main/java/com/zeromail/core/draft/exception/DraftGenerationInFlightException.java, backend/core/src/main/java/com/zeromail/core/draft/exception/DraftGenerationFailedException.java, backend/core/src/main/java/com/zeromail/core/triage/usecases/TriageOrchestratorService.java, backend/core/src/main/java/com/zeromail/core/triage/package-info.java</files>
   <read_first>
     - backend/core/src/main/java/com/zeromail/core/llm/usecases/LlmGateway.java + backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/*.java (the adapter — `ChatClient` wiring, `ToolCallback` registration, `OpenAiChatOptions.builder()` shape, `ActionValidator` post-parse check, the existing `chat(...)` flow with `CreditLedger.reserve/settle/release` on the platform path; the model-pin map keyed by `CallSite`)
     - backend/core/src/main/java/com/zeromail/core/llm/domain/AllowListedTools.java (current `{label, archive, save_draft}` tool set + however a `LlmToolProfile` is selected — add a `SAVE_DRAFT_ONLY` profile that draws from the same set)
@@ -143,7 +153,8 @@ Output: New `core.draft` package, `RedisDistributedLock` in `core.shared.lock`, 
     - backend/core/src/main/java/com/zeromail/core/triage/usecases/TriageGmailWriter.java (the Plan-01-widened `saveDraft(UUID, ReplyHeaders, String, String)` + `deleteDraft`)
     - backend/core/src/main/java/com/zeromail/core/triage/domain/ReplyHeaders.java (Plan 01) + how to source the inbound message's `Message-ID`/`References`/`Subject`/reply-to for a thread on-demand — reuse `GmailPreviewReadService`'s `messages.get(format=METADATA)` for the thread's last inbound (non-self) message, OR the metadata triage already persisted on the `TriageAuditEntity` row
     - backend/core/src/main/java/com/zeromail/core/triage/persistence/TriageAuditEntity.java + TriageAuditSaga.java + TriageAuditWriter.java (the PENDING→APPLIED draft-state row shape to reuse for the on-demand draft's `externalRef=draftId`)
-    - backend/core/src/main/java/com/zeromail/core/thread/usecases/ClassifyThreadReplyStatusService.java (Plan 02 — to upsert `hasDraft/draftId` after a draft is saved)
+    - backend/core/src/main/java/com/zeromail/core/triage/usecases/TriageOrchestratorService.java + backend/core/src/main/java/com/zeromail/core/triage/package-info.java (the inbound-message `@ApplicationModuleListener`; where to slot the `classify(...)` sub-step after the existing triage work + audit loop, inside the same `@Transactional` scope as the audit write; the `@ApplicationModule` `allowedDependencies` list to extend with `thread`)
+    - backend/core/src/main/java/com/zeromail/core/thread/usecases/ClassifyThreadReplyStatusService.java + ThreadReplyClassificationInput.java (Plan 02 — `public classify(...)`; build the metadata-only input from data the orchestrator already holds: `lastMessageId`, `lastMessageFromIsTenant`, `threadHasSentLabel`, `hasZeroMailDraft`, `lastMessageIsAutoReply`)
     - backend/core/src/test/java/com/zeromail/core/draft/GenerateThreadDraftServiceTest.java + DraftPathArchUnitTest.java + DraftPrivacyLogScrubTest.java (the RED tests)
     - .planning/phases/05B-user-surface-ai-draft-replies/05B-AI-SPEC.md §3 "Entry Point Pattern" + §4 "Core Pattern" + §4b "Retry / failure policy"; .planning/phases/05B-user-surface-ai-draft-replies/05B-CONTEXT.md D-08, D-14, D-15, D-16
   </read_first>
@@ -160,24 +171,26 @@ Output: New `core.draft` package, `RedisDistributedLock` in `core.shared.lock`, 
       7. `newDraftId = triageGmailWriter.saveDraft(tenantId, replyHeaders, body, gmailThreadId)` (threaded MIME, validator-gated).
       8. Persist the new `draftId` on a `TriageAuditEntity`-shaped row (reuse `TriageAuditWriter`/`TriageAuditSaga` PENDING→APPLIED shape; `action=save_draft`, `externalRef=newDraftId`, `gmailThreadId`, `gmailMessageId` = the reply-target id) and upsert `thread_reply_status` (`hasDraft=true`, `draftId=newDraftId`, re-run `classify(...)` with `hasZeroMailDraft=true`).
       9. Return `GenerateThreadDraftResult(newDraftId, gmailThreadId, status = existingDraftId != null ? REGENERATED : GENERATED, openInGmailUrl = "https://mail.google.com/mail/u/0/#all/" + gmailThreadId)` — no draft body in the result.
+    - `TriageOrchestratorService` inbound-message sub-step: after the existing triage decision + audit loop, inside the same `@Transactional` scope as the audit write, build a metadata-only `ThreadReplyClassificationInput` from data already held (`gmailThreadId`, `lastMessageId`, `lastMessageFromIsTenant`, `threadHasSentLabel`, `hasZeroMailDraft` — false on the pure-inbound path unless a Zero-Mail draft already exists for the thread, `lastMessageIsAutoReply`) and call `classifyThreadReplyStatusService.classify(input)`. `core/triage/package-info.java` `@ApplicationModule` `allowedDependencies` gains `thread` — declare the edge in this commit.
     - Logs are metadata-only: `event=draft_generated tenantId={} gmailThreadId={} status={}` etc. — never the body, the prompt, the completion, or the tone snippets.
   </behavior>
   <action>
-    Add the `chatForDraft(...)` seam to `LlmGateway` and implement it in `SpringAiLlmGateway` (all Spring AI types stay in the adapter); add the `SAVE_DRAFT_ONLY` profile to `AllowListedTools`. Create `GenerateThreadDraftService`, its command/result records, and the two exceptions in `core.draft`. Wire `RedisDistributedLock`, `ToneContextBuilder`, `LlmGateway`, `SanitizationPipeline`, `TriageGmailWriter`, the triage-audit-row persistence, and `ClassifyThreadReplyStatusService`/`ThreadReplyStatusRepository`. Make `GenerateThreadDraftServiceTest`, `DraftPathArchUnitTest`, and `DraftPrivacyLogScrubTest` pass. Do NOT add `drafts.send` / `drafts.update` anywhere; do NOT widen the `save_draft` tool schema; do NOT add a `DRAFT_REPLY` `CallSite`.
+    Add the `chatForDraft(...)` seam to `LlmGateway` and implement it in `SpringAiLlmGateway` (all Spring AI types stay in the adapter); add the `SAVE_DRAFT_ONLY` profile to `AllowListedTools`. Create `GenerateThreadDraftService`, its command/result records, and the two exceptions in `core.draft`. Wire `RedisDistributedLock`, `ToneContextBuilder`, `LlmGateway`, `SanitizationPipeline`, `TriageGmailWriter`, the triage-audit-row persistence, and `ClassifyThreadReplyStatusService`/`ThreadReplyStatusRepository`. Add the `classify(...)` sub-step to `TriageOrchestratorService`'s inbound-message handler and add `thread` to `core/triage/package-info.java`'s `allowedDependencies` in the same commit. Make `GenerateThreadDraftServiceTest`, `DraftPathArchUnitTest`, and `DraftPrivacyLogScrubTest` pass. Do NOT add `drafts.send` / `drafts.update` anywhere; do NOT widen the `save_draft` tool schema; do NOT add a `DRAFT_REPLY` `CallSite`.
   </action>
   <verify>
-    <automated>cd "$REPO" && ./gradlew :backend:core:test --tests "*GenerateThreadDraft*" --tests "*DraftPathArchUnit*" --tests "*DraftPrivacyLogScrub*" --tests "*ActionValidator*" --tests "*ApplicationModules*" 2>&1 | tail -14</automated>
+    <automated>cd "$REPO" && ./gradlew :backend:core:test --tests "*GenerateThreadDraft*" --tests "*DraftPathArchUnit*" --tests "*DraftPrivacyLogScrub*" --tests "*ActionValidator*" --tests "*TriageOrchestrator*" --tests "*ApplicationModules*" 2>&1 | tail -14</automated>
   </verify>
   <acceptance_criteria>
     - `GenerateThreadDraftServiceTest` passes: stubbed `LlmGateway` returns `save_draft{body}` → service deletes any existing draft, calls `saveDraft(...)` with `ReplyHeaders`, persists `draftId`, upserts `thread_reply_status` (`hasDraft=true`), returns `GENERATED`/`REGENERATED` with `openInGmailUrl`, no body in the result
     - A stubbed `LlmGateway` returning a non-`save_draft` action → `SafetyViolationException`, zero Gmail writes, no persistence
     - Redis lock held → `DraftGenerationInFlightException`; lock released in `finally`
+    - `TriageOrchestratorService` invokes `classifyThreadReplyStatusService.classify(...)` on the inbound path inside the audit transaction; `core/triage/package-info.java` `allowedDependencies` includes `thread`; `ApplicationModulesTest` green with the new `triage → thread` edge
     - `DraftPathArchUnitTest` passes: no `drafts.send`/`drafts.update`/`messages.send` from `core.draft`/`core.triage`; `org.springframework.ai.*` not imported in `core.draft`; `jakarta.mail.*` not imported in `core.draft`
     - `DraftPrivacyLogScrubTest` passes: no sent-mail body bytes, draft body, prompt, or completion in any log line during a draft generation
     - `AllowListedTools` `SAVE_DRAFT_ONLY` profile exposes exactly `save_draft`; the `save_draft` tool schema is still `{ body: string }`; `CallSite` has no `DRAFT_REPLY` member
     - `./gradlew :backend:core:test :backend:api:test` green; `ApplicationModulesTest` + `DomainBoundaryArchTests` green; `mcp__jetbrains__get_file_problems` on touched files clean
   </acceptance_criteria>
-  <done>On-demand (and triage-shared) draft generation lands: LlmGateway-only, tone-matched, delete-then-recreate, Redis-locked, metadata-only — DRFT-02/03 and the no-auto-send/one-draft invariants of DRFT-04 satisfied at the service layer.</done>
+  <done>On-demand (and triage-shared) draft generation lands: LlmGateway-only, tone-matched, delete-then-recreate, Redis-locked, metadata-only; the triage inbound path classifies reply-status as a sub-step (the single `TriageOrchestratorService.java` edit + `triage → thread` Modulith edge) — DRFT-02/03 and the no-auto-send/one-draft invariants of DRFT-04 satisfied at the service layer.</done>
 </task>
 
 </tasks>
@@ -204,17 +217,19 @@ Output: New `core.draft` package, `RedisDistributedLock` in `core.shared.lock`, 
 | T-05B-03-06 | Denial of Service (cost) | unbounded `max_tokens` → runaway generation; or per-tenant spend-cap bypass | mitigate | Gateway refuses a draft call without an explicit `max_tokens` (~700); `TokenBudgetExceededException` bounds input (degrade to descriptors-only); `CreditLedger.reserve/settle/release` on the platform path (existing); BYOK path bypasses platform credits (existing) |
 | T-05B-03-07 | Tampering | wrong-recipient / mis-threaded draft | mitigate | `ReplyHeaders` + `ThreadingHeaderValidator` from Plan 01 — `In-Reply-To`/`References`/`Re:` subject/`To` validated before `drafts.create`; missing `Message-ID` → fail closed (`DraftGenerationFailedException`), never a mis-threaded draft |
 | T-05B-03-08 | (quality, high-stakes) | hallucinated commitment/fact in the draft (a "yes"/price/date the user never said) | mitigate (best-effort) | System-prompt rule "never invent commitments/dates/prices/facts"; `temperature ≈ 0.5`; eval dim-2 (faithfulness judge + human spot-check, Plan 07); the human Send step in Gmail is the last line — no auto-send path exists |
+| T-05B-03-09 | Denial of Service | the triage inbound `classify(...)` sub-step reaching for `messages.list` | mitigate | The sub-step builds a metadata-only input from data the orchestrator already holds; `classify(...)` only touches `thread_reply_status`; no Gmail enumeration; `DomainBoundaryArchTests` + the `core.thread` no-`messages.list` grep gate (Plan 02) |
 </threat_model>
 
 <verification>
-- `./gradlew :backend:core:test --tests "*GenerateThreadDraft*" --tests "*ToneContextBuilder*" --tests "*DraftPathArchUnit*" --tests "*DraftPrivacyLogScrub*" --tests "*ActionValidator*" --tests "*ApplicationModules*"` all green
+- `./gradlew :backend:core:test --tests "*GenerateThreadDraft*" --tests "*ToneContextBuilder*" --tests "*DraftPathArchUnit*" --tests "*DraftPrivacyLogScrub*" --tests "*ActionValidator*" --tests "*TriageOrchestrator*" --tests "*ApplicationModules*"` all green
 - `grep -rn "drafts().send\|drafts().update\|messages().send\|org.springframework.ai" backend/core/src/main/java/com/zeromail/core/draft` returns nothing
 - `grep -rn "DRAFT_REPLY" backend/core/src/main` returns nothing (reused `CallSite.DRAFT`)
-- `mcp__jetbrains__get_file_problems` on all new `core.draft` + `core.shared.lock` files + `LlmGateway.java` + the adapter + `AllowListedTools.java` — no problems
+- `core/triage/package-info.java` `allowedDependencies` includes `thread`; only this plan (not Plan 02) edits `TriageOrchestratorService.java`
+- `mcp__jetbrains__get_file_problems` on all new `core.draft` + `core.shared.lock` files + `LlmGateway.java` + the adapter + `AllowListedTools.java` + `TriageOrchestratorService.java` + `core/triage/package-info.java` — no problems
 </verification>
 
 <success_criteria>
-`core.draft` package complete: tone-matched reply-draft bodies via `LlmGateway` only (reusing `CallSite.DRAFT`), tone context fetched in-request + sanitized + never persisted + degrades on token-budget, regenerate = delete-then-recreate behind a per-thread Redis lock, all metadata-only. DRFT-02, DRFT-03, and the no-auto-send/one-draft invariants of DRFT-04 met at the service layer; the API surface comes in Plan 05.
+`core.draft` package complete: tone-matched reply-draft bodies via `LlmGateway` only (reusing `CallSite.DRAFT`), tone context fetched in-request + sanitized + never persisted + degrades on token-budget, regenerate = delete-then-recreate behind a per-thread Redis lock, all metadata-only; the triage inbound path classifies reply-status as a sub-step (single `TriageOrchestratorService.java` edit + `triage → thread` Modulith edge live here). DRFT-02, DRFT-03, and the no-auto-send/one-draft invariants of DRFT-04 met at the service layer; the API surface comes in Plan 05.
 </success_criteria>
 
 <output>

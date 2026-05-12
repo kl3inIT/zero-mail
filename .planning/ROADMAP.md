@@ -383,12 +383,20 @@ Plans:
 Plans:
 - [ ] 05B-00-PLAN.md — [BLOCKING] Wave 0: jakarta.mail dep + `030-thread-reply-status` Liquibase changelog + ~14 RED test scaffolds (backend + frontend) + ArchUnit guards + EN_SCAN_FILES
 - [ ] 05B-01-PLAN.md — Threading-header retrofit in `TriageGmailWriter` (jakarta.mail `MimeMessage`) + `ReplyHeaders` + `ThreadingHeaderValidator` (fail-closed on missing `Message-ID`) + `TriageOrchestratorService` wiring
-- [ ] 05B-02-PLAN.md — `core.thread` package: `ThreadReplyBucket` IdentifiedEnum + `thread_reply_status` entity/repo/converter + heuristic `ClassifyThreadReplyStatusService` (inbound sub-step + Modulith draft-saved reaction) + account-deletion cleanup
-- [ ] 05B-03-PLAN.md — `core.draft` package: `ToneContextBuilder` (in-request sent-mail fetch + strip + sanitize, degrade-to-descriptors) + `GenerateThreadDraftService` (Redis lock → delete-then-recreate → `LlmGateway` `CallSite.DRAFT` → threaded `saveDraft` → persist + upsert) + `RedisDistributedLock` + `LlmGateway` draft seam + `SAVE_DRAFT_ONLY` profile
-- [ ] 05B-04-PLAN.md — CQRS-lite read side: `AuditLogQueryService` (closes the 5A `GET /api/triage/audit` gap) + `NeedsReplyInboxQueryService` + `toReplyCount` + `KeysetCursor` codec + `MarkThreadResolvedService`
-- [ ] 05B-05-PLAN.md — backend/api: `GET /api/triage/audit` + `POST /api/threads/{id}/draft` (409 on contention) + `POST .../resolve` + `GET /api/threads?bucket=...` + DTOs + `GlobalExceptionHandler`/`ErrorCodes` + vi/en error i18n + OpenAPI regen
+- [ ] 05B-02-PLAN.md — `core.thread` package: `ThreadReplyBucket` IdentifiedEnum + `thread_reply_status` entity/repo/converter + heuristic `ClassifyThreadReplyStatusService` (public `classify(...)` + Modulith draft-saved/outbound reaction) + account-deletion cleanup — does NOT edit `TriageOrchestratorService` (Plan 03 owns the inbound sub-step + the `triage → thread` Modulith edge)
+- [ ] 05B-03-PLAN.md — `core.draft` package: `ToneContextBuilder` (in-request sent-mail fetch + strip + sanitize, degrade-to-descriptors) + `GenerateThreadDraftService` (Redis lock → delete-then-recreate → `LlmGateway` `CallSite.DRAFT` → threaded `saveDraft` → persist + upsert) + `RedisDistributedLock` + `LlmGateway` draft seam + `SAVE_DRAFT_ONLY` profile + the `TriageOrchestratorService` `classify(...)` inbound sub-step + `core/triage/package-info.java` `triage → thread` edge
+- [ ] 05B-04-PLAN.md — CQRS-lite read side: `AuditLogQueryService` (closes the 5A `GET /api/triage/audit` gap) + `NeedsReplyInboxQueryService` (NULLS-LAST keyset over the string `gmail_thread_id`) + `toReplyCount` + `KeysetCursor` codec (`encode(Instant,UUID)` + `encode(Instant,String)` overloads) + `MarkThreadResolvedService`
+- [ ] 05B-05-PLAN.md — backend/api: `GET /api/triage/audit` + two disjoint `/api/threads` controllers (`ThreadDraftController` `POST /{id}/draft` (409 on contention) + `POST .../resolve`; `NeedsReplyInboxController` `GET /api/threads?bucket=...`) + DTOs + `GlobalExceptionHandler`/`ErrorCodes` (`INVALID_CURSOR` via a typed `InvalidCursorException`) + vi/en error i18n + OpenAPI regen
 - [ ] 05B-06-PLAN.md — apps/web: `features/needs-reply/` (API/keys/hooks/components) + `/needs-reply` route + "Needs reply" sidebar item + `TO_REPLY` badge + "Draft reply/Regenerate draft" action (inbox + now-live audit rows) + remove 5A GAP sentinels + i18n
 - [ ] 05B-07-PLAN.md — closure: `:backend:core:aiEval` source set + deterministic eval dims 4/6/7/8 + synthetic fixtures + `DraftPrivacySweepTest` + full `check` + apps/web gates + `05B-VALIDATION.md`/`05B-UAT.md` + flip DRFT-01..04 + ROADMAP
+
+**Waves & parallelization**:
+- Wave 0: `05B-00` (blocking — schema + jakarta.mail dep + RED scaffolds).
+- Wave 2 (after Wave 0): `05B-01` and `05B-02` run in parallel — disjoint `files_modified` (`05B-01` owns `core.triage` threading: `TriageGmailWriter` + `ReplyHeaders` + `ThreadingHeaderValidator` + `TriageOrchestratorService`; `05B-02` owns `core.thread` + `core.tenant` cleanup and does NOT touch `TriageOrchestratorService.java`). The `TriageOrchestratorService.java` edit and the `triage → thread` Modulith edge live in exactly one plan: `05B-03`, which depends on both `05B-01` and `05B-02`.
+- Wave 3 (after Wave 2): `05B-03` (`depends_on: [05B-01, 05B-02]`) and `05B-04` (`depends_on: [05B-02]`) run in parallel — disjoint `files_modified` (`05B-03`: `core.draft` + `core.shared.lock` + `core.llm` + the `core.triage` orchestrator sub-step; `05B-04`: `core.*.projection` + `core.shared.pagination` + `MarkThreadResolvedService`).
+- Wave 4 (after Wave 3): `05B-05` (`depends_on: [05B-03, 05B-04]`) — backend/api wiring + OpenAPI regen.
+- Wave 5: `05B-06` (apps/web UI, `depends_on: [05B-05]`).
+- Wave 6: `05B-07` (closure, `depends_on: [05B-01..06]`).
 
 **UI hint**: yes
 

@@ -13,13 +13,12 @@ files_modified:
   - backend/core/src/main/java/com/zeromail/core/thread/usecases/ClassifyThreadReplyStatusService.java
   - backend/core/src/main/java/com/zeromail/core/thread/usecases/ThreadReplyClassificationInput.java
   - backend/core/src/main/java/com/zeromail/core/thread/package-info.java
-  - backend/core/src/main/java/com/zeromail/core/triage/usecases/TriageOrchestratorService.java
   - backend/core/src/main/java/com/zeromail/core/tenant/usecases/TenantService.java
 autonomous: true
 requirements: [DRFT-04]
 must_haves:
   truths:
-    - "Every thread Zero Mail observes (inbound triage, or a draft-saved event) gets a reply-status bucket: TO_REPLY or AWAITING_THEIR_REPLY"
+    - "Every thread Zero Mail observes (via a draft-saved / outbound-observed event) gets a reply-status bucket: TO_REPLY or AWAITING_THEIR_REPLY"
     - "Classification never enumerates the mailbox — it keys only off already-observed threads"
     - "thread_reply_status persists metadata only: no bodies, subjects, participants, prompts, or completions"
     - "Re-classifying with an unchanged (tenantId, gmailThreadId, lastClassifiedMessageId) is a no-op"
@@ -34,10 +33,10 @@ must_haves:
     - path: "backend/core/src/main/java/com/zeromail/core/thread/usecases/ClassifyThreadReplyStatusService.java"
       provides: "heuristic-only v1 classifier + idempotent upsert + Modulith after-commit reaction on draft-saved/outbound events"
   key_links:
-    - from: "backend/core/src/main/java/com/zeromail/core/triage/usecases/TriageOrchestratorService.java"
-      to: "ClassifyThreadReplyStatusService.classify"
-      via: "sub-step on the inbound-message path"
-      pattern: "ClassifyThreadReplyStatusService"
+    - from: "backend/core/src/main/java/com/zeromail/core/thread/usecases/ClassifyThreadReplyStatusService.java"
+      to: "ThreadReplyStatusRepository (idempotent upsert)"
+      via: "@ApplicationModuleListener on draft-saved / outbound-observed Gmail-state events"
+      pattern: "ApplicationModuleListener"
     - from: "backend/core/src/main/java/com/zeromail/core/tenant/usecases/TenantService.java"
       to: "ThreadReplyStatusRepository (delete by tenant)"
       via: "account-deletion cleanup"
@@ -45,10 +44,10 @@ must_haves:
 ---
 
 <objective>
-Create the `core.thread` domain package: the `ThreadReplyBucket` `IdentifiedEnum` (TO_REPLY / AWAITING_THEIR_REPLY, with FYI/ACTIONED reserved in the enum and the CHECK constraint but not produced in v1), the `thread_reply_status` JPA entity + repository + attribute converter mapping the bucket to its varchar id, and the heuristic-only `ClassifyThreadReplyStatusService` — invoked as a sub-step inside `TriageOrchestratorService` on the inbound-message path and via a Spring Modulith after-commit reaction on draft-saved / outbound-observed Gmail-state events. Wire account-deletion cleanup. Per CONTEXT D-10..D-12 and the researcher's recommendation, this is heuristic-only v1; the LLM hybrid stays a deferred follow-up.
+Create the `core.thread` domain package: the `ThreadReplyBucket` `IdentifiedEnum` (TO_REPLY / AWAITING_THEIR_REPLY, with FYI/ACTIONED reserved in the enum and the CHECK constraint but not produced in v1), the `thread_reply_status` JPA entity + repository + attribute converter mapping the bucket to its varchar id, and the heuristic-only `ClassifyThreadReplyStatusService` — exposed as a callable use case (`classify(ThreadReplyClassificationInput)`) and invoked via a Spring Modulith after-commit reaction on draft-saved / outbound-observed Gmail-state events. Wire account-deletion cleanup. The triage-orchestrator inbound-message sub-step that calls `classify(...)` is wired in Plan 03 (which depends on both Plan 01 and Plan 02), so this plan never touches `TriageOrchestratorService.java` and never adds a `triage → thread` Modulith edge. Per CONTEXT D-10..D-12 and the researcher's recommendation, this is heuristic-only v1; the LLM hybrid stays a deferred follow-up.
 
 Purpose: Powers the needs-reply inbox (read side comes in Plan 04, UI in Plan 06). The "no mailbox enumeration" and "metadata only" invariants are load-bearing for privacy and quota.
-Output: New `core.thread` package (domain/persistence/usecases), Modulith package-info, orchestrator sub-step wiring, deletion cleanup.
+Output: New `core.thread` package (domain/persistence/usecases), Modulith package-info, Modulith after-commit reaction wiring, deletion cleanup.
 </objective>
 
 <execution_context>
@@ -75,7 +74,7 @@ Output: New `core.thread` package (domain/persistence/usecases), Modulith packag
 
 `AbstractAuditableEntity` (core.shared.persistence): `@MappedSuperclass` with `@Id` UUID, `@Version` long, `@CreatedDate`/`@LastModifiedDate` audit columns via `@EntityListeners(AuditingEntityListener.class)` on a tier-2 parent. New entities extend this and add their own columns + getters/setters; classes (not records) for entities; no Lombok.
 
-Modulith after-commit reaction pattern: `@ApplicationModuleListener void on(SomeGmailStateChangedEvent e)` — see existing handlers of `core.gmail.event.MailMessageObserved` and the Phase 4 `TriageOrchestratorService` `@ApplicationModuleListener`. `core.thread`'s `package-info.java` declares `@ApplicationModule(displayName = "Thread", allowedDependencies = { ... })` — set the allowed deps from what the classifier actually touches (likely `gmail`, `tenant`, `shared.persistence`, `shared.lang`; NO crypto edge).
+Modulith after-commit reaction pattern: `@ApplicationModuleListener void on(SomeGmailStateChangedEvent e)` — see existing handlers of `core.gmail.event.MailMessageObserved` and the Phase 4 `TriageOrchestratorService` `@ApplicationModuleListener`. `core.thread`'s `package-info.java` declares `@ApplicationModule(displayName = "Thread", allowedDependencies = { ... })` — set the allowed deps from what the classifier actually touches (likely `gmail`, `tenant`, `shared.persistence`, `shared.lang`; NO crypto edge). NOTE: the `triage → thread` edge (orchestrator sub-step calling `classify(...)`) is added in Plan 03, not here.
 </interfaces>
 
 <tasks>
@@ -99,10 +98,10 @@ Modulith after-commit reaction pattern: `@ApplicationModuleListener void on(Some
     - `ThreadReplyStatusEntity` — `@Entity @Table(name="thread_reply_status")` extending `AbstractAuditableEntity`; `@Convert` on `bucket` via `ThreadReplyBucketAttributeConverter`; `@TenantId`-annotated `tenantId` if that is how the other tenant-owned entities do it (check `AbstractTenantOwnedEntity` — if the project has a tenant-owned base, extend that instead and don't redeclare `tenant_id`); getters/setters; no Lombok.
     - `ThreadReplyStatusRepository extends JpaRepository<ThreadReplyStatusEntity, UUID>`: `Optional<ThreadReplyStatusEntity> findByGmailThreadId(String)` (tenant-filtered by Hibernate), `long countByBucketAndResolvedFalse(ThreadReplyBucket)` for the badge, and a bulk `@Modifying @Query("delete from ThreadReplyStatusEntity e where e.tenantId = :tenantId") int deleteByTenantId(UUID tenantId)` for account-deletion cleanup (mirror `OnboardingSelectionRepository.deleteByTenantId`).
     - `ThreadReplyBucketAttributeConverter implements AttributeConverter<ThreadReplyBucket,String>` — `convertToDatabaseColumn` = `id()`, `convertToEntityAttribute` = `fromId(...)`.
-    - `package-info.java` for `core.thread` declares `@ApplicationModule(displayName="Thread", allowedDependencies={...})` with the minimal set the classifier actually needs; declare both edges atomically if any existing module already depends on `thread` (none does yet).
+    - `package-info.java` for `core.thread` declares `@ApplicationModule(displayName="Thread", allowedDependencies={...})` with the minimal set the classifier actually needs (likely `gmail`, `tenant`, `shared.persistence`, `shared.lang`). Do NOT add a `triage → thread` edge here — Plan 03 owns that.
   </behavior>
   <action>
-    Create the `core.thread.domain`, `core.thread.persistence` packages with the enum, value object, entity, repository, converter, and the per-domain `persistence/package-info.java` + `lowlevel/` marker if the repo uses that pattern. Create `core.thread/package-info.java` with the Modulith `@ApplicationModule` declaration. Verify `ApplicationModulesTest` still passes (you may need to add `thread` to the `allowedDependencies` of `triage` if the orchestrator sub-step creates a `triage → thread` edge — declare it in the same commit). Add a pure-JVM enum-name persistence test (`ThreadReplyBucketPersistenceTest` mirroring `OnboardingStepEnumPersistenceTest`) asserting `name()` literals match the CHECK-constraint strings.
+    Create the `core.thread.domain`, `core.thread.persistence` packages with the enum, value object, entity, repository, converter, and the per-domain `persistence/package-info.java` + `lowlevel/` marker if the repo uses that pattern. Create `core.thread/package-info.java` with the Modulith `@ApplicationModule` declaration. Verify `ApplicationModulesTest` still passes. Add a pure-JVM enum-name persistence test (`ThreadReplyBucketPersistenceTest` mirroring `OnboardingStepEnumPersistenceTest`) asserting `name()` literals match the CHECK-constraint strings.
   </action>
   <verify>
     <automated>cd "$REPO" && ./gradlew :backend:core:test --tests "*ApplicationModules*" --tests "*ThreadReplyBucket*" --tests "*ThreadReplyStatus*" 2>&1 | tail -10</automated>
@@ -111,45 +110,45 @@ Modulith after-commit reaction pattern: `@ApplicationModuleListener void on(Some
     - `ThreadReplyBucket` implements `IdentifiedEnum`, `id() == name()`, `fromId` throws `NoSuchElementException` on unknown; a persistence test asserts `name()` literals == the `ck_thread_reply_status_bucket` strings
     - `ThreadReplyStatusEntity` extends the appropriate auditable/tenant-owned base, maps all `030` columns, uses the attribute converter for `bucket`, is a class (not record), no Lombok
     - `ThreadReplyStatusRepository` exposes `findByGmailThreadId`, `countByBucketAndResolvedFalse`, and a bulk `deleteByTenantId` `@Modifying @Query`
-    - `core.thread/package-info.java` has an `@ApplicationModule` with `allowedDependencies` limited to what's used; `ApplicationModulesTest` + `DomainBoundaryArchTests` pass
+    - `core.thread/package-info.java` has an `@ApplicationModule` with `allowedDependencies` limited to what's used; no `triage → thread` edge declared here; `ApplicationModulesTest` + `DomainBoundaryArchTests` pass
     - `mcp__jetbrains__get_file_problems` on the new Java files reports no problems
   </acceptance_criteria>
   <done>`core.thread` persistence layer + enum land; Modulith boundaries green.</done>
 </task>
 
 <task type="auto" tdd="true">
-  <name>Task 2: ClassifyThreadReplyStatusService (heuristic) + orchestrator sub-step + Modulith reaction + deletion cleanup</name>
-  <files>backend/core/src/main/java/com/zeromail/core/thread/usecases/ClassifyThreadReplyStatusService.java, backend/core/src/main/java/com/zeromail/core/thread/usecases/ThreadReplyClassificationInput.java, backend/core/src/main/java/com/zeromail/core/triage/usecases/TriageOrchestratorService.java, backend/core/src/main/java/com/zeromail/core/tenant/usecases/TenantService.java</files>
+  <name>Task 2: ClassifyThreadReplyStatusService (heuristic) + Modulith reaction + deletion cleanup</name>
+  <files>backend/core/src/main/java/com/zeromail/core/thread/usecases/ClassifyThreadReplyStatusService.java, backend/core/src/main/java/com/zeromail/core/thread/usecases/ThreadReplyClassificationInput.java, backend/core/src/main/java/com/zeromail/core/tenant/usecases/TenantService.java</files>
   <read_first>
     - backend/core/src/main/java/com/zeromail/core/triage/usecases/SenderSafetyNetService.java (heuristic over Gmail label ids + sender canonicalization — the closest analog)
-    - backend/core/src/main/java/com/zeromail/core/triage/usecases/TriageOrchestratorService.java (the `@ApplicationModuleListener` inbound-message path; where to slot a classify sub-step after the existing triage work; what tenant + Gmail-message data it holds)
+    - backend/core/src/main/java/com/zeromail/core/triage/usecases/TriageOrchestratorService.java (READ ONLY — the `@ApplicationModuleListener` inbound-message path; what tenant + Gmail-message data it holds; Plan 03 will add the `classify(...)` sub-step here, this plan does not edit it)
     - backend/core/src/main/java/com/zeromail/core/gmail/event/*.java (the Gmail-state / draft-saved / outbound-observed events available for an `@ApplicationModuleListener` reaction — if a draft-saved or message-sent event doesn't exist yet, decide: publish a new lightweight `core.triage` event `ThreadDraftSaved(tenantId, gmailThreadId, draftId, observedAt)` from `TriageGmailWriter`/the audit saga after the draft is created, carrying ids + timestamp only — no body)
     - backend/core/src/main/java/com/zeromail/core/tenant/usecases/TenantService.java (existing `deleteCurrentTenant` cascade — add a `threadReplyStatusRepository.deleteByTenantId(...)` call; FK `deleteCascade:true` already covers it, but add the explicit call for parity with the other domains, or rely on cascade and document the choice)
     - backend/core/src/main/java/com/zeromail/core/onboarding/persistence/OnboardingSelectionRepository.java (`deleteByTenantId` bulk-query analog)
     - .planning/phases/05B-user-surface-ai-draft-replies/05B-CONTEXT.md D-10, D-11, D-12; .planning/phases/05B-user-surface-ai-draft-replies/05B-PATTERNS.md §"Pattern 4: Heuristic reply-status classification"
   </read_first>
   <behavior>
-    - `ClassifyThreadReplyStatusService.classify(ThreadReplyClassificationInput input)` where the input carries (metadata-only): `tenantId`, `gmailThreadId`, `lastMessageId`, `lastMessageFromIsTenant` (bool — last message `From` == the tenant's own Gmail address, computed by the caller from already-held metadata), `threadHasSentLabel` (bool), `hasZeroMailDraft` (bool) + optional `zeroMailDraftId`, plus `lastMessageIsAutoReply` (bool — `Auto-Submitted: auto-replied` / `Precedence: bulk` / known vacation pattern). NEVER carries subjects, bodies, or participant strings beyond what's needed for the booleans.
+    - `ClassifyThreadReplyStatusService.classify(ThreadReplyClassificationInput input)` where the input carries (metadata-only): `tenantId`, `gmailThreadId`, `lastMessageId`, `lastMessageFromIsTenant` (bool — last message `From` == the tenant's own Gmail address, computed by the caller from already-held metadata), `threadHasSentLabel` (bool), `hasZeroMailDraft` (bool) + optional `zeroMailDraftId`, plus `lastMessageIsAutoReply` (bool — `Auto-Submitted: auto-replied` / `Precedence: bulk` / known vacation pattern). NEVER carries subjects, bodies, or participant strings beyond what's needed for the booleans. This method is `public` so the Plan 03 orchestrator sub-step can call it directly.
     - Heuristic v1: if `hasZeroMailDraft` → bucket `TO_REPLY`, `hasDraft=true` (the draft is a convenience, not a resolution — UI shows the `Draft ready` badge); else if `lastMessageFromIsTenant && threadHasSentLabel && !lastMessageIsAutoReply` → `AWAITING_THEIR_REPLY`; else → `TO_REPLY`.
     - Idempotency: if a `thread_reply_status` row exists for `(tenantId, gmailThreadId)` with the same `lastClassifiedMessageId == lastMessageId`, do nothing (return early). Otherwise upsert (`findByGmailThreadId` → update or `save` new): set `bucket`, `lastClassifiedMessageId`, `lastClassifiedAt = Instant.now(clock)`, `hasDraft`, `draftId`, preserve `resolved` on update (new activity may re-open it — see below).
     - On new inbound activity (a `lastMessageId` change), if the existing row was `resolved=true`, clear `resolved=false` (the thread re-enters the queue) — UI-SPEC §"Destructive actions" says `Mark resolved` is reversible on new activity.
-    - Never enumerate the mailbox: the only entry points are (a) the orchestrator sub-step on an observed inbound message, and (b) a Modulith `@ApplicationModuleListener` on a draft-saved / outbound-observed event — both already scoped to a single known thread.
+    - Never enumerate the mailbox: the only entry points are (a) the orchestrator sub-step on an observed inbound message (wired in Plan 03), and (b) a Modulith `@ApplicationModuleListener` on a draft-saved / outbound-observed event (this plan) — both already scoped to a single known thread.
     - Log `event=thread_reply_classified tenantId={} gmailThreadId={} bucket={}` only — never the message id beyond an opaque reference, never any content.
   </behavior>
   <action>
-    Create `ClassifyThreadReplyStatusService` (`@Service`, ctor-injected `ThreadReplyStatusRepository` + `Clock`) and `ThreadReplyClassificationInput` (validated record, metadata-only). Wire it as a sub-step in `TriageOrchestratorService`'s inbound-message handler (after the existing triage work, before/after the audit loop as fits the transaction boundary — keep it inside the same `@Transactional` scope as the audit write so a failure rolls back consistently, or document why it's separate). Add the after-commit Modulith reaction: an `@ApplicationModuleListener` on the draft-saved/outbound event (publish a new `ThreadDraftSaved` event from the audit saga or `TriageGmailWriter` if none exists — ids + timestamp only) that re-runs `classify(...)` so "awaiting" flips when the user sends and the draft badge shows after a draft is created. Add `threadReplyStatusRepository.deleteByTenantId(tenantId)` to the account-deletion path in `TenantService.deleteCurrentTenant` (or rely on FK cascade and add a comment + a deletion test asserting rows are gone). Make `ClassifyThreadReplyStatusServiceTest` pass.
+    Create `ClassifyThreadReplyStatusService` (`@Service`, ctor-injected `ThreadReplyStatusRepository` + `Clock`) with a `public` `classify(...)` method and `ThreadReplyClassificationInput` (validated record, metadata-only). Add the after-commit Modulith reaction inside `ClassifyThreadReplyStatusService`: an `@ApplicationModuleListener` on the draft-saved/outbound event (publish a new `ThreadDraftSaved` event from the audit saga or `TriageGmailWriter` if none exists — ids + timestamp only) that re-runs `classify(...)` so "awaiting" flips when the user sends and the draft badge shows after a draft is created. Add `threadReplyStatusRepository.deleteByTenantId(tenantId)` to the account-deletion path in `TenantService.deleteCurrentTenant` (or rely on FK cascade and add a comment + a deletion test asserting rows are gone). Do NOT edit `TriageOrchestratorService.java` and do NOT add a `triage → thread` Modulith edge — Plan 03 owns the inbound-orchestrator wiring. Make `ClassifyThreadReplyStatusServiceTest` pass.
   </action>
   <verify>
-    <automated>cd "$REPO" && ./gradlew :backend:core:test --tests "*ClassifyThreadReplyStatus*" --tests "*TriageOrchestrator*" --tests "*AccountDeletion*" --tests "*ApplicationModules*" 2>&1 | tail -12</automated>
+    <automated>cd "$REPO" && ./gradlew :backend:core:test --tests "*ClassifyThreadReplyStatus*" --tests "*AccountDeletion*" --tests "*ApplicationModules*" 2>&1 | tail -12</automated>
   </verify>
   <acceptance_criteria>
     - `ClassifyThreadReplyStatusServiceTest` passes: counterparty-last + no draft → `TO_REPLY`; tenant-last + `SENT` + not-auto-reply → `AWAITING_THEIR_REPLY`; auto-reply last → stays `TO_REPLY`; thread with a Zero-Mail draft → `TO_REPLY` + `hasDraft=true`; unchanged `(tenantId, gmailThreadId, lastClassifiedMessageId)` → no re-upsert (verified via repository call count or version unchanged)
-    - `TriageOrchestratorService` invokes `classify(...)` on the inbound path; a Modulith `@ApplicationModuleListener` re-classifies on draft-saved/outbound
+    - A Modulith `@ApplicationModuleListener` in `core.thread` re-classifies on draft-saved/outbound; `TriageOrchestratorService.java` is NOT modified in this plan; no `triage → thread` edge added by this plan
     - Account deletion removes all `thread_reply_status` rows for the tenant (deletion test green)
     - No log line emitted by the classifier carries an email body, subject, address, or Google subject
     - `./gradlew :backend:core:test :backend:api:test` green; `ApplicationModulesTest` + `DomainBoundaryArchTests` green; `mcp__jetbrains__get_file_problems` on touched files clean
   </acceptance_criteria>
-  <done>Heuristic reply-status classification runs on inbound + draft-saved events, idempotently, metadata-only, mailbox-scan-free; deletion cleanup wired.</done>
+  <done>Heuristic reply-status classification runs on draft-saved/outbound events, idempotently, metadata-only, mailbox-scan-free, with a public `classify(...)` ready for Plan 03's orchestrator sub-step; deletion cleanup wired.</done>
 </task>
 
 </tasks>
@@ -167,7 +166,7 @@ Modulith after-commit reaction pattern: `@ApplicationModuleListener void on(Some
 
 | Threat ID | Category | Component | Disposition | Mitigation Plan |
 |-----------|----------|-----------|-------------|-----------------|
-| T-05B-02-01 | Denial of Service | classifier reaching for `messages.list` over the whole mailbox to find "awaiting" threads | mitigate | Only two entry points, both single-thread-scoped (orchestrator sub-step on an observed message; Modulith reaction on a draft-saved/outbound event keyed to a known `gmailThreadId`); no `messages.list` call in `core.thread`; ArchUnit/code-review gate |
+| T-05B-02-01 | Denial of Service | classifier reaching for `messages.list` over the whole mailbox to find "awaiting" threads | mitigate | Only two entry points, both single-thread-scoped (orchestrator sub-step on an observed message — wired in Plan 03; Modulith reaction on a draft-saved/outbound event keyed to a known `gmailThreadId` — this plan); no `messages.list` call in `core.thread`; ArchUnit/code-review gate |
 | T-05B-02-02 | Information Disclosure | `thread_reply_status` columns leaking content | mitigate | Schema (Plan 00) has no body/subject/participant columns; the classifier input is booleans + ids only; `ThreadReplyClassificationInput` is a validated record reviewed to carry no content; log format metadata-only |
 | T-05B-02-03 | Tampering | a crafted auto-reply / vacation-responder flipping a thread to `AWAITING_THEIR_REPLY` and hiding it from "to reply" | mitigate | `lastMessageIsAutoReply` (Auto-Submitted/Precedence:bulk + known patterns) keeps auto-reply last messages in `TO_REPLY`; classifier accuracy bar (≥85% TO_REPLY/AWAITING) measured against the held-out fixture set (Plan 07) |
 | T-05B-02-04 | Information Disclosure | residual `thread_reply_status` rows after account deletion | mitigate | FK `deleteCascade: true` on `tenant_id` + an explicit `deleteByTenantId` call in the deletion path + a deletion test asserting zero rows remain |
@@ -177,12 +176,13 @@ Modulith after-commit reaction pattern: `@ApplicationModuleListener void on(Some
 <verification>
 - `./gradlew :backend:core:test --tests "*ClassifyThreadReplyStatus*" --tests "*ThreadReplyBucket*" --tests "*ApplicationModules*" --tests "*DomainBoundary*"` all green
 - `grep -rn "messages().list" backend/core/src/main/java/com/zeromail/core/thread` returns nothing
+- `git diff --name-only` for this plan does NOT include `TriageOrchestratorService.java` (Plan 03 owns that edit)
 - Account-deletion test confirms `thread_reply_status` rows for the deleted tenant are gone
-- `mcp__jetbrains__get_file_problems` on all new `core.thread` files + `TriageOrchestratorService.java` + `TenantService.java` — no problems
+- `mcp__jetbrains__get_file_problems` on all new `core.thread` files + `TenantService.java` — no problems
 </verification>
 
 <success_criteria>
-`core.thread` package exists with a metadata-only `thread_reply_status` projection, an `IdentifiedEnum` bucket, and a heuristic-only v1 classifier that runs on observed inbound messages + draft-saved/outbound events, idempotently and without mailbox enumeration; account deletion purges the rows. Read side + UI follow in Plans 04/06.
+`core.thread` package exists with a metadata-only `thread_reply_status` projection, an `IdentifiedEnum` bucket, and a heuristic-only v1 classifier (public `classify(...)` + a Modulith after-commit reaction on draft-saved/outbound events), idempotent and without mailbox enumeration; account deletion purges the rows. The triage-orchestrator inbound sub-step that calls `classify(...)` is wired in Plan 03. Read side + UI follow in Plans 04/06.
 </success_criteria>
 
 <output>
