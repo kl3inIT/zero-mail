@@ -6,8 +6,23 @@ const APP_WEB = resolve(__dirname, '../..');
 const FEATURES_DIR = resolve(APP_WEB, 'features');
 const COMPONENTS_DIR = resolve(APP_WEB, 'components');
 const I18N_DIR = resolve(APP_WEB, 'i18n');
-const FEATURE_ROOTS = ['account', 'auth', 'gmail', 'landing', 'onboarding', 'triage'] as const;
-const STANDARD_FEATURE_ROOTS = ['account', 'auth', 'gmail', 'onboarding', 'triage'] as const;
+const FEATURE_ROOTS = [
+  'account',
+  'auth',
+  'billing',
+  'gmail',
+  'landing',
+  'onboarding',
+  'triage',
+] as const;
+const STANDARD_FEATURE_ROOTS = [
+  'account',
+  'auth',
+  'billing',
+  'gmail',
+  'onboarding',
+  'triage',
+] as const;
 const SUBDIRS = ['api', 'components', 'hooks'] as const;
 
 // Reviews Revision 1: route page locations after Plan 05 route-group migration.
@@ -121,10 +136,13 @@ describe('Feature folder architecture', () => {
   it('features/triage keeps the mutation API consolidated and invalidates account state', () => {
     const apiFile = resolve(FEATURES_DIR, 'triage/api/triage-api.ts');
     const hookFile = resolve(FEATURES_DIR, 'triage/hooks/useToggleTriagePause.ts');
+    const queryKeys = resolve(FEATURES_DIR, 'triage/query-keys.ts');
     expect(existsSync(apiFile)).toBe(true);
+    expect(existsSync(queryKeys)).toBe(true);
     expect(readFileSync(apiFile, 'utf8')).toMatch(/export\s+async\s+function\s+setTriagePaused/);
+    expect(readFileSync(queryKeys, 'utf8')).toMatch(/pauseState/);
+    expect(readFileSync(queryKeys, 'utf8')).toMatch(/auditLog/);
     expect(readFileSync(hookFile, 'utf8')).toMatch(/accountQueryKeys\.me\(\)/);
-    expect(existsSync(resolve(FEATURES_DIR, 'triage/query-keys.ts'))).toBe(false);
     expect(existsSync(resolve(FEATURES_DIR, 'triage/api/triagePause.ts'))).toBe(false);
     expect(existsSync(resolve(FEATURES_DIR, 'triage/api/keys.ts'))).toBe(false);
   });
