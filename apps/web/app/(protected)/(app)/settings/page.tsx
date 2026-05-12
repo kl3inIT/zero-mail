@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 
 import { ConnectionHealthBadge } from '@/features/gmail/components/ConnectionHealthBadge';
@@ -13,7 +14,7 @@ import { useDeleteAccount } from '@/features/account/hooks/useDeleteAccount';
 import { ByokForm } from '@/features/llm/components/ByokForm';
 import { useTriagePauseState } from '@/features/triage/hooks/useTriagePauseState';
 import { useToggleTriagePause } from '@/features/triage/hooks/useToggleTriagePause';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -162,13 +163,20 @@ export default function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle>{t('settings.privacy.heading')}</CardTitle>
+          <CardDescription>{t('privacy.settingsLink.body')}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <ul className="text-muted-foreground space-y-1.5 text-sm">
             <li>{t('settings.privacy.noBodyStorage')}</li>
             <li>{t('settings.privacy.noAutoSend')}</li>
             <li>{t('settings.privacy.revokeAnytime')}</li>
           </ul>
+          <Link
+            href="/settings/privacy"
+            className={buttonVariants({ variant: 'outline', className: 'w-full sm:w-auto' })}
+          >
+            {t('privacy.settingsLink.cta')}
+          </Link>
         </CardContent>
       </Card>
 
