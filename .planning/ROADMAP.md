@@ -364,7 +364,7 @@ Plans:
   2. An in-product privacy page explains no-stored-bodies, no-auto-send, and the BYOK option.
   3. A persistent UI region (header or sidebar) surfaces the global pause toggle, real-time credit balance, and tenant connection health on every authenticated screen.
 **Plans**: 6 plans
-- [ ] 05A-01-PLAN.md — Wave-0 foundations: install shadcn primitives, shared loading/empty/error trio, triage query-keys, full features/billing skeleton, Playwright/Vitest stubs, 320px viewport, EN_SCAN_FILES
+- [x] 05A-01-PLAN.md — Wave-0 foundations: install shadcn primitives, shared loading/empty/error trio, triage query-keys, full features/billing skeleton, Playwright/Vitest stubs, 320px viewport, EN_SCAN_FILES
 - [ ] 05A-02-PLAN.md — App shell rewrite ((protected)/layout.tsx + AppShell/AppSidebar/ChromeHeader), onboarding chrome-suppression, pause single-source-of-truth (D-13), chrome balance/health widgets
 - [ ] 05A-03-PLAN.md — /triage page: Tabs + ?tab=, audit log + undo (responsive hybrid renderer, 30-day boundary, AlertDialog), shadow-mode toggle, sender safety net (audit-list endpoint gap-flagged)
 - [ ] 05A-04-PLAN.md — /billing page (balance + ledger gap-flagged) + /billing/top-up flow (amount → intent → VietQR/bank fields → poll → success/expired, ?code= rehydration)
