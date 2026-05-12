@@ -245,6 +245,12 @@
     },
     "conflict": "Dữ liệu đã thay đổi trước khi thao tác hoàn tất. Hãy tải lại trang rồi thử lại.",
     "dataIntegrity": "Không thể lưu thay đổi vì dữ liệu không hợp lệ.",
+    "draft": {
+      "generation": {
+        "failed": "Chưa thể tạo bản nháp. Hãy thử lại sau.",
+        "in_flight": "Đang tạo bản nháp cho luồng email này."
+      }
+    },
     "fallback": "Không thể hoàn tất thao tác. Hãy làm mới trang rồi thử lại.",
     "fieldFallback": "Giá trị này không hợp lệ. Hãy kiểm tra lại.",
     "gmail": {
@@ -260,7 +266,7 @@
         "body": "Nạp thêm tín dụng hoặc lưu khóa BYOK hợp lệ để tiếp tục gọi AI.",
         "title": "Tín dụng nền tảng đã hết"
       },
-      "safety_violation": "Yêu cầu AI đã bị từ chối vì lý do an toàn.",
+      "safety_violation": "Đã xảy ra lỗi. Hãy thử lại.",
       "safetyViolation": "Yêu cầu AI đã bị từ chối vì lý do an toàn.",
       "sanitization_failed": "Không thể chuẩn hóa nội dung email trước khi gọi AI. Hãy thử lại.",
       "sanitizationFailed": "Không thể chuẩn hóa nội dung email trước khi gọi AI. Hãy thử lại."
@@ -269,6 +275,9 @@
       "backHome": "Về trang chủ",
       "body": "Trang bạn đang tìm không tồn tại hoặc đã bị di chuyển.",
       "title": "Không tìm thấy trang"
+    },
+    "pagination": {
+      "invalid_cursor": "Đã xảy ra lỗi. Hãy thử lại."
     },
     "rules": {
       "compile": {

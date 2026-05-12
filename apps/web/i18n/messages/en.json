@@ -245,6 +245,12 @@
     },
     "conflict": "The data changed before the action finished. Reload the page and try again.",
     "dataIntegrity": "The change could not be saved because the data is invalid.",
+    "draft": {
+      "generation": {
+        "failed": "Couldn't generate a draft. Try again in a moment.",
+        "in_flight": "A draft is already being generated for this thread."
+      }
+    },
     "fallback": "The action could not finish. Refresh the page, then try again.",
     "fieldFallback": "This value is invalid. Check it and try again.",
     "gmail": {
@@ -260,7 +266,7 @@
         "body": "Top up credits or save a valid BYOK key to continue AI calls.",
         "title": "Platform credits depleted"
       },
-      "safety_violation": "The AI request was rejected for safety reasons.",
+      "safety_violation": "Something went wrong. Try again.",
       "safetyViolation": "The AI request was rejected for safety reasons.",
       "sanitization_failed": "Could not sanitize the email body before calling the AI. Please retry.",
       "sanitizationFailed": "Could not sanitize the email body before calling the AI. Please retry."
@@ -269,6 +275,9 @@
       "backHome": "Back home",
       "body": "The page you're looking for doesn't exist or has been moved.",
       "title": "Page not found"
+    },
+    "pagination": {
+      "invalid_cursor": "Something went wrong. Try again."
     },
     "rules": {
       "compile": {
