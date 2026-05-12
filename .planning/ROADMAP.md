@@ -2,13 +2,14 @@
 
 ## Overview
 
-Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap walks from a safety-first foundation (Scoped Values, log scrubbers, OAuth, CASA kickoff) through three parallel infrastructure tracks (mail ingestion, billing ledger, LLM gateway) that converge on the rules engine and then the hero triage orchestrator. After triage lands, the user-facing surface (drafts, analytics, web UI) ships together, followed by a polish + CASA-verified launch phase. Phase 2C (LLM Gateway) is hard-gated by Phase 1 safety infrastructure, and Phase 4 (Triage) is hard-gated by Phase 2C. CASA restricted-scope verification (4–12 weeks, external) is kicked off in parallel at Phase 1 OAuth wiring and completes before Phase 6 launch.
+Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap walks from a safety-first foundation (Scoped Values, log scrubbers, OAuth, CASA kickoff) through three parallel infrastructure tracks (mail ingestion, billing ledger, LLM gateway) that converge on the rules engine and then the hero triage orchestrator. After triage lands, the user-facing surface ships in three sub-phases — 5A (web UI core for already-built backends), then 5B (AI draft replies) and 5C (analytics + daily digest) in parallel — followed by a polish + CASA-verified launch phase. Phase 2C (LLM Gateway) is hard-gated by Phase 1 safety infrastructure, and Phase 4 (Triage) is hard-gated by Phase 2C. CASA restricted-scope verification (4–12 weeks, external) is kicked off in parallel at Phase 1 OAuth wiring and completes before Phase 6 launch.
 
 ## Phases
 
 **Phase Numbering:**
 - Integer phases (1, 3, 4, 6): Planned milestone work
 - Sub-phases (2A, 2B, 2C): Parallel tracks that must all complete before Phase 3 — executable concurrently post-Phase 1
+- Sub-phases (5A, 5B, 5C): User-surface tracks within the Phase 5 band — 5A (web UI core) lands first; 5B (draft replies) and 5C (analytics + digest) can then run concurrently. All three complete before Phase 6.
 - Decimal phases (1.1, 1.2, 2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: Foundation & Safety Infrastructure** - Scoped Values, `@Sensitive`, Logback scrub, ArchUnit bans, multi-tenant leak test, Google OAuth, skeleton OpenAPI, CASA kickoff (CASA external filing pending — tracked outside the phase as a parallel external dependency)
@@ -20,10 +21,12 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] **Phase 1.5: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED)** _(completed 2026-04-28)_ - Remaining heavy Phase 1.5 work: single Google OAuth upfront Gmail scope, remove google-gmail mismatch architecture, merge Gmail token provisioning, simplify onboarding/consent UX, deflate frontend primitives, polish landing/login/onboarding/settings/ReconnectPrompt, and close surviving REVIEW cleanup; excludes quick tasks already completed
 - [x] **Phase 2A: Mail Ingestion** _(completed 2026-04-29)_ - Gmail `users.watch` + Pub/Sub push + OIDC verification + idempotent history processing + global pause
 - [x] **Phase 2B: Billing (Prepaid Credits)** _(completed 2026-05-06)_ - Double-entry Postgres ledger, reserve/settle/release, credit-hold watchdog, SePay/VietQR top-up intent + webhook, balance API hooks
-- [ ] **Phase 2C: LLM Gateway** - Spring AI 2.0.0-M6 `LlmGateway` with sanitize → Unicode strip → structured tool-call + allow-list → BYOK per-request options → daily spend cap → drift detection
+- [x] **Phase 2C: LLM Gateway** _(completed 2026-05-09)_ - Spring AI 2.0.0-M6 `LlmGateway` with sanitize → Unicode strip → structured tool-call + allow-list → BYOK per-request options → daily spend cap → drift detection
 - [x] **Phase 3: Rules Engine** _(completed 2026-05-10)_ - NL → structured matcher AST via Spring AI tool-call, deterministic evaluator, live preview, CRUD + reorder, template gallery
 - [x] **Phase 4: Triage Convergence (Hero)** _(completed 2026-05-11)_ - Orchestrator, safety policy layer, audit + undo, shadow mode for new tenants, sender safety net
-- [ ] **Phase 5: User Surface (Drafts, Analytics, Web UI)** - AI-drafted replies, metadata-only analytics + daily digest, Next.js 16 / React 19 frontend covering all flows
+- [x] **Phase 5A: User Surface — Web UI Core** _(completed 2026-05-12)_ - Next.js 16 / React 19 frontend for already-built backends: onboarding, rule CRUD + live preview, triage audit log + undo, billing, privacy page, persistent chrome (pause / credit balance / connection health)
+- [ ] **Phase 5B: User Surface — AI Draft Replies** - AI-drafted replies saved as Gmail drafts (correct threading headers, tone-matched, never auto-sent) + "Draft reply" trigger in the web UI
+- [ ] **Phase 5C: User Surface — Analytics & Daily Digest** - Metadata-only analytics screen (volume, time saved, top senders, rule hits over a window) + daily digest email
 - [ ] **Phase 6: Polish & CASA-Verified Launch** - End-to-end integration hardening, CASA Tier verification sign-off, launch readiness
 
 ## Phase Details
@@ -241,7 +244,7 @@ Plans:
 - [x] 02B-06-verification-closure-PLAN.md — DomainBoundaryArchTests (5th billing rule) + BillingDomainBoundaryArchTest GREEN + CallSiteEnumMembershipArchTest GREEN + REQUIREMENTS.md BILL-01..BILL-07 flip + ./gradlew clean check
 **UI hint**: yes
 
-### Phase 2C: LLM Gateway
+### Phase 2C: LLM Gateway _(completed 2026-05-09)_
 **Goal**: Ship the single `LlmGateway` abstraction on Spring AI 2.0.0-M6 that all LLM traffic must traverse, with full prompt-injection hardening, BYOK routing, metadata-only observability, per-tenant spend caps, and drift detection — the contract that Phase 4 triage will be built on.
 **Depends on**: Phase 1 (hard gate — safety infrastructure must ship first)
 **Requirements**: LLM-01, LLM-02, LLM-03, LLM-04, LLM-05, LLM-06, LLM-07, LLM-08, LLM-09, LLM-10, LLM-11
@@ -350,24 +353,47 @@ Plans:
 **Wave 7** *(blocked on Wave 6 completion)*
 - [x] 04-08-PLAN.md — Closure: TriagePrivacySweepTest (FND-03-analogous) + ./gradlew clean check green + TRG-01..TRG-08 -> Complete + 04-VALIDATION.md sign-off + 04-UAT.md
 
-**UI hint**: yes (Phase 5)
+**UI hint**: yes (Phase 5A)
 
-### Phase 5: User Surface — Drafts, Analytics, Web UI
-**Goal**: Deliver the complete user-facing surface: AI-drafted replies in Gmail, metadata-only analytics with a daily digest, and the Next.js 16 / React 19 frontend that ties every flow (onboarding, rules, audit, drafts, analytics, billing, privacy) together.
-**Depends on**: Phase 4 (audit log + triage to surface), Phase 2B (billing UI), Phase 2A (pause toggle + connection health), Phase 1 (OpenAPI contract — note that `apps/web` scaffolding can begin in parallel right after Phase 1 once the OpenAPI stub is stable)
-**Requirements**: DRFT-01, DRFT-02, DRFT-03, DRFT-04, ANL-01, ANL-02, ANL-03, WEB-01, WEB-02, WEB-03, WEB-04
+### Phase 5A: User Surface — Web UI Core
+**Goal**: Deliver the `apps/web` Next.js 16 / React 19 frontend that ties together every already-built backend flow — onboarding, rule CRUD with live preview, triage audit log with undo, billing, an in-product privacy page, and a persistent chrome region surfacing the global pause toggle, real-time credit balance, and tenant connection health — consuming the backend via the typed OpenAPI client. Draft-review and analytics screens are NOT in this phase (their backends do not exist yet — Phases 5B/5C).
+**Depends on**: Phase 4 (audit log + undo REST), Phase 2B (billing API hooks), Phase 2A (pause toggle + connection health), Phase 1.6 (brand identity / design tokens)
+**Requirements**: WEB-01, WEB-02 (onboarding, rule CRUD + live preview, triage audit log + undo, billing — draft review and analytics screens deferred to 5B/5C), WEB-03, WEB-04
 **Success Criteria** (what must be TRUE):
-  1. A user can request an AI draft reply for a thread, find it in Gmail as a normal draft with correct `In-Reply-To` and `References` headers, recognizable tone-matched phrasing, and must review before sending — no code path auto-sends.
-  2. The analytics screen shows volume triaged, estimated time saved, top senders, and rule hits over a user-selectable window, derived from per-message metadata only (no bodies, prompts, or completions stored or queried).
-  3. Each day, a connected tenant receives a digest email summarizing triage activity for the prior day.
-  4. The `apps/web` Next.js 16 / React 19 frontend covers onboarding, rule CRUD with live preview, triage audit log with undo, draft review, analytics, billing, and an in-product privacy page explaining no-stored-bodies, no-auto-send, and the BYOK option.
-  5. A persistent UI region (header or sidebar) surfaces the global pause toggle, real-time credit balance, and tenant connection health on every authenticated screen.
+  1. The `apps/web` frontend covers onboarding, rule CRUD with live preview, triage audit log with undo, and billing — each consuming the backend through the generated typed OpenAPI client.
+  2. An in-product privacy page explains no-stored-bodies, no-auto-send, and the BYOK option.
+  3. A persistent UI region (header or sidebar) surfaces the global pause toggle, real-time credit balance, and tenant connection health on every authenticated screen.
+**Plans**: 6 plans
+- [x] 05A-01-PLAN.md — Wave-0 foundations: install shadcn primitives, shared loading/empty/error trio, triage query-keys, full features/billing skeleton, Playwright/Vitest stubs, 320px viewport, EN_SCAN_FILES
+- [x] 05A-02-PLAN.md — App shell rewrite ((protected)/layout.tsx + AppShell/AppSidebar/ChromeHeader), onboarding chrome-suppression, pause single-source-of-truth (D-13), chrome balance/health widgets
+- [x] 05A-03-PLAN.md — /triage page: Tabs + ?tab=, audit log + undo (responsive hybrid renderer, 30-day boundary, AlertDialog), shadow-mode toggle, sender safety net (audit-list endpoint gap-flagged)
+- [x] 05A-04-PLAN.md — /billing page (balance + ledger gap-flagged) + /billing/top-up flow (amount → intent → VietQR EMV payload/code/amount/expiry → balance-rise success/expired, ?code= rehydration)
+- [x] 05A-05-PLAN.md — In-product /settings/privacy page (vi+en, three mandatory points) + convergence pass (rules/onboarding×3/settings onto shell + 1.6 tokens + shared states + 320px)
+- [x] 05A-06-PLAN.md — Phase closure: full apps/web suite green, frontend-design visual-review note rollup, 05A-GAPS.md register, 05A-VALIDATION.md sign-off, flip WEB-01..04
+**UI hint**: yes
+
+### Phase 5B: User Surface — AI Draft Replies
+**Goal**: A user can request an AI-generated draft reply for a thread from the `apps/web` UI; the draft is saved in Gmail as a normal draft with correct `In-Reply-To` and `References` headers, tone-matched from recent sent mail via lightweight in-request features (no persisted embeddings), and never auto-sent — the user must review and send it themselves in Gmail.
+**Depends on**: Phase 5A (UI shell + audit/thread surface), Phase 2C (LLM gateway), Phase 4 (triage thread surface)
+**Requirements**: DRFT-01, DRFT-02, DRFT-03, DRFT-04 (also satisfies the "draft review" portion of WEB-02)
+**Success Criteria** (what must be TRUE):
+  1. A user can request an AI draft reply for a thread, find it in Gmail as a normal draft with correct `In-Reply-To` and `References` headers and recognizable tone-matched phrasing, and must review before sending — no code path auto-sends.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 5C: User Surface — Analytics & Daily Digest
+**Goal**: An analytics screen shows volume triaged, estimated time saved, top senders, and rule hits over a user-selectable window, derived from per-message metadata only (no bodies, prompts, or completions stored or queried); and each day a connected tenant receives a digest email summarizing triage activity for the prior day.
+**Depends on**: Phase 5A (UI shell), Phase 4 (triage audit metadata)
+**Requirements**: ANL-01, ANL-02, ANL-03 (also satisfies the "analytics" portion of WEB-02)
+**Success Criteria** (what must be TRUE):
+  1. The analytics screen shows volume triaged, estimated time saved, top senders, and rule hits over a user-selectable window, derived from per-message metadata only.
+  2. Each day, a connected tenant receives a digest email summarizing triage activity for the prior day.
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 6: Polish & CASA-Verified Launch
 **Goal**: Harden end-to-end flows, close CASA restricted-scope verification (initiated in Phase 1), and produce a launch-ready build. No new REQ-IDs — this phase validates everything prior.
-**Depends on**: Phase 5, plus external CASA lab sign-off
+**Depends on**: Phase 5A + Phase 5B + Phase 5C, plus external CASA lab sign-off
 **Requirements**: _(none — integration, hardening, external verification close-out)_
 **Success Criteria** (what must be TRUE):
   1. A fresh end-to-end run (sign up → connect Gmail → enable template rule → receive message → triage → undo → draft → analytics) completes without errors on a clean environment.
@@ -384,9 +410,9 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phase 1 → Phase 1.1 → Phase 1.2 → Phase 1.2.1 → Phase 1.3 → Phase 1.4 → Phase 1.5 → {Phase 2A ∥ Phase 2B ∥ Phase 2C} → Phase 3 → Phase 4 → Phase 5 → Phase 6
+Phase 1 → Phase 1.1 → Phase 1.2 → Phase 1.2.1 → Phase 1.3 → Phase 1.4 → Phase 1.5 → {Phase 2A ∥ Phase 2B ∥ Phase 2C} → Phase 3 → Phase 4 → Phase 5A → {Phase 5B ∥ Phase 5C} → Phase 6
 
-Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 completes. Phase 5 starts after Phase 4, but `apps/web` scaffolding may start immediately after Phase 1 once the OpenAPI stub is stable.
+Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 completes. Phase 5A starts after Phase 4 (but `apps/web` scaffolding already began in Phase 1 / Phase 1.x). Phases 5B and 5C can run concurrently once Phase 5A lands the UI shell — 5B also needs Phase 2C (LLM gateway).
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -399,8 +425,10 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 1.5. Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep (INSERTED) | 7/8 | In Progress|  |
 | 2A. Mail Ingestion | 6/6 | Complete | 2026-04-29 |
 | 2B. Billing (Prepaid Credits) | 7/7 | Complete | 2026-05-06 |
-| 2C. LLM Gateway | 0/8 | Not started | - |
+| 2C. LLM Gateway | 8/8 | Complete | 2026-05-09 |
 | 3. Rules Engine | 10/10 | Complete | 2026-05-10 |
 | 4. Triage Convergence (Hero) | 9/9 | Complete | 2026-05-11 |
-| 5. User Surface — Drafts, Analytics, Web UI | 0/TBD | Not started | - |
+| 5A. User Surface — Web UI Core | 6/6 | Complete | 2026-05-12 |
+| 5B. User Surface — AI Draft Replies | 0/TBD | Not started | - |
+| 5C. User Surface — Analytics & Daily Digest | 0/TBD | Not started | - |
 | 6. Polish & CASA-Verified Launch | 0/TBD | Not started | - |

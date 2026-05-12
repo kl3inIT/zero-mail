@@ -7,6 +7,7 @@ import { AlertTriangle, Archive, CheckCircle2, Loader2, Play, Tags } from 'lucid
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/states/EmptyState';
 import {
   Card,
   CardContent,
@@ -112,10 +113,11 @@ export function RulePreviewPanel({
         )}
 
         {!preview ? (
-          <div className="rounded-lg border border-dashed p-4">
-            <p className="font-medium">{t('rules.preview.empty.heading')}</p>
-            <p className="text-muted-foreground mt-1 text-sm">{t('rules.preview.empty.body')}</p>
-          </div>
+          <EmptyState
+            heading={t('rules.preview.empty.heading')}
+            body={t('rules.preview.empty.body')}
+            className="min-h-32 px-4 py-8"
+          />
         ) : (
           <div className="space-y-4">
             <div className="bg-muted/30 rounded-lg border p-3">

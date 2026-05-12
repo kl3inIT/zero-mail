@@ -10,6 +10,8 @@ import { defineConfig, devices } from '@playwright/test';
  *   net for environment hiccups.
  * - webServer auto-starts `next dev` and reuses an existing server when running
  *   locally (so `pnpm dev` in another terminal short-circuits the boot).
+ * - 320px mobile coverage is applied per spec with `page.setViewportSize(...)`
+ *   instead of a global project so desktop-first flows are not rerun at 320px.
  */
 export default defineConfig({
   testDir: './e2e',

@@ -26,16 +26,21 @@ describe('Phase 1.3 — Route group architecture', () => {
   it('flat route pages are moved into route groups', () => {
     expect(existsSync(resolve(APP_DIR, '(auth)/login/page.tsx'))).toBe(true);
     expect(existsSync(resolve(APP_DIR, '(protected)/onboarding/page.tsx'))).toBe(true);
-    expect(existsSync(resolve(APP_DIR, '(protected)/settings/page.tsx'))).toBe(true);
+    expect(existsSync(resolve(APP_DIR, '(protected)/(app)/rules/page.tsx'))).toBe(true);
+    expect(existsSync(resolve(APP_DIR, '(protected)/(app)/settings/page.tsx'))).toBe(true);
     expect(existsSync(resolve(APP_DIR, 'login/page.tsx'))).toBe(false);
     expect(existsSync(resolve(APP_DIR, 'onboarding/page.tsx'))).toBe(false);
     expect(existsSync(resolve(APP_DIR, 'settings/page.tsx'))).toBe(false);
+    expect(existsSync(resolve(APP_DIR, '(protected)/rules/page.tsx'))).toBe(false);
+    expect(existsSync(resolve(APP_DIR, '(protected)/settings/page.tsx'))).toBe(false);
   });
 
   it('every route group has its own layout.tsx', () => {
     expect(existsSync(resolve(APP_DIR, '(public)/layout.tsx'))).toBe(true);
     expect(existsSync(resolve(APP_DIR, '(auth)/layout.tsx'))).toBe(true);
     expect(existsSync(resolve(APP_DIR, '(protected)/layout.tsx'))).toBe(true);
+    expect(existsSync(resolve(APP_DIR, '(protected)/(app)/layout.tsx'))).toBe(true);
+    expect(existsSync(resolve(APP_DIR, '(protected)/onboarding/layout.tsx'))).toBe(true);
   });
 
   it('root app/layout.tsx is preserved', () => {

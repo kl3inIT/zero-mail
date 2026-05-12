@@ -6,13 +6,26 @@ import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { RadioGroup } from '@/components/ui/radio-group';
+import { LoadingState } from '@/components/states/LoadingState';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { TemplateCard } from '@/features/onboarding/components/TemplateCard';
 import { useSelectTemplate } from '@/features/onboarding/hooks/useSelectTemplate';
 
 type TemplateKey = 'archive-receipts' | 'label-newsletters' | 'pin-calendar';
+type TemplateTitleKey =
+  | 'templates.receipts.title'
+  | 'templates.newsletters.title'
+  | 'templates.calendarInvites.title';
+type TemplateDescriptionKey =
+  | 'templates.receipts.description'
+  | 'templates.newsletters.description'
+  | 'templates.calendarInvites.description';
 
-const templates: { key: TemplateKey; titleKey: string; descKey: string }[] = [
+const templates: {
+  key: TemplateKey;
+  titleKey: TemplateTitleKey;
+  descKey: TemplateDescriptionKey;
+}[] = [
   {
     key: 'archive-receipts',
     titleKey: 'templates.receipts.title',
@@ -50,24 +63,24 @@ export function TemplateSelectClient() {
 
   if (!me.data) {
     return (
-      <div className="zm-auth-panel">
-        <p className="text-sm leading-relaxed text-[var(--text-muted)]">
-          {t('onboarding.loading')}
-        </p>
-      </div>
+      <section className="bg-card w-full min-w-0 rounded-md border p-5 shadow-sm sm:p-7">
+        <LoadingState count={1} />
+      </section>
     );
   }
 
   return (
-    <section className="zm-auth-panel">
-      <span className="zm-eyebrow">
-        <span className="zm-dot" />
+    <section className="bg-card w-full min-w-0 rounded-md border p-6 shadow-sm sm:p-8">
+      <span className="text-muted-foreground inline-flex items-center gap-2 font-mono text-xs font-medium uppercase">
+        <span className="bg-primary size-1.5 rounded-full" />
         {t('onboarding.template.eyebrow')}
       </span>
-      <h1 className="zm-auth-title">
+      <h1 className="text-foreground mt-4 text-[28px] leading-tight font-semibold">
         <span>{t('onboarding.template.heading')}</span>
       </h1>
-      <p className="zm-auth-sub">{t('onboarding.template.body')}</p>
+      <p className="text-muted-foreground mt-4 max-w-xl text-sm leading-relaxed">
+        {t('onboarding.template.body')}
+      </p>
       <RadioGroup
         className="mt-7 gap-3"
         value={selected}
@@ -80,8 +93,8 @@ export function TemplateSelectClient() {
           <TemplateCard
             key={tpl.key}
             templateKey={tpl.key}
-            title={t(tpl.titleKey as never)}
-            description={t(tpl.descKey as never)}
+            title={t(tpl.titleKey)}
+            description={t(tpl.descKey)}
             selected={selected === tpl.key}
           />
         ))}
@@ -93,7 +106,7 @@ export function TemplateSelectClient() {
           size="lg"
           disabled={!selected || selectMut.isPending}
           onClick={() => selected && selectMut.mutate({ templateKey: selected })}
-          className="mt-2 h-10 w-full"
+          className="mt-2 h-11 w-full"
         >
           {selectMut.isPending ? t('common.loading') : t('onboarding.template.saveCta')}
         </Button>

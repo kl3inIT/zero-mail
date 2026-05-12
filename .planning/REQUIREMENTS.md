@@ -95,10 +95,10 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 
 ### Web UI
 
-- [ ] **WEB-01**: Next.js 16 / React 19 frontend lives in `apps/web` and consumes the backend OpenAPI via typed client
-- [ ] **WEB-02**: UI covers onboarding, rule CRUD with live preview, triage audit log with undo, draft review, analytics, and billing
-- [ ] **WEB-03**: In-product privacy page explains data handling (no stored bodies, no auto-send, BYOK option)
-- [ ] **WEB-04**: UI surfaces the global pause toggle, credit balance, and tenant connection health in a persistent location
+- [x] **WEB-01**: Next.js 16 / React 19 frontend lives in `apps/web` and consumes the backend OpenAPI via typed client
+- [ ] **WEB-02**: UI covers onboarding, rule CRUD with live preview, triage audit log with undo, draft review, analytics, and billing — 5A portion done (onboarding, rules+live-preview, triage audit log+undo*, billing*); draft-review → 5B, analytics → 5C; *audit-list & ledger-history backend endpoints pending — see `05A-GAPS.md`
+- [x] **WEB-03**: In-product privacy page explains data handling (no stored bodies, no auto-send, BYOK option)
+- [x] **WEB-04**: UI surfaces the global pause toggle, credit balance, and tenant connection health in a persistent location
 
 ## v2 Requirements
 
@@ -194,17 +194,17 @@ Each v1 requirement maps to exactly one phase.
 | TRG-06 | Phase 4 | Complete |
 | TRG-07 | Phase 4 | Complete |
 | TRG-08 | Phase 4 | Complete |
-| DRFT-01 | Phase 5 | Pending |
-| DRFT-02 | Phase 5 | Pending |
-| DRFT-03 | Phase 5 | Pending |
-| DRFT-04 | Phase 5 | Pending |
-| ANL-01 | Phase 5 | Pending |
-| ANL-02 | Phase 5 | Pending |
-| ANL-03 | Phase 5 | Pending |
-| WEB-01 | Phase 5 | Pending |
-| WEB-02 | Phase 5 | Pending |
-| WEB-03 | Phase 5 | Pending |
-| WEB-04 | Phase 5 | Pending |
+| DRFT-01 | Phase 5B | Pending |
+| DRFT-02 | Phase 5B | Pending |
+| DRFT-03 | Phase 5B | Pending |
+| DRFT-04 | Phase 5B | Pending |
+| ANL-01 | Phase 5C | Pending |
+| ANL-02 | Phase 5C | Pending |
+| ANL-03 | Phase 5C | Pending |
+| WEB-01 | Phase 5A | Complete |
+| WEB-02 | Phase 5A / 5B / 5C | 5A portion done (onboarding, rules+live-preview, triage audit log+undo*, billing*); draft-review → 5B, analytics → 5C; *audit-list & ledger-history backend endpoints pending — see `05A-GAPS.md` |
+| WEB-03 | Phase 5A | Complete |
+| WEB-04 | Phase 5A | Complete |
 
 **Coverage:**
 - v1 requirements: 61 total

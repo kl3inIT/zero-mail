@@ -45,6 +45,114 @@
       "workEmail": "Sign in with work email"
     }
   },
+  "billing": {
+    "balance": {
+      "description": "Balance available for Zero Mail AI actions.",
+      "error": {
+        "body": "Something went wrong fetching your credit balance. Try again.",
+        "retry": "Try again",
+        "title": "Couldn't load the balance"
+      },
+      "held": "Held credits",
+      "label": "Available credits",
+      "refreshLabel": "Refreshes",
+      "refreshValue": "Every 45 seconds",
+      "topupCta": "Top up credits",
+      "unit": "credits"
+    },
+    "copy": {
+      "aria": "Copy {label}",
+      "cta": "Copy",
+      "done": "Copied"
+    },
+    "ledger": {
+      "columns": {
+        "amount": "Credits",
+        "balance": "Balance",
+        "description": "Description",
+        "reference": "Reference",
+        "timestamp": "Time",
+        "type": "Type"
+      },
+      "description": "Top-ups, holds, and credit usage will be listed here.",
+      "empty": {
+        "body": "Your top-ups and credit usage will show up here. Add credits to get started.",
+        "heading": "No transactions yet"
+      },
+      "error": {
+        "body": "Something went wrong fetching transaction history. Try again.",
+        "retry": "Try again",
+        "title": "Couldn't load transaction history"
+      },
+      "title": "Transaction history",
+      "type": {
+        "adjustment": "Adjustment",
+        "release": "Release",
+        "reserve": "Reserve",
+        "settle": "Settle",
+        "topup": "Top-up"
+      },
+      "unavailable": {
+        "body": "Zero Mail can show your credit balance now. Detailed transaction history will arrive in a later update.",
+        "heading": "Transaction history isn't available yet"
+      },
+      "valueMissing": "—"
+    },
+    "page": {
+      "description": "Track your credit balance, create VietQR top-ups, and review transaction history when the backend is ready.",
+      "title": "Billing"
+    },
+    "topup": {
+      "amount": {
+        "body": "You will receive a VietQR payload for this exact amount.",
+        "cta": "Continue to payment",
+        "error": {
+          "generic": "Couldn't create the top-up code. Try again.",
+          "invalidResponse": "The backend did not return complete VietQR details. Try again.",
+          "minimum": "Enter an amount greater than 0 VND."
+        },
+        "label": "Top-up amount",
+        "preview": "Transfer amount: {amount}",
+        "submitting": "Creating code",
+        "title": "Choose a top-up amount"
+      },
+      "amountVnd": {
+        "label": "Amount in VND"
+      },
+      "emv": {
+        "label": "VietQR EMV payload"
+      },
+      "expired": {
+        "body": "We didn't see the transfer in time, so this code is no longer being watched. Create a new one.",
+        "cta": "Start a new top-up",
+        "heading": "This top-up expired"
+      },
+      "expiresAt": {
+        "label": "Expires at"
+      },
+      "expiresIn": "Expires in {time}",
+      "page": {
+        "description": "Create a VietQR transfer, scan it with your banking app, and Zero Mail will update your balance automatically.",
+        "title": "Top up credits"
+      },
+      "qr": {
+        "body": "The VietQR payload already includes the destination account, amount, and reference.",
+        "heading": "Scan this QR with your banking app"
+      },
+      "reference": {
+        "label": "Transfer reference"
+      },
+      "success": {
+        "backCta": "Back to billing",
+        "body": "Your credit balance increased. You can keep using Zero Mail.",
+        "heading": "Credits added"
+      },
+      "waiting": {
+        "body": "Zero Mail will update your balance when the webhook credits the transfer.",
+        "heading": "Waiting for your transfer"
+      }
+    }
+  },
   "common": {
     "app": {
       "description": "Reach inbox zero without giving up control.",
@@ -428,6 +536,7 @@
   },
   "nav": {
     "beta": "beta",
+    "billing": "Billing",
     "continueSetup": "Continue setup",
     "features": "Features",
     "how": "How it works",
@@ -435,10 +544,13 @@
     "logoLabel": "Zero Mail home",
     "onboardingProgress": "Onboarding progress",
     "openApp": "Open app",
-    "rules": "Example rules",
+    "privacy": "Privacy",
+    "rules": "Rules",
+    "settings": "Settings",
     "signIn": "Sign in",
     "themeToDark": "Switch to dark mode",
     "themeToLight": "Switch to light mode",
+    "triage": "Triage",
     "trust": "Trust & safety",
     "waitlist": "Join the waitlist"
   },
@@ -498,6 +610,31 @@
       "title": "Compose drafts"
     },
     "title": "What you'll grant"
+  },
+  "privacy": {
+    "byok": {
+      "body": "Bring your own model key in Settings. Your key, your provider, your bill.",
+      "heading": "Using your own AI key (BYOK)"
+    },
+    "capabilities": {
+      "body": "Zero Mail can label, archive, and save Gmail drafts. It cannot send email on your behalf — ever.",
+      "heading": "What Zero Mail can and can't do"
+    },
+    "neverStore": {
+      "body": "We don't keep your email bodies, AI prompts, AI replies, or embeddings of your mail long term. Content is sanitized, truncated, hardened against prompt injection, then discarded.",
+      "heading": "What we never store"
+    },
+    "page": {
+      "intro": "Zero Mail works on your inbox with minimal data and keeps control in your hands.",
+      "title": "In-product privacy"
+    },
+    "publicPolicyIntro": "Need the full legal version?",
+    "publicPolicyLink": "View the public privacy page",
+    "settingsLink": {
+      "body": "Review how Zero Mail handles email content, automation limits, and BYOK.",
+      "cta": "Privacy & data handling",
+      "heading": "Privacy & data handling"
+    }
   },
   "rules": {
     "composer": {
@@ -647,6 +784,43 @@
       }
     }
   },
+  "shell": {
+    "balance": {
+      "label": "Credits"
+    },
+    "connection": {
+      "connected": "Gmail connected",
+      "degraded": "Gmail needs attention",
+      "disconnected": "Gmail disconnected",
+      "reconnect": "Reconnect"
+    },
+    "pause": {
+      "confirm": {
+        "body": "Zero Mail will stop applying new actions until you turn it back on.",
+        "cancel": "Keep it running",
+        "cta": "Pause",
+        "title": "Pause automatic triage?"
+      },
+      "label": "Automatic triage",
+      "paused": "Paused",
+      "running": "Running",
+      "toast": {
+        "paused": "Automatic triage paused",
+        "running": "Automatic triage resumed"
+      }
+    },
+    "sidebar": {
+      "toggle": "Toggle navigation"
+    },
+    "userMenu": {
+      "english": "English",
+      "label": "Account",
+      "language": "Language",
+      "settings": "Settings",
+      "signOut": "Sign out",
+      "vietnamese": "Vietnamese"
+    }
+  },
   "templates": {
     "calendarInvites": {
       "description": "Flag meeting invitations so you don't miss them.",
@@ -659,6 +833,96 @@
     "receipts": {
       "description": "Label invoices, receipts, and order confirmations so they're easy to find later.",
       "title": "Receipts and invoices"
+    }
+  },
+  "triage": {
+    "audit": {
+      "boundary": "Older than 30 days - undo no longer available",
+      "columns": {
+        "action": "Action",
+        "message": "Message",
+        "reason": "Reason",
+        "rule": "Rule",
+        "timestamp": "Time",
+        "undo": "Undo"
+      },
+      "empty": {
+        "body": "When Zero Mail processes email, decisions and reasons will appear here.",
+        "title": "No triage activity yet"
+      },
+      "error": {
+        "body": "Retry the list before deciding whether to undo an action.",
+        "retry": "Retry",
+        "title": "Could not load triage history"
+      },
+      "loadingOlder": "Loading...",
+      "loadOlder": "Load older entries",
+      "message": {
+        "unknownSender": "Unknown sender",
+        "untitled": "Untitled message"
+      },
+      "unavailable": {
+        "body": "The backend currently exposes undo for individual audit entries, but not the audit-list endpoint. Zero Mail will show the history here when that endpoint exists.",
+        "title": "Audit history is not available yet"
+      },
+      "undo": {
+        "cancel": "Keep it",
+        "confirm": "Undo this action",
+        "cta": "Undo",
+        "dialogDescription": "Zero Mail will apply the inverse Gmail change: {action}",
+        "dialogTitle": "Undo this triage action?",
+        "error": "Could not undo this action.",
+        "success": "Triage action undone.",
+        "undone": "Undone",
+        "windowClosed": "Undo window closed",
+        "windowTooltip": "Triage actions can be undone for up to 30 days."
+      }
+    },
+    "page": {
+      "description": "Review what AI changed, run shadow mode, and manage protected senders before trusting automation.",
+      "title": "Triage"
+    },
+    "senders": {
+      "body": "Important senders stay protected until you opt them into automation.",
+      "empty": {
+        "body": "When Zero Mail detects important senders, they will appear here.",
+        "title": "No protected senders yet"
+      },
+      "error": {
+        "body": "Retry before changing sender automation.",
+        "retry": "Retry",
+        "title": "Could not load protected senders"
+      },
+      "optedIn": "Opted in",
+      "optIn": "Opt into automation",
+      "title": "Protected senders",
+      "unknown": "Unknown sender"
+    },
+    "shadow": {
+      "badgeOn": "Shadow mode on",
+      "body": "Run triage as a safe rehearsal: Zero Mail records decisions without changing Gmail.",
+      "confirm": {
+        "action": "Turn off shadow mode",
+        "body": "After this is off, Zero Mail can apply allowed Gmail actions.",
+        "cancel": "Keep shadow mode on",
+        "title": "Turn off shadow mode?"
+      },
+      "error": {
+        "body": "Retry before changing how triage runs.",
+        "retry": "Retry",
+        "title": "Could not load shadow mode"
+      },
+      "offBody": "Allowed triage actions will apply after safety checks.",
+      "onBody": "Zero Mail will evaluate email without applying labels, saving drafts, or archiving.",
+      "readUnavailable": "The initial state uses a local default because the backend does not expose a shadow-mode read endpoint yet.",
+      "title": "Shadow mode",
+      "toggleLabel": "Enable shadow mode"
+    },
+    "tabs": {
+      "audit": "Audit log",
+      "label": "Triage sections",
+      "senders": "Sender safety net",
+      "shadow": "Shadow mode"
     }
   },
   "trust": {

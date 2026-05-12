@@ -1,5 +1,12 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 
+import {
+  API_ROUTE_PATTERN,
+  expectAppShellChrome,
+  expectNoClaySkinClasses,
+  expectNoHorizontalOverflow,
+} from './chrome-test-utils';
+
 test.describe.configure({ mode: 'serial' });
 
 /**
@@ -118,7 +125,7 @@ async function mockRulesApis(page: Page, mode: MockMode) {
     mode === 'error-flow' || mode === 'mobile-flow' ? [createStripeRule()] : [];
   const templates = createTemplates(false);
 
-  await page.route('http://localhost:8080/**', async (route) => {
+  await page.route(API_ROUTE_PATTERN, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
 
@@ -128,7 +135,7 @@ async function mockRulesApis(page: Page, mode: MockMode) {
         tenantId: 'tenant-1',
         email: 'founder@example.com',
         preferredLanguage: 'en',
-        onboardingStep: 'complete',
+        onboardingStep: 'COMPLETE',
         triagePaused: false,
         gmailConnectionStatus: {
           status: 'CONNECTED',
@@ -136,6 +143,21 @@ async function mockRulesApis(page: Page, mode: MockMode) {
           googleEmail: 'founder@example.com',
         },
       });
+      return;
+    }
+
+    if (url.pathname === '/api/billing/balance' && request.method() === 'GET') {
+      await fulfillJson(route, { availableCredits: 12, heldCredits: 0, currency: 'credits' });
+      return;
+    }
+
+    if (url.pathname === '/gmail/connection/status' && request.method() === 'GET') {
+      await fulfillJson(route, { connectionStatus: 'CONNECTED' });
+      return;
+    }
+
+    if (url.pathname === '/tenant/triage-pause' && request.method() === 'PUT') {
+      await route.fulfill({ status: 204, body: '' });
       return;
     }
 
@@ -316,7 +338,9 @@ test('rules desktop flow compiles, clarifies, saves disabled, previews, toggles,
 }) => {
   await openRules(page);
 
-  await expect(page.getByRole('heading', { name: 'Rules' })).toBeVisible();
+  await expectAppShellChrome(page, { sidebarVisible: true });
+  await expectNoClaySkinClasses(page);
+  await expect(page.getByRole('heading', { name: 'Rules', exact: true })).toBeVisible();
   await expect(page.getByText('No rules yet')).toBeVisible();
 
   const ruleText = page.getByLabel('Rule text');
@@ -365,19 +389,19 @@ test('template gallery materializes a disabled starter rule with provenance', as
   await expect(page.getByText('Disabled').first()).toBeVisible();
 });
 
-test('rules workspace remains usable at 375x812 without horizontal overflow', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
+test('rules workspace remains in-shell and usable at 320px without horizontal overflow', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 740 });
   await openRules(page, 'mobile-flow');
 
-  await expect(page.getByRole('heading', { name: 'Rules' })).toBeVisible();
+  await expectAppShellChrome(page);
+  await expectNoClaySkinClasses(page);
+  await expect(page.getByRole('heading', { name: 'Rules', exact: true })).toBeVisible();
   await expect(page.getByText('Rule composer')).toBeVisible();
   await expect(page.getByText('Safe preview')).toBeVisible();
   await expect(page.getByText('Rule order')).toBeVisible();
-
-  const horizontalOverflow = await page.evaluate(
-    () => document.documentElement.scrollWidth > window.innerWidth,
-  );
-  expect(horizontalOverflow).toBe(false);
+  await expectNoHorizontalOverflow(page);
 });
 
 test('rules errors keep compile billing alerts in composer and Gmail preview errors in preview panel', async ({

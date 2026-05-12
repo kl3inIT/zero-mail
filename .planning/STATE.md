@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: "Phase 04 shipped - PR #29"
-stopped_at: Phase 04 complete, ready to discuss Phase 5
-last_updated: "2026-05-12T02:56:11.418Z"
+status: ready_to_plan
+stopped_at: Completed 05A-06-PLAN.md
+last_updated: "2026-05-12T13:51:17.719Z"
 last_activity: 2026-05-12
 progress:
-  total_phases: 15
-  completed_phases: 13
-  total_plans: 100
-  completed_plans: 100
+  total_phases: 17
+  completed_phases: 14
+  total_plans: 106
+  completed_plans: 106
   percent: 100
 ---
 
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 5 — user-surface-—-drafts,-analytics,-web-ui
+**Current focus:** Phase 5B — user-surface-—-ai-draft-replies
 
 ## Current Position
 
-Phase: 5
+Phase: 5B
 Plan: Not started
-Status: Phase 04 shipped - PR #29
-Last activity: 2026-05-12 - Completed quick task 260512-dx4: Fix Frontend Web CI workspace cleanup lint-staged config assertion for PR #29
+Status: Ready to plan
+Last activity: 2026-05-12
 
-Progress: [████████████████████] 100/100 plans (100%)
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 43
+- Total plans completed: 47
 - Average duration: —
 - Total execution time: 0.0 hours
 
@@ -48,6 +48,7 @@ Progress: [████████████████████] 100/100
 | 02B | 7 | - | - |
 | 03 | 10 | - | - |
 | 04 | 9 | - | - |
+| 05A | 6 | - | - |
 
 **Recent Trend:**
 
@@ -121,6 +122,12 @@ Progress: [████████████████████] 100/100
 | Phase 04 P05 | 25min | 2 tasks | 11 files |
 | Phase 04-triage-convergence-hero P06 | 24min | 2 tasks | 22 files |
 | Phase 04 P07 | 23min | 3 tasks | 7 files |
+| Phase 05A P01 | 48min | 3 tasks | 36 files |
+| Phase 05A P02 | 93min | 3 tasks | 25 files |
+| Phase 05A P03 | 32min | 3 tasks | 21 files |
+| Phase 05A P04 | 95min | 2 tasks | 14 app/test files + 3 planning artifacts |
+| Phase 05A P05 | 41min | 3 tasks | 21 app/test files + 1 planning artifact |
+| Phase 05A P06 | 69min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -133,6 +140,12 @@ Recent decisions affecting current work:
 - Roadmap: Phase 2C (LLM Gateway) hard-gated by Phase 1 safety infrastructure — prompt injection + log bleed are product-killing
 - Roadmap: Phase 4 (Triage) hard-gated by Phase 2C — no triage without sanitization, Unicode strip, allow-list
 - Roadmap: CASA restricted-scope verification tracked as external parallel track, initiated in Phase 1 (FND-07), closed before Phase 6 launch
+- [Phase 05A]: Plan 04 ships `/billing` as its own protected app route with a focal balance card, distinct ledger-unavailable panel, and `/billing/top-up` as a dedicated route rather than a modal.
+- [Phase 05A]: Plan 04 confirmed BillingController has no ledger-history endpoint, TopupIntentResponse has no `intentId`, and no intent-status endpoint exists. Billing degrades through `LedgerHistory`'s `{unavailable:true}` sentinel and `?code=` + sessionStorage pending intent rehydration; credited means `/api/billing/balance` rises.
+- [Phase 05A]: Plan 04 intentionally adds no QR dependency and renders `qrPayload` only as copyable React text. No bank account/name/account-holder fields are shown because the response exposes only `code`, `amountVnd`, `expiresAt`, and `qrPayload`.
+- [Phase 05A]: Plan 05 keeps the sidebar flat; `/settings/privacy` is reachable through the existing Settings nav item plus a Settings-page `Privacy & data handling` link.
+- [Phase 05A]: Plan 05 uses `AuthTopBar surface="protected"` and tokenized onboarding panels so protected onboarding keeps focused chrome without rendering `.zm-auth`/`.zm-proto` classes.
+- [Phase 05A]: Plan 05 intentionally leaves regenerated `apps/web/i18n/messages/{en,vi}.json` uncommitted; Plan 06 owns canonical locale bundle regeneration.
 - [Phase 02C]: Plan 02 uses an @Order 10/20/30/40 List<Sanitizer> fold for Jsoup, NFC, Unicode-control strip, and jtokkit CL100K_BASE truncation at 3896 tokens.
 - [Phase 02C]: Plan 02 SanitizationException has no message payload; it preserves stepName and cause without inheriting potentially content-bearing cause text.
 - [Phase 02C]: Plan 03 should inject SanitizationPipeline into LlmGatewayImpl and call sanitize(rawHtml) first under TenantContext before constructing any model request.
@@ -277,6 +290,7 @@ Recent decisions affecting current work:
 - [Phase 04]: Plan 07 retry uses distinct FailedEventPublications — Local Spring Modulith 2.0.7-SNAPSHOT exposes FailedEventPublications; TriageEventRetryJob resubmits incomplete publications older than PT5M and failed publications via ResubmissionOptions.withMinAge(PT5M).
 - [Phase 04]: Plan 07 cleanup counts outstanding publications with JdbcTemplate — The public incomplete and failed publication views do not expose counts on the worker compile classpath; counting against the Liquibase-owned event_publication table keeps cleanup observability compile-safe.
 - [Phase 04]: Plan 07 pending reaper ships conservative FAILED transition — Metadata verification to APPLIED remains optional and deferred; the shipped PT30M abandoned threshold is guarded to stay above the PT2M saga retry lease.
+- [Phase 05A]: Plan 06 closes Phase 05A with WEB-02 intentionally unchecked while WEB-01/WEB-03/WEB-04 are complete. — WEB-02 spans Phase 5A/5B/5C: 5A delivered onboarding, rules+live-preview, triage audit log+undo, and billing UI, but draft review, analytics, and real audit-list/ledger-history backend endpoints remain tracked in 05A-GAPS.md.
 
 ### Roadmap Evolution
 
@@ -341,6 +355,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-11T22:46:12.2160638+07:00
-Stopped at: Phase 04 complete, ready to discuss Phase 5
+Last session: 2026-05-12T13:50:24.919Z
+Stopped at: Completed 05A-06-PLAN.md
 Resume file: None

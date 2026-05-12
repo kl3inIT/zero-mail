@@ -16,6 +16,8 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 - Phase 4 backend triage convergence validated: observed Gmail messages flow into the orchestrator, rules are evaluated in order, semantic-intent matchers route through `LlmGateway`, and only allow-listed Gmail writes (label, archive, save draft) can execute.
 - Phase 4 safety and audit validated: auto-send remains architecturally blocked, every backend triage decision writes an audit row, undo/shadow-mode/sender-safety-net REST surfaces exist, and privacy sweep/full `clean check` passed on 2026-05-11.
+- Phase 5A web UI core validated: `apps/web` now has the protected Next.js app shell, typed-client feature APIs, persistent pause/balance/connection chrome, in-product privacy page, and 320px/light/dark browser coverage.
+- Phase 5A user-surface subset validated: onboarding, rules + live preview, triage audit/shadow/sender UI, billing/top-up UI, and explicit backend-gap degradation are complete; draft review, analytics, and real audit-list/ledger-history backend endpoints remain active follow-up scope.
 
 ### Active
 
@@ -69,8 +71,8 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - [ ] Only minimal derived metadata + short-lived draft caches persist, with strict retention limits
 
 **Web UI**
-- [ ] Next.js / React frontend (separate module in the monorepo) talks to Spring Boot via REST
-- [ ] UI covers onboarding, rules CRUD, triage audit log, draft review, analytics, billing
+- [x] Next.js / React frontend (separate module in the monorepo) talks to Spring Boot via REST
+- [ ] UI still needs draft review, analytics, real triage audit-list endpoint, and real billing ledger-history endpoint; Phase 5A already covers onboarding, rules CRUD + live preview, triage/billing UI degradation, privacy, and persistent chrome
 
 ### Out of Scope
 
@@ -153,4 +155,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-11 after Phase 04*
+*Last updated: 2026-05-12 after Phase 05A*

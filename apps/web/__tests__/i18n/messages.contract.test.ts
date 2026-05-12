@@ -100,4 +100,26 @@ describe('vi/en key parity (Plan 05 GREEN)', () => {
     expect(viRaw).not.toMatch(/validation_/);
     expect(enRaw).not.toMatch(/validation_/);
   });
+
+  it('privacy page keys exist in both locales', () => {
+    const requiredPrivacyKeys = [
+      'privacy.page.title',
+      'privacy.page.intro',
+      'privacy.neverStore.heading',
+      'privacy.neverStore.body',
+      'privacy.capabilities.heading',
+      'privacy.capabilities.body',
+      'privacy.byok.heading',
+      'privacy.byok.body',
+      'privacy.publicPolicyIntro',
+      'privacy.publicPolicyLink',
+      'privacy.settingsLink.body',
+      'privacy.settingsLink.cta',
+    ];
+
+    for (const key of requiredPrivacyKeys) {
+      expect(typeof getDeep(vi, key), `vi.${key}`).toBe('string');
+      expect(typeof getDeep(en, key), `en.${key}`).toBe('string');
+    }
+  });
 });
