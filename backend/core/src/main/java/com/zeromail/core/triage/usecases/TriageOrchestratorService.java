@@ -3,6 +3,7 @@ package com.zeromail.core.triage.usecases;
 import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.billing.domain.ReservationId;
 import com.zeromail.core.billing.usecases.CreditLedger;
+import com.zeromail.core.draft.usecases.DraftBodyGenerator;
 import com.zeromail.core.gmail.event.MailMessageObserved;
 import com.zeromail.core.llm.exception.LlmEvaluationFailedException;
 import com.zeromail.core.llm.exception.SafetyViolationException;
@@ -24,6 +25,8 @@ import com.zeromail.core.rules.persistence.RuleEntity;
 import com.zeromail.core.rules.persistence.RuleRepository;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.usecases.TenantService;
+import com.zeromail.core.thread.usecases.ClassifyThreadReplyStatusService;
+import com.zeromail.core.thread.usecases.ThreadReplyClassificationInput;
 import com.zeromail.core.triage.domain.ReplyHeaders;
 import com.zeromail.core.triage.domain.TriageActionResult;
 import com.zeromail.core.triage.domain.TriageDecision;
@@ -79,6 +82,8 @@ public class TriageOrchestratorService {
     private final TriageSafetyPolicy triageSafetyPolicy;
     private final SenderSafetyNetService senderSafetyNetService;
     private final TriageAuditSaga triageAuditSaga;
+    private final DraftBodyGenerator draftBodyGenerator;
+    private final ClassifyThreadReplyStatusService classifyThreadReplyStatusService;
     private final MeterRegistry meterRegistry;
 
     public TriageOrchestratorService(
@@ -89,6 +94,8 @@ public class TriageOrchestratorService {
             CreditLedger creditLedger,
             SenderSafetyNetService senderSafetyNetService,
             TriageAuditSaga triageAuditSaga,
+            DraftBodyGenerator draftBodyGenerator,
+            ClassifyThreadReplyStatusService classifyThreadReplyStatusService,
             ObjectProvider<MeterRegistry> meterRegistryProvider) {
         this.tenantService = tenantService;
         this.triageRuleEvaluationInputFactory = triageRuleEvaluationInputFactory;
@@ -100,6 +107,8 @@ public class TriageOrchestratorService {
         this.triageSafetyPolicy = new TriageSafetyPolicy();
         this.senderSafetyNetService = senderSafetyNetService;
         this.triageAuditSaga = triageAuditSaga;
+        this.draftBodyGenerator = draftBodyGenerator;
+        this.classifyThreadReplyStatusService = classifyThreadReplyStatusService;
         this.meterRegistry = meterRegistryProvider.getIfAvailable(SimpleMeterRegistry::new);
     }
 
@@ -226,8 +235,36 @@ public class TriageOrchestratorService {
                                 gmailMessageId,
                                 gmailThreadId,
                                 triageRuleEvaluationInput,
-                                actionProposal.type());
+                                actionProposal.type(),
+                                false);
                 triageAuditSaga.recordTerminal(command, TriageDecision.REJECTED_BY_SAFETY_POLICY);
+                continue;
+            }
+
+            if (senderProtected) {
+                TriageAuditCommand command =
+                        commandFor(
+                                tenantId,
+                                actionProposal,
+                                gmailMessageId,
+                                gmailThreadId,
+                                triageRuleEvaluationInput,
+                                actionType,
+                                false);
+                triageAuditSaga.recordTerminal(command, TriageDecision.REJECTED_BY_SAFETY_NET);
+                continue;
+            }
+            if (shadowMode) {
+                TriageAuditCommand command =
+                        commandFor(
+                                tenantId,
+                                actionProposal,
+                                gmailMessageId,
+                                gmailThreadId,
+                                triageRuleEvaluationInput,
+                                actionType,
+                                false);
+                triageAuditSaga.recordTerminal(command, TriageDecision.SHADOW_LOGGED);
                 continue;
             }
 
@@ -238,16 +275,8 @@ public class TriageOrchestratorService {
                             gmailMessageId,
                             gmailThreadId,
                             triageRuleEvaluationInput,
-                            actionType);
-            if (senderProtected) {
-                triageAuditSaga.recordTerminal(command, TriageDecision.REJECTED_BY_SAFETY_NET);
-                continue;
-            }
-            if (shadowMode) {
-                triageAuditSaga.recordTerminal(command, TriageDecision.SHADOW_LOGGED);
-                continue;
-            }
-
+                            actionType,
+                            true);
             String leaseOwner = "triage-orchestrator-" + UUID.randomUUID();
             ReservePhaseResult reservePhaseResult =
                     triageAuditSaga.reservePhase(command, leaseOwner);
@@ -259,6 +288,15 @@ public class TriageOrchestratorService {
             try {
                 GmailWriteResult gmailWriteResult = triageAuditSaga.gmailWritePhase(command);
                 triageAuditSaga.finalizePhase(tenantId, auditId, gmailWriteResult);
+                if (gmailWriteResult.applied()
+                        && command.preWriteIntent() instanceof TriageActionResult.SaveDraft) {
+                    classifyAfterDraftSaved(
+                            tenantId,
+                            gmailMessageId,
+                            gmailThreadId,
+                            triageRuleEvaluationInput,
+                            gmailWriteResult.externalRef());
+                }
                 appliedActions++;
             } catch (IOException gmailWriteFailure) {
                 triageAuditSaga.finalizePhase(
@@ -276,9 +314,15 @@ public class TriageOrchestratorService {
             String gmailMessageId,
             String gmailThreadId,
             TriageRuleEvaluationInput triageRuleEvaluationInput,
-            RuleActionType actionType) {
+            RuleActionType actionType,
+            boolean generateDraftBody) {
         TriageActionResult preWriteIntent =
-                preWriteIntent(actionProposal.actionIntent(), gmailThreadId);
+                preWriteIntent(
+                        tenantId,
+                        actionProposal.actionIntent(),
+                        gmailThreadId,
+                        triageRuleEvaluationInput,
+                        generateDraftBody);
         return new TriageAuditCommand(
                 tenantId,
                 gmailMessageId,
@@ -291,14 +335,34 @@ public class TriageOrchestratorService {
                 reasonEvidence(actionProposal));
     }
 
-    private TriageActionResult preWriteIntent(ActionIntent actionIntent, String gmailThreadId) {
+    private TriageActionResult preWriteIntent(
+            UUID tenantId,
+            ActionIntent actionIntent,
+            String gmailThreadId,
+            TriageRuleEvaluationInput triageRuleEvaluationInput,
+            boolean generateDraftBody) {
         return switch (actionIntent) {
             case ActionIntent.Label label ->
                     new TriageActionResult.Label(label.labelName(), label.labelName());
             case ActionIntent.Archive ignored -> new TriageActionResult.Archive();
-            case ActionIntent.SaveDraft saveDraft ->
-                    new TriageActionResult.SaveDraft(saveDraft.instruction(), null, gmailThreadId);
+            case ActionIntent.SaveDraft saveDraft -> {
+                String draftBody =
+                        generateDraftBody
+                                ? draftBodyGenerator.generate(
+                                        tenantId,
+                                        gmailThreadId,
+                                        draftGenerationSource(triageRuleEvaluationInput),
+                                        triageRuleEvaluationInput
+                                                .evaluationInput()
+                                                .sanitizedSubjectExcerpt())
+                                : saveDraft.instruction();
+                yield new TriageActionResult.SaveDraft(draftBody, null, gmailThreadId);
+            }
         };
+    }
+
+    private String draftGenerationSource(TriageRuleEvaluationInput triageRuleEvaluationInput) {
+        return buildSemanticEvalContent(triageRuleEvaluationInput.evaluationInput());
     }
 
     private ReplyHeaders replyHeadersFor(
@@ -313,6 +377,27 @@ public class TriageOrchestratorService {
                 triageRuleEvaluationInput.evaluationInput().sanitizedSubjectExcerpt(),
                 triageRuleEvaluationInput.replyToAddress(),
                 triageRuleEvaluationInput.gmailThreadId());
+    }
+
+    private void classifyAfterDraftSaved(
+            UUID tenantId,
+            String gmailMessageId,
+            String gmailThreadId,
+            TriageRuleEvaluationInput triageRuleEvaluationInput,
+            String draftId) {
+        classifyThreadReplyStatusService.classify(
+                new ThreadReplyClassificationInput(
+                        tenantId,
+                        gmailThreadId,
+                        gmailMessageId,
+                        false,
+                        triageRuleEvaluationInput
+                                .evaluationInput()
+                                .gmailLabelIds()
+                                .contains("SENT"),
+                        true,
+                        draftId,
+                        false));
     }
 
     private boolean senderProtected(
