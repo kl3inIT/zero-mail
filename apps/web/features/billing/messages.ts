@@ -1,19 +1,59 @@
 export const billingMessages = {
+  'billing.page.title': {
+    vi: 'Thanh toán',
+    en: 'Billing',
+  },
+  'billing.page.description': {
+    vi: 'Theo dõi số dư tín dụng, tạo mã nạp VietQR và xem lịch sử giao dịch khi backend sẵn sàng.',
+    en: 'Track your credit balance, create VietQR top-ups, and review transaction history when the backend is ready.',
+  },
   'billing.balance.label': {
     vi: 'Tín dụng hiện có',
     en: 'Available credits',
+  },
+  'billing.balance.description': {
+    vi: 'Số dư dùng cho các tác vụ AI của Zero Mail.',
+    en: 'Balance available for Zero Mail AI actions.',
+  },
+  'billing.balance.unit': {
+    vi: 'tín dụng',
+    en: 'credits',
   },
   'billing.balance.held': {
     vi: 'Đang giữ',
     en: 'Held credits',
   },
+  'billing.balance.refreshLabel': {
+    vi: 'Tự cập nhật',
+    en: 'Refreshes',
+  },
+  'billing.balance.refreshValue': {
+    vi: 'Mỗi 45 giây',
+    en: 'Every 45 seconds',
+  },
   'billing.balance.topupCta': {
     vi: 'Nạp tín dụng',
     en: 'Top up credits',
   },
+  'billing.balance.error.title': {
+    vi: 'Không tải được số dư',
+    en: "Couldn't load the balance",
+  },
+  'billing.balance.error.body': {
+    vi: 'Có lỗi khi lấy số dư tín dụng. Hãy thử lại.',
+    en: 'Something went wrong fetching your credit balance. Try again.',
+  },
+  'billing.balance.error.retry': {
+    vi: 'Thử lại',
+    en: 'Try again',
+  },
   'billing.ledger.title': {
     vi: 'Lịch sử giao dịch',
     en: 'Transaction history',
+  },
+  'billing.ledger.description': {
+    vi: 'Các lượt nạp, giữ và trừ tín dụng sẽ được liệt kê ở đây.',
+    en: 'Top-ups, holds, and credit usage will be listed here.',
   },
   'billing.ledger.empty.heading': {
     vi: 'Chưa có giao dịch',
@@ -31,13 +71,109 @@ export const billingMessages = {
     vi: 'Zero Mail đã có số dư tín dụng, nhưng danh sách giao dịch chi tiết sẽ được bật trong một bản cập nhật sau.',
     en: 'Zero Mail can show your credit balance now. Detailed transaction history will arrive in a later update.',
   },
+  'billing.ledger.error.title': {
+    vi: 'Không tải được lịch sử giao dịch',
+    en: "Couldn't load transaction history",
+  },
+  'billing.ledger.error.body': {
+    vi: 'Có lỗi khi lấy dữ liệu giao dịch. Hãy thử lại.',
+    en: 'Something went wrong fetching transaction history. Try again.',
+  },
+  'billing.ledger.error.retry': {
+    vi: 'Thử lại',
+    en: 'Try again',
+  },
+  'billing.ledger.columns.timestamp': {
+    vi: 'Thời gian',
+    en: 'Time',
+  },
+  'billing.ledger.columns.type': {
+    vi: 'Loại',
+    en: 'Type',
+  },
+  'billing.ledger.columns.description': {
+    vi: 'Mô tả',
+    en: 'Description',
+  },
+  'billing.ledger.columns.amount': {
+    vi: 'Tín dụng',
+    en: 'Credits',
+  },
+  'billing.ledger.columns.balance': {
+    vi: 'Số dư',
+    en: 'Balance',
+  },
+  'billing.ledger.columns.reference': {
+    vi: 'Tham chiếu',
+    en: 'Reference',
+  },
+  'billing.ledger.type.topup': {
+    vi: 'Nạp',
+    en: 'Top-up',
+  },
+  'billing.ledger.type.reserve': {
+    vi: 'Giữ',
+    en: 'Reserve',
+  },
+  'billing.ledger.type.settle': {
+    vi: 'Trừ',
+    en: 'Settle',
+  },
+  'billing.ledger.type.release': {
+    vi: 'Hoàn giữ',
+    en: 'Release',
+  },
+  'billing.ledger.type.adjustment': {
+    vi: 'Điều chỉnh',
+    en: 'Adjustment',
+  },
+  'billing.ledger.valueMissing': {
+    vi: '—',
+    en: '—',
+  },
+  'billing.topup.page.title': {
+    vi: 'Nạp tín dụng',
+    en: 'Top up credits',
+  },
+  'billing.topup.page.description': {
+    vi: 'Tạo mã chuyển khoản VietQR, quét bằng ứng dụng ngân hàng và Zero Mail sẽ tự cập nhật số dư.',
+    en: 'Create a VietQR transfer, scan it with your banking app, and Zero Mail will update your balance automatically.',
+  },
+  'billing.topup.amount.title': {
+    vi: 'Chọn số tiền nạp',
+    en: 'Choose a top-up amount',
+  },
+  'billing.topup.amount.body': {
+    vi: 'Bạn sẽ nhận một mã VietQR dùng cho đúng số tiền này.',
+    en: 'You will receive a VietQR payload for this exact amount.',
+  },
   'billing.topup.amount.label': {
     vi: 'Số tiền nạp',
     en: 'Top-up amount',
   },
+  'billing.topup.amount.preview': {
+    vi: 'Số tiền chuyển khoản: {amount}',
+    en: 'Transfer amount: {amount}',
+  },
   'billing.topup.amount.cta': {
-    vi: 'Tạo mã chuyển khoản',
-    en: 'Create transfer code',
+    vi: 'Tiếp tục thanh toán',
+    en: 'Continue to payment',
+  },
+  'billing.topup.amount.submitting': {
+    vi: 'Đang tạo mã',
+    en: 'Creating code',
+  },
+  'billing.topup.amount.error.minimum': {
+    vi: 'Nhập số tiền lớn hơn 0 VND.',
+    en: 'Enter an amount greater than 0 VND.',
+  },
+  'billing.topup.amount.error.invalidResponse': {
+    vi: 'Backend chưa trả đủ thông tin VietQR. Hãy thử lại.',
+    en: 'The backend did not return complete VietQR details. Try again.',
+  },
+  'billing.topup.amount.error.generic': {
+    vi: 'Không tạo được mã nạp. Hãy thử lại.',
+    en: "Couldn't create the top-up code. Try again.",
   },
   'billing.topup.qr.heading': {
     vi: 'Quét mã QR bằng ứng dụng ngân hàng',
@@ -59,6 +195,14 @@ export const billingMessages = {
     vi: 'Hết hạn lúc',
     en: 'Expires at',
   },
+  'billing.topup.emv.label': {
+    vi: 'Nội dung VietQR EMV',
+    en: 'VietQR EMV payload',
+  },
+  'billing.topup.expiresIn': {
+    vi: 'Hết hạn sau {time}',
+    en: 'Expires in {time}',
+  },
   'billing.topup.waiting.heading': {
     vi: 'Đang chờ ghi nhận chuyển khoản',
     en: 'Waiting for your transfer',
@@ -75,6 +219,10 @@ export const billingMessages = {
     vi: 'Số dư tín dụng đã tăng. Bạn có thể tiếp tục dùng Zero Mail.',
     en: 'Your credit balance increased. You can keep using Zero Mail.',
   },
+  'billing.topup.success.backCta': {
+    vi: 'Quay lại thanh toán',
+    en: 'Back to billing',
+  },
   'billing.topup.expired.heading': {
     vi: 'Mã nạp này đã hết hạn',
     en: 'This top-up expired',
@@ -83,6 +231,10 @@ export const billingMessages = {
     vi: 'Zero Mail không thấy chuyển khoản đúng hạn, nên mã này không còn được theo dõi. Hãy tạo mã mới.',
     en: "We didn't see the transfer in time, so this code is no longer being watched. Create a new one.",
   },
+  'billing.topup.expired.cta': {
+    vi: 'Tạo mã nạp mới',
+    en: 'Start a new top-up',
+  },
   'billing.copy.cta': {
     vi: 'Sao chép',
     en: 'Copy',
@@ -90,5 +242,9 @@ export const billingMessages = {
   'billing.copy.done': {
     vi: 'Đã sao chép',
     en: 'Copied',
+  },
+  'billing.copy.aria': {
+    vi: 'Sao chép {label}',
+    en: 'Copy {label}',
   },
 } as const;
