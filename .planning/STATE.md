@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 Phase: 5
 Plan: Not started
 Status: Phase 04 shipped - PR #29
-Last activity: 2026-05-12
+Last activity: 2026-05-12 - Completed quick task 260512-dx4: Fix Frontend Web CI workspace cleanup lint-staged config assertion for PR #29
 
 Progress: [████████████████████] 100/100 plans (100%)
 
@@ -311,6 +311,7 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260512-dx4 | Fix Frontend Web CI workspace cleanup lint-staged config assertion for PR #29 | 2026-05-12 | 4ecd071 | Verified | [260512-dx4-fix-frontend-web-ci-workspace-cleanup-li](./quick/260512-dx4-fix-frontend-web-ci-workspace-cleanup-li/) |
 | 260511-wc4 | Backend core package restructure: rename application→usecases, dissolve service/, enforce framework-free domain/, clean up empties, sync docs, fix cross-platform lint-staged | 2026-05-12 | e7cc431 | Verified | [260511-wc4-backend-core-package-restructure-rename-](./quick/260511-wc4-backend-core-package-restructure-rename-/) |
 | 260511-vok | Adopt google-java-format AOSP (4-space) for the backend plus wire enforcement (Spotless plugin, lint-staged, git-blame-ignore-revs) | 2026-05-11 | 1b79fa2 |  | [260511-vok-adopt-google-java-format-aosp-4-space-fo](./quick/260511-vok-adopt-google-java-format-aosp-4-space-fo/) |
 | 260511-jrq | Spring AI 2.0.0-M6 upgrade and sync safe Dependabot dependency PRs | 2026-05-11 | 297f681 | [260511-jrq-spring-ai-2-0-0-m6-upgrade-and-sync-safe](./quick/260511-jrq-spring-ai-2-0-0-m6-upgrade-and-sync-safe/) |
