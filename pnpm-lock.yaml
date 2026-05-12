@@ -56,6 +56,9 @@ importers:
       next-mdx-remote:
         specifier: 6.0.0
         version: 6.0.0(@types/react@19.2.14)(react@19.2.6)
+      next-themes:
+        specifier: ^0.4.6
+        version: 0.4.6(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       openapi-fetch:
         specifier: 0.17.0
         version: 0.17.0
@@ -68,6 +71,9 @@ importers:
       shadcn:
         specifier: ^4.7.0
         version: 4.7.0(@types/node@25.6.0)(typescript@6.0.3)
+      sonner:
+        specifier: ^2.0.7
+        version: 2.0.7(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0
@@ -3451,6 +3457,12 @@ packages:
     peerDependencies:
       react: '>=16'
 
+  next-themes@0.4.6:
+    resolution: {integrity: sha512-pZvgD5L0IEvX5/9GWyHMf3m8BKiVQwsCMHfoFosXtXBMnaS0ZnIJ9ST4b4NqLVKDEm8QBxoNNGNaBv2JNF6XNA==}
+    peerDependencies:
+      react: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
+      react-dom: ^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc
+
   next@16.2.6:
     resolution: {integrity: sha512-qOVgKJg1+At15NpeUP+eJgCHvTCgXsogweq87Ri/Ix7PkqQHg4sdaXmSFqKlgaIXE4kW0g25LE68W87UANlHtw==}
     engines: {node: '>=20.9.0'}
@@ -4029,6 +4041,12 @@ packages:
   slice-ansi@8.0.0:
     resolution: {integrity: sha512-stxByr12oeeOyY2BlviTNQlYV5xOj47GirPr4yA1hE9JCtxfQN0+tVbkxwCtYDQWhEKWFHsEK48ORg5jrouCAg==}
     engines: {node: '>=20'}
+
+  sonner@2.0.7:
+    resolution: {integrity: sha512-W6ZN4p58k8aDKA4XPcx2hpIQXBRAgyiWVkYhT7CvK6D3iAu7xjvVyhQHg2/iaKJZ1XVJ4r7XuwGL+WGEK37i9w==}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0 || ^19.0.0-rc
+      react-dom: ^18.0.0 || ^19.0.0 || ^19.0.0-rc
 
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
@@ -8113,6 +8131,11 @@ snapshots:
       - '@types/react'
       - supports-color
 
+  next-themes@0.4.6(react-dom@19.2.6(react@19.2.6))(react@19.2.6):
+    dependencies:
+      react: 19.2.6
+      react-dom: 19.2.6(react@19.2.6)
+
   next@16.2.6(@babel/core@7.29.0)(@playwright/test@1.59.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6):
     dependencies:
       '@next/env': 16.2.6
@@ -8826,6 +8849,11 @@ snapshots:
     dependencies:
       ansi-styles: 6.2.3
       is-fullwidth-code-point: 5.1.0
+
+  sonner@2.0.7(react-dom@19.2.6(react@19.2.6))(react@19.2.6):
+    dependencies:
+      react: 19.2.6
+      react-dom: 19.2.6(react@19.2.6)
 
   source-map-js@1.2.1: {}
 
