@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: "Phase 04 shipped - PR #29"
-stopped_at: Phase 5A context gathered
-last_updated: "2026-05-12T04:07:24.004Z"
+stopped_at: Phase 5A UI-SPEC approved
+last_updated: "2026-05-12T04:18:45.046Z"
 last_activity: "2026-05-12 - Completed quick task 260512-dx4: Fix Frontend Web CI workspace cleanup lint-staged config assertion for PR #29"
 progress:
   total_phases: 15
@@ -341,6 +341,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-12T04:07:23.983Z
-Stopped at: Phase 5A context gathered
-Resume file: .planning/phases/05A-user-surface-web-ui-core/05A-CONTEXT.md
+Last session: 2026-05-12T04:18:45.028Z
+Stopped at: Phase 5A UI-SPEC approved
+Resume file: .planning/phases/05A-user-surface-web-ui-core/05A-UI-SPEC.md
