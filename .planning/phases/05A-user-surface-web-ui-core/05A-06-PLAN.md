@@ -9,6 +9,8 @@ files_modified:
   - .planning/phases/05A-user-surface-web-ui-core/05A-VALIDATION.md
   - .planning/phases/05A-user-surface-web-ui-core/05A-GAPS.md
   - apps/web/scripts/check-i18n.ts
+  - apps/web/i18n/messages/vi.json
+  - apps/web/i18n/messages/en.json
 autonomous: true
 requirements: [WEB-01, WEB-02, WEB-03, WEB-04]
 user_setup: []
@@ -16,6 +18,7 @@ user_setup: []
 must_haves:
   truths:
     - "The full apps/web suite is green: pnpm --filter web typecheck && lint && test && i18n:check && test:e2e all pass"
+    - "The canonical i18n/messages/{vi,en}.json bundles are regenerated from every feature messages.ts (pnpm i18n:build) and committed in this closure plan"
     - "A frontend-design visual-review note exists for every authenticated screen (shell, /triage all tabs, /billing, /billing top-up all states, /settings/privacy, converged rules/onboarding x3/settings)"
     - "WEB-01, WEB-02 (5A portion), WEB-03, WEB-04 are flipped to done in REQUIREMENTS.md"
     - "05A-VALIDATION.md is signed off (nyquist_compliant: true, all sign-off boxes checked, backend-surface gaps resolved/flagged)"
@@ -75,12 +78,12 @@ Output: green full suite, `05A-GAPS.md`, signed `05A-VALIDATION.md`, updated `RE
     - apps/web/scripts/check-i18n.ts (final reconciliation if any new component path was missed)
   </read_first>
   <action>
-    Run `cd apps/web && pnpm typecheck && pnpm lint && pnpm test && pnpm i18n:check && pnpm test:e2e`. If anything is red, fix the minimal issue (e.g. a missed `EN_SCAN_FILES` path, a flaky e2e selector, a stale snapshot) and re-run until all five gates are green. If a real production bug surfaces that is bigger than a trivial fix, STOP and flag it for a follow-up plan rather than ballooning this closure plan — record it in the SUMMARY. (No `frontend-design` invocation needed — this plan writes no UI.)
+    First run `cd apps/web && pnpm i18n:build` to regenerate the canonical `i18n/messages/{vi,en}.json` bundles from every feature `messages.ts` touched across Phase 5A (the per-feature `messages.ts` files are the source of truth; Plan 06 owns the regenerated bundles to avoid wave-3 plans fighting over them). Then run `cd apps/web && pnpm typecheck && pnpm lint && pnpm test && pnpm i18n:check && pnpm test:e2e`. If anything is red, fix the minimal issue (e.g. a missed `EN_SCAN_FILES` path, a flaky e2e selector, a stale snapshot) and re-run until all five gates are green. If a real production bug surfaces that is bigger than a trivial fix, STOP and flag it for a follow-up plan rather than ballooning this closure plan — record it in the SUMMARY. (No `frontend-design` invocation needed — this plan writes no UI.)
     Create `.planning/phases/05A-user-surface-web-ui-core/05A-GAPS.md` — a register of the three confirmed backend-surface gaps, each with: the missing endpoint/field, where it was confirmed absent (`TriageAuditController` / `BillingController` / `TopupIntentResponse` in `lib/api/schema.d.ts`), the requirement it partially serves (WEB-02), the degradation path actually shipped in 5A (audit screen: undo flow + empty/error + "audit history not yet available" state, list response mocked in e2e; billing: balance + top-up + ledger empty/"coming soon", ledger mocked in e2e; top-up: `?code=` + sessionStorage rehydration, balance-rise as the credit signal), and the explicit note that 5A added no backend endpoint and did not regenerate `schema.d.ts`. Reference 05A-RESEARCH.md A4/A6 and the SPEC out-of-scope rule. Also record (from the plan SUMMARYs) the resolved values of RESEARCH Open Questions 1–5 and whether a QR dependency was added.
     Compile, in this plan's SUMMARY, a single rolled-up list of every `frontend-design` visual-review note from the plan SUMMARYs, mapped to its screen: shell + chrome, `/triage` (audit table / audit cards / shadow-mode card / sender list), `/billing` (balance + ledger), `/billing/top-up` (amount / instructions / success / expired), `/settings/privacy`, converged rules workspace, the three onboarding routes, settings page — desktop + 320px, light + dark. If any screen is missing a note, STOP and route back to the owning plan rather than fabricating one.
   </action>
   <verify>
-    <automated>cd apps/web && pnpm typecheck && pnpm lint && pnpm test && pnpm i18n:check && pnpm test:e2e</automated>
+    <automated>cd apps/web && pnpm i18n:build && pnpm typecheck && pnpm lint && pnpm test && pnpm i18n:check && pnpm test:e2e</automated>
   </verify>
   <acceptance_criteria>
     - `cd apps/web && pnpm typecheck && pnpm lint && pnpm test && pnpm i18n:check && pnpm test:e2e` all exit 0.

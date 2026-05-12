@@ -18,9 +18,6 @@ files_modified:
   - apps/web/app/(protected)/onboarding/gmail-connect/page.tsx
   - apps/web/app/(protected)/onboarding/template-select/page.tsx
   - apps/web/app/(protected)/onboarding/complete/page.tsx
-  - apps/web/i18n/messages/vi.json
-  - apps/web/i18n/messages/en.json
-  - apps/web/scripts/check-i18n.ts
   - apps/web/e2e/privacy-page.spec.ts
   - apps/web/e2e/rules.spec.ts
   - apps/web/e2e/onboarding-routes.spec.ts
@@ -32,25 +29,28 @@ user_setup: []
 
 must_haves:
   truths:
-    - "A distinct authenticated /settings/privacy route exists inside the app shell, is linked from the shell navigation, renders in both vi and en, and explicitly states no-stored-bodies, no-auto-send, and BYOK"
-    - "The existing rules / onboarding (3 routes) / settings screens render inside the new app shell (onboarding stays chrome-suppressed per D-05), on Phase 1.6 base teal design tokens (no .zm-proto/.zm-auth clay skin), using the shared @/components/states loading/empty/error primitives, with no horizontal scroll at 320px"
-    - "No flow redesign — only shell/token/state/responsive integration on the existing screens"
+    - "A distinct authenticated /settings/privacy route exists inside the app shell (a prominent /settings section / dedicated /settings/privacy segment — not a (protected)/privacy route that would collide with the public legal page), is linked from the shell navigation, renders in both vi and en, and explicitly states no-stored-bodies, no-auto-send, and BYOK (D-08)"
+    - "The existing rules + settings pages slot under (protected)/layout.tsx automatically once the shell layout exists, and the convergence pass (Phase 1.6 base teal tokens — no .zm-proto/.zm-auth clay skin — + shared @/components/states loading/empty/error primitives + a 320px-no-horizontal-scroll sanity pass) is applied to each (D-09)"
+    - "The onboarding (3 routes) screens keep their minimal nested chrome-suppressed layout and do not render inside the full sidebar shell; only tokens / shared-states / responsive convergence applies — no flow redesign (D-05, D-09)"
+    - "No flow redesign anywhere — only shell/token/state/responsive integration on the existing screens"
     - "The public (public)/privacy marketing page is untouched"
   artifacts:
     - path: "apps/web/app/(protected)/settings/privacy/page.tsx"
-      provides: "Authenticated privacy page (in-shell, linked from settings/shell), vi+en, states the three mandatory points"
+      provides: "Authenticated privacy page (in-shell, linked from settings/shell, distinct /settings/privacy segment per D-08), vi+en, states the three mandatory points"
     - path: "apps/web/features/privacy/components/PrivacySections.tsx"
-      provides: "Privacy-page sections: 'What we never store' / 'What Zero Mail can and can't do' / 'Using your own AI key (BYOK)' + link to public /privacy"
+      provides: "Privacy-page sections: 'What we never store' / 'What Zero Mail can and can't do' / 'Using your own AI key (BYOK)' + link to public /privacy (D-08)"
     - path: "apps/web/features/rules/components/RuleList.tsx"
-      provides: "Rules list converged onto @/components/states primitives + 1.6 tokens + 320px-safe"
+      provides: "Rules list converged onto @/components/states primitives + 1.6 base teal tokens + 320px-safe — convergence only, no flow redesign (D-09)"
+    - path: "apps/web/app/(protected)/settings/page.tsx"
+      provides: "Settings page converged under the shell layout on 1.6 tokens + shared states; BYOK stays here; pause toggle single-sourced (D-09)"
   key_links:
     - from: "apps/web/components/shell/AppSidebar.tsx"
       to: "/settings/privacy"
       via: "settings nav entry (privacy reachable from settings/shell per D-08)"
       pattern: "settings"
-    - from: "apps/web/features/rules/components/RuleList.tsx"
-      to: "@/components/states"
-      via: "LoadingState / EmptyState / ErrorState"
+    - from: "apps/web/app/(protected)/rules/page.tsx & app/(protected)/settings/page.tsx"
+      to: "(protected)/layout.tsx shell + @/components/states"
+      via: "auto-slot under the shell layout + LoadingState/EmptyState/ErrorState convergence (D-09)"
       pattern: "components/states"
 ---
 
@@ -94,14 +94,14 @@ Output: `/settings/privacy` page + `PrivacySections`, the converged rules/onboar
     - apps/web/app/(protected)/settings/page.tsx (the Card-chain in-shell section layout; where to add the link to /settings/privacy)
     - apps/web/components/ui/{card,separator,button}.tsx, apps/web/components/states/* (Plan 01)
     - apps/web/features/privacy/messages.ts (the seeded `privacy.*` keys from Plan 01 — extend), apps/web/__tests__/i18n/messages.contract.test.ts (the parity-contract test to extend)
-    - apps/web/i18n/messages/{vi,en}.json + apps/web/scripts/merge-feature-i18n.ts + apps/web/scripts/check-i18n.ts (the i18n pipeline; add the new page/component paths to EN_SCAN_FILES per Plan 01's SUMMARY)
+    - apps/web/i18n/messages/{vi,en}.json + apps/web/scripts/merge-feature-i18n.ts + apps/web/scripts/check-i18n.ts (the i18n pipeline — note Plan 01 already registered every Phase 5A path in EN_SCAN_FILES; do not edit it)
     - 05A-CONTEXT.md D-08; 05A-UI-SPEC.md sections Copywriting (the exact privacy-page section headings/bodies — three mandatory points + the link to public /privacy), Color (accent for inline text links; base teal token contract, no clay skin), Typography (12/14/20/28; 20px section headings differentiated by weight/color), Visual Hierarchy ("What we never store" is the focal section), Spacing
     - 05A-PATTERNS.md section "app/(protected)/settings/privacy/page.tsx (new — static i18n copy)"
     - node_modules/next/dist/docs/ — App Router nested route segments under a route group (read before writing the route)
   </read_first>
   <action>
     Invoke the `frontend-design` skill BEFORE writing UI; record a `frontend-design` visual-review note (desktop + 320px, light + dark) for the privacy page in the SUMMARY.
-    Create `app/(protected)/settings/privacy/page.tsx` — a thin page rendering `<PrivacySections/>` inside the standard in-shell content container (idiom from `settings/page.tsx`). Create `features/privacy/components/PrivacySections.tsx` — three `Card` sections with 20px headings (weight/color-differentiated, not extra sizes) carrying the UI-SPEC copy for "What we never store" (focal), "What Zero Mail can and can't do", "Using your own AI key (BYOK)" — every visible string via `next-intl` `privacy.*` keys — plus an accent-colored inline text link to the public `/privacy` page. Add a link to `/settings/privacy` from `app/(protected)/settings/page.tsx` (a "Privacy & data handling" entry) and confirm the shell nav can reach it per D-08 (if Plan 02's `AppSidebar` Settings entry expands or has a sub-link, ensure /settings/privacy is reachable; if nav is strictly flat, the link from the Settings page satisfies "reachable from the shell navigation"). Extend `apps/web/features/privacy/messages.ts` with all `privacy.*` keys (vi + en lock-step), run `pnpm --filter web i18n:build`. Extend `apps/web/__tests__/i18n/messages.contract.test.ts` to assert `privacy.*` vi/en parity. Add `app/(protected)/settings/privacy/page.tsx` and `features/privacy/components/PrivacySections.tsx` to `EN_SCAN_FILES` per Plan 01's SUMMARY. Do NOT touch `app/(public)/privacy/page.tsx`.
+    Create `app/(protected)/settings/privacy/page.tsx` — a thin page rendering `<PrivacySections/>` inside the standard in-shell content container (idiom from `settings/page.tsx`). Create `features/privacy/components/PrivacySections.tsx` — three `Card` sections with 20px headings (weight/color-differentiated, not extra sizes) carrying the UI-SPEC copy for "What we never store" (focal), "What Zero Mail can and can't do", "Using your own AI key (BYOK)" — every visible string via `next-intl` `privacy.*` keys — plus an accent-colored inline text link to the public `/privacy` page. Add a link to `/settings/privacy` from `app/(protected)/settings/page.tsx` (a "Privacy & data handling" entry) and confirm the shell nav can reach it per D-08 (if Plan 02's `AppSidebar` Settings entry expands or has a sub-link, ensure /settings/privacy is reachable; if nav is strictly flat, the link from the Settings page satisfies "reachable from the shell navigation"). Extend `apps/web/features/privacy/messages.ts` with all `privacy.*` keys (vi + en lock-step), run `pnpm --filter web i18n:build`. Extend `apps/web/__tests__/i18n/messages.contract.test.ts` to assert `privacy.*` vi/en parity. Do NOT edit `apps/web/scripts/check-i18n.ts` — Plan 01 already registered the privacy page + `PrivacySections.tsx` in `EN_SCAN_FILES`. Do NOT touch `app/(public)/privacy/page.tsx`.
   </action>
   <verify>
     <automated>cd apps/web && pnpm i18n:build && pnpm typecheck && pnpm lint && pnpm i18n:check && pnpm test -- __tests__/i18n</automated>
@@ -138,7 +138,7 @@ Output: `/settings/privacy` page + `PrivacySections`, the converged rules/onboar
     For the rules workspace (`RulesWorkspace`, `RuleComposer`, `RuleList`, `RulePreviewPanel`, `RuleTemplateGallery`, `rules/page.tsx`): (a) confirm it renders correctly inside the new app shell (it does automatically via `(protected)/layout.tsx` — verify no double-padding/double-header collisions and adjust the page container if needed); (b) replace the ad-hoc inline loading/empty markup in `RuleList.tsx` (and the loading/empty markup in `RulePreviewPanel.tsx`) with `<LoadingState/>` / `<EmptyState heading body cta?/>` / `<ErrorState heading body onRetry/>` from `@/components/states` (keeping the existing copy via the existing `rules.*` i18n keys); (c) swap any ad-hoc hex/rgb colors or arbitrary-px layout gaps for the Phase 1.6 base teal tokens / the 8-pt Tailwind spacing scale — do NOT apply `.zm-proto`/`.zm-auth`; (d) ensure no horizontal scroll at 320px (stack/wrap as needed, ≥44px touch targets). NO flow redesign — the rule composer + preview + list + template gallery behave exactly as before.
     For the settings page (`settings/page.tsx`): same convergence — in-shell sanity, swap the hand-rolled pause-switch markup for the shared `useTriagePauseState`/`useToggleTriagePause` + (optionally) the shadcn `switch` if it reads better (Plan 02 already rebased the pause hooks — settings must consume the SAME `triageKeys.pauseState()` cache entry, no local state), 1.6 tokens, shared states for any list, 320px safe. The BYOK form (`features/llm/ByokForm`) stays on `/settings` per D-07 — convergence only.
     For the three onboarding routes (`gmail-connect`, `template-select`, `complete`): structure unchanged (D-05) — they render inside the minimal chrome-suppressed onboarding layout (Plan 02), not the full shell; apply only 1.6 tokens, the shared loading/empty/error primitives where they currently inline their own, and a 320px no-horizontal-scroll pass.
-    Add an authenticated-shell `@media (max-width:360px)` equivalent guard if the shell/chrome needs one (coordinate with Plan 02's `ChromeHeader` — if Plan 02 already handled the 320px chrome compaction, just verify; otherwise add a small guard in the shell CSS, not in `globals.css`'s public-nav block). Add any new component paths touched to `EN_SCAN_FILES` only if they gained new English literals (the convergence pass should reuse existing keys — flag in the SUMMARY if any new key was needed).
+    Add an authenticated-shell `@media (max-width:360px)` equivalent guard if the shell/chrome needs one (coordinate with Plan 02's `ChromeHeader` — if Plan 02 already handled the 320px chrome compaction, just verify; otherwise add a small guard in the shell CSS, not in `globals.css`'s public-nav block). The convergence pass should reuse existing `rules.*` keys and add no new English literals; do NOT edit `EN_SCAN_FILES` (Plan 01 owns it — if a converged screen genuinely needs a new key, flag it in the SUMMARY and add the path in Plan 01's list scope, not here).
   </action>
   <verify>
     <automated>cd apps/web && pnpm i18n:build && pnpm typecheck && pnpm lint && pnpm i18n:check && pnpm test</automated>
@@ -205,6 +205,7 @@ No high-severity threats — frontend-only; the convergence pass introduces no n
 </threat_model>
 
 <verification>
+- `pnpm --filter web i18n:build` is run as part of the gate but the generated `i18n/messages/{vi,en}.json` are NOT in this plan's `files_modified` and must not be committed here — Plan 06 regenerates and commits the canonical bundles. The per-feature `messages.ts` files (which ARE owned here) are the source of truth.
 - `cd apps/web && pnpm typecheck && pnpm lint && pnpm test && pnpm i18n:check && pnpm test:e2e` all exit 0.
 - `apps/web/lib/api/schema.d.ts` unchanged; `app/(public)/privacy/page.tsx` unchanged; no new backend endpoint.
 - No new runtime dependency in `apps/web/package.json`.

@@ -26,8 +26,6 @@ files_modified:
   - apps/web/features/billing/messages.ts
   - apps/web/features/privacy/messages.ts
   - apps/web/features/shell/messages.ts
-  - apps/web/i18n/messages/vi.json
-  - apps/web/i18n/messages/en.json
   - apps/web/scripts/check-i18n.ts
   - apps/web/playwright.config.ts
   - apps/web/e2e/app-shell.spec.ts
@@ -177,7 +175,7 @@ Output: installed primitives, `components/states/*`, `features/triage/query-keys
     Create the eight Playwright spec files listed in 05A-VALIDATION.md as STUBS — each is a real Playwright spec with `test.describe.configure({ mode: 'serial' })` and at least one `test.skip(...)` so the suite still passes; a top-of-file comment names the owning plan: `e2e/app-shell.spec.ts` (Plan 02), `e2e/pause-toggle.spec.ts` (Plan 02), `e2e/billing-balance.spec.ts` (Plan 02 chrome + Plan 04), `e2e/connection-health.spec.ts` (Plan 02), `e2e/triage-audit.spec.ts` (Plan 03), `e2e/triage-shadow-senders.spec.ts` (Plan 03), `e2e/billing-topup.spec.ts` (Plan 04), `e2e/privacy-page.spec.ts` (Plan 05). Do NOT implement assertions here.
     Create Vitest specs `apps/web/features/billing/hooks/useBillingBalance.test.tsx` and `apps/web/features/billing/hooks/useTopupCreditWatch.test.tsx` as real tests against the Task-2 hooks: `useBillingBalance.test.tsx` asserts the hook is configured with `refetchInterval: 45000` / `staleTime: 30000` (mocking `useQuery` the way `useToggleTriagePause.test.tsx` mocks `useMutation`) and that `getBillingBalance` is the queryFn target; `useTopupCreditWatch.test.tsx` asserts the `refetchInterval` callback returns `false` once `expiresAt` is past and once the balance rises above the baseline. (The `AuditLog.test.tsx`, `SenderSafetyNetList.test.tsx`, and the `useToggleTriagePause.test.tsx` rewrite are owned by Plans 02/03.)
     In `apps/web/playwright.config.ts`: confirm a 320px viewport path exists; if not, add a `projects` entry `mobile-320` with `use: { viewport: { width: 320, height: 740 } }`, OR commit to the per-spec `page.setViewportSize({ width: 320 })` pattern from `mobile-topbar.spec.ts` and add a comment. Pick one approach and apply it consistently; record the choice in the SUMMARY.
-    In `apps/web/scripts/check-i18n.ts`: extend `EN_SCAN_FILES` with every new Phase 5A English-literal-bearing file path: `app/(protected)/triage/page.tsx`, `app/(protected)/billing/page.tsx`, `app/(protected)/billing/top-up/page.tsx`, `app/(protected)/settings/privacy/page.tsx`, `components/shell/{AppShell,AppSidebar,ChromeHeader}.tsx`, all planned `features/triage/components/*.tsx` (`AuditLog`, `AuditTable`, `AuditCardList`, `AuditRow`, `UndoButton`, `ShadowModeCard`, `SenderSafetyNetList`, `SenderRow`), all planned `features/billing/components/*.tsx` (`BalanceCard`, `LedgerHistory`, `LedgerTable`, `TopupAmountForm`, `TopupInstructions`, `CopyableField`, `TopupSuccess`, `TopupExpired`), and `features/privacy/components/PrivacySections.tsx`. FIRST verify whether `check-i18n.ts` errors on a listed-but-missing file: if it tolerates missing paths, add them all now; if it errors, add only paths whose files exist after this plan and the SUMMARY MUST explicitly instruct Plans 02–05 to append their own component/page paths to `EN_SCAN_FILES` as they create those files. State which case applies in the SUMMARY.
+    In `apps/web/scripts/check-i18n.ts`: extend `EN_SCAN_FILES` with every new Phase 5A English-literal-bearing file path: `app/(protected)/triage/page.tsx`, `app/(protected)/billing/page.tsx`, `app/(protected)/billing/top-up/page.tsx`, `app/(protected)/settings/privacy/page.tsx`, `components/shell/{AppShell,AppSidebar,ChromeHeader}.tsx`, all planned `features/triage/components/*.tsx` (`AuditLog`, `AuditTable`, `AuditCardList`, `AuditRow`, `UndoButton`, `ShadowModeCard`, `SenderSafetyNetList`, `SenderRow`), all planned `features/billing/components/*.tsx` (`BalanceCard`, `LedgerHistory`, `LedgerTable`, `TopupAmountForm`, `TopupInstructions`, `CopyableField`, `TopupSuccess`, `TopupExpired`), and `features/privacy/components/PrivacySections.tsx`. Add ALL of these paths NOW, unconditionally — `check-i18n.ts` already silently skips not-yet-existing paths (verify this once), so downstream plans (02–05) MUST NOT touch `EN_SCAN_FILES`. The list owned here is the single source of truth for which files the i18n gate scans across Phase 5A; if you discover a Phase 5A converged-screen file that gains a new English literal, add it here too.
   </action>
   <verify>
     <automated>cd apps/web && pnpm typecheck && pnpm lint && pnpm i18n:check && pnpm test -- features/billing/hooks && pnpm test:e2e</automated>
@@ -186,10 +184,10 @@ Output: installed primitives, `components/states/*`, `features/triage/query-keys
     - All eight `apps/web/e2e/{app-shell,pause-toggle,billing-balance,connection-health,triage-audit,triage-shadow-senders,billing-topup,privacy-page}.spec.ts` exist; `pnpm --filter web test:e2e` exits 0.
     - `apps/web/features/billing/hooks/useBillingBalance.test.tsx` and `useTopupCreditWatch.test.tsx` exist and pass under `pnpm --filter web test`.
     - `apps/web/playwright.config.ts` has a documented 320px viewport approach; SUMMARY states which.
-    - `apps/web/scripts/check-i18n.ts` `EN_SCAN_FILES` is extended; SUMMARY states whether downstream plans must add their own paths.
+    - `apps/web/scripts/check-i18n.ts` `EN_SCAN_FILES` is extended with every Phase 5A component/page path up front (app-shell, triage, billing, privacy, converged screens); downstream plans do not edit it.
     - `cd apps/web && pnpm typecheck && pnpm lint && pnpm i18n:check` exit 0.
   </acceptance_criteria>
-  <done>e2e + vitest stubs exist; 320px viewport path decided; EN_SCAN_FILES extended; all gates green.</done>
+  <done>e2e + vitest stubs exist; 320px viewport path decided; EN_SCAN_FILES extended with every Phase 5A path; all gates green.</done>
 </task>
 
 </tasks>
@@ -213,6 +211,7 @@ No high-severity threats — this plan is scaffolding only; all backend access g
 </threat_model>
 
 <verification>
+- `pnpm --filter web i18n:build` is run as part of the gate but the generated `i18n/messages/{vi,en}.json` are NOT in this plan's `files_modified` and must not be committed here — Plan 06 regenerates and commits the canonical bundles. The per-feature `messages.ts` files (which ARE owned here) are the source of truth.
 - `cd apps/web && pnpm typecheck && pnpm lint && pnpm test && pnpm i18n:check && pnpm test:e2e` all exit 0 after the plan.
 - `apps/web/lib/api/schema.d.ts` is byte-identical to its pre-plan state (no backend regeneration).
 - No new runtime dependency added to `apps/web/package.json`.
@@ -223,5 +222,5 @@ No high-severity threats — this plan is scaffolding only; all backend access g
 </success_criteria>
 
 <output>
-After completion, create `.planning/phases/05A-user-surface-web-ui-core/05A-01-SUMMARY.md` (record: `SIDEBAR_COOKIE_NAME` value; the chosen 320px viewport approach; whether downstream plans must add their own `EN_SCAN_FILES` paths; the `frontend-design` note for the states trio).
+After completion, create `.planning/phases/05A-user-surface-web-ui-core/05A-01-SUMMARY.md` (record: `SIDEBAR_COOKIE_NAME` value; the chosen 320px viewport approach; confirmation that `EN_SCAN_FILES` now lists every Phase 5A path so downstream plans don't touch it; the `frontend-design` note for the states trio).
 </output>

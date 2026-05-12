@@ -17,9 +17,6 @@ files_modified:
   - apps/web/features/billing/components/TopupExpired.tsx
   - apps/web/features/billing/components/TopupClient.tsx
   - apps/web/features/billing/messages.ts
-  - apps/web/i18n/messages/vi.json
-  - apps/web/i18n/messages/en.json
-  - apps/web/scripts/check-i18n.ts
   - apps/web/e2e/billing-topup.spec.ts
   - apps/web/package.json
 autonomous: true
@@ -28,32 +25,35 @@ user_setup: []
 
 must_haves:
   truths:
+    - "Billing is its own /billing route (not a /settings section) — a transactional surface (top-up intent, payment-callback target, credit ledger); BYOK stays under /settings (a credential preference, not a transaction) — D-07"
     - "A /billing page (inside the app shell) shows the current credit balance as the focal Display-type figure"
-    - "A top-up flow at /billing/top-up: amount entry -> POST /api/billing/topup/intent -> displays the VietQR payload + copyable bank-transfer fields (account number, memo/reference code, exact amount) -> polls /api/billing/balance until credited or expired -> success state with the increased balance; an expired intent shows a clear 'intent expired — start a new top-up' panel"
-    - "The pending intent rehydrates from a ?code= searchParam (sessionStorage-backed) so a refresh / come-back-later resumes the same intent"
+    - "A top-up flow at a dedicated /billing/top-up route (not a dismissible modal): amount entry -> POST /api/billing/topup/intent -> displays the VietQR payload + copyable bank-transfer fields (account number, memo/reference code, exact amount) -> polls /api/billing/balance + intent-status via refetchInterval (stopped once credited or expired) -> success state with the increased balance; expiry handled on-route with a clear 'intent expired — start a new top-up' panel; no custom stepper component (D-15)"
+    - "The pending intent rehydrates from a ?code= searchParam (sessionStorage-backed, standing in for the spec's ?intentId= since the backend exposes no intentId / intent-status endpoint) so a refresh / come-back-later resumes the same intent (D-15)"
     - "A paginated ledger/transaction-history list renders an empty state and a populated state; because no backend ledger-history endpoint exists it is flagged blocked-on-backend with the documented degradation (empty / 'transaction history coming soon' panel) — no backend endpoint added, schema.d.ts unchanged"
     - "The raw qrPayload EMV string is never rendered as HTML; if a scannable QR image is shown it is rendered client-side from the payload (any new dep noted)"
   artifacts:
     - path: "apps/web/app/(protected)/billing/page.tsx"
-      provides: "Billing page: BalanceCard (focal) + LedgerHistory + 'Top up credits' CTA -> /billing/top-up"
+      provides: "Billing page on its own /billing route: BalanceCard (focal) + LedgerHistory + 'Top up credits' CTA -> /billing/top-up (D-07)"
     - path: "apps/web/app/(protected)/billing/top-up/page.tsx"
-      provides: "<Suspense> -> TopupClient (?code= reader; amount -> instructions -> poll -> success/expired)"
+      provides: "<Suspense> -> TopupClient on a dedicated /billing/top-up route (not a modal); ?code= reader; amount -> instructions -> poll -> success/expired (D-15)"
     - path: "apps/web/features/billing/components/TopupInstructions.tsx"
-      provides: "VietQR payload + copyable account/memo/amount fields + expiry countdown"
+      provides: "VietQR payload + copyable account/memo/amount fields + expiry countdown + balance/intent-status poll until credited or expired (D-15)"
+    - path: "apps/web/features/billing/components/TopupClient.tsx"
+      provides: "Top-up step machine with ?code=/sessionStorage rehydration so a refresh resumes the same pending intent (D-15)"
     - path: "apps/web/features/billing/components/LedgerHistory.tsx"
       provides: "Ledger list (gap-degraded to empty/'coming soon' until a backend endpoint exists)"
   key_links:
     - from: "apps/web/features/billing/components/TopupAmountForm.tsx"
       to: "/api/billing/topup/intent"
-      via: "useCreateTopupIntent"
+      via: "useCreateTopupIntent (dedicated /billing/top-up route, D-15)"
       pattern: "topup/intent"
     - from: "apps/web/features/billing/components/TopupClient.tsx"
       to: "/api/billing/balance"
-      via: "useTopupCreditWatch (poll until credited/expired)"
+      via: "useTopupCreditWatch (poll until credited/expired) + ?code= rehydration (D-15)"
       pattern: "useTopupCreditWatch"
     - from: "apps/web/features/billing/components/BalanceCard.tsx"
       to: "/api/billing/balance"
-      via: "useBillingBalance"
+      via: "useBillingBalance (focal balance figure on the dedicated /billing route, D-07)"
       pattern: "useBillingBalance"
 ---
 
@@ -118,7 +118,7 @@ Output: `/billing` + `/billing/top-up` pages, `TopupClient`, the billing compone
     Create `app/(protected)/billing/page.tsx` — a thin page (idiom from `rules/page.tsx`): renders `<BalanceCard/>` as the focal element + `<LedgerHistory/>` + a "Top up credits" primary CTA (`Button`, accent) linking to `/billing/top-up`. Create `app/(protected)/billing/top-up/page.tsx` — `export default function TopupPage() { return <Suspense fallback={<LoadingState/>}><TopupClient/></Suspense>; }`.
     Create `features/billing/components/TopupClient.tsx` (`"use client"`): per the behavior block — reads `?code=`, rehydrates from `sessionStorage` (keyed by `code`; the stored fields are bank-transfer instructions, not secrets — acceptable per RESEARCH A3), drives the amount → instructions → success/expired step machine, calls `router.replace('/billing/top-up?code='+code, { scroll:false })` after intent creation. No custom stepper component (D-15 — shadcn has none and the pay→confirm transition is webhook-driven).
     Create `features/billing/components/{TopupAmountForm,TopupInstructions,CopyableField,TopupSuccess,TopupExpired,BalanceCard,LedgerHistory,LedgerTable}.tsx` per the behavior block + the UI-SPEC. `CopyableField` = a small primitive (a labelled value + a copy `Button` + transient "Copied" feedback) — the rule-of-three likely applies across account/memo/amount, so make it a real component. `LedgerHistory` uses `useLedgerHistory` (the Plan-01 gap stub): while loading -> `<LoadingState variant="rows"/>`; on the "not yet available" sentinel/empty page -> `<EmptyState heading="No transactions yet" body=.../>` plus a clearly-worded "transaction history isn't available yet" note — a comment + the SUMMARY flag this as the documented degradation for the missing backend ledger-history endpoint; `LedgerTable` is the renderer (shadcn `Table`, mono for amounts, top-up rows green-soft per UI-SPEC) used once a real endpoint exists or when the e2e mocks a populated ledger. The raw `qrPayload` EMV string is rendered ONLY as React text (and, if a QR component is chosen, as an `<svg>`/canvas the component generates from the string) — never via the dangerously-set-inner-HTML React prop, never as raw HTML.
-    Extend `apps/web/features/billing/messages.ts` with all new `billing.*` keys (vi + en lock-step), run `pnpm --filter web i18n:build`, and add the new `features/billing/components/*.tsx`, `features/billing/components/TopupClient.tsx`, `app/(protected)/billing/page.tsx`, `app/(protected)/billing/top-up/page.tsx` paths to `EN_SCAN_FILES` per Plan 01's SUMMARY. If a QR dependency is added, run it through `pnpm --filter web add <pkg>` (verify the current version on npm first) and note it in the SUMMARY; otherwise leave `package.json` unchanged.
+    Extend `apps/web/features/billing/messages.ts` with all new `billing.*` keys (vi + en lock-step), run `pnpm --filter web i18n:build`, (do NOT edit `apps/web/scripts/check-i18n.ts` — Plan 01 already registered every Phase 5A billing component/page path in `EN_SCAN_FILES`). If a QR dependency is added, run it through `pnpm --filter web add <pkg>` (verify the current version on npm first) and note it in the SUMMARY; otherwise leave `package.json` unchanged.
   </action>
   <verify>
     <automated>cd apps/web && pnpm i18n:build && pnpm typecheck && pnpm lint && pnpm i18n:check</automated>
@@ -193,6 +193,7 @@ No high-severity threats — frontend-only; all backend access via the typed cli
 </threat_model>
 
 <verification>
+- `pnpm --filter web i18n:build` is run as part of the gate but the generated `i18n/messages/{vi,en}.json` are NOT in this plan's `files_modified` and must not be committed here — Plan 06 regenerates and commits the canonical bundles. The per-feature `messages.ts` files (which ARE owned here) are the source of truth.
 - `cd apps/web && pnpm typecheck && pnpm lint && pnpm test && pnpm i18n:check && pnpm test:e2e` all exit 0.
 - `apps/web/lib/api/schema.d.ts` unchanged; the billing ledger-history endpoint gap and the intent-status/`intentId` gap are documented in `billing-api.ts` (Plan 01), `useLedgerHistory.ts` (Plan 01), `LedgerHistory.tsx`, the e2e spec comment, and the SUMMARY.
 - If a QR dependency was added: it is the only `apps/web/package.json` change, the version was verified against npm, and it is recorded in the SUMMARY; otherwise `package.json` is unchanged.
@@ -204,5 +205,5 @@ No high-severity threats — frontend-only; all backend access via the typed cli
 </success_criteria>
 
 <output>
-After completion, create `.planning/phases/05A-user-surface-web-ui-core/05A-04-SUMMARY.md` (record: the `frontend-design` visual-review notes; the documented ledger-history degradation path; the `?code=`/sessionStorage rehydration approach; whether a QR dependency was added and which version; any `EN_SCAN_FILES` paths added; the resolved value of Open Questions 2 + 3 if anything was learned from the backend).
+After completion, create `.planning/phases/05A-user-surface-web-ui-core/05A-04-SUMMARY.md` (record: the `frontend-design` visual-review notes; the documented ledger-history degradation path; the `?code=`/sessionStorage rehydration approach; whether a QR dependency was added and which version; the resolved value of Open Questions 2 + 3 if anything was learned from the backend).
 </output>

@@ -16,9 +16,6 @@ files_modified:
   - apps/web/features/triage/components/PauseBanner.tsx
   - apps/web/features/triage/messages.ts
   - apps/web/features/shell/messages.ts
-  - apps/web/i18n/messages/vi.json
-  - apps/web/i18n/messages/en.json
-  - apps/web/scripts/check-i18n.ts
   - apps/web/e2e/app-shell.spec.ts
   - apps/web/e2e/pause-toggle.spec.ts
   - apps/web/e2e/connection-health.spec.ts
@@ -29,37 +26,44 @@ user_setup: []
 
 must_haves:
   truths:
-    - "Every app/(protected)/** page except onboarding/* renders inside a single persistent app shell (collapsible icon sidebar + 56px top header)"
-    - "The top-header chrome shows the pause toggle, credit-balance pill, and Gmail connection-health indicator without scrolling at desktop and 320px"
-    - "Toggling pause from the chrome persists via /tenant/triage-pause, updates optimistically, rolls back on error, and is reconciled by invalidating triageKeys.pauseState()"
-    - "The chrome pause toggle, the /settings pause toggle, and PauseBanner all read the single triageKeys.pauseState() cache entry — no local useState, no ad-hoc query keys"
-    - "A DISCONNECTED Gmail status surfaces a reconnect affordance reusing ReconnectPrompt semantics"
+    - "Every app/(protected)/** page except onboarding/* renders inside a single persistent app shell — a collapsible icon-rail sidebar (shadcn sidebar block, collapsible=icon, expanded/collapsed state in an SSR-readable cookie) + a thin persistent top header that owns the chrome region, hosted in (protected)/layout.tsx so it never unmounts on navigation (D-01)"
+    - "Primary nav is single-level / flat — one SidebarGroup separator at most, no nested SidebarMenuSub (D-02); destinations are Triage, Rules, Billing, Settings plus an onboarding-state entry where appropriate"
+    - "The top-header chrome shows the pause toggle, credit-balance pill, and Gmail connection-health indicator, built from raw shadcn primitives (badge for balance, tooltip-wrapped colored dot for health, switch + confirm dialog for pause), without scrolling at desktop and 320px (D-03)"
+    - "320px / mobile uses the shadcn sidebar's built-in offcanvas Sheet mode opened by SidebarTrigger in the header — no separate responsive nav implementation (D-04)"
+    - "Chrome data (pause, balance, health) is prefetched in (protected)/layout.tsx via Promise.all and dehydrated into a HydrationBoundary wrapping the client AppShell, and is consumed only within the layout subtree (the shell), never relied on by a deeper page boundary (D-10)"
+    - "The credit-balance query polls at refetchInterval ~45s with refetchIntervalInBackground:false and staleTime ~30s, plus invalidateQueries after billable actions / top-up settle / pause toggle (D-11)"
+    - "Pause state and Gmail connection health stay invalidate-only — no polling (D-12); no SSE/WebSocket is used for any chrome data (D-14)"
+    - "Toggling pause from the chrome persists via /tenant/triage-pause, updates optimistically (onMutate cancel+snapshot+setQueryData), rolls back on error, and is reconciled by invalidating triageKeys.pauseState() and the balance key on onSettled (D-13)"
+    - "The chrome pause toggle, the /settings pause toggle, and PauseBanner all read the single triageKeys.pauseState() cache entry via one read hook (useTriagePauseState) + one write hook (useToggleTriagePause) — no local useState, no ad-hoc query keys (D-13)"
+    - "A DISCONNECTED Gmail status surfaces a reconnect affordance reusing ReconnectPrompt semantics (D-03)"
     - "onboarding/* keeps a minimal chrome-suppressed layout and does not render inside the sidebar shell"
   artifacts:
     - path: "apps/web/app/(protected)/layout.tsx"
-      provides: "Shell host: cache()'d /me, sidebar_state cookie, Promise.all chrome prefetch, dehydrate + HydrationBoundary wrapping <AppShell>"
+      provides: "Shell host: cache()'d /me, sidebar_state cookie, Promise.all chrome prefetch, dehydrate + HydrationBoundary wrapping <AppShell> (D-01, D-10)"
       contains: "HydrationBoundary"
     - path: "apps/web/components/shell/AppShell.tsx"
-      provides: "Client shell: SidebarProvider + AppSidebar + SidebarInset + ChromeHeader + main + Toaster"
+      provides: "Client shell: SidebarProvider + AppSidebar + SidebarInset + ChromeHeader + main + Toaster (D-01)"
+    - path: "apps/web/components/shell/AppSidebar.tsx"
+      provides: "Flat icon-rail sidebar (collapsible=icon, no SidebarMenuSub, offcanvas Sheet at 320px) — D-02, D-04"
     - path: "apps/web/components/shell/ChromeHeader.tsx"
-      provides: "56px header with BalancePill, HealthDot, PauseSwitch (+ confirm dialog on pause-OFF), UserMenu"
+      provides: "Thin header with BalancePill (badge), HealthDot (tooltip dot + reconnect on DISCONNECTED), PauseSwitch (switch + confirm dialog on pause-OFF), UserMenu — D-03"
     - path: "apps/web/features/triage/hooks/useTriagePauseState.ts"
-      provides: "Single read hook for pause state keyed on triageKeys.pauseState()"
+      provides: "Single read hook for pause state keyed on triageKeys.pauseState(), invalidate-only — no refetchInterval (D-12, D-13)"
     - path: "apps/web/features/triage/hooks/useToggleTriagePause.ts"
-      provides: "Optimistic pause mutation (onMutate/onError/onSettled) keyed on triageKeys.pauseState()"
+      provides: "Optimistic pause mutation (onMutate/onError/onSettled) keyed on triageKeys.pauseState(), invalidates balance too (D-11, D-13)"
       contains: "triageKeys.pauseState"
   key_links:
     - from: "apps/web/components/shell/ChromeHeader.tsx"
       to: "triageKeys.pauseState()"
-      via: "useTriagePauseState + useToggleTriagePause"
+      via: "useTriagePauseState + useToggleTriagePause (single source of truth, D-13)"
       pattern: "useTriagePauseState"
     - from: "apps/web/components/shell/ChromeHeader.tsx"
       to: "/api/billing/balance"
-      via: "useBillingBalance"
+      via: "useBillingBalance (polled ~45s + invalidate-after-action, D-11)"
       pattern: "useBillingBalance"
     - from: "apps/web/app/(protected)/layout.tsx"
       to: "triageKeys.pauseState() / billingKeys.balance() / gmailQueryKeys.status()"
-      via: "qc.prefetchQuery x3 + dehydrate"
+      via: "qc.prefetchQuery x3 + dehydrate inside HydrationBoundary (D-10)"
       pattern: "prefetchQuery"
 ---
 
@@ -154,7 +158,7 @@ Output: rewritten `(protected)/layout.tsx`, new `components/shell/{AppShell,AppS
     Create `apps/web/components/shell/AppShell.tsx` (`"use client"`): `<SidebarProvider defaultOpen={defaultSidebarOpen}>` -> `<AppSidebar/>` + `<SidebarInset>` -> `<ChromeHeader/>` + `<PauseBanner/>` + `<main>{children}</main>` (8-pt gutters per UI-SPEC) + a single `<Toaster/>` (shadcn `sonner`).
     Create `apps/web/components/shell/AppSidebar.tsx` (`"use client"`): shadcn `<Sidebar collapsible="icon">` with `SidebarHeader` = brand/logo, a flat `SidebarMenu` (NO `SidebarMenuSub` — D-02/#5874) with items Triage (`/triage`), Rules (`/rules`), Billing (`/billing`), Settings (`/settings`) plus an onboarding-state entry if `/me` indicates onboarding incomplete; active item via `usePathname()`; lucide icons (planner's choice). 320px = the built-in offcanvas `Sheet` (D-04) — no custom drawer; `SidebarTrigger` lives in the header.
     Create `apps/web/components/shell/ChromeHeader.tsx` (`"use client"`): a 56px-high header strip (UI-SPEC Spacing) containing `SidebarTrigger`, a page-title slot, the `BalancePill` (raw `badge` from `useBillingBalance` — neutral pill chrome, figure may be accent-tinted; show a `Skeleton` pill while loading), the `HealthDot` (a `tooltip`-wrapped colored dot from `useTenantStatus`: green CONNECTED / amber action-needed / red DISCONNECTED — on DISCONNECTED also surface `ReconnectPrompt`/`ReconnectPromptGate` semantics with a "Reconnect Gmail" affordance via `getApiUrl('/tenant/connect-gmail')`), the `PauseSwitch` (shadcn `switch`; off = paused, amber surface per UI-SPEC; turning the switch OFF i.e. pausing opens an `alert-dialog` confirm with the UI-SPEC copy "Pause automatic triage?" / "Pause triage" / "Keep it running"; turning it back ON does NOT confirm; displayed state from `useTriagePauseState()`, write from `useToggleTriagePause()`), and a `UserMenu` (`dropdown-menu`: language switch via `useUpdateLanguage`, link to `/settings`, sign out). Minimum 40px hit areas (44px at 320px) on all chrome controls — pad the hit area, not the glyph. At 320px the strip wraps/compacts (labels collapse to icons + accessible names). All visible strings via `next-intl` `nav.*`/`shell.*` keys. Render only React-escaped values — no use of the dangerously-set-inner-HTML prop anywhere in the shell.
-    Update `apps/web/features/shell/messages.ts` (and re-run `pnpm --filter web i18n:build`) if you add keys beyond Plan 01's seed; add the three `components/shell/*.tsx` paths and `features/triage/components/PauseBanner.tsx` (if not already listed) to `EN_SCAN_FILES` in `apps/web/scripts/check-i18n.ts` per Plan 01's SUMMARY guidance.
+    Update `apps/web/features/shell/messages.ts` (and re-run `pnpm --filter web i18n:build`) if you add keys beyond Plan 01's seed. Do NOT edit `apps/web/scripts/check-i18n.ts` — Plan 01 already registered every Phase 5A path (including `components/shell/*.tsx` and `features/triage/components/PauseBanner.tsx`) in `EN_SCAN_FILES`.
   </action>
   <verify>
     <automated>cd apps/web && pnpm i18n:build && pnpm typecheck && pnpm lint && pnpm i18n:check && pnpm test -- features/triage/hooks/useToggleTriagePause</automated>
@@ -227,6 +231,7 @@ No high-severity threats — frontend-only; all backend access via the typed cli
 </threat_model>
 
 <verification>
+- `pnpm --filter web i18n:build` is run as part of the gate but the generated `i18n/messages/{vi,en}.json` are NOT in this plan's `files_modified` and must not be committed here — Plan 06 regenerates and commits the canonical bundles. The per-feature `messages.ts` files (which ARE owned here) are the source of truth.
 - `cd apps/web && pnpm typecheck && pnpm lint && pnpm test && pnpm i18n:check && pnpm test:e2e` all exit 0.
 - `apps/web/lib/api/schema.d.ts` unchanged.
 - No new runtime dependency in `apps/web/package.json`.
@@ -238,5 +243,5 @@ No high-severity threats — frontend-only; all backend access via the typed cli
 </success_criteria>
 
 <output>
-After completion, create `.planning/phases/05A-user-surface-web-ui-core/05A-02-SUMMARY.md` (record: onboarding-suppression mechanism; the `frontend-design` visual-review note for shell + chrome; any nav/shell i18n keys added beyond Plan 01's seed; any `EN_SCAN_FILES` paths added).
+After completion, create `.planning/phases/05A-user-surface-web-ui-core/05A-02-SUMMARY.md` (record: onboarding-suppression mechanism; the `frontend-design` visual-review note for shell + chrome; any nav/shell i18n keys added beyond Plan 01's seed).
 </output>

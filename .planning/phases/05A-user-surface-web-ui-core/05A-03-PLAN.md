@@ -24,9 +24,6 @@ files_modified:
   - apps/web/features/triage/components/AuditLog.test.tsx
   - apps/web/features/triage/components/SenderSafetyNetList.test.tsx
   - apps/web/features/triage/messages.ts
-  - apps/web/i18n/messages/vi.json
-  - apps/web/i18n/messages/en.json
-  - apps/web/scripts/check-i18n.ts
   - apps/web/e2e/triage-audit.spec.ts
   - apps/web/e2e/triage-shadow-senders.spec.ts
 autonomous: true
@@ -35,17 +32,24 @@ user_setup: []
 
 must_haves:
   truths:
-    - "A single /triage page renders inside the app shell with shadcn Tabs for Audit log / Shadow mode / Sender safety net, the active tab synced to a ?tab= searchParam"
-    - "The audit log renders correctly at 0 entries (empty state), 1 entry, and a page-full of entries, with a responsive Table-at->=md / card-list-below-md renderer sharing one row model"
-    - "An entry within the 30-day undo window offers an Undo action that calls POST /api/triage/audit/{auditId}/undo, confirms via an AlertDialog naming the inverse Gmail change, toasts on success, and removes the undoable affordance; an entry past 30 days shows a muted non-interactive Undo-window-closed label"
+    - "A single /triage page renders inside the app shell with shadcn Tabs for Audit log / Shadow mode / Sender safety net, the active tab synced to a ?tab= searchParam so each tab is deep-linkable; shadow mode is page-level state, not a peer section (D-06)"
+    - "The audit log is a responsive hybrid renderer — shadcn Table at >=md / card list below md sharing one row model — and renders correctly at 0 entries (empty state), 1 entry, and a page-full of entries; the Reason field is never truncated into invisibility (it is the trust evidence) and shows in full on the card variant (D-16)"
+    - "Pagination is cursor 'Load older entries' via useInfiniteQuery (the backend list is cursor-paginated / append-only) — not numbered pages — with a subtle divider where entries cross the 30-day undo boundary (D-17)"
+    - "An entry within the 30-day undo window offers an outline Undo button -> an AlertDialog confirm naming the exact inverse Gmail change before POST /api/triage/audit/{auditId}/undo -> on success invalidates the audit + balance queries and toasts; an entry past 30 days shows a muted non-interactive 'Undo window closed' label with a tooltip ('Triage actions can be undone for 30 days') — never hidden (D-18)"
     - "A tenant-wide shadow-mode toggle reads/writes /api/tenant/triage/shadow-mode and persists"
     - "The sender-safety-net list renders (including an empty state) and opting a sender in calls /api/triage/sender-safety-net/{senderEmail}/opt-in and updates the row"
     - "The triage-audit list dependency is explicitly flagged blocked-on-backend with a documented degradation path; no backend endpoint is added and schema.d.ts is unchanged"
   artifacts:
     - path: "apps/web/app/(protected)/triage/page.tsx"
-      provides: "Thin page: <Suspense> -> TriagePageClient (?tab= reader)"
+      provides: "Thin page: <Suspense> -> TriagePageClient (single /triage page + ?tab= reader, D-06)"
+    - path: "apps/web/features/triage/components/TriagePageClient.tsx"
+      provides: "shadcn Tabs driven by ?tab= searchParam (audit/shadow/senders), router.replace on change — single deep-linkable triage page (D-06)"
     - path: "apps/web/features/triage/components/AuditLog.tsx"
-      provides: "Responsive audit renderer (Table >=md / card list <md), 30-day boundary divider, undo affordances"
+      provides: "Responsive audit renderer (Table >=md / card list <md sharing one row model), 30-day boundary divider, cursor 'Load older entries', undo affordances, never-clipped Reason (D-16, D-17)"
+    - path: "apps/web/features/triage/components/UndoButton.tsx"
+      provides: "Outline Undo button -> AlertDialog naming the inverse Gmail change -> POST undo; muted 'Undo window closed' + tooltip past 30 days (D-18)"
+    - path: "apps/web/features/triage/hooks/useTriageAuditLog.ts"
+      provides: "useInfiniteQuery cursor pagination over the (gap-flagged) audit list — initialPageParam/getNextPageParam (D-17)"
     - path: "apps/web/features/triage/components/ShadowModeCard.tsx"
       provides: "Shadow-mode toggle reading/writing /api/tenant/triage/shadow-mode with turn-off confirm"
     - path: "apps/web/features/triage/components/SenderSafetyNetList.tsx"
@@ -53,15 +57,19 @@ must_haves:
   key_links:
     - from: "apps/web/features/triage/hooks/useUndoAuditEntry.ts"
       to: "/api/triage/audit/{auditId}/undo"
-      via: "useMutation -> undoAuditEntry; onSuccess invalidates triageKeys.auditLog() + billingKeys.balance() + toast"
+      via: "useMutation -> undoAuditEntry; onSuccess invalidates triageKeys.auditLog() + billingKeys.balance() + toast (D-18)"
       pattern: "triage/audit"
+    - from: "apps/web/features/triage/components/AuditCardList.tsx"
+      to: "30-day undo boundary"
+      via: "boundary divider between straddling entries; full-text Reason on every card (D-16, D-17)"
+      pattern: "30"
     - from: "apps/web/features/triage/components/SenderSafetyNetList.tsx"
       to: "/api/triage/sender-safety-net/{senderEmail}/opt-in"
       via: "useOptInSender"
       pattern: "sender-safety-net"
     - from: "apps/web/features/triage/components/TriagePageClient.tsx"
       to: "?tab= searchParam"
-      via: "useSearchParams + router.replace"
+      via: "useSearchParams + router.replace (deep-linkable tabs, D-06)"
       pattern: "useSearchParams"
 ---
 
@@ -117,7 +125,7 @@ Output: `/triage` page + `TriagePageClient`, extended `triage-api.ts`, the audit
       - `hooks/useShadowMode.ts` — a read+write pair like `use-byok.ts`: `useQuery({ queryKey: triageKeys.shadowMode(), queryFn: getShadowMode })` + `useMutation({ mutationFn: setShadowMode, onSuccess: () => invalidate triageKeys.shadowMode() })`.
       - `hooks/useProtectedSenders.ts` — `useQuery({ queryKey: triageKeys.senderSafetyNet(), queryFn: getProtectedSenders })` (matches `useRules`).
       - `hooks/useOptInSender.ts` — `useMutation({ mutationFn: optInSender, onSuccess: () => invalidate triageKeys.senderSafetyNet() })` (matches `useUpdateRuleEnabled`).
-    Add `features/triage/components/{AuditLog,AuditTable,AuditCardList,AuditRow,UndoButton,ShadowModeCard,SenderSafetyNetList,SenderRow}.tsx` and `app/(protected)/triage/page.tsx` (+ `features/triage/components/TriagePageClient.tsx`) paths to `EN_SCAN_FILES` in `apps/web/scripts/check-i18n.ts` if Plan 01's SUMMARY said downstream plans must add their own. No UI components in this task — no `frontend-design` invocation needed here.
+    Do NOT edit `apps/web/scripts/check-i18n.ts` — Plan 01 already registered every Phase 5A triage component/page path in `EN_SCAN_FILES`. No UI components in this task — no `frontend-design` invocation needed here.
   </action>
   <verify>
     <automated>cd apps/web && pnpm typecheck && pnpm lint && pnpm i18n:check</automated>
@@ -160,7 +168,7 @@ Output: `/triage` page + `TriagePageClient`, extended `triage-api.ts`, the audit
     Create `features/triage/components/{AuditTable,AuditCardList,AuditRow,UndoButton}.tsx`: `AuditTable` = shadcn `Table` with columns Date/time (mono), Message ref (subject + sender, truncated, link to Gmail only if `gmailMessageId` present — privacy default text-only otherwise), Rule, Action (`Badge` with the UI-SPEC color map), Reason (truncated-with-expand), Undo; dense `py-2` rows. `AuditCardList` = one card per entry, header = Action `Badge` + timestamp, body = message ref + rule + **full** Reason text, footer = `<UndoButton/>` or the muted "Undo window closed" label. `AuditRow` = the shared row-model + truncation/undo-eligibility logic in ONE place. `UndoButton` = outline `Button` "Undo" -> `alert-dialog` confirm whose body renders the backend's computed inverse-action string verbatim (UI-SPEC copy "Undo this triage action?" / confirm "Undo this action" accent / cancel "Keep it"); confirm -> `useUndoAuditEntry().mutate(auditId)`; on success the affordance is removed and a `sonner` toast "Undone — ..." appears. Past 30 days: a muted non-interactive label "Undo window closed" + a `tooltip` "Triage actions can be undone for up to 30 days" (never hidden — D-18).
     Create `features/triage/components/ShadowModeCard.tsx` — a Card (idiom from `settings/page.tsx`) with a shadcn `switch` bound to `useShadowMode`; ON does not confirm; OFF opens an `alert-dialog` light confirm (UI-SPEC "Turn off shadow mode?" / "Turn off shadow mode" / "Keep shadow mode on"); when ON show an info/blue `Badge` "Shadow mode on" and the UI-SPEC ON helper text; loading -> `<LoadingState/>`; error -> `<ErrorState onRetry/>`.
     Create `features/triage/components/{SenderSafetyNetList,SenderRow}.tsx` — `SenderSafetyNetList` uses `useProtectedSenders`; loading -> `<LoadingState/>`; error -> `<ErrorState onRetry/>`; 0 -> `<EmptyState/>` (UI-SPEC sender copy); otherwise a `SenderRow` per sender (sender email shown — owner-visible; an opt-in control: `Button`/`switch` calling `useOptInSender().mutate(senderEmail)`; the row reflects the new opted-in state; a "Remove sender" destructive `alert-dialog` if the remove action is exposed by the endpoint — UI-SPEC copy "Stop protecting {email}?" / "Remove sender" destructive). Render only fields the backend returns; no `console.log` of sender/audit data.
-    Create the Vitest specs `apps/web/features/triage/components/AuditLog.test.tsx` and `SenderSafetyNetList.test.tsx` per the behavior block (mock the hooks like `useToggleTriagePause.test.tsx` mocks `@tanstack/react-query`; assert empty state, row count, boundary divider, full-Reason on cards; assert sender empty + populated + opt-in invokes the mutation). Extend `apps/web/features/triage/messages.ts` with all new `triage.*` keys (vi + en lock-step), run `pnpm --filter web i18n:build`, and add any not-yet-listed component paths to `EN_SCAN_FILES` per Plan 01's SUMMARY.
+    Create the Vitest specs `apps/web/features/triage/components/AuditLog.test.tsx` and `SenderSafetyNetList.test.tsx` per the behavior block (mock the hooks like `useToggleTriagePause.test.tsx` mocks `@tanstack/react-query`; assert empty state, row count, boundary divider, full-Reason on cards; assert sender empty + populated + opt-in invokes the mutation). Extend `apps/web/features/triage/messages.ts` with all new `triage.*` keys (vi + en lock-step), and run `pnpm --filter web i18n:build` (do NOT edit `EN_SCAN_FILES` — Plan 01 owns it).
   </action>
   <verify>
     <automated>cd apps/web && pnpm i18n:build && pnpm typecheck && pnpm lint && pnpm i18n:check && pnpm test -- features/triage/components</automated>
@@ -230,6 +238,7 @@ No high-severity threats — frontend-only; all backend access via the typed cli
 </threat_model>
 
 <verification>
+- `pnpm --filter web i18n:build` is run as part of the gate but the generated `i18n/messages/{vi,en}.json` are NOT in this plan's `files_modified` and must not be committed here — Plan 06 regenerates and commits the canonical bundles. The per-feature `messages.ts` files (which ARE owned here) are the source of truth.
 - `cd apps/web && pnpm typecheck && pnpm lint && pnpm test && pnpm i18n:check && pnpm test:e2e` all exit 0.
 - `apps/web/lib/api/schema.d.ts` unchanged; the triage-audit list endpoint gap is documented in `triage-api.ts`, `useTriageAuditLog.ts`, the `AuditLog` degradation state, the e2e spec comment, and the SUMMARY.
 - No new runtime dependency in `apps/web/package.json`.
@@ -241,5 +250,5 @@ No high-severity threats — frontend-only; all backend access via the typed cli
 </success_criteria>
 
 <output>
-After completion, create `.planning/phases/05A-user-surface-web-ui-core/05A-03-SUMMARY.md` (record: the `frontend-design` visual-review notes; the documented audit-list degradation path; the `AuditEntry` row-model shape chosen; any `EN_SCAN_FILES` paths added; the resolved value of Open Questions 1 + 4 if anything was learned from the backend).
+After completion, create `.planning/phases/05A-user-surface-web-ui-core/05A-03-SUMMARY.md` (record: the `frontend-design` visual-review notes; the documented audit-list degradation path; the `AuditEntry` row-model shape chosen; the resolved value of Open Questions 1 + 4 if anything was learned from the backend).
 </output>

@@ -433,27 +433,32 @@ return data as TenantStatus
 
 **If A4/A6 resolve "the endpoints exist":** 5A is fully buildable; just refresh the generated client. **If they resolve "they don't":** the audit-list, ledger-history, and intent-id-rehydration pieces become explicitly-flagged blocked-on-backend gaps per the SPEC out-of-scope rule, and the screens ship the parts that work (undo flow, empty/error states, balance, top-up-by-code).
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does a triage-audit *list* endpoint exist on the backend?**
    - What we know: `apps/web/openapi/openapi.json` and `lib/api/schema.d.ts` expose **only** `POST /api/triage/audit/{auditId}/undo`. `04-SPEC.md` (Phase 4) describes audit/undo semantics — check whether it shipped a `GET /api/triage/audit` list.
    - What's unclear: whether the list endpoint exists but wasn't regenerated into the committed schema, or genuinely doesn't exist.
    - Recommendation: Planner inspects `backend/api` (`TriageAuditController`) and/or asks the user. If it exists → `pnpm generate:api`, build the full audit list (D-16/D-17). If not → build the `/triage` page with the Audit-log tab showing an "audit history not yet available" state + the shadow-mode and sender-safety-net tabs (which *do* have endpoints) fully working, and log the list endpoint as a gap. The undo endpoint alone can't drive a useful list, so the list itself is the blocked piece.
+   - **RESOLVED:** No triage-audit *list* endpoint on `TriageAuditController` (only `POST /api/triage/audit/{auditId}/undo`). The audit-list is a **flagged backend gap** (Plan 03 + 05A-GAPS.md): `AuditLog` consumes a gap-stub `getAuditLog`/`useTriageAuditLog` resolving to an empty page with a documented "audit history not yet available" degradation state; `e2e/triage-audit.spec.ts` **mocks** the list response. No backend endpoint added; `schema.d.ts` unchanged.
 
 2. **Does a billing *ledger/transaction-history* list endpoint exist?**
    - What we know: schema exposes `GET /api/billing/balance` (`availableCredits`/`heldCredits`/`currency`) and `POST /api/billing/topup/intent` (`code`/`amountVnd`/`expiresAt`/`qrPayload`) — no ledger/history list.
    - Recommendation: Planner inspects `backend/api` (`BillingController`) / `02B` phase output. If it exists → build `LedgerHistory` (`useInfiniteQuery`) per UI-SPEC. If not → `/billing` ships balance + top-up + an empty/"transaction history coming soon" panel; log as a gap (SPEC explicitly allows this: "if a needed list endpoint does not exist, it is logged as a gap rather than built").
+   - **RESOLVED:** `BillingController` exposes only `GET /api/billing/balance` + `POST /api/billing/topup/intent` — no ledger-history endpoint. The ledger is a **flagged backend gap** (Plan 04 + 05A-GAPS.md): `LedgerHistory` uses the gap-stub `useLedgerHistory`/`getLedgerHistory` and degrades to the `EmptyState` "No transactions yet" / "transaction history coming soon" panel; `e2e/billing-topup.spec.ts` mocks a populated ledger to exercise the `LedgerTable` render path. No backend endpoint added; `schema.d.ts` unchanged.
 
 3. **Does the top-up intent response carry an `intentId` (for `?intentId=` rehydration per D-15), or only `code`?**
    - What we know: `TopupIntentResponse = { code?, amountVnd?, expiresAt?, qrPayload? }` — no `intentId`. There's no intent-status GET endpoint either.
    - Recommendation: Use `?code=` as the rehydration handle (the `code` is the bank-transfer memo, unique per intent, and the only stable identifier the response gives). On rehydration with `?code=`, the client can't re-fetch the intent (no GET) — so it must either (a) keep the intent fields in `sessionStorage` keyed by `code` (acceptable — these aren't secrets, just bank-transfer instructions), or (b) re-display only the `code` + amount and tell the user to check `/billing` for the credited balance. Polling for the credit signal = `/api/billing/balance`. Flag this as a UX-degradation gap if a GET-intent endpoint would be cleaner; do **not** build the endpoint.
+   - **RESOLVED:** `TopupIntentResponse` carries only `code`/`amountVnd`/`expiresAt`/`qrPayload` — no `intentId`, no intent-status GET endpoint. D-15's `?intentId=` rehydration **falls back to `?code=` + `sessionStorage`** (intent fields stored keyed by `code` — bank-transfer instructions, not secrets); the success transition relies on `useTopupCreditWatch` refetching/invalidating `/api/billing/balance` (balance rising = credited). Flagged in 05A-GAPS.md; no backend endpoint added.
 
 4. **What identifiers does an audit entry expose for the Gmail deep-link and the inverse-action description?**
    - What we know: the audit response shape isn't in the committed schema (no list endpoint). UI-SPEC D-16/D-18 assume subject + sender (truncated) and a backend-computed inverse-action string.
    - Recommendation: resolves with Q1 — once the list endpoint/shape is known, the audit row model and the `AlertDialog` copy bind to whatever fields exist; if a Gmail message id is present, link out; if not, text only (privacy default).
+   - **RESOLVED:** Resolves with Q1 — no list endpoint exists, so the audit entry shape is the local `AuditEntry` row-model interface in `triage-api.ts` (id, timestamp, action, ruleName, reason, optional message-ref `{ subject, sender, gmailMessageId? }`, `undoableUntil`/`undoable`); the `AlertDialog` copy binds to whatever the gap-stub shape provides; Gmail deep-link only when `gmailMessageId` is present (text-only otherwise). Whatever shape an eventual backend list ships reconciles against this local contract.
 
 5. **Onboarding shell-suppression mechanism — parent-layout branch vs. nested layout override?**
    - Recommendation: Planner's call; the parent-layout segment-branch is simplest and most robust (Pitfall 8). Document the choice in the plan.
+   - **RESOLVED:** Parent-layout **segment-branch** in `app/(protected)/layout.tsx` (Plan 02): the layout detects the active route segment and renders a bare chrome-suppressed wrapper for `onboarding/*`, the full `<AppShell>` otherwise. (A minimal `onboarding/layout.tsx` exists as the focused-funnel wrapper, but the chrome-suppression decision lives in the parent segment-branch, not a nested override.)
 
 ## Environment Availability
 
