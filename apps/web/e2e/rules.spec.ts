@@ -128,7 +128,7 @@ async function mockRulesApis(page: Page, mode: MockMode) {
         tenantId: 'tenant-1',
         email: 'founder@example.com',
         preferredLanguage: 'en',
-        onboardingStep: 'complete',
+        onboardingStep: 'COMPLETE',
         triagePaused: false,
         gmailConnectionStatus: {
           status: 'CONNECTED',
@@ -136,6 +136,21 @@ async function mockRulesApis(page: Page, mode: MockMode) {
           googleEmail: 'founder@example.com',
         },
       });
+      return;
+    }
+
+    if (url.pathname === '/api/billing/balance' && request.method() === 'GET') {
+      await fulfillJson(route, { availableCredits: 12, heldCredits: 0, currency: 'credits' });
+      return;
+    }
+
+    if (url.pathname === '/gmail/connection/status' && request.method() === 'GET') {
+      await fulfillJson(route, { connectionStatus: 'CONNECTED' });
+      return;
+    }
+
+    if (url.pathname === '/tenant/triage-pause' && request.method() === 'PUT') {
+      await route.fulfill({ status: 204, body: '' });
       return;
     }
 
