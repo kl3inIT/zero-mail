@@ -7,6 +7,7 @@ import com.google.api.services.gmail.model.HistoryMessageAdded;
 import com.google.api.services.gmail.model.ListHistoryResponse;
 import com.google.api.services.gmail.model.Message;
 import com.zeromail.core.gmail.event.MailMessageObserved;
+import com.zeromail.core.gmail.event.MailOutboundObserved;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
@@ -99,7 +100,6 @@ public class GmailDeliveryProcessingService {
                                 .list("me")
                                 .setStartHistoryId(BigInteger.valueOf(savedHistoryPointer))
                                 .setHistoryTypes(List.of("messageAdded"))
-                                .setLabelId("INBOX")
                                 .setMaxResults(500L);
                 if (pageToken != null) {
                     historyListRequest.setPageToken(pageToken);
@@ -163,7 +163,8 @@ public class GmailDeliveryProcessingService {
                                 .setFields("id,threadId,labelIds,internalDate")
                                 .execute();
                 List<String> labelIds = gmailMessage.getLabelIds();
-                if (labelIds == null || !labelIds.contains("INBOX")) {
+                if (labelIds == null
+                        || (!labelIds.contains("INBOX") && !labelIds.contains("SENT"))) {
                     continue;
                 }
 
@@ -188,6 +189,18 @@ public class GmailDeliveryProcessingService {
                             "event=mail_message_observed_published tenantId={} gmailMessageId={}",
                             tenantId,
                             gmailMessage.getId());
+                    if (labelIds.contains("SENT")) {
+                        applicationEventPublisher.publishEvent(
+                                new MailOutboundObserved(
+                                        tenantId,
+                                        gmailMessage.getThreadId(),
+                                        gmailMessage.getId(),
+                                        observedAt));
+                        log.info(
+                                "event=mail_outbound_observed_published tenantId={} gmailMessageId={}",
+                                tenantId,
+                                gmailMessage.getId());
+                    }
                 }
             }
         }
