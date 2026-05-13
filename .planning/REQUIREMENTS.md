@@ -89,8 +89,8 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 
 ### Analytics
 
-- [ ] **ANL-01**: User sees volume triaged, estimated time saved, top senders, and rule hits over a selectable window
-- [ ] **ANL-02**: All metrics derive from minimal per-message metadata only (no email bodies, prompts, or completions)
+- [x] **ANL-01**: User sees volume triaged, estimated time saved, top senders, and rule hits over a selectable window
+- [x] **ANL-02**: All metrics derive from minimal per-message metadata only (no email bodies, prompts, or completions)
 - [ ] **ANL-03**: Daily digest email summarizes triage activity for the prior day
 
 ### Web UI
@@ -198,8 +198,8 @@ Each v1 requirement maps to exactly one phase.
 | DRFT-02 | Phase 5B | Complete |
 | DRFT-03 | Phase 5B | Complete |
 | DRFT-04 | Phase 5B | Complete |
-| ANL-01 | Phase 5C | Pending |
-| ANL-02 | Phase 5C | Pending |
+| ANL-01 | Phase 5C | Complete |
+| ANL-02 | Phase 5C | Complete |
 | ANL-03 | Phase 5C | Pending |
 | WEB-01 | Phase 5A | Complete |
 | WEB-02 | Phase 5A / 5B / 5C | 5A portion done (onboarding, rules+live-preview, triage audit log+undo, billing); 5B draft-review done and `GET /api/triage/audit` built; analytics remains → 5C |
