@@ -24,7 +24,7 @@ const PUBLIC_ROUTES = [
   { path: '/login', expectedStatus: 200 },
 ] as const;
 
-const PROTECTED_ROUTES = ['/onboarding', '/settings', '/needs-reply'] as const;
+const PROTECTED_ROUTES = ['/onboarding', '/settings', '/needs-reply', '/analytics'] as const;
 
 const PLAN_06_PENDING_ROUTES = [
   { path: '/docs', expectedStatus: 200 },

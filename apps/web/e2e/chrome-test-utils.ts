@@ -3,13 +3,26 @@ import { expect, type Page, type Route } from '@playwright/test';
 type GmailConnectionStatus = 'CONNECTED' | 'DISCONNECTED' | 'NOT_CONNECTED' | 'PENDING';
 type OnboardingStep = 'GMAIL_CONNECTED' | 'TEMPLATE_SELECTED' | 'COMPLETE';
 type DraftStatus = 'NO_DRAFT' | 'DRAFT_READY' | 'DRAFT_SENT';
+type AppLocale = 'en' | 'vi';
+type AnalyticsWindow = '7d' | '30d' | '90d';
+
+type NotificationPreferences = {
+  channel: string;
+  digestEnabled: boolean;
+  digestSendHourLocal: number;
+  timeZone: string;
+};
 
 export type ChromeMockState = {
   triagePaused: boolean;
   connectionStatus: GmailConnectionStatus;
   onboardingStep: OnboardingStep;
+  preferredLanguage: AppLocale;
   availableCredits: number;
   needsReplyDraftStatus: DraftStatus;
+  notificationPreferences: NotificationPreferences;
+  analyticsRequests: string[];
+  notificationPreferenceUpdates: Array<{ digestEnabled: boolean; digestSendHourLocal: number }>;
   balanceRequests: number;
   draftRequests: string[];
   pauseRequests: Array<{ paused: boolean }>;
@@ -22,8 +35,17 @@ export function createChromeMockState(overrides: Partial<ChromeMockState> = {}):
     triagePaused: false,
     connectionStatus: 'CONNECTED',
     onboardingStep: 'COMPLETE',
+    preferredLanguage: 'en',
     availableCredits: 12,
     needsReplyDraftStatus: 'NO_DRAFT',
+    notificationPreferences: {
+      channel: 'DAILY_DIGEST',
+      digestEnabled: true,
+      digestSendHourLocal: 20,
+      timeZone: 'Asia/Ho_Chi_Minh',
+    },
+    analyticsRequests: [],
+    notificationPreferenceUpdates: [],
     balanceRequests: 0,
     draftRequests: [],
     pauseRequests: [],
@@ -31,7 +53,7 @@ export function createChromeMockState(overrides: Partial<ChromeMockState> = {}):
   };
 }
 
-export async function seedAuthenticatedSession(page: Page) {
+export async function seedAuthenticatedSession(page: Page, locale: AppLocale = 'en') {
   await page.context().addCookies([
     {
       name: 'ZEROMAIL_SESSION',
@@ -44,7 +66,7 @@ export async function seedAuthenticatedSession(page: Page) {
     },
     {
       name: 'NEXT_LOCALE',
-      value: 'en',
+      value: locale,
       domain: 'localhost',
       path: '/',
       sameSite: 'Lax',
@@ -63,7 +85,7 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
         userId: 'user-1',
         tenantId: 'tenant-1',
         email: 'founder@example.com',
-        preferredLanguage: 'en',
+        preferredLanguage: state.preferredLanguage,
         onboardingStep: state.onboardingStep,
         triagePaused: state.triagePaused,
         gmailConnectionStatus: {
@@ -72,6 +94,40 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
           googleEmail: 'founder@example.com',
         },
       });
+      return;
+    }
+
+    if (url.pathname === '/api/analytics/summary' && request.method() === 'GET') {
+      const windowParam = url.searchParams.get('window') ?? '';
+      state.analyticsRequests.push(windowParam);
+      if (!isAnalyticsWindow(windowParam)) {
+        await route.fulfill({ status: 400, body: '' });
+        return;
+      }
+      await fulfillJson(route, analyticsSummary(windowParam));
+      return;
+    }
+
+    if (url.pathname === '/api/me/notifications' && request.method() === 'GET') {
+      await fulfillJson(route, state.notificationPreferences);
+      return;
+    }
+
+    if (url.pathname === '/api/me/notifications' && request.method() === 'PATCH') {
+      const payload = request.postDataJSON() as {
+        digestEnabled: boolean;
+        digestSendHourLocal: number;
+      };
+      expect(typeof payload.digestEnabled).toBe('boolean');
+      expect(payload.digestSendHourLocal).toBeGreaterThanOrEqual(0);
+      expect(payload.digestSendHourLocal).toBeLessThanOrEqual(23);
+      state.notificationPreferenceUpdates.push(payload);
+      state.notificationPreferences = {
+        ...state.notificationPreferences,
+        digestEnabled: payload.digestEnabled,
+        digestSendHourLocal: payload.digestSendHourLocal,
+      };
+      await fulfillJson(route, state.notificationPreferences);
       return;
     }
 
@@ -183,10 +239,10 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
 
 export async function openAuthenticatedRoute(
   page: Page,
-  path: '/rules' | '/settings' | '/onboarding/gmail-connect',
+  path: '/analytics' | '/rules' | '/settings' | '/onboarding/gmail-connect',
   state: ChromeMockState,
 ) {
-  await seedAuthenticatedSession(page);
+  await seedAuthenticatedSession(page, state.preferredLanguage);
   await installChromeApiMock(page, state);
   await page.goto(path, { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('networkidle');
@@ -224,4 +280,37 @@ async function fulfillJson(route: Route, body: unknown, status = 200) {
     contentType: 'application/json',
     body: JSON.stringify(body),
   });
+}
+
+function isAnalyticsWindow(value: string): value is AnalyticsWindow {
+  return value === '7d' || value === '30d' || value === '90d';
+}
+
+function analyticsSummary(window: AnalyticsWindow) {
+  const multiplier = window === '7d' ? 1 : window === '30d' ? 2 : 3;
+  return {
+    window,
+    volumeObserved: 1500 * multiplier,
+    volumeApplied: 1247 * multiplier,
+    timeSavedSeconds: 15120 * multiplier,
+    topSenders: [
+      { senderEmail: 'founder@acme.test', count: 44 * multiplier },
+      { senderEmail: 'billing@example.com', count: 21 * multiplier },
+      { senderEmail: 'alerts@example.com', count: 12 * multiplier },
+    ],
+    ruleHits: [
+      {
+        ruleName: 'Archive receipts',
+        decisions: 30 * multiplier,
+        applied: 28 * multiplier,
+        reverted: 2,
+      },
+      {
+        ruleName: 'Draft investor updates',
+        decisions: 9 * multiplier,
+        applied: 9 * multiplier,
+        reverted: 0,
+      },
+    ],
+  };
 }

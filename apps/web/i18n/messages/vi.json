@@ -8,6 +8,54 @@
     "label": "gắn nhãn",
     "notify": "thông báo"
   },
+  "analytics": {
+    "error": {
+      "body": "Có lỗi khi tải dữ liệu này. Kiểm tra kết nối và thử lại.",
+      "retry": "Thử lại",
+      "title": "Không tải được phần này"
+    },
+    "loading": "Đang tải phân tích...",
+    "page": {
+      "description": "Những gì Zero Mail đã làm cho hộp thư của bạn trong khoảng thời gian đã chọn.",
+      "lastRefreshed": "Cập nhật {age} trước",
+      "title": "Phân tích"
+    },
+    "ruleHits": {
+      "column": {
+        "applied": "Đã áp dụng",
+        "decisions": "Quyết định",
+        "reverted": "Đã hoàn tác",
+        "rule": "Quy tắc"
+      },
+      "empty": "Chưa có quy tắc nào kích hoạt trong khoảng này.",
+      "eyebrow": "QUY TẮC ĐÃ KÍCH HOẠT",
+      "title": "Quy tắc nào đã chạy"
+    },
+    "timeSaved": {
+      "empty": "Chưa tiết kiệm thời gian trong khoảng này.",
+      "eyebrow": "THỜI GIAN TIẾT KIỆM",
+      "screenReader": "Thời gian tiết kiệm ước tính: {hours} giờ {minutes} phút.",
+      "title": "Thời gian tiết kiệm ước tính",
+      "tooltip": "Dựa trên thời gian trung bình mỗi hành động — gắn nhãn, lưu trữ, và soạn nháp tốn thời gian thực của bạn."
+    },
+    "topSenders": {
+      "empty": "Chưa có người gửi nào trong khoảng này.",
+      "eyebrow": "NGƯỜI GỬI HÀNG ĐẦU",
+      "title": "Ai bạn nghe nhiều nhất"
+    },
+    "volume": {
+      "empty": "Không có hoạt động trong khoảng này.",
+      "eyebrow": "KHỐI LƯỢNG",
+      "supplementary": "{applied} trên {observed} đã phân loại",
+      "title": "Tin đã phân loại",
+      "tooltip": "Tin đã quan sát = email Zero Mail đã thấy. Đã phân loại = email Zero Mail đã thao tác."
+    },
+    "window": {
+      "30d": "30 ngày qua",
+      "7d": "7 ngày qua",
+      "90d": "90 ngày qua"
+    }
+  },
   "auth": {
     "backToSite": "Quay lại trang chính",
     "error": {
@@ -545,6 +593,7 @@
     }
   },
   "nav": {
+    "analytics": "Phân tích",
     "beta": "beta",
     "billing": "Thanh toán",
     "continueSetup": "Tiếp tục cài đặt",
@@ -835,6 +884,29 @@
       "label": "Ngôn ngữ",
       "saveCta": "Cập nhật ngôn ngữ",
       "vi": "Tiếng Việt"
+    },
+    "notifications": {
+      "description": "Quản lý email tóm tắt hàng ngày của bạn.",
+      "sendHour": {
+        "downtimeNote": "Nếu trình gửi digest gặp sự cố đúng giờ bạn chọn, bản digest hôm đó sẽ bị bỏ qua — không có cơ chế gửi bù. Hãy chọn giờ mà hệ thống hoạt động ổn định.",
+        "helper": "Email tóm tắt được gửi khoảng giờ này theo múi giờ của bạn.",
+        "label": "Giờ gửi (giờ địa phương)"
+      },
+      "timeZone": {
+        "label": "Múi giờ: {tz}",
+        "tooltip": "Đặt tự động. Hỗ trợ nhiều múi giờ sẽ có sau."
+      },
+      "title": "Thông báo",
+      "toast": {
+        "errorTitle": "Không lưu được — Thử lại",
+        "retry": "Thử lại",
+        "savedTitle": "Đã lưu"
+      },
+      "toggle": {
+        "helperOff": "Đã tắt — bạn sẽ không nhận email tóm tắt nào.",
+        "helperOn": "Bạn sẽ nhận email tóm tắt mỗi ngày vào giờ đã chọn.",
+        "label": "Email tóm tắt hàng ngày"
+      }
     },
     "privacy": {
       "byokPlanned": "Sắp tới: bạn có thể tự cung cấp khóa API (BYOK)",
