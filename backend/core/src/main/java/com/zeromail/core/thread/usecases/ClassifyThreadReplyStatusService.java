@@ -4,7 +4,6 @@ import com.zeromail.core.gmail.event.MailOutboundObserved;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.thread.domain.ThreadReplyBucket;
 import com.zeromail.core.thread.domain.ThreadReplyStatus;
-import com.zeromail.core.thread.event.ThreadDraftSaved;
 import com.zeromail.core.thread.persistence.ThreadReplyStatusEntity;
 import com.zeromail.core.thread.persistence.ThreadReplyStatusRepository;
 import java.time.Clock;
@@ -62,20 +61,6 @@ public class ClassifyThreadReplyStatusService {
         Objects.requireNonNull(classificationInput, "classificationInput must not be null");
         return ScopedValue.where(TenantContext.TENANT, classificationInput.tenantId().toString())
                 .call(() -> classifyInTransaction(classificationInput));
-    }
-
-    @ApplicationModuleListener
-    void on(ThreadDraftSaved event) {
-        classify(
-                new ThreadReplyClassificationInput(
-                        event.tenantId(),
-                        event.gmailThreadId(),
-                        event.draftId(),
-                        false,
-                        false,
-                        true,
-                        event.draftId(),
-                        false));
     }
 
     @ApplicationModuleListener
