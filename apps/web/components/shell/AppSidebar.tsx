@@ -8,6 +8,7 @@ import {
   CreditCard,
   Inbox,
   ListChecks,
+  MailQuestion,
   Settings,
   ShieldCheck,
 } from 'lucide-react';
@@ -19,21 +20,32 @@ import {
   SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
 } from '@/components/ui/sidebar';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
+import { useToReplyCount } from '@/features/needs-reply/hooks/useToReplyCount';
+import { useHydrated } from '@/lib/use-hydrated';
 import { cn } from '@/lib/utils';
 
 type NavItem = {
   href: string;
-  labelKey: 'nav.triage' | 'nav.rules' | 'nav.billing' | 'nav.settings' | 'nav.onboardingProgress';
+  labelKey:
+    | 'nav.triage'
+    | 'nav.needsReply'
+    | 'nav.rules'
+    | 'nav.billing'
+    | 'nav.settings'
+    | 'nav.onboardingProgress';
   icon: typeof Inbox;
+  badge?: 'needs-reply';
 };
 
 const APP_NAV_ITEMS: NavItem[] = [
   { href: '/triage', labelKey: 'nav.triage', icon: Inbox },
+  { href: '/needs-reply', labelKey: 'nav.needsReply', icon: MailQuestion, badge: 'needs-reply' },
   { href: '/rules', labelKey: 'nav.rules', icon: ListChecks },
   { href: '/billing', labelKey: 'nav.billing', icon: CreditCard },
   { href: '/settings', labelKey: 'nav.settings', icon: Settings },
@@ -47,6 +59,9 @@ export function AppSidebar() {
   const pathname = usePathname();
   const t = useTranslations();
   const currentUser = useCurrentUser();
+  const toReplyCount = useToReplyCount();
+  const hydrated = useHydrated();
+  const visibleToReplyCount = hydrated ? (toReplyCount.data ?? 0) : 0;
   const onboardingStep = currentUser.data?.onboardingStep;
   const showOnboarding = Boolean(onboardingStep && onboardingStep !== 'COMPLETE');
   const navItems = showOnboarding
@@ -96,6 +111,11 @@ export function AppSidebar() {
                       <Icon className="size-4" aria-hidden="true" />
                       <span>{label}</span>
                     </SidebarMenuButton>
+                    {item.badge === 'needs-reply' && visibleToReplyCount > 0 ? (
+                      <SidebarMenuBadge className="bg-primary/10 text-primary font-mono">
+                        {visibleToReplyCount}
+                      </SidebarMenuBadge>
+                    ) : null}
                   </SidebarMenuItem>
                 );
               })}

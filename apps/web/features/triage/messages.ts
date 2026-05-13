@@ -99,6 +99,10 @@ export const triageMessages = {
     vi: 'Hoàn tác',
     en: 'Undo',
   },
+  'triage.audit.columns.actions': {
+    vi: 'Hành động',
+    en: 'Actions',
+  },
   'triage.audit.message.untitled': {
     vi: 'Email không tiêu đề',
     en: 'Untitled message',

@@ -33,7 +33,7 @@ export function AuditTable({ entries, now }: AuditTableProps) {
             <TableHead>{t('triage.audit.columns.rule')}</TableHead>
             <TableHead>{t('triage.audit.columns.action')}</TableHead>
             <TableHead>{t('triage.audit.columns.reason')}</TableHead>
-            <TableHead>{t('triage.audit.columns.undo')}</TableHead>
+            <TableHead>{t('triage.audit.columns.actions')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

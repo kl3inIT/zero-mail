@@ -916,6 +916,7 @@
       "boundary": "Cũ hơn 30 ngày - không thể hoàn tác",
       "columns": {
         "action": "Hành động",
+        "actions": "Hành động",
         "message": "Email",
         "reason": "Lý do",
         "rule": "Quy tắc",

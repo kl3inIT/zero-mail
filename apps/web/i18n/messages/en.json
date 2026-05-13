@@ -916,6 +916,7 @@
       "boundary": "Older than 30 days - undo no longer available",
       "columns": {
         "action": "Action",
+        "actions": "Actions",
         "message": "Message",
         "reason": "Reason",
         "rule": "Rule",

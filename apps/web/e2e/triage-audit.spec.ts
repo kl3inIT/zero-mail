@@ -6,18 +6,13 @@ import {
   seedAuthenticatedSession,
 } from './chrome-test-utils';
 
-// GAP: the triage-audit list endpoint does not exist in the backend as of 05A.
-// This e2e covers the real production degradation state: the audit tab renders
-// "audit history not available yet". Populated audit rows are covered by
-// AuditLog.test.tsx with injected fixture data.
-
 test.describe.configure({ mode: 'serial' });
 
 for (const viewport of [
   { name: 'desktop', width: 1280, height: 820 },
   { name: 'mobile', width: 320, height: 740 },
 ]) {
-  test(`triage audit tab renders shell and unavailable state at ${viewport.name}`, async ({
+  test(`triage audit tab renders shell and live empty state at ${viewport.name}`, async ({
     page,
   }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
@@ -25,11 +20,9 @@ for (const viewport of [
 
     await expect(page.getByTestId('chrome-header')).toBeVisible();
     await expect(page.getByTestId('balance-pill')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Triage' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Triage', exact: true })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Audit log' })).toBeVisible();
-    await expect(page.getByTestId('audit-unavailable-panel')).toContainText(
-      'Audit history is not available yet',
-    );
+    await expect(page.getByText('No triage activity yet')).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
     if (viewport.width < 768) {
@@ -46,7 +39,7 @@ for (const viewport of [
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await openTriage(page, '/triage?tab=shadow');
 
-    await expect(page.getByRole('heading', { name: 'Triage' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Triage', exact: true })).toBeVisible();
     await expect(page.getByText('Run triage as a safe rehearsal')).toBeVisible();
     await expect(page.getByTestId('shadow-mode-switch')).toBeVisible();
     await expectNoHorizontalOverflow(page);
@@ -84,6 +77,16 @@ async function installTriageApiMock(page: Page) {
 
     if (url.pathname === '/api/billing/balance' && request.method() === 'GET') {
       await fulfillJson(route, { availableCredits: 12, heldCredits: 0, currency: 'credits' });
+      return;
+    }
+
+    if (url.pathname === '/api/triage/audit' && request.method() === 'GET') {
+      await fulfillJson(route, { items: [], nextCursor: null });
+      return;
+    }
+
+    if (url.pathname === '/api/threads' && request.method() === 'GET') {
+      await fulfillJson(route, { items: [], nextCursor: null, toReplyCount: 0 });
       return;
     }
 

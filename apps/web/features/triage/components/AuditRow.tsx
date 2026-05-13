@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { GenerateDraftButton } from '@/features/needs-reply/components/GenerateDraftButton';
 import { UndoButton } from '@/features/triage/components/UndoButton';
 import type { AuditEntry } from '@/features/triage/api/triage-api';
 import { cn } from '@/lib/utils';
@@ -38,13 +39,21 @@ export function AuditRow({ entry, now }: AuditRowProps) {
         <p className="text-foreground text-sm leading-6">{entry.reason}</p>
       </TableCell>
       <TableCell>
-        {undone ? (
-          <span className="text-muted-foreground text-xs">{t('triage.audit.undo.undone')}</span>
-        ) : undoAvailable ? (
-          <UndoButton entry={entry} onUndone={() => setUndone(true)} />
-        ) : (
-          <UndoClosedLabel />
-        )}
+        <div className="flex flex-wrap items-start gap-1.5">
+          {shouldShowDraftAction(entry) ? (
+            <GenerateDraftButton
+              gmailThreadId={entry.gmailThreadId}
+              draftStatus={entry.draftId ? 'DRAFT_READY' : 'NO_DRAFT'}
+            />
+          ) : null}
+          {undone ? (
+            <span className="text-muted-foreground text-xs">{t('triage.audit.undo.undone')}</span>
+          ) : undoAvailable ? (
+            <UndoButton entry={entry} onUndone={() => setUndone(true)} />
+          ) : (
+            <UndoClosedLabel />
+          )}
+        </div>
       </TableCell>
     </TableRow>
   );
@@ -98,6 +107,13 @@ export function isUndoAvailable(entry: AuditEntry, now: Date): boolean {
 export function shouldShowUndoBoundary(entries: AuditEntry[], index: number, now: Date): boolean {
   if (index === 0) return false;
   return isUndoAvailable(entries[index - 1], now) && !isUndoAvailable(entries[index], now);
+}
+
+export function shouldShowDraftAction(entry: AuditEntry): entry is AuditEntry & {
+  gmailThreadId: string;
+} {
+  const normalizedAction = entry.action.toLowerCase().replace(/[-\s]+/g, '_');
+  return normalizedAction === 'save_draft' && Boolean(entry.gmailThreadId);
 }
 
 export function formatAuditTimestamp(timestamp: string): string {

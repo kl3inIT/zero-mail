@@ -9,7 +9,7 @@ import {
 
 test.describe.configure({ mode: 'serial' });
 
-test.fixme('needs-reply golden path saves a Gmail draft for review', async ({ page }) => {
+test('needs-reply golden path saves a Gmail draft for review', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 820 });
   await seedAuthenticatedSession(page);
   await installChromeApiMock(page, createChromeMockState());

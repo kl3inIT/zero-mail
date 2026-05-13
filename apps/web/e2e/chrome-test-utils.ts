@@ -2,13 +2,16 @@ import { expect, type Page, type Route } from '@playwright/test';
 
 type GmailConnectionStatus = 'CONNECTED' | 'DISCONNECTED' | 'NOT_CONNECTED' | 'PENDING';
 type OnboardingStep = 'GMAIL_CONNECTED' | 'TEMPLATE_SELECTED' | 'COMPLETE';
+type DraftStatus = 'NO_DRAFT' | 'DRAFT_READY' | 'DRAFT_SENT';
 
 export type ChromeMockState = {
   triagePaused: boolean;
   connectionStatus: GmailConnectionStatus;
   onboardingStep: OnboardingStep;
   availableCredits: number;
+  needsReplyDraftStatus: DraftStatus;
   balanceRequests: number;
+  draftRequests: string[];
   pauseRequests: Array<{ paused: boolean }>;
 };
 
@@ -20,7 +23,9 @@ export function createChromeMockState(overrides: Partial<ChromeMockState> = {}):
     connectionStatus: 'CONNECTED',
     onboardingStep: 'COMPLETE',
     availableCredits: 12,
+    needsReplyDraftStatus: 'NO_DRAFT',
     balanceRequests: 0,
+    draftRequests: [],
     pauseRequests: [],
     ...overrides,
   };
@@ -77,6 +82,54 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
         heldCredits: 0,
         currency: 'credits',
       });
+      return;
+    }
+
+    if (url.pathname === '/api/threads' && request.method() === 'GET') {
+      const bucket = url.searchParams.get('bucket');
+      await fulfillJson(route, {
+        items:
+          bucket === 'awaiting-their-reply'
+            ? []
+            : [
+                {
+                  gmailThreadId: 'thread-1',
+                  subject: 'Re: Q3 partnership terms',
+                  otherParty: 'priya@acme.io',
+                  lastActivityAt: '2026-05-12T10:30:00.000Z',
+                  draftStatus: state.needsReplyDraftStatus,
+                  resolved: false,
+                  openInGmailUrl: 'https://mail.google.com/mail/u/0/#all/thread-1',
+                },
+              ],
+        nextCursor: null,
+        toReplyCount: bucket === 'awaiting-their-reply' ? 0 : 1,
+      });
+      return;
+    }
+
+    if (url.pathname === '/api/triage/audit' && request.method() === 'GET') {
+      await fulfillJson(route, { items: [], nextCursor: null });
+      return;
+    }
+
+    const draftMatch = url.pathname.match(/^\/api\/threads\/([^/]+)\/draft$/);
+    if (draftMatch && request.method() === 'POST') {
+      const gmailThreadId = decodeURIComponent(draftMatch[1]);
+      state.draftRequests.push(gmailThreadId);
+      state.needsReplyDraftStatus = 'DRAFT_READY';
+      await fulfillJson(route, {
+        draftId: 'draft-1',
+        gmailThreadId,
+        status: 'GENERATED',
+        openInGmailUrl: `https://mail.google.com/mail/u/0/#all/${gmailThreadId}`,
+      });
+      return;
+    }
+
+    const resolveMatch = url.pathname.match(/^\/api\/threads\/([^/]+)\/resolve$/);
+    if (resolveMatch && request.method() === 'POST') {
+      await route.fulfill({ status: 200, body: '' });
       return;
     }
 

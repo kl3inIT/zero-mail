@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ComponentType, ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
@@ -7,7 +8,7 @@ import enMessages from '@/i18n/messages/en.json';
 
 const NEEDS_REPLY_TABLE_MODULE = '@/features/needs-reply/components/NeedsReplyTable';
 
-describe.skip('NeedsReplyTable - RED until Plan 06 lands NeedsReplyTable', () => {
+describe('NeedsReplyTable', () => {
   it('renders both buckets at zero, one, and many thread counts', async () => {
     const { NeedsReplyTable } = await loadNeedsReplyTable();
 
@@ -43,7 +44,7 @@ describe.skip('NeedsReplyTable - RED until Plan 06 lands NeedsReplyTable', () =>
         />
       </ProviderShell>,
     );
-    expect(screen.getByText(/classifying/i)).toBeInTheDocument();
+    expect(screen.getByText('Updating your needs-reply list…')).toBeInTheDocument();
     expect(screen.getByTestId('needs-reply-row')).toBeInTheDocument();
   });
 
@@ -110,7 +111,7 @@ describe.skip('NeedsReplyTable - RED until Plan 06 lands NeedsReplyTable', () =>
     );
 
     expect(screen.getByTestId('needs-reply-tabs')).toHaveAttribute('data-overflow', 'scroll');
-    expect(screen.getByRole('button', { name: 'Draft reply' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Draft reply' }).length).toBeGreaterThan(0);
   });
 });
 
@@ -125,10 +126,16 @@ function renderWithProviders(children: ReactNode) {
 }
 
 function ProviderShell({ children }: { children: ReactNode }) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+
   return (
-    <NextIntlClientProvider locale="en" messages={enMessages}>
-      {children}
-    </NextIntlClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <NextIntlClientProvider locale="en" messages={enMessages}>
+        {children}
+      </NextIntlClientProvider>
+    </QueryClientProvider>
   );
 }
 
@@ -138,6 +145,7 @@ function needsReplyRow(threadId: string, overrides: Record<string, unknown> = {}
     draftStatus: 'NO_DRAFT',
     gmailThreadId: threadId,
     lastActivityAt: '2026-05-12T10:30:00.000Z',
+    openInGmailUrl: `https://mail.google.com/mail/u/0/#all/${threadId}`,
     otherParty: 'Founding team',
     subject: `Quarterly update ${threadId}`,
     ...overrides,
