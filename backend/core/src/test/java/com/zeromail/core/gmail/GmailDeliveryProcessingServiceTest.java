@@ -25,6 +25,7 @@ import com.zeromail.core.gmail.persistence.PubSubDeliveryRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.gmail.usecases.GmailDeliveryProcessingService;
+import com.zeromail.core.shared.privacy.EmailAddressCanonicalizer;
 import com.zeromail.core.shared.privacy.Sensitive;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -55,6 +56,7 @@ class GmailDeliveryProcessingServiceTest {
         GmailApiClientFactory gmailApiClientFactory = mock(GmailApiClientFactory.class);
         RefreshTokenCipher refreshTokenCipher = mock(RefreshTokenCipher.class);
         ApplicationEventPublisher applicationEventPublisher = mock(ApplicationEventPublisher.class);
+        EmailAddressCanonicalizer emailAddressCanonicalizer = new EmailAddressCanonicalizer();
         Gmail gmail = mock(Gmail.class);
         Gmail.Users gmailUsers = mock(Gmail.Users.class);
         Gmail.Users.History gmailHistory = mock(Gmail.Users.History.class);
@@ -109,7 +111,8 @@ class GmailDeliveryProcessingServiceTest {
         when(gmailUsers.messages()).thenReturn(gmailMessages);
         when(gmailMessages.get("me", GMAIL_MESSAGE_ID)).thenReturn(messageGetRequest);
         when(messageGetRequest.setFormat("metadata")).thenReturn(messageGetRequest);
-        when(messageGetRequest.setFields("id,threadId,labelIds,internalDate"))
+        when(messageGetRequest.setMetadataHeaders(List.of("From"))).thenReturn(messageGetRequest);
+        when(messageGetRequest.setFields("id,threadId,labelIds,internalDate,payload/headers"))
                 .thenReturn(messageGetRequest);
         when(messageGetRequest.execute()).thenReturn(gmailMessage);
         when(observedRepository.insertObservedIfAbsent(
@@ -118,7 +121,8 @@ class GmailDeliveryProcessingServiceTest {
                         eq(GMAIL_THREAD_ID),
                         eq(101L),
                         any(String[].class),
-                        eq(1_779_999_999_000L)))
+                        eq(1_779_999_999_000L),
+                        eq(null)))
                 .thenReturn(1);
 
         new GmailDeliveryProcessingService(
@@ -128,7 +132,8 @@ class GmailDeliveryProcessingServiceTest {
                         connectionRepository,
                         gmailApiClientFactory,
                         refreshTokenCipher,
-                        applicationEventPublisher)
+                        applicationEventPublisher,
+                        emailAddressCanonicalizer)
                 .processDelivery(delivery);
 
         verify(historyListRequest, never()).setLabelId("INBOX");
@@ -160,6 +165,7 @@ class GmailDeliveryProcessingServiceTest {
         GmailApiClientFactory gmailApiClientFactory = mock(GmailApiClientFactory.class);
         RefreshTokenCipher refreshTokenCipher = mock(RefreshTokenCipher.class);
         ApplicationEventPublisher applicationEventPublisher = mock(ApplicationEventPublisher.class);
+        EmailAddressCanonicalizer emailAddressCanonicalizer = new EmailAddressCanonicalizer();
 
         GmailConnectionEntity connection =
                 new GmailConnectionEntity(
@@ -181,7 +187,8 @@ class GmailDeliveryProcessingServiceTest {
                         connectionRepository,
                         gmailApiClientFactory,
                         refreshTokenCipher,
-                        applicationEventPublisher)
+                        applicationEventPublisher,
+                        emailAddressCanonicalizer)
                 .processDelivery(delivery);
 
         verify(deliveryRepository).updateStatus(DELIVERY_ID, "DEAD");

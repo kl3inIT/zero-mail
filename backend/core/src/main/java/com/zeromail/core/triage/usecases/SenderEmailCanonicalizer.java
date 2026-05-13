@@ -1,29 +1,23 @@
 package com.zeromail.core.triage.usecases;
 
+import com.zeromail.core.shared.privacy.EmailAddressCanonicalizer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
-import java.util.Locale;
-import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
 @Component
 public class SenderEmailCanonicalizer {
 
-    private static final Pattern PLAUSIBLE_EMAIL_PATTERN =
-            Pattern.compile("^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9.-]+\\.[a-z]{2,}$");
+    private final EmailAddressCanonicalizer emailAddressCanonicalizer;
+
+    public SenderEmailCanonicalizer(EmailAddressCanonicalizer emailAddressCanonicalizer) {
+        this.emailAddressCanonicalizer = emailAddressCanonicalizer;
+    }
 
     public String canonicalize(String rawSenderEmail) {
-        if (rawSenderEmail == null || rawSenderEmail.isBlank()) {
-            throw new IllegalArgumentException("senderEmail must not be blank");
-        }
-        String extractedAddress = extractAddress(rawSenderEmail.trim());
-        String canonicalizedEmail = extractedAddress.toLowerCase(Locale.ROOT).trim();
-        if (!PLAUSIBLE_EMAIL_PATTERN.matcher(canonicalizedEmail).matches()) {
-            throw new IllegalArgumentException("senderEmail is malformed");
-        }
-        return canonicalizedEmail;
+        return emailAddressCanonicalizer.canonicalize(rawSenderEmail);
     }
 
     public String redisCacheKeyComponent(String canonicalizedEmail) {
@@ -36,18 +30,6 @@ public class SenderEmailCanonicalizer {
                         .replace("\\", "\\\\")
                         .replace("\"", "\\\"");
         return "\"" + safeAddress + "\"";
-    }
-
-    private static String extractAddress(String senderEmail) {
-        int leftAngle = senderEmail.lastIndexOf('<');
-        int rightAngle = senderEmail.lastIndexOf('>');
-        if (leftAngle >= 0 || rightAngle >= 0) {
-            if (leftAngle < 0 || rightAngle <= leftAngle) {
-                throw new IllegalArgumentException("senderEmail is malformed");
-            }
-            return senderEmail.substring(leftAngle + 1, rightAngle).trim();
-        }
-        return senderEmail;
     }
 
     private static String requireCanonicalizedEmail(String canonicalizedEmail) {

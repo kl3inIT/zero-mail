@@ -6,6 +6,7 @@ import com.google.api.services.gmail.model.History;
 import com.google.api.services.gmail.model.HistoryMessageAdded;
 import com.google.api.services.gmail.model.ListHistoryResponse;
 import com.google.api.services.gmail.model.Message;
+import com.google.api.services.gmail.model.MessagePartHeader;
 import com.zeromail.core.gmail.event.MailMessageObserved;
 import com.zeromail.core.gmail.event.MailOutboundObserved;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
@@ -15,6 +16,7 @@ import com.zeromail.core.gmail.persistence.MailMessageObservedRepository;
 import com.zeromail.core.gmail.persistence.PubSubDeliveryEntity;
 import com.zeromail.core.gmail.persistence.PubSubDeliveryRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
+import com.zeromail.core.shared.privacy.EmailAddressCanonicalizer;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -40,6 +42,7 @@ public class GmailDeliveryProcessingService {
     private final GmailApiClientFactory gmailApiClientFactory;
     private final RefreshTokenCipher refreshTokenCipher;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final EmailAddressCanonicalizer emailAddressCanonicalizer;
 
     public GmailDeliveryProcessingService(
             PubSubDeliveryRepository deliveryRepository,
@@ -48,7 +51,8 @@ public class GmailDeliveryProcessingService {
             GmailConnectionRepository connectionRepository,
             GmailApiClientFactory gmailApiClientFactory,
             RefreshTokenCipher refreshTokenCipher,
-            ApplicationEventPublisher applicationEventPublisher) {
+            ApplicationEventPublisher applicationEventPublisher,
+            EmailAddressCanonicalizer emailAddressCanonicalizer) {
         this.deliveryRepository = deliveryRepository;
         this.observedRepository = observedRepository;
         this.connectionService = connectionService;
@@ -56,6 +60,7 @@ public class GmailDeliveryProcessingService {
         this.gmailApiClientFactory = gmailApiClientFactory;
         this.refreshTokenCipher = refreshTokenCipher;
         this.applicationEventPublisher = applicationEventPublisher;
+        this.emailAddressCanonicalizer = emailAddressCanonicalizer;
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -160,13 +165,15 @@ public class GmailDeliveryProcessingService {
                                 .messages()
                                 .get("me", historyMessage.getId())
                                 .setFormat("metadata")
-                                .setFields("id,threadId,labelIds,internalDate")
+                                .setMetadataHeaders(List.of("From"))
+                                .setFields("id,threadId,labelIds,internalDate,payload/headers")
                                 .execute();
                 List<String> labelIds = gmailMessage.getLabelIds();
                 if (labelIds == null
                         || (!labelIds.contains("INBOX") && !labelIds.contains("SENT"))) {
                     continue;
                 }
+                String senderEmail = extractSanitizedSenderEmail(gmailMessage);
 
                 int insertedCount =
                         observedRepository.insertObservedIfAbsent(
@@ -175,7 +182,8 @@ public class GmailDeliveryProcessingService {
                                 gmailMessage.getThreadId(),
                                 history.getId().longValueExact(),
                                 labelIds.toArray(new String[0]),
-                                gmailMessage.getInternalDate());
+                                gmailMessage.getInternalDate(),
+                                senderEmail);
                 if (insertedCount == 1) {
                     newObservations++;
                     Instant observedAt = Instant.now();
@@ -205,6 +213,26 @@ public class GmailDeliveryProcessingService {
             }
         }
         return newObservations;
+    }
+
+    private String extractSanitizedSenderEmail(Message gmailMessage) {
+        if (gmailMessage.getPayload() == null || gmailMessage.getPayload().getHeaders() == null) {
+            return null;
+        }
+        return gmailMessage.getPayload().getHeaders().stream()
+                .filter(header -> "From".equalsIgnoreCase(header.getName()))
+                .map(MessagePartHeader::getValue)
+                .findFirst()
+                .flatMap(this::canonicalizeSenderEmail)
+                .orElse(null);
+    }
+
+    private java.util.Optional<String> canonicalizeSenderEmail(String rawSenderEmail) {
+        try {
+            return java.util.Optional.of(emailAddressCanonicalizer.canonicalize(rawSenderEmail));
+        } catch (IllegalArgumentException senderEmailParseFailure) {
+            return java.util.Optional.empty();
+        }
     }
 
     private String decryptRefreshToken(byte[] encryptedRefreshToken, UUID tenantId) {

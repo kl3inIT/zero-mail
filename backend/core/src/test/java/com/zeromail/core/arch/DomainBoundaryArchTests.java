@@ -52,7 +52,8 @@ public class DomainBoundaryArchTests {
                                             "..core.tenant.persistence..",
                                             "..core.billing.persistence..",
                                             "..core.llm.persistence..",
-                                            "..core.rules.persistence..")))
+                                            "..core.rules.persistence..",
+                                            "..core.notification.persistence..")))
                     .because("D-D1: cross-domain reads must go through the other domain's Service");
 
     @ArchTest
@@ -69,7 +70,8 @@ public class DomainBoundaryArchTests {
                                             "..core.tenant.persistence..",
                                             "..core.billing.persistence..",
                                             "..core.llm.persistence..",
-                                            "..core.rules.persistence..")))
+                                            "..core.rules.persistence..",
+                                            "..core.notification.persistence..")))
                     .because("D-D1: cross-domain reads must go through the other domain's Service");
 
     @ArchTest
@@ -86,7 +88,8 @@ public class DomainBoundaryArchTests {
                                             "..core.tenant.persistence..",
                                             "..core.billing.persistence..",
                                             "..core.llm.persistence..",
-                                            "..core.rules.persistence..")))
+                                            "..core.rules.persistence..",
+                                            "..core.notification.persistence..")))
                     .because("D-D1: cross-domain reads must go through the other domain's Service");
 
     @ArchTest
@@ -103,7 +106,8 @@ public class DomainBoundaryArchTests {
                                             "..core.gmail.persistence..",
                                             "..core.billing.persistence..",
                                             "..core.llm.persistence..",
-                                            "..core.rules.persistence..")))
+                                            "..core.rules.persistence..",
+                                            "..core.notification.persistence..")))
                     .because("D-D1: cross-domain reads must go through the other domain's Service");
 
     @ArchTest
@@ -120,7 +124,8 @@ public class DomainBoundaryArchTests {
                                             "..core.gmail.persistence..",
                                             "..core.tenant.persistence..",
                                             "..core.llm.persistence..",
-                                            "..core.rules.persistence..")))
+                                            "..core.rules.persistence..",
+                                            "..core.notification.persistence..")))
                     .because("D-D1: cross-domain reads must go through the other domain's Service");
 
     @ArchTest
@@ -136,7 +141,8 @@ public class DomainBoundaryArchTests {
                                             "..core.onboarding.persistence..",
                                             "..core.gmail.persistence..",
                                             "..core.tenant.persistence..",
-                                            "..core.billing.persistence..")))
+                                            "..core.billing.persistence..",
+                                            "..core.notification.persistence..")))
                     .because("D-D1: cross-domain reads must go through the other domain's Service");
 
     @ArchTest
@@ -153,8 +159,29 @@ public class DomainBoundaryArchTests {
                                             "..core.gmail.persistence..",
                                             "..core.tenant.persistence..",
                                             "..core.billing.persistence..",
-                                            "..core.llm.persistence..")))
+                                            "..core.llm.persistence..",
+                                            "..core.notification.persistence..")))
                     .because(
                             "D-D1: core.rules must read other domains through Services, not repositories")
+                    .allowEmptyShould(true);
+
+    @ArchTest
+    static final ArchRule notification_no_cross_domain_repos =
+            noClasses()
+                    .that()
+                    .resideInAPackage("..core.notification..")
+                    .should()
+                    .dependOnClassesThat(
+                            nameEndsWithRepository.and(
+                                    resideInAnyPackage(
+                                            "..core.account.persistence..",
+                                            "..core.onboarding.persistence..",
+                                            "..core.gmail.persistence..",
+                                            "..core.tenant.persistence..",
+                                            "..core.billing.persistence..",
+                                            "..core.llm.persistence..",
+                                            "..core.rules.persistence..")))
+                    .because(
+                            "D-D1: core.notification must read other domains through Services, not repositories")
                     .allowEmptyShould(true);
 }
