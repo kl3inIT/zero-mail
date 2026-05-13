@@ -199,6 +199,15 @@
       "b": "không còn lo lắng."
     }
   },
+  "dashboard": {
+    "recentActivity": "Hoạt động gần đây",
+    "stats": {
+      "connection": "Kết nối Gmail",
+      "threads": "luồng"
+    },
+    "subtitle": "Đây là tổng quan hoạt động Zero Mail của bạn.",
+    "welcome": "Xin chào"
+  },
   "deleteAccount": {
     "body": "Thao tác này xóa tenant, kết nối Gmail, lựa chọn khởi đầu, phiên đăng nhập và token đã mã hóa. Không thể hoàn tác.",
     "cancelCta": "Hủy",
@@ -548,6 +557,7 @@
     "beta": "beta",
     "billing": "Thanh toán",
     "continueSetup": "Tiếp tục cài đặt",
+    "dashboard": "Tổng quan",
     "features": "Tính năng",
     "how": "Cách hoạt động",
     "languageSelector": "Ngôn ngữ",
@@ -557,6 +567,8 @@
     "openApp": "Mở ứng dụng",
     "privacy": "Quyền riêng tư",
     "rules": "Quy tắc",
+    "sectionMail": "Thư",
+    "sectionManage": "Quản lý",
     "settings": "Cài đặt",
     "signIn": "Đăng nhập",
     "themeToDark": "Chuyển sang chế độ tối",
@@ -719,10 +731,16 @@
       "compiling": "Đang biên dịch...",
       "invalid": "Quy tắc này chưa thể lưu. Hãy sửa cách diễn đạt hoặc trả lời câu hỏi làm rõ.",
       "matcherReview": "Điều kiện khớp",
+      "newRuleCta": "Soạn quy tắc mới",
       "saveDisabledCta": "Lưu quy tắc đang tắt",
       "saving": "Đang lưu...",
       "sourceLabel": "Nội dung quy tắc",
       "sourcePlaceholder": "Ví dụ: Lưu trữ biên lai từ Stripe và gắn nhãn Finance",
+      "step": {
+        "compile": "Biên dịch",
+        "save": "Lưu",
+        "write": "Viết"
+      },
       "title": "Soạn quy tắc"
     },
     "delete": {
@@ -783,6 +801,12 @@
       "proposedActions": "Hành động dự kiến",
       "sampled": "{count} thư đã lấy mẫu",
       "sampleSize": "Cỡ mẫu",
+      "stat": {
+        "conflicts": "Xung đột",
+        "deferred": "Trì hoãn",
+        "matched": "Đã khớp",
+        "sampled": "Đã lấy mẫu"
+      },
       "title": "Chạy thử an toàn"
     },
     "q": {
@@ -805,6 +829,7 @@
       "recruiters": "Nhà tuyển dụng"
     },
     "templates": {
+      "browseCta": "Xem template khởi đầu",
       "disabledByDefault": "Lưu ở trạng thái tắt cho đến khi chạy thử",
       "materialized": "Đã tạo",
       "title": "Template khởi đầu",

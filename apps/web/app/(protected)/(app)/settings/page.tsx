@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { Check, Globe, Inbox, Mail, ShieldCheck, TriangleAlert, UserCircle } from 'lucide-react';
 
 import { ConnectionHealthBadge } from '@/features/gmail/components/ConnectionHealthBadge';
 import { DeleteAccountDialog } from '@/features/account/components/DeleteAccountDialog';
@@ -40,26 +41,6 @@ function isGmailConnectionStatus(value: string | undefined): value is GmailConne
   );
 }
 
-/**
- * /settings (client). Phase 01.5 Plan 02 — deflated from PageShell/SectionCard
- * to raw shadcn Card chains (D-C1, D-C2).
- *
- * Design intent (Plan 04):
- *  - Section rhythm: max-w-2xl (tighter than max-w-3xl for form-heavy pages),
- *    space-y-4 between cards (tighter than space-y-6 — settings feel dense, not airy).
- *  - Language card: added CardHeader + CardTitle for consistent section heading
- *    hierarchy with other sections.
- *  - gmailConnection CardFooter: text-xs (down from text-sm) to subordinate the
- *    single-account note clearly below the connection status content.
- *  - Privacy section: CardDescription for intro line, list remains as items.
- *  - dangerZone: border-destructive/40 (up from /30) — clearer visual separation
- *    without using a filled background. Separator above provides gap.
- *  - Danger zone actions: flex-wrap gap-3, kept as-is per existing behavior.
- *
- * Five sections: account, language, gmailConnection (with CardFooter single-
- * account-note per D-D5), privacy, dangerZone. Separator preserved. All hooks,
- * click handlers, and behavior unchanged.
- */
 export default function SettingsPage() {
   const t = useTranslations();
   const me = useCurrentUser();
@@ -81,94 +62,132 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 p-4 sm:p-6">
-      {/* Account */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('settings.account.heading')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-foreground text-sm">{me.data?.email ?? t('common.loading')}</p>
-        </CardContent>
-      </Card>
+    <div className="mx-auto w-full max-w-6xl space-y-4 p-4 md:p-6">
+      {/* Row 1: Account + Language */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Account */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserCircle className="text-muted-foreground size-4" aria-hidden="true" />
+              {t('settings.account.heading')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
+                {me.data?.email?.[0]?.toUpperCase() ?? '?'}
+              </div>
+              <p className="text-foreground text-sm">{me.data?.email ?? t('common.loading')}</p>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Language */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>{t('settings.language.label')}</CardTitle>
-          <CardDescription>{t('settings.language.helper')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <LanguageSwitcher currentLocale={preferredLanguage} authenticated={true} variant="row" />
-        </CardContent>
-      </Card>
+        {/* Language */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <Globe className="text-muted-foreground size-4" aria-hidden="true" />
+              {t('settings.language.label')}
+            </CardTitle>
+            <CardDescription>{t('settings.language.helper')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LanguageSwitcher
+              currentLocale={preferredLanguage}
+              authenticated={true}
+              variant="row"
+            />
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Gmail connection */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('settings.gmailConnection.heading')}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center gap-3">
-            <ConnectionHealthBadge status={connStatus} />
-          </div>
-          <ReconnectPromptGate
-            status={connStatus}
-            ingestionHealth={ingestionHealth}
-            onReconnect={reconnect}
-          />
-          {connStatus === 'NOT_CONNECTED' && (
-            // CR-03 fix: GET navigation — no CSRF needed; endpoint is now @GetMapping.
-            <Button
-              onClick={() => {
-                window.location.href = getApiUrl('/tenant/connect-gmail');
-              }}
-            >
-              {t('onboarding.connect.cta')}
-            </Button>
-          )}
-        </CardContent>
-        <CardFooter>
-          <p className="text-muted-foreground text-xs">
-            {t('settings.gmailConnection.singleAccountNote')}
-          </p>
-        </CardFooter>
-      </Card>
+      {/* Row 2: Gmail connection + Automated triage */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Gmail connection */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="text-muted-foreground size-4" aria-hidden="true" />
+              {t('settings.gmailConnection.heading')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-3">
+              <ConnectionHealthBadge status={connStatus} />
+            </div>
+            <ReconnectPromptGate
+              status={connStatus}
+              ingestionHealth={ingestionHealth}
+              onReconnect={reconnect}
+            />
+            {connStatus === 'NOT_CONNECTED' && (
+              <Button
+                onClick={() => {
+                  window.location.href = getApiUrl('/tenant/connect-gmail');
+                }}
+              >
+                {t('onboarding.connect.cta')}
+              </Button>
+            )}
+          </CardContent>
+          <CardFooter>
+            <p className="text-muted-foreground text-xs">
+              {t('settings.gmailConnection.singleAccountNote')}
+            </p>
+          </CardFooter>
+        </Card>
 
-      {/* Automated triage */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('settings.triage.pause.title')}</CardTitle>
-          <CardDescription>{t('settings.triage.pause.body')}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex items-center justify-between gap-4">
-          <span className="text-foreground text-sm font-medium">
-            {t('settings.triage.pause.toggleLabel')}
-          </span>
-          <Switch
-            checked={!triagePaused}
-            aria-label={t('settings.triage.pause.toggleLabel')}
-            disabled={pauseState.isLoading || togglePause.isPending}
-            onCheckedChange={(running) => togglePause.mutate(!running)}
-            className="data-unchecked:bg-warning/80"
-            data-testid="settings-pause-switch"
-          />
-        </CardContent>
-      </Card>
+        {/* Automated triage */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Inbox className="text-muted-foreground size-4" aria-hidden="true" />
+              {t('settings.triage.pause.title')}
+            </CardTitle>
+            <CardDescription>{t('settings.triage.pause.body')}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between gap-4">
+            <span className="text-foreground text-sm font-medium">
+              {t('settings.triage.pause.toggleLabel')}
+            </span>
+            <Switch
+              checked={!triagePaused}
+              aria-label={t('settings.triage.pause.toggleLabel')}
+              disabled={pauseState.isLoading || togglePause.isPending}
+              onCheckedChange={(running) => togglePause.mutate(!running)}
+              className="data-unchecked:bg-warning/80"
+              data-testid="settings-pause-switch"
+            />
+          </CardContent>
+        </Card>
+      </div>
 
       <ByokForm />
 
       {/* Privacy */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('settings.privacy.heading')}</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldCheck className="text-muted-foreground size-4" aria-hidden="true" />
+            {t('settings.privacy.heading')}
+          </CardTitle>
           <CardDescription>{t('privacy.settingsLink.body')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <ul className="text-muted-foreground space-y-1.5 text-sm">
-            <li>{t('settings.privacy.noBodyStorage')}</li>
-            <li>{t('settings.privacy.noAutoSend')}</li>
-            <li>{t('settings.privacy.revokeAnytime')}</li>
+          <ul className="text-muted-foreground space-y-2 text-sm">
+            <li className="flex items-start gap-2">
+              <Check className="text-primary mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+              <span>{t('settings.privacy.noBodyStorage')}</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Check className="text-primary mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+              <span>{t('settings.privacy.noAutoSend')}</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Check className="text-primary mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+              <span>{t('settings.privacy.revokeAnytime')}</span>
+            </li>
           </ul>
           <Link
             href="/settings/privacy"
@@ -182,9 +201,12 @@ export default function SettingsPage() {
       <Separator />
 
       {/* Danger zone */}
-      <Card className="border-destructive/40">
+      <Card className="border-destructive/40 bg-destructive/5">
         <CardHeader>
-          <CardTitle className="text-destructive">{t('settings.dangerZone.heading')}</CardTitle>
+          <CardTitle className="text-destructive flex items-center gap-2">
+            <TriangleAlert className="size-4" aria-hidden="true" />
+            {t('settings.dangerZone.heading')}
+          </CardTitle>
           <CardDescription>{t('deleteAccount.body')}</CardDescription>
         </CardHeader>
         <CardContent>

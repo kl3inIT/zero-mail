@@ -42,6 +42,7 @@ type Props = {
   onEditRule: (rule: RuleResponse) => void;
   onToggleEnabled: (rule: RuleResponse) => void;
   onDeleteRule: (rule: RuleResponse) => void;
+  action?: ReactNode;
 };
 
 export function RuleList({
@@ -55,20 +56,23 @@ export function RuleList({
   onEditRule,
   onToggleEnabled,
   onDeleteRule,
+  action,
 }: Props) {
   const t = useTranslations();
 
   return (
-    <section className="bg-card rounded-xl border p-3">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-semibold">{t('rules.list.title')}</h2>
-          <p className="text-muted-foreground text-sm">{t('rules.page.safetyNote')}</p>
+    <section className="bg-background overflow-hidden rounded-xl border">
+      <div className="bg-muted/20 border-b p-4">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-semibold tracking-tight">{t('rules.list.title')}</h2>
+          {action && <div className="flex-shrink-0">{action}</div>}
         </div>
       </div>
 
       {isLoading ? (
-        <LoadingState count={2} />
+        <div className="space-y-4 p-4">
+          <LoadingState count={3} />
+        </div>
       ) : rules.length === 0 ? (
         <EmptyState
           heading={t('rules.list.empty.heading')}
@@ -77,7 +81,7 @@ export function RuleList({
         />
       ) : (
         <TooltipProvider>
-          <ol className="space-y-2">
+          <ol className="divide-border divide-y">
             {rules.map((rule, index) => {
               const ruleId = rule.ruleId ?? `rule-${index}`;
               const selected = selectedRuleId === rule.ruleId;
@@ -90,135 +94,153 @@ export function RuleList({
                 <li
                   key={ruleId}
                   className={cn(
-                    'grid min-h-20 grid-cols-[auto_1fr] gap-2 rounded-lg border p-2 transition-colors',
-                    selected ? 'border-primary bg-accent-soft/60' : 'bg-background',
+                    'group relative flex cursor-pointer items-center gap-2 border-l-4 px-4 py-3 transition-all',
+                    selected
+                      ? 'border-l-[#0a3d3a] bg-[#E7F0EF] hover:bg-[#E7F0EF]/80'
+                      : 'hover:bg-muted/50 border-l-transparent bg-transparent',
                   )}
+                  onClick={() => onSelectRule(rule)}
                 >
-                  <button
-                    type="button"
-                    className="text-muted-foreground hover:bg-muted flex min-h-11 min-w-11 items-center justify-center rounded-md"
-                    aria-label={rule.displayName ?? t('rules.list.title')}
-                    onClick={() => onSelectRule(rule)}
-                  >
-                    <GripVertical className="size-4" aria-hidden="true" />
-                  </button>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <h3
+                          className={cn(
+                            'truncate text-sm leading-tight font-bold',
+                            selected ? 'text-[#0a3d3a]' : 'text-foreground',
+                          )}
+                        >
+                          {rule.displayName ?? t('rules.composer.title')}
+                        </h3>
+                        <p
+                          className={cn(
+                            'mt-0.5 truncate text-xs leading-tight italic',
+                            selected ? 'text-[#0a3d3a]/70' : 'text-muted-foreground',
+                          )}
+                        >
+                          {rule.sourceText}
+                        </p>
+                      </div>
 
-                  <div className="min-w-0 space-y-2">
-                    <button
-                      type="button"
-                      className="block w-full min-w-0 text-left"
-                      onClick={() => onSelectRule(rule)}
-                    >
-                      <span className="block truncate text-sm font-medium">
-                        {rule.displayName ?? t('rules.composer.title')}
-                      </span>
-                      <span className="text-muted-foreground block truncate text-xs">
-                        {rule.sourceText}
-                      </span>
-                    </button>
+                      <div
+                        className="flex items-center gap-0.5 opacity-0 transition-all duration-200 group-hover:opacity-100"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <IconAction
+                          label={t('rules.list.moveUp')}
+                          disabled={!canMoveUp || pending}
+                          onClick={() => onMoveRule(rule, 'up')}
+                        >
+                          <ArrowUp className="size-3.5" />
+                        </IconAction>
+                        <IconAction
+                          label={t('rules.list.moveDown')}
+                          disabled={!canMoveDown || pending}
+                          onClick={() => onMoveRule(rule, 'down')}
+                        >
+                          <ArrowDown className="size-3.5" />
+                        </IconAction>
+                        <div className="bg-border/60 mx-1 h-3.5 w-px" />
+                        <IconAction
+                          label={t('rules.list.edit')}
+                          disabled={pending}
+                          onClick={() => onEditRule(rule)}
+                        >
+                          <Edit3 className="size-3.5" />
+                        </IconAction>
+                        <IconAction
+                          label={
+                            rule.enabled
+                              ? t('rules.preview.disableCta')
+                              : t('rules.preview.enableCta')
+                          }
+                          disabled={pending || (!rule.enabled && !canEnableRule(rule))}
+                          onClick={() => onToggleEnabled(rule)}
+                        >
+                          {pending ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : rule.enabled ? (
+                            <PowerOff className="size-3.5" />
+                          ) : (
+                            <Power className="size-3.5" />
+                          )}
+                        </IconAction>
+                        <Dialog>
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <DialogTrigger
+                                  render={
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="text-destructive hover:bg-destructive/10 size-7 rounded-full"
+                                      disabled={pending}
+                                    />
+                                  }
+                                />
+                              }
+                            >
+                              <Trash2 className="size-3.5" />
+                            </TooltipTrigger>
+                            <TooltipContent>{t('rules.list.delete')}</TooltipContent>
+                          </Tooltip>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>{t('rules.delete.title')}</DialogTitle>
+                              <DialogDescription>{t('rules.delete.body')}</DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                              <DialogClose render={<Button type="button" variant="outline" />}>
+                                {t('rules.delete.dismiss')}
+                              </DialogClose>
+                              <DialogClose
+                                render={<Button type="button" variant="destructive" />}
+                                onClick={() => onDeleteRule(rule)}
+                              >
+                                {t('rules.delete.confirm')}
+                              </DialogClose>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    </div>
 
-                    <div className="flex flex-wrap gap-1.5">
-                      <Badge
-                        variant={rule.enabled ? 'default' : 'outline'}
-                        className={rule.enabled ? 'bg-green text-white' : ''}
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <div
+                        className={cn(
+                          'size-1.5 rounded-full',
+                          rule.enabled ? 'bg-[var(--green)]' : 'bg-muted-foreground/30',
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          'text-[10px] font-medium',
+                          rule.enabled ? 'text-[var(--green)]' : 'text-muted-foreground',
+                        )}
                       >
                         {rule.enabled ? t('rules.list.enabled') : t('rules.list.disabled')}
-                      </Badge>
+                      </span>
+
                       {rule.templateKey && (
-                        <Badge variant="outline">
+                        <Badge
+                          variant="secondary"
+                          className="bg-muted h-4 rounded-sm px-1.5 py-0 text-[9px] font-medium"
+                        >
                           {rule.customized
                             ? t('rules.list.customizedBadge')
                             : t('rules.list.templateBadge')}
                         </Badge>
                       )}
-                      <Badge
-                        variant="outline"
-                        className={previewReady ? 'border-green/30 text-green' : ''}
-                      >
-                        {previewReady
-                          ? t('rules.list.previewReady')
-                          : t('rules.list.previewRequired')}
-                      </Badge>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1">
-                      <IconAction
-                        label={t('rules.list.moveUp')}
-                        disabled={!canMoveUp || pending}
-                        onClick={() => onMoveRule(rule, 'up')}
-                      >
-                        <ArrowUp className="size-4" aria-hidden="true" />
-                      </IconAction>
-                      <IconAction
-                        label={t('rules.list.moveDown')}
-                        disabled={!canMoveDown || pending}
-                        onClick={() => onMoveRule(rule, 'down')}
-                      >
-                        <ArrowDown className="size-4" aria-hidden="true" />
-                      </IconAction>
-                      <IconAction
-                        label={t('rules.list.edit')}
-                        disabled={pending}
-                        onClick={() => onEditRule(rule)}
-                      >
-                        <Edit3 className="size-4" aria-hidden="true" />
-                      </IconAction>
-                      <IconAction
-                        label={
-                          rule.enabled
-                            ? t('rules.preview.disableCta')
-                            : t('rules.preview.enableCta')
-                        }
-                        disabled={pending || (!rule.enabled && !canEnableRule(rule))}
-                        onClick={() => onToggleEnabled(rule)}
-                      >
-                        {pending ? (
-                          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                        ) : rule.enabled ? (
-                          <PowerOff className="size-4" aria-hidden="true" />
-                        ) : (
-                          <Power className="size-4" aria-hidden="true" />
-                        )}
-                      </IconAction>
-                      <Dialog>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <DialogTrigger
-                                render={
-                                  <Button
-                                    type="button"
-                                    variant="destructive"
-                                    size="icon-lg"
-                                    aria-label={t('rules.list.delete')}
-                                    disabled={pending}
-                                  />
-                                }
-                              />
-                            }
-                          >
-                            <Trash2 className="size-4" aria-hidden="true" />
-                          </TooltipTrigger>
-                          <TooltipContent>{t('rules.list.delete')}</TooltipContent>
-                        </Tooltip>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>{t('rules.delete.title')}</DialogTitle>
-                            <DialogDescription>{t('rules.delete.body')}</DialogDescription>
-                          </DialogHeader>
-                          <DialogFooter>
-                            <DialogClose render={<Button type="button" variant="outline" />}>
-                              {t('rules.delete.dismiss')}
-                            </DialogClose>
-                            <DialogClose
-                              render={<Button type="button" variant="destructive" />}
-                              onClick={() => onDeleteRule(rule)}
-                            >
-                              {t('rules.delete.confirm')}
-                            </DialogClose>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
+                      {previewReady && (
+                        <Badge
+                          variant="outline"
+                          className="h-4 rounded-sm border-[var(--green)]/30 bg-[var(--green-soft)] px-1.5 py-0 text-[9px] font-medium text-[var(--green)]"
+                        >
+                          {t('rules.list.previewReady')}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </li>
@@ -248,8 +270,9 @@ function IconAction({
         render={
           <Button
             type="button"
-            variant="outline"
-            size="icon-lg"
+            variant="ghost"
+            size="icon"
+            className="size-7 rounded-full"
             aria-label={label}
             disabled={disabled}
             onClick={onClick}

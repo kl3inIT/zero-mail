@@ -60,7 +60,10 @@ function SenderSafetyNetView({ senders }: { senders: ProtectedSenderResponse[] }
             body={t('triage.senders.empty.body')}
           />
         ) : (
-          <div className="divide-border rounded-lg border" data-testid="sender-safety-net-list">
+          <div
+            className="divide-[#0a3d3a]/10 rounded-xl border border-[#0a3d3a]/15 bg-[#0a3d3a]/[0.02]"
+            data-testid="sender-safety-net-list"
+          >
             {senders.map((sender, index) => (
               <SenderRow key={sender.senderEmail ?? `unknown-sender-${index}`} sender={sender} />
             ))}

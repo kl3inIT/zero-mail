@@ -14,6 +14,7 @@ import org.springframework.modulith.Modulithic;
 @EnableJpaRepositories(basePackages = "com.zeromail.core")
 public class ZeroMailApiApplication {
     public static void main(String[] args) {
+        java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("UTC"));
         SpringApplication.run(ZeroMailApiApplication.class, args);
     }
 }

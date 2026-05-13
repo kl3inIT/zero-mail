@@ -2,8 +2,10 @@
 
 import { useLocale, useTranslations } from 'next-intl';
 import { useRef, useState } from 'react';
+import { KeyRound } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 
+import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -300,7 +302,10 @@ export function ByokForm() {
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 space-y-1">
-              <CardTitle>{t('llm.byok.title')}</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <KeyRound className="text-muted-foreground size-4" aria-hidden="true" />
+                {t('llm.byok.title')}
+              </CardTitle>
               <CardDescription>{t('llm.byok.description')}</CardDescription>
             </div>
             {existingConfig && (
@@ -312,10 +317,10 @@ export function ByokForm() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="bg-muted/40 text-muted-foreground rounded-lg border p-3 text-xs">
+          <div className="rounded-xl border border-[#0a3d3a]/20 bg-[#E7F0EF] p-3 text-xs text-[#0a3d3a]">
             {existingConfig ? (
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="text-foreground font-medium">
+                <span className="font-bold">
                   {t(
                     providerLabelKey(
                       existingConfig.provider as ByokProvider,
@@ -324,114 +329,116 @@ export function ByokForm() {
                   )}
                 </span>
                 {existingConfig.endpointHost && (
-                  <span className="max-w-full overflow-hidden text-ellipsis">
+                  <span className="max-w-full overflow-hidden text-ellipsis opacity-80">
                     {existingConfig.endpointHost}
                   </span>
                 )}
                 {existingConfig.model && (
-                  <span className="max-w-full overflow-hidden text-ellipsis">
+                  <span className="max-w-full overflow-hidden text-ellipsis opacity-80">
                     {existingConfig.model}
                   </span>
                 )}
-                {savedAtLabel && <time dateTime={savedAt ?? undefined}>{savedAtLabel}</time>}
-                <span>{t('llm.byok.existing.creditNote')}</span>
+                {savedAtLabel && (
+                  <time className="opacity-60" dateTime={savedAt ?? undefined}>
+                    {savedAtLabel}
+                  </time>
+                )}
+                <span className="opacity-60">{t('llm.byok.existing.creditNote')}</span>
               </div>
             ) : (
               <div className="space-y-1">
-                <p className="text-foreground font-medium">{t('llm.byok.empty.heading')}</p>
-                <p>{t('llm.byok.empty.body')}</p>
+                <p className="font-bold">{t('llm.byok.empty.heading')}</p>
+                <p className="opacity-80">{t('llm.byok.empty.body')}</p>
               </div>
             )}
           </div>
 
           <div className="space-y-3">
-            <div className="space-y-2">
-              <Label>{t('llm.byok.provider.label')}</Label>
-              <RadioGroup
-                value={preset}
-                onValueChange={(value) => {
-                  if (!isByokProviderPreset(value)) return;
-                  setPreset(value);
-                  setEndpoint('');
-                  setModel(defaultModelForPreset(value));
-                  markEdited();
-                }}
-                className="grid gap-2"
-                aria-label={t('llm.byok.provider.label')}
-                disabled={isBusy}
-              >
-                <div className="space-y-2">
-                  <p className="text-muted-foreground text-xs font-medium">
-                    {t('llm.byok.provider.officialGroup')}
-                  </p>
-                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+            <Label className="px-1 text-[10px] font-bold tracking-wider text-[#0a3d3a]/70 uppercase">
+              {t('llm.byok.provider.label')}
+            </Label>
+            <RadioGroup
+              value={preset}
+              onValueChange={(value) => {
+                if (!isByokProviderPreset(value)) return;
+                setPreset(value);
+                setEndpoint('');
+                setModel(defaultModelForPreset(value));
+                markEdited();
+              }}
+              className="grid gap-4"
+              aria-label={t('llm.byok.provider.label')}
+              disabled={isBusy}
+            >
+              <div className="space-y-2">
+                <p className="text-muted-foreground px-1 text-[10px] font-bold tracking-wider uppercase">
+                  {t('llm.byok.provider.officialGroup')}
+                </p>
+                <div className="grid gap-2 rounded-2xl border border-[#0a3d3a]/15 bg-[#0a3d3a]/[0.03] p-2.5 sm:grid-cols-2 lg:grid-cols-5">
+                  {[
+                    { id: 'openrouter', label: 'openrouter' },
+                    { id: 'openai', label: 'openai' },
+                    { id: 'anthropic', label: 'anthropic' },
+                    { id: 'google-genai', label: 'googleGenAi' },
+                    { id: 'deepseek', label: 'deepseek' },
+                  ].map((item) => (
                     <Label
-                      htmlFor="byok-provider-openrouter"
-                      className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                      key={item.id}
+                      htmlFor={`byok-provider-${item.id}`}
+                      className={cn(
+                        'flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-200',
+                        preset === item.id
+                          ? 'border-[#0a3d3a] bg-white text-[#0a3d3a] shadow-sm'
+                          : 'text-muted-foreground border-transparent bg-transparent hover:bg-[#0a3d3a]/10',
+                      )}
                     >
-                      <RadioGroupItem id="byok-provider-openrouter" value="openrouter" />
-                      {t('llm.byok.provider.openrouter')}
+                      <RadioGroupItem
+                        id={`byok-provider-${item.id}`}
+                        value={item.id}
+                        className={cn(
+                          'size-3.5 border-[#0a3d3a]/30',
+                          preset === item.id && 'border-[#0a3d3a] text-[#0a3d3a]',
+                        )}
+                      />
+                      {t(`llm.byok.provider.${item.label}`)}
                     </Label>
-                    <Label
-                      htmlFor="byok-provider-openai"
-                      className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
-                    >
-                      <RadioGroupItem id="byok-provider-openai" value="openai" />
-                      {t('llm.byok.provider.openai')}
-                    </Label>
-                    <Label
-                      htmlFor="byok-provider-anthropic"
-                      className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
-                    >
-                      <RadioGroupItem id="byok-provider-anthropic" value="anthropic" />
-                      {t('llm.byok.provider.anthropic')}
-                    </Label>
-                    <Label
-                      htmlFor="byok-provider-google-genai"
-                      className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
-                    >
-                      <RadioGroupItem id="byok-provider-google-genai" value="google-genai" />
-                      {t('llm.byok.provider.googleGenAi')}
-                    </Label>
-                    <Label
-                      htmlFor="byok-provider-deepseek"
-                      className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
-                    >
-                      <RadioGroupItem id="byok-provider-deepseek" value="deepseek" />
-                      {t('llm.byok.provider.deepseek')}
-                    </Label>
-                  </div>
+                  ))}
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <p className="text-muted-foreground text-xs font-medium">
-                    {t('llm.byok.provider.compatibleGroup')}
-                  </p>
-                  <div className="grid gap-2 sm:grid-cols-2">
+              <div className="space-y-2">
+                <p className="text-muted-foreground px-1 text-[10px] font-bold tracking-wider uppercase">
+                  {t('llm.byok.provider.compatibleGroup')}
+                </p>
+                <div className="grid gap-2 rounded-2xl border border-[#0a3d3a]/15 bg-[#0a3d3a]/[0.03] p-2.5 sm:grid-cols-2">
+                  {[
+                    { id: 'openai-compatible', label: 'openaiCompatible' },
+                    { id: 'anthropic-compatible', label: 'anthropicCompatible' },
+                  ].map((item) => (
                     <Label
-                      htmlFor="byok-provider-openai-compatible"
-                      className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                      key={item.id}
+                      htmlFor={`byok-provider-${item.id}`}
+                      className={cn(
+                        'flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-200',
+                        preset === item.id
+                          ? 'border-[#0a3d3a] bg-white text-[#0a3d3a] shadow-sm'
+                          : 'text-muted-foreground border-transparent bg-transparent hover:bg-[#0a3d3a]/10',
+                      )}
                     >
                       <RadioGroupItem
-                        id="byok-provider-openai-compatible"
-                        value="openai-compatible"
+                        id={`byok-provider-${item.id}`}
+                        value={item.id}
+                        className={cn(
+                          'size-3.5 border-[#0a3d3a]/30',
+                          preset === item.id && 'border-[#0a3d3a] text-[#0a3d3a]',
+                        )}
                       />
-                      {t('llm.byok.provider.openaiCompatible')}
+                      {t(`llm.byok.provider.${item.label}`)}
                     </Label>
-                    <Label
-                      htmlFor="byok-provider-anthropic-compatible"
-                      className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
-                    >
-                      <RadioGroupItem
-                        id="byok-provider-anthropic-compatible"
-                        value="anthropic-compatible"
-                      />
-                      {t('llm.byok.provider.anthropicCompatible')}
-                    </Label>
-                  </div>
+                  ))}
                 </div>
-              </RadioGroup>
-            </div>
+              </div>
+            </RadioGroup>
 
             {endpointRequired && (
               <div className="space-y-2">

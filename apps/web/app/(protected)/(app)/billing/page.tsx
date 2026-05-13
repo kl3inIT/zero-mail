@@ -11,16 +11,13 @@ export default async function BillingPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-5 p-4 md:p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-foreground text-xl font-semibold">{t('billing.page.title')}</h1>
-          <p className="text-muted-foreground max-w-3xl text-sm leading-6">
-            {t('billing.page.description')}
-          </p>
-        </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-muted-foreground max-w-3xl text-sm leading-6">
+          {t('billing.page.description')}
+        </p>
         <Link
           href="/billing/top-up"
-          className={buttonVariants({ variant: 'accent', className: 'w-full sm:w-auto' })}
+          className={buttonVariants({ variant: 'accent', className: 'w-full shrink-0 sm:w-auto' })}
         >
           <CreditCard className="size-4" aria-hidden="true" />
           {t('billing.balance.topupCta')}

@@ -111,9 +111,25 @@ export const rulesMessages = {
     vi: 'Hành động dự kiến',
     en: 'Actions',
   },
+  'rules.composer.step.write': {
+    vi: 'Viết',
+    en: 'Write',
+  },
+  'rules.composer.step.compile': {
+    vi: 'Biên dịch',
+    en: 'Compile',
+  },
+  'rules.composer.step.save': {
+    vi: 'Lưu',
+    en: 'Save',
+  },
   'rules.composer.invalid': {
     vi: 'Quy tắc này chưa thể lưu. Hãy sửa cách diễn đạt hoặc trả lời câu hỏi làm rõ.',
     en: 'This rule is not ready to save. Edit the wording or answer the clarification.',
+  },
+  'rules.composer.newRuleCta': {
+    vi: 'Soạn quy tắc mới',
+    en: 'New rule',
   },
   'rules.preview.title': {
     vi: 'Chạy thử an toàn',
@@ -191,6 +207,22 @@ export const rulesMessages = {
     vi: 'Bằng chứng khớp',
     en: 'Evidence',
   },
+  'rules.preview.stat.sampled': {
+    vi: 'Đã lấy mẫu',
+    en: 'Sampled',
+  },
+  'rules.preview.stat.matched': {
+    vi: 'Đã khớp',
+    en: 'Matched',
+  },
+  'rules.preview.stat.deferred': {
+    vi: 'Trì hoãn',
+    en: 'Deferred',
+  },
+  'rules.preview.stat.conflicts': {
+    vi: 'Xung đột',
+    en: 'Conflicts',
+  },
   'rules.templates.title': {
     vi: 'Template khởi đầu',
     en: 'Starter templates',
@@ -206,6 +238,10 @@ export const rulesMessages = {
   'rules.templates.disabledByDefault': {
     vi: 'Lưu ở trạng thái tắt cho đến khi chạy thử',
     en: 'Saved disabled until previewed',
+  },
+  'rules.templates.browseCta': {
+    vi: 'Xem template khởi đầu',
+    en: 'Browse templates',
   },
   'rules.delete.title': {
     vi: 'Xóa quy tắc này?',

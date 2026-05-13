@@ -47,11 +47,13 @@ describe('RulesWorkspace Wave 0 contract', () => {
         insufficientCreditError={null}
         isCompiling={false}
         isSaving={false}
+        canPreview={false}
         onSourceTextChange={vi.fn()}
         onClarificationAnswerChange={vi.fn()}
         onCompile={vi.fn()}
         onAnswerClarification={vi.fn()}
         onSaveDisabledRule={vi.fn()}
+        onOpenPreview={vi.fn()}
       />,
     );
 

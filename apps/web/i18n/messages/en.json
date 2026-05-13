@@ -199,6 +199,15 @@
       "b": "without the anxiety."
     }
   },
+  "dashboard": {
+    "recentActivity": "Recent activity",
+    "stats": {
+      "connection": "Gmail connection",
+      "threads": "threads"
+    },
+    "subtitle": "Here is an overview of your Zero Mail activity.",
+    "welcome": "Hello"
+  },
   "deleteAccount": {
     "body": "This removes your tenant, Gmail connection, onboarding selections, sessions, and encrypted tokens. This cannot be undone.",
     "cancelCta": "Cancel",
@@ -548,6 +557,7 @@
     "beta": "beta",
     "billing": "Billing",
     "continueSetup": "Continue setup",
+    "dashboard": "Dashboard",
     "features": "Features",
     "how": "How it works",
     "languageSelector": "Language",
@@ -557,6 +567,8 @@
     "openApp": "Open app",
     "privacy": "Privacy",
     "rules": "Rules",
+    "sectionMail": "Mail",
+    "sectionManage": "Manage",
     "settings": "Settings",
     "signIn": "Sign in",
     "themeToDark": "Switch to dark mode",
@@ -719,10 +731,16 @@
       "compiling": "Compiling...",
       "invalid": "This rule is not ready to save. Edit the wording or answer the clarification.",
       "matcherReview": "Matchers",
+      "newRuleCta": "New rule",
       "saveDisabledCta": "Save disabled rule",
       "saving": "Saving...",
       "sourceLabel": "Rule text",
       "sourcePlaceholder": "Example: Archive receipts from Stripe and label them Finance",
+      "step": {
+        "compile": "Compile",
+        "save": "Save",
+        "write": "Write"
+      },
       "title": "Rule composer"
     },
     "delete": {
@@ -783,6 +801,12 @@
       "proposedActions": "Proposed actions",
       "sampled": "{count} sampled",
       "sampleSize": "Sample size",
+      "stat": {
+        "conflicts": "Conflicts",
+        "deferred": "Deferred",
+        "matched": "Matched",
+        "sampled": "Sampled"
+      },
       "title": "Safe preview"
     },
     "q": {
@@ -805,6 +829,7 @@
       "recruiters": "Recruiters"
     },
     "templates": {
+      "browseCta": "Browse templates",
       "disabledByDefault": "Saved disabled until previewed",
       "materialized": "Materialized",
       "title": "Starter templates",

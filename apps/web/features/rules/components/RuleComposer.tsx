@@ -1,7 +1,17 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { AlertCircle, HelpCircle, Loader2, Save, Wand2 } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Filter,
+  HelpCircle,
+  Loader2,
+  Play,
+  Save,
+  Wand2,
+  Zap,
+} from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { RuleCompileResult } from '@/features/rules/api/rules-api';
+import { cn } from '@/lib/utils';
 
 type Props = {
   sourceText: string;
@@ -27,11 +38,13 @@ type Props = {
   insufficientCreditError: string | null;
   isCompiling: boolean;
   isSaving: boolean;
+  canPreview: boolean;
   onSourceTextChange: (sourceText: string) => void;
   onClarificationAnswerChange: (answer: string) => void;
   onCompile: () => void;
   onAnswerClarification: () => void;
   onSaveDisabledRule: () => void;
+  onOpenPreview: () => void;
 };
 
 export function RuleComposer({
@@ -42,11 +55,13 @@ export function RuleComposer({
   insufficientCreditError,
   isCompiling,
   isSaving,
+  canPreview,
   onSourceTextChange,
   onClarificationAnswerChange,
   onCompile,
   onAnswerClarification,
   onSaveDisabledRule,
+  onOpenPreview,
 }: Props) {
   const t = useTranslations();
   const hasSourceText = sourceText.trim().length > 0;
@@ -64,11 +79,24 @@ export function RuleComposer({
     t('rules.composer.actionReview'),
   );
 
+  const workflowStep: 1 | 2 | 3 =
+    compileResult?.status === 'compiled'
+      ? 3
+      : compileResult?.status === 'clarificationRequired'
+        ? 2
+        : 1;
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>{t('rules.composer.title')}</CardTitle>
         <CardDescription>{t('rules.page.safetyNote')}</CardDescription>
+        <WorkflowStepBar
+          step={workflowStep}
+          writeLabel={t('rules.composer.step.write')}
+          compileLabel={t('rules.composer.step.compile')}
+          saveLabel={t('rules.composer.step.save')}
+        />
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -115,15 +143,48 @@ export function RuleComposer({
 
         {compiled && (
           <div className="bg-muted/30 rounded-lg border p-3" aria-live="polite">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="border-green/30 text-green">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <CheckCircle2 className="text-green size-4 shrink-0" aria-hidden="true" />
+              <p className="text-sm font-medium">{t('rules.composer.compiledReview')}</p>
+              <Badge variant="outline" className="border-green/30 text-green ml-auto text-xs">
                 {compiled.sourceLanguage ?? 'rules.v1'}
               </Badge>
-              <p className="text-sm font-medium">{t('rules.composer.compiledReview')}</p>
             </div>
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
-              <ReviewBlock title={t('rules.composer.matcherReview')} items={matcherReview} />
-              <ReviewBlock title={t('rules.composer.actionReview')} items={actionReview} />
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-2">
+                <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
+                  <Filter className="size-3" aria-hidden="true" />
+                  {t('rules.composer.matcherReview')}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {matcherReview.map((item) => (
+                    <Badge
+                      key={`m-${item}`}
+                      variant="outline"
+                      className="max-w-full text-xs whitespace-normal"
+                    >
+                      {item}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
+                  <Zap className="size-3" aria-hidden="true" />
+                  {t('rules.composer.actionReview')}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {actionReview.map((item) => (
+                    <Badge
+                      key={`a-${item}`}
+                      variant="secondary"
+                      className="max-w-full text-xs whitespace-normal"
+                    >
+                      {item}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -174,26 +235,86 @@ export function RuleComposer({
           )}
           {isSaving ? t('rules.composer.saving') : t('rules.composer.saveDisabledCta')}
         </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={!canPreview}
+          className="sm:ml-auto"
+          onClick={onOpenPreview}
+        >
+          <Play className="size-4" aria-hidden="true" />
+          {t('rules.preview.previewCta')}
+        </Button>
       </CardFooter>
     </Card>
   );
 }
 
-function ReviewBlock({ title, items }: { title: string; items: string[] }) {
+function WorkflowStepBar({
+  step,
+  writeLabel,
+  compileLabel,
+  saveLabel,
+}: {
+  step: 1 | 2 | 3;
+  writeLabel: string;
+  compileLabel: string;
+  saveLabel: string;
+}) {
+  const steps = [writeLabel, compileLabel, saveLabel] as const;
   return (
-    <div className="min-w-0 space-y-2">
-      <p className="text-muted-foreground text-xs font-medium">{title}</p>
-      <div className="flex flex-wrap gap-1.5">
-        {items.map((item) => (
-          <Badge
-            key={`${title}-${item}`}
-            variant="outline"
-            className="max-w-full whitespace-normal"
-          >
-            {item}
-          </Badge>
-        ))}
-      </div>
+    <div className="mt-3 flex items-center gap-1" aria-label="Rule creation workflow">
+      {steps.map((label, index) => {
+        const n = (index + 1) as 1 | 2 | 3;
+        const isDone = n < step;
+        const isCurrent = n === step;
+        return (
+          <div key={label} className="flex min-w-0 flex-1 items-center gap-1">
+            {index > 0 && <div className="bg-border h-px flex-1" aria-hidden="true" />}
+            <StepChip label={label} n={n} isDone={isDone} isCurrent={isCurrent} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function StepChip({
+  label,
+  n,
+  isDone,
+  isCurrent,
+}: {
+  label: string;
+  n: number;
+  isDone: boolean;
+  isCurrent: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        'flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors',
+        isDone
+          ? 'bg-green/10 text-green'
+          : isCurrent
+            ? 'bg-primary/10 text-primary ring-primary/20 ring-1 ring-inset'
+            : 'text-muted-foreground',
+      )}
+    >
+      {isDone ? (
+        <CheckCircle2 className="size-3 shrink-0" aria-hidden="true" />
+      ) : (
+        <span
+          className={cn(
+            'flex size-3.5 shrink-0 items-center justify-center rounded-full text-[9px] font-bold',
+            isCurrent ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground',
+          )}
+          aria-hidden="true"
+        >
+          {n}
+        </span>
+      )}
+      {label}
     </div>
   );
 }
