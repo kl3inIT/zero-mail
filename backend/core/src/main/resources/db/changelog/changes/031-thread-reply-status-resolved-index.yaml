@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+      id: 031-thread-reply-status-resolved-index
+      author: zeromail
+      comment: >
+        Composite keyset index for the resolved-only NeedsReplyInboxQueryService view.
+        Split out of 030 because that changeset was already applied to live databases —
+        amending an applied changelog breaks the Liquibase contract (checksum mismatch
+        on existing databases, silent migration loss after clearChecksums).
+      changes:
+        - sql:
+            comment: Composite keyset index for the resolved-only NeedsReplyInboxQueryService view.
+            sql: CREATE INDEX idx_thread_reply_status_resolved ON thread_reply_status (tenant_id, resolved, last_classified_at DESC NULLS LAST, gmail_thread_id DESC)
+      rollback:
+        - sql:
+            sql: DROP INDEX IF EXISTS idx_thread_reply_status_resolved

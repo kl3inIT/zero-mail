@@ -89,3 +89,6 @@ databaseChangeLog:
   - include:
       file: changes/030-thread-reply-status.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/031-thread-reply-status-resolved-index.yaml
+      relativeToChangelogFile: true
