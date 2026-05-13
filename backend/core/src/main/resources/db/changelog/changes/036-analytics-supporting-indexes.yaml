@@ -1,0 +1,38 @@
+databaseChangeLog:
+  - changeSet:
+      id: 036-analytics-supporting-indexes
+      author: zeromail
+      comment: >
+        Btree indexes for Phase 5C analytics windows and deterministic top-sender/rule-hit
+        aggregation.
+      changes:
+        - createIndex:
+            tableName: mail_message_observed
+            indexName: idx_mail_message_observed_tenant_observed_at
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: observed_at
+        - sql:
+            comment: Partial index for top-sender analytics; pre-5C rows keep sender_email NULL.
+            sql: CREATE INDEX idx_mail_message_observed_tenant_sender_observed ON mail_message_observed (tenant_id, sender_email, observed_at) WHERE sender_email IS NOT NULL
+        - createIndex:
+            tableName: triage_audit
+            indexName: idx_triage_audit_tenant_rule_decided
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: rule_name_snapshot
+              - column:
+                  name: decided_at
+      rollback:
+        - dropIndex:
+            tableName: mail_message_observed
+            indexName: idx_mail_message_observed_tenant_observed_at
+        - sql:
+            sql: DROP INDEX IF EXISTS idx_mail_message_observed_tenant_sender_observed
+        - dropIndex:
+            tableName: triage_audit
+            indexName: idx_triage_audit_tenant_rule_decided

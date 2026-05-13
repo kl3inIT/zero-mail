@@ -1,0 +1,19 @@
+databaseChangeLog:
+  - changeSet:
+      id: 037-notification-preference-backfill
+      author: zeromail
+      comment: >
+        Existing tenants need a default email digest preference after the notification_preference
+        table is introduced. The unique tenant/channel key makes the backfill idempotent.
+      changes:
+        - sql:
+            comment: Backfill existing tenants with default email digest preferences.
+            sql: >
+              INSERT INTO notification_preference
+                (id, tenant_id, channel, digest_enabled, digest_send_hour_local, created_at, updated_at, version)
+              SELECT gen_random_uuid(), tenants.id, 'EMAIL', true, 20, now(), now(), 0
+              FROM tenants
+              ON CONFLICT (tenant_id, channel) DO NOTHING
+      rollback:
+        - sql:
+            sql: DELETE FROM notification_preference WHERE channel = 'EMAIL'
