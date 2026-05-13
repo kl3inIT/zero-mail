@@ -13,6 +13,7 @@ public record AuditEntryResponse(
         String reason,
         String decisionState,
         Instant createdAt,
+        Instant undoableUntil,
         String draftId) {
 
     public static AuditEntryResponse from(AuditLogRow row) {
@@ -25,6 +26,7 @@ public record AuditEntryResponse(
                 row.reason(),
                 row.decisionState(),
                 row.createdAt(),
+                row.undoableUntil(),
                 row.draftId());
     }
 }

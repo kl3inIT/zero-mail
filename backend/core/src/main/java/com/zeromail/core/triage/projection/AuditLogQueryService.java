@@ -1,6 +1,7 @@
 package com.zeromail.core.triage.projection;
 
 import com.zeromail.core.shared.pagination.KeysetCursor;
+import com.zeromail.core.triage.domain.TriageUndoPolicy;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +39,7 @@ public class AuditLogQueryService {
                 new StringBuilder(
                         """
                         select audit_id, gmail_thread_id, gmail_message_id, rule_name_snapshot,
-                               action_type, reason, decision, external_ref, created_at
+                               action_type, reason, decision, external_ref, created_at, applied_at
                         from triage_audit
                         where tenant_id = ?
                         """);
@@ -67,17 +68,23 @@ public class AuditLogQueryService {
         List<AuditLogRow> rows =
                 jdbcTemplate.query(
                         sql.toString(),
-                        (resultSet, _) ->
-                                new AuditLogRow(
-                                        UUID.fromString(resultSet.getString("audit_id")),
-                                        resultSet.getString("gmail_thread_id"),
-                                        resultSet.getString("gmail_message_id"),
-                                        resultSet.getString("rule_name_snapshot"),
-                                        resultSet.getString("action_type"),
-                                        resultSet.getString("reason"),
-                                        resultSet.getString("decision"),
-                                        resultSet.getTimestamp("created_at").toInstant(),
-                                        resultSet.getString("external_ref")),
+                        (resultSet, _) -> {
+                            Timestamp appliedAtTimestamp = resultSet.getTimestamp("applied_at");
+                            return new AuditLogRow(
+                                    UUID.fromString(resultSet.getString("audit_id")),
+                                    resultSet.getString("gmail_thread_id"),
+                                    resultSet.getString("gmail_message_id"),
+                                    resultSet.getString("rule_name_snapshot"),
+                                    resultSet.getString("action_type"),
+                                    resultSet.getString("reason"),
+                                    resultSet.getString("decision"),
+                                    resultSet.getTimestamp("created_at").toInstant(),
+                                    appliedAtTimestamp == null
+                                            ? null
+                                            : TriageUndoPolicy.undoableUntil(
+                                                    appliedAtTimestamp.toInstant()),
+                                    resultSet.getString("external_ref"));
+                        },
                         parameters.toArray());
         boolean hasNextPage = rows.size() > pageQuery.limit();
         List<AuditLogRow> pageItems = hasNextPage ? rows.subList(0, pageQuery.limit()) : rows;

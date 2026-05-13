@@ -49,6 +49,7 @@ class TriageAuditControllerContractTest {
                         "reason",
                         "decisionState",
                         "createdAt",
+                        "undoableUntil",
                         "draftId");
         assertThat(
                         List.of(AuditListResponse.class.getRecordComponents()).stream()

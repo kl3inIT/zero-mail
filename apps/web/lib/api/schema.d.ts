@@ -801,6 +801,8 @@ export interface components {
             decisionState?: string;
             /** Format: date-time */
             createdAt?: string;
+            /** Format: date-time */
+            undoableUntil?: string;
             draftId?: string;
         };
         AuditListResponse: {

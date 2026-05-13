@@ -13,6 +13,7 @@ public record AuditLogRow(
         String reason,
         String decisionState,
         Instant createdAt,
+        Instant undoableUntil,
         String draftId) {
 
     public AuditLogRow {

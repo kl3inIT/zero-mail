@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zeromail.core.shared.pagination.KeysetCursor;
 import com.zeromail.core.support.PostgresContainerTest;
+import com.zeromail.core.triage.domain.TriageUndoPolicy;
 import com.zeromail.core.triage.projection.AuditLogPage;
 import com.zeromail.core.triage.projection.AuditLogPageQuery;
 import com.zeromail.core.triage.projection.AuditLogQueryService;
@@ -73,6 +74,8 @@ class AuditLogQueryServiceTest extends PostgresContainerTest {
                         tenantA, new AuditLogPageQuery(10, null, "save_draft", null, null));
         assertThat(draftOnlyPage.items()).hasSize(1);
         assertThat(draftOnlyPage.items().getFirst().draftId()).isEqualTo("draft-second");
+        assertThat(draftOnlyPage.items().getFirst().undoableUntil())
+                .isEqualTo(TriageUndoPolicy.undoableUntil(second));
     }
 
     private UUID seedTenant(String displayNamePrefix) {
@@ -96,9 +99,9 @@ class AuditLogQueryServiceTest extends PostgresContainerTest {
                 insert into triage_audit(
                     audit_id, tenant_id, gmail_message_id, gmail_thread_id, rule_name_snapshot,
                     action_type, args_hash, action_args_json, reason, decision, external_ref,
-                    decided_at, created_at
+                    decided_at, applied_at, created_at
                 )
-                values (?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), ?, ?, ?, ?, ?)
+                values (?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), ?, ?, ?, ?, ?, ?)
                 """,
                 auditId,
                 tenantId,
@@ -111,6 +114,7 @@ class AuditLogQueryServiceTest extends PostgresContainerTest {
                 "matched",
                 "APPLIED",
                 externalReference,
+                Timestamp.from(createdAt),
                 Timestamp.from(createdAt),
                 Timestamp.from(createdAt));
     }

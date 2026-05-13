@@ -68,13 +68,6 @@ function unwrap<T>(
   return result.data;
 }
 
-function addDays(isoTimestamp: string, days: number): string {
-  const timestamp = new Date(isoTimestamp);
-  if (Number.isNaN(timestamp.getTime())) return new Date(0).toISOString();
-  timestamp.setUTCDate(timestamp.getUTCDate() + days);
-  return timestamp.toISOString();
-}
-
 function auditActionLabel(action: string): string {
   return action
     .split(/[_\s-]+/)
@@ -107,7 +100,7 @@ function mapAuditEntry(row: components['schemas']['AuditEntryResponse']): AuditE
     messageRef: {
       gmailMessageId: row.gmailMessageId,
     },
-    undoableUntil: addDays(timestamp, 30),
+    undoableUntil: row.undoableUntil ?? new Date(0).toISOString(),
     undone: row.decisionState === 'REVERTED',
     gmailThreadId: row.gmailThreadId,
     draftId: row.draftId,

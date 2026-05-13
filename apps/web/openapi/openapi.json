@@ -3938,6 +3938,10 @@
             "type": "string",
             "format": "date-time"
           },
+          "undoableUntil": {
+            "type": "string",
+            "format": "date-time"
+          },
           "draftId": {
             "type": "string"
           }
