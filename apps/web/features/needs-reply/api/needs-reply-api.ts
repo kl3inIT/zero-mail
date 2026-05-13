@@ -6,6 +6,7 @@ export type ApiError = components['schemas']['ApiError'];
 export type NeedsReplyRowResponse = components['schemas']['NeedsReplyRowResponse'];
 export type NeedsReplyListResponse = components['schemas']['NeedsReplyListResponse'];
 export type ThreadDraftResponse = components['schemas']['ThreadDraftResponse'];
+export type ToReplyCountResponse = components['schemas']['ToReplyCountResponse'];
 
 export type NeedsReplyBucket = 'to-reply' | 'awaiting-their-reply';
 export type DraftStatus = 'NO_DRAFT' | 'DRAFT_READY' | 'DRAFT_SENT';
@@ -135,12 +136,13 @@ export async function getNeedsReplyInbox({
 }
 
 export async function getToReplyCount(): Promise<number> {
-  const page = await getNeedsReplyInbox({
-    bucket: 'to-reply',
-    limit: 1,
-    resolved: false,
-  });
-  return page.toReplyCount;
+  const result = await api.GET('/api/threads/to-reply-count', {});
+
+  if (result.error || !result.response.ok || result.data === undefined) {
+    throwApiError(result, `/api/threads/to-reply-count failed: ${result.response.status}`);
+  }
+
+  return result.data.toReplyCount ?? 0;
 }
 
 export async function generateDraft(gmailThreadId: string): Promise<ThreadDraftResponse> {

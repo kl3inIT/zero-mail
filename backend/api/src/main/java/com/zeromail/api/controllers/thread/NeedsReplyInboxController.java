@@ -1,6 +1,7 @@
 package com.zeromail.api.controllers.thread;
 
 import com.zeromail.api.dto.thread.NeedsReplyListResponse;
+import com.zeromail.api.dto.thread.ToReplyCountResponse;
 import com.zeromail.api.error.InvalidCursorException;
 import com.zeromail.core.gmail.usecases.GmailPreviewReadService;
 import com.zeromail.core.gmail.usecases.GmailPreviewReadService.GmailThreadDisplay;
@@ -59,6 +60,12 @@ public class NeedsReplyInboxController {
                         tenantId, gmailThreadIds, GMAIL_DISPLAY_FETCH_BUDGET);
         long toReplyCount = needsReplyInboxQueryService.toReplyCount(tenantId);
         return NeedsReplyListResponse.from(page, displaysByThreadId, toReplyCount);
+    }
+
+    @GetMapping("/to-reply-count")
+    public ToReplyCountResponse toReplyCount() {
+        UUID tenantId = currentTenantId();
+        return ToReplyCountResponse.from(needsReplyInboxQueryService.toReplyCount(tenantId));
     }
 
     private static void validateCursor(String cursor) {

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.zeromail.api.dto.thread.NeedsReplyListResponse;
 import com.zeromail.api.dto.thread.ThreadDraftResponse;
+import com.zeromail.api.dto.thread.ToReplyCountResponse;
 import com.zeromail.core.thread.domain.ThreadReplyBucket;
 import java.lang.reflect.RecordComponent;
 import java.util.Arrays;
@@ -63,6 +64,13 @@ class ThreadDraftControllerContractTest {
                 .isEqualTo(ThreadReplyBucket.AWAITING_THEIR_REPLY);
         assertThat(recordComponentNames(NeedsReplyListResponse.class))
                 .containsExactly("items", "nextCursor", "toReplyCount");
+        GetMapping countMapping =
+                NeedsReplyInboxController.class
+                        .getMethod("toReplyCount")
+                        .getAnnotation(GetMapping.class);
+        assertThat(countMapping.value()).containsExactly("/to-reply-count");
+        assertThat(recordComponentNames(ToReplyCountResponse.class))
+                .containsExactly("toReplyCount");
     }
 
     private static void assertFutureTypePresent(String futureTypeName) {

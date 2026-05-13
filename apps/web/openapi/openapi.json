@@ -1026,6 +1026,54 @@
         }
       }
     },
+    "/api/threads/to-reply-count": {
+      "get": {
+        "tags": ["thread-inbox"],
+        "operationId": "toReplyCount",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToReplyCountResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/rules": {
       "get": {
         "tags": ["rules"],
@@ -3973,6 +4021,15 @@
           "nextCursor": {
             "type": "string"
           },
+          "toReplyCount": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ToReplyCountResponse": {
+        "type": "object",
+        "properties": {
           "toReplyCount": {
             "type": "integer",
             "format": "int64"
