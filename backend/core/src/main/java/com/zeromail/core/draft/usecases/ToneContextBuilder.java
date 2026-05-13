@@ -221,7 +221,7 @@ public class ToneContextBuilder {
                 UUID tenantId, int maxMessages, Duration fetchBudget) throws IOException {
             Instant deadline = clock.instant().plus(fetchBudget);
             try {
-                Gmail gmail = gmailApiClientFactory.buildClientForTenant(tenantId);
+                Gmail gmail = gmailApiClientFactory.buildClientForTenant(tenantId, fetchBudget);
                 ListMessagesResponse response =
                         gmail.users()
                                 .messages()
