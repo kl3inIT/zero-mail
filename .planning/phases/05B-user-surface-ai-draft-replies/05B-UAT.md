@@ -1,9 +1,10 @@
 ---
 status: passed
 phase: 05B-user-surface-ai-draft-replies
-source: [05B-SPEC.md, 05B-VALIDATION.md]
+source: [05B-SPEC.md, 05B-VALIDATION.md, manual UI walk]
 started: 2026-05-13
 updated: 2026-05-13
+manual_ui_verified: 2026-05-13
 ---
 
 # Phase 5B UAT - AI Draft Replies
@@ -56,3 +57,29 @@ blocked: 0
 ## Gaps
 
 None for Phase 5B closure. Analytics remains Phase 5C, and human tone/judge calibration remains a launch-readiness follow-up before promoting judge dims 1/2/3/5 to required CI.
+
+## Manual UI Verification (2026-05-13)
+
+Driven via Playwright MCP against live Next dev (`apps/web`) + Spring `:backend:api:bootRun`. Two regressions surfaced and were fixed inline.
+
+### Walked
+
+| Surface | Verified | Notes |
+|---------|----------|-------|
+| `05B-PROTOTYPE.html` (all 10 UI-SPEC states) | pass | Sidebar + topbar chrome, 5-row populated table with `Draft reply`/`Regenerate draft`/`Generating…`, 409 amber inline notice, `No draft`/`Draft ready`/`Draft sent` badges, recompute amber banner, 5-row skeleton, To-reply/Awaiting empty states, destructive error `Alert` + `Try again`, success/destructive Sonner toasts, regenerate `alert-dialog`, `/triage` audit table with new draft action + mono `AI` marker, 320px single-column rows. Tokens (teal accent, paper-warm neutrals, 4-step type scale, 8pt spacing) align with UI-SPEC. |
+| `/needs-reply` live (unauthenticated, before Fix #1) | issue → fixed | Page rendered chrome + heading + tabs without session — proxy.ts gate gap (24× ERR_CONNECTION_REFUSED to `:8080` confirmed call paths but not the leak). |
+| `/needs-reply` live (unauthenticated, after Fix #1) | pass | Redirects to `/login` (HTTP 200, Vietnamese login page with `Tiếp tục với Google` and 3 commitment pillars). |
+| Backend `:backend:api:bootRun` (before Fix #2) | issue → fixed | Liquibase validation failed: `030-thread-reply-status` checksum mismatch from amend in commit `d83562a`. |
+| Backend `:backend:api:bootRun` (after Fix #2) | pass | Started in 24.6s, `Tomcat started on port 8080`. DB shows 030 unchanged + 031 newly applied; all 5 expected indexes on `thread_reply_status` present including `idx_thread_reply_status_resolved`. |
+
+### Findings & fixes (closed in this UAT pass)
+
+| # | Finding | Severity | Root cause | Fix commit |
+|---|---------|----------|------------|------------|
+| MUI-1 | `/needs-reply` accessible without `ZEROMAIL_SESSION` cookie; full app shell + page heading + tabs render to anonymous visitors. | major (access-control) | `apps/web/proxy.ts` PROTECTED list missing `/needs-reply` (regression — new authenticated route added in 5B-06 not registered with the gate). | `9e5270f fix(05B): gate /needs-reply behind auth in proxy` — adds route to PROTECTED + extends `route-smoke.spec.ts` regression coverage. |
+| MUI-2 | `:backend:api:bootRun` fails on any DB with 030 already applied: Liquibase checksum mismatch on `030-thread-reply-status`. `clearChecksums` would silently drop the new resolved-only index. | blocker (data/migration) | Commit `d83562a fix(05B): add resolved reply-status index` amended an applied changeset instead of creating a new one. | `d16f4c8 fix(05B): split resolved-index into changeset 031` — reverts 030 to its original five SQL changes; new `031-thread-reply-status-resolved-index.yaml` owns the index; master changelog updated. |
+
+### Not walked (deliberately deferred)
+
+- **Authenticated `/needs-reply` with real Gmail data** — requires interactive Google OAuth (Playwright MCP cannot drive Google's bot-protected login). Already covered in CI by `apps/web/e2e/needs-reply.spec.ts` + `triage-audit.spec.ts` against `chrome-test-utils.ts` mocks. Real-Gmail walk stays in the launch-readiness checklist as the original UAT note documented.
+- **Dark mode** of every state — no token regression risk; tokens are CSS variables shared with 5A which `gsd-ui-review` already audited.
