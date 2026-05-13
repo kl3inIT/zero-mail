@@ -22,4 +22,10 @@ public interface UserRepository extends JpaRepository<UserEntity, UUID> {
 
     /** Canonical tenant-scoped user accessor. Controllers never fall back to findAll().filter(). */
     Optional<UserEntity> findFirstByTenantId(UUID tenantId);
+
+    @Query(
+            value =
+                    "SELECT email FROM users WHERE tenant_id = :tenantId ORDER BY created_at ASC LIMIT 1",
+            nativeQuery = true)
+    Optional<String> findEmailByTenantId(@Param("tenantId") UUID tenantId);
 }

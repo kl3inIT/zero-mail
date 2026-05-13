@@ -72,6 +72,14 @@ public class TenantService {
         return tenantRepository.findById(tenantId).map(TenantEntity::isTriagePaused).orElse(false);
     }
 
+    @Transactional(readOnly = true)
+    public String timeZoneFor(UUID tenantId) {
+        return tenantRepository
+                .findById(tenantId)
+                .map(TenantEntity::getTimeZone)
+                .orElse(TenantEntity.DEFAULT_TIME_ZONE);
+    }
+
     @Transactional
     public void setTriageShadowMode(UUID tenantId, boolean enabled) {
         tenantRepository

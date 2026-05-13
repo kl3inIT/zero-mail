@@ -80,6 +80,10 @@ public class DigestDeliveryEntity extends AbstractTenantOwnedEntity {
         return channel;
     }
 
+    public void setChannel(ChannelType channel) {
+        this.channel = channel;
+    }
+
     public int getAttemptCount() {
         return attemptCount;
     }
