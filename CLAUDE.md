@@ -87,6 +87,10 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 9. **Subproject-owned configuration files** — each runnable subproject owns its own runtime config. API-only properties belong in `backend/api/src/main/resources/application.yml`; worker-only properties belong in `backend/worker/src/main/resources/application.yml`; Next.js/web config belongs under `apps/web`. Shared typed config classes may live in `backend/core`, but each runnable module still declares its own values/defaults in its own config file.
 <!-- GSD:conventions-end -->
 
+## UI Phase Prototype Rule
+
+Whenever a UI phase runs (`/gsd-ui-phase`), in addition to `UI-SPEC.md` always produce a self-contained HTML prototype for that phase at `<phase_dir>/<padded_phase>-PROTOTYPE.html`. The prototype is a static, single-file mockup (inline CSS, CDN Tailwind/fonts allowed, no build step) that visualizes the screens/states the UI-SPEC describes — used for quick visual review before planning. It is throwaway: not production code, not wired to APIs. Keep it consistent with the locked tokens/typography/spacing in `UI-SPEC.md`.
+
 <!-- GSD:architecture-start source:ARCHITECTURE.md -->
 
 ## Architecture
