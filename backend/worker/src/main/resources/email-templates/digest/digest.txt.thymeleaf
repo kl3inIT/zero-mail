@@ -1,0 +1,30 @@
+[(${subject})]
+[(${preheader})]
+
+Zero Mail → [(${digestDate})]
+[(${payload.zeroActivity()} ? #{digest.header.greeting.zero} : #{digest.header.greeting})]
+
+[(${payload.totals().volumeApplied()})] [(#{digest.totals.messages})]
+[(${timeSaved})] [(#{digest.totals.timeSaved})]
+
+[(#{digest.text.viewDetails})]: [(${payload.ctaUrl()})]
+
+[# th:if="${!payload.zeroActivity() and !payload.topSenders().isEmpty()}"]
+[(#{digest.text.topSenders})]
+[# th:each="sender, senderState : ${payload.topSenders()}"]
+[(${senderState.count})]. [(${sender.senderEmail()})]  ([(${sender.count()})])
+[/]
+[/]
+[# th:if="${!payload.zeroActivity() and !payload.topRules().isEmpty()}"]
+[(#{digest.text.topRules})]
+[# th:each="rule, ruleState : ${payload.topRules()}"]
+[(${ruleState.count})]. [(${rule.ruleName()})]  ([(#{digest.rules.applied})]: [(${rule.applied()})][# th:if="${rule.reverted() > 0}"], [(#{digest.rules.reverted})]: [(${rule.reverted()})][/])
+[/]
+[/]
+[# th:if="${payload.zeroActivity()}"]
+[(#{digest.zeroBody})]
+[/]
+
+[(#{digest.footer.optOutPrompt})] [(#{digest.text.turnOff})]: [(${payload.optOutUrl()})]
+[(#{digest.footer.brand(${appDomain})})]
+[(#{digest.footer.legal})]
