@@ -1,0 +1,398 @@
+<!doctype html>
+<!--
+  ============================================================================
+  Zero Mail — Phase 5B PROTOTYPE (THROWAWAY VISUAL MOCKUP)
+  ----------------------------------------------------------------------------
+  This is a single static HTML file used to visualize the screens & states in
+  05B-UI-SPEC.md (needs-reply two-bucket inbox, draft-status badges, the
+  Draft reply / Regenerate draft action, loading / empty / error / classifying
+  / 409 / saved-to-Gmail states, and the now-live /triage audit list with the
+  new per-row draft action).
+
+  It is NOT production code. Not wired to APIs. Not the real Next.js app. It
+  uses CDN Tailwind + CDN Google Fonts only. Tokens/colors/typography/spacing
+  mirror the locked contract in 05B-UI-SPEC.md (base teal #0E5E5A, paper-warm
+  neutrals, 12/14/20 type, 4/8/12/16/24/32/48/64 spacing). Throw it away after
+  the executor builds the real components.
+  ============================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zero Mail · Phase 5B prototype · Needs reply</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Geist', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          mono: ['Geist Mono', 'ui-monospace', 'monospace'],
+        },
+        colors: {
+          bg: '#FAFAF7', fg: '#2D2D2A', card: '#FFFFFF',
+          muted: '#F1EFE7', mutedfg: '#6B6A63',
+          border: '#E6E3D8', primary: '#0E5E5A',
+          accentsoft: '#D6E8E5',
+          destructive: '#B0413E', redsoft: '#F3DEDD',
+          warning: '#B5731F', ambersoft: '#F3E6D2',
+          green: '#2F7D5C', greensoft: '#DCEAE2',
+          blue: '#2C5BA8', bluesoft: '#DEE5F2',
+        },
+        borderRadius: { DEFAULT: '7px', sm: '5px', lg: '10px' },
+      }
+    }
+  }
+</script>
+<style>
+  body { font-family: 'Geist', sans-serif; }
+  .mono { font-family: 'Geist Mono', monospace; }
+  /* dense table row rhythm per UI-SPEC (py-2 ~ 8px, ~40px row height) */
+  .row-dense td { padding-top: 8px; padding-bottom: 8px; }
+  .truncate-cell { max-width: 0; }
+</style>
+</head>
+<body class="bg-bg text-fg text-[14px] leading-[1.5]">
+
+<div class="flex min-h-screen">
+  <!-- ===================== SIDEBAR (5A shell, +Needs reply item) ===================== -->
+  <aside class="hidden md:flex w-56 shrink-0 flex-col border-r border-border bg-bg">
+    <div class="flex h-14 items-center gap-2 px-4 border-b border-border">
+      <div class="h-6 w-6 rounded bg-primary"></div>
+      <span class="font-semibold">Zero&nbsp;Mail</span>
+    </div>
+    <nav class="flex-1 p-2 space-y-1 text-[14px]">
+      <a class="block rounded px-3 py-2 text-mutedfg hover:bg-muted">Overview</a>
+      <a class="block rounded px-3 py-2 text-mutedfg hover:bg-muted">Rules</a>
+      <a class="block rounded px-3 py-2 text-mutedfg hover:bg-muted">Triage</a>
+      <!-- NEW in 5B: active nav item, accent left-border + tint, TO_REPLY count badge -->
+      <a class="flex items-center justify-between rounded px-3 py-2 font-medium bg-accentsoft/60 border-l-2 border-primary text-fg">
+        <span>Needs reply</span>
+        <span class="mono text-[12px] rounded-full bg-primary text-white px-1.5 py-0.5">7</span>
+      </a>
+      <a class="block rounded px-3 py-2 text-mutedfg hover:bg-muted">Billing</a>
+      <a class="block rounded px-3 py-2 text-mutedfg hover:bg-muted">Settings</a>
+    </nav>
+    <div class="p-3 border-t border-border text-[12px] text-mutedfg">
+      <div class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-green"></span> Gmail connected</div>
+    </div>
+  </aside>
+
+  <!-- ===================== MAIN ===================== -->
+  <div class="flex-1 flex flex-col">
+    <!-- top chrome strip 56px -->
+    <header class="h-14 shrink-0 flex items-center justify-between gap-3 border-b border-border bg-bg px-4 md:px-8">
+      <div class="flex items-center gap-2 text-[12px] text-mutedfg">
+        <button class="md:hidden rounded border border-border px-2 py-1">☰</button>
+        <span class="mono">~/needs-reply</span>
+      </div>
+      <div class="flex items-center gap-3 text-[12px]">
+        <span class="rounded-full border border-border px-2 py-1 mono">$4.20 credits</span>
+        <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-green"></span>Connected</span>
+        <span class="rounded-full border border-border px-2 py-1">Triage: <b>on</b></span>
+      </div>
+    </header>
+
+    <main class="flex-1 px-4 md:px-8 py-6 max-w-5xl w-full mx-auto space-y-12">
+
+      <!-- ============== SCREEN 1: NEEDS-REPLY — populated, "To reply" active ============== -->
+      <section>
+        <div class="mb-6">
+          <h1 class="text-[20px] font-semibold leading-[1.25]">Needs reply</h1>
+          <p class="text-mutedfg">Threads waiting on a reply — yours or theirs. Review and send drafts in Gmail.</p>
+        </div>
+
+        <!-- tabs -->
+        <div class="flex items-center gap-1 border-b border-border mb-4 text-[12px] font-medium">
+          <button class="px-3 py-2 border-b-2 border-primary text-fg flex items-center gap-1.5">To reply <span class="mono rounded-full bg-primary/10 text-primary px-1.5">7</span></button>
+          <button class="px-3 py-2 border-b-2 border-transparent text-mutedfg hover:text-fg flex items-center gap-1.5">Awaiting reply <span class="mono rounded-full bg-muted px-1.5">3</span></button>
+          <button class="px-3 py-2 border-b-2 border-transparent text-mutedfg hover:text-fg flex items-center gap-1.5">Resolved <span class="mono rounded-full bg-muted px-1.5">12</span></button>
+        </div>
+
+        <!-- recompute banner (Screen 4) -->
+        <div class="mb-3 flex items-center gap-2 rounded border border-warning/40 bg-ambersoft/60 px-3 py-2 text-[12px] text-warning">
+          <svg class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" stroke-dasharray="40" stroke-linecap="round"/></svg>
+          Updating your needs-reply list…
+        </div>
+
+        <!-- table -->
+        <div class="rounded-lg border border-border bg-card overflow-hidden">
+          <table class="w-full text-left">
+            <thead class="bg-muted text-[12px] font-medium text-mutedfg">
+              <tr>
+                <th class="px-4 py-2">Subject</th>
+                <th class="px-4 py-2 hidden sm:table-cell">From</th>
+                <th class="px-4 py-2 hidden sm:table-cell">Last activity</th>
+                <th class="px-4 py-2">Draft</th>
+                <th class="px-4 py-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border row-dense">
+              <!-- row: no draft -->
+              <tr class="hover:bg-muted/40">
+                <td class="px-4 truncate-cell"><div class="font-medium truncate">Re: Q3 partnership terms — revised SOW attached</div></td>
+                <td class="px-4 hidden sm:table-cell text-mutedfg truncate">priya@acme.io</td>
+                <td class="px-4 hidden sm:table-cell mono text-[12px] text-mutedfg" title="2026-05-13 09:14">2h ago</td>
+                <td class="px-4"><span class="text-[12px] rounded-full bg-muted text-mutedfg px-2 py-0.5">No draft</span></td>
+                <td class="px-4">
+                  <div class="flex items-center justify-end gap-1">
+                    <button class="rounded border border-border bg-card px-2.5 py-1 text-[14px] hover:bg-muted">Draft reply</button>
+                    <a class="rounded p-1.5 hover:bg-muted" title="Open in Gmail" href="#">↗</a>
+                    <button class="rounded p-1.5 text-mutedfg hover:bg-muted" title="Mark resolved">✕</button>
+                  </div>
+                </td>
+              </tr>
+              <!-- row: draft ready -->
+              <tr class="hover:bg-muted/40">
+                <td class="px-4 truncate-cell"><div class="font-medium truncate">Invoice #4471 — payment confirmation needed</div></td>
+                <td class="px-4 hidden sm:table-cell text-mutedfg truncate">billing@stripe.com</td>
+                <td class="px-4 hidden sm:table-cell mono text-[12px] text-mutedfg" title="2026-05-13 07:02">4h ago</td>
+                <td class="px-4"><span class="text-[12px] rounded-full bg-bluesoft text-blue px-2 py-0.5">Draft ready</span></td>
+                <td class="px-4">
+                  <div class="flex items-center justify-end gap-1">
+                    <button class="rounded border border-border bg-card px-2.5 py-1 text-[14px] hover:bg-muted">Regenerate draft</button>
+                    <a class="rounded p-1.5 hover:bg-muted" title="Open in Gmail" href="#">↗</a>
+                    <button class="rounded p-1.5 text-mutedfg hover:bg-muted" title="Mark resolved">✕</button>
+                  </div>
+                </td>
+              </tr>
+              <!-- row: generating (Screen 7) -->
+              <tr class="hover:bg-muted/40">
+                <td class="px-4 truncate-cell"><div class="font-medium truncate">Re: Demo follow-up — scheduling for next week</div></td>
+                <td class="px-4 hidden sm:table-cell text-mutedfg truncate">sam@northwind.dev</td>
+                <td class="px-4 hidden sm:table-cell mono text-[12px] text-mutedfg" title="2026-05-12 18:40">yesterday</td>
+                <td class="px-4"><span class="text-[12px] rounded-full bg-muted text-mutedfg px-2 py-0.5">No draft</span></td>
+                <td class="px-4">
+                  <div class="flex items-center justify-end gap-1">
+                    <button disabled class="rounded border border-border bg-muted px-2.5 py-1 text-[14px] text-mutedfg flex items-center gap-1.5">
+                      <svg class="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" stroke-dasharray="40" stroke-linecap="round"/></svg>
+                      Generating…
+                    </button>
+                    <a class="rounded p-1.5 hover:bg-muted" title="Open in Gmail" href="#">↗</a>
+                    <button class="rounded p-1.5 text-mutedfg hover:bg-muted" title="Mark resolved">✕</button>
+                  </div>
+                </td>
+              </tr>
+              <!-- row: 409 lock held (Screen 7 cont.) -->
+              <tr class="hover:bg-muted/40">
+                <td class="px-4 truncate-cell"><div class="font-medium truncate">Re: Contract renewal — please review redlines</div></td>
+                <td class="px-4 hidden sm:table-cell text-mutedfg truncate">legal@acme.io</td>
+                <td class="px-4 hidden sm:table-cell mono text-[12px] text-mutedfg">2d ago</td>
+                <td class="px-4"><span class="text-[12px] rounded-full bg-muted text-mutedfg px-2 py-0.5">No draft</span></td>
+                <td class="px-4">
+                  <div class="flex flex-col items-end gap-1">
+                    <button class="rounded border border-border bg-card px-2.5 py-1 text-[14px] hover:bg-muted">Draft reply</button>
+                    <span class="text-[12px] text-warning">A draft is already being generated for this thread.</span>
+                  </div>
+                </td>
+              </tr>
+              <!-- row: draft sent -->
+              <tr class="hover:bg-muted/40">
+                <td class="px-4 truncate-cell"><div class="font-medium truncate text-mutedfg">Re: Onboarding questions — answered</div></td>
+                <td class="px-4 hidden sm:table-cell text-mutedfg truncate">jess@hello.co</td>
+                <td class="px-4 hidden sm:table-cell mono text-[12px] text-mutedfg">3d ago</td>
+                <td class="px-4"><span class="text-[12px] rounded-full bg-greensoft text-green px-2 py-0.5">Draft sent</span></td>
+                <td class="px-4">
+                  <div class="flex items-center justify-end gap-1">
+                    <a class="rounded p-1.5 hover:bg-muted" title="Open in Gmail" href="#">↗</a>
+                    <button class="rounded p-1.5 text-mutedfg hover:bg-muted" title="Mark resolved">✕</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="mt-2 text-[12px] text-mutedfg">Review, edit, and send drafts in Gmail — Zero&nbsp;Mail never sends mail for you.</p>
+      </section>
+
+      <!-- ============== SCREEN 3: LOADING ============== -->
+      <section>
+        <h2 class="text-[12px] font-medium uppercase tracking-wide text-mutedfg mb-2">State · loading</h2>
+        <div class="flex items-center gap-1 border-b border-border mb-4 text-[12px] font-medium">
+          <span class="px-3 py-2 border-b-2 border-primary">To reply</span>
+          <span class="px-3 py-2 text-mutedfg">Awaiting reply</span>
+        </div>
+        <div class="rounded-lg border border-border bg-card divide-y divide-border">
+          <div class="grid grid-cols-5 gap-4 px-4 py-3">
+            <div class="h-3 col-span-2 rounded bg-muted animate-pulse"></div>
+            <div class="h-3 rounded bg-muted animate-pulse"></div>
+            <div class="h-3 rounded bg-muted animate-pulse"></div>
+            <div class="h-6 rounded bg-muted animate-pulse"></div>
+          </div>
+          <div class="grid grid-cols-5 gap-4 px-4 py-3">
+            <div class="h-3 col-span-2 rounded bg-muted animate-pulse"></div>
+            <div class="h-3 rounded bg-muted animate-pulse"></div>
+            <div class="h-3 rounded bg-muted animate-pulse"></div>
+            <div class="h-6 rounded bg-muted animate-pulse"></div>
+          </div>
+          <div class="grid grid-cols-5 gap-4 px-4 py-3">
+            <div class="h-3 col-span-2 rounded bg-muted animate-pulse"></div>
+            <div class="h-3 rounded bg-muted animate-pulse"></div>
+            <div class="h-3 rounded bg-muted animate-pulse"></div>
+            <div class="h-6 rounded bg-muted animate-pulse"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============== SCREEN 5: EMPTY STATES ============== -->
+      <section class="grid md:grid-cols-2 gap-6">
+        <div>
+          <h2 class="text-[12px] font-medium uppercase tracking-wide text-mutedfg mb-2">State · empty (To reply)</h2>
+          <div class="rounded-lg border border-border bg-card py-12 px-6 text-center">
+            <div class="mx-auto mb-3 h-10 w-10 rounded-full bg-greensoft text-green grid place-items-center text-lg">✓</div>
+            <h3 class="text-[14px] font-medium">Inbox zero 🎉</h3>
+            <p class="text-mutedfg">Nothing needs a reply right now.</p>
+          </div>
+        </div>
+        <div>
+          <h2 class="text-[12px] font-medium uppercase tracking-wide text-mutedfg mb-2">State · empty (Awaiting)</h2>
+          <div class="rounded-lg border border-border bg-card py-12 px-6 text-center">
+            <h3 class="text-[14px] font-medium">Nothing awaiting</h3>
+            <p class="text-mutedfg">No threads are waiting on the other party.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============== SCREEN 6: ERROR ============== -->
+      <section>
+        <h2 class="text-[12px] font-medium uppercase tracking-wide text-mutedfg mb-2">State · error</h2>
+        <div class="rounded-lg border border-destructive/40 bg-redsoft/50 p-4">
+          <div class="font-medium text-destructive">Couldn't load your needs-reply list</div>
+          <p class="text-mutedfg text-[14px] mt-0.5">Something went wrong fetching your threads. Try again.</p>
+          <button class="mt-3 rounded border border-destructive/50 bg-card px-3 py-1.5 text-[14px] text-destructive hover:bg-redsoft/40">Try again</button>
+        </div>
+      </section>
+
+      <!-- ============== SCREEN 8: failure toast + Screen 7 success toast ============== -->
+      <section>
+        <h2 class="text-[12px] font-medium uppercase tracking-wide text-mutedfg mb-2">Toasts (sonner)</h2>
+        <div class="space-y-2 max-w-sm">
+          <div class="rounded-lg border border-border bg-card shadow-sm px-4 py-3 flex items-start gap-2">
+            <span class="text-green">✓</span>
+            <div><div class="font-medium text-[14px]">Draft saved in Gmail</div><div class="text-mutedfg text-[12px]">Review and send it there.</div></div>
+          </div>
+          <div class="rounded-lg border border-destructive/40 bg-redsoft/50 shadow-sm px-4 py-3 flex items-start gap-2">
+            <span class="text-destructive">!</span>
+            <div><div class="font-medium text-[14px] text-destructive">Couldn't generate a draft</div><div class="text-mutedfg text-[12px]">Try again in a moment.</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============== optional: Replace-draft confirm dialog ============== -->
+      <section>
+        <h2 class="text-[12px] font-medium uppercase tracking-wide text-mutedfg mb-2">Optional · regenerate confirmation (alert-dialog)</h2>
+        <div class="max-w-md rounded-lg border border-border bg-card shadow-lg p-6">
+          <h3 class="text-[14px] font-semibold">Replace the current draft?</h3>
+          <p class="text-mutedfg text-[14px] mt-1">The draft currently in Gmail will be discarded and a new one generated.</p>
+          <div class="mt-5 flex justify-end gap-2">
+            <button class="rounded border border-border bg-card px-3 py-1.5 text-[14px] hover:bg-muted">Cancel</button>
+            <button class="rounded bg-destructive px-3 py-1.5 text-[14px] text-white hover:opacity-90">Replace draft</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============== SCREEN 9: /triage audit list — live, with new draft action ============== -->
+      <section>
+        <div class="mb-4">
+          <h1 class="text-[20px] font-semibold leading-[1.25]">Triage activity</h1>
+          <p class="text-mutedfg">Every automated action, with undo and (for drafts) regenerate.</p>
+        </div>
+        <!-- filter bar -->
+        <div class="mb-3 flex flex-wrap items-center gap-2 text-[12px]">
+          <select class="rounded border border-border bg-card px-2 py-1"><option>All actions</option><option>save_draft</option><option>label</option><option>archive</option></select>
+          <input class="rounded border border-border bg-card px-2 py-1" placeholder="Since" />
+          <input class="rounded border border-border bg-card px-2 py-1" placeholder="Until" />
+        </div>
+        <div class="rounded-lg border border-border bg-card overflow-hidden">
+          <table class="w-full text-left">
+            <thead class="bg-muted text-[12px] font-medium text-mutedfg">
+              <tr>
+                <th class="px-4 py-2">When</th><th class="px-4 py-2">Rule</th><th class="px-4 py-2">Action</th>
+                <th class="px-4 py-2 hidden sm:table-cell">Reason</th><th class="px-4 py-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border row-dense">
+              <tr class="hover:bg-muted/40">
+                <td class="px-4 mono text-[12px] text-mutedfg">2026-05-13 07:02</td>
+                <td class="px-4">Receipts → Finance</td>
+                <td class="px-4"><span class="text-[12px] rounded-full bg-bluesoft text-blue px-2 py-0.5">save_draft</span> <span class="mono text-[12px] text-primary ml-1">AI</span></td>
+                <td class="px-4 hidden sm:table-cell text-mutedfg">Sender matched "billing@stripe.com"</td>
+                <td class="px-4">
+                  <div class="flex items-center justify-end gap-1">
+                    <button class="rounded border border-border bg-card px-2.5 py-1 text-[14px] hover:bg-muted">Regenerate draft</button>
+                    <button class="rounded border border-border bg-card px-2.5 py-1 text-[14px] hover:bg-muted">Undo</button>
+                  </div>
+                </td>
+              </tr>
+              <tr class="hover:bg-muted/40">
+                <td class="px-4 mono text-[12px] text-mutedfg">2026-05-13 06:48</td>
+                <td class="px-4">Newsletters → Archive</td>
+                <td class="px-4"><span class="text-[12px] rounded-full bg-muted text-mutedfg px-2 py-0.5">archive</span> <span class="mono text-[12px] text-primary ml-1">AI</span></td>
+                <td class="px-4 hidden sm:table-cell text-mutedfg">List-Unsubscribe header present</td>
+                <td class="px-4 text-right"><button class="rounded border border-border bg-card px-2.5 py-1 text-[14px] hover:bg-muted">Undo</button></td>
+              </tr>
+              <tr class="hover:bg-muted/40">
+                <td class="px-4 mono text-[12px] text-mutedfg">2026-05-12 18:40</td>
+                <td class="px-4">Demo follow-ups → Draft</td>
+                <td class="px-4"><span class="text-[12px] rounded-full bg-bluesoft text-blue px-2 py-0.5">save_draft</span> <span class="mono text-[12px] text-primary ml-1">AI</span></td>
+                <td class="px-4 hidden sm:table-cell text-mutedfg">Semantic intent: meeting request</td>
+                <td class="px-4">
+                  <div class="flex items-center justify-end gap-1">
+                    <button class="rounded border border-border bg-card px-2.5 py-1 text-[14px] hover:bg-muted">Draft reply</button>
+                    <button class="rounded border border-border bg-muted px-2.5 py-1 text-[14px] text-mutedfg" disabled title="Undo window closed">Undo</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="border-t border-border px-4 py-3 text-center text-[14px]">
+            <button class="rounded border border-border bg-card px-3 py-1.5 hover:bg-muted">Load more</button>
+            <span class="block mt-2 text-[12px] text-mutedfg">Showing 3 of many · <span class="italic">That's everything.</span> appears at the end.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============== SCREEN 10: 320px responsive sketch ============== -->
+      <section>
+        <h2 class="text-[12px] font-medium uppercase tracking-wide text-mutedfg mb-2">Responsive · 320px (single-column rows)</h2>
+        <div class="w-[320px] rounded-lg border border-border bg-card divide-y divide-border">
+          <div class="p-3">
+            <div class="flex items-start justify-between gap-2">
+              <div class="font-medium text-[14px] truncate">Re: Q3 partnership terms — revised SOW</div>
+              <span class="text-[12px] rounded-full bg-muted text-mutedfg px-2 py-0.5 shrink-0">No draft</span>
+            </div>
+            <div class="mt-1 text-[12px] text-mutedfg flex gap-2"><span class="truncate">priya@acme.io</span><span class="mono">· 2h ago</span></div>
+            <div class="mt-2 flex items-center gap-2">
+              <button class="grid place-items-center h-11 w-11 rounded border border-border bg-card" title="Draft reply">✎</button>
+              <a class="grid place-items-center h-11 w-11 rounded hover:bg-muted" title="Open in Gmail" href="#">↗</a>
+              <button class="grid place-items-center h-11 w-11 rounded text-mutedfg hover:bg-muted" title="Mark resolved">✕</button>
+            </div>
+          </div>
+          <div class="p-3">
+            <div class="flex items-start justify-between gap-2">
+              <div class="font-medium text-[14px] truncate">Invoice #4471 — payment confirmation</div>
+              <span class="text-[12px] rounded-full bg-bluesoft text-blue px-2 py-0.5 shrink-0">Draft ready</span>
+            </div>
+            <div class="mt-1 text-[12px] text-mutedfg flex gap-2"><span class="truncate">billing@stripe.com</span><span class="mono">· 4h ago</span></div>
+            <div class="mt-2 flex items-center gap-2">
+              <button class="grid place-items-center h-11 w-11 rounded border border-border bg-card" title="Regenerate draft">↻</button>
+              <a class="grid place-items-center h-11 w-11 rounded hover:bg-muted" title="Open in Gmail" href="#">↗</a>
+              <button class="grid place-items-center h-11 w-11 rounded text-mutedfg hover:bg-muted" title="Mark resolved">✕</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="pt-6 border-t border-border text-[12px] text-mutedfg">
+        Throwaway prototype for Phase 5B — not production code. Tokens mirror <span class="mono">05B-UI-SPEC.md</span>.
+      </footer>
+
+    </main>
+  </div>
+</div>
+</body>
+</html>

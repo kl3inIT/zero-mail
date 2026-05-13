@@ -18,7 +18,7 @@
     "verifier": true,
     "nyquist_validation": true,
     "auto_advance": true,
-    "use_worktrees": true,
+    "use_worktrees": false,
     "worktree_skip_hooks": false,
     "node_repair": true,
     "node_repair_budget": 2,

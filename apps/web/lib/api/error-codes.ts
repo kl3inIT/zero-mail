@@ -48,6 +48,11 @@ export const ErrorCode = {
   LlmSanitizationFailed: 'error.llm.sanitization_failed',
   LlmByokInvalid: 'error.llm.byok.invalid',
   LlmByokValidateFailed: 'error.llm.byok.validate_failed',
+  // draft/thread
+  DraftGenerationInFlight: 'error.draft.generation.in_flight',
+  DraftGenerationUnavailable: 'error.draft.generation.unavailable',
+  DraftGenerationFailed: 'error.draft.generation.failed',
+  InvalidCursor: 'error.pagination.invalid_cursor',
   // rules
   RulesCompileInvalid: 'error.rules.compile.invalid',
   RulesCompileClarificationRequired: 'error.rules.compile.clarification_required',

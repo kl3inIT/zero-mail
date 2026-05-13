@@ -144,10 +144,10 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
     }
 
     @Test
-    void safety_violation_handler_returns_500() {
+    void safety_violation_handler_returns_422() {
         JsonNode responseJson = postProbe("/test/llm/safety-violation");
 
-        assertThat(responseJson.path("status").asInt()).isEqualTo(500);
+        assertThat(responseJson.path("status").asInt()).isEqualTo(422);
         assertThat(responseJson.path("code").asString()).isEqualTo("error.llm.safety_violation");
     }
 

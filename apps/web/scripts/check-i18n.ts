@@ -49,6 +49,7 @@ const EN_SCAN_FILES = [
   'app/(protected)/(app)/settings/privacy/page.tsx',
   'app/(protected)/(app)/rules/page.tsx',
   'app/(protected)/(app)/triage/page.tsx',
+  'app/(protected)/(app)/needs-reply/page.tsx',
   'app/(protected)/(app)/billing/page.tsx',
   'app/(protected)/(app)/billing/top-up/page.tsx',
   // Public surface (Phase 1.3 Plan 05 + Plan 06)
@@ -90,6 +91,13 @@ const EN_SCAN_FILES = [
   'features/triage/components/ShadowModeCard.tsx',
   'features/triage/components/SenderSafetyNetList.tsx',
   'features/triage/components/SenderRow.tsx',
+  // Phase 05B needs-reply surface. Paths are listed before implementation so
+  // future visible copy is scanned as files land.
+  'features/needs-reply/components/NeedsReplyPageClient.tsx',
+  'features/needs-reply/components/NeedsReplyTabs.tsx',
+  'features/needs-reply/components/NeedsReplyTable.tsx',
+  'features/needs-reply/components/NeedsReplyRow.tsx',
+  'features/needs-reply/components/GenerateDraftButton.tsx',
   'features/billing/components/BalanceCard.tsx',
   'features/billing/components/LedgerHistory.tsx',
   'features/billing/components/LedgerTable.tsx',

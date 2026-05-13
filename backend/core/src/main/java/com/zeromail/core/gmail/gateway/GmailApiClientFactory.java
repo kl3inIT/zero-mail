@@ -21,8 +21,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -56,10 +58,15 @@ public class GmailApiClientFactory {
     }
 
     public Gmail buildGmailClient(String accessToken) throws IOException {
+        return buildGmailClient(accessToken, null);
+    }
+
+    public Gmail buildGmailClient(String accessToken, Duration requestTimeout) throws IOException {
         try {
             GoogleCredentials credentials =
                     GoogleCredentials.create(new AccessToken(accessToken, null));
-            HttpRequestInitializer requestInitializer = new HttpCredentialsAdapter(credentials);
+            HttpRequestInitializer requestInitializer =
+                    withOptionalTimeout(new HttpCredentialsAdapter(credentials), requestTimeout);
             return new Gmail.Builder(
                             GoogleNetHttpTransport.newTrustedTransport(),
                             GsonFactory.getDefaultInstance(),
@@ -73,6 +80,10 @@ public class GmailApiClientFactory {
     }
 
     public Gmail buildClientForTenant(UUID tenantId) throws IOException {
+        return buildClientForTenant(tenantId, null);
+    }
+
+    public Gmail buildClientForTenant(UUID tenantId, Duration requestTimeout) throws IOException {
         GmailConnectionEntity gmailConnection =
                 gmailConnectionRepository
                         .findByTenantId(tenantId)
@@ -80,10 +91,16 @@ public class GmailApiClientFactory {
                                 () ->
                                         new IllegalStateException(
                                                 "No connection for tenantId: " + tenantId));
-        return buildClientForConnection(gmailConnection, tenantId);
+        return buildClientForConnection(gmailConnection, tenantId, requestTimeout);
     }
 
     public Gmail buildClientForConnection(GmailConnectionEntity gmailConnection, UUID tenantId)
+            throws IOException {
+        return buildClientForConnection(gmailConnection, tenantId, null);
+    }
+
+    public Gmail buildClientForConnection(
+            GmailConnectionEntity gmailConnection, UUID tenantId, Duration requestTimeout)
             throws IOException {
         byte[] decryptedRefreshTokenBytes =
                 refreshTokenCipher.decrypt(
@@ -92,7 +109,7 @@ public class GmailApiClientFactory {
             String decryptedRefreshToken =
                     new String(decryptedRefreshTokenBytes, StandardCharsets.UTF_8);
             TokenRefreshResult tokenResult = refreshAccessToken(decryptedRefreshToken);
-            return buildGmailClient(tokenResult.accessToken().value());
+            return buildGmailClient(tokenResult.accessToken().value(), requestTimeout);
         } finally {
             Arrays.fill(decryptedRefreshTokenBytes, (byte) 0);
         }
@@ -137,5 +154,30 @@ public class GmailApiClientFactory {
             throw new InvalidGrantException("OAuth token revoked");
         }
         throw new IOException("Token refresh failed with status: " + response.statusCode());
+    }
+
+    private static HttpRequestInitializer withOptionalTimeout(
+            HttpRequestInitializer requestInitializer, Duration requestTimeout) {
+        if (requestTimeout == null) {
+            return requestInitializer;
+        }
+        int timeoutMillis = timeoutMillis(requestTimeout);
+        return request -> {
+            requestInitializer.initialize(request);
+            request.setConnectTimeout(timeoutMillis);
+            request.setReadTimeout(timeoutMillis);
+        };
+    }
+
+    private static int timeoutMillis(Duration requestTimeout) {
+        Objects.requireNonNull(requestTimeout, "requestTimeout must not be null");
+        if (requestTimeout.isZero() || requestTimeout.isNegative()) {
+            throw new IllegalArgumentException("requestTimeout must be positive");
+        }
+        long timeoutMillis = requestTimeout.toMillis();
+        if (timeoutMillis > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("requestTimeout must fit in an int millisecond");
+        }
+        return Math.toIntExact(Math.max(1L, timeoutMillis));
     }
 }

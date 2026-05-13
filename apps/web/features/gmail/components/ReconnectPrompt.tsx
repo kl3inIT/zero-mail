@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 
 /**
  * ReconnectPrompt — Phase 01.5 Plan 02 deflation (D-C1, D-C2, D-C3).
- * Phase 01.5 Plan 04 — visual polish via frontend-design skill (D-D1).
  *
  * Replaces StatusAlert variant=warn with raw <Alert variant="warning">.
  * Token-aware classes only — no hardcoded amber literals (closes REVIEW.md §6).

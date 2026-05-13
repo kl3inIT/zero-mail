@@ -1,8 +1,11 @@
 package com.zeromail.core.triage.usecases;
 
 import com.zeromail.core.rules.domain.RuleActionType;
+import com.zeromail.core.triage.domain.ReplyHeaders;
 import com.zeromail.core.triage.domain.TriageActionResult;
 import com.zeromail.core.triage.domain.TriageDecision;
+import com.zeromail.core.triage.exception.MissingMessageIdException;
+import com.zeromail.core.triage.exception.ThreadingHeaderInvalidException;
 import com.zeromail.core.triage.persistence.TriageAuditRepository;
 import com.zeromail.core.triage.persistence.TriageAuditWriter;
 import java.io.IOException;
@@ -117,15 +120,25 @@ public class TriageAuditSaga {
                         null);
             }
             case TriageActionResult.SaveDraft saveDraft -> {
-                String draftId =
-                        triageGmailWriter.saveDraft(
-                                command.tenantId(), saveDraft, command.gmailThreadId());
-                yield GmailWriteResult.applied(
-                        draftId,
-                        null,
-                        actionArgsJson(
-                                new TriageActionResult.SaveDraft(
-                                        saveDraft.instruction(), draftId, saveDraft.threadId())));
+                try {
+                    String draftId =
+                            triageGmailWriter.saveDraft(
+                                    command.tenantId(),
+                                    command.replyHeaders(),
+                                    saveDraft.instruction(),
+                                    command.gmailThreadId());
+                    yield GmailWriteResult.applied(
+                            draftId,
+                            null,
+                            actionArgsJson(
+                                    new TriageActionResult.SaveDraft(
+                                            saveDraft.instruction(),
+                                            draftId,
+                                            saveDraft.threadId())));
+                } catch (MissingMessageIdException
+                        | ThreadingHeaderInvalidException threadingException) {
+                    yield GmailWriteResult.failed("draft_threading_invalid");
+                }
             }
         };
     }
@@ -205,6 +218,7 @@ public class TriageAuditSaga {
             String ruleNameSnapshot,
             RuleActionType actionType,
             TriageActionResult preWriteIntent,
+            ReplyHeaders replyHeaders,
             String reasonEvidence) {
 
         public TriageAuditCommand {
@@ -215,6 +229,9 @@ public class TriageAuditSaga {
             requireText(ruleNameSnapshot, "ruleNameSnapshot");
             Objects.requireNonNull(actionType, "actionType must not be null");
             Objects.requireNonNull(preWriteIntent, "preWriteIntent must not be null");
+            if (preWriteIntent instanceof TriageActionResult.SaveDraft) {
+                Objects.requireNonNull(replyHeaders, "replyHeaders must not be null");
+            }
             requireText(reasonEvidence, "reasonEvidence");
         }
     }

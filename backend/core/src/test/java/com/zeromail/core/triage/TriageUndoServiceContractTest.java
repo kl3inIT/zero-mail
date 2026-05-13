@@ -3,10 +3,12 @@ package com.zeromail.core.triage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import com.zeromail.core.triage.domain.TriageUndoPolicy;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
 class TriageUndoServiceContractTest {
@@ -52,8 +54,9 @@ class TriageUndoServiceContractTest {
             throws Exception {
         assertThat(throwableType(TRIAGE_UNDO_EXPIRED_EXCEPTION)).isNotNull();
         assertThat(throwableType(TRIAGE_UNDO_ALREADY_DONE_EXCEPTION)).isNotNull();
+        assertThat(TriageUndoPolicy.UNDO_WINDOW).isEqualTo(Duration.ofDays(30));
         assertThat(undoServiceSource())
-                .contains("Duration.ofDays(30)")
+                .contains("TriageUndoPolicy.UNDO_WINDOW")
                 .contains("throw new TriageUndoExpiredException")
                 .contains("throw new TriageUndoAlreadyDoneException")
                 .contains("unsupportedActionType()");

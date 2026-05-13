@@ -245,6 +245,13 @@
     },
     "conflict": "Dữ liệu đã thay đổi trước khi thao tác hoàn tất. Hãy tải lại trang rồi thử lại.",
     "dataIntegrity": "Không thể lưu thay đổi vì dữ liệu không hợp lệ.",
+    "draft": {
+      "generation": {
+        "failed": "Chưa thể tạo bản nháp. Hãy thử lại sau.",
+        "in_flight": "Đang tạo bản nháp cho luồng email này.",
+        "unavailable": "Tạm thời chưa thể tạo bản nháp. Hãy thử lại sau."
+      }
+    },
     "fallback": "Không thể hoàn tất thao tác. Hãy làm mới trang rồi thử lại.",
     "fieldFallback": "Giá trị này không hợp lệ. Hãy kiểm tra lại.",
     "gmail": {
@@ -260,7 +267,7 @@
         "body": "Nạp thêm tín dụng hoặc lưu khóa BYOK hợp lệ để tiếp tục gọi AI.",
         "title": "Tín dụng nền tảng đã hết"
       },
-      "safety_violation": "Yêu cầu AI đã bị từ chối vì lý do an toàn.",
+      "safety_violation": "Đã xảy ra lỗi. Hãy thử lại.",
       "safetyViolation": "Yêu cầu AI đã bị từ chối vì lý do an toàn.",
       "sanitization_failed": "Không thể chuẩn hóa nội dung email trước khi gọi AI. Hãy thử lại.",
       "sanitizationFailed": "Không thể chuẩn hóa nội dung email trước khi gọi AI. Hãy thử lại."
@@ -269,6 +276,9 @@
       "backHome": "Về trang chủ",
       "body": "Trang bạn đang tìm không tồn tại hoặc đã bị di chuyển.",
       "title": "Không tìm thấy trang"
+    },
+    "pagination": {
+      "invalid_cursor": "Đã xảy ra lỗi. Hãy thử lại."
     },
     "rules": {
       "compile": {
@@ -542,6 +552,7 @@
     "how": "Cách hoạt động",
     "languageSelector": "Ngôn ngữ",
     "logoLabel": "Trang chủ Zero Mail",
+    "needsReply": "Cần trả lời",
     "onboardingProgress": "Tiến trình cài đặt",
     "openApp": "Mở ứng dụng",
     "privacy": "Quyền riêng tư",
@@ -553,6 +564,68 @@
     "triage": "Triage",
     "trust": "Tin cậy & an toàn",
     "waitlist": "Đăng ký danh sách chờ"
+  },
+  "needsReply": {
+    "action": {
+      "draftReply": "Soạn nháp trả lời",
+      "generating": "Đang tạo…",
+      "markResolved": "Đánh dấu đã xử lý",
+      "openInGmail": "Mở trong Gmail",
+      "regenerateDraft": "Tạo lại bản nháp",
+      "regenerating": "Đang tạo lại…"
+    },
+    "banner": {
+      "updating": "Đang cập nhật danh sách cần trả lời…"
+    },
+    "columns": {
+      "actions": "Hành động",
+      "draft": "Bản nháp",
+      "lastActivity": "Hoạt động gần nhất",
+      "otherParty": "Người trao đổi",
+      "subject": "Chủ đề"
+    },
+    "dialog": {
+      "cancel": "Hủy",
+      "replace": "Thay bản nháp",
+      "replaceDescription": "Bản nháp hiện có trong Gmail sẽ bị loại bỏ và Zero Mail sẽ tạo một bản nháp mới.",
+      "replaceTitle": "Thay bản nháp hiện tại?"
+    },
+    "empty": {
+      "awaiting": {
+        "body": "Không có luồng nào đang chờ phía bên kia trả lời.",
+        "title": "Không có gì đang chờ"
+      },
+      "resolved": {
+        "body": "Chưa có luồng nào được xử lý."
+      },
+      "toReply": {
+        "body": "Hiện không có email nào cần trả lời.",
+        "title": "Inbox zero 🎉"
+      }
+    },
+    "error": {
+      "body": "Đã xảy ra lỗi khi tải các luồng email của bạn. Hãy thử lại.",
+      "retry": "Thử lại",
+      "title": "Không tải được danh sách cần trả lời"
+    },
+    "page": {
+      "description": "Các luồng email đang chờ phản hồi — từ bạn hoặc từ họ. Xem lại và gửi bản nháp trong Gmail.",
+      "title": "Cần trả lời"
+    },
+    "status": {
+      "draftReady": "Có nháp",
+      "draftSent": "Đã gửi nháp",
+      "noDraft": "Chưa có nháp"
+    },
+    "tabs": {
+      "awaitingReply": "Đang chờ trả lời",
+      "label": "Hộp thư cần trả lời",
+      "resolved": "Đã xử lý",
+      "toReply": "Cần trả lời"
+    },
+    "toast": {
+      "draftSaved": "Đã lưu bản nháp trong Gmail — hãy xem lại và gửi ở đó."
+    }
   },
   "onboarding": {
     "completion": {
@@ -840,27 +913,33 @@
       "boundary": "Cũ hơn 30 ngày - không thể hoàn tác",
       "columns": {
         "action": "Hành động",
+        "actions": "Hành động",
         "message": "Email",
         "reason": "Lý do",
         "rule": "Quy tắc",
         "timestamp": "Thời gian",
         "undo": "Hoàn tác"
       },
+      "draftAction": "Soạn nháp trả lời",
       "empty": {
         "body": "Khi Zero Mail xử lý email, các quyết định và lý do sẽ xuất hiện ở đây.",
         "title": "Chưa có hoạt động triage"
       },
+      "endOfList": "Đã hết danh sách.",
       "error": {
         "body": "Hãy thử tải lại danh sách trước khi quyết định hoàn tác.",
         "retry": "Tải lại",
         "title": "Không tải được nhật ký triage"
       },
+      "loadingMore": "Đang tải...",
       "loadingOlder": "Đang tải...",
+      "loadMore": "Tải thêm",
       "loadOlder": "Tải mục cũ hơn",
       "message": {
         "unknownSender": "Người gửi không rõ",
         "untitled": "Email không tiêu đề"
       },
+      "regenerateDraftAction": "Tạo lại bản nháp",
       "unavailable": {
         "body": "Backend hiện chỉ có endpoint hoàn tác từng bản ghi, chưa có endpoint danh sách nhật ký. Zero Mail sẽ hiển thị lịch sử tại đây khi endpoint đó được bổ sung.",
         "title": "Chưa có lịch sử triage trong giao diện"
@@ -914,7 +993,6 @@
       },
       "offBody": "Các hành động triage được phép sẽ được áp dụng sau khi qua kiểm tra an toàn.",
       "onBody": "Zero Mail sẽ đánh giá email nhưng không áp dụng nhãn, lưu draft, hoặc archive.",
-      "readUnavailable": "Trạng thái ban đầu đang dùng mặc định cục bộ vì backend chưa có endpoint đọc shadow mode.",
       "title": "Shadow mode",
       "toggleLabel": "Bật shadow mode"
     },

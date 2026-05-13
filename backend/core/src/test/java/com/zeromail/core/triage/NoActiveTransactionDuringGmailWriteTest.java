@@ -8,6 +8,7 @@ import static org.mockito.Mockito.doAnswer;
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
+import com.zeromail.core.triage.domain.ReplyHeaders;
 import com.zeromail.core.triage.domain.TriageActionResult;
 import com.zeromail.core.triage.persistence.TriageAuditRepository;
 import com.zeromail.core.triage.persistence.TriageAuditWriter;
@@ -80,7 +81,8 @@ class NoActiveTransactionDuringGmailWriteTest extends PostgresContainerTest {
                 .when(triageGmailWriter)
                 .saveDraft(
                         eq(TENANT_ID),
-                        any(TriageActionResult.SaveDraft.class),
+                        any(ReplyHeaders.class),
+                        eq("Draft a safe reply for user review"),
                         eq(GMAIL_THREAD_ID));
 
         GmailWriteResult labelResult = executeInsideOuterTransaction(labelCommand());
@@ -164,7 +166,20 @@ class NoActiveTransactionDuringGmailWriteTest extends PostgresContainerTest {
                 "Transaction boundary rule",
                 actionType,
                 actionResult,
+                replyHeadersFor(actionResult),
                 "evidenceIds=transaction-boundary");
+    }
+
+    private static ReplyHeaders replyHeadersFor(TriageActionResult actionResult) {
+        if (!(actionResult instanceof TriageActionResult.SaveDraft)) {
+            return null;
+        }
+        return ReplyHeaders.of(
+                "<transaction-boundary@example.com>",
+                null,
+                "Transaction boundary",
+                "founder@example.com",
+                GMAIL_THREAD_ID);
     }
 
     private UUID seedAppliedLabelAudit() {

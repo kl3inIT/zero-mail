@@ -23,14 +23,6 @@ export const triageMessages = {
     vi: 'Người gửi',
     en: 'Sender safety net',
   },
-  'triage.audit.unavailable.title': {
-    vi: 'Chưa có lịch sử triage trong giao diện',
-    en: 'Audit history is not available yet',
-  },
-  'triage.audit.unavailable.body': {
-    vi: 'Backend hiện chỉ có endpoint hoàn tác từng bản ghi, chưa có endpoint danh sách nhật ký. Zero Mail sẽ hiển thị lịch sử tại đây khi endpoint đó được bổ sung.',
-    en: 'The backend currently exposes undo for individual audit entries, but not the audit-list endpoint. Zero Mail will show the history here when that endpoint exists.',
-  },
   'triage.audit.empty.title': {
     vi: 'Chưa có hoạt động triage',
     en: 'No triage activity yet',
@@ -55,9 +47,29 @@ export const triageMessages = {
     vi: 'Tải mục cũ hơn',
     en: 'Load older entries',
   },
+  'triage.audit.loadMore': {
+    vi: 'Tải thêm',
+    en: 'Load more',
+  },
+  'triage.audit.endOfList': {
+    vi: 'Đã hết danh sách.',
+    en: "That's everything.",
+  },
   'triage.audit.loadingOlder': {
     vi: 'Đang tải...',
     en: 'Loading...',
+  },
+  'triage.audit.loadingMore': {
+    vi: 'Đang tải...',
+    en: 'Loading...',
+  },
+  'triage.audit.draftAction': {
+    vi: 'Soạn nháp trả lời',
+    en: 'Draft reply',
+  },
+  'triage.audit.regenerateDraftAction': {
+    vi: 'Tạo lại bản nháp',
+    en: 'Regenerate draft',
   },
   'triage.audit.boundary': {
     vi: 'Cũ hơn 30 ngày - không thể hoàn tác',
@@ -86,6 +98,10 @@ export const triageMessages = {
   'triage.audit.columns.undo': {
     vi: 'Hoàn tác',
     en: 'Undo',
+  },
+  'triage.audit.columns.actions': {
+    vi: 'Hành động',
+    en: 'Actions',
   },
   'triage.audit.message.untitled': {
     vi: 'Email không tiêu đề',
@@ -158,10 +174,6 @@ export const triageMessages = {
   'triage.shadow.offBody': {
     vi: 'Các hành động triage được phép sẽ được áp dụng sau khi qua kiểm tra an toàn.',
     en: 'Allowed triage actions will apply after safety checks.',
-  },
-  'triage.shadow.readUnavailable': {
-    vi: 'Trạng thái ban đầu đang dùng mặc định cục bộ vì backend chưa có endpoint đọc shadow mode.',
-    en: 'The initial state uses a local default because the backend does not expose a shadow-mode read endpoint yet.',
   },
   'triage.shadow.confirm.title': {
     vi: 'Tắt shadow mode?',

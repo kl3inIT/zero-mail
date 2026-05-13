@@ -40,7 +40,8 @@ class LiquibaseMigrationTest extends PostgresContainerTest {
                         "event_publication",
                         "triage_audit",
                         "tenant_sender_opt_in",
-                        "tenant_protected_sender_observation");
+                        "tenant_protected_sender_observation",
+                        "thread_reply_status");
     }
 
     @Test
@@ -55,6 +56,31 @@ class LiquibaseMigrationTest extends PostgresContainerTest {
         assertThat(indexDefinition("ux_triage_audit_idem")).contains("NULLS NOT DISTINCT");
         assertThatThrownBy(() -> insertPendingAuditRow(tenantId, argsHash))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void thread_reply_status_indexes_and_fk_cascade_exist() {
+        assertThat(indexDefinition("ux_thread_reply_status_tenant_thread"))
+                .contains("(tenant_id, gmail_thread_id)");
+        assertThat(indexDefinition("idx_thread_reply_status_inbox"))
+                .contains(
+                        "tenant_id",
+                        "bucket",
+                        "resolved",
+                        "last_classified_at DESC NULLS LAST",
+                        "gmail_thread_id DESC");
+        assertThat(indexDefinition("idx_thread_reply_status_resolved"))
+                .contains(
+                        "tenant_id",
+                        "resolved",
+                        "last_classified_at DESC NULLS LAST",
+                        "gmail_thread_id DESC");
+        assertThat(indexDefinition("idx_thread_reply_status_to_reply"))
+                .contains("WHERE", "'TO_REPLY'::text", "NOT resolved");
+        assertThat(constraintDefinition("fk_thread_reply_status_tenant"))
+                .contains("FOREIGN KEY (tenant_id)")
+                .contains("REFERENCES tenants(id)")
+                .contains("ON DELETE CASCADE");
     }
 
     private void insertPendingAuditRow(UUID tenantId, byte[] argsHash) {
@@ -74,5 +100,12 @@ class LiquibaseMigrationTest extends PostgresContainerTest {
     private String indexDefinition(String indexName) {
         return jdbcTemplate.queryForObject(
                 "select indexdef from pg_indexes where indexname = ?", String.class, indexName);
+    }
+
+    private String constraintDefinition(String constraintName) {
+        return jdbcTemplate.queryForObject(
+                "select pg_get_constraintdef(oid) from pg_constraint where conname = ?",
+                String.class,
+                constraintName);
     }
 }

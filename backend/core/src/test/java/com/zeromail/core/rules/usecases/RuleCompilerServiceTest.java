@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.llm.usecases.LlmGateway;
 import com.zeromail.core.llm.usecases.RuleCompileGatewayResult;
+import com.zeromail.core.llm.usecases.SanitizationContext;
 import com.zeromail.core.llm.usecases.SemanticIntentRequest;
 import com.zeromail.core.llm.usecases.ToolCallResult;
 import com.zeromail.core.rules.domain.RuleLanguage;
@@ -238,6 +239,16 @@ class RuleCompilerServiceTest {
 
         @Override
         public ToolCallResult chat(CallSite callSite, String rawHtml) {
+            throw new AssertionError("Rule compiler must call compileRule");
+        }
+
+        @Override
+        public ToolCallResult chatForDraft(
+                CallSite callSite,
+                SanitizationContext inbound,
+                String toneDescriptorBlock,
+                List<String> toneStyleSnippets,
+                String inboundSubject) {
             throw new AssertionError("Rule compiler must call compileRule");
         }
 

@@ -13,7 +13,6 @@ import { cn } from '@/lib/utils';
 /**
  * /login (RSC). Phase 01.5 Plan 02 — deflated from PageShell to raw <main>,
  * wired RSC searchParams for ?error=... rendering (D-B3).
- * Phase 01.5 Plan 04 — visual polish via frontend-design skill (D-D1).
  *
  * Design intent (Plan 04):
  *  - Card with explicit header/content separation: heading large + confident,

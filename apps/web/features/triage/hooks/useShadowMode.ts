@@ -32,6 +32,5 @@ export function useShadowMode() {
     state,
     mutation,
     enabled: state.data?.enabled ?? false,
-    readUnavailable: state.data?.readUnavailable ?? false,
   };
 }

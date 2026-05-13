@@ -3,6 +3,7 @@ package com.zeromail.core.triage.usecases;
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.triage.domain.TriageActionResult;
 import com.zeromail.core.triage.domain.TriageDecision;
+import com.zeromail.core.triage.domain.TriageUndoPolicy;
 import com.zeromail.core.triage.exception.TriageAuditException;
 import com.zeromail.core.triage.exception.TriageAuditNotFoundException;
 import com.zeromail.core.triage.exception.TriageUndoAlreadyDoneException;
@@ -14,7 +15,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.NoSuchElementException;
@@ -36,7 +36,6 @@ public class TriageUndoService {
 
     private static final Logger log = LoggerFactory.getLogger(TriageUndoService.class);
     private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder().build();
-    private static final Duration UNDO_WINDOW = Duration.ofDays(30);
     private static final String INBOX_LABEL_ID = "INBOX";
 
     private final TriageAuditRepository triageAuditRepository;
@@ -131,7 +130,7 @@ public class TriageUndoService {
 
         Instant appliedAt = auditRow.getAppliedAt();
         Instant now = clock.instant();
-        if (appliedAt == null || appliedAt.isBefore(now.minus(UNDO_WINDOW))) {
+        if (appliedAt == null || appliedAt.isBefore(now.minus(TriageUndoPolicy.UNDO_WINDOW))) {
             throw new TriageUndoExpiredException();
         }
 

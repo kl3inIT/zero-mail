@@ -1,0 +1,201 @@
+package com.zeromail.core.draft.usecases;
+
+import com.google.api.services.gmail.Gmail;
+import com.google.api.services.gmail.model.Message;
+import com.google.api.services.gmail.model.MessagePart;
+import com.google.api.services.gmail.model.MessagePartBody;
+import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.triage.domain.ReplyHeaders;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.stereotype.Service;
+
+@Service
+public class DraftReplySourceLoader {
+
+    private static final String USER_ID = "me";
+    private static final List<String> REPLY_METADATA_HEADERS =
+            List.of(
+                    "Message-ID",
+                    "References",
+                    "In-Reply-To",
+                    "Subject",
+                    "From",
+                    "Reply-To",
+                    "Auto-Submitted");
+    private static final String THREAD_FIELDS =
+            "id,messages(id,threadId,labelIds,payload/headers,payload/mimeType,payload/body/data,"
+                    + "payload/parts(mimeType,body/data,parts))";
+
+    private final GmailApiClientFactory gmailApiClientFactory;
+
+    public DraftReplySourceLoader(GmailApiClientFactory gmailApiClientFactory) {
+        this.gmailApiClientFactory =
+                Objects.requireNonNull(
+                        gmailApiClientFactory, "gmailApiClientFactory must not be null");
+    }
+
+    public DraftReplySource load(UUID tenantId, String gmailThreadId) throws IOException {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        String threadId = requireText(gmailThreadId, "gmailThreadId");
+        Gmail gmail = gmailApiClientFactory.buildClientForTenant(tenantId);
+        com.google.api.services.gmail.model.Thread gmailThread =
+                gmail.users()
+                        .threads()
+                        .get(USER_ID, threadId)
+                        .setFormat("full")
+                        .setMetadataHeaders(REPLY_METADATA_HEADERS)
+                        .setFields(THREAD_FIELDS)
+                        .execute();
+        List<Message> messages = gmailThread.getMessages();
+        if (messages == null || messages.isEmpty()) {
+            throw new IOException("Gmail thread contains no messages");
+        }
+        boolean threadHasSentLabel =
+                messages.stream().anyMatch(message -> hasLabel(message, "SENT"));
+        Message replyTarget = lastInboundMessage(messages).orElse(messages.getLast());
+        MessagePart payload = replyTarget.getPayload();
+        String subject = headerValue(payload, "Subject").orElse("");
+        String replyToAddress =
+                extractEmailAddress(
+                        headerValue(payload, "Reply-To")
+                                .or(() -> headerValue(payload, "From"))
+                                .orElse(""));
+        ReplyHeaders replyHeaders =
+                ReplyHeaders.of(
+                        headerValue(payload, "Message-ID").orElse(null),
+                        headerValue(payload, "References")
+                                .or(() -> headerValue(payload, "In-Reply-To"))
+                                .orElse(null),
+                        subject,
+                        replyToAddress,
+                        threadId);
+        return new DraftReplySource(
+                requireText(replyTarget.getId(), "gmailMessageId"),
+                threadId,
+                replyHeaders,
+                extractReadableBody(payload),
+                subject,
+                hasLabel(replyTarget, "SENT"),
+                threadHasSentLabel,
+                isAutoReply(payload));
+    }
+
+    private static Optional<Message> lastInboundMessage(List<Message> messages) {
+        for (int messageIndex = messages.size() - 1; messageIndex >= 0; messageIndex--) {
+            Message message = messages.get(messageIndex);
+            if (!hasLabel(message, "SENT")) {
+                return Optional.of(message);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static boolean hasLabel(Message message, String labelId) {
+        return message.getLabelIds() != null && message.getLabelIds().contains(labelId);
+    }
+
+    private static Optional<String> headerValue(MessagePart payload, String headerName) {
+        if (payload == null || payload.getHeaders() == null) {
+            return Optional.empty();
+        }
+        return payload.getHeaders().stream()
+                .filter(header -> headerName.equalsIgnoreCase(header.getName()))
+                .map(header -> header.getValue() == null ? "" : header.getValue().trim())
+                .filter(value -> !value.isBlank())
+                .findFirst();
+    }
+
+    private static boolean isAutoReply(MessagePart payload) {
+        return headerValue(payload, "Auto-Submitted")
+                .map(value -> !"no".equalsIgnoreCase(value))
+                .orElse(false);
+    }
+
+    private static String extractEmailAddress(String headerValue) {
+        String sanitizedHeader = Objects.requireNonNullElse(headerValue, "").trim();
+        int openAngleIndex = sanitizedHeader.indexOf('<');
+        int closeAngleIndex = sanitizedHeader.indexOf('>');
+        String emailAddress =
+                openAngleIndex >= 0 && closeAngleIndex > openAngleIndex
+                        ? sanitizedHeader.substring(openAngleIndex + 1, closeAngleIndex)
+                        : sanitizedHeader;
+        return emailAddress.toLowerCase(Locale.ROOT).trim();
+    }
+
+    private static String extractReadableBody(MessagePart payload) {
+        if (payload == null) {
+            return "";
+        }
+        String directBody = decodedBody(payload);
+        if (!directBody.isBlank() && isReadableMimeType(payload.getMimeType())) {
+            return directBody;
+        }
+        List<MessagePart> parts = payload.getParts();
+        if (parts == null || parts.isEmpty()) {
+            return directBody;
+        }
+        ArrayList<String> extractedParts = new ArrayList<>();
+        for (MessagePart part : parts) {
+            String extractedPart = extractReadableBody(part);
+            if (!extractedPart.isBlank()) {
+                extractedParts.add(extractedPart);
+            }
+        }
+        return String.join("\n", extractedParts);
+    }
+
+    private static String decodedBody(MessagePart payload) {
+        MessagePartBody body = payload.getBody();
+        if (body == null || body.getData() == null || body.getData().isBlank()) {
+            return "";
+        }
+        try {
+            byte[] decodedBytes = Base64.getUrlDecoder().decode(body.getData());
+            return new String(decodedBytes, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException invalidBase64) {
+            return "";
+        }
+    }
+
+    private static boolean isReadableMimeType(String mimeType) {
+        return mimeType == null
+                || mimeType.equalsIgnoreCase("text/plain")
+                || mimeType.equalsIgnoreCase("text/html");
+    }
+
+    private static String requireText(String value, String fieldName) {
+        Objects.requireNonNull(value, fieldName + " must not be null");
+        String trimmedValue = value.trim();
+        if (trimmedValue.isBlank()) {
+            throw new IllegalArgumentException(fieldName + " must not be blank");
+        }
+        return trimmedValue;
+    }
+
+    public record DraftReplySource(
+            String gmailMessageId,
+            String gmailThreadId,
+            ReplyHeaders replyHeaders,
+            String inboundRawHtml,
+            String inboundSubject,
+            boolean lastMessageFromIsTenant,
+            boolean threadHasSentLabel,
+            boolean lastMessageIsAutoReply) {
+
+        public DraftReplySource {
+            gmailMessageId = requireText(gmailMessageId, "gmailMessageId");
+            gmailThreadId = requireText(gmailThreadId, "gmailThreadId");
+            Objects.requireNonNull(replyHeaders, "replyHeaders must not be null");
+            inboundRawHtml = Objects.requireNonNullElse(inboundRawHtml, "");
+            inboundSubject = Objects.requireNonNullElse(inboundSubject, "");
+        }
+    }
+}
