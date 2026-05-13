@@ -85,6 +85,11 @@ async function installTriageApiMock(page: Page) {
       return;
     }
 
+    if (url.pathname === '/api/tenant/triage/shadow-mode' && request.method() === 'GET') {
+      await fulfillJson(route, { enabled: false });
+      return;
+    }
+
     if (url.pathname === '/api/threads' && request.method() === 'GET') {
       await fulfillJson(route, { items: [], nextCursor: null, toReplyCount: 0 });
       return;

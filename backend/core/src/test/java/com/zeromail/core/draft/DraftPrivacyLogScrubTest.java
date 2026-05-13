@@ -93,6 +93,8 @@ class DraftPrivacyLogScrubTest {
                         any(),
                         anyString()))
                 .thenReturn(Optional.of(UUID.randomUUID()));
+        when(triageAuditRepository.reclaimStalePending(any(UUID.class), eq(TENANT_ID), anyString()))
+                .thenReturn(1);
         GenerateThreadDraftService service =
                 new GenerateThreadDraftService(
                         redisDistributedLock,

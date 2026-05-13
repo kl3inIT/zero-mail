@@ -23,6 +23,6 @@ test('needs-reply golden path saves a Gmail draft for review', async ({ page }) 
   await page.getByRole('button', { name: 'Draft reply' }).first().click();
 
   await expect(page.getByText('Draft saved in Gmail — review and send it there.')).toBeVisible();
-  await expect(page.getByText('Draft ready')).toBeVisible();
+  await expect(page.getByTestId('needs-reply-row').getByText('Draft ready')).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });
