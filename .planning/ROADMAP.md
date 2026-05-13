@@ -408,7 +408,11 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. The analytics screen shows volume triaged, estimated time saved, top senders, and rule hits over a user-selectable window, derived from per-message metadata only.
   2. Each day, a connected tenant receives a digest email summarizing triage activity for the prior day.
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 05C-01-PLAN.md — Schema + entity wave: sender_email column (§0 fix), tenants.time_zone, notification_preference + digest_delivery tables + analytics indexes, JPA entities + IdentifiedEnum ChannelType/DigestDeliveryStatus, OAuthProvisioningService defaults + account-deletion cascade
+- [ ] 05C-02-PLAN.md — Backend analytics endpoint: core.analytics Modulith module, AnalyticsSummaryQueryService (Q1-Q4 JDBC), TimeSavedWeights, AnalyticsController GET /api/analytics/summary, content-ban + privacy-sweep ArchUnit tests
+- [ ] 05C-03-PLAN.md — Backend digest dispatch: Resend SDK 4.13.0, Thymeleaf vi/en templates, EmailNotificationChannel + ResendEmailGateway + ThymeleafDigestRenderer, DigestDispatchScheduler (cron + ShedLock), DigestPendingReaperJob, NotificationPreferencesController GET/PATCH, ResendBoundaryArchTest + DigestPayloadShapeArchTest + privacy sweep + idempotency tests
+- [ ] 05C-04-PLAN.md — Frontend: /analytics route + 4 panels + window chips + features/analytics, /settings Notifications subsection + features/notifications, sidebar nav item, OpenAPI typed-client regen, EN_SCAN_FILES update, vi+en messages.ts, Playwright e2e for analytics + settings-notifications
 **UI hint**: yes
 
 ### Phase 6: Polish & CASA-Verified Launch
