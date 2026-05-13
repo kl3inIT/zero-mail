@@ -112,7 +112,10 @@ export function AppSidebar() {
                       <span>{label}</span>
                     </SidebarMenuButton>
                     {item.badge === 'needs-reply' && visibleToReplyCount > 0 ? (
-                      <SidebarMenuBadge className="bg-primary/10 text-primary font-mono">
+                      <SidebarMenuBadge
+                        aria-label={`${label}: ${visibleToReplyCount}`}
+                        className="bg-primary/10 text-primary font-mono"
+                      >
                         {visibleToReplyCount}
                       </SidebarMenuBadge>
                     ) : null}
