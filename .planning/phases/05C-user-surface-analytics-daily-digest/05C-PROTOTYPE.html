@@ -1,0 +1,1674 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Phase 5C Prototype — Analytics & Daily Digest · Zero Mail</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Be+Vietnam+Pro:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        /* Phase 5A inherited base-teal token contract — light mode */
+        --background: #fafaf7;
+        --foreground: #1a1a18;
+        --card: #ffffff;
+        --secondary: #f1efe7;
+        --muted: #f1efe7;
+        --muted-foreground: #6a6a64;
+        --border: #e8e5dc;
+        --primary: #0e5e5a;
+        --primary-foreground: #ffffff;
+        --accent: #0e5e5a;
+        --accent-soft: #d6e8e5;
+        --green: #2f7d5c;
+        --green-soft: #d9ecdf;
+        --ring: #0e5e5a;
+        --font-sans: "Geist", "Be Vietnam Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --font-mono: "Geist Mono", "SF Mono", Menlo, Consolas, monospace;
+        --font-serif: "Instrument Serif", Georgia, serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #ece8de;
+        color: var(--foreground);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .proto-shell {
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 32px 24px 64px;
+      }
+
+      .proto-title {
+        font-family: var(--font-sans);
+        font-weight: 600;
+        font-size: 20px;
+        color: var(--foreground);
+        margin: 0 0 4px;
+      }
+
+      .proto-subtitle {
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted-foreground);
+        margin: 0 0 32px;
+        font-family: var(--font-mono);
+      }
+
+      .proto-row {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 32px;
+      }
+
+      @media (min-width: 1100px) {
+        .proto-row {
+          grid-template-columns: 1.4fr 1fr;
+        }
+      }
+
+      .proto-surface {
+        background: var(--background);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+      }
+
+      .proto-surface-label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: var(--secondary);
+        border-bottom: 1px solid var(--border);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted-foreground);
+      }
+
+      .proto-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+      }
+
+      /* ---------- A. /analytics page ---------- */
+
+      .app-shell {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        min-height: 720px;
+      }
+
+      .app-sidebar {
+        background: var(--background);
+        border-right: 1px solid var(--border);
+        padding: 16px 12px;
+      }
+
+      .brand-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 8px 16px;
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--foreground);
+      }
+
+      .brand-mark {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        background: var(--primary);
+        display: inline-block;
+      }
+
+      .nav-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        font-size: 14px;
+        color: var(--muted-foreground);
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .nav-item:hover {
+        background: var(--secondary);
+      }
+
+      .nav-item.active {
+        background: var(--accent-soft);
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      .nav-glyph {
+        width: 16px;
+        height: 16px;
+        border-radius: 3px;
+        background: currentColor;
+        opacity: 0.85;
+        display: inline-block;
+      }
+
+      .app-main {
+        background: var(--background);
+        padding: 24px 32px 48px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      .app-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .h1 {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0 0 4px;
+        color: var(--foreground);
+      }
+
+      .subhead {
+        font-size: 14px;
+        color: var(--muted-foreground);
+        margin: 0;
+        max-width: 60ch;
+      }
+
+      .meta-line {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+
+      .tabs {
+        display: inline-flex;
+        background: var(--secondary);
+        border-radius: 8px;
+        padding: 4px;
+        gap: 2px;
+      }
+
+      .tab {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--muted-foreground);
+        padding: 6px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        min-height: 32px;
+        display: inline-flex;
+        align-items: center;
+        border: 0;
+        background: transparent;
+        font-family: inherit;
+      }
+
+      .tab.active {
+        background: var(--card);
+        color: var(--foreground);
+        font-weight: 600;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+      }
+
+      .tab:focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+      }
+
+      .panel-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+
+      @media (min-width: 720px) {
+        .panel-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted-foreground);
+        margin: 0;
+      }
+
+      .card-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0;
+        color: var(--foreground);
+      }
+
+      .display-figure {
+        font-size: 28px;
+        font-weight: 600;
+        line-height: 1.2;
+        color: var(--foreground);
+        font-feature-settings: "tnum" 1;
+      }
+
+      .display-figure.with-stripe {
+        position: relative;
+        padding-left: 12px;
+      }
+
+      .display-figure.with-stripe::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 4px;
+        bottom: 4px;
+        width: 4px;
+        border-radius: 2px;
+        background: var(--green-soft);
+      }
+
+      .supplementary {
+        font-size: 14px;
+        color: var(--muted-foreground);
+        margin: 0;
+      }
+
+      .sender-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .sender-row {
+        display: grid;
+        grid-template-columns: 24px 1fr auto;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 0;
+        border-bottom: 1px dashed var(--border);
+      }
+
+      .sender-row:last-child {
+        border-bottom: none;
+      }
+
+      .sender-row.rank-1 {
+        position: relative;
+      }
+
+      .sender-row.rank-1::before {
+        content: "";
+        position: absolute;
+        left: -16px;
+        top: 6px;
+        bottom: 6px;
+        width: 4px;
+        border-radius: 2px;
+        background: var(--accent-soft);
+      }
+
+      .rank {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+
+      .sender-email {
+        font-size: 14px;
+        color: var(--foreground);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .count-badge {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        background: var(--secondary);
+        color: var(--foreground);
+        padding: 2px 8px;
+        border-radius: 999px;
+      }
+
+      .rule-table-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .rule-table-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      table.rules {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      table.rules th {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted-foreground);
+        text-align: left;
+        padding: 12px 24px 8px;
+        border-bottom: 1px solid var(--border);
+        background: var(--secondary);
+      }
+
+      table.rules th.num,
+      table.rules td.num {
+        text-align: right;
+      }
+
+      table.rules td {
+        padding: 10px 24px;
+        border-bottom: 1px solid var(--border);
+        color: var(--foreground);
+      }
+
+      table.rules tr:last-child td {
+        border-bottom: none;
+      }
+
+      .rule-name {
+        font-weight: 500;
+      }
+
+      .mono {
+        font-family: var(--font-mono);
+        font-feature-settings: "tnum" 1;
+      }
+
+      .pill-applied {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        background: var(--accent-soft);
+        color: var(--primary);
+        padding: 2px 8px;
+        border-radius: 999px;
+      }
+
+      .pill-reverted {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        background: var(--secondary);
+        color: var(--muted-foreground);
+        padding: 2px 8px;
+        border-radius: 999px;
+      }
+
+      /* ---------- B. Settings — Notifications subsection ---------- */
+
+      .settings-page {
+        background: var(--background);
+        padding: 24px 32px 48px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      .settings-section {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .settings-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 12px 0;
+      }
+
+      .row-label {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .row-label-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--foreground);
+      }
+
+      .row-label-helper {
+        font-size: 12px;
+        color: var(--muted-foreground);
+        max-width: 48ch;
+      }
+
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+        border-radius: 999px;
+        background: var(--primary);
+        flex-shrink: 0;
+        cursor: pointer;
+      }
+
+      .switch::after {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 22px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+        transition: left 120ms ease;
+      }
+
+      .switch.off {
+        background: #c7c4ba;
+      }
+
+      .switch.off::after {
+        left: 2px;
+      }
+
+      .select {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 14px;
+        min-height: 40px;
+        min-width: 140px;
+        color: var(--foreground);
+        font-family: var(--font-mono);
+      }
+
+      .select.disabled {
+        background: var(--secondary);
+        color: var(--muted-foreground);
+      }
+
+      .select-chevron {
+        margin-left: auto;
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+
+      .tz-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: var(--muted-foreground);
+      }
+
+      .info-icon {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 1px solid var(--muted-foreground);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--muted-foreground);
+        font-family: var(--font-mono);
+      }
+
+      /* ---------- C. Digest email preview ---------- */
+
+      .email-stage {
+        background: #d9d4c5;
+        padding: 32px 24px;
+        display: flex;
+        justify-content: center;
+        min-height: 100%;
+      }
+
+      .email-card {
+        width: 100%;
+        max-width: 560px;
+        background: var(--background);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.07);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Be Vietnam Pro", sans-serif;
+      }
+
+      .email-subject-bar {
+        background: #fff;
+        border-bottom: 1px solid var(--border);
+        padding: 12px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .email-subject {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--foreground);
+      }
+
+      .email-preheader {
+        font-size: 12px;
+        color: var(--muted-foreground);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .email-body {
+        background: #fff;
+        padding: 32px 24px 0;
+      }
+
+      .email-brand-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .email-wordmark {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--foreground);
+      }
+
+      .email-datestamp {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+
+      .email-greeting {
+        font-size: 14px;
+        color: var(--muted-foreground);
+        margin: 0 0 24px;
+        line-height: 1.5;
+      }
+
+      .email-totals {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        padding: 16px 0 24px;
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+      }
+
+      @media (max-width: 480px) {
+        .email-totals {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .email-total-figure {
+        font-size: 28px;
+        font-weight: 600;
+        line-height: 1.2;
+        color: var(--foreground);
+        font-feature-settings: "tnum" 1;
+        margin: 0 0 4px;
+      }
+
+      .email-total-label {
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted-foreground);
+        margin: 0;
+      }
+
+      .email-cta-wrap {
+        text-align: center;
+        padding: 32px 0;
+      }
+
+      .email-cta {
+        display: inline-block;
+        background: var(--primary);
+        color: var(--primary-foreground);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+        padding: 12px 24px;
+        border-radius: 6px;
+      }
+
+      .email-section {
+        padding: 0 0 24px;
+      }
+
+      .email-section-eyebrow {
+        font-family: "SF Mono", Menlo, Consolas, monospace;
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted-foreground);
+        margin: 0 0 12px;
+      }
+
+      .email-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .email-list-row {
+        display: grid;
+        grid-template-columns: 24px 1fr auto;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .email-list-row:last-child {
+        border-bottom: none;
+      }
+
+      .email-rule-row {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .email-rule-row:last-child {
+        border-bottom: none;
+      }
+
+      .email-footer {
+        background: var(--secondary);
+        padding: 20px 24px 24px;
+        font-size: 12px;
+        color: var(--muted-foreground);
+        line-height: 1.6;
+      }
+
+      .email-footer a {
+        color: var(--primary);
+        font-weight: 600;
+        text-decoration: none;
+      }
+
+      .email-footer a:hover {
+        text-decoration: underline;
+      }
+
+      .email-footer .brand-line {
+        font-family: "SF Mono", Menlo, Consolas, monospace;
+        margin-top: 6px;
+        display: block;
+      }
+
+      .email-footer .legal-line {
+        margin-top: 6px;
+        display: block;
+      }
+
+      /* ---------- States grid (zero-activity / loading / empty) ---------- */
+
+      .states-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+
+      @media (min-width: 720px) {
+        .states-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      .skeleton {
+        background: linear-gradient(90deg, var(--secondary) 0%, #e7e3d8 50%, var(--secondary) 100%);
+        background-size: 200% 100%;
+        border-radius: 6px;
+        animation: shimmer 1.4s linear infinite;
+      }
+
+      @keyframes shimmer {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
+      }
+
+      .skel-figure {
+        height: 28px;
+        width: 96px;
+      }
+
+      .skel-line {
+        height: 14px;
+        width: 140px;
+      }
+
+      .skel-row {
+        height: 14px;
+        width: 100%;
+      }
+
+      .skel-rank {
+        height: 24px;
+        width: 24px;
+        border-radius: 50%;
+      }
+
+      .empty-state {
+        padding: 48px 24px;
+        text-align: center;
+        color: var(--muted-foreground);
+        font-size: 14px;
+      }
+
+      .empty-state .display-figure {
+        font-size: 28px;
+        font-weight: 600;
+        color: var(--foreground);
+      }
+
+      /* ---------- 320px mockup ---------- */
+
+      .mobile-frame {
+        width: 320px;
+        background: var(--background);
+        border-radius: 18px;
+        padding: 12px 16px 24px;
+        border: 1px solid var(--border);
+        margin: 0 auto;
+      }
+
+      .mobile-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 0 12px;
+      }
+
+      .mobile-burger {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: var(--secondary);
+        display: inline-block;
+      }
+
+      .mobile-tabs {
+        display: flex;
+        background: var(--secondary);
+        border-radius: 8px;
+        padding: 4px;
+        gap: 2px;
+        margin: 12px 0;
+      }
+
+      .mobile-tabs .tab {
+        flex: 1;
+        justify-content: center;
+        padding: 6px 8px;
+        font-size: 12px;
+      }
+
+      .mobile-card-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .mobile-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .mobile-rule-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13px;
+      }
+
+      .mobile-rule-card .rule-name {
+        font-size: 13px;
+      }
+
+      .mobile-rule-meta {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--muted-foreground);
+      }
+
+      /* ---------- Misc ---------- */
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .legend-chip {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: var(--secondary);
+        color: var(--muted-foreground);
+      }
+
+      .section-break {
+        margin: 56px 0 16px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="proto-shell">
+      <p class="proto-subtitle">Phase 5C · prototype · 2026-05-13</p>
+      <h1 class="proto-title">Analytics &amp; Daily Digest — visual lock</h1>
+      <p class="subhead">
+        Three surfaces — <strong>/analytics</strong> page (4 panels + window chips),
+        <strong>/settings → Notifications</strong> (opt-out + send-hour), and the
+        <strong>daily digest email</strong> (HTML preview). Tokens, typography, and spacing
+        inherited verbatim from Phase 5A. Light theme only.
+      </p>
+
+      <!-- ============================ A. /analytics ============================ -->
+
+      <div class="section-break">
+        <p class="proto-subtitle" style="margin: 0">surface a · /analytics (desktop)</p>
+      </div>
+
+      <section class="proto-surface">
+        <div class="proto-surface-label">
+          <span>/analytics · authenticated · 7d window</span>
+          <span>desktop ≥ 1024px</span>
+        </div>
+        <div class="app-shell">
+          <aside class="app-sidebar">
+            <div class="brand-row">
+              <span class="brand-mark"></span>
+              <span>Zero Mail</span>
+            </div>
+            <ul class="nav-list">
+              <li><a class="nav-item" href="#"><span class="nav-glyph"></span>Triage</a></li>
+              <li><a class="nav-item" href="#"><span class="nav-glyph"></span>Rules</a></li>
+              <li><a class="nav-item active" href="#"><span class="nav-glyph"></span>Analytics</a></li>
+              <li><a class="nav-item" href="#"><span class="nav-glyph"></span>Billing</a></li>
+              <li><a class="nav-item" href="#"><span class="nav-glyph"></span>Settings</a></li>
+            </ul>
+          </aside>
+
+          <div class="app-main">
+            <header class="app-header">
+              <div>
+                <h1 class="h1">Analytics</h1>
+                <p class="subhead">
+                  What Zero Mail has done for your inbox over the chosen window.
+                </p>
+              </div>
+              <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                <div class="tabs" role="tablist" aria-label="Time window">
+                  <button class="tab" role="tab">Last 7 days</button>
+                  <button class="tab active" aria-selected="true" role="tab">Last 30 days</button>
+                  <button class="tab" role="tab">Last 90 days</button>
+                </div>
+                <span class="meta-line">Last refreshed 12s ago</span>
+              </div>
+            </header>
+
+            <div class="panel-grid">
+              <!-- Volume panel -->
+              <div class="card">
+                <p class="eyebrow">VOLUME</p>
+                <h3 class="card-title">Messages triaged</h3>
+                <div class="display-figure">1,247</div>
+                <p class="supplementary">893 of 1,247 triaged</p>
+              </div>
+
+              <!-- Time saved panel -->
+              <div class="card">
+                <p class="eyebrow">TIME SAVED</p>
+                <h3 class="card-title">Estimated time saved</h3>
+                <div class="display-figure with-stripe">4h 12m</div>
+                <p class="supplementary">
+                  Based on per-action time weights (label 10s · archive 30s · draft 3m).
+                </p>
+              </div>
+
+              <!-- Top senders panel -->
+              <div class="card" style="padding-left: 40px;">
+                <p class="eyebrow">TOP SENDERS</p>
+                <h3 class="card-title">Who you heard from most</h3>
+                <ul class="sender-list">
+                  <li class="sender-row rank-1">
+                    <span class="rank">01</span>
+                    <span class="sender-email">bills@vietcombank.com.vn</span>
+                    <span class="count-badge">142</span>
+                  </li>
+                  <li class="sender-row">
+                    <span class="rank">02</span>
+                    <span class="sender-email">hr@megacompany.vn</span>
+                    <span class="count-badge">98</span>
+                  </li>
+                  <li class="sender-row">
+                    <span class="rank">03</span>
+                    <span class="sender-email">noreply@github.com</span>
+                    <span class="count-badge">87</span>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Rule hits summary panel (compact teaser, full table below) -->
+              <div class="card">
+                <p class="eyebrow">RULE HITS</p>
+                <h3 class="card-title">Which rules ran</h3>
+                <div class="display-figure">12 <span style="font-size: 14px; font-weight: 400; color: var(--muted-foreground);">rules</span></div>
+                <p class="supplementary">
+                  893 decisions · 851 applied · 42 reverted. Full breakdown below.
+                </p>
+              </div>
+            </div>
+
+            <!-- Rule hits full table -->
+            <div class="rule-table-card">
+              <div class="rule-table-header">
+                <h3 class="card-title">Per-rule activity</h3>
+                <span class="meta-line">12 rules</span>
+              </div>
+              <table class="rules">
+                <thead>
+                  <tr>
+                    <th>Rule</th>
+                    <th class="num">Decisions</th>
+                    <th class="num">Applied</th>
+                    <th class="num">Reverted</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="rule-name">Auto-archive bank statements</td>
+                    <td class="num mono">218</td>
+                    <td class="num"><span class="pill-applied">214</span></td>
+                    <td class="num"><span class="pill-reverted">4</span></td>
+                  </tr>
+                  <tr>
+                    <td class="rule-name">Label "Recruiters" + draft polite no</td>
+                    <td class="num mono">142</td>
+                    <td class="num"><span class="pill-applied">138</span></td>
+                    <td class="num"><span class="pill-reverted">4</span></td>
+                  </tr>
+                  <tr>
+                    <td class="rule-name">Archive GitHub notifications I'm CC'd on</td>
+                    <td class="num mono">96</td>
+                    <td class="num"><span class="pill-applied">96</span></td>
+                    <td class="num mono" style="color: var(--muted-foreground);">0</td>
+                  </tr>
+                  <tr>
+                    <td class="rule-name">Label "Finance" — invoices &amp; receipts</td>
+                    <td class="num mono">81</td>
+                    <td class="num"><span class="pill-applied">73</span></td>
+                    <td class="num"><span class="pill-reverted">8</span></td>
+                  </tr>
+                  <tr>
+                    <td class="rule-name">Draft reply for client introductions</td>
+                    <td class="num mono">54</td>
+                    <td class="num"><span class="pill-applied">42</span></td>
+                    <td class="num"><span class="pill-reverted">12</span></td>
+                  </tr>
+                  <tr>
+                    <td class="rule-name">Archive newsletter digests</td>
+                    <td class="num mono">38</td>
+                    <td class="num"><span class="pill-applied">38</span></td>
+                    <td class="num mono" style="color: var(--muted-foreground);">0</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ A. mobile + states ============================ -->
+
+      <div class="section-break">
+        <p class="proto-subtitle" style="margin: 0">surface a · 320px floor + loading + empty + zero-activity</p>
+      </div>
+
+      <div class="states-grid">
+        <!-- 320px mobile mockup -->
+        <div class="proto-surface">
+          <div class="proto-surface-label">
+            <span>/analytics · 320px hard floor</span>
+            <span>card-list renderer</span>
+          </div>
+          <div style="padding: 24px; background: #ece8de;">
+            <div class="mobile-frame">
+              <div class="mobile-header">
+                <span class="mobile-burger"></span>
+                <span class="brand-mark"></span>
+              </div>
+              <h1 class="h1" style="font-size: 18px;">Phân tích</h1>
+              <p class="meta-line" style="margin: 4px 0 0;">Cập nhật 12s trước</p>
+              <div class="mobile-tabs">
+                <button class="tab" type="button">7 ngày</button>
+                <button class="tab active" type="button">30 ngày</button>
+                <button class="tab" type="button">90 ngày</button>
+              </div>
+
+              <div class="mobile-card-stack">
+                <div class="mobile-card">
+                  <p class="eyebrow">KHỐI LƯỢNG</p>
+                  <div class="display-figure">1,247</div>
+                  <p class="supplementary" style="font-size: 13px;">893 trên 1,247 đã phân loại</p>
+                </div>
+                <div class="mobile-card">
+                  <p class="eyebrow">THỜI GIAN TIẾT KIỆM</p>
+                  <div class="display-figure with-stripe">4h 12m</div>
+                </div>
+                <div class="mobile-card">
+                  <p class="eyebrow">NGƯỜI GỬI HÀNG ĐẦU</p>
+                  <ul class="sender-list" style="gap: 4px;">
+                    <li class="sender-row" style="padding: 6px 0;">
+                      <span class="rank">01</span>
+                      <span class="sender-email" style="font-size: 13px;">bills@vietcombank…</span>
+                      <span class="count-badge">142</span>
+                    </li>
+                    <li class="sender-row" style="padding: 6px 0;">
+                      <span class="rank">02</span>
+                      <span class="sender-email" style="font-size: 13px;">hr@megacompa…</span>
+                      <span class="count-badge">98</span>
+                    </li>
+                    <li class="sender-row" style="padding: 6px 0;">
+                      <span class="rank">03</span>
+                      <span class="sender-email" style="font-size: 13px;">noreply@github…</span>
+                      <span class="count-badge">87</span>
+                    </li>
+                  </ul>
+                </div>
+                <div class="mobile-rule-card">
+                  <span class="rule-name">Tự động lưu trữ sao kê ngân hàng</span>
+                  <div class="mobile-rule-meta">
+                    <span>218 quyết định</span>
+                    <span class="pill-applied">214 áp dụng</span>
+                    <span class="pill-reverted">4 hoàn tác</span>
+                  </div>
+                </div>
+                <div class="mobile-rule-card">
+                  <span class="rule-name">Gắn nhãn "Nhà tuyển dụng"</span>
+                  <div class="mobile-rule-meta">
+                    <span>142 quyết định</span>
+                    <span class="pill-applied">138 áp dụng</span>
+                    <span class="pill-reverted">4 hoàn tác</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading + empty -->
+        <div class="proto-stack">
+          <div class="proto-surface">
+            <div class="proto-surface-label">
+              <span>/analytics · loading state</span>
+              <span>Skeleton matches final layout</span>
+            </div>
+            <div style="padding: 24px;">
+              <div class="panel-grid">
+                <div class="card">
+                  <p class="eyebrow">VOLUME</p>
+                  <div class="skeleton skel-figure"></div>
+                  <div class="skeleton skel-line"></div>
+                </div>
+                <div class="card">
+                  <p class="eyebrow">TIME SAVED</p>
+                  <div class="skeleton skel-figure"></div>
+                  <div class="skeleton skel-line"></div>
+                </div>
+                <div class="card">
+                  <p class="eyebrow">TOP SENDERS</p>
+                  <div class="sender-list">
+                    <div class="sender-row" style="border-bottom: none; padding: 4px 0;">
+                      <span class="skeleton skel-rank"></span>
+                      <span class="skeleton skel-row"></span>
+                    </div>
+                    <div class="sender-row" style="border-bottom: none; padding: 4px 0;">
+                      <span class="skeleton skel-rank"></span>
+                      <span class="skeleton skel-row"></span>
+                    </div>
+                    <div class="sender-row" style="border-bottom: none; padding: 4px 0;">
+                      <span class="skeleton skel-rank"></span>
+                      <span class="skeleton skel-row"></span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <p class="eyebrow">RULE HITS</p>
+                  <div class="skeleton skel-figure"></div>
+                  <div class="skeleton skel-line"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="proto-surface">
+            <div class="proto-surface-label">
+              <span>/analytics · empty / zero-activity</span>
+              <span>real zeros, no NaN, no spinner</span>
+            </div>
+            <div style="padding: 24px;">
+              <div class="panel-grid">
+                <div class="card">
+                  <p class="eyebrow">VOLUME</p>
+                  <div class="display-figure">0</div>
+                  <p class="supplementary">No activity in this window.</p>
+                </div>
+                <div class="card">
+                  <p class="eyebrow">TIME SAVED</p>
+                  <div class="display-figure">0m</div>
+                  <p class="supplementary">Nothing to estimate yet.</p>
+                </div>
+                <div class="card" style="grid-column: span 2;">
+                  <p class="eyebrow">TOP SENDERS</p>
+                  <div class="empty-state" style="padding: 24px;">
+                    No senders yet in this window.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================ B. /settings notifications ============================ -->
+
+      <div class="section-break">
+        <p class="proto-subtitle" style="margin: 0">surface b · /settings → notifications</p>
+      </div>
+
+      <div class="states-grid">
+        <!-- ON state -->
+        <div class="proto-surface">
+          <div class="proto-surface-label">
+            <span>/settings → Notifications · digest ON</span>
+            <span>en</span>
+          </div>
+          <div class="settings-page">
+            <div class="settings-section">
+              <h2 class="h1">Notifications</h2>
+              <p class="subhead" style="margin: -4px 0 0;">Manage your daily summary email.</p>
+
+              <div class="settings-row">
+                <div class="row-label">
+                  <span class="row-label-title">Daily digest email</span>
+                  <span class="row-label-helper">
+                    You'll receive a summary email each day at the chosen hour.
+                  </span>
+                </div>
+                <span class="switch" role="switch" aria-checked="true"></span>
+              </div>
+
+              <div class="settings-row" style="border-top: 1px solid var(--border);">
+                <div class="row-label">
+                  <span class="row-label-title">Send hour (local time)</span>
+                  <span class="row-label-helper">
+                    The digest is sent around this hour in your time zone.
+                  </span>
+                </div>
+                <span class="select">
+                  20:00
+                  <span class="select-chevron">▾</span>
+                </span>
+              </div>
+
+              <div class="tz-row" style="border-top: 1px solid var(--border); padding-top: 16px;">
+                Time zone: <strong>Asia/Ho_Chi_Minh</strong>
+                <span class="info-icon" title="Set automatically. Multi-time-zone support is coming.">i</span>
+              </div>
+            </div>
+
+            <div class="legend">
+              <span class="legend-chip">switch · raw shadcn</span>
+              <span class="legend-chip">select · raw shadcn</span>
+              <span class="legend-chip">no save button</span>
+              <span class="legend-chip">optimistic + toast</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- OFF state (Vietnamese) -->
+        <div class="proto-surface">
+          <div class="proto-surface-label">
+            <span>/settings → Notifications · digest OFF</span>
+            <span>vi</span>
+          </div>
+          <div class="settings-page">
+            <div class="settings-section">
+              <h2 class="h1">Thông báo</h2>
+              <p class="subhead" style="margin: -4px 0 0;">
+                Quản lý email tóm tắt hàng ngày của bạn.
+              </p>
+
+              <div class="settings-row">
+                <div class="row-label">
+                  <span class="row-label-title">Email tóm tắt hàng ngày</span>
+                  <span class="row-label-helper">
+                    Đã tắt — bạn sẽ không nhận email tóm tắt nào.
+                  </span>
+                </div>
+                <span class="switch off" role="switch" aria-checked="false"></span>
+              </div>
+
+              <div class="settings-row" style="border-top: 1px solid var(--border);">
+                <div class="row-label">
+                  <span class="row-label-title" style="color: var(--muted-foreground);">
+                    Giờ gửi (giờ địa phương)
+                  </span>
+                  <span class="row-label-helper">
+                    Bật email tóm tắt để chọn giờ gửi.
+                  </span>
+                </div>
+                <span class="select disabled">
+                  20:00
+                  <span class="select-chevron">▾</span>
+                </span>
+              </div>
+
+              <div class="tz-row" style="border-top: 1px solid var(--border); padding-top: 16px;">
+                Múi giờ: <strong>Asia/Ho_Chi_Minh</strong>
+                <span class="info-icon" title="Đặt tự động.">i</span>
+              </div>
+            </div>
+
+            <div class="legend">
+              <span class="legend-chip">disabled, not hidden</span>
+              <span class="legend-chip">no destructive confirm</span>
+              <span class="legend-chip">reversible preference</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================ C. Digest email ============================ -->
+
+      <div class="section-break">
+        <p class="proto-subtitle" style="margin: 0">surface c · daily digest email · html preview</p>
+      </div>
+
+      <div class="states-grid">
+        <!-- Active-day digest (en) -->
+        <div class="proto-surface">
+          <div class="proto-surface-label">
+            <span>digest email · active day · en</span>
+            <span>max-width 560 · light only</span>
+          </div>
+          <div class="email-stage">
+            <div class="email-card">
+              <div class="email-subject-bar">
+                <span class="email-subject">
+                  Yesterday on Zero Mail · 47 triaged · 18m saved
+                </span>
+                <span class="email-preheader">
+                  bills@vietcombank.com, hr@megacompany.vn, noreply@github.com
+                </span>
+              </div>
+
+              <div class="email-body">
+                <div class="email-brand-row">
+                  <span class="email-wordmark">Zero Mail</span>
+                  <span class="email-datestamp">2026-05-12</span>
+                </div>
+                <p class="email-greeting">
+                  Here's what Zero Mail did for you yesterday.
+                </p>
+
+                <div class="email-totals">
+                  <div>
+                    <p class="email-total-figure">47</p>
+                    <p class="email-total-label">Messages triaged</p>
+                  </div>
+                  <div>
+                    <p class="email-total-figure">18m</p>
+                    <p class="email-total-label">Time saved</p>
+                  </div>
+                </div>
+
+                <div class="email-cta-wrap">
+                  <a class="email-cta" href="#">View details</a>
+                </div>
+
+                <div class="email-section">
+                  <p class="email-section-eyebrow">Top senders</p>
+                  <ul class="email-list">
+                    <li class="email-list-row">
+                      <span class="rank">01</span>
+                      <span class="sender-email">bills@vietcombank.com.vn</span>
+                      <span class="count-badge">12</span>
+                    </li>
+                    <li class="email-list-row">
+                      <span class="rank">02</span>
+                      <span class="sender-email">hr@megacompany.vn</span>
+                      <span class="count-badge">9</span>
+                    </li>
+                    <li class="email-list-row">
+                      <span class="rank">03</span>
+                      <span class="sender-email">noreply@github.com</span>
+                      <span class="count-badge">7</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div class="email-section">
+                  <p class="email-section-eyebrow">Top rules</p>
+                  <div class="email-rule-row">
+                    <span class="rule-name">Auto-archive bank statements</span>
+                    <span class="pill-applied">21 applied</span>
+                    <span class="pill-reverted">1 reverted</span>
+                  </div>
+                  <div class="email-rule-row">
+                    <span class="rule-name">Label "Recruiters" + draft polite no</span>
+                    <span class="pill-applied">14 applied</span>
+                    <span class="pill-reverted">2 reverted</span>
+                  </div>
+                  <div class="email-rule-row">
+                    <span class="rule-name">Archive GitHub CC notifications</span>
+                    <span class="pill-applied">9 applied</span>
+                    <span style="font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground);">0 reverted</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="email-footer">
+                <div>
+                  Don't want these?
+                  <a href="#">Turn off the daily digest.</a>
+                </div>
+                <span class="brand-line">Zero Mail · zeromail.app</span>
+                <span class="legal-line">
+                  You're getting this because you connected Gmail to Zero Mail.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Zero-activity digest (vi) -->
+        <div class="proto-surface">
+          <div class="proto-surface-label">
+            <span>digest email · zero-activity day · vi</span>
+            <span>still sent, explicit wording</span>
+          </div>
+          <div class="email-stage">
+            <div class="email-card">
+              <div class="email-subject-bar">
+                <span class="email-subject">
+                  Hôm qua trên Zero Mail · không có hoạt động
+                </span>
+                <span class="email-preheader">
+                  Hôm qua khá yên — Zero Mail không có việc gì để làm.
+                </span>
+              </div>
+
+              <div class="email-body">
+                <div class="email-brand-row">
+                  <span class="email-wordmark">Zero Mail</span>
+                  <span class="email-datestamp">2026-05-12</span>
+                </div>
+                <p class="email-greeting">
+                  Hôm qua khá yên — Zero Mail không có việc gì để làm.
+                </p>
+
+                <div class="email-totals">
+                  <div>
+                    <p class="email-total-figure">0</p>
+                    <p class="email-total-label">Tin đã phân loại</p>
+                  </div>
+                  <div>
+                    <p class="email-total-figure">0m</p>
+                    <p class="email-total-label">Thời gian tiết kiệm</p>
+                  </div>
+                </div>
+
+                <div class="email-cta-wrap">
+                  <a class="email-cta" href="#">Xem chi tiết</a>
+                </div>
+
+                <div class="email-section">
+                  <p style="font-size: 14px; color: var(--muted-foreground); margin: 0;">
+                    Không có người gửi hoặc quy tắc để báo cáo. Hộp thư của bạn vẫn yên ắng —
+                    chúng tôi sẽ sẵn sàng khi có việc cần làm.
+                  </p>
+                </div>
+              </div>
+
+              <div class="email-footer">
+                <div>
+                  Không muốn nhận?
+                  <a href="#">Tắt email tóm tắt hàng ngày.</a>
+                </div>
+                <span class="brand-line">Zero Mail · zeromail.app</span>
+                <span class="legal-line">
+                  Bạn nhận được email này vì đã kết nối Gmail với Zero Mail.
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================ C. plaintext ============================ -->
+
+      <div class="section-break">
+        <p class="proto-subtitle" style="margin: 0">surface c · daily digest · plaintext fallback (active · en)</p>
+      </div>
+
+      <section class="proto-surface">
+        <div class="proto-surface-label">
+          <span>digest.en.txt</span>
+          <span>Thymeleaf · sibling template · no styling</span>
+        </div>
+        <pre style="font-family: var(--font-mono); font-size: 13px; line-height: 1.6; padding: 24px; margin: 0; background: var(--card); color: var(--foreground); white-space: pre-wrap;">
+Subject: Yesterday on Zero Mail · 47 triaged · 18m saved
+
+Zero Mail · 2026-05-12
+
+Here's what Zero Mail did for you yesterday.
+
+  Messages triaged:  47
+  Time saved:        18m
+
+View details: https://zeromail.app/analytics?source=digest&window=7d
+
+TOP SENDERS
+
+  1. bills@vietcombank.com.vn   (12)
+  2. hr@megacompany.vn          (9)
+  3. noreply@github.com         (7)
+
+TOP RULES
+
+  Auto-archive bank statements
+      21 applied · 1 reverted
+
+  Label "Recruiters" + draft polite no
+      14 applied · 2 reverted
+
+  Archive GitHub CC notifications
+      9 applied · 0 reverted
+
+----
+
+Don't want these? Turn off the daily digest:
+https://zeromail.app/settings?section=notifications&source=digest
+
+Zero Mail · zeromail.app
+You're getting this because you connected Gmail to Zero Mail.
+        </pre>
+      </section>
+
+      <!-- ============================ token legend ============================ -->
+
+      <div class="section-break">
+        <p class="proto-subtitle" style="margin: 0">token legend · inherited from Phase 5A</p>
+      </div>
+
+      <section class="proto-surface">
+        <div class="proto-surface-label">
+          <span>type · color · spacing locks</span>
+          <span>base-nova · light</span>
+        </div>
+        <div style="padding: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+          <div class="card">
+            <p class="eyebrow">TYPE SCALE</p>
+            <p style="font-size: 12px; font-weight: 500; margin: 0;">Label · 12 / 500 / 1.4</p>
+            <p style="font-size: 14px; margin: 0;">Body · 14 / 400 / 1.5</p>
+            <p style="font-size: 20px; font-weight: 600; margin: 0;">Heading · 20 / 600 / 1.25</p>
+            <p style="font-size: 28px; font-weight: 600; margin: 0;">Display · 28 / 600 / 1.2</p>
+          </div>
+          <div class="card">
+            <p class="eyebrow">COLOR · 60/30/10</p>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span style="width: 32px; height: 32px; border-radius: 6px; background: var(--background); border: 1px solid var(--border);"></span>
+              <span class="mono" style="font-size: 12px;">--background · #FAFAF7</span>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span style="width: 32px; height: 32px; border-radius: 6px; background: var(--secondary);"></span>
+              <span class="mono" style="font-size: 12px;">--secondary · #F1EFE7</span>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span style="width: 32px; height: 32px; border-radius: 6px; background: var(--primary);"></span>
+              <span class="mono" style="font-size: 12px;">--primary · #0E5E5A</span>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span style="width: 32px; height: 32px; border-radius: 6px; background: var(--accent-soft);"></span>
+              <span class="mono" style="font-size: 12px;">--accent-soft · #D6E8E5</span>
+            </div>
+          </div>
+          <div class="card">
+            <p class="eyebrow">SPACING</p>
+            <p class="mono" style="font-size: 12px; margin: 0;">4 / 8 / 12 / 16 / 24 / 32 / 48 / 64</p>
+            <p class="supplementary" style="font-size: 12px;">
+              Card padding 24 · Panel grid gap 24 · Page gutters 32 · Touch target 40 (44 on 320px).
+            </p>
+          </div>
+          <div class="card">
+            <p class="eyebrow">ACCENT RESERVED</p>
+            <ul style="margin: 0; padding-left: 16px; font-size: 12px; color: var(--muted-foreground); line-height: 1.7;">
+              <li>Selected window chip</li>
+              <li>Active nav item</li>
+              <li>Focus rings</li>
+              <li>Digest email CTA</li>
+              <li>Digest opt-out link</li>
+              <li>Rank-1 sender stripe</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <p
+        style="margin-top: 48px; text-align: center; font-family: var(--font-mono); font-size: 11px; color: var(--muted-foreground);"
+      >
+        Phase 05C prototype · throwaway · not production code · inherits Phase 5A base-nova tokens
+      </p>
+    </main>
+  </body>
+</html>
