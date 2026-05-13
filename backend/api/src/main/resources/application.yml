@@ -104,6 +104,12 @@ zero-mail:
     sepay:
       # Bare placeholder: Spring fails during placeholder resolution when the secret is absent.
       webhook-api-key: ${SEPAY_WEBHOOK_API_KEY}
+    payment-account:
+      bank-code: ${ZEROMAIL_BILLING_BANK_CODE:VCB}
+      bank-name: ${ZEROMAIL_BILLING_BANK_NAME:Vietcombank}
+      account-number: ${ZEROMAIL_BILLING_ACCOUNT_NUMBER:0000000000}
+      account-name: ${ZEROMAIL_BILLING_ACCOUNT_NAME:ZERO MAIL}
+      qr-payload: ${ZEROMAIL_BILLING_QR_PAYLOAD:}
     vnd-per-credit: 1000
     max-pending-intents-per-tenant: 5
     intent-expiry: PT24H

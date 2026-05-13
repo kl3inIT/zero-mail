@@ -35,13 +35,14 @@ export function TopupAmountForm({ baselineCredits, onIntentCreated }: TopupAmoun
   const t = useTranslations();
   const locale = useLocale();
   const createIntent = useCreateTopupIntent();
-  const [amount, setAmount] = useState('100000');
+  const [amount, setAmount] = useState('20000');
   const [validationError, setValidationError] = useState<string | null>(null);
 
   async function createTopupIntentForAmount() {
     const parsedAmount = Number(amount);
 
-    if (!Number.isFinite(parsedAmount) || parsedAmount < 1) {
+    const packageCode = packageCodeForAmount(parsedAmount);
+    if (!packageCode) {
       setValidationError(t('billing.topup.amount.error.minimum'));
       return;
     }
@@ -49,7 +50,7 @@ export function TopupAmountForm({ baselineCredits, onIntentCreated }: TopupAmoun
     setValidationError(null);
 
     try {
-      const response = await createIntent.mutateAsync(Math.trunc(parsedAmount));
+      const response = await createIntent.mutateAsync(packageCode);
       const intent = normalizeIntent(response);
       if (!intent) {
         setValidationError(t('billing.topup.amount.error.invalidResponse'));
@@ -121,16 +122,23 @@ export function TopupAmountForm({ baselineCredits, onIntentCreated }: TopupAmoun
 }
 
 function normalizeIntent(response: TopupIntentResponse): TopupIntentDetails | null {
-  if (!response.code || !response.amountVnd || !response.expiresAt || !response.qrPayload) {
+  if (!response.orderCode || !response.amountVnd || !response.expiresAt || !response.qrPayload) {
     return null;
   }
 
   return {
-    code: response.code,
+    code: response.orderCode,
     amountVnd: response.amountVnd,
     expiresAt: response.expiresAt,
     qrPayload: response.qrPayload,
   };
+}
+
+function packageCodeForAmount(amountVnd: number): string | null {
+  if (amountVnd === 10000) return 'PKG_10K';
+  if (amountVnd === 20000) return 'PKG_20K';
+  if (amountVnd === 50000) return 'PKG_50K';
+  return null;
 }
 
 function formatVnd(value: number, locale: string): string {

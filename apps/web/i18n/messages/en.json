@@ -103,6 +103,12 @@
       "title": "Billing"
     },
     "topup": {
+      "accountName": {
+        "label": "Account name"
+      },
+      "accountNumber": {
+        "label": "Account number"
+      },
       "amount": {
         "body": "You will receive a VietQR payload for this exact amount.",
         "cta": "Continue to payment",
@@ -119,6 +125,9 @@
       "amountVnd": {
         "label": "Amount in VND"
       },
+      "bank": {
+        "label": "Receiving bank"
+      },
       "emv": {
         "label": "VietQR EMV payload"
       },
@@ -131,13 +140,37 @@
         "label": "Expires at"
       },
       "expiresIn": "Expires in {time}",
+      "package": {
+        "display": "{name} - {credits} credits",
+        "label": "Credit package"
+      },
+      "packages": {
+        "credits": "{credits} credits",
+        "cta": "Choose package",
+        "defaultDescription": "Credits for Zero Mail AI actions.",
+        "error": {
+          "generic": "Couldn't create the payment code. Try again.",
+          "invalidResponse": "The backend did not return complete payment details. Try again.",
+          "load": "Couldn't load billing packages. Try again."
+        },
+        "feature": {
+          "expiry": "Payment code held for a safe expiry window",
+          "instant": "Instant transfer code generation",
+          "webhook": "Automatic crediting after SePay confirmation"
+        },
+        "includes": "Includes",
+        "recommended": "Popular",
+        "startsAt": "Pay"
+      },
       "page": {
         "description": "Create a VietQR transfer, scan it with your banking app, and Zero Mail will update your balance automatically.",
         "title": "Top up credits"
       },
       "qr": {
-        "body": "The VietQR payload already includes the destination account, amount, and reference.",
-        "heading": "Scan this QR with your banking app"
+        "alt": "SePay payment QR code",
+        "body": "Scan this with your banking app. Keep the amount and transfer content unchanged.",
+        "heading": "Scan this QR with your banking app",
+        "missing": "Not enough details to create the QR code"
       },
       "reference": {
         "label": "Transfer reference"
@@ -146,6 +179,9 @@
         "backCta": "Back to billing",
         "body": "Your credit balance increased. You can keep using Zero Mail.",
         "heading": "Credits added"
+      },
+      "transferContent": {
+        "label": "Transfer content"
       },
       "waiting": {
         "body": "Zero Mail will update your balance when the webhook credits the transfer.",

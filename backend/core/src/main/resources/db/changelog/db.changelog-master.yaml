@@ -86,3 +86,6 @@ databaseChangeLog:
   - include:
       file: changes/029-triage-revert-pending.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/030-billing-packages.yaml
+      relativeToChangelogFile: true

@@ -43,6 +43,7 @@ public record ZeroMailCoreProperties(
 
     public record BillingProperties(
             @Valid @NotNull BillingSepayProperties sepay,
+            @Valid BillingPaymentAccountProperties paymentAccount,
             @Valid @NotNull BillingCostProperties cost,
             @Min(1) @DefaultValue("1000") long vndPerCredit,
             @Min(1) @DefaultValue("5") int maxPendingIntentsPerTenant,
@@ -54,6 +55,10 @@ public record ZeroMailCoreProperties(
          * supplied by mistake.
          */
         public BillingProperties {
+            paymentAccount =
+                    paymentAccount == null
+                            ? BillingPaymentAccountProperties.defaults()
+                            : paymentAccount;
             cost = cost == null ? BillingCostProperties.defaults() : cost;
             if (sepay != null && sepay.webhookApiKey() != null) {
                 String webhookApiKey = sepay.webhookApiKey();
@@ -72,6 +77,19 @@ public record ZeroMailCoreProperties(
 
         public record BillingSepayProperties(@NotBlank String webhookApiKey) {}
 
+        public record BillingPaymentAccountProperties(
+                @NotBlank @DefaultValue("VCB") String bankCode,
+                @NotBlank @DefaultValue("Vietcombank") String bankName,
+                @NotBlank @DefaultValue("0000000000") String accountNumber,
+                @NotBlank @DefaultValue("ZERO MAIL") String accountName,
+                @DefaultValue("") String qrPayload) {
+
+            static BillingPaymentAccountProperties defaults() {
+                return new BillingPaymentAccountProperties(
+                        "VCB", "Vietcombank", "0000000000", "ZERO MAIL", "");
+            }
+        }
+
         public record BillingCostProperties(@Min(0) @DefaultValue("0") int triageDeterministic) {
 
             static BillingCostProperties defaults() {
@@ -83,6 +101,7 @@ public record ZeroMailCoreProperties(
         public @NonNull String toString() {
             return "BillingProperties[sepay=****, vndPerCredit="
                     + vndPerCredit
+                    + ", paymentAccount=****"
                     + ", cost="
                     + cost
                     + ", maxPendingIntentsPerTenant="

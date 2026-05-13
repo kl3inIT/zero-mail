@@ -23,7 +23,14 @@ public class BillingTopupIntentRepositoryImpl implements BillingTopupIntentTenan
         return jdbcTemplate
                 .query(
                         """
-                SELECT id, tenant_id, code, amount_vnd, status, expires_at
+                SELECT id,
+                       tenant_id,
+                       code,
+                       amount_vnd,
+                       package_code_snapshot,
+                       credit_amount_snapshot,
+                       status,
+                       expires_at
                   FROM billing_topup_intent
                  WHERE code = ?
                  LIMIT 1
@@ -34,6 +41,8 @@ public class BillingTopupIntentRepositoryImpl implements BillingTopupIntentTenan
                                         resultSet.getObject("tenant_id", UUID.class),
                                         resultSet.getString("code"),
                                         resultSet.getLong("amount_vnd"),
+                                        resultSet.getString("package_code_snapshot"),
+                                        resultSet.getInt("credit_amount_snapshot"),
                                         BillingTopupIntentStatus.fromId(
                                                 resultSet.getString("status")),
                                         resultSet.getObject("expires_at", OffsetDateTime.class)),

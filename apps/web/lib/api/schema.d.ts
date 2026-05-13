@@ -420,6 +420,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/billing/packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["packages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/billing/balance": {
         parameters: {
             query?: never;
@@ -655,15 +671,23 @@ export interface components {
             reason?: string;
         };
         TopupIntentRequest: {
-            /** Format: int64 */
-            amountVnd?: number;
+            packageCode: string;
         };
         TopupIntentResponse: {
-            code?: string;
+            orderCode?: string;
+            packageCode?: string;
+            packageName?: string;
             /** Format: int64 */
             amountVnd?: number;
+            /** Format: int32 */
+            creditAmount?: number;
             /** Format: date-time */
             expiresAt?: string;
+            bankCode?: string;
+            bankName?: string;
+            accountNumber?: string;
+            accountName?: string;
+            transferContent?: string;
             qrPayload?: string;
         };
         SepayWebhookPayload: {
@@ -682,6 +706,7 @@ export interface components {
             subAccount?: string;
             referenceCode?: string;
             description?: string;
+            packageCode?: string;
         };
         UpdateLanguageRequest: {
             language: string;
@@ -745,6 +770,17 @@ export interface components {
             model?: string;
             /** Format: date-time */
             savedAt?: string;
+        };
+        BillingPackageResponse: {
+            code?: string;
+            name?: string;
+            /** Format: int64 */
+            priceVnd?: number;
+            /** Format: int32 */
+            creditAmount?: number;
+            description?: string;
+            /** Format: int32 */
+            displayOrder?: number;
         };
         BillingBalanceResponse: {
             /** Format: int32 */
@@ -3038,6 +3074,80 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RuleTemplateResponse"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    packages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BillingPackageResponse"][];
                 };
             };
             /** @description Bad Request */

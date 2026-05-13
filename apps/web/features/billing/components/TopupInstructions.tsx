@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Clock, Landmark } from 'lucide-react';
+import Image from 'next/image';
 
 import { CopyableField } from '@/features/billing/components/CopyableField';
-import type { TopupIntentDetails } from '@/features/billing/components/TopupAmountForm';
+import type { TopupIntentDetails } from '@/features/billing/components/TopupPackageSelector';
 import { useTopupCreditWatch } from '@/features/billing/hooks/useTopupCreditWatch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -39,6 +40,7 @@ export function TopupInstructions({
     () => Math.max(0, Date.parse(intent.expiresAt) - now),
     [intent.expiresAt, now],
   );
+  const qrImageUrl = buildSepayQrUrl(intent);
 
   useEffect(() => {
     if (watch.credited && typeof watch.balance?.availableCredits === 'number') {
@@ -66,23 +68,70 @@ export function TopupInstructions({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="bg-muted/30 rounded-lg border p-4">
-          <h2 className="text-foreground text-base font-semibold">
-            {t('billing.topup.qr.heading')}
-          </h2>
-          <p className="text-muted-foreground mt-1 text-sm leading-6">
-            {t('billing.topup.qr.body')}
-          </p>
-        </div>
+        <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
+          <div className="bg-background rounded-xl border p-4">
+            <div className="border-primary/40 flex h-full min-h-[360px] flex-col items-center justify-center gap-4 rounded-lg border bg-white p-5">
+              <div className="text-primary text-xl font-semibold">SePay</div>
+              {qrImageUrl ? (
+                <Image
+                  src={qrImageUrl}
+                  width={256}
+                  height={256}
+                  alt={t('billing.topup.qr.alt')}
+                  className="h-64 w-64 object-contain"
+                  unoptimized
+                />
+              ) : (
+                <div className="text-muted-foreground bg-muted/30 flex h-64 w-64 items-center justify-center rounded-lg border text-center text-sm">
+                  {t('billing.topup.qr.missing')}
+                </div>
+              )}
+              <p className="text-muted-foreground text-center text-xs leading-5">
+                {t('billing.topup.qr.body')}
+              </p>
+            </div>
+          </div>
 
-        <div className="grid gap-3">
-          <CopyableField label={t('billing.topup.reference.label')} value={intent.code} />
-          <CopyableField
-            label={t('billing.topup.amountVnd.label')}
-            value={String(intent.amountVnd)}
-            displayValue={formatVnd(intent.amountVnd, locale)}
-          />
-          <CopyableField label={t('billing.topup.emv.label')} value={intent.qrPayload} multiline />
+          <div className="bg-background overflow-hidden rounded-xl border">
+            <PaymentInfoRow label={t('billing.topup.bank.label')} value={formatBank(intent)} />
+            <PaymentInfoRow
+              label={t('billing.topup.accountName.label')}
+              value={intent.accountName}
+            />
+            <PaymentInfoRow
+              label={t('billing.topup.accountNumber.label')}
+              value={intent.accountNumber}
+              copyValue={intent.accountNumber}
+            />
+            <PaymentInfoRow
+              label={t('billing.topup.amountVnd.label')}
+              value={formatVnd(intent.amountVnd, locale)}
+              copyValue={String(intent.amountVnd)}
+            />
+            <PaymentInfoRow
+              label={t('billing.topup.transferContent.label')}
+              value={intent.transferContent}
+              copyValue={intent.transferContent}
+            />
+            <PaymentInfoRow
+              label={t('billing.topup.reference.label')}
+              value={intent.code}
+              copyValue={intent.code}
+            />
+            {intent.packageName ? (
+              <PaymentInfoRow
+                label={t('billing.topup.package.label')}
+                value={
+                  intent.creditAmount
+                    ? t('billing.topup.package.display', {
+                        name: intent.packageName,
+                        credits: intent.creditAmount,
+                      })
+                    : intent.packageName
+                }
+              />
+            ) : null}
+          </div>
         </div>
 
         <div className="text-muted-foreground flex flex-col gap-2 rounded-lg border p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
@@ -94,6 +143,35 @@ export function TopupInstructions({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function PaymentInfoRow({
+  label,
+  value,
+  copyValue,
+}: {
+  label: string;
+  value?: string;
+  copyValue?: string;
+}) {
+  if (!value) return null;
+  return (
+    <div className="grid gap-2 border-b p-4 last:border-b-0 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-center">
+      <div className="text-muted-foreground text-sm font-medium">{label}</div>
+      <div className="min-w-0">
+        {copyValue ? (
+          <CopyableField
+            label={label}
+            value={copyValue}
+            displayValue={value}
+            className="bg-muted/30 border-0 p-2"
+          />
+        ) : (
+          <p className="text-foreground text-sm font-medium break-words">{value}</p>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -112,6 +190,24 @@ function formatExpiry(value: string, locale: string): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(timestamp);
+}
+
+function formatBank(intent: TopupIntentDetails): string | undefined {
+  if (intent.bankName && intent.bankCode) return `${intent.bankName} (${intent.bankCode})`;
+  return intent.bankName ?? intent.bankCode;
+}
+
+function buildSepayQrUrl(intent: TopupIntentDetails): string | null {
+  if (!intent.accountNumber || !intent.bankCode || !intent.amountVnd || !intent.transferContent) {
+    return null;
+  }
+  const params = new URLSearchParams({
+    acc: intent.accountNumber,
+    bank: intent.bankCode,
+    amount: String(intent.amountVnd),
+    des: intent.transferContent,
+  });
+  return `https://qr.sepay.vn/img?${params.toString()}`;
 }
 
 function formatRemaining(value: number): string {

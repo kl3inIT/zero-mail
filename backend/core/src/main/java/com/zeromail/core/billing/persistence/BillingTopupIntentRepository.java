@@ -21,6 +21,13 @@ public interface BillingTopupIntentRepository
     Optional<BillingTopupIntentEntity> findFirstByTenantIdAndStatusOrderByCreatedAtAsc(
             UUID tenantId, BillingTopupIntentStatus status);
 
+    Optional<BillingTopupIntentEntity>
+            findFirstByTenantIdAndPackageCodeSnapshotAndStatusAndExpiresAtAfterOrderByCreatedAtDesc(
+                    UUID tenantId,
+                    String packageCodeSnapshot,
+                    BillingTopupIntentStatus status,
+                    Instant now);
+
     @Modifying
     @Transactional
     @Query(

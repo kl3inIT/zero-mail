@@ -103,6 +103,12 @@
       "title": "Thanh toán"
     },
     "topup": {
+      "accountName": {
+        "label": "Tên tài khoản"
+      },
+      "accountNumber": {
+        "label": "Số tài khoản"
+      },
       "amount": {
         "body": "Bạn sẽ nhận một mã VietQR dùng cho đúng số tiền này.",
         "cta": "Tiếp tục thanh toán",
@@ -119,6 +125,9 @@
       "amountVnd": {
         "label": "Số tiền VND"
       },
+      "bank": {
+        "label": "Ngân hàng nhận"
+      },
       "emv": {
         "label": "Nội dung VietQR EMV"
       },
@@ -131,13 +140,37 @@
         "label": "Hết hạn lúc"
       },
       "expiresIn": "Hết hạn sau {time}",
+      "package": {
+        "display": "{name} - {credits} tín dụng",
+        "label": "Gói tín dụng"
+      },
+      "packages": {
+        "credits": "{credits} tín dụng",
+        "cta": "Chọn gói này",
+        "defaultDescription": "Gói tín dụng dùng cho các tác vụ AI trong Zero Mail.",
+        "error": {
+          "generic": "Không tạo được mã thanh toán. Hãy thử lại.",
+          "invalidResponse": "Backend chưa trả đủ thông tin thanh toán. Hãy thử lại.",
+          "load": "Không tải được danh sách gói. Hãy thử lại."
+        },
+        "feature": {
+          "expiry": "Giữ mã thanh toán trong thời hạn an toàn",
+          "instant": "Tạo mã chuyển khoản ngay lập tức",
+          "webhook": "Tự động cộng tín dụng khi SePay xác nhận"
+        },
+        "includes": "Bao gồm",
+        "recommended": "Phổ biến",
+        "startsAt": "Thanh toán"
+      },
       "page": {
         "description": "Tạo mã chuyển khoản VietQR, quét bằng ứng dụng ngân hàng và Zero Mail sẽ tự cập nhật số dư.",
         "title": "Nạp tín dụng"
       },
       "qr": {
-        "body": "Mã VietQR đã bao gồm tài khoản nhận, số tiền và mã tham chiếu.",
-        "heading": "Quét mã QR bằng ứng dụng ngân hàng"
+        "alt": "Mã QR thanh toán SePay",
+        "body": "Quét mã bằng ứng dụng ngân hàng. Vui lòng giữ đúng số tiền và nội dung chuyển khoản.",
+        "heading": "Quét mã QR bằng ứng dụng ngân hàng",
+        "missing": "Chưa đủ thông tin để tạo QR"
       },
       "reference": {
         "label": "Mã tham chiếu"
@@ -146,6 +179,9 @@
         "backCta": "Quay lại thanh toán",
         "body": "Số dư tín dụng đã tăng. Bạn có thể tiếp tục dùng Zero Mail.",
         "heading": "Đã cộng tín dụng"
+      },
+      "transferContent": {
+        "label": "Nội dung chuyển khoản"
       },
       "waiting": {
         "body": "Zero Mail sẽ tự cập nhật số dư khi webhook ghi nhận giao dịch.",

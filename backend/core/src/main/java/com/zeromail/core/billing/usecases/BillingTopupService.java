@@ -2,15 +2,19 @@ package com.zeromail.core.billing.usecases;
 
 import com.zeromail.core.billing.domain.BillingTopupIntentStatus;
 import com.zeromail.core.billing.domain.TopupCodeGenerator;
+import com.zeromail.core.billing.persistence.BillingPackageEntity;
+import com.zeromail.core.billing.persistence.BillingPackageRepository;
 import com.zeromail.core.billing.persistence.BillingTopupIntentEntity;
 import com.zeromail.core.billing.persistence.BillingTopupIntentRepository;
 import com.zeromail.core.billing.persistence.BillingTopupIntentTenantLookup;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryEntity;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryRepository;
 import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.config.ZeroMailCoreProperties.BillingProperties.BillingPaymentAccountProperties;
 import com.zeromail.core.tenant.TenantContext;
 import java.time.Instant;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
@@ -31,7 +35,9 @@ public class BillingTopupService {
     private static final Logger log = LoggerFactory.getLogger(BillingTopupService.class);
     private static final Pattern CROCKFORD_EIGHT_CHARACTER_CODE =
             Pattern.compile("[0-9A-HJKMNPQRSTVWXYZ]{8}");
+    private static final Pattern PACKAGE_CODE_TOKEN = Pattern.compile("PKG_[A-Z0-9_]{2,32}");
 
+    private final BillingPackageRepository packageRepository;
     private final BillingTopupIntentRepository intentRepository;
     private final CreditLedgerEntryRepository entryRepository;
     private final TopupCodeGenerator topupCodeGenerator = new TopupCodeGenerator();
@@ -39,22 +45,51 @@ public class BillingTopupService {
     private final TransactionTemplate transactionTemplate;
 
     public BillingTopupService(
+            BillingPackageRepository packageRepository,
             BillingTopupIntentRepository intentRepository,
             CreditLedgerEntryRepository entryRepository,
             ZeroMailCoreProperties properties,
             TransactionTemplate transactionTemplate) {
+        this.packageRepository = packageRepository;
         this.intentRepository = intentRepository;
         this.entryRepository = entryRepository;
         this.billingProperties = properties.billing();
         this.transactionTemplate = transactionTemplate;
     }
 
+    @Transactional(readOnly = true)
+    public List<BillingPackageEntity> listActivePackages() {
+        return packageRepository.findByActiveTrueOrderByDisplayOrderAscCodeAsc();
+    }
+
     @Transactional(propagation = Propagation.REQUIRED)
-    public BillingTopupIntentEntity createIntent(UUID tenantId, long amountVnd) {
-        long vndPerCredit = billingProperties.vndPerCredit();
-        if (amountVnd < vndPerCredit) {
-            throw new IllegalArgumentException(
-                    "Top-up amount must be at least " + vndPerCredit + " VND (one credit)");
+    public BillingTopupIntentEntity createIntent(UUID tenantId, String packageCode) {
+        String normalizedPackageCode = normalizeRequiredPackageCode(packageCode);
+        BillingPackageEntity billingPackage =
+                packageRepository
+                        .findByCodeAndActiveTrue(normalizedPackageCode)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Unknown or inactive billing package: "
+                                                        + normalizedPackageCode));
+        Instant now = Instant.now();
+        Optional<BillingTopupIntentEntity> reusableIntent =
+                intentRepository
+                        .findFirstByTenantIdAndPackageCodeSnapshotAndStatusAndExpiresAtAfterOrderByCreatedAtDesc(
+                                tenantId,
+                                billingPackage.getCode(),
+                                BillingTopupIntentStatus.PENDING,
+                                now);
+        if (reusableIntent.isPresent()) {
+            BillingTopupIntentEntity existingIntent = reusableIntent.get();
+            log.info(
+                    "event=billing_topup_intent_reused tenantId={} packageCode={} amountVnd={} credits={}",
+                    tenantId,
+                    existingIntent.getPackageCodeSnapshot(),
+                    existingIntent.getAmountVnd(),
+                    existingIntent.getCreditAmountSnapshot());
+            return existingIntent;
         }
 
         int pendingCount =
@@ -71,24 +106,40 @@ public class BillingTopupService {
                             });
         }
 
-        String code =
+        String orderCode =
                 topupCodeGenerator.generateUniqueCode(
                         candidateCode ->
                                 intentRepository.findTenantLookupByCode(candidateCode).isEmpty(),
                         3);
 
-        Instant expiresAt = Instant.now().plus(billingProperties.intentExpiry());
+        Instant expiresAt = now.plus(billingProperties.intentExpiry());
+        BillingPaymentAccountProperties paymentAccount = billingProperties.paymentAccount();
+        String transferContent = buildTransferContent(orderCode, billingPackage.getCode());
         BillingTopupIntentEntity intent =
                 new BillingTopupIntentEntity(
                         UUID.randomUUID(),
                         tenantId,
-                        code,
-                        amountVnd,
+                        orderCode,
+                        billingPackage.getPriceVnd(),
+                        billingPackage.getId(),
+                        billingPackage.getCode(),
+                        billingPackage.getName(),
+                        billingPackage.getCreditAmount(),
                         BillingTopupIntentStatus.PENDING,
-                        expiresAt);
+                        expiresAt,
+                        paymentAccount.bankCode(),
+                        paymentAccount.bankName(),
+                        paymentAccount.accountNumber(),
+                        paymentAccount.accountName(),
+                        transferContent,
+                        paymentAccount.qrPayload());
         intentRepository.save(intent);
         log.info(
-                "event=billing_topup_intent_created tenantId={} amountVnd={}", tenantId, amountVnd);
+                "event=billing_topup_intent_created tenantId={} packageCode={} amountVnd={} credits={}",
+                tenantId,
+                billingPackage.getCode(),
+                billingPackage.getPriceVnd(),
+                billingPackage.getCreditAmount());
         return intent;
     }
 
@@ -105,6 +156,7 @@ public class BillingTopupService {
             long sepayTransactionId,
             String code,
             String referenceCode,
+            String packageCode,
             String content,
             String transferType,
             long transferAmountVnd) {
@@ -119,6 +171,8 @@ public class BillingTopupService {
             log.warn("event=sepay_webhook_unknown_code tenantId=unresolved");
             return;
         }
+        LinkedHashSet<String> candidatePackageCodes =
+                extractCandidatePackageCodes(packageCode, referenceCode, code, content);
 
         BillingTopupIntentTenantLookup matchedLookup = null;
         BillingTopupIntentTenantLookup firstKnownLookup = null;
@@ -139,6 +193,9 @@ public class BillingTopupService {
                 continue;
             }
             if (lookup.amountVnd() != transferAmountVnd) {
+                continue;
+            }
+            if (!packageCodeMatches(candidatePackageCodes, lookup.packageCodeSnapshot())) {
                 continue;
             }
             matchedLookup = lookup;
@@ -163,10 +220,11 @@ public class BillingTopupService {
                 return;
             }
             log.warn(
-                    "event=sepay_webhook_amount_mismatch tenantId={} intentVnd={} actualVnd={}",
+                    "event=sepay_webhook_amount_or_package_mismatch tenantId={} intentVnd={} actualVnd={} packageCode={}",
                     firstKnownLookup.tenantId(),
                     firstKnownLookup.amountVnd(),
-                    transferAmountVnd);
+                    transferAmountVnd,
+                    firstKnownLookup.packageCodeSnapshot());
             return;
         }
 
@@ -179,11 +237,11 @@ public class BillingTopupService {
                                                 applyTopupCreditTransactional(
                                                         lookup.id(),
                                                         sepayTransactionId,
-                                                        transferAmountVnd)));
+                                                        lookup.creditAmountSnapshot())));
     }
 
     private void applyTopupCreditTransactional(
-            UUID intentId, long sepayTransactionId, long transferAmountVnd) {
+            UUID intentId, long sepayTransactionId, int creditAmountSnapshot) {
         Optional<BillingTopupIntentEntity> maybeIntent = intentRepository.findById(intentId);
         if (maybeIntent.isEmpty()) {
             log.warn("event=sepay_webhook_intent_vanished_post_lookup tenantId=unresolved");
@@ -196,20 +254,15 @@ public class BillingTopupService {
             return;
         }
 
-        long credits = transferAmountVnd / billingProperties.vndPerCredit();
-        long roundingLossVnd = transferAmountVnd - (credits * billingProperties.vndPerCredit());
-        if (roundingLossVnd > 0) {
-            log.info(
-                    "event=sepay_topup_rounding_loss tenantId={} vndLost={}",
-                    intent.getTenantId(),
-                    roundingLossVnd);
-        }
+        int credits =
+                intent.getCreditAmountSnapshot() == null
+                        ? creditAmountSnapshot
+                        : intent.getCreditAmountSnapshot();
         if (credits <= 0) {
             log.warn(
-                    "event=sepay_topup_below_min_credits tenantId={} transferAmountVnd={} vndPerCredit={}",
+                    "event=sepay_topup_missing_credit_snapshot tenantId={} intentId={}",
                     intent.getTenantId(),
-                    transferAmountVnd,
-                    billingProperties.vndPerCredit());
+                    intent.getId());
             return;
         }
 
@@ -231,7 +284,7 @@ public class BillingTopupService {
                     CreditLedgerEntryEntity.topup(
                             UUID.randomUUID(),
                             intent.getTenantId(),
-                            Math.toIntExact(credits),
+                            credits,
                             sepayTransactionIdString);
             entryRepository.saveAndFlush(topupEntry);
             log.info(
@@ -279,5 +332,54 @@ public class BillingTopupService {
         if (CROCKFORD_EIGHT_CHARACTER_CODE.matcher(normalized).matches()) {
             candidates.add(normalized);
         }
+    }
+
+    private LinkedHashSet<String> extractCandidatePackageCodes(
+            String packageCode, String referenceCode, String code, String content) {
+        LinkedHashSet<String> candidates = new LinkedHashSet<>();
+        addPackageCodeIfPresent(candidates, packageCode);
+        scanPackageCodes(candidates, referenceCode);
+        scanPackageCodes(candidates, code);
+        scanPackageCodes(candidates, content);
+        return candidates;
+    }
+
+    private static void addPackageCodeIfPresent(LinkedHashSet<String> candidates, String rawValue) {
+        if (rawValue == null || rawValue.isBlank()) {
+            return;
+        }
+        String normalized = rawValue.trim().toUpperCase(Locale.ROOT);
+        if (PACKAGE_CODE_TOKEN.matcher(normalized).matches()) {
+            candidates.add(normalized);
+        }
+    }
+
+    private static void scanPackageCodes(LinkedHashSet<String> candidates, String rawValue) {
+        if (rawValue == null) {
+            return;
+        }
+        Matcher matcher = PACKAGE_CODE_TOKEN.matcher(rawValue.toUpperCase(Locale.ROOT));
+        while (matcher.find()) {
+            candidates.add(matcher.group());
+        }
+    }
+
+    private static boolean packageCodeMatches(
+            LinkedHashSet<String> candidatePackageCodes, String packageCodeSnapshot) {
+        if (candidatePackageCodes.isEmpty() || packageCodeSnapshot == null) {
+            return true;
+        }
+        return candidatePackageCodes.contains(packageCodeSnapshot.toUpperCase(Locale.ROOT));
+    }
+
+    private static String normalizeRequiredPackageCode(String packageCode) {
+        if (packageCode == null || packageCode.isBlank()) {
+            throw new IllegalArgumentException("Billing package code is required");
+        }
+        return packageCode.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private static String buildTransferContent(String orderCode, String packageCode) {
+        return "ZM " + orderCode + " " + packageCode;
     }
 }

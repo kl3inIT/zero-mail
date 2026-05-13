@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
-import { TopupAmountForm, type TopupIntentDetails } from './TopupAmountForm';
+import { TopupPackageSelector, type TopupIntentDetails } from './TopupPackageSelector';
 import { TopupInstructions } from './TopupInstructions';
 import { TopupSuccess } from './TopupSuccess';
 import { TopupExpired } from './TopupExpired';
@@ -114,7 +114,10 @@ export function TopupClient() {
           onExpired={handleExpired}
         />
       ) : (
-        <TopupAmountForm baselineCredits={baselineCredits} onIntentCreated={handleIntentCreated} />
+        <TopupPackageSelector
+          baselineCredits={baselineCredits}
+          onIntentCreated={handleIntentCreated}
+        />
       )}
     </div>
   );
@@ -165,12 +168,11 @@ function parseStoredIntent(raw: string): StoredTopupIntent | null {
       typeof parsed.code !== 'string' ||
       typeof parsed.amountVnd !== 'number' ||
       typeof parsed.expiresAt !== 'string' ||
-      typeof parsed.qrPayload !== 'string' ||
       typeof parsed.baselineCredits !== 'number'
     ) {
       return null;
     }
-    return parsed as StoredTopupIntent;
+    return { ...parsed, qrPayload: parsed.qrPayload ?? '' } as StoredTopupIntent;
   } catch {
     return null;
   }

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.zeromail.core.config.ZeroMailCoreProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.BillingProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.BillingProperties.BillingCostProperties;
+import com.zeromail.core.config.ZeroMailCoreProperties.BillingProperties.BillingPaymentAccountProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.BillingProperties.BillingSepayProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.CryptoProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.LlmProperties;
@@ -47,6 +48,8 @@ class GoogleGenAiByokModelClientTest {
                 null,
                 new BillingProperties(
                         new BillingSepayProperties("test-sepay-key-fixture"),
+                        new BillingPaymentAccountProperties(
+                                "VCB", "Vietcombank", "0000000000", "ZERO MAIL", ""),
                         new BillingCostProperties(0),
                         1000,
                         5,
