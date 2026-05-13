@@ -88,6 +88,24 @@ Fixture sign-off:
 | Human tone judgment | DRFT-03 | Automated deterministic tests prove tone context is fetched/sanitized and judge scaffolding exists, but "sounds like me" needs calibrated human labels | Review the synthetic judge fixtures and a connected test-tenant draft; record human labels before promoting judge dims |
 | Vietnamese draft/error copy nuance | WEB-02 | Automated i18n parity cannot validate copy quality | Native speaker review of `apps/web/i18n/messages/vi.json` keys touched in 05B |
 
+## Validation Audit 2026-05-13
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+| New test files generated | 0 |
+
+State A audit re-ran the existing focused validation map and found no missing automated coverage. Existing manual-only items remain launch-readiness checks because they require real Gmail UI inspection or human language/tone judgment.
+
+Re-run evidence:
+
+- `./gradlew.bat :backend:core:test --tests "*ReplyMimeBuild*" --tests "*ThreadingHeaderValidator*" --tests "*GenerateThreadDraft*" --tests "*ToneContextBuilder*" --tests "*DraftPathArchUnit*" --tests "*ClassifyThreadReplyStatus*" --tests "*AuditLogQuery*" --tests "*NeedsReplyInboxQuery*" --tests "*DraftPrivacySweepTest" --console=plain` - PASS
+- `./gradlew.bat :backend:api:test --tests "*ThreadDraftController*" --tests "*DraftLockContention*" --tests "*TriageAuditController*" --tests "*AuditLogPagination*" --tests "*AuditLogMultiTenantLeak*" --console=plain` - PASS
+- `./gradlew.bat :backend:core:aiEval -PdeterministicOnly --console=plain` - PASS
+- `pnpm -C apps/web test -- features/needs-reply features/triage` - PASS
+
 ## Validation Sign-Off
 
 - [x] All tasks have automated verify commands or Wave 0 dependencies.
