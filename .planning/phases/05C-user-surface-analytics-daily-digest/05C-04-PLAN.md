@@ -2,7 +2,7 @@
 phase: 05C
 plan: 04
 type: execute
-wave: 3
+wave: 4
 depends_on:
   - 05C-02
   - 05C-03

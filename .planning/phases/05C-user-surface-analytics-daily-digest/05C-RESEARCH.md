@@ -967,32 +967,37 @@ For each CONTEXT.md "Claude's Discretion" item, here is the planner-ready recomm
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **`mail_message_observed.sender_email` — must resolve before planning.**
    - What we know: column doesn't exist (verified); D-18 Q3 references it.
    - What's unclear: user's tolerance for schema change vs Q3 descope.
    - Recommendation: surface §0 to user, prefer option (1) — add the column.
+   - **RESOLVED (2026-05-13):** User approved option (1) during the plan-phase run. Implemented by `05C-01-PLAN.md` Task 1 (Liquibase changeset 032 adds `sender_email varchar(320)` nullable) + Task 2 (`MailMessageObservedEntity.senderEmail` field + `PubSubIngestionService` writer patch). Q3 query filters `WHERE sender_email IS NOT NULL` in `05C-02-PLAN.md` Task 1.
 
 2. **Worker `spring.main.keep-alive=true` — verify presence.**
    - What we know: not seen in the worker `application.yml` snippet shown above.
    - What's unclear: whether the property is set elsewhere (profile-specific YAML, env var).
    - Recommendation: planner verifies and adds if missing.
+   - **RESOLVED (2026-05-13):** `05C-03-PLAN.md` Task 2 modifies `backend/worker/src/main/resources/application.yml` to assert `spring.main.keep-alive: true`.
 
 3. **`Clock` / `Supplier<Instant>` injection convention.**
    - What we know: existing schedulers use `Instant.now()` directly.
    - What's unclear: any project-wide test convention for time stubbing.
    - Recommendation: planner adds `Supplier<Instant>` bean in `backend/worker/notification/` config for testable schedulers.
+   - **RESOLVED (2026-05-13):** `05C-03-PLAN.md` Task 3 adds a `Supplier<Instant>` bean in the notification config and constructor-injects it into `DigestDispatchScheduler` + `DigestPendingReaperJob` for deterministic Testcontainers tests.
 
 4. **Resend `from:` domain.**
    - What we know: must be a verified domain on Resend.
    - What's unclear: domain choice (`notifications@zero-mail.app`, `digest@zero-mail.app`, etc.).
    - Recommendation: planner picks a stable address; deploy runbook covers Resend domain verification.
+   - **RESOLVED (2026-05-13):** `05C-03-PLAN.md` picks `notifications@zero-mail.app` as the canonical `from:` address; Resend domain verification is captured in the plan's `user_setup` block and surfaced in `05C-04-PLAN.md` as a deploy-runbook follow-up.
 
 5. **Tenant changes `digest_send_hour_local` mid-day → double digest on transition day?**
    - What we know: scheduler reads preference fresh each tick; UNIQUE is on `(tenant_id, digest_day_local)` where `digest_day_local` is a DATE.
    - What's unclear: is `digest_day_local` the tenant-local date OR the UTC date at moment of insert?
    - Recommendation: store the **tenant-local-day DATE** so same-day ticks collide regardless of which hour they fire. Add a unit test fixture for the mid-day preference change.
+   - **RESOLVED (2026-05-13):** `05C-01-PLAN.md` Task 1 defines `digest_delivery.digest_day_local` as `date` (tenant-local), and `05C-03-PLAN.md` Task 3 computes it from `LocalDate.now(ZoneId.of(tenant.timeZone))` at insert time. `DigestIdempotencyTest` (`05C-03` Task 3) covers the mid-day preference-change collision.
 
 ---
 
