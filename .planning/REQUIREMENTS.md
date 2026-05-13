@@ -84,7 +84,7 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 
 - [x] **DRFT-01**: User can request an AI-generated draft reply for a thread
 - [x] **DRFT-02**: Draft is saved in Gmail as a normal draft with correct `In-Reply-To` and `References` headers
-- [ ] **DRFT-03**: Draft tone is matched from recent sent mail via lightweight in-request features (no persisted embeddings)
+- [x] **DRFT-03**: Draft tone is matched from recent sent mail via lightweight in-request features (no persisted embeddings)
 - [x] **DRFT-04**: Draft generation never auto-sends and always requires user review in Gmail
 
 ### Analytics
@@ -96,7 +96,7 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 ### Web UI
 
 - [x] **WEB-01**: Next.js 16 / React 19 frontend lives in `apps/web` and consumes the backend OpenAPI via typed client
-- [ ] **WEB-02**: UI covers onboarding, rule CRUD with live preview, triage audit log with undo, draft review, analytics, and billing — 5A portion done (onboarding, rules+live-preview, triage audit log+undo*, billing*); draft-review → 5B, analytics → 5C; *audit-list & ledger-history backend endpoints pending — see `05A-GAPS.md`
+- [ ] **WEB-02**: UI covers onboarding, rule CRUD with live preview, triage audit log with undo, draft review, analytics, and billing — 5A portion done (onboarding, rules+live-preview, triage audit log+undo, billing); 5B draft-review done and `GET /api/triage/audit` built; analytics remains → 5C
 - [x] **WEB-03**: In-product privacy page explains data handling (no stored bodies, no auto-send, BYOK option)
 - [x] **WEB-04**: UI surfaces the global pause toggle, credit balance, and tenant connection health in a persistent location
 
@@ -196,13 +196,13 @@ Each v1 requirement maps to exactly one phase.
 | TRG-08 | Phase 4 | Complete |
 | DRFT-01 | Phase 5B | Complete |
 | DRFT-02 | Phase 5B | Complete |
-| DRFT-03 | Phase 5B | Pending |
+| DRFT-03 | Phase 5B | Complete |
 | DRFT-04 | Phase 5B | Complete |
 | ANL-01 | Phase 5C | Pending |
 | ANL-02 | Phase 5C | Pending |
 | ANL-03 | Phase 5C | Pending |
 | WEB-01 | Phase 5A | Complete |
-| WEB-02 | Phase 5A / 5B / 5C | 5A portion done (onboarding, rules+live-preview, triage audit log+undo*, billing*); draft-review → 5B, analytics → 5C; *audit-list & ledger-history backend endpoints pending — see `05A-GAPS.md` |
+| WEB-02 | Phase 5A / 5B / 5C | 5A portion done (onboarding, rules+live-preview, triage audit log+undo, billing); 5B draft-review done and `GET /api/triage/audit` built; analytics remains → 5C |
 | WEB-03 | Phase 5A | Complete |
 | WEB-04 | Phase 5A | Complete |
 
@@ -213,4 +213,4 @@ Each v1 requirement maps to exactly one phase.
 
 ---
 *Requirements defined: 2026-04-24*
-*Last updated: 2026-05-11 — Phase 4 closure verified TRG-01..TRG-08 as Complete; traceability remains 61/61 mapped*
+*Last updated: 2026-05-13 — Phase 5B closure verified DRFT-01..DRFT-04 as Complete; WEB-02 now has 5A + 5B portions done, analytics remains Phase 5C; traceability remains 61/61 mapped*
