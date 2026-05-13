@@ -26,7 +26,7 @@ export function useGenerateDraft() {
     },
     onError: (error) => {
       if (isDraftGenerationInFlight(error)) return;
-      toast.error(t('needsReply.toast.draftFailed'));
+      toast.error(t('errors.draft.generation.failed'));
     },
   });
 }

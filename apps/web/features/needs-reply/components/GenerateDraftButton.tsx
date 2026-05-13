@@ -106,7 +106,7 @@ export function GenerateDraftButton({
       {showInFlightNotice ? (
         <Alert variant="warning" className="max-w-64 py-1.5 text-xs">
           <AlertDescription className="text-xs">
-            {t('needsReply.notice.draftInFlight')}
+            {t('errors.draft.generation.in_flight')}
           </AlertDescription>
         </Alert>
       ) : null}

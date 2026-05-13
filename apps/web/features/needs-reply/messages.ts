@@ -123,14 +123,6 @@ export const needsReplyMessages = {
     vi: 'Đã lưu bản nháp trong Gmail — hãy xem lại và gửi ở đó.',
     en: 'Draft saved in Gmail — review and send it there.',
   },
-  'needsReply.toast.draftFailed': {
-    vi: 'Chưa thể tạo bản nháp. Hãy thử lại sau.',
-    en: "Couldn't generate a draft. Try again in a moment.",
-  },
-  'needsReply.notice.draftInFlight': {
-    vi: 'Một bản nháp cho luồng này đang được tạo.',
-    en: 'A draft is already being generated for this thread.',
-  },
   'needsReply.dialog.replaceTitle': {
     vi: 'Thay bản nháp hiện tại?',
     en: 'Replace the current draft?',

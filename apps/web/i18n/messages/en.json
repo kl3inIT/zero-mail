@@ -248,7 +248,8 @@
     "draft": {
       "generation": {
         "failed": "Couldn't generate a draft. Try again in a moment.",
-        "in_flight": "A draft is already being generated for this thread."
+        "in_flight": "A draft is already being generated for this thread.",
+        "unavailable": "Draft generation is temporarily unavailable. Try again later."
       }
     },
     "fallback": "The action could not finish. Refresh the page, then try again.",
@@ -607,9 +608,6 @@
       "retry": "Try again",
       "title": "Couldn't load your needs-reply list"
     },
-    "notice": {
-      "draftInFlight": "A draft is already being generated for this thread."
-    },
     "page": {
       "description": "Threads waiting on a reply — yours or theirs. Review and send drafts in Gmail.",
       "title": "Needs reply"
@@ -626,7 +624,6 @@
       "toReply": "To reply"
     },
     "toast": {
-      "draftFailed": "Couldn't generate a draft. Try again in a moment.",
       "draftSaved": "Draft saved in Gmail — review and send it there."
     }
   },

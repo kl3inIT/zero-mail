@@ -248,7 +248,8 @@
     "draft": {
       "generation": {
         "failed": "Chưa thể tạo bản nháp. Hãy thử lại sau.",
-        "in_flight": "Đang tạo bản nháp cho luồng email này."
+        "in_flight": "Đang tạo bản nháp cho luồng email này.",
+        "unavailable": "Tạm thời chưa thể tạo bản nháp. Hãy thử lại sau."
       }
     },
     "fallback": "Không thể hoàn tất thao tác. Hãy làm mới trang rồi thử lại.",
@@ -607,9 +608,6 @@
       "retry": "Thử lại",
       "title": "Không tải được danh sách cần trả lời"
     },
-    "notice": {
-      "draftInFlight": "Một bản nháp cho luồng này đang được tạo."
-    },
     "page": {
       "description": "Các luồng email đang chờ phản hồi — từ bạn hoặc từ họ. Xem lại và gửi bản nháp trong Gmail.",
       "title": "Cần trả lời"
@@ -626,7 +624,6 @@
       "toReply": "Cần trả lời"
     },
     "toast": {
-      "draftFailed": "Chưa thể tạo bản nháp. Hãy thử lại sau.",
       "draftSaved": "Đã lưu bản nháp trong Gmail — hãy xem lại và gửi ở đó."
     }
   },
