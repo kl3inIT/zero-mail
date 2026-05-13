@@ -83,6 +83,9 @@ databaseChangeLog:
             comment: Composite keyset index for NeedsReplyInboxQueryService ORDER BY last_classified_at DESC NULLS LAST, gmail_thread_id DESC after tenant/bucket/resolved filtering.
             sql: CREATE INDEX idx_thread_reply_status_inbox ON thread_reply_status (tenant_id, bucket, resolved, last_classified_at DESC NULLS LAST, gmail_thread_id DESC)
         - sql:
+            comment: Composite keyset index for the resolved-only NeedsReplyInboxQueryService view.
+            sql: CREATE INDEX idx_thread_reply_status_resolved ON thread_reply_status (tenant_id, resolved, last_classified_at DESC NULLS LAST, gmail_thread_id DESC)
+        - sql:
             comment: Partial count index for the sidebar TO_REPLY badge.
             sql: CREATE INDEX idx_thread_reply_status_to_reply ON thread_reply_status (tenant_id) WHERE bucket = 'TO_REPLY' AND NOT resolved
       rollback:

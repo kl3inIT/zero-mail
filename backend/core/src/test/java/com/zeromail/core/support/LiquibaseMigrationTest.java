@@ -69,6 +69,12 @@ class LiquibaseMigrationTest extends PostgresContainerTest {
                         "resolved",
                         "last_classified_at DESC NULLS LAST",
                         "gmail_thread_id DESC");
+        assertThat(indexDefinition("idx_thread_reply_status_resolved"))
+                .contains(
+                        "tenant_id",
+                        "resolved",
+                        "last_classified_at DESC NULLS LAST",
+                        "gmail_thread_id DESC");
         assertThat(indexDefinition("idx_thread_reply_status_to_reply"))
                 .contains("WHERE", "'TO_REPLY'::text", "NOT resolved");
         assertThat(constraintDefinition("fk_thread_reply_status_tenant"))
