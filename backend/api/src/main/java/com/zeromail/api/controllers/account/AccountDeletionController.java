@@ -2,6 +2,8 @@ package com.zeromail.api.controllers.account;
 
 import com.zeromail.core.account.usecases.AccountService;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
+import com.zeromail.core.notification.usecases.DigestDeliveryService;
+import com.zeromail.core.notification.usecases.NotificationPreferenceService;
 import com.zeromail.core.onboarding.usecases.OnboardingService;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.usecases.TenantService;
@@ -24,16 +26,22 @@ public class AccountDeletionController {
 
     private final OnboardingService onboardingService;
     private final GmailConnectionService gmailConnectionService;
+    private final NotificationPreferenceService notificationPreferenceService;
+    private final DigestDeliveryService digestDeliveryService;
     private final AccountService accountService;
     private final TenantService tenantService;
 
     public AccountDeletionController(
             OnboardingService onboardingService,
             GmailConnectionService gmailConnectionService,
+            NotificationPreferenceService notificationPreferenceService,
+            DigestDeliveryService digestDeliveryService,
             AccountService accountService,
             TenantService tenantService) {
         this.onboardingService = onboardingService;
         this.gmailConnectionService = gmailConnectionService;
+        this.notificationPreferenceService = notificationPreferenceService;
+        this.digestDeliveryService = digestDeliveryService;
         this.accountService = accountService;
         this.tenantService = tenantService;
     }
@@ -44,6 +52,8 @@ public class AccountDeletionController {
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
         onboardingService.deleteSelectionsForCurrentTenant(tenantId);
         gmailConnectionService.deleteForCurrentTenant(tenantId);
+        notificationPreferenceService.deleteForTenant(tenantId);
+        digestDeliveryService.deleteForTenant(tenantId);
         accountService.deleteCurrentUser(tenantId);
         tenantService.deleteCurrentTenant(tenantId);
     }
