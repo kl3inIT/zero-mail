@@ -84,6 +84,8 @@ class GenerateThreadDraftServiceTest {
         triageAuditRepository = mock(TriageAuditRepository.class);
         eventPublisher = mock(ApplicationEventPublisher.class);
         lockHandle = mock(LockHandle.class);
+        when(triageAuditRepository.reclaimStalePending(eq(AUDIT_ID), eq(TENANT_ID), anyString()))
+                .thenReturn(1);
         service =
                 new GenerateThreadDraftService(
                         redisDistributedLock,
@@ -169,6 +171,41 @@ class GenerateThreadDraftServiceTest {
                                 THREAD_ID,
                                 NEW_DRAFT_ID,
                                 Instant.parse("2026-05-12T10:00:00Z")));
+        verify(lockHandle).release();
+    }
+
+    @Test
+    void existing_pending_audit_without_lease_skips_gmail_write() throws Exception {
+        arrangeLock();
+        when(threadReplyStatusRepository.findByGmailThreadId(THREAD_ID))
+                .thenReturn(Optional.empty());
+        when(draftReplySourceLoader.load(TENANT_ID, THREAD_ID)).thenReturn(source());
+        when(draftBodyGenerator.generate(TENANT_ID, THREAD_ID, "inbound body", "Inbound subject"))
+                .thenReturn("generated draft body");
+        when(triageAuditWriter.insertPending(
+                        eq(TENANT_ID),
+                        eq(MESSAGE_ID),
+                        eq(THREAD_ID),
+                        any(UUID.class),
+                        anyString(),
+                        any(),
+                        any(),
+                        eq("on_demand_draft")))
+                .thenReturn(Optional.empty());
+        when(triageAuditWriter.findPendingAuditId(
+                        eq(TENANT_ID), eq(MESSAGE_ID), any(UUID.class), any(), any()))
+                .thenReturn(Optional.of(AUDIT_ID));
+        when(triageAuditRepository.reclaimStalePending(eq(AUDIT_ID), eq(TENANT_ID), anyString()))
+                .thenReturn(0);
+
+        assertThatThrownBy(
+                        () ->
+                                service.generateOrRegenerate(
+                                        new GenerateThreadDraftCommand(TENANT_ID, THREAD_ID)))
+                .isInstanceOf(DraftGenerationInFlightException.class);
+
+        verify(triageGmailWriter, never()).saveDraft(any(), any(), anyString(), anyString());
+        verify(triageAuditRepository, never()).markApplied(any(), any(), anyString(), any(), any());
         verify(lockHandle).release();
     }
 

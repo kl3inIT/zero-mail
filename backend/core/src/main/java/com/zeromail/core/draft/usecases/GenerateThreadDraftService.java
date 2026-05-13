@@ -215,28 +215,43 @@ public class GenerateThreadDraftService {
             UUID tenantId,
             DraftReplySource draftReplySource,
             TriageActionResult.SaveDraft preWriteIntent) {
-        Optional<UUID> auditId =
-                transactionOperations.execute(
-                        _ ->
-                                triageAuditWriter
-                                        .insertPending(
-                                                tenantId,
-                                                draftReplySource.gmailMessageId(),
-                                                draftReplySource.gmailThreadId(),
-                                                ON_DEMAND_DRAFT_RULE_ID,
-                                                ON_DEMAND_DRAFT_RULE_NAME,
-                                                RuleActionType.SAVE_DRAFT,
-                                                preWriteIntent,
-                                                "on_demand_draft")
-                                        .or(
-                                                () ->
-                                                        triageAuditWriter.findPendingAuditId(
-                                                                tenantId,
-                                                                draftReplySource.gmailMessageId(),
-                                                                ON_DEMAND_DRAFT_RULE_ID,
-                                                                RuleActionType.SAVE_DRAFT,
-                                                                preWriteIntent)));
-        return auditId.orElseThrow(DraftGenerationInFlightException::new);
+        String leaseOwner = "on-demand-draft-" + UUID.randomUUID();
+        return transactionOperations.execute(
+                _ -> {
+                    Optional<UUID> pendingAuditId =
+                            triageAuditWriter
+                                    .insertPending(
+                                            tenantId,
+                                            draftReplySource.gmailMessageId(),
+                                            draftReplySource.gmailThreadId(),
+                                            ON_DEMAND_DRAFT_RULE_ID,
+                                            ON_DEMAND_DRAFT_RULE_NAME,
+                                            RuleActionType.SAVE_DRAFT,
+                                            preWriteIntent,
+                                            "on_demand_draft")
+                                    .or(
+                                            () ->
+                                                    triageAuditWriter.findPendingAuditId(
+                                                            tenantId,
+                                                            draftReplySource.gmailMessageId(),
+                                                            ON_DEMAND_DRAFT_RULE_ID,
+                                                            RuleActionType.SAVE_DRAFT,
+                                                            preWriteIntent));
+                    UUID auditId =
+                            pendingAuditId.orElseThrow(DraftGenerationInFlightException::new);
+                    int reclaimedRows =
+                            triageAuditRepository.reclaimStalePending(
+                                    auditId, tenantId, leaseOwner);
+                    if (reclaimedRows == 0) {
+                        log.info(
+                                "event=draft_audit_pending_in_flight tenantId={} gmailThreadId={} auditId={}",
+                                tenantId,
+                                draftReplySource.gmailThreadId(),
+                                auditId);
+                        throw new DraftGenerationInFlightException();
+                    }
+                    return auditId;
+                });
     }
 
     private Optional<String> currentDraftId(String gmailThreadId) {
