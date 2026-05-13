@@ -993,7 +993,6 @@
       },
       "offBody": "Các hành động triage được phép sẽ được áp dụng sau khi qua kiểm tra an toàn.",
       "onBody": "Zero Mail sẽ đánh giá email nhưng không áp dụng nhãn, lưu draft, hoặc archive.",
-      "readUnavailable": "Trạng thái ban đầu đang dùng mặc định cục bộ vì backend chưa có endpoint đọc shadow mode.",
       "title": "Shadow mode",
       "toggleLabel": "Bật shadow mode"
     },

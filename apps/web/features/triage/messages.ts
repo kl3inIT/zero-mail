@@ -175,10 +175,6 @@ export const triageMessages = {
     vi: 'Các hành động triage được phép sẽ được áp dụng sau khi qua kiểm tra an toàn.',
     en: 'Allowed triage actions will apply after safety checks.',
   },
-  'triage.shadow.readUnavailable': {
-    vi: 'Trạng thái ban đầu đang dùng mặc định cục bộ vì backend chưa có endpoint đọc shadow mode.',
-    en: 'The initial state uses a local default because the backend does not expose a shadow-mode read endpoint yet.',
-  },
   'triage.shadow.confirm.title': {
     vi: 'Tắt shadow mode?',
     en: 'Turn off shadow mode?',

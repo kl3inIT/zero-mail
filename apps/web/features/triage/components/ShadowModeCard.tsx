@@ -75,11 +75,6 @@ export function ShadowModeCard() {
             data-testid="shadow-mode-switch"
           />
         </div>
-        {shadowMode.readUnavailable ? (
-          <p className="text-muted-foreground text-xs leading-5">
-            {t('triage.shadow.readUnavailable')}
-          </p>
-        ) : null}
       </CardContent>
       <AlertDialog open={confirmOffOpen} onOpenChange={setConfirmOffOpen}>
         <AlertDialogContent>

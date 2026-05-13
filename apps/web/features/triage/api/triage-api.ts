@@ -47,7 +47,6 @@ export type AuditLogOptions = AuditLogFilters & {
 
 export type ShadowModeState = {
   enabled: boolean;
-  readUnavailable: boolean;
 };
 
 function jsonHeaders(): HeadersInit {
@@ -138,11 +137,10 @@ export async function getAuditLog(options: AuditLogOptions = {}): Promise<AuditL
   };
 }
 
-// GAP: the current backend schema exposes PATCH-only shadow-mode writes, but
-// no shadow-mode read endpoint. The UI starts from a known false default and
-// updates from the authoritative PATCH response after the user changes it.
 export async function getShadowMode(): Promise<ShadowModeState> {
-  return { enabled: false, readUnavailable: true };
+  const result = await api.GET('/api/tenant/triage/shadow-mode', {});
+  const data = unwrap(result, `/api/tenant/triage/shadow-mode failed: ${result.response.status}`);
+  return { enabled: data.enabled ?? false };
 }
 
 export async function setShadowMode(enabled: boolean): Promise<ShadowModeState> {
@@ -151,7 +149,7 @@ export async function setShadowMode(enabled: boolean): Promise<ShadowModeState> 
     headers: jsonHeaders(),
   });
   const data = unwrap(result, `/api/tenant/triage/shadow-mode failed: ${result.response.status}`);
-  return { enabled: data.enabled ?? enabled, readUnavailable: false };
+  return { enabled: data.enabled ?? enabled };
 }
 
 export async function undoAuditEntry(auditId: string): Promise<UndoAuditResponse> {

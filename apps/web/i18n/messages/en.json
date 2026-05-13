@@ -993,7 +993,6 @@
       },
       "offBody": "Allowed triage actions will apply after safety checks.",
       "onBody": "Zero Mail will evaluate email without applying labels, saving drafts, or archiving.",
-      "readUnavailable": "The initial state uses a local default because the backend does not expose a shadow-mode read endpoint yet.",
       "title": "Shadow mode",
       "toggleLabel": "Enable shadow mode"
     },
