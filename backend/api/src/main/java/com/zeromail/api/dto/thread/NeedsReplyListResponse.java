@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 public record NeedsReplyListResponse(
-        List<NeedsReplyRowResponse> items, String nextCursor, long toReplyCount) {
+        List<NeedsReplyRowResponse> items, String nextCursor, Long toReplyCount) {
 
     public NeedsReplyListResponse {
         items = List.copyOf(items);
@@ -15,7 +15,7 @@ public record NeedsReplyListResponse(
     public static NeedsReplyListResponse from(
             NeedsReplyPage page,
             Map<String, GmailThreadDisplay> displaysByThreadId,
-            long toReplyCount) {
+            Long toReplyCount) {
         return new NeedsReplyListResponse(
                 page.items().stream()
                         .map(

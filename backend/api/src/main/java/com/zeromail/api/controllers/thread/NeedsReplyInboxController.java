@@ -58,7 +58,10 @@ public class NeedsReplyInboxController {
         Map<String, GmailThreadDisplay> displaysByThreadId =
                 gmailPreviewReadService.fetchThreadDisplays(
                         tenantId, gmailThreadIds, GMAIL_DISPLAY_FETCH_BUDGET);
-        long toReplyCount = needsReplyInboxQueryService.toReplyCount(tenantId);
+        Long toReplyCount =
+                cursor == null || cursor.isBlank()
+                        ? needsReplyInboxQueryService.toReplyCount(tenantId)
+                        : null;
         return NeedsReplyListResponse.from(page, displaysByThreadId, toReplyCount);
     }
 
