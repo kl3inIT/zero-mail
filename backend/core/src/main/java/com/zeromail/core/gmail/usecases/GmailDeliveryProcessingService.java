@@ -18,6 +18,7 @@ import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -72,10 +73,7 @@ public class GmailDeliveryProcessingService {
                                                     "No connection for tenantId: " + tenantId));
 
             String decryptedRefreshToken =
-                    new String(
-                            refreshTokenCipher.decrypt(
-                                    connection.getRefreshTokenEncrypted(), tenantId.toString()),
-                            StandardCharsets.UTF_8);
+                    decryptRefreshToken(connection.getRefreshTokenEncrypted(), tenantId);
             GmailApiClientFactory.TokenRefreshResult tokenResult =
                     gmailApiClientFactory.refreshAccessToken(decryptedRefreshToken);
             Gmail gmail = gmailApiClientFactory.buildGmailClient(tokenResult.accessToken().value());
@@ -125,14 +123,16 @@ public class GmailDeliveryProcessingService {
                         delivery.getHistoryId(),
                         webhookHistoryId);
             } else {
-                handleRetryableFailure(delivery, tenantId);
+                handleRetryableFailure(delivery, tenantId, googleResponseException);
             }
         } catch (InvalidGrantException invalidGrantException) {
             connectionService.markDisconnected(tenantId);
             deliveryRepository.updateStatus(delivery.getId(), "DEAD");
             log.warn("event=gmail_oauth_revoked tenantId={}", tenantId);
+        } catch (NonRetryableGmailDeliveryException nonRetryableDeliveryException) {
+            handleNonRetryableFailure(delivery, tenantId, nonRetryableDeliveryException);
         } catch (Exception processingException) {
-            handleRetryableFailure(delivery, tenantId);
+            handleRetryableFailure(delivery, tenantId, processingException);
         }
     }
 
@@ -207,14 +207,82 @@ public class GmailDeliveryProcessingService {
         return newObservations;
     }
 
-    private void handleRetryableFailure(PubSubDeliveryEntity delivery, UUID tenantId) {
+    private String decryptRefreshToken(byte[] encryptedRefreshToken, UUID tenantId) {
+        if (encryptedRefreshToken == null || encryptedRefreshToken.length == 0) {
+            throw new NonRetryableGmailDeliveryException();
+        }
+        byte[] decryptedRefreshTokenBytes;
+        try {
+            decryptedRefreshTokenBytes =
+                    refreshTokenCipher.decrypt(encryptedRefreshToken, tenantId.toString());
+        } catch (IllegalArgumentException
+                | IllegalStateException
+                | NullPointerException tokenDecryptionFailure) {
+            throw new NonRetryableGmailDeliveryException(tokenDecryptionFailure);
+        }
+        if (decryptedRefreshTokenBytes == null || decryptedRefreshTokenBytes.length == 0) {
+            throw new NonRetryableGmailDeliveryException();
+        }
+        try {
+            String decryptedRefreshToken =
+                    new String(decryptedRefreshTokenBytes, StandardCharsets.UTF_8);
+            if (decryptedRefreshToken.isBlank()) {
+                throw new NonRetryableGmailDeliveryException();
+            }
+            return decryptedRefreshToken;
+        } finally {
+            Arrays.fill(decryptedRefreshTokenBytes, (byte) 0);
+        }
+    }
+
+    private void handleRetryableFailure(
+            PubSubDeliveryEntity delivery, UUID tenantId, Exception processingException) {
         int attempts = delivery.getAttempts();
+        String failureType = failureClassName(processingException);
         if (attempts >= 3) {
             deliveryRepository.updateStatus(delivery.getId(), "DEAD");
-            log.warn("event=gmail_delivery_dead tenantId={} attempts={}", tenantId, attempts);
+            log.warn(
+                    "event=gmail_delivery_dead tenantId={} attempts={} failureType={}",
+                    tenantId,
+                    attempts,
+                    failureType);
         } else {
             deliveryRepository.releaseForRetry(delivery.getId(), Instant.now().plusSeconds(30));
-            log.warn("event=gmail_delivery_retry tenantId={} attempt={}", tenantId, attempts);
+            log.warn(
+                    "event=gmail_delivery_retry tenantId={} attempt={} failureType={}",
+                    tenantId,
+                    attempts,
+                    failureType);
+        }
+    }
+
+    private void handleNonRetryableFailure(
+            PubSubDeliveryEntity delivery,
+            UUID tenantId,
+            NonRetryableGmailDeliveryException nonRetryableDeliveryException) {
+        int attempts = delivery.getAttempts();
+        deliveryRepository.updateStatus(delivery.getId(), "DEAD");
+        log.warn(
+                "event=gmail_delivery_dead tenantId={} attempts={} failureType={} retryable=false",
+                tenantId,
+                attempts,
+                failureClassName(nonRetryableDeliveryException));
+    }
+
+    private static String failureClassName(Exception processingException) {
+        Throwable cause = processingException.getCause();
+        Throwable failureToLog = cause == null ? processingException : cause;
+        return failureToLog.getClass().getSimpleName();
+    }
+
+    private static final class NonRetryableGmailDeliveryException extends RuntimeException {
+
+        private NonRetryableGmailDeliveryException() {
+            super();
+        }
+
+        private NonRetryableGmailDeliveryException(Throwable cause) {
+            super(cause);
         }
     }
 }

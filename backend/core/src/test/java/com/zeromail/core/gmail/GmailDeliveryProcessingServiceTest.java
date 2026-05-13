@@ -149,4 +149,44 @@ class GmailDeliveryProcessingServiceTest {
                                     .isEqualTo(GMAIL_MESSAGE_ID);
                         });
     }
+
+    @Test
+    void process_delivery_marks_missing_refresh_token_dead_without_retry() throws Exception {
+        PubSubDeliveryRepository deliveryRepository = mock(PubSubDeliveryRepository.class);
+        MailMessageObservedRepository observedRepository =
+                mock(MailMessageObservedRepository.class);
+        GmailConnectionService connectionService = mock(GmailConnectionService.class);
+        GmailConnectionRepository connectionRepository = mock(GmailConnectionRepository.class);
+        GmailApiClientFactory gmailApiClientFactory = mock(GmailApiClientFactory.class);
+        RefreshTokenCipher refreshTokenCipher = mock(RefreshTokenCipher.class);
+        ApplicationEventPublisher applicationEventPublisher = mock(ApplicationEventPublisher.class);
+
+        GmailConnectionEntity connection =
+                new GmailConnectionEntity(
+                        CONNECTION_ID,
+                        TENANT_ID,
+                        "user@example.test",
+                        GmailConnectionStatus.CONNECTED);
+        connection.setLastSyncedHistoryId(100L);
+        PubSubDeliveryEntity delivery =
+                new PubSubDeliveryEntity(
+                        DELIVERY_ID, TENANT_ID, "pubsub-message", 200L, "{\"historyId\":\"200\"}");
+
+        when(connectionRepository.findByTenantId(TENANT_ID)).thenReturn(Optional.of(connection));
+
+        new GmailDeliveryProcessingService(
+                        deliveryRepository,
+                        observedRepository,
+                        connectionService,
+                        connectionRepository,
+                        gmailApiClientFactory,
+                        refreshTokenCipher,
+                        applicationEventPublisher)
+                .processDelivery(delivery);
+
+        verify(deliveryRepository).updateStatus(DELIVERY_ID, "DEAD");
+        verify(deliveryRepository, never()).releaseForRetry(eq(DELIVERY_ID), any());
+        verify(refreshTokenCipher, never()).decrypt(any(), any());
+        verify(gmailApiClientFactory, never()).refreshAccessToken(any());
+    }
 }
