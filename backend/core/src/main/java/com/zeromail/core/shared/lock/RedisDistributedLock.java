@@ -41,7 +41,7 @@ public class RedisDistributedLock {
         StringRedisTemplate stringRedisTemplate = stringRedisTemplateSupplier.get();
         if (stringRedisTemplate == null) {
             log.warn("event=redis_lock_unavailable keyPrefix={}", safeKeyPrefix(key));
-            return Optional.empty();
+            throw new LockBackendUnavailableException();
         }
         String lockKey = requireText(key, "key");
         Duration lockTtl = Objects.requireNonNull(ttl, "ttl must not be null");
@@ -49,7 +49,16 @@ public class RedisDistributedLock {
             throw new IllegalArgumentException("ttl must be positive");
         }
         String token = requireText(tokenSupplier.get(), "token");
-        Boolean acquired = stringRedisTemplate.opsForValue().setIfAbsent(lockKey, token, lockTtl);
+        Boolean acquired;
+        try {
+            acquired = stringRedisTemplate.opsForValue().setIfAbsent(lockKey, token, lockTtl);
+        } catch (RuntimeException redisFailure) {
+            log.warn(
+                    "event=redis_lock_unavailable keyPrefix={} reason={}",
+                    safeKeyPrefix(key),
+                    redisFailure.getClass().getSimpleName());
+            throw new LockBackendUnavailableException(redisFailure);
+        }
         if (!Boolean.TRUE.equals(acquired)) {
             return Optional.empty();
         }

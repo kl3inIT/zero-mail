@@ -52,6 +52,7 @@ public final class ErrorCodes {
     public static final String TRIAGE_AUDIT_NOT_FOUND = "error.triage.audit.not_found";
     public static final String TRIAGE_SAFETY_VIOLATION = "error.triage.safety_violation";
     public static final String DRAFT_GENERATION_IN_FLIGHT = "error.draft.generation.in_flight";
+    public static final String DRAFT_GENERATION_UNAVAILABLE = "error.draft.generation.unavailable";
     public static final String DRAFT_GENERATION_FAILED = "error.draft.generation.failed";
     public static final String INVALID_CURSOR = "error.pagination.invalid_cursor";
 

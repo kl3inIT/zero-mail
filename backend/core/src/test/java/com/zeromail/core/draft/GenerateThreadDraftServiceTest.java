@@ -15,6 +15,7 @@ import static org.mockito.Mockito.when;
 import com.zeromail.core.draft.domain.DraftStatus;
 import com.zeromail.core.draft.exception.DraftGenerationFailedException;
 import com.zeromail.core.draft.exception.DraftGenerationInFlightException;
+import com.zeromail.core.draft.exception.DraftGenerationUnavailableException;
 import com.zeromail.core.draft.usecases.DraftBodyGenerator;
 import com.zeromail.core.draft.usecases.DraftReplySourceLoader;
 import com.zeromail.core.draft.usecases.DraftReplySourceLoader.DraftReplySource;
@@ -22,6 +23,7 @@ import com.zeromail.core.draft.usecases.GenerateThreadDraftCommand;
 import com.zeromail.core.draft.usecases.GenerateThreadDraftResult;
 import com.zeromail.core.draft.usecases.GenerateThreadDraftService;
 import com.zeromail.core.llm.exception.SafetyViolationException;
+import com.zeromail.core.shared.lock.LockBackendUnavailableException;
 import com.zeromail.core.shared.lock.RedisDistributedLock;
 import com.zeromail.core.shared.lock.RedisDistributedLock.LockHandle;
 import com.zeromail.core.thread.domain.ThreadReplyBucket;
@@ -268,6 +270,18 @@ class GenerateThreadDraftServiceTest {
                                 service.generateOrRegenerate(
                                         new GenerateThreadDraftCommand(TENANT_ID, THREAD_ID)))
                 .isInstanceOf(DraftGenerationInFlightException.class);
+    }
+
+    @Test
+    void unavailable_lock_backend_raises_retryable_unavailable_exception() {
+        when(redisDistributedLock.tryAcquire(anyString(), any()))
+                .thenThrow(new LockBackendUnavailableException());
+
+        assertThatThrownBy(
+                        () ->
+                                service.generateOrRegenerate(
+                                        new GenerateThreadDraftCommand(TENANT_ID, THREAD_ID)))
+                .isInstanceOf(DraftGenerationUnavailableException.class);
     }
 
     private void arrangeSuccessfulRegeneration() throws Exception {

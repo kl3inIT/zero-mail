@@ -3,9 +3,11 @@ package com.zeromail.core.draft.usecases;
 import com.zeromail.core.draft.domain.DraftStatus;
 import com.zeromail.core.draft.exception.DraftGenerationFailedException;
 import com.zeromail.core.draft.exception.DraftGenerationInFlightException;
+import com.zeromail.core.draft.exception.DraftGenerationUnavailableException;
 import com.zeromail.core.draft.usecases.DraftReplySourceLoader.DraftReplySource;
 import com.zeromail.core.llm.exception.SafetyViolationException;
 import com.zeromail.core.rules.domain.RuleActionType;
+import com.zeromail.core.shared.lock.LockBackendUnavailableException;
 import com.zeromail.core.shared.lock.RedisDistributedLock;
 import com.zeromail.core.shared.lock.RedisDistributedLock.LockHandle;
 import com.zeromail.core.tenant.TenantContext;
@@ -143,10 +145,7 @@ public class GenerateThreadDraftService {
     private GenerateThreadDraftResult generateOrRegenerateWithTenantBound(
             GenerateThreadDraftCommand command) {
         String lockKey = "draft:lock:" + command.tenantId() + ":" + command.gmailThreadId();
-        LockHandle lockHandle =
-                redisDistributedLock
-                        .tryAcquire(lockKey, LOCK_TTL)
-                        .orElseThrow(DraftGenerationInFlightException::new);
+        LockHandle lockHandle = acquireLock(lockKey);
         try {
             String oldDraftId = currentDraftId(command.gmailThreadId()).orElse(null);
             DraftReplySource draftReplySource =
@@ -199,6 +198,16 @@ public class GenerateThreadDraftService {
             throw new DraftGenerationFailedException(draftGenerationFailure);
         } finally {
             lockHandle.release();
+        }
+    }
+
+    private LockHandle acquireLock(String lockKey) {
+        try {
+            return redisDistributedLock
+                    .tryAcquire(lockKey, LOCK_TTL)
+                    .orElseThrow(DraftGenerationInFlightException::new);
+        } catch (LockBackendUnavailableException lockBackendUnavailableException) {
+            throw new DraftGenerationUnavailableException(lockBackendUnavailableException);
         }
     }
 

@@ -1,6 +1,7 @@
 package com.zeromail.core.shared.lock;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -13,6 +14,18 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
 class RedisDistributedLockTest {
+
+    @Test
+    void try_acquire_throws_when_backend_is_unavailable() {
+        RedisDistributedLock redisDistributedLock =
+                new RedisDistributedLock(() -> null, () -> "token");
+
+        assertThatThrownBy(
+                        () ->
+                                redisDistributedLock.tryAcquire(
+                                        "draft:lock:tenant:thread", Duration.ofSeconds(60)))
+                .isInstanceOf(LockBackendUnavailableException.class);
+    }
 
     @Test
     void try_acquire_returns_empty_when_key_is_held() {

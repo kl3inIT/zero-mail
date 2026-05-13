@@ -10,6 +10,7 @@ import com.zeromail.core.billing.exception.IllegalLedgerStateException;
 import com.zeromail.core.billing.exception.InsufficientCreditsException;
 import com.zeromail.core.draft.exception.DraftGenerationFailedException;
 import com.zeromail.core.draft.exception.DraftGenerationInFlightException;
+import com.zeromail.core.draft.exception.DraftGenerationUnavailableException;
 import com.zeromail.core.llm.exception.InvalidByokException;
 import com.zeromail.core.llm.exception.SafetyViolationException;
 import com.zeromail.core.llm.exception.SanitizationException;
@@ -406,6 +407,20 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 "Draft generation already in flight",
                 "A draft is already being generated for this thread.",
                 ErrorCodes.DRAFT_GENERATION_IN_FLIGHT);
+    }
+
+    @ExceptionHandler(DraftGenerationUnavailableException.class)
+    public ResponseEntity<ProblemDetail> onDraftGenerationUnavailable(
+            DraftGenerationUnavailableException exception) {
+        log.warn(
+                "event=draft_generation_unavailable tenantId={} reason={}",
+                tenantIdForLog(),
+                exception.getClass().getSimpleName());
+        return problem(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "Draft generation temporarily unavailable",
+                "Draft generation is temporarily unavailable. Try again later.",
+                ErrorCodes.DRAFT_GENERATION_UNAVAILABLE);
     }
 
     @ExceptionHandler({
