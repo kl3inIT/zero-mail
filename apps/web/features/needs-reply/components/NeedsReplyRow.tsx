@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { ExternalLink, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -30,23 +29,19 @@ export function NeedsReplyRow({
   now = new Date(),
   variant = 'desktop',
 }: NeedsReplyRowProps) {
-  const [draftStatus, setDraftStatus] = useState<DraftStatus>(row.draftStatus);
-
   return variant === 'mobile' ? (
     <MobileNeedsReplyRow
       row={row}
       activeBucket={activeBucket}
-      draftStatus={draftStatus}
+      draftStatus={row.draftStatus}
       now={now}
-      onDraftReady={() => setDraftStatus('DRAFT_READY')}
     />
   ) : (
     <DesktopNeedsReplyRow
       row={row}
       activeBucket={activeBucket}
-      draftStatus={draftStatus}
+      draftStatus={row.draftStatus}
       now={now}
-      onDraftReady={() => setDraftStatus('DRAFT_READY')}
     />
   );
 }
@@ -56,13 +51,11 @@ function DesktopNeedsReplyRow({
   activeBucket,
   draftStatus,
   now,
-  onDraftReady,
 }: {
   row: NeedsReplyRowModel;
   activeBucket: NeedsReplyBucket;
   draftStatus: DraftStatus;
   now: Date;
-  onDraftReady: () => void;
 }) {
   const t = useTranslations();
 
@@ -85,11 +78,7 @@ function DesktopNeedsReplyRow({
       <TableCell className="py-2">
         <div className="flex justify-end gap-1.5">
           {activeBucket === 'to-reply' ? (
-            <GenerateDraftButton
-              gmailThreadId={row.gmailThreadId}
-              draftStatus={draftStatus}
-              onDraftReady={onDraftReady}
-            />
+            <GenerateDraftButton gmailThreadId={row.gmailThreadId} draftStatus={draftStatus} />
           ) : null}
           <OpenInGmailLink href={row.openInGmailUrl} />
           <ResolveButton gmailThreadId={row.gmailThreadId} />
@@ -104,13 +93,11 @@ function MobileNeedsReplyRow({
   activeBucket,
   draftStatus,
   now,
-  onDraftReady,
 }: {
   row: NeedsReplyRowModel;
   activeBucket: NeedsReplyBucket;
   draftStatus: DraftStatus;
   now: Date;
-  onDraftReady: () => void;
 }) {
   const t = useTranslations();
 
@@ -134,7 +121,6 @@ function MobileNeedsReplyRow({
             gmailThreadId={row.gmailThreadId}
             draftStatus={draftStatus}
             compact
-            onDraftReady={onDraftReady}
           />
         ) : null}
         <OpenInGmailLink href={row.openInGmailUrl} large />
