@@ -44,6 +44,7 @@ public class GenerateThreadDraftService {
             UUID.fromString("00000000-0000-0000-0000-00000005b003");
     private static final String ON_DEMAND_DRAFT_RULE_NAME = "On-demand draft";
     private static final String GENERATED_DRAFT_AUDIT_SENTINEL = "[generated]";
+    private static final String NO_EXISTING_DRAFT_MARKER = "none";
 
     private final RedisDistributedLock redisDistributedLock;
     private final DraftReplySourceLoader draftReplySourceLoader;
@@ -156,6 +157,11 @@ public class GenerateThreadDraftService {
                             command.gmailThreadId(),
                             draftReplySource.inboundRawHtml(),
                             draftReplySource.inboundSubject());
+            TriageActionResult.SaveDraft preWriteIntent =
+                    preWriteIntent(command.gmailThreadId(), oldDraftId);
+            UUID auditId =
+                    reserveAuditBeforeGmailWrite(
+                            command.tenantId(), draftReplySource, preWriteIntent);
             String newDraftId =
                     triageGmailWriter.saveDraft(
                             command.tenantId(),
@@ -164,7 +170,8 @@ public class GenerateThreadDraftService {
                             command.gmailThreadId());
             deleteOldDraftIfNeeded(
                     command.tenantId(), command.gmailThreadId(), oldDraftId, newDraftId);
-            persistAuditAndClassify(command.tenantId(), draftReplySource, newDraftId);
+            persistAuditAndClassify(
+                    command.tenantId(), draftReplySource, newDraftId, auditId, preWriteIntent);
             eventPublisher.publishEvent(
                     new ThreadDraftSaved(
                             command.tenantId(),
@@ -195,6 +202,34 @@ public class GenerateThreadDraftService {
         }
     }
 
+    private UUID reserveAuditBeforeGmailWrite(
+            UUID tenantId,
+            DraftReplySource draftReplySource,
+            TriageActionResult.SaveDraft preWriteIntent) {
+        Optional<UUID> auditId =
+                transactionOperations.execute(
+                        _ ->
+                                triageAuditWriter
+                                        .insertPending(
+                                                tenantId,
+                                                draftReplySource.gmailMessageId(),
+                                                draftReplySource.gmailThreadId(),
+                                                ON_DEMAND_DRAFT_RULE_ID,
+                                                ON_DEMAND_DRAFT_RULE_NAME,
+                                                RuleActionType.SAVE_DRAFT,
+                                                preWriteIntent,
+                                                "on_demand_draft")
+                                        .or(
+                                                () ->
+                                                        triageAuditWriter.findPendingAuditId(
+                                                                tenantId,
+                                                                draftReplySource.gmailMessageId(),
+                                                                ON_DEMAND_DRAFT_RULE_ID,
+                                                                RuleActionType.SAVE_DRAFT,
+                                                                preWriteIntent)));
+        return auditId.orElseThrow(DraftGenerationInFlightException::new);
+    }
+
     private Optional<String> currentDraftId(String gmailThreadId) {
         return transactionOperations.execute(
                 _ ->
@@ -222,46 +257,24 @@ public class GenerateThreadDraftService {
     }
 
     private void persistAuditAndClassify(
-            UUID tenantId, DraftReplySource draftReplySource, String newDraftId) {
+            UUID tenantId,
+            DraftReplySource draftReplySource,
+            String newDraftId,
+            UUID auditId,
+            TriageActionResult.SaveDraft preWriteIntent) {
         transactionOperations.executeWithoutResult(
                 _ -> {
-                    TriageActionResult.SaveDraft preWriteIntent =
-                            new TriageActionResult.SaveDraft(
-                                    GENERATED_DRAFT_AUDIT_SENTINEL,
-                                    null,
-                                    draftReplySource.gmailThreadId());
                     TriageActionResult.SaveDraft resolvedIntent =
                             new TriageActionResult.SaveDraft(
-                                    GENERATED_DRAFT_AUDIT_SENTINEL,
+                                    preWriteIntent.instruction(),
                                     newDraftId,
                                     draftReplySource.gmailThreadId());
-                    Optional<UUID> auditId =
-                            triageAuditWriter
-                                    .insertPending(
-                                            tenantId,
-                                            draftReplySource.gmailMessageId(),
-                                            draftReplySource.gmailThreadId(),
-                                            ON_DEMAND_DRAFT_RULE_ID,
-                                            ON_DEMAND_DRAFT_RULE_NAME,
-                                            RuleActionType.SAVE_DRAFT,
-                                            preWriteIntent,
-                                            "on_demand_draft")
-                                    .or(
-                                            () ->
-                                                    triageAuditWriter.findPendingAuditId(
-                                                            tenantId,
-                                                            draftReplySource.gmailMessageId(),
-                                                            ON_DEMAND_DRAFT_RULE_ID,
-                                                            RuleActionType.SAVE_DRAFT,
-                                                            preWriteIntent));
-                    auditId.ifPresent(
-                            id ->
-                                    triageAuditRepository.markApplied(
-                                            id,
-                                            tenantId,
-                                            newDraftId,
-                                            null,
-                                            actionResultJsonValidator.toJson(resolvedIntent)));
+                    triageAuditRepository.markApplied(
+                            auditId,
+                            tenantId,
+                            newDraftId,
+                            null,
+                            actionResultJsonValidator.toJson(resolvedIntent));
                     classifyThreadReplyStatusService.classify(
                             new ThreadReplyClassificationInput(
                                     tenantId,
@@ -273,5 +286,15 @@ public class GenerateThreadDraftService {
                                     newDraftId,
                                     draftReplySource.lastMessageIsAutoReply()));
                 });
+    }
+
+    private static TriageActionResult.SaveDraft preWriteIntent(
+            String gmailThreadId, String oldDraftId) {
+        String existingDraftMarker =
+                oldDraftId == null || oldDraftId.isBlank() ? NO_EXISTING_DRAFT_MARKER : oldDraftId;
+        return new TriageActionResult.SaveDraft(
+                GENERATED_DRAFT_AUDIT_SENTINEL + ":existingDraft=" + existingDraftMarker,
+                null,
+                gmailThreadId);
     }
 }

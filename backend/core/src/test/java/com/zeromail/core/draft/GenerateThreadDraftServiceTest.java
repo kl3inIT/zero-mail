@@ -132,6 +132,25 @@ class GenerateThreadDraftServiceTest {
         assertThat(GenerateThreadDraftResult.class.getRecordComponents())
                 .extracting(recordComponent -> recordComponent.getName())
                 .doesNotContain("body");
+        InOrder auditBeforeGmailOrder = inOrder(triageAuditWriter, triageGmailWriter);
+        auditBeforeGmailOrder
+                .verify(triageAuditWriter)
+                .insertPending(
+                        eq(TENANT_ID),
+                        eq(MESSAGE_ID),
+                        eq(THREAD_ID),
+                        any(UUID.class),
+                        anyString(),
+                        any(),
+                        any(),
+                        eq("on_demand_draft"));
+        auditBeforeGmailOrder
+                .verify(triageGmailWriter)
+                .saveDraft(
+                        eq(TENANT_ID),
+                        any(ReplyHeaders.class),
+                        eq("generated draft body"),
+                        eq(THREAD_ID));
         verify(triageAuditRepository)
                 .markApplied(eq(AUDIT_ID), eq(TENANT_ID), eq(NEW_DRAFT_ID), eq(null), anyString());
         ArgumentCaptor<ThreadReplyClassificationInput> classificationInputCaptor =
@@ -191,6 +210,16 @@ class GenerateThreadDraftServiceTest {
         when(draftReplySourceLoader.load(TENANT_ID, THREAD_ID)).thenReturn(source());
         when(draftBodyGenerator.generate(TENANT_ID, THREAD_ID, "inbound body", "Inbound subject"))
                 .thenReturn("generated draft body");
+        when(triageAuditWriter.insertPending(
+                        any(),
+                        anyString(),
+                        anyString(),
+                        any(),
+                        anyString(),
+                        any(),
+                        any(),
+                        anyString()))
+                .thenReturn(Optional.of(AUDIT_ID));
         when(triageGmailWriter.saveDraft(
                         eq(TENANT_ID),
                         any(ReplyHeaders.class),
