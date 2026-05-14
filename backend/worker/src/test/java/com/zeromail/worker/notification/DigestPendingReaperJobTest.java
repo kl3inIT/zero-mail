@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.util.AopTestUtils;
 
 @ResourceLock("digest-dispatch-db")
 class DigestPendingReaperJobTest extends PostgresContainerTest {
@@ -55,6 +56,9 @@ class DigestPendingReaperJobTest extends PostgresContainerTest {
 
     @Test
     void scheduled_reap_fails_fast_when_shedlock_is_not_held() {
-        assertThatThrownBy(reaperJob::scheduledReap).isInstanceOf(IllegalStateException.class);
+        DigestPendingReaperJob targetReaperJob = AopTestUtils.getTargetObject(reaperJob);
+
+        assertThatThrownBy(targetReaperJob::scheduledReap)
+                .isInstanceOf(IllegalStateException.class);
     }
 }
