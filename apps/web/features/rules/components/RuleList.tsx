@@ -176,6 +176,7 @@ export function RuleList({
                                       variant="ghost"
                                       size="icon"
                                       className="text-destructive hover:bg-destructive/10 size-7 rounded-full"
+                                      aria-label={t('rules.list.delete')}
                                       disabled={pending}
                                     />
                                   }
@@ -231,6 +232,14 @@ export function RuleList({
                           {rule.customized
                             ? t('rules.list.customizedBadge')
                             : t('rules.list.templateBadge')}
+                        </Badge>
+                      )}
+                      {rule.templateKey && rule.templateVersion && (
+                        <Badge
+                          variant="outline"
+                          className="h-4 rounded-sm px-1.5 py-0 text-[9px] font-medium"
+                        >
+                          {`${rule.templateKey} \u00b7 v${rule.templateVersion}`}
                         </Badge>
                       )}
                       {previewReady && (

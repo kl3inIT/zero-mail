@@ -123,6 +123,26 @@ function providerLabelKey(
   return 'llm.byok.provider.openaiCompatible';
 }
 
+type ProviderLabelKey = ReturnType<typeof providerLabelKey>;
+
+type ProviderOption = {
+  id: ByokProviderPreset;
+  labelKey: ProviderLabelKey;
+};
+
+const OFFICIAL_PROVIDER_OPTIONS = [
+  { id: 'openrouter', labelKey: 'llm.byok.provider.openrouter' },
+  { id: 'openai', labelKey: 'llm.byok.provider.openai' },
+  { id: 'anthropic', labelKey: 'llm.byok.provider.anthropic' },
+  { id: 'google-genai', labelKey: 'llm.byok.provider.googleGenAi' },
+  { id: 'deepseek', labelKey: 'llm.byok.provider.deepseek' },
+] satisfies readonly ProviderOption[];
+
+const COMPATIBLE_PROVIDER_OPTIONS = [
+  { id: 'openai-compatible', labelKey: 'llm.byok.provider.openaiCompatible' },
+  { id: 'anthropic-compatible', labelKey: 'llm.byok.provider.anthropicCompatible' },
+] satisfies readonly ProviderOption[];
+
 function endpointLabelKey(
   preset: ByokProviderPreset,
 ): 'llm.byok.endpoint.openaiCompatibleLabel' | 'llm.byok.endpoint.anthropicCompatibleLabel' {
@@ -375,13 +395,7 @@ export function ByokForm() {
                   {t('llm.byok.provider.officialGroup')}
                 </p>
                 <div className="grid gap-2 rounded-2xl border border-[#0a3d3a]/15 bg-[#0a3d3a]/[0.03] p-2.5 sm:grid-cols-2 lg:grid-cols-5">
-                  {[
-                    { id: 'openrouter', label: 'openrouter' },
-                    { id: 'openai', label: 'openai' },
-                    { id: 'anthropic', label: 'anthropic' },
-                    { id: 'google-genai', label: 'googleGenAi' },
-                    { id: 'deepseek', label: 'deepseek' },
-                  ].map((item) => (
+                  {OFFICIAL_PROVIDER_OPTIONS.map((item) => (
                     <Label
                       key={item.id}
                       htmlFor={`byok-provider-${item.id}`}
@@ -400,7 +414,7 @@ export function ByokForm() {
                           preset === item.id && 'border-[#0a3d3a] text-[#0a3d3a]',
                         )}
                       />
-                      {t(`llm.byok.provider.${item.label}`)}
+                      {t(item.labelKey)}
                     </Label>
                   ))}
                 </div>
@@ -411,10 +425,7 @@ export function ByokForm() {
                   {t('llm.byok.provider.compatibleGroup')}
                 </p>
                 <div className="grid gap-2 rounded-2xl border border-[#0a3d3a]/15 bg-[#0a3d3a]/[0.03] p-2.5 sm:grid-cols-2">
-                  {[
-                    { id: 'openai-compatible', label: 'openaiCompatible' },
-                    { id: 'anthropic-compatible', label: 'anthropicCompatible' },
-                  ].map((item) => (
+                  {COMPATIBLE_PROVIDER_OPTIONS.map((item) => (
                     <Label
                       key={item.id}
                       htmlFor={`byok-provider-${item.id}`}
@@ -433,7 +444,7 @@ export function ByokForm() {
                           preset === item.id && 'border-[#0a3d3a] text-[#0a3d3a]',
                         )}
                       />
-                      {t(`llm.byok.provider.${item.label}`)}
+                      {t(item.labelKey)}
                     </Label>
                   ))}
                 </div>

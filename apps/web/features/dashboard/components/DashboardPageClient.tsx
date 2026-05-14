@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Inbox, ListChecks, MailCheck, MailX } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AuditLog } from '@/features/triage/components/AuditLog';
@@ -105,18 +105,14 @@ export function DashboardPageClient() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/triage">
-            <Inbox className="size-4" aria-hidden="true" />
-            {t('nav.triage')}
-          </Link>
-        </Button>
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/rules">
-            <ListChecks className="size-4" aria-hidden="true" />
-            {t('nav.rules')}
-          </Link>
-        </Button>
+        <Link href="/triage" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+          <Inbox className="size-4" aria-hidden="true" />
+          {t('nav.triage')}
+        </Link>
+        <Link href="/rules" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+          <ListChecks className="size-4" aria-hidden="true" />
+          {t('nav.rules')}
+        </Link>
       </div>
 
       <div className="space-y-3">

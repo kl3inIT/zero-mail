@@ -35,9 +35,12 @@ export function NeedsReplyPageClient() {
 
   return (
     <div className="space-y-5">
-      <p className="text-muted-foreground max-w-3xl text-sm leading-6">
-        {t('needsReply.page.description')}
-      </p>
+      <div className="space-y-1">
+        <h1 className="text-foreground text-xl font-semibold">{t('needsReply.page.title')}</h1>
+        <p className="text-muted-foreground max-w-3xl text-sm leading-6">
+          {t('needsReply.page.description')}
+        </p>
+      </div>
 
       <NeedsReplyTable
         activeBucket={activeBucket}

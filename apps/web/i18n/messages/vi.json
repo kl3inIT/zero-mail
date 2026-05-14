@@ -741,7 +741,8 @@
         "save": "Lưu",
         "write": "Viết"
       },
-      "title": "Soạn quy tắc"
+      "title": "Soạn quy tắc",
+      "workflowLabel": "Luồng tạo quy tắc"
     },
     "delete": {
       "body": "Thao tác này xóa định nghĩa quy tắc. Gmail sẽ không thay đổi, nhưng quy tắc này sẽ không còn xuất hiện trong các lượt chạy thử.",

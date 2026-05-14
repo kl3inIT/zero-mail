@@ -93,6 +93,7 @@ export function RuleComposer({
         <CardDescription>{t('rules.page.safetyNote')}</CardDescription>
         <WorkflowStepBar
           step={workflowStep}
+          workflowLabel={t('rules.composer.workflowLabel')}
           writeLabel={t('rules.composer.step.write')}
           compileLabel={t('rules.composer.step.compile')}
           saveLabel={t('rules.composer.step.save')}
@@ -252,18 +253,20 @@ export function RuleComposer({
 
 function WorkflowStepBar({
   step,
+  workflowLabel,
   writeLabel,
   compileLabel,
   saveLabel,
 }: {
   step: 1 | 2 | 3;
+  workflowLabel: string;
   writeLabel: string;
   compileLabel: string;
   saveLabel: string;
 }) {
   const steps = [writeLabel, compileLabel, saveLabel] as const;
   return (
-    <div className="mt-3 flex items-center gap-1" aria-label="Rule creation workflow">
+    <div className="mt-3 flex items-center gap-1" aria-label={workflowLabel}>
       {steps.map((label, index) => {
         const n = (index + 1) as 1 | 2 | 3;
         const isDone = n < step;
@@ -324,9 +327,9 @@ function summarizeCompiledJson(jsonText: string | undefined, fallback: string): 
 
   try {
     const parsed = JSON.parse(jsonText) as unknown;
-    const values = collectReviewStrings(parsed)
-      .filter((value) => value.length > 0)
-      .slice(0, 6);
+    const values = Array.from(
+      new Set(collectReviewStrings(parsed).filter((value) => value.length > 0)),
+    ).slice(0, 6);
     return values.length > 0 ? values : [fallback];
   } catch {
     // If the server ever returns a string that is not valid JSON, render

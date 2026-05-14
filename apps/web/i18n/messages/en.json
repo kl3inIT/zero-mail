@@ -741,7 +741,8 @@
         "save": "Save",
         "write": "Write"
       },
-      "title": "Rule composer"
+      "title": "Rule composer",
+      "workflowLabel": "Rule creation workflow"
     },
     "delete": {
       "body": "This removes the rule definition. Gmail will not be changed, but this rule will no longer appear in previews.",

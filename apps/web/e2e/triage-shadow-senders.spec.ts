@@ -62,12 +62,13 @@ for (const viewport of [
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle');
 
-    await expect(page.getByText('founder@example.com')).toBeVisible();
-    await expect(page.getByText('finance@example.com')).toBeVisible();
+    const senderList = page.getByTestId('sender-safety-net-list');
+    await expect(senderList.getByText('founder@example.com')).toBeVisible();
+    await expect(senderList.getByText('finance@example.com')).toBeVisible();
     await page.getByRole('button', { name: 'Opt into automation' }).click();
     await expect.poll(() => state.optInRequests).toContain('founder@example.com');
-    await expect(page.getByText('founder@example.com')).toBeVisible();
-    await expect(page.getByText('Opted in').first()).toBeVisible();
+    await expect(senderList.getByText('founder@example.com')).toBeVisible();
+    await expect(senderList.getByText('Opted in').first()).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 }

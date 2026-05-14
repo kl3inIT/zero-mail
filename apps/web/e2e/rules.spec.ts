@@ -343,6 +343,7 @@ test('rules desktop flow compiles, clarifies, saves disabled, previews, toggles,
   await expect(page.getByRole('heading', { name: 'Rules', exact: true })).toBeVisible();
   await expect(page.getByText('No rules yet')).toBeVisible();
 
+  await page.getByRole('button', { name: 'New rule' }).click();
   const ruleText = page.getByLabel('Rule text');
   await ruleText.fill('Archive receipts from Stripe and label them Finance');
   await page.getByRole('button', { name: 'Compile rule' }).click();
@@ -354,8 +355,9 @@ test('rules desktop flow compiles, clarifies, saves disabled, previews, toggles,
   await page.getByRole('button', { name: 'Answer clarification' }).click();
   await expect(page.getByText('stripe.com')).toBeVisible();
   await page.getByRole('button', { name: 'Save disabled rule' }).click();
-  await expect(page.getByText('Disabled').first()).toBeVisible();
 
+  await page.getByRole('button', { name: 'Preview rule' }).click();
+  await expect(page.getByLabel('Rule text')).toHaveCount(0);
   await page.getByRole('button', { name: 'Preview rule' }).click();
   await expect(page.getByText('No Gmail changes were made.')).toBeVisible();
   await expect(page.getByText('Your Stripe receipt')).toBeVisible();
@@ -366,11 +368,13 @@ test('rules desktop flow compiles, clarifies, saves disabled, previews, toggles,
 
   await page.getByRole('button', { name: 'Move rule down' }).first().click();
   await page.getByRole('button', { name: 'Edit rule' }).nth(1).click();
-  await ruleText.fill('Archive receipts from Stripe and label them Finance');
+  await page.getByLabel('Rule text').fill('Archive receipts from Stripe and label them Finance');
   await page.getByRole('button', { name: 'Compile rule' }).click();
   await page.getByLabel('Clarification answer').fill('Only Stripe payment receipts');
   await page.getByRole('button', { name: 'Answer clarification' }).click();
   await page.getByRole('button', { name: 'Save disabled rule' }).click();
+  await page.getByRole('button', { name: 'Preview rule' }).click();
+  await expect(page.getByLabel('Rule text')).toHaveCount(0);
   await page.getByRole('button', { name: 'Preview rule' }).click();
   await expect(page.getByText('No Gmail changes were made.')).toBeVisible();
 
@@ -382,6 +386,7 @@ test('rules desktop flow compiles, clarifies, saves disabled, previews, toggles,
 test('template gallery materializes a disabled starter rule with provenance', async ({ page }) => {
   await openRules(page, 'template-flow');
 
+  await page.getByRole('button', { name: 'Browse templates' }).click();
   await page.getByRole('button', { name: 'Use starter rule' }).click();
   await expect(page.getByText('Archive receipts').first()).toBeVisible();
   await expect(page.getByText('Template', { exact: true })).toBeVisible();
@@ -398,9 +403,10 @@ test('rules workspace remains in-shell and usable at 320px without horizontal ov
   await expectAppShellChrome(page);
   await expectNoClaySkinClasses(page);
   await expect(page.getByRole('heading', { name: 'Rules', exact: true })).toBeVisible();
-  await expect(page.getByText('Rule composer')).toBeVisible();
   await expect(page.getByText('Safe preview')).toBeVisible();
   await expect(page.getByText('Rule order')).toBeVisible();
+  await page.getByRole('button', { name: 'New rule' }).click();
+  await expect(page.getByRole('dialog', { name: 'Rule composer' })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });
 
@@ -409,10 +415,13 @@ test('rules errors keep compile billing alerts in composer and Gmail preview err
 }) => {
   await openRules(page, 'error-flow');
 
+  await page.getByRole('button', { name: 'Edit rule' }).click();
   await page.getByLabel('Rule text').fill('Archive receipts from Stripe and label them Finance');
   await page.getByRole('button', { name: 'Compile rule' }).click();
   await expect(page.getByText('Platform credits are depleted.').first()).toBeVisible();
 
+  await page.keyboard.press('Escape');
+  await expect(page.getByLabel('Rule text')).toHaveCount(0);
   await page.getByRole('button', { name: 'Preview rule' }).click();
   await expect(
     page.getByText('Gmail preview is unavailable. Reconnect Gmail and try again.').first(),
