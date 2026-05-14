@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import {
   CreditCard,
   Languages,
@@ -10,13 +10,16 @@ import {
   MailCheck,
   MailWarning,
   MailX,
+  Menu,
   Pause,
   Play,
   RefreshCw,
   Settings,
-  UserCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
+
+import ZMLogoMark from '@/features/landing/components/ZMLogoMark';
 
 import {
   AlertDialog,
@@ -28,20 +31,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { SidebarTrigger } from '@/components/ui/sidebar';
+import { useSidebar } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useUpdateLanguage } from '@/features/account/hooks/useUpdateLanguage';
@@ -53,21 +55,7 @@ import type { AppLocale } from '@/i18n/routing';
 import { getApiUrl } from '@/lib/api/base-url';
 import { cn } from '@/lib/utils';
 
-type PageTitleKey =
-  | 'nav.triage'
-  | 'nav.rules'
-  | 'nav.billing'
-  | 'nav.settings'
-  | 'nav.onboardingProgress';
 type GmailConnectionStatus = 'CONNECTED' | 'DISCONNECTED' | 'NOT_CONNECTED' | 'PENDING';
-
-function pageTitleKey(pathname: string): PageTitleKey {
-  if (pathname.startsWith('/rules')) return 'nav.rules';
-  if (pathname.startsWith('/billing')) return 'nav.billing';
-  if (pathname.startsWith('/settings')) return 'nav.settings';
-  if (pathname.startsWith('/onboarding')) return 'nav.onboardingProgress';
-  return 'nav.triage';
-}
 
 function connectionPresentation(status: GmailConnectionStatus): {
   labelKey:
@@ -108,20 +96,25 @@ function BalancePill() {
   }, [balance.data?.availableCredits, locale]);
 
   if (balance.isPending) {
-    return <Skeleton className="h-9 w-20 rounded-md" data-testid="balance-pill-loading" />;
+    return <Skeleton className="h-8 w-24 rounded-full" data-testid="balance-pill-loading" />;
   }
 
   return (
-    <Badge
-      variant="outline"
-      className="border-border bg-background h-9 gap-1.5 rounded-md px-2.5"
-      aria-label={`${t('shell.balance.label')}: ${formattedBalance}`}
-      data-testid="balance-pill"
-    >
-      <CreditCard className="text-primary size-3.5" aria-hidden="true" />
-      <span className="hidden sm:inline">{t('shell.balance.label')}</span>
-      <span className="font-mono tabular-nums">{formattedBalance}</span>
-    </Badge>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <div
+            className="bg-background hidden h-9 cursor-default items-center gap-1.5 rounded-full border border-[#0a3d3a]/20 px-3 min-[420px]:flex"
+            aria-label={`${t('shell.balance.label')}: ${formattedBalance}`}
+            data-testid="balance-pill"
+          />
+        }
+      >
+        <CreditCard className="text-primary size-3.5 shrink-0" aria-hidden="true" />
+        <span className="font-mono text-sm font-medium tabular-nums">{formattedBalance}</span>
+      </TooltipTrigger>
+      <TooltipContent>{t('shell.balance.label')}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -133,24 +126,30 @@ function ConnectionHealth() {
   const Icon = presentation.icon;
   const label = t(presentation.labelKey);
 
+  const iconColorClass =
+    status === 'CONNECTED'
+      ? 'text-green-500'
+      : status === 'DISCONNECTED'
+        ? 'text-red-500'
+        : 'text-amber-500';
+
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1">
       <Tooltip>
         <TooltipTrigger
           render={
             <button
               type="button"
-              className="border-border bg-background text-muted-foreground grid size-9 place-items-center rounded-md border"
+              className={cn(
+                'hover:bg-accent flex h-9 items-center gap-1.5 rounded-full border border-[#0a3d3a]/20 px-2 transition-colors sm:px-3',
+              )}
               aria-label={label}
               data-testid="connection-health-dot"
               data-status={status}
             />
           }
         >
-          <span
-            className={cn('size-2.5 rounded-full ring-4', presentation.dotClassName)}
-            aria-hidden="true"
-          />
+          <Icon className={cn('size-[18px]', iconColorClass)} aria-hidden="true" />
         </TooltipTrigger>
         <TooltipContent>{label}</TooltipContent>
       </Tooltip>
@@ -159,18 +158,17 @@ function ConnectionHealth() {
           type="button"
           variant="outline"
           size="sm"
-          className="h-9 px-2"
+          className="h-8 rounded-full px-3 text-xs"
           onClick={() => {
             window.location.href = getApiUrl('/tenant/connect-gmail');
           }}
           aria-label={t('shell.connection.reconnect')}
           data-testid="reconnect-gmail-button"
         >
-          <RefreshCw className="size-3.5" aria-hidden="true" />
+          <RefreshCw className="size-3" aria-hidden="true" />
           <span className="hidden sm:inline">{t('shell.connection.reconnect')}</span>
         </Button>
       )}
-      <Icon className="text-muted-foreground hidden size-4 lg:block" aria-hidden="true" />
     </div>
   );
 }
@@ -192,32 +190,35 @@ function PauseControl() {
   };
 
   return (
-    <div className="border-border bg-background flex min-h-10 items-center gap-2 rounded-md border px-2">
-      {paused ? (
-        <Pause className="text-warning size-4" aria-hidden="true" />
-      ) : (
-        <Play className="text-primary size-4" aria-hidden="true" />
-      )}
-      <div className="hidden min-w-0 lg:block">
-        <div className="truncate text-xs font-medium">{t('shell.pause.label')}</div>
-        <div className={cn('text-xs', paused ? 'text-warning' : 'text-muted-foreground')}>
-          {t(paused ? 'shell.pause.paused' : 'shell.pause.running')}
-        </div>
-      </div>
-      <Switch
-        checked={running}
+    <>
+      <button
+        type="button"
+        className={cn(
+          'flex h-9 items-center gap-1.5 rounded-full border px-2 transition-colors sm:px-3',
+          paused
+            ? 'border-warning/40 text-warning hover:bg-warning/10'
+            : 'text-muted-foreground hover:bg-muted hover:text-foreground border-[#0a3d3a]/20',
+        )}
         aria-label={t('shell.pause.label')}
         disabled={pauseState.isLoading || togglePause.isPending}
-        onCheckedChange={(nextRunning) => {
-          if (nextRunning) {
+        onClick={() => {
+          if (running) {
+            setConfirmPauseOpen(true);
+          } else {
             persistPauseState(false);
-            return;
           }
-          setConfirmPauseOpen(true);
         }}
-        className="data-unchecked:bg-warning/80"
         data-testid="pause-switch"
-      />
+      >
+        {paused ? (
+          <Pause className="size-3.5 shrink-0" aria-hidden="true" />
+        ) : (
+          <Play className="size-3.5 shrink-0" aria-hidden="true" />
+        )}
+        <span className="hidden text-xs font-medium sm:inline">
+          {t(paused ? 'shell.pause.paused' : 'shell.pause.running')}
+        </span>
+      </button>
       <AlertDialog open={confirmPauseOpen} onOpenChange={setConfirmPauseOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -238,7 +239,7 @@ function PauseControl() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }
 
@@ -251,80 +252,112 @@ function UserMenu() {
   const currentLocale = (
     currentUser.data?.preferredLanguage === 'en' || locale === 'en' ? 'en' : 'vi'
   ) as AppLocale;
+  const email =
+    currentUser.data?.gmailConnectionStatus?.googleEmail ?? currentUser.data?.email ?? '';
+  const initial = email.charAt(0).toUpperCase();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button
+          <button
             type="button"
-            variant="ghost"
-            size="icon-lg"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
             aria-label={t('shell.userMenu.label')}
             data-testid="user-menu-trigger"
           />
         }
       >
-        <UserCircle className="size-5" aria-hidden="true" />
+        {initial || '?'}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>{t('shell.userMenu.label')}</DropdownMenuLabel>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="font-normal">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs font-medium">{t('shell.userMenu.label')}</span>
+              {email && <span className="text-muted-foreground truncate text-xs">{email}</span>}
+            </div>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuLabel className="flex items-center gap-1.5">
-          <Languages className="size-3.5" aria-hidden="true" />
-          {t('shell.userMenu.language')}
-        </DropdownMenuLabel>
-        <DropdownMenuCheckboxItem
-          checked={currentLocale === 'vi'}
-          onClick={() => updateLanguage.mutate('vi')}
-        >
-          {t('shell.userMenu.vietnamese')}
-        </DropdownMenuCheckboxItem>
-        <DropdownMenuCheckboxItem
-          checked={currentLocale === 'en'}
-          onClick={() => updateLanguage.mutate('en')}
-        >
-          {t('shell.userMenu.english')}
-        </DropdownMenuCheckboxItem>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="flex items-center gap-1.5">
+            <Languages className="size-3.5" aria-hidden="true" />
+            {t('shell.userMenu.language')}
+          </DropdownMenuLabel>
+          <DropdownMenuCheckboxItem
+            checked={currentLocale === 'vi'}
+            onClick={() => updateLanguage.mutate('vi')}
+          >
+            {t('shell.userMenu.vietnamese')}
+          </DropdownMenuCheckboxItem>
+          <DropdownMenuCheckboxItem
+            checked={currentLocale === 'en'}
+            onClick={() => updateLanguage.mutate('en')}
+          >
+            {t('shell.userMenu.english')}
+          </DropdownMenuCheckboxItem>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => router.push('/settings')}>
-          <Settings className="size-4" aria-hidden="true" />
-          {t('shell.userMenu.settings')}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          variant="destructive"
-          onClick={() => {
-            window.location.href = getApiUrl('/logout');
-          }}
-        >
-          <LogOut className="size-4" aria-hidden="true" />
-          {t('shell.userMenu.signOut')}
-        </DropdownMenuItem>
+        <DropdownMenuGroup>
+          <DropdownMenuItem onClick={() => router.push('/settings')}>
+            <Settings className="size-4" aria-hidden="true" />
+            {t('shell.userMenu.settings')}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={() => {
+              window.location.href = getApiUrl('/logout');
+            }}
+          >
+            <LogOut className="size-4" aria-hidden="true" />
+            {t('shell.userMenu.signOut')}
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
 export function ChromeHeader() {
-  const pathname = usePathname();
   const t = useTranslations();
-  const title = t(pageTitleKey(pathname));
+  const { toggleSidebar } = useSidebar();
 
   return (
     <header
-      className="bg-background/95 sticky top-0 z-20 flex min-h-14 flex-wrap items-center gap-2 border-b px-3 py-2 backdrop-blur sm:flex-nowrap sm:px-4"
+      className="bg-background flex h-12 shrink-0 items-center px-2"
       data-testid="chrome-header"
     >
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <SidebarTrigger className="size-10 sm:size-8" aria-label={t('shell.sidebar.toggle')} />
-        <div className="hidden min-w-0 min-[420px]:block">
-          <div className="text-foreground truncate text-sm font-semibold">{title}</div>
-        </div>
+      <div className="flex w-auto shrink-0 items-center gap-2 pr-2 pl-2 sm:w-60 sm:gap-4 sm:pr-4 sm:pl-3">
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className="text-muted-foreground hover:text-foreground hover:bg-accent flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors"
+          aria-label={t('shell.sidebar.toggle')}
+        >
+          <Menu className="size-5" />
+        </button>
+        <Link
+          href="/triage"
+          className="flex items-center gap-2 focus-visible:outline-none sm:gap-4"
+        >
+          <span className="bg-sidebar-primary text-sidebar-primary-foreground grid size-8 shrink-0 place-items-center rounded-full shadow-sm">
+            <ZMLogoMark size={16} />
+          </span>
+          <span className="text-foreground hidden text-xl font-bold tracking-tight whitespace-nowrap sm:inline">
+            Zero Mail
+          </span>
+        </Link>
       </div>
-      <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
+
+      <div className="hidden min-w-0 flex-1 items-center px-4 sm:flex" />
+
+      <div className="ml-auto flex min-w-0 shrink items-center gap-1 sm:shrink-0 sm:gap-3">
         <BalancePill />
+        <div className="bg-border hidden h-5 w-px sm:block" aria-hidden="true" />
         <ConnectionHealth />
         <PauseControl />
+        <div className="bg-border hidden h-5 w-px sm:block" aria-hidden="true" />
         <UserMenu />
       </div>
     </header>

@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { Badge } from '@/components/ui/badge';
-import { TableCell, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { GenerateDraftButton } from '@/features/needs-reply/components/GenerateDraftButton';
 import { UndoButton } from '@/features/triage/components/UndoButton';
@@ -21,42 +20,80 @@ export function AuditRow({ entry, now }: AuditRowProps) {
   const [undone, setUndone] = useState(Boolean(entry.undone));
   const undoAvailable = isUndoAvailable(entry, now) && !undone;
 
+  const sender =
+    entry.messageRef?.sender || entry.ruleName || t('triage.audit.message.unknownSender');
+  const subject = entry.messageRef?.subject || t('triage.audit.message.untitled');
+  const initial = sender.charAt(0).toUpperCase();
+
   return (
-    <TableRow data-testid="audit-table-row">
-      <TableCell className="text-muted-foreground font-mono text-xs whitespace-nowrap">
-        {formatAuditTimestamp(entry.timestamp)}
-      </TableCell>
-      <TableCell className="max-w-56 whitespace-normal">
-        <MessageRef entry={entry} />
-      </TableCell>
-      <TableCell className="max-w-44 whitespace-normal">
-        <span className="text-foreground text-sm">{entry.ruleName}</span>
-      </TableCell>
-      <TableCell>
-        <ActionBadge entry={entry} />
-      </TableCell>
-      <TableCell className="min-w-72 whitespace-normal">
-        <p className="text-foreground text-sm leading-6">{entry.reason}</p>
-      </TableCell>
-      <TableCell>
-        <div className="flex flex-wrap items-start gap-1.5">
-          {shouldShowDraftAction(entry) ? (
-            <GenerateDraftButton
-              gmailThreadId={entry.gmailThreadId}
-              draftStatus={entry.draftId ? 'DRAFT_READY' : 'NO_DRAFT'}
-            />
+    <div
+      className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[#0a3d3a]/[0.04]"
+      data-testid="audit-table-row"
+    >
+      {/* Action-colored avatar */}
+      <div
+        className={cn(
+          'flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+          avatarClassName(entry.action),
+        )}
+        aria-hidden="true"
+      >
+        {initial}
+      </div>
+
+      {/* Main content */}
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        {/* Sender / rule name */}
+        <span className="w-28 shrink-0 truncate text-sm font-medium">{sender}</span>
+
+        {/* Subject + reason */}
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <span className="truncate text-sm font-medium">{subject}</span>
+          {entry.reason ? (
+            <>
+              <span className="text-muted-foreground shrink-0 text-xs">—</span>
+              <span className="text-muted-foreground hidden truncate text-xs sm:block">
+                {entry.reason}
+              </span>
+            </>
           ) : null}
-          {undone ? (
-            <span className="text-muted-foreground text-xs">{t('triage.audit.undo.undone')}</span>
-          ) : undoAvailable ? (
-            <UndoButton entry={entry} onUndone={() => setUndone(true)} />
-          ) : (
-            <UndoClosedLabel />
-          )}
         </div>
-      </TableCell>
-    </TableRow>
+
+        {/* Right: badge + time + actions */}
+        <div className="flex shrink-0 items-center gap-2">
+          <ActionBadge entry={entry} />
+          <time className="text-muted-foreground w-20 shrink-0 text-right font-mono text-xs">
+            {formatAuditTimestamp(entry.timestamp)}
+          </time>
+          <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+            {shouldShowDraftAction(entry) ? (
+              <GenerateDraftButton
+                gmailThreadId={entry.gmailThreadId}
+                draftStatus={entry.draftId ? 'DRAFT_READY' : 'NO_DRAFT'}
+              />
+            ) : null}
+            {undone ? null : undoAvailable ? (
+              <UndoButton entry={entry} onUndone={() => setUndone(true)} />
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
   );
+}
+
+function avatarClassName(action: string): string {
+  const normalized = action.toLowerCase();
+  if (normalized.includes('archive')) {
+    return 'bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-400';
+  }
+  if (normalized.includes('label')) {
+    return 'bg-[#E7F0EF] text-[#0a3d3a] dark:bg-[#0a3d3a]/20 dark:text-[#E7F0EF]';
+  }
+  if (normalized.includes('draft')) {
+    return 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400';
+  }
+  return 'bg-muted text-muted-foreground';
 }
 
 export function MessageRef({ entry }: { entry: AuditEntry }) {
@@ -131,10 +168,10 @@ function actionBadgeClassName(action: string): string {
     return 'bg-sky-500/10 text-sky-700 dark:text-sky-300';
   }
   if (normalizedAction.includes('label')) {
-    return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
+    return 'bg-[#0a3d3a]/10 text-[#0a3d3a] dark:text-[#0a3d3a]/40';
   }
   if (normalizedAction.includes('draft')) {
-    return 'bg-violet-500/10 text-violet-700 dark:text-violet-300';
+    return 'bg-amber-500/10 text-amber-700 dark:text-amber-300';
   }
   return 'bg-muted text-muted-foreground';
 }

@@ -9,26 +9,33 @@ import {
   CreditCard,
   Inbox,
   ListChecks,
+  LogOut,
   MailQuestion,
   Settings,
-  ShieldCheck,
 } from 'lucide-react';
+
+import ZMLogoMark from '@/features/landing/components/ZMLogoMark';
 
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarSeparator,
+  SidebarTrigger,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useToReplyCount } from '@/features/needs-reply/hooks/useToReplyCount';
 import { useHydrated } from '@/lib/use-hydrated';
+import { getApiUrl } from '@/lib/api/base-url';
 import { cn } from '@/lib/utils';
 
 type NavItem = {
@@ -45,10 +52,13 @@ type NavItem = {
   badge?: 'needs-reply';
 };
 
-const APP_NAV_ITEMS: NavItem[] = [
+const MAIL_NAV: NavItem[] = [
   { href: '/triage', labelKey: 'nav.triage', icon: Inbox },
   { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
   { href: '/needs-reply', labelKey: 'nav.needsReply', icon: MailQuestion, badge: 'needs-reply' },
+];
+
+const MANAGE_NAV: NavItem[] = [
   { href: '/rules', labelKey: 'nav.rules', icon: ListChecks },
   { href: '/billing', labelKey: 'nav.billing', icon: CreditCard },
   { href: '/settings', labelKey: 'nav.settings', icon: Settings },
@@ -64,72 +74,110 @@ export function AppSidebar() {
   const currentUser = useCurrentUser();
   const toReplyCount = useToReplyCount();
   const hydrated = useHydrated();
+  const { state } = useSidebar();
+  const isCollapsed = state === 'collapsed';
   const visibleToReplyCount = hydrated ? (toReplyCount.data ?? 0) : 0;
   const onboardingStep = currentUser.data?.onboardingStep;
   const showOnboarding = Boolean(onboardingStep && onboardingStep !== 'COMPLETE');
-  const navItems = showOnboarding
+
+  const manageItems: NavItem[] = showOnboarding
     ? [
-        ...APP_NAV_ITEMS,
+        ...MANAGE_NAV,
         {
           href: '/onboarding',
           labelKey: 'nav.onboardingProgress',
           icon: CircleDotDashed,
         } satisfies NavItem,
       ]
-    : APP_NAV_ITEMS;
+    : MANAGE_NAV;
+
+  const email =
+    currentUser.data?.gmailConnectionStatus?.googleEmail ?? currentUser.data?.email ?? '';
+  const initial = email.charAt(0).toUpperCase();
+
+  function renderNavItem(item: NavItem) {
+    const Icon = item.icon;
+    const label = t(item.labelKey);
+    const active = isActivePath(pathname, item.href);
+    return (
+      <SidebarMenuItem key={item.href}>
+        <SidebarMenuButton
+          tooltip={label}
+          className={cn(
+            'flex h-9 items-center gap-4 transition-all duration-300 ease-in-out',
+            isCollapsed
+              ? 'mx-auto h-9 w-9 justify-center rounded-full p-0'
+              : 'w-full rounded-l-none rounded-r-full pr-4 pl-7',
+            active
+              ? 'bg-[#E7F0EF]! font-bold text-[#0a3d3a]! hover:bg-[#E7F0EF]/80!'
+              : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground font-medium',
+          )}
+          render={<Link href={item.href} aria-label={label} />}
+        >
+          <Icon className="size-5 shrink-0" aria-hidden="true" />
+          <span className="truncate text-sm group-data-[collapsible=icon]:hidden">{label}</span>
+          {item.badge === 'needs-reply' && visibleToReplyCount > 0 && (
+            <span
+              aria-label={`${visibleToReplyCount}`}
+              className="bg-primary/10 text-primary ml-auto flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-1 font-mono text-xs font-semibold group-data-[collapsible=icon]:hidden"
+            >
+              {visibleToReplyCount}
+            </span>
+          )}
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  }
 
   return (
-    <Sidebar collapsible="icon" data-testid="app-sidebar">
-      <SidebarHeader className="border-sidebar-border border-b">
-        <Link
-          href="/triage"
-          aria-label={t('nav.logoLabel')}
-          className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring flex h-10 min-w-0 items-center gap-2 rounded-md px-2 outline-hidden focus-visible:ring-2"
-        >
-          <span className="bg-sidebar-primary text-sidebar-primary-foreground grid size-7 shrink-0 place-items-center rounded-md">
-            <ShieldCheck className="size-4" aria-hidden="true" />
-          </span>
-          <span className="min-w-0 truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
-            <span>zero</span>
-            <span className="text-muted-foreground font-normal">mail</span>
-          </span>
-        </Link>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
+    <Sidebar
+      collapsible="icon"
+      data-testid="app-sidebar"
+      className="!top-12 !h-[calc(100vh-48px)] border-none bg-transparent"
+      style={{ '--sidebar-width': '240px', '--sidebar-width-icon': '72px' } as React.CSSProperties}
+    >
+      <SidebarContent className="flex flex-col gap-0 pt-2 pr-0 pl-0 transition-all duration-300 group-data-[collapsible=icon]:!p-0">
+        <SidebarGroup className="p-0 py-1">
+          <SidebarGroupLabel className="text-sidebar-foreground/50 mb-1 px-6 text-xs font-medium">
+            {t('nav.sectionMail')}
+          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const label = t(item.labelKey);
-                const active = isActivePath(pathname, item.href);
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      tooltip={label}
-                      isActive={active}
-                      className={cn(active && 'bg-sidebar-accent text-sidebar-accent-foreground')}
-                      render={<Link href={item.href} aria-label={label} />}
-                    >
-                      <Icon className="size-4" aria-hidden="true" />
-                      <span>{label}</span>
-                    </SidebarMenuButton>
-                    {item.badge === 'needs-reply' && visibleToReplyCount > 0 ? (
-                      <SidebarMenuBadge
-                        aria-label={`${label}: ${visibleToReplyCount}`}
-                        className="bg-primary/10 text-primary font-mono"
-                      >
-                        {visibleToReplyCount}
-                      </SidebarMenuBadge>
-                    ) : null}
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
+            <SidebarMenu className="gap-0.5">{MAIL_NAV.map(renderNavItem)}</SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup className="mt-auto p-0 py-1">
+          <SidebarSeparator className="bg-sidebar-border/50 mx-3 mb-2" />
+          <SidebarGroupLabel className="text-sidebar-foreground/50 mb-1 px-6 text-xs font-medium group-data-[collapsible=icon]:hidden">
+            {t('nav.sectionManage')}
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-0.5">{manageItems.map(renderNavItem)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
       <SidebarRail />
+
+      <SidebarFooter className="border-none p-0 group-data-[collapsible=icon]:items-center">
+        <div
+          className={cn(
+            'hover:bg-sidebar-accent group/user flex shrink-0 cursor-pointer items-center gap-2.5 rounded-full px-2 py-1.5 transition-all duration-300 ease-in-out',
+            isCollapsed ? 'h-12 w-[72px] justify-center px-0' : 'mx-2 mb-2 w-full',
+          )}
+        >
+          <div className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-transform duration-300 group-hover/user:scale-105">
+            {initial || '?'}
+          </div>
+          {!isCollapsed && (
+            <div className="min-w-0 flex-1">
+              <p className="text-sidebar-foreground truncate text-xs leading-tight font-medium">
+                {email || t('shell.userMenu.label')}
+              </p>
+            </div>
+          )}
+        </div>
+      </SidebarFooter>
     </Sidebar>
   );
 }

@@ -40,11 +40,7 @@ export default async function TopBar() {
   return (
     <header className="zm-nav">
       <nav className="zm-nav-inner">
-        <Link
-          href="/"
-          aria-label={`zeromail ${t('nav.beta')} - ${t('nav.logoLabel')}`}
-          className="zm-brand"
-        >
+        <Link href="/" className="zm-brand">
           <span className="zm-brand-mark">
             <ZMLogoMark size={15} />
           </span>

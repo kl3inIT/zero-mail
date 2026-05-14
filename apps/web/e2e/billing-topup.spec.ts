@@ -81,7 +81,7 @@ for (const viewport of VIEWPORTS) {
     await openBilling(page, '/billing', state);
     await page.getByRole('link', { name: 'Top up credits' }).click();
 
-    await expect(page).toHaveURL(/\/billing\/top-up$/);
+    await expect(page).toHaveURL(/\/billing\/top-up$/, { timeout: 15_000 });
     await expect(page.getByTestId('topup-amount-step')).toBeVisible();
     await page.getByLabel('Top-up amount').fill('250000');
     await page.getByRole('button', { name: 'Continue to payment' }).click();

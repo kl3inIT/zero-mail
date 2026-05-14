@@ -2,8 +2,17 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { Plus, Sparkles } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ErrorCode } from '@/lib/api/error-codes';
 import { RuleComposer } from '@/features/rules/components/RuleComposer';
 import { RuleList } from '@/features/rules/components/RuleList';
@@ -73,6 +82,8 @@ export function RulesWorkspace() {
   } | null>(null);
   const [pendingRuleId, setPendingRuleId] = useState<string | null>(null);
   const [pendingTemplateKey, setPendingTemplateKey] = useState<string | null>(null);
+  const [composerDialogOpen, setComposerDialogOpen] = useState(false);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
 
   const selectedRule = rules.find((rule) => rule.ruleId === selectedRuleId) ?? null;
 
@@ -248,6 +259,7 @@ export function RulesWorkspace() {
       const result = await materializeTemplateMutation.mutateAsync(template.templateKey);
       const createdRule = result.createdRules?.[0];
       if (createdRule) selectRule(createdRule);
+      setTemplateDialogOpen(false);
     } finally {
       setPendingTemplateKey(null);
     }
@@ -262,21 +274,41 @@ export function RulesWorkspace() {
     );
   }
 
+  const canPreview = canPreviewRule(selectedRule, sourceText, compileResult);
+
+  function handleNewRule() {
+    setSelectedRuleId(null);
+    setSourceText('');
+    setCompileResult(null);
+    setCompileError(null);
+    setInsufficientCreditError(null);
+    setClarificationAnswer('');
+    setPreview(null);
+    setPreviewError(null);
+    setGmailUnavailableError(null);
+    setComposerDialogOpen(true);
+  }
+
+  function handleEditRule(rule: RuleResponse) {
+    selectRule(rule);
+    setComposerDialogOpen(true);
+  }
+
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-xl font-semibold">{t('rules.page.title')}</h1>
-        <p className="text-muted-foreground max-w-3xl text-sm">{t('rules.page.intro')}</p>
-      </header>
+      <div className="grid items-start gap-6 lg:grid-cols-[380px_1fr]">
+        {/* Left column: rule list + main action */}
+        <div className="flex flex-col gap-4 lg:sticky lg:top-20">
+          <Button
+            type="button"
+            size="lg"
+            className="h-12 w-full gap-3 rounded-xl text-base font-semibold shadow-sm transition-all hover:shadow-md"
+            onClick={handleNewRule}
+          >
+            <Plus className="size-5" />
+            {t('rules.composer.newRuleCta')}
+          </Button>
 
-      {rulesQuery.error && (
-        <Alert variant="destructive">
-          <AlertDescription>{t('errors.fallback')}</AlertDescription>
-        </Alert>
-      )}
-
-      <div className="grid gap-4 lg:grid-cols-[minmax(17rem,22rem)_minmax(0,1fr)]">
-        <div className="space-y-4 lg:order-1">
           <RuleList
             rules={rules}
             selectedRuleId={selectedRuleId}
@@ -285,33 +317,26 @@ export function RulesWorkspace() {
             canEnableRule={canEnableRule}
             onSelectRule={selectRule}
             onMoveRule={handleMoveRule}
-            onEditRule={selectRule}
+            onEditRule={handleEditRule}
             onToggleEnabled={handleToggleRule}
             onDeleteRule={handleDeleteRule}
-          />
-          <RuleTemplateGallery
-            templates={templates}
-            isLoading={templatesQuery.isLoading}
-            pendingTemplateKey={pendingTemplateKey}
-            onUseTemplate={handleUseTemplate}
+            action={
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-primary hover:bg-primary/5 h-8 gap-1.5 rounded-md px-2 font-medium"
+                onClick={() => setTemplateDialogOpen(true)}
+              >
+                <Sparkles className="size-3.5" />
+                {t('rules.templates.browseCta')}
+              </Button>
+            }
           />
         </div>
 
-        <div className="space-y-4 lg:order-2">
-          <RuleComposer
-            sourceText={sourceText}
-            clarificationAnswer={clarificationAnswer}
-            compileResult={compileResult}
-            compileError={compileError}
-            insufficientCreditError={insufficientCreditError}
-            isCompiling={compileMutation.isPending}
-            isSaving={createRuleMutation.isPending || updateRuleMutation.isPending}
-            onSourceTextChange={updateSourceText}
-            onClarificationAnswerChange={setClarificationAnswer}
-            onCompile={handleCompile}
-            onAnswerClarification={handleAnswerClarification}
-            onSaveDisabledRule={handleSaveDisabledRule}
-          />
+        {/* Right column: preview panel */}
+        <div className="lg:order-2">
           <RulePreviewPanel
             selectedRule={selectedRule}
             preview={preview}
@@ -319,7 +344,7 @@ export function RulesWorkspace() {
             gmailUnavailableError={gmailUnavailableError}
             isPreviewing={previewSavedRuleMutation.isPending || previewDraftRuleMutation.isPending}
             isToggling={updateEnabledMutation.isPending}
-            canPreview={canPreviewRule(selectedRule, sourceText, compileResult)}
+            canPreview={canPreview}
             canEnable={selectedRule ? canEnableRule(selectedRule) : false}
             sampleSize={sampleSize}
             onSampleSizeChange={setSampleSize}
@@ -330,6 +355,49 @@ export function RulesWorkspace() {
           />
         </div>
       </div>
+
+      {/* Composer dialog — for creating and editing rules */}
+      <Dialog open={composerDialogOpen} onOpenChange={setComposerDialogOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{t('rules.composer.title')}</DialogTitle>
+            <DialogDescription>{t('rules.page.safetyNote')}</DialogDescription>
+          </DialogHeader>
+          <RuleComposer
+            sourceText={sourceText}
+            clarificationAnswer={clarificationAnswer}
+            compileResult={compileResult}
+            compileError={compileError}
+            insufficientCreditError={insufficientCreditError}
+            isCompiling={compileMutation.isPending}
+            isSaving={createRuleMutation.isPending || updateRuleMutation.isPending}
+            canPreview={canPreview}
+            onSourceTextChange={updateSourceText}
+            onClarificationAnswerChange={setClarificationAnswer}
+            onCompile={handleCompile}
+            onAnswerClarification={handleAnswerClarification}
+            onSaveDisabledRule={handleSaveDisabledRule}
+            onOpenPreview={() => setComposerDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Template gallery dialog */}
+      <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('rules.templates.title')}</DialogTitle>
+            <DialogDescription>{t('rules.templates.disabledByDefault')}</DialogDescription>
+          </DialogHeader>
+          <RuleTemplateGallery
+            templates={templates}
+            isLoading={templatesQuery.isLoading}
+            pendingTemplateKey={pendingTemplateKey}
+            hideHeader
+            onUseTemplate={handleUseTemplate}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
