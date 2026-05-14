@@ -15,7 +15,7 @@ public class EmailAddressCanonicalizer {
             throw new IllegalArgumentException("senderEmail must not be blank");
         }
         String extractedAddress = extractAddress(rawSenderEmail.trim());
-        String canonicalizedEmail = extractedAddress.toLowerCase(Locale.ROOT).trim();
+        String canonicalizedEmail = extractedAddress.toLowerCase(Locale.ROOT);
         if (!PLAUSIBLE_EMAIL_PATTERN.matcher(canonicalizedEmail).matches()) {
             throw new IllegalArgumentException("senderEmail is malformed");
         }
