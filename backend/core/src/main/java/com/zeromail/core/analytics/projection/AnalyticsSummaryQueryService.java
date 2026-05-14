@@ -129,8 +129,18 @@ public class AnalyticsSummaryQueryService {
         jdbcTemplate.query(
                 TIME_SAVED_SQL,
                 resultSet -> {
-                    appliedByActionType.put(
-                            resultSet.getString("action_type"), resultSet.getLong(2));
+                    String actionType = resultSet.getString("action_type");
+                    if (actionType == null) {
+                        return;
+                    }
+                    appliedByActionType.merge(
+                            actionType,
+                            resultSet.getLong(2),
+                            (previousCount, duplicateCount) -> {
+                                throw new IllegalStateException(
+                                        "Duplicate action_type in time-saved query: "
+                                                + actionType);
+                            });
                 },
                 tenantId,
                 windowStartInclusive,
