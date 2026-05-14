@@ -20,15 +20,9 @@ public class PubSubOidcAuthFilter extends OncePerRequestFilter {
     private final TokenVerifier tokenVerifier;
     private final String expectedEmail;
 
-    public PubSubOidcAuthFilter(
-            String audience, String serviceAccountEmail, String certificatesUrl) {
+    public PubSubOidcAuthFilter(String serviceAccountEmail, TokenVerifier tokenVerifier) {
         this.expectedEmail = serviceAccountEmail;
-        this.tokenVerifier =
-                TokenVerifier.newBuilder()
-                        .setAudience(audience)
-                        .setIssuer("https://accounts.google.com")
-                        .setCertificatesLocation(certificatesUrl)
-                        .build();
+        this.tokenVerifier = tokenVerifier;
     }
 
     @Override
