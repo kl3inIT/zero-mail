@@ -1,7 +1,14 @@
 package com.zeromail.api.e2estub;
 
 import com.zeromail.core.account.usecases.OAuthProvisioningService;
+import com.zeromail.core.billing.persistence.BillingPackageEntity;
+import com.zeromail.core.billing.persistence.BillingTopupIntentEntity;
+import com.zeromail.core.billing.usecases.BillingTopupService;
+import com.zeromail.core.billing.usecases.CreditLedger;
+import com.zeromail.core.tenant.TenantContext;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -28,15 +35,23 @@ public class E2eStubResetController {
             "https://www.googleapis.com/auth/gmail.modify";
     private static final String SESSION_COOKIE_NAME = "ZEROMAIL_SESSION";
     private static final String SESSION_COOKIE_VALUE = "e2e-stub-session";
+    private static final int MINIMUM_LAUNCH_SMOKE_CREDITS = 10;
+    private static final AtomicLong SEPAY_TRANSACTION_COUNTER = new AtomicLong();
 
     private final E2eStubGmailApiClientFactory e2eStubGmailFactory;
     private final OAuthProvisioningService oauthProvisioningService;
+    private final BillingTopupService billingTopupService;
+    private final CreditLedger creditLedger;
 
     public E2eStubResetController(
             E2eStubGmailApiClientFactory e2eStubGmailFactory,
-            OAuthProvisioningService oauthProvisioningService) {
+            OAuthProvisioningService oauthProvisioningService,
+            BillingTopupService billingTopupService,
+            CreditLedger creditLedger) {
         this.e2eStubGmailFactory = e2eStubGmailFactory;
         this.oauthProvisioningService = oauthProvisioningService;
+        this.billingTopupService = billingTopupService;
+        this.creditLedger = creditLedger;
     }
 
     @PostMapping("/api/test/e2e-stub/reset")
@@ -59,6 +74,7 @@ public class E2eStubResetController {
                 oauthProvisioningService.provisionBundledOAuth(
                         GOOGLE_SUBJECT, EMAIL, REFRESH_TOKEN, GRANTED_GMAIL_SCOPES);
         UUID tenantId = provisioningResult.tenantId();
+        TenantContext.runWith(tenantId, () -> ensureLaunchSmokeCredits(tenantId));
         log.info("event=e2e_stub_seed_session tenantId={}", tenantId);
         return new SeedSessionResponse(
                 tenantId.toString(),
@@ -78,6 +94,46 @@ public class E2eStubResetController {
         }
         return new DraftResponse(
                 seededDraft.draftId(), seededDraft.messageId(), seededDraft.body());
+    }
+
+    private void ensureLaunchSmokeCredits(UUID tenantId) {
+        if (creditLedger.balance(tenantId).availableCredits() >= MINIMUM_LAUNCH_SMOKE_CREDITS) {
+            return;
+        }
+
+        List<BillingPackageEntity> activePackages = billingTopupService.listActivePackages();
+        if (activePackages.isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "No active billing package available");
+        }
+
+        BillingPackageEntity billingPackage = activePackages.getFirst();
+        BillingTopupIntentEntity topupIntent =
+                billingTopupService.createIntent(tenantId, billingPackage.getCode());
+        billingTopupService.applyWebhook(
+                nextSepayTransactionId(),
+                topupIntent.getCode(),
+                topupIntent.getCode(),
+                billingPackage.getCode(),
+                topupIntent.getCode() + " " + billingPackage.getCode(),
+                "in",
+                topupIntent.getAmountVnd());
+
+        int availableCredits = creditLedger.balance(tenantId).availableCredits();
+        if (availableCredits < MINIMUM_LAUNCH_SMOKE_CREDITS) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "E2E stub credit seed failed");
+        }
+        log.info(
+                "event=e2e_stub_seed_credits tenantId={} packageCode={} credits={}",
+                tenantId,
+                billingPackage.getCode(),
+                availableCredits);
+    }
+
+    private static long nextSepayTransactionId() {
+        long sequenceOffset = SEPAY_TRANSACTION_COUNTER.incrementAndGet() % 1_000L;
+        return (System.currentTimeMillis() * 1_000L) + sequenceOffset;
     }
 
     public record SeedSessionResponse(
