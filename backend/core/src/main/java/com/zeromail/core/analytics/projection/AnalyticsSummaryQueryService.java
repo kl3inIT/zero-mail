@@ -138,8 +138,7 @@ public class AnalyticsSummaryQueryService {
                             resultSet.getLong(2),
                             (previousCount, duplicateCount) -> {
                                 throw new IllegalStateException(
-                                        "Duplicate action_type in time-saved query: "
-                                                + actionType);
+                                        "Duplicate action_type in time-saved query: " + actionType);
                             });
                 },
                 tenantId,

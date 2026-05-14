@@ -47,8 +47,7 @@ public class DigestComposer {
             AnalyticsSummaryProjection summary =
                     analyticsSummaryQueryService.summarize(
                             tenantId,
-                            TimeWindow.between(
-                                    sendMoment.minus(Duration.ofHours(24)), sendMoment));
+                            TimeWindow.between(sendMoment.minus(Duration.ofHours(24)), sendMoment));
             DigestTotals totals =
                     new DigestTotals(
                             summary.volumeObserved(),
@@ -81,7 +80,8 @@ public class DigestComposer {
                     buildAppUrl(baseAppUrl, "settings?section=notifications&source=digest"),
                     zeroActivity);
         } finally {
-            long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - composeStartedNanos);
+            long durationMs =
+                    TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - composeStartedNanos);
             log.info(
                     "event=digest_compose_latency_ms tenantId={} durationMs={}",
                     tenantId,
