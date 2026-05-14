@@ -1,0 +1,95 @@
+databaseChangeLog:
+  - changeSet:
+      id: 035-digest-delivery
+      author: zeromail
+      comment: >
+        Daily digest delivery ledger. The unique tenant/day key is the durable idempotency guard
+        before any provider-side email send.
+      changes:
+        - createTable:
+            tableName: digest_delivery
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_digest_delivery_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: digest_day_local
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(16)
+                  defaultValue: PENDING
+                  constraints:
+                    nullable: false
+              - column:
+                  name: channel
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: attempt_count
+                  type: int
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+              - column:
+                  name: next_attempt_at
+                  type: timestamptz
+              - column:
+                  name: dispatched_at
+                  type: timestamptz
+              - column:
+                  name: external_ref
+                  type: varchar(255)
+              - column:
+                  name: failure_reason
+                  type: varchar(255)
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: digest_delivery
+            columnNames: tenant_id, digest_day_local
+            constraintName: uq_digest_delivery_tenant_day
+        - sql:
+            comment: Digest delivery status values match DigestDeliveryStatus ids.
+            sql: ALTER TABLE digest_delivery ADD CONSTRAINT ck_digest_delivery_status CHECK (status IN ('PENDING','SENT','FAILED'))
+        - createIndex:
+            tableName: digest_delivery
+            indexName: idx_digest_delivery_reaper
+            columns:
+              - column:
+                  name: status
+              - column:
+                  name: created_at
+      rollback:
+        - dropTable:
+            tableName: digest_delivery

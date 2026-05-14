@@ -10,8 +10,13 @@ import java.util.UUID;
 @Table(name = "tenants")
 public class TenantEntity extends AbstractEntity {
 
+    public static final String DEFAULT_TIME_ZONE = "Asia/Ho_Chi_Minh";
+
     @Column(name = "display_name", nullable = false)
     private String displayName;
+
+    @Column(name = "time_zone", nullable = false, length = 64)
+    private String timeZone = DEFAULT_TIME_ZONE;
 
     @Column(name = "triage_paused", nullable = false)
     private boolean triagePaused = false;
@@ -28,6 +33,14 @@ public class TenantEntity extends AbstractEntity {
 
     public String getDisplayName() {
         return displayName;
+    }
+
+    public String getTimeZone() {
+        return timeZone;
+    }
+
+    public void setTimeZone(String timeZone) {
+        this.timeZone = timeZone;
     }
 
     public boolean isTriagePaused() {

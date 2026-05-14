@@ -19,6 +19,8 @@ dependencies {
     implementation(libs.jtokkit)
     implementation(libs.shedlock.provider.jdbc.template)
     implementation(libs.shedlock.spring)
+    implementation(libs.resend.java)
+    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
     runtimeOnly("org.postgresql:postgresql")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.testcontainers:postgresql:1.21.3")

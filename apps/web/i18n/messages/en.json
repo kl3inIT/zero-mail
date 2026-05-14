@@ -8,6 +8,54 @@
     "label": "label",
     "notify": "notify"
   },
+  "analytics": {
+    "error": {
+      "body": "Something went wrong fetching this data. Check your connection and try again.",
+      "retry": "Try again",
+      "title": "Couldn't load this"
+    },
+    "loading": "Loading analytics...",
+    "page": {
+      "description": "What Zero Mail has done for your inbox over the chosen window.",
+      "lastRefreshed": "Last refreshed {age} ago",
+      "title": "Analytics"
+    },
+    "ruleHits": {
+      "column": {
+        "applied": "Applied",
+        "decisions": "Decisions",
+        "reverted": "Reverted",
+        "rule": "Rule"
+      },
+      "empty": "No rules triggered in this window.",
+      "eyebrow": "RULE HITS",
+      "title": "Which rules ran"
+    },
+    "timeSaved": {
+      "empty": "No time saved in this window.",
+      "eyebrow": "TIME SAVED",
+      "screenReader": "Estimated time saved: {hours} hours {minutes} minutes.",
+      "title": "Estimated time saved",
+      "tooltip": "Based on average seconds per action — labelling, archiving, and drafting take real time off your hands."
+    },
+    "topSenders": {
+      "empty": "No senders yet in this window.",
+      "eyebrow": "TOP SENDERS",
+      "title": "Who you heard from most"
+    },
+    "volume": {
+      "empty": "No activity in this window.",
+      "eyebrow": "VOLUME",
+      "supplementary": "{applied} of {observed} triaged",
+      "title": "Messages triaged",
+      "tooltip": "Observed messages = mail Zero Mail saw. Triaged = mail Zero Mail acted on."
+    },
+    "window": {
+      "30d": "Last 30 days",
+      "7d": "Last 7 days",
+      "90d": "Last 90 days"
+    }
+  },
   "auth": {
     "backToSite": "Back to site",
     "error": {
@@ -545,6 +593,7 @@
     }
   },
   "nav": {
+    "analytics": "Analytics",
     "beta": "beta",
     "billing": "Billing",
     "continueSetup": "Continue setup",
@@ -835,6 +884,29 @@
       "label": "Language",
       "saveCta": "Update language preference",
       "vi": "Tiếng Việt"
+    },
+    "notifications": {
+      "description": "Manage your daily summary email.",
+      "sendHour": {
+        "downtimeNote": "If the digest worker is offline during your selected hour, that day's digest is skipped — there is no automatic catch-up. Choose an hour when the system is reliably running.",
+        "helper": "The digest is sent around this hour in your time zone.",
+        "label": "Send hour (local time)"
+      },
+      "timeZone": {
+        "label": "Time zone: {tz}",
+        "tooltip": "Set automatically. Multi-time-zone support is coming."
+      },
+      "title": "Notifications",
+      "toast": {
+        "errorTitle": "Couldn't save — Try again",
+        "retry": "Retry",
+        "savedTitle": "Saved"
+      },
+      "toggle": {
+        "helperOff": "Off — you'll receive no summary emails.",
+        "helperOn": "You'll receive a summary email each day at the chosen hour.",
+        "label": "Daily digest email"
+      }
     },
     "privacy": {
       "byokPlanned": "Coming soon: you can bring your own API key (BYOK)",

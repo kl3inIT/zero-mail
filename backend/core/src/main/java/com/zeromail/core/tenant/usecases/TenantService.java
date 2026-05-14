@@ -34,6 +34,19 @@ public class TenantService {
         return tenantRepository.save(new TenantEntity(tenantId, displayName));
     }
 
+    @Transactional
+    public void setTimeZoneIfAbsent(UUID tenantId, String ianaZone) {
+        tenantRepository
+                .findById(tenantId)
+                .ifPresent(
+                        tenant -> {
+                            if (TenantEntity.DEFAULT_TIME_ZONE.equals(tenant.getTimeZone())) {
+                                tenant.setTimeZone(ianaZone);
+                                tenantRepository.save(tenant);
+                            }
+                        });
+    }
+
     /**
      * Deletes the tenant row. Caller is responsible for first deleting all child rows (gmail
      * connections, onboarding selections, users) — see {@code AccountDeletionController}.
@@ -57,6 +70,14 @@ public class TenantService {
     @Transactional(readOnly = true)
     public boolean isTriagePaused(UUID tenantId) {
         return tenantRepository.findById(tenantId).map(TenantEntity::isTriagePaused).orElse(false);
+    }
+
+    @Transactional(readOnly = true)
+    public String timeZoneFor(UUID tenantId) {
+        return tenantRepository
+                .findById(tenantId)
+                .map(TenantEntity::getTimeZone)
+                .orElse(TenantEntity.DEFAULT_TIME_ZONE);
     }
 
     @Transactional

@@ -12,6 +12,7 @@
             "thread",
             "billing",
             "tenant",
+            "shared.privacy",
             "shared.persistence",
             "shared.lang",
             "shared.pagination"

@@ -12,6 +12,7 @@ import { useTenantStatus } from '@/features/gmail/hooks/useTenantStatus';
 import { useDisconnectGmail } from '@/features/gmail/hooks/useDisconnectGmail';
 import { useDeleteAccount } from '@/features/account/hooks/useDeleteAccount';
 import { ByokForm } from '@/features/llm/components/ByokForm';
+import { NotificationsSection } from '@/features/notifications/components/NotificationsSection';
 import { useTriagePauseState } from '@/features/triage/hooks/useTriagePauseState';
 import { useToggleTriagePause } from '@/features/triage/hooks/useToggleTriagePause';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -155,6 +156,8 @@ export default function SettingsPage() {
           />
         </CardContent>
       </Card>
+
+      <NotificationsSection />
 
       <ByokForm />
 

@@ -4,6 +4,7 @@
             "tenant",
             "onboarding",
             "gmail",
+            "notification",
             "shared.privacy",
             "shared.persistence",
             "shared.lang"
