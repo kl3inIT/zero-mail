@@ -65,7 +65,6 @@ public class DigestComposer {
                                     topSender ->
                                             new DigestTopSender(
                                                     topSender.senderEmail(), topSender.count()))
-                            .limit(3)
                             .toList(),
                     summary.ruleHits().stream()
                             .map(
@@ -74,6 +73,8 @@ public class DigestComposer {
                                                     ruleHit.ruleName(),
                                                     ruleHit.applied(),
                                                     ruleHit.reverted()))
+                            // The analytics screen uses the full rule-hit query; the email digest
+                            // intentionally shows only the top three entries.
                             .limit(3)
                             .toList(),
                     buildAppUrl(baseAppUrl, "analytics?source=digest&window=7d"),
