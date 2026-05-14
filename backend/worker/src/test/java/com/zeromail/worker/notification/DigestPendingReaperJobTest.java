@@ -1,6 +1,7 @@
 package com.zeromail.worker.notification;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.zeromail.worker.PostgresContainerTest;
 import java.time.Instant;
@@ -50,5 +51,10 @@ class DigestPendingReaperJobTest extends PostgresContainerTest {
                 .isEqualTo("reaper_stuck_pending");
         assertThat(DigestDispatchTestData.deliveryStatusById(jdbcTemplate, freshDeliveryId))
                 .isEqualTo("PENDING");
+    }
+
+    @Test
+    void scheduled_reap_fails_fast_when_shedlock_is_not_held() {
+        assertThatThrownBy(reaperJob::scheduledReap).isInstanceOf(IllegalStateException.class);
     }
 }
