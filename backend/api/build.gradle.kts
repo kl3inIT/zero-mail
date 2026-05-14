@@ -16,6 +16,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
     implementation(libs.google.auth.library.oauth2.http)
+    compileOnly(platform(libs.spring.ai.bom))
+    compileOnly("org.springframework.ai:spring-ai-model")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
     developmentOnly("org.springframework.boot:spring-boot-docker-compose")
     testImplementation("org.springframework.boot:spring-boot-starter-test")

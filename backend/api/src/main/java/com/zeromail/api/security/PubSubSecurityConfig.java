@@ -1,5 +1,6 @@
 package com.zeromail.api.security;
 
+import com.google.api.client.json.webtoken.JsonWebSignature;
 import com.google.auth.oauth2.TokenVerifier;
 import com.zeromail.api.config.ZeroMailApiProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -26,8 +27,19 @@ public class PubSubSecurityConfig {
     }
 
     @Bean
+    PubSubTokenVerifier pubSubTokenVerifier(TokenVerifier tokenVerifier) {
+        return idToken -> {
+            JsonWebSignature verifiedToken = tokenVerifier.verify(idToken);
+            if (verifiedToken == null || verifiedToken.getPayload() == null) {
+                return null;
+            }
+            return (String) verifiedToken.getPayload().get("email");
+        };
+    }
+
+    @Bean
     PubSubOidcAuthFilter pubSubOidcAuthFilter(
-            ZeroMailApiProperties properties, TokenVerifier tokenVerifier) {
+            ZeroMailApiProperties properties, PubSubTokenVerifier tokenVerifier) {
         ZeroMailApiProperties.PubSubProperties pubsubProperties = properties.gmail().pubsub();
         return new PubSubOidcAuthFilter(pubsubProperties.saPrincipalEmail(), tokenVerifier);
     }
