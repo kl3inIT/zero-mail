@@ -53,11 +53,10 @@ export function TopupPackageSelector({
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const packages = packagesQuery.data ?? EMPTY_PACKAGES;
+  const defaultPackage =
+    packages.length > 0 ? packages[Math.floor(packages.length / 2)] : undefined;
   const selectedPackage =
-    packages.find((billingPackage) => billingPackage.code === selectedCode) ??
-    packages[1] ??
-    packages[0];
-  // const highlightedCode = useMemo(() => recommendedCode(packages), [packages]);
+    packages.find((billingPackage) => billingPackage.code === selectedCode) ?? defaultPackage;
 
   async function submitSelectedPackage(packageCode: string) {
     setSelectedCode(packageCode);

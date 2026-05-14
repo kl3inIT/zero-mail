@@ -174,7 +174,8 @@ function parseStoredIntent(raw: string): StoredTopupIntent | null {
     ) {
       return null;
     }
-    return { ...parsed, qrPayload: parsed.qrPayload ?? '' } as StoredTopupIntent;
+    const qrPayload = typeof parsed.qrPayload === 'string' ? parsed.qrPayload : '';
+    return { ...parsed, qrPayload } as StoredTopupIntent;
   } catch {
     return null;
   }

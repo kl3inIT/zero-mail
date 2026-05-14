@@ -255,7 +255,9 @@ class RulePersistenceTest extends PostgresContainerTest {
                         """
             select count(*)
             from information_schema.columns
-            where table_name = ? and column_name = ?
+            where table_schema = current_schema()
+              and table_name = ?
+              and column_name = ?
             """,
                         Integer.class,
                         tableName,

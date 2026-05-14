@@ -111,5 +111,5 @@ databaseChangeLog:
       file: changes/037-notification-preference-backfill.yaml
       relativeToChangelogFile: true
   - include:
-      file: changes/030-billing-packages.yaml
+      file: changes/038-billing-packages.yaml
       relativeToChangelogFile: true

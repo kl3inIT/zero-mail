@@ -162,6 +162,7 @@
         "cta": "Continue to payment",
         "error": {
           "generic": "Couldn't create the top-up code. Try again.",
+          "invalidPackage": "Choose one of the available top-up package amounts.",
           "invalidResponse": "The backend did not return complete VietQR details. Try again.",
           "minimum": "Enter an amount greater than 0 VND."
         },

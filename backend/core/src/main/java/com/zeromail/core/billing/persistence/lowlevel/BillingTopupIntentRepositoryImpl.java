@@ -42,7 +42,8 @@ public class BillingTopupIntentRepositoryImpl implements BillingTopupIntentTenan
                                         resultSet.getString("code"),
                                         resultSet.getLong("amount_vnd"),
                                         resultSet.getString("package_code_snapshot"),
-                                        resultSet.getInt("credit_amount_snapshot"),
+                                        resultSet.getObject(
+                                                "credit_amount_snapshot", Integer.class),
                                         BillingTopupIntentStatus.fromId(
                                                 resultSet.getString("status")),
                                         resultSet.getObject("expires_at", OffsetDateTime.class)),

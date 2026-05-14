@@ -257,8 +257,16 @@ async function installBillingApiMock(page: Page, state: BillingMockState) {
 
     if (url.pathname === '/api/billing/topup/intent' && request.method() === 'POST') {
       const payload = request.postDataJSON() as { packageCode?: string };
+      const requestedPackageCode = payload.packageCode;
+      if (
+        !requestedPackageCode ||
+        !state.packages.some((item) => item.code === requestedPackageCode)
+      ) {
+        await fulfillJson(route, { message: 'Unknown billing package' }, 400);
+        return;
+      }
       expect(payload.packageCode).toBe(state.nextIntent.packageCode);
-      state.topupRequests.push(payload.packageCode ?? '');
+      state.topupRequests.push(requestedPackageCode);
       await fulfillJson(route, state.nextIntent);
       return;
     }

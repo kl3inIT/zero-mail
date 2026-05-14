@@ -61,27 +61,20 @@ class SepayWebhookMismatchAuditEventTest extends ApiPostgresTestBase {
         seedPendingIntent(tenantId, code, 50_000L);
 
         ResponseEntity<String> response =
-                RestClient.create("http://localhost:" + port)
-                        .post()
-                        .uri("/api/billing/sepay/webhook")
-                        .header(HttpHeaders.AUTHORIZATION, "Apikey test-sepay-key-fixture")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(
-                                new SepayWebhookPayload(
-                                        sensitiveSepayTransactionId,
-                                        "VCB",
-                                        "2026-05-05 12:00:00",
-                                        sensitiveAccountNumber,
-                                        code,
-                                        code + " nap tien zeromail",
-                                        "in",
-                                        99_000L,
-                                        0L,
-                                        null,
-                                        "BANK-REF-XYZ",
-                                        "bank sms"))
-                        .retrieve()
-                        .toEntity(String.class);
+                postWebhook(
+                        new SepayWebhookPayload(
+                                sensitiveSepayTransactionId,
+                                "VCB",
+                                "2026-05-05 12:00:00",
+                                sensitiveAccountNumber,
+                                code,
+                                code + " nap tien zeromail",
+                                "in",
+                                99_000L,
+                                0L,
+                                null,
+                                "BANK-REF-XYZ",
+                                "bank sms"));
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getBody()).contains("\"success\":true");
@@ -90,14 +83,55 @@ class SepayWebhookMismatchAuditEventTest extends ApiPostgresTestBase {
                 .isEqualTo(BillingTopupIntentStatus.PENDING);
 
         String combinedLogOutput = String.join("\n", capturedLogLines());
-        assertThat(combinedLogOutput)
-                .contains("event=sepay_webhook_amount_or_package_mismatch")
-                .contains("intentVnd=50000")
-                .contains("actualVnd=99000")
-                .doesNotContain("event=sepay_unknown_code")
-                .doesNotContain("Apikey ")
-                .doesNotContain(String.valueOf(sensitiveSepayTransactionId))
-                .doesNotContain(sensitiveAccountNumber);
+        assertMismatchAuditEvent(
+                combinedLogOutput,
+                sensitiveSepayTransactionId,
+                sensitiveAccountNumber,
+                "actualVnd=99000");
+
+        listAppender.list.clear();
+
+        ResponseEntity<String> packageMismatchResponse =
+                postWebhook(
+                        new SepayWebhookPayload(
+                                sensitiveSepayTransactionId,
+                                "VCB",
+                                "2026-05-05 12:00:00",
+                                sensitiveAccountNumber,
+                                code,
+                                code + " nap tien zeromail",
+                                "in",
+                                50_000L,
+                                0L,
+                                null,
+                                "BANK-REF-PACKAGE-MISMATCH",
+                                "bank sms",
+                                "PKG_TEST_MISMATCH"));
+
+        assertThat(packageMismatchResponse.getStatusCode().value()).isEqualTo(200);
+        assertThat(packageMismatchResponse.getBody()).contains("\"success\":true");
+        assertThat(countTopupEntries(tenantId)).isZero();
+        assertThat(findIntentByCode(tenantId, code).getStatus())
+                .isEqualTo(BillingTopupIntentStatus.PENDING);
+
+        String combinedPackageMismatchLogOutput = String.join("\n", capturedLogLines());
+        assertMismatchAuditEvent(
+                combinedPackageMismatchLogOutput,
+                sensitiveSepayTransactionId,
+                sensitiveAccountNumber,
+                "actualVnd=50000");
+        assertThat(combinedPackageMismatchLogOutput).contains("packageCode=PKG_TEST");
+    }
+
+    private ResponseEntity<String> postWebhook(SepayWebhookPayload payload) {
+        return RestClient.create("http://localhost:" + port)
+                .post()
+                .uri("/api/billing/sepay/webhook")
+                .header(HttpHeaders.AUTHORIZATION, "Apikey test-sepay-key-fixture")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(payload)
+                .retrieve()
+                .toEntity(String.class);
     }
 
     private UUID seedTenant() {
@@ -142,6 +176,21 @@ class SepayWebhookMismatchAuditEventTest extends ApiPostgresTestBase {
     private BillingTopupIntentEntity findIntentByCode(UUID tenantId, String code) {
         return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
                 .call(() -> billingTopupIntentRepository.findByCode(code).orElseThrow());
+    }
+
+    private static void assertMismatchAuditEvent(
+            String combinedLogOutput,
+            long sensitiveSepayTransactionId,
+            String sensitiveAccountNumber,
+            String expectedActualVnd) {
+        assertThat(combinedLogOutput)
+                .contains("event=sepay_webhook_amount_or_package_mismatch")
+                .contains("intentVnd=50000")
+                .contains(expectedActualVnd)
+                .doesNotContain("event=sepay_unknown_code")
+                .doesNotContain("Apikey ")
+                .doesNotContain(String.valueOf(sensitiveSepayTransactionId))
+                .doesNotContain(sensitiveAccountNumber);
     }
 
     private List<String> capturedLogLines() {
