@@ -61,10 +61,10 @@ public class DigestDispatchScheduler {
             try {
                 digestDispatchTenantWorker.dispatchOne(dueTenant, referenceInstant);
             } catch (RuntimeException runtimeException) {
-                log.info("event=digest_tenant_failed tenantId={}", dueTenant.tenantId());
-                log.debug(
-                        "event=digest_tenant_failed_debug tenantId={}",
+                log.warn(
+                        "event=digest_tenant_failed tenantId={} failureType={}",
                         dueTenant.tenantId(),
+                        runtimeException.getClass().getSimpleName(),
                         runtimeException);
             }
         }
