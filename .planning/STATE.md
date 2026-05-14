@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-05-14T19:54:07.055Z"
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-05-14T20:24:51.365Z"
 last_activity: 2026-05-14
 progress:
   total_phases: 17
   completed_phases: 16
   total_plans: 123
-  completed_plans: 119
-  percent: 97
+  completed_plans: 120
+  percent: 98
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 ## Current Position
 
 Phase: 06 (polish-casa-verified-launch) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-05-14
 
-Progress: [██████████] 97%
+Progress: [██████████] 98%
 
 ## Performance Metrics
 
@@ -140,6 +140,7 @@ Progress: [██████████] 97%
 | Phase 05C P03 | 1h 46m | 3 tasks | 43 files |
 | Phase 05C P04 | 1h 55m | 2 tasks | 37 files |
 | Phase 06-polish-casa-verified-launch P01 | 1h 51m | 4 tasks | 17 files |
+| Phase 06-polish-casa-verified-launch P02 | 21min | 5 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -306,6 +307,9 @@ Recent decisions affecting current work:
 - [Phase 06]: Plan 01 uses an e2e-stub @Primary GmailApiClientFactory subclass rather than an eight-consumer GmailClient interface refactor. — All inspected production consumers inject GmailApiClientFactory concretely; the subclass intercepts the existing seam with less blast radius.
 - [Phase 06]: Plan 01 keeps Google Auth TokenVerifier as the production bean and wraps it with PubSubTokenVerifier for launch-profile fakes. — This preserves production verifier behavior while letting e2e-stub/loadtest fakes return verified email addresses without fragile Google Auth internals.
 - [Phase 06]: Plan 01 makes E2eStubChatModel implement both ChatModel and LlmModelClient. — The production draft path injects LlmModelClient, so implementing both seams lets the golden-path draft smoke save canned text in stub Gmail.
+- [Phase 06]: Plan 02 uses deterministic UUID loadtest tenants from 00000000-0000-4000-8000-1de57e570001 through 00000000-0000-4000-8000-1de57e570050.
+- [Phase 06]: Plan 02 seeds gmail_connections for each synthetic loadtest tenant so PubSubIngestionService resolves emailAddress to tenant_id during the k6 workload.
+- [Phase 06]: Plan 02 wires loadtestVerify as a Gradle Exec task that shells out to psql for invariant checks instead of using JDBC on the Gradle buildscript classpath.
 
 ### Roadmap Evolution
 
@@ -374,6 +378,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-14T19:54:07.033Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-05-14T20:24:51.344Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None
