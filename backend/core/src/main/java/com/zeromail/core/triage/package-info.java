@@ -8,10 +8,14 @@
             "rules",
             "gmail",
             "llm",
+            "draft",
+            "thread",
             "billing",
             "tenant",
+            "shared.privacy",
             "shared.persistence",
-            "shared.lang"
+            "shared.lang",
+            "shared.pagination"
         })
 package com.zeromail.core.triage;
 

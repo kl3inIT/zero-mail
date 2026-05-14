@@ -54,7 +54,7 @@ export function ShadowModeCard() {
         ) : null}
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-[#0a3d3a]/15 bg-[#0a3d3a]/[0.02] p-3">
           <div className="space-y-1">
             <p className="text-foreground text-sm font-medium">{t('triage.shadow.toggleLabel')}</p>
             <p className="text-muted-foreground text-sm leading-6">
@@ -75,11 +75,6 @@ export function ShadowModeCard() {
             data-testid="shadow-mode-switch"
           />
         </div>
-        {shadowMode.readUnavailable ? (
-          <p className="text-muted-foreground text-xs leading-5">
-            {t('triage.shadow.readUnavailable')}
-          </p>
-        ) : null}
       </CardContent>
       <AlertDialog open={confirmOffOpen} onOpenChange={setConfirmOffOpen}>
         <AlertDialogContent>

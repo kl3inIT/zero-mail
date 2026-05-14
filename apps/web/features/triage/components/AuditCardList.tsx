@@ -4,12 +4,14 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { GenerateDraftButton } from '@/features/needs-reply/components/GenerateDraftButton';
 import { UndoBoundary } from '@/features/triage/components/AuditLog';
 import {
   ActionBadge,
   formatAuditTimestamp,
   isUndoAvailable,
   MessageRef,
+  shouldShowDraftAction,
   shouldShowUndoBoundary,
   UndoClosedLabel,
 } from '@/features/triage/components/AuditRow';
@@ -63,13 +65,21 @@ function AuditCard({ entry, now }: { entry: AuditEntry; now: Date }) {
         </div>
       </CardContent>
       <CardFooter className="justify-between gap-3">
-        {undone ? (
-          <span className="text-muted-foreground text-xs">{t('triage.audit.undo.undone')}</span>
-        ) : undoAvailable ? (
-          <UndoButton entry={entry} onUndone={() => setUndone(true)} />
-        ) : (
-          <UndoClosedLabel />
-        )}
+        <div className="flex flex-wrap items-start gap-2">
+          {shouldShowDraftAction(entry) ? (
+            <GenerateDraftButton
+              gmailThreadId={entry.gmailThreadId}
+              draftStatus={entry.draftId ? 'DRAFT_READY' : 'NO_DRAFT'}
+            />
+          ) : null}
+          {undone ? (
+            <span className="text-muted-foreground text-xs">{t('triage.audit.undo.undone')}</span>
+          ) : undoAvailable ? (
+            <UndoButton entry={entry} onUndone={() => setUndone(true)} />
+          ) : (
+            <UndoClosedLabel />
+          )}
+        </div>
       </CardFooter>
     </Card>
   );

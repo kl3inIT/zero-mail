@@ -47,11 +47,13 @@ describe('RulesWorkspace Wave 0 contract', () => {
         insufficientCreditError={null}
         isCompiling={false}
         isSaving={false}
+        canPreview={false}
         onSourceTextChange={vi.fn()}
         onClarificationAnswerChange={vi.fn()}
         onCompile={vi.fn()}
         onAnswerClarification={vi.fn()}
         onSaveDisabledRule={vi.fn()}
+        onOpenPreview={vi.fn()}
       />,
     );
 
@@ -111,11 +113,14 @@ describe('RulesWorkspace Wave 0 contract', () => {
 
     renderWithMessages(<RulesWorkspace />);
 
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit rule' }));
     const sourceTextarea = await screen.findByLabelText('Rule text');
     await waitFor(() => expect(sourceTextarea).toHaveValue('Archive Stripe receipts'));
     fireEvent.change(sourceTextarea, { target: { value: 'Archive GitHub receipts' } });
     fireEvent.click(screen.getByRole('button', { name: 'Compile rule' }));
     await waitFor(() => expect(compileRule).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole('button', { name: 'Preview rule' }));
+    await waitFor(() => expect(screen.queryByLabelText('Rule text')).not.toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Preview rule' }));
 
     await waitFor(() => expect(previewDraftRule).toHaveBeenCalled());

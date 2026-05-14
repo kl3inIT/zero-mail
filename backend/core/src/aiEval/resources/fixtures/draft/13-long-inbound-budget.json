@@ -1,0 +1,1 @@
+{"id":"draft-13-long-inbound-budget","category":"content-edge","synthetic":true,"subject":"Synthetic long inbound","expected":"truncate or degrade before token budget overflow"}

@@ -1,6 +1,8 @@
 spring:
   application:
     name: zeromail-worker
+  main:
+    keep-alive: true
   threads:
     virtual:
       enabled: true
@@ -86,6 +88,12 @@ zero-mail:
       enabled: ${ZEROMAIL_LLM_DRIFT_ENABLED:false}
       fixed-tenant-id: 00000000-0000-0000-0000-000000000000
       threshold-percent: 20
+  notification:
+    app-base-url: ${APP_BASE_URL:http://localhost:3000}
+    email:
+      from-address: notifications@zero-mail.app
+      resend:
+        api-key: ${RESEND_API_KEY:?RESEND_API_KEY env var is required}
 server:
   port: 8081
 management:

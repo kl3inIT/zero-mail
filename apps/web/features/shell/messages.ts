@@ -3,6 +3,10 @@ export const shellMessages = {
     vi: 'Triage',
     en: 'Triage',
   },
+  'nav.analytics': {
+    vi: 'Phân tích',
+    en: 'Analytics',
+  },
   'nav.rules': {
     vi: 'Quy tắc',
     en: 'Rules',
@@ -102,5 +106,17 @@ export const shellMessages = {
   'shell.userMenu.signOut': {
     vi: 'Đăng xuất',
     en: 'Sign out',
+  },
+  'nav.sectionMail': {
+    vi: 'Thư',
+    en: 'Mail',
+  },
+  'nav.sectionManage': {
+    vi: 'Quản lý',
+    en: 'Manage',
+  },
+  'nav.dashboard': {
+    vi: 'Tổng quan',
+    en: 'Dashboard',
   },
 } as const;

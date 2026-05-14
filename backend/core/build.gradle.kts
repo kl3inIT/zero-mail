@@ -11,6 +11,20 @@ tasks.named<Test>("test") {
     }
 }
 
+val aiEvalSourceSet = sourceSets.create("aiEval")
+val mainSourceSet = sourceSets.named("main").get()
+
+aiEvalSourceSet.compileClasspath += mainSourceSet.output
+aiEvalSourceSet.runtimeClasspath += mainSourceSet.output
+
+configurations.named(aiEvalSourceSet.implementationConfigurationName) {
+    extendsFrom(configurations.testImplementation.get())
+}
+
+configurations.named(aiEvalSourceSet.runtimeOnlyConfigurationName) {
+    extendsFrom(configurations.testRuntimeOnly.get())
+}
+
 tasks.register<Test>("semanticIntentEval") {
     val testSourceSet = project.extensions.getByType<org.gradle.api.tasks.SourceSetContainer>()["test"]
 
@@ -20,6 +34,20 @@ tasks.register<Test>("semanticIntentEval") {
     classpath = testSourceSet.runtimeClasspath
     useJUnitPlatform {
         includeTags("semantic-intent-eval")
+    }
+    shouldRunAfter(tasks.named("test"))
+}
+
+tasks.register<Test>("aiEval") {
+    group = "verification"
+    description = "Offline draft-reply AI eval harness. Deterministic mode runs without live LLM calls."
+    testClassesDirs = aiEvalSourceSet.output.classesDirs
+    classpath = aiEvalSourceSet.runtimeClasspath
+    useJUnitPlatform {
+        when {
+            providers.gradleProperty("judgeOnly").isPresent -> includeTags("judge")
+            providers.gradleProperty("deterministicOnly").isPresent -> excludeTags("judge")
+        }
     }
     shouldRunAfter(tasks.named("test"))
 }
@@ -44,6 +72,8 @@ dependencies {
     implementation(libs.jtokkit)
     implementation(libs.jsoup)
     implementation(libs.google.re2j)
+    api(libs.jakarta.mail.api)
+    api(libs.angus.mail)
     runtimeOnly("org.eclipse:yasson")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
     runtimeOnly("org.postgresql:postgresql")

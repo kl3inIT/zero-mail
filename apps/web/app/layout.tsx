@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Roboto, Roboto_Mono } from 'next/font/google';
 import { cookies, headers } from 'next/headers';
 import { getLocale, getTranslations } from 'next-intl/server';
 
@@ -7,6 +8,21 @@ import { routing } from '@/i18n/routing';
 import { getApiBase } from '@/lib/api/base-url';
 
 import './globals.css';
+
+const roboto = Roboto({
+  variable: '--font-roboto',
+  subsets: ['latin', 'vietnamese'],
+  weight: ['400', '500', '700'],
+  display: 'optional',
+  preload: false,
+});
+
+const robotoMono = Roboto_Mono({
+  variable: '--font-roboto-mono',
+  subsets: ['latin'],
+  display: 'optional',
+  preload: false,
+});
 
 /**
  * Localize <title> + <meta name="description"> via next-intl (UI-SPEC §"Routing
@@ -91,7 +107,10 @@ export default async function RootLayout({
     : routing.defaultLocale;
 
   return (
-    <html lang={safeLocale} className={`${theme === 'dark' ? 'dark' : ''} h-full antialiased`}>
+    <html
+      lang={safeLocale}
+      className={`${roboto.variable} ${robotoMono.variable} ${theme === 'dark' ? 'dark' : ''} h-full antialiased`}
+    >
       <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );

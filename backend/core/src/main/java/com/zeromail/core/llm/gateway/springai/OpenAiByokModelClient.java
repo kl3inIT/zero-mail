@@ -77,6 +77,9 @@ public class OpenAiByokModelClient implements ByokLlmModelClient {
         if (request.toolChoiceRequired()) {
             chatOptionsBuilder.toolChoice("required");
         }
+        if (request.maxTokens() != null) {
+            chatOptionsBuilder.maxTokens(request.maxTokens());
+        }
         return chatOptionsBuilder;
     }
 }

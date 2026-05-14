@@ -3,16 +3,22 @@ package com.zeromail.api.config;
 import com.zeromail.api.error.AllowedParamScalars;
 import com.zeromail.api.error.ErrorCodes;
 import com.zeromail.api.error.FieldErrorDto;
+import com.zeromail.api.error.InvalidCursorException;
 import com.zeromail.api.error.RuleApiException;
 import com.zeromail.core.account.exception.CurrentUserNotFoundException;
 import com.zeromail.core.billing.exception.IllegalLedgerStateException;
 import com.zeromail.core.billing.exception.InsufficientCreditsException;
+import com.zeromail.core.draft.exception.DraftGenerationFailedException;
+import com.zeromail.core.draft.exception.DraftGenerationInFlightException;
+import com.zeromail.core.draft.exception.DraftGenerationUnavailableException;
 import com.zeromail.core.llm.exception.InvalidByokException;
 import com.zeromail.core.llm.exception.SafetyViolationException;
 import com.zeromail.core.llm.exception.SanitizationException;
 import com.zeromail.core.rules.exception.GmailPreviewUnavailableException;
 import com.zeromail.core.rules.exception.RuleValidationException;
 import com.zeromail.core.tenant.TenantContext;
+import com.zeromail.core.triage.exception.MissingMessageIdException;
+import com.zeromail.core.triage.exception.ThreadingHeaderInvalidException;
 import com.zeromail.core.triage.exception.TriageAuditException;
 import com.zeromail.core.triage.exception.TriageAuditNotFoundException;
 import com.zeromail.core.triage.exception.TriageSafetyViolationException;
@@ -177,7 +183,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 tenantIdForLog(),
                 exception.getClass().getSimpleName());
         return problem(
-                HttpStatus.INTERNAL_SERVER_ERROR,
+                HttpStatus.UNPROCESSABLE_CONTENT,
                 "LLM safety violation",
                 "The model response violated the LLM safety policy.",
                 ErrorCodes.LLM_SAFETY_VIOLATION);
@@ -387,6 +393,64 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 "Triage safety violation",
                 "The triage action violated the safety policy.",
                 ErrorCodes.TRIAGE_SAFETY_VIOLATION);
+    }
+
+    @ExceptionHandler(DraftGenerationInFlightException.class)
+    public ResponseEntity<ProblemDetail> onDraftGenerationInFlight(
+            DraftGenerationInFlightException exception) {
+        log.warn(
+                "event=draft_generation_rejected tenantId={} reason={}",
+                tenantIdForLog(),
+                exception.getClass().getSimpleName());
+        return problem(
+                HttpStatus.CONFLICT,
+                "Draft generation already in flight",
+                "A draft is already being generated for this thread.",
+                ErrorCodes.DRAFT_GENERATION_IN_FLIGHT);
+    }
+
+    @ExceptionHandler(DraftGenerationUnavailableException.class)
+    public ResponseEntity<ProblemDetail> onDraftGenerationUnavailable(
+            DraftGenerationUnavailableException exception) {
+        log.warn(
+                "event=draft_generation_unavailable tenantId={} reason={}",
+                tenantIdForLog(),
+                exception.getClass().getSimpleName());
+        return problem(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "Draft generation temporarily unavailable",
+                "Draft generation is temporarily unavailable. Try again later.",
+                ErrorCodes.DRAFT_GENERATION_UNAVAILABLE);
+    }
+
+    @ExceptionHandler({
+        DraftGenerationFailedException.class,
+        MissingMessageIdException.class,
+        ThreadingHeaderInvalidException.class
+    })
+    public ResponseEntity<ProblemDetail> onDraftGenerationFailed(RuntimeException exception) {
+        log.warn(
+                "event=draft_generation_failed tenantId={} reason={}",
+                tenantIdForLog(),
+                exception.getClass().getSimpleName());
+        return problem(
+                HttpStatus.UNPROCESSABLE_CONTENT,
+                "Draft generation failed",
+                "A draft could not be generated for this thread.",
+                ErrorCodes.DRAFT_GENERATION_FAILED);
+    }
+
+    @ExceptionHandler(InvalidCursorException.class)
+    public ResponseEntity<ProblemDetail> onInvalidCursor(InvalidCursorException exception) {
+        log.warn(
+                "event=invalid_cursor tenantId={} reason={}",
+                tenantIdForLog(),
+                exception.getClass().getSimpleName());
+        return problem(
+                HttpStatus.BAD_REQUEST,
+                "Invalid cursor",
+                "The pagination cursor is malformed.",
+                ErrorCodes.INVALID_CURSOR);
     }
 
     @ExceptionHandler(IllegalStateException.class)

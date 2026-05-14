@@ -8,6 +8,54 @@
     "label": "label",
     "notify": "notify"
   },
+  "analytics": {
+    "error": {
+      "body": "Something went wrong fetching this data. Check your connection and try again.",
+      "retry": "Try again",
+      "title": "Couldn't load this"
+    },
+    "loading": "Loading analytics...",
+    "page": {
+      "description": "What Zero Mail has done for your inbox over the chosen window.",
+      "lastRefreshed": "Last refreshed {age} ago",
+      "title": "Analytics"
+    },
+    "ruleHits": {
+      "column": {
+        "applied": "Applied",
+        "decisions": "Decisions",
+        "reverted": "Reverted",
+        "rule": "Rule"
+      },
+      "empty": "No rules triggered in this window.",
+      "eyebrow": "RULE HITS",
+      "title": "Which rules ran"
+    },
+    "timeSaved": {
+      "empty": "No time saved in this window.",
+      "eyebrow": "TIME SAVED",
+      "screenReader": "Estimated time saved: {hours} hours {minutes} minutes.",
+      "title": "Estimated time saved",
+      "tooltip": "Based on average seconds per action — labelling, archiving, and drafting take real time off your hands."
+    },
+    "topSenders": {
+      "empty": "No senders yet in this window.",
+      "eyebrow": "TOP SENDERS",
+      "title": "Who you heard from most"
+    },
+    "volume": {
+      "empty": "No activity in this window.",
+      "eyebrow": "VOLUME",
+      "supplementary": "{applied} of {observed} triaged",
+      "title": "Messages triaged",
+      "tooltip": "Observed messages = mail Zero Mail saw. Triaged = mail Zero Mail acted on."
+    },
+    "window": {
+      "30d": "Last 30 days",
+      "7d": "Last 7 days",
+      "90d": "Last 90 days"
+    }
+  },
   "auth": {
     "backToSite": "Back to site",
     "error": {
@@ -235,6 +283,15 @@
       "b": "without the anxiety."
     }
   },
+  "dashboard": {
+    "recentActivity": "Recent activity",
+    "stats": {
+      "connection": "Gmail connection",
+      "threads": "threads"
+    },
+    "subtitle": "Here is an overview of your Zero Mail activity.",
+    "welcome": "Hello"
+  },
   "deleteAccount": {
     "body": "This removes your tenant, Gmail connection, onboarding selections, sessions, and encrypted tokens. This cannot be undone.",
     "cancelCta": "Cancel",
@@ -281,6 +338,13 @@
     },
     "conflict": "The data changed before the action finished. Reload the page and try again.",
     "dataIntegrity": "The change could not be saved because the data is invalid.",
+    "draft": {
+      "generation": {
+        "failed": "Couldn't generate a draft. Try again in a moment.",
+        "in_flight": "A draft is already being generated for this thread.",
+        "unavailable": "Draft generation is temporarily unavailable. Try again later."
+      }
+    },
     "fallback": "The action could not finish. Refresh the page, then try again.",
     "fieldFallback": "This value is invalid. Check it and try again.",
     "gmail": {
@@ -296,7 +360,7 @@
         "body": "Top up credits or save a valid BYOK key to continue AI calls.",
         "title": "Platform credits depleted"
       },
-      "safety_violation": "The AI request was rejected for safety reasons.",
+      "safety_violation": "Something went wrong. Try again.",
       "safetyViolation": "The AI request was rejected for safety reasons.",
       "sanitization_failed": "Could not sanitize the email body before calling the AI. Please retry.",
       "sanitizationFailed": "Could not sanitize the email body before calling the AI. Please retry."
@@ -305,6 +369,9 @@
       "backHome": "Back home",
       "body": "The page you're looking for doesn't exist or has been moved.",
       "title": "Page not found"
+    },
+    "pagination": {
+      "invalid_cursor": "Something went wrong. Try again."
     },
     "rules": {
       "compile": {
@@ -571,17 +638,22 @@
     }
   },
   "nav": {
+    "analytics": "Analytics",
     "beta": "beta",
     "billing": "Billing",
     "continueSetup": "Continue setup",
+    "dashboard": "Dashboard",
     "features": "Features",
     "how": "How it works",
     "languageSelector": "Language",
     "logoLabel": "Zero Mail home",
+    "needsReply": "Needs reply",
     "onboardingProgress": "Onboarding progress",
     "openApp": "Open app",
     "privacy": "Privacy",
     "rules": "Rules",
+    "sectionMail": "Mail",
+    "sectionManage": "Manage",
     "settings": "Settings",
     "signIn": "Sign in",
     "themeToDark": "Switch to dark mode",
@@ -589,6 +661,68 @@
     "triage": "Triage",
     "trust": "Trust & safety",
     "waitlist": "Join the waitlist"
+  },
+  "needsReply": {
+    "action": {
+      "draftReply": "Draft reply",
+      "generating": "Generating…",
+      "markResolved": "Mark resolved",
+      "openInGmail": "Open in Gmail",
+      "regenerateDraft": "Regenerate draft",
+      "regenerating": "Regenerating…"
+    },
+    "banner": {
+      "updating": "Updating your needs-reply list…"
+    },
+    "columns": {
+      "actions": "Actions",
+      "draft": "Draft",
+      "lastActivity": "Last activity",
+      "otherParty": "From / other party",
+      "subject": "Subject"
+    },
+    "dialog": {
+      "cancel": "Cancel",
+      "replace": "Replace draft",
+      "replaceDescription": "The draft currently in Gmail will be discarded and a new one generated.",
+      "replaceTitle": "Replace the current draft?"
+    },
+    "empty": {
+      "awaiting": {
+        "body": "No threads are waiting on the other party.",
+        "title": "Nothing awaiting"
+      },
+      "resolved": {
+        "body": "No resolved threads yet."
+      },
+      "toReply": {
+        "body": "Nothing needs a reply right now.",
+        "title": "Inbox zero 🎉"
+      }
+    },
+    "error": {
+      "body": "Something went wrong fetching your threads. Try again.",
+      "retry": "Try again",
+      "title": "Couldn't load your needs-reply list"
+    },
+    "page": {
+      "description": "Threads waiting on a reply — yours or theirs. Review and send drafts in Gmail.",
+      "title": "Needs reply"
+    },
+    "status": {
+      "draftReady": "Draft ready",
+      "draftSent": "Draft sent",
+      "noDraft": "No draft"
+    },
+    "tabs": {
+      "awaitingReply": "Awaiting reply",
+      "label": "Needs-reply buckets",
+      "resolved": "Resolved",
+      "toReply": "To reply"
+    },
+    "toast": {
+      "draftSaved": "Draft saved in Gmail — review and send it there."
+    }
   },
   "onboarding": {
     "completion": {
@@ -682,11 +816,18 @@
       "compiling": "Compiling...",
       "invalid": "This rule is not ready to save. Edit the wording or answer the clarification.",
       "matcherReview": "Matchers",
+      "newRuleCta": "New rule",
       "saveDisabledCta": "Save disabled rule",
       "saving": "Saving...",
       "sourceLabel": "Rule text",
       "sourcePlaceholder": "Example: Archive receipts from Stripe and label them Finance",
-      "title": "Rule composer"
+      "step": {
+        "compile": "Compile",
+        "save": "Save",
+        "write": "Write"
+      },
+      "title": "Rule composer",
+      "workflowLabel": "Rule creation workflow"
     },
     "delete": {
       "body": "This removes the rule definition. Gmail will not be changed, but this rule will no longer appear in previews.",
@@ -746,6 +887,12 @@
       "proposedActions": "Proposed actions",
       "sampled": "{count} sampled",
       "sampleSize": "Sample size",
+      "stat": {
+        "conflicts": "Conflicts",
+        "deferred": "Deferred",
+        "matched": "Matched",
+        "sampled": "Sampled"
+      },
       "title": "Safe preview"
     },
     "q": {
@@ -768,6 +915,7 @@
       "recruiters": "Recruiters"
     },
     "templates": {
+      "browseCta": "Browse templates",
       "disabledByDefault": "Saved disabled until previewed",
       "materialized": "Materialized",
       "title": "Starter templates",
@@ -798,6 +946,29 @@
       "label": "Language",
       "saveCta": "Update language preference",
       "vi": "Tiếng Việt"
+    },
+    "notifications": {
+      "description": "Manage your daily summary email.",
+      "sendHour": {
+        "downtimeNote": "If the digest worker is offline during your selected hour, that day's digest is skipped — there is no automatic catch-up. Choose an hour when the system is reliably running.",
+        "helper": "The digest is sent around this hour in your time zone.",
+        "label": "Send hour (local time)"
+      },
+      "timeZone": {
+        "label": "Time zone: {tz}",
+        "tooltip": "Set automatically. Multi-time-zone support is coming."
+      },
+      "title": "Notifications",
+      "toast": {
+        "errorTitle": "Couldn't save — Try again",
+        "retry": "Retry",
+        "savedTitle": "Saved"
+      },
+      "toggle": {
+        "helperOff": "Off — you'll receive no summary emails.",
+        "helperOn": "You'll receive a summary email each day at the chosen hour.",
+        "label": "Daily digest email"
+      }
     },
     "privacy": {
       "byokPlanned": "Coming soon: you can bring your own API key (BYOK)",
@@ -876,27 +1047,33 @@
       "boundary": "Older than 30 days - undo no longer available",
       "columns": {
         "action": "Action",
+        "actions": "Actions",
         "message": "Message",
         "reason": "Reason",
         "rule": "Rule",
         "timestamp": "Time",
         "undo": "Undo"
       },
+      "draftAction": "Draft reply",
       "empty": {
         "body": "When Zero Mail processes email, decisions and reasons will appear here.",
         "title": "No triage activity yet"
       },
+      "endOfList": "That's everything.",
       "error": {
         "body": "Retry the list before deciding whether to undo an action.",
         "retry": "Retry",
         "title": "Could not load triage history"
       },
+      "loadingMore": "Loading...",
       "loadingOlder": "Loading...",
+      "loadMore": "Load more",
       "loadOlder": "Load older entries",
       "message": {
         "unknownSender": "Unknown sender",
         "untitled": "Untitled message"
       },
+      "regenerateDraftAction": "Regenerate draft",
       "unavailable": {
         "body": "The backend currently exposes undo for individual audit entries, but not the audit-list endpoint. Zero Mail will show the history here when that endpoint exists.",
         "title": "Audit history is not available yet"
@@ -950,7 +1127,6 @@
       },
       "offBody": "Allowed triage actions will apply after safety checks.",
       "onBody": "Zero Mail will evaluate email without applying labels, saving drafts, or archiving.",
-      "readUnavailable": "The initial state uses a local default because the backend does not expose a shadow-mode read endpoint yet.",
       "title": "Shadow mode",
       "toggleLabel": "Enable shadow mode"
     },

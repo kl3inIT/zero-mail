@@ -15,7 +15,7 @@ for (const viewport of [
     const state = createChromeMockState({ triagePaused: false });
     await openAuthenticatedRoute(page, '/settings', state);
 
-    await expect(page.getByTestId('pause-switch')).toBeChecked();
+    await expect(page.getByTestId('pause-switch')).toContainText('Running');
     await page.getByTestId('pause-switch').click();
     await expect(page.getByRole('alertdialog')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Pause automatic triage?' })).toBeVisible();
@@ -23,13 +23,13 @@ for (const viewport of [
 
     await expect.poll(() => state.pauseRequests).toContainEqual({ paused: true });
     await expect(page.getByTestId('pause-banner')).toBeVisible();
-    await expect(page.getByTestId('pause-switch')).not.toBeChecked();
+    await expect(page.getByTestId('pause-switch')).toContainText('Paused');
     await page.getByTestId('settings-pause-switch').scrollIntoViewIfNeeded();
     await expect(page.getByTestId('settings-pause-switch')).not.toBeChecked();
 
     await page.getByTestId('pause-switch').click();
     await expect(page.getByRole('alertdialog')).toHaveCount(0);
     await expect.poll(() => state.pauseRequests).toContainEqual({ paused: false });
-    await expect(page.getByTestId('pause-switch')).toBeChecked();
+    await expect(page.getByTestId('pause-switch')).toContainText('Running');
   });
 }

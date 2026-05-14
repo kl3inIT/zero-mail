@@ -11,20 +11,10 @@ import type { AuditEntry } from '@/features/triage/api/triage-api';
 const NOW = new Date('2026-05-12T12:00:00.000Z');
 
 describe('AuditLog', () => {
-  it('renders the unavailable panel separately from the empty state', () => {
-    renderWithProviders(<AuditLog injectedData={{ unavailable: true }} now={NOW} />);
-
-    expect(screen.getByTestId('audit-unavailable-panel')).toHaveTextContent(
-      'Audit history is not available yet',
-    );
-    expect(screen.queryByText('No triage activity yet')).not.toBeInTheDocument();
-  });
-
-  it('renders the empty state for an available zero-entry result', () => {
+  it('renders the empty state for a zero-entry result', () => {
     renderWithProviders(<AuditLog injectedData={{ entries: [] }} now={NOW} />);
 
     expect(screen.getByText('No triage activity yet')).toBeInTheDocument();
-    expect(screen.queryByTestId('audit-unavailable-panel')).not.toBeInTheDocument();
   });
 
   it('renders one entry across the shared table and card models', () => {
@@ -44,7 +34,7 @@ describe('AuditLog', () => {
     );
 
     expect(screen.getAllByTestId('audit-table-row')).toHaveLength(8);
-    expect(screen.getByRole('button', { name: 'Load older entries' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Load more' })).toBeInTheDocument();
   });
 
   it('places the undo boundary between the last in-window and first out-of-window entry', () => {

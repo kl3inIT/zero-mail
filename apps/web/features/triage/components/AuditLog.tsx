@@ -7,18 +7,12 @@ import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { LoadingState } from '@/components/states/LoadingState';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { AuditCardList } from '@/features/triage/components/AuditCardList';
 import { AuditTable } from '@/features/triage/components/AuditTable';
 import type { AuditEntry } from '@/features/triage/api/triage-api';
-import {
-  flattenAuditEntries,
-  isAuditLogUnavailable,
-  useTriageAuditLog,
-} from '@/features/triage/hooks/useTriageAuditLog';
+import { flattenAuditEntries, useTriageAuditLog } from '@/features/triage/hooks/useTriageAuditLog';
 
 export type AuditLogInjectedData = {
-  unavailable?: boolean;
   entries?: AuditEntry[];
   hasNextPage?: boolean;
   isFetchingNextPage?: boolean;
@@ -34,7 +28,6 @@ export function AuditLog({ injectedData, now = new Date() }: AuditLogProps) {
   if (injectedData) {
     return (
       <AuditLogView
-        unavailable={Boolean(injectedData.unavailable)}
         entries={injectedData.entries ?? []}
         hasNextPage={Boolean(injectedData.hasNextPage)}
         isFetchingNextPage={Boolean(injectedData.isFetchingNextPage)}
@@ -68,7 +61,6 @@ function AuditLogQueryState({ now }: { now: Date }) {
 
   return (
     <AuditLogView
-      unavailable={isAuditLogUnavailable(query.data)}
       entries={flattenAuditEntries(query.data)}
       hasNextPage={Boolean(query.hasNextPage)}
       isFetchingNextPage={query.isFetchingNextPage}
@@ -79,14 +71,12 @@ function AuditLogQueryState({ now }: { now: Date }) {
 }
 
 function AuditLogView({
-  unavailable,
   entries,
   hasNextPage,
   isFetchingNextPage,
   onLoadMore,
   now,
 }: {
-  unavailable: boolean;
   entries: AuditEntry[];
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
@@ -94,21 +84,6 @@ function AuditLogView({
   now: Date;
 }) {
   const t = useTranslations();
-
-  if (unavailable) {
-    return (
-      <Card className="border-warning/40 bg-warning/5" data-testid="audit-unavailable-panel">
-        <CardContent className="space-y-2 py-8">
-          <p className="text-foreground text-base font-medium">
-            {t('triage.audit.unavailable.title')}
-          </p>
-          <p className="text-muted-foreground max-w-2xl text-sm leading-6">
-            {t('triage.audit.unavailable.body')}
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
 
   if (entries.length === 0) {
     return (
@@ -132,10 +107,12 @@ function AuditLogView({
             onClick={onLoadMore}
             disabled={isFetchingNextPage}
           >
-            {isFetchingNextPage ? t('triage.audit.loadingOlder') : t('triage.audit.loadOlder')}
+            {isFetchingNextPage ? t('triage.audit.loadingMore') : t('triage.audit.loadMore')}
           </Button>
         </div>
-      ) : null}
+      ) : (
+        <p className="text-muted-foreground text-center text-xs">{t('triage.audit.endOfList')}</p>
+      )}
     </div>
   );
 }

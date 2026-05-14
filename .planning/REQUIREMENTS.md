@@ -82,21 +82,21 @@ Requirements for initial release. Each maps to exactly one roadmap phase.
 
 ### Draft Replies
 
-- [ ] **DRFT-01**: User can request an AI-generated draft reply for a thread
-- [ ] **DRFT-02**: Draft is saved in Gmail as a normal draft with correct `In-Reply-To` and `References` headers
-- [ ] **DRFT-03**: Draft tone is matched from recent sent mail via lightweight in-request features (no persisted embeddings)
-- [ ] **DRFT-04**: Draft generation never auto-sends and always requires user review in Gmail
+- [x] **DRFT-01**: User can request an AI-generated draft reply for a thread
+- [x] **DRFT-02**: Draft is saved in Gmail as a normal draft with correct `In-Reply-To` and `References` headers
+- [x] **DRFT-03**: Draft tone is matched from recent sent mail via lightweight in-request features (no persisted embeddings)
+- [x] **DRFT-04**: Draft generation never auto-sends and always requires user review in Gmail
 
 ### Analytics
 
-- [ ] **ANL-01**: User sees volume triaged, estimated time saved, top senders, and rule hits over a selectable window
-- [ ] **ANL-02**: All metrics derive from minimal per-message metadata only (no email bodies, prompts, or completions)
-- [ ] **ANL-03**: Daily digest email summarizes triage activity for the prior day
+- [x] **ANL-01**: User sees volume triaged, estimated time saved, top senders, and rule hits over a selectable window
+- [x] **ANL-02**: All metrics derive from minimal per-message metadata only (no email bodies, prompts, or completions)
+- [x] **ANL-03**: Daily digest email summarizes triage activity for the prior day
 
 ### Web UI
 
 - [x] **WEB-01**: Next.js 16 / React 19 frontend lives in `apps/web` and consumes the backend OpenAPI via typed client
-- [ ] **WEB-02**: UI covers onboarding, rule CRUD with live preview, triage audit log with undo, draft review, analytics, and billing — 5A portion done (onboarding, rules+live-preview, triage audit log+undo*, billing*); draft-review → 5B, analytics → 5C; *audit-list & ledger-history backend endpoints pending — see `05A-GAPS.md`
+- [x] **WEB-02**: UI covers onboarding, rule CRUD with live preview, triage audit log with undo, draft review, analytics, and billing — complete across 5A, 5B, and 5C.
 - [x] **WEB-03**: In-product privacy page explains data handling (no stored bodies, no auto-send, BYOK option)
 - [x] **WEB-04**: UI surfaces the global pause toggle, credit balance, and tenant connection health in a persistent location
 
@@ -194,15 +194,15 @@ Each v1 requirement maps to exactly one phase.
 | TRG-06 | Phase 4 | Complete |
 | TRG-07 | Phase 4 | Complete |
 | TRG-08 | Phase 4 | Complete |
-| DRFT-01 | Phase 5B | Pending |
-| DRFT-02 | Phase 5B | Pending |
-| DRFT-03 | Phase 5B | Pending |
-| DRFT-04 | Phase 5B | Pending |
-| ANL-01 | Phase 5C | Pending |
-| ANL-02 | Phase 5C | Pending |
-| ANL-03 | Phase 5C | Pending |
+| DRFT-01 | Phase 5B | Complete |
+| DRFT-02 | Phase 5B | Complete |
+| DRFT-03 | Phase 5B | Complete |
+| DRFT-04 | Phase 5B | Complete |
+| ANL-01 | Phase 5C | Complete |
+| ANL-02 | Phase 5C | Complete |
+| ANL-03 | Phase 5C | Complete |
 | WEB-01 | Phase 5A | Complete |
-| WEB-02 | Phase 5A / 5B / 5C | 5A portion done (onboarding, rules+live-preview, triage audit log+undo*, billing*); draft-review → 5B, analytics → 5C; *audit-list & ledger-history backend endpoints pending — see `05A-GAPS.md` |
+| WEB-02 | Phase 5A / 5B / 5C | Complete |
 | WEB-03 | Phase 5A | Complete |
 | WEB-04 | Phase 5A | Complete |
 
@@ -213,4 +213,4 @@ Each v1 requirement maps to exactly one phase.
 
 ---
 *Requirements defined: 2026-04-24*
-*Last updated: 2026-05-11 — Phase 4 closure verified TRG-01..TRG-08 as Complete; traceability remains 61/61 mapped*
+*Last updated: 2026-05-13 — Phase 5C closure verified ANL-01..ANL-03 and the analytics portion of WEB-02 as Complete; traceability remains 61/61 mapped*

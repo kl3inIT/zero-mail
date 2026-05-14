@@ -56,11 +56,17 @@ public class TriageRuleEvaluationInputFactory {
         return new TriageRuleEvaluationInput(
                 ruleEvaluationInput,
                 previewMessage.sanitizedSenderEmail(),
-                previewMessage.gmailThreadId());
+                previewMessage.gmailThreadId(),
+                previewMessage.rfcMessageId(),
+                previewMessage.references(),
+                previewMessage.replyToAddress());
     }
 
     public record TriageRuleEvaluationInput(
             RuleEvaluationInput evaluationInput,
             String sanitizedSenderEmail,
-            String gmailThreadId) {}
+            String gmailThreadId,
+            String rfcMessageId,
+            String references,
+            String replyToAddress) {}
 }

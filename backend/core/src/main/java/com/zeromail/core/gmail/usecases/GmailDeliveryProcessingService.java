@@ -6,7 +6,9 @@ import com.google.api.services.gmail.model.History;
 import com.google.api.services.gmail.model.HistoryMessageAdded;
 import com.google.api.services.gmail.model.ListHistoryResponse;
 import com.google.api.services.gmail.model.Message;
+import com.google.api.services.gmail.model.MessagePartHeader;
 import com.zeromail.core.gmail.event.MailMessageObserved;
+import com.zeromail.core.gmail.event.MailOutboundObserved;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
@@ -14,9 +16,11 @@ import com.zeromail.core.gmail.persistence.MailMessageObservedRepository;
 import com.zeromail.core.gmail.persistence.PubSubDeliveryEntity;
 import com.zeromail.core.gmail.persistence.PubSubDeliveryRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
+import com.zeromail.core.shared.privacy.EmailAddressCanonicalizer;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -38,6 +42,7 @@ public class GmailDeliveryProcessingService {
     private final GmailApiClientFactory gmailApiClientFactory;
     private final RefreshTokenCipher refreshTokenCipher;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final EmailAddressCanonicalizer emailAddressCanonicalizer;
 
     public GmailDeliveryProcessingService(
             PubSubDeliveryRepository deliveryRepository,
@@ -46,7 +51,8 @@ public class GmailDeliveryProcessingService {
             GmailConnectionRepository connectionRepository,
             GmailApiClientFactory gmailApiClientFactory,
             RefreshTokenCipher refreshTokenCipher,
-            ApplicationEventPublisher applicationEventPublisher) {
+            ApplicationEventPublisher applicationEventPublisher,
+            EmailAddressCanonicalizer emailAddressCanonicalizer) {
         this.deliveryRepository = deliveryRepository;
         this.observedRepository = observedRepository;
         this.connectionService = connectionService;
@@ -54,6 +60,7 @@ public class GmailDeliveryProcessingService {
         this.gmailApiClientFactory = gmailApiClientFactory;
         this.refreshTokenCipher = refreshTokenCipher;
         this.applicationEventPublisher = applicationEventPublisher;
+        this.emailAddressCanonicalizer = emailAddressCanonicalizer;
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -71,10 +78,7 @@ public class GmailDeliveryProcessingService {
                                                     "No connection for tenantId: " + tenantId));
 
             String decryptedRefreshToken =
-                    new String(
-                            refreshTokenCipher.decrypt(
-                                    connection.getRefreshTokenEncrypted(), tenantId.toString()),
-                            StandardCharsets.UTF_8);
+                    decryptRefreshToken(connection.getRefreshTokenEncrypted(), tenantId);
             GmailApiClientFactory.TokenRefreshResult tokenResult =
                     gmailApiClientFactory.refreshAccessToken(decryptedRefreshToken);
             Gmail gmail = gmailApiClientFactory.buildGmailClient(tokenResult.accessToken().value());
@@ -99,7 +103,6 @@ public class GmailDeliveryProcessingService {
                                 .list("me")
                                 .setStartHistoryId(BigInteger.valueOf(savedHistoryPointer))
                                 .setHistoryTypes(List.of("messageAdded"))
-                                .setLabelId("INBOX")
                                 .setMaxResults(500L);
                 if (pageToken != null) {
                     historyListRequest.setPageToken(pageToken);
@@ -125,14 +128,16 @@ public class GmailDeliveryProcessingService {
                         delivery.getHistoryId(),
                         webhookHistoryId);
             } else {
-                handleRetryableFailure(delivery, tenantId);
+                handleRetryableFailure(delivery, tenantId, googleResponseException);
             }
         } catch (InvalidGrantException invalidGrantException) {
             connectionService.markDisconnected(tenantId);
             deliveryRepository.updateStatus(delivery.getId(), "DEAD");
             log.warn("event=gmail_oauth_revoked tenantId={}", tenantId);
+        } catch (NonRetryableGmailDeliveryException nonRetryableDeliveryException) {
+            handleNonRetryableFailure(delivery, tenantId, nonRetryableDeliveryException);
         } catch (Exception processingException) {
-            handleRetryableFailure(delivery, tenantId);
+            handleRetryableFailure(delivery, tenantId, processingException);
         }
     }
 
@@ -160,12 +165,15 @@ public class GmailDeliveryProcessingService {
                                 .messages()
                                 .get("me", historyMessage.getId())
                                 .setFormat("metadata")
-                                .setFields("id,threadId,labelIds,internalDate")
+                                .setMetadataHeaders(List.of("From"))
+                                .setFields("id,threadId,labelIds,internalDate,payload/headers")
                                 .execute();
                 List<String> labelIds = gmailMessage.getLabelIds();
-                if (labelIds == null || !labelIds.contains("INBOX")) {
+                if (labelIds == null
+                        || (!labelIds.contains("INBOX") && !labelIds.contains("SENT"))) {
                     continue;
                 }
+                String senderEmail = extractSanitizedSenderEmail(gmailMessage);
 
                 int insertedCount =
                         observedRepository.insertObservedIfAbsent(
@@ -174,7 +182,8 @@ public class GmailDeliveryProcessingService {
                                 gmailMessage.getThreadId(),
                                 history.getId().longValueExact(),
                                 labelIds.toArray(new String[0]),
-                                gmailMessage.getInternalDate());
+                                gmailMessage.getInternalDate(),
+                                senderEmail);
                 if (insertedCount == 1) {
                     newObservations++;
                     Instant observedAt = Instant.now();
@@ -188,20 +197,120 @@ public class GmailDeliveryProcessingService {
                             "event=mail_message_observed_published tenantId={} gmailMessageId={}",
                             tenantId,
                             gmailMessage.getId());
+                    if (labelIds.contains("SENT")) {
+                        applicationEventPublisher.publishEvent(
+                                new MailOutboundObserved(
+                                        tenantId,
+                                        gmailMessage.getThreadId(),
+                                        gmailMessage.getId(),
+                                        observedAt));
+                        log.info(
+                                "event=mail_outbound_observed_published tenantId={} gmailMessageId={}",
+                                tenantId,
+                                gmailMessage.getId());
+                    }
                 }
             }
         }
         return newObservations;
     }
 
-    private void handleRetryableFailure(PubSubDeliveryEntity delivery, UUID tenantId) {
+    private String extractSanitizedSenderEmail(Message gmailMessage) {
+        if (gmailMessage.getPayload() == null || gmailMessage.getPayload().getHeaders() == null) {
+            return null;
+        }
+        return gmailMessage.getPayload().getHeaders().stream()
+                .filter(header -> "From".equalsIgnoreCase(header.getName()))
+                .map(MessagePartHeader::getValue)
+                .findFirst()
+                .flatMap(this::canonicalizeSenderEmail)
+                .orElse(null);
+    }
+
+    private java.util.Optional<String> canonicalizeSenderEmail(String rawSenderEmail) {
+        try {
+            return java.util.Optional.of(emailAddressCanonicalizer.canonicalize(rawSenderEmail));
+        } catch (IllegalArgumentException senderEmailParseFailure) {
+            return java.util.Optional.empty();
+        }
+    }
+
+    private String decryptRefreshToken(byte[] encryptedRefreshToken, UUID tenantId) {
+        if (encryptedRefreshToken == null || encryptedRefreshToken.length == 0) {
+            throw new NonRetryableGmailDeliveryException();
+        }
+        byte[] decryptedRefreshTokenBytes;
+        try {
+            decryptedRefreshTokenBytes =
+                    refreshTokenCipher.decrypt(encryptedRefreshToken, tenantId.toString());
+        } catch (IllegalArgumentException
+                | IllegalStateException
+                | NullPointerException tokenDecryptionFailure) {
+            throw new NonRetryableGmailDeliveryException(tokenDecryptionFailure);
+        }
+        if (decryptedRefreshTokenBytes == null || decryptedRefreshTokenBytes.length == 0) {
+            throw new NonRetryableGmailDeliveryException();
+        }
+        try {
+            String decryptedRefreshToken =
+                    new String(decryptedRefreshTokenBytes, StandardCharsets.UTF_8);
+            if (decryptedRefreshToken.isBlank()) {
+                throw new NonRetryableGmailDeliveryException();
+            }
+            return decryptedRefreshToken;
+        } finally {
+            Arrays.fill(decryptedRefreshTokenBytes, (byte) 0);
+        }
+    }
+
+    private void handleRetryableFailure(
+            PubSubDeliveryEntity delivery, UUID tenantId, Exception processingException) {
         int attempts = delivery.getAttempts();
+        String failureType = failureClassName(processingException);
         if (attempts >= 3) {
             deliveryRepository.updateStatus(delivery.getId(), "DEAD");
-            log.warn("event=gmail_delivery_dead tenantId={} attempts={}", tenantId, attempts);
+            log.warn(
+                    "event=gmail_delivery_dead tenantId={} attempts={} failureType={}",
+                    tenantId,
+                    attempts,
+                    failureType);
         } else {
             deliveryRepository.releaseForRetry(delivery.getId(), Instant.now().plusSeconds(30));
-            log.warn("event=gmail_delivery_retry tenantId={} attempt={}", tenantId, attempts);
+            log.warn(
+                    "event=gmail_delivery_retry tenantId={} attempt={} failureType={}",
+                    tenantId,
+                    attempts,
+                    failureType);
+        }
+    }
+
+    private void handleNonRetryableFailure(
+            PubSubDeliveryEntity delivery,
+            UUID tenantId,
+            NonRetryableGmailDeliveryException nonRetryableDeliveryException) {
+        int attempts = delivery.getAttempts();
+        deliveryRepository.updateStatus(delivery.getId(), "DEAD");
+        log.warn(
+                "event=gmail_delivery_dead tenantId={} attempts={} failureType={} retryable=false",
+                tenantId,
+                attempts,
+                failureClassName(nonRetryableDeliveryException));
+    }
+
+    private static String failureClassName(Exception processingException) {
+        Throwable cause = processingException.getCause();
+        Throwable failureToLog = cause == null ? processingException : cause;
+        return failureToLog.getClass().getSimpleName();
+    }
+
+    private static final class NonRetryableGmailDeliveryException extends RuntimeException {
+
+        private NonRetryableGmailDeliveryException() {
+            super();
+        }
+
+        private NonRetryableGmailDeliveryException(Throwable cause) {
+            super(cause);
         }
     }
 }

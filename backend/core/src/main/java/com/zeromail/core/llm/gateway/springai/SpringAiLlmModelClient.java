@@ -65,6 +65,9 @@ public class SpringAiLlmModelClient implements LlmModelClient {
         if (request.toolChoiceRequired()) {
             chatOptionsBuilder.toolChoice("required");
         }
+        if (request.maxTokens() != null) {
+            chatOptionsBuilder.maxTokens(request.maxTokens());
+        }
         return chatOptionsBuilder;
     }
 

@@ -1,7 +1,6 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import type { ReactNode } from 'react';
 import { AlertTriangle, Archive, CheckCircle2, Loader2, Play, Tags } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -72,20 +71,28 @@ export function RulePreviewPanel({
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <p className="text-sm font-medium">{t('rules.preview.sampleSize')}</p>
-            <ToggleGroup
-              value={[String(sampleSize)]}
-              onValueChange={(value) => {
-                const next = Number(value[0]);
-                if (next === 10 || next === 25 || next === 50) onSampleSizeChange(next);
-              }}
-              className="rounded-lg border"
-            >
-              {SAMPLE_SIZES.map((size) => (
-                <ToggleGroupItem key={size} value={String(size)} aria-label={String(size)}>
-                  {size}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+            <div className="bg-background border-border flex w-fit items-center gap-0.5 rounded-xl border p-1 shadow-sm">
+              {SAMPLE_SIZES.map((size) => {
+                const isActive = sampleSize === size;
+                return (
+                  <Button
+                    key={size}
+                    type="button"
+                    variant={isActive ? 'default' : 'ghost'}
+                    size="sm"
+                    className={cn(
+                      'h-8 w-11 rounded-lg border text-sm font-medium transition-all',
+                      isActive
+                        ? 'border-[#0a3d3a]/10 bg-[#E7F0EF] font-bold text-[#0a3d3a] shadow-sm'
+                        : 'bg-background border-border text-muted-foreground hover:bg-muted hover:text-foreground',
+                    )}
+                    onClick={() => onSampleSizeChange(size)}
+                  >
+                    {size}
+                  </Button>
+                );
+              })}
+            </div>
           </div>
           <Button type="button" disabled={!canPreview || isPreviewing} onClick={onPreview}>
             {isPreviewing ? (
@@ -120,30 +127,38 @@ export function RulePreviewPanel({
           />
         ) : (
           <div className="space-y-4">
-            <div className="bg-muted/30 rounded-lg border p-3">
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">
-                  {t('rules.preview.sampled', {
-                    count: summary?.sampledMessageCount ?? rows.length,
-                  })}
-                </Badge>
-                <Badge className="bg-primary text-primary-foreground">
-                  {t('rules.preview.matched', { count: summary?.matchedCount ?? 0 })}
-                </Badge>
-                <Badge variant="outline">
-                  {t('rules.preview.deferred', { count: summary?.deferredCount ?? 0 })}
-                </Badge>
-                <Badge variant="outline">
-                  {t('rules.preview.conflicts', { count: summary?.conflictCount ?? 0 })}
-                </Badge>
-                {actionCounts.map(([actionType, count]) => (
-                  <Badge key={actionType} variant="outline">
-                    {actionType}: {count}
-                  </Badge>
-                ))}
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <StatCard
+                  value={summary?.sampledMessageCount ?? rows.length}
+                  label={t('rules.preview.stat.sampled')}
+                />
+                <StatCard
+                  value={summary?.matchedCount ?? 0}
+                  label={t('rules.preview.stat.matched')}
+                  variant="primary"
+                />
+                <StatCard
+                  value={summary?.deferredCount ?? 0}
+                  label={t('rules.preview.stat.deferred')}
+                />
+                <StatCard
+                  value={summary?.conflictCount ?? 0}
+                  label={t('rules.preview.stat.conflicts')}
+                  variant={(summary?.conflictCount ?? 0) > 0 ? 'warning' : 'default'}
+                />
               </div>
-              <p className="text-green mt-3 flex items-center gap-2 text-sm">
-                <CheckCircle2 className="size-4" aria-hidden="true" />
+              {actionCounts.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {actionCounts.map(([actionType, count]) => (
+                    <Badge key={actionType} variant="outline" className="text-xs">
+                      {actionType}: {count}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <p className="text-green flex items-center gap-1.5 text-xs">
+                <CheckCircle2 className="size-3.5 shrink-0" aria-hidden="true" />
                 {t('rules.preview.noWriteNotice')}
               </p>
             </div>
@@ -156,69 +171,109 @@ export function RulePreviewPanel({
             )}
 
             <TooltipProvider>
-              <div className="space-y-2">
-                {rows.map((row) => (
-                  <article
-                    key={row.gmailMessageId ?? row.gmailThreadId}
-                    className={cn(
-                      'grid gap-3 rounded-lg border p-3 text-sm lg:grid-cols-[minmax(8rem,11rem)_minmax(0,1fr)_auto]',
-                      row.matched ? 'bg-card' : 'bg-muted/30',
-                    )}
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">
-                        {row.sanitizedSenderEmail ?? row.sanitizedSenderDomain}
-                      </p>
-                      <p className="text-muted-foreground truncate text-xs">
-                        {row.sanitizedSenderDomain}
-                      </p>
-                    </div>
-                    <div className="min-w-0 space-y-2">
-                      <p className="line-clamp-2">{row.sanitizedSubjectExcerpt}</p>
-                      <ChipGroup
-                        label={t('rules.preview.gmailLabels')}
-                        chips={row.gmailLabelIds ?? []}
-                        variant="outline"
-                      />
-                      <ChipGroup
-                        label={t('rules.preview.proposedActions')}
-                        chips={(row.proposedActionChips ?? []).map(
-                          (chip) => chip.safeLabel ?? chip.actionTypeId ?? '',
+              <div className="overflow-hidden rounded-lg border">
+                {rows.map((row) => {
+                  const visibleLabels = (row.gmailLabelIds ?? []).filter(isVisibleLabel);
+                  const proposedActions = (row.proposedActionChips ?? [])
+                    .map((chip) => {
+                      const label = chip.safeLabel ?? chip.actionTypeId ?? '';
+                      return label.startsWith('label:') ? label.replace('label:', '') : label;
+                    })
+                    .filter(Boolean);
+                  const evidenceChips = (row.matchedEvidenceChips ?? [])
+                    .map((chip) => chip.reasonKey ?? chip.matcherNodeId ?? '')
+                    .filter(Boolean);
+                  const hasSecondaryInfo =
+                    proposedActions.length > 0 ||
+                    evidenceChips.length > 0 ||
+                    (row.deferredEvidenceChips ?? []).length > 0 ||
+                    (row.conflictChips ?? []).length > 0;
+
+                  return (
+                    <article
+                      key={row.gmailMessageId ?? row.gmailThreadId}
+                      className={cn(
+                        'hover:bg-muted/30 flex items-start gap-3 border-b px-3 py-2.5 text-sm transition-colors last:border-b-0',
+                        !row.matched && 'opacity-50',
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          'mt-1.5 size-1.5 shrink-0 rounded-full',
+                          row.matched ? 'bg-green' : 'bg-muted-foreground/20',
                         )}
-                        icon={<Archive className="size-3" aria-hidden="true" />}
+                        aria-hidden="true"
                       />
-                      <ChipGroup
-                        label={t('rules.preview.evidence')}
-                        chips={(row.matchedEvidenceChips ?? []).map(
-                          (chip) => chip.reasonKey ?? chip.matcherNodeId ?? '',
+                      <div className="w-36 shrink-0">
+                        <p className="truncate font-medium">
+                          {senderDisplayName(row.sanitizedSenderEmail ?? row.sanitizedSenderDomain)}
+                        </p>
+                        <p className="text-muted-foreground truncate text-xs">
+                          {row.sanitizedSenderDomain}
+                        </p>
+                      </div>
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <div className="flex min-w-0 flex-wrap items-center gap-1">
+                          {visibleLabels.map((labelId) => (
+                            <GmailLabelChip key={labelId} labelId={labelId} />
+                          ))}
+                          <span className="min-w-0 flex-1 truncate">
+                            {row.sanitizedSubjectExcerpt}
+                          </span>
+                        </div>
+                        {hasSecondaryInfo && (
+                          <div className="flex flex-wrap items-center gap-1">
+                            {proposedActions.map((action) => (
+                              <span
+                                key={action}
+                                className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+                              >
+                                <Archive className="size-2.5 shrink-0" aria-hidden="true" />
+                                {action}
+                              </span>
+                            ))}
+                            {evidenceChips.map((evidence) => (
+                              <span
+                                key={evidence}
+                                className="bg-muted text-muted-foreground rounded-sm px-1.5 py-0.5 text-[10px]"
+                              >
+                                {evidence}
+                              </span>
+                            ))}
+                            {row.deferredEvidenceChips?.map((chip) => (
+                              <Tooltip key={chip.matcherNodeId ?? chip.reasonKey}>
+                                <TooltipTrigger
+                                  render={
+                                    <span className="cursor-help rounded-sm bg-violet-50 px-1.5 py-0.5 text-[10px] text-violet-600 dark:bg-violet-900/20 dark:text-violet-400" />
+                                  }
+                                >
+                                  {t('rules.preview.deferredSemantic')}
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {t('rules.preview.deferredTooltip')}
+                                </TooltipContent>
+                              </Tooltip>
+                            ))}
+                            {row.conflictChips?.map((chip) => (
+                              <span
+                                key={chip.conflictTypeId}
+                                className="bg-warning/10 text-warning rounded-sm px-1.5 py-0.5 text-[10px]"
+                              >
+                                {chip.conflictTypeId}
+                              </span>
+                            ))}
+                          </div>
                         )}
-                        variant="outline"
-                      />
-                      {row.deferredEvidenceChips?.map((chip) => (
-                        <Tooltip key={chip.matcherNodeId ?? chip.reasonKey}>
-                          <TooltipTrigger
-                            render={<Badge variant="outline" className="text-violet" />}
-                          >
-                            {t('rules.preview.deferredSemantic')}
-                          </TooltipTrigger>
-                          <TooltipContent>{t('rules.preview.deferredTooltip')}</TooltipContent>
-                        </Tooltip>
-                      ))}
-                      {row.conflictChips?.map((chip) => (
-                        <Badge
-                          key={chip.conflictTypeId}
-                          variant="outline"
-                          className="border-warning/40 text-warning"
-                        >
-                          {chip.conflictTypeId}
-                        </Badge>
-                      ))}
-                    </div>
-                    <time className="text-muted-foreground text-xs" dateTime={row.internalDate}>
-                      {formatDate(row.internalDate)}
-                    </time>
-                  </article>
-                ))}
+                      </div>
+                      <time
+                        className="text-muted-foreground w-12 shrink-0 pt-0.5 text-right text-xs"
+                        dateTime={row.internalDate}
+                      >
+                        {formatDate(row.internalDate)}
+                      </time>
+                    </article>
+                  );
+                })}
               </div>
             </TooltipProvider>
           </div>
@@ -249,29 +304,98 @@ function PowerOffIcon() {
   return <Tags className="size-4 rotate-45" aria-hidden="true" />;
 }
 
-function ChipGroup({
-  label,
-  chips,
-  icon,
-  variant,
-}: {
-  label: string;
-  chips: string[];
-  icon?: ReactNode;
-  variant?: 'outline';
-}) {
-  const visibleChips = chips.filter(Boolean);
-  if (visibleChips.length === 0) return null;
+const GMAIL_LABEL_COLOR_MAP: Record<string, string> = {
+  INBOX: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400',
+  IMPORTANT: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  STARRED: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400',
+  SENT: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+  DRAFT: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  SPAM: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  CATEGORY_PROMOTIONS:
+    'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  CATEGORY_UPDATES: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  CATEGORY_SOCIAL: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
+  CATEGORY_FORUMS: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  CATEGORY_PERSONAL: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
+};
 
+const CUSTOM_LABEL_COLORS = [
+  'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
+  'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
+  'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-400',
+] as const;
+
+function gmailLabelColorClass(labelId: string): string {
+  const known = GMAIL_LABEL_COLOR_MAP[labelId];
+  if (known) return known;
+  const hash = [...labelId].reduce(
+    (accumulator, character) => accumulator + character.charCodeAt(0),
+    0,
+  );
+  return CUSTOM_LABEL_COLORS[hash % CUSTOM_LABEL_COLORS.length] ?? CUSTOM_LABEL_COLORS[0];
+}
+
+function humanizeLabelId(labelId: string): string {
+  return labelId
+    .replace(/^CATEGORY_/, '')
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function isVisibleLabel(labelId: string): boolean {
+  return labelId !== 'UNREAD';
+}
+
+function senderDisplayName(emailOrDomain: string | undefined): string {
+  if (!emailOrDomain) return '';
+  const atIndex = emailOrDomain.indexOf('@');
+  return atIndex > 0 ? emailOrDomain.slice(0, atIndex) : emailOrDomain;
+}
+
+function GmailLabelChip({ labelId }: { labelId: string }) {
   return (
-    <div className="flex flex-wrap items-center gap-1">
-      <span className="text-muted-foreground text-xs">{label}</span>
-      {visibleChips.map((chip) => (
-        <Badge key={`${label}-${chip}`} variant={variant ?? 'secondary'} className="max-w-full">
-          {icon}
-          <span className="truncate">{chip}</span>
-        </Badge>
-      ))}
+    <span
+      className={cn(
+        'inline-flex shrink-0 items-center rounded-sm px-1.5 py-0.5 text-[10px] leading-none font-medium',
+        gmailLabelColorClass(labelId),
+      )}
+    >
+      {humanizeLabelId(labelId)}
+    </span>
+  );
+}
+
+function StatCard({
+  value,
+  label,
+  variant = 'default',
+}: {
+  value: number;
+  label: string;
+  variant?: 'default' | 'primary' | 'warning';
+}) {
+  return (
+    <div
+      className={cn(
+        'rounded-lg border p-3 text-center',
+        variant === 'primary' && 'border-primary/20 bg-primary/5',
+        variant === 'warning' && 'border-warning/20 bg-warning/5',
+        variant === 'default' && 'bg-muted/20',
+      )}
+    >
+      <p
+        className={cn(
+          'text-2xl font-bold tabular-nums',
+          variant === 'primary' && 'text-primary',
+          variant === 'warning' && 'text-warning',
+        )}
+      >
+        {value}
+      </p>
+      <p className="text-muted-foreground mt-0.5 text-xs">{label}</p>
     </div>
   );
 }

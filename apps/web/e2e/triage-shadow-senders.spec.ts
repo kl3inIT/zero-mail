@@ -15,6 +15,7 @@ type Sender = {
 
 type TriageMockState = {
   shadowModeRequests: Array<{ enabled: boolean }>;
+  shadowModeEnabled: boolean;
   optInRequests: string[];
   protectedSenders: Sender[];
 };
@@ -61,12 +62,13 @@ for (const viewport of [
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle');
 
-    await expect(page.getByText('founder@example.com')).toBeVisible();
-    await expect(page.getByText('finance@example.com')).toBeVisible();
+    const senderList = page.getByTestId('sender-safety-net-list');
+    await expect(senderList.getByText('founder@example.com')).toBeVisible();
+    await expect(senderList.getByText('finance@example.com')).toBeVisible();
     await page.getByRole('button', { name: 'Opt into automation' }).click();
     await expect.poll(() => state.optInRequests).toContain('founder@example.com');
-    await expect(page.getByText('founder@example.com')).toBeVisible();
-    await expect(page.getByText('Opted in').first()).toBeVisible();
+    await expect(senderList.getByText('founder@example.com')).toBeVisible();
+    await expect(senderList.getByText('Opted in').first()).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 }
@@ -74,6 +76,7 @@ for (const viewport of [
 function createTriageMockState(overrides: Partial<TriageMockState> = {}): TriageMockState {
   return {
     shadowModeRequests: [],
+    shadowModeEnabled: false,
     optInRequests: [],
     protectedSenders: [],
     ...overrides,
@@ -128,10 +131,16 @@ async function installTriageApiMock(page: Page, state: TriageMockState) {
       return;
     }
 
+    if (url.pathname === '/api/tenant/triage/shadow-mode' && request.method() === 'GET') {
+      await fulfillJson(route, { enabled: state.shadowModeEnabled });
+      return;
+    }
+
     if (url.pathname === '/api/tenant/triage/shadow-mode' && request.method() === 'PATCH') {
       const payload = request.postDataJSON() as { enabled: boolean };
       expect(typeof payload.enabled).toBe('boolean');
       state.shadowModeRequests.push(payload);
+      state.shadowModeEnabled = payload.enabled;
       await fulfillJson(route, { enabled: payload.enabled });
       return;
     }

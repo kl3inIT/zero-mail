@@ -69,7 +69,8 @@ public class AnthropicByokModelClient implements ByokLlmModelClient {
             chatOptionsBuilder.baseUrl(canonicalEndpoint);
             chatOptionsBuilder.model(Model.of(request.model()));
             chatOptionsBuilder.temperature(request.temperature());
-            chatOptionsBuilder.maxTokens(MAX_TOKENS);
+            chatOptionsBuilder.maxTokens(
+                    request.maxTokens() == null ? MAX_TOKENS : request.maxTokens());
             chatOptionsBuilder.timeout(byokProperties.readTimeout());
             chatOptionsBuilder.internalToolExecutionEnabled(false);
             if (request.toolChoiceRequired()) {

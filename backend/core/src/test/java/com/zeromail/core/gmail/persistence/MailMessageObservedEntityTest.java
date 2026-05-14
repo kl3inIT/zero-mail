@@ -75,7 +75,8 @@ class MailMessageObservedEntityTest extends PostgresContainerTest {
                         "thread-dupe",
                         100L,
                         new String[] {"INBOX"},
-                        1_700_000_000_000L);
+                        1_700_000_000_000L,
+                        null);
         int second =
                 observed.insertObservedIfAbsent(
                         tenantId,
@@ -83,7 +84,8 @@ class MailMessageObservedEntityTest extends PostgresContainerTest {
                         "thread-dupe",
                         101L,
                         new String[] {"INBOX"},
-                        1_700_000_000_001L);
+                        1_700_000_000_001L,
+                        null);
 
         Long count =
                 jdbc.queryForObject(

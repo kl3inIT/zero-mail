@@ -87,5 +87,29 @@ databaseChangeLog:
       file: changes/029-triage-revert-pending.yaml
       relativeToChangelogFile: true
   - include:
+      file: changes/030-thread-reply-status.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/031-thread-reply-status-resolved-index.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/032-mail-message-observed-sender-email.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/033-tenants-time-zone.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/034-notification-preference.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/035-digest-delivery.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/036-analytics-supporting-indexes.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/037-notification-preference-backfill.yaml
+      relativeToChangelogFile: true
+  - include:
       file: changes/030-billing-packages.yaml
       relativeToChangelogFile: true

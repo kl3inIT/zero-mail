@@ -1,0 +1,90 @@
+databaseChangeLog:
+  - changeSet:
+      id: 030-thread-reply-status
+      author: zeromail
+      comment: >
+        Metadata-only thread reply-status projection. No email bodies, prompts, or completions.
+        Account deletion cleanup is owned by the tenant FK ON DELETE CASCADE.
+      changes:
+        - createTable:
+            tableName: thread_reply_status
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_thread_reply_status_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: gmail_thread_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: bucket
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_classified_message_id
+                  type: varchar(255)
+              - column:
+                  name: last_classified_at
+                  type: timestamptz
+              - column:
+                  name: has_draft
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: draft_id
+                  type: varchar(255)
+              - column:
+                  name: resolved
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            comment: Thread reply-status bucket values match ThreadReplyBucket ids.
+            sql: ALTER TABLE thread_reply_status ADD CONSTRAINT ck_thread_reply_status_bucket CHECK (bucket IN ('TO_REPLY','AWAITING_THEIR_REPLY','FYI','ACTIONED'))
+        - sql:
+            comment: One reply-status projection row per tenant and Gmail thread.
+            sql: CREATE UNIQUE INDEX ux_thread_reply_status_tenant_thread ON thread_reply_status (tenant_id, gmail_thread_id)
+        - sql:
+            comment: Composite keyset index for NeedsReplyInboxQueryService ORDER BY last_classified_at DESC NULLS LAST, gmail_thread_id DESC after tenant/bucket/resolved filtering.
+            sql: CREATE INDEX idx_thread_reply_status_inbox ON thread_reply_status (tenant_id, bucket, resolved, last_classified_at DESC NULLS LAST, gmail_thread_id DESC)
+        - sql:
+            comment: Partial count index for the sidebar TO_REPLY badge.
+            sql: CREATE INDEX idx_thread_reply_status_to_reply ON thread_reply_status (tenant_id) WHERE bucket = 'TO_REPLY' AND NOT resolved
+      rollback:
+        - dropTable:
+            tableName: thread_reply_status

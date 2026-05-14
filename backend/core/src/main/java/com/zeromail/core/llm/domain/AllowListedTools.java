@@ -47,6 +47,8 @@ public class AllowListedTools {
                             "rule_compile",
                             "Compile a natural-language rule into the rules.v1 matcher and action schema",
                             ruleCompileSchema()));
+    private static final List<LlmTool> SAVE_DRAFT_ONLY =
+            ALLOW_LISTED.stream().filter(tool -> "save_draft".equals(tool.name())).toList();
 
     public List<LlmTool> tools() {
         return tools(LlmToolProfile.SAFE_ACTIONS);
@@ -56,6 +58,7 @@ public class AllowListedTools {
         return switch (toolProfile) {
             case SAFE_ACTIONS -> ALLOW_LISTED;
             case RULE_COMPILE -> RULE_COMPILE;
+            case SAVE_DRAFT_ONLY -> SAVE_DRAFT_ONLY;
         };
     }
 

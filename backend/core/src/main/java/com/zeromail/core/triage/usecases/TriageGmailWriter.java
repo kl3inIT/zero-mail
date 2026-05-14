@@ -8,11 +8,14 @@ import com.google.api.services.gmail.model.ListLabelsResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.ModifyMessageRequest;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
-import com.zeromail.core.triage.domain.TriageActionResult;
+import com.zeromail.core.triage.domain.ReplyHeaders;
+import com.zeromail.core.triage.exception.MissingMessageIdException;
+import com.zeromail.core.triage.exception.ThreadingHeaderInvalidException;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -79,8 +82,31 @@ public class TriageGmailWriter {
     }
 
     public String saveDraft(
-            UUID tenantId, TriageActionResult.SaveDraft draftSpec, String gmailThreadId)
+            UUID tenantId, ReplyHeaders replyHeaders, String body, String gmailThreadId)
             throws IOException {
+        Objects.requireNonNull(replyHeaders, "replyHeaders must not be null");
+        requireText(body, "body");
+        requireText(gmailThreadId, "gmailThreadId");
+
+        Message draftMessage;
+        try {
+            String encodedMimeMessage = ReplyMimeBuilder.buildBase64UrlMime(replyHeaders, body);
+            MimeMessage mimeMessage = ReplyMimeBuilder.parseBase64UrlMime(encodedMimeMessage);
+            draftMessage =
+                    new Message()
+                            .setThreadId(replyHeaders.gmailThreadId())
+                            .setRaw(encodedMimeMessage);
+            ThreadingHeaderValidator.validate(mimeMessage, draftMessage, gmailThreadId);
+        } catch (MissingMessageIdException | ThreadingHeaderInvalidException threadingException) {
+            log.warn(
+                    "event=draft_threading_invalid tenantId={} gmailThreadId={}",
+                    tenantId,
+                    gmailThreadId);
+            throw threadingException;
+        } catch (MessagingException messagingException) {
+            throw new IOException("Unable to build reply MIME", messagingException);
+        }
+
         return executeGmailWrite(
                 tenantId,
                 "saveDraft",
@@ -88,13 +114,7 @@ public class TriageGmailWriter {
                     Draft createdDraft =
                             gmail.users()
                                     .drafts()
-                                    .create(
-                                            USER_ID,
-                                            new Draft()
-                                                    .setMessage(
-                                                            draftMessage(
-                                                                    draftSpec.instruction(),
-                                                                    gmailThreadId)))
+                                    .create(USER_ID, new Draft().setMessage(draftMessage))
                                     .execute();
                     logThreadWrite(tenantId, gmailThreadId);
                     return createdDraft.getId();
@@ -229,20 +249,6 @@ public class TriageGmailWriter {
 
     private static boolean isLikelyGmailLabelId(String labelName) {
         return labelName.startsWith("Label_") || INBOX_LABEL_ID.equals(labelName);
-    }
-
-    private static Message draftMessage(String instruction, String gmailThreadId) {
-        String rawMimeMessage =
-                "MIME-Version: 1.0\r\n"
-                        + "Content-Type: text/plain; charset=UTF-8\r\n"
-                        + "Content-Transfer-Encoding: 8bit\r\n"
-                        + "\r\n"
-                        + instruction;
-        String encodedMimeMessage =
-                Base64.getUrlEncoder()
-                        .withoutPadding()
-                        .encodeToString(rawMimeMessage.getBytes(StandardCharsets.UTF_8));
-        return new Message().setThreadId(gmailThreadId).setRaw(encodedMimeMessage);
     }
 
     private static void logMessageWrite(UUID tenantId, String gmailMessageId, String operation) {

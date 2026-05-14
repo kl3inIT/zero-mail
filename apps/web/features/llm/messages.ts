@@ -168,8 +168,8 @@ export const llmMessages = {
     en: 'The AI request was rejected for safety reasons.',
   },
   'errors.llm.safety_violation': {
-    vi: 'Yêu cầu AI đã bị từ chối vì lý do an toàn.',
-    en: 'The AI request was rejected for safety reasons.',
+    vi: 'Đã xảy ra lỗi. Hãy thử lại.',
+    en: 'Something went wrong. Try again.',
   },
   'errors.llm.sanitizationFailed': {
     vi: 'Không thể chuẩn hóa nội dung email trước khi gọi AI. Hãy thử lại.',

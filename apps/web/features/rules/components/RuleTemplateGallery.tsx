@@ -12,6 +12,7 @@ type Props = {
   templates: RuleTemplateResponse[];
   isLoading: boolean;
   pendingTemplateKey: string | null;
+  hideHeader?: boolean;
   onUseTemplate: (template: RuleTemplateResponse) => void;
 };
 
@@ -19,16 +20,19 @@ export function RuleTemplateGallery({
   templates,
   isLoading,
   pendingTemplateKey,
+  hideHeader = false,
   onUseTemplate,
 }: Props) {
   const t = useTranslations();
 
   return (
-    <section className="bg-card rounded-xl border p-3">
-      <div className="mb-3">
-        <h2 className="text-xl font-semibold">{t('rules.templates.title')}</h2>
-        <p className="text-muted-foreground text-sm">{t('rules.templates.disabledByDefault')}</p>
-      </div>
+    <div>
+      {!hideHeader && (
+        <div className="mb-3">
+          <h2 className="text-sm font-semibold">{t('rules.templates.title')}</h2>
+          <p className="text-muted-foreground text-xs">{t('rules.templates.disabledByDefault')}</p>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="space-y-2">
@@ -62,9 +66,6 @@ export function RuleTemplateGallery({
                   <p className="text-muted-foreground line-clamp-2 text-xs">
                     {template.actionSummary ?? template.sourceText}
                   </p>
-                  <p className="text-muted-foreground truncate font-mono text-xs">
-                    {template.templateKey} · v{template.templateVersion ?? 1}
-                  </p>
                 </div>
                 <Button
                   type="button"
@@ -84,6 +85,6 @@ export function RuleTemplateGallery({
           })}
         </div>
       )}
-    </section>
+    </div>
   );
 }

@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 032-mail-message-observed-sender-email
+      author: zeromail
+      comment: >
+        Adds future-only sanitized sender metadata for Phase 5C analytics. Existing observed
+        message rows remain valid with NULL sender_email; analytics queries filter NULL values.
+      changes:
+        - addColumn:
+            tableName: mail_message_observed
+            columns:
+              - column:
+                  name: sender_email
+                  type: varchar(320)
+      rollback:
+        - dropColumn:
+            tableName: mail_message_observed
+            columnName: sender_email
