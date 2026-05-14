@@ -28,7 +28,9 @@ export default async function HowItWorks() {
         <div className="zm-how-grid">
           {/* Step 01 */}
           <article className="zm-how-card">
-            <div className="zm-how-num">01</div>
+            <div className="zm-how-num" aria-hidden="true">
+              01
+            </div>
             <div className="zm-how-icon">
               <MailIcon size={18} />
             </div>
@@ -63,7 +65,9 @@ export default async function HowItWorks() {
 
           {/* Step 02 */}
           <article className="zm-how-card">
-            <div className="zm-how-num">02</div>
+            <div className="zm-how-num" aria-hidden="true">
+              02
+            </div>
             <div className="zm-how-icon">
               <PenIcon size={18} />
             </div>
@@ -96,7 +100,9 @@ export default async function HowItWorks() {
 
           {/* Step 03 */}
           <article className="zm-how-card">
-            <div className="zm-how-num">03</div>
+            <div className="zm-how-num" aria-hidden="true">
+              03
+            </div>
             <div className="zm-how-icon">
               <ListIcon size={18} />
             </div>

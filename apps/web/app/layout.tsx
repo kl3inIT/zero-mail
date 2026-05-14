@@ -13,13 +13,15 @@ const roboto = Roboto({
   variable: '--font-roboto',
   subsets: ['latin', 'vietnamese'],
   weight: ['400', '500', '700'],
-  display: 'swap',
+  display: 'optional',
+  preload: false,
 });
 
 const robotoMono = Roboto_Mono({
   variable: '--font-roboto-mono',
   subsets: ['latin'],
-  display: 'swap',
+  display: 'optional',
+  preload: false,
 });
 
 /**

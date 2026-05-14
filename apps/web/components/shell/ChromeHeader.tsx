@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import {
   CreditCard,
   Languages,
@@ -55,25 +55,7 @@ import type { AppLocale } from '@/i18n/routing';
 import { getApiUrl } from '@/lib/api/base-url';
 import { cn } from '@/lib/utils';
 
-type PageTitleKey =
-  | 'nav.triage'
-  | 'nav.needsReply'
-  | 'nav.rules'
-  | 'nav.billing'
-  | 'nav.settings'
-  | 'nav.onboardingProgress'
-  | 'nav.dashboard';
 type GmailConnectionStatus = 'CONNECTED' | 'DISCONNECTED' | 'NOT_CONNECTED' | 'PENDING';
-
-function pageTitleKey(pathname: string): PageTitleKey {
-  if (pathname.startsWith('/needs-reply')) return 'nav.needsReply';
-  if (pathname.startsWith('/rules')) return 'nav.rules';
-  if (pathname.startsWith('/billing')) return 'nav.billing';
-  if (pathname.startsWith('/settings')) return 'nav.settings';
-  if (pathname.startsWith('/onboarding')) return 'nav.onboardingProgress';
-  if (pathname.startsWith('/dashboard')) return 'nav.dashboard';
-  return 'nav.triage';
-}
 
 function connectionPresentation(status: GmailConnectionStatus): {
   labelKey:
@@ -122,7 +104,7 @@ function BalancePill() {
       <TooltipTrigger
         render={
           <div
-            className="bg-background flex h-9 cursor-default items-center gap-1.5 rounded-full border border-[#0a3d3a]/20 px-3"
+            className="bg-background hidden h-9 cursor-default items-center gap-1.5 rounded-full border border-[#0a3d3a]/20 px-3 min-[420px]:flex"
             aria-label={`${t('shell.balance.label')}: ${formattedBalance}`}
             data-testid="balance-pill"
           />
@@ -159,7 +141,7 @@ function ConnectionHealth() {
             <button
               type="button"
               className={cn(
-                'hover:bg-accent flex h-9 items-center gap-1.5 rounded-full border border-[#0a3d3a]/20 px-3 transition-colors',
+                'hover:bg-accent flex h-9 items-center gap-1.5 rounded-full border border-[#0a3d3a]/20 px-2 transition-colors sm:px-3',
               )}
               aria-label={label}
               data-testid="connection-health-dot"
@@ -212,7 +194,7 @@ function PauseControl() {
       <button
         type="button"
         className={cn(
-          'flex h-9 items-center gap-1.5 rounded-full border px-3 transition-colors',
+          'flex h-9 items-center gap-1.5 rounded-full border px-2 transition-colors sm:px-3',
           paused
             ? 'border-warning/40 text-warning hover:bg-warning/10'
             : 'text-muted-foreground hover:bg-muted hover:text-foreground border-[#0a3d3a]/20',
@@ -233,7 +215,7 @@ function PauseControl() {
         ) : (
           <Play className="size-3.5 shrink-0" aria-hidden="true" />
         )}
-        <span className="text-xs font-medium">
+        <span className="hidden text-xs font-medium sm:inline">
           {t(paused ? 'shell.pause.paused' : 'shell.pause.running')}
         </span>
       </button>
@@ -338,18 +320,15 @@ function UserMenu() {
 }
 
 export function ChromeHeader() {
-  const pathname = usePathname();
   const t = useTranslations();
-  const { toggleSidebar, state } = useSidebar();
-  const isCollapsed = state === 'collapsed';
-  const title = t(pageTitleKey(pathname));
+  const { toggleSidebar } = useSidebar();
 
   return (
     <header
       className="bg-background flex h-12 shrink-0 items-center px-2"
       data-testid="chrome-header"
     >
-      <div className="flex w-60 shrink-0 items-center gap-4 pr-4 pl-3">
+      <div className="flex w-auto shrink-0 items-center gap-2 pr-2 pl-2 sm:w-60 sm:gap-4 sm:pr-4 sm:pl-3">
         <button
           type="button"
           onClick={toggleSidebar}
@@ -358,19 +337,22 @@ export function ChromeHeader() {
         >
           <Menu className="size-5" />
         </button>
-        <Link href="/triage" className="flex items-center gap-4 focus-visible:outline-none">
+        <Link
+          href="/triage"
+          className="flex items-center gap-2 focus-visible:outline-none sm:gap-4"
+        >
           <span className="bg-sidebar-primary text-sidebar-primary-foreground grid size-8 shrink-0 place-items-center rounded-full shadow-sm">
             <ZMLogoMark size={16} />
           </span>
-          <span className="text-foreground text-xl font-bold tracking-tight whitespace-nowrap">
+          <span className="text-foreground hidden text-xl font-bold tracking-tight whitespace-nowrap sm:inline">
             Zero Mail
           </span>
         </Link>
       </div>
 
-      <div className="flex min-w-0 flex-1 items-center px-4" />
+      <div className="hidden min-w-0 flex-1 items-center px-4 sm:flex" />
 
-      <div className="ml-auto flex shrink-0 items-center gap-3">
+      <div className="ml-auto flex min-w-0 shrink items-center gap-1 sm:shrink-0 sm:gap-3">
         <BalancePill />
         <div className="bg-border hidden h-5 w-px sm:block" aria-hidden="true" />
         <ConnectionHealth />
