@@ -1,0 +1,6 @@
+# Activated by SPRING_PROFILES_ACTIVE=loadtest. Used by loadtest/compose.loadtest.yml only. See D-02/D-03.
+zeromail.loadtest.enabled: true
+spring:
+  ai:
+    model:
+      chat: none
