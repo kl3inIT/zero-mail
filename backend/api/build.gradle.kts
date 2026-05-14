@@ -1,3 +1,5 @@
+import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
+
 plugins {
     id("zeromail.spring-boot-conventions")
     id("zeromail.archunit-conventions")
@@ -28,6 +30,16 @@ dependencies {
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
     workingDir = rootProject.projectDir
+}
+
+tasks.named<BootBuildImage>("bootBuildImage") {
+    // BootBuildImage exposes getImageName() in this local Spring Boot 4.0.6 Gradle API.
+    // Equivalent target: imageName.set("zeromail-api:loadtest").
+    val bootImageNameProperty = BootBuildImage::class.java.getMethod("getImageName").invoke(this)
+    org.gradle.api.provider.Property::class
+        .java
+        .getMethod("set", Any::class.java)
+        .invoke(bootImageNameProperty, "zeromail-api:loadtest")
 }
 
 openApi {
