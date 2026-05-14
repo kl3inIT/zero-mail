@@ -52,6 +52,7 @@ public class AccountDeletionController {
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
         onboardingService.deleteSelectionsForCurrentTenant(tenantId);
         gmailConnectionService.deleteForCurrentTenant(tenantId);
+        // Defensive cleanup; both tables also cascade from tenants(id) on successful tenant delete.
         notificationPreferenceService.deleteForTenant(tenantId);
         digestDeliveryService.deleteForTenant(tenantId);
         accountService.deleteCurrentUser(tenantId);
