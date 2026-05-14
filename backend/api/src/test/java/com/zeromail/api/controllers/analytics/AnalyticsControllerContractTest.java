@@ -108,6 +108,12 @@ class AnalyticsControllerContractTest extends ApiPostgresTestBase {
         ResponseEntity<String> response = get("/api/analytics/summary?window=bogus", seed);
 
         assertThat(response.getStatusCode().value()).isEqualTo(400);
+        assertThat(response.getHeaders().getContentType()).isNotNull();
+        assertThat(response.getHeaders().getContentType().toString())
+                .startsWith("application/problem+json");
+        assertThat(response.getBody())
+                .contains("\"code\":\"error.badRequest\"")
+                .contains("\"message\":\"error.badRequest\"");
         verifyNoInteractions(analyticsSummaryQueryService);
     }
 
