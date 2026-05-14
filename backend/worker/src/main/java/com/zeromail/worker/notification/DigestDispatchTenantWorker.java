@@ -11,6 +11,7 @@ import com.zeromail.core.notification.usecases.DispatchOutcome;
 import com.zeromail.core.notification.usecases.NotificationChannel;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.worker.notification.config.NotificationProperties;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -24,6 +25,8 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class DigestDispatchTenantWorker {
+
+    private static final Duration TRANSIENT_RETRY_DELAY = Duration.ofMinutes(15);
 
     private static final Logger log = LoggerFactory.getLogger(DigestDispatchTenantWorker.class);
 
@@ -60,13 +63,15 @@ public class DigestDispatchTenantWorker {
 
     private void dispatchOneWithinTenant(DigestDueTenant dueTenant, Instant referenceInstant) {
         ZoneId tenantZone = ZoneId.of(dueTenant.timeZone());
-        LocalDate digestDayLocal = referenceInstant.atZone(tenantZone).toLocalDate();
+        LocalDate digestDayLocal = dueTenant.digestDayLocal();
         LocalDateTime scheduledLocalDateTime = digestDayLocal.atTime(dueTenant.sendHourLocal(), 0);
         Instant sendMoment = scheduledLocalDateTime.atZone(tenantZone).toInstant();
         Locale locale = Locale.forLanguageTag(dueTenant.preferredLanguage());
         DigestClaimRecord claimRecord;
         try {
-            claimRecord = digestDeliveryService.claimPending(dueTenant.tenantId(), digestDayLocal);
+            claimRecord =
+                    digestDeliveryService.claimPending(
+                            dueTenant.tenantId(), digestDayLocal, referenceInstant);
         } catch (DigestAlreadyClaimedException _) {
             log.info(
                     "event=digest_already_claimed tenantId={} digestDay={}",
@@ -94,7 +99,10 @@ public class DigestDispatchTenantWorker {
         try {
             outcome = notificationChannel.dispatch(payload, emailAddress.orElseThrow());
         } catch (RuntimeException runtimeException) {
-            digestDeliveryService.markFailed(claimRecord.deliveryId(), "dispatch_exception");
+            digestDeliveryService.markRetryable(
+                    claimRecord.deliveryId(),
+                    "dispatch_exception",
+                    nextAttemptAt(referenceInstant));
             throw runtimeException;
         }
         switch (outcome) {
@@ -105,8 +113,14 @@ public class DigestDispatchTenantWorker {
                     digestDeliveryService.markFailed(
                             claimRecord.deliveryId(), permanentFailure.reason());
             case DispatchOutcome.TransientFailure transientFailure ->
-                    digestDeliveryService.markFailed(
-                            claimRecord.deliveryId(), transientFailure.reason());
+                    digestDeliveryService.markRetryable(
+                            claimRecord.deliveryId(),
+                            transientFailure.reason(),
+                            nextAttemptAt(referenceInstant));
         }
+    }
+
+    private static Instant nextAttemptAt(Instant referenceInstant) {
+        return referenceInstant.plus(TRANSIENT_RETRY_DELAY);
     }
 }

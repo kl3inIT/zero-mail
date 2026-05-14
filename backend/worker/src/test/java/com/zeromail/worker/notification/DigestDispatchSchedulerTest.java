@@ -126,6 +126,7 @@ class DigestDispatchSchedulerTest extends PostgresContainerTest {
                         dueTenant -> {
                             assertThat(dueTenant.tenantId()).isEqualTo(tenantId);
                             assertThat(dueTenant.preferredLanguage()).isEqualTo("vi");
+                            assertThat(dueTenant.digestDayLocal()).isEqualTo(DIGEST_DAY_LOCAL);
                         });
     }
 
@@ -150,7 +151,7 @@ class DigestDispatchSchedulerTest extends PostgresContainerTest {
         assertThat(DigestDispatchTestData.deliveryStatus(jdbcTemplate, firstTenantId))
                 .isEqualTo("SENT");
         assertThat(DigestDispatchTestData.deliveryStatus(jdbcTemplate, failingTenantId))
-                .isEqualTo("FAILED");
+                .isEqualTo("PENDING");
         assertThat(DigestDispatchTestData.deliveryFailureReason(jdbcTemplate, failingTenantId))
                 .isEqualTo("dispatch_exception");
         assertThat(DigestDispatchTestData.deliveryStatus(jdbcTemplate, thirdTenantId))

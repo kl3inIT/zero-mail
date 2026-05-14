@@ -30,7 +30,20 @@ public class DigestDeliveryService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public DigestClaimRecord claimPending(UUID tenantId, LocalDate digestDayLocal) {
+    public DigestClaimRecord claimPending(
+            UUID tenantId, LocalDate digestDayLocal, Instant referenceInstant) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(digestDayLocal, "digestDayLocal must not be null");
+        Objects.requireNonNull(referenceInstant, "referenceInstant must not be null");
+        return digestDeliveryRepository
+                .findByTenantIdAndDigestDayLocal(tenantId, digestDayLocal)
+                .map(
+                        existingDigestDelivery ->
+                                reclaimPending(existingDigestDelivery, referenceInstant))
+                .orElseGet(() -> insertPending(tenantId, digestDayLocal));
+    }
+
+    private DigestClaimRecord insertPending(UUID tenantId, LocalDate digestDayLocal) {
         DigestDeliveryEntity digestDelivery =
                 new DigestDeliveryEntity(
                         UUID.randomUUID(),
@@ -54,6 +67,29 @@ public class DigestDeliveryService {
         }
     }
 
+    private DigestClaimRecord reclaimPending(
+            DigestDeliveryEntity digestDelivery, Instant referenceInstant) {
+        if (digestDelivery.getStatus() != DigestDeliveryStatus.PENDING) {
+            throw new DigestAlreadyClaimedException(
+                    digestDelivery.getTenantId(), digestDelivery.getDigestDayLocal(), null);
+        }
+        Instant nextAttemptAt = digestDelivery.getNextAttemptAt();
+        if (nextAttemptAt == null || nextAttemptAt.isAfter(referenceInstant)) {
+            throw new DigestAlreadyClaimedException(
+                    digestDelivery.getTenantId(), digestDelivery.getDigestDayLocal(), null);
+        }
+        digestDelivery.setAttemptCount(digestDelivery.getAttemptCount() + 1);
+        digestDelivery.setNextAttemptAt(null);
+        digestDelivery.setFailureReason(null);
+        DigestDeliveryEntity savedDelivery = digestDeliveryRepository.saveAndFlush(digestDelivery);
+        return new DigestClaimRecord(
+                savedDelivery.getId(),
+                savedDelivery.getTenantId(),
+                savedDelivery.getDigestDayLocal(),
+                savedDelivery.getAttemptCount(),
+                savedDelivery.getChannel());
+    }
+
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markSent(UUID deliveryId, ChannelType channel, String externalRef) {
         DigestDeliveryEntity digestDelivery =
@@ -63,6 +99,7 @@ public class DigestDeliveryService {
         digestDelivery.setDispatchedAt(Instant.now());
         digestDelivery.setExternalRef(externalRef);
         digestDelivery.setFailureReason(null);
+        digestDelivery.setNextAttemptAt(null);
         digestDeliveryRepository.save(digestDelivery);
     }
 
@@ -72,6 +109,20 @@ public class DigestDeliveryService {
                 digestDeliveryRepository.findById(deliveryId).orElseThrow();
         digestDelivery.setStatus(DigestDeliveryStatus.FAILED);
         digestDelivery.setFailureReason(failureReason);
+        digestDelivery.setNextAttemptAt(null);
+        digestDeliveryRepository.save(digestDelivery);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void markRetryable(UUID deliveryId, String failureReason, Instant nextAttemptAt) {
+        DigestDeliveryEntity digestDelivery =
+                digestDeliveryRepository.findById(deliveryId).orElseThrow();
+        digestDelivery.setStatus(DigestDeliveryStatus.PENDING);
+        digestDelivery.setFailureReason(failureReason);
+        digestDelivery.setNextAttemptAt(
+                Objects.requireNonNull(nextAttemptAt, "nextAttemptAt must not be null"));
+        digestDelivery.setDispatchedAt(null);
+        digestDelivery.setExternalRef(null);
         digestDeliveryRepository.save(digestDelivery);
     }
 

@@ -31,7 +31,7 @@ public class AnalyticsSummaryQueryService {
 
     private static final String APPLIED_VOLUME_SQL =
             """
-            SELECT count(*)
+            SELECT count(DISTINCT gmail_message_id)
             FROM triage_audit
             WHERE tenant_id = ?
               AND applied_at >= ?

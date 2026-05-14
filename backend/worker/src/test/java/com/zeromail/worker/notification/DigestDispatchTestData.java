@@ -116,6 +116,24 @@ final class DigestDispatchTestData {
                 tenantId);
     }
 
+    static int deliveryAttemptCount(JdbcTemplate jdbcTemplate, UUID tenantId) {
+        Integer attemptCount =
+                jdbcTemplate.queryForObject(
+                        "SELECT attempt_count FROM digest_delivery WHERE tenant_id = ?",
+                        Integer.class,
+                        tenantId);
+        return attemptCount == null ? 0 : attemptCount;
+    }
+
+    static Instant deliveryNextAttemptAt(JdbcTemplate jdbcTemplate, UUID tenantId) {
+        Timestamp nextAttemptAt =
+                jdbcTemplate.queryForObject(
+                        "SELECT next_attempt_at FROM digest_delivery WHERE tenant_id = ?",
+                        Timestamp.class,
+                        tenantId);
+        return nextAttemptAt == null ? null : nextAttemptAt.toInstant();
+    }
+
     static LocalDate deliveryDay(JdbcTemplate jdbcTemplate, UUID tenantId) {
         return jdbcTemplate.queryForObject(
                 "SELECT digest_day_local FROM digest_delivery WHERE tenant_id = ?",

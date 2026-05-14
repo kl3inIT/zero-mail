@@ -101,6 +101,15 @@ class AnalyticsSummaryQueryServiceTest extends PostgresContainerTest {
                 windowStartInclusive.plusSeconds(50));
         insertAudit(
                 tenantA,
+                "analytics-a-audit-priority-label",
+                "Priority Rule",
+                "archive",
+                "APPLIED",
+                windowStartInclusive.plusSeconds(52),
+                windowStartInclusive.plusSeconds(54),
+                null);
+        insertAudit(
+                tenantA,
                 "analytics-a-audit-alpha",
                 "Alpha Tie Rule",
                 "save_draft",
@@ -142,7 +151,7 @@ class AnalyticsSummaryQueryServiceTest extends PostgresContainerTest {
 
         assertThat(summary.volumeObserved()).isEqualTo(3);
         assertThat(summary.volumeApplied()).isEqualTo(3);
-        assertThat(summary.timeSavedSeconds()).isEqualTo(220);
+        assertThat(summary.timeSavedSeconds()).isEqualTo(250);
         assertThat(summary.topSenders())
                 .extracting(TopSenderProjection::senderEmail, TopSenderProjection::count)
                 .containsExactly(
@@ -163,7 +172,7 @@ class AnalyticsSummaryQueryServiceTest extends PostgresContainerTest {
                         RuleHitProjection::applied,
                         RuleHitProjection::reverted)
                 .containsExactly(
-                        tuple("Priority Rule", 2L, 1L, 1L),
+                        tuple("Priority Rule", 3L, 2L, 1L),
                         tuple("Alpha Tie Rule", 1L, 1L, 0L),
                         tuple("Beta Tie Rule", 1L, 1L, 0L));
     }
