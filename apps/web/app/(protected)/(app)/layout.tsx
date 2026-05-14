@@ -1,8 +1,8 @@
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 
 import { AppShell } from '@/components/shell/AppShell';
-import { getCurrentUserCached } from '@/features/account/api/account-api';
+import { getCurrentUser } from '@/features/account/api/account-api';
 import { getBillingBalance } from '@/features/billing/api/billing-api';
 import { billingKeys } from '@/features/billing/query-keys';
 import { getTenantStatus } from '@/features/gmail/api/gmail-api';
@@ -13,8 +13,9 @@ const SIDEBAR_COOKIE_NAME = 'sidebar_state';
 
 export default async function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
+  const incomingHeaders = await headers();
   const cookieHeader = cookieStore.toString();
-  const requestHeaders = cookieHeader ? { Cookie: cookieHeader } : undefined;
+  const requestHeaders = backendRequestHeaders(cookieHeader, incomingHeaders);
   const defaultSidebarOpen = cookieStore.get(SIDEBAR_COOKIE_NAME)?.value !== 'false';
   const queryClient = new QueryClient();
 
@@ -22,7 +23,7 @@ export default async function ProtectedAppLayout({ children }: { children: React
     queryClient.prefetchQuery({
       queryKey: triageKeys.pauseState(),
       queryFn: async () => {
-        const user = await getCurrentUserCached(cookieHeader);
+        const user = await getCurrentUser({ headers: requestHeaders });
         return user.triagePaused;
       },
     }),
@@ -41,4 +42,19 @@ export default async function ProtectedAppLayout({ children }: { children: React
       <AppShell defaultSidebarOpen={defaultSidebarOpen}>{children}</AppShell>
     </HydrationBoundary>
   );
+}
+
+function backendRequestHeaders(
+  cookieHeader: string,
+  incomingHeaders: { get(name: string): string | null },
+): HeadersInit | undefined {
+  const requestHeaders: Record<string, string> = {};
+  if (cookieHeader) requestHeaders.Cookie = cookieHeader;
+
+  const testSubject = incomingHeaders.get('x-test-subject');
+  const testEmail = incomingHeaders.get('x-test-email');
+  if (testSubject) requestHeaders['X-Test-Subject'] = testSubject;
+  if (testEmail) requestHeaders['X-Test-Email'] = testEmail;
+
+  return Object.keys(requestHeaders).length === 0 ? undefined : requestHeaders;
 }

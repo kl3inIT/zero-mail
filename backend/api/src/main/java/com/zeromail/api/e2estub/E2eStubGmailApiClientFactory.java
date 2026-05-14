@@ -25,6 +25,12 @@ import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.shared.privacy.Sensitive;
+import jakarta.mail.BodyPart;
+import jakarta.mail.MessagingException;
+import jakarta.mail.Multipart;
+import jakarta.mail.Session;
+import jakarta.mail.internet.MimeMessage;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -36,6 +42,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -347,7 +354,35 @@ public class E2eStubGmailApiClientFactory extends GmailApiClientFactory {
         }
         String paddedRawMime = rawMime + "=".repeat((4 - rawMime.length() % 4) % 4);
         byte[] decodedMime = Base64.getUrlDecoder().decode(paddedRawMime);
-        return new String(decodedMime, StandardCharsets.UTF_8);
+        try {
+            MimeMessage mimeMessage =
+                    new MimeMessage(
+                            Session.getInstance(new Properties()),
+                            new ByteArrayInputStream(decodedMime));
+            return extractTextContent(mimeMessage);
+        } catch (MessagingException | IOException mimeParsingException) {
+            return new String(decodedMime, StandardCharsets.UTF_8);
+        }
+    }
+
+    private static String extractTextContent(jakarta.mail.Part messagePart)
+            throws MessagingException, IOException {
+        Object content = messagePart.getContent();
+        if (content instanceof String textContent) {
+            return textContent;
+        }
+        if (content instanceof Multipart multipartContent) {
+            for (int partIndex = 0; partIndex < multipartContent.getCount(); partIndex++) {
+                BodyPart bodyPart = multipartContent.getBodyPart(partIndex);
+                if (bodyPart.isMimeType("text/plain")) {
+                    return extractTextContent(bodyPart);
+                }
+            }
+            if (multipartContent.getCount() > 0) {
+                return extractTextContent(multipartContent.getBodyPart(0));
+            }
+        }
+        return content == null ? "" : content.toString();
     }
 
     private static HttpTransport failLoudTransport() {

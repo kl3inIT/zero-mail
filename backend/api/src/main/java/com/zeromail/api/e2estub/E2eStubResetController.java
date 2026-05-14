@@ -5,7 +5,13 @@ import com.zeromail.core.billing.persistence.BillingPackageEntity;
 import com.zeromail.core.billing.persistence.BillingTopupIntentEntity;
 import com.zeromail.core.billing.usecases.BillingTopupService;
 import com.zeromail.core.billing.usecases.CreditLedger;
+import com.zeromail.core.gmail.persistence.PubSubDeliveryEntity;
+import com.zeromail.core.gmail.persistence.PubSubDeliveryRepository;
+import com.zeromail.core.gmail.usecases.GmailConnectionService;
+import com.zeromail.core.gmail.usecases.GmailDeliveryProcessingService;
 import com.zeromail.core.tenant.TenantContext;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
@@ -36,22 +42,34 @@ public class E2eStubResetController {
     private static final String SESSION_COOKIE_NAME = "ZEROMAIL_SESSION";
     private static final String SESSION_COOKIE_VALUE = "e2e-stub-session";
     private static final int MINIMUM_LAUNCH_SMOKE_CREDITS = 10;
+    private static final int DELIVERY_PROCESSING_BATCH_SIZE = 50;
+    private static final int DELIVERY_PROCESSING_LOCK_SECONDS = 120;
+    private static final long E2E_STUB_INITIAL_HISTORY_ID = 1L;
     private static final AtomicLong SEPAY_TRANSACTION_COUNTER = new AtomicLong();
 
     private final E2eStubGmailApiClientFactory e2eStubGmailFactory;
     private final OAuthProvisioningService oauthProvisioningService;
+    private final GmailConnectionService gmailConnectionService;
     private final BillingTopupService billingTopupService;
     private final CreditLedger creditLedger;
+    private final PubSubDeliveryRepository pubSubDeliveryRepository;
+    private final GmailDeliveryProcessingService gmailDeliveryProcessingService;
 
     public E2eStubResetController(
             E2eStubGmailApiClientFactory e2eStubGmailFactory,
             OAuthProvisioningService oauthProvisioningService,
+            GmailConnectionService gmailConnectionService,
             BillingTopupService billingTopupService,
-            CreditLedger creditLedger) {
+            CreditLedger creditLedger,
+            PubSubDeliveryRepository pubSubDeliveryRepository,
+            GmailDeliveryProcessingService gmailDeliveryProcessingService) {
         this.e2eStubGmailFactory = e2eStubGmailFactory;
         this.oauthProvisioningService = oauthProvisioningService;
+        this.gmailConnectionService = gmailConnectionService;
         this.billingTopupService = billingTopupService;
         this.creditLedger = creditLedger;
+        this.pubSubDeliveryRepository = pubSubDeliveryRepository;
+        this.gmailDeliveryProcessingService = gmailDeliveryProcessingService;
     }
 
     @PostMapping("/api/test/e2e-stub/reset")
@@ -68,13 +86,32 @@ public class E2eStubResetController {
         log.info("event=e2e_stub_seed_message");
     }
 
+    @PostMapping("/api/test/e2e-stub/process-deliveries")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void processDeliveries() {
+        List<PubSubDeliveryEntity> pubSubDeliveries =
+                pubSubDeliveryRepository.claimPendingBatch(
+                        DELIVERY_PROCESSING_BATCH_SIZE, DELIVERY_PROCESSING_LOCK_SECONDS);
+        for (PubSubDeliveryEntity pubSubDelivery : pubSubDeliveries) {
+            TenantContext.runWith(
+                    pubSubDelivery.getTenantId(),
+                    () -> gmailDeliveryProcessingService.processDelivery(pubSubDelivery));
+        }
+        log.info("event=e2e_stub_process_deliveries count={}", pubSubDeliveries.size());
+    }
+
     @PostMapping("/api/test/e2e-stub/seed-session")
     public SeedSessionResponse seedSession() {
         OAuthProvisioningService.BundledProvisioningResult provisioningResult =
                 oauthProvisioningService.provisionBundledOAuth(
                         GOOGLE_SUBJECT, EMAIL, REFRESH_TOKEN, GRANTED_GMAIL_SCOPES);
         UUID tenantId = provisioningResult.tenantId();
-        TenantContext.runWith(tenantId, () -> ensureLaunchSmokeCredits(tenantId));
+        TenantContext.runWith(
+                tenantId,
+                () -> {
+                    ensureLaunchSmokeWatchState(tenantId);
+                    ensureLaunchSmokeCredits(tenantId);
+                });
         log.info("event=e2e_stub_seed_session tenantId={}", tenantId);
         return new SeedSessionResponse(
                 tenantId.toString(),
@@ -94,6 +131,12 @@ public class E2eStubResetController {
         }
         return new DraftResponse(
                 seededDraft.draftId(), seededDraft.messageId(), seededDraft.body());
+    }
+
+    private void ensureLaunchSmokeWatchState(UUID tenantId) {
+        gmailConnectionService.clearForReconnect(tenantId);
+        gmailConnectionService.recordWatchSuccess(
+                tenantId, E2E_STUB_INITIAL_HISTORY_ID, Instant.now().plus(Duration.ofDays(7)));
     }
 
     private void ensureLaunchSmokeCredits(UUID tenantId) {

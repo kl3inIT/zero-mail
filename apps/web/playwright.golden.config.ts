@@ -23,12 +23,17 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
-      command: `${gradleExecutable} :backend:api:bootRun --args='--spring.profiles.active=e2e-stub --zeromail.e2e-stub.enabled=true'`,
+      command: `${gradleExecutable} :backend:api:bootRun`,
       url: 'http://localhost:8080/actuator/health/readiness',
       name: 'Backend',
       reuseExistingServer: !process.env.CI,
       timeout: 240_000,
       cwd: '../..',
+      // Equivalent to --spring.profiles.active=e2e-stub without shell-quoted --args.
+      env: {
+        SPRING_PROFILES_ACTIVE: 'e2e-stub',
+        ZEROMAIL_E2E_STUB_ENABLED: 'true',
+      },
     },
   ],
 });

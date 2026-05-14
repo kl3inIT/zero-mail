@@ -3,6 +3,7 @@ package com.zeromail.core.gmail;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,6 +36,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 
 class GmailDeliveryProcessingSenderEmailTest {
 
@@ -122,6 +125,8 @@ class GmailDeliveryProcessingSenderEmailTest {
             RefreshTokenCipher refreshTokenCipher = mock(RefreshTokenCipher.class);
             ApplicationEventPublisher applicationEventPublisher =
                     mock(ApplicationEventPublisher.class);
+            PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
+            TransactionStatus transactionStatus = mock(TransactionStatus.class);
             Gmail gmail = mock(Gmail.class);
             Gmail.Users gmailUsers = mock(Gmail.Users.class);
             Gmail.Users.History gmailHistory = mock(Gmail.Users.History.class);
@@ -180,6 +185,9 @@ class GmailDeliveryProcessingSenderEmailTest {
             when(messageGetRequest.setFields("id,threadId,labelIds,internalDate,payload/headers"))
                     .thenReturn(messageGetRequest);
             when(messageGetRequest.execute()).thenReturn(gmailMessage);
+            when(transactionManager.getTransaction(any())).thenReturn(transactionStatus);
+            doNothing().when(transactionManager).commit(transactionStatus);
+            doNothing().when(transactionManager).rollback(transactionStatus);
 
             GmailDeliveryProcessingService service =
                     new GmailDeliveryProcessingService(
@@ -190,7 +198,8 @@ class GmailDeliveryProcessingSenderEmailTest {
                             gmailApiClientFactory,
                             refreshTokenCipher,
                             applicationEventPublisher,
-                            new EmailAddressCanonicalizer());
+                            new EmailAddressCanonicalizer(),
+                            transactionManager);
             return new Scenario(delivery, observedRepository, messageGetRequest, service);
         }
 
