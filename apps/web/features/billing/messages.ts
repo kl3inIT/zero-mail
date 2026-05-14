@@ -139,6 +139,54 @@ export const billingMessages = {
     vi: 'Tạo mã chuyển khoản VietQR, quét bằng ứng dụng ngân hàng và Zero Mail sẽ tự cập nhật số dư.',
     en: 'Create a VietQR transfer, scan it with your banking app, and Zero Mail will update your balance automatically.',
   },
+  'billing.topup.packages.recommended': {
+    vi: 'Phổ biến',
+    en: 'Popular',
+  },
+  'billing.topup.packages.startsAt': {
+    vi: 'Thanh toán',
+    en: 'Pay',
+  },
+  'billing.topup.packages.credits': {
+    vi: '{credits} tín dụng',
+    en: '{credits} credits',
+  },
+  'billing.topup.packages.cta': {
+    vi: 'Chọn gói này',
+    en: 'Choose package',
+  },
+  'billing.topup.packages.includes': {
+    vi: 'Bao gồm',
+    en: 'Includes',
+  },
+  'billing.topup.packages.defaultDescription': {
+    vi: 'Gói tín dụng dùng cho các tác vụ AI trong Zero Mail.',
+    en: 'Credits for Zero Mail AI actions.',
+  },
+  'billing.topup.packages.feature.instant': {
+    vi: 'Tạo mã chuyển khoản ngay lập tức',
+    en: 'Instant transfer code generation',
+  },
+  'billing.topup.packages.feature.webhook': {
+    vi: 'Tự động cộng tín dụng khi SePay xác nhận',
+    en: 'Automatic crediting after SePay confirmation',
+  },
+  'billing.topup.packages.feature.expiry': {
+    vi: 'Giữ mã thanh toán trong thời hạn an toàn',
+    en: 'Payment code held for a safe expiry window',
+  },
+  'billing.topup.packages.error.load': {
+    vi: 'Không tải được danh sách gói. Hãy thử lại.',
+    en: "Couldn't load billing packages. Try again.",
+  },
+  'billing.topup.packages.error.invalidResponse': {
+    vi: 'Backend chưa trả đủ thông tin thanh toán. Hãy thử lại.',
+    en: 'The backend did not return complete payment details. Try again.',
+  },
+  'billing.topup.packages.error.generic': {
+    vi: 'Không tạo được mã thanh toán. Hãy thử lại.',
+    en: "Couldn't create the payment code. Try again.",
+  },
   'billing.topup.amount.title': {
     vi: 'Chọn số tiền nạp',
     en: 'Choose a top-up amount',
@@ -167,6 +215,10 @@ export const billingMessages = {
     vi: 'Nhập số tiền lớn hơn 0 VND.',
     en: 'Enter an amount greater than 0 VND.',
   },
+  'billing.topup.amount.error.invalidPackage': {
+    vi: 'Chọn đúng một trong các gói nạp hiện có.',
+    en: 'Choose one of the available top-up package amounts.',
+  },
   'billing.topup.amount.error.invalidResponse': {
     vi: 'Backend chưa trả đủ thông tin VietQR. Hãy thử lại.',
     en: 'The backend did not return complete VietQR details. Try again.',
@@ -180,16 +232,48 @@ export const billingMessages = {
     en: 'Scan this QR with your banking app',
   },
   'billing.topup.qr.body': {
-    vi: 'Mã VietQR đã bao gồm tài khoản nhận, số tiền và mã tham chiếu.',
-    en: 'The VietQR payload already includes the destination account, amount, and reference.',
+    vi: 'Quét mã bằng ứng dụng ngân hàng. Vui lòng giữ đúng số tiền và nội dung chuyển khoản.',
+    en: 'Scan this with your banking app. Keep the amount and transfer content unchanged.',
+  },
+  'billing.topup.qr.alt': {
+    vi: 'Mã QR thanh toán SePay',
+    en: 'SePay payment QR code',
+  },
+  'billing.topup.qr.missing': {
+    vi: 'Chưa đủ thông tin để tạo QR',
+    en: 'Not enough details to create the QR code',
   },
   'billing.topup.reference.label': {
     vi: 'Mã tham chiếu',
     en: 'Transfer reference',
   },
+  'billing.topup.package.label': {
+    vi: 'Gói tín dụng',
+    en: 'Credit package',
+  },
+  'billing.topup.package.display': {
+    vi: '{name} - {credits} tín dụng',
+    en: '{name} - {credits} credits',
+  },
   'billing.topup.amountVnd.label': {
     vi: 'Số tiền VND',
     en: 'Amount in VND',
+  },
+  'billing.topup.bank.label': {
+    vi: 'Ngân hàng nhận',
+    en: 'Receiving bank',
+  },
+  'billing.topup.accountNumber.label': {
+    vi: 'Số tài khoản',
+    en: 'Account number',
+  },
+  'billing.topup.accountName.label': {
+    vi: 'Tên tài khoản',
+    en: 'Account name',
+  },
+  'billing.topup.transferContent.label': {
+    vi: 'Nội dung chuyển khoản',
+    en: 'Transfer content',
   },
   'billing.topup.expiresAt.label': {
     vi: 'Hết hạn lúc',

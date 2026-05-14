@@ -22,6 +22,10 @@ class ZeroMailLlmByokPropertiesBindingTest {
                     .withPropertyValues(
                             "zero-mail.crypto.refresh-token-key-base64=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
                             "zero-mail.billing.sepay.webhook-api-key=test-sepay-key-fixture",
+                            "zero-mail.billing.payment-account.bank-code=VCB",
+                            "zero-mail.billing.payment-account.bank-name=Vietcombank",
+                            "zero-mail.billing.payment-account.account-number=0123456789",
+                            "zero-mail.billing.payment-account.account-name=Zero Mail Test",
                             "zero-mail.llm.platform.api-key=test-platform-key");
 
     @Test

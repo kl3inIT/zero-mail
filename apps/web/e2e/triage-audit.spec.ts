@@ -19,7 +19,7 @@ for (const viewport of [
     await openTriage(page, '/triage');
 
     await expect(page.getByTestId('chrome-header')).toBeVisible();
-    await expect(page.getByTestId('balance-pill')).toBeVisible();
+    await expectBalancePillForViewport(page, viewport.width);
     await expect(page.getByRole('heading', { name: 'Triage', exact: true })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Audit log' })).toBeVisible();
     await expect(page.getByText('No triage activity yet')).toBeVisible();
@@ -115,4 +115,14 @@ async function fulfillJson(route: Route, body: unknown, status = 200) {
     contentType: 'application/json',
     body: JSON.stringify(body),
   });
+}
+
+async function expectBalancePillForViewport(page: Page, width: number) {
+  const balancePill = page.getByTestId('balance-pill');
+  if (width >= 420) {
+    await expect(balancePill).toBeVisible();
+    return;
+  }
+
+  await expect(balancePill).toHaveAttribute('aria-label', /Credits: 12/);
 }

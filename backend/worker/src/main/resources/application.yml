@@ -65,6 +65,12 @@ zero-mail:
     sepay:
       # Bare placeholder: Spring fails during placeholder resolution when the secret is absent.
       webhook-api-key: ${SEPAY_WEBHOOK_API_KEY}
+    payment-account:
+      bank-code: ${ZEROMAIL_BILLING_BANK_CODE:?ZEROMAIL_BILLING_BANK_CODE must be supplied via env file or deployment secret source}
+      bank-name: ${ZEROMAIL_BILLING_BANK_NAME:?ZEROMAIL_BILLING_BANK_NAME must be supplied via env file or deployment secret source}
+      account-number: ${ZEROMAIL_BILLING_ACCOUNT_NUMBER:?ZEROMAIL_BILLING_ACCOUNT_NUMBER must be supplied via env file or deployment secret source}
+      account-name: ${ZEROMAIL_BILLING_ACCOUNT_NAME:?ZEROMAIL_BILLING_ACCOUNT_NAME must be supplied via env file or deployment secret source}
+      qr-payload: ${ZEROMAIL_BILLING_QR_PAYLOAD:}
     vnd-per-credit: 1000
     max-pending-intents-per-tenant: 5
     intent-expiry: PT24H

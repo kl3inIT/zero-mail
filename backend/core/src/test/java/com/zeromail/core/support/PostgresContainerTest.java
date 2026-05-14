@@ -57,6 +57,11 @@ public abstract class PostgresContainerTest {
         // ZeroMailCoreProperties.billing is loaded by core billing tests and requires SePay
         // settings.
         r.add("zero-mail.billing.sepay.webhook-api-key", () -> "test-sepay-key-fixture");
+        r.add("zero-mail.billing.payment-account.bank-code", () -> "VCB");
+        r.add("zero-mail.billing.payment-account.bank-name", () -> "Vietcombank");
+        r.add("zero-mail.billing.payment-account.account-number", () -> "0123456789");
+        r.add("zero-mail.billing.payment-account.account-name", () -> "Zero Mail Test");
+        r.add("zero-mail.billing.payment-account.qr-payload", () -> "");
         r.add("zero-mail.billing.vnd-per-credit", () -> "1000");
         r.add("zero-mail.billing.max-pending-intents-per-tenant", () -> "5");
         r.add("zero-mail.billing.intent-expiry", () -> "PT24H");

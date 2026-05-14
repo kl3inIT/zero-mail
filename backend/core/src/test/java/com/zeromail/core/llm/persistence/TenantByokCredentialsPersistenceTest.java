@@ -12,7 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-class TenantByokCredentialsPersistenceWave0Test extends PostgresContainerTest {
+class TenantByokCredentialsPersistenceTest extends PostgresContainerTest {
 
     @Autowired JdbcTemplate jdbcTemplate;
 

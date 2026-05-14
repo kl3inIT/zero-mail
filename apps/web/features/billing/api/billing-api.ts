@@ -12,6 +12,7 @@ import type { components } from '@/lib/api/schema';
  */
 
 export type BillingBalanceResponse = components['schemas']['BillingBalanceResponse'];
+export type BillingPackageResponse = components['schemas']['BillingPackageResponse'];
 export type TopupIntentRequest = components['schemas']['TopupIntentRequest'];
 export type TopupIntentResponse = components['schemas']['TopupIntentResponse'];
 
@@ -64,8 +65,13 @@ export async function getBillingBalance({
   return unwrap(result, `/api/billing/balance failed: ${result.response.status}`);
 }
 
-export async function createTopupIntent(amountVnd: number): Promise<TopupIntentResponse> {
-  const body: TopupIntentRequest = { amountVnd };
+export async function listBillingPackages(): Promise<BillingPackageResponse[]> {
+  const result = await api.GET('/api/billing/packages', {});
+  return unwrap(result, `/api/billing/packages failed: ${result.response.status}`);
+}
+
+export async function createTopupIntent(packageCode: string): Promise<TopupIntentResponse> {
+  const body: TopupIntentRequest = { packageCode };
   const result = await api.POST('/api/billing/topup/intent', {
     body,
     headers: jsonHeaders(),
