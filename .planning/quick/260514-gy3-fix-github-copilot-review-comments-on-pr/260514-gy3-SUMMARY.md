@@ -11,6 +11,7 @@ commit: b764ab9
 
 - Changed analytics applied volume to count distinct `gmail_message_id` values, so the "messages triaged" metric no longer double-counts multi-action messages.
 - Kept digest transient dispatch failures retryable by preserving `PENDING`, setting `next_attempt_at`, and letting the scheduler reclaim due retry rows.
+- Clarified digest email copy from "yesterday" to "last 24 hours" / "24 giờ qua" so the wording matches the locked send-hour-anchored window.
 - Added regression coverage for distinct applied-message counting and retry-after-transient digest dispatch.
 
 ## Verification
