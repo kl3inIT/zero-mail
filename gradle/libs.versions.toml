@@ -1,11 +1,9 @@
 [versions]
 springBoot = "4.0.6"
 springAi = "2.0.0-M6"
-# Spring Modulith: Boot-4-compatible 2.x line has no milestone/RC on Spring's milestone repo
-# as of 2026-04-24 — only tracked snapshots (latest 2.0.7-SNAPSHOT). We pin to the tracked
-# 2.0.7-SNAPSHOT rather than floating `2.0.0-SNAPSHOT` so rebuilds resolve a deterministic
-# artifact from the Spring snapshot repo. Revisit + re-pin when 2.0.0-M1 or later ships.
-springModulith = "2.0.7-SNAPSHOT"
+# Spring Modulith 2.0.x is the Spring Boot 4-compatible line. Keep this GA pin in
+# sync with buildSrc/src/main/kotlin/zeromail.modulith-conventions.gradle.kts.
+springModulith = "2.0.6"
 liquibase = "5.0.2"
 archunit = "1.4.2"
 logstashLogback = "9.0"
