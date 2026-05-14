@@ -94,10 +94,12 @@ export function TopupClient() {
   const baselineCredits = balance.data?.availableCredits ?? 0;
 
   return (
-    <div className="space-y-5">
-      <div className="space-y-1">
-        <h1 className="text-foreground text-xl font-semibold">{t('billing.topup.page.title')}</h1>
-        <p className="text-muted-foreground max-w-2xl text-sm leading-6">
+    <div className="space-y-12">
+      <div className="mb-12 space-y-4 text-center">
+        <h1 className="text-foreground from-foreground to-foreground/70 bg-linear-to-b bg-clip-text text-4xl font-extrabold tracking-tight text-transparent md:text-5xl">
+          {t('billing.topup.page.title')}
+        </h1>
+        <p className="text-muted-foreground mx-auto max-w-2xl text-lg leading-relaxed">
           {t('billing.topup.page.description')}
         </p>
       </div>

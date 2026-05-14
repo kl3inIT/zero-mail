@@ -1,11 +1,10 @@
 'use client';
 
-import { Check, Loader2, Sparkles } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type {
   BillingPackageResponse,
@@ -58,7 +57,7 @@ export function TopupPackageSelector({
     packages.find((billingPackage) => billingPackage.code === selectedCode) ??
     packages[1] ??
     packages[0];
-  const highlightedCode = useMemo(() => recommendedCode(packages), [packages]);
+  // const highlightedCode = useMemo(() => recommendedCode(packages), [packages]);
 
   async function submitSelectedPackage(packageCode: string) {
     setSelectedCode(packageCode);
@@ -79,9 +78,9 @@ export function TopupPackageSelector({
 
   if (packagesQuery.isPending) {
     return (
-      <div className="grid gap-4 md:grid-cols-3" data-testid="topup-package-loading">
+      <div className="grid gap-8 md:grid-cols-3" data-testid="topup-package-loading">
         {[0, 1, 2].map((item) => (
-          <div key={item} className="bg-muted/30 h-[420px] animate-pulse rounded-xl border" />
+          <div key={item} className="bg-muted/20 h-[500px] animate-pulse rounded-[2rem] border" />
         ))}
       </div>
     );
@@ -96,10 +95,9 @@ export function TopupPackageSelector({
   }
 
   return (
-    <div className="space-y-6" data-testid="topup-package-step">
-      <div className="grid gap-4 md:grid-cols-3">
-        {packages.map((billingPackage, index) => {
-          const isHighlighted = billingPackage.code === highlightedCode;
+    <div className="space-y-12" data-testid="topup-package-step">
+      <div className="grid gap-8 md:grid-cols-3">
+        {packages.map((billingPackage) => {
           const isSelected = billingPackage.code === selectedPackage?.code;
           const isSubmitting = createIntent.isPending && selectedCode === billingPackage.code;
 
@@ -107,69 +105,78 @@ export function TopupPackageSelector({
             <article
               key={billingPackage.code}
               className={cn(
-                'bg-card relative flex min-h-[430px] flex-col overflow-hidden rounded-xl border p-6 shadow-sm transition',
-                packageTone(index),
-                isHighlighted && 'border-primary/40 shadow-primary/10 shadow-md',
-                isSelected && 'ring-primary/50 ring-2',
+                'group bg-card/40 relative flex min-h-[500px] flex-col overflow-hidden rounded-[2rem] border p-8 shadow-sm backdrop-blur-sm transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl',
+                isSelected
+                  ? 'border-primary/60 ring-primary/20 ring-1'
+                  : 'border-border/50 hover:border-primary/30',
               )}
             >
-              {isHighlighted ? (
-                <Badge className="bg-foreground text-background absolute top-4 right-4">
-                  <Sparkles className="size-3" aria-hidden="true" />
-                  {t('billing.topup.packages.recommended')}
-                </Badge>
-              ) : null}
+              {/* Background Glow Effect */}
+              <div className="bg-primary/5 group-hover:bg-primary/15 absolute -top-24 -right-24 h-48 w-48 rounded-full blur-[80px] transition-all duration-500" />
 
-              <div className="space-y-5">
-                <div className="space-y-2 pr-24">
-                  <h2 className="text-foreground text-lg font-semibold">{billingPackage.name}</h2>
-                  <p className="text-muted-foreground min-h-10 text-sm leading-5">
+              <div className="relative flex flex-1 flex-col">
+                <div className="mb-8 space-y-3">
+                  <h2 className="text-foreground text-2xl font-bold tracking-tight">
+                    {billingPackage.name}
+                  </h2>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
                     {billingPackage.description ?? t('billing.topup.packages.defaultDescription')}
                   </p>
                 </div>
 
-                <div>
-                  <p className="text-muted-foreground text-sm">
-                    {t('billing.topup.packages.startsAt')}
-                  </p>
-                  <div className="mt-1 flex items-end gap-2">
-                    <span className="text-foreground text-4xl font-semibold tracking-normal">
+                <div className="mb-8">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-foreground text-4xl font-extrabold tracking-tight">
                       {formatVnd(billingPackage.priceVnd ?? 0, locale)}
                     </span>
                   </div>
-                  <p className="text-muted-foreground mt-2 text-sm">
-                    {t('billing.topup.packages.credits', {
-                      credits: billingPackage.creditAmount ?? 0,
-                    })}
-                  </p>
+                  <div className="mt-4 flex items-center gap-2">
+                    <div className="bg-primary/10 flex h-8 items-center rounded-full px-4">
+                      <span className="text-primary text-xs font-bold tracking-wider uppercase">
+                        {t('billing.topup.packages.credits', {
+                          credits: billingPackage.creditAmount ?? 0,
+                        })}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <Button
-                type="button"
-                variant={isHighlighted ? 'accent' : 'outline'}
-                className="mt-6 w-full"
-                disabled={createIntent.isPending}
-                onClick={() => void submitSelectedPackage(billingPackage.code ?? '')}
-              >
-                {isSubmitting ? (
-                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                ) : null}
-                {t('billing.topup.packages.cta')}
-              </Button>
+                <div className="flex-1">
+                  <div className="via-border mb-4 h-px w-full bg-linear-to-r from-transparent to-transparent" />
+                  <p className="text-foreground mb-4 text-xs font-bold tracking-widest uppercase opacity-60">
+                    {t('billing.topup.packages.includes')}
+                  </p>
+                  <ul className="space-y-4">
+                    {FEATURE_KEYS.map((featureKey) => (
+                      <li key={featureKey} className="flex items-start gap-3 text-sm">
+                        <div className="bg-primary/10 mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full">
+                          <Check className="text-primary h-3 w-3" aria-hidden="true" />
+                        </div>
+                        <span className="text-muted-foreground/90 leading-tight">
+                          {t(featureKey)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
-              <div className="mt-6 border-t pt-5">
-                <p className="text-foreground text-sm font-medium">
-                  {t('billing.topup.packages.includes')}
-                </p>
-                <ul className="mt-4 space-y-3">
-                  {FEATURE_KEYS.map((featureKey) => (
-                    <li key={featureKey} className="flex gap-3 text-sm leading-5">
-                      <Check className="text-primary mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                      <span className="text-muted-foreground">{t(featureKey)}</span>
-                    </li>
-                  ))}
-                </ul>
+                <Button
+                  type="button"
+                  variant={isSelected ? 'default' : 'outline'}
+                  size="lg"
+                  className={cn(
+                    'mt-8 h-12 w-full rounded-xl font-bold transition-all duration-300',
+                    !isSelected &&
+                      'hover:bg-primary hover:text-primary-foreground hover:border-primary',
+                  )}
+                  disabled={createIntent.isPending}
+                  onClick={() => void submitSelectedPackage(billingPackage.code ?? '')}
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="mr-2 size-4 animate-spin" aria-hidden="true" />
+                  ) : null}
+                  {t('billing.topup.packages.cta')}
+                </Button>
               </div>
             </article>
           );
@@ -177,8 +184,8 @@ export function TopupPackageSelector({
       </div>
 
       {validationError ? (
-        <Alert variant="warning">
-          <AlertDescription>{validationError}</AlertDescription>
+        <Alert variant="warning" className="rounded-2xl border-orange-200 bg-orange-50/50">
+          <AlertDescription className="text-orange-800">{validationError}</AlertDescription>
         </Alert>
       ) : null}
     </div>
@@ -204,18 +211,6 @@ function normalizeIntent(response: TopupIntentResponse): TopupIntentDetails | nu
     transferContent: response.transferContent,
     qrPayload: response.qrPayload ?? '',
   };
-}
-
-function recommendedCode(packages: BillingPackageResponse[]): string | undefined {
-  return packages[Math.min(1, packages.length - 1)]?.code;
-}
-
-function packageTone(index: number): string {
-  if (index === 0)
-    return 'bg-[linear-gradient(180deg,rgba(255,237,226,0.72),rgba(255,255,255,0.95))]';
-  if (index === 1)
-    return 'bg-[linear-gradient(180deg,rgba(229,236,255,0.78),rgba(255,255,255,0.96))]';
-  return 'bg-[linear-gradient(180deg,rgba(226,250,247,0.72),rgba(255,255,255,0.95))]';
 }
 
 function formatVnd(value: number, locale: string): string {
