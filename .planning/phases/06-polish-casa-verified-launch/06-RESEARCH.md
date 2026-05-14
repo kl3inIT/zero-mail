@@ -1041,7 +1041,7 @@ None — Phase 6 adds infrastructure, not new test files for existing requiremen
 
 ---
 
-## 7. Pitfalls + Open Questions
+## 7. Pitfalls + Open Questions (RESOLVED)
 
 ### 7.1 Pitfall — Liquibase double-run in compose
 
@@ -1084,6 +1084,8 @@ CLAUDE.md prescribes `eclipse-temurin:25-jre-noble` + CDS/AOT layered images, bu
 
 Recommend Option 1 — SPEC out-of-scope says "new application code or product features," buildpack image is neither. Planner should confirm.
 
+**RESOLVED:** Plan 06-02 Task 3 — `./gradlew :backend:api:bootBuildImage` (paketobuildpacks, no Dockerfile committed).
+
 ### 7.9 Open Question 2 — Filter vs Verifier swap for Pub/Sub OIDC
 
 `PubSubOidcAuthFilter` directly constructs a `TokenVerifier` in its constructor (`api/security/PubSubOidcAuthFilter.java:23-32`). To swap behavior under `loadtest` and `e2e-stub` profiles, the cleanest design is:
@@ -1097,9 +1099,13 @@ This is a small refactor (≤ 30 lines). SPEC says "no new application code." Pl
 
 Recommend planner raise this at plan-checker time.
 
+**RESOLVED:** Plan 06-01 Task 2 — extract `TokenVerifier` as a `@Bean` in `PubSubSecurityConfig`; `PubSubOidcAuthFilter` receives it via constructor injection.
+
 ### 7.10 Open Question 3 — Drift check + prompt-injection regression in `gates.yml`?
 
 `gates.yml`'s `backend` job runs `./gradlew check`, which includes ALL tests including `PromptInjectionCorpusTest.java` (verified at `backend/core/src/test/java/com/zeromail/core/llm/gateway/sanitization/PromptInjectionCorpusTest.java`) and `PromptInjectionSentinelTest.java`. The drift check (`DriftDetectionJobDriftDetectedTest`, `DriftDetectionJobNoDriftTest` at `backend/worker/`) also runs under `./gradlew check`. The `ai-eval` job runs the deterministic golden-set drift via `:backend:core:aiEval -PdeterministicOnly`. So **all four regression suites** (item 3 in SPEC) are covered by `gates.yml` jobs `backend` + `ai-eval`. Good — no extra wiring needed for SPEC item 3.
+
+**RESOLVED:** Plan 06-04 Task 1 — all four regression suites already run inside `gates.yml`'s `backend` + `ai-eval` jobs; no extra wiring required.
 
 ### 7.11 Open Question 4 — Where do the existing Playwright specs run in the new world?
 
@@ -1108,6 +1114,8 @@ Currently `e2e.yml` runs ALL specs in `apps/web/e2e/`. After Phase 6, `launch-go
 - **Test tagging** — `@e2e-stub` annotation on golden-path; default `pnpm test:e2e` excludes it; `pnpm test:e2e:golden` includes it. Cleaner separation, more pnpm scripts.
 
 Recommend tagging (Option 2). Planner decides exact tag mechanism (Playwright projects with `grep` / `grepInvert`, or `--project=golden-path`).
+
+**RESOLVED:** Plan 06-04 Task 1 — `e2e.yml` folds into `gates.yml` as a single Playwright job covering all 22 existing specs plus `launch-golden-path.spec.ts` (Chromium only, single project to keep gate time bounded).
 
 ---
 
