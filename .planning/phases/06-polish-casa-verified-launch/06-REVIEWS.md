@@ -500,3 +500,142 @@ OpenCode cycle 2's NEW concerns: 0 HIGH, 1 MEDIUM (Gmail data-flow gap — overl
 
 The cycle-2 number went UP not because of regressions but because the codex cycle-1 findings (8 HIGHs) became visible only after cycle-1 was committed. This is **late-signal stall**, not regression stall. The remaining cycle budget is 1.
 
+
+
+---
+
+# Cycle 2 Replan — Codebase Inspection Evidence + Disposition (2026-05-15)
+
+> Inspection performed by the planner per `<codebase_inspection_required>`. Evidence-grade findings (path, line, type) are recorded here; plan edits are made in 06-01..06-05.
+
+## Inspection 1 — Gmail consumer call sites (codex HIGH-1, opencode cycle-2 MEDIUM)
+
+`GmailApiClientFactory` is a **concrete `@Component public class`** at `backend/core/src/main/java/com/zeromail/core/gmail/gateway/GmailApiClientFactory.java:35`. **Every production consumer injects it CONCRETELY**, then calls `factory.buildGmailClient(accessToken)` to get a `com.google.api.services.gmail.Gmail` instance, then chains `gmail.users().messages()/drafts()/labels()...`:
+
+- `backend/core/src/main/java/com/zeromail/core/gmail/usecases/GmailDeliveryProcessingService.java:84` — `Gmail gmail = gmailApiClientFactory.buildGmailClient(...); gmail.users().messages()...:101,164`
+- `backend/core/src/main/java/com/zeromail/core/gmail/usecases/GmailPreviewReadService.java:140` — `gmail.users()...:281,447,461`
+- `backend/core/src/main/java/com/zeromail/core/gmail/usecases/GmailConnectionService.java:107` — `.buildGmailClient(...)`
+- `backend/core/src/main/java/com/zeromail/core/draft/usecases/DraftReplySourceLoader.java:50` — `gmail.users()`
+- `backend/core/src/main/java/com/zeromail/core/draft/usecases/ToneContextBuilder.java:226,240`
+- `backend/core/src/main/java/com/zeromail/core/triage/usecases/TriageGmailWriter.java:53,71,115,130,147,166,217,238` — heavy consumer (`addLabel`, `archive`, `drafts.create`, `drafts.delete`, `labels.list`)
+- `backend/core/src/main/java/com/zeromail/core/triage/usecases/SenderSafetyNetService.java:173`
+- `backend/worker/src/main/java/com/zeromail/worker/GmailWatchScheduler.java:69`
+
+**Verdict: codex HIGH-1 is FACTUALLY CORRECT.** Adding `interface GmailClient` + `@Primary` fake will NOT intercept these consumers (they inject the concrete class, not the interface). Even if we changed the bean type, the consumers then call into the real `Gmail` SDK object directly — an offline `HttpTransport` throws `IOException` on every call.
+
+**Correct surgical fix (per opencode cycle-2 NEW MEDIUM, option b):** Under the `e2e-stub` profile, replace the `GmailApiClientFactory` bean with a subclass `E2eStubGmailApiClientFactory extends GmailApiClientFactory` annotated `@Profile("e2e-stub") @Primary` that overrides `buildGmailClient(String)` (and `buildGmailClient(String, Duration)`) to return a custom `Gmail` subclass whose `users()` chain reads/writes the in-memory `ConcurrentHashMap<String, SeededMessage>`. The Google API client supports subclassing because `Gmail`, `Gmail.Users`, `Gmail.Users.Messages`, `Gmail.Users.Drafts` are all public concrete classes — override only the leaf methods triage actually calls (`get`, `list`, `modify`, `archive`, `drafts.create`, `drafts.delete`, `labels.list`). **REQUIRES executor-time judgement:** the surface area of `Gmail.users()` calls is large enough that the executor may instead choose to introduce a narrow `GmailClient` interface AND refactor all 8 consumer classes to inject it. Plan 06-01 surfaces BOTH options and requires the executor to pick one with explicit justification in the SUMMARY.
+
+## Inspection 2 — TokenVerifier subclass fragility (codex HIGH-2)
+
+`PubSubOidcAuthFilter` at `backend/api/src/main/java/com/zeromail/api/security/PubSubOidcAuthFilter.java:4` imports **`com.google.auth.oauth2.TokenVerifier`** (Google Auth Library), **NOT** `com.google.api.client.googleapis.auth.oauth2.TokenVerifier` as Plan 06-01 Task 3's reference code claimed. The plan also returned a `com.google.api.client.json.webtoken.JsonWebSignature` — that part is correct, because the Auth Library's `TokenVerifier.verify(String)` does return `com.google.api.client.json.webtoken.JsonWebSignature`.
+
+The Auth Library's `com.google.auth.oauth2.TokenVerifier` has a `protected TokenVerifier(Builder builder)` constructor + a non-final `public verify(String idToken) throws TokenVerifier.VerificationException` method. Subclassing via `TokenVerifier.newBuilder().setAudience(...).setIssuer(...).build()` then overriding `verify(String)` does compile.
+
+**Verdict: codex HIGH-2 is PARTIALLY VALID — package was wrong; subclass approach itself works.** Plan 06-01 Task 3 amended to use `com.google.auth.oauth2.TokenVerifier`.
+
+## Inspection 3 — `seedAuthenticatedSession` shape (codex HIGH-3, opencode cycle-2 LOW)
+
+`apps/web/e2e/chrome-test-utils.ts:56-76` only writes a literal browser cookie `ZEROMAIL_SESSION=playwright-session`. There is no Spring Session in Redis with that ID. The existing 22 specs work only because they use `installChromeApiMock` (page.route) to intercept all API responses — the cookie is never validated.
+
+Production `SecurityConfig` at `backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java:16` is `@Profile("!test")` (the negation excludes only the literal profile name `test`). The `e2e-stub` profile does NOT match `!test` → `SecurityConfig` IS active under `e2e-stub` → `/api/**` requires real OAuth2 authentication.
+
+The existing `TestSessionSupport` (`backend/api/src/test/java/com/zeromail/api/security/TestSessionSupport.java:45`) is a `@TestConfiguration` (test classpath only — not loadable from `src/main/java` under e2e-stub). Its pattern (header-based filter `X-Test-Subject` + `X-Test-Email`, custom `SecurityFilterChain @Order(2)`, populates `SecurityContextHolder` + `TenantContext.TENANT` ScopedValue) IS the correct model to mirror under `src/main/java/.../e2estub/`.
+
+**Verdict: codex HIGH-3 is FACTUALLY CORRECT.** Plan 06-01 Task 3 gains a fifth Java file `E2eStubAuthFilter.java` (or `E2eStubAuthConfig.java`) that mirrors `TestSessionSupport` but lives under `src/main/java` and is gated by `@Profile("e2e-stub") @ConditionalOnProperty`. Plan 06-01 Task 3 also adds a new endpoint `POST /api/test/e2e-stub/seed-session` that creates a `User` + `Tenant` row (or reuses an existing seeded one) and returns the `tenantId` (+ optionally sets a known session cookie) so the Playwright spec can both authenticate AND know which tenantId to use for `seedMessage`.
+
+## Inspection 4 — Draft acceptance below SPEC (codex HIGH-4)
+
+SPEC AC #1 explicitly says "request AI draft → confirm draft saved in stubbed Gmail". Cycle-1 plan downgraded to "assert 202/queued" (LOW-14 path b). The SPEC requirement can be met by:
+- A `@Profile("e2e-stub") @Primary` Spring AI `ChatModel` bean returning a canned `ChatResponse`. Spring AI 2.0.0-M6 exposes `org.springframework.ai.chat.model.ChatModel` with `call(Prompt)` and `stream(Prompt)`.
+- The e2e-stub `Gmail` interceptor (from Inspection 1) supports `users().drafts().create(...)` writing into the in-memory map AND `users().drafts().get(draftId)` reading from it.
+
+**Verdict: codex HIGH-4 is FACTUALLY CORRECT.** Plans 06-01 + 06-03 amended:
+- 06-01 Task 3 adds `E2eStubChatModel.java` returning a fixed `ChatResponse`.
+- 06-01 Task 3 Gmail interceptor extends to handle `drafts.create` + `drafts.get`.
+- 06-03 Task 2 step 7-8 reverts to the SPEC-mandated "draft saved in stub Gmail" assertion via a new peek endpoint `GET /api/test/e2e-stub/drafts?messageId=...`. Drop LOW-14 path (b).
+
+## Inspection 5 — Existing daily Playwright CI (codex HIGH-5)
+
+`.github/workflows/e2e.yml` (51 lines) does NOT start Postgres or Redis. It runs `pnpm --filter web run test:e2e` against the existing `playwright.config.ts` with a single `webServer` running `pnpm dev`. The existing 22 specs use `page.route()` mocks — they never need a real backend.
+
+If we fold `e2e.yml` into `gates.yml` AND change `playwright.config.ts` `webServer` to a 2-entry array (Frontend + Backend), the new daily `Gates / e2e` job will start Spring Boot **without** Postgres/Redis → Liquibase boot fails → readiness probe never returns 200 → 240s timeout → daily CI red.
+
+**Verdict: codex HIGH-5 is FACTUALLY CORRECT.** Plans 06-03 + 06-04 amended:
+- 06-03 Task 1: do NOT modify the root `playwright.config.ts` `webServer`. Instead, create a SECOND config `apps/web/playwright.golden.config.ts` that adds Backend webServer. Add a new pnpm script `test:e2e:golden` invoking `playwright test --config=playwright.golden.config.ts`. The default `test:e2e` and the daily `Gates / e2e` job continue to use the existing config (Frontend only).
+- 06-04 Task 3: `release.yml` `golden-path` job runs `pnpm --filter web run test:e2e:golden` AND pre-starts `docker compose up -d --wait` (root compose) for Postgres+Redis before the Playwright invocation.
+
+## Inspection 6 — Load-test tenant_id LIKE invalid (codex HIGH-6)
+
+Confirmed `tenant_id` is `uuid` in BOTH `triage_audit` (changelog 025-triage-audit.yaml:27) and `credit_ledger_entry` (changelog 014-credit-ledger-entry.yaml:17), both FK to `tenants.id` which is `type: uuid` (changelog 001-create-tenants.yaml:9). Java code uses `UUID tenantId` consistently.
+
+**Verdict: codex HIGH-6 is FACTUALLY CORRECT.** Plan 06-02 amended:
+- Task 2 adds `loadtest/scripts/seed-tenants.sql` + a new `loadtest_tenant` table (or a tagged tenants row marker) inserting 50 deterministic UUIDs into `tenants` AFTER Liquibase finishes.
+- Task 1's k6 script reads the 50 UUIDs from `__ENV.LOADTEST_TENANT_UUIDS` (comma-separated).
+- Task 4's invariant SQL switches to `WHERE tenant_id IN (SELECT tenant_id FROM loadtest_tenant)` and the inverse for invariant (a) (`NOT IN`).
+- `release.yml` loadtest job adds a step between `up -d --wait` and `k6 run`: `psql ... -f loadtest/scripts/seed-tenants.sql` + export the resulting UUID list to `LOADTEST_TENANT_UUIDS`.
+
+## Inspection 7 — Ledger reconciliation model (codex HIGH-7)
+
+`CreditLedgerEntryEntity.java` lines 40-72 confirm sign semantics: TOPUP=+, RESERVE=-, SETTLE=0, RELEASE=+. `CreditLedgerEntryRepository.java:15-29` confirms held = unfinalized RESERVE. The check constraint at changelog 014 line 67 is `kind IN ('TOPUP','RESERVE','SETTLE','RELEASE')`. `uq_credit_ledger_entry_ref_kind` (UNIQUE constraint, line 62-65) guarantees per-(ref_type, ref_id) idempotency for each kind.
+
+**Verdict: codex HIGH-7 is FACTUALLY CORRECT.** Plan 06-02 Task 4 invariant (b) replaced with two checks:
+1. **No double-finalize.** For every RESERVATION ref_id: at most one SETTLE, at most one RELEASE, never both.
+2. **Non-negative balance per tenant.** `SUM(amount_credits)` per loadtest tenant must be `>= 0`.
+
+## Inspection 8 — Gradle buildscript classpath for JDBC (codex HIGH-8)
+
+`backend/api/build.gradle.kts` has NO `buildscript {}` block; the project's `implementation` (`org.postgresql:postgresql:*`) is on `runtimeClasspath`, NOT on the buildscript classpath that runs the Gradle `doLast {}` block. `java.sql.DriverManager.getConnection(...)` from buildscript code will fail with `No suitable driver found`.
+
+**Verdict: codex HIGH-8 is FACTUALLY CORRECT.** Plan 06-02 Task 4 switches from in-process `DriverManager` to a Gradle `Exec`-style invocation of `psql` (already installed on `ubuntu-latest` GHA runners + documented as prereq in `loadtest/README.md`). Three invariant queries become three `psql -tAc "..."` invocations.
+
+## Inspection 9 — Committed load-test result artifact (codex HIGH-9)
+
+SPEC AC #2 says the report is committed. Cycle-1 had `release.yml` generate it AFTER the tag push. To break the cycle, the operator runs the load test locally BEFORE cutting the tag and commits the result file as a normal commit on `main`; the tag is then cut on that signed commit.
+
+**Verdict: codex HIGH-9 is FACTUALLY CORRECT.** Plans 06-02 + 06-05 amended:
+- 06-02 Task 5 README adds a "Pre-tag step" section.
+- 06-05 Task 4 runbook adds Step 2.5: run local load test, commit `06-LOAD-TEST-RESULT.md`, push, then cut tag on that commit.
+
+## Inspection 10 — RC tag / sign-off circularity (codex HIGH-10)
+
+The cycle-1 flow cuts the tag, waits for the gate, fills in `LAUNCH-GO-NOGO.md`, then commits the sign-off. The tag points at the pre-sign-off commit.
+
+**Verdict: codex HIGH-10 is FACTUALLY CORRECT.** Plan 06-05 Task 4 adopts a two-tag pattern:
+- Step 3a: Cut `v1.0.0-rc1-candidate` (matches existing `'v*.*.*-rc*'` glob — confirmed, `*` is greedy across `-`).
+- Step 5: Operator fills `LAUNCH-GO-NOGO.md` item (a) with the candidate run's URL, checks boxes, commits sign-off.
+- Step 7: Cut the FINAL `v1.0.0-rc1` annotated tag on the signed commit. Push exactly once.
+- Step 8: Delete the candidate tag locally + remotely (housekeeping only; not the launch tag).
+
+## Inspection 11 — Base64 placeholder key length (opencode cycle-2 LOW)
+
+`ZTJlLXN0dWItcmVmcmVzaC1rZXktMzItYnl0ZXMtcGFkZGluZw==` decodes to `e2e-stub-refresh-key-32-bytes-padding` = 37 bytes. AES-256 requires 32 bytes. The repo already uses `AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=` (32 × A) at `backend/api/build.gradle.kts:57` + `ApiPostgresTestBase.java:68`.
+
+**Verdict: opencode cycle-2 LOW is FACTUALLY CORRECT.** Plan 06-01 Task 3 File 4 amended to use `AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=`.
+
+---
+
+## Disposition Summary (cycle 2 replan)
+
+| # | Finding | Disposition |
+|---|---------|-------------|
+| 1 | Gmail interface doesn't swap prod usage | APPLIED — 06-01 Task 3 rewritten; subclass `GmailApiClientFactory` per opencode option b |
+| 2 | TokenVerifier subclass fragility | APPLIED — 06-01 Task 3 uses correct package `com.google.auth.oauth2.TokenVerifier` |
+| 3 | OAuth sign-up not really exercised | APPLIED — 06-01 Task 3 adds `E2eStubAuthFilter` + seed-session endpoint; 06-03 Task 2 uses it |
+| 4 | Draft acceptance below SPEC | APPLIED — 06-01 Task 3 adds `E2eStubChatModel` + draft interceptor; 06-03 Task 2 asserts saved draft; LOW-14 (b) dropped |
+| 5 | Global Playwright webServer breaks daily CI | APPLIED — 06-03 Task 1 splits configs; 06-04 Task 3 uses dedicated golden config |
+| 6 | Load-test tenant_id LIKE invalid | APPLIED — 06-02 Tasks 1, 2, 4 use UUID-seeded tenants via `seed-tenants.sql` + `loadtest_tenant` allow-list |
+| 7 | Ledger SUM=0 oversimplified | APPLIED — 06-02 Task 4 invariant (b) replaced with non-negative balance + no-double-finalize checks |
+| 8 | loadtestVerify JDBC classpath | APPLIED — 06-02 Task 4 switches to `psql` shell-out via Gradle `Exec` |
+| 9 | Committed load-test result artifact | APPLIED — 06-02 Task 5 + 06-05 Task 4 add pre-tag local-run + commit step |
+| 10 | RC tag / sign-off circularity | APPLIED — 06-05 Task 4 adopts two-tag pattern (candidate → sign-off commit → final rc1) |
+| opencode-c2 MEDIUM | Gmail data-flow gap | APPLIED (merged into #1) |
+| opencode-c2 LOW | base64 key length | APPLIED — 06-01 Task 3 File 4 uses `AAAA...A=` (32 × A) |
+| opencode-c2 LOW | tenant-ID coordination | APPLIED (folded into #3 — seed-session returns tenantId) |
+
+No findings REJECTED.
+
+## Deferred to executor-time codebase changes (not plan-text fixes)
+
+- **Finding 1 large-refactor option.** Executor may pick "narrow `GmailClient` interface + refactor all 8 consumers" OR "subclass `GmailApiClientFactory` + intercepting `Gmail`". Both surfaces are documented in 06-01 Task 3 `<read_first>` + `<action>`; executor justifies the choice in the SUMMARY.
+- **Finding 5 second Playwright config.** The executor writes `apps/web/playwright.golden.config.ts` from scratch; 06-03 Task 1 gives the shape but executor verifies the compose pattern with `defineConfig(...)` works under the project's Playwright version.
+- **Finding 6 50-UUID strategy.** Executor picks hard-coded list vs `uuid_generate_v5` and documents in the SUMMARY; k6 receives the same 50 UUIDs via `__ENV`.
