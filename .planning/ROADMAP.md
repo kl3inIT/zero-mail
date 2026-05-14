@@ -426,7 +426,7 @@ Plans:
   4. Prompt-injection regression suite, ArchUnit suite, and golden-set drift check all pass on the release candidate commit.
   5. Production runbook exists (on-call, Pub/Sub backlog recovery, `users.watch` renewal incidents, ledger reconciliation) and a launch go/no-go has been signed off against the trust story (never auto-sends, no stored bodies, undoable actions).
 **Plans**: 5 plans
-- [ ] 06-01-PLAN.md — Test-only Spring profile scaffolding (e2e-stub + loadtest beans, GmailClient interface, TokenVerifier @Bean, ArchUnit guards) — Wave 1
+- [x] 06-01-PLAN.md — Test-only Spring profile scaffolding (e2e-stub + loadtest beans, GmailClient interface, TokenVerifier @Bean, ArchUnit guards) — Wave 1
 - [ ] 06-02-PLAN.md — k6 + docker-compose load harness + bootBuildImage wiring + :backend:api:loadtestVerify Gradle task with three invariant assertions — Wave 2
 - [ ] 06-03-PLAN.md — Playwright golden-path spec under e2e-stub profile + playwright.config webServer array — Wave 2
 - [ ] 06-04-PLAN.md — Reusable gates.yml + slimmed ci.yml + tag-triggered release.yml with golden-path + loadtest + release-gates-summary aggregator — Wave 3

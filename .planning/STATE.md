@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: "Phase 05C shipped - PR #35"
-stopped_at: Phase 6 context gathered
-last_updated: "2026-05-14T15:33:09.164Z"
-last_activity: "2026-05-14 - Resolved PR #36 STATE.md merge conflict after pausing CodeRabbit"
+status: executing
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-05-14T19:54:07.055Z"
+last_activity: 2026-05-14
 progress:
   total_phases: 17
   completed_phases: 16
-  total_plans: 118
-  completed_plans: 118
-  percent: 100
+  total_plans: 123
+  completed_plans: 119
+  percent: 97
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 6 — launch hardening and CASA-verified release readiness
+**Current focus:** Phase 06 — polish-casa-verified-launch
 
 ## Current Position
 
-Phase: 05C (user-surface-analytics-daily-digest) — COMPLETE
-Plan: 4 of 4
-Status: Phase 05C shipped - PR #35
-Last activity: 2026-05-14 - Resolved PR #36 STATE.md merge conflict after pausing CodeRabbit
+Phase: 06 (polish-casa-verified-launch) — EXECUTING
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-05-14
 
-Progress: [██████████] 100%
+Progress: [██████████] 97%
 
 ## Performance Metrics
 
@@ -139,6 +139,7 @@ Progress: [██████████] 100%
 | Phase 05C P02 | 35min | 2 tasks | 16 files |
 | Phase 05C P03 | 1h 46m | 3 tasks | 43 files |
 | Phase 05C P04 | 1h 55m | 2 tasks | 37 files |
+| Phase 06-polish-casa-verified-launch P01 | 1h 51m | 4 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -302,6 +303,9 @@ Recent decisions affecting current work:
 - [Phase 04]: Plan 07 cleanup counts outstanding publications with JdbcTemplate — The public incomplete and failed publication views do not expose counts on the worker compile classpath; counting against the Liquibase-owned event_publication table keeps cleanup observability compile-safe.
 - [Phase 04]: Plan 07 pending reaper ships conservative FAILED transition — Metadata verification to APPLIED remains optional and deferred; the shipped PT30M abandoned threshold is guarded to stay above the PT2M saga retry lease.
 - [Phase 05A]: Plan 06 closes Phase 05A with WEB-02 intentionally unchecked while WEB-01/WEB-03/WEB-04 are complete. — WEB-02 spans Phase 5A/5B/5C: 5A delivered onboarding, rules+live-preview, triage audit log+undo, and billing UI, but draft review, analytics, and real audit-list/ledger-history backend endpoints remain tracked in 05A-GAPS.md.
+- [Phase 06]: Plan 01 uses an e2e-stub @Primary GmailApiClientFactory subclass rather than an eight-consumer GmailClient interface refactor. — All inspected production consumers inject GmailApiClientFactory concretely; the subclass intercepts the existing seam with less blast radius.
+- [Phase 06]: Plan 01 keeps Google Auth TokenVerifier as the production bean and wraps it with PubSubTokenVerifier for launch-profile fakes. — This preserves production verifier behavior while letting e2e-stub/loadtest fakes return verified email addresses without fragile Google Auth internals.
+- [Phase 06]: Plan 01 makes E2eStubChatModel implement both ChatModel and LlmModelClient. — The production draft path injects LlmModelClient, so implementing both seams lets the golden-path draft smoke save canned text in stub Gmail.
 
 ### Roadmap Evolution
 
@@ -370,6 +374,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-14T15:33:09.137Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-polish-casa-verified-launch/06-CONTEXT.md
+Last session: 2026-05-14T19:54:07.033Z
+Stopped at: Completed 06-01-PLAN.md
+Resume file: None

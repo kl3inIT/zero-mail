@@ -44,7 +44,7 @@
     "plan_bounce_passes": 2,
     "plan_chunked": false,
     "auto_prune_state": false,
-    "_auto_chain_active": true,
+    "_auto_chain_active": false,
     "plan_review_convergence": true,
     "post_planning_gaps": true,
     "context_coverage_gate": true,
