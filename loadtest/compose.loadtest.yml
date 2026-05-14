@@ -1,0 +1,110 @@
+name: zeromail-loadtest
+
+services:
+  postgres-loadtest:
+    image: postgres:17.6
+    environment:
+      POSTGRES_DB: zeromail
+      POSTGRES_USER: zeromail
+      POSTGRES_PASSWORD: zeromail
+    ports:
+      - "15433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zeromail -d zeromail"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+  redis-loadtest:
+    image: redis:7.2
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  api:
+    image: zeromail-api:loadtest
+    depends_on:
+      postgres-loadtest:
+        condition: service_healthy
+      redis-loadtest:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: loadtest
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      DB_URL: jdbc:postgresql://postgres-loadtest:5432/zeromail
+      DB_USER: zeromail
+      DB_PASSWORD: zeromail
+      REDIS_HOST: redis-loadtest
+      REDIS_PORT: "6379"
+      ZEROMAIL_LOADTEST_ENABLED: "true"
+      REFRESH_TOKEN_KEY_BASE64: ${REFRESH_TOKEN_KEY_BASE64}
+      PUBSUB_PUSH_AUDIENCE_URL: http://api:8080/internal/pubsub/gmail
+      PUBSUB_SA_PRINCIPAL_EMAIL: loadtest@loadtest.invalid
+      PUBSUB_OIDC_CERTIFICATES_URL: https://www.googleapis.com/oauth2/v3/certs
+      GOOGLE_OAUTH_CLIENT_ID: loadtest
+      GOOGLE_OAUTH_CLIENT_SECRET: loadtest
+      SEPAY_WEBHOOK_API_KEY: loadtest
+      ZEROMAIL_BILLING_BANK_CODE: loadtest
+      ZEROMAIL_BILLING_BANK_NAME: loadtest
+      ZEROMAIL_BILLING_ACCOUNT_NUMBER: "0000"
+      ZEROMAIL_BILLING_ACCOUNT_NAME: loadtest
+      ZEROMAIL_BILLING_QR_PAYLOAD: ""
+      ZEROMAIL_LLM_PLATFORM_API_KEY: loadtest
+      SPRING_AI_OPENAI_API_KEY: loadtest
+      SPRING_AI_ANTHROPIC_API_KEY: loadtest
+      SPRING_AI_GOOGLE_GENAI_API_KEY: loadtest
+      SPRING_AI_DEEPSEEK_API_KEY: loadtest
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health/readiness"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 20s
+
+  worker:
+    image: zeromail-worker:loadtest
+    depends_on:
+      postgres-loadtest:
+        condition: service_healthy
+      redis-loadtest:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: loadtest
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      SPRING_LIQUIBASE_ENABLED: "false"
+      DB_URL: jdbc:postgresql://postgres-loadtest:5432/zeromail
+      DB_USER: zeromail
+      DB_PASSWORD: zeromail
+      REDIS_HOST: redis-loadtest
+      REDIS_PORT: "6379"
+      ZEROMAIL_LOADTEST_ENABLED: "true"
+      REFRESH_TOKEN_KEY_BASE64: ${REFRESH_TOKEN_KEY_BASE64}
+      GOOGLE_PUBSUB_TOPIC_NAME: projects/loadtest/topics/gmail
+      GOOGLE_OAUTH_CLIENT_ID: loadtest
+      GOOGLE_OAUTH_CLIENT_SECRET: loadtest
+      SEPAY_WEBHOOK_API_KEY: loadtest
+      ZEROMAIL_BILLING_BANK_CODE: loadtest
+      ZEROMAIL_BILLING_BANK_NAME: loadtest
+      ZEROMAIL_BILLING_ACCOUNT_NUMBER: "0000"
+      ZEROMAIL_BILLING_ACCOUNT_NAME: loadtest
+      ZEROMAIL_BILLING_QR_PAYLOAD: ""
+      ZEROMAIL_LLM_PLATFORM_API_KEY: loadtest
+      RESEND_API_KEY: loadtest
+      APP_BASE_URL: http://localhost:3000
+      SPRING_AI_OPENAI_API_KEY: loadtest
+      SPRING_AI_ANTHROPIC_API_KEY: loadtest
+      SPRING_AI_GOOGLE_GENAI_API_KEY: loadtest
+      SPRING_AI_DEEPSEEK_API_KEY: loadtest
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 20s
