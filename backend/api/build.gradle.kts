@@ -1,3 +1,4 @@
+import org.gradle.api.tasks.Exec
 import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
 
 plugins {
@@ -40,6 +41,14 @@ tasks.named<BootBuildImage>("bootBuildImage") {
         .java
         .getMethod("set", Any::class.java)
         .invoke(bootImageNameProperty, "zeromail-api:loadtest")
+}
+
+tasks.register<Exec>("loadtestVerify") {
+    group = "verification"
+    description =
+        "Runs the three loadtest invariant assertions via loadtest/scripts/loadtest-verify.sh (psql shell-out per codex HIGH-8). Assumes worker queue is drained (call loadtest/scripts/wait-for-worker-drain.sh first per MED-3)."
+    workingDir = rootProject.projectDir
+    commandLine("bash", "loadtest/scripts/loadtest-verify.sh")
 }
 
 openApi {
