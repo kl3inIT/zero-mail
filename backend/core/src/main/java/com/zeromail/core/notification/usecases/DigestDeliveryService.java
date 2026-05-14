@@ -82,7 +82,7 @@ public class DigestDeliveryService {
                 DigestDeliveryStatus.PENDING, cutoff, PageRequest.of(0, batchLimit));
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void deleteForTenant(UUID tenantId) {
         digestDeliveryRepository.deleteByTenantId(tenantId);
     }
