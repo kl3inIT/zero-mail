@@ -24,14 +24,15 @@ public class DigestDispatchScheduler {
     private static final Logger log = LoggerFactory.getLogger(DigestDispatchScheduler.class);
     private static final String DUE_TENANT_SQL =
             """
-            SELECT np.tenant_id, t.time_zone, np.digest_send_hour_local, u.preferred_language
+            SELECT DISTINCT ON (np.tenant_id)
+                   np.tenant_id, t.time_zone, np.digest_send_hour_local, u.preferred_language
             FROM notification_preference np
             JOIN tenants t ON t.id = np.tenant_id
             JOIN users u ON u.tenant_id = t.id
             WHERE np.digest_enabled = true
               AND np.channel = 'EMAIL'
               AND EXTRACT(HOUR FROM (?::timestamptz AT TIME ZONE t.time_zone))::int = np.digest_send_hour_local
-            ORDER BY np.tenant_id
+            ORDER BY np.tenant_id, u.created_at ASC, u.id ASC
             """;
 
     private final JdbcTemplate jdbcTemplate;

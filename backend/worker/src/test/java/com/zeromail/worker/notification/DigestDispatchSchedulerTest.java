@@ -114,6 +114,22 @@ class DigestDispatchSchedulerTest extends PostgresContainerTest {
     }
 
     @Test
+    void due_tenant_lookup_returns_one_row_per_tenant_when_multiple_users_exist() {
+        UUID tenantId = seedTenant("owner@example.test", true, 20, "vi");
+        DigestDispatchTestData.seedUser(jdbcTemplate, tenantId, "member@example.test", "en");
+
+        List<DigestDueTenant> dueTenants = scheduler.findTenantsDueForDigest(REFERENCE_INSTANT);
+
+        assertThat(dueTenants)
+                .singleElement()
+                .satisfies(
+                        dueTenant -> {
+                            assertThat(dueTenant.tenantId()).isEqualTo(tenantId);
+                            assertThat(dueTenant.preferredLanguage()).isEqualTo("vi");
+                        });
+    }
+
+    @Test
     void one_tenant_failure_does_not_roll_back_other_tenant_dispatches() {
         UUID firstTenantId = seedTenant("first@example.test", true, 20, "vi");
         UUID failingTenantId = seedTenant("failing@example.test", true, 20, "vi");

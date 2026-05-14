@@ -45,7 +45,7 @@ final class DigestDispatchTestData {
                 """,
                 UUID.randomUUID(),
                 tenantId,
-                "google-subject-" + tenantId,
+                "google-subject-" + tenantId + "-" + UUID.randomUUID(),
                 email,
                 preferredLanguage);
     }
