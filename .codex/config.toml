@@ -15,4 +15,4 @@ args = [
 ]
 
 [mcp_servers.postgres.env]
-DATABASE_URI = "postgresql://zeromail:zeromail@host.docker.internal:15432/zeromail"
+DATABASE_URI = "postgresql://zeromail:zeromail@host.docker.internal:5432/zeromail"
