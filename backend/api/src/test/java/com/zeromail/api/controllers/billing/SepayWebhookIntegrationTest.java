@@ -73,8 +73,18 @@ class SepayWebhookIntegrationTest extends ApiPostgresTestBase {
                         tenantId,
                         code,
                         amountVnd,
+                        null,
+                        "PKG_TEST",
+                        "Test package",
+                        Math.toIntExact(amountVnd / 1_000L),
                         BillingTopupIntentStatus.PENDING,
-                        Instant.now().plus(Duration.ofHours(24)));
+                        Instant.now().plus(Duration.ofHours(24)),
+                        null,
+                        null,
+                        null,
+                        null,
+                        code,
+                        null);
         ScopedValue.where(TenantContext.TENANT, tenantId.toString())
                 .run(() -> billingTopupIntentRepository.saveAndFlush(intent));
     }

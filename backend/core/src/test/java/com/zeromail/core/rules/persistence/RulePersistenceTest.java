@@ -186,6 +186,14 @@ class RulePersistenceTest extends PostgresContainerTest {
     }
 
     @Test
+    void schema_excludes_raw_email_content_columns() {
+        assertThat(columnExists("rules", "raw_body")).isFalse();
+        assertThat(columnExists("rules", "snippet")).isFalse();
+        assertThat(columnExists("rules", "prompt")).isFalse();
+        assertThat(columnExists("rules", "completion")).isFalse();
+    }
+
+    @Test
     void onboarding_template_keys_align_with_materializable_catalog_keys() {
         UUID tenantId = seedTenant("rules-onboarding-alignment");
         insertOnboardingSelection(UUID.randomUUID(), tenantId, ARCHIVE_RECEIPTS_KEY);
@@ -239,6 +247,20 @@ class RulePersistenceTest extends PostgresContainerTest {
                 tenantId,
                 orderIndex,
                 templateKey);
+    }
+
+    private boolean columnExists(String tableName, String columnName) {
+        Integer columnCount =
+                jdbcTemplate.queryForObject(
+                        """
+            select count(*)
+            from information_schema.columns
+            where table_name = ? and column_name = ?
+            """,
+                        Integer.class,
+                        tableName,
+                        columnName);
+        return columnCount != null && columnCount > 0;
     }
 
     private void insertOnboardingSelection(UUID selectionId, UUID tenantId, String templateKey) {

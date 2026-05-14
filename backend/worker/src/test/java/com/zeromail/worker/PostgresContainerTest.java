@@ -6,12 +6,21 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringBootConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigurationExcludeFilter;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.context.TypeExcludeFilter;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-@SpringBootTest(classes = ZeroMailWorkerApplication.class)
+@SpringBootTest(classes = PostgresContainerTest.WorkerTestApplication.class)
 public abstract class PostgresContainerTest {
 
     protected static final PostgreSQLContainer<?> POSTGRES;
@@ -78,4 +87,22 @@ public abstract class PostgresContainerTest {
         return cipher.encrypt(
                 "worker-refresh-token".getBytes(StandardCharsets.UTF_8), tenantId.toString());
     }
+
+    @SpringBootConfiguration
+    @EnableAutoConfiguration
+    @ComponentScan(
+            basePackages = {"com.zeromail.worker", "com.zeromail.core"},
+            excludeFilters = {
+                @ComponentScan.Filter(type = FilterType.CUSTOM, classes = TypeExcludeFilter.class),
+                @ComponentScan.Filter(
+                        type = FilterType.CUSTOM,
+                        classes = AutoConfigurationExcludeFilter.class),
+                @ComponentScan.Filter(
+                        type = FilterType.ASSIGNABLE_TYPE,
+                        classes = ZeroMailWorkerApplication.class)
+            })
+    @ConfigurationPropertiesScan(basePackages = "com.zeromail")
+    @EntityScan(basePackages = "com.zeromail.core")
+    @EnableJpaRepositories(basePackages = "com.zeromail.core")
+    static class WorkerTestApplication {}
 }

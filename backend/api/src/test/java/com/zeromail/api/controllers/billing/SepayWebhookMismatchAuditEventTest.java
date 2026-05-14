@@ -53,7 +53,7 @@ class SepayWebhookMismatchAuditEventTest extends ApiPostgresTestBase {
     }
 
     @Test
-    void amount_mismatch_emits_audit_event_with_vnd_numbers() {
+    void amount_or_package_mismatch_emits_audit_event_with_vnd_numbers() {
         UUID tenantId = seedTenant();
         String code = "ABCD2345";
         long sensitiveSepayTransactionId = 987_654_321_987_654_321L;
@@ -91,7 +91,7 @@ class SepayWebhookMismatchAuditEventTest extends ApiPostgresTestBase {
 
         String combinedLogOutput = String.join("\n", capturedLogLines());
         assertThat(combinedLogOutput)
-                .contains("event=sepay_webhook_amount_mismatch")
+                .contains("event=sepay_webhook_amount_or_package_mismatch")
                 .contains("intentVnd=50000")
                 .contains("actualVnd=99000")
                 .doesNotContain("event=sepay_unknown_code")
@@ -116,8 +116,18 @@ class SepayWebhookMismatchAuditEventTest extends ApiPostgresTestBase {
                         tenantId,
                         code,
                         amountVnd,
+                        null,
+                        "PKG_TEST",
+                        "Test package",
+                        Math.toIntExact(amountVnd / 1_000L),
                         BillingTopupIntentStatus.PENDING,
-                        Instant.now().plus(Duration.ofHours(24)));
+                        Instant.now().plus(Duration.ofHours(24)),
+                        null,
+                        null,
+                        null,
+                        null,
+                        code,
+                        null);
         ScopedValue.where(TenantContext.TENANT, tenantId.toString())
                 .run(() -> billingTopupIntentRepository.saveAndFlush(intent));
     }
