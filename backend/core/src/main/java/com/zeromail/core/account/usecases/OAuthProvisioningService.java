@@ -191,11 +191,15 @@ public class OAuthProvisioningService {
             // complete state. Opening a second transaction here would break the
             // single-transaction atomicity contract (CR-01 / HIGH-1 fix) if that second
             // transaction fails, leaving a partial state.
-            log.warn("event=oauth_provisioning_race");
             UserEntity raceWinner =
                     userRepository
                             .findByGoogleSubject(googleSubject)
                             .orElseThrow(() -> dataIntegrityViolation);
+            log.warn(
+                    "event=oauth_provisioning_race tenantId={} googleSubjectHash={} failureType={}",
+                    raceWinner.getTenantId(),
+                    Integer.toHexString(googleSubject.hashCode()),
+                    dataIntegrityViolation.getClass().getSimpleName());
             return new BundledProvisioningResult(
                     raceWinner.getTenantId(), raceWinner.getId(), false);
         }
