@@ -66,6 +66,12 @@ public abstract class PostgresContainerTest {
         dynamicPropertyRegistry.add("spring.ai.anthropic.api-key", () -> "test-anthropic-key");
         dynamicPropertyRegistry.add(
                 "zero-mail.llm.platform.api-key", () -> "test-platform-llm-key");
+        dynamicPropertyRegistry.add(
+                "zero-mail.notification.email.resend.api-key", () -> "test-resend-key");
+        dynamicPropertyRegistry.add(
+                "zero-mail.notification.email.from-address", () -> "notifications@zero-mail.test");
+        dynamicPropertyRegistry.add(
+                "zero-mail.notification.app-base-url", () -> "https://zero-mail.test");
     }
 
     protected byte[] encryptedRefreshToken(UUID tenantId) {

@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: 033-tenants-time-zone
+      author: zeromail
+      comment: >
+        Adds tenant-level IANA time zone used by the daily digest scheduler. Default is a string
+        literal, not a computed expression, so existing rows backfill safely.
+      changes:
+        - addColumn:
+            tableName: tenants
+            columns:
+              - column:
+                  name: time_zone
+                  type: varchar(64)
+                  defaultValue: Asia/Ho_Chi_Minh
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropColumn:
+            tableName: tenants
+            columnName: time_zone

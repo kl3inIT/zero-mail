@@ -4,8 +4,11 @@ import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
+import com.zeromail.core.notification.domain.ChannelType;
+import com.zeromail.core.notification.usecases.NotificationPreferenceService;
 import com.zeromail.core.onboarding.domain.OnboardingStep;
 import com.zeromail.core.tenant.TenantContext;
+import com.zeromail.core.tenant.persistence.TenantEntity;
 import com.zeromail.core.tenant.usecases.TenantService;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
@@ -43,6 +46,7 @@ public class OAuthProvisioningService {
     private final UserRepository userRepository;
     private final TenantService tenantService;
     private final GmailConnectionService gmailConnectionService;
+    private final NotificationPreferenceService notificationPreferenceService;
     private final RefreshTokenCipher refreshTokenCipher;
     private final TransactionTemplate bundledTransaction;
 
@@ -50,11 +54,13 @@ public class OAuthProvisioningService {
             UserRepository userRepository,
             TenantService tenantService,
             GmailConnectionService gmailConnectionService,
+            NotificationPreferenceService notificationPreferenceService,
             RefreshTokenCipher refreshTokenCipher,
             PlatformTransactionManager transactionManager) {
         this.userRepository = userRepository;
         this.tenantService = tenantService;
         this.gmailConnectionService = gmailConnectionService;
+        this.notificationPreferenceService = notificationPreferenceService;
         this.refreshTokenCipher = refreshTokenCipher;
         this.bundledTransaction = new TransactionTemplate(transactionManager);
         this.bundledTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
@@ -150,6 +156,8 @@ public class OAuthProvisioningService {
                                     bundledTransaction.executeWithoutResult(
                                             _ -> {
                                                 tenantService.createTenant(tenantId, email);
+                                                tenantService.setTimeZoneIfAbsent(
+                                                        tenantId, TenantEntity.DEFAULT_TIME_ZONE);
                                                 UserEntity savedUser =
                                                         userRepository.save(
                                                                 new UserEntity(
@@ -162,6 +170,8 @@ public class OAuthProvisioningService {
                                                                 refreshTokenPlaintext.getBytes(
                                                                         StandardCharsets.UTF_8),
                                                                 tenantId.toString());
+                                                notificationPreferenceService.insertDefaults(
+                                                        tenantId, ChannelType.EMAIL, true, 20);
                                                 gmailConnectionService.upsert(
                                                         tenantId,
                                                         email,
@@ -181,11 +191,15 @@ public class OAuthProvisioningService {
             // complete state. Opening a second transaction here would break the
             // single-transaction atomicity contract (CR-01 / HIGH-1 fix) if that second
             // transaction fails, leaving a partial state.
-            log.warn("event=oauth_provisioning_race");
             UserEntity raceWinner =
                     userRepository
                             .findByGoogleSubject(googleSubject)
                             .orElseThrow(() -> dataIntegrityViolation);
+            log.warn(
+                    "event=oauth_provisioning_race tenantId={} googleSubjectHash={} failureType={}",
+                    raceWinner.getTenantId(),
+                    Integer.toHexString(googleSubject.hashCode()),
+                    dataIntegrityViolation.getClass().getSimpleName());
             return new BundledProvisioningResult(
                     raceWinner.getTenantId(), raceWinner.getId(), false);
         }

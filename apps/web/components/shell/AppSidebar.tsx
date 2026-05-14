@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
+  BarChart3,
   CircleDotDashed,
   CreditCard,
   Inbox,
@@ -41,6 +42,7 @@ type NavItem = {
   href: string;
   labelKey:
     | 'nav.triage'
+    | 'nav.analytics'
     | 'nav.needsReply'
     | 'nav.rules'
     | 'nav.billing'
@@ -52,6 +54,7 @@ type NavItem = {
 
 const MAIL_NAV: NavItem[] = [
   { href: '/triage', labelKey: 'nav.triage', icon: Inbox },
+  { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
   { href: '/needs-reply', labelKey: 'nav.needsReply', icon: MailQuestion, badge: 'needs-reply' },
 ];
 

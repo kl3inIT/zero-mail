@@ -15,9 +15,9 @@ public interface MailMessageObservedRepository
             value =
                     """
             INSERT INTO mail_message_observed
-              (tenant_id, gmail_message_id, gmail_thread_id, history_id, label_ids, internal_date, observed_at)
+              (tenant_id, gmail_message_id, gmail_thread_id, history_id, label_ids, internal_date, sender_email, observed_at)
             VALUES
-              (:tenantId, :gmailMessageId, :gmailThreadId, :historyId, :labelIds, :internalDate, NOW())
+              (:tenantId, :gmailMessageId, :gmailThreadId, :historyId, :labelIds, :internalDate, :senderEmail, NOW())
             ON CONFLICT (tenant_id, gmail_message_id) DO NOTHING
             """,
             nativeQuery = true)
@@ -28,5 +28,6 @@ public interface MailMessageObservedRepository
             @Param("gmailThreadId") String gmailThreadId,
             @Param("historyId") Long historyId,
             @Param("labelIds") String[] labelIds,
-            @Param("internalDate") Long internalDate);
+            @Param("internalDate") Long internalDate,
+            @Param("senderEmail") String senderEmail);
 }

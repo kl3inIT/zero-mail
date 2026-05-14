@@ -1,0 +1,73 @@
+databaseChangeLog:
+  - changeSet:
+      id: 034-notification-preference
+      author: zeromail
+      comment: >
+        Per-tenant notification preferences. The JPA entity extends AbstractTenantOwnedEntity, so
+        the table uses a single UUID id primary key plus a unique business key on tenant/channel.
+      changes:
+        - createTable:
+            tableName: notification_preference
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_notification_preference_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: channel
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: digest_enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: digest_send_hour_local
+                  type: int
+                  defaultValueNumeric: 20
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: notification_preference
+            columnNames: tenant_id, channel
+            constraintName: uq_notification_preference_tenant_channel
+        - sql:
+            comment: Digest send hour is stored as a local hour in 24-hour format.
+            sql: ALTER TABLE notification_preference ADD CONSTRAINT ck_notification_preference_digest_hour CHECK (digest_send_hour_local BETWEEN 0 AND 23)
+        - sql:
+            comment: Scheduler fanout predicate for enabled email digests.
+            sql: CREATE INDEX idx_notification_preference_due ON notification_preference (tenant_id) WHERE digest_enabled = true AND channel = 'EMAIL'
+      rollback:
+        - dropTable:
+            tableName: notification_preference

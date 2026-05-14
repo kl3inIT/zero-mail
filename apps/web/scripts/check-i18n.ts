@@ -47,6 +47,8 @@ const EN_SCAN_FILES = [
   'app/(protected)/onboarding/page.tsx',
   'app/(protected)/(app)/settings/page.tsx',
   'app/(protected)/(app)/settings/privacy/page.tsx',
+  'app/(protected)/(app)/analytics/page.tsx',
+  'app/(protected)/(app)/analytics/loading.tsx',
   'app/(protected)/(app)/rules/page.tsx',
   'app/(protected)/(app)/triage/page.tsx',
   'app/(protected)/(app)/needs-reply/page.tsx',
@@ -91,6 +93,14 @@ const EN_SCAN_FILES = [
   'features/triage/components/ShadowModeCard.tsx',
   'features/triage/components/SenderSafetyNetList.tsx',
   'features/triage/components/SenderRow.tsx',
+  'features/analytics/components/AnalyticsPageClient.tsx',
+  'features/analytics/components/VolumePanel.tsx',
+  'features/analytics/components/TimeSavedPanel.tsx',
+  'features/analytics/components/TopSendersPanel.tsx',
+  'features/analytics/components/RuleHitsPanel.tsx',
+  'features/analytics/components/WindowChips.tsx',
+  'features/analytics/components/AnalyticsSkeleton.tsx',
+  'features/notifications/components/NotificationsSection.tsx',
   // Phase 05B needs-reply surface. Paths are listed before implementation so
   // future visible copy is scanned as files land.
   'features/needs-reply/components/NeedsReplyPageClient.tsx',

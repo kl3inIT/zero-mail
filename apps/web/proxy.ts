@@ -19,7 +19,15 @@ import { LOCALE_COOKIE_MAX_AGE, NEXT_LOCALE_COOKIE, routing } from './i18n/routi
  * NO next-intl middleware here. This is deliberate: locale is data, not route
  * structure, in this app.
  */
-const PROTECTED = ['/onboarding', '/rules', '/settings', '/triage', '/billing', '/needs-reply'];
+const PROTECTED = [
+  '/onboarding',
+  '/rules',
+  '/settings',
+  '/triage',
+  '/billing',
+  '/needs-reply',
+  '/analytics',
+];
 
 function setLocaleCookie(response: NextResponse, value: (typeof routing.locales)[number]) {
   response.cookies.set(NEXT_LOCALE_COOKIE, value, {

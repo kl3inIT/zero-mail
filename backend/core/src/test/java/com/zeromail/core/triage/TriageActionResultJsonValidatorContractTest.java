@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.zeromail.core.shared.privacy.EmailAddressCanonicalizer;
 import com.zeromail.core.triage.domain.TriageActionResult;
 import com.zeromail.core.triage.domain.TriageDecision;
 import com.zeromail.core.triage.exception.TriageSafetyViolationException;
@@ -94,7 +95,8 @@ class TriageActionResultJsonValidatorContractTest {
 
     @Test
     void sender_email_canonicalizer_normalizes_hashes_and_quotes_sender_addresses() {
-        SenderEmailCanonicalizer canonicalizer = new SenderEmailCanonicalizer();
+        SenderEmailCanonicalizer canonicalizer =
+                new SenderEmailCanonicalizer(new EmailAddressCanonicalizer());
 
         String canonicalEmail = canonicalizer.canonicalize("Boss <Boss@Example.COM> ");
 

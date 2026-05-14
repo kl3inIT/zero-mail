@@ -3,6 +3,10 @@ export const shellMessages = {
     vi: 'Triage',
     en: 'Triage',
   },
+  'nav.analytics': {
+    vi: 'Phân tích',
+    en: 'Analytics',
+  },
   'nav.rules': {
     vi: 'Quy tắc',
     en: 'Rules',
