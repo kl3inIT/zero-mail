@@ -112,8 +112,8 @@ export const rulesMessages = {
     en: 'Checking...',
   },
   'rules.composer.saveDisabledCta': {
-    vi: 'Lưu quy tắc đang tắt',
-    en: 'Save rule off',
+    vi: 'Lưu (giữ tắt cho đến khi chạy thử)',
+    en: 'Save (stays off until preview)',
   },
   'rules.composer.saving': {
     vi: 'Đang lưu...',

@@ -831,7 +831,7 @@
       "invalid": "Quy tắc này chưa thể lưu. Hãy sửa cách diễn đạt hoặc trả lời câu hỏi làm rõ.",
       "matcherReview": "Email phù hợp",
       "newRuleCta": "Tạo quy tắc",
-      "saveDisabledCta": "Lưu quy tắc đang tắt",
+      "saveDisabledCta": "Lưu (giữ tắt cho đến khi chạy thử)",
       "saving": "Đang lưu...",
       "sourceLabel": "Bạn muốn Zero Mail xử lý email nào và làm gì?",
       "sourcePlaceholder": "Ví dụ: Lưu trữ biên lai từ Stripe và gắn nhãn Finance",

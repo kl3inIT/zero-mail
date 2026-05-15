@@ -831,7 +831,7 @@
       "invalid": "This rule is not ready to save. Edit the wording or answer the clarification.",
       "matcherReview": "Matched email",
       "newRuleCta": "Create rule",
-      "saveDisabledCta": "Save rule off",
+      "saveDisabledCta": "Save (stays off until preview)",
       "saving": "Saving...",
       "sourceLabel": "Which emails should Zero Mail match, and what should it do?",
       "sourcePlaceholder": "Example: Archive receipts from Stripe and label them Finance",

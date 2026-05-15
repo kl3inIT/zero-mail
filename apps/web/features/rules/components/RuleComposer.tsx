@@ -64,7 +64,6 @@ type Props = {
   insufficientCreditError: string | null;
   isCompiling: boolean;
   isSaving: boolean;
-  canPreview: boolean;
   onSourceTextChange: (sourceText: string) => void;
   onClarificationAnswerChange: (answer: string) => void;
   onCompile: () => void;
@@ -72,7 +71,6 @@ type Props = {
   onSaveDisabledRule: () => void;
   onSaveManualRule: (rule: BuiltManualRule) => void | Promise<void>;
   onRefineManualRule: (rule: BuiltManualRule, instruction: string) => void | Promise<void>;
-  onOpenPreview: () => void;
 };
 
 export function RuleComposer({
@@ -85,7 +83,6 @@ export function RuleComposer({
   insufficientCreditError,
   isCompiling,
   isSaving,
-  canPreview,
   onSourceTextChange,
   onClarificationAnswerChange,
   onCompile,
@@ -93,7 +90,6 @@ export function RuleComposer({
   onSaveDisabledRule,
   onSaveManualRule,
   onRefineManualRule,
-  onOpenPreview,
 }: Props) {
   const t = useTranslations();
   const structureCopy = createRuleStructureCopy(t as unknown as (key: string) => string);
@@ -269,6 +265,7 @@ export function RuleComposer({
               type="button"
               variant="secondary"
               disabled={!compiled || isSaving || isCompiling}
+              className="sm:ml-auto"
               onClick={onSaveDisabledRule}
             >
               {isSaving ? (
@@ -277,16 +274,6 @@ export function RuleComposer({
                 <Save className="size-4" aria-hidden="true" />
               )}
               {isSaving ? t('rules.composer.saving') : t('rules.composer.saveDisabledCta')}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={!canPreview}
-              className="sm:ml-auto"
-              onClick={onOpenPreview}
-            >
-              <Zap className="size-4" aria-hidden="true" />
-              {t('rules.preview.previewCta')}
             </Button>
           </div>
         </TabsContent>

@@ -618,7 +618,6 @@ export function RulesWorkspace() {
               insufficientCreditError={state.insufficientCreditError}
               isCompiling={compileMutation.isPending}
               isSaving={createRuleMutation.isPending || updateRuleMutation.isPending}
-              canPreview={canPreview}
               onSourceTextChange={(sourceText) =>
                 dispatch({ type: 'sourceTextChanged', sourceText })
               }
@@ -630,7 +629,6 @@ export function RulesWorkspace() {
               onSaveDisabledRule={handleSaveDisabledRule}
               onSaveManualRule={handleSaveManualRule}
               onRefineManualRule={handleRefineManualRule}
-              onOpenPreview={() => dispatch({ type: 'composerDialogToggled', open: false })}
             />
           )}
         </DialogContent>
