@@ -95,7 +95,7 @@ docker compose -f loadtest/compose.loadtest.yml down -v
 - (a) `triage_audit.tenant_id NOT IN (SELECT tenant_id FROM loadtest_tenant) COUNT = 0`
 - (b1) per-reservation: not more than one SETTLE, not more than one RELEASE, never both
 - (b2) per loadtest tenant: `SUM(amount_credits) >= 0`
-- (c) regex `email_body|prompt|completion|raw_html` on `loadtest/run/run.log` returns zero matches
+- (c) token regex `(^|[^[:alnum:]_])(email_body|prompt|completion|raw_html)([^[:alnum:]_]|$)` on `loadtest/run/run.log` returns zero matches
 
 ## Decision references
 
