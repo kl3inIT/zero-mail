@@ -95,6 +95,7 @@ export function TopupInstructions({
           <div className="bg-background rounded-xl border p-4">
             <div className="border-primary/40 flex h-full min-h-[360px] flex-col items-center justify-center gap-4 rounded-lg border bg-white p-5">
               <div className="text-primary text-xl font-semibold">SePay</div>
+              {/* SePay renders a generated QR image; keep Next's optimizer out of this flow. */}
               {qrImageUrl ? (
                 <Image
                   src={qrImageUrl}

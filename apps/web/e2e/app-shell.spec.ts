@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import {
   createChromeMockState,
@@ -22,7 +22,7 @@ for (const viewport of [
     await openAuthenticatedRoute(page, '/rules', state);
 
     await expect(page.getByTestId('chrome-header')).toBeVisible();
-    await expect(page.getByTestId('balance-pill')).toBeVisible();
+    await expectBalancePillForViewport(page, viewport.width);
     await expect(page.getByTestId('connection-health-dot')).toBeVisible();
     await expect(page.getByTestId('pause-switch')).toBeVisible();
     await expectNoHorizontalOverflow(page);
@@ -37,7 +37,7 @@ for (const viewport of [
     await page.goto('/settings', { waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle');
     await expect(page.getByTestId('chrome-header')).toBeVisible();
-    await expect(page.getByTestId('balance-pill')).toBeVisible();
+    await expectBalancePillForViewport(page, viewport.width);
     await expect(page.getByTestId('connection-health-dot')).toBeVisible();
     await expect(page.getByTestId('pause-switch')).toBeVisible();
     await expectNoHorizontalOverflow(page);
@@ -68,3 +68,13 @@ test('app shell remains mounted across client navigation and onboarding is chrom
   await expect(page.getByTestId('chrome-header')).toHaveCount(0);
   await expect(page.getByTestId('app-sidebar')).toHaveCount(0);
 });
+
+async function expectBalancePillForViewport(page: Page, width: number) {
+  const balancePill = page.getByTestId('balance-pill');
+  if (width >= 420) {
+    await expect(balancePill).toBeVisible();
+    return;
+  }
+
+  await expect(balancePill).toHaveAttribute('aria-label', /Credits: 12/);
+}

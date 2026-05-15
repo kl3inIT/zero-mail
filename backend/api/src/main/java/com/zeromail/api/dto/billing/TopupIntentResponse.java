@@ -18,12 +18,16 @@ public record TopupIntentResponse(
         String qrPayload) {
 
     public static TopupIntentResponse from(BillingTopupIntentEntity intent) {
+        Integer creditAmountSnapshot = intent.getCreditAmountSnapshot();
+        if (creditAmountSnapshot == null) {
+            throw new IllegalStateException("Billing top-up intent credit snapshot is required");
+        }
         return new TopupIntentResponse(
                 intent.getCode(),
                 intent.getPackageCodeSnapshot(),
                 intent.getPackageNameSnapshot(),
                 intent.getAmountVnd(),
-                intent.getCreditAmountSnapshot() == null ? 0 : intent.getCreditAmountSnapshot(),
+                creditAmountSnapshot,
                 intent.getExpiresAt(),
                 intent.getBankCodeSnapshot(),
                 intent.getBankNameSnapshot(),

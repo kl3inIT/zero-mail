@@ -1,7 +1,9 @@
 databaseChangeLog:
+  - logicalFilePath: db/changelog/changes/030-billing-packages.yaml
   - changeSet:
       id: 030-billing-packages
       author: zeromail
+      validCheckSum: "9:be5a09821310983947726ffd81dbbb4f"
       changes:
         - createTable:
             tableName: billing_package
@@ -195,6 +197,24 @@ databaseChangeLog:
         - sql:
             comment: Package snapshots are optional for historical amount-based intents but must be positive when present.
             sql: ALTER TABLE billing_topup_intent ADD CONSTRAINT ck_billing_topup_intent_credit_snapshot_positive CHECK (credit_amount_snapshot IS NULL OR credit_amount_snapshot > 0)
+        - sql:
+            comment: Package identity and credit snapshots are optional for historical amount-based intents but atomic for package-based intents.
+            sql: >-
+              ALTER TABLE billing_topup_intent
+              ADD CONSTRAINT ck_billing_topup_intent_package_snapshot_atomic
+              CHECK (
+                (
+                  package_code_snapshot IS NULL
+                  AND package_name_snapshot IS NULL
+                  AND credit_amount_snapshot IS NULL
+                )
+                OR
+                (
+                  package_code_snapshot IS NOT NULL
+                  AND package_name_snapshot IS NOT NULL
+                  AND credit_amount_snapshot > 0
+                )
+              )
       rollback:
         - dropForeignKeyConstraint:
             baseTableName: billing_topup_intent

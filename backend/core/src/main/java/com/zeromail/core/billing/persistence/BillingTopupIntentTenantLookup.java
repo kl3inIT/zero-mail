@@ -14,6 +14,6 @@ public record BillingTopupIntentTenantLookup(
         String code,
         long amountVnd,
         String packageCodeSnapshot,
-        int creditAmountSnapshot,
+        Integer creditAmountSnapshot,
         BillingTopupIntentStatus status,
         OffsetDateTime expiresAt) {}

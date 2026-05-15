@@ -248,11 +248,15 @@ public class BillingTopupService {
                                                 applyTopupCreditTransactional(
                                                         lookup.id(),
                                                         sepayTransactionId,
-                                                        lookup.creditAmountSnapshot())));
+                                                        lookup.creditAmountSnapshot(),
+                                                        transferAmountVnd)));
     }
 
     private void applyTopupCreditTransactional(
-            UUID intentId, long sepayTransactionId, int creditAmountSnapshot) {
+            UUID intentId,
+            long sepayTransactionId,
+            Integer creditAmountSnapshot,
+            long transferAmountVnd) {
         Optional<BillingTopupIntentEntity> maybeIntent = intentRepository.findById(intentId);
         if (maybeIntent.isEmpty()) {
             log.warn("event=sepay_webhook_intent_vanished_post_lookup tenantId=unresolved");
@@ -265,7 +269,7 @@ public class BillingTopupService {
             return;
         }
 
-        int credits = resolveTopupCredits(intent, creditAmountSnapshot);
+        int credits = resolveTopupCredits(intent, creditAmountSnapshot, transferAmountVnd);
         if (credits <= 0) {
             log.warn(
                     "event=sepay_topup_missing_credit_snapshot tenantId={} intentId={}",
@@ -321,18 +325,43 @@ public class BillingTopupService {
     }
 
     private int resolveTopupCredits(
-            BillingTopupIntentEntity intent, int projectedCreditAmountSnapshot) {
-        if (intent.getCreditAmountSnapshot() != null) {
-            return intent.getCreditAmountSnapshot();
+            BillingTopupIntentEntity intent,
+            Integer lookupCreditAmountSnapshot,
+            long transferAmountVnd) {
+        Integer persistedCreditAmountSnapshot = intent.getCreditAmountSnapshot();
+        if (persistedCreditAmountSnapshot != null) {
+            return persistedCreditAmountSnapshot;
         }
-        if (projectedCreditAmountSnapshot > 0) {
-            return projectedCreditAmountSnapshot;
+        if (lookupCreditAmountSnapshot != null) {
+            return lookupCreditAmountSnapshot;
         }
+
         long vndPerCredit = billingProperties.vndPerCredit();
-        if (vndPerCredit <= 0 || intent.getAmountVnd() % vndPerCredit != 0) {
+        if (vndPerCredit <= 0) {
+            log.warn(
+                    "event=sepay_topup_invalid_credit_rate tenantId={} vndPerCredit={}",
+                    intent.getTenantId(),
+                    vndPerCredit);
             return 0;
         }
-        return Math.toIntExact(intent.getAmountVnd() / vndPerCredit);
+
+        long calculatedCredits = transferAmountVnd / vndPerCredit;
+        long roundingLossVnd = transferAmountVnd - (calculatedCredits * vndPerCredit);
+        if (roundingLossVnd > 0) {
+            log.info(
+                    "event=sepay_topup_rounding_loss tenantId={} vndLost={}",
+                    intent.getTenantId(),
+                    roundingLossVnd);
+        }
+        if (calculatedCredits <= 0) {
+            log.warn(
+                    "event=sepay_topup_below_min_credits tenantId={} transferAmountVnd={} vndPerCredit={}",
+                    intent.getTenantId(),
+                    transferAmountVnd,
+                    vndPerCredit);
+            return 0;
+        }
+        return Math.toIntExact(calculatedCredits);
     }
 
     /**

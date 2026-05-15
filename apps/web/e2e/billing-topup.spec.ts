@@ -12,8 +12,9 @@ import {
 //   by LedgerTable.test.tsx with injected fixture data.
 // - The backend has no top-up intent-status endpoint; credited is inferred from
 //   /api/billing/balance rising during polling.
-// - TopupIntentResponse has only code/amountVnd/expiresAt/qrPayload, so the
-//   instructions screen shows QR payload + code + amount + expiry only.
+// - PR #36 changes top-up creation from free-form VND amount entry to package
+//   selection. The E2E mock follows that API shape: packages list + packageCode
+//   intent creation.
 
 test.describe.configure({ mode: 'serial' });
 
@@ -21,13 +22,33 @@ type BillingMockState = {
   availableCredits: number;
   heldCredits: number;
   balanceRequests: number;
-  topupRequests: number[];
-  nextIntent: {
-    code: string;
-    amountVnd: number;
-    expiresAt: string;
-    qrPayload: string;
-  };
+  topupRequests: string[];
+  packages: BillingPackageMock[];
+  nextIntent: TopupIntentMock;
+};
+
+type BillingPackageMock = {
+  code: string;
+  name: string;
+  priceVnd: number;
+  creditAmount: number;
+  description: string;
+  displayOrder: number;
+};
+
+type TopupIntentMock = {
+  orderCode: string;
+  packageCode: string;
+  packageName: string;
+  amountVnd: number;
+  creditAmount: number;
+  expiresAt: string;
+  bankCode: string;
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+  transferContent: string;
+  qrPayload: string;
 };
 
 const VIEWPORTS = [
@@ -35,9 +56,37 @@ const VIEWPORTS = [
   { name: 'mobile', width: 320, height: 740 },
 ] as const;
 
-const TOPUP_CODE = 'ZMABCD2345';
+const TOPUP_CODE = 'ABCD2345';
+const DEFAULT_PACKAGE_CODE = 'PKG_50K';
+const DEFAULT_TRANSFER_CONTENT = `ZM ${TOPUP_CODE} ${DEFAULT_PACKAGE_CODE}`;
 const QR_PAYLOAD =
   '00020101021238540010A0000007270124000697042201101234567890208QRIBFTTA530370454062500005802VN6304ABCD';
+const DEFAULT_PACKAGES: BillingPackageMock[] = [
+  {
+    code: 'PKG_10K',
+    name: 'Starter 10K',
+    priceVnd: 10_000,
+    creditAmount: 10,
+    description: 'Starter credit package',
+    displayOrder: 10,
+  },
+  {
+    code: 'PKG_20K',
+    name: 'Growth 20K',
+    priceVnd: 20_000,
+    creditAmount: 20,
+    description: 'Growth credit package',
+    displayOrder: 20,
+  },
+  {
+    code: DEFAULT_PACKAGE_CODE,
+    name: 'Scale 50K',
+    priceVnd: 50_000,
+    creditAmount: 50,
+    description: 'Scale credit package',
+    displayOrder: 50,
+  },
+];
 
 for (const viewport of VIEWPORTS) {
   test(`billing page renders shell, balance, and unavailable ledger at ${viewport.name}`, async ({
@@ -66,37 +115,31 @@ for (const viewport of VIEWPORTS) {
     await expect(page.getByRole('link', { name: 'Billing' }).first()).toBeVisible();
   });
 
-  test(`top-up amount to credited success flow works at ${viewport.name}`, async ({ page }) => {
+  test(`top-up package to credited success flow works at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    const state = createBillingMockState({
-      availableCredits: 12,
-      nextIntent: {
-        code: TOPUP_CODE,
-        amountVnd: 250_000,
-        expiresAt: futureExpiresAt(),
-        qrPayload: QR_PAYLOAD,
-      },
-    });
+    const state = createBillingMockState({ availableCredits: 12 });
 
     await openBilling(page, '/billing', state);
     await page.getByRole('link', { name: 'Top up credits' }).click();
 
     await expect(page).toHaveURL(/\/billing\/top-up$/, { timeout: 15_000 });
-    await expect(page.getByTestId('topup-amount-step')).toBeVisible();
-    await page.getByLabel('Top-up amount').fill('250000');
-    await page.getByRole('button', { name: 'Continue to payment' }).click();
+    await expect(page.getByTestId('topup-package-step')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Scale 50K' })).toBeVisible();
+    await page.getByRole('button', { name: 'Choose package' }).nth(2).click();
 
-    await expect.poll(() => state.topupRequests).toEqual([250_000]);
+    await expect.poll(() => state.topupRequests).toEqual([DEFAULT_PACKAGE_CODE]);
     await expect(page).toHaveURL(new RegExp(`/billing/top-up\\?code=${TOPUP_CODE}`));
-    await expect(page.getByTestId('topup-instructions-step')).toBeVisible();
-    await expect(page.getByText('Scan this QR with your banking app')).toBeVisible();
-    await expect(page.getByText(QR_PAYLOAD)).toBeVisible();
-    await expect(page.getByText(TOPUP_CODE)).toBeVisible();
-    await expect(page.getByText('₫250,000')).toBeVisible();
-    await expect(page.getByText(/Expires in \d\d:\d\d/)).toBeVisible();
-    await expect(page.getByText('Bank name')).toHaveCount(0);
-    await expect(page.getByText('Bank account')).toHaveCount(0);
-    await expect(page.getByText('Account holder')).toHaveCount(0);
+    const instructionsStep = page.getByTestId('topup-instructions-step');
+    await expect(instructionsStep).toBeVisible();
+    await expect(instructionsStep.getByText('Waiting for your transfer')).toBeVisible();
+    await expect(page.getByAltText('SePay payment QR code')).toBeVisible();
+    await expect(instructionsStep.getByText(TOPUP_CODE, { exact: true })).toBeVisible();
+    await expect(instructionsStep.getByText(/50,000/)).toBeVisible();
+    await expect(instructionsStep.getByText('Vietcombank (VCB)')).toBeVisible();
+    await expect(instructionsStep.getByText('0123456789')).toBeVisible();
+    await expect(instructionsStep.getByText('Zero Mail', { exact: true })).toBeVisible();
+    await expect(instructionsStep.getByText(DEFAULT_TRANSFER_CONTENT)).toBeVisible();
+    await expect(instructionsStep.getByText(/Expires in \d\d:\d\d/)).toBeVisible();
 
     await page.getByRole('button', { name: 'Copy Transfer reference' }).click();
     await expect(page.getByRole('button', { name: 'Copy Transfer reference' })).toContainText(
@@ -125,46 +168,34 @@ for (const viewport of VIEWPORTS) {
 test('top-up route rehydrates a pending intent from code search param and sessionStorage', async ({
   page,
 }) => {
-  const state = createBillingMockState({
-    nextIntent: {
-      code: TOPUP_CODE,
-      amountVnd: 300_000,
-      expiresAt: futureExpiresAt(),
-      qrPayload: QR_PAYLOAD,
-    },
-  });
+  const state = createBillingMockState();
 
   await openBilling(page, '/billing/top-up', state);
-  await page.getByLabel('Top-up amount').fill('300000');
-  await page.getByRole('button', { name: 'Continue to payment' }).click();
+  await expect(page.getByTestId('topup-package-step')).toBeVisible();
+  await page.getByRole('button', { name: 'Choose package' }).nth(2).click();
 
   await expect(page.getByTestId('topup-instructions-step')).toBeVisible();
-  await expect(page.getByText(TOPUP_CODE)).toBeVisible();
+  await expect(page.getByText(TOPUP_CODE, { exact: true })).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/billing/top-up\\?code=${TOPUP_CODE}`));
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('networkidle');
 
   await expect(page).toHaveURL(new RegExp(`/billing/top-up\\?code=${TOPUP_CODE}`));
   await expect(page.getByTestId('topup-instructions-step')).toBeVisible();
-  await expect(page.getByText(TOPUP_CODE)).toBeVisible();
-  await expect(page.getByText(QR_PAYLOAD)).toBeVisible();
+  await expect(page.getByText(TOPUP_CODE, { exact: true })).toBeVisible();
+  await expect(page.getByText(DEFAULT_TRANSFER_CONTENT)).toBeVisible();
 });
 
-test('expired top-up panel resets to the amount step and clears the code query param', async ({
+test('expired top-up panel resets to the package step and clears the code query param', async ({
   page,
 }) => {
   const state = createBillingMockState({
-    nextIntent: {
-      code: TOPUP_CODE,
-      amountVnd: 150_000,
-      expiresAt: pastExpiresAt(),
-      qrPayload: QR_PAYLOAD,
-    },
+    nextIntent: createTopupIntentMock({ expiresAt: pastExpiresAt() }),
   });
 
   await openBilling(page, '/billing/top-up', state);
-  await page.getByLabel('Top-up amount').fill('150000');
-  await page.getByRole('button', { name: 'Continue to payment' }).click();
+  await expect(page.getByTestId('topup-package-step')).toBeVisible();
+  await page.getByRole('button', { name: 'Choose package' }).nth(2).click();
 
   await expect(page.getByTestId('topup-expired-step')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'This top-up expired' })).toBeVisible();
@@ -173,7 +204,7 @@ test('expired top-up panel resets to the amount step and clears the code query p
   await page.getByRole('button', { name: 'Start a new top-up' }).click();
 
   await expect(page).toHaveURL(/\/billing\/top-up$/);
-  await expect(page.getByTestId('topup-amount-step')).toBeVisible();
+  await expect(page.getByTestId('topup-package-step')).toBeVisible();
 });
 
 async function openBilling(
@@ -219,10 +250,23 @@ async function installBillingApiMock(page: Page, state: BillingMockState) {
       return;
     }
 
+    if (url.pathname === '/api/billing/packages' && request.method() === 'GET') {
+      await fulfillJson(route, state.packages);
+      return;
+    }
+
     if (url.pathname === '/api/billing/topup/intent' && request.method() === 'POST') {
-      const payload = request.postDataJSON() as { amountVnd?: number };
-      expect(payload.amountVnd).toBe(state.nextIntent.amountVnd);
-      state.topupRequests.push(payload.amountVnd ?? 0);
+      const payload = request.postDataJSON() as { packageCode?: string };
+      const requestedPackageCode = payload.packageCode;
+      if (
+        !requestedPackageCode ||
+        !state.packages.some((item) => item.code === requestedPackageCode)
+      ) {
+        await fulfillJson(route, { message: 'Unknown billing package' }, 400);
+        return;
+      }
+      expect(payload.packageCode).toBe(state.nextIntent.packageCode);
+      state.topupRequests.push(requestedPackageCode);
       await fulfillJson(route, state.nextIntent);
       return;
     }
@@ -247,12 +291,26 @@ function createBillingMockState(overrides: Partial<BillingMockState> = {}): Bill
     heldCredits: 0,
     balanceRequests: 0,
     topupRequests: [],
-    nextIntent: {
-      code: TOPUP_CODE,
-      amountVnd: 250_000,
-      expiresAt: futureExpiresAt(),
-      qrPayload: QR_PAYLOAD,
-    },
+    packages: DEFAULT_PACKAGES,
+    nextIntent: createTopupIntentMock(),
+    ...overrides,
+  };
+}
+
+function createTopupIntentMock(overrides: Partial<TopupIntentMock> = {}): TopupIntentMock {
+  return {
+    orderCode: TOPUP_CODE,
+    packageCode: DEFAULT_PACKAGE_CODE,
+    packageName: 'Scale 50K',
+    amountVnd: 50_000,
+    creditAmount: 50,
+    expiresAt: futureExpiresAt(),
+    bankCode: 'VCB',
+    bankName: 'Vietcombank',
+    accountNumber: '0123456789',
+    accountName: 'Zero Mail',
+    transferContent: DEFAULT_TRANSFER_CONTENT,
+    qrPayload: QR_PAYLOAD,
     ...overrides,
   };
 }

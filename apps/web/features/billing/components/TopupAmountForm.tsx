@@ -43,7 +43,7 @@ export function TopupAmountForm({ baselineCredits, onIntentCreated }: TopupAmoun
 
     const packageCode = packageCodeForAmount(parsedAmount);
     if (!packageCode) {
-      setValidationError(t('billing.topup.amount.error.minimum'));
+      setValidationError(t('billing.topup.amount.error.invalidPackage'));
       return;
     }
 
@@ -122,7 +122,7 @@ export function TopupAmountForm({ baselineCredits, onIntentCreated }: TopupAmoun
 }
 
 function normalizeIntent(response: TopupIntentResponse): TopupIntentDetails | null {
-  if (!response.orderCode || !response.amountVnd || !response.expiresAt || !response.qrPayload) {
+  if (!response.orderCode || !response.amountVnd || !response.expiresAt) {
     return null;
   }
 
@@ -130,11 +130,12 @@ function normalizeIntent(response: TopupIntentResponse): TopupIntentDetails | nu
     code: response.orderCode,
     amountVnd: response.amountVnd,
     expiresAt: response.expiresAt,
-    qrPayload: response.qrPayload,
+    qrPayload: response.qrPayload ?? '',
   };
 }
 
 function packageCodeForAmount(amountVnd: number): string | null {
+  // Legacy form kept for compatibility; the primary UI loads package codes from the API.
   if (amountVnd === 10000) return 'PKG_10K';
   if (amountVnd === 20000) return 'PKG_20K';
   if (amountVnd === 50000) return 'PKG_50K';

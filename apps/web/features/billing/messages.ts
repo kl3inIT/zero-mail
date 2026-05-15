@@ -215,6 +215,10 @@ export const billingMessages = {
     vi: 'Nhập số tiền lớn hơn 0 VND.',
     en: 'Enter an amount greater than 0 VND.',
   },
+  'billing.topup.amount.error.invalidPackage': {
+    vi: 'Chọn đúng một trong các gói nạp hiện có.',
+    en: 'Choose one of the available top-up package amounts.',
+  },
   'billing.topup.amount.error.invalidResponse': {
     vi: 'Backend chưa trả đủ thông tin VietQR. Hãy thử lại.',
     en: 'The backend did not return complete VietQR details. Try again.',

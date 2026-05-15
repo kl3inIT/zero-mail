@@ -18,6 +18,13 @@ const nextConfig: NextConfig = {
   // has unist/remark CJS edges). Documented temporary workaround per the
   // hashicorp/next-mdx-remote README. Plan 06 installs the runtime dep.
   transpilePackages: ['next-mdx-remote'],
+  // Quick task 260514-leb: strip dev console.* calls from production bundles
+  // to shave a few KiB off the landing chunk (helps Lighthouse Performance)
+  // and avoid leaking debug log output to end users (Best Practices buffer).
+  // Errors and warnings are preserved for real diagnostics.
+  compiler: {
+    removeConsole: { exclude: ['error', 'warn'] },
+  },
 };
 
 export default withNextIntl(nextConfig);
