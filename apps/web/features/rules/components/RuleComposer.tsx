@@ -242,6 +242,36 @@ export function RuleComposer({
             </div>
           </div>
 
+          {clarification?.question && (
+            <Alert className="border-warning/40 bg-warning-soft/50 text-warning">
+              <HelpCircle className="size-4" aria-hidden="true" />
+              <AlertTitle>{clarification.question}</AlertTitle>
+              <AlertDescription className="space-y-3 pt-2">
+                <Label htmlFor="rules-clarification-answer">
+                  {t('rules.composer.answerLabel')}
+                </Label>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    id="rules-clarification-answer"
+                    value={clarificationAnswer}
+                    aria-label={t('rules.composer.answerLabel')}
+                    disabled={isCompiling}
+                    onChange={(event) => onClarificationAnswerChange(event.currentTarget.value)}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={!clarificationAnswer.trim() || isCompiling}
+                    onClick={onAnswerClarification}
+                  >
+                    {isCompiling && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+                    {t('rules.composer.answerClarification')}
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {compiled && (
             <CompiledReview
               matcherReview={matcherReview}
@@ -360,39 +390,11 @@ function ManualBuilder({
         invalidReason={invalidReason}
       />
 
-      {clarificationQuestion && (
-        <Alert className="border-warning/40 bg-warning-soft/50 text-warning">
-          <HelpCircle className="size-4" aria-hidden="true" />
-          <AlertTitle>{clarificationQuestion}</AlertTitle>
-          <AlertDescription className="space-y-3 pt-2">
-            <Label htmlFor="rules-clarification-answer">{t('rules.composer.answerLabel')}</Label>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input
-                id="rules-clarification-answer"
-                value={clarificationAnswer}
-                aria-label={t('rules.composer.answerLabel')}
-                disabled={isCompiling}
-                onChange={(event) => onClarificationAnswerChange(event.currentTarget.value)}
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={!clarificationAnswer.trim() || isCompiling}
-                onClick={onAnswerClarification}
-              >
-                {isCompiling && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
-                {t('rules.composer.answerClarification')}
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/*
-        Clarification banner and the refine input are mutually exclusive: only
-        show "Cập nhật form" when the model has settled on a draft (no pending
-        clarification). When the model is genuinely uncertain, the user should
-        answer the clarification first instead of editing a stale draft.
+        Clarification UI now lives in the describe tab next to the source
+        textarea — that is where the user phrased the rule and where they
+        rephrase. Refine flow swallows clarificationRequired as invalid (see
+        treatClarificationAsInvalid), so it never reaches the manual builder.
       */}
       {builtRule && !clarificationQuestion && (
         <div className="bg-muted/20 rounded-lg border p-4">

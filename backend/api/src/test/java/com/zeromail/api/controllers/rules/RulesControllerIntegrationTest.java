@@ -95,12 +95,22 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
         assertThat(fetchedRuleJson.path("entityVersion").asInt()).isZero();
         assertThat(fetchedRuleJson.path("lastPreviewedEntityVersion").isNull()).isTrue();
 
+        // Duplicate-rule guard rejects same matcher+actionIntents tuples in
+        // a tenant. Build a distinct compiled payload so the second rule
+        // exercises the CRUD path without colliding with the first.
+        Map<String, Object> secondCompiled =
+                compiledPayload(
+                        "{\"schemaVersion\":\"rules.v1\","
+                                + "\"nodeId\":\"manual-condition-1\","
+                                + "\"type\":\"SENDER_DOMAIN\","
+                                + "\"domain\":\"stripe-invoices.com\"}",
+                        "[{\"type\":\"archive\"}]");
         JsonNode secondRuleJson =
                 createRule(
                         seedData,
                         "Archive Stripe invoices",
                         "Archive invoices from Stripe",
-                        compileJson.path("compiled"));
+                        objectMapper.valueToTree(secondCompiled));
         UUID secondRuleId = UUID.fromString(secondRuleJson.path("ruleId").asString());
         when(rulePreviewDataService.fetchPreviewInputs(
                         eq(seedData.tenantId()), eq(false), eq(new PreviewSampleSize(25))))

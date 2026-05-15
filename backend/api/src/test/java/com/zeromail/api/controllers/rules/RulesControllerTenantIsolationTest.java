@@ -32,6 +32,11 @@ class RulesControllerTenantIsolationTest extends ApiPostgresTestBase {
     private static final String MATCHER_JSON =
             "{\"schemaVersion\":\"rules.v1\",\"type\":\"SENDER_DOMAIN\",\"domain\":\"stripe.com\"}";
     private static final String ACTIONS_JSON = "[{\"type\":\"archive\"}]";
+    // Second matcher used when a test must create two rules in the same
+    // tenant; the duplicate-rule guard rejects identical matcher+action
+    // tuples so the second rule needs its own shape.
+    private static final String SECONDARY_MATCHER_JSON =
+            "{\"schemaVersion\":\"rules.v1\",\"type\":\"SENDER_DOMAIN\",\"domain\":\"stripe-billing.com\"}";
 
     @LocalServerPort int serverPort;
 
@@ -93,7 +98,7 @@ class RulesControllerTenantIsolationTest extends ApiPostgresTestBase {
             throws Exception {
         SeedData seedData = seedUser("rules-reorder-conflict");
         JsonNode firstRule = createRule(seedData, "First rule");
-        JsonNode secondRule = createRule(seedData, "Second rule");
+        JsonNode secondRule = createRule(seedData, "Second rule", SECONDARY_MATCHER_JSON);
 
         JsonNode reorderProblem =
                 putProblem(
@@ -123,6 +128,11 @@ class RulesControllerTenantIsolationTest extends ApiPostgresTestBase {
     }
 
     private JsonNode createRule(SeedData seedData, String displayName) throws Exception {
+        return createRule(seedData, displayName, MATCHER_JSON);
+    }
+
+    private JsonNode createRule(SeedData seedData, String displayName, String matcherJson)
+            throws Exception {
         ResponseEntity<String> response =
                 authenticatedClient(seedData)
                         .post()
@@ -130,7 +140,7 @@ class RulesControllerTenantIsolationTest extends ApiPostgresTestBase {
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(
                                 objectMapper.writeValueAsString(
-                                        ruleSaveBody(displayName, "Archive Stripe")))
+                                        ruleSaveBody(displayName, "Archive Stripe", matcherJson)))
                         .retrieve()
                         .toEntity(String.class);
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
@@ -138,6 +148,11 @@ class RulesControllerTenantIsolationTest extends ApiPostgresTestBase {
     }
 
     private Map<String, Object> ruleSaveBody(String displayName, String sourceText) {
+        return ruleSaveBody(displayName, sourceText, MATCHER_JSON);
+    }
+
+    private Map<String, Object> ruleSaveBody(
+            String displayName, String sourceText, String matcherJson) {
         return Map.of(
                 "displayName",
                 displayName,
@@ -152,7 +167,7 @@ class RulesControllerTenantIsolationTest extends ApiPostgresTestBase {
                         "schemaVersion",
                         "rules.v1",
                         "matcherAst",
-                        MATCHER_JSON,
+                        matcherJson,
                         "actionIntents",
                         ACTIONS_JSON));
     }

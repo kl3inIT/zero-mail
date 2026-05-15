@@ -19,9 +19,9 @@ const plannedRulesFiles = [
 
 const requiredRulesCopy = [
   'Automation rules',
-  'Each rule means: When an email matches these conditions, Then Zero Mail may apply only the safe actions you approved.',
-  'Compile to When / Then',
-  'Save rule off',
+  'Each rule defines which emails to match and what Zero Mail is allowed to do. New rules stay off until previewed.',
+  'Convert to rule',
+  'Save (stays off until preview)',
   'Preview rule',
   'Enable rule',
   'Send answer',

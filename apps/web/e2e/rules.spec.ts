@@ -348,12 +348,12 @@ test('rules desktop flow compiles, clarifies, saves disabled, previews, toggles,
   await page.getByRole('button', { name: 'Convert to rule', exact: true }).click();
   await expect(page.getByText('Which receipts should Zero Mail archive?')).toBeVisible();
   await expect(ruleText).toHaveValue('Archive receipts from Stripe and label them Finance');
-  await expect(page.getByText('Zero Mail could not compile this rule')).toHaveCount(0);
+  await expect(page.getByText('Zero Mail could not review this rule')).toHaveCount(0);
 
   await page.getByLabel('Your answer').fill('Only Stripe payment receipts');
   await page.getByRole('button', { name: 'Send answer' }).click();
   await expect(page.getByText('stripe.com')).toBeVisible();
-  await page.getByRole('button', { name: 'Save rule off' }).click();
+  await page.getByRole('button', { name: 'Save (stays off until preview)' }).click();
 
   await page.getByRole('button', { name: 'Preview rule' }).click();
   await expect(
@@ -377,7 +377,7 @@ test('rules desktop flow compiles, clarifies, saves disabled, previews, toggles,
   await page.getByRole('button', { name: 'Convert to rule', exact: true }).click();
   await page.getByLabel('Your answer').fill('Only Stripe payment receipts');
   await page.getByRole('button', { name: 'Send answer' }).click();
-  await page.getByRole('button', { name: 'Save rule off' }).click();
+  await page.getByRole('button', { name: 'Save (stays off until preview)' }).click();
   await page.getByRole('button', { name: 'Preview rule' }).click();
   await expect(
     page.getByLabel('Which emails should Zero Mail match, and what should it do?'),
