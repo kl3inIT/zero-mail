@@ -9,7 +9,6 @@ import {
   getRule,
   listRules,
   listRuleTemplates,
-  materializeSelectedRuleTemplates,
   materializeRuleTemplate,
   previewDraftRule,
   previewSavedRule,
@@ -168,18 +167,6 @@ export function useMaterializeRuleTemplate() {
 
   return useMutation({
     mutationFn: (templateKey: string) => materializeRuleTemplate(templateKey),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: rulesKeys.list() });
-      await queryClient.invalidateQueries({ queryKey: rulesKeys.templates() });
-    },
-  });
-}
-
-export function useMaterializeSelectedRuleTemplates() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: materializeSelectedRuleTemplates,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: rulesKeys.list() });
       await queryClient.invalidateQueries({ queryKey: rulesKeys.templates() });

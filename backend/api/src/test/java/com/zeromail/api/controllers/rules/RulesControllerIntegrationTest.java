@@ -221,29 +221,6 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
     }
 
     @Test
-    void materialize_selected_templates_is_explicit_post_and_idempotent() throws Exception {
-        SeedData seedData = seedUser("rules-api-materialize-selected");
-        insertSelection(seedData.tenantId(), "archive-receipts", true);
-        insertSelection(seedData.tenantId(), "label-newsletters", true);
-
-        JsonNode firstMaterializationJson =
-                postJson(
-                        authenticatedClient(seedData),
-                        "/api/rules/templates/materialize-selected",
-                        Map.of());
-        JsonNode secondMaterializationJson =
-                postJson(
-                        authenticatedClient(seedData),
-                        "/api/rules/templates/materialize-selected",
-                        Map.of());
-
-        assertThat(firstMaterializationJson.path("createdCount").asInt()).isEqualTo(2);
-        assertThat(secondMaterializationJson.path("createdCount").asInt()).isZero();
-        assertThat(secondMaterializationJson.path("skippedCount").asInt()).isEqualTo(2);
-        assertThat(ruleCount(seedData.tenantId())).isEqualTo(2);
-    }
-
-    @Test
     void compile_clarification_invalid_output_and_credit_errors_have_distinct_contracts()
             throws Exception {
         SeedData seedData = seedUser("rules-api-compile-states");
@@ -380,8 +357,6 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
         assertThat(openApiJson.path("paths").has("/api/rules/{ruleId}/enabled")).isTrue();
         assertThat(openApiJson.path("paths").has("/api/rules/templates")).isTrue();
         assertThat(openApiJson.path("paths").has("/api/rules/templates/{templateKey}/materialize"))
-                .isTrue();
-        assertThat(openApiJson.path("paths").has("/api/rules/templates/materialize-selected"))
                 .isTrue();
         String openApiBody = openApiJson.toString();
         assertThat(openApiBody).contains("RuleOrderEntryRequest", "ruleId", "entityVersion");

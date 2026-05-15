@@ -74,7 +74,7 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         this.authorizedClientService = authorizedClientService;
         this.userRepository = userRepository;
 
-        // WR-04 fix: validate baseUrl scheme/host at construction time so a misconfigured
+        // Validate baseUrl scheme/host at construction time so a misconfigured
         // ZEROMAIL_WEB_BASE_URL fails fast instead of silently becoming an open-redirect on
         // the OAuth success path. Same-origin deployments only — http/https schemes; host
         // must be present (no opaque or relative URIs).
@@ -90,7 +90,7 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         }
 
         // Build the success-redirect URL via UriComponentsBuilder so URI semantics are
-        // preserved regardless of input shape (mirrors WR-05 fix for the failure handler).
+        // preserved regardless of input shape.
         String onboardingUrl =
                 UriComponentsBuilder.fromUri(baseUrl).path("/onboarding").build().toUriString();
         setDefaultTargetUrl(onboardingUrl);
@@ -121,18 +121,17 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                 authorizedClientService.loadAuthorizedClient(
                         "google", authenticationToken.getName());
 
-        // (a) Granted-scope check BEFORE any DB write (D-A2, T-01.5-01-04).
+        // (a) Granted-scope check BEFORE any DB write.
         if (authorizedClient == null
                 || authorizedClient.getAccessToken() == null
                 || !authorizedClient
                         .getAccessToken()
                         .getScopes()
                         .contains(OAuthScopes.GMAIL_MODIFY)) {
-            // CR-02 fix: clean up any partial AuthorizedClient Spring stored before the success
-            // handler ran. Use authenticationToken.getName() — always available from
-            // OAuth2AuthenticationToken,
+            // Clean up any partial AuthorizedClient Spring stored before the success handler ran.
+            // Use authenticationToken.getName() — always available from OAuth2AuthenticationToken,
             // unlike request.getUserPrincipal() which is null here (principal not committed to
-            // SecurityContext yet). Best-effort; never log the principal name (privacy D-E1).
+            // SecurityContext yet). Best-effort; never log the principal name (privacy).
             if (authorizedClient != null) {
                 try {
                     authorizedClientService.removeAuthorizedClient(
@@ -146,16 +145,15 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                             "gmail_scope_required", "Required Gmail scope was not granted", null));
         }
 
-        // (b) Null refresh-token check (MED-3, T-01.5-01-10).
+        // (b) Null refresh-token check.
         if (authorizedClient.getRefreshToken() == null) {
             // First-login null: no existing user → throw consent_denied.
             boolean existingUser = userRepository.findByGoogleSubject(googleSubject).isPresent();
             if (!existingUser) {
                 log.info("event=oauth_no_refresh_token_first_login");
-                // CR-02 fix: clean up partial AuthorizedClient before throwing.
-                // authenticationToken.getName() is always available; request.getUserPrincipal() is
-                // null
-                // here.
+                // Clean up partial AuthorizedClient before throwing.
+                // authenticationToken.getName() is always available; request.getUserPrincipal()
+                // is null here.
                 try {
                     authorizedClientService.removeAuthorizedClient(
                             "google", authenticationToken.getName());
@@ -171,7 +169,7 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             // Reconnect null: fall through to provisioning (service handles gracefully).
         }
 
-        // (c) INFO-7: settings.basic observational warning (non-blocking).
+        // (c) settings.basic observational warning (non-blocking).
         boolean settingsBasicMissing =
                 !authorizedClient
                         .getAccessToken()
@@ -188,18 +186,18 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                         .sorted()
                         .collect(Collectors.joining(" "));
 
-        // (e) Null-safe refresh-token extraction (MED-3 reconnect path).
+        // (e) Null-safe refresh-token extraction (reconnect path).
         String refreshToken =
                 authorizedClient.getRefreshToken() == null
                         ? null
                         : authorizedClient.getRefreshToken().getTokenValue();
 
-        // (f) Single delegation to atomic provisioning service (HIGH-1 fix).
+        // (f) Single delegation to atomic provisioning service.
         OAuthProvisioningService.BundledProvisioningResult result =
                 provisioningService.provisionBundledOAuth(
                         googleSubject, email, refreshToken, gmailScopes);
 
-        // (g) INFO-7 follow-up with tenant context (after provisioning resolves tenantId).
+        // (g) Follow-up with tenant context (after provisioning resolves tenantId).
         if (settingsBasicMissing) {
             log.warn("event=oauth_settings_basic_missing tenantId={}", result.tenantId());
         }

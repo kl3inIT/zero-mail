@@ -90,7 +90,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ProblemDetail> onCurrentUserMissing(
             CurrentUserNotFoundException exception) {
         log.warn(
-                "Current user not found for tenant; rejecting with 401: {}",
+                "event=current_user_missing tenantId={} reason={}",
+                tenantIdForLog(),
                 exception.getClass().getSimpleName());
         return problem(
                 HttpStatus.UNAUTHORIZED,
@@ -101,7 +102,10 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ProblemDetail> onAuthFailed(AuthenticationException exception) {
-        log.warn("Authentication failure: {}", exception.getClass().getSimpleName());
+        log.warn(
+                "event=auth_failure tenantId={} reason={}",
+                tenantIdForLog(),
+                exception.getClass().getSimpleName());
         return problem(
                 HttpStatus.UNAUTHORIZED,
                 "Authentication required",
@@ -111,7 +115,10 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ProblemDetail> onAccessDenied(AccessDeniedException exception) {
-        log.warn("Access denied: {}", exception.getClass().getSimpleName());
+        log.warn(
+                "event=access_denied tenantId={} reason={}",
+                tenantIdForLog(),
+                exception.getClass().getSimpleName());
         return problem(
                 HttpStatus.FORBIDDEN,
                 "Access denied",
@@ -122,14 +129,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ProblemDetail> onDataIntegrity(
             DataIntegrityViolationException exception) {
-        // Do NOT echo SQL state, constraint names, or raw exception messages to the client —
-        // those can leak schema details. We also deliberately do NOT pass the throwable
-        // itself to the logger: Logback would render the full stack trace and the wrapped
-        // SQLException's message + SQL state into the appender output, which violates the
-        // Phase 1.1 "no SQL internals / PII in logs" invariant. Log only the exception
-        // class name on the server side. (CR-01.)
+        // Logging only the exception class name, never the throwable itself: Logback would
+        // render the wrapped SQLException's message + SQL state into the appender, leaking
+        // schema details into logs.
         log.warn(
-                "Data integrity violation translated to 409: {}",
+                "event=data_integrity_conflict tenantId={} reason={}",
+                tenantIdForLog(),
                 exception.getClass().getSimpleName());
         return problem(
                 HttpStatus.CONFLICT,
@@ -142,7 +147,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ProblemDetail> onOptimisticLock(
             OptimisticLockingFailureException exception) {
         log.warn(
-                "Optimistic lock failure translated to 409: {}",
+                "event=optimistic_lock_conflict tenantId={} reason={}",
+                tenantIdForLog(),
                 exception.getClass().getSimpleName());
         return problem(
                 HttpStatus.CONFLICT,
@@ -155,7 +161,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ProblemDetail> onInsufficientCredits(
             InsufficientCreditsException exception) {
         log.warn(
-                "Insufficient credits translated to 402: {}", exception.getClass().getSimpleName());
+                "event=insufficient_credits tenantId={} reason={}",
+                tenantIdForLog(),
+                exception.getClass().getSimpleName());
         return problem(
                 HttpStatus.valueOf(402),
                 "Insufficient credits",
@@ -167,7 +175,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ProblemDetail> onIllegalLedgerState(
             IllegalLedgerStateException exception) {
         log.error(
-                "Illegal ledger state transition translated to 500: {}",
+                "event=illegal_ledger_state tenantId={} reason={}",
+                tenantIdForLog(),
                 exception.getClass().getSimpleName());
         return problem(
                 HttpStatus.INTERNAL_SERVER_ERROR,
@@ -456,7 +465,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ProblemDetail> onIllegalState(IllegalStateException exception) {
         log.warn(
-                "IllegalStateException translated to 409: {}",
+                "event=illegal_state tenantId={} reason={}",
+                tenantIdForLog(),
                 exception.getClass().getSimpleName());
         return problem(
                 HttpStatus.CONFLICT,
@@ -468,7 +478,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ProblemDetail> onIllegalArg(IllegalArgumentException exception) {
         log.warn(
-                "IllegalArgumentException translated to 400: {}",
+                "event=illegal_argument tenantId={} reason={}",
+                tenantIdForLog(),
                 exception.getClass().getSimpleName());
         return problem(
                 HttpStatus.BAD_REQUEST,
@@ -509,7 +520,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                         .toList());
         problemDetail.setProperty("message", ErrorCodes.VALIDATION);
         log.warn(
-                "ConstraintViolationException translated to 400 with {} field error(s)",
+                "event=validation_rejected tenantId={} fieldErrors={}",
+                tenantIdForLog(),
                 exception.getConstraintViolations().size());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
@@ -541,7 +553,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                         .toList());
         problemDetail.setProperty("message", ErrorCodes.VALIDATION);
         log.warn(
-                "MethodArgumentNotValid translated to 400 with {} field error(s)",
+                "event=validation_rejected tenantId={} fieldErrors={}",
+                tenantIdForLog(),
                 exception.getBindingResult().getFieldErrorCount());
         return handleExceptionInternal(exception, problemDetail, headers, status, request);
     }

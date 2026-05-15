@@ -21,10 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
  * (the previous controller-level behavior could leave a tenant with a saved selection but no
  * advanced user state, while the client saw 2xx).
  *
- * <p>Phase 1.2 reshape (D-D1 — enforced by {@code DomainBoundaryArchTests}): the previous
- * incarnation injected {@code UserRepository} (account domain) directly. Cross-domain reads now go
- * through {@link AccountService}; this service holds only its own {@link
- * OnboardingSelectionRepository}.
+ * <p>Cross-domain reads go through {@link AccountService} (enforced by {@code
+ * DomainBoundaryArchTests}); this service holds only its own {@link OnboardingSelectionRepository}.
  */
 @Service
 public class OnboardingService {

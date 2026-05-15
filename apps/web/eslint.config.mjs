@@ -16,8 +16,8 @@ const eslintConfig = defineConfig([
     'lib/api/schema.d.ts',
     'components/ui/**',
   ]),
-  // Phase 1.3 Plan 02: eslint-config-prettier MUST be last to disable
-  // formatting-related rules that would otherwise conflict with Prettier.
+  // eslint-config-prettier MUST be last to disable formatting-related rules
+  // that would otherwise conflict with Prettier.
   prettier,
 ]);
 

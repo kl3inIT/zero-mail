@@ -61,11 +61,11 @@ const EN_SCAN_FILES = [
   'app/(public)/docs/[slug]/page.tsx',
   'app/(public)/docs/[slug]/loading.tsx',
   'app/(auth)/layout.tsx',
-  // Phase 01.4 Plan 05 — Next.js App Router error-boundary baseline.
-  // global-error.tsx contains inline English fallback (CONTEXT.md D-D3:
-  // next-intl provider unavailable at root replacement). Each prose
-  // literal is annotated with `// i18n-allow` so the scanner accepts it.
-  // The four other boundary files use next-intl keys exclusively.
+  // Next.js App Router error-boundary baseline. global-error.tsx contains
+  // inline English fallback because the next-intl provider is unavailable at
+  // root replacement. Each prose literal is annotated with `// i18n-allow` so
+  // the scanner accepts it. The four other boundary files use next-intl keys
+  // exclusively.
   'app/global-error.tsx',
   'app/not-found.tsx',
   'app/(public)/error.tsx',
@@ -101,8 +101,8 @@ const EN_SCAN_FILES = [
   'features/analytics/components/WindowChips.tsx',
   'features/analytics/components/AnalyticsSkeleton.tsx',
   'features/notifications/components/NotificationsSection.tsx',
-  // Phase 05B needs-reply surface. Paths are listed before implementation so
-  // future visible copy is scanned as files land.
+  // Needs-reply surface. Paths listed before implementation so future visible
+  // copy is scanned as files land.
   'features/needs-reply/components/NeedsReplyPageClient.tsx',
   'features/needs-reply/components/NeedsReplyTabs.tsx',
   'features/needs-reply/components/NeedsReplyTable.tsx',
@@ -120,7 +120,7 @@ const EN_SCAN_FILES = [
   'features/privacy/components/PrivacySections.tsx',
   'features/account/components/DeleteAccountDialog.tsx',
   'i18n/components/LanguageSwitcher.tsx',
-  // Phase 1.6 additions — landing + auth chrome + onboarding split + legal stubs
+  // Landing + auth chrome + onboarding split + legal stubs.
   'app/(public)/terms/page.tsx',
   'app/(public)/privacy/page.tsx',
   'app/(protected)/onboarding/gmail-connect/page.tsx',

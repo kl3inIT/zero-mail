@@ -55,10 +55,8 @@ export function RulesWorkspace() {
   const updateEnabledMutation = useUpdateRuleEnabled();
   const materializeTemplateMutation = useMaterializeRuleTemplate();
 
-  // Locked decision D-C2: server-side GET /api/rules materializes
-  // selected templates idempotently. The frontend does NOT POST
-  // /api/rules/templates/materialize-selected here - the list query
-  // is the single source of truth for template-derived rules.
+  // GET /api/rules materializes selected templates idempotently —
+  // the list query is the single source of truth for template-derived rules.
 
   const rules = useMemo(
     () => [...(rulesQuery.data?.rules ?? [])].sort(compareRulesByOrder),
