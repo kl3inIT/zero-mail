@@ -49,3 +49,11 @@ WR-06 follow-up in a single small phase if both are scheduled together.
 - `grep -c "sm://" backend/worker/src/main/resources/application.yml` returns 0
 - `grep -c "REFRESH_TOKEN_KEY_BASE64:?" backend/worker/src/main/resources/application.yml` returns 1
 - Worker test suite green
+
+---
+
+## Resolution (2026-05-14, Phase 6 D-15)
+
+Verified already fixed at `backend/worker/src/main/resources/application.yml:63` during the Phase 6 discuss-phase. The `:?` fail-fast placeholder for `REFRESH_TOKEN_KEY_BASE64` is present and crashes worker boot if the env var is missing - exactly the property D-15 requires. Phase 6 implementation work: none.
+
+See also: `.planning/phases/06-polish-casa-verified-launch/06-CONTEXT.md` D-15.

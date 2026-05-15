@@ -17,18 +17,24 @@ public class PubSubOidcAuthFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(PubSubOidcAuthFilter.class);
 
-    private final TokenVerifier tokenVerifier;
+    private final PubSubTokenVerifier tokenVerifier;
     private final String expectedEmail;
 
-    public PubSubOidcAuthFilter(
-            String audience, String serviceAccountEmail, String certificatesUrl) {
+    public PubSubOidcAuthFilter(String serviceAccountEmail, TokenVerifier tokenVerifier) {
+        this(
+                serviceAccountEmail,
+                idToken -> {
+                    JsonWebSignature verifiedToken = tokenVerifier.verify(idToken);
+                    if (verifiedToken == null || verifiedToken.getPayload() == null) {
+                        return null;
+                    }
+                    return (String) verifiedToken.getPayload().get("email");
+                });
+    }
+
+    public PubSubOidcAuthFilter(String serviceAccountEmail, PubSubTokenVerifier tokenVerifier) {
         this.expectedEmail = serviceAccountEmail;
-        this.tokenVerifier =
-                TokenVerifier.newBuilder()
-                        .setAudience(audience)
-                        .setIssuer("https://accounts.google.com")
-                        .setCertificatesLocation(certificatesUrl)
-                        .build();
+        this.tokenVerifier = tokenVerifier;
     }
 
     @Override
@@ -49,8 +55,7 @@ public class PubSubOidcAuthFilter extends OncePerRequestFilter {
             return;
         }
         try {
-            JsonWebSignature verifiedToken = tokenVerifier.verify(authorizationHeader.substring(7));
-            String verifiedEmail = (String) verifiedToken.getPayload().get("email");
+            String verifiedEmail = tokenVerifier.verifyEmail(authorizationHeader.substring(7));
             if (!expectedEmail.equalsIgnoreCase(verifiedEmail)) {
                 log.warn("event=pubsub_oidc_wrong_email");
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

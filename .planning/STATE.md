@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: "Phase 05C shipped - PR #35"
-stopped_at: Completed 05C-04-PLAN.md
-last_updated: "2026-05-14T05:24:28.068Z"
-last_activity: 2026-05-14
+status: executing
+stopped_at: Load-test evidence committed; awaiting candidate gate URL, sign-off, and final rc tag
+last_updated: "2026-05-15T04:45:00.000Z"
+last_activity: 2026-05-15
 progress:
   total_phases: 17
   completed_phases: 16
-  total_plans: 118
-  completed_plans: 118
-  percent: 100
+  total_plans: 123
+  completed_plans: 122
+  percent: 99
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 6 — launch hardening and CASA-verified release readiness
+**Current focus:** Phase 06 - polish-casa-verified-launch
 
 ## Current Position
 
-Phase: 05C (user-surface-analytics-daily-digest) — COMPLETE
-Plan: 4 of 4
-Status: Phase 05C shipped - PR #35
-Last activity: 2026-05-14 - Completed quick task 260514-leb: Lighthouse mobile audit — all 4 scores ≥ 90 on landing
+Phase: 06 (polish-casa-verified-launch) - EXECUTING
+Plan: 5 of 5
+Status: Awaiting operator checkpoint for candidate gate URL, launch sign-off, final rc tag, and STATE closure
+Last activity: 2026-05-15
 
-Progress: [██████████] 100%
+Progress: [██████████] 99%
 
 ## Performance Metrics
 
@@ -139,6 +139,10 @@ Progress: [██████████] 100%
 | Phase 05C P02 | 35min | 2 tasks | 16 files |
 | Phase 05C P03 | 1h 46m | 3 tasks | 43 files |
 | Phase 05C P04 | 1h 55m | 2 tasks | 37 files |
+| Phase 06-polish-casa-verified-launch P01 | 1h 51m | 4 tasks | 17 files |
+| Phase 06-polish-casa-verified-launch P02 | 21min | 5 tasks | 10 files |
+| Phase 06 P03 | 2h 47m | 2 tasks | 11 files |
+| Phase 06 P04 | 9 min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -302,6 +306,12 @@ Recent decisions affecting current work:
 - [Phase 04]: Plan 07 cleanup counts outstanding publications with JdbcTemplate — The public incomplete and failed publication views do not expose counts on the worker compile classpath; counting against the Liquibase-owned event_publication table keeps cleanup observability compile-safe.
 - [Phase 04]: Plan 07 pending reaper ships conservative FAILED transition — Metadata verification to APPLIED remains optional and deferred; the shipped PT30M abandoned threshold is guarded to stay above the PT2M saga retry lease.
 - [Phase 05A]: Plan 06 closes Phase 05A with WEB-02 intentionally unchecked while WEB-01/WEB-03/WEB-04 are complete. — WEB-02 spans Phase 5A/5B/5C: 5A delivered onboarding, rules+live-preview, triage audit log+undo, and billing UI, but draft review, analytics, and real audit-list/ledger-history backend endpoints remain tracked in 05A-GAPS.md.
+- [Phase 06]: Plan 01 uses an e2e-stub @Primary GmailApiClientFactory subclass rather than an eight-consumer GmailClient interface refactor. — All inspected production consumers inject GmailApiClientFactory concretely; the subclass intercepts the existing seam with less blast radius.
+- [Phase 06]: Plan 01 keeps Google Auth TokenVerifier as the production bean and wraps it with PubSubTokenVerifier for launch-profile fakes. — This preserves production verifier behavior while letting e2e-stub/loadtest fakes return verified email addresses without fragile Google Auth internals.
+- [Phase 06]: Plan 01 makes E2eStubChatModel implement both ChatModel and LlmModelClient. — The production draft path injects LlmModelClient, so implementing both seams lets the golden-path draft smoke save canned text in stub Gmail.
+- [Phase 06]: Plan 02 uses deterministic UUID loadtest tenants from 00000000-0000-4000-8000-1de57e570001 through 00000000-0000-4000-8000-1de57e570050.
+- [Phase 06]: Plan 02 seeds gmail_connections for each synthetic loadtest tenant so PubSubIngestionService resolves emailAddress to tenant_id during the k6 workload.
+- [Phase 06]: Plan 02 wires loadtestVerify as a Gradle Exec task that shells out to psql for invariant checks instead of using JDBC on the Gradle buildscript classpath.
 
 ### Roadmap Evolution
 
@@ -336,6 +346,7 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260514-ta7 | Review PR #36 CodeRabbit and Copilot comments, apply warranted fixes, and recheck CI | 2026-05-14 | 4409e0e | Verified | [260514-ta7-review-pr-36-coderabbit-and-copilot-comm](./quick/260514-ta7-review-pr-36-coderabbit-and-copilot-comm/) |
 | 260514-j7v | PR #33 merge readiness and CI refresh while preserving PR UI | 2026-05-14 | e3e6639 | Verified | [260514-j7v-big-update-ui-33-check-pr-to-merge-into-](./quick/260514-j7v-big-update-ui-33-check-pr-to-merge-into-/) |
 | 260514-leb | Lighthouse mobile audit for apps/web landing — all 4 scores ≥ 90 (Perf 96, A11y 100, BP 100, SEO 100) | 2026-05-14 | 4917efd | — | [260514-leb-chay-lighthouse-audit-cho-apps-web-mobil](./quick/260514-leb-chay-lighthouse-audit-cho-apps-web-mobil/) |
 | 260514-gy3 | Fix GitHub Copilot review comments on PR #35 for Phase 05C | 2026-05-14 | b764ab9 | Verified | [260514-gy3-fix-github-copilot-review-comments-on-pr](./quick/260514-gy3-fix-github-copilot-review-comments-on-pr/) |
@@ -369,6 +380,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-13T18:10:57.411Z
-Stopped at: Completed 05C-04-PLAN.md
+Last session: 2026-05-14T23:35:33.615Z
+Stopped at: Completed 06-04-PLAN.md
 Resume file: None

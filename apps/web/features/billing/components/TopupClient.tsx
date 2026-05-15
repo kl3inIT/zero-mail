@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
-import { TopupAmountForm, type TopupIntentDetails } from './TopupAmountForm';
+import { TopupPackageSelector, type TopupIntentDetails } from './TopupPackageSelector';
 import { TopupInstructions } from './TopupInstructions';
 import { TopupSuccess } from './TopupSuccess';
 import { TopupExpired } from './TopupExpired';
@@ -94,10 +94,12 @@ export function TopupClient() {
   const baselineCredits = balance.data?.availableCredits ?? 0;
 
   return (
-    <div className="space-y-5">
-      <div className="space-y-1">
-        <h1 className="text-foreground text-xl font-semibold">{t('billing.topup.page.title')}</h1>
-        <p className="text-muted-foreground max-w-2xl text-sm leading-6">
+    <div className="space-y-12">
+      <div className="mb-12 space-y-4 text-center">
+        <h1 className="text-foreground from-foreground to-foreground/70 bg-linear-to-b bg-clip-text text-4xl font-extrabold tracking-tight text-transparent md:text-5xl">
+          {t('billing.topup.page.title')}
+        </h1>
+        <p className="text-muted-foreground mx-auto max-w-2xl text-lg leading-relaxed">
           {t('billing.topup.page.description')}
         </p>
       </div>
@@ -114,7 +116,10 @@ export function TopupClient() {
           onExpired={handleExpired}
         />
       ) : (
-        <TopupAmountForm baselineCredits={baselineCredits} onIntentCreated={handleIntentCreated} />
+        <TopupPackageSelector
+          baselineCredits={baselineCredits}
+          onIntentCreated={handleIntentCreated}
+        />
       )}
     </div>
   );
@@ -165,12 +170,12 @@ function parseStoredIntent(raw: string): StoredTopupIntent | null {
       typeof parsed.code !== 'string' ||
       typeof parsed.amountVnd !== 'number' ||
       typeof parsed.expiresAt !== 'string' ||
-      typeof parsed.qrPayload !== 'string' ||
       typeof parsed.baselineCredits !== 'number'
     ) {
       return null;
     }
-    return parsed as StoredTopupIntent;
+    const qrPayload = typeof parsed.qrPayload === 'string' ? parsed.qrPayload : '';
+    return { ...parsed, qrPayload } as StoredTopupIntent;
   } catch {
     return null;
   }

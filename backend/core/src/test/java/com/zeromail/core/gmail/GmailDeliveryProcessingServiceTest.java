@@ -3,6 +3,7 @@ package com.zeromail.core.gmail;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -36,6 +37,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 
 class GmailDeliveryProcessingServiceTest {
 
@@ -57,6 +60,8 @@ class GmailDeliveryProcessingServiceTest {
         RefreshTokenCipher refreshTokenCipher = mock(RefreshTokenCipher.class);
         ApplicationEventPublisher applicationEventPublisher = mock(ApplicationEventPublisher.class);
         EmailAddressCanonicalizer emailAddressCanonicalizer = new EmailAddressCanonicalizer();
+        PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
+        TransactionStatus transactionStatus = mock(TransactionStatus.class);
         Gmail gmail = mock(Gmail.class);
         Gmail.Users gmailUsers = mock(Gmail.Users.class);
         Gmail.Users.History gmailHistory = mock(Gmail.Users.History.class);
@@ -115,6 +120,9 @@ class GmailDeliveryProcessingServiceTest {
         when(messageGetRequest.setFields("id,threadId,labelIds,internalDate,payload/headers"))
                 .thenReturn(messageGetRequest);
         when(messageGetRequest.execute()).thenReturn(gmailMessage);
+        when(transactionManager.getTransaction(any())).thenReturn(transactionStatus);
+        doNothing().when(transactionManager).commit(transactionStatus);
+        doNothing().when(transactionManager).rollback(transactionStatus);
         when(observedRepository.insertObservedIfAbsent(
                         eq(TENANT_ID),
                         eq(GMAIL_MESSAGE_ID),
@@ -133,7 +141,8 @@ class GmailDeliveryProcessingServiceTest {
                         gmailApiClientFactory,
                         refreshTokenCipher,
                         applicationEventPublisher,
-                        emailAddressCanonicalizer)
+                        emailAddressCanonicalizer,
+                        transactionManager)
                 .processDelivery(delivery);
 
         verify(historyListRequest, never()).setLabelId("INBOX");
@@ -166,6 +175,8 @@ class GmailDeliveryProcessingServiceTest {
         RefreshTokenCipher refreshTokenCipher = mock(RefreshTokenCipher.class);
         ApplicationEventPublisher applicationEventPublisher = mock(ApplicationEventPublisher.class);
         EmailAddressCanonicalizer emailAddressCanonicalizer = new EmailAddressCanonicalizer();
+        PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
+        TransactionStatus transactionStatus = mock(TransactionStatus.class);
 
         GmailConnectionEntity connection =
                 new GmailConnectionEntity(
@@ -179,6 +190,9 @@ class GmailDeliveryProcessingServiceTest {
                         DELIVERY_ID, TENANT_ID, "pubsub-message", 200L, "{\"historyId\":\"200\"}");
 
         when(connectionRepository.findByTenantId(TENANT_ID)).thenReturn(Optional.of(connection));
+        when(transactionManager.getTransaction(any())).thenReturn(transactionStatus);
+        doNothing().when(transactionManager).commit(transactionStatus);
+        doNothing().when(transactionManager).rollback(transactionStatus);
 
         new GmailDeliveryProcessingService(
                         deliveryRepository,
@@ -188,7 +202,8 @@ class GmailDeliveryProcessingServiceTest {
                         gmailApiClientFactory,
                         refreshTokenCipher,
                         applicationEventPublisher,
-                        emailAddressCanonicalizer)
+                        emailAddressCanonicalizer,
+                        transactionManager)
                 .processDelivery(delivery);
 
         verify(deliveryRepository).updateStatus(DELIVERY_ID, "DEAD");

@@ -46,6 +46,24 @@ class SepayWebhookIntegrationTest extends ApiPostgresTestBase {
         assertThat(paidIntent.getStatus()).isEqualTo(BillingTopupIntentStatus.PAID);
     }
 
+    @Test
+    void legacy_amount_intent_without_package_snapshot_credits_from_transfer_amount() {
+        UUID tenantId = seedTenant();
+        seedLegacyPendingIntent(tenantId, "MNP12345", 100_000L);
+
+        ResponseEntity<String> response =
+                postWebhook(
+                        sepayPayload(
+                                1999L, null, "MNP12345 nap tien zeromail", 100_000L, "MNP12345"));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).contains("\"success\":true");
+        assertThat(countTopupEntries(tenantId)).isEqualTo(1L);
+        assertThat(topupAmountCredits(tenantId, "1999")).isEqualTo(100);
+        BillingTopupIntentEntity paidIntent = findIntentByCode(tenantId, "MNP12345");
+        assertThat(paidIntent.getStatus()).isEqualTo(BillingTopupIntentStatus.PAID);
+    }
+
     private ResponseEntity<String> postWebhook(SepayWebhookPayload payload) {
         return RestClient.create("http://localhost:" + port)
                 .post()
@@ -67,6 +85,29 @@ class SepayWebhookIntegrationTest extends ApiPostgresTestBase {
     }
 
     private void seedPendingIntent(UUID tenantId, String code, long amountVnd) {
+        BillingTopupIntentEntity intent =
+                new BillingTopupIntentEntity(
+                        UUID.randomUUID(),
+                        tenantId,
+                        code,
+                        amountVnd,
+                        null,
+                        "PKG_TEST",
+                        "Test package",
+                        Math.toIntExact(amountVnd / 1_000L),
+                        BillingTopupIntentStatus.PENDING,
+                        Instant.now().plus(Duration.ofHours(24)),
+                        null,
+                        null,
+                        null,
+                        null,
+                        code,
+                        null);
+        ScopedValue.where(TenantContext.TENANT, tenantId.toString())
+                .run(() -> billingTopupIntentRepository.saveAndFlush(intent));
+    }
+
+    private void seedLegacyPendingIntent(UUID tenantId, String code, long amountVnd) {
         BillingTopupIntentEntity intent =
                 new BillingTopupIntentEntity(
                         UUID.randomUUID(),

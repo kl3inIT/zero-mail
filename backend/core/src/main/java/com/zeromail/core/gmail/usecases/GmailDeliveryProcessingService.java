@@ -27,8 +27,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class GmailDeliveryProcessingService {
@@ -43,6 +45,7 @@ public class GmailDeliveryProcessingService {
     private final RefreshTokenCipher refreshTokenCipher;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final EmailAddressCanonicalizer emailAddressCanonicalizer;
+    private final TransactionTemplate observationTransaction;
 
     public GmailDeliveryProcessingService(
             PubSubDeliveryRepository deliveryRepository,
@@ -52,7 +55,8 @@ public class GmailDeliveryProcessingService {
             GmailApiClientFactory gmailApiClientFactory,
             RefreshTokenCipher refreshTokenCipher,
             ApplicationEventPublisher applicationEventPublisher,
-            EmailAddressCanonicalizer emailAddressCanonicalizer) {
+            EmailAddressCanonicalizer emailAddressCanonicalizer,
+            PlatformTransactionManager transactionManager) {
         this.deliveryRepository = deliveryRepository;
         this.observedRepository = observedRepository;
         this.connectionService = connectionService;
@@ -61,6 +65,7 @@ public class GmailDeliveryProcessingService {
         this.refreshTokenCipher = refreshTokenCipher;
         this.applicationEventPublisher = applicationEventPublisher;
         this.emailAddressCanonicalizer = emailAddressCanonicalizer;
+        this.observationTransaction = new TransactionTemplate(transactionManager);
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -176,43 +181,63 @@ public class GmailDeliveryProcessingService {
                 String senderEmail = extractSanitizedSenderEmail(gmailMessage);
 
                 int insertedCount =
-                        observedRepository.insertObservedIfAbsent(
-                                tenantId,
-                                gmailMessage.getId(),
-                                gmailMessage.getThreadId(),
-                                history.getId().longValueExact(),
-                                labelIds.toArray(new String[0]),
-                                gmailMessage.getInternalDate(),
-                                senderEmail);
+                        insertObservationAndPublishEvents(
+                                tenantId, history, gmailMessage, labelIds, senderEmail);
                 if (insertedCount == 1) {
                     newObservations++;
-                    Instant observedAt = Instant.now();
-                    applicationEventPublisher.publishEvent(
-                            new MailMessageObserved(
-                                    tenantId,
-                                    gmailMessage.getId(),
-                                    gmailMessage.getThreadId(),
-                                    observedAt));
-                    log.info(
-                            "event=mail_message_observed_published tenantId={} gmailMessageId={}",
-                            tenantId,
-                            gmailMessage.getId());
-                    if (labelIds.contains("SENT")) {
-                        applicationEventPublisher.publishEvent(
-                                new MailOutboundObserved(
-                                        tenantId,
-                                        gmailMessage.getThreadId(),
-                                        gmailMessage.getId(),
-                                        observedAt));
-                        log.info(
-                                "event=mail_outbound_observed_published tenantId={} gmailMessageId={}",
-                                tenantId,
-                                gmailMessage.getId());
-                    }
                 }
             }
         }
         return newObservations;
+    }
+
+    private int insertObservationAndPublishEvents(
+            UUID tenantId,
+            History history,
+            Message gmailMessage,
+            List<String> labelIds,
+            String senderEmail) {
+        Integer insertedCount =
+                observationTransaction.execute(
+                        transactionStatus -> {
+                            int newRowCount =
+                                    observedRepository.insertObservedIfAbsent(
+                                            tenantId,
+                                            gmailMessage.getId(),
+                                            gmailMessage.getThreadId(),
+                                            history.getId().longValueExact(),
+                                            labelIds.toArray(new String[0]),
+                                            gmailMessage.getInternalDate(),
+                                            senderEmail);
+                            if (newRowCount == 1) {
+                                publishObservedEvents(tenantId, gmailMessage, labelIds);
+                            }
+                            return newRowCount;
+                        });
+        return insertedCount == null ? 0 : insertedCount;
+    }
+
+    private void publishObservedEvents(UUID tenantId, Message gmailMessage, List<String> labelIds) {
+        Instant observedAt = Instant.now();
+        applicationEventPublisher.publishEvent(
+                new MailMessageObserved(
+                        tenantId, gmailMessage.getId(), gmailMessage.getThreadId(), observedAt));
+        log.info(
+                "event=mail_message_observed_published tenantId={} gmailMessageId={}",
+                tenantId,
+                gmailMessage.getId());
+        if (labelIds.contains("SENT")) {
+            applicationEventPublisher.publishEvent(
+                    new MailOutboundObserved(
+                            tenantId,
+                            gmailMessage.getThreadId(),
+                            gmailMessage.getId(),
+                            observedAt));
+            log.info(
+                    "event=mail_outbound_observed_published tenantId={} gmailMessageId={}",
+                    tenantId,
+                    gmailMessage.getId());
+        }
     }
 
     private String extractSanitizedSenderEmail(Message gmailMessage) {

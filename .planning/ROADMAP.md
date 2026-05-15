@@ -425,7 +425,12 @@ Plans:
   3. CASA restricted-scope verification for Gmail scopes is completed (Tier decision logged), and the Google OAuth consent screen is moved from Testing to Production.
   4. Prompt-injection regression suite, ArchUnit suite, and golden-set drift check all pass on the release candidate commit.
   5. Production runbook exists (on-call, Pub/Sub backlog recovery, `users.watch` renewal incidents, ledger reconciliation) and a launch go/no-go has been signed off against the trust story (never auto-sends, no stored bodies, undoable actions).
-**Plans**: TBD
+**Plans**: 5 plans
+- [x] 06-01-PLAN.md — Test-only Spring profile scaffolding (e2e-stub + loadtest beans, GmailClient interface, TokenVerifier @Bean, ArchUnit guards) — Wave 1
+- [x] 06-02-PLAN.md — k6 + docker-compose load harness + bootBuildImage wiring + :backend:api:loadtestVerify Gradle task with three invariant assertions — Wave 2
+- [x] 06-03-PLAN.md — Playwright golden-path spec under e2e-stub profile + playwright.config webServer array — Wave 2
+- [x] 06-04-PLAN.md — Reusable gates.yml + slimmed ci.yml + tag-triggered release.yml with golden-path + loadtest + release-gates-summary aggregator — Wave 3
+- [ ] 06-05-PLAN.md — LAUNCH-GO-NOGO.md (8 checkboxes + trust-story phrases) + SEED-012 CASA seed + D-15 todo archive + operator RC-tag checkpoint — Wave 3
 
 ## External Track (not a phase)
 
@@ -455,4 +460,4 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 5A. User Surface — Web UI Core | 6/6 | Complete | 2026-05-12 |
 | 5B. User Surface — AI Draft Replies | 8/8 | Complete | 2026-05-13 |
 | 5C. User Surface — Analytics & Daily Digest | 0/TBD | Not started | - |
-| 6. Polish & CASA-Verified Launch | 0/TBD | Not started | - |
+| 6. Polish & CASA-Verified Launch | 2/5 | In Progress|  |

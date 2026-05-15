@@ -1,0 +1,251 @@
+databaseChangeLog:
+  - changeSet:
+      id: 038-billing-packages
+      author: zeromail
+      changes:
+        - createTable:
+            tableName: billing_package
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: code
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uq_billing_package_code
+              - column:
+                  name: name
+                  type: varchar(120)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: price_vnd
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: credit_amount
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: varchar(512)
+              - column:
+                  name: active
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: display_order
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            comment: Positive price and credit invariants for top-up packages.
+            sql: ALTER TABLE billing_package ADD CONSTRAINT ck_billing_package_positive_values CHECK (price_vnd > 0 AND credit_amount > 0)
+        - createIndex:
+            tableName: billing_package
+            indexName: idx_billing_package_active_order
+            columns:
+              - column:
+                  name: active
+              - column:
+                  name: display_order
+              - column:
+                  name: code
+        - insert:
+            tableName: billing_package
+            columns:
+              - column:
+                  name: id
+                  value: 10000000-0000-0000-0000-000000000010
+              - column:
+                  name: code
+                  value: PKG_10K
+              - column:
+                  name: name
+                  value: Starter 10K
+              - column:
+                  name: price_vnd
+                  valueNumeric: 10000
+              - column:
+                  name: credit_amount
+                  valueNumeric: 10
+              - column:
+                  name: description
+                  value: Starter credit package
+              - column:
+                  name: display_order
+                  valueNumeric: 10
+        - insert:
+            tableName: billing_package
+            columns:
+              - column:
+                  name: id
+                  value: 10000000-0000-0000-0000-000000000020
+              - column:
+                  name: code
+                  value: PKG_20K
+              - column:
+                  name: name
+                  value: Growth 20K
+              - column:
+                  name: price_vnd
+                  valueNumeric: 20000
+              - column:
+                  name: credit_amount
+                  valueNumeric: 20
+              - column:
+                  name: description
+                  value: Growth credit package
+              - column:
+                  name: display_order
+                  valueNumeric: 20
+        - insert:
+            tableName: billing_package
+            columns:
+              - column:
+                  name: id
+                  value: 10000000-0000-0000-0000-000000000050
+              - column:
+                  name: code
+                  value: PKG_50K
+              - column:
+                  name: name
+                  value: Scale 50K
+              - column:
+                  name: price_vnd
+                  valueNumeric: 50000
+              - column:
+                  name: credit_amount
+                  valueNumeric: 50
+              - column:
+                  name: description
+                  value: Scale credit package
+              - column:
+                  name: display_order
+                  valueNumeric: 50
+        - addColumn:
+            tableName: billing_topup_intent
+            columns:
+              - column:
+                  name: package_id
+                  type: uuid
+              - column:
+                  name: package_code_snapshot
+                  type: varchar(64)
+              - column:
+                  name: package_name_snapshot
+                  type: varchar(120)
+              - column:
+                  name: credit_amount_snapshot
+                  type: int
+              - column:
+                  name: bank_code_snapshot
+                  type: varchar(32)
+              - column:
+                  name: bank_name_snapshot
+                  type: varchar(120)
+              - column:
+                  name: account_number_snapshot
+                  type: varchar(64)
+              - column:
+                  name: account_name_snapshot
+                  type: varchar(160)
+              - column:
+                  name: transfer_content_snapshot
+                  type: varchar(160)
+              - column:
+                  name: qr_payload_snapshot
+                  type: text
+        - addForeignKeyConstraint:
+            baseTableName: billing_topup_intent
+            baseColumnNames: package_id
+            constraintName: fk_billing_topup_intent_package
+            referencedTableName: billing_package
+            referencedColumnNames: id
+            onDelete: RESTRICT
+        - sql:
+            comment: Package snapshots are optional for historical amount-based intents but must be positive when present.
+            sql: ALTER TABLE billing_topup_intent ADD CONSTRAINT ck_billing_topup_intent_credit_snapshot_positive CHECK (credit_amount_snapshot IS NULL OR credit_amount_snapshot > 0)
+        - sql:
+            comment: Package identity and credit snapshots are optional for historical amount-based intents but atomic for package-based intents.
+            sql: >-
+              ALTER TABLE billing_topup_intent
+              ADD CONSTRAINT ck_billing_topup_intent_package_snapshot_atomic
+              CHECK (
+                (
+                  package_code_snapshot IS NULL
+                  AND package_name_snapshot IS NULL
+                  AND credit_amount_snapshot IS NULL
+                )
+                OR
+                (
+                  package_code_snapshot IS NOT NULL
+                  AND package_name_snapshot IS NOT NULL
+                  AND credit_amount_snapshot > 0
+                )
+              )
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: billing_topup_intent
+            constraintName: fk_billing_topup_intent_package
+        - dropColumn:
+            tableName: billing_topup_intent
+            columnName: qr_payload_snapshot
+        - dropColumn:
+            tableName: billing_topup_intent
+            columnName: transfer_content_snapshot
+        - dropColumn:
+            tableName: billing_topup_intent
+            columnName: account_name_snapshot
+        - dropColumn:
+            tableName: billing_topup_intent
+            columnName: account_number_snapshot
+        - dropColumn:
+            tableName: billing_topup_intent
+            columnName: bank_name_snapshot
+        - dropColumn:
+            tableName: billing_topup_intent
+            columnName: bank_code_snapshot
+        - dropColumn:
+            tableName: billing_topup_intent
+            columnName: credit_amount_snapshot
+        - dropColumn:
+            tableName: billing_topup_intent
+            columnName: package_name_snapshot
+        - dropColumn:
+            tableName: billing_topup_intent
+            columnName: package_code_snapshot
+        - dropColumn:
+            tableName: billing_topup_intent
+            columnName: package_id
+        - dropTable:
+            tableName: billing_package

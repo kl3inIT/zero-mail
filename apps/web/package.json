@@ -15,7 +15,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "e2e": "pnpm test:e2e",
-    "test:e2e": "node ../../node_modules/@playwright/test/cli.js test"
+    "test:e2e": "node ../../node_modules/@playwright/test/cli.js test",
+    "test:e2e:golden": "playwright test --config=playwright.golden.config.ts launch-golden-path.spec.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -40,6 +41,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@tanstack/react-query-devtools": "5.100.9",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.2",
     "@types/node": "^25",

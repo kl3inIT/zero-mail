@@ -1,5 +1,5 @@
 package com.zeromail.api.dto.billing;
 
-import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 
-public record TopupIntentRequest(@Min(1) long amountVnd) {}
+public record TopupIntentRequest(@NotBlank String packageCode) {}

@@ -1,0 +1,134 @@
+# Single-sourced launch gates (D-10/D-13). Called by ci.yml on PR/push:main and by release.yml on v*.*.*-rc* tag push.
+# WARNING: callers use `secrets: inherit`, exposing ALL repo secrets to every job in this workflow.
+# WARNING: this exposes ALL repo secrets to the reusable workflow; keep gates.yml inputs minimal and audited.
+#          Do not add jobs that need only a subset of secrets without considering scope-narrowing alternatives.
+name: Gates
+
+on:
+  workflow_call:
+    inputs:
+      run-ai-eval:
+        type: boolean
+        default: true
+        description: 'Whether to run :backend:core:aiEval -PdeterministicOnly'
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend Gradle
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          check-latest: true
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Run backend checks
+        run: ./gradlew --no-daemon check
+
+  ai-eval:
+    name: Backend AI Eval
+    if: ${{ inputs.run-ai-eval }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          check-latest: true
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Run deterministic draft eval
+        run: ./gradlew --no-daemon :backend:core:aiEval -PdeterministicOnly
+
+  frontend:
+    name: Frontend Web
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run frontend lint
+        run: pnpm --filter web run lint
+
+      - name: Run frontend typecheck
+        run: pnpm --filter web run typecheck
+
+      - name: Run frontend unit tests
+        run: pnpm --filter web run test
+
+      - name: Build frontend
+        run: pnpm --filter web run build
+
+  e2e:
+    name: Playwright
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter web exec playwright install --with-deps chromium
+
+      - name: Run frontend E2E tests
+        run: pnpm --filter web run test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 30

@@ -1,17 +1,15 @@
 import { render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NextIntlClientProvider } from 'next-intl';
-import type { ComponentType, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 
+import { NeedsReplyTable } from '@/features/needs-reply/components/NeedsReplyTable';
+import type { NeedsReplyRow as NeedsReplyRowModel } from '@/features/needs-reply/api/needs-reply-api';
 import enMessages from '@/i18n/messages/en.json';
 
-const NEEDS_REPLY_TABLE_MODULE = '@/features/needs-reply/components/NeedsReplyTable';
-
 describe('NeedsReplyTable', () => {
-  it('renders both buckets at zero, one, and many thread counts', async () => {
-    const { NeedsReplyTable } = await loadNeedsReplyTable();
-
+  it('renders both buckets at zero, one, and many thread counts', () => {
     renderWithProviders(
       <NeedsReplyTable
         activeBucket="to-reply"
@@ -26,9 +24,7 @@ describe('NeedsReplyTable', () => {
     expect(screen.getAllByTestId('needs-reply-row')).toHaveLength(2);
   });
 
-  it('renders loading skeleton rows and a classifying banner above stale rows', async () => {
-    const { NeedsReplyTable } = await loadNeedsReplyTable();
-
+  it('renders loading skeleton rows and a classifying banner above stale rows', () => {
     const { rerender } = renderWithProviders(
       <NeedsReplyTable activeBucket="to-reply" isLoading rows={[]} toReplyCount={0} />,
     );
@@ -48,9 +44,7 @@ describe('NeedsReplyTable', () => {
     expect(screen.getByTestId('needs-reply-row')).toBeInTheDocument();
   });
 
-  it('renders the empty and error states for both public buckets', async () => {
-    const { NeedsReplyTable } = await loadNeedsReplyTable();
-
+  it('renders the empty and error states for both public buckets', () => {
     const { rerender } = renderWithProviders(
       <NeedsReplyTable activeBucket="to-reply" rows={[]} toReplyCount={0} />,
     );
@@ -76,9 +70,7 @@ describe('NeedsReplyTable', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Try again');
   });
 
-  it('exposes draft, Gmail, status, resolved, and public-bucket affordances on a row', async () => {
-    const { NeedsReplyTable } = await loadNeedsReplyTable();
-
+  it('exposes draft, Gmail, status, resolved, and public-bucket affordances on a row', () => {
     renderWithProviders(
       <NeedsReplyTable
         activeBucket="to-reply"
@@ -97,9 +89,7 @@ describe('NeedsReplyTable', () => {
     expect(within(row).getByRole('button', { name: 'Mark resolved' })).toBeInTheDocument();
   });
 
-  it('keeps 320px layout actions stable with icon-only row controls', async () => {
-    const { NeedsReplyTable } = await loadNeedsReplyTable();
-
+  it('keeps 320px layout actions stable with icon-only row controls', () => {
     renderWithProviders(
       <div style={{ width: 320 }}>
         <NeedsReplyTable
@@ -114,12 +104,6 @@ describe('NeedsReplyTable', () => {
     expect(screen.getAllByRole('button', { name: 'Draft reply' }).length).toBeGreaterThan(0);
   });
 });
-
-async function loadNeedsReplyTable(): Promise<{
-  NeedsReplyTable: ComponentType<Record<string, unknown>>;
-}> {
-  return import(NEEDS_REPLY_TABLE_MODULE);
-}
 
 function renderWithProviders(children: ReactNode) {
   return render(<ProviderShell>{children}</ProviderShell>);
@@ -139,14 +123,17 @@ function ProviderShell({ children }: { children: ReactNode }) {
   );
 }
 
-function needsReplyRow(threadId: string, overrides: Record<string, unknown> = {}) {
+function needsReplyRow(
+  threadId: string,
+  overrides: Partial<NeedsReplyRowModel> = {},
+): NeedsReplyRowModel {
   return {
-    draftId: null,
     draftStatus: 'NO_DRAFT',
     gmailThreadId: threadId,
     lastActivityAt: '2026-05-12T10:30:00.000Z',
     openInGmailUrl: `https://mail.google.com/mail/u/0/#all/${threadId}`,
     otherParty: 'Founding team',
+    resolved: false,
     subject: `Quarterly update ${threadId}`,
     ...overrides,
   };
