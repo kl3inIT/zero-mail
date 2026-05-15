@@ -33,7 +33,7 @@ const VI_PATH = resolve(WEB_ROOT, 'i18n/messages/vi.json');
 const EN_PATH = resolve(WEB_ROOT, 'i18n/messages/en.json');
 const ERROR_CODES_JAVA = resolve(
   REPO_ROOT,
-  'backend/api/src/main/java/com/zeromail/api/error/ErrorCodes.java',
+  'backend/core/src/main/java/com/zeromail/core/shared/error/ErrorCodes.java',
 );
 
 // Files in scope for the EN-prose scanner. Mirrors PLAN <task1.behavior>.
