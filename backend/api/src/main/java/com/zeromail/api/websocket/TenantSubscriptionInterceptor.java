@@ -2,6 +2,8 @@ package com.zeromail.api.websocket;
 
 import java.util.Map;
 import org.jspecify.annotations.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
@@ -13,7 +15,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class TenantSubscriptionInterceptor implements ChannelInterceptor {
-
+    private static final Logger log = LoggerFactory.getLogger(TenantSubscriptionInterceptor.class);
     private static final String BILLING_TOPIC_PREFIX = "/topic/tenants/";
     private static final String BILLING_TOPIC_SUFFIX = "/billing";
 
@@ -33,6 +35,10 @@ public class TenantSubscriptionInterceptor implements ChannelInterceptor {
         String requestedTenantId = extractTenantId(destination);
         String sessionTenantId = sessionTenantId(accessor.getSessionAttributes());
         if (!requestedTenantId.equals(sessionTenantId)) {
+            log.warn(
+                    "event=websocket_subscription_tenant_mismatch tenantId={} requestedTenantId={}",
+                    sessionTenantId,
+                    requestedTenantId);
             throw new AccessDeniedException("Cannot subscribe to another tenant billing topic");
         }
         return message;

@@ -76,9 +76,7 @@ export function TopupClient() {
     }
     setCurrentIntent(null);
     setManualStep('amount');
-    const successUrl = activeIntent?.code
-      ? `/billing/top-up/success?code=${encodeURIComponent(activeIntent.code)}`
-      : '/billing/top-up/success';
+    const successUrl = activeIntent?.code ? `/billing` : '/billing';
     router.replace(successUrl, { scroll: false });
   }, [activeIntent, router]);
 
