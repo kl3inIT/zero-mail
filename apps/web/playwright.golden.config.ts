@@ -14,6 +14,7 @@ const gradleExecutable = process.platform === 'win32' ? 'gradlew.bat' : './gradl
 export default defineConfig({
   ...baseConfig,
   testMatch: ['**/launch-golden-path.spec.ts'],
+  testIgnore: [],
   webServer: [
     {
       command: 'pnpm dev',
