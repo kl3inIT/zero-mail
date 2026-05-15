@@ -1,7 +1,10 @@
-package com.zeromail.core.analytics.projection;
+package com.zeromail.core.analytics.usecases;
 
 import com.zeromail.core.analytics.domain.TimeSavedWeights;
 import com.zeromail.core.analytics.domain.TimeWindow;
+import com.zeromail.core.analytics.projection.AnalyticsSummaryProjection;
+import com.zeromail.core.analytics.projection.RuleHitProjection;
+import com.zeromail.core.analytics.projection.TopSenderProjection;
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;

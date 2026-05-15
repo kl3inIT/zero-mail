@@ -52,13 +52,13 @@ class AnalyticsRepositoryContentBanTest {
     private static Path resolveServiceSource() {
         Path moduleRelative =
                 Path.of(
-                        "src/main/java/com/zeromail/core/analytics/projection/"
+                        "src/main/java/com/zeromail/core/analytics/usecases/"
                                 + "AnalyticsSummaryQueryService.java");
         if (Files.exists(moduleRelative)) {
             return moduleRelative;
         }
         return Path.of(
-                "backend/core/src/main/java/com/zeromail/core/analytics/projection/"
+                "backend/core/src/main/java/com/zeromail/core/analytics/usecases/"
                         + "AnalyticsSummaryQueryService.java");
     }
 }

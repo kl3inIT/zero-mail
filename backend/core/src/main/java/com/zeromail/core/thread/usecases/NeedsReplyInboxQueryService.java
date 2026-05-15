@@ -1,9 +1,12 @@
-package com.zeromail.core.thread.projection;
+package com.zeromail.core.thread.usecases;
 
 import com.zeromail.core.shared.pagination.KeysetCursor;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.thread.domain.ThreadReplyBucket;
 import com.zeromail.core.thread.persistence.ThreadReplyStatusRepository;
+import com.zeromail.core.thread.projection.NeedsReplyPage;
+import com.zeromail.core.thread.projection.NeedsReplyPageQuery;
+import com.zeromail.core.thread.projection.NeedsReplyRow;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;

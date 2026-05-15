@@ -1,4 +1,4 @@
-package com.zeromail.core.gmail.usecases;
+package com.zeromail.core.gmail.exception;
 
 public class InvalidGrantException extends RuntimeException {
 

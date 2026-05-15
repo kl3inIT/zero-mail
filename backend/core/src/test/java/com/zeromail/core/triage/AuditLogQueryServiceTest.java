@@ -7,7 +7,7 @@ import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.triage.domain.TriageUndoPolicy;
 import com.zeromail.core.triage.projection.AuditLogPage;
 import com.zeromail.core.triage.projection.AuditLogPageQuery;
-import com.zeromail.core.triage.projection.AuditLogQueryService;
+import com.zeromail.core.triage.usecases.AuditLogQueryService;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;

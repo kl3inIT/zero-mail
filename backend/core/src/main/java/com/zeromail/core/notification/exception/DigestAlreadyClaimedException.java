@@ -1,4 +1,4 @@
-package com.zeromail.core.notification.usecases;
+package com.zeromail.core.notification.exception;
 
 import java.time.LocalDate;
 import java.util.UUID;

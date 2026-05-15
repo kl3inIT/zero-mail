@@ -1,7 +1,10 @@
-package com.zeromail.core.triage.projection;
+package com.zeromail.core.triage.usecases;
 
 import com.zeromail.core.shared.pagination.KeysetCursor;
 import com.zeromail.core.triage.domain.TriageUndoPolicy;
+import com.zeromail.core.triage.projection.AuditLogPage;
+import com.zeromail.core.triage.projection.AuditLogPageQuery;
+import com.zeromail.core.triage.projection.AuditLogRow;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
