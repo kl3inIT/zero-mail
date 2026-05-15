@@ -43,8 +43,7 @@ class TriageOrchestratorContractTest {
         assertThat(orchestratorSource())
                 .contains("@ApplicationModuleListener")
                 .contains("TenantContext.runWith")
-                .contains("findOrderedByTenantId")
-                .contains("RuleEntity::isEnabled")
+                .contains("listEnabledForExecution")
                 .contains("ActionProposalMerger");
     }
 

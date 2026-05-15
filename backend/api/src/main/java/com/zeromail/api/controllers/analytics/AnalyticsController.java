@@ -2,10 +2,10 @@ package com.zeromail.api.controllers.analytics;
 
 import com.zeromail.api.dto.analytics.AnalyticsSummaryResponse;
 import com.zeromail.api.dto.analytics.AnalyticsWindow;
-import com.zeromail.api.error.ErrorCodes;
 import com.zeromail.core.analytics.domain.TimeWindow;
 import com.zeromail.core.analytics.projection.AnalyticsSummaryProjection;
 import com.zeromail.core.analytics.usecases.AnalyticsSummaryQueryService;
+import com.zeromail.core.shared.error.ErrorCodes;
 import com.zeromail.core.tenant.TenantContext;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.Instant;

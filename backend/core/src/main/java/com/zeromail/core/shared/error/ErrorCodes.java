@@ -1,16 +1,18 @@
-package com.zeromail.api.error;
+package com.zeromail.core.shared.error;
 
 /**
- * Stable, dotted-hierarchy error code constants emitted by {@code GlobalExceptionHandler} in every
- * Phase 1 error response. The frontend switches on these codes (D-C3) and localizes via the {@code
+ * Stable, dotted-hierarchy error code constants emitted by the HTTP error pipeline in every Phase 1
+ * error response. The frontend switches on these codes (D-C3) and localizes via the {@code
  * errors.*} dictionary namespace; raw exception messages, {@code ProblemDetail.title}, and {@code
  * ProblemDetail.detail} are NEVER user-facing.
  *
  * <p>Naming convention (CONTEXT.md decision D-C3): hierarchical dotted keys, mirroring the {@code
  * messages/{vi,en}.json} {@code errors.*} namespace one-to-one.
  *
- * <p>Adapted from the JHipster {@code ErrorConstants} reference (kept: dotted-key style; rejected:
- * {@code error.http.{status}} default codes — Zero Mail uses semantic keys).
+ * <p>Lives in {@code core} so business exceptions can attach their own code at construction without
+ * the {@code api} package depending on {@code api}. Adapted from the JHipster {@code
+ * ErrorConstants} reference (kept: dotted-key style; rejected: {@code error.http.{status}} default
+ * codes — Zero Mail uses semantic keys).
  */
 public final class ErrorCodes {
 

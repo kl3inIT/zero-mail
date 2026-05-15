@@ -1,30 +1,11 @@
 package com.zeromail.api.config;
 
 import com.zeromail.api.error.AllowedParamScalars;
-import com.zeromail.api.error.ErrorCodes;
 import com.zeromail.api.error.FieldErrorDto;
-import com.zeromail.api.error.InvalidCursorException;
-import com.zeromail.api.error.RuleApiException;
-import com.zeromail.core.account.exception.CurrentUserNotFoundException;
-import com.zeromail.core.billing.exception.IllegalLedgerStateException;
-import com.zeromail.core.billing.exception.InsufficientCreditsException;
-import com.zeromail.core.draft.exception.DraftGenerationFailedException;
-import com.zeromail.core.draft.exception.DraftGenerationInFlightException;
-import com.zeromail.core.draft.exception.DraftGenerationUnavailableException;
-import com.zeromail.core.llm.exception.InvalidByokException;
-import com.zeromail.core.llm.exception.SafetyViolationException;
-import com.zeromail.core.llm.exception.SanitizationException;
-import com.zeromail.core.rules.exception.GmailPreviewUnavailableException;
-import com.zeromail.core.rules.exception.RuleValidationException;
+import com.zeromail.core.shared.error.ErrorCodes;
+import com.zeromail.core.shared.exception.BusinessException;
+import com.zeromail.core.shared.exception.ErrorClass;
 import com.zeromail.core.tenant.TenantContext;
-import com.zeromail.core.triage.exception.MissingMessageIdException;
-import com.zeromail.core.triage.exception.ThreadingHeaderInvalidException;
-import com.zeromail.core.triage.exception.TriageAuditException;
-import com.zeromail.core.triage.exception.TriageAuditNotFoundException;
-import com.zeromail.core.triage.exception.TriageSafetyViolationException;
-import com.zeromail.core.triage.exception.TriageUndoAlreadyDoneException;
-import com.zeromail.core.triage.exception.TriageUndoExpiredException;
-import com.zeromail.core.triage.exception.TriageUndoWriteFailedException;
 import jakarta.validation.ConstraintViolationException;
 import java.util.Map;
 import org.jspecify.annotations.NonNull;
@@ -62,10 +43,15 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
  * }
  * </pre>
  *
+ * <p><b>Pattern B (JHipster v9 style):</b> business exceptions carry their own HTTP-semantic class
+ * ({@link ErrorClass}), dotted error code, log event name, and title/detail diagnostics via {@link
+ * BusinessException}. A single {@link #onBusinessException} handler translates every subtype; the
+ * remaining handlers cover framework exceptions ({@link AuthenticationException}, {@link
+ * AccessDeniedException}, JPA conflicts, validation, etc.) that we do not own.
+ *
  * <p><b>Why {@code extends ResponseEntityExceptionHandler}?</b> Under {@code
  * spring.mvc.problemdetails.enabled=true} the framework's default {@code
- * MethodArgumentNotValidException} handling silently bypasses
- * {@code @ExceptionHandler(MethodArgumentNotValidException.class)} on a plain
+ * MethodArgumentNotValidException} handling silently bypasses {@code @ExceptionHandler} on a plain
  * {@code @RestControllerAdvice}. Inheriting {@link ResponseEntityExceptionHandler} and overriding
  * {@link #handleMethodArgumentNotValid} is the supported route. (Mitigates threat T-1.1.02-02; cite
  * RESEARCH.md Pitfall 1; Spring issue #35982.)
@@ -86,18 +72,28 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    @ExceptionHandler(CurrentUserNotFoundException.class)
-    public ResponseEntity<ProblemDetail> onCurrentUserMissing(
-            CurrentUserNotFoundException exception) {
-        log.warn(
-                "event=current_user_missing tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.getClass().getSimpleName());
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ProblemDetail> onBusinessException(BusinessException exception) {
+        HttpStatus status = toHttpStatus(exception.errorClass());
+        if (status.is5xxServerError()) {
+            log.error(
+                    "event={} tenantId={} reason={}",
+                    exception.logEvent(),
+                    tenantIdForLog(),
+                    exception.getClass().getSimpleName());
+        } else {
+            log.warn(
+                    "event={} tenantId={} reason={}",
+                    exception.logEvent(),
+                    tenantIdForLog(),
+                    exception.getClass().getSimpleName());
+        }
         return problem(
-                HttpStatus.UNAUTHORIZED,
-                "Current user is not available",
-                "The authenticated session points at a user that no longer exists.",
-                ErrorCodes.AUTH_CURRENT_USER_NOT_FOUND);
+                status,
+                exception.title(),
+                exception.detail(),
+                exception.errorCode(),
+                exception.params());
     }
 
     @ExceptionHandler(AuthenticationException.class)
@@ -155,311 +151,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 "Conflict",
                 "The resource was modified by another request before this update completed.",
                 ErrorCodes.CONFLICT);
-    }
-
-    @ExceptionHandler(InsufficientCreditsException.class)
-    public ResponseEntity<ProblemDetail> onInsufficientCredits(
-            InsufficientCreditsException exception) {
-        log.warn(
-                "event=insufficient_credits tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.getClass().getSimpleName());
-        return problem(
-                HttpStatus.valueOf(402),
-                "Insufficient credits",
-                "The current tenant balance is too low for this action.",
-                ErrorCodes.BILLING_INSUFFICIENT_CREDITS);
-    }
-
-    @ExceptionHandler(IllegalLedgerStateException.class)
-    public ResponseEntity<ProblemDetail> onIllegalLedgerState(
-            IllegalLedgerStateException exception) {
-        log.error(
-                "event=illegal_ledger_state tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.getClass().getSimpleName());
-        return problem(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                "Ledger state invariant violated",
-                "An internal billing-state transition was attempted in an invalid order.",
-                ErrorCodes.BILLING_LEDGER_INVALID_STATE);
-    }
-
-    @ExceptionHandler(SafetyViolationException.class)
-    public ResponseEntity<ProblemDetail> onSafetyViolation(SafetyViolationException exception) {
-        log.error(
-                "event=llm_safety_violation tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.getClass().getSimpleName());
-        return problem(
-                HttpStatus.UNPROCESSABLE_CONTENT,
-                "LLM safety violation",
-                "The model response violated the LLM safety policy.",
-                ErrorCodes.LLM_SAFETY_VIOLATION);
-    }
-
-    @ExceptionHandler(SanitizationException.class)
-    public ResponseEntity<ProblemDetail> onSanitizationFailed(SanitizationException exception) {
-        log.error(
-                "event=llm_sanitization_failed tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.getClass().getSimpleName());
-        return problem(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                "LLM sanitization failed",
-                "The LLM request could not be sanitized safely.",
-                ErrorCodes.LLM_SANITIZATION_FAILED);
-    }
-
-    @ExceptionHandler(InvalidByokException.class)
-    public ResponseEntity<ProblemDetail> onInvalidByok(InvalidByokException exception) {
-        log.warn(
-                "event=llm_byok_invalid tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.getClass().getSimpleName());
-        return problem(
-                HttpStatus.BAD_REQUEST,
-                "Invalid BYOK credentials",
-                "The BYOK provider, endpoint, or key could not be validated.",
-                ErrorCodes.LLM_BYOK_INVALID);
-    }
-
-    @ExceptionHandler(RuleApiException.class)
-    public ResponseEntity<ProblemDetail> onRuleApiException(RuleApiException exception) {
-        log.warn(
-                "event=rules_api_rejected tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.reason());
-        return switch (exception.reason()) {
-            case INVALID_COMPILE_OUTPUT ->
-                    problem(
-                            HttpStatus.BAD_REQUEST,
-                            "Invalid rule compile output",
-                            "The compiled rule payload is invalid.",
-                            ErrorCodes.RULES_COMPILE_INVALID);
-            case CLARIFICATION_REQUIRED ->
-                    problem(
-                            HttpStatus.BAD_REQUEST,
-                            "Rule clarification required",
-                            "The rule must be clarified before this operation can continue.",
-                            ErrorCodes.RULES_COMPILE_CLARIFICATION_REQUIRED);
-            case INVALID_SAMPLE_SIZE ->
-                    problem(
-                            HttpStatus.BAD_REQUEST,
-                            "Invalid preview sample size",
-                            "Preview sample size must be one of the allowed values.",
-                            ErrorCodes.RULES_PREVIEW_INVALID_SAMPLE_SIZE);
-            case INVALID_REORDER ->
-                    problem(
-                            HttpStatus.BAD_REQUEST,
-                            "Invalid rule order",
-                            "The reorder request must include the full current rule list.",
-                            ErrorCodes.RULES_REORDER_INVALID);
-            case UNSAFE_ACTION ->
-                    problem(
-                            HttpStatus.BAD_REQUEST,
-                            "Unsafe rule action",
-                            "The rule contains an action outside the safe action allow-list.",
-                            ErrorCodes.RULES_UNSAFE_ACTION);
-        };
-    }
-
-    @ExceptionHandler(RuleValidationException.class)
-    public ResponseEntity<ProblemDetail> onRuleValidation(RuleValidationException exception) {
-        log.warn(
-                "event=rules_validation_rejected tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.reason());
-        return switch (exception.reason()) {
-            case NOT_FOUND ->
-                    problem(
-                            HttpStatus.NOT_FOUND,
-                            "Rule not found",
-                            "The requested rule was not found for the current tenant.",
-                            ErrorCodes.RULES_NOT_FOUND);
-            case PREVIEW_REQUIRED ->
-                    problem(
-                            HttpStatus.CONFLICT,
-                            "Rule preview required",
-                            "The current rule version must be previewed before enabling.",
-                            ErrorCodes.RULES_PREVIEW_REQUIRED);
-            case VERSION_MISMATCH ->
-                    problem(
-                            HttpStatus.CONFLICT,
-                            "Rule version mismatch",
-                            "The rule version changed before the request completed.",
-                            ErrorCodes.RULES_VERSION_MISMATCH);
-            case INVALID_REORDER ->
-                    problem(
-                            HttpStatus.BAD_REQUEST,
-                            "Invalid rule order",
-                            "The reorder request must include the full current rule list.",
-                            ErrorCodes.RULES_REORDER_INVALID);
-            case UNSAFE_ACTION ->
-                    problem(
-                            HttpStatus.BAD_REQUEST,
-                            "Unsafe rule action",
-                            "The rule contains an action outside the safe action allow-list.",
-                            ErrorCodes.RULES_UNSAFE_ACTION);
-        };
-    }
-
-    @ExceptionHandler(GmailPreviewUnavailableException.class)
-    public ResponseEntity<ProblemDetail> onGmailPreviewUnavailable(
-            GmailPreviewUnavailableException exception) {
-        log.warn(
-                "event=rules_gmail_preview_unavailable tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.reason().id());
-        return problem(
-                HttpStatus.SERVICE_UNAVAILABLE,
-                "Gmail preview unavailable",
-                "Gmail preview data is not currently available.",
-                ErrorCodes.RULES_GMAIL_UNAVAILABLE,
-                Map.of("reason", exception.reason().id()));
-    }
-
-    @ExceptionHandler(TriageUndoExpiredException.class)
-    public ResponseEntity<ProblemDetail> onTriageUndoExpired(TriageUndoExpiredException exception) {
-        log.warn(
-                "event=triage_undo_rejected tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.getClass().getSimpleName());
-        return problem(
-                HttpStatus.CONFLICT,
-                "Triage undo expired",
-                "The triage action can no longer be undone.",
-                ErrorCodes.TRIAGE_UNDO_EXPIRED);
-    }
-
-    @ExceptionHandler(TriageUndoAlreadyDoneException.class)
-    public ResponseEntity<ProblemDetail> onTriageUndoAlreadyDone(
-            TriageUndoAlreadyDoneException exception) {
-        log.warn(
-                "event=triage_undo_rejected tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.getClass().getSimpleName());
-        return problem(
-                HttpStatus.CONFLICT,
-                "Triage undo unavailable",
-                "The triage action is not in an undoable state.",
-                ErrorCodes.TRIAGE_UNDO_ALREADY_DONE);
-    }
-
-    @ExceptionHandler(TriageAuditException.class)
-    public ResponseEntity<ProblemDetail> onTriageAuditException(TriageAuditException exception) {
-        log.warn(
-                "event=triage_audit_rejected tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.reason());
-        return switch (exception.reason()) {
-            case UNSUPPORTED_ACTION_TYPE ->
-                    problem(
-                            HttpStatus.CONFLICT,
-                            "Triage undo unsupported",
-                            "The triage action type cannot be undone safely.",
-                            ErrorCodes.TRIAGE_UNDO_UNSUPPORTED_ACTION);
-        };
-    }
-
-    @ExceptionHandler(TriageAuditNotFoundException.class)
-    public ResponseEntity<ProblemDetail> onTriageAuditNotFound(
-            TriageAuditNotFoundException exception) {
-        log.warn(
-                "event=triage_audit_not_found tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.getClass().getSimpleName());
-        return problem(
-                HttpStatus.NOT_FOUND,
-                "Triage audit not found",
-                "The requested triage audit entry was not found.",
-                ErrorCodes.TRIAGE_AUDIT_NOT_FOUND);
-    }
-
-    @ExceptionHandler(TriageUndoWriteFailedException.class)
-    public ResponseEntity<ProblemDetail> onTriageUndoWriteFailed(
-            TriageUndoWriteFailedException exception) {
-        log.error(
-                "event=triage_undo_write_failed tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.getClass().getSimpleName());
-        return problem(
-                HttpStatus.BAD_GATEWAY,
-                "Triage undo write failed",
-                "The triage action could not be undone right now.",
-                ErrorCodes.TRIAGE_UNDO_WRITE_FAILED);
-    }
-
-    @ExceptionHandler(TriageSafetyViolationException.class)
-    public ResponseEntity<ProblemDetail> onTriageSafetyViolation(
-            TriageSafetyViolationException exception) {
-        log.error(
-                "event=triage_safety_violation tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.getClass().getSimpleName());
-        return problem(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                "Triage safety violation",
-                "The triage action violated the safety policy.",
-                ErrorCodes.TRIAGE_SAFETY_VIOLATION);
-    }
-
-    @ExceptionHandler(DraftGenerationInFlightException.class)
-    public ResponseEntity<ProblemDetail> onDraftGenerationInFlight(
-            DraftGenerationInFlightException exception) {
-        log.warn(
-                "event=draft_generation_rejected tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.getClass().getSimpleName());
-        return problem(
-                HttpStatus.CONFLICT,
-                "Draft generation already in flight",
-                "A draft is already being generated for this thread.",
-                ErrorCodes.DRAFT_GENERATION_IN_FLIGHT);
-    }
-
-    @ExceptionHandler(DraftGenerationUnavailableException.class)
-    public ResponseEntity<ProblemDetail> onDraftGenerationUnavailable(
-            DraftGenerationUnavailableException exception) {
-        log.warn(
-                "event=draft_generation_unavailable tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.getClass().getSimpleName());
-        return problem(
-                HttpStatus.SERVICE_UNAVAILABLE,
-                "Draft generation temporarily unavailable",
-                "Draft generation is temporarily unavailable. Try again later.",
-                ErrorCodes.DRAFT_GENERATION_UNAVAILABLE);
-    }
-
-    @ExceptionHandler({
-        DraftGenerationFailedException.class,
-        MissingMessageIdException.class,
-        ThreadingHeaderInvalidException.class
-    })
-    public ResponseEntity<ProblemDetail> onDraftGenerationFailed(RuntimeException exception) {
-        log.warn(
-                "event=draft_generation_failed tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.getClass().getSimpleName());
-        return problem(
-                HttpStatus.UNPROCESSABLE_CONTENT,
-                "Draft generation failed",
-                "A draft could not be generated for this thread.",
-                ErrorCodes.DRAFT_GENERATION_FAILED);
-    }
-
-    @ExceptionHandler(InvalidCursorException.class)
-    public ResponseEntity<ProblemDetail> onInvalidCursor(InvalidCursorException exception) {
-        log.warn(
-                "event=invalid_cursor tenantId={} reason={}",
-                tenantIdForLog(),
-                exception.getClass().getSimpleName());
-        return problem(
-                HttpStatus.BAD_REQUEST,
-                "Invalid cursor",
-                "The pagination cursor is malformed.",
-                ErrorCodes.INVALID_CURSOR);
     }
 
     @ExceptionHandler(IllegalStateException.class)
@@ -557,6 +248,21 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 tenantIdForLog(),
                 exception.getBindingResult().getFieldErrorCount());
         return handleExceptionInternal(exception, problemDetail, headers, status, request);
+    }
+
+    private static HttpStatus toHttpStatus(ErrorClass errorClass) {
+        return switch (errorClass) {
+            case BAD_REQUEST -> HttpStatus.BAD_REQUEST;
+            case UNAUTHORIZED -> HttpStatus.UNAUTHORIZED;
+            case PAYMENT_REQUIRED -> HttpStatus.valueOf(402);
+            case FORBIDDEN -> HttpStatus.FORBIDDEN;
+            case NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case CONFLICT -> HttpStatus.CONFLICT;
+            case UNPROCESSABLE -> HttpStatus.UNPROCESSABLE_CONTENT;
+            case INTERNAL -> HttpStatus.INTERNAL_SERVER_ERROR;
+            case GATEWAY_FAILURE -> HttpStatus.BAD_GATEWAY;
+            case SERVICE_UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
+        };
     }
 
     /**

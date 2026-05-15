@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zeromail.api.security.TestSessionSupport;
 import com.zeromail.api.support.ApiPostgresTestBase;
+import com.zeromail.core.shared.error.ErrorCodes;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import org.junit.jupiter.api.DisplayName;

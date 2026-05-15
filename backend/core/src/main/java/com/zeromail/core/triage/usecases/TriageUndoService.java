@@ -6,9 +6,7 @@ import com.zeromail.core.triage.domain.TriageDecision;
 import com.zeromail.core.triage.domain.TriageUndoPolicy;
 import com.zeromail.core.triage.exception.TriageAuditException;
 import com.zeromail.core.triage.exception.TriageAuditNotFoundException;
-import com.zeromail.core.triage.exception.TriageUndoAlreadyDoneException;
-import com.zeromail.core.triage.exception.TriageUndoExpiredException;
-import com.zeromail.core.triage.exception.TriageUndoWriteFailedException;
+import com.zeromail.core.triage.exception.TriageUndoException;
 import com.zeromail.core.triage.persistence.TriageAuditEntity;
 import com.zeromail.core.triage.persistence.TriageAuditRepository;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -86,7 +84,7 @@ public class TriageUndoService {
                     command.tenantId(),
                     command.auditId(),
                     gmailWriteFailure.getClass().getSimpleName());
-            throw new TriageUndoWriteFailedException();
+            throw TriageUndoException.writeFailed();
         }
 
         Instant revertedAt = clock.instant();
@@ -94,7 +92,7 @@ public class TriageUndoService {
                 triageAuditRepository.markReverted(
                         command.auditId(), command.tenantId(), revertedAt);
         if (revertedRows != 1) {
-            throw new TriageUndoAlreadyDoneException();
+            throw TriageUndoException.alreadyDone();
         }
 
         Instant appliedAt = undoPreparation.appliedAt();
@@ -125,13 +123,13 @@ public class TriageUndoService {
 
         TriageDecision decision = auditRow.getDecision();
         if (decision != TriageDecision.APPLIED && decision != TriageDecision.REVERT_PENDING) {
-            throw new TriageUndoAlreadyDoneException();
+            throw TriageUndoException.alreadyDone();
         }
 
         Instant appliedAt = auditRow.getAppliedAt();
         Instant now = clock.instant();
         if (appliedAt == null || appliedAt.isBefore(now.minus(TriageUndoPolicy.UNDO_WINDOW))) {
-            throw new TriageUndoExpiredException();
+            throw TriageUndoException.expired();
         }
 
         RuleActionType actionType = actionType(auditRow);
@@ -147,7 +145,7 @@ public class TriageUndoService {
                                 .findByAuditIdAndTenantId(command.auditId(), command.tenantId())
                                 .orElseThrow(TriageAuditNotFoundException::new);
                 if (auditRow.getDecision() != TriageDecision.REVERT_PENDING) {
-                    throw new TriageUndoAlreadyDoneException();
+                    throw TriageUndoException.alreadyDone();
                 }
             }
         }
