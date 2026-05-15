@@ -9,6 +9,7 @@ plugins {
 dependencies {
     implementation(project(":backend:core"))
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-websocket")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
@@ -59,6 +60,10 @@ openApi {
                 "--zero-mail.api.gmail.pubsub.sa-principal-email=pubsub-openapi@openapi.invalid",
                 "--zero-mail.api.gmail.pubsub.oidc-certificates-url=https://www.googleapis.com/oauth2/v3/certs",
                 "--zero-mail.billing.sepay.webhook-api-key=openapi-emit",
+                "--zero-mail.billing.payment-account.bank-code=VCB",
+                "--zero-mail.billing.payment-account.bank-name=Vietcombank",
+                "--zero-mail.billing.payment-account.account-number=0000000000",
+                "--zero-mail.billing.payment-account.account-name=ZERO MAIL",
                 "--zero-mail.billing.vnd-per-credit=1000",
                 "--zero-mail.billing.max-pending-intents-per-tenant=5",
                 "--zero-mail.billing.intent-expiry=PT24H",

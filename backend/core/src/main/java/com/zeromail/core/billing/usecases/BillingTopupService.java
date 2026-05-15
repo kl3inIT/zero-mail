@@ -2,6 +2,7 @@ package com.zeromail.core.billing.usecases;
 
 import com.zeromail.core.billing.domain.BillingTopupIntentStatus;
 import com.zeromail.core.billing.domain.TopupCodeGenerator;
+import com.zeromail.core.billing.event.BillingTopupCredited;
 import com.zeromail.core.billing.persistence.BillingPackageEntity;
 import com.zeromail.core.billing.persistence.BillingPackageRepository;
 import com.zeromail.core.billing.persistence.BillingTopupIntentEntity;
@@ -22,6 +23,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -43,18 +45,21 @@ public class BillingTopupService {
     private final TopupCodeGenerator topupCodeGenerator = new TopupCodeGenerator();
     private final ZeroMailCoreProperties.BillingProperties billingProperties;
     private final TransactionTemplate transactionTemplate;
+    private final ApplicationEventPublisher eventPublisher;
 
     public BillingTopupService(
             BillingPackageRepository packageRepository,
             BillingTopupIntentRepository intentRepository,
             CreditLedgerEntryRepository entryRepository,
             ZeroMailCoreProperties properties,
-            TransactionTemplate transactionTemplate) {
+            TransactionTemplate transactionTemplate,
+            ApplicationEventPublisher eventPublisher) {
         this.packageRepository = packageRepository;
         this.intentRepository = intentRepository;
         this.entryRepository = entryRepository;
         this.billingProperties = properties.billing();
         this.transactionTemplate = transactionTemplate;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -219,11 +224,17 @@ public class BillingTopupService {
                         firstKnownLookup.tenantId());
                 return;
             }
+            if (firstKnownLookup.amountVnd() != transferAmountVnd) {
+                log.warn(
+                        "event=sepay_webhook_amount_mismatch tenantId={} intentVnd={} actualVnd={}",
+                        firstKnownLookup.tenantId(),
+                        firstKnownLookup.amountVnd(),
+                        transferAmountVnd);
+                return;
+            }
             log.warn(
-                    "event=sepay_webhook_amount_or_package_mismatch tenantId={} intentVnd={} actualVnd={} packageCode={}",
+                    "event=sepay_webhook_package_mismatch tenantId={} packageCode={}",
                     firstKnownLookup.tenantId(),
-                    firstKnownLookup.amountVnd(),
-                    transferAmountVnd,
                     firstKnownLookup.packageCodeSnapshot());
             return;
         }
@@ -254,10 +265,7 @@ public class BillingTopupService {
             return;
         }
 
-        int credits =
-                intent.getCreditAmountSnapshot() == null
-                        ? creditAmountSnapshot
-                        : intent.getCreditAmountSnapshot();
+        int credits = resolveTopupCredits(intent, creditAmountSnapshot);
         if (credits <= 0) {
             log.warn(
                     "event=sepay_topup_missing_credit_snapshot tenantId={} intentId={}",
@@ -287,6 +295,18 @@ public class BillingTopupService {
                             credits,
                             sepayTransactionIdString);
             entryRepository.saveAndFlush(topupEntry);
+            Instant creditedAt = Instant.now();
+            eventPublisher.publishEvent(
+                    new BillingTopupCredited(
+                            intent.getTenantId(),
+                            intent.getId(),
+                            intent.getCode(),
+                            intent.getPackageCodeSnapshot(),
+                            intent.getPackageNameSnapshot(),
+                            intent.getAmountVnd(),
+                            credits,
+                            sepayTransactionIdString,
+                            creditedAt));
             log.info(
                     "event=sepay_topup_credited tenantId={} credits={}",
                     intent.getTenantId(),
@@ -298,6 +318,21 @@ public class BillingTopupService {
             // replay so SePay receives 200.
             log.info("event=sepay_topup_replay_ignored tenantId={}", intent.getTenantId());
         }
+    }
+
+    private int resolveTopupCredits(
+            BillingTopupIntentEntity intent, int projectedCreditAmountSnapshot) {
+        if (intent.getCreditAmountSnapshot() != null) {
+            return intent.getCreditAmountSnapshot();
+        }
+        if (projectedCreditAmountSnapshot > 0) {
+            return projectedCreditAmountSnapshot;
+        }
+        long vndPerCredit = billingProperties.vndPerCredit();
+        if (vndPerCredit <= 0 || intent.getAmountVnd() % vndPerCredit != 0) {
+            return 0;
+        }
+        return Math.toIntExact(intent.getAmountVnd() / vndPerCredit);
     }
 
     /**
