@@ -108,7 +108,9 @@ public class RulesController {
                                 tenantId,
                                 request.sourceText(),
                                 request.clarificationAnswer(),
-                                request.priorCompileContext()));
+                                request.priorCompileContext(),
+                                request.priorDraftJson(),
+                                request.editInstruction()));
         return RuleCompileResponse.from(compileResult);
     }
 
