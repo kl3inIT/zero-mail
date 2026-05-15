@@ -21,8 +21,7 @@ import com.zeromail.core.rules.domain.RuleEvaluationInput;
 import com.zeromail.core.rules.domain.RuleEvaluationResult;
 import com.zeromail.core.rules.domain.RuleEvaluator;
 import com.zeromail.core.rules.domain.SemanticIntentMatcher;
-import com.zeromail.core.rules.persistence.RuleEntity;
-import com.zeromail.core.rules.persistence.RuleRepository;
+import com.zeromail.core.rules.usecases.RuleManagementService;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.usecases.TenantService;
 import com.zeromail.core.thread.usecases.ClassifyThreadReplyStatusService;
@@ -77,7 +76,7 @@ public class TriageOrchestratorService {
 
     private final TenantService tenantService;
     private final TriageRuleEvaluationInputFactory triageRuleEvaluationInputFactory;
-    private final RuleRepository ruleRepository;
+    private final RuleManagementService ruleManagementService;
     private final LlmGateway llmGateway;
     private final CreditLedger creditLedger;
     private final ActionProposalMerger actionProposalMerger;
@@ -93,7 +92,7 @@ public class TriageOrchestratorService {
     public TriageOrchestratorService(
             TenantService tenantService,
             TriageRuleEvaluationInputFactory triageRuleEvaluationInputFactory,
-            RuleRepository ruleRepository,
+            RuleManagementService ruleManagementService,
             LlmGateway llmGateway,
             CreditLedger creditLedger,
             SenderSafetyNetService senderSafetyNetService,
@@ -104,7 +103,7 @@ public class TriageOrchestratorService {
             ObjectProvider<MeterRegistry> meterRegistryProvider) {
         this.tenantService = tenantService;
         this.triageRuleEvaluationInputFactory = triageRuleEvaluationInputFactory;
-        this.ruleRepository = ruleRepository;
+        this.ruleManagementService = ruleManagementService;
         this.llmGateway = llmGateway;
         this.creditLedger = creditLedger;
         this.actionProposalMerger = new ActionProposalMerger();
@@ -132,7 +131,9 @@ public class TriageOrchestratorService {
     public OrchestrationResult processObservedEvent(MailMessageObserved observedEvent) {
         Objects.requireNonNull(observedEvent, "observedEvent must not be null");
         UUID tenantId = observedEvent.tenantId();
-        if (tenantService.isTriagePaused(tenantId)) {
+        TenantService.TenantTriageSettings triageSettings =
+                tenantService.triageSettingsFor(tenantId);
+        if (triageSettings.paused()) {
             log.info(
                     "event=triage_orchestration_paused tenantId={} gmailMessageId={}",
                     tenantId,
@@ -153,9 +154,7 @@ public class TriageOrchestratorService {
             return OrchestrationResult.empty();
         }
 
-        // v1 limitation: semanticEvalContent is sanitized subject excerpt plus content-free
-        // metadata
-        // flags only.
+        // semanticEvalContent is a sanitized subject excerpt plus content-free metadata flags only.
         String semanticEvalContent = buildSemanticEvalContent(ruleEvaluationInput);
         Map<String, MatcherEvaluationState> semanticMatches =
                 resolveSemanticMatches(ruleExecutionCandidates, semanticEvalContent);
@@ -171,7 +170,7 @@ public class TriageOrchestratorService {
             return OrchestrationResult.empty();
         }
 
-        boolean shadowMode = tenantService.isTriageShadowMode(tenantId);
+        boolean shadowMode = triageSettings.shadowMode();
         boolean senderProtected =
                 senderProtected(tenantId, triageInput.get().sanitizedSenderEmail(), observedEvent);
         int appliedActions =
@@ -187,16 +186,15 @@ public class TriageOrchestratorService {
     }
 
     private List<RuleExecutionCandidate> loadEnabledCandidates(UUID tenantId) {
-        return ruleRepository.findOrderedByTenantId(tenantId).stream()
-                .filter(RuleEntity::isEnabled)
+        return ruleManagementService.listEnabledForExecution(tenantId).stream()
                 .map(
-                        ruleEntity ->
+                        snapshot ->
                                 new RuleExecutionCandidate(
-                                        ruleEntity.getId(),
-                                        ruleEntity.getDisplayName(),
-                                        ruleEntity.getOrderIndex(),
-                                        parseMatcher(ruleEntity.getMatcherAst()),
-                                        parseActionIntents(ruleEntity.getActionIntents())))
+                                        snapshot.id(),
+                                        snapshot.displayName(),
+                                        snapshot.orderIndex(),
+                                        parseMatcher(snapshot.matcherAstJson()),
+                                        parseActionIntents(snapshot.actionIntentsJson())))
                 .toList();
     }
 

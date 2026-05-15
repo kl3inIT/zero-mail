@@ -4,6 +4,7 @@ import com.zeromail.core.rules.exception.RuleValidationException;
 import com.zeromail.core.rules.persistence.RuleEntity;
 import com.zeromail.core.rules.persistence.RuleRepository;
 import com.zeromail.core.rules.persistence.lowlevel.RuleNativeStateUpdater;
+import com.zeromail.core.rules.projection.EnabledRuleSnapshot;
 import com.zeromail.core.rules.projection.RuleStatusProjection;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -36,6 +37,25 @@ public class RuleManagementService {
                 .toList();
     }
 
+    /**
+     * Read-side accessor used by the triage orchestrator to build per-message execution candidates
+     * without depending on {@link RuleRepository} across domain boundaries.
+     */
+    @Transactional(readOnly = true)
+    public List<EnabledRuleSnapshot> listEnabledForExecution(UUID tenantId) {
+        return ruleRepository.findOrderedByTenantId(tenantId).stream()
+                .filter(RuleEntity::isEnabled)
+                .map(
+                        ruleEntity ->
+                                new EnabledRuleSnapshot(
+                                        ruleEntity.getId(),
+                                        ruleEntity.getDisplayName(),
+                                        ruleEntity.getOrderIndex(),
+                                        ruleEntity.getMatcherAst(),
+                                        ruleEntity.getActionIntents()))
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public RuleStatusProjection get(UUID tenantId, UUID ruleId) {
         return findRuleOrThrow(tenantId, ruleId).toStatusProjection();
@@ -43,7 +63,7 @@ public class RuleManagementService {
 
     @Transactional
     public RuleStatusProjection create(RuleCreateCommand command) {
-        int orderIndex = ruleRepository.findOrderedByTenantId(command.tenantId()).size();
+        int orderIndex = (int) ruleRepository.countByTenantId(command.tenantId());
         RuleEntity ruleEntity =
                 new RuleEntity(
                         command.ruleId(),

@@ -16,6 +16,7 @@ import com.zeromail.core.llm.byok.ByokEndpointValidator;
 import com.zeromail.core.llm.domain.BYOKProvider;
 import com.zeromail.core.llm.domain.ByokProviderPreset;
 import com.zeromail.core.llm.exception.InvalidByokException;
+import com.zeromail.core.llm.gateway.springai.ByokValidationGateway;
 import com.zeromail.core.llm.persistence.TenantByokCredentialsEntity;
 import com.zeromail.core.llm.persistence.TenantByokCredentialsRepository;
 import com.zeromail.core.support.PostgresContainerTest;
@@ -631,7 +632,7 @@ class ByokServiceTest extends PostgresContainerTest {
                                         : List.of(),
                                 Duration.ofSeconds(5),
                                 Duration.ofSeconds(15))),
-                restClientBuilder);
+                new ByokValidationGateway(restClientBuilder));
     }
 
     private void mockSuccessfulOpenAiProbe(String expectedUrl) {
