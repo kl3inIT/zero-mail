@@ -8,14 +8,14 @@ OAuth consent screen: **Testing** (100-user cap). Production move is gated on CA
 
 ## Decision Checklist
 
-- [ ] **(a) Playwright golden-path spec green on RC tag.** Link to CI run: _(operator fills in after `release-gates-summary` reports green - see Task 4)_
-- [ ] **(b) 50-tenant load test invariants all PASS.** Link to result: [`.planning/phases/06-polish-casa-verified-launch/06-LOAD-TEST-RESULT.md`](./phases/06-polish-casa-verified-launch/06-LOAD-TEST-RESULT.md)
-- [ ] **(c) Prompt-injection regression suite green on RC tag.** Re-verified by the `Gates / backend` job in `Release Gates` (it runs `./gradlew check`, which includes the prompt-injection suite from Phase 2C).
-- [ ] **(d) ArchUnit suite green on RC tag.** Re-verified by the same `Gates / backend` job (includes `DraftPathArchUnitTest`, `I18nArchUnitTest`, `LaunchProfileArchUnitTest` from Plan 06-01).
-- [ ] **(e) Spring Modulith `ApplicationModulesTest` green on RC tag.** Re-verified by `Gates / backend` (`ZeroMailApiApplicationModulesTest` runs as part of `check`).
-- [ ] **(f) LLM golden-set drift check green on RC tag.** Re-verified by `Gates / ai-eval` (`:backend:core:aiEval -PdeterministicOnly`).
-- [ ] **(g) Trust story re-affirmed in writing:** **auto-send forbidden**, **no stored bodies / prompts / completions**, **every triage action undoable**.
-- [ ] **(h) Launch mode = OAuth "Testing" (Production move deferred).** Tracking: [`.planning/seeds/SEED-012-casa-restricted-scope-verification.md`](./seeds/SEED-012-casa-restricted-scope-verification.md)
+- [x] **(a) Playwright golden-path spec green on RC tag.** Link to CI run: [Release Gates run #25903268052](https://github.com/kl3inIT/zero-mail/actions/runs/25903268052)
+- [x] **(b) 50-tenant load test invariants all PASS.** Link to result: [`.planning/phases/06-polish-casa-verified-launch/06-LOAD-TEST-RESULT.md`](./phases/06-polish-casa-verified-launch/06-LOAD-TEST-RESULT.md)
+- [x] **(c) Prompt-injection regression suite green on RC tag.** Re-verified by the `Gates / backend` job in `Release Gates` (it runs `./gradlew check`, which includes the prompt-injection suite from Phase 2C).
+- [x] **(d) ArchUnit suite green on RC tag.** Re-verified by the same `Gates / backend` job (includes `DraftPathArchUnitTest`, `I18nArchUnitTest`, `LaunchProfileArchUnitTest` from Plan 06-01).
+- [x] **(e) Spring Modulith `ApplicationModulesTest` green on RC tag.** Re-verified by `Gates / backend` (`ZeroMailApiApplicationModulesTest` runs as part of `check`).
+- [x] **(f) LLM golden-set drift check green on RC tag.** Re-verified by `Gates / ai-eval` (`:backend:core:aiEval -PdeterministicOnly`).
+- [x] **(g) Trust story re-affirmed in writing:** **auto-send forbidden**, **no stored bodies / prompts / completions**, **every triage action undoable**.
+- [x] **(h) Launch mode = OAuth "Testing" (Production move deferred).** Tracking: [`.planning/seeds/SEED-012-casa-restricted-scope-verification.md`](./seeds/SEED-012-casa-restricted-scope-verification.md)
 
 ## Evidence
 
@@ -44,4 +44,4 @@ OAuth consent screen: **Testing** (100-user cap). Production move is gated on CA
 
 *Operator adds the sign-off line below as the LAST EDIT before pushing the rc1 tag. Format is exact and committed verbatim.*
 
-<!-- ✓ signed-off by @<user> on <ISO date> -->
+✓ signed-off by @kl3inIT on 2026-05-15
