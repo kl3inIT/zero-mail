@@ -1,11 +1,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { CurrentUserResponse } from '@/features/account/api/account-api';
+import type { CurrentUser } from '@/features/account/api/account-api';
 import { accountQueryKeys } from '@/features/account/query-keys';
 import { billingKeys } from '@/features/billing/query-keys';
 
-type MutationContext = { previousUser: CurrentUserResponse | undefined } | undefined;
+type MutationContext = { previousUser: CurrentUser | undefined } | undefined;
 type MutationOptions = {
   mutationFn: (paused: boolean) => Promise<unknown>;
   onMutate?: (paused: boolean) => Promise<MutationContext>;
@@ -18,7 +18,7 @@ type MutationOptions = {
   ) => Promise<void> | void;
 };
 
-const baseUser: CurrentUserResponse = {
+const baseUser: CurrentUser = {
   id: 'user-1',
   email: 'user@example.com',
   tenantId: 'tenant-1',
@@ -26,7 +26,7 @@ const baseUser: CurrentUserResponse = {
   onboardingStep: 'COMPLETE',
   triagePaused: false,
   triageShadowMode: false,
-} as unknown as CurrentUserResponse;
+} as unknown as CurrentUser;
 
 const mocks = vi.hoisted(() => ({
   cancelQueries: vi.fn(),

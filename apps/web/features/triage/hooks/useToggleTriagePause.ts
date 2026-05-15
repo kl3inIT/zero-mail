@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import type { CurrentUserResponse } from '@/features/account/api/account-api';
+import type { CurrentUser } from '@/features/account/api/account-api';
 import { accountQueryKeys } from '@/features/account/query-keys';
 import { billingKeys } from '@/features/billing/query-keys';
 import { setTriagePaused } from '@/features/triage/api/triage-api';
@@ -14,10 +14,10 @@ export function useToggleTriagePause() {
     mutationFn: (paused: boolean) => setTriagePaused(paused),
     onMutate: async (paused) => {
       await queryClient.cancelQueries({ queryKey: accountQueryKeys.me() });
-      const previousUser = queryClient.getQueryData<CurrentUserResponse>(accountQueryKeys.me());
+      const previousUser = queryClient.getQueryData<CurrentUser>(accountQueryKeys.me());
 
       if (previousUser) {
-        queryClient.setQueryData<CurrentUserResponse>(accountQueryKeys.me(), {
+        queryClient.setQueryData<CurrentUser>(accountQueryKeys.me(), {
           ...previousUser,
           triagePaused: paused,
         });

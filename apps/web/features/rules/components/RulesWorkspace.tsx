@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useReducer } from 'react';
 import { useTranslations } from 'next-intl';
 import { Plus, Sparkles } from 'lucide-react';
 
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -41,6 +40,185 @@ import {
 
 type SampleSize = 10 | 25 | 50;
 
+type LastPreviewedRule = { ruleId: string; entityVersion?: number };
+
+type RulesWorkspaceState = {
+  selectedRuleId: string | null;
+  sourceText: string;
+  clarificationAnswer: string;
+  compileResult: RuleCompileResult | null;
+  compileError: string | null;
+  insufficientCreditError: string | null;
+  preview: RulePreviewResponse | null;
+  previewError: string | null;
+  gmailUnavailableError: string | null;
+  sampleSize: SampleSize;
+  lastPreviewedRule: LastPreviewedRule | null;
+  pendingRuleId: string | null;
+  pendingTemplateKey: string | null;
+  composerDialogOpen: boolean;
+  templateDialogOpen: boolean;
+};
+
+type RulesWorkspaceAction =
+  | { type: 'sourceTextChanged'; sourceText: string }
+  | { type: 'clarificationAnswerChanged'; clarificationAnswer: string }
+  | { type: 'ruleSelected'; rule: RuleResponse }
+  | { type: 'newRuleStarted' }
+  | { type: 'editRuleStarted'; rule: RuleResponse }
+  | { type: 'compileStarted' }
+  | { type: 'compileSucceeded'; result: RuleCompileResult; invalidMessage?: string }
+  | { type: 'compileFailed'; message: string }
+  | { type: 'compileInsufficientCredit'; message: string }
+  | { type: 'composerDialogToggled'; open: boolean }
+  | { type: 'templateDialogToggled'; open: boolean }
+  | { type: 'previewStarted' }
+  | {
+      type: 'previewSucceeded';
+      preview: RulePreviewResponse;
+      lastPreviewedRule: LastPreviewedRule | null;
+    }
+  | { type: 'previewFailed'; message: string }
+  | { type: 'previewGmailUnavailable'; message: string }
+  | { type: 'sampleSizeChanged'; sampleSize: SampleSize }
+  | { type: 'ruleTogglePending'; ruleId: string }
+  | { type: 'rulePendingCleared' }
+  | { type: 'templateMaterializePending'; templateKey: string }
+  | { type: 'templateMaterializeCleared' }
+  | { type: 'ruleSavedAfterCompose'; savedRule: RuleResponse }
+  | { type: 'selectedRuleDeleted' };
+
+const initialState: RulesWorkspaceState = {
+  selectedRuleId: null,
+  sourceText: '',
+  clarificationAnswer: '',
+  compileResult: null,
+  compileError: null,
+  insufficientCreditError: null,
+  preview: null,
+  previewError: null,
+  gmailUnavailableError: null,
+  sampleSize: 25,
+  lastPreviewedRule: null,
+  pendingRuleId: null,
+  pendingTemplateKey: null,
+  composerDialogOpen: false,
+  templateDialogOpen: false,
+};
+
+function rulesWorkspaceReducer(
+  state: RulesWorkspaceState,
+  action: RulesWorkspaceAction,
+): RulesWorkspaceState {
+  switch (action.type) {
+    case 'sourceTextChanged':
+      return {
+        ...state,
+        sourceText: action.sourceText,
+        compileResult: null,
+        compileError: null,
+        insufficientCreditError: null,
+        clarificationAnswer: '',
+      };
+    case 'clarificationAnswerChanged':
+      return { ...state, clarificationAnswer: action.clarificationAnswer };
+    case 'ruleSelected':
+      return applyRuleSelection(state, action.rule);
+    case 'newRuleStarted':
+      return {
+        ...resetForFreshComposition(state),
+        composerDialogOpen: true,
+      };
+    case 'editRuleStarted':
+      return {
+        ...applyRuleSelection(state, action.rule),
+        composerDialogOpen: true,
+      };
+    case 'compileStarted':
+      return { ...state, compileError: null, insufficientCreditError: null };
+    case 'compileSucceeded':
+      return {
+        ...state,
+        compileResult: action.result,
+        clarificationAnswer: action.result.status === 'compiled' ? '' : state.clarificationAnswer,
+        compileError: action.invalidMessage ?? null,
+      };
+    case 'compileFailed':
+      return { ...state, compileError: action.message };
+    case 'compileInsufficientCredit':
+      return { ...state, insufficientCreditError: action.message };
+    case 'composerDialogToggled':
+      return { ...state, composerDialogOpen: action.open };
+    case 'templateDialogToggled':
+      return { ...state, templateDialogOpen: action.open };
+    case 'previewStarted':
+      return { ...state, previewError: null, gmailUnavailableError: null };
+    case 'previewSucceeded':
+      return {
+        ...state,
+        preview: action.preview,
+        lastPreviewedRule: action.lastPreviewedRule ?? state.lastPreviewedRule,
+      };
+    case 'previewFailed':
+      return { ...state, previewError: action.message };
+    case 'previewGmailUnavailable':
+      return { ...state, gmailUnavailableError: action.message };
+    case 'sampleSizeChanged':
+      return { ...state, sampleSize: action.sampleSize };
+    case 'ruleTogglePending':
+      return { ...state, pendingRuleId: action.ruleId };
+    case 'rulePendingCleared':
+      return { ...state, pendingRuleId: null };
+    case 'templateMaterializePending':
+      return { ...state, pendingTemplateKey: action.templateKey };
+    case 'templateMaterializeCleared':
+      return { ...state, pendingTemplateKey: null };
+    case 'ruleSavedAfterCompose':
+      return {
+        ...applyRuleSelection(state, action.savedRule),
+        lastPreviewedRule: null,
+      };
+    case 'selectedRuleDeleted':
+      return {
+        ...state,
+        selectedRuleId: null,
+        sourceText: '',
+        compileResult: null,
+        preview: null,
+      };
+  }
+}
+
+function applyRuleSelection(state: RulesWorkspaceState, rule: RuleResponse): RulesWorkspaceState {
+  return {
+    ...state,
+    selectedRuleId: rule.ruleId ?? null,
+    sourceText: rule.sourceText ?? '',
+    compileResult: compiledResultFromRule(rule),
+    clarificationAnswer: '',
+    compileError: null,
+    insufficientCreditError: null,
+    preview: null,
+    previewError: null,
+    gmailUnavailableError: null,
+  };
+}
+
+function resetForFreshComposition(state: RulesWorkspaceState): RulesWorkspaceState {
+  return {
+    ...state,
+    selectedRuleId: null,
+    sourceText: '',
+    compileResult: null,
+    compileError: null,
+    insufficientCreditError: null,
+    clarificationAnswer: '',
+    preview: null,
+    previewError: null,
+    gmailUnavailableError: null,
+  };
+}
+
 export function RulesWorkspace() {
   const t = useTranslations();
   const rulesQuery = useRules();
@@ -55,8 +233,7 @@ export function RulesWorkspace() {
   const updateEnabledMutation = useUpdateRuleEnabled();
   const materializeTemplateMutation = useMaterializeRuleTemplate();
 
-  // GET /api/rules materializes selected templates idempotently —
-  // the list query is the single source of truth for template-derived rules.
+  const [state, dispatch] = useReducer(rulesWorkspaceReducer, initialState);
 
   const rules = useMemo(
     () => [...(rulesQuery.data?.rules ?? [])].sort(compareRulesByOrder),
@@ -64,51 +241,40 @@ export function RulesWorkspace() {
   );
   const templates = templatesQuery.data ?? rulesQuery.data?.templates ?? [];
 
-  const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
-  const [sourceText, setSourceText] = useState('');
-  const [clarificationAnswer, setClarificationAnswer] = useState('');
-  const [compileResult, setCompileResult] = useState<RuleCompileResult | null>(null);
-  const [compileError, setCompileError] = useState<string | null>(null);
-  const [insufficientCreditError, setInsufficientCreditError] = useState<string | null>(null);
-  const [preview, setPreview] = useState<RulePreviewResponse | null>(null);
-  const [previewError, setPreviewError] = useState<string | null>(null);
-  const [gmailUnavailableError, setGmailUnavailableError] = useState<string | null>(null);
-  const [sampleSize, setSampleSize] = useState<SampleSize>(25);
-  const [lastPreviewedRule, setLastPreviewedRule] = useState<{
-    ruleId: string;
-    entityVersion?: number;
-  } | null>(null);
-  const [pendingRuleId, setPendingRuleId] = useState<string | null>(null);
-  const [pendingTemplateKey, setPendingTemplateKey] = useState<string | null>(null);
-  const [composerDialogOpen, setComposerDialogOpen] = useState(false);
-  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
-
-  const selectedRule = rules.find((rule) => rule.ruleId === selectedRuleId) ?? null;
+  const selectedRule = rules.find((rule) => rule.ruleId === state.selectedRuleId) ?? null;
 
   useEffect(() => {
-    if (!selectedRuleId && rules[0]?.ruleId) {
-      selectRule(rules[0]);
+    if (!state.selectedRuleId && rules[0]?.ruleId) {
+      dispatch({ type: 'ruleSelected', rule: rules[0] });
     }
-  }, [rules, selectedRuleId]);
+  }, [rules, state.selectedRuleId]);
 
-  function updateSourceText(nextSourceText: string) {
-    setSourceText(nextSourceText);
-    setCompileResult(null);
-    setCompileError(null);
-    setInsufficientCreditError(null);
-    setClarificationAnswer('');
-  }
-
-  function selectRule(rule: RuleResponse) {
-    setSelectedRuleId(rule.ruleId ?? null);
-    setSourceText(rule.sourceText ?? '');
-    setCompileResult(compiledResultFromRule(rule));
-    setClarificationAnswer('');
-    setCompileError(null);
-    setInsufficientCreditError(null);
-    setPreview(null);
-    setPreviewError(null);
-    setGmailUnavailableError(null);
+  async function runCompile(answer: string | undefined) {
+    dispatch({ type: 'compileStarted' });
+    try {
+      const result = await compileMutation.mutateAsync({
+        sourceText: state.sourceText,
+        clarificationAnswer: answer,
+        priorCompileContext:
+          state.compileResult?.status === 'clarificationRequired'
+            ? state.compileResult.priorCompileContext
+            : undefined,
+      });
+      dispatch({
+        type: 'compileSucceeded',
+        result,
+        invalidMessage: result.status === 'invalid' ? t('errors.rules.compile.invalid') : undefined,
+      });
+    } catch (error) {
+      if (isInsufficientCredit(error)) {
+        dispatch({
+          type: 'compileInsufficientCredit',
+          message: t('errors.rules.insufficientCredits'),
+        });
+        return;
+      }
+      dispatch({ type: 'compileFailed', message: t('errors.rules.compile.invalid') });
+    }
   }
 
   async function handleCompile() {
@@ -116,104 +282,85 @@ export function RulesWorkspace() {
   }
 
   async function handleAnswerClarification() {
-    if (!clarificationAnswer.trim()) return;
-    await runCompile(clarificationAnswer.trim());
-  }
-
-  async function runCompile(answer: string | undefined) {
-    setCompileError(null);
-    setInsufficientCreditError(null);
-    try {
-      const result = await compileMutation.mutateAsync({
-        sourceText,
-        clarificationAnswer: answer,
-        priorCompileContext:
-          compileResult?.status === 'clarificationRequired'
-            ? compileResult.priorCompileContext
-            : undefined,
-      });
-      setCompileResult(result);
-      if (result.status === 'compiled') setClarificationAnswer('');
-      if (result.status === 'invalid') setCompileError(t('errors.rules.compile.invalid'));
-    } catch (error) {
-      if (isInsufficientCredit(error)) {
-        setInsufficientCreditError(t('errors.rules.insufficientCredits'));
-        return;
-      }
-      setCompileError(t('errors.rules.compile.invalid'));
-    }
+    if (!state.clarificationAnswer.trim()) return;
+    await runCompile(state.clarificationAnswer.trim());
   }
 
   async function handleSaveDisabledRule() {
-    if (compileResult?.status !== 'compiled') return;
+    if (state.compileResult?.status !== 'compiled') return;
 
     const basePayload = {
-      displayName: compileResult.compiled.displayName ?? fallbackDisplayName(sourceText),
-      sourceText,
-      compiled: compiledResponseToRequest(compileResult.compiled),
+      displayName:
+        state.compileResult.compiled.displayName ?? fallbackDisplayName(state.sourceText),
+      sourceText: state.sourceText,
+      compiled: compiledResponseToRequest(state.compileResult.compiled),
     };
 
-    let savedRule;
-    if (selectedRule?.ruleId && selectedRule.sourceText) {
-      savedRule = await updateRuleMutation.mutateAsync({
-        ruleId: selectedRule.ruleId,
-        payload: {
-          ...basePayload,
-          entityVersion: selectedRule.entityVersion ?? 0,
-        },
-      });
-    } else {
-      savedRule = await createRuleMutation.mutateAsync(basePayload);
-    }
+    const savedRule =
+      selectedRule?.ruleId && selectedRule.sourceText
+        ? await updateRuleMutation.mutateAsync({
+            ruleId: selectedRule.ruleId,
+            payload: {
+              ...basePayload,
+              entityVersion: selectedRule.entityVersion ?? 0,
+            },
+          })
+        : await createRuleMutation.mutateAsync(basePayload);
 
-    selectRule(savedRule);
-    setLastPreviewedRule(null);
+    dispatch({ type: 'ruleSavedAfterCompose', savedRule });
   }
 
   async function handlePreview() {
-    setPreviewError(null);
-    setGmailUnavailableError(null);
+    dispatch({ type: 'previewStarted' });
 
     try {
-      const draftPreviewRequired = isDirtySelectedDraft(selectedRule, sourceText, compileResult);
+      const draftPreviewRequired = isDirtySelectedDraft(
+        selectedRule,
+        state.sourceText,
+        state.compileResult,
+      );
       const result =
         selectedRule?.ruleId !== undefined && !draftPreviewRequired
           ? await previewSavedRuleMutation.mutateAsync({
               ruleId: selectedRule.ruleId,
-              payload: { sampleSize },
+              payload: { sampleSize: state.sampleSize },
             })
-          : compileResult?.status === 'compiled'
+          : state.compileResult?.status === 'compiled'
             ? await previewDraftRuleMutation.mutateAsync({
-                compiled: compiledResponseToRequest(compileResult.compiled),
-                sampleSize,
+                compiled: compiledResponseToRequest(state.compileResult.compiled),
+                sampleSize: state.sampleSize,
               })
             : null;
 
       if (result) {
-        setPreview(result);
-        if (selectedRule?.ruleId && !draftPreviewRequired) {
-          setLastPreviewedRule({
-            ruleId: selectedRule.ruleId,
-            entityVersion: selectedRule.entityVersion,
-          });
-        }
+        dispatch({
+          type: 'previewSucceeded',
+          preview: result,
+          lastPreviewedRule:
+            selectedRule?.ruleId && !draftPreviewRequired
+              ? { ruleId: selectedRule.ruleId, entityVersion: selectedRule.entityVersion }
+              : null,
+        });
       }
     } catch (error) {
       if (isGmailUnavailable(error)) {
-        setGmailUnavailableError(t('errors.rules.gmail.unavailable'));
+        dispatch({
+          type: 'previewGmailUnavailable',
+          message: t('errors.rules.gmail.unavailable'),
+        });
         return;
       }
-      setPreviewError(t('errors.rules.preview.generic'));
+      dispatch({ type: 'previewFailed', message: t('errors.rules.preview.generic') });
     }
   }
 
   async function handleToggleRule(rule: RuleResponse) {
     if (!rule.ruleId) return;
-    setPendingRuleId(rule.ruleId);
+    dispatch({ type: 'ruleTogglePending', ruleId: rule.ruleId });
     try {
       await updateEnabledMutation.mutateAsync({ ruleId: rule.ruleId, enabled: !rule.enabled });
     } finally {
-      setPendingRuleId(null);
+      dispatch({ type: 'rulePendingCleared' });
     }
   }
 
@@ -242,24 +389,21 @@ export function RulesWorkspace() {
   async function handleDeleteRule(rule: RuleResponse) {
     if (!rule.ruleId) return;
     await deleteRuleMutation.mutateAsync(rule.ruleId);
-    if (selectedRuleId === rule.ruleId) {
-      setSelectedRuleId(null);
-      setSourceText('');
-      setCompileResult(null);
-      setPreview(null);
+    if (state.selectedRuleId === rule.ruleId) {
+      dispatch({ type: 'selectedRuleDeleted' });
     }
   }
 
   async function handleUseTemplate(template: RuleTemplateResponse) {
     if (!template.templateKey) return;
-    setPendingTemplateKey(template.templateKey);
+    dispatch({ type: 'templateMaterializePending', templateKey: template.templateKey });
     try {
       const result = await materializeTemplateMutation.mutateAsync(template.templateKey);
       const createdRule = result.createdRules?.[0];
-      if (createdRule) selectRule(createdRule);
-      setTemplateDialogOpen(false);
+      if (createdRule) dispatch({ type: 'ruleSelected', rule: createdRule });
+      dispatch({ type: 'templateDialogToggled', open: false });
     } finally {
-      setPendingTemplateKey(null);
+      dispatch({ type: 'templateMaterializeCleared' });
     }
   }
 
@@ -267,30 +411,12 @@ export function RulesWorkspace() {
     return (
       Boolean(rule.ruleId) &&
       (rule.lastPreviewedEntityVersion === rule.entityVersion ||
-        (lastPreviewedRule?.ruleId === rule.ruleId &&
-          lastPreviewedRule?.entityVersion === rule.entityVersion))
+        (state.lastPreviewedRule?.ruleId === rule.ruleId &&
+          state.lastPreviewedRule?.entityVersion === rule.entityVersion))
     );
   }
 
-  const canPreview = canPreviewRule(selectedRule, sourceText, compileResult);
-
-  function handleNewRule() {
-    setSelectedRuleId(null);
-    setSourceText('');
-    setCompileResult(null);
-    setCompileError(null);
-    setInsufficientCreditError(null);
-    setClarificationAnswer('');
-    setPreview(null);
-    setPreviewError(null);
-    setGmailUnavailableError(null);
-    setComposerDialogOpen(true);
-  }
-
-  function handleEditRule(rule: RuleResponse) {
-    selectRule(rule);
-    setComposerDialogOpen(true);
-  }
+  const canPreview = canPreviewRule(selectedRule, state.sourceText, state.compileResult);
 
   return (
     <div className="space-y-6">
@@ -301,7 +427,7 @@ export function RulesWorkspace() {
             type="button"
             size="lg"
             className="h-12 w-full gap-3 rounded-xl text-base font-semibold shadow-sm transition-all hover:shadow-md"
-            onClick={handleNewRule}
+            onClick={() => dispatch({ type: 'newRuleStarted' })}
           >
             <Plus className="size-5" />
             {t('rules.composer.newRuleCta')}
@@ -309,13 +435,13 @@ export function RulesWorkspace() {
 
           <RuleList
             rules={rules}
-            selectedRuleId={selectedRuleId}
+            selectedRuleId={state.selectedRuleId}
             isLoading={rulesQuery.isLoading}
-            pendingRuleId={pendingRuleId}
+            pendingRuleId={state.pendingRuleId}
             canEnableRule={canEnableRule}
-            onSelectRule={selectRule}
+            onSelectRule={(rule) => dispatch({ type: 'ruleSelected', rule })}
             onMoveRule={handleMoveRule}
-            onEditRule={handleEditRule}
+            onEditRule={(rule) => dispatch({ type: 'editRuleStarted', rule })}
             onToggleEnabled={handleToggleRule}
             onDeleteRule={handleDeleteRule}
             action={
@@ -324,7 +450,7 @@ export function RulesWorkspace() {
                 variant="ghost"
                 size="sm"
                 className="text-primary hover:bg-primary/5 h-8 gap-1.5 rounded-md px-2 font-medium"
-                onClick={() => setTemplateDialogOpen(true)}
+                onClick={() => dispatch({ type: 'templateDialogToggled', open: true })}
               >
                 <Sparkles className="size-3.5" />
                 {t('rules.templates.browseCta')}
@@ -337,15 +463,15 @@ export function RulesWorkspace() {
         <div className="lg:order-2">
           <RulePreviewPanel
             selectedRule={selectedRule}
-            preview={preview}
-            previewError={previewError}
-            gmailUnavailableError={gmailUnavailableError}
+            preview={state.preview}
+            previewError={state.previewError}
+            gmailUnavailableError={state.gmailUnavailableError}
             isPreviewing={previewSavedRuleMutation.isPending || previewDraftRuleMutation.isPending}
             isToggling={updateEnabledMutation.isPending}
             canPreview={canPreview}
             canEnable={selectedRule ? canEnableRule(selectedRule) : false}
-            sampleSize={sampleSize}
-            onSampleSizeChange={setSampleSize}
+            sampleSize={state.sampleSize}
+            onSampleSizeChange={(sampleSize) => dispatch({ type: 'sampleSizeChanged', sampleSize })}
             onPreview={handlePreview}
             onToggleEnabled={() => {
               if (selectedRule) void handleToggleRule(selectedRule);
@@ -355,33 +481,41 @@ export function RulesWorkspace() {
       </div>
 
       {/* Composer dialog — for creating and editing rules */}
-      <Dialog open={composerDialogOpen} onOpenChange={setComposerDialogOpen}>
+      <Dialog
+        open={state.composerDialogOpen}
+        onOpenChange={(open) => dispatch({ type: 'composerDialogToggled', open })}
+      >
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader className="sr-only">
             <DialogTitle>{t('rules.composer.title')}</DialogTitle>
             <DialogDescription>{t('rules.page.safetyNote')}</DialogDescription>
           </DialogHeader>
           <RuleComposer
-            sourceText={sourceText}
-            clarificationAnswer={clarificationAnswer}
-            compileResult={compileResult}
-            compileError={compileError}
-            insufficientCreditError={insufficientCreditError}
+            sourceText={state.sourceText}
+            clarificationAnswer={state.clarificationAnswer}
+            compileResult={state.compileResult}
+            compileError={state.compileError}
+            insufficientCreditError={state.insufficientCreditError}
             isCompiling={compileMutation.isPending}
             isSaving={createRuleMutation.isPending || updateRuleMutation.isPending}
             canPreview={canPreview}
-            onSourceTextChange={updateSourceText}
-            onClarificationAnswerChange={setClarificationAnswer}
+            onSourceTextChange={(sourceText) => dispatch({ type: 'sourceTextChanged', sourceText })}
+            onClarificationAnswerChange={(clarificationAnswer) =>
+              dispatch({ type: 'clarificationAnswerChanged', clarificationAnswer })
+            }
             onCompile={handleCompile}
             onAnswerClarification={handleAnswerClarification}
             onSaveDisabledRule={handleSaveDisabledRule}
-            onOpenPreview={() => setComposerDialogOpen(false)}
+            onOpenPreview={() => dispatch({ type: 'composerDialogToggled', open: false })}
           />
         </DialogContent>
       </Dialog>
 
       {/* Template gallery dialog */}
-      <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
+      <Dialog
+        open={state.templateDialogOpen}
+        onOpenChange={(open) => dispatch({ type: 'templateDialogToggled', open })}
+      >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{t('rules.templates.title')}</DialogTitle>
@@ -390,7 +524,7 @@ export function RulesWorkspace() {
           <RuleTemplateGallery
             templates={templates}
             isLoading={templatesQuery.isLoading}
-            pendingTemplateKey={pendingTemplateKey}
+            pendingTemplateKey={state.pendingTemplateKey}
             hideHeader
             onUseTemplate={handleUseTemplate}
           />
