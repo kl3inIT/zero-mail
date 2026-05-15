@@ -6,10 +6,11 @@ import { useTranslations } from 'next-intl';
 
 import { TopupPackageSelector, type TopupIntentDetails } from './TopupPackageSelector';
 import { TopupInstructions } from './TopupInstructions';
+import { TopupSuccess } from './TopupSuccess';
 import { TopupExpired } from './TopupExpired';
 import { useBillingBalance } from '@/features/billing/hooks/useBillingBalance';
 
-type TopupStep = 'amount' | 'instructions' | 'expired';
+type TopupStep = 'amount' | 'instructions' | 'success' | 'expired';
 
 type StoredTopupIntent = TopupIntentDetails & {
   baselineCredits: number;
@@ -34,6 +35,7 @@ export function TopupClient() {
   );
   const [manualStep, setManualStep] = useState<TopupStep>('amount');
   const [currentIntent, setCurrentIntent] = useState<StoredTopupIntent | null>(null);
+  const [creditedBalance, setCreditedBalance] = useState<number | null>(null);
   const [clearedCode, setClearedCode] = useState<string | null>(null);
 
   const activeRehydratedIntent = clearedCode === searchCode ? null : rehydratedIntent;
@@ -51,6 +53,7 @@ export function TopupClient() {
       setClearedCode(activeIntent.code);
     }
     setCurrentIntent(null);
+    setCreditedBalance(null);
     setManualStep('amount');
     router.replace('/billing/top-up', { scroll: false });
   }, [activeIntent, router]);
@@ -61,6 +64,7 @@ export function TopupClient() {
       safeSetStoredIntent(createdIntent.code, storedIntent);
       setCurrentIntent(storedIntent);
       setClearedCode(null);
+      setCreditedBalance(null);
       setManualStep(isExpired(storedIntent.expiresAt) ? 'expired' : 'instructions');
       router.replace(`/billing/top-up?code=${encodeURIComponent(createdIntent.code)}`, {
         scroll: false,
@@ -69,16 +73,19 @@ export function TopupClient() {
     [router],
   );
 
-  const handleCredited = useCallback(() => {
-    if (activeIntent?.code) {
-      safeRemoveStoredIntent(activeIntent.code);
-      setClearedCode(activeIntent.code);
-    }
-    setCurrentIntent(null);
-    setManualStep('amount');
-    const successUrl = activeIntent?.code ? `/billing` : '/billing';
-    router.replace(successUrl, { scroll: false });
-  }, [activeIntent, router]);
+  const handleCredited = useCallback(
+    (newBalance: number) => {
+      if (activeIntent?.code) {
+        safeRemoveStoredIntent(activeIntent.code);
+        setClearedCode(activeIntent.code);
+      }
+      setCurrentIntent(null);
+      setCreditedBalance(newBalance);
+      setManualStep('success');
+      router.replace('/billing/top-up', { scroll: false });
+    },
+    [activeIntent, router],
+  );
 
   const handleExpired = useCallback(() => {
     setManualStep('expired');
@@ -97,7 +104,9 @@ export function TopupClient() {
         </p>
       </div>
 
-      {step === 'expired' ? (
+      {step === 'success' && creditedBalance !== null ? (
+        <TopupSuccess newBalance={creditedBalance} />
+      ) : step === 'expired' ? (
         <TopupExpired onRestart={restart} />
       ) : step === 'instructions' && activeIntent ? (
         <TopupInstructions
