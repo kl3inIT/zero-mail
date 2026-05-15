@@ -28,6 +28,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] **Phase 5B: User Surface — AI Draft Replies** _(completed 2026-05-13)_ - AI-drafted replies saved as Gmail drafts (correct threading headers, tone-matched, never auto-sent) + "Draft reply" trigger in the web UI
 - [ ] **Phase 5C: User Surface — Analytics & Daily Digest** - Metadata-only analytics screen (volume, time saved, top senders, rule hits over a window) + daily digest email
 - [ ] **Phase 6: Polish & CASA-Verified Launch** - End-to-end integration hardening, CASA Tier verification sign-off, launch readiness
+- [ ] **Phase 7: Analytics Enhancement** *(workstream: `analytics-enhancement`)* - Nâng cấp dashboard analytics: trend chart theo ngày (7d/30d/90d), Δ% badges, action breakdown, rule precision rate + Trust Score, Noise Reduction panel, credits dashboard, top senders mở rộng (top 10 + domain grouping) — chỉ metadata, không vi phạm privacy. Depends on Phase 5C.
 
 ## Phase Details
 
@@ -431,6 +432,22 @@ Plans:
 - [x] 06-03-PLAN.md — Playwright golden-path spec under e2e-stub profile + playwright.config webServer array — Wave 2
 - [x] 06-04-PLAN.md — Reusable gates.yml + slimmed ci.yml + tag-triggered release.yml with golden-path + loadtest + release-gates-summary aggregator — Wave 3
 - [ ] 06-05-PLAN.md — LAUNCH-GO-NOGO.md (8 checkboxes + trust-story phrases) + SEED-012 CASA seed + D-15 todo archive + operator RC-tag checkpoint — Wave 3
+
+### Phase 07: Analytics Enhancement
+**Goal**: Nâng cấp màn hình Analytics từ 4 panel tổng hợp cơ bản lên dashboard đa chiều: trend chart theo ngày, so sánh kỳ trước (Δ%), phân tích hành động (action breakdown), tỷ lệ hiệu quả rule (precision rate + Trust Score), Noise Reduction Score, credits dashboard, và top senders mở rộng (top 10 + domain grouping) — tất cả chỉ dùng metadata, không vi phạm privacy constraint.
+**Depends on**: Phase 5C (analytics foundation — endpoint /api/analytics/summary, 4-panel UI, database indexes)
+**Requirements**: ANL-04, ANL-05, ANL-06, ANL-07, ANL-08, ANL-09
+**Success Criteria** (what must be TRUE):
+  1. `/analytics` hiển thị trend chart theo ngày trong khoảng thời gian đã chọn (7d/30d/90d), với volume applied overlay trên volume observed.
+  2. Mỗi metric số lớn (volume, time saved) hiển thị badge Δ% so với kỳ trước có cùng độ dài; positive = green, negative = red.
+  3. Action Breakdown panel hiển thị phân bổ label/archive/save_draft dưới dạng bar hoặc donut chart.
+  4. Rule Hits panel thêm cột `Precision Rate` (applied/decisions × 100%) và Trust Score badge (≥90% = green, 70-89% = amber, <70% = red) cho mỗi rule.
+  5. Noise Reduction panel thay thế hoặc bổ sung Volume panel: hiển thị % email được triage + số tuyệt đối filtered.
+  6. Credits panel hiển thị credits tiêu thụ trong kỳ, cost-per-action breakdown, và projected monthly spend.
+  7. Top Senders mở rộng lên top 10 với domain grouping (nhiều emails cùng domain được group lại).
+  8. Tất cả metrics chỉ dùng metadata từ `mail_message_observed` và `triage_audit` — không có email body, subject, hay nội dung LLM.
+  9. `pnpm tsc`, ESLint, Vitest, `i18n:check` tất cả GREEN; Playwright e2e golden path cho analytics enhancement PASS.
+**Plans**: TBD
 
 ## External Track (not a phase)
 
