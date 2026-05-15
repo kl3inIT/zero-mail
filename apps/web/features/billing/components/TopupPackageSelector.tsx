@@ -12,6 +12,7 @@ import type {
 } from '@/features/billing/api/billing-api';
 import { useBillingPackages } from '@/features/billing/hooks/useBillingPackages';
 import { useCreateTopupIntent } from '@/features/billing/hooks/useCreateTopupIntent';
+import { formatVnd } from '@/features/billing/util/format-vnd';
 import { cn } from '@/lib/utils';
 
 export type TopupIntentDetails = {
@@ -210,12 +211,4 @@ function normalizeIntent(response: TopupIntentResponse): TopupIntentDetails | nu
     transferContent: response.transferContent,
     qrPayload: response.qrPayload ?? '',
   };
-}
-
-function formatVnd(value: number, locale: string): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  }).format(value);
 }

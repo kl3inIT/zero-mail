@@ -17,7 +17,7 @@ public class DisconnectController {
 
     @PostMapping("/tenant/disconnect")
     public void disconnect() {
-        UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+        UUID tenantId = TenantContext.currentTenantUuid();
         connectionService.disconnect(tenantId);
     }
 }

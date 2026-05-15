@@ -11,6 +11,7 @@ import { AuditLog } from '@/features/triage/components/AuditLog';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useToReplyCount } from '@/features/needs-reply/hooks/useToReplyCount';
 import { useBillingBalance } from '@/features/billing/hooks/useBillingBalance';
+import { formatCredits } from '@/lib/format';
 import { useHydrated } from '@/lib/use-hydrated';
 import { cn } from '@/lib/utils';
 
@@ -96,7 +97,7 @@ export function DashboardPageClient() {
             ) : (
               <Link href="/billing" className="flex items-baseline gap-1.5 hover:underline">
                 <span className="text-foreground font-mono text-2xl font-bold tabular-nums">
-                  {new Intl.NumberFormat().format(credits)}
+                  {formatCredits(credits)}
                 </span>
               </Link>
             )}

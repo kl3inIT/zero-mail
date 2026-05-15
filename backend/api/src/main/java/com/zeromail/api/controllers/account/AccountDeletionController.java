@@ -49,7 +49,7 @@ public class AccountDeletionController {
     @DeleteMapping("/me/account")
     @Transactional
     public void deleteAccount() {
-        UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+        UUID tenantId = TenantContext.currentTenantUuid();
         onboardingService.deleteSelectionsForCurrentTenant(tenantId);
         gmailConnectionService.deleteForCurrentTenant(tenantId);
         // Defensive cleanup; both tables also cascade from tenants(id) on successful tenant delete.

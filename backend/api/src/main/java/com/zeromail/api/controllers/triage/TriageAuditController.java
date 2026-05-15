@@ -7,7 +7,7 @@ import com.zeromail.core.shared.pagination.KeysetCursor;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.triage.projection.AuditLogPage;
 import com.zeromail.core.triage.projection.AuditLogPageQuery;
-import com.zeromail.core.triage.projection.AuditLogQueryService;
+import com.zeromail.core.triage.usecases.AuditLogQueryService;
 import com.zeromail.core.triage.usecases.TriageUndoService;
 import com.zeromail.core.triage.usecases.UndoAuditCommand;
 import com.zeromail.core.triage.usecases.UndoAuditResult;
@@ -44,7 +44,7 @@ public class TriageAuditController {
             @RequestParam(required = false) String action,
             @RequestParam(required = false) Instant since,
             @RequestParam(required = false) Instant until) {
-        UUID tenantId = currentTenantId();
+        UUID tenantId = TenantContext.currentTenantUuid();
         validateAuditCursor(cursor);
         AuditLogPageQuery query = new AuditLogPageQuery(limit, cursor, action, since, until);
         AuditLogPage page = auditLogQueryService.page(tenantId, query);
@@ -54,7 +54,7 @@ public class TriageAuditController {
 
     @PostMapping("/api/triage/audit/{auditId}/undo")
     public UndoAuditResponse undo(@PathVariable UUID auditId) {
-        UUID tenantId = currentTenantId();
+        UUID tenantId = TenantContext.currentTenantUuid();
         UndoAuditResult undoAuditResult =
                 triageUndoService.undo(new UndoAuditCommand(auditId, tenantId));
         log.info("event=triage_undo_requested tenantId={} auditId={}", tenantId, auditId);
@@ -75,9 +75,5 @@ public class TriageAuditController {
         } catch (IllegalArgumentException invalidCursor) {
             throw new InvalidCursorException(invalidCursor);
         }
-    }
-
-    private static UUID currentTenantId() {
-        return UUID.fromString(TenantContext.currentOrThrow());
     }
 }

@@ -7,6 +7,7 @@ import { ErrorState } from '@/components/states/ErrorState';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBillingBalance } from '@/features/billing/hooks/useBillingBalance';
+import { formatCredits } from '@/lib/format';
 
 export function BalanceCard() {
   const t = useTranslations();
@@ -75,8 +76,4 @@ export function BalanceCard() {
       </CardContent>
     </Card>
   );
-}
-
-function formatCredits(value: number): string {
-  return new Intl.NumberFormat().format(value);
 }

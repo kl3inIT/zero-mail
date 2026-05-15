@@ -5,7 +5,7 @@ import com.zeromail.api.dto.analytics.AnalyticsWindow;
 import com.zeromail.api.error.ErrorCodes;
 import com.zeromail.core.analytics.domain.TimeWindow;
 import com.zeromail.core.analytics.projection.AnalyticsSummaryProjection;
-import com.zeromail.core.analytics.projection.AnalyticsSummaryQueryService;
+import com.zeromail.core.analytics.usecases.AnalyticsSummaryQueryService;
 import com.zeromail.core.tenant.TenantContext;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.Instant;
@@ -41,7 +41,7 @@ public class AnalyticsController {
     public AnalyticsSummaryResponse summary(
             @RequestParam(value = "window", required = false) String rawWindow) {
         AnalyticsWindow analyticsWindow = resolveWindow(rawWindow);
-        UUID tenantId = currentTenantId();
+        UUID tenantId = TenantContext.currentTenantUuid();
         TimeWindow timeWindow = TimeWindow.endingAt(Instant.now(), analyticsWindow.duration());
         AnalyticsSummaryProjection projection =
                 analyticsSummaryQueryService.summarize(tenantId, timeWindow);
@@ -75,10 +75,6 @@ public class AnalyticsController {
         } catch (NoSuchElementException invalidWindow) {
             throw new InvalidAnalyticsWindowException(invalidWindow);
         }
-    }
-
-    private static UUID currentTenantId() {
-        return UUID.fromString(TenantContext.currentOrThrow());
     }
 
     private static String tenantIdForLog() {

@@ -12,12 +12,8 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
 
 final class SpringAiByokChatSupport {
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     List<ToolCallback> translateTools(List<LlmTool> tools) {
         return tools.stream().map(this::toToolCallback).toList();
@@ -46,18 +42,9 @@ final class SpringAiByokChatSupport {
         return FunctionToolCallback.builder(
                         tool.name(), (Map<String, Object> toolInput) -> Map.of())
                 .description(tool.description())
-                .inputSchema(toJsonSchema(tool))
+                .inputSchema(LlmToolJsonSchemas.jsonSchemaOf(tool))
                 .inputType(Map.class)
                 .build();
-    }
-
-    private String toJsonSchema(LlmTool tool) {
-        try {
-            return objectMapper.writeValueAsString(tool.jsonSchema());
-        } catch (JacksonException jsonSerializationFailure) {
-            throw new IllegalStateException(
-                    "Unable to serialize LLM tool schema", jsonSerializationFailure);
-        }
     }
 
     private int tokenCount(Integer tokenCount) {

@@ -1,5 +1,6 @@
 package com.zeromail.core.shared.pagination;
 
+import com.zeromail.core.shared.lang.Strings;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
@@ -18,7 +19,7 @@ public record KeysetCursor(Instant timestamp, String id, boolean isNullsLast) {
         if (!isNullsLast) {
             Objects.requireNonNull(timestamp, "timestamp must not be null");
         }
-        id = requireText(id, "id");
+        id = Strings.requireText(id, "id");
     }
 
     public static String encode(Instant timestamp, UUID id) {
@@ -28,7 +29,7 @@ public record KeysetCursor(Instant timestamp, String id, boolean isNullsLast) {
 
     public static String encode(Instant timestamp, String id) {
         Instant cursorTimestamp = Objects.requireNonNull(timestamp, "timestamp must not be null");
-        String cursorId = requireText(id, "id");
+        String cursorId = Strings.requireText(id, "id");
         return encodePayload(
                 VERSION
                         + ":"
@@ -40,7 +41,8 @@ public record KeysetCursor(Instant timestamp, String id, boolean isNullsLast) {
     }
 
     public static String nullsLast(String id) {
-        return encodePayload(VERSION + ":" + NULLS_LAST_TOKEN + "::" + requireText(id, "id"));
+        return encodePayload(
+                VERSION + ":" + NULLS_LAST_TOKEN + "::" + Strings.requireText(id, "id"));
     }
 
     public static Optional<KeysetCursor> decode(String cursor) {
@@ -75,14 +77,5 @@ public record KeysetCursor(Instant timestamp, String id, boolean isNullsLast) {
 
     private static String encodePayload(String payload) {
         return ENCODER.encodeToString(payload.getBytes(StandardCharsets.UTF_8));
-    }
-
-    private static String requireText(String value, String fieldName) {
-        Objects.requireNonNull(value, fieldName + " must not be null");
-        String trimmedValue = value.trim();
-        if (trimmedValue.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        return trimmedValue;
     }
 }

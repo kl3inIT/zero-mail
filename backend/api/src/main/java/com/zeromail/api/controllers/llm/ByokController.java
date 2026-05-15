@@ -33,7 +33,7 @@ public class ByokController {
 
     @PostMapping("/validate")
     public ByokValidateResponse validate(@Valid @RequestBody ByokValidateRequest request) {
-        UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+        UUID tenantId = TenantContext.currentTenantUuid();
         ByokValidateResult result =
                 byokService.validate(
                         tenantId,
@@ -47,7 +47,7 @@ public class ByokController {
 
     @PostMapping
     public ByokSaveResponse save(@Valid @RequestBody ByokSaveRequest request) {
-        UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+        UUID tenantId = TenantContext.currentTenantUuid();
         ByokSaveResult result =
                 byokService.save(
                         tenantId,
@@ -61,7 +61,7 @@ public class ByokController {
 
     @GetMapping
     public ByokCurrentResponse current() {
-        UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+        UUID tenantId = TenantContext.currentTenantUuid();
         return byokService
                 .current(tenantId)
                 .map(ByokCurrentResponse::from)
