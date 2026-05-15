@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-04-PLAN.md
-last_updated: "2026-05-14T23:35:33.887Z"
-last_activity: 2026-05-14
+stopped_at: Completed 06-05 Tasks 1-3; awaiting operator checkpoint
+last_updated: "2026-05-15T03:08:00.000Z"
+last_activity: 2026-05-15
 progress:
   total_phases: 17
   completed_phases: 16
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 06 — polish-casa-verified-launch
+**Current focus:** Phase 06 - polish-casa-verified-launch
 
 ## Current Position
 
-Phase: 06 (polish-casa-verified-launch) — EXECUTING
+Phase: 06 (polish-casa-verified-launch) - EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
-Last activity: 2026-05-14
+Status: Awaiting operator checkpoint for load-test evidence, launch sign-off, final rc tag, and STATE closure
+Last activity: 2026-05-15
 
 Progress: [██████████] 99%
 
