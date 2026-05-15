@@ -48,7 +48,14 @@ tasks.register<Exec>("loadtestVerify") {
     description =
         "Runs the three loadtest invariant assertions via loadtest/scripts/loadtest-verify.sh (psql shell-out per codex HIGH-8). Assumes worker queue is drained (call loadtest/scripts/wait-for-worker-drain.sh first per MED-3)."
     workingDir = rootProject.projectDir
-    commandLine("bash", "loadtest/scripts/loadtest-verify.sh")
+    val gitBash = file("C:/Program Files/Git/bin/bash.exe")
+    val bashExecutable =
+        if (System.getProperty("os.name").lowercase().contains("windows") && gitBash.isFile) {
+            gitBash.absolutePath
+        } else {
+            "bash"
+        }
+    commandLine(bashExecutable, "loadtest/scripts/loadtest-verify.sh")
 }
 
 openApi {

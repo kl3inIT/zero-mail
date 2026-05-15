@@ -121,6 +121,18 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: docker compose -f loadtest/compose.loadtest.yml up -d --wait
 
+      - name: Wait for API readiness
+        working-directory: ${{ github.workspace }}
+        run: |
+          for attempt in {1..60}; do
+            if curl -fsS http://localhost:8080/actuator/health/readiness; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose -f loadtest/compose.loadtest.yml logs --no-color --no-log-prefix api
+          exit 1
+
       - name: Seed 50 UUID tenants
         working-directory: ${{ github.workspace }}
         env:

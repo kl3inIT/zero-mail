@@ -30,10 +30,11 @@ docker compose -f loadtest/compose.loadtest.yml down -v || true
 ./gradlew --no-daemon :backend:api:bootBuildImage --imageName=zeromail-api:loadtest && ./gradlew --no-daemon :backend:worker:bootBuildImage --imageName=zeromail-worker:loadtest
 ```
 
-2. Generate an ephemeral AES key and bring up the stack:
+2. Generate an ephemeral AES key, bring up the stack, and wait for API readiness from the host:
 
 ```bash
 export REFRESH_TOKEN_KEY_BASE64=$(openssl rand -base64 32); docker compose -f loadtest/compose.loadtest.yml up -d --wait
+for attempt in {1..60}; do curl -fsS http://localhost:8080/actuator/health/readiness && break; sleep 2; done
 ```
 
 3. Seed 50 tenants (codex HIGH-6), then capture the comma-joined UUID list:

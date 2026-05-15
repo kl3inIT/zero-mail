@@ -60,7 +60,9 @@ services:
     ports:
       - "8080:8080"
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health/readiness"]
+      # Paketo tiny run images intentionally omit shell/curl. Compose health only
+      # proves the CNB Java runtime is exec-able; host-side scripts verify HTTP readiness.
+      test: ["CMD", "/layers/paketo-buildpacks_bellsoft-liberica/jre/bin/java", "-version"]
       interval: 5s
       timeout: 3s
       retries: 60
@@ -103,7 +105,8 @@ services:
       SPRING_AI_GOOGLE_GENAI_API_KEY: loadtest
       SPRING_AI_DEEPSEEK_API_KEY: loadtest
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8081/actuator/health"]
+      # Paketo tiny run images intentionally omit shell/curl.
+      test: ["CMD", "/layers/paketo-buildpacks_bellsoft-liberica/jre/bin/java", "-version"]
       interval: 5s
       timeout: 3s
       retries: 60
