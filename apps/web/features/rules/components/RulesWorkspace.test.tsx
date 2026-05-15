@@ -43,6 +43,7 @@ describe('RulesWorkspace Wave 0 contract', () => {
           },
           priorCompileContext: 'Which receipts should Zero Mail archive?',
         }}
+        lastCompiled={null}
         compileError={null}
         insufficientCreditError={null}
         isCompiling={false}
@@ -53,14 +54,18 @@ describe('RulesWorkspace Wave 0 contract', () => {
         onCompile={vi.fn()}
         onAnswerClarification={vi.fn()}
         onSaveDisabledRule={vi.fn()}
+        onSaveManualRule={vi.fn()}
+        onRefineManualRule={vi.fn()}
         onOpenPreview={vi.fn()}
       />,
     );
 
-    expect(screen.getByLabelText('Rule text')).toHaveValue('Archive receipts from Stripe');
+    expect(
+      screen.getByLabelText('Which emails should Zero Mail match, and what should it do?'),
+    ).toHaveValue('Archive receipts from Stripe');
     expect(screen.getByText('Which receipts should Zero Mail archive?')).toBeInTheDocument();
-    expect(screen.getByLabelText('Clarification answer')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Answer clarification' })).toBeDisabled();
+    expect(screen.getByLabelText('Your answer')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Send answer' })).toBeDisabled();
   });
 
   it('renders HTML-looking rule names as text instead of injected markup', () => {
@@ -94,7 +99,7 @@ describe('RulesWorkspace Wave 0 contract', () => {
 
   it('pins UI-SPEC visible copy for component tests', () => {
     expect(enMessages.rules.preview.noWriteNotice).toBe('No Gmail changes were made.');
-    expect(enMessages.rules.composer.compileCta).toBe('Compile rule');
+    expect(enMessages.rules.composer.compileCta).toBe('Convert to rule');
     expect(enMessages.rules.preview.previewCta).toBe('Preview rule');
     expect(enMessages.rules.preview.enableCta).toBe('Enable rule');
   });
@@ -113,14 +118,21 @@ describe('RulesWorkspace Wave 0 contract', () => {
 
     renderWithMessages(<RulesWorkspace />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit rule' }));
-    const sourceTextarea = await screen.findByLabelText('Rule text');
+    fireEvent.click(await screen.findByRole('button', { name: 'Rule actions' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Edit rule' }));
+    const sourceTextarea = await screen.findByLabelText(
+      'Which emails should Zero Mail match, and what should it do?',
+    );
     await waitFor(() => expect(sourceTextarea).toHaveValue('Archive Stripe receipts'));
     fireEvent.change(sourceTextarea, { target: { value: 'Archive GitHub receipts' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Compile rule' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Convert to rule' }));
     await waitFor(() => expect(compileRule).toHaveBeenCalled());
     fireEvent.click(screen.getByRole('button', { name: 'Preview rule' }));
-    await waitFor(() => expect(screen.queryByLabelText('Rule text')).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.queryByLabelText('Which emails should Zero Mail match, and what should it do?'),
+      ).not.toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Preview rule' }));
 
     await waitFor(() => expect(previewDraftRule).toHaveBeenCalled());

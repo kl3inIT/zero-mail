@@ -1,14 +1,18 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   AlertCircle,
+  Archive,
   CheckCircle2,
-  Filter,
+  FileText,
   HelpCircle,
   Loader2,
-  Play,
+  Plus,
   Save,
+  Tags,
+  Trash2,
   Wand2,
   Zap,
 } from 'lucide-react';
@@ -16,24 +20,46 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import type { RuleCompileResult } from '@/features/rules/api/rules-api';
-import { cn } from '@/lib/utils';
+import type {
+  RuleCompiledPayloadResponse,
+  RuleCompileResult,
+} from '@/features/rules/api/rules-api';
+import {
+  actionRequiresValue,
+  buildManualRule,
+  conditionRequiresValue,
+  describeAction,
+  describeCondition,
+  emptyAction,
+  emptyCondition,
+  MANUAL_ACTION_TYPES,
+  MANUAL_CONDITION_TYPES,
+  manualDraftFromCompiledRule,
+  summarizeActionIntents,
+  summarizeMatcherAst,
+  type BuiltManualRule,
+  type ManualAction,
+  type ManualActionType,
+  type ManualCondition,
+  type ManualConditionType,
+  type ManualMatchOperator,
+  type ManualRuleDraft,
+} from '@/features/rules/lib/rule-structure';
+import { createRuleStructureCopy } from '@/features/rules/lib/rule-structure-copy';
 
 type Props = {
   sourceText: string;
+  initialDisplayName?: string | null;
   clarificationAnswer: string;
   compileResult: RuleCompileResult | null;
+  // Sticky snapshot of the last *successfully compiled* draft. Drives the
+  // manual form so clarification/invalid responses do not wipe edits.
+  lastCompiled: RuleCompiledPayloadResponse | null;
   compileError: string | null;
   insufficientCreditError: string | null;
   isCompiling: boolean;
@@ -44,13 +70,17 @@ type Props = {
   onCompile: () => void;
   onAnswerClarification: () => void;
   onSaveDisabledRule: () => void;
+  onSaveManualRule: (rule: BuiltManualRule) => void | Promise<void>;
+  onRefineManualRule: (rule: BuiltManualRule, instruction: string) => void | Promise<void>;
   onOpenPreview: () => void;
 };
 
 export function RuleComposer({
   sourceText,
+  initialDisplayName,
   clarificationAnswer,
   compileResult,
+  lastCompiled,
   compileError,
   insufficientCreditError,
   isCompiling,
@@ -61,173 +91,510 @@ export function RuleComposer({
   onCompile,
   onAnswerClarification,
   onSaveDisabledRule,
+  onSaveManualRule,
+  onRefineManualRule,
   onOpenPreview,
 }: Props) {
   const t = useTranslations();
+  const structureCopy = createRuleStructureCopy(t as unknown as (key: string) => string);
+  const compiled = lastCompiled;
+  const [activeTab, setActiveTab] = useState<'describe' | 'manual'>(
+    lastCompiled ? 'manual' : 'describe',
+  );
+  const compiledSignature = `${initialDisplayName ?? ''}|${compiled?.matcherAst ?? ''}|${
+    compiled?.actionIntents ?? ''
+  }`;
+  const compiledManualDraft = manualDraftFromCompiledRule({
+    displayName: initialDisplayName ?? compiled?.displayName,
+    matcherAst: compiled?.matcherAst,
+    actionIntents: compiled?.actionIntents,
+  });
+  const [manualDraftState, setManualDraftState] = useState<{
+    signature: string;
+    draft: ManualRuleDraft;
+  }>(() => ({
+    signature: compiledSignature,
+    draft: compiledManualDraft,
+  }));
+  const manualDraft =
+    manualDraftState.signature === compiledSignature ? manualDraftState.draft : compiledManualDraft;
+
+  function setManualDraft(
+    nextDraft: ManualRuleDraft | ((current: ManualRuleDraft) => ManualRuleDraft),
+  ) {
+    setManualDraftState((current) => {
+      const currentDraft =
+        current.signature === compiledSignature ? current.draft : compiledManualDraft;
+      const draft = typeof nextDraft === 'function' ? nextDraft(currentDraft) : nextDraft;
+      return { signature: compiledSignature, draft };
+    });
+  }
+
+  const manualBuild = useMemo(() => buildManualRule(manualDraft), [manualDraft]);
   const hasSourceText = sourceText.trim().length > 0;
   const clarification =
     compileResult?.status === 'clarificationRequired' ? compileResult.clarification : null;
-  const compiled = compileResult?.status === 'compiled' ? compileResult.compiled : null;
   const invalid = compileResult?.status === 'invalid' ? compileResult.invalid : null;
-
-  const matcherReview = summarizeCompiledJson(
+  const matcherReview = summarizeMatcherAst(
     compiled?.matcherAst,
     t('rules.composer.matcherReview'),
+    structureCopy,
   );
-  const actionReview = summarizeCompiledJson(
+  const actionReview = summarizeActionIntents(
     compiled?.actionIntents,
     t('rules.composer.actionReview'),
+    structureCopy,
   );
+  const exampleRules = [
+    t('rules.composer.example.receipts'),
+    t('rules.composer.example.calendar'),
+    t('rules.composer.example.newsletters'),
+  ];
 
-  const workflowStep: 1 | 2 | 3 =
-    compileResult?.status === 'compiled'
-      ? 3
-      : compileResult?.status === 'clarificationRequired'
-        ? 2
-        : 1;
+  function updateCondition(conditionId: string, patch: Partial<ManualCondition>) {
+    setManualDraft((current) => ({
+      ...current,
+      conditions: current.conditions.map((condition) =>
+        condition.id === conditionId ? { ...condition, ...patch } : condition,
+      ),
+    }));
+  }
+
+  function updateAction(actionId: string, patch: Partial<ManualAction>) {
+    setManualDraft((current) => ({
+      ...current,
+      actions: current.actions.map((action) =>
+        action.id === actionId ? { ...action, ...patch } : action,
+      ),
+    }));
+  }
+
+  function removeCondition(conditionId: string) {
+    setManualDraft((current) => ({
+      ...current,
+      conditions:
+        current.conditions.length > 1
+          ? current.conditions.filter((condition) => condition.id !== conditionId)
+          : current.conditions,
+    }));
+  }
+
+  function removeAction(actionId: string) {
+    setManualDraft((current) => ({
+      ...current,
+      actions:
+        current.actions.length > 1
+          ? current.actions.filter((action) => action.id !== actionId)
+          : current.actions,
+    }));
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t('rules.composer.title')}</CardTitle>
-        <CardDescription>{t('rules.page.safetyNote')}</CardDescription>
-        <WorkflowStepBar
-          step={workflowStep}
-          workflowLabel={t('rules.composer.workflowLabel')}
-          writeLabel={t('rules.composer.step.write')}
-          compileLabel={t('rules.composer.step.compile')}
-          saveLabel={t('rules.composer.step.save')}
-        />
-      </CardHeader>
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight">{t('rules.composer.title')}</h2>
+        <p className="text-muted-foreground mt-1 text-sm">{t('rules.page.safetyNote')}</p>
+      </div>
 
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="rules-source-text">{t('rules.composer.sourceLabel')}</Label>
-          <Textarea
-            id="rules-source-text"
-            aria-label={t('rules.composer.sourceLabel')}
-            value={sourceText}
-            placeholder={t('rules.composer.sourcePlaceholder')}
-            disabled={isCompiling}
-            className="min-h-28 resize-y"
-            onChange={(event) => onSourceTextChange(event.currentTarget.value)}
-          />
-        </div>
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as 'describe' | 'manual')}
+      >
+        <TabsList variant="line" aria-label={t('rules.composer.tabsLabel')}>
+          <TabsTrigger value="describe" className="gap-2 px-3">
+            <Wand2 className="size-4" aria-hidden="true" />
+            {t('rules.composer.tab.describe')}
+          </TabsTrigger>
+          <TabsTrigger value="manual" className="gap-2 px-3">
+            <FileText className="size-4" aria-hidden="true" />
+            {t('rules.composer.tab.manual')}
+          </TabsTrigger>
+        </TabsList>
 
-        {clarification?.question && (
-          <Alert className="border-warning/40 bg-warning-soft/50 text-warning">
-            <HelpCircle className="size-4" aria-hidden="true" />
-            <AlertTitle>{clarification.question}</AlertTitle>
-            <AlertDescription className="space-y-3 pt-2">
-              <Label htmlFor="rules-clarification-answer">{t('rules.composer.answerLabel')}</Label>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Input
-                  id="rules-clarification-answer"
-                  value={clarificationAnswer}
-                  aria-label={t('rules.composer.answerLabel')}
-                  disabled={isCompiling}
-                  onChange={(event) => onClarificationAnswerChange(event.currentTarget.value)}
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={!clarificationAnswer.trim() || isCompiling}
-                  onClick={onAnswerClarification}
-                >
-                  {isCompiling && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
-                  {t('rules.composer.answerClarification')}
-                </Button>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {compiled && (
-          <div className="bg-muted/30 rounded-lg border p-3" aria-live="polite">
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <CheckCircle2 className="text-green size-4 shrink-0" aria-hidden="true" />
-              <p className="text-sm font-medium">{t('rules.composer.compiledReview')}</p>
-              <Badge variant="outline" className="border-green/30 text-green ml-auto text-xs">
-                {compiled.sourceLanguage ?? 'rules.v1'}
-              </Badge>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-2">
-                <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
-                  <Filter className="size-3" aria-hidden="true" />
-                  {t('rules.composer.matcherReview')}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {matcherReview.map((item) => (
-                    <Badge
-                      key={`m-${item}`}
-                      variant="outline"
-                      className="max-w-full text-xs whitespace-normal"
-                    >
-                      {item}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
-                  <Zap className="size-3" aria-hidden="true" />
-                  {t('rules.composer.actionReview')}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {actionReview.map((item) => (
-                    <Badge
-                      key={`a-${item}`}
-                      variant="secondary"
-                      className="max-w-full text-xs whitespace-normal"
-                    >
-                      {item}
-                    </Badge>
-                  ))}
-                </div>
+        <TabsContent value="describe" className="mt-5 space-y-4">
+          <div className="bg-background rounded-lg border p-4">
+            <div className="space-y-2">
+              <Label htmlFor="rules-source-text">{t('rules.composer.sourceLabel')}</Label>
+              <Textarea
+                id="rules-source-text"
+                aria-label={t('rules.composer.sourceLabel')}
+                value={sourceText}
+                placeholder={t('rules.composer.sourcePlaceholder')}
+                disabled={isCompiling}
+                className="min-h-32 resize-y"
+                onChange={(event) => onSourceTextChange(event.currentTarget.value)}
+              />
+              <div className="grid gap-2 sm:grid-cols-3">
+                {exampleRules.map((exampleRule) => (
+                  <Button
+                    key={exampleRule}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isCompiling}
+                    className="h-auto justify-start rounded-md px-3 py-2 text-left text-xs whitespace-normal"
+                    onClick={() => onSourceTextChange(exampleRule)}
+                  >
+                    {exampleRule}
+                  </Button>
+                ))}
               </div>
             </div>
           </div>
-        )}
 
-        <div aria-live="polite" className="space-y-2">
-          {insufficientCreditError && (
-            <Alert variant="warning">
-              <AlertCircle className="size-4" aria-hidden="true" />
-              <AlertTitle>{t('errors.rules.insufficientCredits')}</AlertTitle>
-              <AlertDescription>{insufficientCreditError}</AlertDescription>
-            </Alert>
+          {compiled && (
+            <CompiledReview
+              matcherReview={matcherReview}
+              actionReview={actionReview}
+              sourceLanguage={compiled.sourceLanguage}
+            />
           )}
 
-          {compileError && (
-            <Alert variant="destructive">
-              <AlertCircle className="size-4" aria-hidden="true" />
-              <AlertDescription>{compileError}</AlertDescription>
-            </Alert>
-          )}
+          <ComposerErrors
+            insufficientCreditError={insufficientCreditError}
+            compileError={compileError}
+            invalidReason={invalid?.reason}
+          />
 
-          {invalid?.reason && (
-            <Alert variant="warning">
-              <AlertDescription>{t('rules.composer.invalid')}</AlertDescription>
-            </Alert>
-          )}
+          <div className="flex flex-col items-stretch gap-2 border-t pt-4 sm:flex-row">
+            <Button type="button" disabled={!hasSourceText || isCompiling} onClick={onCompile}>
+              {isCompiling ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Wand2 className="size-4" aria-hidden="true" />
+              )}
+              {isCompiling ? t('rules.composer.compiling') : t('rules.composer.compileCta')}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!compiled || isSaving || isCompiling}
+              onClick={onSaveDisabledRule}
+            >
+              {isSaving ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Save className="size-4" aria-hidden="true" />
+              )}
+              {isSaving ? t('rules.composer.saving') : t('rules.composer.saveDisabledCta')}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!canPreview}
+              className="sm:ml-auto"
+              onClick={onOpenPreview}
+            >
+              <Zap className="size-4" aria-hidden="true" />
+              {t('rules.preview.previewCta')}
+            </Button>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="manual" className="mt-5 space-y-4">
+          <ManualBuilder
+            draft={manualDraft}
+            builtRule={manualBuild}
+            isCompiling={isCompiling}
+            isSaving={isSaving}
+            insufficientCreditError={insufficientCreditError}
+            compileError={compileError}
+            invalidReason={invalid?.reason}
+            clarificationQuestion={clarification?.question ?? null}
+            clarificationAnswer={clarificationAnswer}
+            onDraftChange={setManualDraft}
+            onUpdateCondition={updateCondition}
+            onRemoveCondition={removeCondition}
+            onUpdateAction={updateAction}
+            onRemoveAction={removeAction}
+            onClarificationAnswerChange={onClarificationAnswerChange}
+            onAnswerClarification={onAnswerClarification}
+            onSaveManualRule={onSaveManualRule}
+            onRefineManualRule={onRefineManualRule}
+          />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function ManualBuilder({
+  draft,
+  builtRule,
+  isCompiling,
+  isSaving,
+  insufficientCreditError,
+  compileError,
+  invalidReason,
+  clarificationQuestion,
+  clarificationAnswer,
+  onDraftChange,
+  onUpdateCondition,
+  onRemoveCondition,
+  onUpdateAction,
+  onRemoveAction,
+  onClarificationAnswerChange,
+  onAnswerClarification,
+  onSaveManualRule,
+  onRefineManualRule,
+}: {
+  draft: ManualRuleDraft;
+  builtRule: BuiltManualRule | null;
+  isCompiling: boolean;
+  isSaving: boolean;
+  insufficientCreditError: string | null;
+  compileError: string | null;
+  invalidReason: string | undefined;
+  clarificationQuestion: string | null;
+  clarificationAnswer: string;
+  onDraftChange: (draft: ManualRuleDraft) => void;
+  onUpdateCondition: (conditionId: string, patch: Partial<ManualCondition>) => void;
+  onRemoveCondition: (conditionId: string) => void;
+  onUpdateAction: (actionId: string, patch: Partial<ManualAction>) => void;
+  onRemoveAction: (actionId: string) => void;
+  onClarificationAnswerChange: (answer: string) => void;
+  onAnswerClarification: () => void;
+  onSaveManualRule: (rule: BuiltManualRule) => void | Promise<void>;
+  onRefineManualRule: (rule: BuiltManualRule, instruction: string) => void | Promise<void>;
+}) {
+  const t = useTranslations();
+  const structureCopy = createRuleStructureCopy(t as unknown as (key: string) => string);
+  const [refinementInstruction, setRefinementInstruction] = useState('');
+
+  return (
+    <div className="space-y-4">
+      <ComposerErrors
+        insufficientCreditError={insufficientCreditError}
+        compileError={compileError}
+        invalidReason={invalidReason}
+      />
+
+      {clarificationQuestion && (
+        <Alert className="border-warning/40 bg-warning-soft/50 text-warning">
+          <HelpCircle className="size-4" aria-hidden="true" />
+          <AlertTitle>{clarificationQuestion}</AlertTitle>
+          <AlertDescription className="space-y-3 pt-2">
+            <Label htmlFor="rules-clarification-answer">{t('rules.composer.answerLabel')}</Label>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                id="rules-clarification-answer"
+                value={clarificationAnswer}
+                aria-label={t('rules.composer.answerLabel')}
+                disabled={isCompiling}
+                onChange={(event) => onClarificationAnswerChange(event.currentTarget.value)}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!clarificationAnswer.trim() || isCompiling}
+                onClick={onAnswerClarification}
+              >
+                {isCompiling && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+                {t('rules.composer.answerClarification')}
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/*
+        Clarification banner and the refine input are mutually exclusive: only
+        show "Cập nhật form" when the model has settled on a draft (no pending
+        clarification). When the model is genuinely uncertain, the user should
+        answer the clarification first instead of editing a stale draft.
+      */}
+      {builtRule && !clarificationQuestion && (
+        <div className="bg-muted/20 rounded-lg border p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+            <div className="min-w-0 flex-1 space-y-2">
+              <Label htmlFor="manual-rule-refinement">{t('rules.manual.refineLabel')}</Label>
+              <Input
+                id="manual-rule-refinement"
+                value={refinementInstruction}
+                maxLength={500}
+                placeholder={t('rules.manual.refinePlaceholder')}
+                onChange={(event) => setRefinementInstruction(event.currentTarget.value)}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!refinementInstruction.trim() || isCompiling || isSaving}
+              onClick={() => {
+                const instruction = refinementInstruction.trim();
+                if (!instruction) return;
+                void onRefineManualRule(builtRule, instruction);
+                setRefinementInstruction('');
+              }}
+            >
+              <Wand2 className="size-4" aria-hidden="true" />
+              {t('rules.manual.refineCta')}
+            </Button>
+          </div>
         </div>
-      </CardContent>
+      )}
 
-      <CardFooter className="flex flex-col items-stretch gap-2 sm:flex-row">
-        <Button type="button" disabled={!hasSourceText || isCompiling} onClick={onCompile}>
-          {isCompiling ? (
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <Wand2 className="size-4" aria-hidden="true" />
-          )}
-          {isCompiling ? t('rules.composer.compiling') : t('rules.composer.compileCta')}
-        </Button>
+      <div className="bg-background rounded-lg border p-4">
+        <Label htmlFor="manual-rule-name">{t('rules.manual.nameLabel')}</Label>
+        <Input
+          id="manual-rule-name"
+          value={draft.displayName}
+          maxLength={160}
+          className="mt-2"
+          placeholder={t('rules.manual.namePlaceholder')}
+          onChange={(event) =>
+            onDraftChange({
+              ...draft,
+              displayName: event.currentTarget.value,
+            })
+          }
+        />
+      </div>
+
+      <div className="bg-background rounded-lg border p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="font-semibold">{t('rules.manual.whenTitle')}</h3>
+            <p className="text-muted-foreground text-sm">{t('rules.manual.whenBody')}</p>
+          </div>
+          <Select
+            value={draft.matchOperator}
+            onValueChange={(value) =>
+              onDraftChange({ ...draft, matchOperator: value as ManualMatchOperator })
+            }
+          >
+            <SelectTrigger className="w-full sm:w-32">
+              {draft.matchOperator === 'ALL'
+                ? t('rules.manual.operator.all')
+                : t('rules.manual.operator.any')}
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">{t('rules.manual.operator.all')}</SelectItem>
+              <SelectItem value="ANY">{t('rules.manual.operator.any')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="mt-4 space-y-2">
+          {draft.conditions.map((condition, index) => (
+            <ConditionRow
+              key={condition.id}
+              condition={condition}
+              index={index}
+              removable={draft.conditions.length > 1}
+              onUpdate={onUpdateCondition}
+              onRemove={onRemoveCondition}
+            />
+          ))}
+        </div>
+
         <Button
           type="button"
-          variant="secondary"
-          disabled={!compiled || isSaving || isCompiling}
-          onClick={onSaveDisabledRule}
+          variant="outline"
+          size="sm"
+          className="mt-3"
+          onClick={() =>
+            onDraftChange({
+              ...draft,
+              conditions: [
+                ...draft.conditions,
+                { ...emptyCondition(draft.conditions.length), id: `condition-${Date.now()}` },
+              ],
+            })
+          }
+        >
+          <Plus className="size-4" aria-hidden="true" />
+          {t('rules.manual.addCondition')}
+        </Button>
+      </div>
+
+      <div className="bg-background rounded-lg border p-4">
+        <div>
+          <h3 className="font-semibold">{t('rules.manual.thenTitle')}</h3>
+          <p className="text-muted-foreground text-sm">{t('rules.manual.thenBody')}</p>
+        </div>
+
+        <div className="mt-4 space-y-2">
+          {draft.actions.map((action, index) => (
+            <ActionRow
+              key={action.id}
+              action={action}
+              index={index}
+              removable={draft.actions.length > 1}
+              onUpdate={onUpdateAction}
+              onRemove={onRemoveAction}
+            />
+          ))}
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mt-3"
+          onClick={() =>
+            onDraftChange({
+              ...draft,
+              actions: [
+                ...draft.actions,
+                { ...emptyAction(draft.actions.length), id: `action-${Date.now()}` },
+              ],
+            })
+          }
+        >
+          <Plus className="size-4" aria-hidden="true" />
+          {t('rules.manual.addAction')}
+        </Button>
+      </div>
+
+      <div className="bg-muted/20 rounded-lg border border-dashed p-4">
+        <h3 className="font-semibold">{t('rules.manual.advancedTitle')}</h3>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {[
+            t('rules.manual.unsafe.autoSend'),
+            t('rules.manual.unsafe.forward'),
+            t('rules.manual.unsafe.delete'),
+            t('rules.manual.unsafe.webhook'),
+          ].map((label) => (
+            <Badge
+              key={label}
+              variant="outline"
+              className="bg-background text-muted-foreground rounded-sm px-2 py-1"
+            >
+              {label}
+            </Badge>
+          ))}
+        </div>
+      </div>
+
+      {builtRule && (
+        <div className="rounded-lg border bg-[#E7F0EF] p-4 text-[#0a3d3a]">
+          <div className="flex items-center gap-2 font-semibold">
+            <CheckCircle2 className="size-4" aria-hidden="true" />
+            {t('rules.manual.structuredPreview')}
+          </div>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <PreviewColumn
+              title={t('rules.list.when')}
+              items={draft.conditions.map((condition) =>
+                describeCondition(condition, structureCopy),
+              )}
+            />
+            <PreviewColumn
+              title={t('rules.list.then')}
+              items={draft.actions.map((action) => describeAction(action, structureCopy))}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col items-stretch gap-2 border-t pt-4 sm:flex-row sm:items-center">
+        <p className="text-muted-foreground text-xs">{t('rules.manual.saveHint')}</p>
+        <Button
+          type="button"
+          className="sm:ml-auto"
+          disabled={!builtRule || isSaving}
+          onClick={() => builtRule && void onSaveManualRule(builtRule)}
         >
           {isSaving ? (
             <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -236,122 +603,334 @@ export function RuleComposer({
           )}
           {isSaving ? t('rules.composer.saving') : t('rules.composer.saveDisabledCta')}
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={!canPreview}
-          className="sm:ml-auto"
-          onClick={onOpenPreview}
-        >
-          <Play className="size-4" aria-hidden="true" />
-          {t('rules.preview.previewCta')}
-        </Button>
-      </CardFooter>
-    </Card>
-  );
-}
-
-function WorkflowStepBar({
-  step,
-  workflowLabel,
-  writeLabel,
-  compileLabel,
-  saveLabel,
-}: {
-  step: 1 | 2 | 3;
-  workflowLabel: string;
-  writeLabel: string;
-  compileLabel: string;
-  saveLabel: string;
-}) {
-  const steps = [writeLabel, compileLabel, saveLabel] as const;
-  return (
-    <div className="mt-3 flex items-center gap-1" aria-label={workflowLabel}>
-      {steps.map((label, index) => {
-        const n = (index + 1) as 1 | 2 | 3;
-        const isDone = n < step;
-        const isCurrent = n === step;
-        return (
-          <div key={label} className="flex min-w-0 flex-1 items-center gap-1">
-            {index > 0 && <div className="bg-border h-px flex-1" aria-hidden="true" />}
-            <StepChip label={label} n={n} isDone={isDone} isCurrent={isCurrent} />
-          </div>
-        );
-      })}
+      </div>
     </div>
   );
 }
 
-function StepChip({
-  label,
-  n,
-  isDone,
-  isCurrent,
+function ConditionRow({
+  condition,
+  index,
+  removable,
+  onUpdate,
+  onRemove,
 }: {
-  label: string;
-  n: number;
-  isDone: boolean;
-  isCurrent: boolean;
+  condition: ManualCondition;
+  index: number;
+  removable: boolean;
+  onUpdate: (conditionId: string, patch: Partial<ManualCondition>) => void;
+  onRemove: (conditionId: string) => void;
 }) {
+  const t = useTranslations();
+  const translate = t as unknown as (key: string) => string;
+  const needsValue = conditionRequiresValue(condition.type);
+
   return (
-    <div
-      className={cn(
-        'flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors',
-        isDone
-          ? 'bg-green/10 text-green'
-          : isCurrent
-            ? 'bg-primary/10 text-primary ring-primary/20 ring-1 ring-inset'
-            : 'text-muted-foreground',
-      )}
-    >
-      {isDone ? (
-        <CheckCircle2 className="size-3 shrink-0" aria-hidden="true" />
+    <div className="bg-muted/20 grid gap-2 rounded-md border p-2 sm:grid-cols-[28px_190px_1fr_36px] sm:items-center">
+      <div className="text-muted-foreground hidden text-center text-xs font-semibold sm:block">
+        {index + 1}
+      </div>
+      <Select
+        value={condition.type}
+        onValueChange={(value) => {
+          const nextType = value as ManualConditionType;
+          onUpdate(condition.id, {
+            type: nextType,
+            value: conditionRequiresValue(nextType) ? condition.value : '',
+          });
+        }}
+      >
+        <SelectTrigger className="w-full">
+          {conditionTypeLabel(condition.type, translate)}
+        </SelectTrigger>
+        <SelectContent>
+          {MANUAL_CONDITION_TYPES.map((type) => (
+            <SelectItem key={type} value={type}>
+              {conditionTypeLabel(type, translate)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {needsValue ? (
+        <Input
+          value={condition.value}
+          maxLength={512}
+          aria-label={conditionTypeLabel(condition.type, translate)}
+          placeholder={conditionPlaceholder(condition.type, translate)}
+          onChange={(event) => onUpdate(condition.id, { value: event.currentTarget.value })}
+        />
       ) : (
-        <span
-          className={cn(
-            'flex size-3.5 shrink-0 items-center justify-center rounded-full text-[9px] font-bold',
-            isCurrent ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground',
-          )}
-          aria-hidden="true"
-        >
-          {n}
-        </span>
+        <div className="text-muted-foreground bg-background rounded-md border px-3 py-2 text-sm">
+          {t('rules.manual.noValueNeeded')}
+        </div>
       )}
-      {label}
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="size-8 justify-self-end"
+        disabled={!removable}
+        aria-label={t('rules.manual.removeCondition')}
+        onClick={() => onRemove(condition.id)}
+      >
+        <Trash2 className="size-4" aria-hidden="true" />
+      </Button>
     </div>
   );
 }
 
-function summarizeCompiledJson(jsonText: string | undefined, fallback: string): string[] {
-  if (!jsonText) return [fallback];
+function ActionRow({
+  action,
+  index,
+  removable,
+  onUpdate,
+  onRemove,
+}: {
+  action: ManualAction;
+  index: number;
+  removable: boolean;
+  onUpdate: (actionId: string, patch: Partial<ManualAction>) => void;
+  onRemove: (actionId: string) => void;
+}) {
+  const t = useTranslations();
+  const translate = t as unknown as (key: string) => string;
+  const needsValue = actionRequiresValue(action.type);
 
-  try {
-    const parsed = JSON.parse(jsonText) as unknown;
-    const values = Array.from(
-      new Set(collectReviewStrings(parsed).filter((value) => value.length > 0)),
-    ).slice(0, 6);
-    return values.length > 0 ? values : [fallback];
-  } catch {
-    // If the server ever returns a string that is not valid JSON, render
-    // the generic fallback rather than a raw 80-char slice of the
-    // payload (which would surface fragments like `{"schemaVersion":...`
-    // as a chip in the "What Zero Mail understood" review card).
-    return [fallback];
+  return (
+    <div className="bg-muted/20 grid gap-2 rounded-md border p-2 sm:grid-cols-[28px_190px_1fr_36px] sm:items-center">
+      <div className="text-muted-foreground hidden text-center text-xs font-semibold sm:block">
+        {index + 1}
+      </div>
+      <Select
+        value={action.type}
+        onValueChange={(value) => {
+          const nextType = value as ManualActionType;
+          onUpdate(action.id, {
+            type: nextType,
+            value: actionRequiresValue(nextType) ? action.value : '',
+          });
+        }}
+      >
+        <SelectTrigger className="w-full">
+          <span className="inline-flex items-center gap-2">
+            {action.type === 'archive' ? (
+              <Archive className="size-4" aria-hidden="true" />
+            ) : action.type === 'label' ? (
+              <Tags className="size-4" aria-hidden="true" />
+            ) : (
+              <FileText className="size-4" aria-hidden="true" />
+            )}
+            {actionTypeLabel(action.type, translate)}
+          </span>
+        </SelectTrigger>
+        <SelectContent>
+          {MANUAL_ACTION_TYPES.map((type) => (
+            <SelectItem key={type} value={type}>
+              <span className="inline-flex items-center gap-2">
+                {type === 'archive' ? (
+                  <Archive className="size-4" aria-hidden="true" />
+                ) : type === 'label' ? (
+                  <Tags className="size-4" aria-hidden="true" />
+                ) : (
+                  <FileText className="size-4" aria-hidden="true" />
+                )}
+                {actionTypeLabel(type, translate)}
+              </span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {needsValue ? (
+        <Input
+          value={action.value}
+          maxLength={500}
+          aria-label={actionTypeLabel(action.type, translate)}
+          placeholder={actionPlaceholder(action.type, translate)}
+          onChange={(event) => onUpdate(action.id, { value: event.currentTarget.value })}
+        />
+      ) : (
+        <div className="text-muted-foreground bg-background rounded-md border px-3 py-2 text-sm">
+          {t('rules.manual.noValueNeeded')}
+        </div>
+      )}
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="size-8 justify-self-end"
+        disabled={!removable}
+        aria-label={t('rules.manual.removeAction')}
+        onClick={() => onRemove(action.id)}
+      >
+        <Trash2 className="size-4" aria-hidden="true" />
+      </Button>
+    </div>
+  );
+}
+
+function CompiledReview({
+  matcherReview,
+  actionReview,
+  sourceLanguage,
+}: {
+  matcherReview: string[];
+  actionReview: string[];
+  sourceLanguage: string | undefined;
+}) {
+  const t = useTranslations();
+
+  return (
+    <div className="bg-muted/30 rounded-lg border p-4" aria-live="polite">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <CheckCircle2 className="text-green size-4 shrink-0" aria-hidden="true" />
+        <p className="text-sm font-medium">{t('rules.composer.compiledReview')}</p>
+        <Badge variant="outline" className="border-green/30 text-green ml-auto text-xs">
+          {sourceLanguage ?? 'rules.v1'}
+        </Badge>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <PreviewColumn title={t('rules.composer.matcherReview')} items={matcherReview} />
+        <PreviewColumn title={t('rules.composer.actionReview')} items={actionReview} action />
+      </div>
+      <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/20 bg-amber-500/5 p-2.5 text-xs leading-5 text-amber-800 dark:text-amber-200">
+        <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+        <span>{t('rules.composer.allowedActionsNote')}</span>
+      </div>
+    </div>
+  );
+}
+
+function PreviewColumn({
+  title,
+  items,
+  action = false,
+}: {
+  title: string;
+  items: string[];
+  action?: boolean;
+}) {
+  return (
+    <div className="bg-background/70 rounded-md border p-3">
+      <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase">
+        {action ? (
+          <Zap className="size-3" aria-hidden="true" />
+        ) : (
+          <Tags className="size-3" aria-hidden="true" />
+        )}
+        {title}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {items.map((item) => (
+          <Badge
+            key={`${title}-${item}`}
+            variant={action ? 'secondary' : 'outline'}
+            className="max-w-full text-xs whitespace-normal"
+          >
+            {item}
+          </Badge>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ComposerErrors({
+  insufficientCreditError,
+  compileError,
+  invalidReason,
+}: {
+  insufficientCreditError: string | null;
+  compileError: string | null;
+  invalidReason: string | undefined;
+}) {
+  const t = useTranslations();
+
+  return (
+    <div aria-live="polite" className="space-y-2">
+      {insufficientCreditError && (
+        <Alert variant="warning">
+          <AlertCircle className="size-4" aria-hidden="true" />
+          <AlertTitle>{t('errors.rules.insufficientCredits')}</AlertTitle>
+          <AlertDescription>{insufficientCreditError}</AlertDescription>
+        </Alert>
+      )}
+
+      {compileError && (
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" aria-hidden="true" />
+          <AlertDescription>{compileError}</AlertDescription>
+        </Alert>
+      )}
+
+      {invalidReason && (
+        <Alert variant="warning">
+          <AlertDescription>{t('rules.composer.invalid')}</AlertDescription>
+        </Alert>
+      )}
+    </div>
+  );
+}
+
+function conditionTypeLabel(type: ManualConditionType, t: (key: string) => string) {
+  switch (type) {
+    case 'SENDER_DOMAIN':
+      return t('rules.manual.condition.SENDER_DOMAIN');
+    case 'SENDER_EMAIL':
+      return t('rules.manual.condition.SENDER_EMAIL');
+    case 'RECIPIENT_TO':
+      return t('rules.manual.condition.RECIPIENT_TO');
+    case 'SUBJECT_CONTAINS':
+      return t('rules.manual.condition.SUBJECT_CONTAINS');
+    case 'GMAIL_LABEL_PRESENT':
+      return t('rules.manual.condition.GMAIL_LABEL_PRESENT');
+    case 'HAS_ATTACHMENT':
+      return t('rules.manual.condition.HAS_ATTACHMENT');
+    case 'NEWSLETTER_INDICATOR':
+      return t('rules.manual.condition.NEWSLETTER_INDICATOR');
+    case 'SEMANTIC_INTENT':
+      return t('rules.manual.condition.SEMANTIC_INTENT');
   }
 }
 
-function collectReviewStrings(value: unknown): string[] {
-  if (typeof value === 'string') return [humanizeReviewToken(value)];
-  if (typeof value === 'number' || typeof value === 'boolean') return [String(value)];
-  if (Array.isArray(value)) return value.flatMap(collectReviewStrings);
-  if (value === null || typeof value !== 'object') return [];
-
-  return Object.entries(value as Record<string, unknown>).flatMap(([key, entryValue]) => {
-    if (key === 'id' || key.toLowerCase().endsWith('id')) return [];
-    return collectReviewStrings(entryValue);
-  });
+function conditionPlaceholder(type: ManualConditionType, t: (key: string) => string) {
+  switch (type) {
+    case 'SENDER_DOMAIN':
+      return t('rules.manual.conditionPlaceholder.SENDER_DOMAIN');
+    case 'SENDER_EMAIL':
+      return t('rules.manual.conditionPlaceholder.SENDER_EMAIL');
+    case 'RECIPIENT_TO':
+      return t('rules.manual.conditionPlaceholder.RECIPIENT_TO');
+    case 'SUBJECT_CONTAINS':
+      return t('rules.manual.conditionPlaceholder.SUBJECT_CONTAINS');
+    case 'GMAIL_LABEL_PRESENT':
+      return t('rules.manual.conditionPlaceholder.GMAIL_LABEL_PRESENT');
+    case 'HAS_ATTACHMENT':
+      return t('rules.manual.conditionPlaceholder.HAS_ATTACHMENT');
+    case 'NEWSLETTER_INDICATOR':
+      return t('rules.manual.conditionPlaceholder.NEWSLETTER_INDICATOR');
+    case 'SEMANTIC_INTENT':
+      return t('rules.manual.conditionPlaceholder.SEMANTIC_INTENT');
+  }
 }
 
-function humanizeReviewToken(value: string): string {
-  return value.replaceAll('_', ' ').replaceAll('-', ' ');
+function actionTypeLabel(type: ManualActionType, t: (key: string) => string) {
+  switch (type) {
+    case 'label':
+      return t('rules.manual.action.label');
+    case 'archive':
+      return t('rules.manual.action.archive');
+    case 'save_draft':
+      return t('rules.manual.action.save_draft');
+  }
+}
+
+function actionPlaceholder(type: ManualActionType, t: (key: string) => string) {
+  switch (type) {
+    case 'label':
+      return t('rules.manual.actionPlaceholder.label');
+    case 'archive':
+      return t('rules.manual.actionPlaceholder.archive');
+    case 'save_draft':
+      return t('rules.manual.actionPlaceholder.save_draft');
+  }
 }
