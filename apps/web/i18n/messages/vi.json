@@ -828,6 +828,7 @@
         "newsletters": "Gắn nhãn Reading cho newsletter, nhưng không lưu trữ email từ khách hàng",
         "receipts": "Lưu trữ biên lai từ Stripe và gắn nhãn Finance"
       },
+      "examplesHint": "Gợi ý — bấm để chèn nhanh:",
       "invalid": "Quy tắc này chưa thể lưu. Hãy sửa cách diễn đạt hoặc trả lời câu hỏi làm rõ.",
       "matcherReview": "Email phù hợp",
       "newRuleCta": "Tạo quy tắc",

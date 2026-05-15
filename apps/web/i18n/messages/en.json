@@ -828,6 +828,7 @@
         "newsletters": "Label newsletters as Reading, but do not archive customer emails",
         "receipts": "Archive receipts from Stripe and label them Finance"
       },
+      "examplesHint": "Suggestions — click to insert:",
       "invalid": "This rule is not ready to save. Edit the wording or answer the clarification.",
       "matcherReview": "Matched email",
       "newRuleCta": "Create rule",

@@ -220,20 +220,24 @@ export function RuleComposer({
                 className="min-h-32 resize-y"
                 onChange={(event) => onSourceTextChange(event.currentTarget.value)}
               />
-              <div className="grid gap-2 sm:grid-cols-3">
-                {exampleRules.map((exampleRule) => (
-                  <Button
-                    key={exampleRule}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={isCompiling}
-                    className="h-auto justify-start rounded-md px-3 py-2 text-left text-xs whitespace-normal"
-                    onClick={() => onSourceTextChange(exampleRule)}
-                  >
-                    {exampleRule}
-                  </Button>
-                ))}
+              <div className="space-y-2">
+                <p className="text-foreground text-xs font-medium">
+                  {t('rules.composer.examplesHint')}
+                </p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {exampleRules.map((exampleRule) => (
+                    <button
+                      key={exampleRule}
+                      type="button"
+                      disabled={isCompiling}
+                      onClick={() => onSourceTextChange(exampleRule)}
+                      className="group border-primary/30 bg-primary/5 text-foreground hover:border-primary hover:bg-primary/10 focus-visible:ring-primary/60 flex items-start gap-2 rounded-md border px-3 py-2 text-left text-xs leading-relaxed whitespace-normal shadow-sm transition-colors hover:cursor-pointer focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Wand2 className="text-primary mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                      <span className="flex-1">{exampleRule}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

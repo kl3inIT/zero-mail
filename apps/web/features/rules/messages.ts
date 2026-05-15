@@ -147,6 +147,10 @@ export const rulesMessages = {
     vi: 'Quy tắc này chưa thể lưu. Hãy sửa cách diễn đạt hoặc trả lời câu hỏi làm rõ.',
     en: 'This rule is not ready to save. Edit the wording or answer the clarification.',
   },
+  'rules.composer.examplesHint': {
+    vi: 'Gợi ý — bấm để chèn nhanh:',
+    en: 'Suggestions — click to insert:',
+  },
   'rules.composer.example.receipts': {
     vi: 'Lưu trữ biên lai từ Stripe và gắn nhãn Finance',
     en: 'Archive receipts from Stripe and label them Finance',
