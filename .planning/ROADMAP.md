@@ -27,7 +27,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [x] **Phase 5A: User Surface — Web UI Core** _(completed 2026-05-12)_ - Next.js 16 / React 19 frontend for already-built backends: onboarding, rule CRUD + live preview, triage audit log + undo, billing, privacy page, persistent chrome (pause / credit balance / connection health)
 - [x] **Phase 5B: User Surface — AI Draft Replies** _(completed 2026-05-13)_ - AI-drafted replies saved as Gmail drafts (correct threading headers, tone-matched, never auto-sent) + "Draft reply" trigger in the web UI
 - [ ] **Phase 5C: User Surface — Analytics & Daily Digest** - Metadata-only analytics screen (volume, time saved, top senders, rule hits over a window) + daily digest email
-- [ ] **Phase 6: Polish & CASA-Verified Launch** - End-to-end integration hardening, CASA Tier verification sign-off, launch readiness
+- [x] **Phase 6: Polish & CASA-Verified Launch** _(completed 2026-05-15)_ - End-to-end integration hardening, CASA Tier verification sign-off, launch readiness
 
 ## Phase Details
 
@@ -430,7 +430,7 @@ Plans:
 - [x] 06-02-PLAN.md — k6 + docker-compose load harness + bootBuildImage wiring + :backend:api:loadtestVerify Gradle task with three invariant assertions — Wave 2
 - [x] 06-03-PLAN.md — Playwright golden-path spec under e2e-stub profile + playwright.config webServer array — Wave 2
 - [x] 06-04-PLAN.md — Reusable gates.yml + slimmed ci.yml + tag-triggered release.yml with golden-path + loadtest + release-gates-summary aggregator — Wave 3
-- [ ] 06-05-PLAN.md — LAUNCH-GO-NOGO.md (8 checkboxes + trust-story phrases) + SEED-012 CASA seed + D-15 todo archive + operator RC-tag checkpoint — Wave 3
+- [x] 06-05-PLAN.md — LAUNCH-GO-NOGO.md (8 checkboxes + trust-story phrases) + SEED-012 CASA seed + D-15 todo archive + operator RC-tag checkpoint — Wave 3
 
 ## External Track (not a phase)
 
@@ -460,4 +460,4 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 5A. User Surface — Web UI Core | 6/6 | Complete | 2026-05-12 |
 | 5B. User Surface — AI Draft Replies | 8/8 | Complete | 2026-05-13 |
 | 5C. User Surface — Analytics & Daily Digest | 0/TBD | Not started | - |
-| 6. Polish & CASA-Verified Launch | 2/5 | In Progress|  |
+| 6. Polish & CASA-Verified Launch | 5/5 | Complete | 2026-05-15 |

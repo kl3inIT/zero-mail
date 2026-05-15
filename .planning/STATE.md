@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Load-test evidence committed; awaiting candidate gate URL, sign-off, and final rc tag
-last_updated: "2026-05-15T04:45:00.000Z"
+status: milestone_complete
+stopped_at: v1.0.0-rc1 tagged once on signed commit; final Release Gates green; Phase 6 closed
+last_updated: "2026-05-15T13:32:38+07:00"
 last_activity: 2026-05-15
 progress:
   total_phases: 17
-  completed_phases: 16
+  completed_phases: 17
   total_plans: 123
-  completed_plans: 122
-  percent: 99
+  completed_plans: 123
+  percent: 100
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 06 - polish-casa-verified-launch
+**Current focus:** v1.0 milestone complete - v1.0.0-rc1 released
 
 ## Current Position
 
-Phase: 06 (polish-casa-verified-launch) - EXECUTING
+Phase: 06 (polish-casa-verified-launch) - COMPLETE
 Plan: 5 of 5
-Status: Awaiting operator checkpoint for candidate gate URL, launch sign-off, final rc tag, and STATE closure
+Status: v1.0.0-rc1 tagged and Release Gates green
 Last activity: 2026-05-15
 
-Progress: [██████████] 99%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 56
+- Total plans completed: 61
 - Average duration: —
 - Total execution time: 0.0 hours
 
@@ -329,7 +329,6 @@ Recent decisions affecting current work:
 [From .planning/todos/pending/ — ideas captured during sessions]
 
 - WR-06: dedicated test-profile SecurityConfig slice (so OAuth filter chain is exercised under integration tests) — `.planning/todos/pending/2026-04-28-wr-06-test-profile-securityconfig-slice.md`
-- Apply `:?` fail-fast to `backend/worker/src/main/resources/application.yml:10` (CR-04 parity with api module) — `.planning/todos/pending/2026-04-28-worker-application-yml-fail-fast-parity.md`
 - Make backend/core context API surfaces explicit with Spring Modulith `@NamedInterface("api")` (+ low-pri: Spotless `ratchetFrom`, vertical-slice split of `rules`/`llm` if folders grow) — `.planning/todos/pending/2026-05-12-make-backend-core-context-api-surfaces-explicit-with-namedin.md`
 
 ### Blockers/Concerns
