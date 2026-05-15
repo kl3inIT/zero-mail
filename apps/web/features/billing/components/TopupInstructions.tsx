@@ -1,12 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
 import { Clock, Landmark } from 'lucide-react';
 import Image from 'next/image';
 
 import { CopyableField } from '@/features/billing/components/CopyableField';
 import type { TopupIntentDetails } from '@/features/billing/components/TopupPackageSelector';
+import { billingKeys } from '@/features/billing/query-keys';
+import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
+import { useBillingTopupWebSocket } from '@/features/billing/hooks/useBillingTopupWebSocket';
 import { useTopupCreditWatch } from '@/features/billing/hooks/useTopupCreditWatch';
 import { formatVnd } from '@/features/billing/util/format-vnd';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,12 +31,25 @@ export function TopupInstructions({
 }: TopupInstructionsProps) {
   const t = useTranslations();
   const locale = useLocale();
+  const currentUser = useCurrentUser();
+  const queryClient = useQueryClient();
   const watch = useTopupCreditWatch({
     baselineCredits,
     expiresAt: intent.expiresAt,
   });
 
   const qrImageUrl = buildSepayQrUrl(intent);
+
+  const refreshBalanceFromBroker = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: billingKeys.balance() });
+  }, [queryClient]);
+
+  useBillingTopupWebSocket({
+    tenantId: currentUser.data?.tenantId,
+    orderCode: intent.code,
+    enabled: !watch.expired,
+    onCredited: refreshBalanceFromBroker,
+  });
 
   useEffect(() => {
     if (watch.credited && typeof watch.balance?.availableCredits === 'number') {
