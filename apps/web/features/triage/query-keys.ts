@@ -1,6 +1,5 @@
 export const triageKeys = {
   all: ['triage'] as const,
-  pauseState: () => [...triageKeys.all, 'pause-state'] as const,
   auditLog: (filters?: Record<string, unknown>) =>
     filters
       ? ([...triageKeys.all, 'audit-log', filters] as const)

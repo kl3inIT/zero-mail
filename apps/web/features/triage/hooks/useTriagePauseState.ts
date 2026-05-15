@@ -3,14 +3,14 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { getCurrentUser } from '@/features/account/api/account-api';
-import { triageKeys } from '@/features/triage/query-keys';
+import { accountQueryKeys } from '@/features/account/query-keys';
 
+// Reads `triagePaused` off the shared /me cache entry so the pause flag stays in
+// sync with useCurrentUser instead of living in a parallel triage cache.
 export function useTriagePauseState() {
   return useQuery({
-    queryKey: triageKeys.pauseState(),
-    queryFn: async ({ signal }) => {
-      const user = await getCurrentUser({ signal });
-      return user.triagePaused;
-    },
+    queryKey: accountQueryKeys.me(),
+    queryFn: ({ signal }) => getCurrentUser({ signal }),
+    select: (user) => user.triagePaused,
   });
 }

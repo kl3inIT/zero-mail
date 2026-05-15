@@ -19,6 +19,8 @@ public interface RuleRepository extends JpaRepository<RuleEntity, UUID> {
       """)
     List<RuleEntity> findOrderedByTenantId(@Param("tenantId") UUID tenantId);
 
+    long countByTenantId(UUID tenantId);
+
     Optional<RuleEntity> findByIdAndTenantId(UUID ruleId, UUID tenantId);
 
     long deleteByIdAndTenantId(UUID ruleId, UUID tenantId);

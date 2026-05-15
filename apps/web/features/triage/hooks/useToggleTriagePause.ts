@@ -2,10 +2,10 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import type { CurrentUserResponse } from '@/features/account/api/account-api';
 import { accountQueryKeys } from '@/features/account/query-keys';
 import { billingKeys } from '@/features/billing/query-keys';
 import { setTriagePaused } from '@/features/triage/api/triage-api';
-import { triageKeys } from '@/features/triage/query-keys';
 
 export function useToggleTriagePause() {
   const queryClient = useQueryClient();
@@ -13,23 +13,27 @@ export function useToggleTriagePause() {
   return useMutation({
     mutationFn: (paused: boolean) => setTriagePaused(paused),
     onMutate: async (paused) => {
-      await queryClient.cancelQueries({ queryKey: triageKeys.pauseState() });
-      const previousPauseState = queryClient.getQueryData<boolean>(triageKeys.pauseState());
+      await queryClient.cancelQueries({ queryKey: accountQueryKeys.me() });
+      const previousUser = queryClient.getQueryData<CurrentUserResponse>(accountQueryKeys.me());
 
-      queryClient.setQueryData<boolean>(triageKeys.pauseState(), paused);
+      if (previousUser) {
+        queryClient.setQueryData<CurrentUserResponse>(accountQueryKeys.me(), {
+          ...previousUser,
+          triagePaused: paused,
+        });
+      }
 
-      return { previousPauseState };
+      return { previousUser };
     },
     onError: (_mutationError, _paused, context) => {
-      if (context?.previousPauseState !== undefined) {
-        queryClient.setQueryData(triageKeys.pauseState(), context.previousPauseState);
+      if (context?.previousUser) {
+        queryClient.setQueryData(accountQueryKeys.me(), context.previousUser);
       }
     },
     onSettled: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: triageKeys.pauseState() }),
-        queryClient.invalidateQueries({ queryKey: billingKeys.balance() }),
         queryClient.invalidateQueries({ queryKey: accountQueryKeys.me() }),
+        queryClient.invalidateQueries({ queryKey: billingKeys.balance() }),
       ]);
     },
   });
