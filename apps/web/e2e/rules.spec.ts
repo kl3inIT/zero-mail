@@ -371,6 +371,9 @@ test('rules desktop flow compiles, clarifies, saves disabled, previews, toggles,
   await page.getByRole('menuitem', { name: 'Move rule down' }).click();
   await openRuleMenu(page, 'Archive Stripe receipts');
   await page.getByRole('menuitem', { name: 'Edit rule' }).click();
+  // Editing an existing compiled rule opens the manual tab by default;
+  // switch to Describe so the source textarea is mounted.
+  await page.getByRole('tab', { name: 'Describe', exact: true }).click();
   await page
     .getByLabel('Which emails should Zero Mail match, and what should it do?')
     .fill('Archive receipts from Stripe and label them Finance');
@@ -428,6 +431,9 @@ test('rules errors keep compile billing alerts in composer and Gmail preview err
 
   await openRuleMenu(page, 'Archive Stripe receipts');
   await page.getByRole('menuitem', { name: 'Edit rule' }).click();
+  // Editing an existing compiled rule opens the manual tab by default;
+  // switch to Describe so the source textarea is mounted.
+  await page.getByRole('tab', { name: 'Describe', exact: true }).click();
   await page
     .getByLabel('Which emails should Zero Mail match, and what should it do?')
     .fill('Archive receipts from Stripe and label them Finance');
