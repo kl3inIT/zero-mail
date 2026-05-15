@@ -2,6 +2,7 @@ package com.zeromail.core.billing.usecases;
 
 import com.zeromail.core.billing.domain.BillingTopupIntentStatus;
 import com.zeromail.core.billing.domain.TopupCodeGenerator;
+import com.zeromail.core.billing.event.BillingTopupCredited;
 import com.zeromail.core.billing.persistence.BillingPackageEntity;
 import com.zeromail.core.billing.persistence.BillingPackageRepository;
 import com.zeromail.core.billing.persistence.BillingTopupIntentEntity;
@@ -22,6 +23,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -43,18 +45,21 @@ public class BillingTopupService {
     private final TopupCodeGenerator topupCodeGenerator = new TopupCodeGenerator();
     private final ZeroMailCoreProperties.BillingProperties billingProperties;
     private final TransactionTemplate transactionTemplate;
+    private final ApplicationEventPublisher eventPublisher;
 
     public BillingTopupService(
             BillingPackageRepository packageRepository,
             BillingTopupIntentRepository intentRepository,
             CreditLedgerEntryRepository entryRepository,
             ZeroMailCoreProperties properties,
-            TransactionTemplate transactionTemplate) {
+            TransactionTemplate transactionTemplate,
+            ApplicationEventPublisher eventPublisher) {
         this.packageRepository = packageRepository;
         this.intentRepository = intentRepository;
         this.entryRepository = entryRepository;
         this.billingProperties = properties.billing();
         this.transactionTemplate = transactionTemplate;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -288,6 +293,18 @@ public class BillingTopupService {
                             credits,
                             sepayTransactionIdString);
             entryRepository.saveAndFlush(topupEntry);
+            Instant creditedAt = Instant.now();
+            eventPublisher.publishEvent(
+                    new BillingTopupCredited(
+                            intent.getTenantId(),
+                            intent.getId(),
+                            intent.getCode(),
+                            intent.getPackageCodeSnapshot(),
+                            intent.getPackageNameSnapshot(),
+                            intent.getAmountVnd(),
+                            credits,
+                            sepayTransactionIdString,
+                            creditedAt));
             log.info(
                     "event=sepay_topup_credited tenantId={} credits={}",
                     intent.getTenantId(),
@@ -313,9 +330,17 @@ public class BillingTopupService {
             return lookupCreditAmountSnapshot;
         }
 
-        long calculatedCredits = transferAmountVnd / billingProperties.vndPerCredit();
-        long roundingLossVnd =
-                transferAmountVnd - (calculatedCredits * billingProperties.vndPerCredit());
+        long vndPerCredit = billingProperties.vndPerCredit();
+        if (vndPerCredit <= 0) {
+            log.warn(
+                    "event=sepay_topup_invalid_credit_rate tenantId={} vndPerCredit={}",
+                    intent.getTenantId(),
+                    vndPerCredit);
+            return 0;
+        }
+
+        long calculatedCredits = transferAmountVnd / vndPerCredit;
+        long roundingLossVnd = transferAmountVnd - (calculatedCredits * vndPerCredit);
         if (roundingLossVnd > 0) {
             log.info(
                     "event=sepay_topup_rounding_loss tenantId={} vndLost={}",
@@ -327,7 +352,7 @@ public class BillingTopupService {
                     "event=sepay_topup_below_min_credits tenantId={} transferAmountVnd={} vndPerCredit={}",
                     intent.getTenantId(),
                     transferAmountVnd,
-                    billingProperties.vndPerCredit());
+                    vndPerCredit);
             return 0;
         }
         return Math.toIntExact(calculatedCredits);

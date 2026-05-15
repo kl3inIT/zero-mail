@@ -1,12 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
 import { Clock, Landmark } from 'lucide-react';
 import Image from 'next/image';
 
 import { CopyableField } from '@/features/billing/components/CopyableField';
 import type { TopupIntentDetails } from '@/features/billing/components/TopupPackageSelector';
+import { billingKeys } from '@/features/billing/query-keys';
+import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
+import { useBillingTopupWebSocket } from '@/features/billing/hooks/useBillingTopupWebSocket';
 import { useTopupCreditWatch } from '@/features/billing/hooks/useTopupCreditWatch';
 import { formatVnd } from '@/features/billing/util/format-vnd';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +19,7 @@ import { formatDateTime } from '@/lib/format';
 type TopupInstructionsProps = {
   intent: TopupIntentDetails;
   baselineCredits: number;
-  onCredited: (newBalance: number) => void;
+  onCredited: () => void;
   onExpired: () => void;
 };
 
@@ -27,6 +31,9 @@ export function TopupInstructions({
 }: TopupInstructionsProps) {
   const t = useTranslations();
   const locale = useLocale();
+  const currentUser = useCurrentUser();
+  const queryClient = useQueryClient();
+  const creditedHandledRef = useRef(false);
   const watch = useTopupCreditWatch({
     baselineCredits,
     expiresAt: intent.expiresAt,
@@ -34,11 +41,27 @@ export function TopupInstructions({
 
   const qrImageUrl = buildSepayQrUrl(intent);
 
-  useEffect(() => {
-    if (watch.credited && typeof watch.balance?.availableCredits === 'number') {
-      onCredited(watch.balance.availableCredits);
+  const completeTopup = useCallback(() => {
+    if (creditedHandledRef.current) {
+      return;
     }
-  }, [onCredited, watch.balance?.availableCredits, watch.credited]);
+    creditedHandledRef.current = true;
+    void queryClient.invalidateQueries({ queryKey: billingKeys.balance() });
+    onCredited();
+  }, [onCredited, queryClient]);
+
+  useBillingTopupWebSocket({
+    tenantId: currentUser.data?.tenantId,
+    orderCode: intent.code,
+    enabled: !watch.expired,
+    onCredited: completeTopup,
+  });
+
+  useEffect(() => {
+    if (watch.credited) {
+      completeTopup();
+    }
+  }, [completeTopup, watch.credited]);
 
   useEffect(() => {
     if (watch.expired) {
