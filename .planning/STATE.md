@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-05 Tasks 1-3; awaiting operator checkpoint
-last_updated: "2026-05-15T03:08:00.000Z"
+stopped_at: Load-test evidence committed; awaiting candidate gate URL, sign-off, and final rc tag
+last_updated: "2026-05-15T04:45:00.000Z"
 last_activity: 2026-05-15
 progress:
   total_phases: 17
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 
 Phase: 06 (polish-casa-verified-launch) - EXECUTING
 Plan: 5 of 5
-Status: Awaiting operator checkpoint for load-test evidence, launch sign-off, final rc tag, and STATE closure
+Status: Awaiting operator checkpoint for candidate gate URL, launch sign-off, final rc tag, and STATE closure
 Last activity: 2026-05-15
 
 Progress: [██████████] 99%
