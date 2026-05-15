@@ -14,7 +14,7 @@ describe('AuditLog', () => {
   it('renders the empty state for a zero-entry result', () => {
     renderWithProviders(<AuditLog injectedData={{ entries: [] }} now={NOW} />);
 
-    expect(screen.getByText('No triage activity yet')).toBeInTheDocument();
+    expect(screen.getByText('No email actions yet')).toBeInTheDocument();
   });
 
   it('renders one entry across the shared table and card models', () => {

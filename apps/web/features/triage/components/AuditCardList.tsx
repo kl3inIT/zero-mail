@@ -54,13 +54,17 @@ function AuditCard({ entry, now }: { entry: AuditEntry; now: Date }) {
       <CardContent className="space-y-3">
         <MessageRef entry={entry} />
         <div className="grid gap-1">
-          <span className="text-muted-foreground text-xs">{t('triage.audit.columns.rule')}</span>
+          <span className="text-muted-foreground text-xs">{t('triage.audit.whenLabel')}</span>
           <span className="text-foreground text-sm">{entry.ruleName}</span>
         </div>
         <div className="grid gap-1">
-          <span className="text-muted-foreground text-xs">{t('triage.audit.columns.reason')}</span>
+          <span className="text-muted-foreground text-xs">{t('triage.audit.thenLabel')}</span>
+          <span className="text-foreground text-sm">{entry.actionLabel}</span>
+        </div>
+        <div className="grid gap-1">
+          <span className="text-muted-foreground text-xs">{t('triage.audit.whyLabel')}</span>
           <p className="text-foreground text-sm leading-6" data-testid="audit-card-reason">
-            {entry.reason}
+            {entry.reason || t('triage.audit.noReason')}
           </p>
         </div>
       </CardContent>

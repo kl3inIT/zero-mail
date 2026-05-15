@@ -33,6 +33,10 @@ public class RuleValidationException extends BusinessException {
         return new RuleValidationException(Reason.UNSAFE_ACTION);
     }
 
+    public static RuleValidationException duplicate() {
+        return new RuleValidationException(Reason.DUPLICATE);
+    }
+
     public Reason reason() {
         return reason;
     }
@@ -92,7 +96,13 @@ public class RuleValidationException extends BusinessException {
                 ErrorCodes.RULES_UNSAFE_ACTION,
                 "rules.unsafe_action",
                 "Unsafe rule action",
-                "The rule contains an action outside the safe action allow-list.");
+                "The rule contains an action outside the safe action allow-list."),
+        DUPLICATE(
+                ErrorClass.CONFLICT,
+                ErrorCodes.RULES_DUPLICATE,
+                "rules.duplicate",
+                "Duplicate rule",
+                "A rule with the same matcher and actions already exists.");
 
         private final ErrorClass errorClass;
         private final String errorCode;

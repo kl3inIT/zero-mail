@@ -13,6 +13,7 @@ import com.zeromail.core.tenant.TenantContext;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -71,8 +72,120 @@ class RuleCompilerServiceTest {
         assertThat(compileResult.actionIntents()).contains("\"archive\"", "\"label\"", "Finance");
         assertThat(gateway.lastCallSite()).isEqualTo(CallSite.PREVIEW);
         assertThat(gateway.lastCompilerPayload())
+                .contains("\"compileMode\":\"initial\"")
                 .contains("\"sourceLanguageHint\":\"en\"")
                 .contains("\"allowedActionIds\":[\"label\",\"archive\",\"save_draft\"]");
+    }
+
+    @Test
+    void clarification_answer_payload_uses_effective_rule_text_without_legacy_fields() {
+        RecordingLlmGateway gateway =
+                new RecordingLlmGateway(
+                        gatewayResult(
+                                Map.of(
+                                        "schemaVersion",
+                                        "rules.v1",
+                                        "sourceLanguage",
+                                        "vi",
+                                        "displayName",
+                                        "Lưu trữ biên lai Stripe",
+                                        "matcher",
+                                        Map.of(
+                                                "type",
+                                                "ANY",
+                                                "children",
+                                                List.of(
+                                                        Map.of(
+                                                                "type",
+                                                                "SENDER_DOMAIN",
+                                                                "domain",
+                                                                "stripe.com"),
+                                                        Map.of(
+                                                                "type",
+                                                                "SUBJECT_CONTAINS",
+                                                                "text",
+                                                                "receipt"))),
+                                        "actionIntents",
+                                        List.of(
+                                                Map.of("type", "archive"),
+                                                Map.of("type", "label", "labelName", "Finance")),
+                                        "clarificationRequired",
+                                        false)));
+        RuleCompilerService compilerService =
+                new RuleCompilerService(gateway, new RuleCompileResultValidator());
+
+        RuleCompileResult compileResult =
+                compilerService.compile(
+                        new RuleCompileCommand(
+                                TENANT_ID,
+                                "Lưu trữ biên lai từ Stripe và gắn nhãn Finance",
+                                "Áp dụng cho email từ stripe.com có tiêu đề chứa receipt",
+                                "Bạn muốn quy tắc này áp dụng cho người gửi, chủ đề hay nhãn nào?"));
+
+        assertThat(compileResult.status()).isEqualTo(RuleCompileResult.Status.COMPILED);
+        assertThat(compileResult.matcherAst())
+                .contains("stripe.com", "SUBJECT_CONTAINS", "receipt");
+        assertThat(compileResult.actionIntents()).contains("\"archive\"", "\"label\"", "Finance");
+        assertThat(gateway.lastCompilerPayload())
+                .contains("\"compileMode\":\"after_clarification\"")
+                .contains("\"effectiveRuleText\"")
+                .contains("\"previousQuestion\"")
+                .contains("\"answer\":\"Áp dụng cho email từ stripe.com có tiêu đề chứa receipt\"")
+                .doesNotContain("\"priorCompileContext\"")
+                .doesNotContain("\"clarificationAnswer\"");
+    }
+
+    @Test
+    void broad_vietnamese_intent_compiles_to_semantic_review_draft_instead_of_blocking() {
+        RecordingLlmGateway gateway =
+                new RecordingLlmGateway(
+                        gatewayResult(
+                                Map.of(
+                                        "sourceLanguage",
+                                        "vi",
+                                        "clarificationRequired",
+                                        true,
+                                        "clarificationQuestion",
+                                        "Bạn muốn quy tắc này áp dụng cho người gửi, chủ đề hay nhãn nào?")),
+                        gatewayResult(
+                                Map.of(
+                                        "schemaVersion",
+                                        "rules.v1",
+                                        "sourceLanguage",
+                                        "vi",
+                                        "displayName",
+                                        "Email liên quan đến học tập",
+                                        "matcher",
+                                        Map.of(
+                                                "type",
+                                                "SEMANTIC_INTENT",
+                                                "intent",
+                                                "Email liên quan đến học tập",
+                                                "deferred",
+                                                true),
+                                        "actionIntents",
+                                        List.of(Map.of("type", "label", "labelName", "học tập")),
+                                        "clarificationRequired",
+                                        false)));
+        RuleCompilerService compilerService =
+                new RuleCompilerService(gateway, new RuleCompileResultValidator());
+
+        RuleCompileResult compileResult =
+                compilerService.compile(
+                        new RuleCompileCommand(
+                                TENANT_ID,
+                                "khi nào có mail liên quan đến học tập thì gán nhãn học tập cho tôi"));
+
+        assertThat(compileResult.status()).isEqualTo(RuleCompileResult.Status.COMPILED);
+        assertThat(compileResult.matcherAst())
+                .contains(
+                        "\"SEMANTIC_INTENT\"", "Email liên quan đến học tập", "\"deferred\":true");
+        assertThat(compileResult.actionIntents()).contains("\"label\"", "\"học tập\"");
+        assertThat(gateway.callCount()).isEqualTo(2);
+        assertThat(gateway.lastCompilerPayload())
+                .contains("\"compileMode\":\"force_review_form\"")
+                .doesNotContain("\"modelClarificationQuestion\"")
+                .doesNotContain("\"reviewFormPolicy\"");
     }
 
     @ParameterizedTest
@@ -229,12 +342,13 @@ class RuleCompilerServiceTest {
 
     private static final class RecordingLlmGateway implements LlmGateway {
 
-        private final RuleCompileGatewayResult compileResult;
+        private final List<RuleCompileGatewayResult> compileResults;
         private final AtomicReference<CallSite> lastCallSite = new AtomicReference<>();
         private final AtomicReference<String> lastCompilerPayload = new AtomicReference<>();
+        private final AtomicInteger callCount = new AtomicInteger();
 
-        private RecordingLlmGateway(RuleCompileGatewayResult compileResult) {
-            this.compileResult = compileResult;
+        private RecordingLlmGateway(RuleCompileGatewayResult... compileResults) {
+            this.compileResults = List.of(compileResults);
         }
 
         @Override
@@ -257,7 +371,11 @@ class RuleCompilerServiceTest {
             assertThat(TenantContext.currentOrThrow()).isEqualTo(TENANT_ID.toString());
             lastCallSite.set(callSite);
             lastCompilerPayload.set(compilerPayload);
-            return compileResult;
+            int callIndex = callCount.getAndIncrement();
+            if (callIndex >= compileResults.size()) {
+                return compileResults.get(compileResults.size() - 1);
+            }
+            return compileResults.get(callIndex);
         }
 
         @Override
@@ -277,6 +395,10 @@ class RuleCompilerServiceTest {
 
         private String lastCompilerPayload() {
             return lastCompilerPayload.get();
+        }
+
+        private int callCount() {
+            return callCount.get();
         }
     }
 }

@@ -32,6 +32,14 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Enterprise readability**: Backend Java code must use explicit, domain-revealing names for fields, parameters, locals, and lambda variables. Avoid opaque abbreviations such as `req`, `res`, `repo`, `svc`, `cfg`, `ctx`, `msg`, `err`, `ex`, `e`, `conn`, `tx`, or one-letter variables. Prefer names like `request`, `response`, `userRepository`, `gmailConnectionService`, `configurationProperties`, `tenantContext`, `gmailMessage`, `authenticationException`, `connection`, and `transactionTemplate`. Exceptions are allowed only for established technical acronyms (`ID`, `DTO`, `JPA`, `OAuth2`, `OIDC`, `URL`, `URI`, `HTTP`), generated API names, or intentionally ignored lambda parameters (`_`).
 <!-- GSD:project-end -->
 
+## Local Reference Repositories
+
+- Inbox Zero source is available next to this repo at `../inbox-zero`. Use it as a product and UX reference only; do not port its TypeScript/Node architecture into Zero Mail's Java/Spring architecture.
+- Before changing Zero Mail's rules UI, inspect Inbox Zero's AI assistant/rule builder flow. Its useful mental model is a clear rules table with `Enabled / Name / When / Then`, a natural-language create flow, and a structured manual editor.
+- Rule authoring policy: natural-language input is only a compiler front-end. The authoritative saved rule must be a structured, editable `When/Then` schema; keep the original user text only as `sourceText`/audit metadata. v1 write actions stay limited to `label`, `archive`, and `save_draft`; no auto-send, forward, spam, delete, or webhook action without a new product/security phase.
+- Rule compiler AI boundary: do **not** use regex, accent-insensitive keyword matching, substring hacks, or post-hoc string cleanup to infer `displayName`, `matcher.intent`, `labelName`, or other user-meaning fields from natural language. The LLM compiler must extract those fields through structured output and prompt/tool-schema constraints; backend code only validates schema, safety, bounds, tenant/privacy invariants, and technical syntax such as user-authored subject regex.
+- Prompt rewrite policy: when changing any system prompt, follow outcome-first prompting. State the goal, output contract, success criteria, true safety/format constraints, clarification or stopping policy, and a few representative examples. Do not append failure-specific keyword blacklists or "do not include word X" patches unless they are hard safety invariants; fix extraction behavior with prompt/schema/evals, not backend semantic cleanup.
+
 <!-- GSD:stack-start source:research/STACK.md -->
 
 ## Technology Stack

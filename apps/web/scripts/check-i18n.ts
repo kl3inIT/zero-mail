@@ -20,7 +20,7 @@
  * Output is human-readable; the FIRST line of any failing block is the
  * machine-grep target. Exit code is the contract for CI consumers.
  */
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 // -----------------------------------------------------------------------------
@@ -35,6 +35,7 @@ const ERROR_CODES_JAVA = resolve(
   REPO_ROOT,
   'backend/core/src/main/java/com/zeromail/core/shared/error/ErrorCodes.java',
 );
+const FEATURES_ROOT = resolve(WEB_ROOT, 'features');
 
 // Files in scope for the EN-prose scanner. Mirrors PLAN <task1.behavior>.
 // Plan 1.3-05 Task 1 — pages relocated into route groups; paths updated
@@ -174,6 +175,42 @@ function getNested(obj: unknown, dotted: string): unknown {
 
 function isNonEmptyString(v: unknown): v is string {
   return typeof v === 'string' && v.length > 0;
+}
+
+// -----------------------------------------------------------------------------
+// Encoding guard
+// -----------------------------------------------------------------------------
+
+const MOJIBAKE_RE =
+  /\u00c3[\u0080-\u00bf]|\u00c2[\u0080-\u00bf]|\u00c6[\u0080-\u00bf]|\u00c4[\u0080-\u00bf]|\u00e1[\u00ba\u00bb]|\u00e2\u20ac|\ufffd/u;
+
+function findFeatureMessageFiles(root: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    const fullPath = resolve(root, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...findFeatureMessageFiles(fullPath));
+      continue;
+    }
+    if (entry.isFile() && entry.name === 'messages.ts') {
+      out.push(fullPath);
+    }
+  }
+  return out.sort();
+}
+
+function checkMojibake(): string[] {
+  const failures: string[] = [];
+  const files = [VI_PATH, EN_PATH, ...findFeatureMessageFiles(FEATURES_ROOT)];
+  for (const file of files) {
+    const lines = readFileSync(file, 'utf8').split(/\r?\n/);
+    for (let index = 0; index < lines.length; index++) {
+      if (MOJIBAKE_RE.test(lines[index])) {
+        failures.push(`[encoding] mojibake-looking text in ${file}:${index + 1}`);
+      }
+    }
+  }
+  return failures;
 }
 
 // -----------------------------------------------------------------------------
@@ -421,6 +458,7 @@ function main(): void {
   const en = readJson(EN_PATH);
 
   const allFailures: string[] = [];
+  allFailures.push(...checkMojibake());
   allFailures.push(...checkParity(vi, en));
   allFailures.push(...checkBackendCoverage(vi, en));
   allFailures.push(...checkLockedKey(vi, en));
@@ -435,7 +473,8 @@ function main(): void {
   const totalKeys = leafKeys(vi).length;
   console.log(
     `i18n:check OK - vi/en parity, ${totalKeys} leaf keys, backend ErrorCodes coverage, ` +
-      `locked errors.validation.generic, no English-prose literals in ${EN_SCAN_FILES.length} Phase 1 files.`,
+      `locked errors.validation.generic, no mojibake in i18n sources, ` +
+      `no English-prose literals in ${EN_SCAN_FILES.length} Phase 1 files.`,
   );
 }
 

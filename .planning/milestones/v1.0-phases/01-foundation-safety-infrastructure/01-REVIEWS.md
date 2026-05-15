@@ -1,4 +1,4 @@
-﻿---
+---
 phase: 1
 reviewers: [claude, codex, opencode]
 reviewed_at: 2026-04-25T00:18:54+07:00

@@ -132,9 +132,9 @@ public record ZeroMailCoreProperties(
         public ZeroMailLlmProperties {
             provider = provider == null ? BYOKProvider.OPENAI : provider;
             baseUrl = baseUrl == null ? "https://openrouter.ai/api/v1" : baseUrl;
-            compileModel = compileModel == null ? "openai/gpt-4o-mini" : compileModel;
-            driftModel = driftModel == null ? "openai/gpt-4o-mini" : driftModel;
-            triageModel = triageModel == null ? "openai/gpt-4o-mini" : triageModel;
+            compileModel = compileModel == null ? "openai/gpt-5.4-nano" : compileModel;
+            driftModel = driftModel == null ? "openai/gpt-5.4-nano" : driftModel;
+            triageModel = triageModel == null ? "openai/gpt-5.4-nano" : triageModel;
             connectTimeout = connectTimeout == null ? Duration.ofSeconds(5) : connectTimeout;
             readTimeout = readTimeout == null ? Duration.ofSeconds(30) : readTimeout;
         }

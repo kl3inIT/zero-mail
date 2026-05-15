@@ -1,0 +1,986 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zero Mail Rules Prototype</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --ink: #0b1324;
+      --muted: #607089;
+      --line: #dbe3ef;
+      --line-strong: #c8d4e3;
+      --blue: #2f64e7;
+      --blue-ink: #174bd1;
+      --blue-soft: #edf3ff;
+      --green: #0d8f52;
+      --green-soft: #eaf8f0;
+      --amber: #a26300;
+      --amber-soft: #fff5df;
+      --purple: #7b3fc6;
+      --purple-soft: #f3ecff;
+      --danger: #c23b3b;
+      --shadow: 0 18px 45px rgba(15, 23, 42, .16);
+      color-scheme: light;
+      font-family:
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.8), rgba(247,248,251,.6) 30%),
+        var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 248px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--line);
+      background: rgba(255, 255, 255, .74);
+      backdrop-filter: blur(18px);
+      padding: 22px 18px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 760;
+      font-size: 18px;
+      margin-bottom: 28px;
+    }
+
+    .mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--ink);
+      font-weight: 850;
+    }
+
+    .nav-section {
+      margin-top: 22px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 680;
+      text-transform: uppercase;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: #243147;
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-top: 4px;
+      text-align: left;
+    }
+
+    .nav-link.active {
+      background: #eef3fb;
+      color: var(--ink);
+      font-weight: 720;
+    }
+
+    .main {
+      min-width: 0;
+      padding: 30px 42px 48px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 34px;
+      line-height: 1.08;
+      font-weight: 760;
+    }
+
+    .subtle {
+      color: var(--muted);
+      margin: 8px 0 0;
+      font-size: 15px;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      border: 1px solid var(--line-strong);
+      background: var(--panel);
+      color: var(--ink);
+      min-height: 42px;
+      border-radius: 8px;
+      padding: 0 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      font-weight: 680;
+      box-shadow: 0 1px 0 rgba(15, 23, 42, .02);
+    }
+
+    .btn.primary {
+      border-color: var(--blue);
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .btn.ghost {
+      background: transparent;
+      border-color: transparent;
+      color: var(--muted);
+    }
+
+    .btn:disabled {
+      opacity: .46;
+      cursor: not-allowed;
+    }
+
+    .tabs {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      padding: 14px 0 15px;
+      color: var(--muted);
+      font-weight: 680;
+      position: relative;
+    }
+
+    .tab.active {
+      color: var(--ink);
+    }
+
+    .tab.active::after {
+      content: "";
+      position: absolute;
+      height: 2px;
+      left: 0;
+      right: 0;
+      bottom: -1px;
+      background: var(--ink);
+      border-radius: 99px;
+    }
+
+    .rule-table {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .rule-row {
+      display: grid;
+      grid-template-columns: 108px 210px minmax(260px, 1fr) minmax(310px, 430px) 42px;
+      align-items: center;
+      gap: 18px;
+      min-height: 76px;
+      border-top: 1px solid var(--line);
+      padding: 0 22px;
+    }
+
+    .rule-row.header {
+      min-height: 52px;
+      border-top: 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 720;
+    }
+
+    .rule-title {
+      font-weight: 740;
+    }
+
+    .rule-prompt {
+      color: #172033;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .switch {
+      width: 46px;
+      height: 26px;
+      border-radius: 999px;
+      border: 1px solid #0e1728;
+      background: #0e1728;
+      position: relative;
+      padding: 0;
+    }
+
+    .switch::after {
+      content: "";
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #fff;
+      top: 2px;
+      right: 2px;
+      box-shadow: 0 1px 2px rgba(0,0,0,.15);
+    }
+
+    .switch.off {
+      background: #d9e1ec;
+      border-color: #c6d1df;
+    }
+
+    .switch.off::after {
+      left: 2px;
+      right: auto;
+    }
+
+    .chip-set {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      max-width: 100%;
+      min-height: 30px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      font-weight: 680;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .chip.label {
+      color: var(--blue-ink);
+      background: var(--blue-soft);
+      border-color: #cfe0ff;
+    }
+
+    .chip.archive {
+      color: var(--amber);
+      background: var(--amber-soft);
+      border-color: #f3d99d;
+    }
+
+    .chip.draft {
+      color: var(--green);
+      background: var(--green-soft);
+      border-color: #bfe9cd;
+    }
+
+    .chip.notify {
+      color: var(--purple);
+      background: var(--purple-soft);
+      border-color: #dfccff;
+    }
+
+    .kebab {
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+      font-size: 24px;
+      line-height: 1;
+      padding: 8px;
+    }
+
+    .drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, .54);
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 38px 22px;
+      z-index: 10;
+    }
+
+    .drawer-backdrop.open {
+      display: flex;
+      animation: fade .16s ease-out;
+    }
+
+    @keyframes fade {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal {
+      width: min(1180px, 100%);
+      max-height: calc(100vh - 76px);
+      overflow: auto;
+      background: var(--panel);
+      border: 1px solid #e1e7f0;
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      animation: rise .18s ease-out;
+    }
+
+    @keyframes rise {
+      from { transform: translateY(10px); opacity: .96; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-head {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: rgba(255,255,255,.94);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--line);
+      padding: 24px 28px 18px;
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .modal-title {
+      font-size: 26px;
+      font-weight: 760;
+      margin: 0;
+    }
+
+    .close {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .modal-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 28px;
+      padding: 26px 28px 28px;
+    }
+
+    .mode-switch {
+      display: inline-grid;
+      grid-template-columns: 1fr 1fr;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #f5f7fb;
+      margin-bottom: 20px;
+    }
+
+    .mode-switch button {
+      border: 0;
+      background: transparent;
+      min-height: 34px;
+      border-radius: 6px;
+      padding: 0 12px;
+      color: var(--muted);
+      font-weight: 720;
+    }
+
+    .mode-switch button.active {
+      background: #fff;
+      color: var(--ink);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, .1);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 20px;
+      font-weight: 760;
+      margin: 26px 0 12px;
+    }
+
+    .field-label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .input,
+    .textarea,
+    .select {
+      width: 100%;
+      border: 1px solid var(--line-strong);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 8px;
+      min-height: 44px;
+      padding: 10px 12px;
+      outline: 0;
+    }
+
+    .textarea {
+      min-height: 140px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    .input:focus,
+    .textarea:focus,
+    .select:focus {
+      border-color: #8ba8df;
+      box-shadow: 0 0 0 3px rgba(47, 100, 231, .12);
+    }
+
+    .composer {
+      display: grid;
+      gap: 14px;
+    }
+
+    .condition-row,
+    .action-row {
+      display: grid;
+      grid-template-columns: 126px 180px minmax(0, 1fr) 38px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .action-row {
+      grid-template-columns: 280px minmax(0, 1fr) 38px;
+    }
+
+    .joiner {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-weight: 720;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      border-radius: 8px;
+    }
+
+    .icon-btn:hover,
+    .close:hover {
+      background: #f1f5fb;
+      color: var(--ink);
+    }
+
+    .inline-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .examples {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .example {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 8px;
+      min-height: 58px;
+      padding: 12px 14px;
+      text-align: left;
+      color: #172033;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      line-height: 1.25;
+    }
+
+    .side-panel {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f8fafc;
+      padding: 18px;
+      height: fit-content;
+      position: sticky;
+      top: 92px;
+    }
+
+    .side-title {
+      margin: 0 0 14px;
+      font-size: 17px;
+      font-weight: 760;
+    }
+
+    .action-list {
+      display: grid;
+      gap: 11px;
+      color: #1f2d43;
+    }
+
+    .action-list div {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 28px;
+    }
+
+    .disabled-action {
+      color: #98a6ba;
+      text-decoration: line-through;
+      text-decoration-thickness: 1px;
+    }
+
+    .manual-only,
+    .describe-only {
+      display: none;
+    }
+
+    .manual-mode .manual-only,
+    .describe-mode .describe-only {
+      display: block;
+    }
+
+    .footer {
+      position: sticky;
+      bottom: 0;
+      background: rgba(255,255,255,.96);
+      border-top: 1px solid var(--line);
+      backdrop-filter: blur(14px);
+      padding: 16px 28px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .advanced {
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      overflow: hidden;
+      margin-top: 18px;
+    }
+
+    .advanced-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 16px 18px;
+      border-top: 1px solid var(--line);
+    }
+
+    .advanced-row:first-child {
+      border-top: 0;
+    }
+
+    .advanced-row strong {
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .review-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #f7faff;
+      border: 1px solid #dbe8ff;
+    }
+
+    @media (max-width: 980px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      .main {
+        padding: 22px 18px 36px;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .actions {
+        justify-content: flex-start;
+      }
+
+      .rule-row {
+        grid-template-columns: 70px minmax(120px, 1fr);
+        min-height: auto;
+        padding: 16px;
+      }
+
+      .rule-row.header {
+        display: none;
+      }
+
+      .rule-row > :nth-child(3),
+      .rule-row > :nth-child(4),
+      .rule-row > :nth-child(5) {
+        grid-column: 2;
+      }
+
+      .modal-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .side-panel {
+        position: static;
+      }
+
+      .condition-row,
+      .action-row {
+        grid-template-columns: 1fr;
+      }
+
+      .examples {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><span class="mark">Z</span><span>Zero Mail</span></div>
+      <div class="nav-section">Mail</div>
+      <button class="nav-link">Inbox triage</button>
+      <button class="nav-link">Needs reply</button>
+      <div class="nav-section">Manage</div>
+      <button class="nav-link active">Rules</button>
+      <button class="nav-link">Billing</button>
+      <button class="nav-link">Settings</button>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1>Quy tac</h1>
+          <p class="subtle">Zero Mail xu ly email moi theo cac quy tac ben duoi. Rule moi luon tat cho den khi preview.</p>
+        </div>
+        <div class="actions">
+          <button class="btn">Process past emails</button>
+          <button class="btn primary" id="openCreate">+ Add Rule</button>
+        </div>
+      </header>
+
+      <nav class="tabs" aria-label="Rules sections">
+        <button class="tab active">Rules</button>
+        <button class="tab">Test</button>
+        <button class="tab">History</button>
+        <button class="tab">Settings</button>
+      </nav>
+
+      <section class="rule-table" aria-label="Rules">
+        <div class="rule-row header">
+          <div>Enabled</div>
+          <div>Name</div>
+          <div>When</div>
+          <div>Then</div>
+          <div></div>
+        </div>
+
+        <div class="rule-row">
+          <button class="switch" aria-label="Enabled"></button>
+          <div class="rule-title">Receipts</div>
+          <div class="rule-prompt">From stripe.com OR subject contains receipt</div>
+          <div class="chip-set">
+            <span class="chip label">Label Finance</span>
+            <span class="chip archive">Archive</span>
+          </div>
+          <button class="kebab" aria-label="More">...</button>
+        </div>
+
+        <div class="rule-row">
+          <button class="switch" aria-label="Enabled"></button>
+          <div class="rule-title">Calendar</div>
+          <div class="rule-prompt">Subject contains calendar OR invite</div>
+          <div class="chip-set">
+            <span class="chip label">Label Calendar</span>
+          </div>
+          <button class="kebab" aria-label="More">...</button>
+        </div>
+
+        <div class="rule-row">
+          <button class="switch off" aria-label="Disabled"></button>
+          <div class="rule-title">Newsletters</div>
+          <div class="rule-prompt">Newsletter indicators, except customer domains</div>
+          <div class="chip-set">
+            <span class="chip label">Label Reading</span>
+          </div>
+          <button class="kebab" aria-label="More">...</button>
+        </div>
+
+        <div class="rule-row">
+          <button class="switch off" aria-label="Disabled"></button>
+          <div class="rule-title">Customer support</div>
+          <div class="rule-prompt">From customers asking for help or support</div>
+          <div class="chip-set">
+            <span class="chip label">Label Support</span>
+            <span class="chip draft">Save draft</span>
+          </div>
+          <button class="kebab" aria-label="More">...</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="drawer-backdrop" id="drawer">
+    <section class="modal describe-mode" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <div>
+          <h2 class="modal-title" id="modalTitle">Create rule</h2>
+          <p class="subtle">Mo ta nhanh bang ngon ngu tu nhien, hoac chinh truc tiep bang When / Then.</p>
+        </div>
+        <button class="close" id="closeCreate" aria-label="Close">x</button>
+      </div>
+
+      <div class="modal-grid">
+        <div>
+          <div class="mode-switch">
+            <button class="active" id="describeTab">Describe</button>
+            <button id="manualTab">Manual</button>
+          </div>
+
+          <div class="describe-only">
+            <label class="field-label" for="naturalRule">Add new rules</label>
+            <textarea class="textarea" id="naturalRule">Label urgent emails as "Urgent"
+Archive receipts from Stripe and label them Finance</textarea>
+            <div class="inline-actions">
+              <button class="btn primary" id="generateRule">Create draft rule</button>
+              <button class="btn" id="showExamples">Choose from examples</button>
+              <button class="btn" id="jumpManual">+ Add rule manually</button>
+            </div>
+
+            <div class="examples" id="examples">
+              <button class="example"><span class="chip label">Label</span> Label emails from @mycompany.com as Team</button>
+              <button class="example"><span class="chip label">Label</span> Label urgent emails as Urgent</button>
+              <button class="example"><span class="chip draft">Draft</span> If someone asks for a call, draft a reply with my calendar link</button>
+              <button class="example"><span class="chip label">Label</span> Label feedback from customers as Customer Feedback</button>
+              <button class="example"><span class="chip label">Label</span> Label legal documents as Legal</button>
+              <button class="example"><span class="chip label">Label</span> Label emails from investors as Investor</button>
+            </div>
+          </div>
+
+          <div class="manual-only">
+            <label class="field-label" for="ruleName">Rule name</label>
+            <input class="input" id="ruleName" value="Archive Stripe receipts" />
+
+            <div class="section-title">When I get an email</div>
+            <label class="field-label" for="semanticMatch">That matches</label>
+            <textarea class="textarea" id="semanticMatch">Purchase confirmations, payment receipts, or billing emails from Stripe</textarea>
+
+            <div class="composer">
+              <div class="condition-row">
+                <div class="joiner">and</div>
+                <select class="select" aria-label="Condition type">
+                  <option>From</option>
+                  <option>To</option>
+                  <option>Subject</option>
+                  <option>Gmail label</option>
+                  <option>Newsletter</option>
+                </select>
+                <input class="input" value="stripe.com" />
+                <button class="icon-btn" aria-label="Remove condition">-</button>
+              </div>
+              <div class="condition-row">
+                <div class="joiner">and</div>
+                <select class="select" aria-label="Condition type">
+                  <option>Subject</option>
+                  <option>From</option>
+                  <option>To</option>
+                  <option>Gmail label</option>
+                  <option>Newsletter</option>
+                </select>
+                <input class="input" value="receipt OR invoice" />
+                <button class="icon-btn" aria-label="Remove condition">-</button>
+              </div>
+            </div>
+            <div class="inline-actions">
+              <button class="btn">+ Add condition</button>
+            </div>
+
+            <div class="section-title">Then</div>
+            <div class="composer">
+              <div class="action-row">
+                <select class="select" aria-label="Action">
+                  <option>Label</option>
+                  <option>Archive</option>
+                  <option>Save draft</option>
+                </select>
+                <input class="input" value="Finance" />
+                <button class="icon-btn" aria-label="Remove action">-</button>
+              </div>
+              <div class="action-row">
+                <select class="select" aria-label="Action">
+                  <option>Archive</option>
+                  <option>Label</option>
+                  <option>Save draft</option>
+                </select>
+                <input class="input" value="Skip inbox" />
+                <button class="icon-btn" aria-label="Remove action">-</button>
+              </div>
+            </div>
+            <div class="inline-actions">
+              <button class="btn">+ Add action</button>
+            </div>
+
+            <div class="review-strip">
+              <span class="chip label">Label Finance</span>
+              <span class="chip archive">Archive</span>
+              <span class="chip">Needs preview</span>
+            </div>
+
+            <div class="section-title">Advanced options</div>
+            <div class="advanced">
+              <div class="advanced-row">
+                <div>
+                  <strong>Apply to threads</strong>
+                  <span class="subtle">Run on every reply in a conversation, not just the first message.</span>
+                </div>
+                <button class="switch" aria-label="Apply to threads"></button>
+              </div>
+              <div class="advanced-row">
+                <div>
+                  <strong>Include in digest</strong>
+                  <span class="subtle">Show matched emails in the daily summary.</span>
+                </div>
+                <button class="btn">Enable</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="side-panel">
+          <h3 class="side-title">Available actions</h3>
+          <div class="action-list">
+            <div><span class="chip label">Label</span></div>
+            <div><span class="chip archive">Archive</span></div>
+            <div><span class="chip draft">Save draft</span></div>
+            <div class="disabled-action">Send replies</div>
+            <div class="disabled-action">Forward</div>
+            <div class="disabled-action">Send email</div>
+            <div class="disabled-action">Mark as spam</div>
+            <div class="disabled-action">Call webhook</div>
+          </div>
+        </aside>
+      </div>
+
+      <footer class="footer">
+        <button class="btn" id="cancelFooter">Cancel</button>
+        <button class="btn">Preview</button>
+        <button class="btn primary">Save rule off</button>
+      </footer>
+    </section>
+  </div>
+
+  <script>
+    const drawer = document.getElementById('drawer');
+    const modal = document.getElementById('modal');
+    const openCreate = document.getElementById('openCreate');
+    const closeCreate = document.getElementById('closeCreate');
+    const cancelFooter = document.getElementById('cancelFooter');
+    const describeTab = document.getElementById('describeTab');
+    const manualTab = document.getElementById('manualTab');
+    const jumpManual = document.getElementById('jumpManual');
+    const generateRule = document.getElementById('generateRule');
+    const examples = document.getElementById('examples');
+
+    function openModal() {
+      drawer.classList.add('open');
+    }
+
+    function closeModal() {
+      drawer.classList.remove('open');
+    }
+
+    function setMode(mode) {
+      const manual = mode === 'manual';
+      modal.classList.toggle('manual-mode', manual);
+      modal.classList.toggle('describe-mode', !manual);
+      manualTab.classList.toggle('active', manual);
+      describeTab.classList.toggle('active', !manual);
+    }
+
+    openCreate.addEventListener('click', openModal);
+    closeCreate.addEventListener('click', closeModal);
+    cancelFooter.addEventListener('click', closeModal);
+    describeTab.addEventListener('click', () => setMode('describe'));
+    manualTab.addEventListener('click', () => setMode('manual'));
+    jumpManual.addEventListener('click', () => setMode('manual'));
+    generateRule.addEventListener('click', () => setMode('manual'));
+    examples.addEventListener('click', (event) => {
+      const button = event.target.closest('button');
+      if (!button) return;
+      document.getElementById('naturalRule').value = button.textContent.trim();
+      setMode('manual');
+    });
+  </script>
+</body>
+</html>

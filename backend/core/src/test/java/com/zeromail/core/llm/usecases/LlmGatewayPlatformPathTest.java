@@ -43,7 +43,7 @@ class LlmGatewayPlatformPathTest {
                                     .isEqualTo(SystemPrompts.TRIAGE_SYSTEM_PROMPT);
                             assertThat(request.userMessage()).isEqualTo("sanitized-user-message");
                             assertThat(request.tools()).hasSize(3);
-                            assertThat(request.model()).isEqualTo("openai/gpt-4o-mini");
+                            assertThat(request.model()).isEqualTo("openai/gpt-5.4-nano");
                             assertThat(request.temperature()).isZero();
                             assertThat(request.toolChoiceRequired()).isTrue();
                         });
@@ -81,7 +81,7 @@ class LlmGatewayPlatformPathTest {
                 .contains("event=llm_call_succeeded tenantId=" + TENANT_ID)
                 .contains("callSite=PREVIEW")
                 .contains("provider=openai")
-                .contains("model=openai/gpt-4o-mini")
+                .contains("model=openai/gpt-5.4-nano")
                 .contains("latencyMs=")
                 .contains("promptTokens=10")
                 .contains("completionTokens=5")
@@ -109,9 +109,9 @@ class LlmGatewayPlatformPathTest {
                 BYOKProvider.OPENAI,
                 "https://openrouter.ai/api/v1",
                 "test-platform-key",
-                "openai/gpt-4o-mini",
-                "openai/gpt-4o-mini",
-                "openai/gpt-4o-mini",
+                "openai/gpt-5.4-nano",
+                "openai/gpt-5.4-nano",
+                "openai/gpt-5.4-nano",
                 null,
                 null);
     }

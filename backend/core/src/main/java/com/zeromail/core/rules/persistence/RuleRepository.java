@@ -28,4 +28,40 @@ public interface RuleRepository extends JpaRepository<RuleEntity, UUID> {
     Optional<RuleEntity> findByTenantIdAndTemplateKey(UUID tenantId, String templateKey);
 
     List<RuleEntity> findByTenantIdAndTemplateKeyIn(UUID tenantId, Collection<String> templateKeys);
+
+    @Query(
+            value =
+                    """
+      SELECT *
+      FROM rules
+      WHERE tenant_id = :tenantId
+        AND matcher_ast = CAST(:matcherAst AS jsonb)
+        AND action_intents = CAST(:actionIntents AS jsonb)
+      ORDER BY order_index ASC
+      LIMIT 1
+      """,
+            nativeQuery = true)
+    Optional<RuleEntity> findFirstByTenantIdAndDefinition(
+            @Param("tenantId") UUID tenantId,
+            @Param("matcherAst") String matcherAst,
+            @Param("actionIntents") String actionIntents);
+
+    @Query(
+            value =
+                    """
+      SELECT *
+      FROM rules
+      WHERE tenant_id = :tenantId
+        AND id <> :excludedRuleId
+        AND matcher_ast = CAST(:matcherAst AS jsonb)
+        AND action_intents = CAST(:actionIntents AS jsonb)
+      ORDER BY order_index ASC
+      LIMIT 1
+      """,
+            nativeQuery = true)
+    Optional<RuleEntity> findFirstByTenantIdAndDefinitionExcludingRule(
+            @Param("tenantId") UUID tenantId,
+            @Param("excludedRuleId") UUID excludedRuleId,
+            @Param("matcherAst") String matcherAst,
+            @Param("actionIntents") String actionIntents);
 }

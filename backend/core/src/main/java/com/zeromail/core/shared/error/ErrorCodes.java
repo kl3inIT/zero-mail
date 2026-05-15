@@ -45,6 +45,7 @@ public final class ErrorCodes {
     public static final String RULES_REORDER_INVALID = "error.rules.reorder.invalid";
     public static final String RULES_VERSION_MISMATCH = "error.rules.version_mismatch";
     public static final String RULES_UNSAFE_ACTION = "error.rules.unsafe_action";
+    public static final String RULES_DUPLICATE = "error.rules.duplicate";
     public static final String RULES_GMAIL_UNAVAILABLE = "error.rules.gmail.unavailable";
     public static final String TRIAGE_UNDO_EXPIRED = "error.triage.undo.expired";
     public static final String TRIAGE_UNDO_ALREADY_DONE = "error.triage.undo.already_done";

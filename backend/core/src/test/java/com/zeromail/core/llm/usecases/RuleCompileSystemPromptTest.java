@@ -13,7 +13,9 @@ class RuleCompileSystemPromptTest {
                 .contains("exactly one rule_compile tool call")
                 .contains("rules.v1")
                 .contains("sender email or domain")
-                .contains("SEMANTIC_INTENT as a deferred marker only")
+                .contains("SEMANTIC_INTENT")
+                .contains("Broad semantic conditions are valid review-form drafts")
+                .contains("safe action intents")
                 .contains("label, archive, and save_draft")
                 .contains("clarificationRequired=true")
                 .contains("never logged or persisted");

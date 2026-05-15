@@ -63,6 +63,11 @@ public class RuleManagementService {
 
     @Transactional
     public RuleStatusProjection create(RuleCreateCommand command) {
+        rejectDuplicateDefinition(
+                command.tenantId(),
+                command.compileResult().matcherAst(),
+                command.compileResult().actionIntents(),
+                null);
         int orderIndex = (int) ruleRepository.countByTenantId(command.tenantId());
         RuleEntity ruleEntity =
                 new RuleEntity(
@@ -94,6 +99,12 @@ public class RuleManagementService {
                         || !Objects.equals(
                                 ruleEntity.getActionIntents(),
                                 command.compileResult().actionIntents());
+
+        rejectDuplicateDefinition(
+                command.tenantId(),
+                command.compileResult().matcherAst(),
+                command.compileResult().actionIntents(),
+                command.ruleId());
 
         ruleEntity.replaceDefinition(
                 command.displayName(),
@@ -206,6 +217,23 @@ public class RuleManagementService {
             throw RuleValidationException.versionMismatch();
         }
         ruleNativeStateUpdater.refresh(ruleEntity);
+    }
+
+    private void rejectDuplicateDefinition(
+            UUID tenantId, String matcherAst, String actionIntents, UUID excludedRuleId) {
+        boolean duplicateExists =
+                excludedRuleId == null
+                        ? ruleRepository
+                                .findFirstByTenantIdAndDefinition(
+                                        tenantId, matcherAst, actionIntents)
+                                .isPresent()
+                        : ruleRepository
+                                .findFirstByTenantIdAndDefinitionExcludingRule(
+                                        tenantId, excludedRuleId, matcherAst, actionIntents)
+                                .isPresent();
+        if (duplicateExists) {
+            throw RuleValidationException.duplicate();
+        }
     }
 
     private static void normalizeOrder(List<RuleEntity> rules) {

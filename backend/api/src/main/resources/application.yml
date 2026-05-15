@@ -118,9 +118,9 @@ zero-mail:
       provider: openai
       base-url: https://openrouter.ai/api/v1
       api-key: ${ZEROMAIL_LLM_PLATFORM_API_KEY:?ZEROMAIL_LLM_PLATFORM_API_KEY must be supplied via deployment secret source (Docker secret, systemd credential, or locked-down env file)}
-      compile-model: openai/gpt-4o-mini
-      drift-model: openai/gpt-4o-mini
-      triage-model: openai/gpt-4o-mini
+      compile-model: openai/gpt-5.4-nano
+      drift-model: openai/gpt-5.4-nano
+      triage-model: openai/gpt-5.4-nano
       connect-timeout: 5s
       read-timeout: 30s
     byok:

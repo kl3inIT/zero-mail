@@ -33,7 +33,7 @@ for (const viewport of [
     await page.getByTestId('shadow-mode-switch').click();
     await expect(page.getByRole('alertdialog')).toHaveCount(0);
     await expect.poll(() => state.shadowModeRequests).toContainEqual({ enabled: true });
-    await expect(page.getByText('Shadow mode on')).toBeVisible();
+    await expect(page.getByText('Test mode on')).toBeVisible();
     await expect(page.getByTestId('shadow-mode-switch')).toBeChecked();
 
     await page.getByTestId('shadow-mode-switch').click();

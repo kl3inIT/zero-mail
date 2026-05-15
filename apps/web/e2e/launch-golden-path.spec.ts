@@ -150,7 +150,9 @@ test.describe('Launch golden path', () => {
 
       await test.step('3. enable template rule from gallery', async () => {
         await page.goto(`${FRONTEND_BASE_URL}/rules`, { waitUntil: 'domcontentloaded' });
-        await expect(page.getByRole('heading', { name: 'Rules', exact: true })).toBeVisible();
+        await expect(
+          page.getByRole('heading', { name: 'Automation rules', exact: true }),
+        ).toBeVisible();
 
         const archiveRule = page.getByRole('heading', { name: 'Archive receipts' }).first();
         if (!(await waitForLocatorVisible(archiveRule, 5000))) {
