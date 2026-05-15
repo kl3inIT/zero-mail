@@ -21,9 +21,12 @@ import com.zeromail.core.shared.privacy.EmailAddressCanonicalizer;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.StructuredTaskScope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -37,6 +40,13 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class GmailDeliveryProcessingService {
 
     private static final Logger log = LoggerFactory.getLogger(GmailDeliveryProcessingService.class);
+
+    /**
+     * Per-tenant Gmail messages.get fanout cap. Kept well under Gmail's 250 quota-units/sec
+     * per-user budget (~1 message fetch ≈ 5 units), leaving headroom for other concurrent calls
+     * within the same tenant.
+     */
+    private static final int GMAIL_FETCH_CONCURRENCY = 8;
 
     private final PubSubDeliveryRepository deliveryRepository;
     private final MailMessageObservedRepository observedRepository;
@@ -149,13 +159,64 @@ public class GmailDeliveryProcessingService {
 
     private int observeInboxMessages(
             Gmail gmail, UUID tenantId, ListHistoryResponse historyResponse)
-            throws java.io.IOException {
-        int newObservations = 0;
+            throws java.io.IOException, InterruptedException {
         List<History> historyList = historyResponse.getHistory();
         if (historyList == null) {
-            return newObservations;
+            return 0;
         }
 
+        List<PendingFetch> pendingFetches = collectPendingFetches(historyList);
+        if (pendingFetches.isEmpty()) {
+            return 0;
+        }
+
+        Semaphore concurrencyLimiter = new Semaphore(GMAIL_FETCH_CONCURRENCY);
+        List<StructuredTaskScope.Subtask<Integer>> subtasks =
+                new ArrayList<>(pendingFetches.size());
+        try (var scope = StructuredTaskScope.<Integer>open()) {
+            for (PendingFetch pendingFetch : pendingFetches) {
+                subtasks.add(
+                        scope.fork(
+                                () -> {
+                                    concurrencyLimiter.acquire();
+                                    try {
+                                        return fetchAndObserve(
+                                                gmail,
+                                                tenantId,
+                                                pendingFetch.history(),
+                                                pendingFetch.gmailMessageId());
+                                    } finally {
+                                        concurrencyLimiter.release();
+                                    }
+                                }));
+            }
+            scope.join();
+        }
+
+        int newObservations = 0;
+        for (StructuredTaskScope.Subtask<Integer> subtask : subtasks) {
+            if (subtask.state() == StructuredTaskScope.Subtask.State.SUCCESS) {
+                newObservations += subtask.get();
+                continue;
+            }
+            // Preserve original fail-fast semantics: any Gmail fetch failure aborts the
+            // batch so the outer retry envelope reprocesses the entire history range.
+            // insertObservedIfAbsent dedup ensures already-persisted observations are
+            // not duplicated when Pub/Sub redelivers.
+            Throwable failureCause = subtask.exception();
+            if (failureCause instanceof java.io.IOException ioFailure) {
+                throw ioFailure;
+            }
+            if (failureCause instanceof RuntimeException runtimeFailure) {
+                throw runtimeFailure;
+            }
+            throw new RuntimeException(failureCause);
+        }
+        return newObservations;
+    }
+
+    private List<PendingFetch> collectPendingFetches(List<History> historyList) {
+        List<PendingFetch> pendingFetches = new ArrayList<>();
         for (History history : historyList) {
             if (history.getMessagesAdded() == null) {
                 continue;
@@ -165,32 +226,32 @@ public class GmailDeliveryProcessingService {
                 if (historyMessage == null || historyMessage.getId() == null) {
                     continue;
                 }
-
-                Message gmailMessage =
-                        gmail.users()
-                                .messages()
-                                .get("me", historyMessage.getId())
-                                .setFormat("metadata")
-                                .setMetadataHeaders(List.of("From"))
-                                .setFields("id,threadId,labelIds,internalDate,payload/headers")
-                                .execute();
-                List<String> labelIds = gmailMessage.getLabelIds();
-                if (labelIds == null
-                        || (!labelIds.contains("INBOX") && !labelIds.contains("SENT"))) {
-                    continue;
-                }
-                String senderEmail = extractSanitizedSenderEmail(gmailMessage);
-
-                int insertedCount =
-                        insertObservationAndPublishEvents(
-                                tenantId, history, gmailMessage, labelIds, senderEmail);
-                if (insertedCount == 1) {
-                    newObservations++;
-                }
+                pendingFetches.add(new PendingFetch(history, historyMessage.getId()));
             }
         }
-        return newObservations;
+        return pendingFetches;
     }
+
+    private int fetchAndObserve(Gmail gmail, UUID tenantId, History history, String gmailMessageId)
+            throws java.io.IOException {
+        Message gmailMessage =
+                gmail.users()
+                        .messages()
+                        .get("me", gmailMessageId)
+                        .setFormat("metadata")
+                        .setMetadataHeaders(List.of("From"))
+                        .setFields("id,threadId,labelIds,internalDate,payload/headers")
+                        .execute();
+        List<String> labelIds = gmailMessage.getLabelIds();
+        if (labelIds == null || (!labelIds.contains("INBOX") && !labelIds.contains("SENT"))) {
+            return 0;
+        }
+        String senderEmail = extractSanitizedSenderEmail(gmailMessage);
+        return insertObservationAndPublishEvents(
+                tenantId, history, gmailMessage, labelIds, senderEmail);
+    }
+
+    private record PendingFetch(History history, String gmailMessageId) {}
 
     private int insertObservationAndPublishEvents(
             UUID tenantId,

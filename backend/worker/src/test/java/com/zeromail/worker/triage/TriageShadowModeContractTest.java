@@ -29,7 +29,7 @@ class TriageShadowModeContractTest {
                 .extracting(Object::toString)
                 .contains("SHADOW_LOGGED");
         assertThat(orchestratorSource())
-                .contains("isTriageShadowMode")
+                .contains("triageSettings.shadowMode()")
                 .contains("TriageDecision.SHADOW_LOGGED")
                 .contains("recordTerminal(command, TriageDecision.SHADOW_LOGGED)")
                 .contains("continue;");
