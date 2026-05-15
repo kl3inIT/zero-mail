@@ -1,0 +1,69 @@
+# CodeRabbit ignore — files/dirs CodeRabbit should NOT review.
+# Syntax follows .gitignore rules.
+
+# --- Planning artifacts (GSD workflow output, not production code) ---
+.planning/
+.planning/**
+.claude/
+.codex/
+.agents/
+.cursor/
+.github/skills/
+AGENTS.md
+
+# --- Local tooling / IDE ---
+.idea/
+.run/
+.vscode/
+.husky/
+.playwright-mcp/
+.mcp.json
+.claude/worktrees/
+
+# --- Build output ---
+build/
+**/build/
+.gradle/
+**/.gradle/
+out/
+**/out/
+dist/
+**/dist/
+**/.next/
+target/
+
+# --- Dependencies & lockfiles ---
+node_modules/
+**/node_modules/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+bun.lockb
+gradle/wrapper/gradle-wrapper.jar
+
+# --- Generated / vendored UI primitives ---
+apps/web/components/ui/**
+
+# --- Env & secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Load test runs & ad-hoc specs ---
+loadtest/run/
+seed.spec.ts
+
+# --- Binary / non-reviewable assets ---
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.webp
+**/*.ico
+**/*.pdf
+**/*.zip
+**/*.tar
+**/*.tar.gz
+**/*.jar
+**/*.war
+**/*.class
