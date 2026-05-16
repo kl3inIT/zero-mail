@@ -21,17 +21,19 @@ export function AuditRow({ entry, now }: AuditRowProps) {
   const [undone, setUndone] = useState(Boolean(entry.undone));
   const undoAvailable = isUndoAvailable(entry, now) && !undone;
 
-  const sender = entry.messageRef?.sender || t('triage.audit.message.unknownSender');
-  const subject = entry.messageRef?.subject || t('triage.audit.message.untitled');
+  const senderEmail = entry.messageRef?.sender;
+  const rawSubject = entry.messageRef?.subject;
+  const hasSubject = Boolean(rawSubject && rawSubject.trim());
+  const senderParts = splitSenderEmail(senderEmail, t('triage.audit.message.unknownSender'));
 
   return (
     <div
-      className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[#0a3d3a]/[0.04]"
+      className="group flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-[#0a3d3a]/[0.03]"
       data-testid="audit-table-row"
     >
       <div
         className={cn(
-          'flex size-9 shrink-0 items-center justify-center rounded-full',
+          'flex size-10 shrink-0 items-center justify-center rounded-full',
           avatarClassName(entry.action),
         )}
         aria-hidden="true"
@@ -39,29 +41,44 @@ export function AuditRow({ entry, now }: AuditRowProps) {
         <ActionIcon action={entry.action} />
       </div>
 
-      <div className="flex min-w-0 flex-1 items-center gap-3">
-        <div className="min-w-0 flex-1 space-y-0.5">
+      <div className="flex min-w-0 flex-1 items-center gap-4">
+        <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-baseline gap-2">
-            <span className="text-foreground max-w-[14rem] shrink-0 truncate text-sm font-semibold">
-              {sender}
+            <span
+              className="text-foreground shrink-0 truncate text-sm font-semibold"
+              title={senderEmail ?? undefined}
+            >
+              {senderParts.handle}
             </span>
-            <span className="text-muted-foreground min-w-0 truncate text-sm">{subject}</span>
+            {senderParts.domain ? (
+              <span className="text-muted-foreground shrink-0 truncate text-xs">
+                @{senderParts.domain}
+              </span>
+            ) : null}
+            {hasSubject ? (
+              <>
+                <span className="text-muted-foreground/40 shrink-0 text-xs" aria-hidden="true">
+                  ·
+                </span>
+                <span className="text-muted-foreground min-w-0 truncate text-sm">{rawSubject}</span>
+              </>
+            ) : null}
           </div>
-          <div className="text-muted-foreground/80 flex min-w-0 items-center gap-1.5 text-xs">
+          <div className="text-muted-foreground/80 mt-0.5 flex min-w-0 items-center gap-1.5 text-xs">
             <Wand2 className="size-3 shrink-0" aria-hidden="true" />
             <span className="truncate">{entry.ruleName}</span>
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 items-center gap-4">
           <ActionBadge entry={entry} />
           <time
-            className="text-muted-foreground hidden shrink-0 text-right text-xs tabular-nums sm:block"
+            className="text-muted-foreground hidden w-24 shrink-0 text-right text-xs tabular-nums sm:block"
             title={new Date(entry.timestamp).toLocaleString()}
           >
             {formatAuditTimestamp(entry.timestamp, now)}
           </time>
-          <div className="flex items-center gap-1">
+          <div className="flex w-24 shrink-0 items-center justify-end gap-1">
             {shouldShowDraftAction(entry) ? (
               <GenerateDraftButton
                 gmailThreadId={entry.gmailThreadId}
@@ -80,6 +97,16 @@ export function AuditRow({ entry, now }: AuditRowProps) {
       </div>
     </div>
   );
+}
+
+function splitSenderEmail(
+  email: string | undefined,
+  fallback: string,
+): { handle: string; domain: string | null } {
+  if (!email) return { handle: fallback, domain: null };
+  const atIndex = email.lastIndexOf('@');
+  if (atIndex < 0) return { handle: email, domain: null };
+  return { handle: email.slice(0, atIndex), domain: email.slice(atIndex + 1) };
 }
 
 function ActionIcon({ action }: { action: string }) {
