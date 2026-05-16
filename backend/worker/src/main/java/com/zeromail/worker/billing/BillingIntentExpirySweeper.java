@@ -1,5 +1,6 @@
 package com.zeromail.worker.billing;
 
+import com.zeromail.core.billing.persistence.BillingPaymentAttemptRepository;
 import com.zeromail.core.billing.persistence.BillingTopupIntentRepository;
 import java.time.Instant;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
@@ -17,9 +18,13 @@ public class BillingIntentExpirySweeper {
     private static final Logger log = LoggerFactory.getLogger(BillingIntentExpirySweeper.class);
 
     private final BillingTopupIntentRepository intentRepository;
+    private final BillingPaymentAttemptRepository paymentAttemptRepository;
 
-    public BillingIntentExpirySweeper(BillingTopupIntentRepository intentRepository) {
+    public BillingIntentExpirySweeper(
+            BillingTopupIntentRepository intentRepository,
+            BillingPaymentAttemptRepository paymentAttemptRepository) {
         this.intentRepository = intentRepository;
+        this.paymentAttemptRepository = paymentAttemptRepository;
     }
 
     @Scheduled(fixedRate = 3_600_000L)
@@ -33,9 +38,14 @@ public class BillingIntentExpirySweeper {
 
     @Transactional(propagation = Propagation.REQUIRED)
     public void sweep() {
-        int rowsExpired = intentRepository.expireStale(Instant.now());
-        if (rowsExpired > 0) {
-            log.info("event=billing_intent_expiry_sweep rowsExpired={}", rowsExpired);
+        Instant now = Instant.now();
+        int intentsExpired = intentRepository.expireStale(now);
+        int attemptsExpired = paymentAttemptRepository.expireStale(now);
+        if (intentsExpired > 0 || attemptsExpired > 0) {
+            log.info(
+                    "event=billing_intent_expiry_sweep intentsExpired={} attemptsExpired={}",
+                    intentsExpired,
+                    attemptsExpired);
         }
     }
 }

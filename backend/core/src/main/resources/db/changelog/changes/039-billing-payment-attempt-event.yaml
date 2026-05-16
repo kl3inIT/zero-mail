@@ -1,0 +1,312 @@
+databaseChangeLog:
+  - changeSet:
+      id: 039-billing-payment-attempt-event
+      author: zeromail
+      changes:
+        - createTable:
+            tableName: billing_payment_attempt
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_billing_payment_attempt_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: topup_intent_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_billing_payment_attempt_topup_intent
+                    references: billing_topup_intent(id)
+                    deleteCascade: true
+              - column:
+                  name: provider
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(24)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: currency
+                  type: varchar(3)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: provider_reference_id
+                  type: varchar(255)
+              - column:
+                  name: provider_payment_id
+                  type: varchar(255)
+              - column:
+                  name: redirect_url
+                  type: text
+              - column:
+                  name: expires_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: completed_at
+                  type: timestamptz
+              - column:
+                  name: failure_code
+                  type: varchar(64)
+              - column:
+                  name: failure_message
+                  type: varchar(256)
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            comment: Check constraint for supported billing payment providers.
+            sql: ALTER TABLE billing_payment_attempt ADD CONSTRAINT ck_billing_payment_attempt_provider CHECK (provider IN ('SEPAY','STRIPE'))
+        - sql:
+            comment: Check constraint for payment attempt statuses.
+            sql: ALTER TABLE billing_payment_attempt ADD CONSTRAINT ck_billing_payment_attempt_status CHECK (status IN ('CREATED','PENDING','SUCCEEDED','FAILED','EXPIRED'))
+        - sql:
+            comment: Positive payment attempt amount invariant.
+            sql: ALTER TABLE billing_payment_attempt ADD CONSTRAINT ck_billing_payment_attempt_amount_positive CHECK (amount > 0)
+        - createIndex:
+            tableName: billing_payment_attempt
+            indexName: idx_billing_payment_attempt_tenant_created
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: created_at
+        - createIndex:
+            tableName: billing_payment_attempt
+            indexName: idx_billing_payment_attempt_intent_provider
+            columns:
+              - column:
+                  name: topup_intent_id
+              - column:
+                  name: provider
+              - column:
+                  name: created_at
+        - sql:
+            comment: Provider reference ids identify provider-side payment sessions/orders when present.
+            sql: CREATE UNIQUE INDEX uq_billing_payment_attempt_provider_ref ON billing_payment_attempt (provider, provider_reference_id) WHERE provider_reference_id IS NOT NULL
+        - sql:
+            comment: Provider payment ids identify completed provider-side payments when present.
+            sql: CREATE UNIQUE INDEX uq_billing_payment_attempt_provider_payment ON billing_payment_attempt (provider, provider_payment_id) WHERE provider_payment_id IS NOT NULL
+        - createTable:
+            tableName: billing_payment_event
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_billing_payment_event_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: payment_attempt_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_billing_payment_event_attempt
+                    references: billing_payment_attempt(id)
+                    deleteCascade: true
+              - column:
+                  name: topup_intent_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_billing_payment_event_topup_intent
+                    references: billing_topup_intent(id)
+                    deleteCascade: true
+              - column:
+                  name: provider
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: provider_event_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event_type
+                  type: varchar(96)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: processing_status
+                  type: varchar(24)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: received_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: processed_at
+                  type: timestamptz
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            comment: Check constraint for supported billing payment providers.
+            sql: ALTER TABLE billing_payment_event ADD CONSTRAINT ck_billing_payment_event_provider CHECK (provider IN ('SEPAY','STRIPE'))
+        - sql:
+            comment: Check constraint for payment event processing statuses.
+            sql: ALTER TABLE billing_payment_event ADD CONSTRAINT ck_billing_payment_event_processing_status CHECK (processing_status IN ('RECEIVED','PROCESSED','IGNORED','FAILED'))
+        - addUniqueConstraint:
+            tableName: billing_payment_event
+            columnNames: provider, provider_event_id
+            constraintName: uq_billing_payment_event_provider_event
+        - createIndex:
+            tableName: billing_payment_event
+            indexName: idx_billing_payment_event_attempt
+            columns:
+              - column:
+                  name: payment_attempt_id
+              - column:
+                  name: received_at
+        - createIndex:
+            tableName: billing_payment_event
+            indexName: idx_billing_payment_event_intent
+            columns:
+              - column:
+                  name: topup_intent_id
+              - column:
+                  name: received_at
+        - sql:
+            comment: Backfill one SE Pay payment attempt for every existing top-up intent.
+            sql: >-
+              INSERT INTO billing_payment_attempt (
+                id,
+                tenant_id,
+                topup_intent_id,
+                provider,
+                status,
+                amount,
+                currency,
+                provider_reference_id,
+                provider_payment_id,
+                expires_at,
+                completed_at,
+                created_at,
+                updated_at,
+                version
+              )
+              SELECT
+                gen_random_uuid(),
+                tenant_id,
+                id,
+                'SEPAY',
+                CASE status
+                  WHEN 'PAID' THEN 'SUCCEEDED'
+                  WHEN 'EXPIRED' THEN 'EXPIRED'
+                  ELSE 'PENDING'
+                END,
+                amount_vnd,
+                'vnd',
+                code,
+                sepay_transaction_id,
+                expires_at,
+                paid_at,
+                created_at,
+                updated_at,
+                0
+              FROM billing_topup_intent
+        - sql:
+            comment: Backfill processed SE Pay payment events for historical paid intents.
+            sql: >-
+              INSERT INTO billing_payment_event (
+                id,
+                tenant_id,
+                payment_attempt_id,
+                topup_intent_id,
+                provider,
+                provider_event_id,
+                event_type,
+                processing_status,
+                received_at,
+                processed_at,
+                created_at,
+                updated_at,
+                version
+              )
+              SELECT
+                gen_random_uuid(),
+                billing_payment_attempt.tenant_id,
+                billing_payment_attempt.id,
+                billing_topup_intent.id,
+                'SEPAY',
+                billing_topup_intent.sepay_transaction_id,
+                'sepay.transfer.in',
+                'PROCESSED',
+                COALESCE(billing_topup_intent.paid_at, billing_topup_intent.updated_at),
+                COALESCE(billing_topup_intent.paid_at, billing_topup_intent.updated_at),
+                COALESCE(billing_topup_intent.paid_at, billing_topup_intent.updated_at),
+                COALESCE(billing_topup_intent.paid_at, billing_topup_intent.updated_at),
+                0
+              FROM billing_topup_intent
+              JOIN billing_payment_attempt
+                ON billing_payment_attempt.topup_intent_id = billing_topup_intent.id
+               AND billing_payment_attempt.provider = 'SEPAY'
+              WHERE billing_topup_intent.status = 'PAID'
+                AND billing_topup_intent.sepay_transaction_id IS NOT NULL
+      rollback:
+        - dropTable:
+            tableName: billing_payment_event
+        - dropTable:
+            tableName: billing_payment_attempt

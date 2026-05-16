@@ -1,10 +1,14 @@
 package com.zeromail.core.billing.usecases;
 
 import com.zeromail.core.billing.domain.BillingTopupIntentStatus;
+import com.zeromail.core.billing.domain.PaymentProvider;
 import com.zeromail.core.billing.domain.TopupCodeGenerator;
 import com.zeromail.core.billing.event.BillingTopupCredited;
 import com.zeromail.core.billing.persistence.BillingPackageEntity;
 import com.zeromail.core.billing.persistence.BillingPackageRepository;
+import com.zeromail.core.billing.persistence.BillingPaymentAttemptEntity;
+import com.zeromail.core.billing.persistence.BillingPaymentAttemptRepository;
+import com.zeromail.core.billing.persistence.BillingPaymentEventRepository;
 import com.zeromail.core.billing.persistence.BillingTopupIntentEntity;
 import com.zeromail.core.billing.persistence.BillingTopupIntentRepository;
 import com.zeromail.core.billing.persistence.BillingTopupIntentTenantLookup;
@@ -41,6 +45,8 @@ public class BillingTopupService {
 
     private final BillingPackageRepository packageRepository;
     private final BillingTopupIntentRepository intentRepository;
+    private final BillingPaymentAttemptRepository paymentAttemptRepository;
+    private final BillingPaymentEventRepository paymentEventRepository;
     private final CreditLedgerEntryRepository entryRepository;
     private final TopupCodeGenerator topupCodeGenerator = new TopupCodeGenerator();
     private final ZeroMailCoreProperties.BillingProperties billingProperties;
@@ -50,12 +56,16 @@ public class BillingTopupService {
     public BillingTopupService(
             BillingPackageRepository packageRepository,
             BillingTopupIntentRepository intentRepository,
+            BillingPaymentAttemptRepository paymentAttemptRepository,
+            BillingPaymentEventRepository paymentEventRepository,
             CreditLedgerEntryRepository entryRepository,
             ZeroMailCoreProperties properties,
             TransactionTemplate transactionTemplate,
             ApplicationEventPublisher eventPublisher) {
         this.packageRepository = packageRepository;
         this.intentRepository = intentRepository;
+        this.paymentAttemptRepository = paymentAttemptRepository;
+        this.paymentEventRepository = paymentEventRepository;
         this.entryRepository = entryRepository;
         this.billingProperties = properties.billing();
         this.transactionTemplate = transactionTemplate;
@@ -94,6 +104,7 @@ public class BillingTopupService {
                     existingIntent.getPackageCodeSnapshot(),
                     existingIntent.getAmountVnd(),
                     existingIntent.getCreditAmountSnapshot());
+            ensureSepayPaymentAttempt(existingIntent);
             return existingIntent;
         }
 
@@ -138,7 +149,8 @@ public class BillingTopupService {
                         paymentAccount.accountName(),
                         transferContent,
                         paymentAccount.qrPayload());
-        intentRepository.save(intent);
+        intentRepository.saveAndFlush(intent);
+        ensureSepayPaymentAttempt(intent);
         log.info(
                 "event=billing_topup_intent_created tenantId={} packageCode={} amountVnd={} credits={}",
                 tenantId,
@@ -226,16 +238,18 @@ public class BillingTopupService {
             }
             if (firstKnownLookup.amountVnd() != transferAmountVnd) {
                 log.warn(
-                        "event=sepay_webhook_amount_mismatch tenantId={} intentVnd={} actualVnd={}",
+                        "event=sepay_webhook_amount_or_package_mismatch tenantId={} intentVnd={} actualVnd={}",
                         firstKnownLookup.tenantId(),
                         firstKnownLookup.amountVnd(),
                         transferAmountVnd);
                 return;
             }
             log.warn(
-                    "event=sepay_webhook_package_mismatch tenantId={} packageCode={}",
+                    "event=sepay_webhook_amount_or_package_mismatch tenantId={} packageCode={} intentVnd={} actualVnd={}",
                     firstKnownLookup.tenantId(),
-                    firstKnownLookup.packageCodeSnapshot());
+                    firstKnownLookup.packageCodeSnapshot(),
+                    firstKnownLookup.amountVnd(),
+                    transferAmountVnd);
             return;
         }
 
@@ -269,16 +283,35 @@ public class BillingTopupService {
             return;
         }
 
+        BillingPaymentAttemptEntity paymentAttempt = ensureSepayPaymentAttempt(intent);
+        String sepayTransactionIdString = String.valueOf(sepayTransactionId);
+        Instant eventReceivedAt = Instant.now();
+        int eventRowsInserted =
+                paymentEventRepository.insertReceivedIfAbsent(
+                        UUID.randomUUID(),
+                        intent.getTenantId(),
+                        paymentAttempt.getId(),
+                        intent.getId(),
+                        PaymentProvider.SEPAY.id(),
+                        sepayTransactionIdString,
+                        "sepay.transfer.in",
+                        eventReceivedAt);
+        if (eventRowsInserted == 0) {
+            log.info("event=sepay_topup_replay_ignored tenantId={}", intent.getTenantId());
+            return;
+        }
+
         int credits = resolveTopupCredits(intent, creditAmountSnapshot, transferAmountVnd);
         if (credits <= 0) {
             log.warn(
                     "event=sepay_topup_missing_credit_snapshot tenantId={} intentId={}",
                     intent.getTenantId(),
                     intent.getId());
+            paymentEventRepository.markIgnored(
+                    PaymentProvider.SEPAY.id(), sepayTransactionIdString, Instant.now());
             return;
         }
 
-        String sepayTransactionIdString = String.valueOf(sepayTransactionId);
         int rowsUpdated = intentRepository.markPaidIfPending(intentId, sepayTransactionIdString);
         if (rowsUpdated == 0) {
             // Concurrent webhook delivery: another thread already moved this intent to PAID. Per
@@ -288,10 +321,14 @@ public class BillingTopupService {
             // (ref_type, ref_id) is enforced by the winning thread; this loser must not insert
             // again.
             log.info("event=sepay_topup_replay_ignored tenantId={}", intent.getTenantId());
+            paymentEventRepository.markIgnored(
+                    PaymentProvider.SEPAY.id(), sepayTransactionIdString, Instant.now());
             return;
         }
 
         try {
+            paymentAttempt.markSucceeded(sepayTransactionIdString);
+            paymentAttemptRepository.save(paymentAttempt);
             CreditLedgerEntryEntity topupEntry =
                     CreditLedgerEntryEntity.topup(
                             UUID.randomUUID(),
@@ -311,6 +348,8 @@ public class BillingTopupService {
                             credits,
                             sepayTransactionIdString,
                             creditedAt));
+            paymentEventRepository.markProcessed(
+                    PaymentProvider.SEPAY.id(), sepayTransactionIdString, creditedAt);
             log.info(
                     "event=sepay_topup_credited tenantId={} credits={}",
                     intent.getTenantId(),
@@ -322,6 +361,25 @@ public class BillingTopupService {
             // replay so SePay receives 200.
             log.info("event=sepay_topup_replay_ignored tenantId={}", intent.getTenantId());
         }
+    }
+
+    private BillingPaymentAttemptEntity ensureSepayPaymentAttempt(BillingTopupIntentEntity intent) {
+        paymentAttemptRepository.insertSepayPendingIfAbsent(
+                UUID.randomUUID(),
+                intent.getTenantId(),
+                intent.getId(),
+                intent.getAmountVnd(),
+                intent.getCode(),
+                intent.getExpiresAt(),
+                Instant.now());
+        return paymentAttemptRepository
+                .findFirstByTopupIntentIdAndProviderOrderByCreatedAtDesc(
+                        intent.getId(), PaymentProvider.SEPAY)
+                .orElseThrow(
+                        () ->
+                                new IllegalStateException(
+                                        "SEPAY payment attempt was not created for top-up intent "
+                                                + intent.getId()));
     }
 
     private int resolveTopupCredits(
