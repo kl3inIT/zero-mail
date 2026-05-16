@@ -8,6 +8,16 @@
     "label": "label",
     "notify": "notify"
   },
+  "ai": {
+    "page": {
+      "description": "Teach the AI how to behave in your inbox — who is shielded from automation, and (soon) the voice and style you want it to mirror when drafting replies.",
+      "title": "AI configuration"
+    },
+    "senders": {
+      "description": "Mail from these senders is always left alone — no labels, no archive, no auto-drafts, no matter how strongly a rule matches.",
+      "heading": "Protected senders"
+    }
+  },
   "analytics": {
     "error": {
       "body": "Something went wrong fetching this data. Check your connection and try again.",
@@ -650,6 +660,7 @@
     }
   },
   "nav": {
+    "ai": "AI",
     "analytics": "Analytics",
     "beta": "beta",
     "billing": "Billing",
@@ -670,7 +681,6 @@
     "signIn": "Sign in",
     "themeToDark": "Switch to dark mode",
     "themeToLight": "Switch to light mode",
-    "triage": "Triage",
     "trust": "Trust & safety",
     "waitlist": "Join the waitlist"
   },
@@ -1004,6 +1014,8 @@
       "freeBadge": "Free",
       "gmailCreditWarningBody": "When a rule uses semantic LLM matchers, each test consumes platform credits. The Custom email tab tests rule logic for free.",
       "gmailCreditWarningTitle": "Real Gmail test uses credits",
+      "history": "History",
+      "historyIntro": "Every AI action applied to your Gmail, with the matching rule, reason, and a 30-day undo window.",
       "investors": "Investor follow-ups",
       "label": "Rules page mode",
       "list": "Rule list",

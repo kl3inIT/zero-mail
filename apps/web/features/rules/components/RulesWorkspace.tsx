@@ -22,6 +22,7 @@ import { RuleComposer } from '@/features/rules/components/RuleComposer';
 import { RuleList } from '@/features/rules/components/RuleList';
 import { RulePreviewPanel } from '@/features/rules/components/RulePreviewPanel';
 import { RuleTemplateGallery } from '@/features/rules/components/RuleTemplateGallery';
+import { AuditLog } from '@/features/triage/components/AuditLog';
 import {
   compiledResponseToRequest,
   type RuleCompiledPayloadResponse,
@@ -285,7 +286,7 @@ export function RulesWorkspace() {
   const [state, dispatch] = useReducer(rulesWorkspaceReducer, initialState);
   const [customMailResult, setCustomMailResult] = useState<RuleCustomPreviewResponse | null>(null);
   const [customMailError, setCustomMailError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'list' | 'test'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'test' | 'history'>('list');
 
   const rules = useMemo(
     () => [...(rulesQuery.data?.rules ?? [])].sort(compareRulesByOrder),
@@ -508,12 +509,13 @@ export function RulesWorkspace() {
   return (
     <Tabs
       value={activeTab}
-      onValueChange={(nextValue) => setActiveTab(nextValue as 'list' | 'test')}
+      onValueChange={(nextValue) => setActiveTab(nextValue as 'list' | 'test' | 'history')}
       className="space-y-6"
     >
       <TabsList aria-label={t('rules.tabs.label')}>
         <TabsTrigger value="list">{t('rules.tabs.list')}</TabsTrigger>
         <TabsTrigger value="test">{t('rules.tabs.test')}</TabsTrigger>
+        <TabsTrigger value="history">{t('rules.tabs.history')}</TabsTrigger>
       </TabsList>
 
       <TabsContent value="list" className="space-y-6">
@@ -607,6 +609,11 @@ export function RulesWorkspace() {
             />
           </TabsContent>
         </Tabs>
+      </TabsContent>
+
+      <TabsContent value="history" className="space-y-4">
+        <p className="text-muted-foreground text-sm">{t('rules.tabs.historyIntro')}</p>
+        <AuditLog />
       </TabsContent>
 
       {/* Composer dialog — for creating and editing rules */}

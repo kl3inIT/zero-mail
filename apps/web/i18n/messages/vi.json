@@ -8,6 +8,16 @@
     "label": "gắn nhãn",
     "notify": "thông báo"
   },
+  "ai": {
+    "page": {
+      "description": "Dạy AI cách hành xử với hộp thư của bạn — ai được bảo vệ khỏi tự động hoá, và (sắp tới) giọng văn cùng phong cách bạn muốn AI bắt chước khi soạn nháp.",
+      "title": "Cấu hình AI"
+    },
+    "senders": {
+      "description": "Email từ những người gửi này luôn được giữ nguyên — không gắn nhãn, không lưu trữ, không soạn nháp tự động, dù quy tắc có khớp đến đâu.",
+      "heading": "Người gửi được bảo vệ"
+    }
+  },
   "analytics": {
     "error": {
       "body": "Có lỗi khi tải dữ liệu này. Kiểm tra kết nối và thử lại.",
@@ -650,6 +660,7 @@
     }
   },
   "nav": {
+    "ai": "AI",
     "analytics": "Phân tích",
     "beta": "beta",
     "billing": "Thanh toán",
@@ -670,7 +681,6 @@
     "signIn": "Đăng nhập",
     "themeToDark": "Chuyển sang chế độ tối",
     "themeToLight": "Chuyển sang chế độ sáng",
-    "triage": "Triage",
     "trust": "Tin cậy & an toàn",
     "waitlist": "Đăng ký danh sách chờ"
   },
@@ -1004,6 +1014,8 @@
       "freeBadge": "Miễn phí",
       "gmailCreditWarningBody": "Nếu quy tắc có matcher cần LLM phân loại, mỗi lần chạy thử sẽ tốn credit nền tảng. Test miễn phí bằng email tự soạn ở tab bên cạnh.",
       "gmailCreditWarningTitle": "Test trên Gmail thật sẽ tốn credit",
+      "history": "Lịch sử",
+      "historyIntro": "Mọi hành động AI đã chạy trên Gmail của bạn, kèm rule khớp, lý do và nút hoàn tác trong 30 ngày.",
       "investors": "Theo dõi nhà đầu tư",
       "label": "Chế độ trang quy tắc",
       "list": "Danh sách quy tắc",

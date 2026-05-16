@@ -23,6 +23,14 @@ export const rulesMessages = {
     vi: 'Kiểm tra quy tắc',
     en: 'Test rules',
   },
+  'rules.tabs.history': {
+    vi: 'Lịch sử',
+    en: 'History',
+  },
+  'rules.tabs.historyIntro': {
+    vi: 'Mọi hành động AI đã chạy trên Gmail của bạn, kèm rule khớp, lý do và nút hoàn tác trong 30 ngày.',
+    en: 'Every AI action applied to your Gmail, with the matching rule, reason, and a 30-day undo window.',
+  },
   'rules.tabs.testIntro': {
     vi: 'Mặc định sẽ thử trên {count} quy tắc đang bật.',
     en: 'By default, testing runs on {count} enabled rules.',

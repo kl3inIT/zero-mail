@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { Inbox, ListChecks, MailCheck, MailX } from 'lucide-react';
+import { ListChecks, MailCheck, MailX, Sparkles } from 'lucide-react';
 
 import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -106,13 +106,13 @@ export function DashboardPageClient() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Link href="/triage" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-          <Inbox className="size-4" aria-hidden="true" />
-          {t('nav.triage')}
-        </Link>
         <Link href="/rules" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
           <ListChecks className="size-4" aria-hidden="true" />
           {t('nav.rules')}
+        </Link>
+        <Link href="/ai" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+          <Sparkles className="size-4" aria-hidden="true" />
+          {t('nav.ai')}
         </Link>
       </div>
 

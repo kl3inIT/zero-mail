@@ -85,6 +85,7 @@ const EN_SCAN_FILES = [
   'components/shell/AppShell.tsx',
   'components/shell/AppSidebar.tsx',
   'components/shell/ChromeHeader.tsx',
+  'features/ai/components/AiConfigPage.tsx',
   'features/triage/components/PauseBanner.tsx',
   'features/triage/components/AuditLog.tsx',
   'features/triage/components/AuditTable.tsx',

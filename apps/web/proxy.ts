@@ -23,7 +23,7 @@ const PROTECTED = [
   '/onboarding',
   '/rules',
   '/settings',
-  '/triage',
+  '/ai',
   '/billing',
   '/needs-reply',
   '/analytics',
