@@ -203,23 +203,6 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
             @Param("tenantId") UUID tenantId,
             @Param("revertedAt") Instant revertedAt);
 
-    @Modifying
-    @Query(
-            value =
-                    """
-          UPDATE triage_audit
-          SET decision = 'SHADOW_LOGGED',
-              decided_at = NOW(),
-              lease_owner = NULL,
-              updated_at = NOW()
-          WHERE audit_id = :auditId
-            AND tenant_id = :tenantId
-            AND decision = 'PENDING'
-          """,
-            nativeQuery = true)
-    @Transactional
-    int markShadowLogged(@Param("auditId") UUID auditId, @Param("tenantId") UUID tenantId);
-
     @Query(
             """
       SELECT triageAudit

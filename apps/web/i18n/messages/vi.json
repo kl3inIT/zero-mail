@@ -1251,30 +1251,10 @@
       "title": "Người gửi được bảo vệ",
       "unknown": "Người gửi không rõ"
     },
-    "shadow": {
-      "badgeOn": "Đang chạy thử",
-      "body": "Zero Mail vẫn đánh giá email và ghi lại quyết định, nhưng không gắn nhãn, lưu nháp, hay lưu trữ khỏi Inbox.",
-      "confirm": {
-        "action": "Tắt shadow mode",
-        "body": "Sau khi tắt, Zero Mail có thể áp dụng các hành động Gmail được phép.",
-        "cancel": "Giữ shadow mode",
-        "title": "Tắt shadow mode?"
-      },
-      "error": {
-        "body": "Hãy thử lại trước khi thay đổi chế độ chạy triage.",
-        "retry": "Tải lại",
-        "title": "Không tải được shadow mode"
-      },
-      "offBody": "Các hành động triage được phép sẽ được áp dụng sau khi qua kiểm tra an toàn.",
-      "onBody": "Zero Mail sẽ đánh giá email nhưng không áp dụng nhãn, lưu draft, hoặc archive.",
-      "title": "Chạy thử không đổi Gmail",
-      "toggleLabel": "Bật chế độ chạy thử"
-    },
     "tabs": {
       "audit": "Hoạt động",
       "label": "Khu vực xử lý email",
-      "senders": "Người gửi quan trọng",
-      "shadow": "Chạy thử"
+      "senders": "Người gửi quan trọng"
     }
   },
   "trust": {

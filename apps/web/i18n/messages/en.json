@@ -1251,30 +1251,10 @@
       "title": "Protected senders",
       "unknown": "Unknown sender"
     },
-    "shadow": {
-      "badgeOn": "Test mode on",
-      "body": "Zero Mail still evaluates email and records decisions, but it will not label, save drafts, or archive from Inbox.",
-      "confirm": {
-        "action": "Turn off shadow mode",
-        "body": "After this is off, Zero Mail can apply allowed Gmail actions.",
-        "cancel": "Keep shadow mode on",
-        "title": "Turn off shadow mode?"
-      },
-      "error": {
-        "body": "Retry before changing how triage runs.",
-        "retry": "Retry",
-        "title": "Could not load shadow mode"
-      },
-      "offBody": "Allowed triage actions will apply after safety checks.",
-      "onBody": "Zero Mail will evaluate email without applying labels, saving drafts, or archiving.",
-      "title": "Test without changing Gmail",
-      "toggleLabel": "Enable test mode"
-    },
     "tabs": {
       "audit": "Activity",
       "label": "Email action sections",
-      "senders": "Protected senders",
-      "shadow": "Test mode"
+      "senders": "Protected senders"
     }
   },
   "trust": {

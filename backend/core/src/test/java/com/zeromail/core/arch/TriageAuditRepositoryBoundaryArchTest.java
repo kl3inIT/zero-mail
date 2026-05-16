@@ -18,8 +18,7 @@ class TriageAuditRepositoryBoundaryArchTest {
                     "markApplied",
                     "markFailed",
                     "markRevertPending",
-                    "markReverted",
-                    "markShadowLogged");
+                    "markReverted");
 
     private static final String TRIAGE_AUDIT_REPOSITORY =
             "com.zeromail.core.triage.persistence.TriageAuditRepository";
@@ -54,8 +53,7 @@ class TriageAuditRepositoryBoundaryArchTest {
                         "markApplied",
                         "markFailed",
                         "markRevertPending",
-                        "markReverted",
-                        "markShadowLogged");
+                        "markReverted");
         assertThat(TRIAGE_AUDIT_REPOSITORY)
                 .isEqualTo("com.zeromail.core.triage.persistence.TriageAuditRepository");
     }

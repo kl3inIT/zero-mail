@@ -175,7 +175,6 @@ public class TriageOrchestratorService {
                         tenantId,
                         observedEvent.gmailMessageId(),
                         triageRuleEvaluationInput,
-                        triageSettings.shadowMode(),
                         senderProtected(
                                 tenantId, triageInput.get().sanitizedSenderEmail(), observedEvent));
         int appliedActions = handleProposals(dispatchContext, mergeResult.proposals());
@@ -192,7 +191,6 @@ public class TriageOrchestratorService {
             UUID tenantId,
             String gmailMessageId,
             TriageRuleEvaluationInput triageRuleEvaluationInput,
-            boolean shadowMode,
             boolean senderProtected) {
 
         String gmailThreadId() {
@@ -257,12 +255,6 @@ public class TriageOrchestratorService {
                 triageAuditSaga.recordTerminal(
                         commandFor(dispatchContext, actionProposal, actionType, false),
                         TriageDecision.REJECTED_BY_SAFETY_NET);
-                continue;
-            }
-            if (dispatchContext.shadowMode()) {
-                triageAuditSaga.recordTerminal(
-                        commandFor(dispatchContext, actionProposal, actionType, false),
-                        TriageDecision.SHADOW_LOGGED);
                 continue;
             }
 

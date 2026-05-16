@@ -8,9 +8,8 @@ import { CheckCircle2, Filter, Inbox, RotateCcw } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AuditLog } from '@/features/triage/components/AuditLog';
 import { SenderSafetyNetList } from '@/features/triage/components/SenderSafetyNetList';
-import { ShadowModeCard } from '@/features/triage/components/ShadowModeCard';
 
-const TRIAGE_TABS = ['audit', 'shadow', 'senders'] as const;
+const TRIAGE_TABS = ['audit', 'senders'] as const;
 type TriageTab = (typeof TRIAGE_TABS)[number];
 
 function normalizeTab(value: string | null): TriageTab {
@@ -49,15 +48,11 @@ export function TriagePageClient() {
         <div className="overflow-x-auto pb-1">
           <TabsList className="min-w-max" aria-label={t('triage.tabs.label')}>
             <TabsTrigger value="audit">{t('triage.tabs.audit')}</TabsTrigger>
-            <TabsTrigger value="shadow">{t('triage.tabs.shadow')}</TabsTrigger>
             <TabsTrigger value="senders">{t('triage.tabs.senders')}</TabsTrigger>
           </TabsList>
         </div>
         <TabsContent value="audit" className="mt-3">
           <AuditLog />
-        </TabsContent>
-        <TabsContent value="shadow" className="mt-3">
-          <ShadowModeCard />
         </TabsContent>
         <TabsContent value="senders" className="mt-3">
           <SenderSafetyNetList />

@@ -1,0 +1,40 @@
+databaseChangeLog:
+  - changeSet:
+      id: 039-drop-triage-shadow-mode
+      author: zeromail
+      comment: >
+        Remove shadow mode entirely. Delete any pre-existing SHADOW_LOGGED audit rows
+        (dry-run logs only, no Gmail side effects), drop the tenants.triage_shadow_mode
+        column, and tighten the triage_audit decision CHECK constraint to remove
+        SHADOW_LOGGED from the allowed value set.
+      changes:
+        - sql:
+            comment: Remove dry-run audit rows; SHADOW_LOGGED never produced Gmail side effects.
+            sql: DELETE FROM triage_audit WHERE decision = 'SHADOW_LOGGED'
+        - sql:
+            comment: Tighten decision CHECK to drop SHADOW_LOGGED from the value set.
+            sql: >-
+              ALTER TABLE triage_audit
+              DROP CONSTRAINT ck_triage_audit_decision,
+              ADD CONSTRAINT ck_triage_audit_decision
+              CHECK (decision IN ('PENDING','APPLIED','REJECTED_BY_SAFETY_NET','REJECTED_BY_SAFETY_POLICY','FAILED','REVERT_PENDING','REVERTED'))
+        - dropColumn:
+            tableName: tenants
+            columnName: triage_shadow_mode
+      rollback:
+        - addColumn:
+            tableName: tenants
+            columns:
+              - column:
+                  name: triage_shadow_mode
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+        - sql:
+            comment: Restore the previous decision CHECK including SHADOW_LOGGED.
+            sql: >-
+              ALTER TABLE triage_audit
+              DROP CONSTRAINT ck_triage_audit_decision,
+              ADD CONSTRAINT ck_triage_audit_decision
+              CHECK (decision IN ('PENDING','APPLIED','SHADOW_LOGGED','REJECTED_BY_SAFETY_NET','REJECTED_BY_SAFETY_POLICY','FAILED','REVERT_PENDING','REVERTED'))

@@ -1366,112 +1366,6 @@
         }
       }
     },
-    "/api/tenant/triage/shadow-mode": {
-      "get": {
-        "tags": ["tenant"],
-        "operationId": "getShadowMode",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": { "schema": { "$ref": "#/components/schemas/TriageShadowModeResponse" } }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          }
-        }
-      },
-      "patch": {
-        "tags": ["tenant"],
-        "operationId": "setShadowMode",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/TriageShadowModeRequest" }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": { "schema": { "$ref": "#/components/schemas/TriageShadowModeResponse" } }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          }
-        }
-      }
-    },
     "/api/rules/{ruleId}/enabled": {
       "patch": {
         "tags": ["rules"],
@@ -2702,15 +2596,6 @@
           "triagePaused": { "type": "boolean" },
           "gmailConnectionStatus": { "$ref": "#/components/schemas/GmailConnectionStatusExtended" }
         }
-      },
-      "TriageShadowModeRequest": {
-        "type": "object",
-        "properties": { "enabled": { "type": "boolean" } },
-        "required": ["enabled"]
-      },
-      "TriageShadowModeResponse": {
-        "type": "object",
-        "properties": { "enabled": { "type": "boolean" } }
       },
       "RuleEnabledRequest": {
         "type": "object",

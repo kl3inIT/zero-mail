@@ -35,22 +35,24 @@ for (const viewport of [
     }
   });
 
-  test(`triage tab search param deep-links to shadow mode at ${viewport.name}`, async ({
+  test(`triage tab search param deep-links to protected senders at ${viewport.name}`, async ({
     page,
   }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    await openTriage(page, '/triage?tab=shadow');
+    await openTriage(page, '/triage?tab=senders');
 
     await expect(
       page.getByRole('heading', { name: 'AI email actions', exact: true }),
     ).toBeVisible();
-    await expect(page.getByText('Zero Mail still evaluates email')).toBeVisible();
-    await expect(page.getByTestId('shadow-mode-switch')).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Protected senders' })).toHaveAttribute(
+      'data-state',
+      'active',
+    );
     await expectNoHorizontalOverflow(page);
   });
 }
 
-async function openTriage(page: Page, path: '/triage' | '/triage?tab=shadow') {
+async function openTriage(page: Page, path: '/triage' | '/triage?tab=senders') {
   await seedAuthenticatedSession(page);
   await installTriageApiMock(page);
   await page.goto(path, { waitUntil: 'domcontentloaded' });
@@ -89,8 +91,8 @@ async function installTriageApiMock(page: Page) {
       return;
     }
 
-    if (url.pathname === '/api/tenant/triage/shadow-mode' && request.method() === 'GET') {
-      await fulfillJson(route, { enabled: false });
+    if (url.pathname === '/api/triage/sender-safety-net' && request.method() === 'GET') {
+      await fulfillJson(route, { items: [] });
       return;
     }
 

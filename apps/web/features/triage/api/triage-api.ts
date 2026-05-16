@@ -1,7 +1,6 @@
 import { api, xsrfHeader } from '@/lib/api/client';
 import type { components } from '@/lib/api/schema';
 
-export type TriageShadowModeResponse = components['schemas']['TriageShadowModeResponse'];
 export type ProtectedSenderResponse = components['schemas']['ProtectedSenderResponse'];
 export type ProtectedSendersResponse = components['schemas']['ProtectedSendersResponse'];
 export type SenderOptInResponse = components['schemas']['SenderOptInResponse'];
@@ -43,10 +42,6 @@ export type AuditLogFilters = {
 export type AuditLogOptions = AuditLogFilters & {
   cursor?: string | null;
   limit?: number;
-};
-
-export type ShadowModeState = {
-  enabled: boolean;
 };
 
 function jsonHeaders(): HeadersInit {
@@ -135,21 +130,6 @@ export async function getAuditLog(options: AuditLogOptions = {}): Promise<AuditL
       .filter((entry): entry is AuditEntry => entry !== null),
     nextCursor: data.nextCursor ?? null,
   };
-}
-
-export async function getShadowMode(): Promise<ShadowModeState> {
-  const result = await api.GET('/api/tenant/triage/shadow-mode', {});
-  const data = unwrap(result, `/api/tenant/triage/shadow-mode failed: ${result.response.status}`);
-  return { enabled: data.enabled ?? false };
-}
-
-export async function setShadowMode(enabled: boolean): Promise<ShadowModeState> {
-  const result = await api.PATCH('/api/tenant/triage/shadow-mode', {
-    body: { enabled },
-    headers: jsonHeaders(),
-  });
-  const data = unwrap(result, `/api/tenant/triage/shadow-mode failed: ${result.response.status}`);
-  return { enabled: data.enabled ?? enabled };
 }
 
 export async function undoAuditEntry(auditId: string): Promise<UndoAuditResponse> {

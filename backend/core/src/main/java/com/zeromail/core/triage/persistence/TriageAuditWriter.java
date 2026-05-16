@@ -22,7 +22,6 @@ public class TriageAuditWriter {
 
     private static final EnumSet<TriageDecision> DIRECT_TERMINAL_DECISIONS =
             EnumSet.of(
-                    TriageDecision.SHADOW_LOGGED,
                     TriageDecision.REJECTED_BY_SAFETY_NET,
                     TriageDecision.REJECTED_BY_SAFETY_POLICY);
 

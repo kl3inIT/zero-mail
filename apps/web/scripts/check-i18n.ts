@@ -91,7 +91,6 @@ const EN_SCAN_FILES = [
   'features/triage/components/AuditCardList.tsx',
   'features/triage/components/AuditRow.tsx',
   'features/triage/components/UndoButton.tsx',
-  'features/triage/components/ShadowModeCard.tsx',
   'features/triage/components/SenderSafetyNetList.tsx',
   'features/triage/components/SenderRow.tsx',
   'features/analytics/components/AnalyticsPageClient.tsx',

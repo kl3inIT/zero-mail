@@ -4,6 +4,5 @@ export const triageKeys = {
     filters
       ? ([...triageKeys.all, 'audit-log', filters] as const)
       : ([...triageKeys.all, 'audit-log'] as const),
-  shadowMode: () => [...triageKeys.all, 'shadow-mode'] as const,
   senderSafetyNet: () => [...triageKeys.all, 'sender-safety-net'] as const,
 } as const;
