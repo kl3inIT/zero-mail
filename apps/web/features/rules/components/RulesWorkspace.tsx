@@ -441,7 +441,8 @@ export function RulesWorkspace() {
     });
   }
 
-  async function handlePreview() {
+  async function handlePreview(options: { evaluateSemanticIntents?: boolean } = {}) {
+    const evaluateSemanticIntents = options.evaluateSemanticIntents ?? false;
     dispatch({ type: 'previewStarted' });
 
     try {
@@ -454,12 +455,13 @@ export function RulesWorkspace() {
         selectedRule?.ruleId !== undefined && !draftPreviewRequired
           ? await previewSavedRuleMutation.mutateAsync({
               ruleId: selectedRule.ruleId,
-              payload: { sampleSize: state.sampleSize },
+              payload: { sampleSize: state.sampleSize, evaluateSemanticIntents },
             })
           : state.compileResult?.status === 'compiled'
             ? await previewDraftRuleMutation.mutateAsync({
                 compiled: compiledResponseToRequest(state.compileResult.compiled),
                 sampleSize: state.sampleSize,
+                evaluateSemanticIntents,
               })
             : null;
 
@@ -483,6 +485,10 @@ export function RulesWorkspace() {
       }
       dispatch({ type: 'previewFailed', message: t('errors.rules.preview.generic') });
     }
+  }
+
+  function handleEvaluateSemanticIntents() {
+    void handlePreview({ evaluateSemanticIntents: true });
   }
 
   async function handleToggleRule(rule: RuleResponse) {
@@ -626,10 +632,15 @@ export function RulesWorkspace() {
               }
               canPreview={canPreview}
               sampleSize={state.sampleSize}
+              isEvaluatingSemanticIntents={
+                (previewSavedRuleMutation.isPending || previewDraftRuleMutation.isPending) &&
+                Boolean(state.preview)
+              }
               onSampleSizeChange={(sampleSize) =>
                 dispatch({ type: 'sampleSizeChanged', sampleSize })
               }
-              onPreview={handlePreview}
+              onPreview={() => handlePreview()}
+              onEvaluateSemanticIntents={handleEvaluateSemanticIntents}
             />
           </TabsContent>
         </Tabs>

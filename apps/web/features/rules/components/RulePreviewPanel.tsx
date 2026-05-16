@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, Archive, CheckCircle2, Loader2, Play } from 'lucide-react';
+import { AlertTriangle, Archive, CheckCircle2, Loader2, Play, Sparkles } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -29,8 +29,10 @@ type Props = {
   isPreviewing: boolean;
   canPreview: boolean;
   sampleSize: SampleSize;
+  isEvaluatingSemanticIntents: boolean;
   onSampleSizeChange: (sampleSize: SampleSize) => void;
   onPreview: () => void;
+  onEvaluateSemanticIntents: () => void;
 };
 
 const SAMPLE_SIZES = [10, 20] as const;
@@ -43,8 +45,10 @@ export function RulePreviewPanel({
   isPreviewing,
   canPreview,
   sampleSize,
+  isEvaluatingSemanticIntents,
   onSampleSizeChange,
   onPreview,
+  onEvaluateSemanticIntents,
 }: Props) {
   const t = useTranslations();
   const rows = preview?.rows ?? [];
@@ -160,6 +164,39 @@ export function RulePreviewPanel({
               <Alert variant="warning">
                 <AlertTriangle className="size-4" aria-hidden="true" />
                 <AlertTitle>{t('rules.preview.conflictWarning')}</AlertTitle>
+              </Alert>
+            )}
+
+            {(summary?.deferredCount ?? 0) > 0 && (
+              <Alert variant="warning" className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                <div className="flex-1 space-y-1">
+                  <AlertTitle>
+                    {t('rules.preview.llmCtaTitle', { count: summary?.deferredCount ?? 0 })}
+                  </AlertTitle>
+                  <AlertDescription>
+                    {t('rules.preview.llmCtaBody', {
+                      credits: summary?.sampledMessageCount ?? rows.length,
+                    })}
+                  </AlertDescription>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={isEvaluatingSemanticIntents}
+                  onClick={onEvaluateSemanticIntents}
+                  data-testid="rules-preview-evaluate-semantic"
+                >
+                  {isEvaluatingSemanticIntents ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Sparkles className="size-4" aria-hidden="true" />
+                  )}
+                  {isEvaluatingSemanticIntents
+                    ? t('rules.preview.llmRunning')
+                    : t('rules.preview.llmCta', {
+                        credits: summary?.sampledMessageCount ?? rows.length,
+                      })}
+                </Button>
               </Alert>
             )}
 

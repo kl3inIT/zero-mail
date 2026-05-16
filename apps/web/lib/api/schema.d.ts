@@ -36,22 +36,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/rules/reorder": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["reorderRules"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/tenant/disconnect": {
         parameters: {
             query?: never;
@@ -212,22 +196,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/rules/templates/materialize-selected": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["materializeSelectedTemplates"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/rules/preview": {
         parameters: {
             query?: never;
@@ -238,6 +206,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["previewDraftRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rules/preview-custom": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewCustomMail"];
         delete?: never;
         options?: never;
         head?: never;
@@ -627,15 +611,6 @@ export interface components {
             templateVersion?: number;
             customized?: boolean;
         };
-        RuleOrderEntryRequest: {
-            /** Format: uuid */
-            ruleId: string;
-            /** Format: int32 */
-            entityVersion: number;
-        };
-        RuleReorderRequest: {
-            entries: components["schemas"]["RuleOrderEntryRequest"][];
-        };
         SelectTemplateRequest: {
             templateKey: string;
         };
@@ -664,6 +639,7 @@ export interface components {
         RulePreviewRequest: {
             /** Format: int32 */
             sampleSize?: number;
+            evaluateSemanticIntents?: boolean;
         };
         ActionChipResponse: {
             actionTypeId?: string;
@@ -737,6 +713,26 @@ export interface components {
             compiled: components["schemas"]["CompiledPayloadRequest"];
             /** Format: int32 */
             sampleSize?: number;
+            evaluateSemanticIntents?: boolean;
+        };
+        RuleCustomPreviewRequest: {
+            subject?: string;
+            body?: string;
+            ruleIds?: string[];
+        };
+        Entry: {
+            /** Format: uuid */
+            ruleId?: string;
+            displayName?: string;
+            enabled?: boolean;
+            matched?: boolean;
+            deferred?: boolean;
+            proposedActionChips?: components["schemas"]["ActionChipResponse"][];
+            matchedEvidenceChips?: components["schemas"]["EvidenceChipResponse"][];
+            deferredEvidenceChips?: components["schemas"]["EvidenceChipResponse"][];
+        };
+        RuleCustomPreviewResponse: {
+            entries?: components["schemas"]["Entry"][];
         };
         RuleCompileRequest: {
             sourceText: string;
@@ -1291,84 +1287,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    reorderRules: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RuleReorderRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["RuleResponse"][];
-                };
             };
             /** @description Bad Request */
             400: {
@@ -2256,14 +2174,18 @@ export interface operations {
             };
         };
     };
-    materializeSelectedTemplates: {
+    previewDraftRule: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleDraftPreviewRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -2271,7 +2193,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RuleTemplateMaterializationResponse"];
+                    "*/*": components["schemas"]["RulePreviewResponse"];
                 };
             };
             /** @description Bad Request */
@@ -2330,7 +2252,7 @@ export interface operations {
             };
         };
     };
-    previewDraftRule: {
+    previewCustomMail: {
         parameters: {
             query?: never;
             header?: never;
@@ -2339,7 +2261,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RuleDraftPreviewRequest"];
+                "application/json": components["schemas"]["RuleCustomPreviewRequest"];
             };
         };
         responses: {
@@ -2349,7 +2271,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RulePreviewResponse"];
+                    "*/*": components["schemas"]["RuleCustomPreviewResponse"];
                 };
             };
             /** @description Bad Request */
@@ -4110,7 +4032,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
             };
             /** @description Unauthorized */
             401: {

@@ -6,6 +6,7 @@ import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -16,6 +17,19 @@ public class RuleEvaluator {
 
     public RuleEvaluationResult evaluate(
             MatcherNode matcherNode, RuleEvaluationInput ruleEvaluationInput) {
+        return evaluate(matcherNode, ruleEvaluationInput, Map.of());
+    }
+
+    /**
+     * Evaluate a matcher tree. When {@code semanticOverrides} contains an entry for a {@code
+     * SemanticIntentMatcher} nodeId, the matcher resolves to {@code MATCHED} or {@code NOT_MATCHED}
+     * from the override instead of returning {@code DEFERRED}. The preview path uses this to fold
+     * LLM batched-evaluation results back into the rule tree without bypassing structural matchers.
+     */
+    public RuleEvaluationResult evaluate(
+            MatcherNode matcherNode,
+            RuleEvaluationInput ruleEvaluationInput,
+            Map<String, Boolean> semanticOverrides) {
         return switch (matcherNode) {
             case MatcherNode.SenderEmailMatcher senderEmailMatcher ->
                     evaluateTextEquals(
@@ -92,13 +106,29 @@ public class RuleEvaluator {
                     evaluateMessageAge(messageAgeMatcher, ruleEvaluationInput);
             case MatcherNode.MessageDateMatcher messageDateMatcher ->
                     evaluateMessageDate(messageDateMatcher, ruleEvaluationInput);
-            case MatcherNode.AllMatcher allMatcher -> evaluateAll(allMatcher, ruleEvaluationInput);
-            case MatcherNode.AnyMatcher anyMatcher -> evaluateAny(anyMatcher, ruleEvaluationInput);
-            case MatcherNode.NotMatcher notMatcher -> evaluateNot(notMatcher, ruleEvaluationInput);
+            case MatcherNode.AllMatcher allMatcher ->
+                    evaluateAll(allMatcher, ruleEvaluationInput, semanticOverrides);
+            case MatcherNode.AnyMatcher anyMatcher ->
+                    evaluateAny(anyMatcher, ruleEvaluationInput, semanticOverrides);
+            case MatcherNode.NotMatcher notMatcher ->
+                    evaluateNot(notMatcher, ruleEvaluationInput, semanticOverrides);
             case SemanticIntentMatcher semanticIntentMatcher ->
-                    RuleEvaluationResult.deferred(
-                            semanticIntentMatcher.nodeId(), "semantic_intent_deferred");
+                    evaluateSemanticIntent(semanticIntentMatcher, semanticOverrides);
         };
+    }
+
+    private RuleEvaluationResult evaluateSemanticIntent(
+            SemanticIntentMatcher semanticIntentMatcher, Map<String, Boolean> semanticOverrides) {
+        Boolean override = semanticOverrides.get(semanticIntentMatcher.nodeId());
+        if (override == null) {
+            return RuleEvaluationResult.deferred(
+                    semanticIntentMatcher.nodeId(), "semantic_intent_deferred");
+        }
+        return override
+                ? RuleEvaluationResult.matched(
+                        semanticIntentMatcher.nodeId(), "semantic_intent_matched")
+                : RuleEvaluationResult.notMatched(
+                        semanticIntentMatcher.nodeId(), "semantic_intent_not_matched");
     }
 
     private RuleEvaluationResult evaluateSubjectContains(
@@ -152,11 +182,14 @@ public class RuleEvaluator {
     }
 
     private RuleEvaluationResult evaluateAll(
-            MatcherNode.AllMatcher allMatcher, RuleEvaluationInput ruleEvaluationInput) {
+            MatcherNode.AllMatcher allMatcher,
+            RuleEvaluationInput ruleEvaluationInput,
+            Map<String, Boolean> semanticOverrides) {
         ArrayList<RuleEvaluationResult> childResults = new ArrayList<>();
         MatcherEvaluationState status = MatcherEvaluationState.MATCHED;
         for (MatcherNode childMatcherNode : allMatcher.children()) {
-            RuleEvaluationResult childResult = evaluate(childMatcherNode, ruleEvaluationInput);
+            RuleEvaluationResult childResult =
+                    evaluate(childMatcherNode, ruleEvaluationInput, semanticOverrides);
             childResults.add(childResult);
             if (childResult.status() == MatcherEvaluationState.NOT_MATCHED) {
                 status = MatcherEvaluationState.NOT_MATCHED;
@@ -169,12 +202,15 @@ public class RuleEvaluator {
     }
 
     private RuleEvaluationResult evaluateAny(
-            MatcherNode.AnyMatcher anyMatcher, RuleEvaluationInput ruleEvaluationInput) {
+            MatcherNode.AnyMatcher anyMatcher,
+            RuleEvaluationInput ruleEvaluationInput,
+            Map<String, Boolean> semanticOverrides) {
         ArrayList<RuleEvaluationResult> childResults = new ArrayList<>();
         boolean anyMatched = false;
         boolean anyDeferred = false;
         for (MatcherNode childMatcherNode : anyMatcher.children()) {
-            RuleEvaluationResult childResult = evaluate(childMatcherNode, ruleEvaluationInput);
+            RuleEvaluationResult childResult =
+                    evaluate(childMatcherNode, ruleEvaluationInput, semanticOverrides);
             childResults.add(childResult);
             anyMatched = anyMatched || childResult.status() == MatcherEvaluationState.MATCHED;
             anyDeferred = anyDeferred || childResult.status() == MatcherEvaluationState.DEFERRED;
@@ -189,8 +225,11 @@ public class RuleEvaluator {
     }
 
     private RuleEvaluationResult evaluateNot(
-            MatcherNode.NotMatcher notMatcher, RuleEvaluationInput ruleEvaluationInput) {
-        RuleEvaluationResult childResult = evaluate(notMatcher.child(), ruleEvaluationInput);
+            MatcherNode.NotMatcher notMatcher,
+            RuleEvaluationInput ruleEvaluationInput,
+            Map<String, Boolean> semanticOverrides) {
+        RuleEvaluationResult childResult =
+                evaluate(notMatcher.child(), ruleEvaluationInput, semanticOverrides);
         MatcherEvaluationState status =
                 switch (childResult.status()) {
                     case MATCHED -> MatcherEvaluationState.NOT_MATCHED;

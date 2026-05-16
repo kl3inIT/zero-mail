@@ -172,7 +172,10 @@ public class RulesController {
         try {
             return RulePreviewResponse.from(
                     rulePreviewService.previewSavedRule(
-                            TenantContext.currentTenantUuid(), ruleId, request.sampleSize()));
+                            TenantContext.currentTenantUuid(),
+                            ruleId,
+                            request.sampleSize(),
+                            request.evaluateSemanticIntentsFlag()));
         } catch (IllegalArgumentException invalidSampleSize) {
             throw RuleApiException.invalidSampleSize();
         }
@@ -204,7 +207,8 @@ public class RulesController {
                             TenantContext.currentTenantUuid(),
                             compileResult.matcherAst(),
                             compileResult.actionIntents(),
-                            normalizedSampleSize));
+                            normalizedSampleSize,
+                            request.evaluateSemanticIntentsFlag()));
         } catch (IllegalArgumentException invalidPreviewPayload) {
             throw RuleApiException.invalidCompileOutput();
         }

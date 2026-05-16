@@ -451,6 +451,22 @@ export const rulesMessages = {
     vi: 'Phase 03 lưu kiểm tra này, nhưng việc đánh giá được trì hoãn.',
     en: 'Phase 03 stores this check, but evaluation is deferred.',
   },
+  'rules.preview.llmCtaTitle': {
+    vi: '{count} email cần LLM xác nhận',
+    en: '{count} emails need LLM confirmation',
+  },
+  'rules.preview.llmCtaBody': {
+    vi: 'Các quy tắc có matcher ngữ nghĩa hiện đang để "trì hoãn". Chạy LLM để biết chắc rule có match hay không (~{credits} credit).',
+    en: 'Rules with semantic matchers are currently deferred. Run the LLM to confirm whether they match (~{credits} credits).',
+  },
+  'rules.preview.llmCta': {
+    vi: 'Chạy LLM xác nhận (~{credits} credit)',
+    en: 'Run LLM confirmation (~{credits} credits)',
+  },
+  'rules.preview.llmRunning': {
+    vi: 'Đang gọi LLM...',
+    en: 'Calling LLM...',
+  },
   'rules.preview.conflictWarning': {
     vi: 'Lượt chạy thử này có xung đột hành động. Hãy xem các quy tắc khớp trước khi bật.',
     en: 'This preview found action conflicts. Review the matched rules before enabling.',
