@@ -28,7 +28,11 @@ class RuleManagementServiceTest extends PostgresContainerTest {
     @Autowired JdbcTemplate jdbcTemplate;
 
     @Test
-    void new_rule_cannot_be_enabled_until_current_version_is_previewed() throws Exception {
+    void new_rule_can_be_enabled_without_running_a_preview_first() throws Exception {
+        // The preview-before-enable gate was removed: v1 write actions are
+        // reversible (label / archive / save_draft only), and the rules /test
+        // tab is now a separate first-class entry point so the user no longer
+        // needs to chạy thử before flipping the switch.
         UUID tenantId = seedTenant("rules-enable-preview");
         RuleStatusProjection createdRule =
                 withTenant(
@@ -43,33 +47,12 @@ class RuleManagementServiceTest extends PostgresContainerTest {
 
         assertThat(createdRule.enabled()).isFalse();
         assertThat(createdRule.lastPreviewedEntityVersion()).isNull();
-        assertThatThrownBy(
-                        () ->
-                                withTenant(
-                                        tenantId,
-                                        () ->
-                                                ruleManagementService.enable(
-                                                        tenantId, createdRule.ruleId().value())))
-                .isInstanceOf(RuleValidationException.class)
-                .extracting("reason")
-                .isEqualTo(RuleValidationException.Reason.PREVIEW_REQUIRED);
 
-        RuleStatusProjection previewedRule =
-                withTenant(
-                        tenantId,
-                        () ->
-                                ruleManagementService.markPreviewSucceeded(
-                                        tenantId,
-                                        createdRule.ruleId().value(),
-                                        createdRule.entityVersion(),
-                                        Instant.parse("2026-05-10T00:00:00Z")));
         RuleStatusProjection enabledRule =
                 withTenant(
                         tenantId,
                         () -> ruleManagementService.enable(tenantId, createdRule.ruleId().value()));
 
-        assertThat(previewedRule.lastPreviewedEntityVersion())
-                .isEqualTo(createdRule.entityVersion());
         assertThat(enabledRule.enabled()).isTrue();
     }
 

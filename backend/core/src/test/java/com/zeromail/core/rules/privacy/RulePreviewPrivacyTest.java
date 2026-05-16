@@ -66,7 +66,7 @@ class RulePreviewPrivacyTest extends PostgresContainerTest {
         when(rulePreviewDataService.fetchPreviewInputs(
                         eq(tenantId),
                         eq(false),
-                        eq(new com.zeromail.core.rules.domain.PreviewSampleSize(25))))
+                        eq(new com.zeromail.core.rules.domain.PreviewSampleSize(10))))
                 .thenReturn(List.of(previewInput()));
 
         RulePreviewResult previewResult =
