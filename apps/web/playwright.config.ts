@@ -16,6 +16,8 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   testMatch: ['**/*.spec.ts'],
+  // Launch golden path needs the Spring Boot e2e-stub backend from playwright.golden.config.ts.
+  testIgnore: ['**/launch-golden-path.spec.ts'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

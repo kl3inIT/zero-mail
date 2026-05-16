@@ -18,6 +18,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
@@ -26,6 +28,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 public class RuleCompileResultValidator {
 
+    private static final Logger log = LoggerFactory.getLogger(RuleCompileResultValidator.class);
     private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder().build();
     private static final int MAX_DISPLAY_NAME_LENGTH = 160;
     private static final int MAX_MATCHER_TEXT_LENGTH = 512;
@@ -93,6 +96,14 @@ public class RuleCompileResultValidator {
                     writeJson(parsedMatcher.normalizedMatcher()),
                     writeJson(normalizedActionIntents));
         } catch (IllegalArgumentException | NoSuchElementException validationFailure) {
+            // Exception messages here describe *schema-level* failures (unknown
+            // matcher id, displayName too long, missing required field) — not
+            // user content. Logging the class + message keeps the privacy rule
+            // intact while making invalid-output bugs diagnosable.
+            log.info(
+                    "event=rule_compile_validation_failed errorClass={} reason={}",
+                    validationFailure.getClass().getSimpleName(),
+                    validationFailure.getMessage());
             return RuleCompileResult.invalid(detectedLanguage, "invalid_compile_output");
         }
     }
@@ -208,34 +219,50 @@ public class RuleCompileResultValidator {
         MatcherNode typedMatcher =
                 switch (matcherType) {
                     case SENDER_EMAIL -> {
-                        rejectUnknownFields(matcherArguments, fields("email"), matcherPath);
+                        rejectUnknownFields(
+                                matcherArguments, fields("email", "value"), matcherPath);
                         String email =
-                                boundedStringField(
-                                        matcherArguments, "email", MAX_MATCHER_TEXT_LENGTH, false);
+                                firstBoundedString(
+                                        matcherArguments,
+                                        MAX_MATCHER_TEXT_LENGTH,
+                                        "email",
+                                        "value");
                         normalizedMatcher.put("email", email);
                         yield new MatcherNode.SenderEmailMatcher(nodeId, email);
                     }
                     case SENDER_DOMAIN -> {
-                        rejectUnknownFields(matcherArguments, fields("domain"), matcherPath);
+                        rejectUnknownFields(
+                                matcherArguments, fields("domain", "value"), matcherPath);
                         String domain =
-                                boundedStringField(
-                                        matcherArguments, "domain", MAX_MATCHER_TEXT_LENGTH, false);
+                                firstBoundedString(
+                                        matcherArguments,
+                                        MAX_MATCHER_TEXT_LENGTH,
+                                        "domain",
+                                        "value");
                         normalizedMatcher.put("domain", domain);
                         yield new MatcherNode.SenderDomainMatcher(nodeId, domain);
                     }
                     case RECIPIENT_TO -> {
-                        rejectUnknownFields(matcherArguments, fields("email"), matcherPath);
+                        rejectUnknownFields(
+                                matcherArguments, fields("email", "value"), matcherPath);
                         String email =
-                                boundedStringField(
-                                        matcherArguments, "email", MAX_MATCHER_TEXT_LENGTH, false);
+                                firstBoundedString(
+                                        matcherArguments,
+                                        MAX_MATCHER_TEXT_LENGTH,
+                                        "email",
+                                        "value");
                         normalizedMatcher.put("email", email);
                         yield new MatcherNode.RecipientToMatcher(nodeId, email);
                     }
                     case RECIPIENT_CC -> {
-                        rejectUnknownFields(matcherArguments, fields("email"), matcherPath);
+                        rejectUnknownFields(
+                                matcherArguments, fields("email", "value"), matcherPath);
                         String email =
-                                boundedStringField(
-                                        matcherArguments, "email", MAX_MATCHER_TEXT_LENGTH, false);
+                                firstBoundedString(
+                                        matcherArguments,
+                                        MAX_MATCHER_TEXT_LENGTH,
+                                        "email",
+                                        "value");
                         normalizedMatcher.put("email", email);
                         yield new MatcherNode.RecipientCcMatcher(nodeId, email);
                     }
@@ -520,7 +547,7 @@ public class RuleCompileResultValidator {
             Map<String, Object> values, Set<String> allowedFields, String path) {
         for (String fieldName : values.keySet()) {
             if (!allowedFields.contains(fieldName)) {
-                throw new IllegalArgumentException("Unknown field at " + path);
+                throw new IllegalArgumentException("Unknown field at " + path + ": " + fieldName);
             }
         }
     }

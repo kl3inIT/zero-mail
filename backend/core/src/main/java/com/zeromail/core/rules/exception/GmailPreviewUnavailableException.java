@@ -1,8 +1,12 @@
 package com.zeromail.core.rules.exception;
 
+import com.zeromail.core.shared.error.ErrorCodes;
+import com.zeromail.core.shared.exception.BusinessException;
+import com.zeromail.core.shared.exception.ErrorClass;
+import java.util.Map;
 import java.util.Objects;
 
-public class GmailPreviewUnavailableException extends RuntimeException {
+public class GmailPreviewUnavailableException extends BusinessException {
 
     public static final String ERROR_KEY = "error.rules.gmail.unavailable";
 
@@ -19,6 +23,36 @@ public class GmailPreviewUnavailableException extends RuntimeException {
 
     public String errorKey() {
         return ERROR_KEY;
+    }
+
+    @Override
+    public ErrorClass errorClass() {
+        return ErrorClass.SERVICE_UNAVAILABLE;
+    }
+
+    @Override
+    public String errorCode() {
+        return ErrorCodes.RULES_GMAIL_UNAVAILABLE;
+    }
+
+    @Override
+    public String logEvent() {
+        return "rules_gmail_preview_unavailable";
+    }
+
+    @Override
+    public String title() {
+        return "Gmail preview unavailable";
+    }
+
+    @Override
+    public String detail() {
+        return "Gmail preview data is not currently available.";
+    }
+
+    @Override
+    public Map<String, Object> params() {
+        return Map.of("reason", reason.id());
     }
 
     public enum Reason {

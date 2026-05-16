@@ -38,7 +38,7 @@ public class NotificationPreferencesController {
 
     @GetMapping
     public NotificationPreferencesResponse get() {
-        UUID tenantId = currentTenantId();
+        UUID tenantId = TenantContext.currentTenantUuid();
         NotificationPreferenceEntity notificationPreference = findEmailPreference(tenantId);
         log.info("event=notification_preferences_read tenantId={}", tenantId);
         return NotificationPreferencesResponse.from(
@@ -48,7 +48,7 @@ public class NotificationPreferencesController {
     @PatchMapping
     public NotificationPreferencesResponse update(
             @Valid @RequestBody NotificationPreferencesUpdateRequest request) {
-        UUID tenantId = currentTenantId();
+        UUID tenantId = TenantContext.currentTenantUuid();
         NotificationPreferenceEntity notificationPreference =
                 notificationPreferenceService.updatePreference(
                         tenantId,
@@ -68,9 +68,5 @@ public class NotificationPreferencesController {
                                 new IllegalStateException(
                                         "Email notification preference missing for tenantId: "
                                                 + tenantId));
-    }
-
-    private static UUID currentTenantId() {
-        return UUID.fromString(TenantContext.currentOrThrow());
     }
 }

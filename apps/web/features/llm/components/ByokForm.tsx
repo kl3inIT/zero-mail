@@ -35,19 +35,19 @@ import {
 import { useLocalizedApiError, type ApiError } from '@/lib/api/errors';
 
 const DEFAULT_PRESET: ByokProviderPreset = 'openrouter';
-const OPENROUTER_DEFAULT_MODEL = 'openai/gpt-4o-mini';
-const OPENAI_DEFAULT_MODEL = 'gpt-4o-mini';
+const OPENROUTER_DEFAULT_MODEL = 'openai/gpt-5.4-nano';
+const OPENAI_DEFAULT_MODEL = 'gpt-5.4-nano';
 const ANTHROPIC_DEFAULT_MODEL = 'claude-3-haiku-20240307';
 const GOOGLE_GENAI_DEFAULT_MODEL = 'gemini-2.0-flash';
 const DEEPSEEK_DEFAULT_MODEL = 'deepseek-chat';
 
 const MODEL_EXAMPLES: Record<ByokProviderPreset, string[]> = {
-  openrouter: ['openai/gpt-4o-mini', 'anthropic/claude-3.5-sonnet', 'google/gemini-flash-1.5'],
-  openai: ['gpt-4o-mini', 'gpt-4.1-mini', 'o4-mini'],
+  openrouter: ['openai/gpt-5.4-nano', 'anthropic/claude-3.5-sonnet', 'google/gemini-flash-1.5'],
+  openai: ['gpt-5.4-nano', 'gpt-4.1-mini', 'o4-mini'],
   anthropic: ['claude-sonnet-4-20250514', 'claude-3-5-sonnet-latest', 'claude-3-haiku-20240307'],
   'google-genai': ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'],
   deepseek: ['deepseek-chat', 'deepseek-reasoner', 'deepseek-v4-flash'],
-  'openai-compatible': ['gpt-4o-mini', 'llama-3.1-70b-instruct', 'qwen2.5-72b-instruct'],
+  'openai-compatible': ['gpt-5.4-nano', 'llama-3.1-70b-instruct', 'qwen2.5-72b-instruct'],
   'anthropic-compatible': [
     'claude-sonnet-4-20250514',
     'claude-3-5-sonnet-latest',

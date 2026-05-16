@@ -8,6 +8,7 @@ import ch.qos.logback.core.read.ListAppender;
 import com.zeromail.api.security.TestSessionSupport;
 import com.zeromail.api.support.ApiPostgresTestBase;
 import com.zeromail.core.account.exception.CurrentUserNotFoundException;
+import com.zeromail.core.shared.error.ErrorCodes;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import java.sql.SQLException;

@@ -20,8 +20,7 @@ export function AuditRow({ entry, now }: AuditRowProps) {
   const [undone, setUndone] = useState(Boolean(entry.undone));
   const undoAvailable = isUndoAvailable(entry, now) && !undone;
 
-  const sender =
-    entry.messageRef?.sender || entry.ruleName || t('triage.audit.message.unknownSender');
+  const sender = entry.messageRef?.sender || t('triage.audit.message.unknownSender');
   const subject = entry.messageRef?.subject || t('triage.audit.message.untitled');
   const initial = sender.charAt(0).toUpperCase();
 
@@ -41,25 +40,22 @@ export function AuditRow({ entry, now }: AuditRowProps) {
         {initial}
       </div>
 
-      {/* Main content */}
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        {/* Sender / rule name */}
-        <span className="w-28 shrink-0 truncate text-sm font-medium">{sender}</span>
-
-        {/* Subject + reason */}
-        <div className="flex min-w-0 flex-1 items-center gap-1.5">
-          <span className="truncate text-sm font-medium">{subject}</span>
-          {entry.reason ? (
-            <>
-              <span className="text-muted-foreground shrink-0 text-xs">—</span>
-              <span className="text-muted-foreground hidden truncate text-xs sm:block">
-                {entry.reason}
-              </span>
-            </>
-          ) : null}
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="w-28 shrink-0 truncate text-sm font-medium">{sender}</span>
+            <span className="min-w-0 truncate text-sm font-medium">{subject}</span>
+          </div>
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <AuditFact label={t('triage.audit.whenLabel')} value={entry.ruleName} />
+            <AuditFact label={t('triage.audit.thenLabel')} value={entry.actionLabel} action />
+            <AuditFact
+              label={t('triage.audit.whyLabel')}
+              value={entry.reason || t('triage.audit.noReason')}
+            />
+          </div>
         </div>
 
-        {/* Right: badge + time + actions */}
         <div className="flex shrink-0 items-center gap-2">
           <ActionBadge entry={entry} />
           <time className="text-muted-foreground w-20 shrink-0 text-right font-mono text-xs">
@@ -79,6 +75,30 @@ export function AuditRow({ entry, now }: AuditRowProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+function AuditFact({
+  label,
+  value,
+  action = false,
+}: {
+  label: string;
+  value: string;
+  action?: boolean;
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex max-w-[16rem] items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] leading-4',
+        action
+          ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+          : 'bg-muted text-muted-foreground',
+      )}
+    >
+      <span className="font-semibold tracking-wide uppercase">{label}</span>
+      <span className="truncate">{value}</span>
+    </span>
   );
 }
 

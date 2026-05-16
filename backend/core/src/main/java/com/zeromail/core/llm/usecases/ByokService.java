@@ -5,46 +5,40 @@ import com.zeromail.core.llm.byok.ByokEndpointValidator;
 import com.zeromail.core.llm.domain.BYOKProvider;
 import com.zeromail.core.llm.domain.ByokProviderPreset;
 import com.zeromail.core.llm.exception.InvalidByokException;
+import com.zeromail.core.llm.gateway.springai.ByokValidationGateway;
 import com.zeromail.core.llm.persistence.TenantByokCredentialsEntity;
 import com.zeromail.core.llm.persistence.TenantByokCredentialsRepository;
-import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestClientResponseException;
 
 @Service
 public class ByokService {
 
     private static final Logger log = LoggerFactory.getLogger(ByokService.class);
-    private static final String ANTHROPIC_VERSION = "2023-06-01";
 
     private final TenantByokCredentialsRepository tenantByokCredentialsRepository;
     private final RefreshTokenCipher refreshTokenCipher;
     private final ByokEndpointValidator byokEndpointValidator;
-    private final RestClient.Builder restClientBuilder;
+    private final ByokValidationGateway byokValidationGateway;
 
     public ByokService(
             TenantByokCredentialsRepository tenantByokCredentialsRepository,
             RefreshTokenCipher refreshTokenCipher,
             ByokEndpointValidator byokEndpointValidator,
-            RestClient.Builder restClientBuilder) {
+            ByokValidationGateway byokValidationGateway) {
         this.tenantByokCredentialsRepository = tenantByokCredentialsRepository;
         this.refreshTokenCipher = refreshTokenCipher;
         this.byokEndpointValidator = byokEndpointValidator;
-        this.restClientBuilder = restClientBuilder;
+        this.byokValidationGateway = byokValidationGateway;
     }
 
     public ByokValidateResult validate(UUID tenantId, ByokValidateCommand command) {
@@ -111,7 +105,7 @@ public class ByokService {
                 resolveProvider(command.preset(), command.endpoint());
         String model = canonicalModel(command.model());
         ByokValidateResult upstreamValidation =
-                validateUpstreamKey(
+                probeUpstream(
                         tenantId,
                         resolvedProvider.provider(),
                         resolvedProvider.canonicalEndpoint(),
@@ -176,15 +170,6 @@ public class ByokService {
                                                 : credentials.getUpdatedAt()));
     }
 
-    private ByokValidateResult validateUpstreamKey(
-            UUID tenantId,
-            BYOKProvider provider,
-            String canonicalEndpoint,
-            String model,
-            String apiKey) {
-        return probeUpstream(tenantId, provider, canonicalEndpoint, model, apiKey);
-    }
-
     private ByokValidateResult probeUpstream(
             UUID tenantId,
             BYOKProvider provider,
@@ -192,22 +177,7 @@ public class ByokService {
             String model,
             String apiKey) {
         try {
-            return switch (provider) {
-                case ANTHROPIC -> probeAnthropic(canonicalEndpoint, apiKey, model);
-                case DEEPSEEK -> probeDeepSeek(canonicalEndpoint, apiKey, model);
-                case GOOGLE_GENAI -> probeGoogleGenAi(canonicalEndpoint, apiKey, model);
-                case OPENAI -> probeOpenAi(canonicalEndpoint, apiKey, model);
-            };
-        } catch (RestClientResponseException upstreamRejection) {
-            return new ByokValidateResult(
-                    false, null, reasonForUpstreamRejection(provider, upstreamRejection));
-        } catch (ResourceAccessException resourceAccessFailure) {
-            return new ByokValidateResult(
-                    false,
-                    null,
-                    isTimeout(resourceAccessFailure) ? "timeout" : "connection_failed");
-        } catch (RestClientException restClientFailure) {
-            return new ByokValidateResult(false, null, "connection_failed");
+            return byokValidationGateway.validate(provider, canonicalEndpoint, model, apiKey);
         } catch (RuntimeException unexpectedFailure) {
             log.info(
                     "event=byok_validate_failed tenantId={} provider={} reason={}",
@@ -216,76 +186,6 @@ public class ByokService {
                     unexpectedFailure.getClass().getSimpleName());
             return new ByokValidateResult(false, null, "connection_failed");
         }
-    }
-
-    private ByokValidateResult probeOpenAi(String canonicalEndpoint, String apiKey, String model) {
-        ModelsResponse response =
-                restClientBuilder
-                        .build()
-                        .get()
-                        .uri(joinPath(canonicalEndpoint, "models"))
-                        .headers(headers -> headers.setBearerAuth(apiKey))
-                        .retrieve()
-                        .body(ModelsResponse.class);
-        List<String> modelIds =
-                response == null || response.data() == null
-                        ? List.of()
-                        : response.data().stream().map(ModelResource::id).toList();
-        if (!modelIds.isEmpty() && !modelIds.contains(model)) {
-            return new ByokValidateResult(false, modelIds, "model_not_found");
-        }
-        return new ByokValidateResult(true, modelIds, null);
-    }
-
-    private ByokValidateResult probeDeepSeek(
-            String canonicalEndpoint, String apiKey, String model) {
-        return probeOpenAi(canonicalEndpoint, apiKey, model);
-    }
-
-    private ByokValidateResult probeAnthropic(
-            String canonicalEndpoint, String apiKey, String model) {
-        ModelsResponse response =
-                restClientBuilder
-                        .build()
-                        .get()
-                        .uri(joinPath(canonicalEndpoint, "models"))
-                        .header("x-api-key", apiKey)
-                        .header("anthropic-version", ANTHROPIC_VERSION)
-                        .retrieve()
-                        .body(ModelsResponse.class);
-        List<String> modelIds =
-                response == null || response.data() == null
-                        ? List.of()
-                        : response.data().stream().map(ModelResource::id).toList();
-        if (!modelIds.isEmpty() && !modelIds.contains(model)) {
-            return new ByokValidateResult(false, modelIds, "model_not_found");
-        }
-        return new ByokValidateResult(true, modelIds.isEmpty() ? List.of(model) : modelIds, null);
-    }
-
-    private ByokValidateResult probeGoogleGenAi(
-            String canonicalEndpoint, String apiKey, String model) {
-        GoogleModelsResponse response =
-                restClientBuilder
-                        .build()
-                        .get()
-                        .uri(joinPath(canonicalEndpoint, "models"))
-                        .header("x-goog-api-key", apiKey)
-                        .retrieve()
-                        .body(GoogleModelsResponse.class);
-        List<String> modelIds =
-                response == null || response.models() == null
-                        ? List.of()
-                        : response.models().stream()
-                                .filter(ByokService::supportsGoogleGenerateContent)
-                                .map(GoogleModelResource::name)
-                                .filter(modelName -> modelName != null && !modelName.isBlank())
-                                .map(ByokService::googleModelId)
-                                .toList();
-        if (!modelIds.isEmpty() && !modelIds.contains(model)) {
-            return new ByokValidateResult(false, modelIds, "model_not_found");
-        }
-        return new ByokValidateResult(true, modelIds, null);
     }
 
     private ResolvedByokProvider resolveProvider(ByokProviderPreset preset, String endpoint) {
@@ -306,31 +206,12 @@ public class ByokService {
         return new ResolvedByokProvider(preset.provider(), canonicalEndpoint);
     }
 
-    private String reasonForUpstreamRejection(
-            BYOKProvider provider, RestClientResponseException upstreamRejection) {
-        int upstreamStatus = upstreamRejection.getStatusCode().value();
-        if (upstreamStatus == 404) {
-            return "endpoint_rejected";
-        }
-        if (provider == BYOKProvider.ANTHROPIC && upstreamStatus == 400) {
-            return "model_not_found";
-        }
-        if (upstreamStatus == 422) {
-            return "model_not_found";
-        }
-        return "upstream_rejected";
-    }
-
     private record ResolvedByokProvider(BYOKProvider provider, String canonicalEndpoint) {
         private ResolvedByokProvider {
             if (canonicalEndpoint == null || canonicalEndpoint.isBlank()) {
                 throw new InvalidByokException();
             }
         }
-    }
-
-    private String joinPath(String canonicalEndpoint, String suffix) {
-        return canonicalEndpoint.replaceAll("/+$", "") + "/" + suffix.replaceAll("^/+", "");
     }
 
     private static String canonicalModel(String model) {
@@ -349,35 +230,5 @@ public class ByokService {
 
     private static short keyVersionFromEnvelope(byte[] encryptedEnvelope) {
         return (short) ByteBuffer.wrap(encryptedEnvelope).getInt();
-    }
-
-    private static boolean isTimeout(Throwable throwable) {
-        Throwable currentThrowable = throwable;
-        while (currentThrowable != null) {
-            if (currentThrowable instanceof SocketTimeoutException) {
-                return true;
-            }
-            currentThrowable = currentThrowable.getCause();
-        }
-        return false;
-    }
-
-    private record ModelsResponse(List<ModelResource> data) {}
-
-    private record ModelResource(String id) {}
-
-    private record GoogleModelsResponse(List<GoogleModelResource> models) {}
-
-    private record GoogleModelResource(String name, List<String> supportedGenerationMethods) {}
-
-    private static boolean supportsGoogleGenerateContent(GoogleModelResource modelResource) {
-        return modelResource.supportedGenerationMethods() == null
-                || modelResource.supportedGenerationMethods().contains("generateContent");
-    }
-
-    private static String googleModelId(String modelName) {
-        return modelName.startsWith("models/")
-                ? modelName.substring("models/".length())
-                : modelName;
     }
 }

@@ -6,8 +6,13 @@ import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Locale;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class RuleEvaluator {
+
+    private static final ConcurrentMap<String, Pattern> COMPILED_SUBJECT_REGEXES =
+            new ConcurrentHashMap<>();
 
     public RuleEvaluationResult evaluate(
             MatcherNode matcherNode, RuleEvaluationInput ruleEvaluationInput) {
@@ -110,7 +115,9 @@ public class RuleEvaluator {
     private RuleEvaluationResult evaluateSubjectRegex(
             MatcherNode.SubjectRegexMatcher subjectRegexMatcher,
             RuleEvaluationInput ruleEvaluationInput) {
-        Pattern compiledPattern = Pattern.compile(subjectRegexMatcher.regexPattern());
+        Pattern compiledPattern =
+                COMPILED_SUBJECT_REGEXES.computeIfAbsent(
+                        subjectRegexMatcher.regexPattern(), Pattern::compile);
         boolean regexMatched =
                 compiledPattern.matcher(ruleEvaluationInput.sanitizedSubjectExcerpt()).find();
         return terminal(subjectRegexMatcher.nodeId(), regexMatched, "subject_regex_re2j");

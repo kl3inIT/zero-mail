@@ -6,6 +6,7 @@ import { CheckCircle2 } from 'lucide-react';
 
 import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatCredits } from '@/lib/format';
 
 type TopupSuccessProps = {
   newBalance: number;
@@ -30,7 +31,7 @@ export function TopupSuccess({ newBalance }: TopupSuccessProps) {
         <p className="text-muted-foreground text-sm leading-6">{t('billing.topup.success.body')}</p>
         <div>
           <p className="text-foreground text-3xl font-semibold tracking-normal">
-            {new Intl.NumberFormat().format(newBalance)}
+            {formatCredits(newBalance)}
           </p>
           <p className="text-muted-foreground mt-1 text-sm">{t('billing.balance.unit')}</p>
         </div>

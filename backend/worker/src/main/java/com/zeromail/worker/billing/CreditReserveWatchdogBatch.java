@@ -86,21 +86,31 @@ public class CreditReserveWatchdogBatch {
             return 0;
         }
 
+        List<Object[]> batchArgs =
+                claimed.stream()
+                        .map(
+                                claimedReservation ->
+                                        new Object[] {
+                                            UUID.randomUUID(),
+                                            claimedReservation.tenantId(),
+                                            claimedReservation.amountCredits(),
+                                            claimedReservation.id().toString()
+                                        })
+                        .toList();
+        int[] perRowInsertCounts =
+                jdbcTemplate.batchUpdate(
+                        """
+          INSERT INTO credit_ledger_entry
+              (id, tenant_id, kind, amount_credits, ref_type, ref_id)
+          VALUES (?, ?, 'RELEASE', ?, 'RESERVATION', ?)
+          ON CONFLICT ON CONSTRAINT uq_credit_ledger_entry_ref_kind DO NOTHING
+          """,
+                        batchArgs);
+
         int releasedCount = 0;
-        for (ClaimedReservation claimedReservation : claimed) {
-            int ledgerRowsInserted =
-                    jdbcTemplate.update(
-                            """
-              INSERT INTO credit_ledger_entry
-                  (id, tenant_id, kind, amount_credits, ref_type, ref_id)
-              VALUES (?, ?, 'RELEASE', ?, 'RESERVATION', ?)
-              ON CONFLICT ON CONSTRAINT uq_credit_ledger_entry_ref_kind DO NOTHING
-              """,
-                            UUID.randomUUID(),
-                            claimedReservation.tenantId(),
-                            claimedReservation.amountCredits(),
-                            claimedReservation.id().toString());
-            if (ledgerRowsInserted == 1) {
+        for (int rowIndex = 0; rowIndex < claimed.size(); rowIndex++) {
+            ClaimedReservation claimedReservation = claimed.get(rowIndex);
+            if (perRowInsertCounts[rowIndex] == 1) {
                 long ageSeconds =
                         Duration.between(claimedReservation.createdAt(), Instant.now()).toSeconds();
                 log.info(

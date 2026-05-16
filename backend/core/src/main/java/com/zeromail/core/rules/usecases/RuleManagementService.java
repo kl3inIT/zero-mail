@@ -4,6 +4,7 @@ import com.zeromail.core.rules.exception.RuleValidationException;
 import com.zeromail.core.rules.persistence.RuleEntity;
 import com.zeromail.core.rules.persistence.RuleRepository;
 import com.zeromail.core.rules.persistence.lowlevel.RuleNativeStateUpdater;
+import com.zeromail.core.rules.projection.EnabledRuleSnapshot;
 import com.zeromail.core.rules.projection.RuleStatusProjection;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -36,6 +37,25 @@ public class RuleManagementService {
                 .toList();
     }
 
+    /**
+     * Read-side accessor used by the triage orchestrator to build per-message execution candidates
+     * without depending on {@link RuleRepository} across domain boundaries.
+     */
+    @Transactional(readOnly = true)
+    public List<EnabledRuleSnapshot> listEnabledForExecution(UUID tenantId) {
+        return ruleRepository.findOrderedByTenantId(tenantId).stream()
+                .filter(RuleEntity::isEnabled)
+                .map(
+                        ruleEntity ->
+                                new EnabledRuleSnapshot(
+                                        ruleEntity.getId(),
+                                        ruleEntity.getDisplayName(),
+                                        ruleEntity.getOrderIndex(),
+                                        ruleEntity.getMatcherAst(),
+                                        ruleEntity.getActionIntents()))
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public RuleStatusProjection get(UUID tenantId, UUID ruleId) {
         return findRuleOrThrow(tenantId, ruleId).toStatusProjection();
@@ -43,7 +63,12 @@ public class RuleManagementService {
 
     @Transactional
     public RuleStatusProjection create(RuleCreateCommand command) {
-        int orderIndex = ruleRepository.findOrderedByTenantId(command.tenantId()).size();
+        rejectDuplicateDefinition(
+                command.tenantId(),
+                command.compileResult().matcherAst(),
+                command.compileResult().actionIntents(),
+                null);
+        int orderIndex = (int) ruleRepository.countByTenantId(command.tenantId());
         RuleEntity ruleEntity =
                 new RuleEntity(
                         command.ruleId(),
@@ -74,6 +99,12 @@ public class RuleManagementService {
                         || !Objects.equals(
                                 ruleEntity.getActionIntents(),
                                 command.compileResult().actionIntents());
+
+        rejectDuplicateDefinition(
+                command.tenantId(),
+                command.compileResult().matcherAst(),
+                command.compileResult().actionIntents(),
+                command.ruleId());
 
         ruleEntity.replaceDefinition(
                 command.displayName(),
@@ -186,6 +217,23 @@ public class RuleManagementService {
             throw RuleValidationException.versionMismatch();
         }
         ruleNativeStateUpdater.refresh(ruleEntity);
+    }
+
+    private void rejectDuplicateDefinition(
+            UUID tenantId, String matcherAst, String actionIntents, UUID excludedRuleId) {
+        boolean duplicateExists =
+                excludedRuleId == null
+                        ? ruleRepository
+                                .findFirstByTenantIdAndDefinition(
+                                        tenantId, matcherAst, actionIntents)
+                                .isPresent()
+                        : ruleRepository
+                                .findFirstByTenantIdAndDefinitionExcludingRule(
+                                        tenantId, excludedRuleId, matcherAst, actionIntents)
+                                .isPresent();
+        if (duplicateExists) {
+            throw RuleValidationException.duplicate();
+        }
     }
 
     private static void normalizeOrder(List<RuleEntity> rules) {

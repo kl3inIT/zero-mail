@@ -29,18 +29,14 @@ public class SenderSafetyNetController {
     @GetMapping("/api/triage/sender-safety-net")
     public ProtectedSendersResponse listProtectedSenders() {
         return ProtectedSendersResponse.from(
-                senderSafetyNetService.listProtectedSenders(currentTenantId()));
+                senderSafetyNetService.listProtectedSenders(TenantContext.currentTenantUuid()));
     }
 
     @PostMapping("/api/triage/sender-safety-net/{senderEmail}/opt-in")
     public SenderOptInResponse optIn(@PathVariable String senderEmail) {
-        UUID tenantId = currentTenantId();
+        UUID tenantId = TenantContext.currentTenantUuid();
         String canonicalSenderEmail = senderEmailCanonicalizer.canonicalize(senderEmail);
         senderSafetyNetService.optInSender(tenantId, canonicalSenderEmail);
         return SenderOptInResponse.from(canonicalSenderEmail, true);
-    }
-
-    private static UUID currentTenantId() {
-        return UUID.fromString(TenantContext.currentOrThrow());
     }
 }

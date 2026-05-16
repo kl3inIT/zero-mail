@@ -92,7 +92,7 @@ class BillingInsufficientCreditsTest extends ApiPostgresTestBase {
 
         @PostMapping("/test/billing/reserve-triage")
         void reserveTriage() {
-            UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+            UUID tenantId = TenantContext.currentTenantUuid();
             creditLedger.reserve(tenantId, CallSite.TRIAGE);
         }
     }

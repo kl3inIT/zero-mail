@@ -1,3 +1,6 @@
+import org.gradle.api.tasks.Exec
+import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
+
 plugins {
     id("zeromail.spring-boot-conventions")
     id("zeromail.archunit-conventions")
@@ -17,6 +20,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
     implementation(libs.google.auth.library.oauth2.http)
+    compileOnly(platform(libs.spring.ai.bom))
+    compileOnly("org.springframework.ai:spring-ai-model")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
     developmentOnly("org.springframework.boot:spring-boot-docker-compose")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
@@ -27,6 +32,31 @@ dependencies {
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
     workingDir = rootProject.projectDir
+}
+
+tasks.named<BootBuildImage>("bootBuildImage") {
+    // BootBuildImage exposes getImageName() in this local Spring Boot 4.0.6 Gradle API.
+    // Equivalent target: imageName.set("zeromail-api:loadtest").
+    val bootImageNameProperty = BootBuildImage::class.java.getMethod("getImageName").invoke(this)
+    org.gradle.api.provider.Property::class
+        .java
+        .getMethod("set", Any::class.java)
+        .invoke(bootImageNameProperty, "zeromail-api:loadtest")
+}
+
+tasks.register<Exec>("loadtestVerify") {
+    group = "verification"
+    description =
+        "Runs the three loadtest invariant assertions via loadtest/scripts/loadtest-verify.sh (psql shell-out per codex HIGH-8). Assumes worker queue is drained (call loadtest/scripts/wait-for-worker-drain.sh first per MED-3)."
+    workingDir = rootProject.projectDir
+    val gitBash = file("C:/Program Files/Git/bin/bash.exe")
+    val bashExecutable =
+        if (System.getProperty("os.name").lowercase().contains("windows") && gitBash.isFile) {
+            gitBash.absolutePath
+        } else {
+            "bash"
+        }
+    commandLine(bashExecutable, "loadtest/scripts/loadtest-verify.sh")
 }
 
 openApi {

@@ -68,7 +68,7 @@ class TenantByokCredentialsPersistenceTest extends PostgresContainerTest {
                         tenantId,
                         BYOKProvider.OPENAI,
                         "https://llm.example.test/v1",
-                        "openai/gpt-4o-mini",
+                        "openai/gpt-5.4-nano",
                         bytes32(),
                         (short) 1));
 

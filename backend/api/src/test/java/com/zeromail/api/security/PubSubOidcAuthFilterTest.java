@@ -2,6 +2,7 @@ package com.zeromail.api.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.auth.oauth2.TokenVerifier;
 import com.zeromail.api.support.MockGoogleOidcServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -117,7 +118,13 @@ class PubSubOidcAuthFilterTest {
     }
 
     private PubSubOidcAuthFilter filter() {
-        return new PubSubOidcAuthFilter(AUDIENCE, SERVICE_ACCOUNT_EMAIL, oidc.jwksUrl());
+        TokenVerifier tokenVerifier =
+                TokenVerifier.newBuilder()
+                        .setAudience(AUDIENCE)
+                        .setIssuer(ISSUER)
+                        .setCertificatesLocation(oidc.jwksUrl())
+                        .build();
+        return new PubSubOidcAuthFilter(SERVICE_ACCOUNT_EMAIL, tokenVerifier);
     }
 
     private static MockHttpServletRequest pubsubRequest(String token) {

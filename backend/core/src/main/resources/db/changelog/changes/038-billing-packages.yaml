@@ -1,9 +1,7 @@
 databaseChangeLog:
-  - logicalFilePath: db/changelog/changes/030-billing-packages.yaml
   - changeSet:
-      id: 030-billing-packages
+      id: 038-billing-packages
       author: zeromail
-      validCheckSum: "9:be5a09821310983947726ffd81dbbb4f"
       changes:
         - createTable:
             tableName: billing_package

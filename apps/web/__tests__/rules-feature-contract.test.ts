@@ -18,13 +18,13 @@ const plannedRulesFiles = [
 ] as const;
 
 const requiredRulesCopy = [
-  'Rules',
-  'Write rules in plain language, preview what would match, then enable only the rules you trust.',
-  'Compile rule',
-  'Save disabled rule',
+  'Automation rules',
+  'Each rule defines which emails to match and what Zero Mail is allowed to do. New rules stay off until previewed.',
+  'Convert to rule',
+  'Save (stays off until preview)',
   'Preview rule',
   'Enable rule',
-  'Answer clarification',
+  'Send answer',
   'No Gmail changes were made.',
 ] as const;
 

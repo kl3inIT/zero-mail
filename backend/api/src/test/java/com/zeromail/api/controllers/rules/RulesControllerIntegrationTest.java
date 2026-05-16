@@ -95,12 +95,22 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
         assertThat(fetchedRuleJson.path("entityVersion").asInt()).isZero();
         assertThat(fetchedRuleJson.path("lastPreviewedEntityVersion").isNull()).isTrue();
 
+        // Duplicate-rule guard rejects same matcher+actionIntents tuples in
+        // a tenant. Build a distinct compiled payload so the second rule
+        // exercises the CRUD path without colliding with the first.
+        Map<String, Object> secondCompiled =
+                compiledPayload(
+                        "{\"schemaVersion\":\"rules.v1\","
+                                + "\"nodeId\":\"manual-condition-1\","
+                                + "\"type\":\"SENDER_DOMAIN\","
+                                + "\"domain\":\"stripe-invoices.com\"}",
+                        "[{\"type\":\"archive\"}]");
         JsonNode secondRuleJson =
                 createRule(
                         seedData,
                         "Archive Stripe invoices",
                         "Archive invoices from Stripe",
-                        compileJson.path("compiled"));
+                        objectMapper.valueToTree(secondCompiled));
         UUID secondRuleId = UUID.fromString(secondRuleJson.path("ruleId").asString());
         when(rulePreviewDataService.fetchPreviewInputs(
                         eq(seedData.tenantId()), eq(false), eq(new PreviewSampleSize(25))))
@@ -217,29 +227,6 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
         assertThat(secondResponseJson.path("materialization").path("skippedCount").asInt())
                 .isEqualTo(2);
         assertThat(secondResponseJson.path("rules").size()).isEqualTo(2);
-        assertThat(ruleCount(seedData.tenantId())).isEqualTo(2);
-    }
-
-    @Test
-    void materialize_selected_templates_is_explicit_post_and_idempotent() throws Exception {
-        SeedData seedData = seedUser("rules-api-materialize-selected");
-        insertSelection(seedData.tenantId(), "archive-receipts", true);
-        insertSelection(seedData.tenantId(), "label-newsletters", true);
-
-        JsonNode firstMaterializationJson =
-                postJson(
-                        authenticatedClient(seedData),
-                        "/api/rules/templates/materialize-selected",
-                        Map.of());
-        JsonNode secondMaterializationJson =
-                postJson(
-                        authenticatedClient(seedData),
-                        "/api/rules/templates/materialize-selected",
-                        Map.of());
-
-        assertThat(firstMaterializationJson.path("createdCount").asInt()).isEqualTo(2);
-        assertThat(secondMaterializationJson.path("createdCount").asInt()).isZero();
-        assertThat(secondMaterializationJson.path("skippedCount").asInt()).isEqualTo(2);
         assertThat(ruleCount(seedData.tenantId())).isEqualTo(2);
     }
 
@@ -380,8 +367,6 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
         assertThat(openApiJson.path("paths").has("/api/rules/{ruleId}/enabled")).isTrue();
         assertThat(openApiJson.path("paths").has("/api/rules/templates")).isTrue();
         assertThat(openApiJson.path("paths").has("/api/rules/templates/{templateKey}/materialize"))
-                .isTrue();
-        assertThat(openApiJson.path("paths").has("/api/rules/templates/materialize-selected"))
                 .isTrue();
         String openApiBody = openApiJson.toString();
         assertThat(openApiBody).contains("RuleOrderEntryRequest", "ruleId", "entityVersion");

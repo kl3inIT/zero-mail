@@ -1,7 +1,9 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { CheckCircle2, Filter, Inbox, RotateCcw } from 'lucide-react';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AuditLog } from '@/features/triage/components/AuditLog';
@@ -30,6 +32,13 @@ export function TriagePageClient() {
         </p>
       </div>
 
+      <div className="grid gap-2 sm:grid-cols-4">
+        <FlowStep icon={<Inbox className="size-4" />} label={t('triage.flow.observed')} />
+        <FlowStep icon={<Filter className="size-4" />} label={t('triage.flow.matched')} />
+        <FlowStep icon={<CheckCircle2 className="size-4" />} label={t('triage.flow.applied')} />
+        <FlowStep icon={<RotateCcw className="size-4" />} label={t('triage.flow.undo')} />
+      </div>
+
       <Tabs
         value={tab}
         onValueChange={(nextTab) => {
@@ -54,6 +63,17 @@ export function TriagePageClient() {
           <SenderSafetyNetList />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function FlowStep({ icon, label }: { icon: ReactNode; label: string }) {
+  return (
+    <div className="bg-muted/25 flex min-h-12 items-center gap-2 rounded-md border px-3 py-2 text-xs font-medium">
+      <span className="text-primary shrink-0" aria-hidden="true">
+        {icon}
+      </span>
+      <span className="leading-5">{label}</span>
     </div>
   );
 }

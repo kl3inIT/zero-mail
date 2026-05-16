@@ -11,6 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { formatCredits, formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 export type LedgerEntry = {
@@ -57,7 +58,7 @@ export function LedgerTable({ rows = [], injectedRows }: LedgerTableProps) {
                 className={cn(topup && 'bg-green-soft/40 hover:bg-green-soft/60')}
               >
                 <TableCell className="font-mono text-xs">
-                  {formatTimestamp(entry.timestamp, locale)}
+                  {formatDateTime(entry.timestamp, locale)}
                 </TableCell>
                 <TableCell>
                   <Badge
@@ -86,19 +87,6 @@ export function LedgerTable({ rows = [], injectedRows }: LedgerTableProps) {
       </Table>
     </div>
   );
-}
-
-function formatTimestamp(value: string, locale: string): string {
-  const timestamp = Date.parse(value);
-  if (!Number.isFinite(timestamp)) return value;
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(timestamp);
-}
-
-function formatCredits(value: number): string {
-  return new Intl.NumberFormat().format(value);
 }
 
 function formatSignedCredits(value: number): string {

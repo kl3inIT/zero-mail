@@ -1,10 +1,8 @@
 package com.zeromail.core.triage.usecases;
 
 import com.zeromail.core.rules.domain.RuleActionType;
+import com.zeromail.core.shared.crypto.Hashing;
 import com.zeromail.core.triage.domain.TriageActionResult;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.TreeMap;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
@@ -28,11 +26,11 @@ public class TriageActionArgsCanonicalizer {
      * removed before hashing so a post-write SaveDraft payload still maps to the same PENDING row.
      */
     public byte[] canonicalHash(TriageActionResult preWriteIntent) {
-        return sha256(canonicalJson(preWriteIntent));
+        return Hashing.sha256(canonicalJson(preWriteIntent));
     }
 
     public byte[] canonicalHash(String actionArgsJson) {
-        return sha256(canonicalJson(actionArgsJson));
+        return Hashing.sha256(canonicalJson(actionArgsJson));
     }
 
     public String canonicalJson(TriageActionResult preWriteIntent) {
@@ -88,15 +86,5 @@ public class TriageActionArgsCanonicalizer {
             throw new IllegalArgumentException(fieldName + " must not be blank");
         }
         return value;
-    }
-
-    private static byte[] sha256(String canonicalJson) {
-        try {
-            MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
-            return messageDigest.digest(canonicalJson.getBytes(StandardCharsets.UTF_8));
-        } catch (NoSuchAlgorithmException noSuchAlgorithmException) {
-            throw new IllegalStateException(
-                    "SHA-256 digest is unavailable", noSuchAlgorithmException);
-        }
     }
 }

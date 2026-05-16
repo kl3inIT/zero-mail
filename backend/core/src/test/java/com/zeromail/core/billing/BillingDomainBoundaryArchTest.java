@@ -63,6 +63,8 @@ class BillingDomainBoundaryArchTest {
                         "..core.tenant..",
                         "..core.shared.persistence..",
                         "..core.shared.lang..",
+                        "..core.shared.error..",
+                        "..core.shared.exception..",
                         "java..",
                         "jakarta..",
                         "org.springframework..",

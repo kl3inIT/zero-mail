@@ -35,7 +35,7 @@ public class ThreadDraftController {
 
     @PostMapping("/{gmailThreadId}/draft")
     public ThreadDraftResponse generateDraft(@PathVariable String gmailThreadId) {
-        UUID tenantId = currentTenantId();
+        UUID tenantId = TenantContext.currentTenantUuid();
         GenerateThreadDraftResult result =
                 generateThreadDraftService.generateOrRegenerate(
                         new GenerateThreadDraftCommand(tenantId, gmailThreadId));
@@ -49,16 +49,12 @@ public class ThreadDraftController {
 
     @PostMapping("/{gmailThreadId}/resolve")
     public ResponseEntity<Void> resolve(@PathVariable String gmailThreadId) {
-        UUID tenantId = currentTenantId();
+        UUID tenantId = TenantContext.currentTenantUuid();
         markThreadResolvedService.markResolved(tenantId, gmailThreadId);
         log.info(
                 "event=thread_marked_resolved tenantId={} gmailThreadId={}",
                 tenantId,
                 gmailThreadId);
         return ResponseEntity.noContent().build();
-    }
-
-    private static UUID currentTenantId() {
-        return UUID.fromString(TenantContext.currentOrThrow());
     }
 }

@@ -16,6 +16,11 @@ public final class TenantContext {
         return TENANT.get();
     }
 
+    /** Convenience for callers that immediately reify the bound tenant as a {@link UUID}. */
+    public static UUID currentTenantUuid() {
+        return UUID.fromString(currentOrThrow());
+    }
+
     public static Optional<String> currentOptional() {
         return TENANT.isBound() ? Optional.of(TENANT.get()) : Optional.empty();
     }

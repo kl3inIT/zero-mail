@@ -2,6 +2,7 @@ package com.zeromail.core.notification.usecases;
 
 import com.zeromail.core.notification.domain.ChannelType;
 import com.zeromail.core.notification.domain.DigestDeliveryStatus;
+import com.zeromail.core.notification.exception.DigestAlreadyClaimedException;
 import com.zeromail.core.notification.persistence.DigestDeliveryEntity;
 import com.zeromail.core.notification.persistence.DigestDeliveryRepository;
 import java.time.Duration;
@@ -100,7 +101,6 @@ public class DigestDeliveryService {
         digestDelivery.setExternalRef(externalRef);
         digestDelivery.setFailureReason(null);
         digestDelivery.setNextAttemptAt(null);
-        digestDeliveryRepository.save(digestDelivery);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -110,7 +110,6 @@ public class DigestDeliveryService {
         digestDelivery.setStatus(DigestDeliveryStatus.FAILED);
         digestDelivery.setFailureReason(failureReason);
         digestDelivery.setNextAttemptAt(null);
-        digestDeliveryRepository.save(digestDelivery);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -123,7 +122,6 @@ public class DigestDeliveryService {
                 Objects.requireNonNull(nextAttemptAt, "nextAttemptAt must not be null"));
         digestDelivery.setDispatchedAt(null);
         digestDelivery.setExternalRef(null);
-        digestDeliveryRepository.save(digestDelivery);
     }
 
     @Transactional(readOnly = true)

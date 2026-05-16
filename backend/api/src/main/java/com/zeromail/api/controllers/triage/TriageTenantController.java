@@ -28,23 +28,19 @@ public class TriageTenantController {
 
     @GetMapping("/api/tenant/triage/shadow-mode")
     public TriageShadowModeResponse getShadowMode() {
-        UUID tenantId = currentTenantId();
+        UUID tenantId = TenantContext.currentTenantUuid();
         return TriageShadowModeResponse.from(tenantService.isTriageShadowMode(tenantId));
     }
 
     @PatchMapping("/api/tenant/triage/shadow-mode")
     public TriageShadowModeResponse setShadowMode(
             @RequestBody @Valid TriageShadowModeRequest request) {
-        UUID tenantId = currentTenantId();
+        UUID tenantId = TenantContext.currentTenantUuid();
         tenantService.setTriageShadowMode(tenantId, request.enabled());
         log.info(
                 "event=triage_shadow_mode_toggled tenantId={} enabled={}",
                 tenantId,
                 request.enabled());
         return TriageShadowModeResponse.from(request.enabled());
-    }
-
-    private static UUID currentTenantId() {
-        return UUID.fromString(TenantContext.currentOrThrow());
     }
 }

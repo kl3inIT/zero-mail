@@ -1,0 +1,136 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit configuration for Zero Mail
+# Docs: https://docs.coderabbit.ai/guides/configure-coderabbit
+
+language: en-US
+early_access: false
+tone_instructions: |
+  Be concise and enterprise-tone. Reference Zero Mail conventions from
+  CLAUDE.md, CONVENTIONS.md, and TESTING.md when relevant. Flag any
+  violation of locked constraints (Java 25, Spring Boot 4, Spring AI M6,
+  Gradle Kotlin DSL, no Lombok, no WebFlux, no javax.*, no raw LLM calls
+  outside the Spring AI adapter, no storing prompts/completions).
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+
+  path_filters:
+    - "!.planning/**"
+    - "!**/*.lock"
+    - "!**/*.lockb"
+    - "!pnpm-lock.yaml"
+    - "!package-lock.json"
+    - "!gradle/wrapper/**"
+    - "!**/build/**"
+    - "!**/.gradle/**"
+    - "!**/.next/**"
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!**/out/**"
+    - "!apps/web/components/ui/**"
+
+  path_instructions:
+    - path: "backend/**/*.java"
+      instructions: |
+        Enforce Zero Mail backend conventions:
+        - Java 25 records for DTOs; classes for JPA entities; no Lombok.
+        - Thin controllers; @Transactional lives in application services.
+        - Domain-revealing names — reject `req`, `res`, `repo`, `svc`,
+          `cfg`, `ctx`, `msg`, `err`, `ex`, `e`, `conn`, `tx`, single-letter
+          locals (except established acronyms or `_` for ignored lambdas).
+        - Package layout: domain/, application/, projection/, exception/,
+          persistence/ inside backend/core; controllers/<domain>/ and
+          dto/<domain>/ in backend/api.
+        - Enums via OrderedEnum/IdentifiedEnum + static fromId fail-loud;
+          never use ordinal() for storage or comparison.
+        - Logs follow `event=<name> tenantId={}` format; never log email
+          addresses, Google subjects, tokens, message bodies, or LLM
+          prompts/completions.
+        - No raw HTTP LLM calls or vendor SDK usage outside
+          core.llm.gateway.springai.
+        - No javax.* — Jakarta only.
+        - Prefer Spring MVC + virtual threads; no WebFlux.
+    - path: "backend/**/src/main/resources/db/changelog/**"
+      instructions: |
+        Liquibase YAML changelogs only. Each changeset must have a stable
+        author + id, a rollback (or explicit `empty` rationale), and no
+        destructive operations without an explicit rollback path.
+    - path: "apps/web/**/*.{ts,tsx}"
+      instructions: |
+        Enforce Zero Mail frontend conventions:
+        - Use shadcn/ui primitives directly; do not wrap Alert/Card with
+          custom names unless real composition value (rule of three).
+        - Feature layout: features/<feature>/api/<feature>-api.ts,
+          features/<feature>/query-keys.ts, one hook file per use case.
+        - No query keys for mutation-only features.
+        - Playwright specs in apps/web/e2e/**; Vitest beside feature code
+          or in apps/web/__tests__/** for app-wide contracts.
+        - TanStack Query 5 patterns; typed client via openapi-fetch from
+          springdoc-openapi output.
+    - path: "**/*.test.{ts,tsx,js}"
+      instructions: |
+        Test invariants (privacy, tenant isolation, money, crypto, safety),
+        not code shape. No real LLM calls in unit tests — mock ChatModel /
+        LlmModelClient. Real-LLM evals are tagged separately.
+    - path: "backend/**/src/test/**/*.java"
+      instructions: |
+        Same testing discipline: invariants over code shape. Use the
+        smallest Spring Boot test slice that proves the invariant. Never
+        call a real LLM in `./gradlew test` — use mocked ChatModel /
+        LlmModelClient. Real-LLM evals are @Tag("llm-eval") and run in a
+        separate Gradle task.
+
+  tools:
+    github-checks:
+      enabled: true
+      timeout_ms: 90000
+    ast-grep:
+      essential_rules: true
+    languagetool:
+      enabled: true
+      level: default
+    markdownlint:
+      enabled: true
+    yamllint:
+      enabled: true
+    actionlint:
+      enabled: true
+    shellcheck:
+      enabled: true
+    gitleaks:
+      enabled: true
+    checkov:
+      enabled: true
+    detekt:
+      enabled: false
+    eslint:
+      enabled: true
+    biome:
+      enabled: false
+    hadolint:
+      enabled: true
+    semgrep:
+      enabled: true
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  opt_out: false
+  learnings:
+    scope: auto
+  issues:
+    scope: auto
+  pull_requests:
+    scope: auto

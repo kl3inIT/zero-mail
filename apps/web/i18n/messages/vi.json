@@ -377,13 +377,14 @@
     "rules": {
       "compile": {
         "clarification_required": "Quy tắc này cần một câu trả lời làm rõ trước khi có thể lưu.",
-        "invalid": "Zero Mail không thể biên dịch quy tắc này. Hãy sửa cách diễn đạt hoặc trả lời câu hỏi làm rõ rồi biên dịch lại."
+        "invalid": "Zero Mail chưa kiểm tra được quy tắc này. Hãy sửa cách diễn đạt hoặc trả lời câu hỏi làm rõ rồi kiểm tra lại."
       },
+      "duplicate": "Quy tắc giống hệt đã tồn tại trong danh sách. Hãy sửa quy tắc cũ hoặc thay đổi điều kiện/hành động.",
       "gmail": {
         "unavailable": "Không thể chạy thử qua Gmail lúc này. Kết nối lại Gmail rồi thử lại."
       },
       "gmailUnavailable": "Không thể chạy thử qua Gmail lúc này. Kết nối lại Gmail rồi thử lại.",
-      "insufficientCredits": "Tín dụng nền tảng đã hết. Hãy nạp thêm tín dụng hoặc lưu khóa BYOK hợp lệ trước khi biên dịch hoặc chạy thử quy tắc.",
+      "insufficientCredits": "Tín dụng nền tảng đã hết. Hãy nạp thêm tín dụng hoặc lưu khóa BYOK hợp lệ trước khi kiểm tra hoặc chạy thử quy tắc.",
       "invalidSampleSize": "Cỡ mẫu chạy thử phải là 10, 25 hoặc 50.",
       "not_found": "Không tìm thấy quy tắc này. Hãy tải lại danh sách quy tắc.",
       "notFound": "Không tìm thấy quy tắc này. Hãy tải lại danh sách quy tắc.",
@@ -392,8 +393,14 @@
         "invalid_sample_size": "Cỡ mẫu chạy thử phải là 10, 25 hoặc 50.",
         "required": "Hãy chạy thử phiên bản quy tắc hiện tại trước khi bật."
       },
+      "refine": {
+        "generic": "Chưa áp dụng được chỉnh sửa này. Bản nháp hiện tại được giữ nguyên — hãy mô tả lại yêu cầu chỉnh sửa rõ hơn rồi thử lại."
+      },
       "reorder": {
         "invalid": "Không thể lưu thứ tự quy tắc. Hãy tải lại danh sách rồi thử lại."
+      },
+      "save": {
+        "generic": "Không thể lưu quy tắc lúc này. Hãy tải lại danh sách rồi thử lại."
       },
       "unsafe_action": "Quy tắc này yêu cầu hành động không được phép trong v1.",
       "version_mismatch": "Quy tắc đã thay đổi trước khi thao tác hoàn tất. Tải lại rồi thử lại.",
@@ -809,26 +816,32 @@
   },
   "rules": {
     "composer": {
-      "actionReview": "Hành động dự kiến",
-      "answerClarification": "Trả lời câu hỏi làm rõ",
-      "answerLabel": "Câu trả lời làm rõ",
-      "compileCta": "Biên dịch quy tắc",
-      "compiledReview": "Zero Mail đã hiểu",
-      "compiling": "Đang biên dịch...",
-      "invalid": "Quy tắc này chưa thể lưu. Hãy sửa cách diễn đạt hoặc trả lời câu hỏi làm rõ.",
-      "matcherReview": "Điều kiện khớp",
-      "newRuleCta": "Soạn quy tắc mới",
-      "saveDisabledCta": "Lưu quy tắc đang tắt",
-      "saving": "Đang lưu...",
-      "sourceLabel": "Nội dung quy tắc",
-      "sourcePlaceholder": "Ví dụ: Lưu trữ biên lai từ Stripe và gắn nhãn Finance",
-      "step": {
-        "compile": "Biên dịch",
-        "save": "Lưu",
-        "write": "Viết"
+      "actionReview": "Zero Mail sẽ làm",
+      "allowedActionsNote": "Ở v1, Zero Mail chỉ được gắn nhãn, lưu trữ khỏi Inbox và lưu bản nháp Gmail. Zero Mail không tự gửi, chuyển tiếp, xóa, đánh spam hoặc gọi webhook.",
+      "answerClarification": "Gửi câu trả lời",
+      "answerLabel": "Câu trả lời của bạn",
+      "compileCta": "Chuyển thành quy tắc",
+      "compiledReview": "Quy tắc sẽ được lưu",
+      "compiling": "Đang kiểm tra...",
+      "example": {
+        "calendar": "Gắn nhãn Calendar cho lời mời họp và cập nhật lịch",
+        "newsletters": "Gắn nhãn Reading cho newsletter, nhưng không lưu trữ email từ khách hàng",
+        "receipts": "Lưu trữ biên lai từ Stripe và gắn nhãn Finance"
       },
-      "title": "Soạn quy tắc",
-      "workflowLabel": "Luồng tạo quy tắc"
+      "examplesHint": "Gợi ý — bấm để chèn nhanh:",
+      "invalid": "Quy tắc này chưa thể lưu. Hãy sửa cách diễn đạt hoặc trả lời câu hỏi làm rõ.",
+      "matcherReview": "Email phù hợp",
+      "newRuleCta": "Tạo quy tắc",
+      "saveDisabledCta": "Lưu (giữ tắt cho đến khi chạy thử)",
+      "saving": "Đang lưu...",
+      "sourceLabel": "Bạn muốn Zero Mail xử lý email nào và làm gì?",
+      "sourcePlaceholder": "Ví dụ: Lưu trữ biên lai từ Stripe và gắn nhãn Finance",
+      "tab": {
+        "describe": "Viết bằng mô tả",
+        "manual": "Xem & sửa"
+      },
+      "tabsLabel": "Cách tạo quy tắc",
+      "title": "Tạo quy tắc xử lý email"
     },
     "delete": {
       "body": "Thao tác này xóa định nghĩa quy tắc. Gmail sẽ không thay đổi, nhưng quy tắc này sẽ không còn xuất hiện trong các lượt chạy thử.",
@@ -841,27 +854,92 @@
     "exampleQuote": "\"Lưu trữ bản tin, marketing và biên lai trừ khi khoản phí trên $500 hoặc đó là hoàn tiền.\"",
     "eyebrow": "Quy tắc mẫu",
     "list": {
+      "actions": "Thao tác với quy tắc",
+      "column": {
+        "enabled": "Bật",
+        "name": "Tên"
+      },
       "customizedBadge": "Đã tùy chỉnh",
       "delete": "Xóa quy tắc",
-      "disabled": "Đang tắt",
       "edit": "Sửa quy tắc",
       "empty": {
-        "body": "Viết quy tắc đầu tiên hoặc bắt đầu từ template Gmail. Quy tắc mới luôn tắt cho đến khi bạn chạy thử.",
+        "body": "Tạo quy tắc đầu tiên hoặc dùng mẫu Gmail có sẵn. Quy tắc mới luôn được lưu ở trạng thái tắt cho đến khi bạn chạy thử.",
         "heading": "Chưa có quy tắc"
       },
-      "enabled": "Đang bật",
-      "moveDown": "Di chuyển quy tắc xuống",
-      "moveUp": "Di chuyển quy tắc lên",
-      "previewReady": "Đã chạy thử",
-      "previewRequired": "Cần chạy thử",
-      "templateBadge": "Template",
-      "title": "Thứ tự quy tắc"
+      "moveDown": "Đưa quy tắc xuống dưới",
+      "moveUp": "Đưa quy tắc lên trên",
+      "noThen": "Chưa có hành động",
+      "noWhen": "Chưa có điều kiện rõ ràng",
+      "subtitle": "Xem nhanh từng quy tắc theo tên, email phù hợp và hành động được phép.",
+      "templateBadge": "Mẫu",
+      "then": "Hành động",
+      "title": "Danh sách quy tắc",
+      "when": "Email phù hợp"
+    },
+    "manual": {
+      "action": {
+        "archive": "Lưu trữ",
+        "label": "Gắn nhãn",
+        "save_draft": "Lưu bản nháp"
+      },
+      "actionPlaceholder": {
+        "archive": "Không cần nhập thêm",
+        "label": "Finance",
+        "save_draft": "Soạn bản nháp ngắn để xin file PDF hóa đơn"
+      },
+      "addAction": "Thêm hành động",
+      "addCondition": "Thêm điều kiện",
+      "advancedTitle": "Đang bị khóa trong v1",
+      "condition": {
+        "GMAIL_LABEL_PRESENT": "Có nhãn Gmail",
+        "HAS_ATTACHMENT": "Có tệp đính kèm",
+        "NEWSLETTER_INDICATOR": "Có dấu hiệu newsletter",
+        "RECIPIENT_TO": "Gửi tới",
+        "SEMANTIC_INTENT": "Nội dung cần nhận diện",
+        "SENDER_DOMAIN": "Tên miền người gửi",
+        "SENDER_EMAIL": "Email người gửi",
+        "SUBJECT_CONTAINS": "Tiêu đề chứa"
+      },
+      "conditionPlaceholder": {
+        "GMAIL_LABEL_PRESENT": "Finance",
+        "HAS_ATTACHMENT": "Không cần nhập thêm",
+        "NEWSLETTER_INDICATOR": "Không cần nhập thêm",
+        "RECIPIENT_TO": "founder@example.com",
+        "SEMANTIC_INTENT": "Email liên quan đến học tập",
+        "SENDER_DOMAIN": "stripe.com",
+        "SENDER_EMAIL": "billing@stripe.com",
+        "SUBJECT_CONTAINS": "receipt"
+      },
+      "nameLabel": "Tên quy tắc",
+      "namePlaceholder": "Ví dụ: Lưu biên lai Stripe",
+      "noValueNeeded": "Không cần nhập thêm",
+      "operator": {
+        "all": "Khớp tất cả",
+        "any": "Khớp bất kỳ"
+      },
+      "refineCta": "Cập nhật form",
+      "refineLabel": "Muốn chỉnh thêm bằng mô tả?",
+      "refinePlaceholder": "Ví dụ: trừ email quảng cáo khóa học, hoặc chỉ áp dụng cho deadline và bài tập",
+      "removeAction": "Xóa hành động",
+      "removeCondition": "Xóa điều kiện",
+      "saveHint": "Quy tắc mới hoặc vừa sửa luôn được lưu ở trạng thái tắt cho đến khi bạn chạy thử.",
+      "structuredPreview": "Quy tắc sẽ được lưu",
+      "thenBody": "Chỉ chọn các hành động an toàn được phép trong v1.",
+      "thenTitle": "Zero Mail sẽ làm",
+      "unsafe": {
+        "autoSend": "Tự gửi",
+        "delete": "Xóa / spam",
+        "forward": "Chuyển tiếp",
+        "webhook": "Gọi webhook"
+      },
+      "whenBody": "Chọn dấu hiệu để Zero Mail nhận diện email trước khi hành động.",
+      "whenTitle": "Email phù hợp"
     },
     "matches": "4 kết quả",
     "page": {
-      "intro": "Viết quy tắc bằng ngôn ngữ tự nhiên, xem trước thư nào sẽ khớp, rồi chỉ bật các quy tắc bạn tin tưởng.",
-      "safetyNote": "Quy tắc mới luôn được lưu ở trạng thái tắt. Chạy thử không thay đổi Gmail.",
-      "title": "Quy tắc"
+      "intro": "Mỗi quy tắc nói rõ email nào cần nhận diện và Zero Mail được phép làm gì. Quy tắc mới luôn tắt cho đến khi bạn chạy thử.",
+      "safetyNote": "Mô tả tự nhiên chỉ là cách nhập nhanh. Khi lưu, Zero Mail giữ cấu trúc điều kiện và hành động để bạn kiểm tra lại; các hành động nguy hiểm vẫn bị khóa.",
+      "title": "Quy tắc tự động"
     },
     "parses": {
       "body": "Zero Mail trích xuất ý định (lưu trữ, gắn nhãn, soạn nháp, thông báo), thực thể (bản tin, biên lai), và điều kiện (số tiền, người gửi, trạng thái chuỗi). Nó không bao giờ chạm vào thư không khớp.",
@@ -871,11 +949,11 @@
       "conflicts": "{count} xung đột",
       "conflictWarning": "Lượt chạy thử này có xung đột hành động. Hãy xem các quy tắc khớp trước khi bật.",
       "deferred": "{count} kiểm tra trì hoãn",
-      "deferredSemantic": "Kiểm tra ngữ nghĩa trì hoãn",
+      "deferredSemantic": "Kiểm tra ngữ nghĩa bị trì hoãn",
       "deferredTooltip": "Phase 03 lưu kiểm tra này, nhưng việc đánh giá được trì hoãn.",
       "disableCta": "Tắt quy tắc",
       "empty": {
-        "body": "Chạy thử trên các email Gmail gần đây trước khi bật quy tắc này.",
+        "body": "Chọn một quy tắc ở trên rồi chạy thử với email Gmail gần đây trước khi bật.",
         "heading": "Chưa chạy thử"
       },
       "enableCta": "Bật quy tắc",
@@ -894,7 +972,7 @@
         "matched": "Đã khớp",
         "sampled": "Đã lấy mẫu"
       },
-      "title": "Chạy thử an toàn"
+      "title": "Kiểm tra quy tắc đang chọn"
     },
     "q": {
       "plain": "ngôn ngữ tự nhiên",
@@ -916,11 +994,11 @@
       "recruiters": "Nhà tuyển dụng"
     },
     "templates": {
-      "browseCta": "Xem template khởi đầu",
+      "browseCta": "Xem mẫu có sẵn",
       "disabledByDefault": "Lưu ở trạng thái tắt cho đến khi chạy thử",
       "materialized": "Đã tạo",
-      "title": "Template khởi đầu",
-      "useStarter": "Dùng quy tắc khởi đầu"
+      "title": "Mẫu khởi đầu",
+      "useStarter": "Dùng mẫu này"
     },
     "title": "Câu văn, không phải bộ lọc."
   },
@@ -1057,8 +1135,8 @@
       },
       "draftAction": "Soạn nháp trả lời",
       "empty": {
-        "body": "Khi Zero Mail xử lý email, các quyết định và lý do sẽ xuất hiện ở đây.",
-        "title": "Chưa có hoạt động triage"
+        "body": "Khi một quy tắc khớp email, bạn sẽ thấy When, Then, lý do và nút hoàn tác tại đây.",
+        "title": "Chưa có hành động email"
       },
       "endOfList": "Đã hết danh sách.",
       "error": {
@@ -1074,7 +1152,9 @@
         "unknownSender": "Người gửi không rõ",
         "untitled": "Email không tiêu đề"
       },
+      "noReason": "Không có lý do chi tiết",
       "regenerateDraftAction": "Tạo lại bản nháp",
+      "thenLabel": "Thì",
       "unavailable": {
         "body": "Backend hiện chỉ có endpoint hoàn tác từng bản ghi, chưa có endpoint danh sách nhật ký. Zero Mail sẽ hiển thị lịch sử tại đây khi endpoint đó được bổ sung.",
         "title": "Chưa có lịch sử triage trong giao diện"
@@ -1090,11 +1170,19 @@
         "undone": "Đã hoàn tác",
         "windowClosed": "Đã hết hạn hoàn tác",
         "windowTooltip": "Hành động triage chỉ có thể hoàn tác trong vòng 30 ngày."
-      }
+      },
+      "whenLabel": "Khi",
+      "whyLabel": "Vì sao"
+    },
+    "flow": {
+      "applied": "Chỉ làm action cho phép",
+      "matched": "Khớp quy tắc When",
+      "observed": "Gmail mới đến",
+      "undo": "Có thể hoàn tác 30 ngày"
     },
     "page": {
-      "description": "Kiểm tra những gì AI đã làm, chạy thử shadow mode, và kiểm soát các người gửi được bảo vệ trước khi cho phép tự động hóa.",
-      "title": "Triage"
+      "description": "Xem quy tắc nào đã khớp, Zero Mail đã làm gì với Gmail, vì sao hành động đó xảy ra, và hoàn tác trong 30 ngày khi cần.",
+      "title": "AI xử lý email"
     },
     "senders": {
       "body": "Những người gửi quan trọng được giữ an toàn cho đến khi bạn cho phép tự động hóa.",
@@ -1113,8 +1201,8 @@
       "unknown": "Người gửi không rõ"
     },
     "shadow": {
-      "badgeOn": "Shadow mode đang bật",
-      "body": "Chạy triage như một bản nháp an toàn: Zero Mail ghi nhận quyết định nhưng không thay đổi Gmail.",
+      "badgeOn": "Đang chạy thử",
+      "body": "Zero Mail vẫn đánh giá email và ghi lại quyết định, nhưng không gắn nhãn, lưu nháp, hay lưu trữ khỏi Inbox.",
       "confirm": {
         "action": "Tắt shadow mode",
         "body": "Sau khi tắt, Zero Mail có thể áp dụng các hành động Gmail được phép.",
@@ -1128,14 +1216,14 @@
       },
       "offBody": "Các hành động triage được phép sẽ được áp dụng sau khi qua kiểm tra an toàn.",
       "onBody": "Zero Mail sẽ đánh giá email nhưng không áp dụng nhãn, lưu draft, hoặc archive.",
-      "title": "Shadow mode",
-      "toggleLabel": "Bật shadow mode"
+      "title": "Chạy thử không đổi Gmail",
+      "toggleLabel": "Bật chế độ chạy thử"
     },
     "tabs": {
-      "audit": "Nhật ký",
-      "label": "Khu vực triage",
-      "senders": "Người gửi",
-      "shadow": "Shadow mode"
+      "audit": "Hoạt động",
+      "label": "Khu vực xử lý email",
+      "senders": "Người gửi quan trọng",
+      "shadow": "Chạy thử"
     }
   },
   "trust": {

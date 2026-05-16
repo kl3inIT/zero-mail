@@ -3,7 +3,7 @@ package com.zeromail.worker.notification;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.notification.domain.ChannelType;
 import com.zeromail.core.notification.domain.DigestPayload;
-import com.zeromail.core.notification.usecases.DigestAlreadyClaimedException;
+import com.zeromail.core.notification.exception.DigestAlreadyClaimedException;
 import com.zeromail.core.notification.usecases.DigestClaimRecord;
 import com.zeromail.core.notification.usecases.DigestComposer;
 import com.zeromail.core.notification.usecases.DigestDeliveryService;

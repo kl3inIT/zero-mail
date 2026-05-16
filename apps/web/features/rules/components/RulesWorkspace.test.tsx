@@ -43,24 +43,27 @@ describe('RulesWorkspace Wave 0 contract', () => {
           },
           priorCompileContext: 'Which receipts should Zero Mail archive?',
         }}
+        lastCompiled={null}
         compileError={null}
         insufficientCreditError={null}
         isCompiling={false}
         isSaving={false}
-        canPreview={false}
         onSourceTextChange={vi.fn()}
         onClarificationAnswerChange={vi.fn()}
         onCompile={vi.fn()}
         onAnswerClarification={vi.fn()}
         onSaveDisabledRule={vi.fn()}
-        onOpenPreview={vi.fn()}
+        onSaveManualRule={vi.fn()}
+        onRefineManualRule={vi.fn()}
       />,
     );
 
-    expect(screen.getByLabelText('Rule text')).toHaveValue('Archive receipts from Stripe');
+    expect(
+      screen.getByLabelText('Which emails should Zero Mail match, and what should it do?'),
+    ).toHaveValue('Archive receipts from Stripe');
     expect(screen.getByText('Which receipts should Zero Mail archive?')).toBeInTheDocument();
-    expect(screen.getByLabelText('Clarification answer')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Answer clarification' })).toBeDisabled();
+    expect(screen.getByLabelText('Your answer')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Send answer' })).toBeDisabled();
   });
 
   it('renders HTML-looking rule names as text instead of injected markup', () => {
@@ -88,13 +91,16 @@ describe('RulesWorkspace Wave 0 contract', () => {
       />,
     );
 
-    expect(screen.getByText('<img src=x onerror=alert(1)>')).toBeInTheDocument();
+    // RuleList renders rule names in both the desktop table and the mobile
+    // card list, so multiple matches are expected; assert at least one and
+    // that no real <img> tag was ever inserted (the XSS guard).
+    expect(screen.getAllByText('<img src=x onerror=alert(1)>').length).toBeGreaterThan(0);
     expect(container.querySelector('img')).toBeNull();
   });
 
   it('pins UI-SPEC visible copy for component tests', () => {
     expect(enMessages.rules.preview.noWriteNotice).toBe('No Gmail changes were made.');
-    expect(enMessages.rules.composer.compileCta).toBe('Compile rule');
+    expect(enMessages.rules.composer.compileCta).toBe('Convert to rule');
     expect(enMessages.rules.preview.previewCta).toBe('Preview rule');
     expect(enMessages.rules.preview.enableCta).toBe('Enable rule');
   });
@@ -113,15 +119,31 @@ describe('RulesWorkspace Wave 0 contract', () => {
 
     renderWithMessages(<RulesWorkspace />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit rule' }));
-    const sourceTextarea = await screen.findByLabelText('Rule text');
+    // RuleList renders the rule row in both the desktop table and the mobile
+    // card list, so "Rule actions" appears twice; pick the first.
+    const ruleActionsButtons = await screen.findAllByRole('button', { name: 'Rule actions' });
+    fireEvent.click(ruleActionsButtons[0]!);
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Edit rule' }));
+    // Editing an existing compiled rule opens the manual tab by default
+    // (lastCompiled is non-null). Switch to the describe tab so the source
+    // textarea is mounted and we can simulate the user dirtying it.
+    fireEvent.click(await screen.findByRole('tab', { name: /Describe/i }));
+    const sourceTextarea = await screen.findByLabelText(
+      'Which emails should Zero Mail match, and what should it do?',
+    );
     await waitFor(() => expect(sourceTextarea).toHaveValue('Archive Stripe receipts'));
     fireEvent.change(sourceTextarea, { target: { value: 'Archive GitHub receipts' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Compile rule' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Convert to rule' }));
     await waitFor(() => expect(compileRule).toHaveBeenCalled());
-    fireEvent.click(screen.getByRole('button', { name: 'Preview rule' }));
-    await waitFor(() => expect(screen.queryByLabelText('Rule text')).not.toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: 'Preview rule' }));
+    // The in-dialog "Preview rule" shortcut was removed; preview now happens
+    // from RulePreviewPanel. The dialog is still open which marks the rest
+    // of the page as aria-hidden, so we have to include hidden elements
+    // when querying for the panel's button.
+    const previewButtons = await screen.findAllByRole('button', {
+      name: 'Preview rule',
+      hidden: true,
+    });
+    fireEvent.click(previewButtons[0]!);
 
     await waitFor(() => expect(previewDraftRule).toHaveBeenCalled());
     expect(previewSavedRule).not.toHaveBeenCalled();

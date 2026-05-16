@@ -45,6 +45,16 @@ public interface LlmGateway {
     RuleCompileGatewayResult compileRule(CallSite callSite, String compilerPayload);
 
     /**
+     * Rules-engine compile path for UX review drafts. It uses the same canonical {@code
+     * rule_compile} tool name but a stricter schema that removes the clarification branch so broad
+     * semantic rules become editable form drafts instead of blocking follow-up questions.
+     */
+    default RuleCompileGatewayResult compileRuleReviewDraft(
+            CallSite callSite, String compilerPayload) {
+        return compileRule(callSite, compilerPayload);
+    }
+
+    /**
      * Resolves a batch of {@code SEMANTIC_INTENT} matchers for one message in one structured-output
      * LLM call.
      *

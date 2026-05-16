@@ -35,8 +35,8 @@ class ZeroMailLlmPropertiesTest {
                         "zero-mail.llm.platform.provider=openai",
                         "zero-mail.llm.platform.base-url=https://openrouter.ai/api/v1",
                         "zero-mail.llm.platform.api-key=test-platform-key",
-                        "zero-mail.llm.platform.compile-model=openai/gpt-4o-mini",
-                        "zero-mail.llm.platform.drift-model=openai/gpt-4o-mini",
+                        "zero-mail.llm.platform.compile-model=openai/gpt-5.4-nano",
+                        "zero-mail.llm.platform.drift-model=openai/gpt-5.4-nano",
                         "zero-mail.llm.platform.triage-model=anthropic/claude-3.5-sonnet")
                 .run(
                         applicationContext -> {
@@ -51,12 +51,12 @@ class ZeroMailLlmPropertiesTest {
                                     .isEqualTo("https://openrouter.ai/api/v1");
                             assertThat(llmProperties.apiKey()).isEqualTo("test-platform-key");
                             assertThat(llmProperties.compileModel())
-                                    .isEqualTo("openai/gpt-4o-mini");
-                            assertThat(llmProperties.driftModel()).isEqualTo("openai/gpt-4o-mini");
+                                    .isEqualTo("openai/gpt-5.4-nano");
+                            assertThat(llmProperties.driftModel()).isEqualTo("openai/gpt-5.4-nano");
                             assertThat(llmProperties.triageModel())
                                     .isEqualTo("anthropic/claude-3.5-sonnet");
                             assertThat(llmProperties.modelByCallSite())
-                                    .containsEntry(CallSite.PREVIEW, "openai/gpt-4o-mini")
+                                    .containsEntry(CallSite.PREVIEW, "openai/gpt-5.4-nano")
                                     .containsEntry(CallSite.DRAFT, "anthropic/claude-3.5-sonnet")
                                     .containsEntry(CallSite.TRIAGE, "anthropic/claude-3.5-sonnet")
                                     .containsEntry(

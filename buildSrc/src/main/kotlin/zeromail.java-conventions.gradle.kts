@@ -14,6 +14,9 @@ repositories {
     maven("https://repo.spring.io/snapshot")
 }
 
+val utf8RuntimeJvmArgs =
+    listOf("--enable-preview", "-Dfile.encoding=UTF-8", "-Dsun.stdout.encoding=UTF-8", "-Dsun.stderr.encoding=UTF-8")
+
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
     // --enable-preview: JDK 25 Structured Concurrency (JEP 505) is still preview.
@@ -23,13 +26,13 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
-    jvmArgs("--enable-preview")
+    jvmArgs(utf8RuntimeJvmArgs)
 }
 
 tasks.withType<JavaExec>().configureEach {
-    jvmArgs("--enable-preview")
+    jvmArgs(utf8RuntimeJvmArgs)
 }
 
 tasks.withType<org.springframework.boot.gradle.tasks.run.BootRun>().configureEach {
-    jvmArgs("--enable-preview")
+    jvmArgs(utf8RuntimeJvmArgs)
 }

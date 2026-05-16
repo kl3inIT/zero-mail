@@ -1,0 +1,219 @@
+# Tag-triggered release gate (D-10/D-12). Calls gates.yml + adds golden-path + loadtest + trust-story-grep jobs.
+# release-gates-summary is the required check for LAUNCH-GO-NOGO.md item (b).
+# WARNING: this exposes ALL repo secrets to the reusable workflow; keep gates.yml inputs minimal and audited.
+name: Release Gates
+
+on:
+  push:
+    tags: ['v*.*.*-rc*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  gates:
+    uses: ./.github/workflows/gates.yml
+    secrets: inherit # WARNING: this exposes ALL repo secrets to the reusable workflow; keep gates.yml inputs minimal and audited.
+
+  golden-path:
+    name: Playwright Golden Path (e2e-stub)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          check-latest: true
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: ${{ github.workspace }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        working-directory: ${{ github.workspace }}
+        run: pnpm --filter web exec playwright install --with-deps chromium
+
+      - name: Bring up dev compose (postgres + redis)
+        working-directory: ${{ github.workspace }}
+        run: docker compose up -d --wait
+
+      - name: Run golden-path spec
+        working-directory: ${{ github.workspace }}
+        run: pnpm --filter web run test:e2e:golden
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+
+      - name: Upload Playwright golden-path report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-golden-path-report
+          path: apps/web/playwright-report/
+          retention-days: 30
+
+  loadtest:
+    name: 50-Tenant Load Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          check-latest: true
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Set up k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Install psql client
+        working-directory: ${{ github.workspace }}
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: MED-4 pre-run cleanup
+        working-directory: ${{ github.workspace }}
+        run: docker compose -f loadtest/compose.loadtest.yml down -v || true
+
+      - name: Build api OCI image
+        working-directory: ${{ github.workspace }}
+        run: ./gradlew --no-daemon :backend:api:bootBuildImage --imageName=zeromail-api:loadtest
+
+      - name: Build worker OCI image
+        working-directory: ${{ github.workspace }}
+        run: ./gradlew --no-daemon :backend:worker:bootBuildImage --imageName=zeromail-worker:loadtest
+
+      - name: Generate ephemeral AES-GCM key
+        working-directory: ${{ github.workspace }}
+        run: echo "REFRESH_TOKEN_KEY_BASE64=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+
+      - name: Bring up loadtest compose stack
+        working-directory: ${{ github.workspace }}
+        run: docker compose -f loadtest/compose.loadtest.yml up -d --wait
+
+      - name: Wait for API readiness
+        working-directory: ${{ github.workspace }}
+        run: |
+          for attempt in {1..60}; do
+            if curl -fsS http://localhost:8080/actuator/health/readiness; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose -f loadtest/compose.loadtest.yml logs --no-color --no-log-prefix api
+          exit 1
+
+      - name: Seed 50 UUID tenants
+        working-directory: ${{ github.workspace }}
+        env:
+          PGPASSWORD: zeromail
+        run: |
+          psql -h localhost -p 15433 -U zeromail -d zeromail -f loadtest/scripts/seed-tenants.sql
+          LOADTEST_TENANT_UUIDS=$(psql -h localhost -p 15433 -U zeromail -d zeromail -tAc "SELECT string_agg(tenant_id::text, ',' ORDER BY slug) FROM loadtest_tenant")
+          echo "LOADTEST_TENANT_UUIDS=${LOADTEST_TENANT_UUIDS}" >> "$GITHUB_ENV"
+
+      - name: Run k6 load test
+        working-directory: ${{ github.workspace }}
+        run: k6 run loadtest/scripts/golden-path.js
+        env:
+          API_BASE_URL: http://localhost:8080
+          LOADTEST_TENANT_UUIDS: ${{ env.LOADTEST_TENANT_UUIDS }}
+
+      - name: Wait for worker drain (MED-3)
+        working-directory: ${{ github.workspace }}
+        run: bash loadtest/scripts/wait-for-worker-drain.sh
+        env:
+          LOADTEST_DB_HOST: localhost
+          LOADTEST_DB_PORT: '15433'
+          LOADTEST_DB_NAME: zeromail
+          LOADTEST_DB_USER: zeromail
+          LOADTEST_DB_PASSWORD: zeromail
+          LOADTEST_DRAIN_TIMEOUT: '120'
+
+      - name: Capture container logs
+        if: ${{ always() }}
+        working-directory: ${{ github.workspace }}
+        run: |
+          mkdir -p loadtest/run
+          docker compose -f loadtest/compose.loadtest.yml logs --no-color --no-log-prefix api worker > loadtest/run/run.log
+
+      - name: Verify invariants
+        working-directory: ${{ github.workspace }}
+        run: ./gradlew --no-daemon :backend:api:loadtestVerify
+
+      - name: Upload k6 summary and run log
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: loadtest-artifacts
+          path: loadtest/run/
+          retention-days: 30
+
+      - name: Tear down compose
+        if: ${{ always() }}
+        working-directory: ${{ github.workspace }}
+        run: docker compose -f loadtest/compose.loadtest.yml down -v
+
+  trust-story-grep:
+    name: Trust Story Phrases (LAUNCH-GO-NOGO.md item g)
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Verify the three load-bearing trust-story phrases
+        working-directory: ${{ github.workspace }}
+        run: |
+          grep -Fq 'auto-send forbidden' .planning/LAUNCH-GO-NOGO.md
+          grep -Fq 'no stored bodies / prompts / completions' .planning/LAUNCH-GO-NOGO.md
+          grep -Fq 'every triage action undoable' .planning/LAUNCH-GO-NOGO.md
+
+  release-gates-summary:
+    name: Release Gates Summary
+    needs: [gates, golden-path, loadtest, trust-story-grep]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Assert all upstream jobs succeeded
+        run: |
+          if [[ "${{ needs.gates.result }}" != "success" ]] || \
+             [[ "${{ needs.golden-path.result }}" != "success" ]] || \
+             [[ "${{ needs.loadtest.result }}" != "success" ]] || \
+             [[ "${{ needs.trust-story-grep.result }}" != "success" ]]; then
+            echo "::error::One or more release gates failed (gates=${{ needs.gates.result }}, golden-path=${{ needs.golden-path.result }}, loadtest=${{ needs.loadtest.result }}, trust-story-grep=${{ needs.trust-story-grep.result }})"
+            exit 1
+          fi
+          echo "All release gates passed."

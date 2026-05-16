@@ -22,15 +22,13 @@ import { ErrorCode } from '@/lib/api/error-codes';
 describe('frontend ErrorCode -> backend ErrorCodes.java parity', () => {
   const errorCodesJavaPath = resolve(
     __dirname,
-    '../../../../backend/api/src/main/java/com/zeromail/api/error/ErrorCodes.java',
+    '../../../../backend/core/src/main/java/com/zeromail/core/shared/error/ErrorCodes.java',
   );
   const errorCodesJavaSource = readFileSync(errorCodesJavaPath, 'utf-8');
 
   // Extract every quoted dotted code from `public static final String NAME = "value";`
   const backendCodeMatches = Array.from(
-    errorCodesJavaSource.matchAll(
-      /public\s+static\s+final\s+String\s+\w+\s*=\s*"([^"]+)"/g,
-    ),
+    errorCodesJavaSource.matchAll(/public\s+static\s+final\s+String\s+\w+\s*=\s*"([^"]+)"/g),
   );
   const backendCodes = new Set(backendCodeMatches.map((match) => match[1]));
 

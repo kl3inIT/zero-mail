@@ -9,6 +9,7 @@ import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePartHeader;
 import com.zeromail.core.gmail.event.MailMessageObserved;
 import com.zeromail.core.gmail.event.MailOutboundObserved;
+import com.zeromail.core.gmail.exception.InvalidGrantException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
@@ -20,20 +21,32 @@ import com.zeromail.core.shared.privacy.EmailAddressCanonicalizer;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.StructuredTaskScope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class GmailDeliveryProcessingService {
 
     private static final Logger log = LoggerFactory.getLogger(GmailDeliveryProcessingService.class);
+
+    /**
+     * Per-tenant Gmail messages.get fanout cap. Kept well under Gmail's 250 quota-units/sec
+     * per-user budget (~1 message fetch ≈ 5 units), leaving headroom for other concurrent calls
+     * within the same tenant.
+     */
+    private static final int GMAIL_FETCH_CONCURRENCY = 8;
 
     private final PubSubDeliveryRepository deliveryRepository;
     private final MailMessageObservedRepository observedRepository;
@@ -43,6 +56,7 @@ public class GmailDeliveryProcessingService {
     private final RefreshTokenCipher refreshTokenCipher;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final EmailAddressCanonicalizer emailAddressCanonicalizer;
+    private final TransactionTemplate observationTransaction;
 
     public GmailDeliveryProcessingService(
             PubSubDeliveryRepository deliveryRepository,
@@ -52,7 +66,8 @@ public class GmailDeliveryProcessingService {
             GmailApiClientFactory gmailApiClientFactory,
             RefreshTokenCipher refreshTokenCipher,
             ApplicationEventPublisher applicationEventPublisher,
-            EmailAddressCanonicalizer emailAddressCanonicalizer) {
+            EmailAddressCanonicalizer emailAddressCanonicalizer,
+            PlatformTransactionManager transactionManager) {
         this.deliveryRepository = deliveryRepository;
         this.observedRepository = observedRepository;
         this.connectionService = connectionService;
@@ -61,6 +76,7 @@ public class GmailDeliveryProcessingService {
         this.refreshTokenCipher = refreshTokenCipher;
         this.applicationEventPublisher = applicationEventPublisher;
         this.emailAddressCanonicalizer = emailAddressCanonicalizer;
+        this.observationTransaction = new TransactionTemplate(transactionManager);
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -143,13 +159,64 @@ public class GmailDeliveryProcessingService {
 
     private int observeInboxMessages(
             Gmail gmail, UUID tenantId, ListHistoryResponse historyResponse)
-            throws java.io.IOException {
-        int newObservations = 0;
+            throws java.io.IOException, InterruptedException {
         List<History> historyList = historyResponse.getHistory();
         if (historyList == null) {
-            return newObservations;
+            return 0;
         }
 
+        List<PendingFetch> pendingFetches = collectPendingFetches(historyList);
+        if (pendingFetches.isEmpty()) {
+            return 0;
+        }
+
+        Semaphore concurrencyLimiter = new Semaphore(GMAIL_FETCH_CONCURRENCY);
+        List<StructuredTaskScope.Subtask<Integer>> subtasks =
+                new ArrayList<>(pendingFetches.size());
+        try (var scope = StructuredTaskScope.<Integer>open()) {
+            for (PendingFetch pendingFetch : pendingFetches) {
+                subtasks.add(
+                        scope.fork(
+                                () -> {
+                                    concurrencyLimiter.acquire();
+                                    try {
+                                        return fetchAndObserve(
+                                                gmail,
+                                                tenantId,
+                                                pendingFetch.history(),
+                                                pendingFetch.gmailMessageId());
+                                    } finally {
+                                        concurrencyLimiter.release();
+                                    }
+                                }));
+            }
+            scope.join();
+        }
+
+        int newObservations = 0;
+        for (StructuredTaskScope.Subtask<Integer> subtask : subtasks) {
+            if (subtask.state() == StructuredTaskScope.Subtask.State.SUCCESS) {
+                newObservations += subtask.get();
+                continue;
+            }
+            // Preserve original fail-fast semantics: any Gmail fetch failure aborts the
+            // batch so the outer retry envelope reprocesses the entire history range.
+            // insertObservedIfAbsent dedup ensures already-persisted observations are
+            // not duplicated when Pub/Sub redelivers.
+            Throwable failureCause = subtask.exception();
+            if (failureCause instanceof java.io.IOException ioFailure) {
+                throw ioFailure;
+            }
+            if (failureCause instanceof RuntimeException runtimeFailure) {
+                throw runtimeFailure;
+            }
+            throw new RuntimeException(failureCause);
+        }
+        return newObservations;
+    }
+
+    private List<PendingFetch> collectPendingFetches(List<History> historyList) {
+        List<PendingFetch> pendingFetches = new ArrayList<>();
         for (History history : historyList) {
             if (history.getMessagesAdded() == null) {
                 continue;
@@ -159,60 +226,80 @@ public class GmailDeliveryProcessingService {
                 if (historyMessage == null || historyMessage.getId() == null) {
                     continue;
                 }
-
-                Message gmailMessage =
-                        gmail.users()
-                                .messages()
-                                .get("me", historyMessage.getId())
-                                .setFormat("metadata")
-                                .setMetadataHeaders(List.of("From"))
-                                .setFields("id,threadId,labelIds,internalDate,payload/headers")
-                                .execute();
-                List<String> labelIds = gmailMessage.getLabelIds();
-                if (labelIds == null
-                        || (!labelIds.contains("INBOX") && !labelIds.contains("SENT"))) {
-                    continue;
-                }
-                String senderEmail = extractSanitizedSenderEmail(gmailMessage);
-
-                int insertedCount =
-                        observedRepository.insertObservedIfAbsent(
-                                tenantId,
-                                gmailMessage.getId(),
-                                gmailMessage.getThreadId(),
-                                history.getId().longValueExact(),
-                                labelIds.toArray(new String[0]),
-                                gmailMessage.getInternalDate(),
-                                senderEmail);
-                if (insertedCount == 1) {
-                    newObservations++;
-                    Instant observedAt = Instant.now();
-                    applicationEventPublisher.publishEvent(
-                            new MailMessageObserved(
-                                    tenantId,
-                                    gmailMessage.getId(),
-                                    gmailMessage.getThreadId(),
-                                    observedAt));
-                    log.info(
-                            "event=mail_message_observed_published tenantId={} gmailMessageId={}",
-                            tenantId,
-                            gmailMessage.getId());
-                    if (labelIds.contains("SENT")) {
-                        applicationEventPublisher.publishEvent(
-                                new MailOutboundObserved(
-                                        tenantId,
-                                        gmailMessage.getThreadId(),
-                                        gmailMessage.getId(),
-                                        observedAt));
-                        log.info(
-                                "event=mail_outbound_observed_published tenantId={} gmailMessageId={}",
-                                tenantId,
-                                gmailMessage.getId());
-                    }
-                }
+                pendingFetches.add(new PendingFetch(history, historyMessage.getId()));
             }
         }
-        return newObservations;
+        return pendingFetches;
+    }
+
+    private int fetchAndObserve(Gmail gmail, UUID tenantId, History history, String gmailMessageId)
+            throws java.io.IOException {
+        Message gmailMessage =
+                gmail.users()
+                        .messages()
+                        .get("me", gmailMessageId)
+                        .setFormat("metadata")
+                        .setMetadataHeaders(List.of("From"))
+                        .setFields("id,threadId,labelIds,internalDate,payload/headers")
+                        .execute();
+        List<String> labelIds = gmailMessage.getLabelIds();
+        if (labelIds == null || (!labelIds.contains("INBOX") && !labelIds.contains("SENT"))) {
+            return 0;
+        }
+        String senderEmail = extractSanitizedSenderEmail(gmailMessage);
+        return insertObservationAndPublishEvents(
+                tenantId, history, gmailMessage, labelIds, senderEmail);
+    }
+
+    private record PendingFetch(History history, String gmailMessageId) {}
+
+    private int insertObservationAndPublishEvents(
+            UUID tenantId,
+            History history,
+            Message gmailMessage,
+            List<String> labelIds,
+            String senderEmail) {
+        Integer insertedCount =
+                observationTransaction.execute(
+                        transactionStatus -> {
+                            int newRowCount =
+                                    observedRepository.insertObservedIfAbsent(
+                                            tenantId,
+                                            gmailMessage.getId(),
+                                            gmailMessage.getThreadId(),
+                                            history.getId().longValueExact(),
+                                            labelIds.toArray(new String[0]),
+                                            gmailMessage.getInternalDate(),
+                                            senderEmail);
+                            if (newRowCount == 1) {
+                                publishObservedEvents(tenantId, gmailMessage, labelIds);
+                            }
+                            return newRowCount;
+                        });
+        return insertedCount == null ? 0 : insertedCount;
+    }
+
+    private void publishObservedEvents(UUID tenantId, Message gmailMessage, List<String> labelIds) {
+        Instant observedAt = Instant.now();
+        applicationEventPublisher.publishEvent(
+                new MailMessageObserved(
+                        tenantId, gmailMessage.getId(), gmailMessage.getThreadId(), observedAt));
+        log.info(
+                "event=mail_message_observed_published tenantId={} gmailMessageId={}",
+                tenantId,
+                gmailMessage.getId());
+        if (labelIds.contains("SENT")) {
+            applicationEventPublisher.publishEvent(
+                    new MailOutboundObserved(
+                            tenantId,
+                            gmailMessage.getThreadId(),
+                            gmailMessage.getId(),
+                            observedAt));
+            log.info(
+                    "event=mail_outbound_observed_published tenantId={} gmailMessageId={}",
+                    tenantId,
+                    gmailMessage.getId());
+        }
     }
 
     private String extractSanitizedSenderEmail(Message gmailMessage) {

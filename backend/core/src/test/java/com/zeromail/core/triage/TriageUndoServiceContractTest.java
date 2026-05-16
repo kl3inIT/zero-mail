@@ -17,10 +17,8 @@ class TriageUndoServiceContractTest {
             "com.zeromail.core.triage.usecases.TriageUndoService";
     private static final String TRIAGE_GMAIL_WRITER =
             "com.zeromail.core.triage.usecases.TriageGmailWriter";
-    private static final String TRIAGE_UNDO_EXPIRED_EXCEPTION =
-            "com.zeromail.core.triage.exception.TriageUndoExpiredException";
-    private static final String TRIAGE_UNDO_ALREADY_DONE_EXCEPTION =
-            "com.zeromail.core.triage.exception.TriageUndoAlreadyDoneException";
+    private static final String TRIAGE_UNDO_EXCEPTION =
+            "com.zeromail.core.triage.exception.TriageUndoException";
     private static final String TRIAGE_AUDIT_EXCEPTION =
             "com.zeromail.core.triage.exception.TriageAuditException";
 
@@ -28,8 +26,7 @@ class TriageUndoServiceContractTest {
     void future_undo_contract_types_are_present() {
         assertFutureTypePresent(TRIAGE_UNDO_SERVICE);
         assertFutureTypePresent(TRIAGE_GMAIL_WRITER);
-        assertFutureTypePresent(TRIAGE_UNDO_EXPIRED_EXCEPTION);
-        assertFutureTypePresent(TRIAGE_UNDO_ALREADY_DONE_EXCEPTION);
+        assertFutureTypePresent(TRIAGE_UNDO_EXCEPTION);
         assertFutureTypePresent(TRIAGE_AUDIT_EXCEPTION);
     }
 
@@ -52,13 +49,12 @@ class TriageUndoServiceContractTest {
     @Test
     void expired_already_done_and_unsupported_actions_fail_with_reason_specific_exceptions()
             throws Exception {
-        assertThat(throwableType(TRIAGE_UNDO_EXPIRED_EXCEPTION)).isNotNull();
-        assertThat(throwableType(TRIAGE_UNDO_ALREADY_DONE_EXCEPTION)).isNotNull();
+        assertThat(throwableType(TRIAGE_UNDO_EXCEPTION)).isNotNull();
         assertThat(TriageUndoPolicy.UNDO_WINDOW).isEqualTo(Duration.ofDays(30));
         assertThat(undoServiceSource())
                 .contains("TriageUndoPolicy.UNDO_WINDOW")
-                .contains("throw new TriageUndoExpiredException")
-                .contains("throw new TriageUndoAlreadyDoneException")
+                .contains("TriageUndoException.expired")
+                .contains("TriageUndoException.alreadyDone")
                 .contains("unsupportedActionType()");
     }
 

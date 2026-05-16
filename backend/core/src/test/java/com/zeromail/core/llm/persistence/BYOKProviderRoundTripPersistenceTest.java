@@ -96,7 +96,7 @@ class BYOKProviderRoundTripPersistenceTest extends PostgresContainerTest {
             case ANTHROPIC -> "claude-3-haiku-20240307";
             case DEEPSEEK -> "deepseek-chat";
             case GOOGLE_GENAI -> "gemini-2.0-flash";
-            case OPENAI -> "openai/gpt-4o-mini";
+            case OPENAI -> "openai/gpt-5.4-nano";
         };
     }
 

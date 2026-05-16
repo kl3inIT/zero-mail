@@ -41,7 +41,7 @@ class RuleCompileGatewayContractTest {
                                                 CallSite.PREVIEW, "Archive Stripe receipts"));
 
         assertThat(compileResult.toolName()).isEqualTo("rule_compile");
-        assertThat(compileResult.modelId()).isEqualTo("openai/gpt-4o-mini");
+        assertThat(compileResult.modelId()).isEqualTo("openai/gpt-5.4-nano");
         assertThat(compileResult.toolArguments())
                 .containsEntry("schemaVersion", "rules.v1")
                 .containsEntry("displayName", "Stripe receipts");
@@ -58,7 +58,7 @@ class RuleCompileGatewayContractTest {
                                             tool ->
                                                     assertThat(tool.name())
                                                             .isEqualTo("rule_compile"));
-                            assertThat(request.model()).isEqualTo("openai/gpt-4o-mini");
+                            assertThat(request.model()).isEqualTo("openai/gpt-5.4-nano");
                             assertThat(request.temperature()).isZero();
                             assertThat(request.toolChoiceRequired()).isTrue();
                         });
@@ -100,9 +100,9 @@ class RuleCompileGatewayContractTest {
                 BYOKProvider.OPENAI,
                 "https://openrouter.ai/api/v1",
                 "test-platform-key",
-                "openai/gpt-4o-mini",
-                "openai/gpt-4o-mini",
-                "openai/gpt-4o-mini",
+                "openai/gpt-5.4-nano",
+                "openai/gpt-5.4-nano",
+                "openai/gpt-5.4-nano",
                 null,
                 null);
     }

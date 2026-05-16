@@ -42,7 +42,6 @@ public class TenantService {
                         tenant -> {
                             if (TenantEntity.DEFAULT_TIME_ZONE.equals(tenant.getTimeZone())) {
                                 tenant.setTimeZone(ianaZone);
-                                tenantRepository.save(tenant);
                             }
                         });
     }
@@ -58,18 +57,33 @@ public class TenantService {
 
     @Transactional
     public void setTriagePaused(UUID tenantId, boolean paused) {
-        tenantRepository
-                .findById(tenantId)
-                .ifPresent(
-                        tenant -> {
-                            tenant.setTriagePaused(paused);
-                            tenantRepository.save(tenant);
-                        });
+        tenantRepository.findById(tenantId).ifPresent(tenant -> tenant.setTriagePaused(paused));
     }
 
     @Transactional(readOnly = true)
     public boolean isTriagePaused(UUID tenantId) {
         return tenantRepository.findById(tenantId).map(TenantEntity::isTriagePaused).orElse(false);
+    }
+
+    /**
+     * Reads both triage flags in a single query so hot-path callers like the triage orchestrator do
+     * not issue two separate {@code findById} round trips per inbound message.
+     */
+    @Transactional(readOnly = true)
+    public TenantTriageSettings triageSettingsFor(UUID tenantId) {
+        return tenantRepository
+                .findById(tenantId)
+                .map(
+                        tenant ->
+                                new TenantTriageSettings(
+                                        tenant.isTriagePaused(), tenant.isTriageShadowMode()))
+                .orElse(TenantTriageSettings.defaults());
+    }
+
+    public record TenantTriageSettings(boolean paused, boolean shadowMode) {
+        public static TenantTriageSettings defaults() {
+            return new TenantTriageSettings(false, false);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -84,11 +98,7 @@ public class TenantService {
     public void setTriageShadowMode(UUID tenantId, boolean enabled) {
         tenantRepository
                 .findById(tenantId)
-                .ifPresent(
-                        tenant -> {
-                            tenant.setTriageShadowMode(enabled);
-                            tenantRepository.save(tenant);
-                        });
+                .ifPresent(tenant -> tenant.setTriageShadowMode(enabled));
     }
 
     @Transactional(readOnly = true)

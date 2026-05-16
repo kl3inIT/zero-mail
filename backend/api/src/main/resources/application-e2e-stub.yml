@@ -1,0 +1,42 @@
+# Activated by SPRING_PROFILES_ACTIVE=e2e-stub. Used by Playwright launch-golden-path.spec.ts only.
+# HIGH-4: self-sufficient. Every override below is a literal placeholder.
+zeromail:
+  e2e-stub:
+    enabled: true
+zero-mail:
+  crypto:
+    refresh-token-key-base64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+  api:
+    gmail:
+      pubsub:
+        push-audience-url: https://e2e-stub.invalid/internal/pubsub/gmail
+        sa-principal-email: e2e-stub-sa@e2e-stub.invalid
+        oidc-certificates-url: https://www.googleapis.com/oauth2/v3/certs
+  billing:
+    sepay:
+      webhook-api-key: e2e-stub-sepay-key
+    payment-account:
+      bank-code: e2e-stub-bank
+      bank-name: e2e-stub
+      account-number: "0000"
+      account-name: e2e-stub-account
+      qr-payload: ""
+    vnd-per-credit: 1000
+    max-pending-intents-per-tenant: 5
+    intent-expiry: PT24H
+  llm:
+    platform:
+      api-key: e2e-stub-llm-key
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: e2e-stub-client-id
+            client-secret: e2e-stub-client-secret
+  ai:
+    openai:
+      api-key: e2e-stub-openai-key
+    anthropic:
+      api-key: e2e-stub-anthropic-key

@@ -6,9 +6,9 @@ import static org.mockito.Mockito.when;
 
 import com.zeromail.core.analytics.domain.TimeWindow;
 import com.zeromail.core.analytics.projection.AnalyticsSummaryProjection;
-import com.zeromail.core.analytics.projection.AnalyticsSummaryQueryService;
 import com.zeromail.core.analytics.projection.RuleHitProjection;
 import com.zeromail.core.analytics.projection.TopSenderProjection;
+import com.zeromail.core.analytics.usecases.AnalyticsSummaryQueryService;
 import com.zeromail.core.notification.domain.DigestPayload;
 import com.zeromail.core.notification.usecases.DigestComposer;
 import java.net.URI;

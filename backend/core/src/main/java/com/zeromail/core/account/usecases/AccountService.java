@@ -13,11 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
  * Centralizing this here gives us one place to enforce tenant invariants, transaction boundaries,
  * and (later) audit logging — and lets controllers stay transport-only.
  *
- * <p>Phase 1.2 reshape (CL-2 + D-D1): the previous incarnation injected four cross-domain
- * repositories (gmail, onboarding, user, tenant) to perform a cascading delete inline. After Phase
- * 1.2 only {@link UserRepository} remains — the multi-domain delete orchestration moves to {@code
- * AccountDeletionController} (transitional bridge during Plans 03–05; finalized in Plan 06 as a
- * chain of per-domain service calls).
+ * <p>Holds only {@link UserRepository} — the multi-domain delete orchestration lives in {@code
+ * AccountDeletionController} as a chain of per-domain service calls.
  */
 @Service
 public class AccountService {

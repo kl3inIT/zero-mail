@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.openai.models.chat.completions.ChatCompletionToolChoiceOption;
 import com.zeromail.core.llm.domain.AllowListedTools;
 import com.zeromail.core.llm.usecases.LlmChatRequest;
 import com.zeromail.core.llm.usecases.LlmChatResult;
@@ -63,9 +64,14 @@ class SpringAiLlmModelClientTest {
         verify(chatClientRequestSpecification).user("sanitized-user-message");
         verify(chatClientRequestSpecification).options(openAiChatOptionsCaptor.capture());
         OpenAiChatOptions capturedOptions = openAiChatOptionsCaptor.getValue().build();
-        assertThat(capturedOptions.getToolChoice()).isEqualTo("required");
+        assertThat(capturedOptions.getToolChoice())
+                .isInstanceOfSatisfying(
+                        ChatCompletionToolChoiceOption.class,
+                        toolChoice ->
+                                assertThat(toolChoice.asAuto())
+                                        .isEqualTo(ChatCompletionToolChoiceOption.Auto.REQUIRED));
         assertThat(capturedOptions.getInternalToolExecutionEnabled()).isFalse();
-        assertThat(capturedOptions.getModel()).isEqualTo("openai/gpt-4o-mini");
+        assertThat(capturedOptions.getModel()).isEqualTo("openai/gpt-5.4-nano");
         assertThat(capturedOptions.getTemperature()).isEqualTo(0.0);
         assertThat(chatResult.toolCalls())
                 .singleElement()
@@ -110,7 +116,7 @@ class SpringAiLlmModelClientTest {
                 SystemPrompts.TRIAGE_SYSTEM_PROMPT,
                 "sanitized-user-message",
                 tools,
-                "openai/gpt-4o-mini",
+                "openai/gpt-5.4-nano",
                 0.0,
                 true);
     }

@@ -1,0 +1,3 @@
+# Runtime artifacts; committed evidence is .planning/phases/06-.../06-LOAD-TEST-RESULT.md only.
+run/
+*.log

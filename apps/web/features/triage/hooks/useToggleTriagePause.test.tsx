@@ -1,11 +1,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { CurrentUser } from '@/features/account/api/account-api';
 import { accountQueryKeys } from '@/features/account/query-keys';
 import { billingKeys } from '@/features/billing/query-keys';
-import { triageKeys } from '@/features/triage/query-keys';
 
-type MutationContext = { previousPauseState: boolean | undefined } | undefined;
+type MutationContext = { previousUser: CurrentUser | undefined } | undefined;
 type MutationOptions = {
   mutationFn: (paused: boolean) => Promise<unknown>;
   onMutate?: (paused: boolean) => Promise<MutationContext>;
@@ -17,6 +17,16 @@ type MutationOptions = {
     context: MutationContext,
   ) => Promise<void> | void;
 };
+
+const baseUser: CurrentUser = {
+  id: 'user-1',
+  email: 'user@example.com',
+  tenantId: 'tenant-1',
+  preferredLanguage: 'en',
+  onboardingStep: 'COMPLETE',
+  triagePaused: false,
+  triageShadowMode: false,
+} as unknown as CurrentUser;
 
 const mocks = vi.hoisted(() => ({
   cancelQueries: vi.fn(),
@@ -47,7 +57,7 @@ describe('useToggleTriagePause', () => {
   beforeEach(() => {
     mocks.cancelQueries.mockReset();
     mocks.getQueryData.mockReset();
-    mocks.getQueryData.mockReturnValue(false);
+    mocks.getQueryData.mockReturnValue({ ...baseUser });
     mocks.invalidateQueries.mockReset();
     mocks.setQueryData.mockReset();
     mocks.setTriagePaused.mockReset();
@@ -80,24 +90,25 @@ describe('useToggleTriagePause', () => {
     expect(mocks.setTriagePaused).toHaveBeenCalledWith(true);
   });
 
-  it('optimistically writes the single triage pause cache entry', async () => {
+  it('optimistically writes triagePaused on the shared /me cache entry', async () => {
     const { result } = renderHook(() => useToggleTriagePause());
 
     await act(async () => {
       await result.current.mutate(true);
     });
 
-    expect(mocks.cancelQueries).toHaveBeenCalledWith({ queryKey: triageKeys.pauseState() });
-    expect(mocks.getQueryData).toHaveBeenCalledWith(triageKeys.pauseState());
-    expect(mocks.setQueryData).toHaveBeenCalledWith(triageKeys.pauseState(), true);
-    expect(mocks.setQueryData.mock.calls.map(([queryKey]) => queryKey)).toEqual([
-      triageKeys.pauseState(),
-    ]);
+    expect(mocks.cancelQueries).toHaveBeenCalledWith({ queryKey: accountQueryKeys.me() });
+    expect(mocks.getQueryData).toHaveBeenCalledWith(accountQueryKeys.me());
+    expect(mocks.setQueryData).toHaveBeenCalledWith(accountQueryKeys.me(), {
+      ...baseUser,
+      triagePaused: true,
+    });
   });
 
-  it('rolls back the triage pause cache entry on error', async () => {
+  it('rolls back the /me cache entry on error', async () => {
     const apiError = new Error('pause failed');
-    mocks.getQueryData.mockReturnValue(false);
+    const previousUser = { ...baseUser, triagePaused: false };
+    mocks.getQueryData.mockReturnValue(previousUser);
     mocks.setTriagePaused.mockRejectedValue(apiError);
     const { result } = renderHook(() => useToggleTriagePause());
 
@@ -107,10 +118,10 @@ describe('useToggleTriagePause', () => {
       }),
     ).rejects.toThrow(apiError);
 
-    expect(mocks.setQueryData).toHaveBeenCalledWith(triageKeys.pauseState(), false);
+    expect(mocks.setQueryData).toHaveBeenCalledWith(accountQueryKeys.me(), previousUser);
   });
 
-  it('invalidates pause state, billing balance, and current user on settle', async () => {
+  it('invalidates /me and billing balance on settle', async () => {
     const { result } = renderHook(() => useToggleTriagePause());
 
     await act(async () => {
@@ -118,9 +129,8 @@ describe('useToggleTriagePause', () => {
     });
 
     await waitFor(() => {
-      expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: triageKeys.pauseState() });
-      expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: billingKeys.balance() });
       expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: accountQueryKeys.me() });
+      expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: billingKeys.balance() });
     });
   });
 });

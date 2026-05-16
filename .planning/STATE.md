@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: "Phase 05C shipped - PR #35"
-stopped_at: Completed 05C-04-PLAN.md
-last_updated: "2026-05-14T14:35:00.000Z"
-last_activity: 2026-05-14
+status: Awaiting next milestone
+stopped_at: Completed 06-04-PLAN.md
+last_updated: "2026-05-15T15:37:18.619Z"
+last_activity: 2026-05-15 — Milestone v1.0 completed and archived
 progress:
   total_phases: 17
-  completed_phases: 16
-  total_plans: 118
-  completed_plans: 118
+  completed_phases: 17
+  total_plans: 123
+  completed_plans: 123
   percent: 100
 ---
 
@@ -21,22 +21,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 6 — launch hardening and CASA-verified release readiness
+**Current focus:** v1.0 milestone complete - v1.0.0-rc1 released
 
 ## Current Position
 
-Phase: 05C (user-surface-analytics-daily-digest) — COMPLETE
-Plan: 4 of 4
-Status: Phase 05C shipped - PR #35
-Last activity: 2026-05-14 - Resolved PR #36 STATE.md merge conflict after pausing CodeRabbit
-
-Progress: [██████████] 100%
+Phase: Milestone v1.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-05-15 — Milestone v1.0 completed and archived
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 56
+- Total plans completed: 61
 - Average duration: —
 - Total execution time: 0.0 hours
 
@@ -139,6 +137,10 @@ Progress: [██████████] 100%
 | Phase 05C P02 | 35min | 2 tasks | 16 files |
 | Phase 05C P03 | 1h 46m | 3 tasks | 43 files |
 | Phase 05C P04 | 1h 55m | 2 tasks | 37 files |
+| Phase 06-polish-casa-verified-launch P01 | 1h 51m | 4 tasks | 17 files |
+| Phase 06-polish-casa-verified-launch P02 | 21min | 5 tasks | 10 files |
+| Phase 06 P03 | 2h 47m | 2 tasks | 11 files |
+| Phase 06 P04 | 9 min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -302,6 +304,12 @@ Recent decisions affecting current work:
 - [Phase 04]: Plan 07 cleanup counts outstanding publications with JdbcTemplate — The public incomplete and failed publication views do not expose counts on the worker compile classpath; counting against the Liquibase-owned event_publication table keeps cleanup observability compile-safe.
 - [Phase 04]: Plan 07 pending reaper ships conservative FAILED transition — Metadata verification to APPLIED remains optional and deferred; the shipped PT30M abandoned threshold is guarded to stay above the PT2M saga retry lease.
 - [Phase 05A]: Plan 06 closes Phase 05A with WEB-02 intentionally unchecked while WEB-01/WEB-03/WEB-04 are complete. — WEB-02 spans Phase 5A/5B/5C: 5A delivered onboarding, rules+live-preview, triage audit log+undo, and billing UI, but draft review, analytics, and real audit-list/ledger-history backend endpoints remain tracked in 05A-GAPS.md.
+- [Phase 06]: Plan 01 uses an e2e-stub @Primary GmailApiClientFactory subclass rather than an eight-consumer GmailClient interface refactor. — All inspected production consumers inject GmailApiClientFactory concretely; the subclass intercepts the existing seam with less blast radius.
+- [Phase 06]: Plan 01 keeps Google Auth TokenVerifier as the production bean and wraps it with PubSubTokenVerifier for launch-profile fakes. — This preserves production verifier behavior while letting e2e-stub/loadtest fakes return verified email addresses without fragile Google Auth internals.
+- [Phase 06]: Plan 01 makes E2eStubChatModel implement both ChatModel and LlmModelClient. — The production draft path injects LlmModelClient, so implementing both seams lets the golden-path draft smoke save canned text in stub Gmail.
+- [Phase 06]: Plan 02 uses deterministic UUID loadtest tenants from 00000000-0000-4000-8000-1de57e570001 through 00000000-0000-4000-8000-1de57e570050.
+- [Phase 06]: Plan 02 seeds gmail_connections for each synthetic loadtest tenant so PubSubIngestionService resolves emailAddress to tenant_id during the k6 workload.
+- [Phase 06]: Plan 02 wires loadtestVerify as a Gradle Exec task that shells out to psql for invariant checks instead of using JDBC on the Gradle buildscript classpath.
 
 ### Roadmap Evolution
 
@@ -319,7 +327,6 @@ Recent decisions affecting current work:
 [From .planning/todos/pending/ — ideas captured during sessions]
 
 - WR-06: dedicated test-profile SecurityConfig slice (so OAuth filter chain is exercised under integration tests) — `.planning/todos/pending/2026-04-28-wr-06-test-profile-securityconfig-slice.md`
-- Apply `:?` fail-fast to `backend/worker/src/main/resources/application.yml:10` (CR-04 parity with api module) — `.planning/todos/pending/2026-04-28-worker-application-yml-fail-fast-parity.md`
 - Make backend/core context API surfaces explicit with Spring Modulith `@NamedInterface("api")` (+ low-pri: Spotless `ratchetFrom`, vertical-slice split of `rules`/`llm` if folders grow) — `.planning/todos/pending/2026-05-12-make-backend-core-context-api-surfaces-explicit-with-namedin.md`
 
 ### Blockers/Concerns
@@ -362,14 +369,51 @@ Recent decisions affecting current work:
 
 ## Deferred Items
 
-Items acknowledged and carried forward from previous milestone close:
+Items acknowledged and deferred at v1.0 milestone close on 2026-05-15.
 
-| Category | Item | Status | Deferred At |
-|----------|------|--------|-------------|
-| *(none — project init)* | | | |
+**Summary:** 54 open items at close — 32 quick tasks + 5 UAT gaps + 2 verification gaps archived alongside v1.0 phases; 12 seeds + 3 todos kept in `.planning/` for next milestone.
+
+### Carried forward to next milestone (kept in .planning/)
+
+**Seeds (12 — future feature ideas):**
+
+| Slug | Notes |
+|------|-------|
+| SEED-001 | future-ai-email-workspace-features |
+| SEED-002 | ai-mailbox-search-and-answer-engine |
+| SEED-003 | screen-aware-ai-assistant-command-center |
+| SEED-004 | inbox-splits-bundles-delivery-schedules |
+| SEED-005 | team-collaboration-shared-email-workspace |
+| SEED-006 | calendar-scheduling-and-meeting-briefs |
+| SEED-007 | messaging-assistant-slack-telegram-zalo |
+| SEED-008 | tasklet-style-agentic-workflow-automation |
+| SEED-009 | bulk-cleanup-cold-blocker-smart-filing |
+| SEED-010 | sales-engagement-crm-and-read-tracking |
+| SEED-011 | admin-support-and-compliance-console |
+| SEED-012 | casa-restricted-scope-verification (dormant — production OAuth verification track) |
+
+**Todos (3 — pending work):**
+
+| Slug | Notes |
+|------|-------|
+| 2026-04-28-wr-06-test-profile-securityconfig-slice | Phase 1.5 deferred test improvement |
+| 2026-05-12-make-backend-core-context-api-surfaces-explicit-with-namedin | API surface explicitness |
+| 2026-05-15-rules-ux-structured-builder-next-milestone | Rules UX structured builder for next milestone |
+
+### Archived alongside v1.0 phases (moved to milestones/v1.0-*)
+
+**Quick tasks (32):** All directories under `.planning/quick/` moved to `.planning/milestones/v1.0-quick/`. None had completion SUMMARYs; they represent ad-hoc execution traces from the v1.0 development period (Phase 1.5 cleanup, frontend refactors, BYOK presets, CI work, content drafts, code review responses, etc.).
+
+**UAT gaps (5):** Inside phase VERIFICATION/UAT files — moved with phase dirs. Notable: 05C live Resend deliverability acknowledged for ship 2026-05-14.
+
+**Verification gaps (2):** 01.4 + 02A status `human_needed` (manual gates: live OAuth UX, live Pub/Sub, native VI copy, visual sweep) — moved with phase dirs. All automated tests PASS.
 
 ## Session Continuity
 
-Last session: 2026-05-13T18:10:57.411Z
-Stopped at: Completed 05C-04-PLAN.md
+Last session: 2026-05-14T23:35:33.615Z
+Stopped at: Completed 06-04-PLAN.md
 Resume file: None
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

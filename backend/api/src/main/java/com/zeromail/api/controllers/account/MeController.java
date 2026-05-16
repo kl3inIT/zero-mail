@@ -47,7 +47,7 @@ public class MeController {
 
     @GetMapping("/me")
     public MeResponse me() {
-        UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+        UUID tenantId = TenantContext.currentTenantUuid();
         CurrentUserProjection user = accountService.requireCurrentUser(tenantId);
         boolean triagePaused = tenantService.isTriagePaused(tenantId);
         GmailConnectionProjection gmailConnection = gmailConnectionService.currentStatus(tenantId);
@@ -63,7 +63,7 @@ public class MeController {
      */
     @PatchMapping("/me/language")
     public MeResponse updateLanguage(@Valid @RequestBody UpdateLanguageRequest request) {
-        UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+        UUID tenantId = TenantContext.currentTenantUuid();
         CurrentUserProjection updated =
                 accountService.updateCurrentUserLanguage(tenantId, request.language());
         boolean triagePaused = tenantService.isTriagePaused(tenantId);

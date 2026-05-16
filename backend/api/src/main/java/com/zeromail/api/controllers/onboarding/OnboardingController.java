@@ -20,13 +20,13 @@ public class OnboardingController {
 
     @PostMapping("/onboarding/select-template")
     public void selectTemplate(@Valid @RequestBody SelectTemplateRequest request) {
-        UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+        UUID tenantId = TenantContext.currentTenantUuid();
         onboardingService.selectTemplate(tenantId, request.templateKey());
     }
 
     @PostMapping("/onboarding/complete")
     public void complete() {
-        UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+        UUID tenantId = TenantContext.currentTenantUuid();
         onboardingService.complete(tenantId);
     }
 }

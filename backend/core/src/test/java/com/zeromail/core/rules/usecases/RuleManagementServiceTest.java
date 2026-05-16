@@ -399,9 +399,17 @@ class RuleManagementServiceTest extends PostgresContainerTest {
     }
 
     private RuleCompileResult compiled(String displayName) {
+        // Each rule's compiled payload must be unique per tenant — the rule
+        // service rejects duplicate (matcherAst, actionIntents) tuples — so
+        // derive a per-rule domain from the display name.
+        String domain =
+                displayName.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]+", "-")
+                        + ".example";
         return compiled(
                 displayName,
-                "{\"schemaVersion\":\"rules.v1\",\"type\":\"SENDER_DOMAIN\",\"domain\":\"stripe.com\"}",
+                "{\"schemaVersion\":\"rules.v1\",\"type\":\"SENDER_DOMAIN\",\"domain\":\""
+                        + domain
+                        + "\"}",
                 "[{\"type\":\"archive\"}]");
     }
 

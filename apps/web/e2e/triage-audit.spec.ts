@@ -20,9 +20,11 @@ for (const viewport of [
 
     await expect(page.getByTestId('chrome-header')).toBeVisible();
     await expectBalancePillForViewport(page, viewport.width);
-    await expect(page.getByRole('heading', { name: 'Triage', exact: true })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Audit log' })).toBeVisible();
-    await expect(page.getByText('No triage activity yet')).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'AI email actions', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Activity' })).toBeVisible();
+    await expect(page.getByText('No email actions yet')).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
     if (viewport.width < 768) {
@@ -39,8 +41,10 @@ for (const viewport of [
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await openTriage(page, '/triage?tab=shadow');
 
-    await expect(page.getByRole('heading', { name: 'Triage', exact: true })).toBeVisible();
-    await expect(page.getByText('Run triage as a safe rehearsal')).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'AI email actions', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText('Zero Mail still evaluates email')).toBeVisible();
     await expect(page.getByTestId('shadow-mode-switch')).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });

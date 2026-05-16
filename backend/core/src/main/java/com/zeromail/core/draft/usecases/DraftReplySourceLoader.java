@@ -3,13 +3,11 @@ package com.zeromail.core.draft.usecases;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
-import com.google.api.services.gmail.model.MessagePartBody;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.shared.lang.Strings;
 import com.zeromail.core.triage.domain.ReplyHeaders;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -44,7 +42,7 @@ public class DraftReplySourceLoader {
 
     public DraftReplySource load(UUID tenantId, String gmailThreadId) throws IOException {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
-        String threadId = requireText(gmailThreadId, "gmailThreadId");
+        String threadId = Strings.requireText(gmailThreadId, "gmailThreadId");
         Gmail gmail = gmailApiClientFactory.buildClientForTenant(tenantId);
         com.google.api.services.gmail.model.Thread gmailThread =
                 gmail.users()
@@ -78,7 +76,7 @@ public class DraftReplySourceLoader {
                         replyToAddress,
                         threadId);
         return new DraftReplySource(
-                requireText(replyTarget.getId(), "gmailMessageId"),
+                Strings.requireText(replyTarget.getId(), "gmailMessageId"),
                 threadId,
                 replyHeaders,
                 extractReadableBody(payload),
@@ -134,8 +132,8 @@ public class DraftReplySourceLoader {
         if (payload == null) {
             return "";
         }
-        String directBody = decodedBody(payload);
-        if (!directBody.isBlank() && isReadableMimeType(payload.getMimeType())) {
+        String directBody = GmailMimeDecoder.decodedBody(payload);
+        if (!directBody.isBlank() && GmailMimeDecoder.isReadableMimeType(payload.getMimeType())) {
             return directBody;
         }
         List<MessagePart> parts = payload.getParts();
@@ -152,34 +150,6 @@ public class DraftReplySourceLoader {
         return String.join("\n", extractedParts);
     }
 
-    private static String decodedBody(MessagePart payload) {
-        MessagePartBody body = payload.getBody();
-        if (body == null || body.getData() == null || body.getData().isBlank()) {
-            return "";
-        }
-        try {
-            byte[] decodedBytes = Base64.getUrlDecoder().decode(body.getData());
-            return new String(decodedBytes, StandardCharsets.UTF_8);
-        } catch (IllegalArgumentException invalidBase64) {
-            return "";
-        }
-    }
-
-    private static boolean isReadableMimeType(String mimeType) {
-        return mimeType == null
-                || mimeType.equalsIgnoreCase("text/plain")
-                || mimeType.equalsIgnoreCase("text/html");
-    }
-
-    private static String requireText(String value, String fieldName) {
-        Objects.requireNonNull(value, fieldName + " must not be null");
-        String trimmedValue = value.trim();
-        if (trimmedValue.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        return trimmedValue;
-    }
-
     public record DraftReplySource(
             String gmailMessageId,
             String gmailThreadId,
@@ -191,8 +161,8 @@ public class DraftReplySourceLoader {
             boolean lastMessageIsAutoReply) {
 
         public DraftReplySource {
-            gmailMessageId = requireText(gmailMessageId, "gmailMessageId");
-            gmailThreadId = requireText(gmailThreadId, "gmailThreadId");
+            gmailMessageId = Strings.requireText(gmailMessageId, "gmailMessageId");
+            gmailThreadId = Strings.requireText(gmailThreadId, "gmailThreadId");
             Objects.requireNonNull(replyHeaders, "replyHeaders must not be null");
             inboundRawHtml = Objects.requireNonNullElse(inboundRawHtml, "");
             inboundSubject = Objects.requireNonNullElse(inboundSubject, "");

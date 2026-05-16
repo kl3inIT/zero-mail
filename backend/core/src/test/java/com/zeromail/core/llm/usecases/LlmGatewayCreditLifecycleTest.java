@@ -272,7 +272,7 @@ class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
                         tenantId,
                         BYOKProvider.OPENAI,
                         "https://openrouter.ai/api/v1",
-                        "openai/gpt-4o-mini",
+                        "openai/gpt-5.4-nano",
                         encryptedEnvelope,
                         (short) 1);
         underTenant(tenantId, () -> tenantByokCredentialsRepository.saveAndFlush(credentials));

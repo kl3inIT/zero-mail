@@ -377,13 +377,14 @@
     "rules": {
       "compile": {
         "clarification_required": "This rule needs one clarification answer before it can be saved.",
-        "invalid": "Zero Mail could not compile this rule. Edit the wording or answer the clarification, then compile again."
+        "invalid": "Zero Mail could not review this rule. Edit the wording or answer the clarification, then review again."
       },
+      "duplicate": "An identical rule already exists in the list. Edit the existing rule or change the conditions/actions.",
       "gmail": {
         "unavailable": "Gmail preview is unavailable. Reconnect Gmail and try again."
       },
       "gmailUnavailable": "Gmail preview is unavailable. Reconnect Gmail and try again.",
-      "insufficientCredits": "Platform credits are depleted. Top up credits or save a valid BYOK key before compiling or previewing rules.",
+      "insufficientCredits": "Platform credits are depleted. Top up credits or save a valid BYOK key before reviewing or previewing rules.",
       "invalidSampleSize": "Preview sample size must be 10, 25, or 50.",
       "not_found": "This rule could not be found. Reload the rules list.",
       "notFound": "This rule could not be found. Reload the rules list.",
@@ -392,8 +393,14 @@
         "invalid_sample_size": "Preview sample size must be 10, 25, or 50.",
         "required": "Preview the current rule version before enabling it."
       },
+      "refine": {
+        "generic": "Could not apply this edit. Your current draft is preserved — rephrase the edit request and try again."
+      },
       "reorder": {
         "invalid": "Could not save rule order. Reload the list and try again."
+      },
+      "save": {
+        "generic": "The rule could not be saved right now. Reload the list and try again."
       },
       "unsafe_action": "This rule asks for an action that is not allowed in v1.",
       "version_mismatch": "The rule changed before the action finished. Reload and try again.",
@@ -809,26 +816,32 @@
   },
   "rules": {
     "composer": {
-      "actionReview": "Actions",
-      "answerClarification": "Answer clarification",
-      "answerLabel": "Clarification answer",
-      "compileCta": "Compile rule",
-      "compiledReview": "What Zero Mail understood",
-      "compiling": "Compiling...",
-      "invalid": "This rule is not ready to save. Edit the wording or answer the clarification.",
-      "matcherReview": "Matchers",
-      "newRuleCta": "New rule",
-      "saveDisabledCta": "Save disabled rule",
-      "saving": "Saving...",
-      "sourceLabel": "Rule text",
-      "sourcePlaceholder": "Example: Archive receipts from Stripe and label them Finance",
-      "step": {
-        "compile": "Compile",
-        "save": "Save",
-        "write": "Write"
+      "actionReview": "Allowed actions",
+      "allowedActionsNote": "v1 actions are limited to label, archive from Inbox, and save Gmail draft. Zero Mail does not auto-send, forward, delete, mark spam, or call webhooks.",
+      "answerClarification": "Send answer",
+      "answerLabel": "Your answer",
+      "compileCta": "Convert to rule",
+      "compiledReview": "Rule to save",
+      "compiling": "Checking...",
+      "example": {
+        "calendar": "Label calendar invitations and schedule updates as Calendar",
+        "newsletters": "Label newsletters as Reading, but do not archive customer emails",
+        "receipts": "Archive receipts from Stripe and label them Finance"
       },
-      "title": "Rule composer",
-      "workflowLabel": "Rule creation workflow"
+      "examplesHint": "Suggestions — click to insert:",
+      "invalid": "This rule is not ready to save. Edit the wording or answer the clarification.",
+      "matcherReview": "Matched email",
+      "newRuleCta": "Create rule",
+      "saveDisabledCta": "Save (stays off until preview)",
+      "saving": "Saving...",
+      "sourceLabel": "Which emails should Zero Mail match, and what should it do?",
+      "sourcePlaceholder": "Example: Archive receipts from Stripe and label them Finance",
+      "tab": {
+        "describe": "Describe",
+        "manual": "Review & edit"
+      },
+      "tabsLabel": "Rule authoring mode",
+      "title": "Create email rule"
     },
     "delete": {
       "body": "This removes the rule definition. Gmail will not be changed, but this rule will no longer appear in previews.",
@@ -841,27 +854,92 @@
     "exampleQuote": "\"Archive newsletters, marketing, and receipts unless a charge is over $500 or it's a refund.\"",
     "eyebrow": "Example rules",
     "list": {
+      "actions": "Rule actions",
+      "column": {
+        "enabled": "Enabled",
+        "name": "Name"
+      },
       "customizedBadge": "Customized",
       "delete": "Delete rule",
-      "disabled": "Disabled",
       "edit": "Edit rule",
       "empty": {
         "body": "Write your first rule or start from a Gmail template. New rules stay disabled until you preview them.",
         "heading": "No rules yet"
       },
-      "enabled": "Enabled",
       "moveDown": "Move rule down",
       "moveUp": "Move rule up",
-      "previewReady": "Previewed",
-      "previewRequired": "Preview required",
+      "noThen": "No action yet",
+      "noWhen": "No clear criteria yet",
+      "subtitle": "Scan each rule by name, matched email, and allowed actions.",
       "templateBadge": "Template",
-      "title": "Rule order"
+      "then": "Actions",
+      "title": "Rule list",
+      "when": "Matched email"
+    },
+    "manual": {
+      "action": {
+        "archive": "Archive",
+        "label": "Label",
+        "save_draft": "Save draft"
+      },
+      "actionPlaceholder": {
+        "archive": "No value needed",
+        "label": "Finance",
+        "save_draft": "Draft a short reply asking for the invoice PDF"
+      },
+      "addAction": "Add action",
+      "addCondition": "Add condition",
+      "advancedTitle": "Locked in v1",
+      "condition": {
+        "GMAIL_LABEL_PRESENT": "Gmail label present",
+        "HAS_ATTACHMENT": "Has attachment",
+        "NEWSLETTER_INDICATOR": "Newsletter indicator",
+        "RECIPIENT_TO": "To recipient",
+        "SEMANTIC_INTENT": "Email meaning",
+        "SENDER_DOMAIN": "Sender domain",
+        "SENDER_EMAIL": "Sender email",
+        "SUBJECT_CONTAINS": "Subject contains"
+      },
+      "conditionPlaceholder": {
+        "GMAIL_LABEL_PRESENT": "Finance",
+        "HAS_ATTACHMENT": "No value needed",
+        "NEWSLETTER_INDICATOR": "No value needed",
+        "RECIPIENT_TO": "founder@example.com",
+        "SEMANTIC_INTENT": "Email about studying",
+        "SENDER_DOMAIN": "stripe.com",
+        "SENDER_EMAIL": "billing@stripe.com",
+        "SUBJECT_CONTAINS": "receipt"
+      },
+      "nameLabel": "Rule name",
+      "namePlaceholder": "Example: Archive Stripe receipts",
+      "noValueNeeded": "No value needed",
+      "operator": {
+        "all": "Match all",
+        "any": "Match any"
+      },
+      "refineCta": "Update form",
+      "refineLabel": "Refine with another instruction",
+      "refinePlaceholder": "Example: exclude course ads, or only match deadlines and assignments",
+      "removeAction": "Remove action",
+      "removeCondition": "Remove condition",
+      "saveHint": "New or edited rules are saved off until you preview them.",
+      "structuredPreview": "Rule to save",
+      "thenBody": "Choose only the safe v1 actions Zero Mail may take.",
+      "thenTitle": "Allowed actions",
+      "unsafe": {
+        "autoSend": "Auto-send disabled",
+        "delete": "Delete/spam disabled",
+        "forward": "Forward disabled",
+        "webhook": "Webhook disabled"
+      },
+      "whenBody": "Choose the signals Zero Mail checks before taking action.",
+      "whenTitle": "Matched email"
     },
     "matches": "4 matches",
     "page": {
-      "intro": "Write rules in plain language, preview what would match, then enable only the rules you trust.",
-      "safetyNote": "New rules are saved disabled. Preview never changes Gmail.",
-      "title": "Rules"
+      "intro": "Each rule defines which emails to match and what Zero Mail is allowed to do. New rules stay off until previewed.",
+      "safetyNote": "Natural language is only a quick input method. Saved rules keep a reviewable criteria and action structure, and unsafe actions stay locked.",
+      "title": "Automation rules"
     },
     "parses": {
       "body": "Zero Mail extracts intents (archive, label, draft, notify), entities (newsletter, receipt), and conditions (amount, sender, thread state). It never touches mail that doesn't match.",
@@ -875,7 +953,7 @@
       "deferredTooltip": "Phase 03 stores this check, but evaluation is deferred.",
       "disableCta": "Disable rule",
       "empty": {
-        "body": "Run a preview against recent Gmail messages before enabling this rule.",
+        "body": "Select a rule above, then test it against recent Gmail messages before enabling it.",
         "heading": "No preview run yet"
       },
       "enableCta": "Enable rule",
@@ -894,7 +972,7 @@
         "matched": "Matched",
         "sampled": "Sampled"
       },
-      "title": "Safe preview"
+      "title": "Test selected rule"
     },
     "q": {
       "plain": "plain English",
@@ -1057,8 +1135,8 @@
       },
       "draftAction": "Draft reply",
       "empty": {
-        "body": "When Zero Mail processes email, decisions and reasons will appear here.",
-        "title": "No triage activity yet"
+        "body": "When a rule matches an email, you will see the When, Then, reason, and undo action here.",
+        "title": "No email actions yet"
       },
       "endOfList": "That's everything.",
       "error": {
@@ -1074,7 +1152,9 @@
         "unknownSender": "Unknown sender",
         "untitled": "Untitled message"
       },
+      "noReason": "No detailed reason",
       "regenerateDraftAction": "Regenerate draft",
+      "thenLabel": "Then",
       "unavailable": {
         "body": "The backend currently exposes undo for individual audit entries, but not the audit-list endpoint. Zero Mail will show the history here when that endpoint exists.",
         "title": "Audit history is not available yet"
@@ -1090,11 +1170,19 @@
         "undone": "Undone",
         "windowClosed": "Undo window closed",
         "windowTooltip": "Triage actions can be undone for up to 30 days."
-      }
+      },
+      "whenLabel": "When",
+      "whyLabel": "Why"
+    },
+    "flow": {
+      "applied": "Applies allowed action",
+      "matched": "Matches a When rule",
+      "observed": "New Gmail arrives",
+      "undo": "Undo available 30 days"
     },
     "page": {
-      "description": "Review what AI changed, run shadow mode, and manage protected senders before trusting automation.",
-      "title": "Triage"
+      "description": "See which rule matched, what Zero Mail changed in Gmail, why it happened, and undo within 30 days when needed.",
+      "title": "AI email actions"
     },
     "senders": {
       "body": "Important senders stay protected until you opt them into automation.",
@@ -1113,8 +1201,8 @@
       "unknown": "Unknown sender"
     },
     "shadow": {
-      "badgeOn": "Shadow mode on",
-      "body": "Run triage as a safe rehearsal: Zero Mail records decisions without changing Gmail.",
+      "badgeOn": "Test mode on",
+      "body": "Zero Mail still evaluates email and records decisions, but it will not label, save drafts, or archive from Inbox.",
       "confirm": {
         "action": "Turn off shadow mode",
         "body": "After this is off, Zero Mail can apply allowed Gmail actions.",
@@ -1128,14 +1216,14 @@
       },
       "offBody": "Allowed triage actions will apply after safety checks.",
       "onBody": "Zero Mail will evaluate email without applying labels, saving drafts, or archiving.",
-      "title": "Shadow mode",
-      "toggleLabel": "Enable shadow mode"
+      "title": "Test without changing Gmail",
+      "toggleLabel": "Enable test mode"
     },
     "tabs": {
-      "audit": "Audit log",
-      "label": "Triage sections",
-      "senders": "Sender safety net",
-      "shadow": "Shadow mode"
+      "audit": "Activity",
+      "label": "Email action sections",
+      "senders": "Protected senders",
+      "shadow": "Test mode"
     }
   },
   "trust": {

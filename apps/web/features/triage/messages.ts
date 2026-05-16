@@ -1,35 +1,51 @@
 export const triageMessages = {
   'triage.page.title': {
-    vi: 'Triage',
-    en: 'Triage',
+    vi: 'AI xử lý email',
+    en: 'AI email actions',
   },
   'triage.page.description': {
-    vi: 'Kiểm tra những gì AI đã làm, chạy thử shadow mode, và kiểm soát các người gửi được bảo vệ trước khi cho phép tự động hóa.',
-    en: 'Review what AI changed, run shadow mode, and manage protected senders before trusting automation.',
+    vi: 'Xem quy tắc nào đã khớp, Zero Mail đã làm gì với Gmail, vì sao hành động đó xảy ra, và hoàn tác trong 30 ngày khi cần.',
+    en: 'See which rule matched, what Zero Mail changed in Gmail, why it happened, and undo within 30 days when needed.',
   },
   'triage.tabs.label': {
-    vi: 'Khu vực triage',
-    en: 'Triage sections',
+    vi: 'Khu vực xử lý email',
+    en: 'Email action sections',
   },
   'triage.tabs.audit': {
-    vi: 'Nhật ký',
-    en: 'Audit log',
+    vi: 'Hoạt động',
+    en: 'Activity',
   },
   'triage.tabs.shadow': {
-    vi: 'Shadow mode',
-    en: 'Shadow mode',
+    vi: 'Chạy thử',
+    en: 'Test mode',
   },
   'triage.tabs.senders': {
-    vi: 'Người gửi',
-    en: 'Sender safety net',
+    vi: 'Người gửi quan trọng',
+    en: 'Protected senders',
+  },
+  'triage.flow.observed': {
+    vi: 'Gmail mới đến',
+    en: 'New Gmail arrives',
+  },
+  'triage.flow.matched': {
+    vi: 'Khớp quy tắc When',
+    en: 'Matches a When rule',
+  },
+  'triage.flow.applied': {
+    vi: 'Chỉ làm action cho phép',
+    en: 'Applies allowed action',
+  },
+  'triage.flow.undo': {
+    vi: 'Có thể hoàn tác 30 ngày',
+    en: 'Undo available 30 days',
   },
   'triage.audit.empty.title': {
-    vi: 'Chưa có hoạt động triage',
-    en: 'No triage activity yet',
+    vi: 'Chưa có hành động email',
+    en: 'No email actions yet',
   },
   'triage.audit.empty.body': {
-    vi: 'Khi Zero Mail xử lý email, các quyết định và lý do sẽ xuất hiện ở đây.',
-    en: 'When Zero Mail processes email, decisions and reasons will appear here.',
+    vi: 'Khi một quy tắc khớp email, bạn sẽ thấy When, Then, lý do và nút hoàn tác tại đây.',
+    en: 'When a rule matches an email, you will see the When, Then, reason, and undo action here.',
   },
   'triage.audit.error.title': {
     vi: 'Không tải được nhật ký triage',
@@ -103,6 +119,22 @@ export const triageMessages = {
     vi: 'Hành động',
     en: 'Actions',
   },
+  'triage.audit.whenLabel': {
+    vi: 'Khi',
+    en: 'When',
+  },
+  'triage.audit.thenLabel': {
+    vi: 'Thì',
+    en: 'Then',
+  },
+  'triage.audit.whyLabel': {
+    vi: 'Vì sao',
+    en: 'Why',
+  },
+  'triage.audit.noReason': {
+    vi: 'Không có lý do chi tiết',
+    en: 'No detailed reason',
+  },
   'triage.audit.message.untitled': {
     vi: 'Email không tiêu đề',
     en: 'Untitled message',
@@ -152,20 +184,20 @@ export const triageMessages = {
     en: 'Undone',
   },
   'triage.shadow.title': {
-    vi: 'Shadow mode',
-    en: 'Shadow mode',
+    vi: 'Chạy thử không đổi Gmail',
+    en: 'Test without changing Gmail',
   },
   'triage.shadow.body': {
-    vi: 'Chạy triage như một bản nháp an toàn: Zero Mail ghi nhận quyết định nhưng không thay đổi Gmail.',
-    en: 'Run triage as a safe rehearsal: Zero Mail records decisions without changing Gmail.',
+    vi: 'Zero Mail vẫn đánh giá email và ghi lại quyết định, nhưng không gắn nhãn, lưu nháp, hay lưu trữ khỏi Inbox.',
+    en: 'Zero Mail still evaluates email and records decisions, but it will not label, save drafts, or archive from Inbox.',
   },
   'triage.shadow.toggleLabel': {
-    vi: 'Bật shadow mode',
-    en: 'Enable shadow mode',
+    vi: 'Bật chế độ chạy thử',
+    en: 'Enable test mode',
   },
   'triage.shadow.badgeOn': {
-    vi: 'Shadow mode đang bật',
-    en: 'Shadow mode on',
+    vi: 'Đang chạy thử',
+    en: 'Test mode on',
   },
   'triage.shadow.onBody': {
     vi: 'Zero Mail sẽ đánh giá email nhưng không áp dụng nhãn, lưu draft, hoặc archive.',

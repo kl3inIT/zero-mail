@@ -18,6 +18,7 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
@@ -30,6 +31,7 @@ import tools.jackson.databind.ObjectMapper;
  */
 @Component
 @Primary
+@Profile("!e2e-stub")
 public class SpringAiLlmModelClient implements LlmModelClient {
 
     private final ChatClient platformChatClient;
@@ -63,7 +65,7 @@ public class SpringAiLlmModelClient implements LlmModelClient {
                         .temperature(request.temperature())
                         .internalToolExecutionEnabled(false);
         if (request.toolChoiceRequired()) {
-            chatOptionsBuilder.toolChoice("required");
+            chatOptionsBuilder.toolChoice(OpenAiToolChoiceOptions.required());
         }
         if (request.maxTokens() != null) {
             chatOptionsBuilder.maxTokens(request.maxTokens());
