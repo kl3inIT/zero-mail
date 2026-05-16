@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useReducer, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Plus, Sparkles } from 'lucide-react';
 
@@ -286,7 +287,13 @@ export function RulesWorkspace() {
   const [state, dispatch] = useReducer(rulesWorkspaceReducer, initialState);
   const [customMailResult, setCustomMailResult] = useState<RuleCustomPreviewResponse | null>(null);
   const [customMailError, setCustomMailError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'list' | 'test' | 'history'>('list');
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeTab = normalizeRulesTab(searchParams.get('tab'));
+  const setActiveTab = (nextTab: RulesTab) => {
+    router.replace(`/rules?tab=${nextTab}`, { scroll: false });
+  };
 
   const rules = useMemo(
     () => [...(rulesQuery.data?.rules ?? [])].sort(compareRulesByOrder),
@@ -509,7 +516,7 @@ export function RulesWorkspace() {
   return (
     <Tabs
       value={activeTab}
-      onValueChange={(nextValue) => setActiveTab(nextValue as 'list' | 'test' | 'history')}
+      onValueChange={(nextValue) => setActiveTab(normalizeRulesTab(nextValue))}
       className="space-y-6"
     >
       <TabsList aria-label={t('rules.tabs.label')}>
@@ -675,6 +682,13 @@ export function RulesWorkspace() {
       </Dialog>
     </Tabs>
   );
+}
+
+const RULES_TABS = ['list', 'test', 'history'] as const;
+type RulesTab = (typeof RULES_TABS)[number];
+
+function normalizeRulesTab(value: string | null): RulesTab {
+  return RULES_TABS.includes(value as RulesTab) ? (value as RulesTab) : 'list';
 }
 
 function compareRulesByOrder(left: RuleResponse, right: RuleResponse): number {
