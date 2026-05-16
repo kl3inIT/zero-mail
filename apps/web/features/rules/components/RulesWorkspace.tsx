@@ -37,9 +37,8 @@ import {
   useCreateRule,
   useDeleteRule,
   useMaterializeRuleTemplate,
+  usePreviewAllEnabledRules,
   usePreviewCustomMail,
-  usePreviewDraftRule,
-  usePreviewSavedRule,
   useRuleTemplates,
   useRules,
   useUpdateRule,
@@ -47,8 +46,6 @@ import {
 } from '@/features/rules/hooks/use-rules';
 
 type SampleSize = 10 | 20;
-
-type LastPreviewedRule = { ruleId: string; entityVersion?: number };
 
 type CompileOptions = {
   keepCurrentSourceText?: boolean;
@@ -81,7 +78,6 @@ type RulesWorkspaceState = {
   previewError: string | null;
   gmailUnavailableError: string | null;
   sampleSize: SampleSize;
-  lastPreviewedRule: LastPreviewedRule | null;
   pendingRuleId: string | null;
   pendingTemplateKey: string | null;
   composerDialogOpen: boolean;
@@ -110,11 +106,7 @@ type RulesWorkspaceAction =
   | { type: 'composerDialogToggled'; open: boolean }
   | { type: 'templateDialogToggled'; open: boolean }
   | { type: 'previewStarted' }
-  | {
-      type: 'previewSucceeded';
-      preview: RulePreviewResponse;
-      lastPreviewedRule: LastPreviewedRule | null;
-    }
+  | { type: 'previewSucceeded'; preview: RulePreviewResponse }
   | { type: 'previewFailed'; message: string }
   | { type: 'previewGmailUnavailable'; message: string }
   | { type: 'sampleSizeChanged'; sampleSize: SampleSize }
@@ -137,7 +129,6 @@ const initialState: RulesWorkspaceState = {
   previewError: null,
   gmailUnavailableError: null,
   sampleSize: 10,
-  lastPreviewedRule: null,
   pendingRuleId: null,
   pendingTemplateKey: null,
   composerDialogOpen: false,
@@ -212,11 +203,7 @@ function rulesWorkspaceReducer(
     case 'previewStarted':
       return { ...state, previewError: null, gmailUnavailableError: null };
     case 'previewSucceeded':
-      return {
-        ...state,
-        preview: action.preview,
-        lastPreviewedRule: action.lastPreviewedRule ?? state.lastPreviewedRule,
-      };
+      return { ...state, preview: action.preview };
     case 'previewFailed':
       return { ...state, previewError: action.message };
     case 'previewGmailUnavailable':
@@ -235,7 +222,6 @@ function rulesWorkspaceReducer(
       return {
         ...applyRuleSelection(state, action.savedRule),
         composerDialogOpen: false,
-        lastPreviewedRule: null,
       };
     case 'selectedRuleDeleted':
       return {
@@ -291,8 +277,7 @@ export function RulesWorkspace() {
   const createRuleMutation = useCreateRule();
   const updateRuleMutation = useUpdateRule();
   const deleteRuleMutation = useDeleteRule();
-  const previewSavedRuleMutation = usePreviewSavedRule();
-  const previewDraftRuleMutation = usePreviewDraftRule();
+  const previewAllEnabledMutation = usePreviewAllEnabledRules();
   const updateEnabledMutation = useUpdateRuleEnabled();
   const materializeTemplateMutation = useMaterializeRuleTemplate();
   const previewCustomMailMutation = usePreviewCustomMail();
@@ -446,35 +431,11 @@ export function RulesWorkspace() {
     dispatch({ type: 'previewStarted' });
 
     try {
-      const draftPreviewRequired = isDirtySelectedDraft(
-        selectedRule,
-        state.sourceText,
-        state.compileResult,
-      );
-      const result =
-        selectedRule?.ruleId !== undefined && !draftPreviewRequired
-          ? await previewSavedRuleMutation.mutateAsync({
-              ruleId: selectedRule.ruleId,
-              payload: { sampleSize: state.sampleSize, evaluateSemanticIntents },
-            })
-          : state.compileResult?.status === 'compiled'
-            ? await previewDraftRuleMutation.mutateAsync({
-                compiled: compiledResponseToRequest(state.compileResult.compiled),
-                sampleSize: state.sampleSize,
-                evaluateSemanticIntents,
-              })
-            : null;
-
-      if (result) {
-        dispatch({
-          type: 'previewSucceeded',
-          preview: result,
-          lastPreviewedRule:
-            selectedRule?.ruleId && !draftPreviewRequired
-              ? { ruleId: selectedRule.ruleId, entityVersion: selectedRule.entityVersion }
-              : null,
-        });
-      }
+      const result = await previewAllEnabledMutation.mutateAsync({
+        sampleSize: state.sampleSize,
+        evaluateSemanticIntents,
+      });
+      dispatch({ type: 'previewSucceeded', preview: result });
     } catch (error) {
       if (isGmailUnavailable(error)) {
         dispatch({
@@ -496,6 +457,11 @@ export function RulesWorkspace() {
     dispatch({ type: 'ruleTogglePending', ruleId: rule.ruleId });
     try {
       await updateEnabledMutation.mutateAsync({ ruleId: rule.ruleId, enabled: !rule.enabled });
+    } catch (toggleError) {
+      // Swallow the typed ApiError so Next.js does not render the raw object
+      // as "[object Object]" in the runtime overlay. Re-fetch the list so the
+      // switch state stays in sync with the server's view of the rule.
+      console.warn('rule toggle failed', toggleError);
     } finally {
       dispatch({ type: 'rulePendingCleared' });
     }
@@ -537,7 +503,7 @@ export function RulesWorkspace() {
   }
 
   const enabledRulesCount = rules.filter((rule) => rule.enabled).length;
-  const canPreview = canPreviewRule(selectedRule, state.sourceText, state.compileResult);
+  const canPreview = enabledRulesCount > 0;
 
   return (
     <Tabs
@@ -623,18 +589,15 @@ export function RulesWorkspace() {
               <AlertDescription>{t('rules.tabs.gmailCreditWarningBody')}</AlertDescription>
             </Alert>
             <RulePreviewPanel
-              selectedRule={selectedRule}
+              enabledRulesCount={enabledRulesCount}
               preview={state.preview}
               previewError={state.previewError}
               gmailUnavailableError={state.gmailUnavailableError}
-              isPreviewing={
-                previewSavedRuleMutation.isPending || previewDraftRuleMutation.isPending
-              }
+              isPreviewing={previewAllEnabledMutation.isPending}
               canPreview={canPreview}
               sampleSize={state.sampleSize}
               isEvaluatingSemanticIntents={
-                (previewSavedRuleMutation.isPending || previewDraftRuleMutation.isPending) &&
-                Boolean(state.preview)
+                previewAllEnabledMutation.isPending && Boolean(state.preview)
               }
               onSampleSizeChange={(sampleSize) =>
                 dispatch({ type: 'sampleSizeChanged', sampleSize })
@@ -747,33 +710,6 @@ function parseJsonOrRaw(jsonText: string | null | undefined): unknown {
   } catch {
     return jsonText;
   }
-}
-
-function canPreviewRule(
-  selectedRule: RuleResponse | null,
-  sourceText: string,
-  compileResult: RuleCompileResult | null,
-): boolean {
-  if (!selectedRule?.ruleId) return compileResult?.status === 'compiled';
-  if (isDirtySelectedDraft(selectedRule, sourceText, compileResult)) {
-    return compileResult?.status === 'compiled';
-  }
-  return true;
-}
-
-function isDirtySelectedDraft(
-  selectedRule: RuleResponse | null,
-  sourceText: string,
-  compileResult: RuleCompileResult | null,
-): boolean {
-  if (!selectedRule?.ruleId) return false;
-  if ((selectedRule.sourceText ?? '') !== sourceText) return true;
-  if (compileResult?.status !== 'compiled') return false;
-  return (
-    compileResult.compiled.matcherAst !== selectedRule.matcherAst ||
-    compileResult.compiled.actionIntents !== selectedRule.actionIntents ||
-    compileResult.compiled.schemaVersion !== selectedRule.schemaVersion
-  );
 }
 
 function apiErrorCode(error: unknown): string | undefined {

@@ -10,6 +10,7 @@ import {
   listRules,
   listRuleTemplates,
   materializeRuleTemplate,
+  previewAllEnabledRules,
   previewCustomMail,
   previewDraftRule,
   previewSavedRule,
@@ -18,6 +19,7 @@ import {
   type RuleCreateRequest,
   type RuleCustomPreviewRequest,
   type RuleDraftPreviewRequest,
+  type RuleEnabledPreviewRequest,
   type RulePreviewRequest,
   type RuleUpdateRequest,
 } from '@/features/rules/api/rules-api';
@@ -121,6 +123,12 @@ export function usePreviewDraftRule() {
 export function usePreviewCustomMail() {
   return useMutation({
     mutationFn: (payload: RuleCustomPreviewRequest) => previewCustomMail(payload),
+  });
+}
+
+export function usePreviewAllEnabledRules() {
+  return useMutation({
+    mutationFn: (payload: RuleEnabledPreviewRequest) => previewAllEnabledRules(payload),
   });
 }
 

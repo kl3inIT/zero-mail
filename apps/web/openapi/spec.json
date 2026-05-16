@@ -870,6 +870,64 @@
         }
       }
     },
+    "/api/rules/preview-enabled": {
+      "post": {
+        "tags": ["rules"],
+        "operationId": "previewAllEnabledRules",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RuleEnabledPreviewRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/RulePreviewResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
     "/api/rules/preview-custom": {
       "post": {
         "tags": ["rules"],
@@ -2435,6 +2493,13 @@
           "evaluateSemanticIntents": { "type": "boolean" }
         },
         "required": ["compiled"]
+      },
+      "RuleEnabledPreviewRequest": {
+        "type": "object",
+        "properties": {
+          "sampleSize": { "type": "integer", "format": "int32" },
+          "evaluateSemanticIntents": { "type": "boolean" }
+        }
       },
       "RuleCustomPreviewRequest": {
         "type": "object",

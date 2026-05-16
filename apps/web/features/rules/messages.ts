@@ -392,8 +392,12 @@ export const rulesMessages = {
     en: 'Draft a short reply asking for the invoice PDF',
   },
   'rules.preview.title': {
-    vi: 'Kiểm tra quy tắc đang chọn',
-    en: 'Test selected rule',
+    vi: 'Kiểm tra trên Gmail thật',
+    en: 'Preview on real Gmail',
+  },
+  'rules.preview.testingEnabledCount': {
+    vi: 'Đang test {count} quy tắc đang bật',
+    en: 'Testing {count} enabled rules',
   },
   'rules.preview.empty.heading': {
     vi: 'Chưa chạy thử',

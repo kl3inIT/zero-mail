@@ -185,6 +185,34 @@ export async function previewDraftRule(
   return unwrap(result, `/api/rules/preview failed: ${result.response.status}`);
 }
 
+export type RuleEnabledPreviewRequest = {
+  sampleSize?: number | null;
+  evaluateSemanticIntents?: boolean | null;
+};
+
+export async function previewAllEnabledRules(
+  payload: RuleEnabledPreviewRequest,
+): Promise<RulePreviewResponse> {
+  const response = await fetch(getApiUrl('/api/rules/preview-enabled'), {
+    method: 'POST',
+    credentials: 'include',
+    headers: jsonHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    let apiErrorBody: unknown;
+    try {
+      apiErrorBody = await response.json();
+    } catch {
+      apiErrorBody = undefined;
+    }
+    throw apiErrorBody && typeof apiErrorBody === 'object'
+      ? apiErrorBody
+      : new Error(`/api/rules/preview-enabled failed: ${response.status}`);
+  }
+  return (await response.json()) as RulePreviewResponse;
+}
+
 // Manual types for the custom-mail preview endpoint. These mirror the
 // backend DTOs in com.zeromail.api.dto.rules.RuleCustomPreview{Request,Response}.
 // Once the OpenAPI spec is regenerated against the new endpoint, swap these

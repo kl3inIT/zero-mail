@@ -16,13 +16,13 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import type { RulePreviewResponse, RuleResponse } from '@/features/rules/api/rules-api';
+import type { RulePreviewResponse } from '@/features/rules/api/rules-api';
 import { cn } from '@/lib/utils';
 
 type SampleSize = 10 | 20;
 
 type Props = {
-  selectedRule: RuleResponse | null;
+  enabledRulesCount: number;
   preview: RulePreviewResponse | null;
   previewError: string | null;
   gmailUnavailableError: string | null;
@@ -38,7 +38,7 @@ type Props = {
 const SAMPLE_SIZES = [10, 20] as const;
 
 export function RulePreviewPanel({
-  selectedRule,
+  enabledRulesCount,
   preview,
   previewError,
   gmailUnavailableError,
@@ -312,7 +312,7 @@ export function RulePreviewPanel({
 
       <CardFooter>
         <p className="text-muted-foreground min-w-0 truncate text-xs">
-          {selectedRule?.displayName ?? t('rules.preview.empty.heading')}
+          {t('rules.preview.testingEnabledCount', { count: enabledRulesCount })}
         </p>
       </CardFooter>
     </Card>

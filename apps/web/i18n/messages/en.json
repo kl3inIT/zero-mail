@@ -982,7 +982,8 @@
         "matched": "Matched",
         "sampled": "Sampled"
       },
-      "title": "Test selected rule"
+      "testingEnabledCount": "Testing {count} enabled rules",
+      "title": "Preview on real Gmail"
     },
     "q": {
       "plain": "plain English",

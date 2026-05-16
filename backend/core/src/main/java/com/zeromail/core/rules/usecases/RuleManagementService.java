@@ -142,11 +142,11 @@ public class RuleManagementService {
 
     @Transactional
     public RuleStatusProjection enable(UUID tenantId, UUID ruleId) {
+        // Preview-before-enable gate intentionally removed: v1 write actions
+        // (label / archive / save_draft) are reversible and the Test tab is a
+        // separate first-class entry point — users no longer need to preview
+        // before flipping the switch.
         RuleEntity ruleEntity = findRuleOrThrow(tenantId, ruleId);
-        if (!Objects.equals(
-                ruleEntity.getLastPreviewedEntityVersion(), ruleEntity.getEntityVersion())) {
-            throw RuleValidationException.previewRequired();
-        }
         updateEnabled(tenantId, ruleEntity, true);
         return ruleEntity.toStatusProjection();
     }

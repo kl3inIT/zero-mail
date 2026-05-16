@@ -172,6 +172,45 @@ public class RulePreviewService {
         return previewDraft(tenantId, matcherAst, actionIntents, requestedSampleSize, false);
     }
 
+    /**
+     * Preview against every currently-enabled rule for a tenant, with no per-rule focus and no
+     * markPreviewSucceeded bookkeeping. Used by the rules /test tab where the user wants to see how
+     * their current rule set behaves on real Gmail without first picking a rule.
+     */
+    @Transactional(readOnly = true)
+    public RulePreviewResult previewAllEnabled(
+            UUID tenantId, Integer requestedSampleSize, boolean evaluateSemanticIntents) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        PreviewSampleSize sampleSize = PreviewSampleSize.normalize(requestedSampleSize);
+        List<RuleEntity> orderedRules = ruleRepository.findOrderedByTenantId(tenantId);
+        ArrayList<PreviewCandidate> previewCandidates = new ArrayList<>();
+        for (RuleEntity ruleEntity : orderedRules) {
+            if (!ruleEntity.isEnabled()) {
+                continue;
+            }
+            previewCandidates.add(toPreviewCandidate(ruleEntity, false));
+        }
+        if (previewCandidates.isEmpty()) {
+            return new RulePreviewResult(
+                    new RulePreviewResult.ImpactSummary(
+                            sampleSize.value(), 0, 0, Map.of(), 0, 0, true, NO_WRITE_NOTICE_KEY),
+                    List.of(),
+                    false);
+        }
+        boolean requiresBodyEvidence =
+                previewCandidates.stream()
+                        .anyMatch(candidate -> candidate.matcherNode().requiresBodyEvidence());
+        List<RulePreviewDataService.PreviewInput> previewInputs =
+                rulePreviewDataService.fetchPreviewInputs(
+                        tenantId, requiresBodyEvidence, sampleSize);
+        Map<String, Map<String, Boolean>> semanticOverridesByMessage =
+                evaluateSemanticIntents
+                        ? resolveSemanticOverrides(previewCandidates, previewInputs)
+                        : Map.of();
+        return buildResult(
+                sampleSize, previewCandidates, previewInputs, false, semanticOverridesByMessage);
+    }
+
     @Transactional(readOnly = true)
     public RulePreviewResult previewDraft(
             UUID tenantId,

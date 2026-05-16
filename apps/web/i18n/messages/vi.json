@@ -982,7 +982,8 @@
         "matched": "Đã khớp",
         "sampled": "Đã lấy mẫu"
       },
-      "title": "Kiểm tra quy tắc đang chọn"
+      "testingEnabledCount": "Đang test {count} quy tắc đang bật",
+      "title": "Kiểm tra trên Gmail thật"
     },
     "q": {
       "plain": "ngôn ngữ tự nhiên",
