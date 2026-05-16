@@ -994,10 +994,21 @@
     "ruleN": "Quy tắc 1 / 5",
     "tabs": {
       "calendar": "Thư mời lịch họp",
+      "creditBadge": "Tốn credit",
       "customer": "Khách hàng cần xử lý",
+      "freeBadge": "Miễn phí",
+      "gmailCreditWarningBody": "Nếu quy tắc có matcher cần LLM phân loại, mỗi lần chạy thử sẽ tốn credit nền tảng. Test miễn phí bằng email tự soạn ở tab bên cạnh.",
+      "gmailCreditWarningTitle": "Test trên Gmail thật sẽ tốn credit",
       "investors": "Theo dõi nhà đầu tư",
+      "label": "Chế độ trang quy tắc",
+      "list": "Danh sách quy tắc",
       "newsletters": "Bản tin & biên lai",
-      "recruiters": "Nhà tuyển dụng"
+      "recruiters": "Nhà tuyển dụng",
+      "test": "Kiểm tra quy tắc",
+      "testCustom": "Email tự soạn",
+      "testGmail": "Email Gmail thật",
+      "testIntro": "Mặc định sẽ thử trên {count} quy tắc đang bật.",
+      "testModeLabel": "Chế độ kiểm tra"
     },
     "templates": {
       "browseCta": "Xem mẫu có sẵn",

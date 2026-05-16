@@ -107,7 +107,7 @@ class RulePreviewDataServiceTest {
                                         TENANT_ID,
                                         new MatcherNode.SenderDomainMatcher(
                                                 "sender-domain", "stripe.com"),
-                                        new PreviewSampleSize(25)))
+                                        new PreviewSampleSize(10)))
                 .isInstanceOf(GmailPreviewUnavailableException.class)
                 .extracting("reason")
                 .isEqualTo(GmailPreviewUnavailableException.Reason.REVOKED);
@@ -131,8 +131,8 @@ class RulePreviewDataServiceTest {
         dataService.fetchPreviewInputs(
                 TENANT_ID,
                 new MatcherNode.SubjectContainsMatcher("subject", "receipt"),
-                new PreviewSampleSize(25));
-        dataService.fetchPreviewInputs(TENANT_ID, true, new PreviewSampleSize(25));
+                new PreviewSampleSize(10));
+        dataService.fetchPreviewInputs(TENANT_ID, true, new PreviewSampleSize(10));
 
         verify(gmailPreviewReadService)
                 .fetchRecentMessages(TENANT_ID, 25, false, Duration.ofSeconds(5));

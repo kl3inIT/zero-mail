@@ -994,10 +994,21 @@
     "ruleN": "Rule 1 of 5",
     "tabs": {
       "calendar": "Calendar invites",
+      "creditBadge": "Uses credits",
       "customer": "Customer escalations",
+      "freeBadge": "Free",
+      "gmailCreditWarningBody": "When a rule uses semantic LLM matchers, each test consumes platform credits. The Custom email tab tests rule logic for free.",
+      "gmailCreditWarningTitle": "Real Gmail test uses credits",
       "investors": "Investor follow-ups",
+      "label": "Rules page mode",
+      "list": "Rule list",
       "newsletters": "Newsletters & receipts",
-      "recruiters": "Recruiters"
+      "recruiters": "Recruiters",
+      "test": "Test rules",
+      "testCustom": "Custom email",
+      "testGmail": "Real Gmail",
+      "testIntro": "By default, testing runs on {count} enabled rules.",
+      "testModeLabel": "Test mode"
     },
     "templates": {
       "browseCta": "Browse templates",

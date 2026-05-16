@@ -15,10 +15,10 @@ const rulesHooks = vi.hoisted(() => ({
   useCompileRule: vi.fn(),
   useCreateRule: vi.fn(),
   useUpdateRule: vi.fn(),
-  useReorderRules: vi.fn(),
   useDeleteRule: vi.fn(),
   usePreviewSavedRule: vi.fn(),
   usePreviewDraftRule: vi.fn(),
+  usePreviewCustomMail: vi.fn(),
   useUpdateRuleEnabled: vi.fn(),
   useMaterializeRuleTemplate: vi.fn(),
 }));
@@ -80,17 +80,12 @@ describe('RulesWorkspace Wave 0 contract', () => {
           },
         ]}
         selectedRuleId="rule-html"
-        selectedForTestIds={new Set<string>()}
         isLoading={false}
         pendingRuleId={null}
-        canEnableRule={() => false}
         onSelectRule={vi.fn()}
-        onMoveRule={vi.fn()}
         onEditRule={vi.fn()}
         onToggleEnabled={vi.fn()}
         onDeleteRule={vi.fn()}
-        onToggleRuleForTest={vi.fn()}
-        onToggleAllRulesForTest={vi.fn()}
       />,
     );
 
@@ -216,7 +211,6 @@ function mockRulesWorkspaceHooks({
   rulesHooks.useCompileRule.mockReturnValue({ mutateAsync: compileRule, isPending: false });
   rulesHooks.useCreateRule.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
   rulesHooks.useUpdateRule.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
-  rulesHooks.useReorderRules.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
   rulesHooks.useDeleteRule.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
   rulesHooks.usePreviewSavedRule.mockReturnValue({
     mutateAsync: previewSavedRule,
@@ -226,6 +220,7 @@ function mockRulesWorkspaceHooks({
     mutateAsync: previewDraftRule,
     isPending: false,
   });
+  rulesHooks.usePreviewCustomMail.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
   rulesHooks.useUpdateRuleEnabled.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
   rulesHooks.useMaterializeRuleTemplate.mockReturnValue({
     mutateAsync: vi.fn(),
@@ -267,7 +262,7 @@ function compiledPayload(displayName: string, matcherAst: string) {
 function previewResult() {
   return {
     impactSummary: {
-      sampleSize: 25,
+      sampleSize: 10,
       sampledMessageCount: 0,
       matchedCount: 0,
       proposedActionCounts: {},

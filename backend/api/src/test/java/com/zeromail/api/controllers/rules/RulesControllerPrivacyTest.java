@@ -67,14 +67,14 @@ class RulesControllerPrivacyTest extends ApiPostgresTestBase {
         JsonNode ruleJson = createRule(seedData, "Archive Stripe");
         UUID ruleId = UUID.fromString(ruleJson.path("ruleId").asString());
         when(rulePreviewDataService.fetchPreviewInputs(
-                        eq(seedData.tenantId()), eq(false), eq(new PreviewSampleSize(25))))
+                        eq(seedData.tenantId()), eq(false), eq(new PreviewSampleSize(10))))
                 .thenReturn(List.of(previewInputWithInternalSentinels()));
 
         JsonNode previewJson =
                 postJson(
                         authenticatedClient(seedData),
                         "/api/rules/" + ruleId + "/preview",
-                        Map.of("sampleSize", 25));
+                        Map.of("sampleSize", 10));
 
         assertThat(previewJson.path("impactSummary").path("noWriteNotice").asBoolean()).isTrue();
         assertThat(previewJson.toString())
@@ -100,7 +100,7 @@ class RulesControllerPrivacyTest extends ApiPostgresTestBase {
         JsonNode ruleJson = createRule(seedData, "Archive Stripe");
         UUID ruleId = UUID.fromString(ruleJson.path("ruleId").asString());
         when(rulePreviewDataService.fetchPreviewInputs(
-                        eq(seedData.tenantId()), eq(false), eq(new PreviewSampleSize(25))))
+                        eq(seedData.tenantId()), eq(false), eq(new PreviewSampleSize(10))))
                 .thenThrow(
                         new GmailPreviewUnavailableException(
                                 GmailPreviewUnavailableException.Reason.NO_READ_GRANT));
@@ -109,7 +109,7 @@ class RulesControllerPrivacyTest extends ApiPostgresTestBase {
                 postProblem(
                         authenticatedClient(seedData),
                         "/api/rules/" + ruleId + "/preview",
-                        Map.of("sampleSize", 25));
+                        Map.of("sampleSize", 10));
 
         assertThat(problemJson.path("status").asInt()).isEqualTo(503);
         assertThat(problemJson.path("code").asString()).isEqualTo("error.rules.gmail.unavailable");

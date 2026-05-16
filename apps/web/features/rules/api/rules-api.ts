@@ -14,8 +14,6 @@ export type RuleCompiledPayloadRequest = components['schemas']['CompiledPayloadR
 export type RuleCreateRequest = components['schemas']['RuleCreateRequest'];
 export type RuleUpdateRequest = components['schemas']['RuleUpdateRequest'];
 export type RuleEnabledRequest = components['schemas']['RuleEnabledRequest'];
-export type RuleOrderEntryRequest = components['schemas']['RuleOrderEntryRequest'];
-export type RuleReorderRequest = components['schemas']['RuleReorderRequest'];
 export type RulePreviewRequest = components['schemas']['RulePreviewRequest'];
 export type RuleDraftPreviewRequest = components['schemas']['RuleDraftPreviewRequest'];
 export type RulePreviewResponse = components['schemas']['RulePreviewResponse'];
@@ -151,14 +149,6 @@ export async function updateRuleEnabled(
     headers: jsonHeaders(),
   });
   return unwrap(result, `/api/rules/${ruleId}/enabled failed: ${result.response.status}`);
-}
-
-export async function reorderRules(payload: RuleReorderRequest): Promise<RuleResponse[]> {
-  const result = await api.PUT('/api/rules/reorder', {
-    body: payload,
-    headers: jsonHeaders(),
-  });
-  return unwrap(result, `/api/rules/reorder failed: ${result.response.status}`);
 }
 
 export async function deleteRule(ruleId: string): Promise<void> {

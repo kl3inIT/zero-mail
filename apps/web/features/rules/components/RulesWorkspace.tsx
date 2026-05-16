@@ -4,7 +4,9 @@ import { useEffect, useMemo, useReducer, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Plus, Sparkles } from 'lucide-react';
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ErrorCode } from '@/lib/api/error-codes';
 import { useLocalizedApiError, type ApiError } from '@/lib/api/errors';
 import { CustomMailTester } from '@/features/rules/components/CustomMailTester';
@@ -37,14 +40,13 @@ import {
   usePreviewCustomMail,
   usePreviewDraftRule,
   usePreviewSavedRule,
-  useReorderRules,
   useRuleTemplates,
   useRules,
   useUpdateRule,
   useUpdateRuleEnabled,
 } from '@/features/rules/hooks/use-rules';
 
-type SampleSize = 10 | 25 | 50;
+type SampleSize = 10 | 20;
 
 type LastPreviewedRule = { ruleId: string; entityVersion?: number };
 
@@ -134,7 +136,7 @@ const initialState: RulesWorkspaceState = {
   preview: null,
   previewError: null,
   gmailUnavailableError: null,
-  sampleSize: 25,
+  sampleSize: 10,
   lastPreviewedRule: null,
   pendingRuleId: null,
   pendingTemplateKey: null,
@@ -288,7 +290,6 @@ export function RulesWorkspace() {
   const compileMutation = useCompileRule();
   const createRuleMutation = useCreateRule();
   const updateRuleMutation = useUpdateRule();
-  const reorderRulesMutation = useReorderRules();
   const deleteRuleMutation = useDeleteRule();
   const previewSavedRuleMutation = usePreviewSavedRule();
   const previewDraftRuleMutation = usePreviewDraftRule();
@@ -297,10 +298,9 @@ export function RulesWorkspace() {
   const previewCustomMailMutation = usePreviewCustomMail();
 
   const [state, dispatch] = useReducer(rulesWorkspaceReducer, initialState);
-  const [selectedForTestIds, setSelectedForTestIds] = useState<Set<string>>(() => new Set());
   const [customMailResult, setCustomMailResult] = useState<RuleCustomPreviewResponse | null>(null);
   const [customMailError, setCustomMailError] = useState<string | null>(null);
-  const [customTesterOpen, setCustomTesterOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'list' | 'test'>('list');
 
   const rules = useMemo(
     () => [...(rulesQuery.data?.rules ?? [])].sort(compareRulesByOrder),
@@ -495,28 +495,6 @@ export function RulesWorkspace() {
     }
   }
 
-  async function handleMoveRule(rule: RuleResponse, direction: 'up' | 'down') {
-    if (!rule.ruleId) return;
-    const currentIndex = rules.findIndex((candidate) => candidate.ruleId === rule.ruleId);
-    const nextIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= rules.length) return;
-
-    const orderedRules = [...rules];
-    const [movedRule] = orderedRules.splice(currentIndex, 1);
-    if (!movedRule) return;
-    orderedRules.splice(nextIndex, 0, movedRule);
-
-    await reorderRulesMutation.mutateAsync({
-      orderedRules,
-      entries: orderedRules
-        .filter((orderedRule) => orderedRule.ruleId)
-        .map((orderedRule) => ({
-          ruleId: orderedRule.ruleId as string,
-          entityVersion: orderedRule.entityVersion ?? 0,
-        })),
-    });
-  }
-
   async function handleDeleteRule(rule: RuleResponse) {
     if (!rule.ruleId) return;
     await deleteRuleMutation.mutateAsync(rule.ruleId);
@@ -538,42 +516,13 @@ export function RulesWorkspace() {
     }
   }
 
-  function handleToggleRuleForTest(rule: RuleResponse) {
-    if (!rule.ruleId) return;
-    setSelectedForTestIds((previous) => {
-      const next = new Set(previous);
-      if (next.has(rule.ruleId as string)) {
-        next.delete(rule.ruleId as string);
-      } else {
-        next.add(rule.ruleId as string);
-      }
-      return next;
-    });
-  }
-
-  function handleToggleAllRulesForTest(selectAll: boolean) {
-    if (selectAll) {
-      const allEligible = rules
-        .map((rule) => rule.ruleId)
-        .filter((ruleId): ruleId is string => Boolean(ruleId));
-      setSelectedForTestIds(new Set(allEligible));
-      return;
-    }
-    setSelectedForTestIds(new Set());
-  }
-
-  function handleClearTestSelection() {
-    setSelectedForTestIds(new Set());
-  }
-
   async function handleRunCustomMailTest(input: { subject: string; body: string }) {
     setCustomMailError(null);
-    const ruleIds = Array.from(selectedForTestIds);
     try {
       const response = await previewCustomMailMutation.mutateAsync({
         subject: input.subject,
         body: input.body,
-        ruleIds: ruleIds.length > 0 ? ruleIds : null,
+        ruleIds: null,
       });
       setCustomMailResult(response);
     } catch {
@@ -581,92 +530,110 @@ export function RulesWorkspace() {
     }
   }
 
-  function canEnableRule(rule: RuleResponse): boolean {
-    return (
-      Boolean(rule.ruleId) &&
-      (rule.lastPreviewedEntityVersion === rule.entityVersion ||
-        (state.lastPreviewedRule?.ruleId === rule.ruleId &&
-          state.lastPreviewedRule?.entityVersion === rule.entityVersion))
-    );
-  }
-
+  const enabledRulesCount = rules.filter((rule) => rule.enabled).length;
   const canPreview = canPreviewRule(selectedRule, state.sourceText, state.compileResult);
 
   return (
-    <div className="space-y-6">
-      <RuleList
-        rules={rules}
-        selectedRuleId={state.selectedRuleId}
-        selectedForTestIds={selectedForTestIds}
-        isLoading={rulesQuery.isLoading}
-        pendingRuleId={state.pendingRuleId}
-        canEnableRule={canEnableRule}
-        onSelectRule={(rule) => dispatch({ type: 'ruleSelected', rule })}
-        onMoveRule={handleMoveRule}
-        onEditRule={(rule) => dispatch({ type: 'editRuleStarted', rule })}
-        onToggleEnabled={handleToggleRule}
-        onDeleteRule={handleDeleteRule}
-        onToggleRuleForTest={handleToggleRuleForTest}
-        onToggleAllRulesForTest={handleToggleAllRulesForTest}
-        action={
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1.5 rounded-md"
-              onClick={() => dispatch({ type: 'templateDialogToggled', open: true })}
-            >
-              <Sparkles className="size-3.5" />
-              {t('rules.templates.browseCta')}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              className="gap-1.5 rounded-md"
-              onClick={() => dispatch({ type: 'newRuleStarted' })}
-            >
-              <Plus className="size-3.5" />
-              {t('rules.composer.newRuleCta')}
-            </Button>
-          </div>
-        }
-      />
+    <Tabs
+      value={activeTab}
+      onValueChange={(nextValue) => setActiveTab(nextValue as 'list' | 'test')}
+      className="space-y-6"
+    >
+      <TabsList aria-label={t('rules.tabs.label')}>
+        <TabsTrigger value="list">{t('rules.tabs.list')}</TabsTrigger>
+        <TabsTrigger value="test">{t('rules.tabs.test')}</TabsTrigger>
+      </TabsList>
 
-      <RulePreviewPanel
-        selectedRule={selectedRule}
-        preview={state.preview}
-        previewError={state.previewError}
-        gmailUnavailableError={state.gmailUnavailableError}
-        isPreviewing={previewSavedRuleMutation.isPending || previewDraftRuleMutation.isPending}
-        isToggling={updateEnabledMutation.isPending}
-        canPreview={canPreview}
-        canEnable={selectedRule ? canEnableRule(selectedRule) : false}
-        sampleSize={state.sampleSize}
-        onSampleSizeChange={(sampleSize) => dispatch({ type: 'sampleSizeChanged', sampleSize })}
-        onPreview={handlePreview}
-        onToggleEnabled={() => {
-          if (selectedRule) void handleToggleRule(selectedRule);
-        }}
-        onOpenCustomMailTester={() => setCustomTesterOpen(true)}
-      />
+      <TabsContent value="list" className="space-y-6">
+        <RuleList
+          rules={rules}
+          selectedRuleId={state.selectedRuleId}
+          isLoading={rulesQuery.isLoading}
+          pendingRuleId={state.pendingRuleId}
+          onSelectRule={(rule) => dispatch({ type: 'ruleSelected', rule })}
+          onEditRule={(rule) => dispatch({ type: 'editRuleStarted', rule })}
+          onToggleEnabled={handleToggleRule}
+          onDeleteRule={handleDeleteRule}
+          action={
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5 rounded-md"
+                onClick={() => dispatch({ type: 'templateDialogToggled', open: true })}
+              >
+                <Sparkles className="size-3.5" />
+                {t('rules.templates.browseCta')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="gap-1.5 rounded-md"
+                onClick={() => dispatch({ type: 'newRuleStarted' })}
+              >
+                <Plus className="size-3.5" />
+                {t('rules.composer.newRuleCta')}
+              </Button>
+            </div>
+          }
+        />
+      </TabsContent>
 
-      <Dialog open={customTesterOpen} onOpenChange={setCustomTesterOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader className="sr-only">
-            <DialogTitle>{t('rules.testCustom.title')}</DialogTitle>
-            <DialogDescription>{t('rules.testCustom.intro')}</DialogDescription>
-          </DialogHeader>
-          <CustomMailTester
-            selectedCount={selectedForTestIds.size}
-            isRunning={previewCustomMailMutation.isPending}
-            result={customMailResult}
-            resultError={customMailError}
-            onClearSelection={handleClearTestSelection}
-            onRunTest={handleRunCustomMailTest}
-          />
-        </DialogContent>
-      </Dialog>
+      <TabsContent value="test" className="space-y-6">
+        <p className="text-muted-foreground text-sm">
+          {t('rules.tabs.testIntro', { count: enabledRulesCount })}
+        </p>
+        <Tabs defaultValue="custom" className="space-y-4">
+          <TabsList aria-label={t('rules.tabs.testModeLabel')}>
+            <TabsTrigger value="custom" className="gap-2">
+              {t('rules.tabs.testCustom')}
+              <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                {t('rules.tabs.freeBadge')}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="gmail" className="gap-2">
+              {t('rules.tabs.testGmail')}
+              <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                {t('rules.tabs.creditBadge')}
+              </Badge>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="custom">
+            <CustomMailTester
+              selectedCount={0}
+              isRunning={previewCustomMailMutation.isPending}
+              result={customMailResult}
+              resultError={customMailError}
+              onClearSelection={() => undefined}
+              onRunTest={handleRunCustomMailTest}
+            />
+          </TabsContent>
+
+          <TabsContent value="gmail" className="space-y-3">
+            <Alert variant="warning">
+              <AlertTitle>{t('rules.tabs.gmailCreditWarningTitle')}</AlertTitle>
+              <AlertDescription>{t('rules.tabs.gmailCreditWarningBody')}</AlertDescription>
+            </Alert>
+            <RulePreviewPanel
+              selectedRule={selectedRule}
+              preview={state.preview}
+              previewError={state.previewError}
+              gmailUnavailableError={state.gmailUnavailableError}
+              isPreviewing={
+                previewSavedRuleMutation.isPending || previewDraftRuleMutation.isPending
+              }
+              canPreview={canPreview}
+              sampleSize={state.sampleSize}
+              onSampleSizeChange={(sampleSize) =>
+                dispatch({ type: 'sampleSizeChanged', sampleSize })
+              }
+              onPreview={handlePreview}
+            />
+          </TabsContent>
+        </Tabs>
+      </TabsContent>
 
       {/* Composer dialog — for creating and editing rules */}
       <Dialog
@@ -725,7 +692,7 @@ export function RulesWorkspace() {
           />
         </DialogContent>
       </Dialog>
-    </div>
+    </Tabs>
   );
 }
 

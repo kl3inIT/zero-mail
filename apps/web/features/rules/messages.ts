@@ -11,6 +11,50 @@ export const rulesMessages = {
     vi: 'Mô tả tự nhiên chỉ là cách nhập nhanh. Khi lưu, Zero Mail giữ cấu trúc điều kiện và hành động để bạn kiểm tra lại; các hành động nguy hiểm vẫn bị khóa.',
     en: 'Natural language is only a quick input method. Saved rules keep a reviewable criteria and action structure, and unsafe actions stay locked.',
   },
+  'rules.tabs.label': {
+    vi: 'Chế độ trang quy tắc',
+    en: 'Rules page mode',
+  },
+  'rules.tabs.list': {
+    vi: 'Danh sách quy tắc',
+    en: 'Rule list',
+  },
+  'rules.tabs.test': {
+    vi: 'Kiểm tra quy tắc',
+    en: 'Test rules',
+  },
+  'rules.tabs.testIntro': {
+    vi: 'Mặc định sẽ thử trên {count} quy tắc đang bật.',
+    en: 'By default, testing runs on {count} enabled rules.',
+  },
+  'rules.tabs.testModeLabel': {
+    vi: 'Chế độ kiểm tra',
+    en: 'Test mode',
+  },
+  'rules.tabs.testCustom': {
+    vi: 'Email tự soạn',
+    en: 'Custom email',
+  },
+  'rules.tabs.testGmail': {
+    vi: 'Email Gmail thật',
+    en: 'Real Gmail',
+  },
+  'rules.tabs.freeBadge': {
+    vi: 'Miễn phí',
+    en: 'Free',
+  },
+  'rules.tabs.creditBadge': {
+    vi: 'Tốn credit',
+    en: 'Uses credits',
+  },
+  'rules.tabs.gmailCreditWarningTitle': {
+    vi: 'Test trên Gmail thật sẽ tốn credit',
+    en: 'Real Gmail test uses credits',
+  },
+  'rules.tabs.gmailCreditWarningBody': {
+    vi: 'Nếu quy tắc có matcher cần LLM phân loại, mỗi lần chạy thử sẽ tốn credit nền tảng. Test miễn phí bằng email tự soạn ở tab bên cạnh.',
+    en: 'When a rule uses semantic LLM matchers, each test consumes platform credits. The Custom email tab tests rule logic for free.',
+  },
   'rules.list.title': {
     vi: 'Danh sách quy tắc',
     en: 'Rule list',
@@ -70,14 +114,6 @@ export const rulesMessages = {
   'rules.list.noThen': {
     vi: 'Chưa có hành động',
     en: 'No action yet',
-  },
-  'rules.list.moveUp': {
-    vi: 'Đưa quy tắc lên trên',
-    en: 'Move rule up',
-  },
-  'rules.list.moveDown': {
-    vi: 'Đưa quy tắc xuống dưới',
-    en: 'Move rule down',
   },
   'rules.list.edit': {
     vi: 'Sửa quy tắc',

@@ -1,15 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import {
-  AlertTriangle,
-  Archive,
-  CheckCircle2,
-  FlaskConical,
-  Loader2,
-  Play,
-  Tags,
-} from 'lucide-react';
+import { AlertTriangle, Archive, CheckCircle2, Loader2, Play } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -27,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import type { RulePreviewResponse, RuleResponse } from '@/features/rules/api/rules-api';
 import { cn } from '@/lib/utils';
 
-type SampleSize = 10 | 25 | 50;
+type SampleSize = 10 | 20;
 
 type Props = {
   selectedRule: RuleResponse | null;
@@ -35,17 +27,13 @@ type Props = {
   previewError: string | null;
   gmailUnavailableError: string | null;
   isPreviewing: boolean;
-  isToggling: boolean;
   canPreview: boolean;
-  canEnable: boolean;
   sampleSize: SampleSize;
   onSampleSizeChange: (sampleSize: SampleSize) => void;
   onPreview: () => void;
-  onToggleEnabled: () => void;
-  onOpenCustomMailTester: () => void;
 };
 
-const SAMPLE_SIZES = [10, 25, 50] as const;
+const SAMPLE_SIZES = [10, 20] as const;
 
 export function RulePreviewPanel({
   selectedRule,
@@ -53,14 +41,10 @@ export function RulePreviewPanel({
   previewError,
   gmailUnavailableError,
   isPreviewing,
-  isToggling,
   canPreview,
-  canEnable,
   sampleSize,
   onSampleSizeChange,
   onPreview,
-  onToggleEnabled,
-  onOpenCustomMailTester,
 }: Props) {
   const t = useTranslations();
   const rows = preview?.rows ?? [];
@@ -103,25 +87,14 @@ export function RulePreviewPanel({
               })}
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onOpenCustomMailTester}
-              data-testid="rules-open-custom-mail-tester"
-            >
-              <FlaskConical className="size-4" aria-hidden="true" />
-              {t('rules.testCustom.openCta')}
-            </Button>
-            <Button type="button" disabled={!canPreview || isPreviewing} onClick={onPreview}>
-              {isPreviewing ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <Play className="size-4" aria-hidden="true" />
-              )}
-              {isPreviewing ? t('rules.preview.previewing') : t('rules.preview.previewCta')}
-            </Button>
-          </div>
+          <Button type="button" disabled={!canPreview || isPreviewing} onClick={onPreview}>
+            {isPreviewing ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Play className="size-4" aria-hidden="true" />
+            )}
+            {isPreviewing ? t('rules.preview.previewing') : t('rules.preview.previewCta')}
+          </Button>
         </div>
 
         {gmailUnavailableError && (
@@ -300,28 +273,13 @@ export function RulePreviewPanel({
         )}
       </CardContent>
 
-      <CardFooter className="justify-between gap-3">
+      <CardFooter>
         <p className="text-muted-foreground min-w-0 truncate text-xs">
           {selectedRule?.displayName ?? t('rules.preview.empty.heading')}
         </p>
-        {selectedRule?.enabled ? (
-          <Button type="button" variant="secondary" disabled={isToggling} onClick={onToggleEnabled}>
-            <PowerOffIcon />
-            {t('rules.preview.disableCta')}
-          </Button>
-        ) : (
-          <Button type="button" disabled={!canEnable || isToggling} onClick={onToggleEnabled}>
-            <Tags className="size-4" aria-hidden="true" />
-            {t('rules.preview.enableCta')}
-          </Button>
-        )}
       </CardFooter>
     </Card>
   );
-}
-
-function PowerOffIcon() {
-  return <Tags className="size-4 rotate-45" aria-hidden="true" />;
 }
 
 const GMAIL_LABEL_COLOR_MAP: Record<string, string> = {

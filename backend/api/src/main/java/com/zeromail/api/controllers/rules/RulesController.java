@@ -11,7 +11,6 @@ import com.zeromail.api.dto.rules.RuleDraftPreviewRequest;
 import com.zeromail.api.dto.rules.RuleEnabledRequest;
 import com.zeromail.api.dto.rules.RulePreviewRequest;
 import com.zeromail.api.dto.rules.RulePreviewResponse;
-import com.zeromail.api.dto.rules.RuleReorderRequest;
 import com.zeromail.api.dto.rules.RuleResponse;
 import com.zeromail.api.dto.rules.RuleTemplateMaterializationResponse;
 import com.zeromail.api.dto.rules.RuleTemplateResponse;
@@ -25,9 +24,7 @@ import com.zeromail.core.rules.usecases.RuleCompileResult;
 import com.zeromail.core.rules.usecases.RuleCompilerService;
 import com.zeromail.core.rules.usecases.RuleCreateCommand;
 import com.zeromail.core.rules.usecases.RuleManagementService;
-import com.zeromail.core.rules.usecases.RuleOrderEntry;
 import com.zeromail.core.rules.usecases.RulePreviewService;
-import com.zeromail.core.rules.usecases.RuleReorderCommand;
 import com.zeromail.core.rules.usecases.RuleTemplateCatalogService;
 import com.zeromail.core.rules.usecases.RuleTemplateMaterializationResult;
 import com.zeromail.core.rules.usecases.RuleTemplateMaterializationService;
@@ -161,29 +158,6 @@ public class RulesController {
             return RuleResponse.from(ruleManagementService.enable(tenantId, ruleId));
         }
         return RuleResponse.from(ruleManagementService.disable(tenantId, ruleId));
-    }
-
-    @PutMapping("/reorder")
-    public List<RuleResponse> reorderRules(@Valid @RequestBody RuleReorderRequest request) {
-        UUID tenantId = TenantContext.currentTenantUuid();
-        try {
-            return ruleManagementService
-                    .reorder(
-                            new RuleReorderCommand(
-                                    tenantId,
-                                    request.entries().stream()
-                                            .map(
-                                                    orderedEntry ->
-                                                            new RuleOrderEntry(
-                                                                    orderedEntry.ruleId(),
-                                                                    orderedEntry.entityVersion()))
-                                            .toList()))
-                    .stream()
-                    .map(RuleResponse::from)
-                    .toList();
-        } catch (IllegalArgumentException invalidReorderRequest) {
-            throw RuleApiException.invalidReorder();
-        }
     }
 
     @DeleteMapping("/{ruleId}")
