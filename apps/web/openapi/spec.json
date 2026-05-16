@@ -2650,6 +2650,8 @@
           "auditId": { "type": "string", "format": "uuid" },
           "gmailThreadId": { "type": "string" },
           "gmailMessageId": { "type": "string" },
+          "subject": { "type": "string" },
+          "senderEmail": { "type": "string" },
           "ruleName": { "type": "string" },
           "action": { "type": "string" },
           "reason": { "type": "string" },

@@ -15,4 +15,32 @@ export const aiMessages = {
     vi: 'Email từ những người gửi này luôn được giữ nguyên — không gắn nhãn, không lưu trữ, không soạn nháp tự động, dù quy tắc có khớp đến đâu.',
     en: 'Mail from these senders is always left alone — no labels, no archive, no auto-drafts, no matter how strongly a rule matches.',
   },
+  'ai.senders.inputLabel': {
+    vi: 'Email người gửi cần bảo vệ',
+    en: 'Sender email to protect',
+  },
+  'ai.senders.inputPlaceholder': {
+    vi: 'sep@congty.com',
+    en: 'boss@company.com',
+  },
+  'ai.senders.add': {
+    vi: 'Bảo vệ',
+    en: 'Protect',
+  },
+  'ai.senders.adding': {
+    vi: 'Đang thêm…',
+    en: 'Adding…',
+  },
+  'ai.senders.added': {
+    vi: 'Đã bảo vệ {email}',
+    en: 'Protected {email}',
+  },
+  'ai.senders.addFailed': {
+    vi: 'Chưa thêm được người gửi. Hãy thử lại.',
+    en: 'Could not protect this sender. Try again.',
+  },
+  'ai.senders.invalidEmail': {
+    vi: 'Email không hợp lệ.',
+    en: 'Invalid email address.',
+  },
 } as const;

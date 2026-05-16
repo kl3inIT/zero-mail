@@ -26,13 +26,12 @@ export function AuditRow({ entry, now }: AuditRowProps) {
 
   return (
     <div
-      className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[#0a3d3a]/[0.04]"
+      className="group flex items-start gap-3 px-4 py-3 transition-colors hover:bg-[#0a3d3a]/[0.04]"
       data-testid="audit-table-row"
     >
-      {/* Action-colored avatar */}
       <div
         className={cn(
-          'flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+          'mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold',
           avatarClassName(entry.action),
         )}
         aria-hidden="true"
@@ -41,24 +40,21 @@ export function AuditRow({ entry, now }: AuditRowProps) {
       </div>
 
       <div className="flex min-w-0 flex-1 items-center gap-3">
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="w-28 shrink-0 truncate text-sm font-medium">{sender}</span>
-            <span className="min-w-0 truncate text-sm font-medium">{subject}</span>
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <div className="flex min-w-0 items-baseline gap-2">
+            <span className="text-foreground max-w-[12rem] shrink-0 truncate text-sm font-semibold">
+              {sender}
+            </span>
+            <span className="text-muted-foreground min-w-0 truncate text-sm">{subject}</span>
           </div>
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <AuditFact label={t('triage.audit.whenLabel')} value={entry.ruleName} />
-            <AuditFact label={t('triage.audit.thenLabel')} value={entry.actionLabel} action />
-            <AuditFact
-              label={t('triage.audit.whyLabel')}
-              value={entry.reason || t('triage.audit.noReason')}
-            />
+          <div className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
+            <span className="truncate">{entry.ruleName}</span>
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-3">
           <ActionBadge entry={entry} />
-          <time className="text-muted-foreground w-20 shrink-0 text-right font-mono text-xs">
+          <time className="text-muted-foreground hidden w-20 shrink-0 text-right font-mono text-xs sm:block">
             {formatAuditTimestamp(entry.timestamp)}
           </time>
           <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
@@ -75,30 +71,6 @@ export function AuditRow({ entry, now }: AuditRowProps) {
         </div>
       </div>
     </div>
-  );
-}
-
-function AuditFact({
-  label,
-  value,
-  action = false,
-}: {
-  label: string;
-  value: string;
-  action?: boolean;
-}) {
-  return (
-    <span
-      className={cn(
-        'inline-flex max-w-[16rem] items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] leading-4',
-        action
-          ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
-          : 'bg-muted text-muted-foreground',
-      )}
-    >
-      <span className="font-semibold tracking-wide uppercase">{label}</span>
-      <span className="truncate">{value}</span>
-    </span>
   );
 }
 

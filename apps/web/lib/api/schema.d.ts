@@ -877,6 +877,8 @@ export interface components {
             auditId?: string;
             gmailThreadId?: string;
             gmailMessageId?: string;
+            subject?: string;
+            senderEmail?: string;
             ruleName?: string;
             action?: string;
             reason?: string;

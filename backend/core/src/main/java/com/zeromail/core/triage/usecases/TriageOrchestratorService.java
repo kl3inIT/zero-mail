@@ -294,15 +294,18 @@ public class TriageOrchestratorService {
             boolean generateDraftBody) {
         TriageActionResult preWriteIntent =
                 preWriteIntent(dispatchContext, actionProposal.actionIntent(), generateDraftBody);
+        TriageRuleEvaluationInput evaluationContext = dispatchContext.triageRuleEvaluationInput();
         return new TriageAuditCommand(
                 dispatchContext.tenantId(),
                 dispatchContext.gmailMessageId(),
                 dispatchContext.gmailThreadId(),
+                evaluationContext.evaluationInput().sanitizedSubjectExcerpt(),
+                evaluationContext.sanitizedSenderEmail(),
                 firstContributingRuleId(actionProposal),
                 firstContributingRuleName(actionProposal),
                 actionType,
                 preWriteIntent,
-                replyHeadersFor(preWriteIntent, dispatchContext.triageRuleEvaluationInput()),
+                replyHeadersFor(preWriteIntent, evaluationContext),
                 reasonEvidence(actionProposal));
     }
 

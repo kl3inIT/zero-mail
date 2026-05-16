@@ -93,6 +93,8 @@ function mapAuditEntry(row: components['schemas']['AuditEntryResponse']): AuditE
     inverseAction: inverseActionLabel(action),
     messageRef: {
       gmailMessageId: row.gmailMessageId,
+      subject: row.subject ?? undefined,
+      sender: row.senderEmail ?? undefined,
     },
     undoableUntil: row.undoableUntil ?? new Date(0).toISOString(),
     undone: row.decisionState === 'REVERTED',

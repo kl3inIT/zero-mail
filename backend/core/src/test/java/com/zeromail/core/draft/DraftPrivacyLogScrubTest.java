@@ -88,6 +88,8 @@ class DraftPrivacyLogScrubTest {
                         anyString(),
                         anyString(),
                         any(),
+                        any(),
+                        any(),
                         anyString(),
                         any(),
                         any(),

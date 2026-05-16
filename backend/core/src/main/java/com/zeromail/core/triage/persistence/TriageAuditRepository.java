@@ -17,13 +17,16 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
             value =
                     """
           INSERT INTO triage_audit (
-            audit_id, tenant_id, gmail_message_id, gmail_thread_id, rule_id, rule_name_snapshot,
+            audit_id, tenant_id, gmail_message_id, gmail_thread_id,
+            sanitized_subject, sanitized_sender_email,
+            rule_id, rule_name_snapshot,
             action_type, args_hash, action_args_json, gmail_change_token, reason, decision,
             attempt_count, last_attempt_at, lease_owner, decided_at, created_at, updated_at, version
           )
           VALUES (
-            gen_random_uuid(), :tenantId, :gmailMessageId, :gmailThreadId, :ruleId,
-            :ruleNameSnapshot, :actionType, :argsHash, CAST(:actionArgsJson AS jsonb), NULL,
+            gen_random_uuid(), :tenantId, :gmailMessageId, :gmailThreadId,
+            :sanitizedSubject, :sanitizedSenderEmail,
+            :ruleId, :ruleNameSnapshot, :actionType, :argsHash, CAST(:actionArgsJson AS jsonb), NULL,
             :reason, 'PENDING', 0, NULL, NULL, NOW(), NOW(), NOW(), 0
           )
           ON CONFLICT (tenant_id, gmail_message_id, rule_id, action_type, args_hash) DO NOTHING
@@ -35,6 +38,8 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
             @Param("tenantId") UUID tenantId,
             @Param("gmailMessageId") String gmailMessageId,
             @Param("gmailThreadId") String gmailThreadId,
+            @Param("sanitizedSubject") String sanitizedSubject,
+            @Param("sanitizedSenderEmail") String sanitizedSenderEmail,
             @Param("ruleId") UUID ruleId,
             @Param("ruleNameSnapshot") String ruleNameSnapshot,
             @Param("actionType") String actionType,
@@ -46,13 +51,16 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
             value =
                     """
           INSERT INTO triage_audit (
-            audit_id, tenant_id, gmail_message_id, gmail_thread_id, rule_id, rule_name_snapshot,
+            audit_id, tenant_id, gmail_message_id, gmail_thread_id,
+            sanitized_subject, sanitized_sender_email,
+            rule_id, rule_name_snapshot,
             action_type, args_hash, action_args_json, gmail_change_token, reason, decision,
             attempt_count, last_attempt_at, lease_owner, decided_at, created_at, updated_at, version
           )
           VALUES (
-            gen_random_uuid(), :tenantId, :gmailMessageId, :gmailThreadId, :ruleId,
-            :ruleNameSnapshot, :actionType, :argsHash, CAST(:actionArgsJson AS jsonb), NULL,
+            gen_random_uuid(), :tenantId, :gmailMessageId, :gmailThreadId,
+            :sanitizedSubject, :sanitizedSenderEmail,
+            :ruleId, :ruleNameSnapshot, :actionType, :argsHash, CAST(:actionArgsJson AS jsonb), NULL,
             :reason, :decision, 0, NULL, NULL, NOW(), NOW(), NOW(), 0
           )
           ON CONFLICT (tenant_id, gmail_message_id, rule_id, action_type, args_hash) DO NOTHING
@@ -64,6 +72,8 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
             @Param("tenantId") UUID tenantId,
             @Param("gmailMessageId") String gmailMessageId,
             @Param("gmailThreadId") String gmailThreadId,
+            @Param("sanitizedSubject") String sanitizedSubject,
+            @Param("sanitizedSenderEmail") String sanitizedSenderEmail,
             @Param("ruleId") UUID ruleId,
             @Param("ruleNameSnapshot") String ruleNameSnapshot,
             @Param("actionType") String actionType,

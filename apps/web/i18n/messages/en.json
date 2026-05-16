@@ -14,8 +14,15 @@
       "title": "AI configuration"
     },
     "senders": {
+      "add": "Protect",
+      "added": "Protected {email}",
+      "addFailed": "Could not protect this sender. Try again.",
+      "adding": "Adding…",
       "description": "Mail from these senders is always left alone — no labels, no archive, no auto-drafts, no matter how strongly a rule matches.",
-      "heading": "Protected senders"
+      "heading": "Protected senders",
+      "inputLabel": "Sender email to protect",
+      "inputPlaceholder": "boss@company.com",
+      "invalidEmail": "Invalid email address."
     }
   },
   "analytics": {

@@ -224,6 +224,8 @@ public class GenerateThreadDraftService {
                                             tenantId,
                                             draftReplySource.gmailMessageId(),
                                             draftReplySource.gmailThreadId(),
+                                            draftReplySource.inboundSubject(),
+                                            draftReplySource.replyHeaders().replyToAddress(),
                                             ON_DEMAND_DRAFT_RULE_ID,
                                             ON_DEMAND_DRAFT_RULE_NAME,
                                             RuleActionType.SAVE_DRAFT,

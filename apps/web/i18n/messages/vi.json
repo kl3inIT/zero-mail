@@ -14,8 +14,15 @@
       "title": "Cấu hình AI"
     },
     "senders": {
+      "add": "Bảo vệ",
+      "added": "Đã bảo vệ {email}",
+      "addFailed": "Chưa thêm được người gửi. Hãy thử lại.",
+      "adding": "Đang thêm…",
       "description": "Email từ những người gửi này luôn được giữ nguyên — không gắn nhãn, không lưu trữ, không soạn nháp tự động, dù quy tắc có khớp đến đâu.",
-      "heading": "Người gửi được bảo vệ"
+      "heading": "Người gửi được bảo vệ",
+      "inputLabel": "Email người gửi cần bảo vệ",
+      "inputPlaceholder": "sep@congty.com",
+      "invalidEmail": "Email không hợp lệ."
     }
   },
   "analytics": {

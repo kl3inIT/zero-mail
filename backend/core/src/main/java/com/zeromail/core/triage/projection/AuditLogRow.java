@@ -8,6 +8,8 @@ public record AuditLogRow(
         UUID auditId,
         String gmailThreadId,
         String gmailMessageId,
+        String sanitizedSubject,
+        String sanitizedSenderEmail,
         String ruleName,
         String action,
         String reason,

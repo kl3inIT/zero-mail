@@ -41,7 +41,9 @@ public class AuditLogQueryService {
         StringBuilder sql =
                 new StringBuilder(
                         """
-                        select audit_id, gmail_thread_id, gmail_message_id, rule_name_snapshot,
+                        select audit_id, gmail_thread_id, gmail_message_id,
+                               sanitized_subject, sanitized_sender_email,
+                               rule_name_snapshot,
                                action_type, reason, decision, external_ref, created_at, applied_at
                         from triage_audit
                         where tenant_id = ?
@@ -77,6 +79,8 @@ public class AuditLogQueryService {
                                     UUID.fromString(resultSet.getString("audit_id")),
                                     resultSet.getString("gmail_thread_id"),
                                     resultSet.getString("gmail_message_id"),
+                                    resultSet.getString("sanitized_subject"),
+                                    resultSet.getString("sanitized_sender_email"),
                                     resultSet.getString("rule_name_snapshot"),
                                     resultSet.getString("action_type"),
                                     resultSet.getString("reason"),
