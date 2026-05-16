@@ -6,6 +6,7 @@ import { ArrowDown, ArrowUp, Edit3, Loader2, MoreHorizontal, Trash2 } from 'luci
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { EmptyState } from '@/components/states/EmptyState';
 import { LoadingState } from '@/components/states/LoadingState';
@@ -33,6 +34,7 @@ import { cn } from '@/lib/utils';
 type Props = {
   rules: RuleResponse[];
   selectedRuleId: string | null;
+  selectedForTestIds: ReadonlySet<string>;
   isLoading: boolean;
   pendingRuleId: string | null;
   canEnableRule: (rule: RuleResponse) => boolean;
@@ -41,12 +43,15 @@ type Props = {
   onEditRule: (rule: RuleResponse) => void;
   onToggleEnabled: (rule: RuleResponse) => void;
   onDeleteRule: (rule: RuleResponse) => void;
+  onToggleRuleForTest: (rule: RuleResponse) => void;
+  onToggleAllRulesForTest: (selectAll: boolean) => void;
   action?: ReactNode;
 };
 
 export function RuleList({
   rules,
   selectedRuleId,
+  selectedForTestIds,
   isLoading,
   pendingRuleId,
   canEnableRule,
@@ -55,10 +60,18 @@ export function RuleList({
   onEditRule,
   onToggleEnabled,
   onDeleteRule,
+  onToggleRuleForTest,
+  onToggleAllRulesForTest,
   action,
 }: Props) {
   const t = useTranslations();
   const [rulePendingDelete, setRulePendingDelete] = useState<RuleResponse | null>(null);
+  const eligibleRuleIds = rules
+    .map((rule) => rule.ruleId)
+    .filter((id): id is string => Boolean(id));
+  const selectedCount = eligibleRuleIds.filter((id) => selectedForTestIds.has(id)).length;
+  const allSelected = eligibleRuleIds.length > 0 && selectedCount === eligibleRuleIds.length;
+  const headerIndeterminate = selectedCount > 0 && !allSelected;
 
   return (
     <section className="bg-background overflow-hidden rounded-lg border">
@@ -86,6 +99,17 @@ export function RuleList({
             <table className="w-full table-fixed border-collapse text-sm">
               <thead>
                 <tr className="bg-muted/20 text-muted-foreground border-b text-left text-xs font-semibold">
+                  <th className="w-[44px] px-3 py-3">
+                    <Checkbox
+                      aria-label={t('rules.list.column.selectAll')}
+                      checked={allSelected}
+                      indeterminate={headerIndeterminate}
+                      onCheckedChange={(nextChecked) =>
+                        onToggleAllRulesForTest(nextChecked === true)
+                      }
+                      data-testid="rule-list-select-all"
+                    />
+                  </th>
                   <th className="w-[92px] px-4 py-3">{t('rules.list.column.enabled')}</th>
                   <th className="w-[240px] px-4 py-3">{t('rules.list.column.name')}</th>
                   <th className="px-4 py-3">{t('rules.list.when')}</th>
@@ -103,12 +127,14 @@ export function RuleList({
                     index={index}
                     total={rules.length}
                     selected={selectedRuleId === rule.ruleId}
+                    selectedForTest={rule.ruleId ? selectedForTestIds.has(rule.ruleId) : false}
                     pending={pendingRuleId === rule.ruleId}
                     canEnable={canEnableRule(rule)}
                     onSelectRule={onSelectRule}
                     onMoveRule={onMoveRule}
                     onEditRule={onEditRule}
                     onToggleEnabled={onToggleEnabled}
+                    onToggleSelectForTest={onToggleRuleForTest}
                     onDeleteRule={() => setRulePendingDelete(rule)}
                   />
                 ))}
@@ -124,12 +150,14 @@ export function RuleList({
                 index={index}
                 total={rules.length}
                 selected={selectedRuleId === rule.ruleId}
+                selectedForTest={rule.ruleId ? selectedForTestIds.has(rule.ruleId) : false}
                 pending={pendingRuleId === rule.ruleId}
                 canEnable={canEnableRule(rule)}
                 onSelectRule={onSelectRule}
                 onMoveRule={onMoveRule}
                 onEditRule={onEditRule}
                 onToggleEnabled={onToggleEnabled}
+                onToggleSelectForTest={onToggleRuleForTest}
                 onDeleteRule={() => setRulePendingDelete(rule)}
               />
             ))}
@@ -171,12 +199,14 @@ function RuleTableRow({
   index,
   total,
   selected,
+  selectedForTest,
   pending,
   canEnable,
   onSelectRule,
   onMoveRule,
   onEditRule,
   onToggleEnabled,
+  onToggleSelectForTest,
   onDeleteRule,
 }: RuleRowProps) {
   const t = useTranslations();
@@ -201,6 +231,17 @@ function RuleTableRow({
       )}
       onClick={() => onSelectRule(rule)}
     >
+      <td className="px-3 py-4" onClick={(event) => event.stopPropagation()}>
+        <Checkbox
+          aria-label={t('rules.list.column.selectRow', {
+            name: rule.displayName ?? t('rules.composer.title'),
+          })}
+          checked={selectedForTest}
+          disabled={!rule.ruleId}
+          onCheckedChange={() => onToggleSelectForTest(rule)}
+          data-testid={rule.ruleId ? `rule-list-select-${rule.ruleId}` : undefined}
+        />
+      </td>
       <td className="px-4 py-4" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center gap-2">
           {pending ? (
@@ -261,12 +302,14 @@ function RuleMobileCard(props: RuleRowProps) {
     index,
     total,
     selected,
+    selectedForTest,
     pending,
     canEnable,
     onSelectRule,
     onMoveRule,
     onEditRule,
     onToggleEnabled,
+    onToggleSelectForTest,
     onDeleteRule,
   } = props;
   const t = useTranslations();
@@ -288,7 +331,17 @@ function RuleMobileCard(props: RuleRowProps) {
       onClick={() => onSelectRule(rule)}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-3">
+          <span onClick={(event) => event.stopPropagation()}>
+            <Checkbox
+              aria-label={t('rules.list.column.selectRow', {
+                name: rule.displayName ?? t('rules.composer.title'),
+              })}
+              checked={selectedForTest}
+              disabled={!rule.ruleId}
+              onCheckedChange={() => onToggleSelectForTest(rule)}
+            />
+          </span>
           <p className="truncate font-semibold">{rule.displayName ?? t('rules.composer.title')}</p>
         </div>
         <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
@@ -426,11 +479,13 @@ type RuleRowProps = {
   index: number;
   total: number;
   selected: boolean;
+  selectedForTest: boolean;
   pending: boolean;
   canEnable: boolean;
   onSelectRule: (rule: RuleResponse) => void;
   onMoveRule: (rule: RuleResponse, direction: 'up' | 'down') => void;
   onEditRule: (rule: RuleResponse) => void;
   onToggleEnabled: (rule: RuleResponse) => void;
+  onToggleSelectForTest: (rule: RuleResponse) => void;
   onDeleteRule: () => void;
 };

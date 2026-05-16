@@ -27,6 +27,14 @@ export const rulesMessages = {
     vi: 'Tên',
     en: 'Name',
   },
+  'rules.list.column.selectAll': {
+    vi: 'Chọn tất cả quy tắc để thử',
+    en: 'Select all rules for testing',
+  },
+  'rules.list.column.selectRow': {
+    vi: 'Chọn quy tắc {name}',
+    en: 'Select rule {name}',
+  },
   'rules.list.actions': {
     vi: 'Thao tác với quy tắc',
     en: 'Rule actions',
@@ -474,6 +482,106 @@ export const rulesMessages = {
   'rules.delete.dismiss': {
     vi: 'Giữ quy tắc',
     en: 'Keep rule',
+  },
+  'rules.testCustom.openCta': {
+    vi: 'Thử với email tùy chỉnh',
+    en: 'Test with custom email',
+  },
+  'rules.testCustom.title': {
+    vi: 'Thử với email tùy chỉnh',
+    en: 'Test with a custom email',
+  },
+  'rules.testCustom.intro': {
+    vi: 'Soạn email giả lập để xem quy tắc nào sẽ khớp. Email này KHÔNG được gửi và Gmail không bị thay đổi.',
+    en: 'Compose a hypothetical email to see which rules would match. The email is never sent and Gmail is not changed.',
+  },
+  'rules.testCustom.subjectLabel': {
+    vi: 'Tiêu đề',
+    en: 'Subject',
+  },
+  'rules.testCustom.subjectPlaceholder': {
+    vi: 'Ví dụ: Hóa đơn Stripe tháng 5 — $49',
+    en: 'Example: Stripe receipt May — $49',
+  },
+  'rules.testCustom.bodyLabel': {
+    vi: 'Nội dung email',
+    en: 'Email body',
+  },
+  'rules.testCustom.bodyPlaceholder': {
+    vi: 'Dán hoặc gõ nội dung email tại đây. Ví dụ: Thank you for your payment of $49. To unsubscribe, click here.',
+    en: 'Paste or type email content here. Example: Thank you for your payment of $49. To unsubscribe, click here.',
+  },
+  'rules.testCustom.runCta': {
+    vi: 'Chạy thử trên email này',
+    en: 'Test on this email',
+  },
+  'rules.testCustom.running': {
+    vi: 'Đang chạy thử...',
+    en: 'Running...',
+  },
+  'rules.testCustom.selectedHint': {
+    vi: '{count} quy tắc đã chọn — sẽ chỉ thử các quy tắc này.',
+    en: '{count} rules selected — only these will be tested.',
+  },
+  'rules.testCustom.noSelectedHint': {
+    vi: 'Chưa chọn quy tắc nào — sẽ thử tất cả quy tắc đang bật.',
+    en: 'No rules selected — all enabled rules will be tested.',
+  },
+  'rules.testCustom.clearSelection': {
+    vi: 'Bỏ chọn',
+    en: 'Clear selection',
+  },
+  'rules.testCustom.empty.heading': {
+    vi: 'Chưa có kết quả',
+    en: 'No results yet',
+  },
+  'rules.testCustom.empty.body': {
+    vi: 'Nhập tiêu đề và nội dung email, sau đó bấm "Chạy thử" để xem quy tắc nào sẽ khớp.',
+    en: 'Enter a subject and body, then click "Test" to see which rules would match.',
+  },
+  'rules.testCustom.result.title': {
+    vi: 'Kết quả thử ({count} quy tắc)',
+    en: 'Test results ({count} rules)',
+  },
+  'rules.testCustom.result.matched': {
+    vi: 'Khớp',
+    en: 'Matched',
+  },
+  'rules.testCustom.result.deferred': {
+    vi: 'Cần kiểm tra ngữ nghĩa',
+    en: 'Needs semantic check',
+  },
+  'rules.testCustom.result.notMatched': {
+    vi: 'Không khớp',
+    en: 'No match',
+  },
+  'rules.testCustom.result.disabled': {
+    vi: 'Đang tắt',
+    en: 'Disabled',
+  },
+  'rules.testCustom.result.actions': {
+    vi: 'Hành động sẽ chạy',
+    en: 'Actions that would fire',
+  },
+  'rules.testCustom.result.evidence': {
+    vi: 'Bằng chứng khớp',
+    en: 'Match evidence',
+  },
+  'rules.testCustom.result.deferredEvidence': {
+    vi: 'Kiểm tra trì hoãn',
+    en: 'Deferred checks',
+  },
+  'rules.testCustom.result.noMatchHint': {
+    vi: 'Quy tắc này không khớp với email tùy chỉnh — kiểm tra điều kiện hoặc thử nội dung khác.',
+    en: 'This rule did not match the custom email — review the condition or try different content.',
+  },
+  'errors.rules.testCustom.generic': {
+    vi: 'Không thể chạy thử lúc này. Hãy thử lại.',
+    en: 'Could not run the custom-mail test. Please try again.',
+  },
+  'errors.rules.testCustom.subjectOrBodyRequired': {
+    vi: 'Hãy nhập ít nhất tiêu đề hoặc nội dung email.',
+    en: 'Enter at least a subject or a body.',
   },
   'errors.rules.compile.invalid': {
     vi: 'Zero Mail chưa kiểm tra được quy tắc này. Hãy sửa cách diễn đạt hoặc trả lời câu hỏi làm rõ rồi kiểm tra lại.',

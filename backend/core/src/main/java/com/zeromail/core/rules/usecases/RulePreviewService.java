@@ -8,6 +8,8 @@ import com.zeromail.core.rules.domain.MatcherNode;
 import com.zeromail.core.rules.domain.MatcherType;
 import com.zeromail.core.rules.domain.PreviewSampleSize;
 import com.zeromail.core.rules.domain.RuleActionType;
+import com.zeromail.core.rules.domain.RuleEvaluationInput;
+import com.zeromail.core.rules.domain.RuleEvaluationResult;
 import com.zeromail.core.rules.domain.RuleEvaluator;
 import com.zeromail.core.rules.domain.SemanticIntentMatcher;
 import com.zeromail.core.rules.exception.RuleValidationException;
@@ -19,7 +21,10 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -113,6 +118,127 @@ public class RulePreviewService {
                 parseMatcher(matcherAst),
                 parseActionIntents(actionIntents),
                 requestedSampleSize);
+    }
+
+    @Transactional(readOnly = true)
+    public RuleCustomPreviewResult previewCustomMail(
+            UUID tenantId, String subject, String body, List<UUID> requestedRuleIds) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Set<UUID> selectedRuleIds =
+                requestedRuleIds == null || requestedRuleIds.isEmpty()
+                        ? null
+                        : Set.copyOf(requestedRuleIds);
+        List<RuleEntity> orderedRules = ruleRepository.findOrderedByTenantId(tenantId);
+        List<RuleEntity> targetRules =
+                orderedRules.stream()
+                        .filter(
+                                ruleEntity ->
+                                        selectedRuleIds == null
+                                                ? ruleEntity.isEnabled()
+                                                : selectedRuleIds.contains(ruleEntity.getId()))
+                        .toList();
+        if (targetRules.isEmpty()) {
+            return new RuleCustomPreviewResult(List.of());
+        }
+
+        RuleEvaluationInput evaluationInput = buildCustomEvaluationInput(subject, body);
+        ArrayList<RuleCustomPreviewResult.Entry> entries = new ArrayList<>(targetRules.size());
+        for (RuleEntity ruleEntity : targetRules) {
+            MatcherNode matcherNode = parseMatcher(ruleEntity.getMatcherAst());
+            List<ActionIntent> actionIntents = parseActionIntents(ruleEntity.getActionIntents());
+            RuleEvaluationResult evaluationResult =
+                    ruleEvaluator.evaluate(matcherNode, evaluationInput);
+            boolean matched = evaluationResult.status() == MatcherEvaluationState.MATCHED;
+            boolean deferred = evaluationResult.status() == MatcherEvaluationState.DEFERRED;
+            entries.add(
+                    new RuleCustomPreviewResult.Entry(
+                            ruleEntity.getId(),
+                            ruleEntity.getDisplayName(),
+                            ruleEntity.isEnabled(),
+                            matched,
+                            deferred,
+                            matched
+                                    ? actionIntents.stream()
+                                            .map(
+                                                    actionIntent ->
+                                                            toCustomActionChip(
+                                                                    ruleEntity.getId(),
+                                                                    actionIntent,
+                                                                    evaluationResult
+                                                                            .matchedEvidenceIds()))
+                                            .toList()
+                                    : List.of(),
+                            matched
+                                    ? toEvidenceChipList(
+                                            evaluationResult.matchedEvidenceIds(),
+                                            evaluationResult.evidenceById())
+                                    : List.of(),
+                            deferred
+                                    ? toEvidenceChipList(
+                                            evaluationResult.deferredEvidenceIds(),
+                                            evaluationResult.evidenceById())
+                                    : List.of()));
+        }
+        return new RuleCustomPreviewResult(List.copyOf(entries));
+    }
+
+    private RuleEvaluationInput buildCustomEvaluationInput(String subject, String body) {
+        // Synthetic message: blank sender/recipients/labels. Body-derived flags
+        // are inferred from coarse markers so user-authored rules around
+        // newsletters/unsubscribe links still have a chance to fire — matchers
+        // that depend on real Gmail metadata (categories, labels, attachments)
+        // intentionally fall through to NOT_MATCHED.
+        Instant now = Instant.now(clock);
+        String safeBody = body == null ? "" : body;
+        boolean unsubscribeHinted = bodyContainsUnsubscribeMarker(safeBody);
+        return new RuleEvaluationInput(
+                "",
+                "",
+                List.of(),
+                List.of(),
+                subject == null ? "" : subject,
+                List.of(),
+                List.of(),
+                now,
+                now,
+                false,
+                unsubscribeHinted,
+                unsubscribeHinted,
+                Optional.of(!safeBody.isBlank()),
+                Set.of());
+    }
+
+    private static boolean bodyContainsUnsubscribeMarker(String body) {
+        return body.toLowerCase(Locale.ROOT).contains("unsubscribe");
+    }
+
+    private static RulePreviewResult.ActionChip toCustomActionChip(
+            UUID ruleId, ActionIntent actionIntent, List<String> matchedEvidenceIds) {
+        return new RulePreviewResult.ActionChip(
+                customActionTypeId(actionIntent),
+                safeActionLabel(actionIntent),
+                List.of(ruleId),
+                matchedEvidenceIds);
+    }
+
+    private static String customActionTypeId(ActionIntent actionIntent) {
+        return switch (actionIntent) {
+            case ActionIntent.Label ignored -> "label";
+            case ActionIntent.Archive ignored -> "archive";
+            case ActionIntent.SaveDraft ignored -> "save_draft";
+        };
+    }
+
+    private static List<RulePreviewResult.EvidenceChip> toEvidenceChipList(
+            List<String> evidenceIds, java.util.Map<String, String> evidenceById) {
+        return evidenceIds.stream()
+                .map(
+                        evidenceId ->
+                                new RulePreviewResult.EvidenceChip(
+                                        evidenceId,
+                                        Objects.requireNonNullElse(
+                                                evidenceById.get(evidenceId), "")))
+                .toList();
     }
 
     // No @Transactional here on purpose: preview(...) is only invoked via

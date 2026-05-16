@@ -80,6 +80,7 @@ describe('RulesWorkspace Wave 0 contract', () => {
           },
         ]}
         selectedRuleId="rule-html"
+        selectedForTestIds={new Set<string>()}
         isLoading={false}
         pendingRuleId={null}
         canEnableRule={() => false}
@@ -88,6 +89,8 @@ describe('RulesWorkspace Wave 0 contract', () => {
         onEditRule={vi.fn()}
         onToggleEnabled={vi.fn()}
         onDeleteRule={vi.fn()}
+        onToggleRuleForTest={vi.fn()}
+        onToggleAllRulesForTest={vi.fn()}
       />,
     );
 

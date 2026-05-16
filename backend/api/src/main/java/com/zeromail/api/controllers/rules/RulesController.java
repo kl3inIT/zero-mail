@@ -5,6 +5,8 @@ import com.zeromail.api.dto.rules.RuleCompileRequest;
 import com.zeromail.api.dto.rules.RuleCompileResponse;
 import com.zeromail.api.dto.rules.RuleCompileStatus;
 import com.zeromail.api.dto.rules.RuleCreateRequest;
+import com.zeromail.api.dto.rules.RuleCustomPreviewRequest;
+import com.zeromail.api.dto.rules.RuleCustomPreviewResponse;
 import com.zeromail.api.dto.rules.RuleDraftPreviewRequest;
 import com.zeromail.api.dto.rules.RuleEnabledRequest;
 import com.zeromail.api.dto.rules.RulePreviewRequest;
@@ -199,6 +201,21 @@ public class RulesController {
                             TenantContext.currentTenantUuid(), ruleId, request.sampleSize()));
         } catch (IllegalArgumentException invalidSampleSize) {
             throw RuleApiException.invalidSampleSize();
+        }
+    }
+
+    @PostMapping("/preview-custom")
+    public RuleCustomPreviewResponse previewCustomMail(
+            @Valid @RequestBody RuleCustomPreviewRequest request) {
+        try {
+            return RuleCustomPreviewResponse.from(
+                    rulePreviewService.previewCustomMail(
+                            TenantContext.currentTenantUuid(),
+                            request.subject(),
+                            request.body(),
+                            request.ruleIds()));
+        } catch (IllegalArgumentException invalidCustomPreviewPayload) {
+            throw RuleApiException.invalidCompileOutput();
         }
     }
 

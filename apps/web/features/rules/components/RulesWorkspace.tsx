@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useReducer } from 'react';
+import { useEffect, useMemo, useReducer, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Plus, Sparkles } from 'lucide-react';
 
@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { ErrorCode } from '@/lib/api/error-codes';
 import { useLocalizedApiError, type ApiError } from '@/lib/api/errors';
+import { CustomMailTester } from '@/features/rules/components/CustomMailTester';
 import { RuleComposer } from '@/features/rules/components/RuleComposer';
 import { RuleList } from '@/features/rules/components/RuleList';
 import { RulePreviewPanel } from '@/features/rules/components/RulePreviewPanel';
@@ -22,6 +23,7 @@ import {
   compiledResponseToRequest,
   type RuleCompiledPayloadResponse,
   type RuleCompileResult,
+  type RuleCustomPreviewResponse,
   type RulePreviewResponse,
   type RuleResponse,
   type RuleTemplateResponse,
@@ -32,6 +34,7 @@ import {
   useCreateRule,
   useDeleteRule,
   useMaterializeRuleTemplate,
+  usePreviewCustomMail,
   usePreviewDraftRule,
   usePreviewSavedRule,
   useReorderRules,
@@ -291,8 +294,13 @@ export function RulesWorkspace() {
   const previewDraftRuleMutation = usePreviewDraftRule();
   const updateEnabledMutation = useUpdateRuleEnabled();
   const materializeTemplateMutation = useMaterializeRuleTemplate();
+  const previewCustomMailMutation = usePreviewCustomMail();
 
   const [state, dispatch] = useReducer(rulesWorkspaceReducer, initialState);
+  const [selectedForTestIds, setSelectedForTestIds] = useState<Set<string>>(() => new Set());
+  const [customMailResult, setCustomMailResult] = useState<RuleCustomPreviewResponse | null>(null);
+  const [customMailError, setCustomMailError] = useState<string | null>(null);
+  const [customTesterOpen, setCustomTesterOpen] = useState(false);
 
   const rules = useMemo(
     () => [...(rulesQuery.data?.rules ?? [])].sort(compareRulesByOrder),
@@ -530,6 +538,49 @@ export function RulesWorkspace() {
     }
   }
 
+  function handleToggleRuleForTest(rule: RuleResponse) {
+    if (!rule.ruleId) return;
+    setSelectedForTestIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(rule.ruleId as string)) {
+        next.delete(rule.ruleId as string);
+      } else {
+        next.add(rule.ruleId as string);
+      }
+      return next;
+    });
+  }
+
+  function handleToggleAllRulesForTest(selectAll: boolean) {
+    if (selectAll) {
+      const allEligible = rules
+        .map((rule) => rule.ruleId)
+        .filter((ruleId): ruleId is string => Boolean(ruleId));
+      setSelectedForTestIds(new Set(allEligible));
+      return;
+    }
+    setSelectedForTestIds(new Set());
+  }
+
+  function handleClearTestSelection() {
+    setSelectedForTestIds(new Set());
+  }
+
+  async function handleRunCustomMailTest(input: { subject: string; body: string }) {
+    setCustomMailError(null);
+    const ruleIds = Array.from(selectedForTestIds);
+    try {
+      const response = await previewCustomMailMutation.mutateAsync({
+        subject: input.subject,
+        body: input.body,
+        ruleIds: ruleIds.length > 0 ? ruleIds : null,
+      });
+      setCustomMailResult(response);
+    } catch {
+      setCustomMailError(t('errors.rules.testCustom.generic'));
+    }
+  }
+
   function canEnableRule(rule: RuleResponse): boolean {
     return (
       Boolean(rule.ruleId) &&
@@ -546,6 +597,7 @@ export function RulesWorkspace() {
       <RuleList
         rules={rules}
         selectedRuleId={state.selectedRuleId}
+        selectedForTestIds={selectedForTestIds}
         isLoading={rulesQuery.isLoading}
         pendingRuleId={state.pendingRuleId}
         canEnableRule={canEnableRule}
@@ -554,6 +606,8 @@ export function RulesWorkspace() {
         onEditRule={(rule) => dispatch({ type: 'editRuleStarted', rule })}
         onToggleEnabled={handleToggleRule}
         onDeleteRule={handleDeleteRule}
+        onToggleRuleForTest={handleToggleRuleForTest}
+        onToggleAllRulesForTest={handleToggleAllRulesForTest}
         action={
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Button
@@ -594,7 +648,25 @@ export function RulesWorkspace() {
         onToggleEnabled={() => {
           if (selectedRule) void handleToggleRule(selectedRule);
         }}
+        onOpenCustomMailTester={() => setCustomTesterOpen(true)}
       />
+
+      <Dialog open={customTesterOpen} onOpenChange={setCustomTesterOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{t('rules.testCustom.title')}</DialogTitle>
+            <DialogDescription>{t('rules.testCustom.intro')}</DialogDescription>
+          </DialogHeader>
+          <CustomMailTester
+            selectedCount={selectedForTestIds.size}
+            isRunning={previewCustomMailMutation.isPending}
+            result={customMailResult}
+            resultError={customMailError}
+            onClearSelection={handleClearTestSelection}
+            onRunTest={handleRunCustomMailTest}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Composer dialog — for creating and editing rules */}
       <Dialog

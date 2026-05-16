@@ -402,6 +402,10 @@
       "save": {
         "generic": "The rule could not be saved right now. Reload the list and try again."
       },
+      "testCustom": {
+        "generic": "Could not run the custom-mail test. Please try again.",
+        "subjectOrBodyRequired": "Enter at least a subject or a body."
+      },
       "unsafe_action": "This rule asks for an action that is not allowed in v1.",
       "version_mismatch": "The rule changed before the action finished. Reload and try again.",
       "versionMismatch": "The rule changed before the action finished. Reload and try again."
@@ -857,7 +861,9 @@
       "actions": "Rule actions",
       "column": {
         "enabled": "Enabled",
-        "name": "Name"
+        "name": "Name",
+        "selectAll": "Select all rules for testing",
+        "selectRow": "Select rule {name}"
       },
       "customizedBadge": "Customized",
       "delete": "Delete rule",
@@ -999,6 +1005,35 @@
       "materialized": "Materialized",
       "title": "Starter templates",
       "useStarter": "Use starter rule"
+    },
+    "testCustom": {
+      "bodyLabel": "Email body",
+      "bodyPlaceholder": "Paste or type email content here. Example: Thank you for your payment of $49. To unsubscribe, click here.",
+      "clearSelection": "Clear selection",
+      "empty": {
+        "body": "Enter a subject and body, then click \"Test\" to see which rules would match.",
+        "heading": "No results yet"
+      },
+      "intro": "Compose a hypothetical email to see which rules would match. The email is never sent and Gmail is not changed.",
+      "noSelectedHint": "No rules selected — all enabled rules will be tested.",
+      "openCta": "Test with custom email",
+      "result": {
+        "actions": "Actions that would fire",
+        "deferred": "Needs semantic check",
+        "deferredEvidence": "Deferred checks",
+        "disabled": "Disabled",
+        "evidence": "Match evidence",
+        "matched": "Matched",
+        "noMatchHint": "This rule did not match the custom email — review the condition or try different content.",
+        "notMatched": "No match",
+        "title": "Test results ({count} rules)"
+      },
+      "runCta": "Test on this email",
+      "running": "Running...",
+      "selectedHint": "{count} rules selected — only these will be tested.",
+      "subjectLabel": "Subject",
+      "subjectPlaceholder": "Example: Stripe receipt May — $49",
+      "title": "Test with a custom email"
     },
     "title": "Sentences, not filters."
   },

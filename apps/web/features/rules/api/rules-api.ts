@@ -1,4 +1,5 @@
 import { api, xsrfHeader } from '@/lib/api/client';
+import { getApiUrl } from '@/lib/api/base-url';
 import type { components } from '@/lib/api/schema';
 
 export type RuleResponse = components['schemas']['RuleResponse'];
@@ -192,6 +193,54 @@ export async function previewDraftRule(
     headers: jsonHeaders(),
   });
   return unwrap(result, `/api/rules/preview failed: ${result.response.status}`);
+}
+
+// Manual types for the custom-mail preview endpoint. These mirror the
+// backend DTOs in com.zeromail.api.dto.rules.RuleCustomPreview{Request,Response}.
+// Once the OpenAPI spec is regenerated against the new endpoint, swap these
+// for components['schemas']['RuleCustomPreview{Request,Response}'].
+export type RuleCustomPreviewRequest = {
+  subject?: string | null;
+  body?: string | null;
+  ruleIds?: string[] | null;
+};
+
+export type RuleCustomPreviewEntry = {
+  ruleId: string;
+  displayName: string;
+  enabled: boolean;
+  matched: boolean;
+  deferred: boolean;
+  proposedActionChips: components['schemas']['ActionChipResponse'][];
+  matchedEvidenceChips: components['schemas']['EvidenceChipResponse'][];
+  deferredEvidenceChips: components['schemas']['EvidenceChipResponse'][];
+};
+
+export type RuleCustomPreviewResponse = {
+  entries: RuleCustomPreviewEntry[];
+};
+
+export async function previewCustomMail(
+  payload: RuleCustomPreviewRequest,
+): Promise<RuleCustomPreviewResponse> {
+  const response = await fetch(getApiUrl('/api/rules/preview-custom'), {
+    method: 'POST',
+    credentials: 'include',
+    headers: jsonHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    let apiErrorBody: unknown;
+    try {
+      apiErrorBody = await response.json();
+    } catch {
+      apiErrorBody = undefined;
+    }
+    throw apiErrorBody && typeof apiErrorBody === 'object'
+      ? apiErrorBody
+      : new Error(`/api/rules/preview-custom failed: ${response.status}`);
+  }
+  return (await response.json()) as RuleCustomPreviewResponse;
 }
 
 export async function listRuleTemplates(): Promise<RuleTemplateResponse[]> {

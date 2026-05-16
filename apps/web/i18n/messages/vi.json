@@ -402,6 +402,10 @@
       "save": {
         "generic": "Không thể lưu quy tắc lúc này. Hãy tải lại danh sách rồi thử lại."
       },
+      "testCustom": {
+        "generic": "Không thể chạy thử lúc này. Hãy thử lại.",
+        "subjectOrBodyRequired": "Hãy nhập ít nhất tiêu đề hoặc nội dung email."
+      },
       "unsafe_action": "Quy tắc này yêu cầu hành động không được phép trong v1.",
       "version_mismatch": "Quy tắc đã thay đổi trước khi thao tác hoàn tất. Tải lại rồi thử lại.",
       "versionMismatch": "Quy tắc đã thay đổi trước khi thao tác hoàn tất. Tải lại rồi thử lại."
@@ -857,7 +861,9 @@
       "actions": "Thao tác với quy tắc",
       "column": {
         "enabled": "Bật",
-        "name": "Tên"
+        "name": "Tên",
+        "selectAll": "Chọn tất cả quy tắc để thử",
+        "selectRow": "Chọn quy tắc {name}"
       },
       "customizedBadge": "Đã tùy chỉnh",
       "delete": "Xóa quy tắc",
@@ -999,6 +1005,35 @@
       "materialized": "Đã tạo",
       "title": "Mẫu khởi đầu",
       "useStarter": "Dùng mẫu này"
+    },
+    "testCustom": {
+      "bodyLabel": "Nội dung email",
+      "bodyPlaceholder": "Dán hoặc gõ nội dung email tại đây. Ví dụ: Thank you for your payment of $49. To unsubscribe, click here.",
+      "clearSelection": "Bỏ chọn",
+      "empty": {
+        "body": "Nhập tiêu đề và nội dung email, sau đó bấm \"Chạy thử\" để xem quy tắc nào sẽ khớp.",
+        "heading": "Chưa có kết quả"
+      },
+      "intro": "Soạn email giả lập để xem quy tắc nào sẽ khớp. Email này KHÔNG được gửi và Gmail không bị thay đổi.",
+      "noSelectedHint": "Chưa chọn quy tắc nào — sẽ thử tất cả quy tắc đang bật.",
+      "openCta": "Thử với email tùy chỉnh",
+      "result": {
+        "actions": "Hành động sẽ chạy",
+        "deferred": "Cần kiểm tra ngữ nghĩa",
+        "deferredEvidence": "Kiểm tra trì hoãn",
+        "disabled": "Đang tắt",
+        "evidence": "Bằng chứng khớp",
+        "matched": "Khớp",
+        "noMatchHint": "Quy tắc này không khớp với email tùy chỉnh — kiểm tra điều kiện hoặc thử nội dung khác.",
+        "notMatched": "Không khớp",
+        "title": "Kết quả thử ({count} quy tắc)"
+      },
+      "runCta": "Chạy thử trên email này",
+      "running": "Đang chạy thử...",
+      "selectedHint": "{count} quy tắc đã chọn — sẽ chỉ thử các quy tắc này.",
+      "subjectLabel": "Tiêu đề",
+      "subjectPlaceholder": "Ví dụ: Hóa đơn Stripe tháng 5 — $49",
+      "title": "Thử với email tùy chỉnh"
     },
     "title": "Câu văn, không phải bộ lọc."
   },

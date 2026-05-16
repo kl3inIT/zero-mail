@@ -1,7 +1,15 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, Archive, CheckCircle2, Loader2, Play, Tags } from 'lucide-react';
+import {
+  AlertTriangle,
+  Archive,
+  CheckCircle2,
+  FlaskConical,
+  Loader2,
+  Play,
+  Tags,
+} from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +42,7 @@ type Props = {
   onSampleSizeChange: (sampleSize: SampleSize) => void;
   onPreview: () => void;
   onToggleEnabled: () => void;
+  onOpenCustomMailTester: () => void;
 };
 
 const SAMPLE_SIZES = [10, 25, 50] as const;
@@ -51,6 +60,7 @@ export function RulePreviewPanel({
   onSampleSizeChange,
   onPreview,
   onToggleEnabled,
+  onOpenCustomMailTester,
 }: Props) {
   const t = useTranslations();
   const rows = preview?.rows ?? [];
@@ -93,14 +103,25 @@ export function RulePreviewPanel({
               })}
             </div>
           </div>
-          <Button type="button" disabled={!canPreview || isPreviewing} onClick={onPreview}>
-            {isPreviewing ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <Play className="size-4" aria-hidden="true" />
-            )}
-            {isPreviewing ? t('rules.preview.previewing') : t('rules.preview.previewCta')}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onOpenCustomMailTester}
+              data-testid="rules-open-custom-mail-tester"
+            >
+              <FlaskConical className="size-4" aria-hidden="true" />
+              {t('rules.testCustom.openCta')}
+            </Button>
+            <Button type="button" disabled={!canPreview || isPreviewing} onClick={onPreview}>
+              {isPreviewing ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Play className="size-4" aria-hidden="true" />
+              )}
+              {isPreviewing ? t('rules.preview.previewing') : t('rules.preview.previewCta')}
+            </Button>
+          </div>
         </div>
 
         {gmailUnavailableError && (

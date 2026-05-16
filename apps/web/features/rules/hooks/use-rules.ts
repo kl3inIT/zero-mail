@@ -10,12 +10,14 @@ import {
   listRules,
   listRuleTemplates,
   materializeRuleTemplate,
+  previewCustomMail,
   previewDraftRule,
   previewSavedRule,
   reorderRules,
   updateRule,
   updateRuleEnabled,
   type RuleCreateRequest,
+  type RuleCustomPreviewRequest,
   type RuleDraftPreviewRequest,
   type RuleListResponse,
   type RuleOrderEntryRequest,
@@ -159,6 +161,12 @@ export function usePreviewSavedRule() {
 export function usePreviewDraftRule() {
   return useMutation({
     mutationFn: (payload: RuleDraftPreviewRequest) => previewDraftRule(payload),
+  });
+}
+
+export function usePreviewCustomMail() {
+  return useMutation({
+    mutationFn: (payload: RuleCustomPreviewRequest) => previewCustomMail(payload),
   });
 }
 
