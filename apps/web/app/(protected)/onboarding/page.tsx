@@ -15,7 +15,7 @@ export default function OnboardingIndexPage() {
     if (onboardingStep === 'GMAIL_CONNECTED') router.replace('/onboarding/template-select');
     else if (onboardingStep === 'TEMPLATE_SELECTED') router.replace('/onboarding/complete');
     else if (onboardingStep === 'COMPLETE') router.replace('/settings');
-    else router.replace('/welcome');
+    else router.replace('/rules');
   }, [onboardingStep, router]);
 
   return null;

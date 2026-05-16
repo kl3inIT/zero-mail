@@ -29,7 +29,7 @@ export default async function TopBar() {
         ctaHref = '/onboarding';
         ctaKey = 'nav.continueSetup';
       } else {
-        ctaHref = '/welcome';
+        ctaHref = '/rules';
         ctaKey = 'nav.openApp';
       }
     }
