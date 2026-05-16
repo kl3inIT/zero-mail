@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { Archive, FileEdit, Tag, Wand2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -22,56 +23,70 @@ export function AuditRow({ entry, now }: AuditRowProps) {
 
   const sender = entry.messageRef?.sender || t('triage.audit.message.unknownSender');
   const subject = entry.messageRef?.subject || t('triage.audit.message.untitled');
-  const initial = sender.charAt(0).toUpperCase();
 
   return (
     <div
-      className="group flex items-start gap-3 px-4 py-3 transition-colors hover:bg-[#0a3d3a]/[0.04]"
+      className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[#0a3d3a]/[0.04]"
       data-testid="audit-table-row"
     >
       <div
         className={cn(
-          'mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold',
+          'flex size-9 shrink-0 items-center justify-center rounded-full',
           avatarClassName(entry.action),
         )}
         aria-hidden="true"
       >
-        {initial}
+        <ActionIcon action={entry.action} />
       </div>
 
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <div className="min-w-0 flex-1 space-y-0.5">
           <div className="flex min-w-0 items-baseline gap-2">
-            <span className="text-foreground max-w-[12rem] shrink-0 truncate text-sm font-semibold">
+            <span className="text-foreground max-w-[14rem] shrink-0 truncate text-sm font-semibold">
               {sender}
             </span>
             <span className="text-muted-foreground min-w-0 truncate text-sm">{subject}</span>
           </div>
-          <div className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
+          <div className="text-muted-foreground/80 flex min-w-0 items-center gap-1.5 text-xs">
+            <Wand2 className="size-3 shrink-0" aria-hidden="true" />
             <span className="truncate">{entry.ruleName}</span>
           </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-3">
           <ActionBadge entry={entry} />
-          <time className="text-muted-foreground hidden w-20 shrink-0 text-right font-mono text-xs sm:block">
-            {formatAuditTimestamp(entry.timestamp)}
+          <time
+            className="text-muted-foreground hidden shrink-0 text-right text-xs tabular-nums sm:block"
+            title={new Date(entry.timestamp).toLocaleString()}
+          >
+            {formatAuditTimestamp(entry.timestamp, now)}
           </time>
-          <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="flex items-center gap-1">
             {shouldShowDraftAction(entry) ? (
               <GenerateDraftButton
                 gmailThreadId={entry.gmailThreadId}
                 draftStatus={entry.draftId ? 'DRAFT_READY' : 'NO_DRAFT'}
               />
             ) : null}
-            {undone ? null : undoAvailable ? (
+            {undone ? (
+              <span className="text-muted-foreground text-xs">{t('triage.audit.undo.undone')}</span>
+            ) : undoAvailable ? (
               <UndoButton entry={entry} onUndone={() => setUndone(true)} />
-            ) : null}
+            ) : (
+              <UndoClosedLabel />
+            )}
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+function ActionIcon({ action }: { action: string }) {
+  const normalized = action.toLowerCase();
+  if (normalized.includes('archive')) return <Archive className="size-4" />;
+  if (normalized.includes('draft')) return <FileEdit className="size-4" />;
+  return <Tag className="size-4" />;
 }
 
 function avatarClassName(action: string): string {
@@ -105,7 +120,10 @@ export function ActionBadge({ entry }: { entry: AuditEntry }) {
   return (
     <Badge
       variant="outline"
-      className={cn('border-transparent', actionBadgeClassName(entry.action))}
+      className={cn(
+        'border-transparent px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase',
+        actionBadgeClassName(entry.action),
+      )}
     >
       {entry.actionLabel}
     </Badge>
@@ -145,25 +163,32 @@ export function shouldShowDraftAction(entry: AuditEntry): entry is AuditEntry & 
   return normalizedAction === 'save_draft' && Boolean(entry.gmailThreadId);
 }
 
-export function formatAuditTimestamp(timestamp: string): string {
+export function formatAuditTimestamp(timestamp: string, now: Date = new Date()): string {
+  const entryDate = new Date(timestamp);
+  const deltaMs = now.getTime() - entryDate.getTime();
+  const deltaMinutes = Math.round(deltaMs / 60_000);
+  if (deltaMinutes < 1) return 'vừa xong';
+  if (deltaMinutes < 60) return `${deltaMinutes} phút trước`;
+  const deltaHours = Math.round(deltaMinutes / 60);
+  if (deltaHours < 24) return `${deltaHours} giờ trước`;
+  const deltaDays = Math.round(deltaHours / 24);
+  if (deltaDays < 7) return `${deltaDays} ngày trước`;
   return new Intl.DateTimeFormat(undefined, {
     month: 'short',
     day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(timestamp));
+  }).format(entryDate);
 }
 
 function actionBadgeClassName(action: string): string {
   const normalizedAction = action.toLowerCase();
   if (normalizedAction.includes('archive')) {
-    return 'bg-sky-500/10 text-sky-700 dark:text-sky-300';
+    return 'bg-sky-500/15 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300';
   }
   if (normalizedAction.includes('label')) {
-    return 'bg-[#0a3d3a]/10 text-[#0a3d3a] dark:text-[#0a3d3a]/40';
+    return 'bg-[#0a3d3a]/12 text-[#0a3d3a] dark:bg-[#0a3d3a]/30 dark:text-[#E7F0EF]';
   }
   if (normalizedAction.includes('draft')) {
-    return 'bg-amber-500/10 text-amber-700 dark:text-amber-300';
+    return 'bg-amber-500/15 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300';
   }
   return 'bg-muted text-muted-foreground';
 }
