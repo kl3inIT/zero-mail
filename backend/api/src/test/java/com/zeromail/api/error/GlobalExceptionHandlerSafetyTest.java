@@ -242,6 +242,12 @@ class GlobalExceptionHandlerSafetyTest extends ApiPostgresTestBase {
                 .as("code is one of the locked dotted-hierarchy ErrorCodes constants")
                 .matches("error\\.[a-zA-Z][a-zA-Z0-9.]*");
 
+        // RFC 9457 type — stable URI per category, never "about:blank".
+        String type = json.path("type").asString();
+        assertThat(type)
+                .as("ProblemDetail.type is the RFC 9457 stable problem-type URI")
+                .startsWith("https://zeromail.app/problems/");
+
         // params Map values must all be allow-listed (Numbers, Booleans, or short identifiers)
         // — this is the AllowedParamScalars contract translated into a JSON-side check.
         JsonNode params = json.path("params");
