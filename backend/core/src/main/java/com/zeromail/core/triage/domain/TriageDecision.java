@@ -7,7 +7,6 @@ import java.util.stream.Stream;
 public enum TriageDecision implements IdentifiedEnum {
     PENDING,
     APPLIED,
-    SHADOW_LOGGED,
     REJECTED_BY_SAFETY_NET,
     REJECTED_BY_SAFETY_POLICY,
     FAILED,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, Archive, CheckCircle2, Loader2, Play, Tags } from 'lucide-react';
+import { AlertTriangle, Archive, CheckCircle2, Loader2, Play, Sparkles } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -16,41 +16,39 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import type { RulePreviewResponse, RuleResponse } from '@/features/rules/api/rules-api';
+import type { RulePreviewResponse } from '@/features/rules/api/rules-api';
 import { cn } from '@/lib/utils';
 
-type SampleSize = 10 | 25 | 50;
+type SampleSize = 10 | 20;
 
 type Props = {
-  selectedRule: RuleResponse | null;
+  enabledRulesCount: number;
   preview: RulePreviewResponse | null;
   previewError: string | null;
   gmailUnavailableError: string | null;
   isPreviewing: boolean;
-  isToggling: boolean;
   canPreview: boolean;
-  canEnable: boolean;
   sampleSize: SampleSize;
+  isEvaluatingSemanticIntents: boolean;
   onSampleSizeChange: (sampleSize: SampleSize) => void;
   onPreview: () => void;
-  onToggleEnabled: () => void;
+  onEvaluateSemanticIntents: () => void;
 };
 
-const SAMPLE_SIZES = [10, 25, 50] as const;
+const SAMPLE_SIZES = [10, 20] as const;
 
 export function RulePreviewPanel({
-  selectedRule,
+  enabledRulesCount,
   preview,
   previewError,
   gmailUnavailableError,
   isPreviewing,
-  isToggling,
   canPreview,
-  canEnable,
   sampleSize,
+  isEvaluatingSemanticIntents,
   onSampleSizeChange,
   onPreview,
-  onToggleEnabled,
+  onEvaluateSemanticIntents,
 }: Props) {
   const t = useTranslations();
   const rows = preview?.rows ?? [];
@@ -169,6 +167,39 @@ export function RulePreviewPanel({
               </Alert>
             )}
 
+            {(summary?.deferredCount ?? 0) > 0 && (
+              <Alert variant="warning" className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                <div className="flex-1 space-y-1">
+                  <AlertTitle>
+                    {t('rules.preview.llmCtaTitle', { count: summary?.deferredCount ?? 0 })}
+                  </AlertTitle>
+                  <AlertDescription>
+                    {t('rules.preview.llmCtaBody', {
+                      credits: summary?.sampledMessageCount ?? rows.length,
+                    })}
+                  </AlertDescription>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={isEvaluatingSemanticIntents}
+                  onClick={onEvaluateSemanticIntents}
+                  data-testid="rules-preview-evaluate-semantic"
+                >
+                  {isEvaluatingSemanticIntents ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Sparkles className="size-4" aria-hidden="true" />
+                  )}
+                  {isEvaluatingSemanticIntents
+                    ? t('rules.preview.llmRunning')
+                    : t('rules.preview.llmCta', {
+                        credits: summary?.sampledMessageCount ?? rows.length,
+                      })}
+                </Button>
+              </Alert>
+            )}
+
             <TooltipProvider>
               <div className="overflow-hidden rounded-lg border">
                 {rows.map((row) => {
@@ -279,28 +310,13 @@ export function RulePreviewPanel({
         )}
       </CardContent>
 
-      <CardFooter className="justify-between gap-3">
+      <CardFooter>
         <p className="text-muted-foreground min-w-0 truncate text-xs">
-          {selectedRule?.displayName ?? t('rules.preview.empty.heading')}
+          {t('rules.preview.testingEnabledCount', { count: enabledRulesCount })}
         </p>
-        {selectedRule?.enabled ? (
-          <Button type="button" variant="secondary" disabled={isToggling} onClick={onToggleEnabled}>
-            <PowerOffIcon />
-            {t('rules.preview.disableCta')}
-          </Button>
-        ) : (
-          <Button type="button" disabled={!canEnable || isToggling} onClick={onToggleEnabled}>
-            <Tags className="size-4" aria-hidden="true" />
-            {t('rules.preview.enableCta')}
-          </Button>
-        )}
       </CardFooter>
     </Card>
   );
-}
-
-function PowerOffIcon() {
-  return <Tags className="size-4 rotate-45" aria-hidden="true" />;
 }
 
 const GMAIL_LABEL_COLOR_MAP: Record<string, string> = {

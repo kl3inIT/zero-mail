@@ -42,7 +42,7 @@ class RulePreviewDataServiceTest {
                         new GmailConnectionProjection(
                                 "CONNECTED", "HEALTHY", "hidden@example.test"));
         when(gmailPreviewReadService.fetchRecentMessages(
-                        eq(TENANT_ID), eq(25), eq(false), eq(Duration.ofSeconds(5))))
+                        eq(TENANT_ID), eq(10), eq(false), eq(Duration.ofSeconds(5))))
                 .thenReturn(List.of(gmailPreviewMessage()));
 
         RulePreviewDataService dataService =
@@ -93,7 +93,7 @@ class RulePreviewDataServiceTest {
         when(connectedConnectionService.currentStatus(TENANT_ID))
                 .thenReturn(new GmailConnectionProjection("CONNECTED", "HEALTHY", null));
         when(revokedReadService.fetchRecentMessages(
-                        eq(TENANT_ID), eq(25), eq(false), eq(Duration.ofSeconds(5))))
+                        eq(TENANT_ID), eq(10), eq(false), eq(Duration.ofSeconds(5))))
                 .thenThrow(
                         new GmailPreviewReadService.GmailPreviewReadUnavailableException(
                                 GmailPreviewReadService.UnavailableReason.REVOKED));
@@ -107,7 +107,7 @@ class RulePreviewDataServiceTest {
                                         TENANT_ID,
                                         new MatcherNode.SenderDomainMatcher(
                                                 "sender-domain", "stripe.com"),
-                                        new PreviewSampleSize(25)))
+                                        new PreviewSampleSize(10)))
                 .isInstanceOf(GmailPreviewUnavailableException.class)
                 .extracting("reason")
                 .isEqualTo(GmailPreviewUnavailableException.Reason.REVOKED);
@@ -120,10 +120,10 @@ class RulePreviewDataServiceTest {
         when(gmailConnectionService.currentStatus(TENANT_ID))
                 .thenReturn(new GmailConnectionProjection("CONNECTED", "HEALTHY", null));
         when(gmailPreviewReadService.fetchRecentMessages(
-                        eq(TENANT_ID), eq(25), eq(false), eq(Duration.ofSeconds(5))))
+                        eq(TENANT_ID), eq(10), eq(false), eq(Duration.ofSeconds(5))))
                 .thenReturn(List.of(gmailPreviewMessage()));
         when(gmailPreviewReadService.fetchRecentMessages(
-                        eq(TENANT_ID), eq(25), eq(true), eq(Duration.ofSeconds(5))))
+                        eq(TENANT_ID), eq(10), eq(true), eq(Duration.ofSeconds(5))))
                 .thenReturn(List.of(gmailPreviewMessage()));
         RulePreviewDataService dataService =
                 new RulePreviewDataService(gmailConnectionService, gmailPreviewReadService);
@@ -131,13 +131,13 @@ class RulePreviewDataServiceTest {
         dataService.fetchPreviewInputs(
                 TENANT_ID,
                 new MatcherNode.SubjectContainsMatcher("subject", "receipt"),
-                new PreviewSampleSize(25));
-        dataService.fetchPreviewInputs(TENANT_ID, true, new PreviewSampleSize(25));
+                new PreviewSampleSize(10));
+        dataService.fetchPreviewInputs(TENANT_ID, true, new PreviewSampleSize(10));
 
         verify(gmailPreviewReadService)
-                .fetchRecentMessages(TENANT_ID, 25, false, Duration.ofSeconds(5));
+                .fetchRecentMessages(TENANT_ID, 10, false, Duration.ofSeconds(5));
         verify(gmailPreviewReadService)
-                .fetchRecentMessages(TENANT_ID, 25, true, Duration.ofSeconds(5));
+                .fetchRecentMessages(TENANT_ID, 10, true, Duration.ofSeconds(5));
     }
 
     @Test

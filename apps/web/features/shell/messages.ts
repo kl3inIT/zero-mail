@@ -1,7 +1,7 @@
 export const shellMessages = {
-  'nav.triage': {
-    vi: 'Triage',
-    en: 'Triage',
+  'nav.ai': {
+    vi: 'AI',
+    en: 'AI',
   },
   'nav.analytics': {
     vi: 'Phân tích',

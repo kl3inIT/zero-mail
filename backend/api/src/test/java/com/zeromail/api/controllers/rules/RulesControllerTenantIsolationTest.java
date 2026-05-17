@@ -10,7 +10,6 @@ import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.persistence.TenantEntity;
 import com.zeromail.core.tenant.persistence.TenantRepository;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -49,7 +48,7 @@ class RulesControllerTenantIsolationTest extends ApiPostgresTestBase {
     @Autowired ObjectMapper objectMapper;
 
     @Test
-    void tenant_a_cannot_read_mutate_preview_or_reorder_tenant_b_rules() throws Exception {
+    void tenant_a_cannot_read_mutate_or_preview_tenant_b_rules() throws Exception {
         SeedData tenantA = seedUser("rules-tenant-a");
         SeedData tenantB = seedUser("rules-tenant-b");
         JsonNode tenantARule = createRule(tenantA, "Tenant A rule");
@@ -73,58 +72,10 @@ class RulesControllerTenantIsolationTest extends ApiPostgresTestBase {
         JsonNode deleteProblem = deleteProblem(authenticatedClient(tenantA), tenantBRuleId);
         assertThat(deleteProblem.path("code").asString()).isEqualTo("error.rules.not_found");
 
-        JsonNode reorderProblem =
-                putProblem(
-                        authenticatedClient(tenantA),
-                        "/api/rules/reorder",
-                        Map.of(
-                                "entries",
-                                List.of(
-                                        Map.of(
-                                                "ruleId",
-                                                tenantBRuleId.toString(),
-                                                "entityVersion",
-                                                tenantBRule.path("entityVersion").asInt()))));
-        assertThat(reorderProblem.path("code").asString()).isEqualTo("error.rules.reorder.invalid");
-
         JsonNode tenantAList = getJson(authenticatedClient(tenantA), "/api/rules");
         assertThat(tenantAList.path("rules").toString())
                 .contains(tenantARule.path("ruleId").asString());
         assertThat(tenantAList.path("rules").toString()).doesNotContain(tenantBRuleId.toString());
-    }
-
-    @Test
-    void reorder_version_mismatch_rejects_entire_request_without_partial_order_changes()
-            throws Exception {
-        SeedData seedData = seedUser("rules-reorder-conflict");
-        JsonNode firstRule = createRule(seedData, "First rule");
-        JsonNode secondRule = createRule(seedData, "Second rule", SECONDARY_MATCHER_JSON);
-
-        JsonNode reorderProblem =
-                putProblem(
-                        authenticatedClient(seedData),
-                        "/api/rules/reorder",
-                        Map.of(
-                                "entries",
-                                List.of(
-                                        Map.of(
-                                                "ruleId",
-                                                secondRule.path("ruleId").asString(),
-                                                "entityVersion",
-                                                secondRule.path("entityVersion").asInt() + 1),
-                                        Map.of(
-                                                "ruleId",
-                                                firstRule.path("ruleId").asString(),
-                                                "entityVersion",
-                                                firstRule.path("entityVersion").asInt()))));
-        assertThat(reorderProblem.path("code").asString())
-                .isEqualTo("error.rules.version_mismatch");
-
-        JsonNode rulesAfterFailure = getJson(authenticatedClient(seedData), "/api/rules");
-        assertThat(rulesAfterFailure.path("rules").get(0).path("ruleId").asString())
-                .isEqualTo(firstRule.path("ruleId").asString());
-        assertThat(rulesAfterFailure.path("rules").get(1).path("ruleId").asString())
-                .isEqualTo(secondRule.path("ruleId").asString());
     }
 
     private JsonNode createRule(SeedData seedData, String displayName) throws Exception {

@@ -36,22 +36,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/rules/reorder": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["reorderRules"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/tenant/disconnect": {
         parameters: {
             query?: never;
@@ -212,22 +196,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/rules/templates/materialize-selected": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["materializeSelectedTemplates"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/rules/preview": {
         parameters: {
             query?: never;
@@ -238,6 +206,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["previewDraftRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rules/preview-enabled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewAllEnabledRules"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/rules/preview-custom": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewCustomMail"];
         delete?: never;
         options?: never;
         head?: never;
@@ -338,22 +338,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["updateLanguage"];
-        trace?: never;
-    };
-    "/api/tenant/triage/shadow-mode": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getShadowMode"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["setShadowMode"];
         trace?: never;
     };
     "/api/rules/{ruleId}/enabled": {
@@ -627,15 +611,6 @@ export interface components {
             templateVersion?: number;
             customized?: boolean;
         };
-        RuleOrderEntryRequest: {
-            /** Format: uuid */
-            ruleId: string;
-            /** Format: int32 */
-            entityVersion: number;
-        };
-        RuleReorderRequest: {
-            entries: components["schemas"]["RuleOrderEntryRequest"][];
-        };
         SelectTemplateRequest: {
             templateKey: string;
         };
@@ -664,6 +639,7 @@ export interface components {
         RulePreviewRequest: {
             /** Format: int32 */
             sampleSize?: number;
+            evaluateSemanticIntents?: boolean;
         };
         ActionChipResponse: {
             actionTypeId?: string;
@@ -737,6 +713,31 @@ export interface components {
             compiled: components["schemas"]["CompiledPayloadRequest"];
             /** Format: int32 */
             sampleSize?: number;
+            evaluateSemanticIntents?: boolean;
+        };
+        RuleEnabledPreviewRequest: {
+            /** Format: int32 */
+            sampleSize?: number;
+            evaluateSemanticIntents?: boolean;
+        };
+        RuleCustomPreviewRequest: {
+            subject?: string;
+            body?: string;
+            ruleIds?: string[];
+        };
+        Entry: {
+            /** Format: uuid */
+            ruleId?: string;
+            displayName?: string;
+            enabled?: boolean;
+            matched?: boolean;
+            deferred?: boolean;
+            proposedActionChips?: components["schemas"]["ActionChipResponse"][];
+            matchedEvidenceChips?: components["schemas"]["EvidenceChipResponse"][];
+            deferredEvidenceChips?: components["schemas"]["EvidenceChipResponse"][];
+        };
+        RuleCustomPreviewResponse: {
+            entries?: components["schemas"]["Entry"][];
         };
         RuleCompileRequest: {
             sourceText: string;
@@ -845,12 +846,6 @@ export interface components {
             triagePaused?: boolean;
             gmailConnectionStatus?: components["schemas"]["GmailConnectionStatusExtended"];
         };
-        TriageShadowModeRequest: {
-            enabled: boolean;
-        };
-        TriageShadowModeResponse: {
-            enabled?: boolean;
-        };
         RuleEnabledRequest: {
             enabled: boolean;
         };
@@ -882,6 +877,8 @@ export interface components {
             auditId?: string;
             gmailThreadId?: string;
             gmailMessageId?: string;
+            subject?: string;
+            senderEmail?: string;
             ruleName?: string;
             action?: string;
             reason?: string;
@@ -1291,84 +1288,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    reorderRules: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RuleReorderRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["RuleResponse"][];
-                };
             };
             /** @description Bad Request */
             400: {
@@ -2256,14 +2175,18 @@ export interface operations {
             };
         };
     };
-    materializeSelectedTemplates: {
+    previewDraftRule: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleDraftPreviewRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -2271,7 +2194,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RuleTemplateMaterializationResponse"];
+                    "*/*": components["schemas"]["RulePreviewResponse"];
                 };
             };
             /** @description Bad Request */
@@ -2330,7 +2253,7 @@ export interface operations {
             };
         };
     };
-    previewDraftRule: {
+    previewAllEnabledRules: {
         parameters: {
             query?: never;
             header?: never;
@@ -2339,7 +2262,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RuleDraftPreviewRequest"];
+                "application/json": components["schemas"]["RuleEnabledPreviewRequest"];
             };
         };
         responses: {
@@ -2350,6 +2273,84 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RulePreviewResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    previewCustomMail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleCustomPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RuleCustomPreviewResponse"];
                 };
             };
             /** @description Bad Request */
@@ -2894,158 +2895,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MeResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    getShadowMode: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["TriageShadowModeResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    setShadowMode: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TriageShadowModeRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["TriageShadowModeResponse"];
                 };
             };
             /** @description Bad Request */
@@ -4110,7 +3959,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
             };
             /** @description Unauthorized */
             401: {

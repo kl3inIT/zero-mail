@@ -12,6 +12,7 @@ import {
   LogOut,
   MailQuestion,
   Settings,
+  Sparkles,
 } from 'lucide-react';
 
 import ZMLogoMark from '@/features/landing/components/ZMLogoMark';
@@ -41,7 +42,7 @@ import { cn } from '@/lib/utils';
 type NavItem = {
   href: string;
   labelKey:
-    | 'nav.triage'
+    | 'nav.ai'
     | 'nav.analytics'
     | 'nav.needsReply'
     | 'nav.rules'
@@ -53,13 +54,13 @@ type NavItem = {
 };
 
 const MAIL_NAV: NavItem[] = [
-  { href: '/triage', labelKey: 'nav.triage', icon: Inbox },
+  { href: '/rules', labelKey: 'nav.rules', icon: ListChecks },
+  { href: '/ai', labelKey: 'nav.ai', icon: Sparkles },
   { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
   { href: '/needs-reply', labelKey: 'nav.needsReply', icon: MailQuestion, badge: 'needs-reply' },
 ];
 
 const MANAGE_NAV: NavItem[] = [
-  { href: '/rules', labelKey: 'nav.rules', icon: ListChecks },
   { href: '/billing', labelKey: 'nav.billing', icon: CreditCard },
   { href: '/settings', labelKey: 'nav.settings', icon: Settings },
 ];

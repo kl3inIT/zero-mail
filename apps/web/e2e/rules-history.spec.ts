@@ -12,52 +12,48 @@ for (const viewport of [
   { name: 'desktop', width: 1280, height: 820 },
   { name: 'mobile', width: 320, height: 740 },
 ]) {
-  test(`triage audit tab renders shell and live empty state at ${viewport.name}`, async ({
-    page,
-  }) => {
+  test(`rules history tab renders empty audit log at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    await openTriage(page, '/triage');
+    await openRules(page);
 
-    await expect(page.getByTestId('chrome-header')).toBeVisible();
-    await expectBalancePillForViewport(page, viewport.width);
-    await expect(
-      page.getByRole('heading', { name: 'AI email actions', exact: true }),
-    ).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Activity' })).toBeVisible();
+    await page.getByRole('tab', { name: 'History' }).click();
+    await expect(page.getByRole('tab', { name: 'History' })).toHaveAttribute(
+      'data-state',
+      'active',
+    );
     await expect(page.getByText('No email actions yet')).toBeVisible();
     await expectNoHorizontalOverflow(page);
-
-    if (viewport.width < 768) {
-      await page.getByRole('button', { name: 'Toggle navigation' }).click();
-      await expect(page.getByRole('link', { name: 'Triage' }).first()).toBeVisible();
-    } else {
-      await expect(page.getByRole('link', { name: 'Triage' }).first()).toBeVisible();
-    }
   });
 
-  test(`triage tab search param deep-links to shadow mode at ${viewport.name}`, async ({
-    page,
-  }) => {
+  test(`ai page renders protected senders empty state at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    await openTriage(page, '/triage?tab=shadow');
+    await openAi(page);
 
     await expect(
-      page.getByRole('heading', { name: 'AI email actions', exact: true }),
+      page.getByRole('heading', { name: 'AI configuration', exact: true }),
     ).toBeVisible();
-    await expect(page.getByText('Zero Mail still evaluates email')).toBeVisible();
-    await expect(page.getByTestId('shadow-mode-switch')).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Protected senders', exact: true }),
+    ).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 }
 
-async function openTriage(page: Page, path: '/triage' | '/triage?tab=shadow') {
+async function openRules(page: Page) {
   await seedAuthenticatedSession(page);
-  await installTriageApiMock(page);
-  await page.goto(path, { waitUntil: 'domcontentloaded' });
+  await installApiMock(page);
+  await page.goto('/rules', { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('networkidle');
 }
 
-async function installTriageApiMock(page: Page) {
+async function openAi(page: Page) {
+  await seedAuthenticatedSession(page);
+  await installApiMock(page);
+  await page.goto('/ai', { waitUntil: 'domcontentloaded' });
+  await page.waitForLoadState('networkidle');
+}
+
+async function installApiMock(page: Page) {
   await page.route(API_ROUTE_PATTERN, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -89,8 +85,18 @@ async function installTriageApiMock(page: Page) {
       return;
     }
 
-    if (url.pathname === '/api/tenant/triage/shadow-mode' && request.method() === 'GET') {
-      await fulfillJson(route, { enabled: false });
+    if (url.pathname === '/api/triage/sender-safety-net' && request.method() === 'GET') {
+      await fulfillJson(route, { items: [] });
+      return;
+    }
+
+    if (url.pathname === '/api/rules' && request.method() === 'GET') {
+      await fulfillJson(route, { items: [] });
+      return;
+    }
+
+    if (url.pathname === '/api/rule-templates' && request.method() === 'GET') {
+      await fulfillJson(route, { items: [] });
       return;
     }
 
@@ -119,14 +125,4 @@ async function fulfillJson(route: Route, body: unknown, status = 200) {
     contentType: 'application/json',
     body: JSON.stringify(body),
   });
-}
-
-async function expectBalancePillForViewport(page: Page, width: number) {
-  const balancePill = page.getByTestId('balance-pill');
-  if (width >= 420) {
-    await expect(balancePill).toBeVisible();
-    return;
-  }
-
-  await expect(balancePill).toHaveAttribute('aria-label', /Credits: 12/);
 }

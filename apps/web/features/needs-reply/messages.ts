@@ -23,9 +23,41 @@ export const needsReplyMessages = {
     vi: 'Đang chờ trả lời',
     en: 'Awaiting reply',
   },
+  'needsReply.tabs.drafted': {
+    vi: 'Đã sinh nháp',
+    en: 'Drafted',
+  },
   'needsReply.tabs.resolved': {
     vi: 'Đã xử lý',
     en: 'Resolved',
+  },
+  'needsReply.row.ageDays': {
+    vi: 'Đợi {count} ngày',
+    en: 'Waiting {count}d',
+  },
+  'needsReply.row.ageHours': {
+    vi: 'Đợi {count} giờ',
+    en: 'Waiting {count}h',
+  },
+  'needsReply.row.ageMinutes': {
+    vi: 'Vừa nhận',
+    en: 'Just now',
+  },
+  'needsReply.row.draftWritten': {
+    vi: 'AI đã viết nháp',
+    en: 'AI drafted',
+  },
+  'needsReply.row.draftSent': {
+    vi: 'Đã gửi',
+    en: 'Sent',
+  },
+  'needsReply.empty.drafted.title': {
+    vi: 'Chưa có nháp nào',
+    en: 'No drafts yet',
+  },
+  'needsReply.empty.drafted.body': {
+    vi: 'Chưa có rule nào tạo nháp tự động, hoặc bạn chưa nhấn "Soạn nháp" cho thread nào.',
+    en: 'No rules have generated drafts yet, and you have not manually drafted any thread.',
   },
   'needsReply.columns.subject': {
     vi: 'Chủ đề',

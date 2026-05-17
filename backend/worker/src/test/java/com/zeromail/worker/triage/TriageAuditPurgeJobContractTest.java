@@ -27,7 +27,7 @@ class TriageAuditPurgeJobContractTest extends PostgresContainerTest {
     }
 
     @Test
-    void purge_deletes_aged_terminal_rows_by_decided_at_including_shadow_logged() {
+    void purge_deletes_aged_terminal_rows_by_decided_at() {
         UUID tenantId = seedTenant();
         UUID agedAppliedAuditId =
                 seedAudit(
@@ -36,11 +36,11 @@ class TriageAuditPurgeJobContractTest extends PostgresContainerTest {
                         "APPLIED",
                         FIXED_NOW.minusSeconds(31 * 86_400),
                         FIXED_NOW.minusSeconds(31 * 86_400));
-        UUID agedShadowLoggedAuditId =
+        UUID agedRevertedAuditId =
                 seedAudit(
                         tenantId,
-                        "gmail-message-aged-shadow",
-                        "SHADOW_LOGGED",
+                        "gmail-message-aged-reverted",
+                        "REVERTED",
                         FIXED_NOW.minusSeconds(31 * 86_400),
                         null);
         UUID freshAppliedAuditId =
@@ -67,7 +67,7 @@ class TriageAuditPurgeJobContractTest extends PostgresContainerTest {
 
         assertThat(deletedCount).isEqualTo(2);
         assertThat(auditExists(agedAppliedAuditId)).isFalse();
-        assertThat(auditExists(agedShadowLoggedAuditId)).isFalse();
+        assertThat(auditExists(agedRevertedAuditId)).isFalse();
         assertThat(auditExists(freshAppliedAuditId)).isTrue();
         assertThat(auditExists(agedPendingAuditId)).isTrue();
     }

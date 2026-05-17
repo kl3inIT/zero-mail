@@ -337,10 +337,7 @@ export function ChromeHeader() {
         >
           <Menu className="size-5" />
         </button>
-        <Link
-          href="/triage"
-          className="flex items-center gap-2 focus-visible:outline-none sm:gap-4"
-        >
+        <Link href="/rules" className="flex items-center gap-2 focus-visible:outline-none sm:gap-4">
           <span className="bg-sidebar-primary text-sidebar-primary-foreground grid size-8 shrink-0 place-items-center rounded-full shadow-sm">
             <ZMLogoMark size={16} />
           </span>

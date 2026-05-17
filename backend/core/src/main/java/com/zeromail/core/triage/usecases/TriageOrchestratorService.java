@@ -175,7 +175,6 @@ public class TriageOrchestratorService {
                         tenantId,
                         observedEvent.gmailMessageId(),
                         triageRuleEvaluationInput,
-                        triageSettings.shadowMode(),
                         senderProtected(
                                 tenantId, triageInput.get().sanitizedSenderEmail(), observedEvent));
         int appliedActions = handleProposals(dispatchContext, mergeResult.proposals());
@@ -192,7 +191,6 @@ public class TriageOrchestratorService {
             UUID tenantId,
             String gmailMessageId,
             TriageRuleEvaluationInput triageRuleEvaluationInput,
-            boolean shadowMode,
             boolean senderProtected) {
 
         String gmailThreadId() {
@@ -259,12 +257,6 @@ public class TriageOrchestratorService {
                         TriageDecision.REJECTED_BY_SAFETY_NET);
                 continue;
             }
-            if (dispatchContext.shadowMode()) {
-                triageAuditSaga.recordTerminal(
-                        commandFor(dispatchContext, actionProposal, actionType, false),
-                        TriageDecision.SHADOW_LOGGED);
-                continue;
-            }
 
             TriageAuditCommand command =
                     commandFor(dispatchContext, actionProposal, actionType, true);
@@ -302,15 +294,18 @@ public class TriageOrchestratorService {
             boolean generateDraftBody) {
         TriageActionResult preWriteIntent =
                 preWriteIntent(dispatchContext, actionProposal.actionIntent(), generateDraftBody);
+        TriageRuleEvaluationInput evaluationContext = dispatchContext.triageRuleEvaluationInput();
         return new TriageAuditCommand(
                 dispatchContext.tenantId(),
                 dispatchContext.gmailMessageId(),
                 dispatchContext.gmailThreadId(),
+                evaluationContext.evaluationInput().sanitizedSubjectExcerpt(),
+                evaluationContext.sanitizedSenderEmail(),
                 firstContributingRuleId(actionProposal),
                 firstContributingRuleName(actionProposal),
                 actionType,
                 preWriteIntent,
-                replyHeadersFor(preWriteIntent, dispatchContext.triageRuleEvaluationInput()),
+                replyHeadersFor(preWriteIntent, evaluationContext),
                 reasonEvidence(actionProposal));
     }
 

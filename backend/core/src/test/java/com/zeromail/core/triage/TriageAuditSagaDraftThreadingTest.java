@@ -90,6 +90,8 @@ class TriageAuditSagaDraftThreadingTest {
                 TENANT_ID,
                 GMAIL_MESSAGE_ID,
                 GMAIL_THREAD_ID,
+                "Planning",
+                "founder@example.com",
                 RULE_ID,
                 "Draft threading rule",
                 RuleActionType.SAVE_DRAFT,

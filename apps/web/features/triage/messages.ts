@@ -15,10 +15,6 @@ export const triageMessages = {
     vi: 'Hoạt động',
     en: 'Activity',
   },
-  'triage.tabs.shadow': {
-    vi: 'Chạy thử',
-    en: 'Test mode',
-  },
   'triage.tabs.senders': {
     vi: 'Người gửi quan trọng',
     en: 'Protected senders',
@@ -182,58 +178,6 @@ export const triageMessages = {
   'triage.audit.undo.undone': {
     vi: 'Đã hoàn tác',
     en: 'Undone',
-  },
-  'triage.shadow.title': {
-    vi: 'Chạy thử không đổi Gmail',
-    en: 'Test without changing Gmail',
-  },
-  'triage.shadow.body': {
-    vi: 'Zero Mail vẫn đánh giá email và ghi lại quyết định, nhưng không gắn nhãn, lưu nháp, hay lưu trữ khỏi Inbox.',
-    en: 'Zero Mail still evaluates email and records decisions, but it will not label, save drafts, or archive from Inbox.',
-  },
-  'triage.shadow.toggleLabel': {
-    vi: 'Bật chế độ chạy thử',
-    en: 'Enable test mode',
-  },
-  'triage.shadow.badgeOn': {
-    vi: 'Đang chạy thử',
-    en: 'Test mode on',
-  },
-  'triage.shadow.onBody': {
-    vi: 'Zero Mail sẽ đánh giá email nhưng không áp dụng nhãn, lưu draft, hoặc archive.',
-    en: 'Zero Mail will evaluate email without applying labels, saving drafts, or archiving.',
-  },
-  'triage.shadow.offBody': {
-    vi: 'Các hành động triage được phép sẽ được áp dụng sau khi qua kiểm tra an toàn.',
-    en: 'Allowed triage actions will apply after safety checks.',
-  },
-  'triage.shadow.confirm.title': {
-    vi: 'Tắt shadow mode?',
-    en: 'Turn off shadow mode?',
-  },
-  'triage.shadow.confirm.body': {
-    vi: 'Sau khi tắt, Zero Mail có thể áp dụng các hành động Gmail được phép.',
-    en: 'After this is off, Zero Mail can apply allowed Gmail actions.',
-  },
-  'triage.shadow.confirm.action': {
-    vi: 'Tắt shadow mode',
-    en: 'Turn off shadow mode',
-  },
-  'triage.shadow.confirm.cancel': {
-    vi: 'Giữ shadow mode',
-    en: 'Keep shadow mode on',
-  },
-  'triage.shadow.error.title': {
-    vi: 'Không tải được shadow mode',
-    en: 'Could not load shadow mode',
-  },
-  'triage.shadow.error.body': {
-    vi: 'Hãy thử lại trước khi thay đổi chế độ chạy triage.',
-    en: 'Retry before changing how triage runs.',
-  },
-  'triage.shadow.error.retry': {
-    vi: 'Tải lại',
-    en: 'Retry',
   },
   'triage.senders.title': {
     vi: 'Người gửi được bảo vệ',

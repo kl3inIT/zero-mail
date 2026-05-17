@@ -14,7 +14,6 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -152,16 +151,17 @@ public class SenderSafetyNetService {
                 tenantSenderOptInRepository.findByTenantId(tenantId).stream()
                         .map(TenantSenderOptInEntity::getSenderEmail)
                         .collect(Collectors.toUnmodifiableSet());
-        return tenantProtectedSenderObservationRepository.findByTenantId(tenantId).stream()
-                .sorted(
-                        Comparator.comparing(
-                                TenantProtectedSenderObservationEntity::getSenderEmail))
+        java.util.LinkedHashSet<String> allSenderEmails = new java.util.LinkedHashSet<>();
+        tenantProtectedSenderObservationRepository.findByTenantId(tenantId).stream()
+                .map(TenantProtectedSenderObservationEntity::getSenderEmail)
+                .forEach(allSenderEmails::add);
+        allSenderEmails.addAll(optedInSenderEmails);
+        return allSenderEmails.stream()
+                .sorted()
                 .map(
-                        protectedSenderObservation ->
+                        senderEmail ->
                                 new ProtectedSenderListItem(
-                                        protectedSenderObservation.getSenderEmail(),
-                                        optedInSenderEmails.contains(
-                                                protectedSenderObservation.getSenderEmail())))
+                                        senderEmail, optedInSenderEmails.contains(senderEmail)))
                 .toList();
     }
 

@@ -86,7 +86,7 @@ class RulePreviewServiceTest extends PostgresContainerTest {
                 tenantId,
                 () -> ruleManagementService.enable(tenantId, enabledSibling.ruleId().value()));
         when(rulePreviewDataService.fetchPreviewInputs(
-                        eq(tenantId), eq(false), eq(new PreviewSampleSize(25))))
+                        eq(tenantId), eq(false), eq(new PreviewSampleSize(10))))
                 .thenReturn(List.of(previewInput()));
 
         RulePreviewResult previewResult =
@@ -97,7 +97,7 @@ class RulePreviewServiceTest extends PostgresContainerTest {
                                         tenantId, currentRule.ruleId().value(), null));
 
         assertThat(previewResult.savedRuleMarkedPreviewed()).isTrue();
-        assertThat(previewResult.impactSummary().sampleSize()).isEqualTo(25);
+        assertThat(previewResult.impactSummary().sampleSize()).isEqualTo(10);
         assertThat(previewResult.impactSummary().sampledMessageCount()).isEqualTo(1);
         assertThat(previewResult.impactSummary().matchedCount()).isEqualTo(1);
         assertThat(previewResult.impactSummary().noWriteNotice()).isTrue();

@@ -66,23 +66,20 @@ public class TenantService {
     }
 
     /**
-     * Reads both triage flags in a single query so hot-path callers like the triage orchestrator do
-     * not issue two separate {@code findById} round trips per inbound message.
+     * Reads triage flags in a single query so hot-path callers like the triage orchestrator do not
+     * issue two separate {@code findById} round trips per inbound message.
      */
     @Transactional(readOnly = true)
     public TenantTriageSettings triageSettingsFor(UUID tenantId) {
         return tenantRepository
                 .findById(tenantId)
-                .map(
-                        tenant ->
-                                new TenantTriageSettings(
-                                        tenant.isTriagePaused(), tenant.isTriageShadowMode()))
+                .map(tenant -> new TenantTriageSettings(tenant.isTriagePaused()))
                 .orElse(TenantTriageSettings.defaults());
     }
 
-    public record TenantTriageSettings(boolean paused, boolean shadowMode) {
+    public record TenantTriageSettings(boolean paused) {
         public static TenantTriageSettings defaults() {
-            return new TenantTriageSettings(false, false);
+            return new TenantTriageSettings(false);
         }
     }
 
@@ -92,20 +89,5 @@ public class TenantService {
                 .findById(tenantId)
                 .map(TenantEntity::getTimeZone)
                 .orElse(TenantEntity.DEFAULT_TIME_ZONE);
-    }
-
-    @Transactional
-    public void setTriageShadowMode(UUID tenantId, boolean enabled) {
-        tenantRepository
-                .findById(tenantId)
-                .ifPresent(tenant -> tenant.setTriageShadowMode(enabled));
-    }
-
-    @Transactional(readOnly = true)
-    public boolean isTriageShadowMode(UUID tenantId) {
-        return tenantRepository
-                .findById(tenantId)
-                .map(TenantEntity::isTriageShadowMode)
-                .orElse(false);
     }
 }

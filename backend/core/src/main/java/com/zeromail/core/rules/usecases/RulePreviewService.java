@@ -1,5 +1,8 @@
 package com.zeromail.core.rules.usecases;
 
+import com.zeromail.core.billing.domain.CallSite;
+import com.zeromail.core.llm.usecases.LlmGateway;
+import com.zeromail.core.llm.usecases.SemanticIntentRequest;
 import com.zeromail.core.rules.domain.ActionIntent;
 import com.zeromail.core.rules.domain.ActionProposal;
 import com.zeromail.core.rules.domain.ActionProposalMerger;
@@ -8,6 +11,8 @@ import com.zeromail.core.rules.domain.MatcherNode;
 import com.zeromail.core.rules.domain.MatcherType;
 import com.zeromail.core.rules.domain.PreviewSampleSize;
 import com.zeromail.core.rules.domain.RuleActionType;
+import com.zeromail.core.rules.domain.RuleEvaluationInput;
+import com.zeromail.core.rules.domain.RuleEvaluationResult;
 import com.zeromail.core.rules.domain.RuleEvaluator;
 import com.zeromail.core.rules.domain.SemanticIntentMatcher;
 import com.zeromail.core.rules.exception.RuleValidationException;
@@ -19,7 +24,11 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -43,12 +52,14 @@ public class RulePreviewService {
     private final ActionProposalMerger actionProposalMerger;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final LlmGateway llmGateway;
 
     @Autowired
     public RulePreviewService(
             RuleRepository ruleRepository,
             RuleManagementService ruleManagementService,
-            RulePreviewDataService rulePreviewDataService) {
+            RulePreviewDataService rulePreviewDataService,
+            LlmGateway llmGateway) {
         this(
                 ruleRepository,
                 ruleManagementService,
@@ -56,7 +67,8 @@ public class RulePreviewService {
                 new RuleEvaluator(),
                 new ActionProposalMerger(),
                 JsonMapper.builder().build(),
-                Clock.systemUTC());
+                Clock.systemUTC(),
+                llmGateway);
     }
 
     RulePreviewService(
@@ -67,6 +79,26 @@ public class RulePreviewService {
             ActionProposalMerger actionProposalMerger,
             ObjectMapper objectMapper,
             Clock clock) {
+        this(
+                ruleRepository,
+                ruleManagementService,
+                rulePreviewDataService,
+                ruleEvaluator,
+                actionProposalMerger,
+                objectMapper,
+                clock,
+                null);
+    }
+
+    RulePreviewService(
+            RuleRepository ruleRepository,
+            RuleManagementService ruleManagementService,
+            RulePreviewDataService rulePreviewDataService,
+            RuleEvaluator ruleEvaluator,
+            ActionProposalMerger actionProposalMerger,
+            ObjectMapper objectMapper,
+            Clock clock,
+            LlmGateway llmGateway) {
         this.ruleRepository =
                 Objects.requireNonNull(ruleRepository, "ruleRepository must not be null");
         this.ruleManagementService =
@@ -82,6 +114,10 @@ public class RulePreviewService {
                         actionProposalMerger, "actionProposalMerger must not be null");
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
+        // null is allowed so existing unit tests that don't exercise the
+        // semantic-eval path do not need to fabricate a mock gateway.
+        // preview(...) refuses to call it when null + evaluateSemanticIntents=true.
+        this.llmGateway = llmGateway;
     }
 
     public int normalizeSampleSize(Integer requestedSampleSize) {
@@ -91,7 +127,18 @@ public class RulePreviewService {
     @Transactional
     public RulePreviewResult previewSavedRule(
             UUID tenantId, UUID ruleId, Integer requestedSampleSize) {
-        return preview(RulePreviewCommand.savedRule(tenantId, ruleId, requestedSampleSize));
+        return previewSavedRule(tenantId, ruleId, requestedSampleSize, false);
+    }
+
+    @Transactional
+    public RulePreviewResult previewSavedRule(
+            UUID tenantId,
+            UUID ruleId,
+            Integer requestedSampleSize,
+            boolean evaluateSemanticIntents) {
+        return preview(
+                RulePreviewCommand.savedRule(
+                        tenantId, ruleId, requestedSampleSize, evaluateSemanticIntents));
     }
 
     @Transactional(readOnly = true)
@@ -100,19 +147,204 @@ public class RulePreviewService {
             MatcherNode matcherNode,
             List<ActionIntent> actionIntents,
             Integer requestedSampleSize) {
+        return previewDraft(tenantId, matcherNode, actionIntents, requestedSampleSize, false);
+    }
+
+    @Transactional(readOnly = true)
+    public RulePreviewResult previewDraft(
+            UUID tenantId,
+            MatcherNode matcherNode,
+            List<ActionIntent> actionIntents,
+            Integer requestedSampleSize,
+            boolean evaluateSemanticIntents) {
         return preview(
                 RulePreviewCommand.draft(
-                        tenantId, matcherNode, actionIntents, requestedSampleSize));
+                        tenantId,
+                        matcherNode,
+                        actionIntents,
+                        requestedSampleSize,
+                        evaluateSemanticIntents));
     }
 
     @Transactional(readOnly = true)
     public RulePreviewResult previewDraft(
             UUID tenantId, String matcherAst, String actionIntents, Integer requestedSampleSize) {
+        return previewDraft(tenantId, matcherAst, actionIntents, requestedSampleSize, false);
+    }
+
+    /**
+     * Preview against every currently-enabled rule for a tenant, with no per-rule focus and no
+     * markPreviewSucceeded bookkeeping. Used by the rules /test tab where the user wants to see how
+     * their current rule set behaves on real Gmail without first picking a rule.
+     */
+    @Transactional(readOnly = true)
+    public RulePreviewResult previewAllEnabled(
+            UUID tenantId, Integer requestedSampleSize, boolean evaluateSemanticIntents) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        PreviewSampleSize sampleSize = PreviewSampleSize.normalize(requestedSampleSize);
+        List<RuleEntity> orderedRules = ruleRepository.findOrderedByTenantId(tenantId);
+        ArrayList<PreviewCandidate> previewCandidates = new ArrayList<>();
+        for (RuleEntity ruleEntity : orderedRules) {
+            if (!ruleEntity.isEnabled()) {
+                continue;
+            }
+            previewCandidates.add(toPreviewCandidate(ruleEntity, false));
+        }
+        if (previewCandidates.isEmpty()) {
+            return new RulePreviewResult(
+                    new RulePreviewResult.ImpactSummary(
+                            sampleSize.value(), 0, 0, Map.of(), 0, 0, true, NO_WRITE_NOTICE_KEY),
+                    List.of(),
+                    false);
+        }
+        boolean requiresBodyEvidence =
+                previewCandidates.stream()
+                        .anyMatch(candidate -> candidate.matcherNode().requiresBodyEvidence());
+        List<RulePreviewDataService.PreviewInput> previewInputs =
+                rulePreviewDataService.fetchPreviewInputs(
+                        tenantId, requiresBodyEvidence, sampleSize);
+        Map<String, Map<String, Boolean>> semanticOverridesByMessage =
+                evaluateSemanticIntents
+                        ? resolveSemanticOverrides(previewCandidates, previewInputs)
+                        : Map.of();
+        return buildResult(
+                sampleSize, previewCandidates, previewInputs, false, semanticOverridesByMessage);
+    }
+
+    @Transactional(readOnly = true)
+    public RulePreviewResult previewDraft(
+            UUID tenantId,
+            String matcherAst,
+            String actionIntents,
+            Integer requestedSampleSize,
+            boolean evaluateSemanticIntents) {
         return previewDraft(
                 tenantId,
                 parseMatcher(matcherAst),
                 parseActionIntents(actionIntents),
-                requestedSampleSize);
+                requestedSampleSize,
+                evaluateSemanticIntents);
+    }
+
+    @Transactional(readOnly = true)
+    public RuleCustomPreviewResult previewCustomMail(
+            UUID tenantId, String subject, String body, List<UUID> requestedRuleIds) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Set<UUID> selectedRuleIds =
+                requestedRuleIds == null || requestedRuleIds.isEmpty()
+                        ? null
+                        : Set.copyOf(requestedRuleIds);
+        List<RuleEntity> orderedRules = ruleRepository.findOrderedByTenantId(tenantId);
+        List<RuleEntity> targetRules =
+                orderedRules.stream()
+                        .filter(
+                                ruleEntity ->
+                                        selectedRuleIds == null
+                                                ? ruleEntity.isEnabled()
+                                                : selectedRuleIds.contains(ruleEntity.getId()))
+                        .toList();
+        if (targetRules.isEmpty()) {
+            return new RuleCustomPreviewResult(List.of());
+        }
+
+        RuleEvaluationInput evaluationInput = buildCustomEvaluationInput(subject, body);
+        ArrayList<RuleCustomPreviewResult.Entry> entries = new ArrayList<>(targetRules.size());
+        for (RuleEntity ruleEntity : targetRules) {
+            MatcherNode matcherNode = parseMatcher(ruleEntity.getMatcherAst());
+            List<ActionIntent> actionIntents = parseActionIntents(ruleEntity.getActionIntents());
+            RuleEvaluationResult evaluationResult =
+                    ruleEvaluator.evaluate(matcherNode, evaluationInput);
+            boolean matched = evaluationResult.status() == MatcherEvaluationState.MATCHED;
+            boolean deferred = evaluationResult.status() == MatcherEvaluationState.DEFERRED;
+            entries.add(
+                    new RuleCustomPreviewResult.Entry(
+                            ruleEntity.getId(),
+                            ruleEntity.getDisplayName(),
+                            ruleEntity.isEnabled(),
+                            matched,
+                            deferred,
+                            matched
+                                    ? actionIntents.stream()
+                                            .map(
+                                                    actionIntent ->
+                                                            toCustomActionChip(
+                                                                    ruleEntity.getId(),
+                                                                    actionIntent,
+                                                                    evaluationResult
+                                                                            .matchedEvidenceIds()))
+                                            .toList()
+                                    : List.of(),
+                            matched
+                                    ? toEvidenceChipList(
+                                            evaluationResult.matchedEvidenceIds(),
+                                            evaluationResult.evidenceById())
+                                    : List.of(),
+                            deferred
+                                    ? toEvidenceChipList(
+                                            evaluationResult.deferredEvidenceIds(),
+                                            evaluationResult.evidenceById())
+                                    : List.of()));
+        }
+        return new RuleCustomPreviewResult(List.copyOf(entries));
+    }
+
+    private RuleEvaluationInput buildCustomEvaluationInput(String subject, String body) {
+        // Synthetic message: blank sender/recipients/labels. Body-derived flags
+        // are inferred from coarse markers so user-authored rules around
+        // newsletters/unsubscribe links still have a chance to fire — matchers
+        // that depend on real Gmail metadata (categories, labels, attachments)
+        // intentionally fall through to NOT_MATCHED.
+        Instant now = Instant.now(clock);
+        String safeBody = body == null ? "" : body;
+        boolean unsubscribeHinted = bodyContainsUnsubscribeMarker(safeBody);
+        return new RuleEvaluationInput(
+                "",
+                "",
+                List.of(),
+                List.of(),
+                subject == null ? "" : subject,
+                List.of(),
+                List.of(),
+                now,
+                now,
+                false,
+                unsubscribeHinted,
+                unsubscribeHinted,
+                Optional.of(!safeBody.isBlank()),
+                Set.of());
+    }
+
+    private static boolean bodyContainsUnsubscribeMarker(String body) {
+        return body.toLowerCase(Locale.ROOT).contains("unsubscribe");
+    }
+
+    private static RulePreviewResult.ActionChip toCustomActionChip(
+            UUID ruleId, ActionIntent actionIntent, List<String> matchedEvidenceIds) {
+        return new RulePreviewResult.ActionChip(
+                customActionTypeId(actionIntent),
+                safeActionLabel(actionIntent),
+                List.of(ruleId),
+                matchedEvidenceIds);
+    }
+
+    private static String customActionTypeId(ActionIntent actionIntent) {
+        return switch (actionIntent) {
+            case ActionIntent.Label ignored -> "label";
+            case ActionIntent.Archive ignored -> "archive";
+            case ActionIntent.SaveDraft ignored -> "save_draft";
+        };
+    }
+
+    private static List<RulePreviewResult.EvidenceChip> toEvidenceChipList(
+            List<String> evidenceIds, java.util.Map<String, String> evidenceById) {
+        return evidenceIds.stream()
+                .map(
+                        evidenceId ->
+                                new RulePreviewResult.EvidenceChip(
+                                        evidenceId,
+                                        Objects.requireNonNullElse(
+                                                evidenceById.get(evidenceId), "")))
+                .toList();
     }
 
     // No @Transactional here on purpose: preview(...) is only invoked via
@@ -134,8 +366,17 @@ public class RulePreviewService {
         List<RulePreviewDataService.PreviewInput> previewInputs =
                 rulePreviewDataService.fetchPreviewInputs(
                         command.tenantId(), requiresBodyEvidence, sampleSize);
+        Map<String, Map<String, Boolean>> semanticOverridesByMessage =
+                command.evaluateSemanticIntents()
+                        ? resolveSemanticOverrides(previewTarget.candidates(), previewInputs)
+                        : Map.of();
         RulePreviewResult result =
-                buildResult(sampleSize, previewTarget.candidates(), previewInputs, false);
+                buildResult(
+                        sampleSize,
+                        previewTarget.candidates(),
+                        previewInputs,
+                        false,
+                        semanticOverridesByMessage);
         if (command.savedRulePreview()) {
             ruleManagementService.markPreviewSucceeded(
                     command.tenantId(),
@@ -145,6 +386,83 @@ public class RulePreviewService {
             return new RulePreviewResult(result.impactSummary(), result.rows(), true);
         }
         return result;
+    }
+
+    private Map<String, Map<String, Boolean>> resolveSemanticOverrides(
+            List<PreviewCandidate> candidates,
+            List<RulePreviewDataService.PreviewInput> previewInputs) {
+        if (llmGateway == null) {
+            // Caller asked for semantic eval but no LLM gateway is wired in this
+            // build (test profile, lite profile). Fall through to deferred chips
+            // rather than fail loudly so the structural preview still surfaces.
+            return Map.of();
+        }
+        LinkedHashMap<String, SemanticIntentMatcher> semanticIntentsByNodeId =
+                new LinkedHashMap<>();
+        for (PreviewCandidate candidate : candidates) {
+            collectSemanticIntentMatchers(candidate.matcherNode(), semanticIntentsByNodeId);
+        }
+        if (semanticIntentsByNodeId.isEmpty()) {
+            return Map.of();
+        }
+        List<SemanticIntentRequest> intents =
+                semanticIntentsByNodeId.entrySet().stream()
+                        .map(
+                                entry ->
+                                        new SemanticIntentRequest(
+                                                entry.getKey(), entry.getValue().intent()))
+                        .toList();
+        LinkedHashMap<String, Map<String, Boolean>> overridesByMessage = new LinkedHashMap<>();
+        for (RulePreviewDataService.PreviewInput previewInput : previewInputs) {
+            String semanticContent =
+                    buildSemanticEvaluationContent(previewInput.ruleEvaluationInput());
+            Map<String, Boolean> overrides =
+                    llmGateway.evaluateSemanticIntents(CallSite.PREVIEW, semanticContent, intents);
+            overridesByMessage.put(previewInput.gmailMessageId(), overrides);
+        }
+        return overridesByMessage;
+    }
+
+    private static void collectSemanticIntentMatchers(
+            MatcherNode matcherNode, Map<String, SemanticIntentMatcher> accumulator) {
+        switch (matcherNode) {
+            case SemanticIntentMatcher semanticIntentMatcher ->
+                    accumulator.putIfAbsent(semanticIntentMatcher.nodeId(), semanticIntentMatcher);
+            case MatcherNode.AllMatcher allMatcher -> {
+                for (MatcherNode child : allMatcher.children()) {
+                    collectSemanticIntentMatchers(child, accumulator);
+                }
+            }
+            case MatcherNode.AnyMatcher anyMatcher -> {
+                for (MatcherNode child : anyMatcher.children()) {
+                    collectSemanticIntentMatchers(child, accumulator);
+                }
+            }
+            case MatcherNode.NotMatcher notMatcher ->
+                    collectSemanticIntentMatchers(notMatcher.child(), accumulator);
+            default -> {
+                // structural leaf — no semantic node to collect
+            }
+        }
+    }
+
+    private static String buildSemanticEvaluationContent(RuleEvaluationInput evaluationInput) {
+        // Privacy + token-budget: preview path never has the raw body, so we
+        // pass the sanitized subject plus a deterministic flag summary that
+        // matches what the triage path builds (LlmGateway javadoc).
+        StringBuilder content = new StringBuilder();
+        content.append("subject: ").append(evaluationInput.sanitizedSubjectExcerpt());
+        content.append("\nsender_domain: ").append(evaluationInput.sanitizedSenderDomain());
+        if (evaluationInput.listUnsubscribePresent()) {
+            content.append("\nflag: list_unsubscribe_present");
+        }
+        if (evaluationInput.newsletterIndicatorPresent()) {
+            content.append("\nflag: newsletter_indicator");
+        }
+        if (evaluationInput.hasAttachment()) {
+            content.append("\nflag: has_attachment");
+        }
+        return content.toString();
     }
 
     private PreviewTarget savedPreviewTarget(RulePreviewCommand command) {
@@ -196,7 +514,8 @@ public class RulePreviewService {
             PreviewSampleSize sampleSize,
             List<PreviewCandidate> previewCandidates,
             List<RulePreviewDataService.PreviewInput> previewInputs,
-            boolean savedRuleMarkedPreviewed) {
+            boolean savedRuleMarkedPreviewed,
+            Map<String, Map<String, Boolean>> semanticOverridesByMessage) {
         ArrayList<RulePreviewResult.PreviewRow> rows = new ArrayList<>();
         LinkedHashMap<String, Integer> actionCounts = new LinkedHashMap<>();
         int matchedCount = 0;
@@ -204,7 +523,11 @@ public class RulePreviewService {
         int conflictCount = 0;
 
         for (RulePreviewDataService.PreviewInput previewInput : previewInputs) {
-            RowEvaluation rowEvaluation = evaluateRow(previewCandidates, previewInput);
+            Map<String, Boolean> overridesForMessage =
+                    semanticOverridesByMessage.getOrDefault(
+                            previewInput.gmailMessageId(), Map.of());
+            RowEvaluation rowEvaluation =
+                    evaluateRow(previewCandidates, previewInput, overridesForMessage);
             if (!rowEvaluation.actionChips().isEmpty()) {
                 matchedCount++;
             }
@@ -246,7 +569,8 @@ public class RulePreviewService {
 
     private RowEvaluation evaluateRow(
             List<PreviewCandidate> previewCandidates,
-            RulePreviewDataService.PreviewInput previewInput) {
+            RulePreviewDataService.PreviewInput previewInput,
+            Map<String, Boolean> semanticOverrides) {
         ArrayList<ActionProposal> orderedProposals = new ArrayList<>();
         LinkedHashMap<String, String> matchedEvidenceById = new LinkedHashMap<>();
         LinkedHashMap<String, String> deferredEvidenceById = new LinkedHashMap<>();
@@ -262,7 +586,9 @@ public class RulePreviewService {
         for (PreviewCandidate previewCandidate : orderedCandidates) {
             var evaluationResult =
                     ruleEvaluator.evaluate(
-                            previewCandidate.matcherNode(), previewInput.ruleEvaluationInput());
+                            previewCandidate.matcherNode(),
+                            previewInput.ruleEvaluationInput(),
+                            semanticOverrides);
             if (evaluationResult.status() == MatcherEvaluationState.MATCHED) {
                 for (String matchedEvidenceId : evaluationResult.matchedEvidenceIds()) {
                     matchedEvidenceById.put(

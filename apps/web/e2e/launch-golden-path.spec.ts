@@ -259,7 +259,10 @@ test.describe('Launch golden path', () => {
         );
         await auditApplied.toContain('Archive receipts');
 
-        await page.goto(`${FRONTEND_BASE_URL}/triage`, { waitUntil: 'domcontentloaded' });
+        await page.goto(`${FRONTEND_BASE_URL}/rules?tab=history`, {
+          waitUntil: 'domcontentloaded',
+        });
+        await page.getByRole('tab', { name: 'History' }).click();
         const auditRows = page.getByTestId('audit-table-row');
         await expect(auditRows.first()).toBeVisible({ timeout: 15_000 });
         await expect(auditRows.first()).toContainText(/Archive receipts|Archive|Label/);

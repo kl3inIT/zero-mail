@@ -65,8 +65,7 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
     @MockitoBean RulePreviewDataService rulePreviewDataService;
 
     @Test
-    void rules_api_supports_compile_crud_preview_enable_reorder_delete_and_templates()
-            throws Exception {
+    void rules_api_supports_compile_crud_preview_enable_delete_and_templates() throws Exception {
         SeedData seedData = seedUser("rules-api-happy-path");
         when(llmGateway.compileRule(eq(CallSite.PREVIEW), anyString()))
                 .thenReturn(compiledGatewayResult("Archive Stripe receipts", STRIPE_MATCHER_JSON));
@@ -113,15 +112,15 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
                         objectMapper.valueToTree(secondCompiled));
         UUID secondRuleId = UUID.fromString(secondRuleJson.path("ruleId").asString());
         when(rulePreviewDataService.fetchPreviewInputs(
-                        eq(seedData.tenantId()), eq(false), eq(new PreviewSampleSize(25))))
+                        eq(seedData.tenantId()), eq(false), eq(new PreviewSampleSize(10))))
                 .thenReturn(List.of(previewInput()));
 
         JsonNode previewJson =
                 postJson(
                         authenticatedClient(seedData),
                         "/api/rules/" + firstRuleId + "/preview",
-                        Map.of("sampleSize", 25));
-        assertThat(previewJson.path("impactSummary").path("sampleSize").asInt()).isEqualTo(25);
+                        Map.of("sampleSize", 10));
+        assertThat(previewJson.path("impactSummary").path("sampleSize").asInt()).isEqualTo(10);
         assertThat(previewJson.path("savedRuleMarkedPreviewed").asBoolean()).isTrue();
         assertThat(previewJson.toString())
                 .doesNotContain("rawBody", "rawHeaders", "prompt", "completion");
@@ -156,25 +155,6 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
 
         JsonNode currentRulesJson = getJson(authenticatedClient(seedData), "/api/rules");
         assertThat(currentRulesJson.path("rules").size()).isGreaterThanOrEqualTo(2);
-        JsonNode reorderedRulesJson =
-                putJson(
-                        authenticatedClient(seedData),
-                        "/api/rules/reorder",
-                        Map.of(
-                                "entries",
-                                List.of(
-                                        Map.of(
-                                                "ruleId",
-                                                secondRuleId.toString(),
-                                                "entityVersion",
-                                                secondRuleJson.path("entityVersion").asInt()),
-                                        Map.of(
-                                                "ruleId",
-                                                firstRuleId.toString(),
-                                                "entityVersion",
-                                                updatedRuleJson.path("entityVersion").asInt()))));
-        assertThat(reorderedRulesJson.get(0).path("ruleId").asString())
-                .isEqualTo(secondRuleId.toString());
 
         JsonNode templateCatalogJson =
                 getJson(authenticatedClient(seedData), "/api/rules/templates");
@@ -355,13 +335,12 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
     }
 
     @Test
-    void openapi_declares_rules_paths_and_reorder_entity_version_shape() throws Exception {
+    void openapi_declares_rules_paths() throws Exception {
         JsonNode openApiJson =
                 getJson(RestClient.create("http://localhost:" + serverPort), "/v3/api-docs");
 
         assertThat(openApiJson.path("paths").has("/api/rules")).isTrue();
         assertThat(openApiJson.path("paths").has("/api/rules/compile")).isTrue();
-        assertThat(openApiJson.path("paths").has("/api/rules/reorder")).isTrue();
         assertThat(openApiJson.path("paths").has("/api/rules/{ruleId}")).isTrue();
         assertThat(openApiJson.path("paths").has("/api/rules/{ruleId}/preview")).isTrue();
         assertThat(openApiJson.path("paths").has("/api/rules/{ruleId}/enabled")).isTrue();
@@ -369,7 +348,7 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
         assertThat(openApiJson.path("paths").has("/api/rules/templates/{templateKey}/materialize"))
                 .isTrue();
         String openApiBody = openApiJson.toString();
-        assertThat(openApiBody).contains("RuleOrderEntryRequest", "ruleId", "entityVersion");
+        assertThat(openApiBody).contains("ruleId", "entityVersion");
     }
 
     private JsonNode createRule(

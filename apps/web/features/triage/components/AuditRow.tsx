@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { Archive, FileEdit, Tag, Wand2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -20,57 +21,77 @@ export function AuditRow({ entry, now }: AuditRowProps) {
   const [undone, setUndone] = useState(Boolean(entry.undone));
   const undoAvailable = isUndoAvailable(entry, now) && !undone;
 
-  const sender = entry.messageRef?.sender || t('triage.audit.message.unknownSender');
-  const subject = entry.messageRef?.subject || t('triage.audit.message.untitled');
-  const initial = sender.charAt(0).toUpperCase();
+  const senderEmail = entry.messageRef?.sender;
+  const rawSubject = entry.messageRef?.subject;
+  const hasSubject = Boolean(rawSubject && rawSubject.trim());
+  const senderParts = splitSenderEmail(senderEmail, t('triage.audit.message.unknownSender'));
 
   return (
     <div
-      className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[#0a3d3a]/[0.04]"
+      className="group flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-[#0a3d3a]/[0.03]"
       data-testid="audit-table-row"
     >
-      {/* Action-colored avatar */}
       <div
         className={cn(
-          'flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+          'flex size-10 shrink-0 items-center justify-center rounded-full',
           avatarClassName(entry.action),
         )}
         aria-hidden="true"
       >
-        {initial}
+        <ActionIcon action={entry.action} />
       </div>
 
-      <div className="flex min-w-0 flex-1 items-center gap-3">
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="w-28 shrink-0 truncate text-sm font-medium">{sender}</span>
-            <span className="min-w-0 truncate text-sm font-medium">{subject}</span>
+      <div className="flex min-w-0 flex-1 items-center gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-baseline gap-2">
+            <span
+              className="text-foreground shrink-0 truncate text-sm font-semibold"
+              title={senderEmail ?? undefined}
+            >
+              {senderParts.handle}
+            </span>
+            {senderParts.domain ? (
+              <span className="text-muted-foreground shrink-0 truncate text-xs">
+                @{senderParts.domain}
+              </span>
+            ) : null}
+            {hasSubject ? (
+              <>
+                <span className="text-muted-foreground/40 shrink-0 text-xs" aria-hidden="true">
+                  ·
+                </span>
+                <span className="text-muted-foreground min-w-0 truncate text-sm">{rawSubject}</span>
+              </>
+            ) : null}
           </div>
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <AuditFact label={t('triage.audit.whenLabel')} value={entry.ruleName} />
-            <AuditFact label={t('triage.audit.thenLabel')} value={entry.actionLabel} action />
-            <AuditFact
-              label={t('triage.audit.whyLabel')}
-              value={entry.reason || t('triage.audit.noReason')}
-            />
+          <div className="text-muted-foreground/80 mt-0.5 flex min-w-0 items-center gap-1.5 text-xs">
+            <Wand2 className="size-3 shrink-0" aria-hidden="true" />
+            <span className="truncate">{entry.ruleName}</span>
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-4">
           <ActionBadge entry={entry} />
-          <time className="text-muted-foreground w-20 shrink-0 text-right font-mono text-xs">
-            {formatAuditTimestamp(entry.timestamp)}
+          <time
+            className="text-muted-foreground hidden w-24 shrink-0 text-right text-xs tabular-nums sm:block"
+            title={new Date(entry.timestamp).toLocaleString()}
+          >
+            {formatAuditTimestamp(entry.timestamp, now)}
           </time>
-          <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="flex w-24 shrink-0 items-center justify-end gap-1">
             {shouldShowDraftAction(entry) ? (
               <GenerateDraftButton
                 gmailThreadId={entry.gmailThreadId}
                 draftStatus={entry.draftId ? 'DRAFT_READY' : 'NO_DRAFT'}
               />
             ) : null}
-            {undone ? null : undoAvailable ? (
+            {undone ? (
+              <span className="text-muted-foreground text-xs">{t('triage.audit.undo.undone')}</span>
+            ) : undoAvailable ? (
               <UndoButton entry={entry} onUndone={() => setUndone(true)} />
-            ) : null}
+            ) : (
+              <UndoClosedLabel />
+            )}
           </div>
         </div>
       </div>
@@ -78,28 +99,21 @@ export function AuditRow({ entry, now }: AuditRowProps) {
   );
 }
 
-function AuditFact({
-  label,
-  value,
-  action = false,
-}: {
-  label: string;
-  value: string;
-  action?: boolean;
-}) {
-  return (
-    <span
-      className={cn(
-        'inline-flex max-w-[16rem] items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] leading-4',
-        action
-          ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
-          : 'bg-muted text-muted-foreground',
-      )}
-    >
-      <span className="font-semibold tracking-wide uppercase">{label}</span>
-      <span className="truncate">{value}</span>
-    </span>
-  );
+function splitSenderEmail(
+  email: string | undefined,
+  fallback: string,
+): { handle: string; domain: string | null } {
+  if (!email) return { handle: fallback, domain: null };
+  const atIndex = email.lastIndexOf('@');
+  if (atIndex < 0) return { handle: email, domain: null };
+  return { handle: email.slice(0, atIndex), domain: email.slice(atIndex + 1) };
+}
+
+function ActionIcon({ action }: { action: string }) {
+  const normalized = action.toLowerCase();
+  if (normalized.includes('archive')) return <Archive className="size-4" />;
+  if (normalized.includes('draft')) return <FileEdit className="size-4" />;
+  return <Tag className="size-4" />;
 }
 
 function avatarClassName(action: string): string {
@@ -133,7 +147,10 @@ export function ActionBadge({ entry }: { entry: AuditEntry }) {
   return (
     <Badge
       variant="outline"
-      className={cn('border-transparent', actionBadgeClassName(entry.action))}
+      className={cn(
+        'border-transparent px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase',
+        actionBadgeClassName(entry.action),
+      )}
     >
       {entry.actionLabel}
     </Badge>
@@ -173,25 +190,32 @@ export function shouldShowDraftAction(entry: AuditEntry): entry is AuditEntry & 
   return normalizedAction === 'save_draft' && Boolean(entry.gmailThreadId);
 }
 
-export function formatAuditTimestamp(timestamp: string): string {
+export function formatAuditTimestamp(timestamp: string, now: Date = new Date()): string {
+  const entryDate = new Date(timestamp);
+  const deltaMs = now.getTime() - entryDate.getTime();
+  const deltaMinutes = Math.round(deltaMs / 60_000);
+  if (deltaMinutes < 1) return 'vừa xong';
+  if (deltaMinutes < 60) return `${deltaMinutes} phút trước`;
+  const deltaHours = Math.round(deltaMinutes / 60);
+  if (deltaHours < 24) return `${deltaHours} giờ trước`;
+  const deltaDays = Math.round(deltaHours / 24);
+  if (deltaDays < 7) return `${deltaDays} ngày trước`;
   return new Intl.DateTimeFormat(undefined, {
     month: 'short',
     day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(timestamp));
+  }).format(entryDate);
 }
 
 function actionBadgeClassName(action: string): string {
   const normalizedAction = action.toLowerCase();
   if (normalizedAction.includes('archive')) {
-    return 'bg-sky-500/10 text-sky-700 dark:text-sky-300';
+    return 'bg-sky-500/15 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300';
   }
   if (normalizedAction.includes('label')) {
-    return 'bg-[#0a3d3a]/10 text-[#0a3d3a] dark:text-[#0a3d3a]/40';
+    return 'bg-[#0a3d3a]/12 text-[#0a3d3a] dark:bg-[#0a3d3a]/30 dark:text-[#E7F0EF]';
   }
   if (normalizedAction.includes('draft')) {
-    return 'bg-amber-500/10 text-amber-700 dark:text-amber-300';
+    return 'bg-amber-500/15 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300';
   }
   return 'bg-muted text-muted-foreground';
 }

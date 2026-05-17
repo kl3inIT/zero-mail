@@ -8,6 +8,23 @@
     "label": "label",
     "notify": "notify"
   },
+  "ai": {
+    "page": {
+      "description": "Teach the AI how to behave in your inbox — who is shielded from automation, and (soon) the voice and style you want it to mirror when drafting replies.",
+      "title": "AI configuration"
+    },
+    "senders": {
+      "add": "Protect",
+      "added": "Protected {email}",
+      "addFailed": "Could not protect this sender. Try again.",
+      "adding": "Adding…",
+      "description": "Mail from these senders is always left alone — no labels, no archive, no auto-drafts, no matter how strongly a rule matches.",
+      "heading": "Protected senders",
+      "inputLabel": "Sender email to protect",
+      "inputPlaceholder": "boss@company.com",
+      "invalidEmail": "Invalid email address."
+    }
+  },
   "analytics": {
     "error": {
       "body": "Something went wrong fetching this data. Check your connection and try again.",
@@ -489,6 +506,10 @@
       "save": {
         "generic": "The rule could not be saved right now. Reload the list and try again."
       },
+      "testCustom": {
+        "generic": "Could not run the custom-mail test. Please try again.",
+        "subjectOrBodyRequired": "Enter at least a subject or a body."
+      },
       "unsafe_action": "This rule asks for an action that is not allowed in v1.",
       "version_mismatch": "The rule changed before the action finished. Reload and try again.",
       "versionMismatch": "The rule changed before the action finished. Reload and try again."
@@ -733,6 +754,7 @@
     }
   },
   "nav": {
+    "ai": "AI",
     "analytics": "Analytics",
     "beta": "beta",
     "billing": "Billing",
@@ -753,7 +775,6 @@
     "signIn": "Sign in",
     "themeToDark": "Switch to dark mode",
     "themeToLight": "Switch to light mode",
-    "triage": "Triage",
     "trust": "Trust & safety",
     "waitlist": "Join the waitlist"
   },
@@ -787,6 +808,10 @@
         "body": "No threads are waiting on the other party.",
         "title": "Nothing awaiting"
       },
+      "drafted": {
+        "body": "No rules have generated drafts yet, and you have not manually drafted any thread.",
+        "title": "No drafts yet"
+      },
       "resolved": {
         "body": "No resolved threads yet."
       },
@@ -804,6 +829,13 @@
       "description": "Threads waiting on a reply — yours or theirs. Review and send drafts in Gmail.",
       "title": "Needs reply"
     },
+    "row": {
+      "ageDays": "Waiting {count}d",
+      "ageHours": "Waiting {count}h",
+      "ageMinutes": "Just now",
+      "draftSent": "Sent",
+      "draftWritten": "AI drafted"
+    },
     "status": {
       "draftReady": "Draft ready",
       "draftSent": "Draft sent",
@@ -811,6 +843,7 @@
     },
     "tabs": {
       "awaitingReply": "Awaiting reply",
+      "drafted": "Drafted",
       "label": "Needs-reply buckets",
       "resolved": "Resolved",
       "toReply": "To reply"
@@ -944,7 +977,9 @@
       "actions": "Rule actions",
       "column": {
         "enabled": "Enabled",
-        "name": "Name"
+        "name": "Name",
+        "selectAll": "Select all rules for testing",
+        "selectRow": "Select rule {name}"
       },
       "customizedBadge": "Customized",
       "delete": "Delete rule",
@@ -1046,6 +1081,10 @@
       "enableCta": "Enable rule",
       "evidence": "Evidence",
       "gmailLabels": "Gmail labels",
+      "llmCta": "Run LLM confirmation (~{credits} credits)",
+      "llmCtaBody": "Rules with semantic matchers are currently deferred. Run the LLM to confirm whether they match (~{credits} credits).",
+      "llmCtaTitle": "{count} emails need LLM confirmation",
+      "llmRunning": "Calling LLM...",
       "matched": "{count} matched",
       "noWriteNotice": "No Gmail changes were made.",
       "previewCta": "Preview rule",
@@ -1059,7 +1098,8 @@
         "matched": "Matched",
         "sampled": "Sampled"
       },
-      "title": "Test selected rule"
+      "testingEnabledCount": "Testing {count} enabled rules",
+      "title": "Preview on real Gmail"
     },
     "q": {
       "plain": "plain English",
@@ -1075,10 +1115,23 @@
     "ruleN": "Rule 1 of 5",
     "tabs": {
       "calendar": "Calendar invites",
+      "creditBadge": "Uses credits",
       "customer": "Customer escalations",
+      "freeBadge": "Free",
+      "gmailCreditWarningBody": "When a rule uses semantic LLM matchers, each test consumes platform credits. The Custom email tab tests rule logic for free.",
+      "gmailCreditWarningTitle": "Real Gmail test uses credits",
+      "history": "History",
+      "historyIntro": "Every AI action applied to your Gmail, with the matching rule, reason, and a 30-day undo window.",
       "investors": "Investor follow-ups",
+      "label": "Rules page mode",
+      "list": "Rule list",
       "newsletters": "Newsletters & receipts",
-      "recruiters": "Recruiters"
+      "recruiters": "Recruiters",
+      "test": "Test rules",
+      "testCustom": "Custom email",
+      "testGmail": "Real Gmail",
+      "testIntro": "By default, testing runs on {count} enabled rules.",
+      "testModeLabel": "Test mode"
     },
     "templates": {
       "browseCta": "Browse templates",
@@ -1086,6 +1139,35 @@
       "materialized": "Materialized",
       "title": "Starter templates",
       "useStarter": "Use starter rule"
+    },
+    "testCustom": {
+      "bodyLabel": "Email body",
+      "bodyPlaceholder": "Paste or type email content here. Example: Thank you for your payment of $49. To unsubscribe, click here.",
+      "clearSelection": "Clear selection",
+      "empty": {
+        "body": "Enter a subject and body, then click \"Test\" to see which rules would match.",
+        "heading": "No results yet"
+      },
+      "intro": "Compose a hypothetical email to see which rules would match. The email is never sent and Gmail is not changed.",
+      "noSelectedHint": "No rules selected — all enabled rules will be tested.",
+      "openCta": "Test with custom email",
+      "result": {
+        "actions": "Actions that would fire",
+        "deferred": "Needs semantic check",
+        "deferredEvidence": "Deferred checks",
+        "disabled": "Disabled",
+        "evidence": "Match evidence",
+        "matched": "Matched",
+        "noMatchHint": "This rule did not match the custom email — review the condition or try different content.",
+        "notMatched": "No match",
+        "title": "Test results ({count} rules)"
+      },
+      "runCta": "Test on this email",
+      "running": "Running...",
+      "selectedHint": "{count} rules selected — only these will be tested.",
+      "subjectLabel": "Subject",
+      "subjectPlaceholder": "Example: Stripe receipt May — $49",
+      "title": "Test with a custom email"
     },
     "title": "Sentences, not filters."
   },
@@ -1287,30 +1369,10 @@
       "title": "Protected senders",
       "unknown": "Unknown sender"
     },
-    "shadow": {
-      "badgeOn": "Test mode on",
-      "body": "Zero Mail still evaluates email and records decisions, but it will not label, save drafts, or archive from Inbox.",
-      "confirm": {
-        "action": "Turn off shadow mode",
-        "body": "After this is off, Zero Mail can apply allowed Gmail actions.",
-        "cancel": "Keep shadow mode on",
-        "title": "Turn off shadow mode?"
-      },
-      "error": {
-        "body": "Retry before changing how triage runs.",
-        "retry": "Retry",
-        "title": "Could not load shadow mode"
-      },
-      "offBody": "Allowed triage actions will apply after safety checks.",
-      "onBody": "Zero Mail will evaluate email without applying labels, saving drafts, or archiving.",
-      "title": "Test without changing Gmail",
-      "toggleLabel": "Enable test mode"
-    },
     "tabs": {
       "audit": "Activity",
       "label": "Email action sections",
-      "senders": "Protected senders",
-      "shadow": "Test mode"
+      "senders": "Protected senders"
     }
   },
   "trust": {

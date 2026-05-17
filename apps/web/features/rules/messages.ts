@@ -11,6 +11,58 @@ export const rulesMessages = {
     vi: 'Mô tả tự nhiên chỉ là cách nhập nhanh. Khi lưu, Zero Mail giữ cấu trúc điều kiện và hành động để bạn kiểm tra lại; các hành động nguy hiểm vẫn bị khóa.',
     en: 'Natural language is only a quick input method. Saved rules keep a reviewable criteria and action structure, and unsafe actions stay locked.',
   },
+  'rules.tabs.label': {
+    vi: 'Chế độ trang quy tắc',
+    en: 'Rules page mode',
+  },
+  'rules.tabs.list': {
+    vi: 'Danh sách quy tắc',
+    en: 'Rule list',
+  },
+  'rules.tabs.test': {
+    vi: 'Kiểm tra quy tắc',
+    en: 'Test rules',
+  },
+  'rules.tabs.history': {
+    vi: 'Lịch sử',
+    en: 'History',
+  },
+  'rules.tabs.historyIntro': {
+    vi: 'Mọi hành động AI đã chạy trên Gmail của bạn, kèm rule khớp, lý do và nút hoàn tác trong 30 ngày.',
+    en: 'Every AI action applied to your Gmail, with the matching rule, reason, and a 30-day undo window.',
+  },
+  'rules.tabs.testIntro': {
+    vi: 'Mặc định sẽ thử trên {count} quy tắc đang bật.',
+    en: 'By default, testing runs on {count} enabled rules.',
+  },
+  'rules.tabs.testModeLabel': {
+    vi: 'Chế độ kiểm tra',
+    en: 'Test mode',
+  },
+  'rules.tabs.testCustom': {
+    vi: 'Email tự soạn',
+    en: 'Custom email',
+  },
+  'rules.tabs.testGmail': {
+    vi: 'Email Gmail thật',
+    en: 'Real Gmail',
+  },
+  'rules.tabs.freeBadge': {
+    vi: 'Miễn phí',
+    en: 'Free',
+  },
+  'rules.tabs.creditBadge': {
+    vi: 'Tốn credit',
+    en: 'Uses credits',
+  },
+  'rules.tabs.gmailCreditWarningTitle': {
+    vi: 'Test trên Gmail thật sẽ tốn credit',
+    en: 'Real Gmail test uses credits',
+  },
+  'rules.tabs.gmailCreditWarningBody': {
+    vi: 'Nếu quy tắc có matcher cần LLM phân loại, mỗi lần chạy thử sẽ tốn credit nền tảng. Test miễn phí bằng email tự soạn ở tab bên cạnh.',
+    en: 'When a rule uses semantic LLM matchers, each test consumes platform credits. The Custom email tab tests rule logic for free.',
+  },
   'rules.list.title': {
     vi: 'Danh sách quy tắc',
     en: 'Rule list',
@@ -26,6 +78,14 @@ export const rulesMessages = {
   'rules.list.column.name': {
     vi: 'Tên',
     en: 'Name',
+  },
+  'rules.list.column.selectAll': {
+    vi: 'Chọn tất cả quy tắc để thử',
+    en: 'Select all rules for testing',
+  },
+  'rules.list.column.selectRow': {
+    vi: 'Chọn quy tắc {name}',
+    en: 'Select rule {name}',
   },
   'rules.list.actions': {
     vi: 'Thao tác với quy tắc',
@@ -62,14 +122,6 @@ export const rulesMessages = {
   'rules.list.noThen': {
     vi: 'Chưa có hành động',
     en: 'No action yet',
-  },
-  'rules.list.moveUp': {
-    vi: 'Đưa quy tắc lên trên',
-    en: 'Move rule up',
-  },
-  'rules.list.moveDown': {
-    vi: 'Đưa quy tắc xuống dưới',
-    en: 'Move rule down',
   },
   'rules.list.edit': {
     vi: 'Sửa quy tắc',
@@ -348,8 +400,12 @@ export const rulesMessages = {
     en: 'Draft a short reply asking for the invoice PDF',
   },
   'rules.preview.title': {
-    vi: 'Kiểm tra quy tắc đang chọn',
-    en: 'Test selected rule',
+    vi: 'Kiểm tra trên Gmail thật',
+    en: 'Preview on real Gmail',
+  },
+  'rules.preview.testingEnabledCount': {
+    vi: 'Đang test {count} quy tắc đang bật',
+    en: 'Testing {count} enabled rules',
   },
   'rules.preview.empty.heading': {
     vi: 'Chưa chạy thử',
@@ -406,6 +462,22 @@ export const rulesMessages = {
   'rules.preview.deferredTooltip': {
     vi: 'Phase 03 lưu kiểm tra này, nhưng việc đánh giá được trì hoãn.',
     en: 'Phase 03 stores this check, but evaluation is deferred.',
+  },
+  'rules.preview.llmCtaTitle': {
+    vi: '{count} email cần LLM xác nhận',
+    en: '{count} emails need LLM confirmation',
+  },
+  'rules.preview.llmCtaBody': {
+    vi: 'Các quy tắc có matcher ngữ nghĩa hiện đang để "trì hoãn". Chạy LLM để biết chắc rule có match hay không (~{credits} credit).',
+    en: 'Rules with semantic matchers are currently deferred. Run the LLM to confirm whether they match (~{credits} credits).',
+  },
+  'rules.preview.llmCta': {
+    vi: 'Chạy LLM xác nhận (~{credits} credit)',
+    en: 'Run LLM confirmation (~{credits} credits)',
+  },
+  'rules.preview.llmRunning': {
+    vi: 'Đang gọi LLM...',
+    en: 'Calling LLM...',
   },
   'rules.preview.conflictWarning': {
     vi: 'Lượt chạy thử này có xung đột hành động. Hãy xem các quy tắc khớp trước khi bật.',
@@ -474,6 +546,106 @@ export const rulesMessages = {
   'rules.delete.dismiss': {
     vi: 'Giữ quy tắc',
     en: 'Keep rule',
+  },
+  'rules.testCustom.openCta': {
+    vi: 'Thử với email tùy chỉnh',
+    en: 'Test with custom email',
+  },
+  'rules.testCustom.title': {
+    vi: 'Thử với email tùy chỉnh',
+    en: 'Test with a custom email',
+  },
+  'rules.testCustom.intro': {
+    vi: 'Soạn email giả lập để xem quy tắc nào sẽ khớp. Email này KHÔNG được gửi và Gmail không bị thay đổi.',
+    en: 'Compose a hypothetical email to see which rules would match. The email is never sent and Gmail is not changed.',
+  },
+  'rules.testCustom.subjectLabel': {
+    vi: 'Tiêu đề',
+    en: 'Subject',
+  },
+  'rules.testCustom.subjectPlaceholder': {
+    vi: 'Ví dụ: Hóa đơn Stripe tháng 5 — $49',
+    en: 'Example: Stripe receipt May — $49',
+  },
+  'rules.testCustom.bodyLabel': {
+    vi: 'Nội dung email',
+    en: 'Email body',
+  },
+  'rules.testCustom.bodyPlaceholder': {
+    vi: 'Dán hoặc gõ nội dung email tại đây. Ví dụ: Thank you for your payment of $49. To unsubscribe, click here.',
+    en: 'Paste or type email content here. Example: Thank you for your payment of $49. To unsubscribe, click here.',
+  },
+  'rules.testCustom.runCta': {
+    vi: 'Chạy thử trên email này',
+    en: 'Test on this email',
+  },
+  'rules.testCustom.running': {
+    vi: 'Đang chạy thử...',
+    en: 'Running...',
+  },
+  'rules.testCustom.selectedHint': {
+    vi: '{count} quy tắc đã chọn — sẽ chỉ thử các quy tắc này.',
+    en: '{count} rules selected — only these will be tested.',
+  },
+  'rules.testCustom.noSelectedHint': {
+    vi: 'Chưa chọn quy tắc nào — sẽ thử tất cả quy tắc đang bật.',
+    en: 'No rules selected — all enabled rules will be tested.',
+  },
+  'rules.testCustom.clearSelection': {
+    vi: 'Bỏ chọn',
+    en: 'Clear selection',
+  },
+  'rules.testCustom.empty.heading': {
+    vi: 'Chưa có kết quả',
+    en: 'No results yet',
+  },
+  'rules.testCustom.empty.body': {
+    vi: 'Nhập tiêu đề và nội dung email, sau đó bấm "Chạy thử" để xem quy tắc nào sẽ khớp.',
+    en: 'Enter a subject and body, then click "Test" to see which rules would match.',
+  },
+  'rules.testCustom.result.title': {
+    vi: 'Kết quả thử ({count} quy tắc)',
+    en: 'Test results ({count} rules)',
+  },
+  'rules.testCustom.result.matched': {
+    vi: 'Khớp',
+    en: 'Matched',
+  },
+  'rules.testCustom.result.deferred': {
+    vi: 'Cần kiểm tra ngữ nghĩa',
+    en: 'Needs semantic check',
+  },
+  'rules.testCustom.result.notMatched': {
+    vi: 'Không khớp',
+    en: 'No match',
+  },
+  'rules.testCustom.result.disabled': {
+    vi: 'Đang tắt',
+    en: 'Disabled',
+  },
+  'rules.testCustom.result.actions': {
+    vi: 'Hành động sẽ chạy',
+    en: 'Actions that would fire',
+  },
+  'rules.testCustom.result.evidence': {
+    vi: 'Bằng chứng khớp',
+    en: 'Match evidence',
+  },
+  'rules.testCustom.result.deferredEvidence': {
+    vi: 'Kiểm tra trì hoãn',
+    en: 'Deferred checks',
+  },
+  'rules.testCustom.result.noMatchHint': {
+    vi: 'Quy tắc này không khớp với email tùy chỉnh — kiểm tra điều kiện hoặc thử nội dung khác.',
+    en: 'This rule did not match the custom email — review the condition or try different content.',
+  },
+  'errors.rules.testCustom.generic': {
+    vi: 'Không thể chạy thử lúc này. Hãy thử lại.',
+    en: 'Could not run the custom-mail test. Please try again.',
+  },
+  'errors.rules.testCustom.subjectOrBodyRequired': {
+    vi: 'Hãy nhập ít nhất tiêu đề hoặc nội dung email.',
+    en: 'Enter at least a subject or a body.',
   },
   'errors.rules.compile.invalid': {
     vi: 'Zero Mail chưa kiểm tra được quy tắc này. Hãy sửa cách diễn đạt hoặc trả lời câu hỏi làm rõ rồi kiểm tra lại.',

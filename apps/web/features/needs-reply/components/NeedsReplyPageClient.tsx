@@ -13,7 +13,7 @@ import {
 import { useToReplyCount } from '@/features/needs-reply/hooks/useToReplyCount';
 import { useHydrated } from '@/lib/use-hydrated';
 
-const NEEDS_REPLY_TABS = ['to-reply', 'awaiting-their-reply'] as const;
+const NEEDS_REPLY_TABS = ['to-reply', 'awaiting-their-reply', 'drafted'] as const;
 
 function normalizeBucket(value: string | null): NeedsReplyBucket {
   return NEEDS_REPLY_TABS.includes(value as NeedsReplyBucket)
@@ -47,6 +47,7 @@ export function NeedsReplyPageClient() {
         rows={rows}
         toReplyCount={toReplyCount}
         awaitingCount={activeBucket === 'awaiting-their-reply' ? rows.length : 0}
+        draftedCount={activeBucket === 'drafted' ? rows.length : 0}
         isLoading={inboxQuery.isPending}
         isClassifying={inboxQuery.isFetching && !inboxQuery.isPending}
         error={inboxQuery.error}

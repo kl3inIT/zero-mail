@@ -10,26 +10,20 @@ import {
   listRules,
   listRuleTemplates,
   materializeRuleTemplate,
+  previewAllEnabledRules,
+  previewCustomMail,
   previewDraftRule,
   previewSavedRule,
-  reorderRules,
   updateRule,
   updateRuleEnabled,
   type RuleCreateRequest,
+  type RuleCustomPreviewRequest,
   type RuleDraftPreviewRequest,
-  type RuleListResponse,
-  type RuleOrderEntryRequest,
+  type RuleEnabledPreviewRequest,
   type RulePreviewRequest,
-  type RuleReorderRequest,
-  type RuleResponse,
   type RuleUpdateRequest,
 } from '@/features/rules/api/rules-api';
 import { rulesKeys } from '@/features/rules/query-keys';
-
-export type ReorderRulesInput = {
-  entries: RuleOrderEntryRequest[];
-  orderedRules: RuleResponse[];
-};
 
 export function useRules() {
   return useQuery({ queryKey: rulesKeys.list(), queryFn: listRules });
@@ -95,42 +89,6 @@ export function useUpdateRuleEnabled() {
   });
 }
 
-export function useReorderRules() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ entries }: ReorderRulesInput) =>
-      reorderRules({ entries } satisfies RuleReorderRequest),
-    onMutate: async ({ orderedRules }) => {
-      await queryClient.cancelQueries({ queryKey: rulesKeys.list() });
-      const previousList = queryClient.getQueryData<RuleListResponse>(rulesKeys.list());
-
-      queryClient.setQueryData<RuleListResponse>(rulesKeys.list(), (currentList) => {
-        if (!currentList) return currentList;
-        return {
-          ...currentList,
-          rules: orderedRules.map((rule, index) => ({ ...rule, orderIndex: index })),
-        };
-      });
-
-      return { previousList };
-    },
-    onError: (_error, _variables, context) => {
-      if (context?.previousList) {
-        queryClient.setQueryData(rulesKeys.list(), context.previousList);
-      }
-    },
-    onSuccess: (rules) => {
-      for (const rule of rules) {
-        if (rule.ruleId) queryClient.setQueryData(rulesKeys.detail(rule.ruleId), rule);
-      }
-    },
-    onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: rulesKeys.list() });
-    },
-  });
-}
-
 export function useDeleteRule() {
   const queryClient = useQueryClient();
 
@@ -159,6 +117,18 @@ export function usePreviewSavedRule() {
 export function usePreviewDraftRule() {
   return useMutation({
     mutationFn: (payload: RuleDraftPreviewRequest) => previewDraftRule(payload),
+  });
+}
+
+export function usePreviewCustomMail() {
+  return useMutation({
+    mutationFn: (payload: RuleCustomPreviewRequest) => previewCustomMail(payload),
+  });
+}
+
+export function usePreviewAllEnabledRules() {
+  return useMutation({
+    mutationFn: (payload: RuleEnabledPreviewRequest) => previewAllEnabledRules(payload),
   });
 }
 

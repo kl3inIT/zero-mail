@@ -32,6 +32,12 @@ public class TriageAuditEntity extends AbstractTenantOwnedEntity {
     @Column(name = "gmail_thread_id", length = 255)
     private String gmailThreadId;
 
+    @Column(name = "sanitized_subject", length = 200)
+    private String sanitizedSubject;
+
+    @Column(name = "sanitized_sender_email", length = 320)
+    private String sanitizedSenderEmail;
+
     @Column(name = "rule_id")
     private UUID ruleId;
 
@@ -50,7 +56,7 @@ public class TriageAuditEntity extends AbstractTenantOwnedEntity {
 
     /**
      * Stores what Zero Mail changed, not a full Gmail label snapshot. This is set after a Gmail
-     * write succeeds and remains null for save-draft, shadow, rejected, and failed decisions.
+     * write succeeds and remains null for save-draft, rejected, and failed decisions.
      */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "gmail_change_token", columnDefinition = "jsonb")
@@ -143,6 +149,14 @@ public class TriageAuditEntity extends AbstractTenantOwnedEntity {
 
     public String getGmailThreadId() {
         return gmailThreadId;
+    }
+
+    public String getSanitizedSubject() {
+        return sanitizedSubject;
+    }
+
+    public String getSanitizedSenderEmail() {
+        return sanitizedSenderEmail;
     }
 
     public UUID getRuleId() {

@@ -1,5 +1,7 @@
+import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
 
+import { LoadingState } from '@/components/states/LoadingState';
 import { RulesWorkspace } from '@/features/rules/components/RulesWorkspace';
 
 export default async function RulesPage() {
@@ -11,7 +13,9 @@ export default async function RulesPage() {
         <h1 className="text-foreground text-xl font-semibold">{t('rules.page.title')}</h1>
         <p className="text-muted-foreground max-w-3xl text-sm leading-6">{t('rules.page.intro')}</p>
       </div>
-      <RulesWorkspace />
+      <Suspense fallback={<LoadingState variant="cards" count={2} />}>
+        <RulesWorkspace />
+      </Suspense>
     </div>
   );
 }

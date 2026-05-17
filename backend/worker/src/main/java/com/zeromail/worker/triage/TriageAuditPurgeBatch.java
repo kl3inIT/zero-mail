@@ -40,7 +40,6 @@ public class TriageAuditPurgeBatch {
              AND decision IN (
                'APPLIED',
                'REVERTED',
-               'SHADOW_LOGGED',
                'REJECTED_BY_SAFETY_NET',
                'REJECTED_BY_SAFETY_POLICY',
                'FAILED'

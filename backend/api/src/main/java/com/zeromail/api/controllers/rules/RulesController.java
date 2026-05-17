@@ -5,11 +5,13 @@ import com.zeromail.api.dto.rules.RuleCompileRequest;
 import com.zeromail.api.dto.rules.RuleCompileResponse;
 import com.zeromail.api.dto.rules.RuleCompileStatus;
 import com.zeromail.api.dto.rules.RuleCreateRequest;
+import com.zeromail.api.dto.rules.RuleCustomPreviewRequest;
+import com.zeromail.api.dto.rules.RuleCustomPreviewResponse;
 import com.zeromail.api.dto.rules.RuleDraftPreviewRequest;
+import com.zeromail.api.dto.rules.RuleEnabledPreviewRequest;
 import com.zeromail.api.dto.rules.RuleEnabledRequest;
 import com.zeromail.api.dto.rules.RulePreviewRequest;
 import com.zeromail.api.dto.rules.RulePreviewResponse;
-import com.zeromail.api.dto.rules.RuleReorderRequest;
 import com.zeromail.api.dto.rules.RuleResponse;
 import com.zeromail.api.dto.rules.RuleTemplateMaterializationResponse;
 import com.zeromail.api.dto.rules.RuleTemplateResponse;
@@ -23,9 +25,7 @@ import com.zeromail.core.rules.usecases.RuleCompileResult;
 import com.zeromail.core.rules.usecases.RuleCompilerService;
 import com.zeromail.core.rules.usecases.RuleCreateCommand;
 import com.zeromail.core.rules.usecases.RuleManagementService;
-import com.zeromail.core.rules.usecases.RuleOrderEntry;
 import com.zeromail.core.rules.usecases.RulePreviewService;
-import com.zeromail.core.rules.usecases.RuleReorderCommand;
 import com.zeromail.core.rules.usecases.RuleTemplateCatalogService;
 import com.zeromail.core.rules.usecases.RuleTemplateMaterializationResult;
 import com.zeromail.core.rules.usecases.RuleTemplateMaterializationService;
@@ -161,29 +161,6 @@ public class RulesController {
         return RuleResponse.from(ruleManagementService.disable(tenantId, ruleId));
     }
 
-    @PutMapping("/reorder")
-    public List<RuleResponse> reorderRules(@Valid @RequestBody RuleReorderRequest request) {
-        UUID tenantId = TenantContext.currentTenantUuid();
-        try {
-            return ruleManagementService
-                    .reorder(
-                            new RuleReorderCommand(
-                                    tenantId,
-                                    request.entries().stream()
-                                            .map(
-                                                    orderedEntry ->
-                                                            new RuleOrderEntry(
-                                                                    orderedEntry.ruleId(),
-                                                                    orderedEntry.entityVersion()))
-                                            .toList()))
-                    .stream()
-                    .map(RuleResponse::from)
-                    .toList();
-        } catch (IllegalArgumentException invalidReorderRequest) {
-            throw RuleApiException.invalidReorder();
-        }
-    }
-
     @DeleteMapping("/{ruleId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteRule(@PathVariable UUID ruleId) {
@@ -196,9 +173,41 @@ public class RulesController {
         try {
             return RulePreviewResponse.from(
                     rulePreviewService.previewSavedRule(
-                            TenantContext.currentTenantUuid(), ruleId, request.sampleSize()));
+                            TenantContext.currentTenantUuid(),
+                            ruleId,
+                            request.sampleSize(),
+                            request.evaluateSemanticIntentsFlag()));
         } catch (IllegalArgumentException invalidSampleSize) {
             throw RuleApiException.invalidSampleSize();
+        }
+    }
+
+    @PostMapping("/preview-enabled")
+    public RulePreviewResponse previewAllEnabledRules(
+            @Valid @RequestBody RuleEnabledPreviewRequest request) {
+        try {
+            return RulePreviewResponse.from(
+                    rulePreviewService.previewAllEnabled(
+                            TenantContext.currentTenantUuid(),
+                            request.sampleSize(),
+                            request.evaluateSemanticIntentsFlag()));
+        } catch (IllegalArgumentException invalidSampleSize) {
+            throw RuleApiException.invalidSampleSize();
+        }
+    }
+
+    @PostMapping("/preview-custom")
+    public RuleCustomPreviewResponse previewCustomMail(
+            @Valid @RequestBody RuleCustomPreviewRequest request) {
+        try {
+            return RuleCustomPreviewResponse.from(
+                    rulePreviewService.previewCustomMail(
+                            TenantContext.currentTenantUuid(),
+                            request.subject(),
+                            request.body(),
+                            request.ruleIds()));
+        } catch (IllegalArgumentException invalidCustomPreviewPayload) {
+            throw RuleApiException.invalidCompileOutput();
         }
     }
 
@@ -213,7 +222,8 @@ public class RulesController {
                             TenantContext.currentTenantUuid(),
                             compileResult.matcherAst(),
                             compileResult.actionIntents(),
-                            normalizedSampleSize));
+                            normalizedSampleSize,
+                            request.evaluateSemanticIntentsFlag()));
         } catch (IllegalArgumentException invalidPreviewPayload) {
             throw RuleApiException.invalidCompileOutput();
         }

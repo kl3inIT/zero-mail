@@ -11,7 +11,8 @@ public record RulePreviewCommand(
         UUID ruleId,
         MatcherNode matcherNode,
         List<ActionIntent> actionIntents,
-        Integer requestedSampleSize) {
+        Integer requestedSampleSize,
+        boolean evaluateSemanticIntents) {
 
     public RulePreviewCommand {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
@@ -26,7 +27,16 @@ public record RulePreviewCommand(
 
     public static RulePreviewCommand savedRule(
             UUID tenantId, UUID ruleId, Integer requestedSampleSize) {
-        return new RulePreviewCommand(tenantId, ruleId, null, List.of(), requestedSampleSize);
+        return savedRule(tenantId, ruleId, requestedSampleSize, false);
+    }
+
+    public static RulePreviewCommand savedRule(
+            UUID tenantId,
+            UUID ruleId,
+            Integer requestedSampleSize,
+            boolean evaluateSemanticIntents) {
+        return new RulePreviewCommand(
+                tenantId, ruleId, null, List.of(), requestedSampleSize, evaluateSemanticIntents);
     }
 
     public static RulePreviewCommand draft(
@@ -34,8 +44,22 @@ public record RulePreviewCommand(
             MatcherNode matcherNode,
             List<ActionIntent> actionIntents,
             Integer requestedSampleSize) {
+        return draft(tenantId, matcherNode, actionIntents, requestedSampleSize, false);
+    }
+
+    public static RulePreviewCommand draft(
+            UUID tenantId,
+            MatcherNode matcherNode,
+            List<ActionIntent> actionIntents,
+            Integer requestedSampleSize,
+            boolean evaluateSemanticIntents) {
         return new RulePreviewCommand(
-                tenantId, null, matcherNode, actionIntents, requestedSampleSize);
+                tenantId,
+                null,
+                matcherNode,
+                actionIntents,
+                requestedSampleSize,
+                evaluateSemanticIntents);
     }
 
     public boolean savedRulePreview() {

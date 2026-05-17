@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: 040-triage-audit-message-ref
+      author: zeromail
+      comment: >
+        Persist a sanitized subject excerpt and sender email on each triage_audit row so
+        the audit log UI can render "who / what" instead of placeholders. Subject + sender
+        are metadata, not body content (no privacy regression — same fields the orchestrator
+        already passes to deterministic matchers and to the safety net). Both columns are
+        nullable so legacy rows and observation-failed rows keep loading. The subject column
+        is sized to the existing 200-char excerpt budget; sender is sized to RFC 5321 local+domain.
+      changes:
+        - addColumn:
+            tableName: triage_audit
+            columns:
+              - column:
+                  name: sanitized_subject
+                  type: varchar(200)
+              - column:
+                  name: sanitized_sender_email
+                  type: varchar(320)
+      rollback:
+        - dropColumn:
+            tableName: triage_audit
+            columnName: sanitized_subject
+        - dropColumn:
+            tableName: triage_audit
+            columnName: sanitized_sender_email

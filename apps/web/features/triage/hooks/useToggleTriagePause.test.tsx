@@ -25,7 +25,6 @@ const baseUser: CurrentUser = {
   preferredLanguage: 'en',
   onboardingStep: 'COMPLETE',
   triagePaused: false,
-  triageShadowMode: false,
 } as unknown as CurrentUser;
 
 const mocks = vi.hoisted(() => ({

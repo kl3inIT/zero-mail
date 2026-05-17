@@ -22,7 +22,6 @@ public class TriageAuditWriter {
 
     private static final EnumSet<TriageDecision> DIRECT_TERMINAL_DECISIONS =
             EnumSet.of(
-                    TriageDecision.SHADOW_LOGGED,
                     TriageDecision.REJECTED_BY_SAFETY_NET,
                     TriageDecision.REJECTED_BY_SAFETY_POLICY);
 
@@ -43,6 +42,8 @@ public class TriageAuditWriter {
             UUID tenantId,
             String gmailMessageId,
             String gmailThreadId,
+            String sanitizedSubject,
+            String sanitizedSenderEmail,
             UUID ruleId,
             String ruleNameSnapshot,
             RuleActionType actionType,
@@ -52,6 +53,8 @@ public class TriageAuditWriter {
                 tenantId,
                 gmailMessageId,
                 gmailThreadId,
+                sanitizedSubject,
+                sanitizedSenderEmail,
                 ruleId,
                 ruleNameSnapshot,
                 actionType.id(),
@@ -64,6 +67,8 @@ public class TriageAuditWriter {
             UUID tenantId,
             String gmailMessageId,
             String gmailThreadId,
+            String sanitizedSubject,
+            String sanitizedSenderEmail,
             UUID ruleId,
             String ruleNameSnapshot,
             RuleActionType actionType,
@@ -78,6 +83,8 @@ public class TriageAuditWriter {
                 tenantId,
                 gmailMessageId,
                 gmailThreadId,
+                sanitizedSubject,
+                sanitizedSenderEmail,
                 ruleId,
                 ruleNameSnapshot,
                 actionType.id(),

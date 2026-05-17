@@ -1,12 +1,14 @@
 package com.zeromail.api.config;
 
 import com.zeromail.api.error.AllowedParamScalars;
+import com.zeromail.api.error.ErrorTypes;
 import com.zeromail.api.error.FieldErrorDto;
 import com.zeromail.core.shared.error.ErrorCodes;
 import com.zeromail.core.shared.exception.BusinessException;
 import com.zeromail.core.shared.exception.ErrorClass;
 import com.zeromail.core.tenant.TenantContext;
 import jakarta.validation.ConstraintViolationException;
+import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
@@ -49,12 +51,18 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
  * remaining handlers cover framework exceptions ({@link AuthenticationException}, {@link
  * AccessDeniedException}, JPA conflicts, validation, etc.) that we do not own.
  *
- * <p><b>Why {@code extends ResponseEntityExceptionHandler}?</b> Under {@code
- * spring.mvc.problemdetails.enabled=true} the framework's default {@code
- * MethodArgumentNotValidException} handling silently bypasses {@code @ExceptionHandler} on a plain
- * {@code @RestControllerAdvice}. Inheriting {@link ResponseEntityExceptionHandler} and overriding
- * {@link #handleMethodArgumentNotValid} is the supported route. (Mitigates threat T-1.1.02-02; cite
- * RESEARCH.md Pitfall 1; Spring issue #35982.)
+ * <p><b>Why {@code extends ResponseEntityExceptionHandler}?</b> The parent class registers built-in
+ * {@code @ExceptionHandler} translations for the framework exceptions we do not own — notably
+ * {@link org.springframework.http.converter.HttpMessageNotReadableException} (malformed JSON /
+ * unknown enum value). Without that inheritance, the response of a malformed body request is
+ * silently overwritten by the security filter chain to {@code 401} on error re-dispatch (verified
+ * by {@code ByokControllerIntegrationTest.post_validate_accepts_lowercase_preset_id}). The parent
+ * also covers {@code HttpRequestMethodNotSupportedException} (405), {@code
+ * HttpMediaTypeNotSupportedException} (415), {@code NoHandlerFoundException} (404), and peers —
+ * re-implementing each as a hand-rolled {@code @ExceptionHandler} would bloat this file rather than
+ * slim it. (Historical note: the original rationale cited Spring #35982 / bypassed {@code
+ * MethodArgumentNotValidException}; the safety test confirms that specific bypass no longer
+ * reproduces, but the broader framework-exception coverage still earns the inheritance.)
  *
  * <p><b>Privacy invariants:</b>
  *
@@ -185,36 +193,24 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         // jakarta.validation path-style violations on @Validated method parameters /
         // path variables. Mirrors the @MethodArgumentNotValid shape: same code, same
         // fieldErrors[] array, with field paths like "method.argName".
-        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-        problemDetail.setTitle("Validation failed");
-        problemDetail.setDetail("One or more parameters failed validation.");
-        problemDetail.setProperty("code", ErrorCodes.VALIDATION);
-        problemDetail.setProperty("params", Map.of());
-        problemDetail.setProperty(
-                "fieldErrors",
+        List<FieldErrorDto> fieldErrors =
                 exception.getConstraintViolations().stream()
                         .map(
-                                constraintViolation ->
-                                        new FieldErrorDto(
-                                                constraintViolation.getPropertyPath().toString(),
-                                                "error.validation.field."
-                                                        + constraintViolation
-                                                                .getPropertyPath()
-                                                                .toString()
-                                                        + "."
-                                                        + constraintViolation
-                                                                .getConstraintDescriptor()
-                                                                .getAnnotation()
-                                                                .annotationType()
-                                                                .getSimpleName(),
-                                                AllowedParamScalars.filter(new Object[0])))
-                        .toList());
-        problemDetail.setProperty("message", ErrorCodes.VALIDATION);
-        log.warn(
-                "event=validation_rejected tenantId={} fieldErrors={}",
-                tenantIdForLog(),
-                exception.getConstraintViolations().size());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+                                constraintViolation -> {
+                                    String path = constraintViolation.getPropertyPath().toString();
+                                    String annotation =
+                                            constraintViolation
+                                                    .getConstraintDescriptor()
+                                                    .getAnnotation()
+                                                    .annotationType()
+                                                    .getSimpleName();
+                                    return new FieldErrorDto(
+                                            path,
+                                            "error.validation.field." + path + "." + annotation,
+                                            AllowedParamScalars.filter(new Object[0]));
+                                })
+                        .toList();
+        return validationProblem("One or more parameters failed validation.", fieldErrors);
     }
 
     @Override
@@ -223,13 +219,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             @NonNull HttpHeaders headers,
             @NonNull HttpStatusCode status,
             @NonNull WebRequest request) {
-        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-        problemDetail.setTitle("Validation failed");
-        problemDetail.setDetail("One or more fields failed validation.");
-        problemDetail.setProperty("code", ErrorCodes.VALIDATION);
-        problemDetail.setProperty("params", Map.of());
-        problemDetail.setProperty(
-                "fieldErrors",
+        List<FieldErrorDto> fieldErrors =
                 exception.getBindingResult().getFieldErrors().stream()
                         .map(
                                 fieldError ->
@@ -241,12 +231,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                                                         + fieldError.getCode(),
                                                 AllowedParamScalars.filter(
                                                         fieldError.getArguments())))
-                        .toList());
-        problemDetail.setProperty("message", ErrorCodes.VALIDATION);
-        log.warn(
-                "event=validation_rejected tenantId={} fieldErrors={}",
-                tenantIdForLog(),
-                exception.getBindingResult().getFieldErrorCount());
+                        .toList();
+        ProblemDetail problemDetail =
+                validationProblem("One or more fields failed validation.", fieldErrors).getBody();
         return handleExceptionInternal(exception, problemDetail, headers, status, request);
     }
 
@@ -285,6 +272,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             String code,
             Map<String, Object> params) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(status);
+        problemDetail.setType(ErrorTypes.forStatus(status));
         problemDetail.setTitle(title);
         problemDetail.setDetail(detail);
         problemDetail.setProperty("code", code);
@@ -292,6 +280,31 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         problemDetail.setProperty(
                 "message", code); // transitional alias of code (drop next phase per D-C1)
         return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    /**
+     * Build the 400 validation ProblemDetail shape shared by {@link #handleMethodArgumentNotValid}
+     * (request body {@code @Valid}) and {@link #onConstraintViolation} ({@code @Validated} method
+     * parameters). Both paths emit the same wire contract: top-level {@code code =
+     * error.validation} + a {@code fieldErrors[]} array; only the rejection source (field vs
+     * parameter) differs, captured in {@code detail}.
+     */
+    private static ResponseEntity<ProblemDetail> validationProblem(
+            String detail, List<FieldErrorDto> fieldErrors) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problemDetail.setType(ErrorTypes.VALIDATION);
+        problemDetail.setTitle("Validation failed");
+        problemDetail.setDetail(detail);
+        problemDetail.setProperty("code", ErrorCodes.VALIDATION);
+        problemDetail.setProperty("params", Map.of());
+        problemDetail.setProperty("fieldErrors", fieldErrors);
+        problemDetail.setProperty(
+                "message", ErrorCodes.VALIDATION); // transitional alias (drop next phase per D-C1)
+        log.warn(
+                "event=validation_rejected tenantId={} fieldErrors={}",
+                tenantIdForLog(),
+                fieldErrors.size());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
 
     private static String tenantIdForLog() {

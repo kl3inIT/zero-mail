@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useReducer } from 'react';
+import { useEffect, useMemo, useReducer, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Plus, Sparkles } from 'lucide-react';
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -12,16 +15,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ErrorCode } from '@/lib/api/error-codes';
 import { useLocalizedApiError, type ApiError } from '@/lib/api/errors';
+import { CustomMailTester } from '@/features/rules/components/CustomMailTester';
 import { RuleComposer } from '@/features/rules/components/RuleComposer';
 import { RuleList } from '@/features/rules/components/RuleList';
 import { RulePreviewPanel } from '@/features/rules/components/RulePreviewPanel';
 import { RuleTemplateGallery } from '@/features/rules/components/RuleTemplateGallery';
+import { AuditLog } from '@/features/triage/components/AuditLog';
 import {
   compiledResponseToRequest,
   type RuleCompiledPayloadResponse,
   type RuleCompileResult,
+  type RuleCustomPreviewResponse,
   type RulePreviewResponse,
   type RuleResponse,
   type RuleTemplateResponse,
@@ -32,18 +39,15 @@ import {
   useCreateRule,
   useDeleteRule,
   useMaterializeRuleTemplate,
-  usePreviewDraftRule,
-  usePreviewSavedRule,
-  useReorderRules,
+  usePreviewAllEnabledRules,
+  usePreviewCustomMail,
   useRuleTemplates,
   useRules,
   useUpdateRule,
   useUpdateRuleEnabled,
 } from '@/features/rules/hooks/use-rules';
 
-type SampleSize = 10 | 25 | 50;
-
-type LastPreviewedRule = { ruleId: string; entityVersion?: number };
+type SampleSize = 10 | 20;
 
 type CompileOptions = {
   keepCurrentSourceText?: boolean;
@@ -76,7 +80,6 @@ type RulesWorkspaceState = {
   previewError: string | null;
   gmailUnavailableError: string | null;
   sampleSize: SampleSize;
-  lastPreviewedRule: LastPreviewedRule | null;
   pendingRuleId: string | null;
   pendingTemplateKey: string | null;
   composerDialogOpen: boolean;
@@ -105,11 +108,7 @@ type RulesWorkspaceAction =
   | { type: 'composerDialogToggled'; open: boolean }
   | { type: 'templateDialogToggled'; open: boolean }
   | { type: 'previewStarted' }
-  | {
-      type: 'previewSucceeded';
-      preview: RulePreviewResponse;
-      lastPreviewedRule: LastPreviewedRule | null;
-    }
+  | { type: 'previewSucceeded'; preview: RulePreviewResponse }
   | { type: 'previewFailed'; message: string }
   | { type: 'previewGmailUnavailable'; message: string }
   | { type: 'sampleSizeChanged'; sampleSize: SampleSize }
@@ -131,8 +130,7 @@ const initialState: RulesWorkspaceState = {
   preview: null,
   previewError: null,
   gmailUnavailableError: null,
-  sampleSize: 25,
-  lastPreviewedRule: null,
+  sampleSize: 10,
   pendingRuleId: null,
   pendingTemplateKey: null,
   composerDialogOpen: false,
@@ -207,11 +205,7 @@ function rulesWorkspaceReducer(
     case 'previewStarted':
       return { ...state, previewError: null, gmailUnavailableError: null };
     case 'previewSucceeded':
-      return {
-        ...state,
-        preview: action.preview,
-        lastPreviewedRule: action.lastPreviewedRule ?? state.lastPreviewedRule,
-      };
+      return { ...state, preview: action.preview };
     case 'previewFailed':
       return { ...state, previewError: action.message };
     case 'previewGmailUnavailable':
@@ -230,7 +224,6 @@ function rulesWorkspaceReducer(
       return {
         ...applyRuleSelection(state, action.savedRule),
         composerDialogOpen: false,
-        lastPreviewedRule: null,
       };
     case 'selectedRuleDeleted':
       return {
@@ -285,14 +278,22 @@ export function RulesWorkspace() {
   const compileMutation = useCompileRule();
   const createRuleMutation = useCreateRule();
   const updateRuleMutation = useUpdateRule();
-  const reorderRulesMutation = useReorderRules();
   const deleteRuleMutation = useDeleteRule();
-  const previewSavedRuleMutation = usePreviewSavedRule();
-  const previewDraftRuleMutation = usePreviewDraftRule();
+  const previewAllEnabledMutation = usePreviewAllEnabledRules();
   const updateEnabledMutation = useUpdateRuleEnabled();
   const materializeTemplateMutation = useMaterializeRuleTemplate();
+  const previewCustomMailMutation = usePreviewCustomMail();
 
   const [state, dispatch] = useReducer(rulesWorkspaceReducer, initialState);
+  const [customMailResult, setCustomMailResult] = useState<RuleCustomPreviewResponse | null>(null);
+  const [customMailError, setCustomMailError] = useState<string | null>(null);
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeTab = normalizeRulesTab(searchParams.get('tab'));
+  const setActiveTab = (nextTab: RulesTab) => {
+    router.replace(`/rules?tab=${nextTab}`, { scroll: false });
+  };
 
   const rules = useMemo(
     () => [...(rulesQuery.data?.rules ?? [])].sort(compareRulesByOrder),
@@ -433,38 +434,16 @@ export function RulesWorkspace() {
     });
   }
 
-  async function handlePreview() {
+  async function handlePreview(options: { evaluateSemanticIntents?: boolean } = {}) {
+    const evaluateSemanticIntents = options.evaluateSemanticIntents ?? false;
     dispatch({ type: 'previewStarted' });
 
     try {
-      const draftPreviewRequired = isDirtySelectedDraft(
-        selectedRule,
-        state.sourceText,
-        state.compileResult,
-      );
-      const result =
-        selectedRule?.ruleId !== undefined && !draftPreviewRequired
-          ? await previewSavedRuleMutation.mutateAsync({
-              ruleId: selectedRule.ruleId,
-              payload: { sampleSize: state.sampleSize },
-            })
-          : state.compileResult?.status === 'compiled'
-            ? await previewDraftRuleMutation.mutateAsync({
-                compiled: compiledResponseToRequest(state.compileResult.compiled),
-                sampleSize: state.sampleSize,
-              })
-            : null;
-
-      if (result) {
-        dispatch({
-          type: 'previewSucceeded',
-          preview: result,
-          lastPreviewedRule:
-            selectedRule?.ruleId && !draftPreviewRequired
-              ? { ruleId: selectedRule.ruleId, entityVersion: selectedRule.entityVersion }
-              : null,
-        });
-      }
+      const result = await previewAllEnabledMutation.mutateAsync({
+        sampleSize: state.sampleSize,
+        evaluateSemanticIntents,
+      });
+      dispatch({ type: 'previewSucceeded', preview: result });
     } catch (error) {
       if (isGmailUnavailable(error)) {
         dispatch({
@@ -477,36 +456,23 @@ export function RulesWorkspace() {
     }
   }
 
+  function handleEvaluateSemanticIntents() {
+    void handlePreview({ evaluateSemanticIntents: true });
+  }
+
   async function handleToggleRule(rule: RuleResponse) {
     if (!rule.ruleId) return;
     dispatch({ type: 'ruleTogglePending', ruleId: rule.ruleId });
     try {
       await updateEnabledMutation.mutateAsync({ ruleId: rule.ruleId, enabled: !rule.enabled });
+    } catch (toggleError) {
+      // Swallow the typed ApiError so Next.js does not render the raw object
+      // as "[object Object]" in the runtime overlay. Re-fetch the list so the
+      // switch state stays in sync with the server's view of the rule.
+      console.warn('rule toggle failed', toggleError);
     } finally {
       dispatch({ type: 'rulePendingCleared' });
     }
-  }
-
-  async function handleMoveRule(rule: RuleResponse, direction: 'up' | 'down') {
-    if (!rule.ruleId) return;
-    const currentIndex = rules.findIndex((candidate) => candidate.ruleId === rule.ruleId);
-    const nextIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= rules.length) return;
-
-    const orderedRules = [...rules];
-    const [movedRule] = orderedRules.splice(currentIndex, 1);
-    if (!movedRule) return;
-    orderedRules.splice(nextIndex, 0, movedRule);
-
-    await reorderRulesMutation.mutateAsync({
-      orderedRules,
-      entries: orderedRules
-        .filter((orderedRule) => orderedRule.ruleId)
-        .map((orderedRule) => ({
-          ruleId: orderedRule.ruleId as string,
-          entityVersion: orderedRule.entityVersion ?? 0,
-        })),
-    });
   }
 
   async function handleDeleteRule(rule: RuleResponse) {
@@ -530,71 +496,132 @@ export function RulesWorkspace() {
     }
   }
 
-  function canEnableRule(rule: RuleResponse): boolean {
-    return (
-      Boolean(rule.ruleId) &&
-      (rule.lastPreviewedEntityVersion === rule.entityVersion ||
-        (state.lastPreviewedRule?.ruleId === rule.ruleId &&
-          state.lastPreviewedRule?.entityVersion === rule.entityVersion))
-    );
+  async function handleRunCustomMailTest(input: { subject: string; body: string }) {
+    setCustomMailError(null);
+    try {
+      const response = await previewCustomMailMutation.mutateAsync({
+        subject: input.subject,
+        body: input.body,
+        ruleIds: null,
+      });
+      setCustomMailResult(response);
+    } catch {
+      setCustomMailError(t('errors.rules.testCustom.generic'));
+    }
   }
 
-  const canPreview = canPreviewRule(selectedRule, state.sourceText, state.compileResult);
+  const enabledRulesCount = rules.filter((rule) => rule.enabled).length;
+  const canPreview = enabledRulesCount > 0;
 
   return (
-    <div className="space-y-6">
-      <RuleList
-        rules={rules}
-        selectedRuleId={state.selectedRuleId}
-        isLoading={rulesQuery.isLoading}
-        pendingRuleId={state.pendingRuleId}
-        canEnableRule={canEnableRule}
-        onSelectRule={(rule) => dispatch({ type: 'ruleSelected', rule })}
-        onMoveRule={handleMoveRule}
-        onEditRule={(rule) => dispatch({ type: 'editRuleStarted', rule })}
-        onToggleEnabled={handleToggleRule}
-        onDeleteRule={handleDeleteRule}
-        action={
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1.5 rounded-md"
-              onClick={() => dispatch({ type: 'templateDialogToggled', open: true })}
-            >
-              <Sparkles className="size-3.5" />
-              {t('rules.templates.browseCta')}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              className="gap-1.5 rounded-md"
-              onClick={() => dispatch({ type: 'newRuleStarted' })}
-            >
-              <Plus className="size-3.5" />
-              {t('rules.composer.newRuleCta')}
-            </Button>
-          </div>
-        }
-      />
+    <Tabs
+      value={activeTab}
+      onValueChange={(nextValue) => setActiveTab(normalizeRulesTab(nextValue))}
+      className="space-y-6"
+    >
+      <TabsList aria-label={t('rules.tabs.label')}>
+        <TabsTrigger value="list">{t('rules.tabs.list')}</TabsTrigger>
+        <TabsTrigger value="test">{t('rules.tabs.test')}</TabsTrigger>
+        <TabsTrigger value="history">{t('rules.tabs.history')}</TabsTrigger>
+      </TabsList>
 
-      <RulePreviewPanel
-        selectedRule={selectedRule}
-        preview={state.preview}
-        previewError={state.previewError}
-        gmailUnavailableError={state.gmailUnavailableError}
-        isPreviewing={previewSavedRuleMutation.isPending || previewDraftRuleMutation.isPending}
-        isToggling={updateEnabledMutation.isPending}
-        canPreview={canPreview}
-        canEnable={selectedRule ? canEnableRule(selectedRule) : false}
-        sampleSize={state.sampleSize}
-        onSampleSizeChange={(sampleSize) => dispatch({ type: 'sampleSizeChanged', sampleSize })}
-        onPreview={handlePreview}
-        onToggleEnabled={() => {
-          if (selectedRule) void handleToggleRule(selectedRule);
-        }}
-      />
+      <TabsContent value="list" className="space-y-6">
+        <RuleList
+          rules={rules}
+          selectedRuleId={state.selectedRuleId}
+          isLoading={rulesQuery.isLoading}
+          pendingRuleId={state.pendingRuleId}
+          onSelectRule={(rule) => dispatch({ type: 'ruleSelected', rule })}
+          onEditRule={(rule) => dispatch({ type: 'editRuleStarted', rule })}
+          onToggleEnabled={handleToggleRule}
+          onDeleteRule={handleDeleteRule}
+          action={
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5 rounded-md"
+                onClick={() => dispatch({ type: 'templateDialogToggled', open: true })}
+              >
+                <Sparkles className="size-3.5" />
+                {t('rules.templates.browseCta')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="gap-1.5 rounded-md"
+                onClick={() => dispatch({ type: 'newRuleStarted' })}
+              >
+                <Plus className="size-3.5" />
+                {t('rules.composer.newRuleCta')}
+              </Button>
+            </div>
+          }
+        />
+      </TabsContent>
+
+      <TabsContent value="test" className="space-y-6">
+        <p className="text-muted-foreground text-sm">
+          {t('rules.tabs.testIntro', { count: enabledRulesCount })}
+        </p>
+        <Tabs defaultValue="custom" className="space-y-4">
+          <TabsList aria-label={t('rules.tabs.testModeLabel')}>
+            <TabsTrigger value="custom" className="gap-2">
+              {t('rules.tabs.testCustom')}
+              <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                {t('rules.tabs.freeBadge')}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="gmail" className="gap-2">
+              {t('rules.tabs.testGmail')}
+              <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                {t('rules.tabs.creditBadge')}
+              </Badge>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="custom">
+            <CustomMailTester
+              selectedCount={0}
+              isRunning={previewCustomMailMutation.isPending}
+              result={customMailResult}
+              resultError={customMailError}
+              onClearSelection={() => undefined}
+              onRunTest={handleRunCustomMailTest}
+            />
+          </TabsContent>
+
+          <TabsContent value="gmail" className="space-y-3">
+            <Alert variant="warning">
+              <AlertTitle>{t('rules.tabs.gmailCreditWarningTitle')}</AlertTitle>
+              <AlertDescription>{t('rules.tabs.gmailCreditWarningBody')}</AlertDescription>
+            </Alert>
+            <RulePreviewPanel
+              enabledRulesCount={enabledRulesCount}
+              preview={state.preview}
+              previewError={state.previewError}
+              gmailUnavailableError={state.gmailUnavailableError}
+              isPreviewing={previewAllEnabledMutation.isPending}
+              canPreview={canPreview}
+              sampleSize={state.sampleSize}
+              isEvaluatingSemanticIntents={
+                previewAllEnabledMutation.isPending && Boolean(state.preview)
+              }
+              onSampleSizeChange={(sampleSize) =>
+                dispatch({ type: 'sampleSizeChanged', sampleSize })
+              }
+              onPreview={() => handlePreview()}
+              onEvaluateSemanticIntents={handleEvaluateSemanticIntents}
+            />
+          </TabsContent>
+        </Tabs>
+      </TabsContent>
+
+      <TabsContent value="history" className="space-y-4">
+        <p className="text-muted-foreground text-sm">{t('rules.tabs.historyIntro')}</p>
+        <AuditLog />
+      </TabsContent>
 
       {/* Composer dialog — for creating and editing rules */}
       <Dialog
@@ -653,8 +680,15 @@ export function RulesWorkspace() {
           />
         </DialogContent>
       </Dialog>
-    </div>
+    </Tabs>
   );
+}
+
+const RULES_TABS = ['list', 'test', 'history'] as const;
+type RulesTab = (typeof RULES_TABS)[number];
+
+function normalizeRulesTab(value: string | null): RulesTab {
+  return RULES_TABS.includes(value as RulesTab) ? (value as RulesTab) : 'list';
 }
 
 function compareRulesByOrder(left: RuleResponse, right: RuleResponse): number {
@@ -697,33 +731,6 @@ function parseJsonOrRaw(jsonText: string | null | undefined): unknown {
   } catch {
     return jsonText;
   }
-}
-
-function canPreviewRule(
-  selectedRule: RuleResponse | null,
-  sourceText: string,
-  compileResult: RuleCompileResult | null,
-): boolean {
-  if (!selectedRule?.ruleId) return compileResult?.status === 'compiled';
-  if (isDirtySelectedDraft(selectedRule, sourceText, compileResult)) {
-    return compileResult?.status === 'compiled';
-  }
-  return true;
-}
-
-function isDirtySelectedDraft(
-  selectedRule: RuleResponse | null,
-  sourceText: string,
-  compileResult: RuleCompileResult | null,
-): boolean {
-  if (!selectedRule?.ruleId) return false;
-  if ((selectedRule.sourceText ?? '') !== sourceText) return true;
-  if (compileResult?.status !== 'compiled') return false;
-  return (
-    compileResult.compiled.matcherAst !== selectedRule.matcherAst ||
-    compileResult.compiled.actionIntents !== selectedRule.actionIntents ||
-    compileResult.compiled.schemaVersion !== selectedRule.schemaVersion
-  );
 }
 
 function apiErrorCode(error: unknown): string | undefined {

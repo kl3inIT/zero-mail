@@ -113,3 +113,9 @@ databaseChangeLog:
   - include:
       file: changes/038-billing-packages.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/039-drop-triage-shadow-mode.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/040-triage-audit-message-ref.yaml
+      relativeToChangelogFile: true
