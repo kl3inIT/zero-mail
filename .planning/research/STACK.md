@@ -1,364 +1,354 @@
-# Stack Research — Zero Mail
+# Stack Research — Zero Mail v1.1 (Chat Assistant + Settings Page)
 
-**Domain:** Multi-tenant AI Gmail-triage SaaS (Java 25 / Spring Boot 4 / Spring AI / Next.js)
-**Researched:** 2026-04-24
-**Overall confidence:** MEDIUM-HIGH overall. HIGH for Spring Boot 4.0.6, Liquibase YAML, and the GCP-managed runtime choices; MEDIUM on exact Spring AI 2.0.0-M6 APIs because the user explicitly chose a milestone build.
+**Domain:** Conversational AI assistant on top of existing Spring AI 2.0.0-M6 / Next.js 16 SaaS
+**Researched:** 2026-05-17
+**Overall confidence:** HIGH on frontend additions (verified npm + Context7 + reference repo Inbox Zero). HIGH on Spring MVC SSE patterns. MEDIUM-HIGH on Vercel UI Message Stream wire format (verified against ai@6 source + protocol docs). MEDIUM on Spring AI M6 user-controlled tool execution path (verified against 2.0-SNAPSHOT reference).
 
----
+> **Scope of this document.** This is the **v1.1 delta**. The v1.0 baseline (Java 25 / Spring Boot 4.0.6 / Spring AI 2.0.0-M6 / PostgreSQL 17 / Redis 7 / Next.js 16.2 / React 19.2 / Tailwind 4 / shadcn/ui / TanStack Query / openapi-fetch / Liquibase 5 / virtual threads) is locked and validated — see git history of this file before 2026-05-17 for the full v1.0 stack tables. This document only catalogs what v1.1 **adds** or **changes**.
 
-## TL;DR — The Prescriptive Stack
-
-- **JDK 25 LTS** (GA 2025-09-16) managed via Gradle toolchains.
-- **Gradle 9.5.0** with **Kotlin DSL**, `libs.versions.toml` version catalog, multi-project (not composite) build.
-- **Spring Boot 4.0.6** (current GA; 4.1.0-RC1 exists — stay on 4.0.x for production).
-- **Spring Framework 7.0.7**, **Spring Security 7.0.5**, **Jakarta Servlet 6.1**, **Jakarta Persistence 3.2**, **Jackson 3.1.2** (managed by Spring Boot 4.0.6).
-- **Spring AI 2.0.0-M6** via OpenAI, Anthropic, Google GenAI, and DeepSeek starters. Platform OpenRouter routing uses the OpenAI adapter (`base-url: https://openrouter.ai/api/v1`); official BYOK providers use native Spring AI adapters where available. Keep all direct Spring AI usage inside the LLM adapter because M6 -> GA churn is still likely.
-- **spring-cloud-gcp 8.0.2** — keep it for **Secret Manager** integration. Do **not** add `spring-cloud-gcp-starter-pubsub` by default: Gmail push still arrives as **plain HTTP POSTs to a Spring MVC controller**, so the Pub/Sub starter adds little unless the app later needs Pub/Sub publish/admin flows from Java.
-- **PostgreSQL 17.6 on Cloud SQL** + **Liquibase 5.0.2 (YAML changelogs)** + **Spring Data JPA (Hibernate 7)** for aggregates, **Spring Data JDBC** for read-side and hot paths, **JSONB + jsonb_path_ops** for rule matchers, **pgcrypto / AES-GCM at app layer** for OAuth refresh-token encryption. Community PostgreSQL 18 exists, but Cloud SQL 18 is still Preview as of 2026-04-24.
-- **Redis 7.2 on Memorystore** (Spring Data Redis + Lettuce) for rate limiting, idempotency keys, session store, and per-tenant ChatModel cache — NOT as a task queue. OSS Redis 8.x exists, but GCP's managed service currently tops out at 7.2.
-- **Queue = Postgres-backed** (single `outbox` + `processing_job` table with `SKIP LOCKED`). No Kafka, no RabbitMQ in v1. Google Pub/Sub already handles ingress retries.
-- **Next.js 16.2.4 (App Router) + React 19.2.5** in `apps/web`, **pnpm 11.0.8 + Turborepo 2.9.6**, **TanStack Query 5.100.1**, **shadcn/ui + Tailwind CSS 4.2.4**, typed client via **OpenAPI codegen (`openapi-typescript` 7.13.0 + `openapi-fetch` 0.17.0)** from Spring's `springdoc-openapi` output.
-- **Auth**: Spring Security OAuth2 Client (Google), **server-issued signed session cookie** (not stateless JWT). Next.js sits behind the same origin; cookie is HttpOnly, SameSite=Lax.
-- **Deploy**: **Google Cloud Run** (Pub/Sub push is natively OIDC-authenticated against Cloud Run URLs — zero glue). Cloud SQL Postgres, Memorystore Redis. Secret Manager for OAuth client secret + app-level encryption keys.
-- **Container**: `eclipse-temurin:25-jre-noble` (production) built via Spring Boot's **CDS + AOT layered image** support; distroless for hardening if startup tuning matters more than debuggability.
-- **Observability**: Micrometer + **OpenTelemetry Java agent 2.16.0**, push OTLP to **Grafana Cloud** (Tempo/Loki/Mimir) — cheapest and most vendor-neutral path in 2026. Keep prompt/completion capture disabled in Spring AI tracing.
+> **What v1.1 does not add to the backend stack:** no new Spring Boot starters, no new database, no new queue, no new auth flow, no new observability tool. The entire backend addition is "a streaming SSE controller built on existing Spring MVC + existing Spring AI 2.0.0-M6 + existing virtual threads." Backend changes are *architectural*, not *dependency*. See the new frontend dependencies below.
 
 ---
 
-## Recommended Stack
+## TL;DR — Prescriptive v1.1 Additions
 
-### Core Backend
+**Frontend (`apps/web/package.json`) — three new runtime dependencies:**
 
-| Technology | Version | Purpose | Why |
-|---|---|---|---|
-| Java | **25 LTS** (GA 2025-09-16) | Runtime | User-locked. LTS, virtual threads are stable, pattern matching + records + scoped values all mature. Spring Boot 4 supports Java 17–26. **HIGH**. |
-| Spring Boot | **4.0.6** | App framework | User-locked. Current GA. Requires Spring Framework 7, Jakarta Servlet 6.1, Jackson 3. **HIGH** — verified via official Spring release notes + system requirements. |
-| Spring Framework | **7.0.7** (managed by Boot BOM) | Core framework | Ambient — pulled by Boot 4.0.6. **HIGH**. |
-| Spring Security | **7.0.5** (Boot-managed) | AuthN/Z, OAuth2 client | Google Workspace OAuth2, CSRF, session. **HIGH**. |
-| Spring Data JPA | 4.0.x (Boot-managed, Hibernate 7.x) | ORM for aggregates | Write-side (rules, users, tenants, audit). **HIGH**. |
-| Spring Data JDBC | 4.0.x | Read-side & hot paths | For triage-log lookups, analytics. Avoids N+1 / lazy-init traps in hot path. **MEDIUM** — optional; JPA alone is fine for v1. |
-| Spring AI | **2.0.0-M6** | LLM orchestration | User-locked milestone. `spring-ai-starter-model-openai` still gives the OpenRouter/OpenAI path; native Anthropic, Google GenAI, and DeepSeek starters back official BYOK presets. Keep Spring AI surface area isolated to one adapter module because M6 -> GA changes are still possible. **MEDIUM-HIGH**. |
-| spring-cloud-gcp | **8.0.2** | GCP integration (Secret Manager first, Pub/Sub optional) | **First line that supports Spring Boot 4**. Use `spring-cloud-gcp-starter-secretmanager` by default. Gmail push receiving itself stays a plain HTTP controller, so the Pub/Sub starter is optional rather than foundational. **HIGH**. |
-| PostgreSQL | **17.6 on Cloud SQL** | Primary datastore | Cloud SQL PostgreSQL 18 is still Preview as of 2026-04-24. For a managed production v1 on GCP, 17.6 is the latest GA-safe line. **HIGH**. |
-| Redis | **7.2 on Memorystore** | Cache, sessions, rate limit, idempotency | Not a queue. Memorystore currently supports Redis through 7.2, so this is the latest managed option on GCP even though OSS Redis 8.x exists. **HIGH**. |
-| Liquibase | **5.0.2** | Schema migrations | User requested Liquibase + YAML. Spring Boot 4.0.6 BOM already manages Liquibase 5.0.2, so this is both latest and compatible. **HIGH**. |
-
-### Spring Boot 4 Starters (required)
-
-| Starter | Purpose |
-|---|---|
-| `spring-boot-starter-web` | REST (we don't need reactive for this workload — Gmail push is HTTP, LLM calls are I/O-bound but modest fan-out; use **virtual threads** instead). |
-| `spring-boot-starter-security` | Base security. |
-| `spring-boot-starter-oauth2-client` | Google OAuth login + refresh token management. |
-| `spring-boot-starter-data-jpa` | ORM. |
-| `spring-boot-starter-data-redis` | Redis via Lettuce. |
-| `spring-boot-starter-validation` | Jakarta Validation 3.1 (JSR 380). |
-| `spring-boot-starter-actuator` | `/actuator/health`, Prometheus, readiness/liveness. |
-| `spring-boot-starter-jdbc` | For Liquibase + Spring Data JDBC. |
-| `spring-boot-starter-liquibase` | Liquibase runtime + Boot auto-configuration for YAML changelogs. |
-| `spring-boot-docker-compose` (dev only) | Auto-starts Postgres + Redis locally. |
-| `spring-cloud-gcp-starter-secretmanager` | Pull app secrets from GCP Secret Manager at boot. |
-
-**Enable virtual threads:** `spring.threads.virtual.enabled=true`. Spring Boot 4 honors this for Tomcat, `@Async`, `@Scheduled`, and Spring AI HTTP calls, which is the single biggest latency win for an I/O-heavy triage service. **HIGH**.
-
-### Spring AI Modules
-
-| Artifact | Purpose | Notes |
-|---|---|---|
-| `org.springframework.ai:spring-ai-starter-model-openai` | **OpenRouter path** + direct OpenAI BYOK | Point `spring.ai.openai.base-url=https://openrouter.ai/api/v1` for the platform path; BYOK OpenAI/OpenRouter/custom OpenAI-compatible endpoints pass tenant key/base URL/model through the adapter. **HIGH** for the provider wiring; **MEDIUM** on exact M6 runtime builder APIs. |
-| `org.springframework.ai:spring-ai-starter-model-anthropic` | Direct Anthropic BYOK | Native Anthropic BYOK uses `AnthropicChatOptions` with tenant key/base URL/model instead of converting Claude traffic through OpenAI-compatible requests. **MEDIUM-HIGH**. |
-| `org.springframework.ai:spring-ai-starter-model-google-genai` | Direct Google GenAI BYOK | Native Google GenAI BYOK uses the Google GenAI `Client` + `GoogleGenAiChatModel`; model IDs remain user-entered and validated against the models endpoint. **MEDIUM**. |
-| `org.springframework.ai:spring-ai-starter-model-deepseek` | Direct DeepSeek BYOK | Native DeepSeek BYOK uses `DeepSeekApi` + `DeepSeekChatModel`; endpoint defaults to `https://api.deepseek.com`. **MEDIUM**. |
-
-**OpenRouter + BYOK implementation pattern (prescribed):**
-
-1. **Default tenant path (platform-paid):** Autoconfigured OpenAI-compatible client with `spring.ai.openai.base-url=https://openrouter.ai/api/v1` and the platform OpenRouter key.
-2. **BYOK per-request path:** Keep Spring AI behind `LlmGateway` and pass tenant-specific model / auth overrides at request time rather than rebuilding full client graphs on every call.
-3. **Milestone caution:** Because the project is pinned to **Spring AI 2.0.0-M6**, keep the M6 adapter seams isolated and re-verify them before any M6→GA upgrade. Phase 2C compile-tests currently verify `OpenAiChatModel.builder().options(...)`, `OpenAiChatOptions.builder().apiKey().baseUrl().model()`, `ChatClient.prompt().options(AnthropicChatOptions.builder()...)`, `GoogleGenAiChatModel.builder()`, and `DeepSeekChatModel.builder()`.
-
-**Observability for LLM calls** (Spring AI 2.0.0-M6):
-- Keep prompt/completion capture disabled. Spans should record provider, model, token counts, latency, and stop reason, but **never** raw content. **HIGH** as a policy; **MEDIUM** on exact property names until implementation locks the M6 APIs.
-
-### Gmail / Google Integration
-
-| Library | Version | Purpose | Notes |
-|---|---|---|---|
-| `com.google.apis:google-api-services-gmail` | **v1-rev20250331-2.0.0** | Gmail REST client | Generated client. Used for `users.watch`, `messages.get`, `labels`, `drafts`. **HIGH**. |
-| `com.google.auth:google-auth-library-oauth2-http` | **1.47.0** | OAuth2 credentials + ID-token verification | Used to **verify OIDC tokens** on Pub/Sub push requests (critical — without this, anyone can POST to your push endpoint). **HIGH**. |
-| `com.google.cloud:google-cloud-pubsub` | Optional | Native Pub/Sub client | Not required for the core Gmail push receiver. Add only if the app later needs Pub/Sub publish/admin flows from Java. For push **receiving**, you just have a `@PostMapping` controller — Google POSTs JSON to it. **HIGH**. |
-| `com.google.api-client:google-api-client` | Transitive | Shared infra | — |
-
-**Gmail OAuth flow (prescribed):**
-1. **Incremental authorization** — request narrow scopes first (profile + `gmail.readonly`), escalate to `gmail.modify` (never `gmail.send` in v1 — draft-only needs only `gmail.modify`) when the user enables triage.
-2. **Offline access + refresh token** — `access_type=offline&prompt=consent` on the first grant so Google returns a refresh token. Store it AES-GCM-encrypted with a key from GCP Secret Manager / KMS; do **not** use pgcrypto's `pgp_sym_encrypt` (key lives in DB/connection, poor rotation story).
-3. **Provision Pub/Sub outside the app** — create the topic + push subscription via Terraform / `gcloud`, not on application startup. The app only receives authenticated HTTP pushes and renews Gmail watches.
-4. **Per-user Pub/Sub topic** is *not* necessary — use **one topic, one push subscription**, and let the push payload include `historyId` + `emailAddress`; dispatch to the right tenant server-side.
-5. **Gmail `watch` must be renewed every 7 days** — scheduled job (`@Scheduled` on virtual thread) refreshes all active watches every 24 hours. Without this, triage silently dies on day 8 — classic pitfall.
-
-### Persistence Details
-
-| Concern | Choice | Rationale |
-|---|---|---|
-| ORM | **Spring Data JPA (Hibernate 7)** primary; **Spring Data JDBC** for read-heavy projections | JPA's identity/dirty-tracking shines on aggregates (User, Rule, TriageRun); JDBC is simpler for flat reads. **jOOQ is overkill** for a greenfield schema the team owns. |
-| Migrations | **Liquibase 5.0.2 with YAML changelogs** | User-directed. Put the master file at `src/main/resources/db/changelog/db.changelog-master.yaml` and fan out numbered YAML files with `includeAll`. |
-| Rule matchers | **JSONB column** with a `jsonb_path_ops` GIN index | Rules are structured-but-evolving (classifier output shape changes with prompt iteration). JSONB lets you add fields without a migration. |
-| Audit log | Append-only table with `BRIN` index on `created_at` | Triage runs are time-series-ish; BRIN keeps it cheap at scale. |
-| Token encryption | **AES-GCM at app layer**, key from **GCP Secret Manager / Cloud KMS** | Beats pgcrypto because keys never touch DB and rotation is a KMS operation, not a SQL migration. |
-| Multi-tenancy | **Shared schema, discriminator column (`tenant_id`)** enforced by a Hibernate `@Filter` + JPA `@TenantId` (Hibernate 6.3+) | Simplest correct model. Schema-per-tenant is premature for v1. **HIGH**. |
-| Connection pool | **HikariCP** (Boot default) | Keep default. |
-
-### Async / Queue Strategy
-
-**Recommendation: no external broker in v1.**
-
-- **Ingress**: Google Pub/Sub push → your `/internal/pubsub/gmail` controller. Pub/Sub handles at-least-once, retries, DLQ. You get backpressure for free.
-- **Internal fan-out**: Postgres table `triage_job` with columns `(id, tenant_id, external_id UNIQUE, status, attempts, locked_until, payload JSONB)`. A `@Scheduled` worker polls with:
-  ```sql
-  SELECT * FROM triage_job
-  WHERE status = 'PENDING' AND locked_until < now()
-  FOR UPDATE SKIP LOCKED
-  LIMIT 50;
-  ```
-  Each worker runs on a **virtual thread**, so a single pod can comfortably hold 1000+ concurrent triage jobs.
-- **Idempotency**: the Pub/Sub message's `messageId` is the dedup key. Unique constraint on `external_id` makes duplicate deliveries a no-op.
-- **Why not Kafka/RabbitMQ**: adds ops surface, a second durability story, and another dashboard — for a workload whose QPS ceiling at the v1 user base is <50/s. Revisit if you hit multi-region or >500 msg/s sustained. **HIGH**.
-
-### Caching / Session / Redis
-
-Redis earns its keep for four specific jobs — not as a speculative cache:
-
-1. **Rate limiting** per tenant + per action (Bucket4j or Spring's `RateLimiter`, backed by Lettuce).
-2. **Idempotency keys** for user-initiated write actions (TTL 24h).
-3. **Session store** (`spring-session-data-redis`) so horizontal scaling Just Works.
-4. **Ephemeral LLM context** — short-lived draft context (TTL 30min) that must never go to Postgres per your privacy constraint.
-
-**Not for:** user/rule caching (Postgres is plenty fast for that at this scale) and definitely not for job queueing.
-
-### Frontend
-
-| Technology | Version | Purpose | Why |
-|---|---|---|---|
-| Next.js | **16.2.4** (App Router) | Web app | Current stable line verified on 2026-04-24. **HIGH**. |
-| React | **19.2.5** | UI lib | Actions + `use` hook + ref-as-prop landed; pairs with Next 16. **HIGH**. |
-| TypeScript | **6.0.3** | Type safety | Current stable line verified on 2026-04-24. Non-negotiable. |
-| Tailwind CSS | **4.2.4** | Styling | Current stable v4 line. Oxide keeps the toolchain fast. **HIGH**. |
-| shadcn/ui | latest CLI (copy-in components) | UI primitives | Radix under the hood, full source in your repo — you own the code. Best DX for this workload. **HIGH**. |
-| TanStack Query | **5.100.1** | Server state | Current stable line. Pairs with the OpenAPI-generated fetch client. **HIGH**. |
-| `openapi-typescript` + `openapi-fetch` | **7.13.0 + 0.17.0** | Typed API client | Generate types from Spring's OpenAPI doc. **Do not use tRPC** — the backend is Java, tRPC assumes a TS backend. **HIGH**. |
-| `next-auth` / Auth.js | **NOT USED** | — | Auth is owned by Spring Boot. Next.js just reads the session cookie via a server action or `/api/me` call. **HIGH** — simpler than running two auth systems. |
-| Zod | **4.3.6** | Runtime validation of inputs | Current stable line. Pair with react-hook-form. |
-
-### Monorepo & Build
-
-| Piece | Choice | Notes |
-|---|---|---|
-| Layout | **Hybrid monorepo** — Gradle owns `backend/core`, `backend/api`, and `backend/worker`; **pnpm workspace + Turborepo** owns `apps/web`. | `backend/core` is the shared backend library. `backend/api` and `backend/worker` are thin executable shells over that shared core. Do **not** try to make Gradle run Node. |
-| Gradle | **9.x** with **Kotlin DSL** | User-locked. |
-| Version catalog | **`gradle/libs.versions.toml`** | Single source of truth for versions across backend modules. **HIGH**. |
-| Build structure | **Multi-project** (not composite) | Composite builds are for sharing plugin jars across unrelated repos. Multi-project is the right answer here. **HIGH**. |
-| JDK provisioning | **Gradle toolchains** — declare Java 25 in root `build.gradle.kts`; Gradle auto-downloads from Foojay. | Prevents "works on my machine" JDK drift. **HIGH**. |
-| Node version | Pinned via **`.nvmrc`** / Volta, enforced by Turborepo. | — |
-| Backend shape | **Pragmatic modular monolith** | Keep bounded contexts as package-based Spring Modulith modules **inside `backend/core`** instead of exploding them into many Gradle modules on day one. |
-| Docker | Build one image for `backend/api`, one for `backend/worker`, and one for `apps/web` only if frontend is deployed separately. | `api` and `worker` should version/release together even if they run as separate Cloud Run services. |
-
-**Suggested Gradle toolchain config (`build.gradle.kts` root):**
-
-```kotlin
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
-        vendor = JvmVendorSpec.ADOPTIUM
-    }
-}
-
-kotlin {
-    jvmToolchain(25) // only if any module uses Kotlin
-}
+```bash
+# from apps/web
+pnpm add ai@^6.0.184 @ai-sdk/react@^3.0.186 streamdown@^2.5.0
 ```
 
-### Deployment
+**Frontend (`apps/web/components/ai-elements/**`) — copy-paste primitive registry, not an npm dep:**
 
-**Prescribed: Google Cloud Run.** Rationale:
+```bash
+# from apps/web — installs AI Elements components into apps/web/components/ai-elements/
+pnpm dlx ai-elements@latest add conversation message prompt-input response tool reasoning loader suggestion confirmation
+```
 
-- **Pub/Sub push integrates natively with Cloud Run** — Pub/Sub signs requests with an OIDC token whose audience is your Cloud Run service URL. Your push controller just verifies the token. No VPC, no NAT, no glue.
-- **Cloud SQL for Postgres 17.6** with private IP + Cloud SQL Auth Proxy sidecar (or the Spring Cloud GCP SQL starter). Revisit PostgreSQL 18 when Cloud SQL moves it out of Preview.
-- **Memorystore for Redis**.
-- **Secret Manager** wired in via spring-cloud-gcp-starter-secretmanager.
-- **Scale to zero** on dev/staging; min-instances ≥ 1 on prod to avoid cold-start on Pub/Sub pushes (LLM latency dominates anyway, but cold-start on Gmail push is user-visible because it delays triage).
+**Backend — zero new dependencies.** Use existing Spring MVC `SseEmitter` (or `Flux<ServerSentEvent>` since `spring-boot-starter-webflux` is **not** a dep — only Reactor Core is needed and is already on the classpath via Spring AI's streaming API). The Vercel "UI Message Stream Protocol" is plain JSON-over-SSE; emit it by hand from a controller that consumes the existing `ChatModel.stream(Prompt)` `Flux<ChatResponse>`.
 
-**Alternatives (when to pick them):**
+**Backend Spring AI mode change (no new dep) — user-controlled tool execution:**
 
-| Platform | When it wins |
-|---|---|
-| **Fly.io** | If you want global Postgres-near-user or WebSocket-heavy workloads — neither applies here. |
-| **Railway / Render** | Faster first-deploy DX; pick for prototyping, migrate to Cloud Run once billing is live. |
-| **Kubernetes (GKE Autopilot)** | Only if you need custom networking, >2 services, or compliance requires it. **Overkill for v1.** |
-
-**Image base:** `eclipse-temurin:25-jre-noble` (MEDIUM) or `gcr.io/distroless/java25-debian12:nonroot` (MEDIUM) once distroless ships an official Java 25 tag. Build via **Spring Boot's `bootBuildImage` (Paketo Cloud Native Buildpacks)** — it auto-enables CDS and AOT layers in Spring Boot 4, cutting cold start by ~40%.
-
-### Auth
-
-**Prescribed pattern:**
-
-- Spring Security `oauth2Login()` with Google provider. Scopes: `openid profile email` on first login; `https://www.googleapis.com/auth/gmail.modify` added incrementally on triage activation.
-- **Session cookie** (not JWT). Issued by Spring, stored in Redis via `spring-session-data-redis`. `HttpOnly`, `SameSite=Lax`, `Secure`. Next.js runs on the same root domain (or subdomain with cookie `domain=.zeromail.app`).
-- Next.js **Server Components** forward the `Cookie` header to Spring using `fetch(…, { credentials: 'include' })` inside a Route Handler / Server Action.
-- **CSRF**: Spring Security 7's cookie-based CSRF token + `X-XSRF-TOKEN` header. Next.js reads the cookie and echoes the header on mutating requests.
-- **Do NOT use stateless JWT** for user sessions — you need instant revocation when users click "Disconnect Gmail", and refresh-token handling for Google is server-side anyway. JWT buys nothing here and costs you a revocation list.
-
-### Observability
-
-| Concern | Choice | Notes |
-|---|---|---|
-| Metrics | **Micrometer** → Prometheus endpoint via actuator → **OTLP** (via Micrometer's OTLP registry) | **HIGH** |
-| Traces | **OpenTelemetry Java agent** (auto-instrumentation JAR attached at container start) | One env var enables it; auto-instruments Spring MVC, JDBC, Redis, Pub/Sub, HTTP clients used by Spring AI. **HIGH** |
-| LLM-specific | Spring AI chat observations wired through Boot + Micrometer | Emits `gen_ai.*`-style spans/metrics. Do **not** include prompt/completion content. **MEDIUM-HIGH** — exact M6 wiring should be re-checked at implementation time |
-| Logs | Logback JSON encoder (`logstash-logback-encoder` 8.x) → stdout → Cloud Run Logs → OTLP forwarder to Grafana Loki | **HIGH** |
-| Backend | **Grafana Cloud** (Tempo + Loki + Mimir) free tier or **Honeycomb** (trace-first, pricier). Grafana Cloud is the 2026 default for this scale. | **MEDIUM** — not technical, just cost/UX |
-| Error tracking | **Sentry Java SDK 7.x** alongside OTel (captures exceptions with better grouping than raw traces) | Optional. **MEDIUM** |
+```yaml
+# Tool execution must be user-controlled so the chat preview/confirm UX can intercept
+# Configure via ToolCallingChatOptions.builder().internalToolExecutionEnabled(false)
+# per-request inside the LLM gateway, not as a global property.
+```
 
 ---
 
-## Alternatives Considered
+## What v1.1 Adds — Frontend Dependencies
 
-| Recommended | Alternative | When to Use Alternative |
+### Core runtime packages (npm/pnpm)
+
+| Package | Version | Purpose | Why |
+|---|---|---|---|
+| `ai` | **^6.0.184** (latest GA on 2026-05-17) | Vercel AI SDK core — `UIMessage` type, `DefaultChatTransport`, `ToolUIPart`, message-stream helpers used by `useChat` internally | Required peer of `@ai-sdk/react@3.x`. The npm `latest` dist-tag now points to v6; v5 is still maintained under the `ai-v5` tag (`5.0.188`). Reference repo `inbox-zero` uses `ai@6.0.168` — v6 is the production line as of May 2026. **HIGH** (verified `npm view ai`). |
+| `@ai-sdk/react` | **^3.0.186** | React hooks (`useChat`, `experimental_useObject`) | Pairs with `ai@^6`. Internally depends on `ai@6.0.184`, `swr@^2.2.5`, `throttleit@2.1.0`. Peer dep: `react: ^18 \|\| ~19.0.1 \|\| ~19.1.2 \|\| ^19.2.1` — **compatible** with our `react@19.2.6`. **HIGH** (verified `npm view @ai-sdk/react@3.0.186 peerDependencies`). |
+| `streamdown` | **^2.5.0** | Markdown renderer hardened against partial/incomplete tokens during streaming (handles half-closed code fences, unfinished tables, malformed links) | Drop-in replacement for `react-markdown` specifically built for AI streams. Reference repo `inbox-zero` ships it. AI Elements' `MessageResponse` component **uses Streamdown internally** — without `streamdown` installed, the AI Elements `response` / `message` components fall back to plain text. Peer dep: `react: ^18 \|\| ^19` — fine. **HIGH** (verified `npm view streamdown` + Context7 `/vercel/streamdown`). |
+
+**Total runtime cost:** three top-level deps. `swr` and `throttleit` come in transitively via `@ai-sdk/react` (already not in the project — net 2 transitive additions). `@opentelemetry/api` comes in transitively via `ai` (lightweight, already commonly bundled).
+
+### Component primitives (copy-paste, not a runtime dep)
+
+**`ai-elements` is a CLI registry, not a runtime package.** It is a shadcn-style component generator that **writes source code into `apps/web/components/ai-elements/`** and that source then becomes part of the project (lint-ignored alongside `apps/web/components/ui/**`, same convention as raw shadcn primitives). There is no `ai-elements` npm dependency to track in `package.json`.
+
+```bash
+# Install all components (recommended for v1.1 — cheap, all components are small)
+pnpm dlx ai-elements@latest
+
+# OR install components piecewise (production discipline)
+pnpm dlx ai-elements@latest add conversation
+pnpm dlx ai-elements@latest add message
+pnpm dlx ai-elements@latest add prompt-input
+pnpm dlx ai-elements@latest add response       # uses streamdown internally
+pnpm dlx ai-elements@latest add tool           # tool-call card with state lifecycle
+pnpm dlx ai-elements@latest add reasoning      # collapsible "thinking" block
+pnpm dlx ai-elements@latest add loader         # streaming spinner
+pnpm dlx ai-elements@latest add suggestion     # quick-action chips
+pnpm dlx ai-elements@latest add confirmation   # tool approval dialog (use for sendEmail/replyEmail/forwardEmail)
+```
+
+**Prerequisites that are already satisfied in `apps/web`:**
+- ✓ Node.js 18+ (we run Node 22+)
+- ✓ React 19 (`react@19.2.6`)
+- ✓ Next.js 14+ with App Router (`next@16.2.6`)
+- ✓ Tailwind CSS 4 (`tailwindcss@^4` + `@tailwindcss/postcss`)
+- ✓ shadcn/ui initialized (`shadcn@^4.7.0` + `components/ui/**` populated)
+- ✓ CSS Variables mode (shadcn default; required by AI Elements)
+- ✓ `sonner` (`^2.0.7`) — required by AI Elements `Confirmation`/`Tool` toast paths
+
+**AI Elements components used in v1.1 (verified each via Context7 `/vercel/ai-elements`):**
+
+| Component | Source folder | Purpose in Zero Mail v1.1 |
 |---|---|---|
-| Cloud Run | Fly.io / Railway | If GCP lock-in is unacceptable; Fly for global latency. Neither beats Cloud Run's native Pub/Sub push integration. |
-| Postgres-backed queue | Kafka / RabbitMQ | Only if sustained >500 msg/s or cross-service event bus emerges. Not v1. |
-| Spring Data JPA + JDBC | jOOQ | If you want full SQL control and the team enjoys Kotlin-first DSLs. Not worth onboarding cost for v1. |
-| OpenRouter default | Direct provider SDKs (OpenAI, Anthropic) | If you outgrow routing overhead or need provider-specific features (Anthropic tool use, OpenAI structured outputs). Spring AI's module design already lets you swap without code change. |
-| Liquibase YAML | Flyway | If the team decides it prefers SQL-only migrations later. For this project the user explicitly chose Liquibase YAML, so treat Flyway as the alternative, not the default. |
-| Session cookies | Stateless JWT | If you had a purely mobile client with offline sessions. Web-only app → cookie is correct. |
-| `openapi-typescript` codegen | tRPC / GraphQL | tRPC requires a TS backend (you have Java). GraphQL is overhead for a narrow REST surface; add later only if client query flexibility becomes a bottleneck. |
-| pnpm + Turborepo | Nx | Nx is heavier and its plugin ecosystem is oriented to all-JS monorepos. You have one web app — Turborepo is lighter. |
-| Shared-schema multi-tenancy | Schema-per-tenant / DB-per-tenant | Only at enterprise scale with strict data residency. Premature for prosumer v1. |
+| `Conversation` + `ConversationContent` + `ConversationScrollButton` + `ConversationEmptyState` + `ConversationDownload` | `components/ai-elements/conversation.tsx` | Scrollable chat container with stick-to-bottom autoscroll. Wraps the message list on `/chat`. |
+| `Message` + `MessageContent` + `MessageResponse` | `components/ai-elements/message.tsx` | Per-turn message bubble. `MessageResponse` renders streamed assistant text through Streamdown. |
+| `PromptInput` + `PromptInputBody` + `PromptInputTextarea` + `PromptInputSubmit` + `PromptInputFooter` + `PromptInputTools` + `PromptInputSelect` (model picker) | `components/ai-elements/prompt-input.tsx` | The input bar at the bottom. We will use the model-picker slot to surface per-feature model choice if v1.1 settings expose it in chat. |
+| `Tool` + `ToolHeader` + `ToolContent` + `ToolInput` + `ToolOutput` | `components/ai-elements/tool.tsx` | Renders tool-invocation cards with `input-streaming` → `input-available` → `output-available` / `output-error` state. Used to visualize every tool call (`listRules`, `createRule`, `getEmail`, etc.). |
+| `Reasoning` + `ReasoningTrigger` + `ReasoningContent` | `components/ai-elements/reasoning.tsx` | Collapsible "AI thought process" block. Useful for o1-style and Claude 3.7 thinking provider responses. Optional in v1.1. |
+| `Loader` | `components/ai-elements/loader.tsx` | Simple spinner shown while `status === "submitted"`. |
+| `Suggestion` + `Suggestions` | `components/ai-elements/suggestion.tsx` | Quick-action chips (e.g., "Create a rule for newsletters", "Show me top senders this week"). Optional. |
+| `Confirmation` + `ConfirmationRequest` + `ConfirmationActions` + `ConfirmationAction` | `components/ai-elements/confirmation.tsx` | **Critical for v1.1 send safety.** Bound to `addToolApprovalResponse` from `useChat`. Renders the "AI wants to send this draft to X — Send / Cancel / Edit" dialog. Required for `sendEmail`/`replyEmail`/`forwardEmail` tools. |
+
+### Tool-call rendering with confirm/cancel (the v1.1 send-safety story)
+
+There is **no separate tool-call rendering library** to add. The combination is:
+
+1. **Backend** marks the tool definition with `requireApproval: true` (Vercel AI SDK pattern). In our case, because we are not running the Vercel `ai` server-side helpers, we instead use **Spring AI's `ToolCallingChatOptions.builder().internalToolExecutionEnabled(false)` + custom tool-call serialization in the SSE stream** to emit the "approval-requested" state to the client.
+2. **Frontend** `useChat({ ..., sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses })` triggers a follow-up request once the user approves.
+3. **UI** uses AI Elements `<Confirmation>` (or roll-your-own with shadcn `<AlertDialog>`) and calls `addToolApprovalResponse({ id, approved: true|false })` on click.
+4. **State machine** on the message part: `input-streaming` → `input-available` → `approval-requested` → `output-available` | `output-denied`.
+
+> **The "tool-call card with Confirm/Cancel" you asked about is `<Confirmation>` from AI Elements, wired to `addToolApprovalResponse` from `useChat`.** Both ship together in the AI SDK v6 / AI Elements 1.9 line.
+
+---
+
+## What v1.1 Adds — Backend
+
+**Zero new Maven/Gradle dependencies.** Everything below is built from artifacts already on the v1.0 classpath.
+
+### Existing artifacts used (no new entries in `libs.versions.toml`)
+
+| Artifact (already present) | What v1.1 uses it for |
+|---|---|
+| `spring-boot-starter-web` (already a top-level dep) | `SseEmitter` / `Flux<ServerSentEvent>` return type on the new `/api/chat` `@PostMapping` controller. Spring MVC converts `Flux` to streaming SSE automatically when `produces=text/event-stream`. **HIGH** — verified via Spring Framework reference, `web/webmvc/mvc-ann-async.adoc`. |
+| `spring-ai-starter-model-openai` (and the other three providers) | `ChatModel.stream(Prompt)` returns `Flux<ChatResponse>`. Already on classpath since v1.0 (LLM-01). |
+| Reactor Core (transitively via Spring AI) | `Flux` is already on the classpath because `ChatModel#stream` returns `Flux<ChatResponse>`. No new `spring-boot-starter-webflux` dep needed; we stay on Spring MVC + virtual threads. |
+| Jackson 3.1.2 (Boot-managed) | Serialize the 12 UI Message Stream Protocol envelope types to JSON for each `data: ...\n\n` SSE frame. |
+| Spring Session Redis (already wired) | Reuses the cookie-based session for chat auth — `useChat`'s `DefaultChatTransport({ credentials: 'include' })` sends the existing session cookie. No JWT, no new auth path. |
+| Postgres 17 + Liquibase 5 + Spring Data JPA (already wired) | Two new tables in v1.1: chat conversation history (`chat_conversation` + `chat_message`), audit row per confirmed send (`chat_send_audit`). Plain Liquibase YAML changelog — no new dep. |
+| Spring Modulith events (already wired) | Reuse the existing event spine to fan out "chat-initiated send completed" → analytics module. |
+
+### v1.1 backend architecture change (no dep): user-controlled tool execution
+
+Spring AI normally executes tools internally — the model emits a tool call, Spring AI runs the `@Tool`-annotated method, feeds the result back, and the user only sees the final assistant text. **v1.1 disables this loop** so the chat UI can preview every tool call before execution (especially the three send tools).
+
+Pattern verified against `https://docs.spring.io/spring-ai/reference/2.0-SNAPSHOT/api/tools.html`:
+
+```java
+// Inside the LLM gateway (backend/core's llm.gateway.springai package).
+// Per-request, build a ToolCallingChatOptions with internalToolExecutionEnabled(false).
+// Then walk the tool-call loop yourself, emitting each step to the SSE writer:
+//
+//   ChatResponse response = chatModel.call(prompt);
+//   while (response.hasToolCalls()) {
+//       // 1. emit tool-call event over SSE so the UI shows the card
+//       // 2. for "safe" tools (listRules, getEmail, etc.) — execute via
+//       //    ToolCallingManager.executeToolCalls(prompt, response) immediately
+//       // 3. for "approval-required" tools (sendEmail, replyEmail, forwardEmail) —
+//       //    pause the stream until the client posts back addToolApprovalResponse
+//       // 4. feed ToolExecutionResult.conversationHistory() back into a new Prompt
+//       //    and call chatModel.call again
+//   }
+```
+
+For **streaming** within a single LLM turn, swap `chatModel.call(prompt)` for `chatModel.stream(prompt)` and forward `Flux<ChatResponse>` items as `text-delta` SSE frames using the protocol below. The Spring AI 2.0.0-M6 streaming API is in `StreamingChatModel#stream(Prompt) -> Flux<ChatResponse>`. **HIGH** — verified via `/websites/spring_io_spring-ai_reference_2_0-snapshot`.
+
+### Spring MVC SSE pattern (verified)
+
+Three valid return-type choices on a `@PostMapping` controller, all producing `text/event-stream`. Verified against `https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-async.html` and Spring Boot 4 reference:
+
+| Return type | When to use | Notes |
+|---|---|---|
+| `SseEmitter` | Imperative writer pattern. Best fit when the SSE producer is a non-reactive thread loop (e.g., walking `chatModel.call(...)` in a `while (response.hasToolCalls())` loop) | Save the emitter, call `emitter.send(SseEmitter.event().data(payload))` from a worker thread, `emitter.complete()` at end. With `spring.threads.virtual.enabled=true` (already set in v1.0), the "worker thread" is a virtual thread — no extra `@Async` plumbing needed. |
+| `Flux<ServerSentEvent<String>>` | Reactive pattern. Best fit when the producer is already a `Flux<ChatResponse>` from `ChatModel#stream` | Spring MVC auto-adapts `Flux` to SSE if `produces=MediaType.TEXT_EVENT_STREAM_VALUE`. Spring uses `ResponseBodyEmitter` under the hood and runs writes on the configured `AsyncTaskExecutor` (which is the virtual-thread executor when `spring.threads.virtual.enabled=true`). |
+| `ResponseBodyEmitter` | Same as `SseEmitter` but without the SSE auto-format | We do **not** use this — `SseEmitter` is strictly better when the wire format is SSE. |
+
+**Virtual-thread gotcha (verified):** When `spring.threads.virtual.enabled=true`, the Tomcat worker for an SSE request is a virtual thread. This is exactly what we want — long-lived SSE connections (LLM streams can run 30s+) cost approximately one stack frame, not one platform thread. No additional config required.
+
+**No-WebFlux confirmation:** Returning `Flux<ServerSentEvent>` from a Spring **MVC** controller works because Spring MVC's `ReactiveAdapterRegistry` adapts Reactor `Flux` to `SseEmitter` automatically. **You do not need to add `spring-boot-starter-webflux`** — that would switch the whole app to Netty and break the existing Tomcat-based v1.0 setup.
+
+### Vercel UI Message Stream Protocol — the wire format we must emit
+
+The frontend `useChat` hook from `@ai-sdk/react@3` expects a specific SSE format. **There is no Java/Spring adapter library** — we hand-write the encoder in `backend/api`. The format is small (~12 event types) and stable. Verified via Context7 `/vercel/ai` `content/docs/04-ai-sdk-ui/50-stream-protocol.mdx` and `content/docs/03-ai-sdk-core/55-testing.mdx`.
+
+**Required response headers:**
+
+```
+HTTP/1.1 200 OK
+Content-Type: text/event-stream
+Cache-Control: no-cache
+Connection: keep-alive
+x-vercel-ai-ui-message-stream: v1     ← REQUIRED header for non-Vercel backends
+```
+
+**Event envelope** — every event is a single SSE `data:` line containing a JSON object:
+
+```
+data: {"type":"start","messageId":"msg-123"}\n\n
+data: {"type":"text-start","id":"text-1"}\n\n
+data: {"type":"text-delta","id":"text-1","delta":"Hello"}\n\n
+data: {"type":"text-delta","id":"text-1","delta":" world"}\n\n
+data: {"type":"text-end","id":"text-1"}\n\n
+data: {"type":"finish"}\n\n
+data: [DONE]\n\n
+```
+
+**Ordering rule (will cause runtime errors if violated):** every `text-delta` MUST be wrapped between a matching `text-start` and `text-end` with the same `id`. Source: `https://github.com/vercel/ai/blob/main/content/docs/07-reference/05-ai-sdk-errors/ai-ui-message-stream-error.mdx`. Same rule applies to tool parts (`tool-input-start` → `tool-input-delta` → `tool-input-available` → `tool-output-available`).
+
+**Event types we will emit in v1.1** (verified subset — full catalog is larger):
+
+| Type | When | Payload |
+|---|---|---|
+| `start` | First event of a turn | `{ type, messageId }` |
+| `text-start` | New assistant text block | `{ type, id }` |
+| `text-delta` | Each token chunk from Spring AI's `Flux<ChatResponse>` | `{ type, id, delta }` |
+| `text-end` | Text block finished | `{ type, id }` |
+| `tool-input-start` | Model started emitting a tool call | `{ type, toolCallId, toolName }` |
+| `tool-input-delta` | Streaming arguments | `{ type, toolCallId, inputTextDelta }` |
+| `tool-input-available` | Arguments fully parsed | `{ type, toolCallId, toolName, input }` |
+| `tool-output-available` | Tool result | `{ type, toolCallId, output }` |
+| `tool-output-error` | Tool threw | `{ type, toolCallId, errorText }` |
+| `data-<custom>` | Custom data parts (e.g., `data-tenant-credit-balance`, `data-rule-preview`) | `{ type: "data-<name>", id?, data }` |
+| `finish` | Turn ended | `{ type }` |
+| `[DONE]` | Stream terminator | (literal `data: [DONE]\n\n`) |
+
+For human-in-the-loop approval, the message-part state on the client moves through `input-streaming` → `input-available` → `approval-requested` → `output-available` | `output-denied`. The `approval-requested` state is what makes the `<Confirmation>` component render.
+
+---
+
+## What v1.1 Adds — Backend Persistence
+
+Two new Liquibase YAML changelogs (no new library):
+
+| Table | Owner module | Purpose |
+|---|---|---|
+| `chat_conversation` | `backend/core` (new `chat` package) | Per-tenant conversation root: `(id, tenant_id, title, created_at, updated_at)`. Title is the LLM-generated short summary. |
+| `chat_message` | `backend/core` (new `chat` package) | Per-turn message: `(id, conversation_id, role, parts_jsonb, created_at)`. `parts_jsonb` is the `UIMessage.parts[]` array verbatim, so the frontend can replay history into `useChat({ initialMessages: ... })` without re-streaming. **Includes tool-call inputs/outputs.** |
+| `chat_send_audit` | `backend/core` (`chat` package, but also queried by analytics) | Per confirmed send: `(id, tenant_id, conversation_id, message_id, tool_name, gmail_message_id, sent_at, draft_id_before, recipient_count)`. **Append-only**, never updated, never deleted within 30-day window. |
+
+**Privacy note:** This is a deliberate carve-out from v1.0's "no LLM prompts/completions stored" rule, locked in `CLAUDE.md` and `PROJECT.md` ("User-typed rule-builder assistant chat (chat messages + structured tool outputs) persists normally — it is UI configuration input, not extracted email content"). The carve-out **explicitly excludes** inlining email bodies into stored chat messages: tools that fetch email content (`getEmail`, `listEmails`) must return short-lived summaries, not raw bodies, before any persistence.
+
+---
+
+## Development Tools (no changes)
+
+No new dev dependencies. Existing toolchain — `vitest`, `playwright`, `eslint`, `typescript`, `openapi-typescript`, `openapi-fetch` — covers v1.1.
+
+**Playwright coverage for v1.1:** golden-path E2E must include:
+1. User sends "Create a rule for receipts" → assistant streams reasoning → emits `tool-input-available` for `createRule` → tool auto-executes (no approval) → `<Tool>` card shows success → DB row appears.
+2. User sends "Send a thank-you reply to this thread" → assistant streams draft text → emits `tool-input-available` for `replyEmail` → `<Confirmation>` dialog renders → user clicks **Confirm** → `addToolApprovalResponse({approved: true})` → backend executes Gmail draft-send → audit row in `chat_send_audit`.
+3. User sends the same prompt → clicks **Cancel** → `addToolApprovalResponse({approved: false})` → backend skips the Gmail call → no audit row, no Gmail state mutation.
+
+---
+
+## Alternatives Considered (and rejected)
+
+| Recommended | Alternative | When Alternative Would Win | Why We Reject for v1.1 |
+|---|---|---|---|
+| `ai@^6.0.184` + `@ai-sdk/react@^3.0.186` | `ai@^5.0.188` (`ai-v5` dist-tag) | If `@ai-sdk/react@2.x` were the only stable line — it is not. v5 is still maintained but in maintenance mode. | v6 is the current `latest` tag on npm, used by Inbox Zero in production, and supported by AI Elements 1.9. Adopting v5 now means a forced migration in 3-6 months. |
+| `ai@^6` | `ai@^7.0.0-beta.116` | If we wanted to track the bleeding edge | v7 is beta on the `beta` dist-tag. Our v1.0 LLM gateway is locked to a *milestone* (Spring AI 2.0.0-M6) — adding *another* pre-release dependency on the frontend doubles the migration burden. |
+| AI Elements CLI (copy-paste primitives) | `npm install ai-elements@1.9.0` as runtime dep | If we wanted version-pinned upgrades of the components | The whole point of the shadcn-style model is that components become *your code* — we can edit them, restyle them, and translate strings (Vietnamese) without forking a runtime package. This matches our existing convention with `components/ui/**`. |
+| `streamdown@^2.5.0` | `react-markdown@^9` + custom partial-token handling | If we needed an ecosystem older than 2024 | Streamdown is **the** Vercel-supported renderer for AI streams; AI Elements `MessageResponse` and `Response` components depend on it. Using `react-markdown` would require monkey-patching AI Elements or replacing both. |
+| Hand-written UI Message Stream encoder (Java) | Look for a "Vercel AI SDK Java" adapter | If a maintained Java adapter existed | No production-grade Java adapter exists in the Vercel ecosystem (verified via Context7 search). The 12-event protocol is small and stable enough to hand-write in 1 file (~300 LoC) inside `backend/api/.../ChatStreamingController`. |
+| Spring MVC `SseEmitter` / `Flux<ServerSentEvent>` | `spring-boot-starter-webflux` | If the whole app were reactive | v1.0 is MVC + virtual threads. Adding WebFlux would create dual web stacks (Tomcat + Netty), break existing servlet filters (security, MDC, `@Sensitive` logback scrubbers), and contradict the locked `CLAUDE.md` rule "Spring WebFlux (use Spring MVC + virtual threads via `spring.threads.virtual.enabled=true`)." |
+| `Flux<ChatResponse>` from Spring AI 2.0.0-M6 `StreamingChatModel` | Direct vendor SDK streaming (OpenAI Java SDK, Anthropic Java SDK) | If Spring AI's stream wrapping introduced unacceptable latency | Direct vendor SDKs would violate `CLAUDE.md`'s `do not use` list ("Raw HTTP LLM calls or vendor SDK usage outside the Spring AI adapter"). Spring AI's `Flux<ChatResponse>` is the locked path. |
+| Spring AI `ToolCallingChatOptions.builder().internalToolExecutionEnabled(false)` | Let Spring AI run all tools internally | If no tool needed user approval | Three tools (`sendEmail`, `replyEmail`, `forwardEmail`) **must** pause for user approval per v1.1 safety story. Disabling internal execution is the only Spring AI 2.0.0-M6 path that gives the chat UI a chance to intercept. |
+| Cookie session via existing Spring Session Redis | Issue a separate JWT for SSE auth | If we wanted to skip the session round-trip | The cookie is already `HttpOnly + SameSite=Lax + Secure`. `useChat({ transport: new DefaultChatTransport({ credentials: 'include' }) })` sends it on every SSE `POST`. Anything else duplicates auth and violates `CLAUDE.md`'s "Stateless JWT user sessions (cookie + Redis-backed Spring Session)" do-not-use rule. |
+
+---
 
 ## What NOT to Use
 
 | Avoid | Why | Use Instead |
 |---|---|---|
-| **Lombok** under Java 25 | Lombok lags JDK releases by 3–12 months; Java 25 adds features (flexible constructors, module imports) Lombok may trip on. Records + Java 25 pattern matching cover 90% of Lombok's use cases. | **Java records** + `@Builder` only where justified (via an explicit builder class, not Lombok). **HIGH**. |
-| **Unverified Spring Boot 4 / Jackson 3 migration assumptions** | Spring Boot 4.0.6 defaults to **Jackson 3.1.x**, but major-version namespace changes have exceptions. Assuming every `com.fasterxml.jackson.*` import becomes `tools.jackson.*` creates compile-only CI failures. | Verify current docs with Context7 and confirm the actual Gradle dependency before changing imports/config. Jackson core/databind moved to `tools.jackson.*`, but `jackson-annotations` remains `com.fasterxml.jackson.annotation.*`; `@JsonCreator`, `@JsonValue`, `@JsonIgnoreProperties`, etc. must not be changed to a non-existent `tools.jackson.annotation.*` package. **HIGH**. |
-| **Spring WebFlux** for this app | You have no streaming endpoints; LLM streaming can ride SSE on MVC. Reactive adds cognitive tax and worse debuggability. | Spring MVC + **virtual threads** (`spring.threads.virtual.enabled=true`). **HIGH**. |
-| **javax.*** packages | Spring Boot 4 is Jakarta-only. | `jakarta.*` exclusively. **HIGH**. |
-| **Raw HTTP LLM calls or vendor SDK usage outside the Spring AI adapter** | Bypasses gateway privacy, tool-call, and observation controls. | Keep provider-specific BYOK client derivation inside `core.llm.gateway.springai`; every caller uses `LlmGateway`. **HIGH**. |
-| **Storing LLM prompts/completions in logs or DB** | Violates your explicit privacy constraint. | `log-prompt=false`, `log-completion=false` on Spring AI observations. Scrub logs. **HIGH**. |
-| **Polling Gmail** | Kills API quota and user-perceived responsiveness. | Pub/Sub push + `users.watch` refresh job. **HIGH**. |
-| **`pgp_sym_encrypt` (pgcrypto) for OAuth tokens** | Key lives in app config → if DB leaks, tokens leak too. | App-layer AES-GCM with KMS-managed key. **HIGH**. |
-| **Running Gradle's Node plugin** for the Next.js build | Slow, buggy, fights with Turborepo's cache. | Separate pnpm workspace, CI runs Gradle + pnpm as independent steps. **HIGH**. |
-| **Kafka / RabbitMQ in v1** | Ops cost >> value at this QPS. | Pub/Sub (ingress) + Postgres `SKIP LOCKED` (internal). **HIGH**. |
-| **Stateless JWT user sessions** | Hard to revoke, redundant with Google OAuth refresh tokens you already track server-side. | Cookie + Redis-backed Spring Session. **HIGH**. |
-| **Embedding store / vector DB in v1** | Your privacy constraint forbids storing embeddings of user email. | No RAG over user mail in v1. If you do prompt-side retrieval of *rules* (not mail), store rule text in Postgres; embeddings are unnecessary for <1000 rules per user. **HIGH**. |
+| **Vercel AI SDK `ai` package on the Java backend** | It is a TypeScript-only package; there is no JVM port. Any attempt to invoke `streamText`/`generateText` from Java means standing up a Node sidecar — splits the LLM gateway across two runtimes, breaks `LlmGateway`'s tenant context and credit-ledger interceptors. | Keep all LLM orchestration in **Spring AI 2.0.0-M6** inside `core.llm.gateway.springai` (already locked). The "Vercel" surface area is only the SSE wire format the frontend expects — emit it from a Spring MVC controller. |
+| **`@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/google`, etc. on the frontend** | These are *server-side* model adapters intended for Next.js API routes that would *bypass* our Java backend. Using them duplicates LLM auth, leaks tenant API keys to the browser, and breaks credit metering. | The frontend never speaks to a model provider. All model traffic goes through `POST /api/chat` on `backend/api` → `LlmGateway` → Spring AI → provider. `@ai-sdk/react` is the *only* `@ai-sdk/*` package the frontend needs. |
+| **WebSockets / STOMP** for chat streaming | A WebSocket adds bidirectional state we do not need (chat is request → stream-response), forces a separate auth handshake, and breaks corporate proxies that block long-lived non-SSE connections. **And `@stomp/stompjs@^7.3.0` is already in `apps/web/package.json`** — that is for a different feature; do **not** repurpose it for chat. | SSE over the existing HTTPS endpoint via `SseEmitter` or `Flux<ServerSentEvent>`. `useChat` natively consumes SSE. |
+| **`spring-boot-starter-webflux`** | Adds Netty alongside Tomcat, breaks all v1.0 servlet filters (security, `@Sensitive` logback, MDC, tenant Scoped Values), and contradicts a locked `CLAUDE.md` constraint. | `spring-boot-starter-web` (already present) + `SseEmitter` or `Flux<ServerSentEvent>` return type. Spring MVC handles both. |
+| **Long-term persistence of LLM prompts/completions touching email content** | Locked privacy invariant. The chat-message persistence carve-out is **only** for user text + structured tool inputs/outputs. Email bodies fetched by `getEmail` tools must be summarized in-memory and discarded before being written to `chat_message.parts_jsonb`. | Store user messages and structured tool args/results in `chat_message`. For tool outputs that include email content, store a short metadata summary (subject, sender, date, ≤120 char snippet) — never the raw body. |
+| **Streaming prompt/completion telemetry into logs or DB** | Same privacy invariant as v1.0 (LLM-09). Existing `@Sensitive` Logback scrub is the safety net. | Use existing Micrometer + OTel observability. Spans should record provider, model, token counts, latency — never content. |
+| **`@vercel/ai-utils` or `@vercel/ai-sdk-*` on the backend (Node)** | Not applicable — we have no Node backend. | N/A. |
+| **`ai-elements` as a runtime npm dep** | It is a **CLI** that scaffolds source code. `npm install ai-elements` would install the CLI as a runtime dep — bloat with no benefit. | `pnpm dlx ai-elements@latest add <component>` writes the source to `components/ai-elements/**`. Treat that folder like `components/ui/**` (already lint-ignored). |
+| **`@ai-sdk/anthropic-tools` / experimental human-in-the-loop helpers on a Node server** | We have no Node server. The HITL workflow lives in Java (`ToolCallingChatOptions.internalToolExecutionEnabled(false)` + manual SSE emission) and React (`addToolApprovalResponse` + `<Confirmation>`). | Spring AI's user-controlled tool execution + the SSE protocol described above. |
+| **Inbox Zero's `streamdown@2.5.0` markdown patches** | Use the public `streamdown` package — do not vendor Inbox Zero's local copy. | `pnpm add streamdown@^2.5.0`. |
+
+---
 
 ## Stack Patterns by Variant
 
-**If traffic stays <20 req/s per tenant:**
-- Single Cloud Run service, min-instances=1, max=10.
-- Single Postgres (Cloud SQL db-custom-2-4GB).
-- Single Redis (Memorystore Basic tier).
+**If a tool is read-only (no side effects):**
+- Use Spring AI's default internal tool execution (do **not** set `internalToolExecutionEnabled(false)` for that request)
+- Emit `tool-input-available` then `tool-output-available` back-to-back in the SSE stream
+- Examples: `listRules`, `getRule`, `getEmail`, `listEmails`, `getAnalytics`, `getCredits`, `listSenders`, `getMemory`
 
-**If you outgrow Cloud Run request timeouts (long triage batches):**
-- Move the worker loop to **Cloud Run Jobs** (batch) triggered by Cloud Scheduler, not the HTTP service.
-- Keep the HTTP service purely for Pub/Sub ingress + user API.
+**If a tool mutates state but is non-destructive (label, archive, save draft, update rule):**
+- Same as read-only — auto-execute. Mutations are reversible via existing v1.0 30-day undo (TRG-06). No approval card.
+- Examples: `createRule`, `updateRule`, `deleteRule` (reversible), `addLabel`, `archive`, `saveDraft`, `updatePersonalInstructions`, `updateMemory`
 
-**If you go multi-region:**
-- Promote the Postgres queue to Pub/Sub with ordering keys on `tenant_id`.
-- Move session store from Redis to signed cookies with short TTL + CSRF (avoid cross-region Redis latency).
+**If a tool is **destructive or external-facing** (sends email):**
+- Set `internalToolExecutionEnabled(false)` for the parent request
+- Emit `tool-input-available` with `approval: { id }` data part
+- **Pause the stream** until the next `POST /api/chat` carries the approval response
+- On approval: execute via `ToolCallingManager.executeToolCalls` and emit `tool-output-available`
+- On rejection: skip execution and emit `tool-output-denied`
+- Examples: `sendEmail`, `replyEmail`, `forwardEmail` — the v1.1 high-risk set
 
-## Version Compatibility
+**If the model supports thinking / reasoning (Claude 3.7 Sonnet, OpenAI o-series):**
+- Emit `reasoning-start` / `reasoning-delta` / `reasoning-end` events alongside `text-*`
+- Frontend `<Reasoning>` component collapses by default — opt-in disclosure for power users
+
+---
+
+## Version Compatibility Matrix
 
 | Package | Compatible With | Notes |
 |---|---|---|
-| Spring Boot 4.0.6 | Java 17–26, Gradle 8.14+ or 9.x, Spring Framework 7.0.7+, Jakarta Servlet 6.1 | **HIGH** — verified. |
-| Spring AI 2.0.0-M6 | Spring Boot 4.0.x / 4.1.x | OpenAI-compatible `base-url` override still enables the OpenRouter path. **MEDIUM-HIGH** — milestone caveat remains. |
-| spring-cloud-gcp 8.0.2 | Spring Boot 4.0.x, Java 17+ | **First line** supporting Boot 4. Use Secret Manager starter by default; Pub/Sub starter is optional for this architecture. **HIGH**. |
-| Hibernate 7.2.x | JDK 17+, Jakarta Persistence 3.2 | Ambient via Boot 4.0.6. **HIGH**. |
-| Liquibase 5.0.2 | Spring Boot 4.0.6 BOM-managed | **HIGH**. |
-| Next.js 16.2.4 | React 19.2.5, Node 20.9+ | **HIGH**. |
-| Turborepo 2.9.6 | pnpm 11.0.8 | **HIGH**. |
+| `ai@^6.0.184` | `@ai-sdk/react@^3.0.186`, `zod@^3.25.76 \|\| ^4.1.8` | We have `zod@4.4.3` — compatible. |
+| `@ai-sdk/react@^3.0.186` | `react@^18 \|\| ~19.0.1 \|\| ~19.1.2 \|\| ^19.2.1` | We have `react@19.2.6` — compatible. |
+| `@ai-sdk/react@^3.0.186` | `ai@6.0.184` (transitive dep, exact pin) | The two version-track together; do not mix `@ai-sdk/react@3` with `ai@5`. |
+| `streamdown@^2.5.0` | `react@^18 \|\| ^19`, `react-dom@^18 \|\| ^19` | Compatible with our React 19.2.6. |
+| `ai-elements@1.9.0` (CLI) | shadcn/ui initialized, Tailwind CSS 4, AI SDK installed | All prereqs satisfied. |
+| Spring AI 2.0.0-M6 `StreamingChatModel#stream(Prompt)` | Reactor Core (transitive) | Already on classpath; no need to import `spring-boot-starter-webflux`. |
+| Spring MVC `SseEmitter` | Spring Boot 4.0.6 + `spring-boot-starter-web` | Already on classpath. Works with `spring.threads.virtual.enabled=true`. |
+| Spring MVC `Flux<ServerSentEvent>` return | Spring Framework 7.0.7's `ReactiveAdapterRegistry` | Works on MVC without WebFlux. |
+| Vercel `useChat` SSE consumption | `text/event-stream` + `x-vercel-ai-ui-message-stream: v1` response header | The header is **mandatory** for non-Vercel backends. Missing it causes `useChat` to silently fall back to text-only mode. |
+| `addToolApprovalResponse` (`@ai-sdk/react@3`) | `requireApproval: true` (Vercel server-side) **or** custom `approval-requested` state part (our Java backend) | We will emit the custom part — the frontend hook does not care whether the server is Node or Spring. |
 
-## Installation (representative fragments)
+---
 
-**`gradle/libs.versions.toml`**
+## Integration Points (where v1.1 touches v1.0)
 
-```toml
-[versions]
-springBoot = "4.0.6"
-springAi = "2.0.0-M6"
-springCloudGcp = "8.0.2"
-googleApiGmail = "v1-rev20250331-2.0.0"
-googleAuth = "1.47.0"
-liquibase = "5.0.2"
-otelAgent = "2.16.0"
+| Touch point | v1.1 change | Risk |
+|---|---|---|
+| `LlmGateway` (`core.llm.gateway.springai`) | Add `stream(Prompt)` method returning `Flux<ChatResponse>` + per-request `internalToolExecutionEnabled` flag | Localized to the gateway module — well within the ArchUnit-enforced single-adapter rule. |
+| `backend/api` controllers | Add `ChatStreamingController` with `@PostMapping(path="/api/chat", produces=MediaType.TEXT_EVENT_STREAM_VALUE)` | New controller — no impact on existing endpoints. |
+| Spring Session Redis | No code change | `useChat` sends the existing session cookie via `credentials: 'include'`. |
+| Spring Security filter chain | Whitelist `/api/chat` for authenticated tenants only; CSRF — chat requests use the same session token, so the existing CSRF approach (per-form token) needs an SSE-aware exception or the same double-submit pattern as existing API endpoints | Verify existing CSRF config; v1.0 may already disable CSRF for `/api/**` if it is a same-origin JSON API. |
+| `springdoc-openapi` (v1.0 OpenAPI generator) | Add a schema entry for `POST /api/chat` request body and a "see UI Message Stream Protocol" note in the response | The streaming response cannot be fully expressed in OpenAPI — document the protocol in `apps/web/lib/chat-protocol.md` and reference it. |
+| `apps/web/scripts/generate-api.ts` | No change needed for the chat endpoint (streaming is not OpenAPI-modeled). Settings page endpoints **do** flow through OpenAPI as normal | Settings page reuses existing typed-client pattern. |
+| ArchUnit rule TRG-03 ("zero send call sites") | Update to allow **exactly one** new call site: the chat-tool implementation of `sendEmail` / `replyEmail` / `forwardEmail` inside the approved branch of the HITL flow | Locked in by repo-wide grep + ArchUnit assertion; cannot regress without a test failure. |
+| Liquibase | Add three new YAML changelogs (`chat_conversation`, `chat_message`, `chat_send_audit`) | Standard pattern; no migration risk. |
 
-[libraries]
-spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web", version.ref = "springBoot" }
-spring-boot-starter-security = { module = "org.springframework.boot:spring-boot-starter-security", version.ref = "springBoot" }
-spring-boot-starter-oauth2-client = { module = "org.springframework.boot:spring-boot-starter-oauth2-client", version.ref = "springBoot" }
-spring-boot-starter-data-jpa = { module = "org.springframework.boot:spring-boot-starter-data-jpa", version.ref = "springBoot" }
-spring-boot-starter-data-redis = { module = "org.springframework.boot:spring-boot-starter-data-redis", version.ref = "springBoot" }
-spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation", version.ref = "springBoot" }
-spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator", version.ref = "springBoot" }
-spring-boot-starter-liquibase = { module = "org.springframework.boot:spring-boot-starter-liquibase", version.ref = "springBoot" }
-spring-session-data-redis = { module = "org.springframework.session:spring-session-data-redis" }
-spring-ai-starter-model-openai = { module = "org.springframework.ai:spring-ai-starter-model-openai", version.ref = "springAi" }
-spring-cloud-gcp-secretmanager = { module = "com.google.cloud:spring-cloud-gcp-starter-secretmanager", version.ref = "springCloudGcp" }
-google-api-gmail = { module = "com.google.apis:google-api-services-gmail", version.ref = "googleApiGmail" }
-google-auth-oauth2 = { module = "com.google.auth:google-auth-library-oauth2-http", version.ref = "googleAuth" }
-liquibase-core = { module = "org.liquibase:liquibase-core", version.ref = "liquibase" }
-```
-
-**`apps/web/package.json`** (key deps only)
-
-```json
-{
-  "dependencies": {
-    "next": "16.2.4",
-    "react": "19.2.5",
-    "react-dom": "19.2.5",
-    "@tanstack/react-query": "5.100.1",
-    "openapi-fetch": "0.17.0",
-    "tailwindcss": "4.2.4",
-    "zod": "4.3.6"
-  },
-  "devDependencies": {
-    "openapi-typescript": "7.13.0",
-    "turbo": "2.9.6"
-  }
-}
-```
+---
 
 ## Sources
 
-- https://spring.io/blog/2026/04/23/spring-boot-4-0-6-available-now — Spring Boot 4.0.6 current GA as of 2026-04-24. **HIGH**.
-- https://docs.spring.io/spring-boot/system-requirements.html — Java 17–26, Gradle 8.14+ / 9.x, Spring Framework 7.0.7+, Servlet 6.1. **HIGH**.
-- https://github.com/spring-projects/spring-ai/releases/tag/v2.0.0-M6 — Spring AI 2.0.0-M6 release (2026-05-08). **HIGH**.
-- https://docs.spring.io/spring-ai/reference/getting-started.html — Spring AI 2.0.x supports Spring Boot 4.0.x / 4.1.x. **HIGH**.
-- https://docs.liquibase.com/concepts/changelogs/yaml-format.html — Liquibase YAML changelog support. **HIGH**.
-- https://github.com/GoogleCloudPlatform/spring-cloud-gcp/releases/tag/v8.0.2 — spring-cloud-gcp 8.0.2 (2026-04-10), Boot 4 line. **HIGH**.
-- https://cloud.google.com/sql/docs/postgres/db-versions — Cloud SQL PostgreSQL 17.6 is current GA; PostgreSQL 18 is Preview as of 2026-04-24. **HIGH**.
-- https://cloud.google.com/memorystore/docs/redis/supported-versions — Memorystore supports Redis up to 7.2 as of 2026-04-24. **HIGH**.
-- https://services.gradle.org/versions/current — Gradle 9.5.0 current stable. **HIGH**.
-- npm registry on 2026-04-24 for `next`, `react`, `react-dom`, `@tanstack/react-query`, `tailwindcss`, `openapi-typescript`, `openapi-fetch`, `turbo`, `pnpm`, `zod`. **HIGH**.
-- Training-data + framework familiarity for: Grafana Cloud defaults, Sentry integration, HikariCP defaults, Hibernate `@TenantId`. **MEDIUM** — common-knowledge patterns, not version-sensitive.
+**Context7 (HIGH confidence):**
+- `/vercel/ai` — `useChat` v6 API, `DefaultChatTransport`, UI Message Stream Protocol event types, HITL tool approval, message parts state machine, headers required for non-Node backends. Fetched 2026-05-17.
+- `/vercel/ai-elements` — Component catalog (`Conversation`, `Message`, `PromptInput`, `Tool`, `Reasoning`, `Loader`, `Suggestion`, `Confirmation`), CLI installation via `pnpm dlx ai-elements@latest add <component>`, prerequisites (React 19, Next 14+, Tailwind 4, shadcn). Fetched 2026-05-17.
+- `/vercel/streamdown` — Drop-in replacement for `react-markdown`, partial-token handling. Fetched 2026-05-17.
+- `/websites/spring_io_spring-ai_reference_2_0-snapshot` — `StreamingChatModel#stream(Prompt) → Flux<ChatResponse>`, `ToolCallingChatOptions.builder().internalToolExecutionEnabled(false)`, `ToolCallingManager.executeToolCalls`, `@Tool` annotation. Fetched 2026-05-17.
+- `/spring-projects/spring-framework` and `/websites/spring_io_spring-framework_reference` — `SseEmitter`, `ResponseBodyEmitter`, `Flux<ServerSentEvent>` return adaptation in Spring MVC, reactive back-pressure with `AsyncTaskExecutor`. Fetched 2026-05-17.
+- `/websites/spring_io_spring-boot_4_0-snapshot` — Virtual thread enablement via `spring.threads.virtual.enabled=true`, `SimpleAsyncTaskExecutor` with virtual threads behavior, `spring.main.keep-alive=true` caveat for `@Scheduled` daemon scheduler threads. Fetched 2026-05-17.
 
-## Confidence Summary
+**npm registry (HIGH confidence, exact versions on 2026-05-17):**
+- `npm view ai` → latest `6.0.184`; v5 latest under `ai-v5` tag = `5.0.188`; v7 beta under `beta` tag = `7.0.0-beta.116`. Peer dep: `zod ^3.25.76 || ^4.1.8`. Node ≥ 18.
+- `npm view @ai-sdk/react` → latest `3.0.186`. Depends on `ai@6.0.184` (exact), `swr@^2.2.5`, `throttleit@2.1.0`, `@ai-sdk/provider-utils@4.0.27`. Peer dep: `react ^18 || ~19.0.1 || ~19.1.2 || ^19.2.1`.
+- `npm view ai-elements` → CLI package, latest `1.9.0`.
+- `npm view streamdown` → latest `2.5.0`. Peer dep: `react ^18 || ^19`.
 
-| Area | Confidence | Reason |
-|---|---|---|
-| Spring Boot 4.0.6 + Java 25 + Gradle 9.5.0 toolchain | **HIGH** | Verified via official Spring docs + Gradle current-version endpoint. |
-| Spring AI 2.0.0-M6 + OpenRouter (base-url swap) + BYOK abstraction | **MEDIUM-HIGH** | The provider path and M6 builder/options seams are compile-tested; M6→GA churn remains the main risk. |
-| spring-cloud-gcp 8.0.2 for Secret Manager on Boot 4 | **HIGH** | Verified via GitHub releases (Apr 2026). |
-| Postgres-backed queue with SKIP LOCKED | **HIGH** | Standard pattern; QPS envelope verified against v1 user base assumption. |
-| Cloud Run as deployment target | **MEDIUM-HIGH** | Technically excellent fit; the main tradeoff is GCP managed-service lag versus community-latest Postgres/Redis versions. |
-| Next.js 16.2.4 + React 19.2.5 + shadcn + TanStack Query 5.100.x | **HIGH** | Current stable frontend stack verified from official docs/npm registry on 2026-04-24. |
-| OpenAPI codegen (not tRPC) | **HIGH** | Forced by Java backend. |
-| Cookie session (not JWT) | **HIGH** | Forced by need for instant revocation + refresh-token server-side handling. |
-| Observability → Grafana Cloud via OTLP | **MEDIUM** | Technically standard; specific vendor choice is cost/taste. |
-| Lombok avoidance under Java 25 | **MEDIUM** | Lombok has historically lagged JDK releases; verify at impl time — but records/pattern-matching in Java 25 remove most reasons to use it. |
-| Jackson 3 mandatory on Spring Boot 4 | **HIGH** | Per release notes. |
-| No vector DB / no embedding store in v1 | **HIGH** | Forced by privacy constraint in PROJECT.md. |
+**Local reference repo (HIGH confidence, mirrors production usage):**
+- `D:/study materials summer 2026/EXE202/inbox-zero/apps/web/package.json` — production Inbox Zero on 2026-05-17 uses `ai@6.0.168`, `@ai-sdk/react@3.0.170`, `react@19.2.5`, `streamdown@2.5.0`, `use-stick-to-bottom@1.1.3` (the latter is already vendored inside AI Elements' `Conversation` component, so we do not need to install it separately).
+
+**Existing v1.0 stack reference (validated, unchanged):**
+- `apps/web/package.json` on `main` at 2026-05-17 — `react@19.2.6`, `next@16.2.6`, `zod@4.4.3`, `@tanstack/react-query@5.100.9`, `shadcn@^4.7.0`, `tailwindcss@^4`, `sonner@^2.0.7` (required by AI Elements Confirmation toasts).
+- `CLAUDE.md` — locked do-not-use list (Lombok, WebFlux, raw vendor SDKs, stateless JWT, Kafka, embeddings), tool-call allow-list, privacy carve-outs for chat persistence.
+- `.planning/research/STACK.md` (v1.0 history before this update) — full Java 25 / Spring Boot 4.0.6 / Spring AI 2.0.0-M6 backend stack and Next.js 16.2.4 frontend stack details.
 
 ---
-*Stack research for: AI Gmail-triage SaaS (Zero Mail)*
-*Researched: 2026-04-24*
+
+*Stack research for: Zero Mail v1.1 — chat email assistant + AI settings page*
+*Researched: 2026-05-17 by gsd-researcher (Context7 + npm + Inbox Zero reference + Spring AI 2.0-SNAPSHOT docs)*
