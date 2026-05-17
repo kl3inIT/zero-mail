@@ -84,23 +84,23 @@
     --card-foreground: #4F496B;
     --popover: #FFFFFF;
     --popover-foreground: #4F496B;
-    --primary: #867AEB;
+    --primary: #0E5E5A;
     --primary-foreground: #FFFFFF;
     --secondary: #F4F2F9;
     --secondary-foreground: #4F496B;
     --muted: #F4F2F9;
     --muted-foreground: #625C78;
-    --accent: #867AEB;
+    --accent: #0E5E5A;
     --accent-foreground: #3D385A;
     --destructive: #B0413E;
     --warning: #E3A023;
     --warning-foreground: #FFFFFF;
     --border: transparent;
     --input: #E6E3D8;
-    --ring: #867AEB;
+    --ring: #0E5E5A;
 
     /* Charts stay neutral-but-branded until a later data-viz pass. */
-    --chart-1: #867AEB;
+    --chart-1: #0E5E5A;
     --chart-2: #2C5BA8;
     --chart-3: #5E4B8B;
     --chart-4: #2F7D5C;
@@ -158,22 +158,22 @@
     --card-foreground: #D3CFE3;
     --popover: #211E30;
     --popover-foreground: #D3CFE3;
-    --primary: #A39CF4;
+    --primary: #6FB3A8;
     --primary-foreground: #FFFFFF;
     --secondary: #2A263D;
     --secondary-foreground: #D3CFE3;
     --muted: #2A263D;
     --muted-foreground: #928DAA;
-    --accent: #A39CF4;
+    --accent: #6FB3A8;
     --accent-foreground: #191724;
     --destructive: #DA8480;
     --warning: #F5CD7A;
     --warning-foreground: #131312;
     --border: rgba(214, 213, 204, 0.12);
     --input: rgba(214, 213, 204, 0.16);
-    --ring: #A39CF4;
+    --ring: #6FB3A8;
 
-    --chart-1: #A39CF4;
+    --chart-1: #6FB3A8;
     --chart-2: #8DA8E0;
     --chart-3: #B0A0DC;
     --chart-4: #6FB389;
