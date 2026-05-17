@@ -19,8 +19,9 @@ export function AnalyticsSkeleton() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         <MetricSkeleton className="xl:col-span-7" />
         <MetricSkeleton className="xl:col-span-5" />
-        <MetricSkeleton className="xl:col-span-5" />
-        <ListSkeleton className="xl:col-span-7" />
+        <ListSkeleton className="xl:col-span-12" />
+        <ListSkeleton className="xl:col-span-12" />
+        <ListSkeleton className="xl:col-span-12" />
       </div>
       <Card className="xl:col-span-12">
         <CardHeader>

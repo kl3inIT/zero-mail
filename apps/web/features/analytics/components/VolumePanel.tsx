@@ -1,17 +1,9 @@
 'use client';
 
-import { Info } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChartInfoAction } from '@/features/analytics/components/ChartInfoAction';
 import {
   formatCompactCount,
   formatPercent,
@@ -45,22 +37,10 @@ export function VolumePanel({ observed, applied, className }: VolumePanelProps) 
         <CardTitle>
           <h3 className="text-base leading-snug font-semibold">{t('analytics.volume.title')}</h3>
         </CardTitle>
-        <CardAction>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <button
-                  type="button"
-                  className="text-muted-foreground hover:text-foreground focus-visible:ring-ring grid size-8 place-items-center rounded-md outline-none focus-visible:ring-2"
-                  aria-label={t('analytics.volume.tooltip')}
-                />
-              }
-            >
-              <Info className="size-4" aria-hidden="true" />
-            </TooltipTrigger>
-            <TooltipContent>{t('analytics.volume.tooltip')}</TooltipContent>
-          </Tooltip>
-        </CardAction>
+        <ChartInfoAction
+          title={t('analytics.volume.title')}
+          description={t('analytics.volume.tooltip')}
+        />
       </CardHeader>
       <CardContent className="grid gap-5 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
         <div className="grid justify-center">

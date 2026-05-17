@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { InboxFlowPanel } from '@/features/analytics/components/InboxFlowPanel';
+import { MetadataControlPanel } from '@/features/analytics/components/MetadataControlPanel';
+import { MetadataLoadPanel } from '@/features/analytics/components/MetadataLoadPanel';
 import { RuleHitsPanel } from '@/features/analytics/components/RuleHitsPanel';
 import { TimeSavedPanel, formatTimeSaved } from '@/features/analytics/components/TimeSavedPanel';
 import { TopSendersPanel } from '@/features/analytics/components/TopSendersPanel';
@@ -18,6 +20,12 @@ describe('analytics panels', () => {
         <VolumePanel observed={0} applied={0} />
         <TimeSavedPanel seconds={0} />
         <InboxFlowPanel observed={0} applied={0} ruleHits={[]} />
+        <MetadataLoadPanel dailyLoad={[]} categoryLoad={[]} />
+        <MetadataControlPanel
+          actionMix={[]}
+          replyBuckets={[]}
+          automationOpportunities={{ noRuleMatched: 0, failedActions: 0, pendingActions: 0 }}
+        />
         <TopSendersPanel senders={[]} />
         <RuleHitsPanel ruleHits={[]} />
       </>,
@@ -26,6 +34,10 @@ describe('analytics panels', () => {
     expect(screen.getByTestId('analytics-volume-panel')).toHaveTextContent('0');
     expect(screen.getByTestId('analytics-time-saved-panel')).toHaveTextContent('0m');
     expect(screen.getByTestId('analytics-inbox-flow-panel')).toHaveTextContent('0');
+    expect(screen.getByTestId('analytics-metadata-load-panel')).toHaveTextContent(
+      'No inbox-load data in this window.',
+    );
+    expect(screen.getByTestId('analytics-metadata-control-panel')).toHaveTextContent('No rule');
     expect(screen.getByText('No activity in this window.')).toBeInTheDocument();
     expect(screen.getByText('No senders yet in this window.')).toBeInTheDocument();
     expect(screen.getByText('No rules triggered in this window.')).toBeInTheDocument();
@@ -45,11 +57,36 @@ describe('analytics panels', () => {
             { ruleName: 'Draft investor updates', decisions: 9, applied: 9, reverted: 0 },
           ]}
         />
+        <MetadataLoadPanel
+          dailyLoad={[
+            { day: '2026-05-10', observed: 20, applied: 16, reverted: 1 },
+            { day: '2026-05-11', observed: 32, applied: 24, reverted: 0 },
+          ]}
+          categoryLoad={[
+            { category: 'updates', count: 18 },
+            { category: 'promotions', count: 7 },
+          ]}
+        />
+        <MetadataControlPanel
+          actionMix={[
+            { actionType: 'archive', applied: 19, reverted: 1, failed: 0 },
+            { actionType: 'save_draft', applied: 9, reverted: 0, failed: 0 },
+          ]}
+          replyBuckets={[
+            { bucket: 'TO_REPLY', count: 6, withDraft: 4 },
+            { bucket: 'AWAITING_THEIR_REPLY', count: 2, withDraft: 0 },
+          ]}
+          automationOpportunities={{ noRuleMatched: 5, failedActions: 1, pendingActions: 0 }}
+        />
         <TopSendersPanel
           senders={[
             { senderEmail: 'founder@acme.test', count: 44 },
             { senderEmail: 'billing@example.com', count: 21 },
             { senderEmail: 'alerts@example.com', count: 12 },
+          ]}
+          domainLoad={[
+            { domain: 'acme.test', count: 44 },
+            { domain: 'example.com', count: 33 },
           ]}
         />
         <RuleHitsPanel
@@ -64,6 +101,9 @@ describe('analytics panels', () => {
     expect(screen.getByTestId('analytics-volume-panel')).toHaveTextContent('1247');
     expect(screen.getByTestId('analytics-time-saved-panel')).toHaveTextContent('4h 12m');
     expect(formatTimeSaved(15120).label).toBe('4h 12m');
+    expect(screen.getByTestId('analytics-metadata-load-panel')).toHaveTextContent('Updates');
+    expect(screen.getByTestId('analytics-metadata-control-panel')).toHaveTextContent('Archive');
+    expect(screen.getByTestId('analytics-top-senders-panel')).toHaveTextContent('acme.test');
 
     const topSendersPanel = screen.getByTestId('analytics-top-senders-panel');
     expect(within(topSendersPanel).getByText('1')).toBeInTheDocument();

@@ -5,7 +5,8 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
 import { AnalyticsSkeleton } from '@/features/analytics/components/AnalyticsSkeleton';
-import { InboxFlowPanel } from '@/features/analytics/components/InboxFlowPanel';
+import { MetadataControlPanel } from '@/features/analytics/components/MetadataControlPanel';
+import { MetadataLoadPanel } from '@/features/analytics/components/MetadataLoadPanel';
 import { normalizeAnalyticsWindow, WindowChips } from '@/features/analytics/components/WindowChips';
 import { RuleHitsPanel } from '@/features/analytics/components/RuleHitsPanel';
 import { TimeSavedPanel } from '@/features/analytics/components/TimeSavedPanel';
@@ -43,8 +44,8 @@ export function AnalyticsPageClient() {
   }
 
   return (
-    <div className="space-y-5">
-      <div className="bg-card/80 ring-primary/10 flex flex-col gap-3 rounded-xl px-3 py-3 shadow-sm ring-1 md:flex-row md:items-center md:justify-between md:px-4">
+    <div className="flex flex-col gap-5">
+      <div className="bg-muted/30 ring-foreground/10 flex flex-col gap-3 rounded-lg px-3 py-3 ring-1 md:flex-row md:items-center md:justify-between md:px-4">
         <WindowChips
           value={selectedWindow}
           onChange={(nextWindow) => {
@@ -70,13 +71,22 @@ export function AnalyticsPageClient() {
           window={selectedWindow}
           className="xl:col-span-5"
         />
-        <InboxFlowPanel
-          observed={summaryQuery.data.volumeObserved}
-          applied={summaryQuery.data.volumeApplied}
-          ruleHits={summaryQuery.data.ruleHits}
-          className="xl:col-span-5"
+        <TopSendersPanel
+          senders={summaryQuery.data.topSenders}
+          domainLoad={summaryQuery.data.domainLoad}
+          className="xl:col-span-12"
         />
-        <TopSendersPanel senders={summaryQuery.data.topSenders} className="xl:col-span-7" />
+        <MetadataLoadPanel
+          dailyLoad={summaryQuery.data.dailyLoad}
+          categoryLoad={summaryQuery.data.categoryLoad}
+          className="xl:col-span-12"
+        />
+        <MetadataControlPanel
+          actionMix={summaryQuery.data.actionMix}
+          replyBuckets={summaryQuery.data.replyBuckets}
+          automationOpportunities={summaryQuery.data.automationOpportunities}
+          className="xl:col-span-12"
+        />
         <RuleHitsPanel ruleHits={summaryQuery.data.ruleHits} className="xl:col-span-12" />
       </div>
     </div>

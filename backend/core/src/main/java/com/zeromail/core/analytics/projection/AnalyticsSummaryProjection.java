@@ -7,10 +7,41 @@ public record AnalyticsSummaryProjection(
         long volumeApplied,
         long timeSavedSeconds,
         List<TopSenderProjection> topSenders,
-        List<RuleHitProjection> ruleHits) {
+        List<RuleHitProjection> ruleHits,
+        List<DailyLoadProjection> dailyLoad,
+        List<ActionMixProjection> actionMix,
+        List<DomainLoadProjection> domainLoad,
+        List<CategoryLoadProjection> categoryLoad,
+        List<ReplyBucketProjection> replyBuckets,
+        AutomationOpportunityProjection automationOpportunities) {
+
+    public AnalyticsSummaryProjection(
+            long volumeObserved,
+            long volumeApplied,
+            long timeSavedSeconds,
+            List<TopSenderProjection> topSenders,
+            List<RuleHitProjection> ruleHits) {
+        this(
+                volumeObserved,
+                volumeApplied,
+                timeSavedSeconds,
+                topSenders,
+                ruleHits,
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                new AutomationOpportunityProjection(0, 0, 0));
+    }
 
     public AnalyticsSummaryProjection {
         topSenders = List.copyOf(topSenders);
         ruleHits = List.copyOf(ruleHits);
+        dailyLoad = List.copyOf(dailyLoad);
+        actionMix = List.copyOf(actionMix);
+        domainLoad = List.copyOf(domainLoad);
+        categoryLoad = List.copyOf(categoryLoad);
+        replyBuckets = List.copyOf(replyBuckets);
     }
 }
