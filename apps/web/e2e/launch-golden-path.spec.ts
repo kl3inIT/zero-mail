@@ -328,7 +328,9 @@ test.describe('Launch golden path', () => {
         await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible({
           timeout: 15_000,
         });
-        await expect(page.getByTestId('analytics-volume-panel')).toContainText(/Messages triaged/i);
+        await expect(page.getByTestId('analytics-volume-panel')).toContainText(
+          /Mail triage coverage/i,
+        );
       });
 
       await expectAppShellChrome(page, { sidebarVisible: true });

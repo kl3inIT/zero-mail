@@ -4,12 +4,10 @@
 
 language: en-US
 early_access: false
-tone_instructions: |
-  Be concise and enterprise-tone. Reference Zero Mail conventions from
-  CLAUDE.md, CONVENTIONS.md, and TESTING.md when relevant. Flag any
-  violation of locked constraints (Java 25, Spring Boot 4, Spring AI M6,
-  Gradle Kotlin DSL, no Lombok, no WebFlux, no javax.*, no raw LLM calls
-  outside the Spring AI adapter, no storing prompts/completions).
+tone_instructions: >
+  Be concise and direct. Enforce Zero Mail constraints: Java 25, Spring Boot 4,
+  Spring AI M6, Gradle Kotlin DSL, no Lombok/WebFlux/javax/raw LLM calls outside
+  Spring AI, and no prompt/completion storage.
 
 reviews:
   profile: chill

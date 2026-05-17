@@ -2,16 +2,23 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Awaiting next milestone
-stopped_at: Completed 06-04-PLAN.md
-last_updated: "2026-05-15T15:37:18.619Z"
-last_activity: 2026-05-15 — Milestone v1.0 completed and archived
+status: Awaiting operator checkpoint for candidate gate URL, launch sign-off, final rc tag, and STATE closure
+stopped_at: context exhaustion at 91% (2026-05-15)
+last_updated: "2026-05-15"
+last_activity: 2026-05-15
 progress:
-  total_phases: 17
+  total_phases: 18
   completed_phases: 17
   total_plans: 123
   completed_plans: 123
   percent: 100
+workstreams:
+  analytics-enhancement:
+    path: .planning/workstreams/analytics-enhancement/
+    state: .planning/workstreams/analytics-enhancement/STATE.md
+    phases: [07]
+    status: not-started
+    created: "2026-05-15"
 ---
 
 # Project State
@@ -21,20 +28,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** v1.0 milestone complete - v1.0.0-rc1 released
+**Current focus:** Phase 06 - polish-casa-verified-launch
 
 ## Current Position
 
-Phase: Milestone v1.0 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-05-15 — Milestone v1.0 completed and archived
+Phase: 06 (polish-casa-verified-launch) - EXECUTING
+Plan: 5 of 5
+Status: Awaiting operator checkpoint for candidate gate URL, launch sign-off, final rc tag, and STATE closure
+Last activity: 2026-05-15
+
+Progress: [██████████] 99%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 61
+- Total plans completed: 56
 - Average duration: —
 - Total execution time: 0.0 hours
 
@@ -327,6 +336,7 @@ Recent decisions affecting current work:
 [From .planning/todos/pending/ — ideas captured during sessions]
 
 - WR-06: dedicated test-profile SecurityConfig slice (so OAuth filter chain is exercised under integration tests) — `.planning/todos/pending/2026-04-28-wr-06-test-profile-securityconfig-slice.md`
+- Apply `:?` fail-fast to `backend/worker/src/main/resources/application.yml:10` (CR-04 parity with api module) — `.planning/todos/pending/2026-04-28-worker-application-yml-fail-fast-parity.md`
 - Make backend/core context API surfaces explicit with Spring Modulith `@NamedInterface("api")` (+ low-pri: Spotless `ratchetFrom`, vertical-slice split of `rules`/`llm` if folders grow) — `.planning/todos/pending/2026-05-12-make-backend-core-context-api-surfaces-explicit-with-namedin.md`
 
 ### Blockers/Concerns
@@ -369,51 +379,14 @@ Recent decisions affecting current work:
 
 ## Deferred Items
 
-Items acknowledged and deferred at v1.0 milestone close on 2026-05-15.
+Items acknowledged and carried forward from previous milestone close:
 
-**Summary:** 54 open items at close — 32 quick tasks + 5 UAT gaps + 2 verification gaps archived alongside v1.0 phases; 12 seeds + 3 todos kept in `.planning/` for next milestone.
-
-### Carried forward to next milestone (kept in .planning/)
-
-**Seeds (12 — future feature ideas):**
-
-| Slug | Notes |
-|------|-------|
-| SEED-001 | future-ai-email-workspace-features |
-| SEED-002 | ai-mailbox-search-and-answer-engine |
-| SEED-003 | screen-aware-ai-assistant-command-center |
-| SEED-004 | inbox-splits-bundles-delivery-schedules |
-| SEED-005 | team-collaboration-shared-email-workspace |
-| SEED-006 | calendar-scheduling-and-meeting-briefs |
-| SEED-007 | messaging-assistant-slack-telegram-zalo |
-| SEED-008 | tasklet-style-agentic-workflow-automation |
-| SEED-009 | bulk-cleanup-cold-blocker-smart-filing |
-| SEED-010 | sales-engagement-crm-and-read-tracking |
-| SEED-011 | admin-support-and-compliance-console |
-| SEED-012 | casa-restricted-scope-verification (dormant — production OAuth verification track) |
-
-**Todos (3 — pending work):**
-
-| Slug | Notes |
-|------|-------|
-| 2026-04-28-wr-06-test-profile-securityconfig-slice | Phase 1.5 deferred test improvement |
-| 2026-05-12-make-backend-core-context-api-surfaces-explicit-with-namedin | API surface explicitness |
-| 2026-05-15-rules-ux-structured-builder-next-milestone | Rules UX structured builder for next milestone |
-
-### Archived alongside v1.0 phases (moved to milestones/v1.0-*)
-
-**Quick tasks (32):** All directories under `.planning/quick/` moved to `.planning/milestones/v1.0-quick/`. None had completion SUMMARYs; they represent ad-hoc execution traces from the v1.0 development period (Phase 1.5 cleanup, frontend refactors, BYOK presets, CI work, content drafts, code review responses, etc.).
-
-**UAT gaps (5):** Inside phase VERIFICATION/UAT files — moved with phase dirs. Notable: 05C live Resend deliverability acknowledged for ship 2026-05-14.
-
-**Verification gaps (2):** 01.4 + 02A status `human_needed` (manual gates: live OAuth UX, live Pub/Sub, native VI copy, visual sweep) — moved with phase dirs. All automated tests PASS.
+| Category | Item | Status | Deferred At |
+|----------|------|--------|-------------|
+| *(none — project init)* | | | |
 
 ## Session Continuity
 
-Last session: 2026-05-14T23:35:33.615Z
-Stopped at: Completed 06-04-PLAN.md
+Last session: 2026-05-15T06:25:45.943Z
+Stopped at: context exhaustion at 91% (2026-05-15)
 Resume file: None
-
-## Operator Next Steps
-
-- Start the next milestone with /gsd-new-milestone

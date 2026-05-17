@@ -35,7 +35,7 @@ export function CompleteClient() {
 
   return (
     <section className="bg-card w-full min-w-0 rounded-md border p-6 shadow-sm sm:p-8">
-      <div className="grid size-14 place-items-center rounded-full bg-[var(--accent-soft)] text-[var(--accent)]">
+      <div className="grid size-14 place-items-center rounded-full bg-(--accent-soft) text-(--accent)">
         <CheckIcon size={28} />
       </div>
       <h1 className="text-foreground mt-4 text-[28px] leading-tight font-semibold">

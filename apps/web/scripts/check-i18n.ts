@@ -135,7 +135,6 @@ const EN_SCAN_FILES = [
   'features/landing/components/Hero.tsx',
   'features/landing/components/HowItWorks.tsx',
   'features/landing/components/Features.tsx',
-  'features/landing/components/TrustPillars.tsx',
   'features/landing/components/ThemeToggle.tsx',
   'features/landing/components/ZMLogoMark.tsx',
   'features/auth/components/AuthTopBar.tsx',

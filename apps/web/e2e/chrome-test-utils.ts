@@ -298,6 +298,50 @@ function analyticsSummary(window: AnalyticsWindow) {
       { senderEmail: 'billing@example.com', count: 21 * multiplier },
       { senderEmail: 'alerts@example.com', count: 12 * multiplier },
     ],
+    dailyLoad: [
+      {
+        day: '2026-05-10',
+        observed: 240 * multiplier,
+        applied: 188 * multiplier,
+        reverted: 3,
+      },
+      {
+        day: '2026-05-11',
+        observed: 320 * multiplier,
+        applied: 270 * multiplier,
+        reverted: 2,
+      },
+      {
+        day: '2026-05-12',
+        observed: 210 * multiplier,
+        applied: 166 * multiplier,
+        reverted: 1,
+      },
+    ],
+    actionMix: [
+      { actionType: 'archive', applied: 720 * multiplier, reverted: 4, failed: 1 },
+      { actionType: 'label', applied: 360 * multiplier, reverted: 2, failed: 0 },
+      { actionType: 'save_draft', applied: 167 * multiplier, reverted: 0, failed: 0 },
+    ],
+    domainLoad: [
+      { domain: 'acme.test', count: 44 * multiplier },
+      { domain: 'example.com', count: 33 * multiplier },
+      { domain: 'alerts.example', count: 12 * multiplier },
+    ],
+    categoryLoad: [
+      { category: 'updates', count: 510 * multiplier },
+      { category: 'promotions', count: 260 * multiplier },
+      { category: 'forums', count: 90 * multiplier },
+    ],
+    replyBuckets: [
+      { bucket: 'TO_REPLY', count: 7 * multiplier, withDraft: 4 * multiplier },
+      { bucket: 'AWAITING_THEIR_REPLY', count: 3 * multiplier, withDraft: 0 },
+    ],
+    automationOpportunities: {
+      noRuleMatched: 31 * multiplier,
+      failedActions: 2,
+      pendingActions: 1,
+    },
     ruleHits: [
       {
         ruleName: 'Archive receipts',

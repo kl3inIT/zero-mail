@@ -9,13 +9,10 @@ import {
   CreditCard,
   Inbox,
   ListChecks,
-  LogOut,
   MailQuestion,
   Settings,
   Sparkles,
 } from 'lucide-react';
-
-import ZMLogoMark from '@/features/landing/components/ZMLogoMark';
 
 import {
   Sidebar,
@@ -24,19 +21,16 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
   SidebarSeparator,
-  SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useToReplyCount } from '@/features/needs-reply/hooks/useToReplyCount';
 import { useHydrated } from '@/lib/use-hydrated';
-import { getApiUrl } from '@/lib/api/base-url';
 import { cn } from '@/lib/utils';
 
 type NavItem = {

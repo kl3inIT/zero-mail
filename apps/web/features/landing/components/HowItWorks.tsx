@@ -37,20 +37,20 @@ export default async function HowItWorks() {
             <h3>{t('how.step1.title')}</h3>
             <p>{t('how.step1.desc')}</p>
             <div className="zm-how-visual">
-              <div className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--bg)] p-4">
+              <div className="flex items-center gap-3 rounded-xl border border-(--line) bg-(--bg) p-4">
                 <span className="zm-brand-mark">
                   <ZMLogoMark size={14} />
                 </span>
                 <span className="h-px flex-1 bg-[repeating-linear-gradient(90deg,var(--accent),var(--accent)_4px,transparent_4px,transparent_8px)]" />
-                <span className="grid size-8 place-items-center rounded-lg border border-[var(--line)] bg-white text-xs font-semibold text-[#555]">
+                <span className="grid size-8 place-items-center rounded-lg border border-(--line) bg-white text-xs font-semibold text-[#555]">
                   M
                 </span>
               </div>
-              <div className="mt-3 flex items-center gap-2 font-mono text-[12px] text-[var(--green)]">
+              <div className="mt-3 flex items-center gap-2 font-mono text-[12px] text-(--green)">
                 <CheckIcon size={13} strokeWidth={3} />
                 <span>{t('how.step1.connected')}</span>
               </div>
-              <div className="mt-1.5 flex items-center gap-1.5 font-mono text-[11px] text-[var(--text-faint)]">
+              <div className="mt-1.5 flex items-center gap-1.5 font-mono text-[11px] text-(--text-faint)">
                 <ShieldIcon size={11} />
                 <span>{t('how.step1.scope')}</span>
               </div>
@@ -74,10 +74,10 @@ export default async function HowItWorks() {
             <h3>{t('how.step2.title')}</h3>
             <p>{t('how.step2.desc')}</p>
             <div className="zm-how-visual">
-              <div className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--bg)] p-3 font-mono text-[12.5px] text-[var(--text)]">
-                <SparklesIcon size={13} className="shrink-0 text-[var(--accent)]" />
+              <div className="flex items-center gap-2 rounded-xl border border-(--line) bg-(--bg) p-3 font-mono text-[12.5px] text-(--text)">
+                <SparklesIcon size={13} className="shrink-0 text-(--accent)" />
                 <span className="min-w-0 truncate">{t('how.step2.example')}</span>
-                <span className="h-4 w-px shrink-0 animate-pulse bg-[var(--ink)]" />
+                <span className="h-4 w-px shrink-0 animate-pulse bg-(--ink)" />
               </div>
               <div className="mt-3 flex flex-wrap gap-1.5">
                 <span className="zm-pill zm-pill-mono pill-accent">{t('action.archive')}</span>
@@ -85,7 +85,7 @@ export default async function HowItWorks() {
                 <span className="zm-pill zm-pill-mono">{t('feat.tester.r1')}</span>
                 <span className="zm-pill zm-pill-mono">amount &lt; $500</span>
               </div>
-              <div className="mt-3 flex items-center gap-1.5 font-mono text-[11.5px] text-[var(--green)]">
+              <div className="mt-3 flex items-center gap-1.5 font-mono text-[11.5px] text-(--green)">
                 <CheckIcon size={12} strokeWidth={2.5} />
                 {t('how.step2.parsed')}
               </div>
@@ -122,7 +122,7 @@ export default async function HowItWorks() {
                   <span className="zm-audit-time">9:14a</span>
                   <span>·</span>
                   <span>
-                    <span className="zm-audit-action text-[var(--accent)]">
+                    <span className="zm-audit-action text-(--accent)">
                       {t('how.audit.labeled')}
                     </span>{' '}
                     {t('how.audit.r2')}
@@ -132,9 +132,7 @@ export default async function HowItWorks() {
                   <span className="zm-audit-time">9:13a</span>
                   <span>·</span>
                   <span>
-                    <span className="zm-audit-action text-[var(--blue)]">
-                      {t('how.audit.drafted')}
-                    </span>{' '}
+                    <span className="zm-audit-action text-(--blue)">{t('how.audit.drafted')}</span>{' '}
                     {t('how.audit.r3')}
                   </span>
                 </div>
@@ -142,7 +140,7 @@ export default async function HowItWorks() {
                   <span className="zm-audit-time">9:13a</span>
                   <span>·</span>
                   <span>
-                    <span className="zm-audit-action text-[var(--text-faint)]">
+                    <span className="zm-audit-action text-(--text-faint)">
                       {t('how.audit.skipped')}
                     </span>{' '}
                     {t('how.audit.r4')}
