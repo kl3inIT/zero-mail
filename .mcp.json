@@ -21,7 +21,7 @@
         "--access-mode=unrestricted"
       ],
       "env": {
-        "DATABASE_URI": "postgresql://zeromail:zeromail@host.docker.internal:5432/zeromail"
+        "DATABASE_URI": "postgresql://zeromail:zeromail@host.docker.internal:15432/zeromail"
       }
     }
   }
