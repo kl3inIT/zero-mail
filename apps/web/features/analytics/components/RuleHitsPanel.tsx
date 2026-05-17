@@ -110,8 +110,9 @@ function RuleTrustRow({ ruleHit }: { ruleHit: RuleHitResponse }) {
   const reverted = safeCount(ruleHit.reverted);
   const precision = rulePrecision(ruleHit);
   const revertedRatio = percentOf(reverted, decisions);
-  const appliedWidth = `${Math.max(6, Math.round(precision * 100))}%`;
-  const revertedWidth = `${Math.round(revertedRatio * 100)}%`;
+  const trustedRatio = Math.max(0, precision - revertedRatio);
+  const appliedWidth = trustedRatio > 0 ? `${Math.max(6, Math.round(trustedRatio * 100))}%` : '0%';
+  const revertedWidth = revertedRatio > 0 ? `${Math.round(revertedRatio * 100)}%` : '0%';
 
   return (
     <div

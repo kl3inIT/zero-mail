@@ -74,7 +74,7 @@
       "revertedLegend": "Reverted",
       "title": "Where to tune rules and follow-up",
       "tuningSummary": "Needs review",
-      "withDraft": "{count} draft"
+      "withDraft": "{count, plural, one {# draft} other {# drafts}}"
     },
     "metadataLoad": {
       "appliedLegend": "Handled",
@@ -666,6 +666,12 @@
       "accent": "the send button.",
       "line1": "Inbox zero,",
       "line2": "without handing AI"
+    },
+    "metrics": {
+      "autoSendsEver": "auto-sends ever",
+      "emailsProcessed": "emails processed",
+      "triageAccuracy": "triage accuracy",
+      "triagePerEmail": "triage per email"
     },
     "peek": {
       "eyebrow": "Next · How it works",

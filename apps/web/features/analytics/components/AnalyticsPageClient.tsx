@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
 import { AnalyticsSkeleton } from '@/features/analytics/components/AnalyticsSkeleton';
+import { InboxFlowPanel } from '@/features/analytics/components/InboxFlowPanel';
 import { MetadataControlPanel } from '@/features/analytics/components/MetadataControlPanel';
 import { MetadataLoadPanel } from '@/features/analytics/components/MetadataLoadPanel';
 import { normalizeAnalyticsWindow, WindowChips } from '@/features/analytics/components/WindowChips';
@@ -70,6 +71,12 @@ export function AnalyticsPageClient() {
           applied={summaryQuery.data.volumeApplied}
           window={selectedWindow}
           className="xl:col-span-5"
+        />
+        <InboxFlowPanel
+          observed={summaryQuery.data.volumeObserved}
+          applied={summaryQuery.data.volumeApplied}
+          ruleHits={summaryQuery.data.ruleHits}
+          className="xl:col-span-12"
         />
         <TopSendersPanel
           senders={summaryQuery.data.topSenders}

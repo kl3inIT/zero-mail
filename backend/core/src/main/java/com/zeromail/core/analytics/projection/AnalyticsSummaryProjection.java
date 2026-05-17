@@ -1,6 +1,7 @@
 package com.zeromail.core.analytics.projection;
 
 import java.util.List;
+import java.util.Objects;
 
 public record AnalyticsSummaryProjection(
         long volumeObserved,
@@ -43,5 +44,8 @@ public record AnalyticsSummaryProjection(
         domainLoad = List.copyOf(domainLoad);
         categoryLoad = List.copyOf(categoryLoad);
         replyBuckets = List.copyOf(replyBuckets);
+        automationOpportunities =
+                Objects.requireNonNull(
+                        automationOpportunities, "automationOpportunities must not be null");
     }
 }

@@ -92,28 +92,28 @@ export default async function Hero() {
           <div className="flex flex-col items-center gap-1">
             <span className="text-2xl font-semibold text-(--ink)">2,847</span>
             <span className="text-xs font-medium tracking-wider text-(--text-muted) uppercase">
-              emails processed
+              {t('landing.metrics.emailsProcessed')}
             </span>
           </div>
           <div className="hidden h-8 w-px bg-(--line) md:block" />
           <div className="flex flex-col items-center gap-1">
             <span className="text-2xl font-semibold text-(--ink)">94%</span>
             <span className="text-xs font-medium tracking-wider text-(--text-muted) uppercase">
-              triage accuracy
+              {t('landing.metrics.triageAccuracy')}
             </span>
           </div>
           <div className="hidden h-8 w-px bg-(--line) md:block" />
           <div className="flex flex-col items-center gap-1">
             <span className="text-2xl font-semibold text-(--ink)">0</span>
             <span className="text-xs font-medium tracking-wider text-(--text-muted) uppercase">
-              auto-sends ever
+              {t('landing.metrics.autoSendsEver')}
             </span>
           </div>
           <div className="hidden h-8 w-px bg-(--line) md:block" />
           <div className="flex flex-col items-center gap-1">
             <span className="text-2xl font-semibold text-(--ink)">&#60;2s</span>
             <span className="text-xs font-medium tracking-wider text-(--text-muted) uppercase">
-              triage per email
+              {t('landing.metrics.triagePerEmail')}
             </span>
           </div>
         </div>

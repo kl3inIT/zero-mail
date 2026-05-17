@@ -271,7 +271,8 @@ function CategoryDistributionBar({
   return (
     <div className="bg-muted/30 ring-foreground/10 flex h-12 overflow-hidden rounded-lg ring-1">
       {categories.map((category) => {
-        const width = `${Math.max(4, Math.round(category.share * 100))}%`;
+        const width =
+          category.count > 0 ? `${Math.max(4, Math.round(category.share * 100))}%` : '0%';
 
         return (
           <div

@@ -1,6 +1,4 @@
 export default function Pricing() {
-  const isAnnual = true;
-
   return (
     <section className="zm-section bg-(--bg)" id="pricing">
       <div className="zm-container">
@@ -12,22 +10,9 @@ export default function Pricing() {
             Không có phí ẩn. Hủy bất cứ lúc nào.
           </p>
 
-          <div className="inline-flex items-center rounded-full border border-(--line-strong) bg-(--bg-elevated) p-1 shadow-sm">
-            <button
-              type="button"
-              aria-pressed="true"
-              className="rounded-full bg-(--ink) px-6 py-2 text-sm font-semibold text-(--bg)"
-            >
-              Hàng năm
-            </button>
-            <button
-              type="button"
-              aria-pressed="false"
-              className="rounded-full px-6 py-2 text-sm font-semibold text-(--text-muted)"
-            >
-              Hàng tháng
-            </button>
-          </div>
+          <p className="inline-flex items-center rounded-full border border-(--line-strong) bg-(--bg-elevated) px-5 py-2 text-sm font-semibold text-(--text-muted) shadow-sm">
+            Giá theo năm, dùng thử miễn phí 7 ngày
+          </p>
         </div>
 
         <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 md:grid-cols-3">
@@ -43,9 +28,7 @@ export default function Pricing() {
               Dành cho cá nhân, doanh nhân muốn lấy lại thời gian của mình.
             </p>
             <div className="mt-4 mb-8">
-              <span className="text-5xl font-extrabold tracking-tight text-(--ink)">
-                ${isAnnual ? '18' : '20'}
-              </span>
+              <span className="text-5xl font-extrabold tracking-tight text-(--ink)">$18</span>
               <span className="text-sm text-(--text-muted)"> /người /tháng</span>
             </div>
             <a
@@ -174,9 +157,7 @@ export default function Pricing() {
               Dành cho người dùng chuyên sâu cần các tiện ích tích hợp hệ thống.
             </p>
             <div className="mt-4 mb-8">
-              <span className="text-5xl font-extrabold tracking-tight text-(--ink)">
-                ${isAnnual ? '28' : '35'}
-              </span>
+              <span className="text-5xl font-extrabold tracking-tight text-(--ink)">$28</span>
               <span className="text-sm text-(--text-muted)"> /người /tháng</span>
             </div>
             <a
@@ -286,9 +267,7 @@ export default function Pricing() {
               Dành cho đội ngũ và doanh nghiệp xử lý lượng lớn email.
             </p>
             <div className="mt-4 mb-8">
-              <span className="text-5xl font-extrabold tracking-tight text-(--ink)">
-                ${isAnnual ? '42' : '50'}
-              </span>
+              <span className="text-5xl font-extrabold tracking-tight text-(--ink)">$42</span>
               <span className="text-sm text-(--text-muted)"> /người /tháng</span>
             </div>
             <a

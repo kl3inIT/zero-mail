@@ -667,6 +667,12 @@
       "line1": "Hộp thư gọn sạch,",
       "line2": "không giao AI"
     },
+    "metrics": {
+      "autoSendsEver": "không tự gửi",
+      "emailsProcessed": "email đã xử lý",
+      "triageAccuracy": "độ chính xác",
+      "triagePerEmail": "xử lý mỗi email"
+    },
     "peek": {
       "eyebrow": "Tiếp theo · Cách hoạt động",
       "link": "Đọc walkthrough",

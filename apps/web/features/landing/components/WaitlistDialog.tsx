@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { CheckCircle2Icon, Loader2Icon, LockIcon, SparklesIcon, XIcon } from 'lucide-react';
 
 type WaitlistDialogCopy = {
@@ -25,6 +25,19 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const closeTimeoutRef = useRef<number | null>(null);
+  const submitTimeoutRef = useRef<number | null>(null);
+
+  const clearDialogTimeouts = useCallback(() => {
+    if (closeTimeoutRef.current !== null) {
+      window.clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    if (submitTimeoutRef.current !== null) {
+      window.clearTimeout(submitTimeoutRef.current);
+      submitTimeoutRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     const syncFromHash = () => {
@@ -52,8 +65,9 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
       document.removeEventListener('click', openFromWaitlistLink);
       window.removeEventListener('hashchange', syncFromHash);
       window.removeEventListener('popstate', syncFromHash);
+      clearDialogTimeouts();
     };
-  }, []);
+  }, [clearDialogTimeouts]);
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : '';
@@ -65,10 +79,12 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
   function closeDialog() {
     setIsOpen(false);
     clearWaitlistHash();
-    window.setTimeout(() => {
+    clearDialogTimeouts();
+    closeTimeoutRef.current = window.setTimeout(() => {
       setEmail('');
       setIsSuccess(false);
       setIsSubmitting(false);
+      closeTimeoutRef.current = null;
     }, 150);
   }
 
@@ -77,9 +93,13 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
     if (!email || isSubmitting) return;
 
     setIsSubmitting(true);
-    window.setTimeout(() => {
+    if (submitTimeoutRef.current !== null) {
+      window.clearTimeout(submitTimeoutRef.current);
+    }
+    submitTimeoutRef.current = window.setTimeout(() => {
       setIsSubmitting(false);
       setIsSuccess(true);
+      submitTimeoutRef.current = null;
     }, 350);
   }
 

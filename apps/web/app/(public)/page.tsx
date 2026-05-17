@@ -19,7 +19,7 @@ export default async function LandingPage() {
       <FAQ />
       <WaitlistDialog
         copy={{
-          title: 'Đăng ký trải nghiệm Zero Mail',
+          title: t('title.a'),
           description: t('desc'),
           emailPlaceholder: t('emailPlaceholder'),
           button: t('button'),

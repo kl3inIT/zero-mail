@@ -26,6 +26,7 @@ for (const viewport of [
     await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible();
     await expect(page.getByTestId('analytics-volume-panel')).toBeVisible();
     await expect(page.getByTestId('analytics-time-saved-panel')).toBeVisible();
+    await expect(page.getByTestId('analytics-inbox-flow-panel')).toBeVisible();
     await expect(page.getByTestId('analytics-top-senders-panel')).toBeVisible();
     await expect(page.getByTestId('analytics-metadata-load-panel')).toBeVisible();
     await expect(page.getByTestId('analytics-metadata-control-panel')).toBeVisible();

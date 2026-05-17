@@ -321,7 +321,7 @@ export const analyticsMessages = {
   },
   'analytics.metadataControl.withDraft': {
     vi: '{count} bản nháp',
-    en: '{count} draft',
+    en: '{count, plural, one {# draft} other {# drafts}}',
   },
   'analytics.metadataControl.noDraft': {
     vi: 'Chưa có bản nháp',

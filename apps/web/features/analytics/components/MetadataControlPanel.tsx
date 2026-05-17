@@ -58,9 +58,9 @@ export function MetadataControlPanel({
       total: applied + reverted + failed,
     };
   });
-  const totalApplied = actionPoints.reduce((sum, action) => sum + action.applied, 0);
-  const totalReverted = actionPoints.reduce((sum, action) => sum + action.reverted, 0);
-  const totalFailed = actionPoints.reduce((sum, action) => sum + action.failed, 0);
+  const totalApplied = actionMix.reduce((sum, action) => sum + safeCount(action.applied), 0);
+  const totalReverted = actionMix.reduce((sum, action) => sum + safeCount(action.reverted), 0);
+  const totalFailed = actionMix.reduce((sum, action) => sum + safeCount(action.failed), 0);
   const replyTotal = replyBucketTotal(replyBuckets);
   const draftTotal = replyBuckets.reduce((sum, bucket) => sum + safeCount(bucket.withDraft), 0);
   const noRuleMatched = safeCount(automationOpportunities?.noRuleMatched);
@@ -378,7 +378,7 @@ function ReplyBucketRow({ bucket, total }: { bucket: ReplyBucketResponse; total:
   const t = useTranslations();
   const count = safeCount(bucket.count);
   const withDraft = safeCount(bucket.withDraft);
-  const width = `${Math.max(6, Math.round(percentOf(count, total) * 100))}%`;
+  const width = count > 0 ? `${Math.max(6, Math.round(percentOf(count, total) * 100))}%` : '0%';
 
   return (
     <div className="bg-background ring-foreground/10 rounded-lg px-3 py-2.5 ring-1">
@@ -394,7 +394,7 @@ function ReplyBucketRow({ bucket, total }: { bucket: ReplyBucketResponse; total:
       <p className="text-muted-foreground mt-2 truncate text-xs">
         {withDraft > 0
           ? t('analytics.metadataControl.withDraft', {
-              count: formatCompactCount(withDraft),
+              count: withDraft,
             })
           : t('analytics.metadataControl.noDraft')}
       </p>
@@ -438,7 +438,7 @@ function OpportunityRow({
   tone: 'info' | 'danger' | 'warning';
 }) {
   const ratio = percentOf(value, total);
-  const width = `${Math.max(6, Math.round(ratio * 100))}%`;
+  const width = value > 0 ? `${Math.max(6, Math.round(ratio * 100))}%` : '0%';
   const color =
     tone === 'info' ? 'var(--chart-2)' : tone === 'danger' ? 'var(--red)' : 'var(--amber)';
 
