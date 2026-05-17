@@ -81,12 +81,12 @@ describe('NeedsReplyTable', () => {
 
     const row = screen.getByTestId('needs-reply-row');
     expect(within(row).getByRole('button', { name: 'Regenerate draft' })).toBeInTheDocument();
-    expect(within(row).getByRole('link', { name: 'Open in Gmail' })).toHaveAttribute(
+    expect(within(row).getByRole('link', { name: /Open in Gmail/ })).toHaveAttribute(
       'href',
       'https://mail.google.com/mail/u/0/#all/thread-1',
     );
-    expect(within(row).getByText('Draft ready')).toBeInTheDocument();
-    expect(within(row).getByRole('button', { name: 'Mark resolved' })).toBeInTheDocument();
+    expect(within(row).getByText('AI drafted')).toBeInTheDocument();
+    expect(within(row).getByRole('button', { name: /Mark resolved/ })).toBeInTheDocument();
   });
 
   it('keeps 320px layout actions stable with icon-only row controls', () => {

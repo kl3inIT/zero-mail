@@ -8,7 +8,6 @@ import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { NeedsReplyRow } from '@/features/needs-reply/components/NeedsReplyRow';
 import { NeedsReplyTabs } from '@/features/needs-reply/components/NeedsReplyTabs';
 import type {
@@ -21,6 +20,7 @@ type NeedsReplyTableProps = {
   rows: NeedsReplyRowModel[];
   toReplyCount: number;
   awaitingCount?: number;
+  draftedCount?: number;
   isLoading?: boolean;
   isClassifying?: boolean;
   error?: unknown;
@@ -36,6 +36,7 @@ export function NeedsReplyTable({
   rows,
   toReplyCount,
   awaitingCount = activeBucket === 'awaiting-their-reply' ? rows.length : 0,
+  draftedCount = activeBucket === 'drafted' ? rows.length : 0,
   isLoading = false,
   isClassifying = false,
   error,
@@ -53,6 +54,7 @@ export function NeedsReplyTable({
         activeBucket={activeBucket}
         toReplyCount={toReplyCount}
         awaitingCount={awaitingCount}
+        draftedCount={draftedCount}
         onBucketChange={onBucketChange}
       />
 
@@ -79,32 +81,9 @@ export function NeedsReplyTable({
         <NeedsReplyEmptyState activeBucket={activeBucket} />
       ) : (
         <>
-          <div className="bg-card hidden rounded-lg border md:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('needsReply.columns.subject')}</TableHead>
-                  <TableHead>{t('needsReply.columns.otherParty')}</TableHead>
-                  <TableHead>{t('needsReply.columns.lastActivity')}</TableHead>
-                  <TableHead>{t('needsReply.columns.draft')}</TableHead>
-                  <TableHead className="text-right">{t('needsReply.columns.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => (
-                  <NeedsReplyRow key={row.gmailThreadId} row={row} activeBucket={activeBucket} />
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          <div className="grid gap-3 md:hidden">
+          <div className="grid gap-2">
             {rows.map((row) => (
-              <NeedsReplyRow
-                key={row.gmailThreadId}
-                row={row}
-                activeBucket={activeBucket}
-                variant="mobile"
-              />
+              <NeedsReplyRow key={row.gmailThreadId} row={row} activeBucket={activeBucket} />
             ))}
           </div>
           {hasNextPage ? (
@@ -127,18 +106,21 @@ export function NeedsReplyTable({
 
 function NeedsReplySkeletonRows() {
   return (
-    <div className="space-y-2" aria-busy="true">
-      {Array.from({ length: 6 }).map((_, index) => (
+    <div className="grid gap-2" aria-busy="true">
+      {Array.from({ length: 5 }).map((_, index) => (
         <div
           key={index}
-          className="bg-card grid grid-cols-[1fr_auto] gap-3 rounded-lg border p-3 md:grid-cols-[2fr_1fr_8rem_7rem_12rem]"
+          className="bg-card flex gap-3 rounded-lg border p-4"
           data-testid="needs-reply-skeleton-row"
         >
-          <Skeleton className="h-4 w-4/5" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="hidden h-4 w-16 md:block" />
-          <Skeleton className="hidden h-5 w-20 md:block" />
-          <Skeleton className="hidden h-7 w-36 justify-self-end md:block" />
+          <Skeleton className="h-auto w-[3px] shrink-0 rounded-full" />
+          <Skeleton className="size-9 shrink-0 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-1/3" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-7 w-48" />
+          </div>
         </div>
       ))}
     </div>
@@ -147,21 +129,32 @@ function NeedsReplySkeletonRows() {
 
 function NeedsReplyEmptyState({ activeBucket }: { activeBucket: NeedsReplyBucket }) {
   const t = useTranslations();
-  const toReply = activeBucket === 'to-reply';
+  const heading =
+    activeBucket === 'to-reply'
+      ? t('needsReply.empty.toReply.title')
+      : activeBucket === 'awaiting-their-reply'
+        ? t('needsReply.empty.awaiting.title')
+        : t('needsReply.empty.drafted.title');
+  const body =
+    activeBucket === 'to-reply'
+      ? t('needsReply.empty.toReply.body')
+      : activeBucket === 'awaiting-their-reply'
+        ? t('needsReply.empty.awaiting.body')
+        : t('needsReply.empty.drafted.body');
 
   return (
     <EmptyState
       heading={
         <span className="inline-flex items-center gap-2">
-          {toReply ? t('needsReply.empty.toReply.title') : t('needsReply.empty.awaiting.title')}
-          {toReply ? (
+          {heading}
+          {activeBucket === 'to-reply' ? (
             <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700">
               ✓
             </Badge>
           ) : null}
         </span>
       }
-      body={toReply ? t('needsReply.empty.toReply.body') : t('needsReply.empty.awaiting.body')}
+      body={body}
     />
   );
 }

@@ -721,6 +721,10 @@
         "body": "Không có luồng nào đang chờ phía bên kia trả lời.",
         "title": "Không có gì đang chờ"
       },
+      "drafted": {
+        "body": "Chưa có rule nào tạo nháp tự động, hoặc bạn chưa nhấn \"Soạn nháp\" cho thread nào.",
+        "title": "Chưa có nháp nào"
+      },
       "resolved": {
         "body": "Chưa có luồng nào được xử lý."
       },
@@ -738,6 +742,13 @@
       "description": "Các luồng email đang chờ phản hồi — từ bạn hoặc từ họ. Xem lại và gửi bản nháp trong Gmail.",
       "title": "Cần trả lời"
     },
+    "row": {
+      "ageDays": "Đợi {count} ngày",
+      "ageHours": "Đợi {count} giờ",
+      "ageMinutes": "Vừa nhận",
+      "draftSent": "Đã gửi",
+      "draftWritten": "AI đã viết nháp"
+    },
     "status": {
       "draftReady": "Có nháp",
       "draftSent": "Đã gửi nháp",
@@ -745,6 +756,7 @@
     },
     "tabs": {
       "awaitingReply": "Đang chờ trả lời",
+      "drafted": "Đã sinh nháp",
       "label": "Hộp thư cần trả lời",
       "resolved": "Đã xử lý",
       "toReply": "Cần trả lời"

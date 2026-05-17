@@ -721,6 +721,10 @@
         "body": "No threads are waiting on the other party.",
         "title": "Nothing awaiting"
       },
+      "drafted": {
+        "body": "No rules have generated drafts yet, and you have not manually drafted any thread.",
+        "title": "No drafts yet"
+      },
       "resolved": {
         "body": "No resolved threads yet."
       },
@@ -738,6 +742,13 @@
       "description": "Threads waiting on a reply — yours or theirs. Review and send drafts in Gmail.",
       "title": "Needs reply"
     },
+    "row": {
+      "ageDays": "Waiting {count}d",
+      "ageHours": "Waiting {count}h",
+      "ageMinutes": "Just now",
+      "draftSent": "Sent",
+      "draftWritten": "AI drafted"
+    },
     "status": {
       "draftReady": "Draft ready",
       "draftSent": "Draft sent",
@@ -745,6 +756,7 @@
     },
     "tabs": {
       "awaitingReply": "Awaiting reply",
+      "drafted": "Drafted",
       "label": "Needs-reply buckets",
       "resolved": "Resolved",
       "toReply": "To reply"

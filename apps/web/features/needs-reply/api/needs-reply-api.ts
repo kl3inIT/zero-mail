@@ -8,8 +8,17 @@ export type NeedsReplyListResponse = components['schemas']['NeedsReplyListRespon
 export type ThreadDraftResponse = components['schemas']['ThreadDraftResponse'];
 export type ToReplyCountResponse = components['schemas']['ToReplyCountResponse'];
 
-export type NeedsReplyBucket = 'to-reply' | 'awaiting-their-reply';
+export type ServerBucket = 'to-reply' | 'awaiting-their-reply';
+export type NeedsReplyBucket = ServerBucket | 'drafted';
 export type DraftStatus = 'NO_DRAFT' | 'DRAFT_READY' | 'DRAFT_SENT';
+
+/**
+ * Map a UI bucket to the bucket the backend understands. The synthetic 'drafted' bucket is a
+ * client-side filter over the to-reply server bucket — backend has no concept of it.
+ */
+export function toServerBucket(bucket: NeedsReplyBucket): ServerBucket {
+  return bucket === 'drafted' ? 'to-reply' : bucket;
+}
 
 export type NeedsReplyRow = {
   gmailThreadId: string;
@@ -120,7 +129,7 @@ export async function getNeedsReplyInbox({
   const result = await api.GET('/api/threads', {
     params: {
       query: {
-        bucket,
+        bucket: toServerBucket(bucket),
         cursor: cursor ?? undefined,
         limit,
         resolved,
@@ -132,7 +141,12 @@ export async function getNeedsReplyInbox({
     throwApiError(result, `/api/threads failed: ${result.response.status}`);
   }
 
-  return normalizePage(result.data);
+  const page = normalizePage(result.data);
+  // Synthetic 'drafted' bucket: server returns to-reply rows; we keep only those with a draft.
+  if (bucket === 'drafted') {
+    return { ...page, items: page.items.filter((row) => row.draftStatus !== 'NO_DRAFT') };
+  }
+  return page;
 }
 
 export async function getToReplyCount(): Promise<number> {

@@ -11,6 +11,7 @@ type NeedsReplyTabsProps = {
   activeBucket: NeedsReplyBucket;
   toReplyCount: number;
   awaitingCount?: number;
+  draftedCount?: number;
   onBucketChange?: (bucket: NeedsReplyBucket) => void;
 };
 
@@ -18,6 +19,7 @@ export function NeedsReplyTabs({
   activeBucket,
   toReplyCount,
   awaitingCount = 0,
+  draftedCount = 0,
   onBucketChange,
 }: NeedsReplyTabsProps) {
   const t = useTranslations();
@@ -41,6 +43,11 @@ export function NeedsReplyTabs({
             value="awaiting-their-reply"
             label={t('needsReply.tabs.awaitingReply')}
             count={awaitingCount}
+          />
+          <NeedsReplyTabsTrigger
+            value="drafted"
+            label={t('needsReply.tabs.drafted')}
+            count={draftedCount}
           />
         </TabsList>
       </div>
@@ -76,5 +83,7 @@ function NeedsReplyTabsTrigger({
 }
 
 function normalizeBucket(value: string): NeedsReplyBucket {
-  return value === 'awaiting-their-reply' ? 'awaiting-their-reply' : 'to-reply';
+  if (value === 'awaiting-their-reply') return 'awaiting-their-reply';
+  if (value === 'drafted') return 'drafted';
+  return 'to-reply';
 }
