@@ -60,7 +60,7 @@
 - [ ] **ARCH-03**: Confirmation state machine handles all three races (double-click, stale toolCallId, confirm-during-stream) — verified by per-race integration test + 5-min Redis lease + `UNIQUE (chat_id, tool_call_id)` on audit table for idempotent retries
 - [ ] **ARCH-04**: Every confirmed send produces exactly one `assistant_send_audit` row written in the same transaction as the state flip; reconciliation cron handles residuals from crashes
 - [ ] **ARCH-05**: Tenant isolation holds across the long-lived SSE connection + tool fan-out work; enforced by `TenantAwareReactorScheduler` + ArchUnit ban on `Schedulers.{boundedElastic,parallel,single}` inside `..chat..` + multi-tenant chat leak integration test
-- [ ] **ARCH-06**: Personalization (`personal_instructions`, `writing_style`) is sandboxed against prompt injection: XML-fenced injection slot in system prompt + length cap + sentinel stripping (`[SYSTEM]`, `</s>`, `### system`, `<|im_start|>`, markdown headers) + hostile-corpus eval before GA
+- [ ] **ARCH-06**: Personalization (`personal_instructions`, `writing_style`) is sandboxed against prompt injection: XML-fenced injection slot in system prompt + length cap + sentinel stripping (e.g., known prompt-injection markers and markdown headers) + hostile-corpus eval before GA
 - [ ] **ARCH-07**: Spring AI 2.0.0-M6 streaming + tool-call confirmation works end-to-end despite known bugs `spring-ai#3366`/`#5167` via Zero Mail-owned `ChatToolCallRegistry` + `ZeroMailChatMemory` adapter reading from `chat_message.parts` directly
 
 ---
@@ -125,18 +125,54 @@ Explicit exclusions for v1.1. Each row carries the reason so we don't silently r
 
 ## Traceability
 
-Phase-to-requirement mapping populated by the roadmapper.
+Phase-to-requirement mapping (populated by roadmapper on 2026-05-17 during v1.1 roadmap creation).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (filled by gsd-roadmapper) | | |
+| CHAT-01 | Phase 7 | Pending |
+| CHAT-02 | Phase 7 | Pending |
+| CHAT-03 | Phase 7 | Pending |
+| CHAT-04 | Phase 7 | Pending |
+| CHAT-05 | Phase 7 | Pending |
+| CHAT-06 | Phase 7 | Pending |
+| CHAT-07 | Phase 7 | Pending |
+| CHAT-08 | Phase 7 | Pending |
+| ARCH-01 | Phase 7 | Pending |
+| ARCH-02 | Phase 7 | Pending |
+| ARCH-03 | Phase 7 | Pending |
+| ARCH-04 | Phase 7 | Pending |
+| ARCH-05 | Phase 7 | Pending |
+| ARCH-06 | Phase 7 | Pending |
+| ARCH-07 | Phase 7 | Pending |
+| SET-SAFE-05 | Phase 7 | Pending |
+| SET-AI-01 | Phase 8 | Pending |
+| SET-AI-02 | Phase 8 | Pending |
+| SET-AI-03 | Phase 8 | Pending |
+| SET-AI-04 | Phase 8 | Pending |
+| SET-VOICE-01 | Phase 8 | Pending |
+| SET-VOICE-02 | Phase 8 | Pending |
+| SET-VOICE-03 | Phase 8 | Pending |
+| SET-VOICE-04 | Phase 8 | Pending |
+| SET-VOICE-05 | Phase 8 | Pending |
+| SET-VOICE-06 | Phase 8 | Pending |
+| SET-BEHV-01 | Phase 8 | Pending |
+| SET-BEHV-02 | Phase 8 | Pending |
+| SET-BEHV-03 | Phase 8 | Pending |
+| SET-BEHV-04 | Phase 8 | Pending |
+| SET-BEHV-05 | Phase 8 | Pending |
+| SET-SAFE-01 | Phase 8 | Pending |
+| SET-SAFE-02 | Phase 8 | Pending |
+| SET-SAFE-03 | Phase 8 | Pending |
+| SET-SAFE-04 | Phase 8 | Pending |
 
 **Coverage:**
-- v1.1 requirements: 27 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 27 ⚠️ (will resolve after roadmap)
+- v1.1 requirements: 35 total (8 CHAT + 4 SET-AI + 6 SET-VOICE + 5 SET-BEHV + 5 SET-SAFE + 7 ARCH)
+- Mapped to phases: 35
+- Phase 7: 16 requirements (CHAT-01..08, ARCH-01..07, SET-SAFE-05)
+- Phase 8: 19 requirements (SET-AI-01..04, SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04)
+- Unmapped: 0
 
 ---
 
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-17 after milestone v1.1 definition*
+*Last updated: 2026-05-17 — roadmap created with 2-phase split (Phase 7 chat + Phase 8 settings/hardening/GA); all 35 requirements mapped*

@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Email assistant chat + Settings page
 status: planning
-last_updated: "2026-05-17T09:38:28.398Z"
+last_updated: "2026-05-17T10:15:00.000Z"
 last_activity: 2026-05-17
 progress:
-  total_phases: 0
+  total_phases: 2
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -24,10 +24,19 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 7 — Chat Email Assistant — pending discuss-phase
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-17 — Milestone v1.1 started
+Status: Roadmap created (2 phases, 35 requirements mapped); awaiting `/gsd:discuss-phase 7`
+Last activity: 2026-05-17 — v1.1 roadmap created with 2-phase split (Phase 7 chat + Phase 8 settings/hardening/GA)
+
+## Current Milestone Roadmap
+
+**v1.1 — Email assistant chat + Settings page** (2 phases, 35 requirements, both pending)
+
+- **Phase 7** — Chat Email Assistant (backend `core.chat` Modulith + send executor + ArchUnit flip 0→1 + frontend `/chat`) — 16 requirements (CHAT-01..08, ARCH-01..07, SET-SAFE-05)
+- **Phase 8** — Assistant Settings + Hardening + Eval + v1.1 GA (BYOK + personalization + behavior + safety-net UI + `aiEval` suite + Grafana + LAUNCH-GO-NOGO) — 19 requirements (SET-AI-01..04, SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04)
+
+See `.planning/ROADMAP.md` for full phase details + success criteria, and `.planning/REQUIREMENTS.md` Traceability section for full REQ-ID → phase mapping.
 
 ## Performance Metrics
 
