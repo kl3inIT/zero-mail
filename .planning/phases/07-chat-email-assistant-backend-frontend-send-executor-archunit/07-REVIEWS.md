@@ -1,10 +1,17 @@
 ---
 phase: 7
 slug: chat-email-assistant-backend-frontend-send-executor-archunit
-review_cycle: 1
-reviewers: codex, opencode
-status: HIGH concerns — replan required
-generated: 2026-05-18
+review_cycles:
+  - cycle: 1
+    reviewers: [codex, opencode]
+    status: HIGH concerns — replan required
+    generated: 2026-05-18
+    current_high: 7
+  - cycle: 2
+    reviewers: [codex, opencode]
+    status: HIGH concerns — replan required (text/schema contradictions)
+    generated: 2026-05-18
+    current_high: 3
 ---
 
 # Phase 7 — Cross-AI Plan Review (Cycle 1)
@@ -220,3 +227,169 @@ The replan should address **7 HIGH concerns + key MEDIUMs** as a single revision
 - **Crash-after-Gmail-send-before-audit** (Codex HIGH, OpenCode MEDIUM) — orphaned email or duplicate retry; needs pre-send audit row + Message-ID reconciliation
 - **Tool execution loop incomplete** (Codex) — read-tool outputs not fed back to model; multi-turn fails on any read tool
 - **Assistant text response not persisted** (Codex) — history replay + multi-turn context broken without it
+
+
+---
+---
+
+# Phase 7 — Cross-AI Plan Review (Cycle 2)
+
+> Re-review after cycle 1 → cycle 2 revision (commit `3bb2cc20`). Independent reviews from **Codex CLI** (`gpt-5-codex`) and **OpenCode CLI** (`deepseek-v4-flash-free`) of revised `07-PLAN-01.md` through `07-PLAN-06.md`.
+
+## Verdict
+
+**HIGH** — Another replan cycle needed. The design direction of all 7 cycle-1 HIGH fixes is correct and present in the right plans, but the revision left behind several load-bearing contradictions (stale catalog counts, schema-level CHECK constraint blocking failure recovery, residual CAS references on a removed column) that would cause execution to either satisfy the wrong target or hit DB-level failures on day one.
+
+| Reviewer | Verdict | HIGH count | MEDIUM count |
+|----------|---------|------------|--------------|
+| Codex | HIGH overall risk | 3 NEW + 5 PARTIALLY-RESOLVED carryovers | 2 |
+| OpenCode | LOW overall risk | 0 NEW, all 7 cycle-1 HIGHs FULLY RESOLVED | 0 |
+| **Synthesis** | **HIGH** | **3 NEW** (verified against plan text) | 2 |
+
+**Disagreement reconciliation:** Independent `grep` of the plan files confirms Codex's three NEW HIGH concerns are real and material. OpenCode classified them as cosmetic ("trivial text fixes during execution") and missed the audit CHECK constraint logic bug + the residual `chat_message.updated_at` CAS path in Plan 05. Side with Codex.
+
+---
+
+## Cycle-1 HIGH Resolution Audit
+
+| HIGH# | Codex | OpenCode | Synthesis | Evidence | Residual gap |
+|-------|-------|----------|-----------|----------|--------------|
+| HIGH-1 (CHAT-05 scope) | PARTIALLY | FULLY | **PARTIALLY** | Plan 03 §24-Tool Authoritative List restores `searchMemories`, `saveMemory`, `addToKnowledgeBase`, `updatePersonalInstructions`; Plan 02 ships tables; Plan 05 wires services; Plan 06 adds 9 body slots. | Stale "20-tool" / "13 tool" / "6 body slot" wording remains in Plan 03 line 259 (`ChatToolName.values().length == 20`), Plan 05 lines 133/153/291/305/306/555, Plan 06 lines 167/317/401/484/527/588. Folded into NEW-HIGH-A. |
+| HIGH-2 (`createRule` confirm-required) | PARTIALLY | FULLY | **PARTIALLY** | Plan 03 catalog entry #16 confirm-required; Plan 05 Task 5.2 wires it under ConfirmRequired; Plan 06 `create-rule-body.tsx`. | Plan 06 Task 6.6 (line 527) still says write-reversible tools include `createRule`. Trivial fix but contradicts Task 6.5. Folded into NEW-HIGH-A. |
+| HIGH-3 (body/privacy contradiction) | PARTIALLY | FULLY | **MOSTLY RESOLVED** | Plan 02 source-aware trigger + sanitizer; CLAUDE.md/AGENTS.md "Draft-body carve-out" (cf00f4bf); Plan 02 `ChatMessageBodyBanTriggerSourceAwareIT`. | Plan 04 Task 4.1 says "append sanitized result" without specifying whether the LLM-context channel and persistence channel see different body content. Sanitizer + DB trigger backstops mean privacy invariant holds either way, so this is MEDIUM (clarity), not HIGH. |
+| HIGH-4 (`chat_message.updated_at` missing) | PARTIALLY | FULLY | **PARTIALLY** | Plan 02 changelog 042 explicitly says "NO updated_at column per HIGH-4"; Plan 02 changelog 043 puts CAS on `assistant_pending_action.parts_updated_at`; Plan 05 line 518 says CAS lives on `assistant_pending_action.parts_updated_at` not `chat_message.updated_at`. | Plan 05 still has live references to the removed CAS: line 67 (`provides: "ARCH-03 — CAS on chat_message.parts.updated_at + 3-race protection"`), line 123 (T-07-24 mitigation), line 129 (T-07-30 mitigation), lines 188-189 (SQL: `UPDATE chat_message SET parts = jsonb_set(...), updated_at = now() WHERE id = ? AND chat_id = ? AND updated_at = ?`). This SQL will fail against the actual revised schema (no `updated_at` column on `chat_message`). NEW-HIGH-C. |
+| HIGH-5 (crash-after-send) | PARTIALLY | FULLY | **PARTIALLY** | Plan 02 changelog 044 adds `assistant_action_audit.state` (SEND_IN_FLIGHT/COMMITTED/FAILED) + `in_flight_at`; Plan 05 Task 5.3 INSERT SEND_IN_FLIGHT → Gmail send → UPDATE COMMITTED; Plan 04 Task 4.3 reconciler Sweep B queries Gmail by Message-ID. | Plan 02 line 282 CHECK constraint `(state = 'SEND_IN_FLIGHT') = (sent_at IS NULL)` is a biconditional. A FAILED row has `sent_at IS NULL` but `state != SEND_IN_FLIGHT`, so the equivalence is false and the CHECK rejects FAILED rows. Plan 05 Task 5.3 + Plan 04 Sweep B both write FAILED rows with `sent_at NULL`. NEW-HIGH-B. |
+| HIGH-6 (tool execution loop) | FULLY | FULLY | **FULLY RESOLVED** | Plan 04 Task 4.1 (lines 51, 210-213) explicit model → read tool → append result → model again loop; `ChatOrchestratorReadToolLoopIT` verifies model called 2×, result fed back, final answer streamed. | None. |
+| HIGH-7 (assistant text persistence) | FULLY | FULLY | **FULLY RESOLVED** | Plan 02 Task 2.2 adds `AssistantTextPart` to `Part` sealed hierarchy; Plan 04 Task 4.1 persists via `TransactionTemplate` callback bound to stream `onComplete`; `ChatOrchestratorAssistantTextPersistenceIT`. | None. |
+
+**Count:** 2 FULLY RESOLVED (HIGH-6, HIGH-7) + 4 PARTIALLY RESOLVED carryovers (HIGH-1, HIGH-2, HIGH-4, HIGH-5) + 1 MOSTLY RESOLVED (HIGH-3, downgraded to MEDIUM-clarity). Per the CYCLE_SUMMARY counting rules, PARTIALLY-RESOLVED HIGHs count as unresolved — but they are folded into the three NEW-HIGH buckets below to avoid double-counting.
+
+---
+
+## NEW HIGH Concerns (introduced or surfaced by cycle 2)
+
+### NEW-HIGH-A: Stale 20-tool / 6-slot / 13-tool directives across Plans 03/05/06
+
+**Severity:** HIGH — execution agents read `<done>` clauses and `<verify>` blocks as acceptance gates. A test that asserts `ChatToolName.values().length == 20` will fail against a 24-entry enum, and an executor that "wires exactly 3 tools per the 20-Tool Authoritative List" or "13 remaining tool wirings" may stop at the wrong count.
+
+**Evidence (verified by independent grep):**
+- `07-PLAN-03.md:259` — `<done>...Exactly 20 entries in ChatToolName enum — verified by ChatToolName.values().length == 20 assertion.</done>`
+- `07-PLAN-05.md:133` — objective: "remaining 13 tool wirings (7 write-reversible + 3 confirm-required + 3 confirmed-send — exactly per Plan 03's 20-Tool Authoritative List)"
+- `07-PLAN-05.md:153` — section header: "# 20-Tool Authoritative List (locked in Plan 03)"
+- `07-PLAN-05.md:291` — "wires exactly 3 tools per the 20-Tool Authoritative List"
+- `07-PLAN-05.md:305` — `<done>All 13 write-side tools wired into ChatToolCatalog; total tool count = exactly 20 (7+7+3+3)...</done>`
+- `07-PLAN-05.md:306` — `<deviation_handling>... Do NOT alter the 20-Tool Authoritative List ...</deviation_handling>`
+- `07-PLAN-05.md:555` — "Note the 20-tool catalog size assertion at boot"
+- `07-PLAN-06.md:167` — "1 generic `<PreviewCard>` + 6 body slots per D-13 (mapping 1:1 to the 6 user-confirmable tools)"
+- `07-PLAN-06.md:317` — "20-Tool Authoritative List in Plan 03"
+- `07-PLAN-06.md:401` — `<done>...The contract test asserts: 20 tools total; names verbatim; 7/7/3/3 partition; preview-card body-slot dispatcher covers exactly the 6 user-confirmable tools...</done>`
+- `07-PLAN-06.md:484` — `<done>...BODY_SLOT_MAP has exactly 6 keys matching the 6 user-confirmable tools.</done>`
+- `07-PLAN-06.md:527` — "for the 6 user-confirmable tools → render `<PreviewCard>` shell ... Write-reversible tool calls (`applyLabel`, `createRule`, etc.) render the bare `<Tool>` envelope" — also folds in cycle-1 HIGH-2 leftover (`createRule` still listed under write-reversible)
+- `07-PLAN-06.md:588` — "6 body slots: sendEmail/replyEmail/forwardEmail/deleteRule/removeSenderFromSafetyNet/bulkArchive" — missing `createRule`, `saveMemory`, `updatePersonalInstructions`
+
+**Fix:** scrub every "20"/"20-tool"/"6 body slot"/"6 user-confirmable"/"7+7+3+3"/"13 remaining tool" reference in Plans 03/05/06. Every `<done>`, `<verify>`, `<deviation_handling>`, objective, success-criterion line, contract-test assertion, and README contract must say **24 tools**, **16 Wave-4 tools**, **9 preview body slots**, and **8+7+6+3 partition**. Update Plan 06 line 527 + line 588 to list `createRule` among confirm-required tools and list all 9 body slots.
+
+### NEW-HIGH-B: `assistant_action_audit` CHECK constraint rejects FAILED rows
+
+**Severity:** HIGH — schema bug. Reconciler Sweep B and any FAILED-path write will violate the CHECK and roll back, defeating HIGH-5's recovery path.
+
+**Evidence (verified):**
+- `07-PLAN-02.md:282` — `CHECK constraint: state IN ('SEND_IN_FLIGHT', 'COMMITTED', 'FAILED') and (state = 'SEND_IN_FLIGHT') = (sent_at IS NULL).`
+- `07-PLAN-05.md` Task 5.3 and `07-PLAN-04.md` Sweep B both expect to write FAILED rows after a Gmail rejection or reconciliation miss. A FAILED row has `state = 'FAILED'` and `sent_at = NULL`. Evaluate the constraint: `(FAILED = SEND_IN_FLIGHT) = (NULL IS NULL)` → `false = true` → CHECK fails → row rejected.
+
+**Fix:** replace the biconditional with explicit per-state rules. Concretely:
+
+```sql
+CHECK (
+  (state = 'SEND_IN_FLIGHT' AND sent_at IS NULL) OR
+  (state = 'COMMITTED'      AND sent_at IS NOT NULL) OR
+  (state = 'FAILED'         AND sent_at IS NULL)
+)
+```
+
+Plan 02 Task 2.1 must be revised; `AssistantActionAuditSchemaIT` should assert that inserting a FAILED row with `sent_at NULL` succeeds and a COMMITTED row with `sent_at NULL` fails.
+
+### NEW-HIGH-C: Plan 05 still references removed `chat_message.parts.updated_at` CAS path
+
+**Severity:** HIGH — execution would land SQL that targets a column that no longer exists (`chat_message.updated_at` was removed by HIGH-4 fix). Tests would also be wrong.
+
+**Evidence (verified):**
+- `07-PLAN-05.md:67` — `provides: "ARCH-03 — CAS on chat_message.parts.updated_at + 3-race protection"`
+- `07-PLAN-05.md:123` — T-07-24 mitigation: "CAS on chat_message.parts.updated_at"
+- `07-PLAN-05.md:129` — T-07-30 mitigation: "CAS on `chat_message.parts.updated_at` fails → return 409 with `stale_tool_call` code"
+- `07-PLAN-05.md:188-189` — SQL: `UPDATE chat_message SET parts = jsonb_set(parts, '{parts,<index>,confirmationState}', '"processing"'::jsonb), updated_at = now() WHERE id = ? AND chat_id = ? AND updated_at = ?` — `chat_message.updated_at` is the removed column
+- Contradicts `07-PLAN-05.md:518` which correctly says "CAS lives on `assistant_pending_action.parts_updated_at` (HIGH-4) not `chat_message.updated_at`"
+
+**Fix:** rewrite Plan 05 Task 5.1 SQL to update `chat_message.parts` (append-only projection — no `updated_at`) and perform CAS against `assistant_pending_action.parts_updated_at` + `state` in a separate UPDATE on `assistant_pending_action`. Update mitigation cells in the threat table (lines 67, 123, 129) to reference `assistant_pending_action.parts_updated_at`. Reconcile with line 518 wording.
+
+---
+
+## MEDIUM Concerns (cycle 2 only)
+
+### MEDIUM-1: Dual-channel read-tool body handling not explicit (Codex)
+
+Plan 04 Task 4.1 says the orchestrator appends "sanitized result" to the model conversation after a read tool runs. It does not explicitly distinguish:
+
+- The **LLM-context payload** (what the model sees for the next-turn prompt) — may contain in-memory body for prompt-hardening + 4k truncation
+- The **persistence payload** (what lands in `chat_message.parts` as a `ToolOutputPart`) — must NOT contain body for `tool-getMessage` / `tool-searchInbox` / `tool-getThread`
+
+The Plan 02 sanitizer + DB trigger guarantee the persistence invariant regardless of orchestrator wording, so this is a clarity gap, not a privacy hole. **Fix:** Plan 04 should declare a `ChatReadToolResult(llmResultJson, persistedResultJson)` record and note that `llmResultJson` is in-memory only.
+
+### MEDIUM-2: Message-ID format leaks tenant correlation potential (Codex echoes cycle-1 LOW-6)
+
+`07-PLAN-05.md` uses Message-ID of the form `<chat-{tenantId}-{uuid}@zero-mail.local>` (or `.invalid`). The Message-ID is sent as an outgoing email header, so any party who can read the recipient's mail server logs can correlate tenant IDs across messages. Cycle-1 LOW-6 raised the log-line concern; the on-the-wire concern is stronger. **Fix:** use an opaque UUID-only Message-ID (`<{uuid}@zero-mail.invalid>`); maintain the mapping in `assistant_action_audit.gmail_message_id` so reconciliation still works without leaking tenant ID.
+
+---
+
+## Wave Structure Soundness
+
+Catalog grew from 20 → 24 tools (+1 read in Wave 2, +3 confirm-required in Wave 4); preview body slots grew 6 → 9 (Wave 5). Conceptually the wave boundaries still hold:
+
+| Dimension | Cycle 1 | Cycle 2 | Wave impact |
+|-----------|---------|---------|-------------|
+| Read tools (Wave 2) | 7 | 8 | +1 small handler (`searchMemories`), table already in 046, no schema delta |
+| Wave 4 write-side | 13 | 16 | +3 — `saveMemory`, `updatePersonalInstructions`, `addToKnowledgeBase` are thin service-call handlers |
+| Wave 5 body slots | 6 | 9 | +3 small React components; generic `<PreviewCard>` shell already designed for arbitrary slot count |
+| Confirmed-send | 3 | 3 | Unchanged → ARCH-01 0→1 flip discipline unchanged |
+
+No wave needs splitting. **Wave structure is sound** — the catalog/body-slot scrub described in NEW-HIGH-A is text-level only, not architectural.
+
+---
+
+## Risk Assessment
+
+**OVERALL RISK: HIGH** until the 3 NEW HIGH concerns are fixed.
+
+Justification:
+
+- 2 of 7 cycle-1 HIGHs (HIGH-6, HIGH-7) are FULLY RESOLVED with verified test coverage
+- 4 carryover HIGHs are correct in direction but have leftover text/schema references that contradict the resolution (CAS path, CHECK constraint, catalog count)
+- All 3 NEW HIGHs are independently verified by `grep` against the plan files — they are real, not interpretation differences
+- Schema-level bug (NEW-HIGH-B CHECK constraint) is the most consequential: it would fail at the first Gmail rejection in production
+- Wave structure and architectural direction are sound; remaining work is correction, not redesign
+
+A third cycle should be a quick scrub pass (estimated <1 hour of plan edits, no architectural rework).
+
+---
+
+## Verdict
+
+**ANOTHER REPLAN CYCLE NEEDED.** Direction is right but cannot execute against current Plan 02 line 282 (CHECK constraint rejects FAILED rows), Plan 05 lines 67/123/129/188-189 (SQL against removed column), and inconsistent 20/24 tool / 6/9 body-slot directives across Plans 03/05/06.
+
+**Recommended replan scope (single quick pass):**
+
+1. Fix CHECK constraint in Plan 02 Task 2.1 (NEW-HIGH-B)
+2. Rewrite Plan 05 SQL + threat-table cells to use `assistant_pending_action.parts_updated_at` (NEW-HIGH-C)
+3. Scrub every "20 tools" / "13 tool" / "6 body slot" / "6 user-confirmable" / "7+7+3+3" / "applyLabel, createRule" reference in Plans 03/05/06 (NEW-HIGH-A + HIGH-1/HIGH-2 leftovers)
+4. (Optional polish) Plan 04 Task 4.1 — declare `ChatReadToolResult(llmResultJson, persistedResultJson)` (MEDIUM-1)
+5. (Optional polish) Plan 05 — opaque-UUID Message-ID format (MEDIUM-2)
+
+---
+
+## CYCLE_SUMMARY: current_high=3
+
+## Current HIGH Concerns
+
+- **NEW-HIGH-A** (Codex, new cycle-2 concern) — Stale "20-tool" / "6-slot" / "13-tool" / "7+7+3+3" / `createRule under write-reversible` references remain in Plan 03 line 259, Plan 05 lines 133/153/291/305/306/555, Plan 06 lines 167/317/401/484/527/588; folds in cycle-1 HIGH-1 + HIGH-2 leftover text. Independent grep verified.
+- **NEW-HIGH-B** (Codex, new cycle-2 concern) — `assistant_action_audit` CHECK constraint `(state = 'SEND_IN_FLIGHT') = (sent_at IS NULL)` in Plan 02 line 282 is a biconditional that rejects FAILED rows; HIGH-5's reconciler Sweep B + Gmail-rejection path both write FAILED rows with `sent_at NULL` and would fail the CHECK. Schema-level bug.
+- **NEW-HIGH-C** (Codex, new cycle-2 concern, also cycle-1 HIGH-4 carryover) — Plan 05 lines 67, 123, 129, 188-189 still reference `chat_message.parts.updated_at` CAS; the column was removed by HIGH-4 fix. SQL on lines 188-189 (`UPDATE chat_message SET ... updated_at = ? WHERE updated_at = ?`) would fail against the revised schema. Contradicts Plan 05's own line 518 acknowledgment.
