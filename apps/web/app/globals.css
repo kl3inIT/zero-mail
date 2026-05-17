@@ -7,12 +7,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans:
-    var(--font-roboto), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    sans-serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono:
-    var(--font-roboto), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    sans-serif;
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
   --font-serif: var(--font-lora), Georgia, serif;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -80,52 +78,52 @@
 /* prettier-ignore */
 :root {
     /* Paper-warm neutrals. Rebind shadcn names; hex values follow the reference token sheet. */
-    --background: #f6f8fc;
-    --foreground: #2D2D2A;
+    --background: #F9F8FD;
+    --foreground: #4F496B;
     --card: #FFFFFF;
-    --card-foreground: #2D2D2A;
+    --card-foreground: #4F496B;
     --popover: #FFFFFF;
-    --popover-foreground: #2D2D2A;
-    --primary: #0E5E5A;
+    --popover-foreground: #4F496B;
+    --primary: #867AEB;
     --primary-foreground: #FFFFFF;
-    --secondary: #f6f8fc;
-    --secondary-foreground: #2D2D2A;
-    --muted: #f6f8fc;
-    --muted-foreground: #6B6A63;
-    --accent: #0E5E5A;
-    --accent-foreground: #2D2D2A;
+    --secondary: #F4F2F9;
+    --secondary-foreground: #4F496B;
+    --muted: #F4F2F9;
+    --muted-foreground: #625C78;
+    --accent: #867AEB;
+    --accent-foreground: #3D385A;
     --destructive: #B0413E;
-    --warning: #B5731F;
+    --warning: #E3A023;
     --warning-foreground: #FFFFFF;
     --border: transparent;
     --input: #E6E3D8;
-    --ring: #0E5E5A;
+    --ring: #867AEB;
 
     /* Charts stay neutral-but-branded until a later data-viz pass. */
-    --chart-1: #0E5E5A;
+    --chart-1: #867AEB;
     --chart-2: #2C5BA8;
     --chart-3: #5E4B8B;
     --chart-4: #2F7D5C;
-    --chart-5: #B5731F;
+    --chart-5: #E3A023;
 
     /* Sidebar tokens — app interior chrome */
-    --sidebar: #f6f8fc;
-    --sidebar-foreground: #2D2D2A;
-    --sidebar-primary: #1A1A1A;
+    --sidebar: #F9F8FD;
+    --sidebar-foreground: #4F496B;
+    --sidebar-primary: #3D385A;
     --sidebar-primary-foreground: #FFFFFF;
-    --sidebar-accent: #f1f3f4;
-    --sidebar-accent-foreground: #2D2D2A;
+    --sidebar-accent: #F4F2F9;
+    --sidebar-accent-foreground: #4F496B;
     --sidebar-border: transparent;
     --sidebar-ring: #0E5E5A;
 
     --radius: 7px;
 
     /* Phase 1.6 supplemental tokens. */
-    --accent-soft: #D6E8E5;
-    --ink: #1A1A1A;
-    --ink-2: #2D2D2A;
+    --accent-soft: #EAE8F7;
+    --ink: #3D385A;
+    --ink-2: #4F496B;
     --text: var(--foreground);
-    --text-faint: #8E8C82;
+    --text-faint: #6F6883;
 
     /* Shadow scale from the reference token sheet. */
     --shadow-xs: 0 1px 0 rgba(20, 20, 18, 0.04);
@@ -135,8 +133,8 @@
 
     --green: #2F7D5C;
     --green-soft: #D8EAD8;
-    --amber: #B5731F;
-    --amber-soft: #F5E1C2;
+    --amber: #E3A023;
+    --amber-soft: #FDE8BA;
     --red: #B0413E;
     --red-soft: #F5D7D2;
     --blue: #2C5BA8;
@@ -154,39 +152,39 @@
 
 /* prettier-ignore */
 .dark {
-    --background: #131312;
-    --foreground: #D6D5CC;
-    --card: #1C1C1A;
-    --card-foreground: #D6D5CC;
-    --popover: #1C1C1A;
-    --popover-foreground: #D6D5CC;
-    --primary: #6FB3A8;
-    --primary-foreground: #0E2826;
-    --secondary: #232220;
-    --secondary-foreground: #D6D5CC;
-    --muted: #232220;
-    --muted-foreground: #8E8C82;
-    --accent: #6FB3A8;
-    --accent-foreground: #0E2826;
+    --background: #191724;
+    --foreground: #D3CFE3;
+    --card: #211E30;
+    --card-foreground: #D3CFE3;
+    --popover: #211E30;
+    --popover-foreground: #D3CFE3;
+    --primary: #A39CF4;
+    --primary-foreground: #FFFFFF;
+    --secondary: #2A263D;
+    --secondary-foreground: #D3CFE3;
+    --muted: #2A263D;
+    --muted-foreground: #928DAA;
+    --accent: #A39CF4;
+    --accent-foreground: #191724;
     --destructive: #DA8480;
-    --warning: #D9A064;
+    --warning: #F5CD7A;
     --warning-foreground: #131312;
     --border: rgba(214, 213, 204, 0.12);
     --input: rgba(214, 213, 204, 0.16);
-    --ring: #6fb3a8;
+    --ring: #A39CF4;
 
-    --chart-1: #6FB3A8;
+    --chart-1: #A39CF4;
     --chart-2: #8DA8E0;
     --chart-3: #B0A0DC;
     --chart-4: #6FB389;
-    --chart-5: #D9A064;
+    --chart-5: #F5CD7A;
 
-    --sidebar: #131312;
-    --sidebar-foreground: #D6D5CC;
-    --sidebar-primary: #6FB3A8;
-    --sidebar-primary-foreground: #0E2826;
-    --sidebar-accent: #232220;
-    --sidebar-accent-foreground: #6FB3A8;
+    --sidebar: #191724;
+    --sidebar-foreground: #D3CFE3;
+    --sidebar-primary: #A39CF4;
+    --sidebar-primary-foreground: #191724;
+    --sidebar-accent: #2A263D;
+    --sidebar-accent-foreground: #D3CFE3;
     --sidebar-border: rgba(214, 213, 204, 0.12);
     --sidebar-ring: #6fb3a8;
 
@@ -205,8 +203,8 @@
 
     --green: #6FB389;
     --green-soft: #1F3A28;
-    --amber: #D9A064;
-    --amber-soft: #3A2A14;
+    --amber: #F5CD7A;
+    --amber-soft: #3D3219;
     --red: #DA8480;
     --red-soft: #3A1F1D;
     --blue: #8DA8E0;
@@ -240,9 +238,9 @@
    prototype's clay accent, earnest copy tone, and subtle grid paper texture. */
 .zm-proto,
 .zm-auth {
-  --accent: #8f3f24;
-  --accent-hover: #77351f;
-  --accent-soft: #f4e5dd;
+  --accent: #867aeb;
+  --accent-hover: #7062df;
+  --accent-soft: #e7e5fc;
   --accent-fg: #ffffff;
   --accent-foreground: var(--accent-fg);
   --bg: var(--background);
@@ -250,12 +248,12 @@
   --bg-subtle: var(--secondary);
   --bg-muted: var(--muted);
   --line: var(--border);
-  --line-strong: #d7d4c8;
-  --ink: #1a1a1a;
-  --ink-2: #2a2a28;
+  --line-strong: #e3dff2;
+  --ink: #3d385a;
+  --ink-2: #4f496b;
   --text: var(--foreground);
   --text-muted: var(--muted-foreground);
-  --text-faint: #5f5d56;
+  --text-faint: #6f6883;
   --green: #27694d;
   --green-soft: #e4f0e9;
   --amber: #7a4b0f;
@@ -275,14 +273,14 @@
 
 .dark .zm-proto,
 .dark .zm-auth {
-  --accent: #e18b6a;
-  --accent-hover: #eba388;
-  --accent-soft: rgba(225, 139, 106, 0.16);
-  --accent-fg: #3a1a0e;
-  --line-strong: #3d3d39;
-  --ink: #f5f4ee;
-  --ink-2: #e8e7e0;
-  --text-faint: #a7a39a;
+  --accent: #a39cf4;
+  --accent-hover: #b5b0f8;
+  --accent-soft: rgba(163, 156, 244, 0.16);
+  --accent-fg: #1e1a5a;
+  --line-strong: #3d385a;
+  --ink: #f2f0fa;
+  --ink-2: #e3dff2;
+  --text-faint: #a7a3c4;
   --green: #6fb389;
   --green-soft: rgba(111, 179, 137, 0.14);
   --amber: #d9a064;
@@ -302,42 +300,14 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background:
-    radial-gradient(
-      ellipse 85% 55% at 50% -5%,
-      color-mix(in oklab, var(--accent) 11%, transparent),
-      transparent 68%
-    ),
-    radial-gradient(
-      ellipse 55% 40% at 88% 72%,
-      color-mix(in oklab, var(--blue) 5%, transparent),
-      transparent 62%
-    ),
-    radial-gradient(
-      ellipse 45% 30% at 10% 80%,
-      color-mix(in oklab, var(--green) 4%, transparent),
-      transparent 60%
-    );
+  background: radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0);
+  background-size: 24px 24px;
+  opacity: 0.35;
 }
 
 .dark .zm-proto::before,
 .dark .zm-auth::before {
-  background:
-    radial-gradient(
-      ellipse 85% 55% at 50% -5%,
-      color-mix(in oklab, var(--accent) 8%, transparent),
-      transparent 68%
-    ),
-    radial-gradient(
-      ellipse 55% 40% at 88% 72%,
-      color-mix(in oklab, var(--blue) 4%, transparent),
-      transparent 62%
-    ),
-    radial-gradient(
-      ellipse 45% 30% at 10% 80%,
-      color-mix(in oklab, var(--green) 3%, transparent),
-      transparent 60%
-    );
+  opacity: 0.15;
 }
 
 .zm-container {
@@ -406,7 +376,7 @@
 }
 
 .zm-brand-wordmark .light {
-  color: var(--text-muted);
+  color: var(--ink-2);
   font-weight: 400;
 }
 
@@ -508,7 +478,7 @@
   height: 24px;
   border-radius: 4px;
   padding: 0 7px;
-  color: var(--text-faint);
+  color: var(--ink-2);
   font-size: 11.5px;
   font-weight: 500;
   letter-spacing: 0.04em;
@@ -533,6 +503,11 @@
   border: 1px solid var(--line);
   border-radius: 7px;
   color: var(--text-muted);
+}
+
+#features > section {
+  content-visibility: auto;
+  contain-intrinsic-size: 900px;
 }
 
 .zm-icon-btn:hover {
@@ -663,11 +638,12 @@
   height: 420px;
   background: radial-gradient(
     ellipse at center,
-    color-mix(in oklab, var(--accent) 7%, transparent) 0%,
+    color-mix(in oklab, var(--accent) 15%, transparent) 0%,
     transparent 65%
   );
   pointer-events: none;
   z-index: 0;
+  opacity: 0.5;
 }
 
 .zm-hero-grid {
@@ -782,14 +758,24 @@
 .zm-step,
 .zm-feature-card {
   position: relative;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  border: 1px solid transparent;
+  box-shadow:
+    0 4px 20px -2px rgba(0, 0, 0, 0.03),
+    0 0 0 1px rgba(0, 0, 0, 0.03);
+  border-radius: 16px;
   background: var(--bg-elevated);
-  padding: 28px 26px;
+  padding: 32px 30px;
   transition:
-    transform 200ms ease,
-    box-shadow 200ms ease,
-    border-color 200ms ease;
+    transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .zm-step,
+.dark .zm-feature-card {
+  box-shadow:
+    0 4px 20px -2px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .zm-feature-card::after {
@@ -812,11 +798,17 @@
 }
 
 .zm-feature-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px);
   box-shadow:
-    var(--shadow-md),
-    0 0 0 1px color-mix(in oklab, var(--accent) 12%, transparent);
-  border-color: color-mix(in oklab, var(--accent) 20%, var(--line));
+    0 24px 48px -12px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+  border-color: transparent;
+}
+
+.dark .zm-feature-card:hover {
+  box-shadow:
+    0 24px 48px -12px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .zm-feature-card:hover::after {

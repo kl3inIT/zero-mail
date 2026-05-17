@@ -193,7 +193,7 @@
       "termsAnd": "và",
       "termsPrefix": "Khi đăng nhập, bạn đồng ý với",
       "title": "Đăng nhập",
-      "waitlist": "Đăng ký danh sách chờ →",
+      "waitlist": "Đăng ký trải nghiệm Zero Mail →",
       "workEmail": "Đăng nhập bằng email công ty"
     }
   },
@@ -369,7 +369,7 @@
     "b1": "Miễn phí trong giai đoạn beta",
     "b2": "Không cần thẻ",
     "b3": "Hủy đăng ký bằng một cú nhấp",
-    "button": "Đăng ký chờ",
+    "button": "Đăng ký trải nghiệm",
     "desc": "Hãy đăng ký chờ. Mỗi tuần chúng tôi đón thêm 50 nhà sáng lập và quản lý vận hành theo thứ tự. Bạn sẽ nhận lời mời để cài đặt Zero Mail với tài khoản Gmail thật của mình.",
     "emailPlaceholder": "ban@congty.com",
     "eyebrow": "Truy cập sớm",
@@ -384,7 +384,7 @@
       "s4": "email tự động gửi"
     },
     "title": {
-      "a": "Đạt inbox zero",
+      "a": "Đăng ký trải nghiệm Zero Mail",
       "b": "không còn lo lắng."
     }
   },
@@ -675,7 +675,7 @@
     "primaryCta": "Đăng nhập",
     "secondaryCta": "Xem cách hoạt động",
     "tagline": "Zero Mail phân loại Gmail của bạn theo các quy tắc bạn viết bằng ngôn ngữ tự nhiên — gắn nhãn việc quan trọng, lưu trữ thư không cần thiết, và soạn sẵn những phản hồi đơn giản. Mọi thứ gửi đi đều phải qua bạn.",
-    "waitlistCta": "Đăng ký danh sách chờ"
+    "waitlistCta": "Đăng ký trải nghiệm Zero Mail"
   },
   "legal": {
     "googleApiPolicy": {
@@ -776,7 +776,7 @@
     "themeToDark": "Chuyển sang chế độ tối",
     "themeToLight": "Chuyển sang chế độ sáng",
     "trust": "Tin cậy & an toàn",
-    "waitlist": "Đăng ký danh sách chờ"
+    "waitlist": "Đăng ký trải nghiệm Zero Mail"
   },
   "needsReply": {
     "action": {
@@ -1418,8 +1418,8 @@
       "scopes": "Xem quyền Gmail"
     },
     "title": {
-      "a": "Hộp thư của bạn vẫn là của bạn.",
-      "b": "Luôn luôn."
+      "a": "Hộp thư gọn sạch,",
+      "b": "không giao AI nút gửi."
     }
   }
 }

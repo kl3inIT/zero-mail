@@ -87,11 +87,7 @@ function RuleSummaryStat({
   tone?: 'neutral' | 'success' | 'danger';
 }) {
   const toneClassName =
-    tone === 'success'
-      ? 'bg-[var(--chart-1)]'
-      : tone === 'danger'
-        ? 'bg-[var(--red)]'
-        : 'bg-foreground/25';
+    tone === 'success' ? 'bg-(--chart-1)' : tone === 'danger' ? 'bg-(--red)' : 'bg-foreground/25';
 
   return (
     <div className="border-foreground/10 flex min-w-0 items-center gap-3 border-b px-4 py-3 last:border-b-0 md:border-r md:border-b-0 md:last:border-r-0">
@@ -143,17 +139,9 @@ function RuleTrustRow({ ruleHit }: { ruleHit: RuleHitResponse }) {
             <span className="text-sm font-semibold tabular-nums">{formatPercent(precision)}</span>
           </div>
           <div className="bg-background flex h-4 overflow-hidden rounded-full">
-            <div
-              className="bg-[var(--chart-1)]"
-              style={{ width: appliedWidth }}
-              aria-hidden="true"
-            />
+            <div className="bg-(--chart-1)" style={{ width: appliedWidth }} aria-hidden="true" />
             {reverted > 0 ? (
-              <div
-                className="bg-[var(--red)]"
-                style={{ width: revertedWidth }}
-                aria-hidden="true"
-              />
+              <div className="bg-(--red)" style={{ width: revertedWidth }} aria-hidden="true" />
             ) : null}
           </div>
         </div>

@@ -54,7 +54,7 @@ export default async function AuthTopBar({ backHref = '/', children, surface = '
             href={backHref}
             className={cn(
               buttonVariants({ variant: 'ghost', size: 'sm' }),
-              'hidden h-8 px-3 text-[var(--text-muted)] hover:text-[var(--ink)] sm:inline-flex',
+              'hidden h-8 px-3 text-(--text-muted) hover:text-(--ink) sm:inline-flex',
             )}
           >
             <ArrowLeftIcon size={13} />

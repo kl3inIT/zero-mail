@@ -211,11 +211,7 @@ function SummaryMetric({
   tone: 'observed' | 'applied' | 'reverted';
 }) {
   const markerClassName =
-    tone === 'observed'
-      ? 'bg-[var(--chart-2)]'
-      : tone === 'applied'
-        ? 'bg-[var(--chart-1)]'
-        : 'bg-[var(--red)]';
+    tone === 'observed' ? 'bg-(--chart-2)' : tone === 'applied' ? 'bg-(--chart-1)' : 'bg-(--red)';
 
   return (
     <div className="border-foreground/10 flex min-w-0 items-center gap-3 border-b px-4 py-3 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0">

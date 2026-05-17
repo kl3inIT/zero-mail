@@ -1,15 +1,30 @@
+import { getTranslations } from 'next-intl/server';
+
 import Features from '@/features/landing/components/Features';
 import Hero from '@/features/landing/components/Hero';
-import HowItWorks from '@/features/landing/components/HowItWorks';
-import TrustPillars from '@/features/landing/components/TrustPillars';
+import Pricing from '@/features/landing/components/Pricing';
+import Testimonials from '@/features/landing/components/Testimonials';
+import FAQ from '@/features/landing/components/FAQ';
+import WaitlistDialog from '@/features/landing/components/WaitlistDialog';
 
 export default async function LandingPage() {
+  const t = await getTranslations('cta');
+
   return (
     <>
       <Hero />
-      <HowItWorks />
       <Features />
-      <TrustPillars />
+      <Pricing />
+      <Testimonials />
+      <FAQ />
+      <WaitlistDialog
+        copy={{
+          title: 'Đăng ký trải nghiệm Zero Mail',
+          description: t('desc'),
+          emailPlaceholder: t('emailPlaceholder'),
+          button: t('button'),
+        }}
+      />
     </>
   );
 }

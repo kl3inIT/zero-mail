@@ -253,11 +253,11 @@ function MetricCell({
 }) {
   const toneClassName =
     tone === 'success'
-      ? 'bg-[var(--chart-1)]'
+      ? 'bg-(--chart-1)'
       : tone === 'danger'
-        ? 'bg-[var(--red)]'
+        ? 'bg-(--red)'
         : tone === 'warning'
-          ? 'bg-[var(--amber)]'
+          ? 'bg-(--amber)'
           : 'bg-foreground/25';
 
   return (
@@ -294,9 +294,9 @@ function ActionMixRow({ actionPoint }: { actionPoint: ActionPoint }) {
       </div>
 
       <div className="bg-background mt-4 flex h-5 overflow-hidden rounded-full">
-        <ActionSegment ratio={appliedRatio} className="bg-[var(--chart-1)]" />
-        <ActionSegment ratio={revertedRatio} className="bg-[var(--red)]" />
-        <ActionSegment ratio={failedRatio} className="bg-[var(--amber)]" />
+        <ActionSegment ratio={appliedRatio} className="bg-(--chart-1)" />
+        <ActionSegment ratio={revertedRatio} className="bg-(--red)" />
+        <ActionSegment ratio={failedRatio} className="bg-(--amber)" />
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
@@ -339,10 +339,10 @@ function InlineStat({
 }) {
   const toneClassName =
     tone === 'success'
-      ? 'border-[var(--chart-1)]'
+      ? 'border-(--chart-1)'
       : tone === 'danger'
-        ? 'border-[var(--red)]'
-        : 'border-[var(--amber)]';
+        ? 'border-(--red)'
+        : 'border-(--amber)';
 
   return (
     <div className={cn('border-l-2 pl-2', toneClassName)}>
@@ -389,11 +389,7 @@ function ReplyBucketRow({ bucket, total }: { bucket: ReplyBucketResponse; total:
         </span>
       </div>
       <div className="bg-muted mt-2 h-2 overflow-hidden rounded-full">
-        <div
-          className="h-full rounded-full bg-[var(--chart-2)]"
-          style={{ width }}
-          aria-hidden="true"
-        />
+        <div className="h-full rounded-full bg-(--chart-2)" style={{ width }} aria-hidden="true" />
       </div>
       <p className="text-muted-foreground mt-2 truncate text-xs">
         {withDraft > 0
@@ -423,9 +419,9 @@ function OpportunityBar({
 
   return (
     <div className="bg-muted flex h-4 overflow-hidden rounded-full">
-      <div className="bg-[var(--chart-2)]" style={{ width: noRuleWidth }} aria-hidden="true" />
-      <div className="bg-[var(--red)]" style={{ width: failedWidth }} aria-hidden="true" />
-      <div className="bg-[var(--amber)]" style={{ width: pendingWidth }} aria-hidden="true" />
+      <div className="bg-(--chart-2)" style={{ width: noRuleWidth }} aria-hidden="true" />
+      <div className="bg-(--red)" style={{ width: failedWidth }} aria-hidden="true" />
+      <div className="bg-(--amber)" style={{ width: pendingWidth }} aria-hidden="true" />
     </div>
   );
 }

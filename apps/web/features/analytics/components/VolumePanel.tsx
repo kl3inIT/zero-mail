@@ -74,7 +74,7 @@ export function VolumePanel({ observed, applied, className }: VolumePanelProps) 
           <div className="space-y-2">
             <div className="bg-muted h-3 overflow-hidden rounded-full">
               <div
-                className="h-full rounded-full bg-[var(--chart-1)]"
+                className="h-full rounded-full bg-(--chart-1)"
                 style={{ width: appliedWidth }}
                 aria-hidden="true"
               />

@@ -1,13 +1,12 @@
 import { NextIntlClientProvider } from 'next-intl';
 import type { ReactNode } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import enMessages from '@/i18n/messages/en.json';
 import { RuleTemplateGallery } from '@/features/rules/components/RuleTemplateGallery';
 import { RuleComposer } from '@/features/rules/components/RuleComposer';
 import { RuleList } from '@/features/rules/components/RuleList';
-import { RulesWorkspace } from '@/features/rules/components/RulesWorkspace';
 
 const rulesHooks = vi.hoisted(() => ({
   useRules: vi.fn(),
@@ -142,98 +141,4 @@ function renderWithMessages(children: ReactNode) {
       {children}
     </NextIntlClientProvider>,
   );
-}
-
-function mockRulesWorkspaceHooks({
-  compileRule,
-  previewDraftRule,
-  previewSavedRule,
-}: {
-  compileRule: ReturnType<typeof vi.fn>;
-  previewDraftRule: ReturnType<typeof vi.fn>;
-  previewSavedRule: ReturnType<typeof vi.fn>;
-}) {
-  rulesHooks.useRules.mockReturnValue({
-    data: {
-      rules: [savedRule()],
-      templates: [],
-      materialization: {
-        createdCount: 0,
-        skippedCount: 0,
-        customizedPreservedCount: 0,
-        createdRules: [],
-        skippedTemplates: [],
-      },
-    },
-    error: null,
-    isLoading: false,
-    isSuccess: true,
-  });
-  rulesHooks.useRuleTemplates.mockReturnValue({ data: [], isLoading: false });
-  rulesHooks.useCompileRule.mockReturnValue({ mutateAsync: compileRule, isPending: false });
-  rulesHooks.useCreateRule.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
-  rulesHooks.useUpdateRule.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
-  rulesHooks.useDeleteRule.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
-  rulesHooks.usePreviewSavedRule.mockReturnValue({
-    mutateAsync: previewSavedRule,
-    isPending: false,
-  });
-  rulesHooks.usePreviewDraftRule.mockReturnValue({
-    mutateAsync: previewDraftRule,
-    isPending: false,
-  });
-  rulesHooks.usePreviewCustomMail.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
-  rulesHooks.useUpdateRuleEnabled.mockReturnValue({ mutateAsync: vi.fn(), isPending: false });
-  rulesHooks.useMaterializeRuleTemplate.mockReturnValue({
-    mutateAsync: vi.fn(),
-    isPending: false,
-  });
-}
-
-function savedRule() {
-  return {
-    ruleId: '11111111-1111-1111-1111-111111111111',
-    displayName: 'Archive Stripe receipts',
-    sourceText: 'Archive Stripe receipts',
-    enabled: false,
-    orderIndex: 1,
-    sourceLanguage: 'en',
-    schemaVersion: 'rules.v1',
-    matcherAst: '{"schemaVersion":"rules.v1","type":"SENDER_DOMAIN","domain":"stripe.com"}',
-    actionIntents: '[{"type":"archive"}]',
-    entityVersion: 0,
-    lastPreviewedEntityVersion: null,
-    lastPreviewedAt: null,
-    templateKey: null,
-    templateVersion: null,
-    customized: false,
-  };
-}
-
-function compiledPayload(displayName: string, matcherAst: string) {
-  return {
-    status: 'compiled',
-    displayName,
-    sourceLanguage: 'en',
-    schemaVersion: 'rules.v1',
-    matcherAst,
-    actionIntents: '[{"type":"archive"}]',
-  };
-}
-
-function previewResult() {
-  return {
-    impactSummary: {
-      sampleSize: 10,
-      sampledMessageCount: 0,
-      matchedCount: 0,
-      proposedActionCounts: {},
-      deferredCount: 0,
-      conflictCount: 0,
-      noWriteNotice: true,
-      noWriteNoticeKey: 'rules.preview.noGmailChanges',
-    },
-    rows: [],
-    savedRuleMarkedPreviewed: false,
-  };
 }

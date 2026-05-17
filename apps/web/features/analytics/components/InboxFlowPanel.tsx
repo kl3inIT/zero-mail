@@ -69,12 +69,12 @@ export function InboxFlowPanel({ observed, applied, ruleHits, className }: Inbox
           <div className="min-w-0 space-y-3">
             <div className="bg-muted flex h-4 overflow-hidden rounded-full">
               <div
-                className="bg-[var(--chart-1)]"
+                className="bg-(--chart-1)"
                 style={{ width: `${Math.round(automatedRatio * 100)}%` }}
                 aria-hidden="true"
               />
               <div
-                className="bg-[var(--chart-5)]"
+                className="bg-(--chart-5)"
                 style={{ width: `${Math.round(revertedRatio * 100)}%` }}
                 aria-hidden="true"
               />
@@ -86,12 +86,12 @@ export function InboxFlowPanel({ observed, applied, ruleHits, className }: Inbox
             </div>
             <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
               <FlowLegend
-                color="bg-[var(--chart-1)]"
+                color="bg-(--chart-1)"
                 label={t('analytics.inboxFlow.automated')}
                 value={automatedCount}
               />
               <FlowLegend
-                color="bg-[var(--chart-5)]"
+                color="bg-(--chart-5)"
                 label={t('analytics.inboxFlow.reverted')}
                 value={revertedCount}
               />

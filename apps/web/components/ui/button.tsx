@@ -14,9 +14,9 @@ const buttonVariants = cva(
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         accent:
-          "bg-accent text-accent-foreground hover:bg-[var(--accent-hover)] aria-expanded:bg-accent aria-expanded:text-accent-foreground",
+          "bg-accent text-accent-foreground hover:bg-(--accent-hover) aria-expanded:bg-accent aria-expanded:text-accent-foreground",
         ink:
-          "border-[var(--ink)] bg-[var(--ink)] text-[var(--bg)] hover:bg-[var(--ink)] hover:text-[var(--bg)]",
+          "border-(--ink) bg-(--ink) text-(--bg) hover:bg-(--ink) hover:text-(--bg)",
         ghost:
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
         destructive:

@@ -90,7 +90,7 @@ const rows = [
 
 const suggestionRows = rows.filter((row) => row.action !== 'keep');
 
-const colors = ['#0E5E5A', '#B5731F', '#2C5BA8', '#5E4B8B', '#2F7D5C', '#B0413E'];
+const colors = ['#867AEB', '#E3A023', '#2C5BA8', '#5E4B8B', '#2F7D5C', '#B0413E'];
 
 function initials(name: string) {
   return name
@@ -119,7 +119,7 @@ export default function InboxPreview() {
         <div className="zm-gm-url">
           <LockIcon size={11} />
           <span>zeromail.com</span>
-          <span className="ml-auto inline-flex items-center gap-1 text-[var(--accent)]">
+          <span className="ml-auto inline-flex items-center gap-1 text-(--accent)">
             <SparklesIcon size={11} />
             zeromail
           </span>
@@ -158,11 +158,11 @@ export default function InboxPreview() {
             <div className="flex min-w-0 items-center gap-2">
               <div className="zm-gm-title">Inbox</div>
               <span className="zm-pill zm-pill-mono">
-                <span className="size-1.5 rounded-full bg-[var(--accent)]" />
+                <span className="size-1.5 rounded-full bg-(--accent)" />
                 Auto-triage on
               </span>
             </div>
-            <div className="flex items-center gap-1 text-[var(--text-muted)]">
+            <div className="flex items-center gap-1 text-(--text-muted)">
               <SearchIcon size={14} />
               <FilterIcon size={14} />
               <SettingsIcon size={14} />
@@ -170,12 +170,12 @@ export default function InboxPreview() {
           </div>
 
           <div className="zm-gm-banner">
-            <SparklesIcon size={14} className="text-[var(--accent)]" />
+            <SparklesIcon size={14} className="text-(--accent)" />
             <span>
-              <b className="text-[var(--accent)]">Zero Mail</b> reviewed 47 messages this morning -
-              32 archived, 9 labeled, 6 drafts ready
+              <b className="text-(--accent)">Zero Mail</b> reviewed 47 messages this morning - 32
+              archived, 9 labeled, 6 drafts ready
             </span>
-            <span className="text-[var(--accent)]">Review queue</span>
+            <span className="text-(--accent)">Review queue</span>
           </div>
 
           <div className="zm-gm-list">
@@ -223,9 +223,9 @@ export default function InboxPreview() {
                     >
                       <div />
                       {row.action === 'draft' ? (
-                        <PenIcon size={13} className="text-[var(--accent)]" />
+                        <PenIcon size={13} className="text-(--accent)" />
                       ) : (
-                        <SparklesIcon size={13} className="text-[var(--accent)]" />
+                        <SparklesIcon size={13} className="text-(--accent)" />
                       )}
                       <div className="zm-gm-suggestion-text">
                         <span className="zm-gm-ai">
@@ -237,7 +237,7 @@ export default function InboxPreview() {
                           {row.action === 'draft' ? 'Draft ready' : 'AI suggestion'}
                         </span>
                         {row.action === 'draft' ? (
-                          <span className="text-[var(--text-muted)]">
+                          <span className="text-(--text-muted)">
                             &quot;Thanks Alex - Wednesday at 2pm works.&quot;
                           </span>
                         ) : (

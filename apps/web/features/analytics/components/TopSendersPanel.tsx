@@ -94,7 +94,7 @@ export function TopSendersPanel({
                       <div
                         className={cn(
                           'h-full rounded-full',
-                          index === 0 ? 'bg-[var(--chart-1)]' : 'bg-[var(--chart-2)]/70',
+                          index === 0 ? 'bg-(--chart-1)' : 'bg-(--chart-2)/70',
                         )}
                         style={{ width }}
                         aria-hidden="true"
@@ -166,11 +166,7 @@ function DomainRow({
         </Badge>
       </div>
       <div className="bg-background h-2.5 overflow-hidden rounded-full">
-        <div
-          className="h-full rounded-full bg-[var(--chart-4)]"
-          style={{ width }}
-          aria-hidden="true"
-        />
+        <div className="h-full rounded-full bg-(--chart-4)" style={{ width }} aria-hidden="true" />
       </div>
     </div>
   );
