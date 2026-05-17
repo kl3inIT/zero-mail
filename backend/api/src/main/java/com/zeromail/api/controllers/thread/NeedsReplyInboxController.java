@@ -8,10 +8,10 @@ import com.zeromail.core.gmail.usecases.GmailPreviewReadService.GmailThreadDispl
 import com.zeromail.core.shared.pagination.KeysetCursor;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.thread.domain.ThreadReplyBucket;
-import com.zeromail.core.thread.projection.NeedsReplyInboxQueryService;
 import com.zeromail.core.thread.projection.NeedsReplyPage;
 import com.zeromail.core.thread.projection.NeedsReplyPageQuery;
 import com.zeromail.core.thread.projection.NeedsReplyRow;
+import com.zeromail.core.thread.usecases.NeedsReplyInboxQueryService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.Duration;
 import java.util.List;
@@ -47,7 +47,7 @@ public class NeedsReplyInboxController {
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "50") int limit,
             @RequestParam(required = false, defaultValue = "false") boolean resolved) {
-        UUID tenantId = currentTenantId();
+        UUID tenantId = TenantContext.currentTenantUuid();
         validateCursor(cursor);
         ThreadReplyBucket replyBucket = resolved ? null : publicBucket(bucket);
         NeedsReplyPage page =
@@ -67,7 +67,7 @@ public class NeedsReplyInboxController {
 
     @GetMapping("/to-reply-count")
     public ToReplyCountResponse toReplyCount() {
-        UUID tenantId = currentTenantId();
+        UUID tenantId = TenantContext.currentTenantUuid();
         return ToReplyCountResponse.from(needsReplyInboxQueryService.toReplyCount(tenantId));
     }
 
@@ -85,9 +85,5 @@ public class NeedsReplyInboxController {
         } catch (NoSuchElementException unknownBucket) {
             throw new IllegalArgumentException("unknown thread bucket", unknownBucket);
         }
-    }
-
-    private static UUID currentTenantId() {
-        return UUID.fromString(TenantContext.currentOrThrow());
     }
 }

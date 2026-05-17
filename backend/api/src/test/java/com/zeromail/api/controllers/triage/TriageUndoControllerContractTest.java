@@ -12,7 +12,7 @@ class TriageUndoControllerContractTest {
             "com.zeromail.api.controllers.triage.TriageAuditController";
     private static final String TRIAGE_UNDO_SERVICE =
             "com.zeromail.core.triage.usecases.TriageUndoService";
-    private static final String ERROR_CODES = "com.zeromail.api.error.ErrorCodes";
+    private static final String ERROR_CODES = "com.zeromail.core.shared.error.ErrorCodes";
 
     @Test
     void future_undo_controller_contract_types_are_present() {

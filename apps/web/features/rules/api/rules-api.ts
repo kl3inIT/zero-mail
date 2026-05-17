@@ -211,13 +211,3 @@ export async function materializeRuleTemplate(
     `/api/rules/templates/${templateKey}/materialize failed: ${result.response.status}`,
   );
 }
-
-export async function materializeSelectedRuleTemplates(): Promise<RuleTemplateMaterializationResponse> {
-  const result = await api.POST('/api/rules/templates/materialize-selected', {
-    headers: unsafeHeaders(),
-  });
-  return unwrap(
-    result,
-    `/api/rules/templates/materialize-selected failed: ${result.response.status}`,
-  );
-}

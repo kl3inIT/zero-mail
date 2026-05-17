@@ -23,15 +23,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * Atomic provisioning for the OAuth first-login flow.
  *
- * <p>Phase 01.5 HIGH-1 fix: {@link #provisionBundledOAuth} collapses user + tenant +
- * GmailConnectionEntity creation into ONE TransactionTemplate (PROPAGATION_REQUIRED) so any failure
- * rolls back all three — no half-provisioned state.
+ * <p>{@link #provisionBundledOAuth} collapses user + tenant + GmailConnectionEntity creation into
+ * ONE TransactionTemplate (PROPAGATION_REQUIRED) so any failure rolls back all three — no
+ * half-provisioned state. {@link #provisionBundledOAuth} is the single provisioning surface.
  *
- * <p>Phase 01.5 WR-01 cleanup: the legacy two-leg {@code findOrCreateGoogleUser} entry point (and
- * its {@code provisioningTx} PROPAGATION_REQUIRES_NEW template) was deleted along with the
- * bundled-flow collapse. {@link #provisionBundledOAuth} is now the single provisioning surface.
- *
- * <p>ScopedValue binding invariant (FND-05): {@link TenantContext#TENANT} MUST be bound BEFORE the
+ * <p>ScopedValue binding invariant: {@link TenantContext#TENANT} MUST be bound BEFORE the
  * TransactionTemplate opens (Hibernate captures tenant on JPA session open).
  *
  * <p><b>API surface:</b> accepts plain {@code String} subject/email rather than {@code OidcUser} so
@@ -70,11 +66,11 @@ public class OAuthProvisioningService {
     public record BundledProvisioningResult(UUID tenantId, UUID userId, boolean firstLogin) {}
 
     /**
-     * Atomic bundled provisioning (HIGH-1 fix): creates user + tenant + GmailConnectionEntity +
-     * advances onboarding step inside ONE {@code PROPAGATION_REQUIRED} transaction. Any failure in
-     * any step causes a full rollback — no half-provisioned rows survive.
+     * Atomic bundled provisioning: creates user + tenant + GmailConnectionEntity + advances
+     * onboarding step inside ONE {@code PROPAGATION_REQUIRED} transaction. Any failure in any step
+     * causes a full rollback — no half-provisioned rows survive.
      *
-     * <p>Null {@code refreshTokenPlaintext} handling (MED-3):
+     * <p>Null {@code refreshTokenPlaintext} handling:
      *
      * <ul>
      *   <li>Existing user (reconnect path): preserves existing GmailConnectionEntity envelope
@@ -87,11 +83,11 @@ public class OAuthProvisioningService {
      *
      * <p>Race-loser path ({@code DataIntegrityViolationException} on {@code users.save}): observes
      * the winner's already-complete state, returns {@code BundledProvisioningResult(winner tenant,
-     * winner id, false)} without any further DB write — preserving the single-transaction guarantee
-     * (CR-01 fix).
+     * winner id, false)} without any further DB write — preserving the single-transaction
+     * guarantee.
      *
-     * <p><b>Privacy (T-01.5-01-02):</b> raw refresh-token bytes are encrypted inside the same
-     * transaction boundary and NEVER logged. Event names are opaque.
+     * <p><b>Privacy:</b> raw refresh-token bytes are encrypted inside the same transaction boundary
+     * and NEVER logged. Event names are opaque.
      *
      * @param googleSubject Google OIDC {@code sub} claim
      * @param email Google OIDC {@code email} claim
@@ -111,7 +107,7 @@ public class OAuthProvisioningService {
             UUID tenantId = user.getTenantId();
             UUID userId = user.getId();
             if (refreshTokenPlaintext == null) {
-                // MED-3: reconnect with null refresh token — preserve existing envelope.
+                // Reconnect with null refresh token — preserve existing envelope.
                 log.warn("event=oauth_no_refresh_token tenantId={}", tenantId);
                 return new BundledProvisioningResult(tenantId, userId, false);
             }
@@ -189,7 +185,7 @@ public class OAuthProvisioningService {
             // connection envelope. The winner's thread already committed its own atomic
             // user + tenant + connection in its own bundled transaction — that is the correct,
             // complete state. Opening a second transaction here would break the
-            // single-transaction atomicity contract (CR-01 / HIGH-1 fix) if that second
+            // single-transaction atomicity contract if that second
             // transaction fails, leaving a partial state.
             UserEntity raceWinner =
                     userRepository

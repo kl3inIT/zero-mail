@@ -75,7 +75,7 @@ public class OpenAiByokModelClient implements ByokLlmModelClient {
                         .timeout(byokProperties.readTimeout())
                         .internalToolExecutionEnabled(false);
         if (request.toolChoiceRequired()) {
-            chatOptionsBuilder.toolChoice("required");
+            chatOptionsBuilder.toolChoice(OpenAiToolChoiceOptions.required());
         }
         if (request.maxTokens() != null) {
             chatOptionsBuilder.maxTokens(request.maxTokens());

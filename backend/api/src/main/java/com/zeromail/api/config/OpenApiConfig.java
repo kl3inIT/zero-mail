@@ -80,13 +80,12 @@ public class OpenApiConfig {
     @Bean
     GlobalOpenApiCustomizer apiErrorCustomizer() {
         return openApi -> {
-            // WR-04: scalar union schema for `params` map values. The backend's
+            // Scalar union schema for `params` map values. The backend's
             // AllowedParamScalars filter only emits String/Number/Boolean (it drops
             // anything else before it reaches the wire), so the wire shape is
-            // `{ [k: string]: string | number | boolean }` — not the previous
-            // `{ [k: string]: object }` which openapi-typescript materialized as
-            // `Record<string, never>` and broke generated-client safety for ICU
-            // parameter use. Cite: AllowedParamScalars, REVIEW.md WR-04.
+            // `{ [k: string]: string | number | boolean }` — not `{ [k: string]: object }`
+            // which openapi-typescript materializes as `Record<string, never>` and
+            // breaks generated-client safety for ICU parameter use.
             Schema<?> safeParamScalar =
                     new Schema<>()
                             .oneOf(

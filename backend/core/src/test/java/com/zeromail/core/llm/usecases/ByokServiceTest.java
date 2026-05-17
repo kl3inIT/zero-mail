@@ -16,6 +16,7 @@ import com.zeromail.core.llm.byok.ByokEndpointValidator;
 import com.zeromail.core.llm.domain.BYOKProvider;
 import com.zeromail.core.llm.domain.ByokProviderPreset;
 import com.zeromail.core.llm.exception.InvalidByokException;
+import com.zeromail.core.llm.gateway.springai.ByokValidationGateway;
 import com.zeromail.core.llm.persistence.TenantByokCredentialsEntity;
 import com.zeromail.core.llm.persistence.TenantByokCredentialsRepository;
 import com.zeromail.core.support.PostgresContainerTest;
@@ -125,7 +126,7 @@ class ByokServiceTest extends PostgresContainerTest {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(
                         withSuccess(
-                                "{\"data\":[{\"id\":\"gpt-4o-mini\"},{\"id\":\"gpt-4.1-mini\"}]}",
+                                "{\"data\":[{\"id\":\"gpt-5.4-nano\"},{\"id\":\"gpt-4.1-mini\"}]}",
                                 MediaType.APPLICATION_JSON));
 
         ByokValidateResult result =
@@ -142,7 +143,7 @@ class ByokServiceTest extends PostgresContainerTest {
 
         assertThat(result.ok()).isFalse();
         assertThat(result.reason()).isEqualTo("model_not_found");
-        assertThat(result.models()).containsExactly("gpt-4o-mini", "gpt-4.1-mini");
+        assertThat(result.models()).containsExactly("gpt-5.4-nano", "gpt-4.1-mini");
         mockRestServiceServer.verify();
     }
 
@@ -303,7 +304,7 @@ class ByokServiceTest extends PostgresContainerTest {
                                 new ByokValidateCommand(
                                         ByokProviderPreset.OPENAI,
                                         null,
-                                        "gpt-4o-mini",
+                                        "gpt-5.4-nano",
                                         "openai-key")));
 
         mockRestServiceServer.verify();
@@ -631,7 +632,7 @@ class ByokServiceTest extends PostgresContainerTest {
                                         : List.of(),
                                 Duration.ofSeconds(5),
                                 Duration.ofSeconds(15))),
-                restClientBuilder);
+                new ByokValidationGateway(restClientBuilder));
     }
 
     private void mockSuccessfulOpenAiProbe(String expectedUrl) {

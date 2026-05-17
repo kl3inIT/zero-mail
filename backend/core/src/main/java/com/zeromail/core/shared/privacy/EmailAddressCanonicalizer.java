@@ -1,5 +1,6 @@
 package com.zeromail.core.shared.privacy;
 
+import com.zeromail.core.shared.lang.Strings;
 import java.util.Locale;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
@@ -11,10 +12,8 @@ public class EmailAddressCanonicalizer {
             Pattern.compile("^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9.-]+\\.[a-z]{2,}$");
 
     public String canonicalize(String rawSenderEmail) {
-        if (rawSenderEmail == null || rawSenderEmail.isBlank()) {
-            throw new IllegalArgumentException("senderEmail must not be blank");
-        }
-        String extractedAddress = extractAddress(rawSenderEmail.trim());
+        String extractedAddress =
+                extractAddress(Strings.requireText(rawSenderEmail, "senderEmail"));
         String canonicalizedEmail = extractedAddress.toLowerCase(Locale.ROOT);
         if (!PLAUSIBLE_EMAIL_PATTERN.matcher(canonicalizedEmail).matches()) {
             throw new IllegalArgumentException("senderEmail is malformed");

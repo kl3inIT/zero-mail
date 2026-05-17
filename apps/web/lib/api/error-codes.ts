@@ -62,6 +62,7 @@ export const ErrorCode = {
   RulesReorderInvalid: 'error.rules.reorder.invalid',
   RulesVersionMismatch: 'error.rules.version_mismatch',
   RulesUnsafeAction: 'error.rules.unsafe_action',
+  RulesDuplicate: 'error.rules.duplicate',
   RulesGmailUnavailable: 'error.rules.gmail.unavailable',
 } as const;
 

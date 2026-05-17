@@ -150,7 +150,9 @@ test.describe('Launch golden path', () => {
 
       await test.step('3. enable template rule from gallery', async () => {
         await page.goto(`${FRONTEND_BASE_URL}/rules`, { waitUntil: 'domcontentloaded' });
-        await expect(page.getByRole('heading', { name: 'Rules', exact: true })).toBeVisible();
+        await expect(
+          page.getByRole('heading', { name: 'Automation rules', exact: true }),
+        ).toBeVisible();
 
         const archiveRule = page.getByRole('heading', { name: 'Archive receipts' }).first();
         if (!(await waitForLocatorVisible(archiveRule, 5000))) {
@@ -323,7 +325,9 @@ test.describe('Launch golden path', () => {
         await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible({
           timeout: 15_000,
         });
-        await expect(page.getByTestId('analytics-volume-panel')).toContainText(/Messages triaged/i);
+        await expect(page.getByTestId('analytics-volume-panel')).toContainText(
+          /Mail triage coverage/i,
+        );
       });
 
       await expectAppShellChrome(page, { sidebarVisible: true });

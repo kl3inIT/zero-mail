@@ -5,5 +5,4 @@ import { vi } from 'vitest';
 
 vi.mock('next/font/google', () => ({
   Roboto: vi.fn(() => ({ variable: 'font-roboto' })),
-  Roboto_Mono: vi.fn(() => ({ variable: 'font-roboto-mono' })),
 }));

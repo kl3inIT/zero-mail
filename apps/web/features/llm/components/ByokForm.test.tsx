@@ -74,7 +74,7 @@ describe('ByokForm', () => {
     ).toBeInTheDocument();
     expect(screen.queryByLabelText(viMessages.llm.byok.endpoint.openaiCompatibleLabel)).toBeNull();
     expect(screen.getByLabelText(viMessages.llm.byok.model.label)).toHaveValue(
-      'openai/gpt-4o-mini',
+      'openai/gpt-5.4-nano',
     );
     expect(screen.getByRole('button', { name: viMessages.llm.byok.validateCta })).toBeDisabled();
     expect(screen.getByRole('button', { name: viMessages.llm.byok.saveCta })).toBeDisabled();
@@ -120,7 +120,7 @@ describe('ByokForm', () => {
   });
 
   it('resets the password input on save success', async () => {
-    apiMocks.validateByok.mockResolvedValue({ ok: true, models: ['openai/gpt-4o-mini'] });
+    apiMocks.validateByok.mockResolvedValue({ ok: true, models: ['openai/gpt-5.4-nano'] });
     apiMocks.saveByok.mockResolvedValue({ ok: true, savedAt: '2026-05-08T04:00:00Z' });
     renderByokForm();
 
@@ -139,7 +139,7 @@ describe('ByokForm', () => {
     expect(apiMocks.saveByok.mock.calls[0]?.[0]).toEqual({
       preset: 'openrouter',
       endpoint: undefined,
-      model: 'openai/gpt-4o-mini',
+      model: 'openai/gpt-5.4-nano',
       apiKey: 'sk-or-v1-test',
     });
     expect(apiKeyInput.value).toBe('');
@@ -149,7 +149,7 @@ describe('ByokForm', () => {
   });
 
   it('requires endpoint only for compatible presets', async () => {
-    apiMocks.validateByok.mockResolvedValue({ ok: true, models: ['gpt-4o-mini'] });
+    apiMocks.validateByok.mockResolvedValue({ ok: true, models: ['gpt-5.4-nano'] });
     renderByokForm();
 
     fireEvent.click(
@@ -170,7 +170,7 @@ describe('ByokForm', () => {
       expect(apiMocks.validateByok.mock.calls[0]?.[0]).toEqual({
         preset: 'openai-compatible',
         endpoint: 'https://together.xyz/v1',
-        model: 'openai/gpt-4o-mini',
+        model: 'openai/gpt-5.4-nano',
         apiKey: 'sk-compatible-test',
       });
     });

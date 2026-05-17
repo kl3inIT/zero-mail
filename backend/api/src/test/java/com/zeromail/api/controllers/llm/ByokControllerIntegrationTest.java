@@ -193,7 +193,7 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(
                                 "{\"preset\":\"openrouter\","
-                                        + "\"model\":\"openai/gpt-4o-mini\","
+                                        + "\"model\":\"openai/gpt-5.4-nano\","
                                         + "\"apiKey\":\"revoked-key\"}")
                         .retrieve()
                         .onStatus(HttpStatusCode::isError, (_, _) -> {})
@@ -222,7 +222,7 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(
                                 "{\"preset\":\"openrouter\","
-                                        + "\"model\":\"openai/gpt-4o-mini\","
+                                        + "\"model\":\"openai/gpt-5.4-nano\","
                                         + "\"apiKey\":\"k\"}")
                         .retrieve()
                         .toEntity(String.class);
@@ -242,7 +242,7 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(
                                 "{\"preset\":\"OPENROUTER\","
-                                        + "\"model\":\"openai/gpt-4o-mini\","
+                                        + "\"model\":\"openai/gpt-5.4-nano\","
                                         + "\"apiKey\":\"k\"}")
                         .retrieve()
                         .onStatus(HttpStatusCode::isError, (_, _) -> {})
@@ -344,7 +344,7 @@ class ByokControllerIntegrationTest extends ApiPostgresTestBase {
 
         @PostMapping("/test/llm/reserve-triage")
         void reserveTriage() {
-            UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+            UUID tenantId = TenantContext.currentTenantUuid();
             creditLedger.reserve(tenantId, CallSite.TRIAGE);
         }
     }

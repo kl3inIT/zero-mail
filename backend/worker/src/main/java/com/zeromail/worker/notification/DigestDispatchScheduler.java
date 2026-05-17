@@ -7,6 +7,8 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.StructuredTaskScope;
 import java.util.function.Supplier;
 import net.javacrumbs.shedlock.core.LockAssert;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
@@ -21,6 +23,13 @@ public class DigestDispatchScheduler {
 
     static final String DISPATCH_CRON = "0 5 * * * *";
     static final String LOCK_NAME = "digestDispatchScheduler";
+
+    /**
+     * Per-cron-tick fanout cap. Each tenant dispatch is a chain of DB queries + an outbound SMTP
+     * send, so the cap is governed by the SMTP provider rate budget and the JDBC pool width, not
+     * Gmail quota.
+     */
+    private static final int DIGEST_DISPATCH_CONCURRENCY = 16;
 
     private static final Logger log = LoggerFactory.getLogger(DigestDispatchScheduler.class);
     private static final String DUE_TENANT_SQL =
@@ -100,17 +109,46 @@ public class DigestDispatchScheduler {
         LockAssert.assertLocked();
         Instant referenceInstant = currentInstant.get();
         List<DigestDueTenant> dueTenants = findTenantsDueForDigest(referenceInstant);
-        for (DigestDueTenant dueTenant : dueTenants) {
-            try {
-                digestDispatchTenantWorker.dispatchOne(dueTenant, referenceInstant);
-            } catch (RuntimeException runtimeException) {
-                log.warn(
-                        "event=digest_tenant_failed tenantId={} failureType={}",
-                        dueTenant.tenantId(),
-                        runtimeException.getClass().getSimpleName(),
-                        runtimeException);
-            }
+        if (dueTenants.isEmpty()) {
+            return;
         }
+
+        Semaphore concurrencyLimiter = new Semaphore(DIGEST_DISPATCH_CONCURRENCY);
+        try (var scope = StructuredTaskScope.<Void>open()) {
+            for (DigestDueTenant dueTenant : dueTenants) {
+                scope.fork(
+                        () ->
+                                dispatchWithBackpressure(
+                                        dueTenant, referenceInstant, concurrencyLimiter));
+            }
+            scope.join();
+        } catch (InterruptedException dispatchInterrupted) {
+            Thread.currentThread().interrupt();
+            log.warn(
+                    "event=digest_dispatch_interrupted dueTenants={}",
+                    dueTenants.size(),
+                    dispatchInterrupted);
+        }
+    }
+
+    private Void dispatchWithBackpressure(
+            DigestDueTenant dueTenant, Instant referenceInstant, Semaphore concurrencyLimiter)
+            throws InterruptedException {
+        concurrencyLimiter.acquire();
+        try {
+            digestDispatchTenantWorker.dispatchOne(dueTenant, referenceInstant);
+        } catch (RuntimeException runtimeException) {
+            // Failure isolation: one tenant blowing up must not cancel siblings in the
+            // structured scope. Logging stays at WARN to match the original loop's posture.
+            log.warn(
+                    "event=digest_tenant_failed tenantId={} failureType={}",
+                    dueTenant.tenantId(),
+                    runtimeException.getClass().getSimpleName(),
+                    runtimeException);
+        } finally {
+            concurrencyLimiter.release();
+        }
+        return null;
     }
 
     List<DigestDueTenant> findTenantsDueForDigest(Instant referenceInstant) {

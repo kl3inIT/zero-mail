@@ -138,7 +138,7 @@ public class RuleTemplateMaterializationService {
                     templateKey, SkippedTemplateReason.UNKNOWN_OR_DEPRECATED, false);
         }
 
-        int orderIndex = ruleRepository.findOrderedByTenantId(tenantId).size();
+        int orderIndex = (int) ruleRepository.countByTenantId(tenantId);
         RuleTemplateEntity ruleTemplateEntity = template.get();
         RuleEntity ruleEntity =
                 new RuleEntity(

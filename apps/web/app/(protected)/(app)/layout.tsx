@@ -3,11 +3,11 @@ import { cookies, headers } from 'next/headers';
 
 import { AppShell } from '@/components/shell/AppShell';
 import { getCurrentUser } from '@/features/account/api/account-api';
+import { accountQueryKeys } from '@/features/account/query-keys';
 import { getBillingBalance } from '@/features/billing/api/billing-api';
 import { billingKeys } from '@/features/billing/query-keys';
 import { getTenantStatus } from '@/features/gmail/api/gmail-api';
 import { gmailQueryKeys } from '@/features/gmail/query-keys';
-import { triageKeys } from '@/features/triage/query-keys';
 
 const SIDEBAR_COOKIE_NAME = 'sidebar_state';
 
@@ -21,11 +21,8 @@ export default async function ProtectedAppLayout({ children }: { children: React
 
   await Promise.all([
     queryClient.prefetchQuery({
-      queryKey: triageKeys.pauseState(),
-      queryFn: async () => {
-        const user = await getCurrentUser({ headers: requestHeaders });
-        return user.triagePaused;
-      },
+      queryKey: accountQueryKeys.me(),
+      queryFn: () => getCurrentUser({ headers: requestHeaders }),
     }),
     queryClient.prefetchQuery({
       queryKey: billingKeys.balance(),

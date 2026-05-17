@@ -67,6 +67,25 @@ class RuleCompileToolProfileTest {
     }
 
     @Test
+    void rule_compile_review_draft_profile_removes_clarification_branch() {
+        List<LlmTool> tools =
+                new AllowListedTools().tools(LlmToolProfile.RULE_COMPILE_REVIEW_DRAFT);
+
+        assertThat(tools)
+                .singleElement()
+                .satisfies(tool -> assertThat(tool.name()).isEqualTo("rule_compile"));
+        Map<String, Object> schema = tools.getFirst().jsonSchema();
+        Map<String, Object> properties = map(schema.get("properties"));
+        Map<String, Object> clarificationRequired = map(properties.get("clarificationRequired"));
+
+        assertThat(schema)
+                .containsEntry("type", "object")
+                .containsEntry("additionalProperties", false);
+        assertThat(clarificationRequired).containsEntry("const", false);
+        assertThat(properties).doesNotContainKey("clarificationQuestion");
+    }
+
+    @Test
     void rule_compile_validator_accepts_only_canonical_tool_name() {
         RuleCompileToolValidator validator = new RuleCompileToolValidator();
 
@@ -146,9 +165,9 @@ class RuleCompileToolProfileTest {
                 BYOKProvider.OPENAI,
                 "https://openrouter.ai/api/v1",
                 "test-platform-key",
-                "openai/gpt-4o-mini",
-                "openai/gpt-4o-mini",
-                "openai/gpt-4o-mini",
+                "openai/gpt-5.4-nano",
+                "openai/gpt-5.4-nano",
+                "openai/gpt-5.4-nano",
                 null,
                 null);
     }

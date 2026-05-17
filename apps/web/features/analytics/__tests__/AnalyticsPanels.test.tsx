@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { InboxFlowPanel } from '@/features/analytics/components/InboxFlowPanel';
 import { RuleHitsPanel } from '@/features/analytics/components/RuleHitsPanel';
 import { TimeSavedPanel, formatTimeSaved } from '@/features/analytics/components/TimeSavedPanel';
 import { TopSendersPanel } from '@/features/analytics/components/TopSendersPanel';
@@ -16,6 +17,7 @@ describe('analytics panels', () => {
       <>
         <VolumePanel observed={0} applied={0} />
         <TimeSavedPanel seconds={0} />
+        <InboxFlowPanel observed={0} applied={0} ruleHits={[]} />
         <TopSendersPanel senders={[]} />
         <RuleHitsPanel ruleHits={[]} />
       </>,
@@ -23,6 +25,7 @@ describe('analytics panels', () => {
 
     expect(screen.getByTestId('analytics-volume-panel')).toHaveTextContent('0');
     expect(screen.getByTestId('analytics-time-saved-panel')).toHaveTextContent('0m');
+    expect(screen.getByTestId('analytics-inbox-flow-panel')).toHaveTextContent('0');
     expect(screen.getByText('No activity in this window.')).toBeInTheDocument();
     expect(screen.getByText('No senders yet in this window.')).toBeInTheDocument();
     expect(screen.getByText('No rules triggered in this window.')).toBeInTheDocument();
@@ -34,6 +37,14 @@ describe('analytics panels', () => {
       <>
         <VolumePanel observed={1500} applied={1247} />
         <TimeSavedPanel seconds={15120} />
+        <InboxFlowPanel
+          observed={1500}
+          applied={1247}
+          ruleHits={[
+            { ruleName: 'Archive receipts', decisions: 30, applied: 28, reverted: 2 },
+            { ruleName: 'Draft investor updates', decisions: 9, applied: 9, reverted: 0 },
+          ]}
+        />
         <TopSendersPanel
           senders={[
             { senderEmail: 'founder@acme.test', count: 44 },

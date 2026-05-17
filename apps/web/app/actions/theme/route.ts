@@ -1,11 +1,8 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { type NextRequest } from 'next/server';
+
+import { redirectBack } from '../redirect-back';
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
-
-function redirectBack(request: NextRequest) {
-  const referer = request.headers.get('referer');
-  return NextResponse.redirect(referer ? new URL(referer) : new URL('/', request.url), 303);
-}
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();

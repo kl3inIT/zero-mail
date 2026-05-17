@@ -65,7 +65,7 @@ public class SpringAiLlmModelClient implements LlmModelClient {
                         .temperature(request.temperature())
                         .internalToolExecutionEnabled(false);
         if (request.toolChoiceRequired()) {
-            chatOptionsBuilder.toolChoice("required");
+            chatOptionsBuilder.toolChoice(OpenAiToolChoiceOptions.required());
         }
         if (request.maxTokens() != null) {
             chatOptionsBuilder.maxTokens(request.maxTokens());

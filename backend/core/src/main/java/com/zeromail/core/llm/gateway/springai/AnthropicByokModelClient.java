@@ -25,8 +25,6 @@ import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.stereotype.Component;
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
 
 @Component
 public class AnthropicByokModelClient implements ByokLlmModelClient {
@@ -36,7 +34,6 @@ public class AnthropicByokModelClient implements ByokLlmModelClient {
     private final ChatClient parentAnthropicChatClient;
     private final ByokEndpointValidator byokEndpointValidator;
     private final ZeroMailLlmByokProperties byokProperties;
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AnthropicByokModelClient(
             ByokEndpointValidator byokEndpointValidator,
@@ -103,18 +100,9 @@ public class AnthropicByokModelClient implements ByokLlmModelClient {
         return FunctionToolCallback.builder(
                         tool.name(), (Map<String, Object> toolInput) -> Map.of())
                 .description(tool.description())
-                .inputSchema(toJsonSchema(tool))
+                .inputSchema(LlmToolJsonSchemas.jsonSchemaOf(tool))
                 .inputType(Map.class)
                 .build();
-    }
-
-    private String toJsonSchema(LlmTool tool) {
-        try {
-            return objectMapper.writeValueAsString(tool.jsonSchema());
-        } catch (JacksonException jsonSerializationFailure) {
-            throw new IllegalStateException(
-                    "Unable to serialize LLM tool schema", jsonSerializationFailure);
-        }
     }
 
     private LlmChatResult toLlmChatResult(ChatResponse chatResponse) {

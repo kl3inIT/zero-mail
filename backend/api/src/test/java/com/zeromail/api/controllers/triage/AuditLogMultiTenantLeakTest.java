@@ -3,7 +3,7 @@ package com.zeromail.api.controllers.triage;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zeromail.core.triage.projection.AuditLogPageQuery;
-import com.zeromail.core.triage.projection.AuditLogQueryService;
+import com.zeromail.core.triage.usecases.AuditLogQueryService;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;

@@ -2,140 +2,168 @@
 
 ## What This Is
 
-Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reach inbox zero in Gmail by using AI to auto-triage, categorize, archive, and draft replies to incoming email based on user-defined natural-language rules. It is an architectural re-build inspired by Inbox Zero (https://github.com/elie222/inbox-zero), but with a Java 25 / Spring Boot 4 backend, Spring AI for model orchestration, and our own branding.
+Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reach inbox zero in Gmail by using AI to auto-triage, categorize, archive, and draft replies to incoming email based on user-defined natural-language rules. **As of v1.0 (2026-05-15) it ships:** Java 25 / Spring Boot 4 backend (`backend/core` + `backend/api` + `backend/worker`), Spring AI 2.0.0-M6 LLM gateway with BYOK + per-tenant credit ledger, deterministic rules engine, hero triage orchestrator with audit/undo/shadow-mode/sender safety net, AI draft replies, analytics + daily digest, Next.js 16 / React 19 / shadcn frontend with Vietnamese-default i18n, and a CASA-ready safety posture.
+
+## Current State
+
+**Shipped:** v1.0 MVP — `v1.0.0-rc1` tagged 2026-05-15.
+
+- **Backend:** ~17 phases, Java 25 + Spring Boot 4.0.6 + Spring Modulith + Hibernate 7 + Liquibase 5 + Spring AI 2.0.0-M6.
+- **Frontend:** Next.js 16.2.4 + React 19.2.5 + Tailwind 4 + shadcn/ui + TanStack Query + typed OpenAPI client; Vietnamese-default with English secondary.
+- **Infra:** Single VPS — Postgres 17 + Redis 7 + reverse proxy + api + worker + web on one host. No GCP / Kafka / vector DB.
+- **Trust posture:** Auto-send architecturally blocked (ArchUnit + safety policy + repo-wide grep enforced); no long-term storage of email bodies, LLM prompts, completions, or embeddings; per-tenant Scoped Values + multi-tenant leak test green; @Sensitive Logback scrub end-to-end verified.
+- **Launch state:** OAuth Testing mode (production CASA verification deferred to dormant SEED-012); 50-tenant load test 4/4 invariants PASS; LAUNCH-GO-NOGO signed.
 
 ## Core Value
 
-**AI auto-triage that users trust with their real inbox.** If triage quality, safety (no destructive actions, no data leakage), and reliability aren't excellent, nothing else matters — users will uninstall the Gmail grant within a day.
+**AI auto-triage that users trust with their real inbox.** Validated through v1.0: trust posture (no auto-send, no stored bodies, undoable actions) is the architectural backbone — every phase reinforced it, and the launch go/no-go signoff is bound to it.
 
 ## Requirements
 
 ### Validated
 
-<!-- Shipped and confirmed valuable. -->
+<!-- Shipped and confirmed valuable. Each row carries the milestone where it landed. -->
 
-- Phase 4 backend triage convergence validated: observed Gmail messages flow into the orchestrator, rules are evaluated in order, semantic-intent matchers route through `LlmGateway`, and only allow-listed Gmail writes (label, archive, save draft) can execute.
-- Phase 4 safety and audit validated: auto-send remains architecturally blocked, every backend triage decision writes an audit row, undo/shadow-mode/sender-safety-net REST surfaces exist, and privacy sweep/full `clean check` passed on 2026-05-11.
-- Phase 5A web UI core validated: `apps/web` now has the protected Next.js app shell, typed-client feature APIs, persistent pause/balance/connection chrome, in-product privacy page, and 320px/light/dark browser coverage.
-- Phase 5A user-surface subset validated: onboarding, rules + live preview, triage audit/shadow/sender UI, billing/top-up UI, and explicit backend-gap degradation are complete; draft review, analytics, and real audit-list/ledger-history backend endpoints remain active follow-up scope.
+**Auth & onboarding** *(v1.0)*
+- ✓ Google OAuth + Gmail scopes signup/signin (AUTH-01, v1.0)
+- ✓ One Gmail / Workspace account per tenant (AUTH-02, v1.0)
+- ✓ Revoke + delete account + all stored data (AUTH-03, v1.0)
+- ✓ Cookie-based session via Spring Session Redis, not JWT (AUTH-04, v1.0)
+- ✓ DISCONNECTED state + reconnect prompt on `invalid_grant` (AUTH-05, v1.0)
+- ✓ Guided onboarding: connect Gmail → enable template rule → first triage preview (AUTH-06, v1.0)
+
+**Foundation & safety** *(v1.0)*
+- ✓ Tenant-scoped context via Scoped Values, never ThreadLocal (FND-01, v1.0)
+- ✓ ArchUnit fails new ThreadLocal in request/worker paths (FND-02, v1.0)
+- ✓ `@Sensitive` wrapper + Logback scrub filter end-to-end (FND-03, v1.0)
+- ✓ ArchUnit fails Sensitive-typed log args (FND-04, v1.0)
+- ✓ Multi-tenant virtual-thread leak test green (FND-05, v1.0)
+- ✓ Skeleton OpenAPI consumed by `apps/web` via `openapi-typescript` (FND-06, v1.0)
+- ✓ CASA restricted-scope kicked off at OAuth wiring (FND-07, v1.0; production close in SEED-012)
+
+**Mail ingestion** *(v1.0)*
+- ✓ Gmail `users.watch` + Pub/Sub push, idempotent per `(tenantId, historyId, messageId)` (MAIL-01..05, v1.0)
+- ✓ Global pause toggle wired UI ↔ backend (MAIL-06, v1.0)
+
+**Billing (prepaid credits)** *(v1.0)*
+- ✓ SePay/VietQR top-up + signed webhook (BILL-01, v1.0)
+- ✓ Double-entry Postgres ledger with reserve/settle/release + concurrency safety (BILL-02..04, v1.0)
+- ✓ Real-time balance + per-action cost in UI; insufficient-credit blocks billable actions (BILL-05..06, v1.0)
+- ✓ BYOK actions bypass platform credits (BILL-07, v1.0)
+
+**LLM gateway** *(v1.0)*
+- ✓ Single `LlmGateway` (Spring AI 2.0.0-M6); ArchUnit confines vendor SDKs (LLM-01, v1.0)
+- ✓ OpenRouter default + per-call model pin + 3-provider BYOK (LLM-02..03, v1.0)
+- ✓ AES-GCM BYOK encryption + per-call zeroing; never logged or persisted in plaintext (LLM-04, v1.0)
+- ✓ HTML sanitize + NFC + Unicode-tag strip + ≤4k token truncate (LLM-05..08, v1.0)
+- ✓ Tool-call allow-list + structured schema; safety violation rejects pre-execution (LLM-07, v1.0)
+- ✓ No raw body/prompt/completion persistence beyond short-lived in-memory cache (LLM-09, v1.0)
+- ✓ Per-tenant daily LLM spend cap + golden-set drift detection (LLM-10..11, v1.0)
+
+**Rules engine** *(v1.0)*
+- ✓ NL-to-AST compile via Spring AI tool-call (no free-form runtime LLM output) (RULE-01..02, v1.0)
+- ✓ Deterministic evaluator; `SEMANTIC_INTENT` deferred to triage batched LLM (RULE-03..04, v1.0)
+- ✓ Side-effect-free preview before enable; CRUD + reorder + edit (RULE-05..06, v1.0)
+- ✓ DB-backed template gallery (receipts, newsletters, calendar starters) (RULE-07, v1.0)
+
+**Triage convergence (hero)** *(v1.0)*
+- ✓ Per-message orchestration: rules in order → safety policy → allow-listed Gmail writes (TRG-01..02, v1.0)
+- ✓ Auto-send blocked at gateway; ArchUnit grep proves zero send call sites (TRG-03, v1.0)
+- ✓ Label / archive / save-draft only (TRG-04, v1.0)
+- ✓ Immutable audit + undo within 30-day window (TRG-05..06, v1.0)
+- ✓ Tenant-wide opt-in shadow mode + sender safety net (TRG-07..08, v1.0)
+
+**Draft replies** *(v1.0)*
+- ✓ On-demand AI draft per thread; saved as Gmail draft with correct `In-Reply-To` / `References` (DRFT-01..02, v1.0)
+- ✓ In-request tone matching, no persisted embeddings (DRFT-03, v1.0)
+- ✓ Never auto-sends; user reviews in Gmail (DRFT-04, v1.0; classifier eval 22/22 = 100%)
+
+**Analytics & daily digest** *(v1.0)*
+- ✓ Volume / time saved / top senders / rule hits over selectable window (ANL-01, v1.0)
+- ✓ Metadata-only metrics; ArchUnit content-ban test enforces (ANL-02, v1.0)
+- ✓ Daily digest email via Resend with idempotency (ANL-03, v1.0; live sender setup deferred)
+
+**Web UI** *(v1.0)*
+- ✓ Next.js 16 / React 19 frontend in `apps/web`, typed OpenAPI client (WEB-01, v1.0)
+- ✓ End-to-end UI: onboarding, rules + live preview, triage audit + undo, draft review, analytics, billing (WEB-02, v1.0 across 5A/5B/5C)
+- ✓ In-product privacy page (no stored bodies, no auto-send, BYOK option) (WEB-03, v1.0)
+- ✓ Persistent chrome with global pause + credit balance + connection health (WEB-04, v1.0)
 
 ### Active
 
-<!-- Current scope. Building toward these. Hypotheses until shipped & validated. -->
+<!-- Next milestone scope. Define via `/gsd:new-milestone`. -->
 
-**Auth & onboarding**
-- [ ] User can sign up and sign in with Google OAuth (Gmail scopes)
-- [ ] User can connect one Gmail / Google Workspace account in v1
-- [ ] User can revoke access and delete their account + data
-
-**AI triage (hero feature)**
-- [ ] System receives near-real-time new-mail notifications via Gmail Pub/Sub push
-- [x] System classifies each new message against the user's active rules using an LLM
-- [x] System can apply labels to messages automatically
-- [x] System can archive (skip inbox) messages automatically
-- [x] System can save a draft reply in Gmail (never auto-sends in v1)
-- [ ] User sees a per-message audit trail of what triage did and why
-
-**Natural-language user rules**
-- [ ] User writes rules in plain English (e.g., "Archive receipts from Stripe and label them Finance")
-- [ ] AI interprets the rule into a structured matcher + action set
-- [ ] User can preview a rule against recent mail before enabling
-- [ ] User can enable, disable, reorder, edit, and delete rules
-
-**AI draft replies**
-- [ ] User can request an AI-generated draft reply for a thread
-- [ ] Draft is created in Gmail as a normal draft (user reviews & sends)
-- [ ] Draft tries to match the user's writing tone from prior sent mail
-
-**Analytics dashboard**
-- [ ] User sees volume triaged, time saved, top senders, rule hits over time
-- [ ] Metrics are derived from minimal metadata (not from stored email bodies)
-
-**LLM routing & BYOK**
-- [ ] Default LLM traffic routes through OpenRouter behind a Spring AI abstraction
-- [ ] User can bring their own API key (OpenAI, Anthropic, Google GenAI, DeepSeek, or compatible endpoint) — BYOK
-- [ ] BYOK usage bypasses platform LLM cost (user pays their provider directly)
-
-**Credits & billing (pay-as-you-go)**
-- [ ] User buys prepaid credits upfront
-- [ ] Each billable action (triage, draft, attachment analysis) deducts credits
-- [ ] User sees real-time credit balance and per-action cost
-- [ ] System blocks billable actions when balance is insufficient
-- [ ] (Credit unit economics finalized during roadmap / billing phase)
-
-**Privacy & safety posture**
-- [ ] Email bodies are sanitized (HTML stripped, hidden text removed) before LLM calls
-- [ ] Bodies are truncated to a safe token budget before LLM calls
-- [ ] All email content is treated as untrusted input; prompt-injection hardening applied
-- [ ] No long-term storage of raw email bodies, LLM prompts, LLM completions, or embeddings
-- [ ] Only minimal derived metadata + short-lived draft caches persist, with strict retention limits
-
-**Web UI**
-- [x] Next.js / React frontend (separate module in the monorepo) talks to Spring Boot via REST
-- [ ] UI still needs draft review, analytics, real triage audit-list endpoint, and real billing ledger-history endpoint; Phase 5A already covers onboarding, rules CRUD + live preview, triage/billing UI degradation, privacy, and persistent chrome
+*(Run `/gsd:new-milestone` to define v1.1 — typical candidates: rules UX structured builder (next-milestone TODO), CASA production verification (SEED-012), live Resend deliverability + payment-provider smoke tests, Outlook/Microsoft 365, Auto-send opt-in for narrow rules with per-rule approval flow, bulk unsubscribe, cold-email blocker, reply-tracker, attachment auto-filing, team/seat plans.)*
 
 ### Out of Scope
 
 <!-- Explicit boundaries. Reasoning included so we don't silently re-add them. -->
 
-- **Auto-send replies (no human review)** — safety risk too high for v1; opt-in advanced feature post-validation.
-- **Outlook / Microsoft 365 support** — Gmail-only in v1 to ship focused; re-evaluate after product-market fit.
-- **Generic IMAP/SMTP support** — different auth, push, and label model; would double provider surface area.
-- **Self-hosted / open-source distribution** — Cloud SaaS only in v1; OSS model is a separate strategic decision.
-- **Team / seat-based plans** — v1 targets individual prosumers; team features deferred until SMB signals appear.
-- **Cold-email blocker as a distinct feature** — can be modeled as a user rule in v1; revisit as a first-class feature later.
-- **Bulk unsubscribe as a distinct feature** — same: expressible as a rule; first-class feature deferred.
-- **Reply-tracker / follow-up nudges** — nice-to-have, deferred past v1.
-- **Long-term storage of email content, LLM prompts, completions, or embeddings** — privacy constraint, not a future feature.
-- **Enterprise features (SSO, SCIM, audit exports, DPA-grade compliance)** — target is busy pros/founders, not enterprise buyers in v1.
+- **Auto-send replies (no human review)** — single bad auto-send is trust-ending; opt-in narrow auto-send deferred to v2 per v1 trust story.
+- **Outlook / Microsoft 365** — Gmail-only in v1 to ship focused; v2 candidate.
+- **Generic IMAP/SMTP** — different auth/push/label model; doubles provider surface area.
+- **Self-hosted / open-source distribution** — Cloud SaaS only in v1; OSS is a separate strategic decision.
+- **Team / seat-based plans** — v1 targets individual prosumers; team features wait for SMB signal.
+- **Long-term storage of email bodies, LLM prompts/completions, or embeddings** — privacy constraint, permanent (not a deferred feature).
+- **RAG over user mail bodies** — requires persistent derived features; incompatible with privacy stance.
+- **Vector DB in v1 infra** — no embedding persistence → no vector DB need.
+- **Full in-app mail client UI** — Gmail remains primary client; we augment, not replace.
+- **Enterprise SSO / SCIM / DPA** — target buyer is busy pro / founder, not enterprise procurement in v1.
+- **Cold-email blocker / bulk unsubscribe / reply-tracker** as distinct first-class features — expressible as user rules in v1; first-class feature deferred to v2.
 
 ## Context
 
-**Product lineage.** Inspired by Inbox Zero (https://github.com/elie222/inbox-zero). We are not forking; this is an independent architecture and brand. Inbox Zero's Next.js + Node implementation is a reference for UX patterns and feature coverage, not for code.
+**Product lineage.** Architecturally re-built, inspired by Inbox Zero (https://github.com/elie222/inbox-zero) — UX/feature reference, not code. Local clone at `../inbox-zero` for inspection only.
 
-**Target user.** Busy professionals and founders who get 100-500+ emails/day and want an AI agent that actually does inbox work for them, not just summarizes it. They are technical enough to understand rules and BYOK but expect prosumer-grade polish.
+**Target user.** Busy professionals and founders with 100-500+ daily emails who want an AI agent that *does* inbox work, not just summarizes it. Technical enough for rules + BYOK; expect prosumer-grade polish.
 
-**Existing internal reference.** User pointed at an existing `D:\DTH\ai-agent-core\ai-agent` project as the pattern for OpenRouter routing. Planning phases should inspect that repo (if still available) before designing the LLM gateway module.
+**Runtime posture.** Multi-tenant cloud SaaS. Every request is tenant-scoped (Scoped Values, never ThreadLocal). Gmail Pub/Sub push arrives asynchronously and is processed with strong idempotency (`ON CONFLICT DO NOTHING`).
 
-**Runtime posture.** Multi-tenant cloud SaaS. Every request is in the context of a tenant (user). Gmail push webhooks arrive asynchronously via Google Pub/Sub and must be processed with strong idempotency and per-tenant isolation.
+**Safety posture.** App has write access to people's primary email. Every triage action is reversible (label / archive / draft); auto-send is forbidden at the gateway and ArchUnit-enforced; every autonomous action leaves an audit trail with 30-day undo.
 
-**Safety posture.** The app has write access to people's primary email accounts. Any destructive, irreversible, or silently-sent action is a product-killing risk. In v1, every triage action must be reversible (labels, archive, draft) and every autonomous action must leave an auditable trail.
+**v1.0 scale.** ~17 phases / 123 plans / 221 tasks, locked Vietnamese-default i18n + English secondary, single-VPS deployment baseline, OAuth Testing mode at launch (production OAuth gated by SEED-012 CASA closure).
 
 ## Constraints
 
-- **Language/runtime**: Java 25 — locked by user directive.
-- **Framework**: Spring Boot 4 — locked by user directive.
-- **Build**: Gradle 9.x with Kotlin DSL — locked by user directive.
-- **Versioning policy**: Prefer the latest stable versions compatible with the chosen deployment platform. Only use a pre-release when explicitly pinned by the user. Current exception: **Spring AI 2.0.0-M6**.
-- **AI**: Spring AI **2.0.0-M6** for LLM orchestration (model abstraction, prompts, tool calls) — locked by user directive.
-- **Structure**: Monorepo / multi-module Gradle project — locked by user directive. Backend topology is now locked to **`backend/core` + `backend/api` + `backend/worker`**, with `apps/web` as the separate frontend module. Internal backend boundaries stay package-based inside `backend/core`, enforced by Spring Modulith verification and architectural tests.
-- **Frontend**: Next.js / React as a separate module inside the monorepo — locked by product decision.
-- **Mail provider (v1)**: Gmail / Google Workspace only, via Gmail API + Google Pub/Sub push — locked by product decision.
-- **Distribution (v1)**: Self-hosted SaaS on a single VPS for the current deployment; managed cloud can be revisited later — locked by user decision.
-- **LLM routing**: Default via OpenRouter behind Spring AI; BYOK supported — locked by product decision.
-- **Billing model**: Prepaid credits, pay-as-you-go. Vietnam beta top-ups use SePay/VietQR against a Postgres ledger with a configurable VND-per-credit rate; global Merchant-of-Record/card provider remains deferred.
-- **Privacy**: No long-term storage of raw email bodies, LLM prompts/completions, or embeddings. Content always sanitized + truncated + prompt-injection-hardened before hitting any LLM — locked.
-- **Write actions allowed in v1**: label, archive (skip inbox), save Gmail draft. **Auto-send is forbidden.**
-- **Primary datastore**: PostgreSQL self-hosted on the same VPS as the app (confirmed). Redis also runs on the same VPS for cache / session / rate-limit infrastructure only; vector DB is deferred.
-- **Schema migrations**: Liquibase with YAML changelogs — locked by user directive.
-- **Timeline**: Exploratory project — learning-oriented, no hard ship deadline. Favor architectural quality and defensibility over speed.
+- **Language/runtime**: Java 25 — locked.
+- **Framework**: Spring Boot 4.0.6 — locked.
+- **Build**: Gradle 9.x with Kotlin DSL + libs.versions.toml — locked.
+- **AI**: Spring AI 2.0.0-M6 — locked (M6 → GA churn possible; all usage confined to one adapter package).
+- **Structure**: Monorepo — `backend/core` + `backend/api` + `backend/worker` + `apps/web`. Internal backend boundaries package-based, enforced by Spring Modulith + ArchUnit.
+- **Frontend**: Next.js 16 / React 19 — locked.
+- **Mail provider (v1)**: Gmail / Workspace only via Gmail API + Pub/Sub push — locked.
+- **Distribution (v1)**: Self-hosted SaaS on a single VPS — locked.
+- **LLM routing**: Default OpenRouter behind Spring AI; BYOK supported — locked.
+- **Billing model**: Prepaid credits, pay-as-you-go. Vietnam beta uses SePay/VietQR + Postgres ledger + configurable VND-per-credit; global Merchant-of-Record/card provider deferred.
+- **Privacy**: No long-term storage of raw email bodies, LLM prompts/completions, or embeddings — locked.
+- **Write actions in v1**: label, archive, save Gmail draft. **Auto-send forbidden.**
+- **Primary datastore**: PostgreSQL 17 self-hosted on the VPS. Redis 7 same VPS for cache/session/rate-limit only; no vector DB.
+- **Schema migrations**: Liquibase YAML — locked.
+- **Timeline**: Exploratory / learning-oriented; favor architectural quality over speed.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Gmail-only in v1 | One provider halves mail-integration scope; Gmail covers the busy-pro/founder target; Outlook is a separate effort | Chosen |
-| Pub/Sub push over polling | User expects near-real-time triage; polling would cap responsiveness and still cost API quota | Chosen |
-| OpenRouter default + BYOK | Matches Inbox Zero's flexibility, lets us switch models without code change, and gives users cost control | Chosen |
-| No auto-send in v1 | A single bad auto-sent reply is a trust-ending event; draft-only keeps safety floor high | Chosen |
-| Prepaid credits, pay-as-you-go | Aligns revenue with actual LLM cost; avoids the freemium abuse surface | Chosen |
-| No long-term storage of email bodies / LLM I/O / embeddings | Privacy is the #1 blocker to installing an AI mail agent; makes the trust story simple to explain | Chosen |
-| Next.js frontend, separate module | Keeps frontend talent pool open; backend stays a clean API boundary; matches Inbox Zero DX | Chosen |
-| Monorepo module layout | Keep the build simple for v1 while still separating HTTP edge from async workers | Chosen — `apps/web` + `backend/core` + `backend/api` + `backend/worker` |
-| Name "Zero Mail" — placeholder | Directory-derived; final brand will be chosen before public launch to avoid rework | Pending rename before launch |
-| Single bundled Google OAuth registration | Phase 01.5 removed the separate `google-gmail` leg; login now requests Gmail scopes up front and persists the Gmail connection during provisioning | Chosen |
-| Single VPS deployment baseline | Current deployment runs app, worker, web, PostgreSQL, and Redis together on one VPS; no GCP hosting baseline or `spring-cloud-gcp` starter by default | Chosen |
-| Billing configuration under `ZeroMailCoreProperties` | Phase 02B follows the existing backend properties convention: core-owned settings stay under one core properties root and bind as `zero-mail.billing.*`, avoiding separate per-domain properties/configuration classes | Chosen |
+| Gmail-only in v1 | Halves mail-integration scope; covers target user | ✓ Good — shipped v1.0 |
+| Pub/Sub push over polling | Near-real-time triage; preserves API quota | ✓ Good — MAIL-01 verified |
+| OpenRouter default + BYOK via Spring AI | Model flexibility + user cost control | ✓ Good — LLM-01..04 shipped |
+| No auto-send in v1 | One bad auto-send is trust-ending | ✓ Good — TRG-03 + ArchUnit + grep gate |
+| Prepaid credits, pay-as-you-go | Aligns revenue with LLM cost; avoids freemium abuse | ✓ Good — BILL-01..07 shipped |
+| No long-term body/prompt/completion/embedding storage | Privacy is #1 install blocker | ✓ Good — repo-wide privacy sweeps green |
+| Next.js frontend separate module | Open frontend talent pool; clean API boundary | ✓ Good — WEB-01..04 shipped |
+| Monorepo `backend/core + api + worker + apps/web` | Simple build; clean HTTP edge / async worker split | ✓ Good — Spring Modulith verifies |
+| Name "Zero Mail" placeholder | Final brand pre-launch | — Pending rename before public launch |
+| Single bundled Google OAuth registration | Phase 1.5 removed `google-gmail` leg; one consent flow | ✓ Good — Inbox Zero parity |
+| Single-VPS deployment baseline | No GCP starter; one VPS hosts everything | ✓ Good — load-test 50 tenants PASS |
+| Billing config under `ZeroMailCoreProperties` | Single core-owned properties root, no per-domain configuration classes | ✓ Good — survived Phase 2B review |
+| Vietnamese default + English secondary i18n | Target market is Vietnam beta first | ✓ Good — Phase 1.1 shipped; CI parity gate |
+| Postgres-backed queue (`SKIP LOCKED`), no Kafka/RabbitMQ | Pub/Sub already retries; one less moving piece | ✓ Good — Phase 4 ShedLock + retry green |
+| Server-issued cookie session, not JWT | Simpler revoke; HttpOnly+SameSite+Secure | ✓ Good — AUTH-04 shipped |
+| Modulith JDBC event spine for cross-module commands | Avoids tight coupling without Kafka | ✓ Good — `MailMessageObserved` → triage works |
+| Phase 1.4 closed without ship; superseded by Phase 1.5 | Mismatched-account two-leg OAuth was wrong model | ✓ Good — Inbox Zero pivot saved cycles |
+| Bundle 32 quick tasks + 12 SEEDs at v1.0 close | Closure hygiene; SEEDs are dormant by design | ⚠ Revisit at v1.1 — drop seeds that age out |
+| OAuth Testing mode at launch | CASA production verification 4–12 weeks external; ship Testing mode now | — Pending — gated by SEED-012 |
 
 ## Evolution
 
@@ -155,4 +183,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-12 after Phase 05A*
+*Last updated: 2026-05-15 after v1.0 milestone close*

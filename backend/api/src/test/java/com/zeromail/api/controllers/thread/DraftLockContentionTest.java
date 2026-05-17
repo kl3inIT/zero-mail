@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.zeromail.api.config.GlobalExceptionHandler;
-import com.zeromail.api.error.ErrorCodes;
 import com.zeromail.api.error.InvalidCursorException;
 import com.zeromail.core.draft.exception.DraftGenerationFailedException;
 import com.zeromail.core.draft.exception.DraftGenerationInFlightException;
 import com.zeromail.core.llm.exception.SafetyViolationException;
+import com.zeromail.core.shared.error.ErrorCodes;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -18,7 +18,7 @@ class DraftLockContentionTest {
 
     private static final String GENERATE_THREAD_DRAFT_SERVICE =
             "com.zeromail.core.draft.usecases.GenerateThreadDraftService";
-    private static final String ERROR_CODES = "com.zeromail.api.error.ErrorCodes";
+    private static final String ERROR_CODES = "com.zeromail.core.shared.error.ErrorCodes";
 
     @Test
     void second_concurrent_draft_request_returns_http_409_in_flight_code() {
@@ -27,7 +27,7 @@ class DraftLockContentionTest {
         GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
         ResponseEntity<ProblemDetail> response =
-                handler.onDraftGenerationInFlight(new DraftGenerationInFlightException());
+                handler.onBusinessException(new DraftGenerationInFlightException());
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(response.getBody()).isNotNull();
@@ -40,11 +40,12 @@ class DraftLockContentionTest {
         GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
         ResponseEntity<ProblemDetail> failedResponse =
-                handler.onDraftGenerationFailed(new DraftGenerationFailedException());
+                handler.onBusinessException(new DraftGenerationFailedException());
         ResponseEntity<ProblemDetail> cursorResponse =
-                handler.onInvalidCursor(new InvalidCursorException(new IllegalArgumentException()));
+                handler.onBusinessException(
+                        new InvalidCursorException(new IllegalArgumentException()));
         ResponseEntity<ProblemDetail> safetyResponse =
-                handler.onSafetyViolation(new SafetyViolationException());
+                handler.onBusinessException(new SafetyViolationException());
 
         assertThat(failedResponse.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
         assertThat(failedResponse.getBody()).isNotNull();

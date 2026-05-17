@@ -7,6 +7,8 @@
     "pnpm": "11.0.8"
   },
   "scripts": {
+    "encoding:check": "node scripts/check-encoding.mjs",
+    "check": "pnpm encoding:check && pnpm --filter web i18n:check && pnpm --filter web typecheck",
     "web:dev": "pnpm --filter web dev",
     "web:dev:tailscale": "pnpm run tailscale:serve:web && pnpm run web:dev",
     "web:build": "pnpm --filter web build",
@@ -18,6 +20,9 @@
     "tailscale:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-tailscale.ps1 -Mode status",
     "tailscale:reset": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-tailscale.ps1 -Mode reset",
     "prepare": "husky"
+  },
+  "lint-staged": {
+    "*": "pnpm encoding:check"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",

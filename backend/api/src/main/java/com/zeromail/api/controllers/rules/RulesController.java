@@ -75,11 +75,10 @@ public class RulesController {
 
     @GetMapping
     public ResponseEntity<RulesListResponse> listRules() {
-        UUID tenantId = currentTenantId();
-        // Locked decision D-C2: GET /api/rules is the source of truth and
-        // must materialize selected templates idempotently. Other clients
-        // (mobile, CLI, future worker bootstrap) must observe template-derived
-        // rules without depending on a frontend-only POST.
+        UUID tenantId = TenantContext.currentTenantUuid();
+        // GET /api/rules is the source of truth and materializes selected templates
+        // idempotently so non-frontend clients (mobile, CLI, future worker bootstrap)
+        // still observe template-derived rules.
         RuleTemplateMaterializationResult materializationResult =
                 ruleTemplateMaterializationService.materializeSelectedTemplates(tenantId);
         RulesListResponse response =
@@ -96,25 +95,28 @@ public class RulesController {
 
     @GetMapping("/{ruleId}")
     public RuleResponse getRule(@PathVariable UUID ruleId) {
-        return RuleResponse.from(ruleManagementService.get(currentTenantId(), ruleId));
+        return RuleResponse.from(
+                ruleManagementService.get(TenantContext.currentTenantUuid(), ruleId));
     }
 
     @PostMapping("/compile")
     public RuleCompileResponse compile(@Valid @RequestBody RuleCompileRequest request) {
-        UUID tenantId = currentTenantId();
+        UUID tenantId = TenantContext.currentTenantUuid();
         RuleCompileResult compileResult =
                 ruleCompilerService.compile(
                         new RuleCompileCommand(
                                 tenantId,
                                 request.sourceText(),
                                 request.clarificationAnswer(),
-                                request.priorCompileContext()));
+                                request.priorCompileContext(),
+                                request.priorDraftJson(),
+                                request.editInstruction()));
         return RuleCompileResponse.from(compileResult);
     }
 
     @PostMapping
     public RuleResponse createRule(@Valid @RequestBody RuleCreateRequest request) {
-        UUID tenantId = currentTenantId();
+        UUID tenantId = TenantContext.currentTenantUuid();
         RuleCompileResult compileResult = compiledPayloadOrThrow(request.compiled());
         try {
             return RuleResponse.from(
@@ -132,7 +134,7 @@ public class RulesController {
     @PutMapping("/{ruleId}")
     public RuleResponse updateRule(
             @PathVariable UUID ruleId, @Valid @RequestBody RuleUpdateRequest request) {
-        UUID tenantId = currentTenantId();
+        UUID tenantId = TenantContext.currentTenantUuid();
         RuleCompileResult compileResult = compiledPayloadOrThrow(request.compiled());
         try {
             return RuleResponse.from(
@@ -152,7 +154,7 @@ public class RulesController {
     @PatchMapping("/{ruleId}/enabled")
     public RuleResponse updateEnabled(
             @PathVariable UUID ruleId, @Valid @RequestBody RuleEnabledRequest request) {
-        UUID tenantId = currentTenantId();
+        UUID tenantId = TenantContext.currentTenantUuid();
         if (request.enabled()) {
             return RuleResponse.from(ruleManagementService.enable(tenantId, ruleId));
         }
@@ -161,7 +163,7 @@ public class RulesController {
 
     @PutMapping("/reorder")
     public List<RuleResponse> reorderRules(@Valid @RequestBody RuleReorderRequest request) {
-        UUID tenantId = currentTenantId();
+        UUID tenantId = TenantContext.currentTenantUuid();
         try {
             return ruleManagementService
                     .reorder(
@@ -185,7 +187,7 @@ public class RulesController {
     @DeleteMapping("/{ruleId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteRule(@PathVariable UUID ruleId) {
-        ruleManagementService.delete(currentTenantId(), ruleId);
+        ruleManagementService.delete(TenantContext.currentTenantUuid(), ruleId);
     }
 
     @PostMapping("/{ruleId}/preview")
@@ -194,7 +196,7 @@ public class RulesController {
         try {
             return RulePreviewResponse.from(
                     rulePreviewService.previewSavedRule(
-                            currentTenantId(), ruleId, request.sampleSize()));
+                            TenantContext.currentTenantUuid(), ruleId, request.sampleSize()));
         } catch (IllegalArgumentException invalidSampleSize) {
             throw RuleApiException.invalidSampleSize();
         }
@@ -208,7 +210,7 @@ public class RulesController {
         try {
             return RulePreviewResponse.from(
                     rulePreviewService.previewDraft(
-                            currentTenantId(),
+                            TenantContext.currentTenantUuid(),
                             compileResult.matcherAst(),
                             compileResult.actionIntents(),
                             normalizedSampleSize));
@@ -219,7 +221,7 @@ public class RulesController {
 
     @GetMapping("/templates")
     public List<RuleTemplateResponse> listTemplates() {
-        UUID tenantId = currentTenantId();
+        UUID tenantId = TenantContext.currentTenantUuid();
         return ruleTemplateCatalogService.listActiveTemplates(tenantId).stream()
                 .map(RuleTemplateResponse::from)
                 .toList();
@@ -230,17 +232,7 @@ public class RulesController {
             @PathVariable String templateKey) {
         return RuleTemplateMaterializationResponse.from(
                 ruleTemplateMaterializationService.materializeTemplate(
-                        currentTenantId(), templateKey));
-    }
-
-    @PostMapping("/templates/materialize-selected")
-    public RuleTemplateMaterializationResponse materializeSelectedTemplates() {
-        return RuleTemplateMaterializationResponse.from(
-                ruleTemplateMaterializationService.materializeSelectedTemplates(currentTenantId()));
-    }
-
-    private static UUID currentTenantId() {
-        return UUID.fromString(TenantContext.currentOrThrow());
+                        TenantContext.currentTenantUuid(), templateKey));
     }
 
     private Integer normalizedPreviewSampleSize(Integer requestedSampleSize) {

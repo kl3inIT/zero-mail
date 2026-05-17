@@ -319,6 +319,17 @@ class LlmGatewayImpl implements LlmGateway {
 
     @Override
     public RuleCompileGatewayResult compileRule(CallSite callSite, String compilerPayload) {
+        return compileRule(callSite, compilerPayload, LlmToolProfile.RULE_COMPILE);
+    }
+
+    @Override
+    public RuleCompileGatewayResult compileRuleReviewDraft(
+            CallSite callSite, String compilerPayload) {
+        return compileRule(callSite, compilerPayload, LlmToolProfile.RULE_COMPILE_REVIEW_DRAFT);
+    }
+
+    private RuleCompileGatewayResult compileRule(
+            CallSite callSite, String compilerPayload, LlmToolProfile toolProfile) {
         if (callSite != CallSite.PREVIEW) {
             throw new IllegalArgumentException("Rule compilation is only supported for PREVIEW");
         }
@@ -348,8 +359,7 @@ class LlmGatewayImpl implements LlmGateway {
                             // (quoted angle addresses, regex literals, "<reply requested>").
                             SanitizationContext sanitizedContext =
                                     sanitizationPipeline.sanitizeStructuredJson(compilerPayload);
-                            List<LlmTool> tools =
-                                    allowListedTools.tools(LlmToolProfile.RULE_COMPILE);
+                            List<LlmTool> tools = allowListedTools.tools(toolProfile);
 
                             Optional<TenantByokCredentialsEntity> byok =
                                     findByokCredentials(tenantId);
@@ -358,7 +368,7 @@ class LlmGatewayImpl implements LlmGateway {
                                         byok.get(),
                                         sanitizedContext,
                                         callSite,
-                                        SystemPrompts.RULE_COMPILE_SYSTEM_PROMPT,
+                                        ruleCompileSystemPrompt(toolProfile),
                                         tools,
                                         0.0,
                                         null,
@@ -371,13 +381,19 @@ class LlmGatewayImpl implements LlmGateway {
                                     provider,
                                     model,
                                     sanitizedContext,
-                                    SystemPrompts.RULE_COMPILE_SYSTEM_PROMPT,
+                                    ruleCompileSystemPrompt(toolProfile),
                                     tools,
                                     startNanos,
                                     0.0,
                                     null,
                                     this::parseRuleCompileToolCall);
                         });
+    }
+
+    private String ruleCompileSystemPrompt(LlmToolProfile toolProfile) {
+        return toolProfile == LlmToolProfile.RULE_COMPILE_REVIEW_DRAFT
+                ? SystemPrompts.RULE_COMPILE_REVIEW_DRAFT_SYSTEM_PROMPT
+                : SystemPrompts.RULE_COMPILE_SYSTEM_PROMPT;
     }
 
     @Override

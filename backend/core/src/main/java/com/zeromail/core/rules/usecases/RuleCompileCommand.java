@@ -3,11 +3,18 @@ package com.zeromail.core.rules.usecases;
 import java.util.UUID;
 
 public record RuleCompileCommand(
-        UUID tenantId, String sourceText, String clarificationAnswer, String priorCompileContext) {
+        UUID tenantId,
+        String sourceText,
+        String clarificationAnswer,
+        String priorCompileContext,
+        String priorDraftJson,
+        String editInstruction) {
 
     private static final int MAX_SOURCE_TEXT_LENGTH = 4_000;
     private static final int MAX_CLARIFICATION_ANSWER_LENGTH = 1_000;
     private static final int MAX_PRIOR_CONTEXT_LENGTH = 2_000;
+    private static final int MAX_PRIOR_DRAFT_LENGTH = 4_000;
+    private static final int MAX_EDIT_INSTRUCTION_LENGTH = 500;
 
     public RuleCompileCommand {
         if (tenantId == null) {
@@ -22,10 +29,27 @@ public record RuleCompileCommand(
         priorCompileContext =
                 normalizeOptionalText(
                         priorCompileContext, "priorCompileContext", MAX_PRIOR_CONTEXT_LENGTH);
+        priorDraftJson =
+                normalizeOptionalText(priorDraftJson, "priorDraftJson", MAX_PRIOR_DRAFT_LENGTH);
+        editInstruction =
+                normalizeOptionalText(
+                        editInstruction, "editInstruction", MAX_EDIT_INSTRUCTION_LENGTH);
     }
 
     public RuleCompileCommand(UUID tenantId, String sourceText) {
-        this(tenantId, sourceText, null, null);
+        this(tenantId, sourceText, null, null, null, null);
+    }
+
+    public RuleCompileCommand(
+            UUID tenantId,
+            String sourceText,
+            String clarificationAnswer,
+            String priorCompileContext) {
+        this(tenantId, sourceText, clarificationAnswer, priorCompileContext, null, null);
+    }
+
+    public boolean isRefinement() {
+        return priorDraftJson != null && editInstruction != null;
     }
 
     private static String requireBoundedText(String text, String fieldName, int maxLength) {

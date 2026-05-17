@@ -8,10 +8,10 @@ import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.zeromail.core.config.ZeroMailCoreProperties;
+import com.zeromail.core.gmail.exception.InvalidGrantException;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
-import com.zeromail.core.gmail.usecases.InvalidGrantException;
 import com.zeromail.core.shared.privacy.Sensitive;
 import java.io.IOException;
 import java.net.URI;
@@ -26,6 +26,8 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
@@ -40,6 +42,10 @@ public class GmailApiClientFactory {
     private final URI tokenEndpoint;
     private final GmailConnectionRepository gmailConnectionRepository;
     private final RefreshTokenCipher refreshTokenCipher;
+    // Caches the access token result for back-to-back deliveries so we skip the AES-GCM
+    // refresh-token decrypt + Google HTTPS refresh round trip when a still-valid token exists.
+    private final ConcurrentMap<UUID, TokenRefreshResult> accessTokenCache =
+            new ConcurrentHashMap<>();
 
     public GmailApiClientFactory(
             @Value("${spring.security.oauth2.client.registration.google.client-id}")
@@ -102,13 +108,24 @@ public class GmailApiClientFactory {
     public Gmail buildClientForConnection(
             GmailConnectionEntity gmailConnection, UUID tenantId, Duration requestTimeout)
             throws IOException {
+        TokenRefreshResult cachedToken = accessTokenCache.get(tenantId);
+        if (cachedToken != null && cachedToken.expiresAt().isAfter(Instant.now())) {
+            return buildGmailClient(cachedToken.accessToken().value(), requestTimeout);
+        }
         byte[] decryptedRefreshTokenBytes =
                 refreshTokenCipher.decrypt(
                         gmailConnection.getRefreshTokenEncrypted(), tenantId.toString());
         try {
             String decryptedRefreshToken =
                     new String(decryptedRefreshTokenBytes, StandardCharsets.UTF_8);
-            TokenRefreshResult tokenResult = refreshAccessToken(decryptedRefreshToken);
+            TokenRefreshResult tokenResult;
+            try {
+                tokenResult = refreshAccessToken(decryptedRefreshToken);
+            } catch (InvalidGrantException invalidGrant) {
+                accessTokenCache.remove(tenantId);
+                throw invalidGrant;
+            }
+            accessTokenCache.put(tenantId, tokenResult);
             return buildGmailClient(tokenResult.accessToken().value(), requestTimeout);
         } finally {
             Arrays.fill(decryptedRefreshTokenBytes, (byte) 0);

@@ -12,3 +12,4 @@ apps/web/.next/
 apps/web/node_modules/
 .playwright-mcp/
 loadtest/run/
+.codex-runs/

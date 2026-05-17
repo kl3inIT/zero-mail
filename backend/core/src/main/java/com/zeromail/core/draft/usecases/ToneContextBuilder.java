@@ -4,7 +4,6 @@ import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
-import com.google.api.services.gmail.model.MessagePartBody;
 import com.zeromail.core.draft.domain.ToneContext;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.llm.exception.SanitizationException;
@@ -13,12 +12,10 @@ import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
 import com.zeromail.core.llm.usecases.SanitizationContext;
 import com.zeromail.core.tenant.TenantContext;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -264,8 +261,9 @@ public class ToneContextBuilder {
             if (payload == null) {
                 return "";
             }
-            String directBody = decodedBody(payload);
-            if (!directBody.isBlank() && isReadableMimeType(payload.getMimeType())) {
+            String directBody = GmailMimeDecoder.decodedBody(payload);
+            if (!directBody.isBlank()
+                    && GmailMimeDecoder.isReadableMimeType(payload.getMimeType())) {
                 return directBody;
             }
             List<MessagePart> parts = payload.getParts();
@@ -280,25 +278,6 @@ public class ToneContextBuilder {
                 }
             }
             return String.join("\n", extractedParts);
-        }
-
-        private static String decodedBody(MessagePart payload) {
-            MessagePartBody body = payload.getBody();
-            if (body == null || body.getData() == null || body.getData().isBlank()) {
-                return "";
-            }
-            try {
-                byte[] decodedBytes = Base64.getUrlDecoder().decode(body.getData());
-                return new String(decodedBytes, StandardCharsets.UTF_8);
-            } catch (IllegalArgumentException invalidBase64) {
-                return "";
-            }
-        }
-
-        private static boolean isReadableMimeType(String mimeType) {
-            return mimeType == null
-                    || mimeType.equalsIgnoreCase("text/plain")
-                    || mimeType.equalsIgnoreCase("text/html");
         }
     }
 

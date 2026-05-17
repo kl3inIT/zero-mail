@@ -1,14 +1,20 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
 import { Clock, Landmark } from 'lucide-react';
 import Image from 'next/image';
 
 import { CopyableField } from '@/features/billing/components/CopyableField';
 import type { TopupIntentDetails } from '@/features/billing/components/TopupPackageSelector';
+import { billingKeys } from '@/features/billing/query-keys';
+import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
+import { useBillingTopupWebSocket } from '@/features/billing/hooks/useBillingTopupWebSocket';
 import { useTopupCreditWatch } from '@/features/billing/hooks/useTopupCreditWatch';
+import { formatVnd } from '@/features/billing/util/format-vnd';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatDateTime } from '@/lib/format';
 
 type TopupInstructionsProps = {
   intent: TopupIntentDetails;
@@ -25,22 +31,25 @@ export function TopupInstructions({
 }: TopupInstructionsProps) {
   const t = useTranslations();
   const locale = useLocale();
-  const [now, setNow] = useState(() => Date.now());
+  const currentUser = useCurrentUser();
+  const queryClient = useQueryClient();
   const watch = useTopupCreditWatch({
     baselineCredits,
     expiresAt: intent.expiresAt,
   });
 
-  useEffect(() => {
-    const interval = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(interval);
-  }, []);
-
-  const remainingMs = useMemo(
-    () => Math.max(0, Date.parse(intent.expiresAt) - now),
-    [intent.expiresAt, now],
-  );
   const qrImageUrl = buildSepayQrUrl(intent);
+
+  const refreshBalanceFromBroker = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: billingKeys.balance() });
+  }, [queryClient]);
+
+  useBillingTopupWebSocket({
+    tenantId: currentUser.data?.tenantId,
+    orderCode: intent.code,
+    enabled: !watch.expired,
+    onCredited: refreshBalanceFromBroker,
+  });
 
   useEffect(() => {
     if (watch.credited && typeof watch.balance?.availableCredits === 'number') {
@@ -49,10 +58,10 @@ export function TopupInstructions({
   }, [onCredited, watch.balance?.availableCredits, watch.credited]);
 
   useEffect(() => {
-    if (remainingMs <= 0 || watch.expired) {
+    if (watch.expired) {
       onExpired();
     }
-  }, [onExpired, remainingMs, watch.expired]);
+  }, [onExpired, watch.expired]);
 
   return (
     <Card data-testid="topup-instructions-step">
@@ -136,14 +145,31 @@ export function TopupInstructions({
         </div>
 
         <div className="text-muted-foreground flex flex-col gap-2 rounded-lg border p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-          <span className="inline-flex items-center gap-2">
-            <Clock className="size-4" aria-hidden="true" />
-            {t('billing.topup.expiresIn', { time: formatRemaining(remainingMs) })}
-          </span>
-          <span className="font-mono text-xs">{formatExpiry(intent.expiresAt, locale)}</span>
+          <Countdown expiresAt={intent.expiresAt} onExpired={onExpired} />
+          <span className="font-mono text-xs">{formatDateTime(intent.expiresAt, locale)}</span>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// Self-contained ticker so the parent does not re-render every second.
+function Countdown({ expiresAt, onExpired }: { expiresAt: string; onExpired: () => void }) {
+  const t = useTranslations();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+  const remainingMs = Math.max(0, Date.parse(expiresAt) - now);
+  useEffect(() => {
+    if (remainingMs <= 0) onExpired();
+  }, [remainingMs, onExpired]);
+  return (
+    <span className="inline-flex items-center gap-2">
+      <Clock className="size-4" aria-hidden="true" />
+      {t('billing.topup.expiresIn', { time: formatRemaining(remainingMs) })}
+    </span>
   );
 }
 
@@ -174,23 +200,6 @@ function PaymentInfoRow({
       </div>
     </div>
   );
-}
-
-function formatVnd(value: number, locale: string): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatExpiry(value: string, locale: string): string {
-  const timestamp = Date.parse(value);
-  if (!Number.isFinite(timestamp)) return value;
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(timestamp);
 }
 
 function formatBank(intent: TopupIntentDetails): string | undefined {

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Roboto, Roboto_Mono } from 'next/font/google';
+import { Roboto } from 'next/font/google';
 import { cookies, headers } from 'next/headers';
 import { getLocale, getTranslations } from 'next-intl/server';
 
@@ -13,13 +13,6 @@ const roboto = Roboto({
   variable: '--font-roboto',
   subsets: ['latin', 'vietnamese'],
   weight: ['400', '500', '700'],
-  display: 'optional',
-  preload: false,
-});
-
-const robotoMono = Roboto_Mono({
-  variable: '--font-roboto-mono',
-  subsets: ['latin'],
   display: 'optional',
   preload: false,
 });
@@ -59,20 +52,18 @@ async function reassertServerLocale(currentLocale: string): Promise<string> {
   if (!apiBase) return currentLocale;
 
   // Forward cookies so the API can identify the user.
-  // Phase 01.5 HIGH-2 fix: use cookies().toString() as primitive cache key
-  // so getCurrentUserCached can dedupe across multiple RSC consumers in one render.
-  // headers().get('cookie') is used only for the early-exit guard; the actual
-  // cache key is the full cookie store serialized to a stable primitive string.
+  // Use cookies().toString() as a primitive cache key so getCurrentUserCached
+  // can dedupe across multiple RSC consumers in one render. headers().get('cookie')
+  // is used only for the early-exit guard; the actual cache key is the full
+  // cookie store serialized to a stable primitive string.
   if (!headerStore.get('cookie')) return currentLocale;
 
   try {
-    // Plan 04 Task 2 (D-B4): isomorphic /me consolidation — same function
-    // backs proxy.ts (write side) and this layout (read side). RSC fetch
-    // does NOT auto-forward Cookie; we pass it via the cached wrapper.
-    //
-    // Phase 01.5 HIGH-2 fix: pass the cookie header as a PRIMITIVE STRING
-    // (not a fresh { headers: { cookie } } object) so React cache() can dedupe
-    // by value equality across multiple calls within this render pass.
+    // Isomorphic /me consolidation — same function backs proxy.ts (write side)
+    // and this layout (read side). RSC fetch does NOT auto-forward Cookie; we
+    // pass it via the cached wrapper. Pass the cookie header as a PRIMITIVE
+    // STRING (not a fresh { headers: { cookie } } object) so React cache() can
+    // dedupe by value equality across multiple calls within this render pass.
     const cookieHeader = (await cookies()).toString();
     const user = await getCurrentUserCached(cookieHeader);
     const preferred = user.preferredLanguage;
@@ -109,7 +100,7 @@ export default async function RootLayout({
   return (
     <html
       lang={safeLocale}
-      className={`${roboto.variable} ${robotoMono.variable} ${theme === 'dark' ? 'dark' : ''} h-full antialiased`}
+      className={`${roboto.variable} ${theme === 'dark' ? 'dark' : ''} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">{children}</body>
     </html>

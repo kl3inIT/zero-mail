@@ -2,7 +2,7 @@ package com.zeromail.core.notification.usecases;
 
 import com.zeromail.core.analytics.domain.TimeWindow;
 import com.zeromail.core.analytics.projection.AnalyticsSummaryProjection;
-import com.zeromail.core.analytics.projection.AnalyticsSummaryQueryService;
+import com.zeromail.core.analytics.usecases.AnalyticsSummaryQueryService;
 import com.zeromail.core.notification.domain.DigestPayload;
 import com.zeromail.core.notification.domain.DigestRuleHit;
 import com.zeromail.core.notification.domain.DigestTopSender;

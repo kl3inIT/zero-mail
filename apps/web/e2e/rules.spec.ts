@@ -55,15 +55,14 @@ const compiledPayload = {
   displayName: 'Archive Stripe receipts',
   schemaVersion: 'rules.v1',
   matcherAst: JSON.stringify({
-    all: [
-      { type: 'sender_domain', value: 'stripe.com' },
-      { type: 'subject_contains', value: 'receipt' },
+    schemaVersion: 'rules.v1',
+    type: 'ALL',
+    children: [
+      { type: 'SENDER_DOMAIN', domain: 'stripe.com' },
+      { type: 'SUBJECT_CONTAINS', text: 'receipt' },
     ],
   }),
-  actionIntents: JSON.stringify([
-    { type: 'archive', safeLabel: 'archive' },
-    { type: 'label', safeLabel: 'label Finance' },
-  ]),
+  actionIntents: JSON.stringify([{ type: 'archive' }, { type: 'label', labelName: 'Finance' }]),
 };
 
 function createStripeRule(overrides: Partial<MockRule> = {}): MockRule {
@@ -92,8 +91,8 @@ function createNewsletterRule(): MockRule {
     orderIndex: 2,
     sourceLanguage: 'en',
     schemaVersion: 'rules.v1',
-    matcherAst: JSON.stringify({ type: 'newsletter_indicator', value: true }),
-    actionIntents: JSON.stringify([{ type: 'label', safeLabel: 'label Reading' }]),
+    matcherAst: JSON.stringify({ schemaVersion: 'rules.v1', type: 'NEWSLETTER_INDICATOR' }),
+    actionIntents: JSON.stringify([{ type: 'label', labelName: 'Reading' }]),
     entityVersion: 1,
     lastPreviewedEntityVersion: 1,
     lastPreviewedAt: '2026-05-10T00:00:00Z',
@@ -340,45 +339,57 @@ test('rules desktop flow compiles, clarifies, saves disabled, previews, toggles,
 
   await expectAppShellChrome(page, { sidebarVisible: true });
   await expectNoClaySkinClasses(page);
-  await expect(page.getByRole('heading', { name: 'Rules', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Automation rules', exact: true })).toBeVisible();
   await expect(page.getByText('No rules yet')).toBeVisible();
 
-  await page.getByRole('button', { name: 'New rule' }).click();
-  const ruleText = page.getByLabel('Rule text');
+  await page.getByRole('button', { name: 'Create rule' }).click();
+  const ruleText = page.getByLabel('Which emails should Zero Mail match, and what should it do?');
   await ruleText.fill('Archive receipts from Stripe and label them Finance');
-  await page.getByRole('button', { name: 'Compile rule' }).click();
+  await page.getByRole('button', { name: 'Convert to rule', exact: true }).click();
   await expect(page.getByText('Which receipts should Zero Mail archive?')).toBeVisible();
   await expect(ruleText).toHaveValue('Archive receipts from Stripe and label them Finance');
-  await expect(page.getByText('Zero Mail could not compile this rule')).toHaveCount(0);
+  await expect(page.getByText('Zero Mail could not review this rule')).toHaveCount(0);
 
-  await page.getByLabel('Clarification answer').fill('Only Stripe payment receipts');
-  await page.getByRole('button', { name: 'Answer clarification' }).click();
+  await page.getByLabel('Your answer').fill('Only Stripe payment receipts');
+  await page.getByRole('button', { name: 'Send answer' }).click();
   await expect(page.getByText('stripe.com')).toBeVisible();
-  await page.getByRole('button', { name: 'Save disabled rule' }).click();
+  await page.getByRole('button', { name: 'Save (stays off until preview)' }).click();
 
   await page.getByRole('button', { name: 'Preview rule' }).click();
-  await expect(page.getByLabel('Rule text')).toHaveCount(0);
+  await expect(
+    page.getByLabel('Which emails should Zero Mail match, and what should it do?'),
+  ).toHaveCount(0);
   await page.getByRole('button', { name: 'Preview rule' }).click();
   await expect(page.getByText('No Gmail changes were made.')).toBeVisible();
   await expect(page.getByText('Your Stripe receipt')).toBeVisible();
   await page.getByRole('button', { name: 'Enable rule' }).last().click();
-  await expect(page.getByText('Enabled').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Disable rule' }).last()).toBeVisible();
   await page.getByRole('button', { name: 'Disable rule' }).last().click();
-  await expect(page.getByText('Disabled').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Enable rule' }).last()).toBeVisible();
 
-  await page.getByRole('button', { name: 'Move rule down' }).first().click();
-  await page.getByRole('button', { name: 'Edit rule' }).nth(1).click();
-  await page.getByLabel('Rule text').fill('Archive receipts from Stripe and label them Finance');
-  await page.getByRole('button', { name: 'Compile rule' }).click();
-  await page.getByLabel('Clarification answer').fill('Only Stripe payment receipts');
-  await page.getByRole('button', { name: 'Answer clarification' }).click();
-  await page.getByRole('button', { name: 'Save disabled rule' }).click();
+  await openRuleMenu(page, 'Archive Stripe receipts');
+  await page.getByRole('menuitem', { name: 'Move rule down' }).click();
+  await openRuleMenu(page, 'Archive Stripe receipts');
+  await page.getByRole('menuitem', { name: 'Edit rule' }).click();
+  // Editing an existing compiled rule opens the manual tab by default;
+  // switch to Describe so the source textarea is mounted.
+  await page.getByRole('tab', { name: 'Describe', exact: true }).click();
+  await page
+    .getByLabel('Which emails should Zero Mail match, and what should it do?')
+    .fill('Archive receipts from Stripe and label them Finance');
+  await page.getByRole('button', { name: 'Convert to rule', exact: true }).click();
+  await page.getByLabel('Your answer').fill('Only Stripe payment receipts');
+  await page.getByRole('button', { name: 'Send answer' }).click();
+  await page.getByRole('button', { name: 'Save (stays off until preview)' }).click();
   await page.getByRole('button', { name: 'Preview rule' }).click();
-  await expect(page.getByLabel('Rule text')).toHaveCount(0);
+  await expect(
+    page.getByLabel('Which emails should Zero Mail match, and what should it do?'),
+  ).toHaveCount(0);
   await page.getByRole('button', { name: 'Preview rule' }).click();
   await expect(page.getByText('No Gmail changes were made.')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Delete rule' }).nth(1).click();
+  await openRuleMenu(page, 'Archive Stripe receipts');
+  await page.getByRole('menuitem', { name: 'Delete rule' }).click();
   await page.getByRole('button', { name: 'Delete rule' }).last().click();
   await expect(page.getByText('Archive Stripe receipts')).toHaveCount(0);
 });
@@ -391,7 +402,7 @@ test('template gallery materializes a disabled starter rule with provenance', as
   await expect(page.getByText('Archive receipts').first()).toBeVisible();
   await expect(page.getByText('Template', { exact: true })).toBeVisible();
   await expect(page.getByText('archive-receipts · v1')).toBeVisible();
-  await expect(page.getByText('Disabled').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Enable rule' }).first()).toBeDisabled();
 });
 
 test('rules workspace remains in-shell and usable at 320px without horizontal overflow', async ({
@@ -402,11 +413,14 @@ test('rules workspace remains in-shell and usable at 320px without horizontal ov
 
   await expectAppShellChrome(page);
   await expectNoClaySkinClasses(page);
-  await expect(page.getByRole('heading', { name: 'Rules', exact: true })).toBeVisible();
-  await expect(page.getByText('Safe preview')).toBeVisible();
-  await expect(page.getByText('Rule order')).toBeVisible();
-  await page.getByRole('button', { name: 'New rule' }).click();
-  await expect(page.getByRole('dialog', { name: 'Rule composer' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Automation rules', exact: true })).toBeVisible();
+  await expect(page.getByText('Test selected rule')).toBeVisible();
+  await expect(page.getByText('Rule list')).toBeVisible();
+  await page.getByRole('button', { name: 'Create rule' }).click();
+  await expect(page.getByRole('dialog', { name: 'Create email rule' })).toBeVisible();
+  await expect(
+    page.getByLabel('Which emails should Zero Mail match, and what should it do?'),
+  ).toHaveValue('');
   await expectNoHorizontalOverflow(page);
 });
 
@@ -415,13 +429,21 @@ test('rules errors keep compile billing alerts in composer and Gmail preview err
 }) => {
   await openRules(page, 'error-flow');
 
-  await page.getByRole('button', { name: 'Edit rule' }).click();
-  await page.getByLabel('Rule text').fill('Archive receipts from Stripe and label them Finance');
-  await page.getByRole('button', { name: 'Compile rule' }).click();
+  await openRuleMenu(page, 'Archive Stripe receipts');
+  await page.getByRole('menuitem', { name: 'Edit rule' }).click();
+  // Editing an existing compiled rule opens the manual tab by default;
+  // switch to Describe so the source textarea is mounted.
+  await page.getByRole('tab', { name: 'Describe', exact: true }).click();
+  await page
+    .getByLabel('Which emails should Zero Mail match, and what should it do?')
+    .fill('Archive receipts from Stripe and label them Finance');
+  await page.getByRole('button', { name: 'Convert to rule', exact: true }).click();
   await expect(page.getByText('Platform credits are depleted.').first()).toBeVisible();
 
   await page.keyboard.press('Escape');
-  await expect(page.getByLabel('Rule text')).toHaveCount(0);
+  await expect(
+    page.getByLabel('Which emails should Zero Mail match, and what should it do?'),
+  ).toHaveCount(0);
   await page.getByRole('button', { name: 'Preview rule' }).click();
   await expect(
     page.getByText('Gmail preview is unavailable. Reconnect Gmail and try again.').first(),
@@ -434,6 +456,11 @@ async function fulfillJson(route: Route, body: unknown, status = 200) {
     contentType: 'application/json',
     body: JSON.stringify(body),
   });
+}
+
+async function openRuleMenu(page: Page, ruleName: string) {
+  const ruleRow = page.getByRole('row', { name: new RegExp(ruleName) });
+  await ruleRow.getByRole('button', { name: 'Rule actions' }).click();
 }
 
 async function fulfillProblem(route: Route, status: number, code: string) {

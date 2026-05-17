@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -13,26 +14,33 @@ import {
 } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { RuleHitResponse } from '@/features/analytics/api/analytics-api';
+import {
+  formatPercent,
+  percentOf,
+  rulePrecision,
+  safeCount,
+  trustLevel,
+  type TrustLevel,
+} from '@/features/analytics/components/analytics-visualization';
+import { cn } from '@/lib/utils';
 
 type RuleHitsPanelProps = {
   ruleHits?: RuleHitResponse[];
+  className?: string;
 };
 
-function safeCount(value: number | undefined): number {
-  return Number.isFinite(value) ? Math.max(0, Math.trunc(value ?? 0)) : 0;
-}
-
-export function RuleHitsPanel({ ruleHits = [] }: RuleHitsPanelProps) {
+export function RuleHitsPanel({ ruleHits = [], className }: RuleHitsPanelProps) {
   const t = useTranslations();
+  const maxDecisions = Math.max(1, ...ruleHits.map((ruleHit) => safeCount(ruleHit.decisions)));
 
   return (
-    <Card data-testid="analytics-rule-hits-panel">
+    <Card data-testid="analytics-rule-hits-panel" className={cn('bg-card/95 shadow-sm', className)}>
       <CardHeader>
-        <CardDescription className="font-mono text-[11px] font-medium tracking-[0.08em]">
+        <CardDescription className="text-xs font-medium">
           {t('analytics.ruleHits.eyebrow')}
         </CardDescription>
         <CardTitle>
-          <h3 className="text-base leading-snug font-medium">{t('analytics.ruleHits.title')}</h3>
+          <h3 className="text-base leading-snug font-semibold">{t('analytics.ruleHits.title')}</h3>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -54,11 +62,21 @@ export function RuleHitsPanel({ ruleHits = [] }: RuleHitsPanelProps) {
                     <TableHead className="text-right">
                       {t('analytics.ruleHits.column.reverted')}
                     </TableHead>
+                    <TableHead className="min-w-[9rem]">
+                      {t('analytics.ruleHits.column.precision')}
+                    </TableHead>
+                    <TableHead className="text-right">
+                      {t('analytics.ruleHits.column.trust')}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {ruleHits.map((ruleHit, index) => {
                     const ruleName = ruleHit.ruleName ?? '';
+                    const decisions = safeCount(ruleHit.decisions);
+                    const applied = safeCount(ruleHit.applied);
+                    const reverted = safeCount(ruleHit.reverted);
+                    const precision = rulePrecision(ruleHit);
                     return (
                       <TableRow key={`${ruleName}-${index}`} data-testid="rule-hit-table-row">
                         <TableCell className="max-w-[28ch] py-2">
@@ -71,9 +89,18 @@ export function RuleHitsPanel({ ruleHits = [] }: RuleHitsPanelProps) {
                             <TooltipContent>{ruleName}</TooltipContent>
                           </Tooltip>
                         </TableCell>
-                        <MetricCell value={safeCount(ruleHit.decisions)} />
-                        <MetricCell value={safeCount(ruleHit.applied)} />
-                        <MetricCell value={safeCount(ruleHit.reverted)} />
+                        <MetricCell value={decisions} />
+                        <MetricCell value={applied} />
+                        <MetricCell value={reverted} />
+                        <TableCell className="py-2">
+                          <PrecisionBar
+                            precision={precision}
+                            volumeRatio={percentOf(decisions, maxDecisions)}
+                          />
+                        </TableCell>
+                        <TableCell className="py-2 text-right">
+                          <TrustBadge level={trustLevel(precision)} />
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -83,6 +110,10 @@ export function RuleHitsPanel({ ruleHits = [] }: RuleHitsPanelProps) {
             <div className="space-y-2 md:hidden" data-testid="rule-hit-card-list">
               {ruleHits.map((ruleHit, index) => {
                 const ruleName = ruleHit.ruleName ?? '';
+                const decisions = safeCount(ruleHit.decisions);
+                const applied = safeCount(ruleHit.applied);
+                const reverted = safeCount(ruleHit.reverted);
+                const precision = rulePrecision(ruleHit);
                 return (
                   <div key={`${ruleName}-${index}`} className="rounded-lg border p-3">
                     <Tooltip>
@@ -94,17 +125,26 @@ export function RuleHitsPanel({ ruleHits = [] }: RuleHitsPanelProps) {
                     <dl className="mt-3 grid grid-cols-3 gap-2 text-xs">
                       <MetricDefinition
                         label={t('analytics.ruleHits.column.decisions')}
-                        value={safeCount(ruleHit.decisions)}
+                        value={decisions}
                       />
                       <MetricDefinition
                         label={t('analytics.ruleHits.column.applied')}
-                        value={safeCount(ruleHit.applied)}
+                        value={applied}
                       />
                       <MetricDefinition
                         label={t('analytics.ruleHits.column.reverted')}
-                        value={safeCount(ruleHit.reverted)}
+                        value={reverted}
                       />
                     </dl>
+                    <div className="mt-3 flex items-center gap-3">
+                      <div className="min-w-0 flex-1">
+                        <PrecisionBar
+                          precision={precision}
+                          volumeRatio={percentOf(decisions, maxDecisions)}
+                        />
+                      </div>
+                      <TrustBadge level={trustLevel(precision)} />
+                    </div>
                   </div>
                 );
               })}
@@ -118,9 +158,7 @@ export function RuleHitsPanel({ ruleHits = [] }: RuleHitsPanelProps) {
 
 function MetricCell({ value }: { value: number }) {
   return (
-    <TableCell className="text-foreground py-2 text-right font-mono text-xs tabular-nums">
-      {value}
-    </TableCell>
+    <TableCell className="text-foreground py-2 text-right text-xs tabular-nums">{value}</TableCell>
   );
 }
 
@@ -128,7 +166,52 @@ function MetricDefinition({ label, value }: { label: string; value: number }) {
   return (
     <div>
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="text-foreground mt-1 font-mono text-sm tabular-nums">{value}</dd>
+      <dd className="text-foreground mt-1 text-sm tabular-nums">{value}</dd>
     </div>
+  );
+}
+
+function PrecisionBar({ precision, volumeRatio }: { precision: number; volumeRatio: number }) {
+  const t = useTranslations();
+  const width = `${Math.max(8, Math.round(precision * 100))}%`;
+  const volumeWidth = `${Math.max(8, Math.round(volumeRatio * 100))}%`;
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-muted-foreground text-xs">
+          {t('analytics.ruleHits.column.precision')}
+        </span>
+        <span className="text-foreground text-xs tabular-nums">{formatPercent(precision)}</span>
+      </div>
+      <div className="bg-muted relative h-2 overflow-hidden rounded-full">
+        <div
+          className="absolute inset-y-0 left-0 rounded-full bg-[var(--chart-2)]/20"
+          style={{ width: volumeWidth }}
+          aria-hidden="true"
+        />
+        <div
+          className="absolute inset-y-0 left-0 rounded-full bg-[var(--chart-1)]"
+          style={{ width }}
+          aria-hidden="true"
+        />
+      </div>
+    </div>
+  );
+}
+
+function TrustBadge({ level }: { level: TrustLevel }) {
+  const t = useTranslations();
+  const className =
+    level === 'high'
+      ? 'bg-green-soft text-green'
+      : level === 'medium'
+        ? 'bg-amber-soft text-amber'
+        : 'bg-red-soft text-red';
+
+  return (
+    <Badge variant="secondary" className={cn('tabular-nums', className)}>
+      {t(`analytics.ruleHits.trust.${level}`)}
+    </Badge>
   );
 }

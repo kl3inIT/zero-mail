@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { TopupIntentResponse } from '@/features/billing/api/billing-api';
 import { useCreateTopupIntent } from '@/features/billing/hooks/useCreateTopupIntent';
+import { formatVnd } from '@/features/billing/util/format-vnd';
 
 export type TopupIntentDetails = {
   code: string;
@@ -140,13 +141,4 @@ function packageCodeForAmount(amountVnd: number): string | null {
   if (amountVnd === 20000) return 'PKG_20K';
   if (amountVnd === 50000) return 'PKG_50K';
   return null;
-}
-
-function formatVnd(value: number, locale: string): string {
-  const amount = Number.isFinite(value) ? value : 0;
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  }).format(amount);
 }

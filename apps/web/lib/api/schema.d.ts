@@ -742,6 +742,8 @@ export interface components {
             sourceText: string;
             clarificationAnswer?: string;
             priorCompileContext?: string;
+            priorDraftJson?: string;
+            editInstruction?: string;
         };
         ClarificationResponse: {
             language?: string;

@@ -139,9 +139,9 @@ class LlmGatewayActionValidatorTest {
                 BYOKProvider.OPENAI,
                 "https://openrouter.ai/api/v1",
                 "test-platform-key",
-                "openai/gpt-4o-mini",
-                "openai/gpt-4o-mini",
-                "openai/gpt-4o-mini",
+                "openai/gpt-5.4-nano",
+                "openai/gpt-5.4-nano",
+                "openai/gpt-5.4-nano",
                 null,
                 null);
     }

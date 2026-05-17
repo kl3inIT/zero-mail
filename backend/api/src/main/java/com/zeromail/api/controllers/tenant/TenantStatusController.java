@@ -40,7 +40,7 @@ public class TenantStatusController {
 
     @GetMapping("/gmail/connection/status")
     public GmailConnectionStatusResponse status() {
-        UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+        UUID tenantId = TenantContext.currentTenantUuid();
         GmailConnectionProjection projection = connectionService.currentStatus(tenantId);
         return GmailConnectionStatusResponse.from(projection);
     }

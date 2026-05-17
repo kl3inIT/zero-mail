@@ -11,8 +11,8 @@
     var(--font-roboto), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
     sans-serif;
   --font-mono:
-    var(--font-roboto-mono), ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono',
-    monospace;
+    var(--font-roboto), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    sans-serif;
   --font-serif: var(--font-lora), Georgia, serif;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);

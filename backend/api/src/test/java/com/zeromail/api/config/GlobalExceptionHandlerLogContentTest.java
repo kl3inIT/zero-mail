@@ -34,7 +34,7 @@ class GlobalExceptionHandlerLogContentTest {
     void handler_log_contains_only_exception_class_metadata() {
         GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
-        handler.onSafetyViolation(new SafetyViolationException());
+        handler.onBusinessException(new SafetyViolationException());
 
         assertThat(appender.list).isNotEmpty();
         assertThat(appender.list)

@@ -33,7 +33,7 @@ public class BillingController {
 
     @GetMapping("/balance")
     public BillingBalanceResponse balance() {
-        UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+        UUID tenantId = TenantContext.currentTenantUuid();
         return BillingBalanceResponse.from(creditLedger.balance(tenantId));
     }
 
@@ -46,7 +46,7 @@ public class BillingController {
 
     @PostMapping("/topup/intent")
     public TopupIntentResponse createIntent(@Valid @RequestBody TopupIntentRequest request) {
-        UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
+        UUID tenantId = TenantContext.currentTenantUuid();
         BillingTopupIntentEntity intent =
                 billingTopupService.createIntent(tenantId, request.packageCode());
         return TopupIntentResponse.from(intent);

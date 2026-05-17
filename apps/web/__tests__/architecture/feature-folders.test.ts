@@ -141,7 +141,9 @@ describe('Feature folder architecture', () => {
     expect(existsSync(apiFile)).toBe(true);
     expect(existsSync(queryKeys)).toBe(true);
     expect(readFileSync(apiFile, 'utf8')).toMatch(/export\s+async\s+function\s+setTriagePaused/);
-    expect(readFileSync(queryKeys, 'utf8')).toMatch(/pauseState/);
+    // After H2-Q dedup: pause state is no longer a separate triage query key —
+    // useTriagePauseState/useToggleTriagePause both read & invalidate accountQueryKeys.me().
+    expect(readFileSync(queryKeys, 'utf8')).not.toMatch(/pauseState/);
     expect(readFileSync(queryKeys, 'utf8')).toMatch(/auditLog/);
     expect(readFileSync(hookFile, 'utf8')).toMatch(/accountQueryKeys\.me\(\)/);
     expect(existsSync(resolve(FEATURES_DIR, 'triage/api/triagePause.ts'))).toBe(false);

@@ -13,15 +13,13 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: workspaceRoot,
   },
-  // Phase 1.3 Plan 02 (Pitfall 6 in 01.3-RESEARCH.md): Turbopack's stricter
-  // ESM expectations require explicit transpilation of next-mdx-remote (which
-  // has unist/remark CJS edges). Documented temporary workaround per the
-  // hashicorp/next-mdx-remote README. Plan 06 installs the runtime dep.
+  // Turbopack's stricter ESM expectations require explicit transpilation of
+  // next-mdx-remote (which has unist/remark CJS edges) — workaround per the
+  // hashicorp/next-mdx-remote README.
   transpilePackages: ['next-mdx-remote'],
-  // Quick task 260514-leb: strip dev console.* calls from production bundles
-  // to shave a few KiB off the landing chunk (helps Lighthouse Performance)
-  // and avoid leaking debug log output to end users (Best Practices buffer).
-  // Errors and warnings are preserved for real diagnostics.
+  // Strip dev console.* calls from production bundles to shave KiB off the
+  // landing chunk (Lighthouse Performance) and avoid leaking debug log output
+  // to end users. Errors and warnings are preserved for diagnostics.
   compiler: {
     removeConsole: { exclude: ['error', 'warn'] },
   },

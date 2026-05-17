@@ -1,5 +1,7 @@
 package com.zeromail.core.llm.usecases;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -14,6 +16,9 @@ public record RuleCompileGatewayResult(
             throw new IllegalArgumentException("toolName must not be blank");
         }
         modelId = modelId == null || modelId.isBlank() ? null : modelId;
-        toolArguments = toolArguments == null ? Map.of() : Map.copyOf(toolArguments);
+        toolArguments =
+                toolArguments == null
+                        ? Map.of()
+                        : Collections.unmodifiableMap(new LinkedHashMap<>(toolArguments));
     }
 }

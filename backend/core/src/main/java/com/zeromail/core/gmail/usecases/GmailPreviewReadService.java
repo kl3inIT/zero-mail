@@ -11,6 +11,7 @@ import com.google.api.services.gmail.model.MessagePart;
 import com.google.api.services.gmail.model.MessagePartHeader;
 import com.google.api.services.gmail.model.Thread;
 import com.zeromail.core.gmail.domain.GmailConnectionStatus;
+import com.zeromail.core.gmail.exception.InvalidGrantException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
