@@ -1,10 +1,11 @@
 ---
 phase: 7
 slug: chat-email-assistant-backend-frontend-send-executor-archunit
-status: draft
+status: approved
 shadcn_initialized: true
 preset: base-nova (neutral, cssVariables, lucide icons)
 created: 2026-05-17
+reviewed_at: 2026-05-17
 ---
 
 # Phase 7 — UI Design Contract: Chat Email Assistant
