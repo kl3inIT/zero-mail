@@ -18,8 +18,8 @@ for (const viewport of [
 
     await page.getByRole('tab', { name: 'History' }).click();
     await expect(page.getByRole('tab', { name: 'History' })).toHaveAttribute(
-      'data-state',
-      'active',
+      'aria-selected',
+      'true',
     );
     await expect(page.getByText('No email actions yet')).toBeVisible();
     await expectNoHorizontalOverflow(page);
