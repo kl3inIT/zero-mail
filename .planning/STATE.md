@@ -2,9 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Email assistant chat + Settings page
-status: planning
-last_updated: "2026-05-17T10:15:00.000Z"
-last_activity: 2026-05-17
+status: "Roadmap created (2 phases, 35 requirements mapped); awaiting `/gsd:discuss-phase 7`"
+stopped_at: Phase 7 context gathered
+last_updated: "2026-05-17T12:46:22.981Z"
+last_activity: 2026-05-17 — v1.1 roadmap created with 2-phase split (Phase 7 chat + Phase 8 settings/hardening/GA)
 progress:
   total_phases: 2
   completed_phases: 0
@@ -418,9 +419,9 @@ Items acknowledged and deferred at v1.0 milestone close on 2026-05-15.
 
 ## Session Continuity
 
-Last session: 2026-05-14T23:35:33.615Z
-Stopped at: Completed 06-04-PLAN.md
-Resume file: None
+Last session: 2026-05-17T12:46:22.960Z
+Stopped at: Phase 7 context gathered
+Resume file: .planning/phases/07-chat-email-assistant-backend-frontend-send-executor-archunit/07-CONTEXT.md
 
 ## Operator Next Steps
 
