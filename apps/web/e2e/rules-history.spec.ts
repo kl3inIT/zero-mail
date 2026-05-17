@@ -32,9 +32,7 @@ for (const viewport of [
     await expect(
       page.getByRole('heading', { name: 'AI configuration', exact: true }),
     ).toBeVisible();
-    await expect(
-      page.getByRole('heading', { name: 'Protected senders', exact: true }),
-    ).toBeVisible();
+    await expect(page.getByText('Protected senders', { exact: true })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 }
