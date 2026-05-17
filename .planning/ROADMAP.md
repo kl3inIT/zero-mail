@@ -29,6 +29,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [ ] **Phase 5C: User Surface — Analytics & Daily Digest** - Metadata-only analytics screen (volume, time saved, top senders, rule hits over a window) + daily digest email
 - [ ] **Phase 6: Polish & CASA-Verified Launch** - End-to-end integration hardening, CASA Tier verification sign-off, launch readiness
 - [ ] **Phase 7: Analytics Enhancement** *(workstream: `analytics-enhancement`)* - Nâng cấp dashboard analytics: trend chart theo ngày (7d/30d/90d), Δ% badges, action breakdown, rule precision rate + Trust Score, Noise Reduction panel, credits dashboard, top senders mở rộng (top 10 + domain grouping) — chỉ metadata, không vi phạm privacy. Depends on Phase 5C.
+- [ ] **Phase 8: Bulk Unsubscribe Campaign** - Bulk preview + dry-run + execute "unsubscribe + archive history" trên các newsletter sender mà user chọn, sử dụng `List-Unsubscribe` header (RFC 8058 one-click POST + `mailto:`) phát hiện ở Phase 2A/3. Adds `UNSUBSCRIBE` RuleActionType (gated, preview-only at first), suppression list, reversible audit. Depends on Phase 7.
 
 ## Phase Details
 
@@ -449,6 +450,21 @@ Plans:
   9. `pnpm tsc`, ESLint, Vitest, `i18n:check` tất cả GREEN; Playwright e2e golden path cho analytics enhancement PASS.
 **Plans**: TBD
 
+### Phase 08: Bulk Unsubscribe Campaign
+**Goal**: Cho phép user chọn một nhóm sender newsletter và thực hiện "unsubscribe + archive lịch sử" theo lô (campaign), với preview bắt buộc trước khi execute, đường unsubscribe ưu tiên `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058), fallback `mailto:`, không bao giờ click HTTP unsubscribe link không thuộc whitelist provider. Mọi action đều reversible bằng audit + label restore.
+**Depends on**: Phase 7 (analytics top-sender + domain grouping cung cấp đầu vào candidate list), Phase 4 (audit + undo infrastructure), Phase 2A (Gmail history + List-Unsubscribe header đã được trích trong `GmailPreviewReadService`)
+**Requirements**: TBD (ssẽ chốt qua /gsd:spec-phase 8)
+**Success Criteria** (what must be TRUE):
+  1. Trang `/unsubscribe-campaign` (hoặc tương đương) hiển thị danh sách candidate sender với count, last seen, có `List-Unsubscribe` hay không, và kiểu unsubscribe khả thi (`one-click` / `mailto` / `none`).
+  2. User chọn ≥1 sender → bấm "Preview campaign" → thấy số mail lịch sử sẽ bị archive + cảnh báo per-sender + risk badge cho sender không có header an toàn (bị disable).
+  3. "Execute campaign" thực thi tuần tự: POST one-click hoặc gửi mailto unsubscribe + apply label `Unsubscribed` + archive lịch sử messages của sender, mỗi step ghi audit row reversible.
+  4. Suppression list (user-managed) đảm bảo sender protected (sếp, gia đình, billing-critical) không bao giờ xuất hiện trong candidate.
+  5. KHÔNG sử dụng HTTP unsubscribe link từ body email; chỉ dùng `List-Unsubscribe-Post` header và `mailto:` từ `List-Unsubscribe` header.
+  6. KHÔNG xóa vĩnh viễn message — chỉ archive (skip inbox) + label, reversible trong N ngày.
+  7. Privacy invariant Phase 1 vẫn pass: không log body, subject, hay token; tenant isolation enforced.
+  8. Code review + security review PASS; ArchUnit + Modulith verification + Playwright e2e campaign flow GREEN.
+**Plans**: TBD
+
 ## External Track (not a phase)
 
 **CASA restricted-scope verification** is a 4–12 week external dependency executed in parallel with Phases 1 → 6. It is initiated during Phase 1 OAuth wiring (FND-07) and must be closed before Phase 6 launch go/no-go. It is tracked as a project risk, not as a phase, because no engineering work is gated on it until launch.
@@ -478,3 +494,5 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 5B. User Surface — AI Draft Replies | 8/8 | Complete | 2026-05-13 |
 | 5C. User Surface — Analytics & Daily Digest | 0/TBD | Not started | - |
 | 6. Polish & CASA-Verified Launch | 2/5 | In Progress|  |
+| 7. Analytics Enhancement | 0/TBD | Not started | - |
+| 8. Bulk Unsubscribe Campaign | 0/TBD | Not started | - |
