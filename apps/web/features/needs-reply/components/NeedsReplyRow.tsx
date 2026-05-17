@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Clock, ExternalLink, FileText } from 'lucide-react';
+import { Check, Clock, ExternalLink, FileText, Mail } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Badge } from '@/components/ui/badge';
@@ -27,32 +27,26 @@ export function NeedsReplyRow({ row, activeBucket, now = new Date() }: NeedsRepl
   const t = useTranslations();
   const ageMs = ageInMilliseconds(row.lastActivityAt, now);
   const urgency = ageUrgency(ageMs);
+  const senderLabel = row.otherParty || t('triage.audit.message.unknownSender');
+  const subjectLabel = row.subject || t('triage.audit.message.untitled');
 
   return (
     <div
-      className="bg-card hover:bg-muted/30 flex gap-3 rounded-lg border p-4 transition-colors"
+      className="bg-card hover:bg-muted/30 flex gap-2.5 rounded-lg border p-3 transition-colors"
       data-testid="needs-reply-row"
     >
       <UrgencyBar urgency={urgency} />
       <SenderAvatar name={row.otherParty} />
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-          <span className="text-foreground truncate text-sm font-semibold">
-            {row.otherParty || t('triage.audit.message.unknownSender')}
-          </span>
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="text-muted-foreground truncate text-xs">{senderLabel}</span>
           <DraftBadge draftStatus={row.draftStatus} />
-          <LastActivity value={row.lastActivityAt} now={now} />
+          <AgeChip ageMs={ageMs} urgency={urgency} lastActivityAt={row.lastActivityAt} />
         </div>
 
-        <p className="text-foreground mt-1 truncate text-sm">
-          {row.subject || t('triage.audit.message.untitled')}
-        </p>
+        <p className="text-foreground truncate text-sm font-medium">{subjectLabel}</p>
 
-        <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-3 text-[11px]">
-          <AgeChip ageMs={ageMs} urgency={urgency} />
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           {activeBucket !== 'awaiting-their-reply' ? (
             <GenerateDraftButton gmailThreadId={row.gmailThreadId} draftStatus={row.draftStatus} />
           ) : null}
@@ -61,7 +55,10 @@ export function NeedsReplyRow({ row, activeBucket, now = new Date() }: NeedsRepl
             href={row.openInGmailUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'ml-auto gap-1.5')}
+            className={cn(
+              buttonVariants({ variant: 'ghost', size: 'sm' }),
+              'text-muted-foreground gap-1.5',
+            )}
           >
             <ExternalLink className="size-3.5" aria-hidden="true" />
             {t('needsReply.action.openInGmail')}
@@ -87,12 +84,13 @@ function UrgencyBar({ urgency }: { urgency: Urgency }) {
 
 function SenderAvatar({ name }: { name: string }) {
   const initials = senderInitials(name);
+  const isUnknown = initials === '?';
   return (
     <div
-      className="bg-muted text-muted-foreground mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full border text-xs font-semibold"
+      className="bg-muted text-muted-foreground mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold"
       aria-hidden="true"
     >
-      {initials}
+      {isUnknown ? <Mail className="size-3.5" /> : initials}
     </div>
   );
 }
@@ -118,7 +116,15 @@ function DraftBadge({ draftStatus }: { draftStatus: DraftStatus }) {
   );
 }
 
-function AgeChip({ ageMs, urgency }: { ageMs: number; urgency: Urgency }) {
+function AgeChip({
+  ageMs,
+  urgency,
+  lastActivityAt,
+}: {
+  ageMs: number;
+  urgency: Urgency;
+  lastActivityAt: string;
+}) {
   const t = useTranslations();
   const minutes = ageMs / 60_000;
   const hours = ageMs / 3_600_000;
@@ -130,28 +136,24 @@ function AgeChip({ ageMs, urgency }: { ageMs: number; urgency: Urgency }) {
         ? t('needsReply.row.ageHours', { count: Math.round(hours) })
         : t('needsReply.row.ageDays', { count: days });
   return (
-    <span
-      className={cn('inline-flex items-center gap-1', {
-        'text-destructive font-medium': urgency === 'high',
-        'text-amber-600 dark:text-amber-400': urgency === 'med',
-      })}
-    >
-      <Clock className="size-3" aria-hidden="true" />
-      {label}
-    </span>
-  );
-}
-
-function LastActivity({ value, now }: { value: string; now: Date }) {
-  return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger>
-          <span className="text-muted-foreground ml-auto cursor-default font-mono text-xs">
-            {formatRelativeTime(value, now)}
+          <span
+            className={cn(
+              'ml-auto inline-flex cursor-default items-center gap-1 font-mono text-[11px]',
+              {
+                'text-destructive font-medium': urgency === 'high',
+                'text-amber-600 dark:text-amber-400': urgency === 'med',
+                'text-muted-foreground': urgency === 'low',
+              },
+            )}
+          >
+            <Clock className="size-3" aria-hidden="true" />
+            {label}
           </span>
         </TooltipTrigger>
-        <TooltipContent>{formatAbsoluteTime(value)}</TooltipContent>
+        <TooltipContent>{formatAbsoluteTime(lastActivityAt)}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
@@ -175,7 +177,6 @@ function ResolveButton({ gmailThreadId }: { gmailThreadId: string }) {
   );
 }
 
-// Re-exported so NeedsReplyTable (and the test still importing it) keep working.
 export function DraftStatusBadge({ draftStatus }: { draftStatus: DraftStatus }) {
   return <DraftBadge draftStatus={draftStatus} />;
 }
@@ -200,18 +201,6 @@ function ageUrgency(ageMs: number): Urgency {
   if (days >= 3) return 'high';
   if (days >= 1) return 'med';
   return 'low';
-}
-
-function formatRelativeTime(value: string, now: Date): string {
-  const then = new Date(value);
-  if (Number.isNaN(then.getTime())) return '—';
-  const diffSeconds = Math.round((then.getTime() - now.getTime()) / 1000);
-  const absoluteSeconds = Math.abs(diffSeconds);
-  const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
-  if (absoluteSeconds < 60) return formatter.format(diffSeconds, 'second');
-  if (absoluteSeconds < 3600) return formatter.format(Math.round(diffSeconds / 60), 'minute');
-  if (absoluteSeconds < 86_400) return formatter.format(Math.round(diffSeconds / 3600), 'hour');
-  return formatter.format(Math.round(diffSeconds / 86_400), 'day');
 }
 
 function formatAbsoluteTime(value: string): string {

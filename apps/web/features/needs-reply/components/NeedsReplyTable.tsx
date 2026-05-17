@@ -110,16 +110,15 @@ function NeedsReplySkeletonRows() {
       {Array.from({ length: 5 }).map((_, index) => (
         <div
           key={index}
-          className="bg-card flex gap-3 rounded-lg border p-4"
+          className="bg-card flex gap-2.5 rounded-lg border p-3"
           data-testid="needs-reply-skeleton-row"
         >
           <Skeleton className="h-auto w-[3px] shrink-0 rounded-full" />
-          <Skeleton className="size-9 shrink-0 rounded-full" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-4 w-1/3" />
+          <Skeleton className="size-8 shrink-0 rounded-full" />
+          <div className="flex-1 space-y-1.5">
+            <Skeleton className="h-3.5 w-1/3" />
             <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-7 w-48" />
+            <Skeleton className="h-7 w-56" />
           </div>
         </div>
       ))}
