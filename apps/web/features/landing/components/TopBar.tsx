@@ -68,13 +68,13 @@ export default async function TopBar() {
             href={ctaHref}
             className={cn(
               buttonVariants({ variant: 'ghost', size: 'sm' }),
-              'h-8 px-3 text-[var(--text-muted)] hover:text-[var(--ink)]',
+              'h-8 px-3 text-(--text-muted) hover:text-(--ink)',
             )}
           >
             {t(ctaKey)}
           </Link>
           <a
-            href="#cta"
+            href="#waitlist"
             className={cn(
               buttonVariants({ variant: 'ink', size: 'sm' }),
               'hidden h-8 px-4 sm:inline-flex',

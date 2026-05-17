@@ -31,9 +31,76 @@
       "retry": "Try again",
       "title": "Couldn't load this"
     },
+    "inboxFlow": {
+      "automated": "Automated",
+      "coverage": "coverage",
+      "empty": "No mail has flowed through automation in this window.",
+      "eyebrow": "Inbox flow",
+      "reverted": "Reverted",
+      "summary": "{automated} of {observed} messages were handled without correction; {reverted} actions were reverted.",
+      "title": "How mail moved through automation",
+      "untouched": "Untouched"
+    },
     "loading": "Loading analytics...",
+    "metadataControl": {
+      "actions": "Automation actions",
+      "actionsEmpty": "No automation actions in this window.",
+      "actionsTooltip": "Compares applied, reverted, and failed automation actions by action type. High reverted or failed counts signal rules worth tuning.",
+      "actionTotal": "{count} actions in this window.",
+      "actionTotalShort": "Total",
+      "appliedLegend": "Applied",
+      "domains": "High-volume domains",
+      "domainsEmpty": "No sender domains in this window.",
+      "draftsLegend": "Drafts",
+      "draftTotal": "Drafts",
+      "eyebrow": "Control signals",
+      "failed": "Failed",
+      "failedLegend": "Failed",
+      "followUpEyebrow": "Follow-up",
+      "followUpTitle": "Reply queues and tuning points",
+      "followUpTooltip": "Summarizes reply queues, created drafts, and tuning opportunities such as unmatched messages or pending actions.",
+      "metadataOnly": "metadata",
+      "noDraft": "No draft yet",
+      "noRule": "No rule",
+      "opportunities": "Automation opportunities",
+      "opportunitiesEyebrow": "Review queue",
+      "opportunitiesTooltip": "Groups review signals: unmatched mail, failed actions, and pending actions. High counts mean rules or connections may need attention.",
+      "pending": "Pending",
+      "replyBuckets": "Reply buckets",
+      "replyBucketsEmpty": "No reply buckets in this window.",
+      "replyBucketsTooltip": "Breaks threads down by reply state and created drafts so you can see which queue needs attention.",
+      "replyDraftSummary": "{count} drafts",
+      "replyTotal": "Threads",
+      "revertedLegend": "Reverted",
+      "title": "Where to tune rules and follow-up",
+      "tuningSummary": "Needs review",
+      "withDraft": "{count, plural, one {# draft} other {# drafts}}"
+    },
+    "metadataLoad": {
+      "appliedLegend": "Handled",
+      "categories": "Gmail categories",
+      "categoriesEmpty": "No category labels in this window.",
+      "categoriesEyebrow": "Gmail categories",
+      "categoryColumn": "Category",
+      "categoryCountLabel": "Mail",
+      "categoryShare": "Share of Gmail categories in the inbox.",
+      "categoryShareLabel": "Share",
+      "categoryTooltip": "Shows which Gmail categories, such as Updates, Promotions, or Personal, are creating most of the inbox load.",
+      "categoryTotalLabel": "mail",
+      "dailyTooltip": "Shows how many messages Zero Mail saw each day, how many were handled, and how many actions were reverted.",
+      "dailyVolume": "Daily volume",
+      "dayTotal": "{count} mail",
+      "empty": "No inbox-load data in this window.",
+      "eyebrow": "Inbox load",
+      "metadataOnly": "metadata only",
+      "observedLegend": "Observed",
+      "revertedLegend": "Reverted",
+      "title": "Mail volume and Gmail signals over time",
+      "totalObserved": "{count} observed mail"
+    },
     "page": {
-      "description": "What Zero Mail has done for your inbox over the chosen window.",
+      "description": "Track how much mail Zero Mail filtered, how much time it saved, and which rules are earning trust.",
+      "eyebrow": "Inbox performance",
       "lastRefreshed": "Last refreshed {age} ago",
       "title": "Analytics"
     },
@@ -41,31 +108,51 @@
       "column": {
         "applied": "Applied",
         "decisions": "Decisions",
+        "precision": "Precision",
         "reverted": "Reverted",
-        "rule": "Rule"
+        "rule": "Rule",
+        "trust": "Trust"
       },
       "empty": "No rules triggered in this window.",
-      "eyebrow": "RULE HITS",
-      "title": "Which rules ran"
+      "eyebrow": "Rule trust",
+      "title": "Which rules are working",
+      "tooltip": "Tracks how many decisions each rule made, how many actions were applied, and the share that was not reverted. Low-trust rules should be reviewed.",
+      "trust": {
+        "high": "High",
+        "low": "Low",
+        "medium": "Watch"
+      }
     },
     "timeSaved": {
+      "averagePerDay": "Per day",
       "empty": "No time saved in this window.",
-      "eyebrow": "TIME SAVED",
+      "eyebrow": "Time saved",
+      "focusBlock": "8h block",
+      "perAction": "Per action",
       "screenReader": "Estimated time saved: {hours} hours {minutes} minutes.",
-      "title": "Estimated time saved",
-      "tooltip": "Based on average seconds per action — labelling, archiving, and drafting take real time off your hands."
+      "title": "Recovered focus time",
+      "tooltip": "This is an estimate, not measured stopwatch time. Current formula: each label action = 10 seconds, archive = 30 seconds, draft = 3 minutes."
     },
     "topSenders": {
+      "domainEyebrow": "Domains",
+      "domainsEmpty": "No sender domains in this window.",
+      "domainsTitle": "Grouped by domain",
+      "domainsTooltip": "Groups senders by domain so you can see which company, system, or service creates the most mail.",
       "empty": "No senders yet in this window.",
-      "eyebrow": "TOP SENDERS",
-      "title": "Who you heard from most"
+      "eyebrow": "Top senders",
+      "title": "Who is creating the most inbox load",
+      "tooltip": "Ranks the senders creating the most mail in the selected window. Use it to spot sources that need rules or noise reduction."
     },
     "volume": {
+      "appliedLabel": "Triaged",
       "empty": "No activity in this window.",
-      "eyebrow": "VOLUME",
-      "supplementary": "{applied} of {observed} triaged",
-      "title": "Messages triaged",
-      "tooltip": "Observed messages = mail Zero Mail saw. Triaged = mail Zero Mail acted on."
+      "eyebrow": "Volume",
+      "observedLabel": "Observed",
+      "supplementary": "{applied} of {observed} messages were handled by Zero Mail in this window.",
+      "title": "Mail triage coverage",
+      "tooltip": "Observed messages are mail Zero Mail saw. Triaged messages are mail Zero Mail labelled, archived, or drafted.",
+      "triageRate": "triaged",
+      "untouchedLabel": "Untouched"
     },
     "window": {
       "30d": "Last 30 days",
@@ -106,7 +193,7 @@
       "termsAnd": "and",
       "termsPrefix": "By signing in you agree to our",
       "title": "Sign in",
-      "waitlist": "Join the waitlist →",
+      "waitlist": "Register to experience Zero Mail →",
       "workEmail": "Sign in with work email"
     }
   },
@@ -282,7 +369,7 @@
     "b1": "Free during beta",
     "b2": "No card required",
     "b3": "Unsubscribe in one click",
-    "button": "Join the waitlist",
+    "button": "Register to experience",
     "desc": "Join the waitlist. We're onboarding 50 founders and operators a week, in order. You'll get an invite to set up Zero Mail with your real Gmail account.",
     "emailPlaceholder": "you@company.com",
     "eyebrow": "Early access",
@@ -297,7 +384,7 @@
       "s4": "emails auto-sent"
     },
     "title": {
-      "a": "Reach inbox zero",
+      "a": "Register to experience Zero Mail",
       "b": "without the anxiety."
     }
   },
@@ -580,6 +667,12 @@
       "line1": "Inbox zero,",
       "line2": "without handing AI"
     },
+    "metrics": {
+      "autoSendsEver": "auto-sends ever",
+      "emailsProcessed": "emails processed",
+      "triageAccuracy": "triage accuracy",
+      "triagePerEmail": "triage per email"
+    },
     "peek": {
       "eyebrow": "Next · How it works",
       "link": "Read the walkthrough",
@@ -588,7 +681,7 @@
     "primaryCta": "Sign in",
     "secondaryCta": "See how it works",
     "tagline": "Zero Mail triages your Gmail with rules you write in plain English — labels what matters, archives what doesn't, drafts the easy replies. You stay in the loop on everything that goes out.",
-    "waitlistCta": "Join the waitlist"
+    "waitlistCta": "Register to experience Zero Mail"
   },
   "legal": {
     "googleApiPolicy": {
@@ -689,7 +782,7 @@
     "themeToDark": "Switch to dark mode",
     "themeToLight": "Switch to light mode",
     "trust": "Trust & safety",
-    "waitlist": "Join the waitlist"
+    "waitlist": "Register to experience Zero Mail"
   },
   "needsReply": {
     "action": {
@@ -1331,8 +1424,8 @@
       "scopes": "View Gmail scopes"
     },
     "title": {
-      "a": "Your inbox stays yours.",
-      "b": "Always."
+      "a": "Clean inbox,",
+      "b": "don't hand the send button to AI."
     }
   }
 }

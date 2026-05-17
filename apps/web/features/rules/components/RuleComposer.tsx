@@ -322,14 +322,11 @@ export function RuleComposer({
             compileError={compileError}
             invalidReason={invalid?.reason}
             clarificationQuestion={clarification?.question ?? null}
-            clarificationAnswer={clarificationAnswer}
             onDraftChange={setManualDraft}
             onUpdateCondition={updateCondition}
             onRemoveCondition={removeCondition}
             onUpdateAction={updateAction}
             onRemoveAction={removeAction}
-            onClarificationAnswerChange={onClarificationAnswerChange}
-            onAnswerClarification={onAnswerClarification}
             onSaveManualRule={onSaveManualRule}
             onRefineManualRule={onRefineManualRule}
           />
@@ -348,14 +345,11 @@ function ManualBuilder({
   compileError,
   invalidReason,
   clarificationQuestion,
-  clarificationAnswer,
   onDraftChange,
   onUpdateCondition,
   onRemoveCondition,
   onUpdateAction,
   onRemoveAction,
-  onClarificationAnswerChange,
-  onAnswerClarification,
   onSaveManualRule,
   onRefineManualRule,
 }: {
@@ -367,14 +361,11 @@ function ManualBuilder({
   compileError: string | null;
   invalidReason: string | undefined;
   clarificationQuestion: string | null;
-  clarificationAnswer: string;
   onDraftChange: (draft: ManualRuleDraft) => void;
   onUpdateCondition: (conditionId: string, patch: Partial<ManualCondition>) => void;
   onRemoveCondition: (conditionId: string) => void;
   onUpdateAction: (actionId: string, patch: Partial<ManualAction>) => void;
   onRemoveAction: (actionId: string) => void;
-  onClarificationAnswerChange: (answer: string) => void;
-  onAnswerClarification: () => void;
   onSaveManualRule: (rule: BuiltManualRule) => void | Promise<void>;
   onRefineManualRule: (rule: BuiltManualRule, instruction: string) => void | Promise<void>;
 }) {

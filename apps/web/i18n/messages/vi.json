@@ -31,9 +31,76 @@
       "retry": "Thử lại",
       "title": "Không tải được phần này"
     },
+    "inboxFlow": {
+      "automated": "Tự động",
+      "coverage": "độ phủ",
+      "empty": "Chưa có email nào trong khoảng này.",
+      "eyebrow": "Dòng hộp thư",
+      "reverted": "Hoàn tác",
+      "summary": "{automated} trên {observed} email được xử lý không cần sửa tay; {reverted} hành động đã được hoàn tác.",
+      "title": "Email đã đi qua tự động hóa như thế nào",
+      "untouched": "Còn lại"
+    },
     "loading": "Đang tải phân tích...",
+    "metadataControl": {
+      "actions": "Hành động tự động",
+      "actionsEmpty": "Chưa có hành động tự động trong khoảng này.",
+      "actionsTooltip": "So sánh số hành động tự động đã áp dụng, bị hoàn tác hoặc lỗi theo từng loại hành động. Cột hoàn tác/lỗi cao là dấu hiệu cần chỉnh rule.",
+      "actionTotal": "{count} hành động trong khoảng này.",
+      "actionTotalShort": "Tổng",
+      "appliedLegend": "Áp dụng",
+      "domains": "Tên miền gửi nhiều",
+      "domainsEmpty": "Chưa có tên miền gửi nhiều trong khoảng này.",
+      "draftsLegend": "Bản nháp",
+      "draftTotal": "Bản nháp",
+      "eyebrow": "Điều khiển",
+      "failed": "Lỗi",
+      "failedLegend": "Lỗi",
+      "followUpEyebrow": "Theo dõi",
+      "followUpTitle": "Thread cần phản hồi và điểm cần chỉnh",
+      "followUpTooltip": "Tóm tắt thread đang cần phản hồi, bản nháp đã tạo và các điểm nên tự động hóa thêm như email chưa khớp rule hoặc hành động còn chờ.",
+      "metadataOnly": "metadata",
+      "noDraft": "Chưa có bản nháp",
+      "noRule": "Chưa khớp rule",
+      "opportunities": "Cơ hội tự động hóa",
+      "opportunitiesEyebrow": "Điểm cần xem",
+      "opportunitiesTooltip": "Gom các tín hiệu cần xem lại: email chưa khớp rule, hành động lỗi và hành động còn chờ. Số cao nghĩa là nên chỉnh rule hoặc kiểm tra kết nối.",
+      "pending": "Đang chờ",
+      "replyBuckets": "Phản hồi",
+      "replyBucketsEmpty": "Chưa có thread phản hồi trong khoảng này.",
+      "replyBucketsTooltip": "Chia thread theo trạng thái phản hồi và số bản nháp đã tạo để biết hàng đợi nào đang cần xử lý.",
+      "replyDraftSummary": "{count} bản nháp",
+      "replyTotal": "Thread",
+      "revertedLegend": "Hoàn tác",
+      "title": "Nơi cần chỉnh rule hoặc theo dõi phản hồi",
+      "tuningSummary": "Điểm nên xem lại",
+      "withDraft": "{count} bản nháp"
+    },
+    "metadataLoad": {
+      "appliedLegend": "Đã xử lý",
+      "categories": "Nhóm Gmail",
+      "categoriesEmpty": "Chưa có nhãn category trong khoảng này.",
+      "categoriesEyebrow": "Phân loại Gmail",
+      "categoryColumn": "Nhóm",
+      "categoryCountLabel": "Email",
+      "categoryShare": "Tỷ trọng category Gmail trong inbox.",
+      "categoryShareLabel": "Tỷ trọng",
+      "categoryTooltip": "Cho biết email đến đang nằm nhiều ở category Gmail nào như Updates, Promotions hoặc Personal để nhận ra nguồn gây tải chính.",
+      "categoryTotalLabel": "email",
+      "dailyTooltip": "Cho biết mỗi ngày Zero Mail thấy bao nhiêu email, xử lý bao nhiêu email và có bao nhiêu hành động bị hoàn tác.",
+      "dailyVolume": "Khối lượng theo ngày",
+      "dayTotal": "{count} email",
+      "empty": "Chưa có dữ liệu tải hộp thư trong khoảng này.",
+      "eyebrow": "Tải hộp thư",
+      "metadataOnly": "chỉ metadata",
+      "observedLegend": "Đã thấy",
+      "revertedLegend": "Hoàn tác",
+      "title": "Email đến và tín hiệu Gmail theo thời gian",
+      "totalObserved": "{count} email đã thấy"
+    },
     "page": {
-      "description": "Những gì Zero Mail đã làm cho hộp thư của bạn trong khoảng thời gian đã chọn.",
+      "description": "Theo dõi Zero Mail đã lọc bao nhiêu email, tiết kiệm bao nhiêu thời gian và quy tắc nào đang đáng tin.",
+      "eyebrow": "Hiệu quả hộp thư",
       "lastRefreshed": "Cập nhật {age} trước",
       "title": "Phân tích"
     },
@@ -41,31 +108,51 @@
       "column": {
         "applied": "Đã áp dụng",
         "decisions": "Quyết định",
+        "precision": "Độ chính xác",
         "reverted": "Đã hoàn tác",
-        "rule": "Quy tắc"
+        "rule": "Quy tắc",
+        "trust": "Tin cậy"
       },
       "empty": "Chưa có quy tắc nào kích hoạt trong khoảng này.",
-      "eyebrow": "QUY TẮC ĐÃ KÍCH HOẠT",
-      "title": "Quy tắc nào đã chạy"
+      "eyebrow": "Độ tin cậy",
+      "title": "Quy tắc nào đang hoạt động tốt",
+      "tooltip": "Theo dõi từng rule đã đưa ra bao nhiêu quyết định, bao nhiêu hành động được áp dụng và tỷ lệ không bị hoàn tác. Rule có độ tin cậy thấp nên được xem lại.",
+      "trust": {
+        "high": "Cao",
+        "low": "Thấp",
+        "medium": "Cần xem"
+      }
     },
     "timeSaved": {
+      "averagePerDay": "Mỗi ngày",
       "empty": "Chưa tiết kiệm thời gian trong khoảng này.",
-      "eyebrow": "THỜI GIAN TIẾT KIỆM",
+      "eyebrow": "Thời gian",
+      "focusBlock": "ca 8 giờ",
+      "perAction": "Mỗi hành động",
       "screenReader": "Thời gian tiết kiệm ước tính: {hours} giờ {minutes} phút.",
-      "title": "Thời gian tiết kiệm ước tính",
-      "tooltip": "Dựa trên thời gian trung bình mỗi hành động — gắn nhãn, lưu trữ, và soạn nháp tốn thời gian thực của bạn."
+      "title": "Thời gian lấy lại",
+      "tooltip": "Đây là ước tính, không phải đồng hồ đo thời gian thật. Công thức hiện tại: mỗi lần gắn nhãn = 10 giây, lưu trữ = 30 giây, tạo bản nháp = 3 phút."
     },
     "topSenders": {
+      "domainEyebrow": "Tên miền",
+      "domainsEmpty": "Chưa có tên miền gửi nhiều trong khoảng này.",
+      "domainsTitle": "Nhóm theo tên miền",
+      "domainsTooltip": "Gom người gửi theo tên miền để thấy công ty, hệ thống hoặc dịch vụ nào đang tạo nhiều email nhất.",
       "empty": "Chưa có người gửi nào trong khoảng này.",
-      "eyebrow": "NGƯỜI GỬI HÀNG ĐẦU",
-      "title": "Ai bạn nghe nhiều nhất"
+      "eyebrow": "Người gửi",
+      "title": "Nguồn gây tải hộp thư nhiều nhất",
+      "tooltip": "Xếp hạng người gửi tạo nhiều email nhất trong khoảng đang chọn. Dùng để phát hiện nguồn cần tạo rule hoặc giảm nhiễu."
     },
     "volume": {
-      "empty": "Không có hoạt động trong khoảng này.",
-      "eyebrow": "KHỐI LƯỢNG",
-      "supplementary": "{applied} trên {observed} đã phân loại",
-      "title": "Tin đã phân loại",
-      "tooltip": "Tin đã quan sát = email Zero Mail đã thấy. Đã phân loại = email Zero Mail đã thao tác."
+      "appliedLabel": "Đã xử lý",
+      "empty": "Chưa có hoạt động trong khoảng này.",
+      "eyebrow": "Khối lượng",
+      "observedLabel": "Đã thấy",
+      "supplementary": "{applied} trên {observed} email đã được Zero Mail xử lý trong kỳ này.",
+      "title": "Tỷ lệ email đã xử lý",
+      "tooltip": "Đã thấy là email Zero Mail nhận diện. Đã xử lý là email Zero Mail đã gắn nhãn, lưu trữ hoặc tạo bản nháp.",
+      "triageRate": "đã xử lý",
+      "untouchedLabel": "Còn lại"
     },
     "window": {
       "30d": "30 ngày qua",
@@ -106,7 +193,7 @@
       "termsAnd": "và",
       "termsPrefix": "Khi đăng nhập, bạn đồng ý với",
       "title": "Đăng nhập",
-      "waitlist": "Đăng ký danh sách chờ →",
+      "waitlist": "Đăng ký trải nghiệm Zero Mail →",
       "workEmail": "Đăng nhập bằng email công ty"
     }
   },
@@ -282,7 +369,7 @@
     "b1": "Miễn phí trong giai đoạn beta",
     "b2": "Không cần thẻ",
     "b3": "Hủy đăng ký bằng một cú nhấp",
-    "button": "Đăng ký chờ",
+    "button": "Đăng ký trải nghiệm",
     "desc": "Hãy đăng ký chờ. Mỗi tuần chúng tôi đón thêm 50 nhà sáng lập và quản lý vận hành theo thứ tự. Bạn sẽ nhận lời mời để cài đặt Zero Mail với tài khoản Gmail thật của mình.",
     "emailPlaceholder": "ban@congty.com",
     "eyebrow": "Truy cập sớm",
@@ -297,7 +384,7 @@
       "s4": "email tự động gửi"
     },
     "title": {
-      "a": "Đạt inbox zero",
+      "a": "Đăng ký trải nghiệm Zero Mail",
       "b": "không còn lo lắng."
     }
   },
@@ -580,6 +667,12 @@
       "line1": "Hộp thư gọn sạch,",
       "line2": "không giao AI"
     },
+    "metrics": {
+      "autoSendsEver": "không tự gửi",
+      "emailsProcessed": "email đã xử lý",
+      "triageAccuracy": "độ chính xác",
+      "triagePerEmail": "xử lý mỗi email"
+    },
     "peek": {
       "eyebrow": "Tiếp theo · Cách hoạt động",
       "link": "Đọc walkthrough",
@@ -588,7 +681,7 @@
     "primaryCta": "Đăng nhập",
     "secondaryCta": "Xem cách hoạt động",
     "tagline": "Zero Mail phân loại Gmail của bạn theo các quy tắc bạn viết bằng ngôn ngữ tự nhiên — gắn nhãn việc quan trọng, lưu trữ thư không cần thiết, và soạn sẵn những phản hồi đơn giản. Mọi thứ gửi đi đều phải qua bạn.",
-    "waitlistCta": "Đăng ký danh sách chờ"
+    "waitlistCta": "Đăng ký trải nghiệm Zero Mail"
   },
   "legal": {
     "googleApiPolicy": {
@@ -689,7 +782,7 @@
     "themeToDark": "Chuyển sang chế độ tối",
     "themeToLight": "Chuyển sang chế độ sáng",
     "trust": "Tin cậy & an toàn",
-    "waitlist": "Đăng ký danh sách chờ"
+    "waitlist": "Đăng ký trải nghiệm Zero Mail"
   },
   "needsReply": {
     "action": {
@@ -1331,8 +1424,8 @@
       "scopes": "Xem quyền Gmail"
     },
     "title": {
-      "a": "Hộp thư của bạn vẫn là của bạn.",
-      "b": "Luôn luôn."
+      "a": "Hộp thư gọn sạch,",
+      "b": "không giao AI nút gửi."
     }
   }
 }

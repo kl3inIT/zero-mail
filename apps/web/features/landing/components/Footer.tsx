@@ -50,7 +50,7 @@ export default async function Footer() {
           <span>{t('footer.copyright')}</span>
           <span className="inline-flex items-center gap-3">
             <span className="inline-flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-[var(--green)]" />
+              <span className="size-1.5 rounded-full bg-(--green)" />
               {t('footer.status')}
             </span>
             <span>{t('footer.version')}</span>

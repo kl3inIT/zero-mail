@@ -118,6 +118,8 @@ public enum OnboardingStep implements OrderedEnum {
 
 Every log statement emits an opaque `event=` name plus structured fields — never raw email address, Google subject, OAuth refresh-token bytes, OAuth access-token bytes, message body, LLM prompt, or LLM completion. Tenant context is the only stable identifier and is logged as a UUID via `tenantId={}`. ArchUnit rules (Phase 1 FND-04) and a Logback scrub filter (FND-03) catch most violations at build/runtime, but the convention is the first line of defense.
 
+**DB persistence is separate from logging.** Rule-builder assistant chat (user-typed configuration messages + structured tool outputs) is allowed to persist in Postgres per the Privacy scope in `PROJECT.md` Constraints — chat content is UI input, not extracted email content. This convention bans *logging* any LLM exchange to application logs regardless of source; it does not ban DB storage of user-typed assistant chat.
+
 **Example:** `backend/api/src/main/java/com/zeromail/api/security/GoogleOAuthSuccessHandler.java`
 
 ```java

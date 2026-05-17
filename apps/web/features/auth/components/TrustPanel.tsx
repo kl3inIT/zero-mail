@@ -45,7 +45,7 @@ export async function TrustPanel() {
           );
         })}
       </ul>
-      <div className="mt-6 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+      <div className="mt-6 flex flex-wrap items-center gap-2 text-xs text-(--text-muted)">
         <span className="inline-flex items-center gap-1">
           <FileTextIcon size={12} /> {t('trust.proof.audit')}
         </span>
@@ -63,22 +63,20 @@ export async function TrustPanel() {
           <h4>{t('permissions.title')}</h4>
           <span className="zm-pill zm-pill-mono">{t('permissions.minimum')}</span>
         </div>
-        <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
-          {t('permissions.intro')}
-        </p>
+        <p className="mt-2 text-sm leading-relaxed text-(--text-muted)">{t('permissions.intro')}</p>
         <div className="mt-4 grid gap-3">
           {(['r1', 'r2', 'r3'] as const).map((row, index) => {
             const Icon = permissionIcons[index];
             return (
               <div key={row} className="grid grid-cols-[22px_1fr] gap-2">
-                <span className="grid size-[22px] place-items-center rounded border border-[var(--line)] bg-[var(--bg-elevated)]">
+                <span className="grid size-[22px] place-items-center rounded border border-(--line) bg-(--bg-elevated)">
                   <Icon size={13} />
                 </span>
                 <div>
-                  <div className="text-sm font-semibold text-[var(--ink)]">
+                  <div className="text-sm font-semibold text-(--ink)">
                     {t(`permissions.${row}.title` as never)}
                   </div>
-                  <p className="text-xs leading-relaxed text-[var(--text-muted)]">
+                  <p className="text-xs leading-relaxed text-(--text-muted)">
                     {t(`permissions.${row}.body` as never)}
                   </p>
                 </div>
@@ -86,7 +84,7 @@ export async function TrustPanel() {
             );
           })}
         </div>
-        <div className="mt-4 flex items-start gap-2 rounded-md border border-dashed border-[var(--line)] bg-[var(--bg-elevated)] p-3 font-mono text-[11.5px] leading-relaxed text-[var(--text-faint)]">
+        <div className="mt-4 flex items-start gap-2 rounded-md border border-dashed border-(--line) bg-(--bg-elevated) p-3 font-mono text-[11.5px] leading-relaxed text-(--text-faint)">
           <XIcon size={12} className="mt-0.5 shrink-0" />
           <span>{t('permissions.notGranted' as never)}</span>
         </div>

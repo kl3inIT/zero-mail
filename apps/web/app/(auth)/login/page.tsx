@@ -90,7 +90,7 @@ export default async function LoginPage({
               <Button
                 type="button"
                 variant="ghost"
-                className="h-10 w-full text-[var(--text-muted)] hover:text-[var(--ink)]"
+                className="h-10 w-full text-(--text-muted) hover:text-(--ink)"
               >
                 <MailIcon size={14} /> {tLogin('workEmail')}
               </Button>
@@ -98,7 +98,7 @@ export default async function LoginPage({
             </div>
             <div className="zm-signin-foot">
               <span>{tLogin('newUser')}</span>
-              <Link href="/#cta" className="text-[var(--ink)]">
+              <Link href="/#waitlist" className="text-(--ink)">
                 {tLogin('waitlist')}
               </Link>
             </div>
