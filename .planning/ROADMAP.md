@@ -31,7 +31,14 @@ v1.1 ships a streaming `/chat` route and an assistant `/settings` page on top of
   4. A reviewer can grep `chat_message.parts` JSONB content for any tenant after a synthetic conversation containing `readEmail` tool calls and find zero email body content; enforced by three independent layers — `ToolOutputSanitizer` (runtime), `ChatPersistenceContentBanTest` (ArchUnit), `chat_message_body_ban` PostgreSQL trigger (DB) — and a multi-tenant chat leak integration test proves tenant context never leaks across the long-lived SSE connection or tool fan-out (ARCH-02, ARCH-05).
   5. The system prompt sandboxes user-supplied personalization (`personal_instructions`, `writing_style`) inside an XML-fenced injection slot with length cap + sentinel stripping (`[SYSTEM]`, `</s>`, `### system`, `<|im_start|>`, markdown headers); a confirmed send/reply/forward to a recipient on the v1.0 sender-safety-net renders an extra-friction VIP banner ("Recipient is on your safety net — confirm anyway?") on the preview card before the Send button is enabled (ARCH-06, SET-SAFE-05).
   6. The chat conversation history sidebar lists prior conversations per tenant, survives page refresh, and renders confirmed cards in replay-mode "Sent ✓" state with no re-execution; Spring AI 2.0.0-M6 streaming + tool-call confirmation works end-to-end despite known bugs `spring-ai#3366`/`#5167` via the Zero Mail-owned `ChatToolCallRegistry` + `ZeroMailChatMemory` adapter reading from `chat_message.parts` directly (CHAT-07, ARCH-07).
-**Plans**: TBD (decompose via `/gsd:plan-phase 7` after `/gsd:discuss-phase 7`)
+**Plans**: 6 plans
+Plans:
+- [ ] 07-PLAN-01.md — Wave 0: Test scaffolding + ArchUnit foundation + pre-Wave verifications
+- [ ] 07-PLAN-02.md — Wave 1: Liquibase 041–046 + persistence + sanitize package (body-ban trigger atomic in 042)
+- [ ] 07-PLAN-03.md — Wave 2: Modulith module + Spring AI adapter + Reactor scheduler + ARCH-07 workaround + 7 read tools
+- [ ] 07-PLAN-04.md — Wave 3: SSE controller + ChatOrchestrator + history endpoint + reconciliation cron
+- [ ] 07-PLAN-05.md — Wave 4: Confirmation state machine + AssistantSendExecutor + ArchUnit 0→1 atomic flip [ATOMIC-GROUP: arch01-flip]
+- [ ] 07-PLAN-06.md — Wave 5: Frontend /chat route + AI Elements + Vietnamese chrome + preview cards + 7 Playwright specs
 **Research flag**: COMPLETE — see `.planning/research/SUMMARY.md`, `STACK.md`, `FEATURES.md`, `ARCHITECTURE.md`, `PITFALLS.md`. Spring AI M6 streaming + tool-call confirmation flagged MEDIUM-HIGH; build a 100-LoC orchestrator prototype before committing to the full executor design.
 **UI hint**: yes
 
