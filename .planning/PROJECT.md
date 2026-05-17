@@ -11,8 +11,24 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Backend:** ~17 phases, Java 25 + Spring Boot 4.0.6 + Spring Modulith + Hibernate 7 + Liquibase 5 + Spring AI 2.0.0-M6.
 - **Frontend:** Next.js 16.2.4 + React 19.2.5 + Tailwind 4 + shadcn/ui + TanStack Query + typed OpenAPI client; Vietnamese-default with English secondary.
 - **Infra:** Single VPS — Postgres 17 + Redis 7 + reverse proxy + api + worker + web on one host. No GCP / Kafka / vector DB.
-- **Trust posture:** Auto-send architecturally blocked (ArchUnit + safety policy + repo-wide grep enforced); no long-term storage of email bodies, LLM prompts, completions, or embeddings; per-tenant Scoped Values + multi-tenant leak test green; @Sensitive Logback scrub end-to-end verified.
+- **Trust posture:** Auto-send architecturally blocked (ArchUnit + safety policy + repo-wide grep enforced); no long-term storage of raw email bodies, email-content LLM prompts/completions, or embeddings (rule-builder assistant chat excluded — see Privacy scope); per-tenant Scoped Values + multi-tenant leak test green; @Sensitive Logback scrub end-to-end verified.
 - **Launch state:** OAuth Testing mode (production CASA verification deferred to dormant SEED-012); 50-tenant load test 4/4 invariants PASS; LAUNCH-GO-NOGO signed.
+
+## Current Milestone: v1.1 — Email assistant chat + Settings page
+
+**Goal:** Ship Inbox Zero-style email assistant chat + assistant Settings UI that lets users configure AI behavior, personalization, and sender safety — keeping v1.0 trust posture intact (user-confirmed send only, no auto-send, privacy carve-outs locked in CLAUDE.md/PROJECT.md).
+
+**Target features:**
+
+- **Chat-based email assistant** — ~19 tools port từ Inbox Zero pattern (rule CRUD, inbox read, label, memory, capabilities, user-confirmed `sendEmail`/`replyEmail`/`forwardEmail` với required confirmation, `updatePersonalInstructions`). Backend Spring AI 2.0.0-M6 SSE (emit Vercel Data Stream Protocol). Frontend `@ai-sdk/react` + `ai-elements` components. New route `/chat`. ArchUnit carve-out cho exactly 1 send call site, audit log table cho mỗi confirmed send, UI preview card với edit/send/cancel.
+- **AI + Personalization Settings page** — provider/model UI cho 4 providers hiện có (OpenAI, Anthropic, Google GenAI, DeepSeek) với per-feature model picker (chat/triage/draft); AI personalization (writing style, personal instructions, email signature, knowledge base, tone preset, AI output language VI/EN); behavior toggles (auto draft replies, draft confidence, follow-up reminders, daily digest, sensitive data protection); sender safety net VIP management UI (expose existing TRG-07..08).
+
+**Seeds in scope:**
+
+- `SEED-001` Track A — V1.1 privacy-preserving assistant umbrella
+- `SEED-003` — screen-aware AI assistant + command center
+
+**Deferred to v1.2:** provider expansion (Bedrock/Azure/Groq/Perplexity/native OpenRouter/OpenAI-compatible/Vertex), waitlist OAuth provisioning, learned patterns, multi-rule selection, browser extension sync, admin/support console (SEED-011), CASA verification (SEED-012).
 
 ## Core Value
 
@@ -93,7 +109,9 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 <!-- Next milestone scope. Define via `/gsd:new-milestone`. -->
 
-*(Run `/gsd:new-milestone` to define v1.1 — typical candidates: rules UX structured builder (next-milestone TODO), CASA production verification (SEED-012), live Resend deliverability + payment-provider smoke tests, Outlook/Microsoft 365, Auto-send opt-in for narrow rules with per-rule approval flow, bulk unsubscribe, cold-email blocker, reply-tracker, attachment auto-filing, team/seat plans.)*
+**v1.1 in progress** (started 2026-05-17). Scope: Email assistant chat + Settings page (see "Current Milestone" section above). Requirements: `.planning/REQUIREMENTS.md`. Roadmap: `.planning/ROADMAP.md`.
+
+*Deferred from v1.1 candidate list:* CASA production verification (SEED-012), live Resend deliverability + payment-provider smoke tests, Outlook/Microsoft 365, Auto-send opt-in for narrow rules with per-rule approval flow, bulk unsubscribe, cold-email blocker, reply-tracker, attachment auto-filing, team/seat plans, waitlist OAuth provisioning.
 
 ### Out of Scope
 
@@ -104,7 +122,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Generic IMAP/SMTP** — different auth/push/label model; doubles provider surface area.
 - **Self-hosted / open-source distribution** — Cloud SaaS only in v1; OSS is a separate strategic decision.
 - **Team / seat-based plans** — v1 targets individual prosumers; team features wait for SMB signal.
-- **Long-term storage of email bodies, LLM prompts/completions, or embeddings** — privacy constraint, permanent (not a deferred feature).
+- **Long-term storage of raw email bodies, email-content LLM prompts/completions, or embeddings** — privacy constraint, permanent (not a deferred feature). Rule-builder assistant chat is excluded — see Privacy scope in Constraints.
 - **RAG over user mail bodies** — requires persistent derived features; incompatible with privacy stance.
 - **Vector DB in v1 infra** — no embedding persistence → no vector DB need.
 - **Full in-app mail client UI** — Gmail remains primary client; we augment, not replace.
@@ -135,8 +153,8 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Distribution (v1)**: Self-hosted SaaS on a single VPS — locked.
 - **LLM routing**: Default OpenRouter behind Spring AI; BYOK supported — locked.
 - **Billing model**: Prepaid credits, pay-as-you-go. Vietnam beta uses SePay/VietQR + Postgres ledger + configurable VND-per-credit; global Merchant-of-Record/card provider deferred.
-- **Privacy**: No long-term storage of raw email bodies, LLM prompts/completions, or embeddings — locked.
-- **Write actions in v1**: label, archive, save Gmail draft. **Auto-send forbidden.**
+- **Privacy**: No long-term storage of raw email bodies, LLM prompts/completions, or embeddings — locked. **Scope:** the email-content processing pipeline (triage, draft generation). User-typed rule-builder assistant chat (chat messages + structured tool outputs) persists normally — it is UI configuration input, not extracted email content. Still forbidden inside chat: inlining email bodies into long-term assistant prompts (use short-lived in-memory cache) and embeddings of user mail.
+- **Write actions allowed**: (1) **Rules engine** (auto-triggered by incoming mail): label, archive (skip inbox), save Gmail draft only — **auto-send forbidden** (= rule firing → send without per-message user click). (2) **Chat assistant** (user-initiated): same as rules engine + (v1.1+) user-confirmed send/reply/forward via chat preview card. AI drafts message → chat UI renders preview with edit + send + cancel → send executes only on explicit per-message user click. Auto-send (rule-triggered, no per-message click) remains forbidden in all pathways.
 - **Primary datastore**: PostgreSQL 17 self-hosted on the VPS. Redis 7 same VPS for cache/session/rate-limit only; no vector DB.
 - **Schema migrations**: Liquibase YAML — locked.
 - **Timeline**: Exploratory / learning-oriented; favor architectural quality over speed.
@@ -183,4 +201,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-15 after v1.0 milestone close*
+*Last updated: 2026-05-17 — v1.1 milestone started (Email assistant chat + Settings page)*
