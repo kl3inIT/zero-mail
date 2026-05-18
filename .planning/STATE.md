@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Email assistant chat + Settings page
 status: executing
-stopped_at: Phase 7 UI-SPEC approved
-last_updated: "2026-05-18T02:40:02.809Z"
+stopped_at: Completed 07-02-PLAN.md
+last_updated: "2026-05-18T03:59:43.894Z"
 last_activity: 2026-05-18
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 6
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 ## Current Position
 
 Phase: 07 (chat-email-assistant-backend-frontend-send-executor-archunit) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-05-18
 
@@ -151,6 +151,7 @@ See `.planning/ROADMAP.md` for full phase details + success criteria, and `.plan
 | Phase 06 P03 | 2h 47m | 2 tasks | 11 files |
 | Phase 06 P04 | 9 min | 3 tasks | 4 files |
 | Phase 07 P01 | 21 min | 9 tasks | 12 files |
+| Phase 07 P02 | 1h 4m | 4 tasks | 51 files |
 
 ## Accumulated Context
 
@@ -320,6 +321,9 @@ Recent decisions affecting current work:
 - [Phase 06]: Plan 02 uses deterministic UUID loadtest tenants from 00000000-0000-4000-8000-1de57e570001 through 00000000-0000-4000-8000-1de57e570050.
 - [Phase 06]: Plan 02 seeds gmail_connections for each synthetic loadtest tenant so PubSubIngestionService resolves emailAddress to tenant_id during the k6 workload.
 - [Phase 06]: Plan 02 wires loadtestVerify as a Gradle Exec task that shells out to psql for invariant checks instead of using JDBC on the Gradle buildscript classpath.
+- [Phase 07]: Plan 02 keeps chat_message.parts source-aware: email-read tool outputs reject body-shaped fields, while send/draft tool arguments may persist user-authored draft bodies per the privacy carve-out.
+- [Phase 07]: Plan 02 uses recursive PL/pgSQL JSONB traversal for the body-ban trigger and SQLSTATE 23514 so Spring maps trigger failures as data-integrity violations.
+- [Phase 07]: Plan 02 moves confirmation CAS to assistant_pending_action(parts_updated_at,state); chat_message remains append-only with no updated_at column.
 
 ### Roadmap Evolution
 
@@ -420,9 +424,9 @@ Items acknowledged and deferred at v1.0 milestone close on 2026-05-15.
 
 ## Session Continuity
 
-Last session: 2026-05-17T13:00:57.201Z
-Stopped at: Phase 7 UI-SPEC approved
-Resume file: .planning/phases/07-chat-email-assistant-backend-frontend-send-executor-archunit/07-UI-SPEC.md
+Last session: 2026-05-18T03:59:16.426Z
+Stopped at: Completed 07-02-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
