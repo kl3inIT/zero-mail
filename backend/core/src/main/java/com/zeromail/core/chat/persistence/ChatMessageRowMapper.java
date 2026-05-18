@@ -1,6 +1,9 @@
 package com.zeromail.core.chat.persistence;
 
+import com.zeromail.core.chat.domain.ChatId;
 import com.zeromail.core.chat.domain.ChatMessage;
+import com.zeromail.core.chat.domain.ChatMessageId;
+import com.zeromail.core.chat.domain.ChatRole;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
@@ -17,10 +20,10 @@ public class ChatMessageRowMapper implements RowMapper<ChatMessage> {
     @Override
     public ChatMessage mapRow(ResultSet resultSet, int rowNumber) throws SQLException {
         return new ChatMessage(
-                resultSet.getObject("id", UUID.class),
-                resultSet.getObject("chat_id", UUID.class),
-                resultSet.getObject("tenant_id", UUID.class),
-                resultSet.getString("role"),
+                new ChatMessageId(resultSet.getObject("id", UUID.class)),
+                new ChatId(resultSet.getObject("chat_id", UUID.class)),
+                resultSet.getObject("tenant_id", UUID.class).toString(),
+                ChatRole.fromId(resultSet.getString("role")),
                 chatPartsJsonConverter.fromJson(resultSet.getString("parts")),
                 resultSet.getTimestamp("created_at").toInstant());
     }

@@ -27,7 +27,7 @@ public class ChatMessageJdbcRepository {
     }
 
     public UUID insert(ChatMessage chatMessage) {
-        UUID messageId = chatMessage.id() == null ? UUID.randomUUID() : chatMessage.id();
+        UUID messageId = chatMessage.id() == null ? UUID.randomUUID() : chatMessage.id().value();
         Instant createdAt =
                 chatMessage.createdAt() == null ? Instant.now() : chatMessage.createdAt();
         ChatMessageParts parts =
@@ -41,9 +41,9 @@ public class ChatMessageJdbcRepository {
                     VALUES (?, ?, ?, ?, ?::jsonb, ?)
                     """,
                     messageId,
-                    chatMessage.chatId(),
-                    chatMessage.tenantId(),
-                    chatMessage.role(),
+                    chatMessage.chatId().value(),
+                    UUID.fromString(chatMessage.tenantId()),
+                    chatMessage.role().id(),
                     chatPartsJsonConverter.toJson(parts),
                     Timestamp.from(createdAt));
         } catch (DataAccessException dataAccessException) {
