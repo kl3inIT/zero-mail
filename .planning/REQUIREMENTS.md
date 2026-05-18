@@ -12,14 +12,14 @@
 
 ### Chat Email Assistant — User-facing capability
 
-- [ ] **CHAT-01**: User can open a streaming `/chat` route and have a multi-turn conversation with the AI assistant about their inbox and rules (per-turn streaming via SSE, stop button, error surfacing, empty state)
-- [ ] **CHAT-02**: User can ask the assistant to list, explain, create, update, or delete rules in natural language; assistant routes through structured tools (rule CRUD) with rule-state always derived from the existing v1.0 rules engine
-- [ ] **CHAT-03**: User can ask the assistant to search inbox, read a specific email, list labels, manage inbox (archive/label/mark-read), and create labels — all reusing v1.0 backend services with no new auto-action paths
-- [ ] **CHAT-04**: User can ask the assistant to draft, send, reply to, or forward email; every send/reply/forward renders a preview card with recipient + subject + body + Edit + Send + Cancel; send only fires after explicit per-message user click
-- [ ] **CHAT-05**: User can ask the assistant to save personal memory ("remember tôi đang work với Acme") and recall it later via search; user can manage knowledge-base snippets the assistant consults when drafting
-- [ ] **CHAT-06**: User sees a confirmation preview card for any risky action (createRule, deleteRule, saveMemory, sendEmail, replyEmail, forwardEmail) with Edit/Send/Cancel; cards render in replay-mode "Sent ✓" state after confirmation
-- [ ] **CHAT-07**: User sees the chat conversation history sidebar at GA; conversations persist per-tenant and survive page refresh
-- [ ] **CHAT-08**: User's chat UI is Vietnamese-default with English secondary, matching the v1.0 i18n direction
+- [x] **CHAT-01**: User can open a streaming `/chat` route and have a multi-turn conversation with the AI assistant about their inbox and rules (per-turn streaming via SSE, stop button, error surfacing, empty state)
+- [x] **CHAT-02**: User can ask the assistant to list, explain, create, update, or delete rules in natural language; assistant routes through structured tools (rule CRUD) with rule-state always derived from the existing v1.0 rules engine
+- [x] **CHAT-03**: User can ask the assistant to search inbox, read a specific email, list labels, manage inbox (archive/label/mark-read), and create labels — all reusing v1.0 backend services with no new auto-action paths
+- [x] **CHAT-04**: User can ask the assistant to draft, send, reply to, or forward email; every send/reply/forward renders a preview card with recipient + subject + body + Edit + Send + Cancel; send only fires after explicit per-message user click
+- [x] **CHAT-05**: User can ask the assistant to save personal memory ("remember tôi đang work với Acme") and recall it later via search; user can manage knowledge-base snippets the assistant consults when drafting
+- [x] **CHAT-06**: User sees a confirmation preview card for any risky action (createRule, deleteRule, saveMemory, sendEmail, replyEmail, forwardEmail) with Edit/Send/Cancel; cards render in replay-mode "Sent ✓" state after confirmation
+- [x] **CHAT-07**: User sees the chat conversation history sidebar at GA; conversations persist per-tenant and survive page refresh
+- [x] **CHAT-08**: User's chat UI is Vietnamese-default with English secondary, matching the v1.0 i18n direction
 
 ### Settings Page — Provider/Model (AI Config)
 
@@ -51,17 +51,17 @@
 - [ ] **SET-SAFE-02**: User can paste-import multiple entries at once with a parsed preview before save
 - [ ] **SET-SAFE-03**: User can pick per-entry mode (`protect` = never auto-act, `escalate` = notify but don't act)
 - [ ] **SET-SAFE-04**: User sees a visual indicator in the audit log when a rule was blocked by the safety net ("Was going to archive, blocked by VIP rule for ceo@acme.com")
-- [ ] **SET-SAFE-05**: Chat-confirmed send/reply/forward to a VIP-listed recipient shows an extra-friction banner ("Recipient is on your safety net — confirm anyway?") on the preview card (extends TRG-07..08 to outgoing pathway)
+- [x] **SET-SAFE-05**: Chat-confirmed send/reply/forward to a VIP-listed recipient shows an extra-friction banner ("Recipient is on your safety net — confirm anyway?") on the preview card (extends TRG-07..08 to outgoing pathway)
 
 ### Architecture Invariants — must hold at v1.1 GA
 
-- [ ] **ARCH-01**: Exactly ONE Gmail send call site exists in the codebase (the `AssistantSendExecutor` in `core.chat.confirm.send` annotated with `@AllowedSendCallSite`); enforced by paired negative + positive ArchUnit tests + CI grep gate that fails the build if count != 1
-- [ ] **ARCH-02**: `chat_message.parts` JSONB cannot persist email body content; enforced by `ToolOutputSanitizer` (runtime) + `ChatPersistenceContentBanTest` (ArchUnit) + `chat_message_body_ban` PostgreSQL trigger (DB) — three independent layers
-- [ ] **ARCH-03**: Confirmation state machine handles all three races (double-click, stale toolCallId, confirm-during-stream) — verified by per-race integration test + 5-min Redis lease + `UNIQUE (chat_id, tool_call_id)` on audit table for idempotent retries
-- [ ] **ARCH-04**: Every confirmed send produces exactly one `assistant_send_audit` row written in the same transaction as the state flip; reconciliation cron handles residuals from crashes
-- [ ] **ARCH-05**: Tenant isolation holds across the long-lived SSE connection + tool fan-out work; enforced by `TenantAwareReactorScheduler` + ArchUnit ban on `Schedulers.{boundedElastic,parallel,single}` inside `..chat..` + multi-tenant chat leak integration test
-- [ ] **ARCH-06**: Personalization (`personal_instructions`, `writing_style`) is sandboxed against prompt injection: XML-fenced injection slot in system prompt + length cap + sentinel stripping (e.g., known prompt-injection markers and markdown headers) + hostile-corpus eval before GA
-- [ ] **ARCH-07**: Spring AI 2.0.0-M6 streaming + tool-call confirmation works end-to-end despite known bugs `spring-ai#3366`/`#5167` via Zero Mail-owned `ChatToolCallRegistry` + `ZeroMailChatMemory` adapter reading from `chat_message.parts` directly
+- [x] **ARCH-01**: Exactly ONE Gmail send call site exists in the codebase (the `AssistantSendExecutor` in `core.chat.confirm.send` annotated with `@AllowedSendCallSite`); enforced by paired negative + positive ArchUnit tests + CI grep gate that fails the build if count != 1
+- [x] **ARCH-02**: `chat_message.parts` JSONB cannot persist email body content; enforced by `ToolOutputSanitizer` (runtime) + `ChatPersistenceContentBanTest` (ArchUnit) + `chat_message_body_ban` PostgreSQL trigger (DB) — three independent layers
+- [x] **ARCH-03**: Confirmation state machine handles all three races (double-click, stale toolCallId, confirm-during-stream) — verified by per-race integration test + 5-min Redis lease + `UNIQUE (chat_id, tool_call_id)` on audit table for idempotent retries
+- [x] **ARCH-04**: Every confirmed send produces exactly one `assistant_send_audit` row written in the same transaction as the state flip; reconciliation cron handles residuals from crashes
+- [x] **ARCH-05**: Tenant isolation holds across the long-lived SSE connection + tool fan-out work; enforced by `TenantAwareReactorScheduler` + ArchUnit ban on `Schedulers.{boundedElastic,parallel,single}` inside `..chat..` + multi-tenant chat leak integration test
+- [x] **ARCH-06**: Personalization (`personal_instructions`, `writing_style`) is sandboxed against prompt injection: XML-fenced injection slot in system prompt + length cap + sentinel stripping (e.g., known prompt-injection markers and markdown headers) + hostile-corpus eval before GA
+- [x] **ARCH-07**: Spring AI 2.0.0-M6 streaming + tool-call confirmation works end-to-end despite known bugs `spring-ai#3366`/`#5167` via Zero Mail-owned `ChatToolCallRegistry` + `ZeroMailChatMemory` adapter reading from `chat_message.parts` directly
 
 ---
 
@@ -129,22 +129,22 @@ Phase-to-requirement mapping (populated by roadmapper on 2026-05-17 during v1.1 
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CHAT-01 | Phase 7 | Pending |
-| CHAT-02 | Phase 7 | Pending |
-| CHAT-03 | Phase 7 | Pending |
-| CHAT-04 | Phase 7 | Pending |
-| CHAT-05 | Phase 7 | Pending |
-| CHAT-06 | Phase 7 | Pending |
-| CHAT-07 | Phase 7 | Pending |
-| CHAT-08 | Phase 7 | Pending |
-| ARCH-01 | Phase 7 | Pending |
-| ARCH-02 | Phase 7 | Pending |
-| ARCH-03 | Phase 7 | Pending |
-| ARCH-04 | Phase 7 | Pending |
-| ARCH-05 | Phase 7 | Pending |
-| ARCH-06 | Phase 7 | Pending |
-| ARCH-07 | Phase 7 | Pending |
-| SET-SAFE-05 | Phase 7 | Pending |
+| CHAT-01 | Phase 7 | Complete |
+| CHAT-02 | Phase 7 | Complete |
+| CHAT-03 | Phase 7 | Complete |
+| CHAT-04 | Phase 7 | Complete |
+| CHAT-05 | Phase 7 | Complete |
+| CHAT-06 | Phase 7 | Complete |
+| CHAT-07 | Phase 7 | Complete |
+| CHAT-08 | Phase 7 | Complete |
+| ARCH-01 | Phase 7 | Complete |
+| ARCH-02 | Phase 7 | Complete |
+| ARCH-03 | Phase 7 | Complete |
+| ARCH-04 | Phase 7 | Complete |
+| ARCH-05 | Phase 7 | Complete |
+| ARCH-06 | Phase 7 | Complete |
+| ARCH-07 | Phase 7 | Complete |
+| SET-SAFE-05 | Phase 7 | Complete |
 | SET-AI-01 | Phase 8 | Pending |
 | SET-AI-02 | Phase 8 | Pending |
 | SET-AI-03 | Phase 8 | Pending |
