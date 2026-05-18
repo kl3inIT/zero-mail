@@ -69,6 +69,18 @@ public class ChatMessageJdbcRepository {
                 .findFirst();
     }
 
+    public java.util.List<ChatMessage> findByChatIdOrderByCreatedAtAsc(UUID chatId) {
+        return jdbcTemplate.query(
+                """
+                SELECT id, chat_id, tenant_id, role, parts::text AS parts, created_at
+                FROM chat_message
+                WHERE chat_id = ?
+                ORDER BY created_at, id
+                """,
+                chatMessageRowMapper,
+                chatId);
+    }
+
     private static boolean isBodyBanViolation(DataAccessException dataAccessException) {
         Throwable currentThrowable = dataAccessException;
         while (currentThrowable != null) {
