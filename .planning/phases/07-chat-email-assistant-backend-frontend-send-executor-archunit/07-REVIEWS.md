@@ -21,7 +21,7 @@ review_cycles:
 
 # Phase 7 — Cross-AI Plan Review (Cycle 1)
 
-> Synthesis of independent reviews from **Codex CLI** and **OpenCode CLI** of `07-PLAN-01.md` through `07-PLAN-06.md` (30 tasks, 6 waves). The reviews were performed in parallel with no shared context.
+> Synthesis of independent reviews from **Codex CLI** and **OpenCode CLI** of `07-01-PLAN.md` through `07-06-PLAN.md` (30 tasks, 6 waves). The reviews were performed in parallel with no shared context.
 
 ## Verdict
 
@@ -239,7 +239,7 @@ The replan should address **7 HIGH concerns + key MEDIUMs** as a single revision
 
 # Phase 7 — Cross-AI Plan Review (Cycle 2)
 
-> Re-review after cycle 1 → cycle 2 revision (commit `3bb2cc20`). Independent reviews from **Codex CLI** (`gpt-5-codex`) and **OpenCode CLI** (`deepseek-v4-flash-free`) of revised `07-PLAN-01.md` through `07-PLAN-06.md`.
+> Re-review after cycle 1 → cycle 2 revision (commit `3bb2cc20`). Independent reviews from **Codex CLI** (`gpt-5-codex`) and **OpenCode CLI** (`deepseek-v4-flash-free`) of revised `07-01-PLAN.md` through `07-06-PLAN.md`.
 
 ## Verdict
 
@@ -278,19 +278,19 @@ The replan should address **7 HIGH concerns + key MEDIUMs** as a single revision
 **Severity:** HIGH — execution agents read `<done>` clauses and `<verify>` blocks as acceptance gates. A test that asserts `ChatToolName.values().length == 20` will fail against a 24-entry enum, and an executor that "wires exactly 3 tools per the 20-Tool Authoritative List" or "13 remaining tool wirings" may stop at the wrong count.
 
 **Evidence (verified by independent grep):**
-- `07-PLAN-03.md:259` — `<done>...Exactly 20 entries in ChatToolName enum — verified by ChatToolName.values().length == 20 assertion.</done>`
-- `07-PLAN-05.md:133` — objective: "remaining 13 tool wirings (7 write-reversible + 3 confirm-required + 3 confirmed-send — exactly per Plan 03's 20-Tool Authoritative List)"
-- `07-PLAN-05.md:153` — section header: "# 20-Tool Authoritative List (locked in Plan 03)"
-- `07-PLAN-05.md:291` — "wires exactly 3 tools per the 20-Tool Authoritative List"
-- `07-PLAN-05.md:305` — `<done>All 13 write-side tools wired into ChatToolCatalog; total tool count = exactly 20 (7+7+3+3)...</done>`
-- `07-PLAN-05.md:306` — `<deviation_handling>... Do NOT alter the 20-Tool Authoritative List ...</deviation_handling>`
-- `07-PLAN-05.md:555` — "Note the 20-tool catalog size assertion at boot"
-- `07-PLAN-06.md:167` — "1 generic `<PreviewCard>` + 6 body slots per D-13 (mapping 1:1 to the 6 user-confirmable tools)"
-- `07-PLAN-06.md:317` — "20-Tool Authoritative List in Plan 03"
-- `07-PLAN-06.md:401` — `<done>...The contract test asserts: 20 tools total; names verbatim; 7/7/3/3 partition; preview-card body-slot dispatcher covers exactly the 6 user-confirmable tools...</done>`
-- `07-PLAN-06.md:484` — `<done>...BODY_SLOT_MAP has exactly 6 keys matching the 6 user-confirmable tools.</done>`
-- `07-PLAN-06.md:527` — "for the 6 user-confirmable tools → render `<PreviewCard>` shell ... Write-reversible tool calls (`applyLabel`, `createRule`, etc.) render the bare `<Tool>` envelope" — also folds in cycle-1 HIGH-2 leftover (`createRule` still listed under write-reversible)
-- `07-PLAN-06.md:588` — "6 body slots: sendEmail/replyEmail/forwardEmail/deleteRule/removeSenderFromSafetyNet/bulkArchive" — missing `createRule`, `saveMemory`, `updatePersonalInstructions`
+- `07-03-PLAN.md:259` — `<done>...Exactly 20 entries in ChatToolName enum — verified by ChatToolName.values().length == 20 assertion.</done>`
+- `07-05-PLAN.md:133` — objective: "remaining 13 tool wirings (7 write-reversible + 3 confirm-required + 3 confirmed-send — exactly per Plan 03's 20-Tool Authoritative List)"
+- `07-05-PLAN.md:153` — section header: "# 20-Tool Authoritative List (locked in Plan 03)"
+- `07-05-PLAN.md:291` — "wires exactly 3 tools per the 20-Tool Authoritative List"
+- `07-05-PLAN.md:305` — `<done>All 13 write-side tools wired into ChatToolCatalog; total tool count = exactly 20 (7+7+3+3)...</done>`
+- `07-05-PLAN.md:306` — `<deviation_handling>... Do NOT alter the 20-Tool Authoritative List ...</deviation_handling>`
+- `07-05-PLAN.md:555` — "Note the 20-tool catalog size assertion at boot"
+- `07-06-PLAN.md:167` — "1 generic `<PreviewCard>` + 6 body slots per D-13 (mapping 1:1 to the 6 user-confirmable tools)"
+- `07-06-PLAN.md:317` — "20-Tool Authoritative List in Plan 03"
+- `07-06-PLAN.md:401` — `<done>...The contract test asserts: 20 tools total; names verbatim; 7/7/3/3 partition; preview-card body-slot dispatcher covers exactly the 6 user-confirmable tools...</done>`
+- `07-06-PLAN.md:484` — `<done>...BODY_SLOT_MAP has exactly 6 keys matching the 6 user-confirmable tools.</done>`
+- `07-06-PLAN.md:527` — "for the 6 user-confirmable tools → render `<PreviewCard>` shell ... Write-reversible tool calls (`applyLabel`, `createRule`, etc.) render the bare `<Tool>` envelope" — also folds in cycle-1 HIGH-2 leftover (`createRule` still listed under write-reversible)
+- `07-06-PLAN.md:588` — "6 body slots: sendEmail/replyEmail/forwardEmail/deleteRule/removeSenderFromSafetyNet/bulkArchive" — missing `createRule`, `saveMemory`, `updatePersonalInstructions`
 
 **Fix:** scrub every "20"/"20-tool"/"6 body slot"/"6 user-confirmable"/"7+7+3+3"/"13 remaining tool" reference in Plans 03/05/06. Every `<done>`, `<verify>`, `<deviation_handling>`, objective, success-criterion line, contract-test assertion, and README contract must say **24 tools**, **16 Wave-4 tools**, **9 preview body slots**, and **8+7+6+3 partition**. Update Plan 06 line 527 + line 588 to list `createRule` among confirm-required tools and list all 9 body slots.
 
@@ -299,8 +299,8 @@ The replan should address **7 HIGH concerns + key MEDIUMs** as a single revision
 **Severity:** HIGH — schema bug. Reconciler Sweep B and any FAILED-path write will violate the CHECK and roll back, defeating HIGH-5's recovery path.
 
 **Evidence (verified):**
-- `07-PLAN-02.md:282` — `CHECK constraint: state IN ('SEND_IN_FLIGHT', 'COMMITTED', 'FAILED') and (state = 'SEND_IN_FLIGHT') = (sent_at IS NULL).`
-- `07-PLAN-05.md` Task 5.3 and `07-PLAN-04.md` Sweep B both expect to write FAILED rows after a Gmail rejection or reconciliation miss. A FAILED row has `state = 'FAILED'` and `sent_at = NULL`. Evaluate the constraint: `(FAILED = SEND_IN_FLIGHT) = (NULL IS NULL)` → `false = true` → CHECK fails → row rejected.
+- `07-02-PLAN.md:282` — `CHECK constraint: state IN ('SEND_IN_FLIGHT', 'COMMITTED', 'FAILED') and (state = 'SEND_IN_FLIGHT') = (sent_at IS NULL).`
+- `07-05-PLAN.md` Task 5.3 and `07-04-PLAN.md` Sweep B both expect to write FAILED rows after a Gmail rejection or reconciliation miss. A FAILED row has `state = 'FAILED'` and `sent_at = NULL`. Evaluate the constraint: `(FAILED = SEND_IN_FLIGHT) = (NULL IS NULL)` → `false = true` → CHECK fails → row rejected.
 
 **Fix:** replace the biconditional with explicit per-state rules. Concretely:
 
@@ -319,11 +319,11 @@ Plan 02 Task 2.1 must be revised; `AssistantActionAuditSchemaIT` should assert t
 **Severity:** HIGH — execution would land SQL that targets a column that no longer exists (`chat_message.updated_at` was removed by HIGH-4 fix). Tests would also be wrong.
 
 **Evidence (verified):**
-- `07-PLAN-05.md:67` — `provides: "ARCH-03 — CAS on chat_message.parts.updated_at + 3-race protection"`
-- `07-PLAN-05.md:123` — T-07-24 mitigation: "CAS on chat_message.parts.updated_at"
-- `07-PLAN-05.md:129` — T-07-30 mitigation: "CAS on `chat_message.parts.updated_at` fails → return 409 with `stale_tool_call` code"
-- `07-PLAN-05.md:188-189` — SQL: `UPDATE chat_message SET parts = jsonb_set(parts, '{parts,<index>,confirmationState}', '"processing"'::jsonb), updated_at = now() WHERE id = ? AND chat_id = ? AND updated_at = ?` — `chat_message.updated_at` is the removed column
-- Contradicts `07-PLAN-05.md:518` which correctly says "CAS lives on `assistant_pending_action.parts_updated_at` (HIGH-4) not `chat_message.updated_at`"
+- `07-05-PLAN.md:67` — `provides: "ARCH-03 — CAS on chat_message.parts.updated_at + 3-race protection"`
+- `07-05-PLAN.md:123` — T-07-24 mitigation: "CAS on chat_message.parts.updated_at"
+- `07-05-PLAN.md:129` — T-07-30 mitigation: "CAS on `chat_message.parts.updated_at` fails → return 409 with `stale_tool_call` code"
+- `07-05-PLAN.md:188-189` — SQL: `UPDATE chat_message SET parts = jsonb_set(parts, '{parts,<index>,confirmationState}', '"processing"'::jsonb), updated_at = now() WHERE id = ? AND chat_id = ? AND updated_at = ?` — `chat_message.updated_at` is the removed column
+- Contradicts `07-05-PLAN.md:518` which correctly says "CAS lives on `assistant_pending_action.parts_updated_at` (HIGH-4) not `chat_message.updated_at`"
 
 **Fix:** rewrite Plan 05 Task 5.1 SQL to update `chat_message.parts` (append-only projection — no `updated_at`) and perform CAS against `assistant_pending_action.parts_updated_at` + `state` in a separate UPDATE on `assistant_pending_action`. Update mitigation cells in the threat table (lines 67, 123, 129) to reference `assistant_pending_action.parts_updated_at`. Reconcile with line 518 wording.
 
@@ -342,7 +342,7 @@ The Plan 02 sanitizer + DB trigger guarantee the persistence invariant regardles
 
 ### MEDIUM-2: Message-ID format leaks tenant correlation potential (Codex echoes cycle-1 LOW-6)
 
-`07-PLAN-05.md` uses Message-ID of the form `<chat-{tenantId}-{uuid}@zero-mail.local>` (or `.invalid`). The Message-ID is sent as an outgoing email header, so any party who can read the recipient's mail server logs can correlate tenant IDs across messages. Cycle-1 LOW-6 raised the log-line concern; the on-the-wire concern is stronger. **Fix:** use an opaque UUID-only Message-ID (`<{uuid}@zero-mail.invalid>`); maintain the mapping in `assistant_action_audit.gmail_message_id` so reconciliation still works without leaking tenant ID.
+`07-05-PLAN.md` uses Message-ID of the form `<chat-{tenantId}-{uuid}@zero-mail.local>` (or `.invalid`). The Message-ID is sent as an outgoing email header, so any party who can read the recipient's mail server logs can correlate tenant IDs across messages. Cycle-1 LOW-6 raised the log-line concern; the on-the-wire concern is stronger. **Fix:** use an opaque UUID-only Message-ID (`<{uuid}@zero-mail.invalid>`); maintain the mapping in `assistant_action_audit.gmail_message_id` so reconciliation still works without leaking tenant ID.
 
 ---
 
@@ -405,7 +405,7 @@ A third cycle should be a quick scrub pass (estimated <1 hour of plan edits, no 
 
 # Phase 7 — Cross-AI Plan Review (Cycle 3)
 
-> Re-review after cycle 2 → cycle 3 surgical scrub (commit `279ea483`). Independent reviews from **Codex CLI** and **OpenCode CLI** of revised `07-PLAN-02.md`, `07-PLAN-03.md`, `07-PLAN-05.md`, `07-PLAN-06.md`. Cycle 3 was scoped to only the 3 NEW HIGH concerns from cycle 2 (NEW-HIGH-A catalog scrub, NEW-HIGH-B CHECK constraint, NEW-HIGH-C stale CAS refs) — no architectural change.
+> Re-review after cycle 2 → cycle 3 surgical scrub (commit `279ea483`). Independent reviews from **Codex CLI** and **OpenCode CLI** of revised `07-02-PLAN.md`, `07-03-PLAN.md`, `07-05-PLAN.md`, `07-06-PLAN.md`. Cycle 3 was scoped to only the 3 NEW HIGH concerns from cycle 2 (NEW-HIGH-A catalog scrub, NEW-HIGH-B CHECK constraint, NEW-HIGH-C stale CAS refs) — no architectural change.
 
 ## Verdict
 
@@ -434,8 +434,8 @@ Not converged. Cycle 3 resolved NEW-HIGH-B, but NEW-HIGH-A is still incomplete a
 
 1. **NEW-HIGH-A: PARTIAL**  
    Plans 05/06 are mostly scrubbed, but stale catalog text remains:
-   - [07-PLAN-02.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/07-chat-email-assistant-backend-frontend-send-executor-archunit/07-PLAN-02.md:426) still says `searchMemories` is out of the locked 20-tool list.
-   - [07-PLAN-03.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/07-chat-email-assistant-backend-frontend-send-executor-archunit/07-PLAN-03.md:169) still says “7 read-only tool handlers”.
+   - [07-02-PLAN.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/07-chat-email-assistant-backend-frontend-send-executor-archunit/07-02-PLAN.md:426) still says `searchMemories` is out of the locked 20-tool list.
+   - [07-03-PLAN.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/07-chat-email-assistant-backend-frontend-send-executor-archunit/07-03-PLAN.md:169) still says “7 read-only tool handlers”.
    - `07-SPEC.md`, `07-CONTEXT.md`, `07-AI-SPEC.md`, and `07-RESEARCH.md` still contain old 20-tool / 7-read / 8-write wording. Since plans reference these artifacts, this remains execution-risk, not just historical text.
 
 2. **NEW-HIGH-B: PASS**  
@@ -445,7 +445,7 @@ Not converged. Cycle 3 resolved NEW-HIGH-B, but NEW-HIGH-A is still incomplete a
    - `<done>` now requires `LiquibaseChangelogValidationTest` coverage for `FAILED + NULL` accepted and `COMMITTED + NULL` rejected.
 
 3. **NEW-HIGH-C: PARTIAL**  
-   The removed `chat_message.updated_at` CAS references are gone, and the SQL now targets existing `assistant_pending_action` columns. However, the stale-toolCallId race is not actually fixed: [07-PLAN-05.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/07-chat-email-assistant-backend-frontend-send-executor-archunit/07-PLAN-05.md:481) says T1 fails because `parts_updated_at` advances “when T2 was created”, but Plan 02’s trigger only bumps on `UPDATE ... WHEN OLD.state IS DISTINCT FROM NEW.state`. Creating T2 does not update T1. If T1 remains `PENDING`, the new CAS can still reserve and execute the stale action.
+   The removed `chat_message.updated_at` CAS references are gone, and the SQL now targets existing `assistant_pending_action` columns. However, the stale-toolCallId race is not actually fixed: [07-05-PLAN.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/07-chat-email-assistant-backend-frontend-send-executor-archunit/07-05-PLAN.md:481) says T1 fails because `parts_updated_at` advances “when T2 was created”, but Plan 02’s trigger only bumps on `UPDATE ... WHEN OLD.state IS DISTINCT FROM NEW.state`. Creating T2 does not update T1. If T1 remains `PENDING`, the new CAS can still reserve and execute the stale action.
 
 4. **Prior HIGH regressions: PASS**  
    HIGH-6 and HIGH-7 remain intact in Plan 04: explicit read-tool loop, model re-call, and assistant text persistence via `TransactionTemplate`. HIGH-3 source-aware body ban and HIGH-5 pre-send `SEND_IN_FLIGHT` + Sweep B reconciliation remain intact after the cycle 3 edits.

@@ -33,12 +33,12 @@ v1.1 ships a streaming `/chat` route and an assistant `/settings` page on top of
   6. The chat conversation history sidebar lists prior conversations per tenant, survives page refresh, and renders confirmed cards in replay-mode "Sent ✓" state with no re-execution; Spring AI 2.0.0-M6 streaming + tool-call confirmation works end-to-end despite known bugs `spring-ai#3366`/`#5167` via the Zero Mail-owned `ChatToolCallRegistry` + `ZeroMailChatMemory` adapter reading from `chat_message.parts` directly (CHAT-07, ARCH-07).
 **Plans**: 6 plans
 Plans:
-- [ ] 07-PLAN-01.md — Wave 0: Test scaffolding + ArchUnit foundation + pre-Wave verifications
-- [ ] 07-PLAN-02.md — Wave 1: Liquibase 041–046 + persistence + sanitize package (body-ban trigger atomic in 042)
-- [ ] 07-PLAN-03.md — Wave 2: Modulith module + Spring AI adapter + Reactor scheduler + ARCH-07 workaround + 7 read tools
-- [ ] 07-PLAN-04.md — Wave 3: SSE controller + ChatOrchestrator + history endpoint + reconciliation cron
-- [ ] 07-PLAN-05.md — Wave 4: Confirmation state machine + AssistantSendExecutor + ArchUnit 0→1 atomic flip [ATOMIC-GROUP: arch01-flip]
-- [ ] 07-PLAN-06.md — Wave 5: Frontend /chat route + AI Elements + Vietnamese chrome + preview cards + 7 Playwright specs
+- [ ] 07-01-PLAN.md — Wave 0: Test scaffolding + ArchUnit foundation + pre-Wave verifications
+- [ ] 07-02-PLAN.md — Wave 1: Liquibase 041–046 + persistence + sanitize package (body-ban trigger atomic in 042)
+- [ ] 07-03-PLAN.md — Wave 2: Modulith module + Spring AI adapter + Reactor scheduler + ARCH-07 workaround + 7 read tools
+- [ ] 07-04-PLAN.md — Wave 3: SSE controller + ChatOrchestrator + history endpoint + reconciliation cron
+- [ ] 07-05-PLAN.md — Wave 4: Confirmation state machine + AssistantSendExecutor + ArchUnit 0→1 atomic flip [ATOMIC-GROUP: arch01-flip]
+- [ ] 07-06-PLAN.md — Wave 5: Frontend /chat route + AI Elements + Vietnamese chrome + preview cards + 7 Playwright specs
 **Research flag**: COMPLETE — see `.planning/research/SUMMARY.md`, `STACK.md`, `FEATURES.md`, `ARCHITECTURE.md`, `PITFALLS.md`. Spring AI M6 streaming + tool-call confirmation flagged MEDIUM-HIGH; build a 100-LoC orchestrator prototype before committing to the full executor design.
 **UI hint**: yes
 
