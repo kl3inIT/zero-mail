@@ -37,7 +37,7 @@ Plans:
 - [x] 07-02-PLAN.md — Wave 1: Liquibase 041–046 + persistence + sanitize package (body-ban trigger atomic in 042)
 - [x] 07-03-PLAN.md — Wave 2: Modulith module + Spring AI adapter + Reactor scheduler + ARCH-07 workaround + 8 read tools
 - [x] 07-04-PLAN.md — Wave 3: SSE controller + ChatOrchestrator + history endpoint + reconciliation cron
-- [ ] 07-05-PLAN.md — Wave 4: Confirmation state machine + AssistantSendExecutor + ArchUnit 0→1 atomic flip [ATOMIC-GROUP: arch01-flip]
+- [x] 07-05-PLAN.md — Wave 4: Confirmation state machine + AssistantSendExecutor + ArchUnit 0→1 atomic flip [ATOMIC-GROUP: arch01-flip]
 - [ ] 07-06-PLAN.md — Wave 5: Frontend /chat route + AI Elements + Vietnamese chrome + preview cards + 7 Playwright specs
 **Research flag**: COMPLETE — see `.planning/research/SUMMARY.md`, `STACK.md`, `FEATURES.md`, `ARCHITECTURE.md`, `PITFALLS.md`. Spring AI M6 streaming + tool-call confirmation flagged MEDIUM-HIGH; build a 100-LoC orchestrator prototype before committing to the full executor design.
 **UI hint**: yes
@@ -71,7 +71,7 @@ Parallelization: None. Phase 8 strictly depends on Phase 7 (Settings consumes th
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1-6 (collapsed) | v1.0 | 123/123 | Complete | 2026-05-15 |
-| 7. Chat Email Assistant | v1.1 | 4/6 | In Progress|  |
+| 7. Chat Email Assistant | v1.1 | 5/6 | In Progress|  |
 | 8. Settings + Hardening + GA | v1.1 | 0/TBD | Not started | - |
 
 ---
