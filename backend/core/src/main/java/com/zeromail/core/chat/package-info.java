@@ -25,6 +25,7 @@
             "gmail",
             "triage",
             "tenant",
+            "shared.lock",
             "shared.persistence",
             "shared.lang",
             "shared.privacy"
