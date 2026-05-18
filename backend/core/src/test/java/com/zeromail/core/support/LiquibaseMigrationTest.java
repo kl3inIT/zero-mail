@@ -94,6 +94,7 @@ class LiquibaseMigrationTest extends PostgresContainerTest {
     @Test
     void chat_schema_owns_body_ban_trigger_and_pending_action_cas_columns() {
         assertThat(columnExists("chat_message", "updated_at")).isFalse();
+        assertThat(columnExists("chat", "version")).isTrue();
         assertThat(columnExists("assistant_pending_action", "parts_updated_at")).isTrue();
         assertThat(columnExists("assistant_pending_action", "draft_body")).isTrue();
         assertThat(columnExists("assistant_action_audit", "tool_category")).isTrue();
@@ -101,6 +102,8 @@ class LiquibaseMigrationTest extends PostgresContainerTest {
         assertThat(columnExists("assistant_action_audit", "in_flight_at")).isTrue();
         assertThat(columnExists("assistant_settings", "assistant_settings_id")).isTrue();
         assertThat(columnExists("assistant_settings", "version")).isTrue();
+        assertThat(columnExists("assistant_memory", "version")).isTrue();
+        assertThat(columnExists("assistant_knowledge_snippet", "version")).isTrue();
         assertThat(
                         jdbcTemplate.queryForObject(
                                 "select count(*) from pg_trigger where tgname = 'chat_message_body_ban'",

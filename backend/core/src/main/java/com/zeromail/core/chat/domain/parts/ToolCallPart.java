@@ -1,5 +1,6 @@
 package com.zeromail.core.chat.domain.parts;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -20,6 +21,6 @@ public record ToolCallPart(
         if (inputJson == null || inputJson.isEmpty()) {
             return Map.of();
         }
-        return Map.copyOf(new LinkedHashMap<>(inputJson));
+        return Collections.unmodifiableMap(new LinkedHashMap<>(inputJson));
     }
 }

@@ -74,7 +74,7 @@ databaseChangeLog:
                 END IF;
 
                 IF jsonb_typeof(candidate) = 'string' THEN
-                  RETURN trim(both '"' from candidate::text) ~* '<(script|iframe)\b';
+                  RETURN (candidate #>> '{}') ~* '<[[:space:]]*(script|iframe)([[:space:]>]|/|$)';
                 ELSIF jsonb_typeof(candidate) = 'object' THEN
                   FOR object_entry IN SELECT key, value FROM jsonb_each(candidate) LOOP
                     IF chat_jsonb_contains_forbidden_html(object_entry.value) THEN
@@ -137,11 +137,13 @@ databaseChangeLog:
                 part_type text;
               BEGIN
                 IF chat_jsonb_contains_forbidden_html(NEW.parts) THEN
-                  RAISE EXCEPTION 'Chat persistence violation: forbidden HTML signature in chat_message.parts; see ARCH-02';
+                  RAISE EXCEPTION 'Chat persistence violation: forbidden HTML signature in chat_message.parts; see ARCH-02'
+                    USING ERRCODE = '23514';
                 END IF;
 
                 IF chat_jsonb_has_subject_over_limit(NEW.parts) THEN
-                  RAISE EXCEPTION 'Chat persistence violation: subject exceeds 200 characters in chat_message.parts; see ARCH-02';
+                  RAISE EXCEPTION 'Chat persistence violation: subject exceeds 200 characters in chat_message.parts; see ARCH-02'
+                    USING ERRCODE = '23514';
                 END IF;
 
                 FOR tool_part IN SELECT value FROM jsonb_array_elements(COALESCE(NEW.parts->'parts', '[]'::jsonb)) LOOP
@@ -151,7 +153,8 @@ databaseChangeLog:
                   END IF;
 
                   IF part_type LIKE 'tool-%' AND chat_jsonb_contains_body_key(tool_part) THEN
-                    RAISE EXCEPTION 'Chat persistence violation: body content in email-read tool output; ToolOutputSanitizer was bypassed; see ARCH-02 + CLAUDE.md Privacy';
+                    RAISE EXCEPTION 'Chat persistence violation: body content in email-read tool output; ToolOutputSanitizer was bypassed; see ARCH-02 + CLAUDE.md Privacy'
+                      USING ERRCODE = '23514';
                   END IF;
                 END LOOP;
 

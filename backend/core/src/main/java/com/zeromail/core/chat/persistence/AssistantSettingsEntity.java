@@ -10,7 +10,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "assistant_settings")
 @AttributeOverride(name = "id", column = @Column(name = "assistant_settings_id", nullable = false))
-@SuppressWarnings("JpaDataSourceORMInspection")
+@SuppressWarnings({"JpaDataSourceORMInspection", "unused"})
 public class AssistantSettingsEntity extends AbstractTenantOwnedEntity {
 
     @Column(name = "personal_instructions")
@@ -18,6 +18,15 @@ public class AssistantSettingsEntity extends AbstractTenantOwnedEntity {
 
     @Column(name = "writing_style")
     private String writingStyle;
+
+    @Column(name = "provider_id", length = 32)
+    private String providerId;
+
+    @Column(name = "default_model", length = 64)
+    private String defaultModel;
+
+    @Column(name = "ai_output_language", length = 8)
+    private String aiOutputLanguage;
 
     protected AssistantSettingsEntity() {
         // Hibernate
@@ -43,5 +52,17 @@ public class AssistantSettingsEntity extends AbstractTenantOwnedEntity {
 
     public String getWritingStyle() {
         return writingStyle;
+    }
+
+    public String getProviderId() {
+        return providerId;
+    }
+
+    public String getDefaultModel() {
+        return defaultModel;
+    }
+
+    public String getAiOutputLanguage() {
+        return aiOutputLanguage;
     }
 }

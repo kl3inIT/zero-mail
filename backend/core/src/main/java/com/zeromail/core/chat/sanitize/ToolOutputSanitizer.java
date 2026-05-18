@@ -5,6 +5,7 @@ import com.zeromail.core.chat.domain.parts.Part;
 import com.zeromail.core.chat.domain.parts.ToolCallPart;
 import com.zeromail.core.chat.domain.parts.ToolOutputPart;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -108,26 +109,35 @@ public class ToolOutputSanitizer {
                                 String toolCallId,
                                 String toolName,
                                 String stateValue,
+                                Map<String, Object> inputJson,
                                 Map<String, Object> outputJson,
+                                Map<String, Object> confirmationJson,
                                 boolean truncated)) {
                     ToolSource toolSource = ToolSource.from(toolName);
                     boolean stripBodyFields = toolSource.stripBodyFields();
+                    SanitizedJson sanitizedInput = sanitizeJson(inputJson, stripBodyFields, false);
                     SanitizedJson sanitizedOutput =
                             sanitizeJson(outputJson, stripBodyFields, false);
+                    SanitizedJson sanitizedConfirmation =
+                            sanitizeJson(confirmationJson, stripBodyFields, false);
                     sanitizedParts.add(
                             new ToolOutputPart(
                                     partId,
                                     toolCallId,
                                     toolName,
                                     stateValue,
+                                    asMap(sanitizedInput.value()),
                                     asMap(sanitizedOutput.value()),
+                                    asMap(sanitizedConfirmation.value()),
                                     truncated));
                     logEntries.add(
                             new ToolLogEntry(
                                     toolName,
                                     toolSource,
                                     false,
-                                    sanitizedOutput.signatureMatches()));
+                                    sanitizedInput.signatureMatches()
+                                            + sanitizedOutput.signatureMatches()
+                                            + sanitizedConfirmation.signatureMatches()));
                 } else {
                     sanitizedParts.add(part);
                 }
@@ -177,21 +187,34 @@ public class ToolOutputSanitizer {
                                 String toolCallId,
                                 String toolName,
                                 String stateValue,
+                                Map<String, Object> inputJson,
                                 Map<String, Object> outputJson,
+                                Map<String, Object> confirmationJson,
                                 boolean truncated)) {
+                    SanitizedJson sanitizedInput = sanitizeJson(inputJson, false, true);
                     SanitizedJson sanitizedOutput = sanitizeJson(outputJson, false, true);
+                    SanitizedJson sanitizedConfirmation =
+                            sanitizeJson(confirmationJson, false, true);
                     sanitizedParts.add(
                             new ToolOutputPart(
                                     partId,
                                     toolCallId,
                                     toolName,
                                     stateValue,
+                                    asMap(sanitizedInput.value()),
                                     asMap(sanitizedOutput.value()),
-                                    truncated || sanitizedOutput.truncated()));
+                                    asMap(sanitizedConfirmation.value()),
+                                    truncated
+                                            || sanitizedInput.truncated()
+                                            || sanitizedOutput.truncated()
+                                            || sanitizedConfirmation.truncated()));
                     updatedLogEntries.add(
                             state.toolLogEntries()
                                     .get(toolPartIndex)
-                                    .withTruncated(sanitizedOutput.truncated()));
+                                    .withTruncated(
+                                            sanitizedInput.truncated()
+                                                    || sanitizedOutput.truncated()
+                                                    || sanitizedConfirmation.truncated()));
                     toolPartIndex++;
                 } else {
                     sanitizedParts.add(part);
@@ -234,7 +257,8 @@ public class ToolOutputSanitizer {
                 truncated = truncated || sanitizedChild.truncated();
                 signatureMatches += sanitizedChild.signatureMatches();
             }
-            return new SanitizedJson(Map.copyOf(sanitizedMap), truncated, signatureMatches);
+            return new SanitizedJson(
+                    Collections.unmodifiableMap(sanitizedMap), truncated, signatureMatches);
         }
         if (candidate instanceof List<?> candidateList) {
             List<Object> sanitizedList = new ArrayList<>();

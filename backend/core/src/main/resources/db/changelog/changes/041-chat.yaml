@@ -43,6 +43,12 @@ databaseChangeLog:
               - column:
                   name: soft_deleted_at
                   type: timestamptz
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
         - sql:
             comment: Active chat history sidebar query by tenant, newest first.
             sql: CREATE INDEX idx_chat_tenant_updated_active ON chat (tenant_id, updated_at DESC) WHERE soft_deleted_at IS NULL
