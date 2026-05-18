@@ -35,7 +35,7 @@ v1.1 ships a streaming `/chat` route and an assistant `/settings` page on top of
 Plans:
 - [x] 07-01-PLAN.md — Wave 0: Test scaffolding + ArchUnit foundation + pre-Wave verifications
 - [x] 07-02-PLAN.md — Wave 1: Liquibase 041–046 + persistence + sanitize package (body-ban trigger atomic in 042)
-- [ ] 07-03-PLAN.md — Wave 2: Modulith module + Spring AI adapter + Reactor scheduler + ARCH-07 workaround + 7 read tools
+- [x] 07-03-PLAN.md — Wave 2: Modulith module + Spring AI adapter + Reactor scheduler + ARCH-07 workaround + 8 read tools
 - [ ] 07-04-PLAN.md — Wave 3: SSE controller + ChatOrchestrator + history endpoint + reconciliation cron
 - [ ] 07-05-PLAN.md — Wave 4: Confirmation state machine + AssistantSendExecutor + ArchUnit 0→1 atomic flip [ATOMIC-GROUP: arch01-flip]
 - [ ] 07-06-PLAN.md — Wave 5: Frontend /chat route + AI Elements + Vietnamese chrome + preview cards + 7 Playwright specs
@@ -71,7 +71,7 @@ Parallelization: None. Phase 8 strictly depends on Phase 7 (Settings consumes th
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1-6 (collapsed) | v1.0 | 123/123 | Complete | 2026-05-15 |
-| 7. Chat Email Assistant | v1.1 | 2/6 | In Progress|  |
+| 7. Chat Email Assistant | v1.1 | 3/6 | In Progress|  |
 | 8. Settings + Hardening + GA | v1.1 | 0/TBD | Not started | - |
 
 ---
