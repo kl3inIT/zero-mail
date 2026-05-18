@@ -33,7 +33,7 @@ v1.1 ships a streaming `/chat` route and an assistant `/settings` page on top of
   6. The chat conversation history sidebar lists prior conversations per tenant, survives page refresh, and renders confirmed cards in replay-mode "Sent ✓" state with no re-execution; Spring AI 2.0.0-M6 streaming + tool-call confirmation works end-to-end despite known bugs `spring-ai#3366`/`#5167` via the Zero Mail-owned `ChatToolCallRegistry` + `ZeroMailChatMemory` adapter reading from `chat_message.parts` directly (CHAT-07, ARCH-07).
 **Plans**: 6 plans
 Plans:
-- [ ] 07-01-PLAN.md — Wave 0: Test scaffolding + ArchUnit foundation + pre-Wave verifications
+- [x] 07-01-PLAN.md — Wave 0: Test scaffolding + ArchUnit foundation + pre-Wave verifications
 - [ ] 07-02-PLAN.md — Wave 1: Liquibase 041–046 + persistence + sanitize package (body-ban trigger atomic in 042)
 - [ ] 07-03-PLAN.md — Wave 2: Modulith module + Spring AI adapter + Reactor scheduler + ARCH-07 workaround + 7 read tools
 - [ ] 07-04-PLAN.md — Wave 3: SSE controller + ChatOrchestrator + history endpoint + reconciliation cron
@@ -71,7 +71,7 @@ Parallelization: None. Phase 8 strictly depends on Phase 7 (Settings consumes th
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1-6 (collapsed) | v1.0 | 123/123 | Complete | 2026-05-15 |
-| 7. Chat Email Assistant | v1.1 | 0/TBD | Pending discuss-phase | - |
+| 7. Chat Email Assistant | v1.1 | 1/6 | In Progress|  |
 | 8. Settings + Hardening + GA | v1.1 | 0/TBD | Not started | - |
 
 ---
