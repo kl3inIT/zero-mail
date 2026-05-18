@@ -33,22 +33,26 @@ public class AssistantWriteExecutor {
         if (!boundTenantId.equals(command.tenantId().toString())) {
             throw new IllegalStateException("tenant context does not match write command");
         }
-        WriteToolHandler writeToolHandler = writeToolHandlers.get(command.toolName());
-        if (writeToolHandler == null) {
-            throw new IllegalArgumentException("No write handler for " + command.toolName().id());
+        try {
+            WriteToolHandler writeToolHandler = writeToolHandlers.get(command.toolName());
+            if (writeToolHandler == null) {
+                throw new IllegalArgumentException(
+                        "No write handler for " + command.toolName().id());
+            }
+            WriteToolResult writeToolResult = writeToolHandler.execute(command);
+            confirmationStateMachine.commitWriteReversible(
+                    new WriteCommitCommand(
+                            command.tenantId(),
+                            command.chatId(),
+                            command.toolCallId(),
+                            command.toolName(),
+                            command.toolName().category(),
+                            writeToolResult.resultSummary(),
+                            command.previewSnapshot()));
+            return new AssistantWriteResult("CONFIRMED", writeToolResult.resultSummary());
+        } finally {
+            confirmationLeaseService.release(command.chatId(), command.toolCallId());
         }
-        WriteToolResult writeToolResult = writeToolHandler.execute(command);
-        confirmationStateMachine.commitWriteReversible(
-                new WriteCommitCommand(
-                        command.tenantId(),
-                        command.chatId(),
-                        command.toolCallId(),
-                        command.toolName(),
-                        command.toolName().category(),
-                        writeToolResult.resultSummary(),
-                        command.previewSnapshot()));
-        confirmationLeaseService.release(command.chatId(), command.toolCallId());
-        return new AssistantWriteResult("CONFIRMED", writeToolResult.resultSummary());
     }
 
     private static Map<ChatToolName, WriteToolHandler> merge(

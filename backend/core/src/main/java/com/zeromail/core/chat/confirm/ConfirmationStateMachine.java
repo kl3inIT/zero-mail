@@ -270,6 +270,24 @@ public class ConfirmationStateMachine {
     public void commitCanceled(UUID chatId, UUID tenantId, String toolCallId) {
         PendingAction pendingAction = loadPendingAction(chatId, tenantId, toolCallId);
         Instant now = clock.instant();
+        int changedRows =
+                jdbcTemplate.update(
+                        """
+                        UPDATE assistant_pending_action
+                           SET state = 'CANCELED',
+                               updated_at = now(),
+                               version = version + 1
+                         WHERE tenant_id = ?
+                           AND chat_id = ?
+                           AND tool_call_id = ?
+                           AND state = 'PENDING'
+                        """,
+                        tenantId,
+                        chatId,
+                        toolCallId);
+        if (changedRows != 1) {
+            throw new StaleToolCallException(toolCallId);
+        }
         jdbcTemplate.update(
                 """
                 INSERT INTO assistant_action_audit (
@@ -301,7 +319,6 @@ public class ConfirmationStateMachine {
                 Timestamp.from(now),
                 Timestamp.from(now),
                 Timestamp.from(now));
-        updatePendingActionState(tenantId, chatId, toolCallId, "CANCELED");
     }
 
     @Transactional

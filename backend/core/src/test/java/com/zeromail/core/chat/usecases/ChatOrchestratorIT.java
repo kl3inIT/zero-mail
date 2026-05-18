@@ -67,6 +67,66 @@ class ChatOrchestratorIT extends PostgresContainerTest {
         assertThat(streamSink.events().getFirst()).isEqualTo("data-persistence:user-message-saved");
     }
 
+    @Test
+    void confirmable_tool_call_persists_pending_action_for_confirm_endpoint() throws Exception {
+        UUID tenantId = seedTenant();
+        RecordingChatStreamSink streamSink = new RecordingChatStreamSink();
+        when(chatLlmGateway.streamChat(any(ChatStreamRequest.class), any(ChatStreamSink.class)))
+                .thenAnswer(
+                        invocation -> {
+                            ChatStreamSink modelSink = invocation.getArgument(1);
+                            modelSink.emitToolInputStart("tool-send-pending", "sendEmail");
+                            modelSink.emitToolInputAvailable(
+                                    "tool-send-pending",
+                                    "sendEmail",
+                                    """
+                                    {"to":"founder@example.test","subject":"Follow-up","body":"User-authored follow-up body"}
+                                    """);
+                            modelSink.emitFinish("tool-call");
+                            return (Disposable) () -> {};
+                        });
+
+        withTenant(
+                tenantId,
+                () ->
+                        chatOrchestrator.stream(
+                                new ChatStreamCommand(
+                                        tenantId.toString(), null, "Draft a follow-up email", null),
+                                streamSink));
+
+        assertThat(streamSink.awaitFinish()).isTrue();
+        UUID chatId =
+                jdbcTemplate.queryForObject(
+                        "select id from chat where tenant_id = ?", UUID.class, tenantId);
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                """
+                                select state
+                                  from assistant_pending_action
+                                 where tenant_id = ?
+                                   and chat_id = ?
+                                   and tool_call_id = 'tool-send-pending'
+                                """,
+                                String.class,
+                                tenantId,
+                                chatId))
+                .isEqualTo("PENDING");
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                """
+                                select draft_body
+                                  from assistant_pending_action
+                                 where tenant_id = ?
+                                   and chat_id = ?
+                                   and tool_call_id = 'tool-send-pending'
+                                """,
+                                String.class,
+                                tenantId,
+                                chatId))
+                .isEqualTo("User-authored follow-up body");
+        assertThat(streamSink.events()).contains("finish:awaiting-confirmation");
+    }
+
     private UUID seedTenant() {
         UUID tenantId = UUID.randomUUID();
         jdbcTemplate.update(

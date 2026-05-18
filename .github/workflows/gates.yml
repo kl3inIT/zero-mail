@@ -49,10 +49,9 @@ jobs:
             echo "::error::Non-AssistantSendExecutor Gmail send call site detected - ARCH-01 regression"
             exit 1
           fi
-          # Wave 0: EXECUTOR == 0 expected (AssistantSendExecutor lands in Wave 4).
-          # Wave 4 [ATOMIC-GROUP: arch01-flip]: flip the comparison below to "$EXECUTOR" != "1".
-          if [ "$EXECUTOR" != "0" ]; then
-            echo "::error::AssistantSendExecutor unexpectedly present before Wave 4"
+          # Wave 4 [ATOMIC-GROUP: arch01-flip]: AssistantSendExecutor is the single allowed send call site.
+          if [ "$EXECUTOR" != "1" ]; then
+            echo "::error::AssistantSendExecutor send call site count drifted from exactly 1 - ARCH-01"
             exit 1
           fi
 

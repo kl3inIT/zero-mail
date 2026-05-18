@@ -19,7 +19,7 @@ class OnlyOneGmailSendCallSiteTest {
     private static final String GMAIL_DRAFTS_OWNER = "Gmail.Users.Drafts";
 
     @Test
-    void gmail_send_call_site_count_is_armed_for_wave_four_flip() {
+    void exactly_one_gmail_send_call_site_exists() {
         JavaClasses importedClasses = importProductionClasses();
 
         long callSiteCount =
@@ -28,9 +28,9 @@ class OnlyOneGmailSendCallSiteTest {
                         .filter(OnlyOneGmailSendCallSiteTest::isGmailSendCall)
                         .count();
 
-        // Count flips 0->1 in Wave 4 atomic group [ATOMIC-GROUP: arch01-flip];
-        // do not edit this number in isolation.
-        assertThat(callSiteCount).isEqualTo(0L);
+        // Count flipped 0->1 in Wave 4 [ATOMIC-GROUP: arch01-flip] with
+        // AssistantSendExecutor.
+        assertThat(callSiteCount).isEqualTo(1L);
     }
 
     @Test

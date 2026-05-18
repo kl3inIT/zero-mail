@@ -289,22 +289,81 @@ public class ChatOrchestrator {
 
     private UUID persistToolCall(
             UUID chatId, UUID tenantId, String toolCallId, String toolName, String inputJson) {
-        return chatMessageRepository.insert(
-                new ChatMessage(
-                        new ChatMessageId(UUID.randomUUID()),
-                        new ChatId(chatId),
-                        tenantId.toString(),
-                        ChatRole.ASSISTANT,
-                        ChatMessageParts.v1(
-                                List.of(
-                                        new ToolCallPart(
-                                                "tool-call-" + toolCallId,
-                                                toolCallId,
-                                                toolName,
-                                                "input-available",
-                                                parseJsonObject(inputJson),
-                                                false))),
-                        Instant.now()));
+        ChatToolName chatToolName = ChatToolName.fromId(toolName);
+        Map<String, Object> input = parseJsonObject(inputJson);
+        UUID chatMessageId =
+                chatMessageRepository.insert(
+                        new ChatMessage(
+                                new ChatMessageId(UUID.randomUUID()),
+                                new ChatId(chatId),
+                                tenantId.toString(),
+                                ChatRole.ASSISTANT,
+                                ChatMessageParts.v1(
+                                        List.of(
+                                                new ToolCallPart(
+                                                        "tool-call-" + toolCallId,
+                                                        toolCallId,
+                                                        toolName,
+                                                        "input-available",
+                                                        input,
+                                                        false))),
+                                Instant.now()));
+        if (chatToolName.category() != ToolCategory.READ) {
+            insertPendingAction(chatId, tenantId, chatMessageId, toolCallId, chatToolName, input);
+        }
+        return chatMessageId;
+    }
+
+    private void insertPendingAction(
+            UUID chatId,
+            UUID tenantId,
+            UUID chatMessageId,
+            String toolCallId,
+            ChatToolName chatToolName,
+            Map<String, Object> input) {
+        Instant now = Instant.now();
+        jdbcTemplate.update(
+                """
+                INSERT INTO assistant_pending_action (
+                    id,
+                    chat_id,
+                    tenant_id,
+                    chat_message_id,
+                    tool_call_id,
+                    state,
+                    draft_body,
+                    expires_at,
+                    last_tool_call_id,
+                    last_tool_call_state,
+                    created_at,
+                    updated_at,
+                    version
+                )
+                VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, ?, 'input-available', ?, ?, 0)
+                """,
+                UUID.randomUUID(),
+                chatId,
+                tenantId,
+                chatMessageId,
+                toolCallId,
+                draftBody(chatToolName, input),
+                Timestamp.from(now.plusSeconds(chatProperties.sseTimeoutMinutes() * 60L)),
+                toolCallId,
+                Timestamp.from(now),
+                Timestamp.from(now));
+    }
+
+    private static String draftBody(ChatToolName chatToolName, Map<String, Object> input) {
+        if (chatToolName == ChatToolName.SAVE_DRAFT
+                || chatToolName == ChatToolName.SEND_EMAIL
+                || chatToolName == ChatToolName.REPLY_EMAIL) {
+            return optionalText(input, "body");
+        }
+        if (chatToolName == ChatToolName.FORWARD_EMAIL) {
+            String additionalBody = optionalText(input, "additionalBody");
+            return additionalBody == null ? optionalText(input, "body") : additionalBody;
+        }
+        return null;
     }
 
     private UUID persistToolOutput(
@@ -364,6 +423,15 @@ public class ChatOrchestrator {
         } catch (JacksonException jacksonException) {
             throw new IllegalArgumentException("tool JSON must be valid", jacksonException);
         }
+    }
+
+    private static String optionalText(Map<String, Object> input, String fieldName) {
+        Object value = input == null ? null : input.get(fieldName);
+        if (value == null) {
+            return null;
+        }
+        String text = String.valueOf(value).trim();
+        return text.isBlank() ? null : text;
     }
 
     private String writeJson(Object value) {
