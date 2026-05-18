@@ -16,6 +16,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * [BLOCKING] schema-push proof: boots Spring against a real Postgres 17 Testcontainer, Liquibase
  * applies all changesets, then asserts every required table is present.
  */
+@SuppressWarnings({"SqlResolve", "SameParameterValue"})
 class LiquibaseMigrationTest extends PostgresContainerTest {
 
     @Autowired DataSource dataSource;
@@ -98,6 +99,8 @@ class LiquibaseMigrationTest extends PostgresContainerTest {
         assertThat(columnExists("assistant_action_audit", "tool_category")).isTrue();
         assertThat(columnExists("assistant_action_audit", "state")).isTrue();
         assertThat(columnExists("assistant_action_audit", "in_flight_at")).isTrue();
+        assertThat(columnExists("assistant_settings", "assistant_settings_id")).isTrue();
+        assertThat(columnExists("assistant_settings", "version")).isTrue();
         assertThat(
                         jdbcTemplate.queryForObject(
                                 "select count(*) from pg_trigger where tgname = 'chat_message_body_ban'",

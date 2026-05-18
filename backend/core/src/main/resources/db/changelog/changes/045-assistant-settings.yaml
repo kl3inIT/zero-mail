@@ -10,11 +10,19 @@ databaseChangeLog:
             tableName: assistant_settings
             columns:
               - column:
-                  name: tenant_id
+                  name: assistant_settings_id
                   type: uuid
+                  defaultValueComputed: gen_random_uuid()
                   constraints:
                     primaryKey: true
                     nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: ux_assistant_settings_tenant
                     foreignKeyName: fk_assistant_settings_tenant
                     references: tenants(id)
                     deleteCascade: true
@@ -43,6 +51,12 @@ databaseChangeLog:
                   name: updated_at
                   type: timestamptz
                   defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
                   constraints:
                     nullable: false
       rollback:
