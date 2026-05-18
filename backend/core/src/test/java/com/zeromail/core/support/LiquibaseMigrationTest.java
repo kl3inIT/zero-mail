@@ -41,7 +41,14 @@ class LiquibaseMigrationTest extends PostgresContainerTest {
                         "triage_audit",
                         "tenant_sender_opt_in",
                         "tenant_protected_sender_observation",
-                        "thread_reply_status");
+                        "thread_reply_status",
+                        "chat",
+                        "chat_message",
+                        "assistant_pending_action",
+                        "assistant_action_audit",
+                        "assistant_settings",
+                        "assistant_memory",
+                        "assistant_knowledge_snippet");
     }
 
     @Test
@@ -83,6 +90,72 @@ class LiquibaseMigrationTest extends PostgresContainerTest {
                 .contains("ON DELETE CASCADE");
     }
 
+    @Test
+    void chat_schema_owns_body_ban_trigger_and_pending_action_cas_columns() {
+        assertThat(columnExists("chat_message", "updated_at")).isFalse();
+        assertThat(columnExists("assistant_pending_action", "parts_updated_at")).isTrue();
+        assertThat(columnExists("assistant_pending_action", "draft_body")).isTrue();
+        assertThat(columnExists("assistant_action_audit", "tool_category")).isTrue();
+        assertThat(columnExists("assistant_action_audit", "state")).isTrue();
+        assertThat(columnExists("assistant_action_audit", "in_flight_at")).isTrue();
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "select count(*) from pg_trigger where tgname = 'chat_message_body_ban'",
+                                Integer.class))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void assistant_action_audit_state_check_allows_failed_without_sent_at_only() {
+        UUID tenantId = UUID.randomUUID();
+        UUID chatId = UUID.randomUUID();
+        UUID chatMessageId = UUID.randomUUID();
+
+        jdbcTemplate.update(
+                "insert into tenants(id, display_name) values (?, ?)", tenantId, "chat-schema");
+        jdbcTemplate.update(
+                "insert into chat(id, tenant_id, title) values (?, ?, ?)",
+                chatId,
+                tenantId,
+                "Schema check");
+        jdbcTemplate.update(
+                """
+                insert into chat_message(id, chat_id, tenant_id, role, parts)
+                values (?, ?, ?, 'assistant', '{"schemaVersion":1,"parts":[{"type":"text","text":"hi"}]}'::jsonb)
+                """,
+                chatMessageId,
+                chatId,
+                tenantId);
+
+        jdbcTemplate.update(
+                """
+                insert into assistant_action_audit(
+                  id, chat_id, tenant_id, tool_call_id, tool_category, tool_name, state,
+                  preview_snapshot
+                )
+                values (?, ?, ?, 'tool-failed', 'confirmed-send', 'sendEmail', 'FAILED', '{}'::jsonb)
+                """,
+                UUID.randomUUID(),
+                chatId,
+                tenantId);
+
+        assertThatThrownBy(
+                        () ->
+                                jdbcTemplate.update(
+                                        """
+                                        insert into assistant_action_audit(
+                                          id, chat_id, tenant_id, tool_call_id, tool_category, tool_name, state,
+                                          preview_snapshot
+                                        )
+                                        values (?, ?, ?, 'tool-committed', 'confirmed-send', 'sendEmail',
+                                          'COMMITTED', '{}'::jsonb)
+                                        """,
+                                        UUID.randomUUID(),
+                                        chatId,
+                                        tenantId))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
     private void insertPendingAuditRow(UUID tenantId, byte[] argsHash) {
         jdbcTemplate.update(
                 """
@@ -107,5 +180,21 @@ class LiquibaseMigrationTest extends PostgresContainerTest {
                 "select pg_get_constraintdef(oid) from pg_constraint where conname = ?",
                 String.class,
                 constraintName);
+    }
+
+    private boolean columnExists(String tableName, String columnName) {
+        Integer count =
+                jdbcTemplate.queryForObject(
+                        """
+                        select count(*)
+                        from information_schema.columns
+                        where table_schema = 'public'
+                          and table_name = ?
+                          and column_name = ?
+                        """,
+                        Integer.class,
+                        tableName,
+                        columnName);
+        return count != null && count > 0;
     }
 }

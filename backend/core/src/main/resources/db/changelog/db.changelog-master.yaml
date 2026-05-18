@@ -119,3 +119,21 @@ databaseChangeLog:
   - include:
       file: changes/040-triage-audit-message-ref.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/041-chat.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/042-chat-message-and-body-ban-trigger.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/043-assistant-pending-action.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/044-assistant-action-audit.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/045-assistant-settings.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/046-assistant-memory-knowledge.yaml
+      relativeToChangelogFile: true
