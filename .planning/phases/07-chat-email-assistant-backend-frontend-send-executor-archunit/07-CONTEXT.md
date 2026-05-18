@@ -52,6 +52,16 @@ Downstream agents MUST read `07-SPEC.md` before planning or implementing. Requir
 <decisions>
 ## Implementation Decisions
 
+### 2026-05-18 Wave 0 Preflight Decision
+
+Operator selected checkpoint option `1` / `proceed` for Plan 07-01 preflight.
+
+- Gmail OAuth: `gmail.send` is not separately bundled, but the current v1 registration includes `https://www.googleapis.com/auth/gmail.modify`, which covers Gmail `users.messages.send`; proceed without adding an extra scope in Wave 0.
+- Sender safety schema: the plan's `sender_safety_entry.mode` wording is stale against the shipped v1 schema. The implemented safety-net tables are `tenant_sender_opt_in` and `tenant_protected_sender_observation`; proceed using those tables for the Phase 7 VIP/safety preview path.
+- Liquibase numbering: `041` through `046` are free; master currently ends at `040-triage-audit-message-ref.yaml`.
+- Spring AI workaround: `spring-ai#3366` is closed/backported, while `spring-ai#5167` remains open for the M7 milestone; keep the `ChatToolCallRegistry` and `ZeroMailChatMemory` workaround path in this phase.
+- Frontend package legitimacy: `ai@6.0.184`, `@ai-sdk/react@3.0.186`, `streamdown@2.5.0`, and `ai-elements@1.9.0` resolve from Vercel-owned GitHub repositories with no `postinstall` script.
+
 ### Modulith Boundaries
 
 - **D-01:** `core.chat` declares `@ApplicationModule(allowedDependencies = {"llm", "rules", "gmail", "triage", "tenant", "shared.persistence", "shared.lang", "shared.privacy"})`. Direct service calls to existing `usecases/` packages from each dependency — no new carved gateway interfaces beyond `ChatLlmGateway` (see D-02). Mirrors the `core.triage` precedent (broad direct deps); ArchUnit boundary tests verify only declared deps are imported. `billing` is **not** a declared dep — chat goes through `LlmGateway`/`ChatLlmGateway` which already wrap credit reservation.
