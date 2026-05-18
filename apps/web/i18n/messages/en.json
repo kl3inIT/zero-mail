@@ -342,6 +342,81 @@
       }
     }
   },
+  "chat": {
+    "empty": {
+      "body": "Ask about your inbox, rules, or draft email — Zero Mail sends only after confirmation.",
+      "title": "Start a conversation with Zero Mail"
+    },
+    "history": {
+      "actions": "Chat actions",
+      "delete": "Delete",
+      "deleted": "Conversation deleted",
+      "empty": "No conversations yet",
+      "new": "New message",
+      "title": "Chat history"
+    },
+    "page": {
+      "subtitle": "Ask about your inbox, rules, or drafts. Zero Mail sends only after your confirmation.",
+      "title": "Email assistant"
+    },
+    "preview": {
+      "actionError": "The action did not complete. Try again.",
+      "added": "Added",
+      "andMore": "and {count} more",
+      "bcc": "Bcc",
+      "body": "Body",
+      "bulkArchive": "Archive in bulk",
+      "cancel": "Cancel",
+      "cancelled": "Cancelled",
+      "cc": "Cc",
+      "confirm": "Confirm",
+      "confirmed": "Confirmed",
+      "createRule": "Create rule",
+      "deleteRule": "Delete rule",
+      "edit": "Edit",
+      "eyebrow": "Needs confirmation",
+      "failed": "Action failed",
+      "instructionsAfter": "After",
+      "instructionsBefore": "Before",
+      "memoryContent": "Will save",
+      "outsideSourceThread": "Added by AI · verify",
+      "overwriteNotice": "Will overwrite current instructions",
+      "removeSender": "Remove from safety net",
+      "ruleName": "Rule name",
+      "saveMemory": "Save memory",
+      "saving": "Saving...",
+      "send": "Send via Gmail",
+      "sender": "Sender",
+      "sent": "Sent",
+      "sourceThread": "Source thread",
+      "subject": "Subject",
+      "syncing": "Syncing — Send will enable shortly",
+      "then": "Then",
+      "threadCount": "{count} threads will be archived",
+      "title": "Review before sending",
+      "to": "To",
+      "updateInstructions": "Update instructions",
+      "when": "When"
+    },
+    "prompt": {
+      "placeholder": "Message Zero Mail...",
+      "send": "Send message",
+      "stop": "Stop response"
+    },
+    "stream": {
+      "cancelled": "Response stopped"
+    },
+    "suggestion": {
+      "draft": "Draft a polite decline",
+      "memory": "Save note: I am working on project X",
+      "rules": "List enabled rules",
+      "search": "Find email from Acme this week"
+    },
+    "vip": {
+      "acknowledge": "I've reviewed and want to send",
+      "title": "Recipient is on your safety net — confirm anyway?"
+    }
+  },
   "common": {
     "app": {
       "description": "Reach inbox zero without giving up control.",

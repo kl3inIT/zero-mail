@@ -342,6 +342,81 @@
       }
     }
   },
+  "chat": {
+    "empty": {
+      "body": "Hỏi về inbox, quy tắc, hoặc soạn email — Zero Mail chỉ gửi sau khi bạn xác nhận.",
+      "title": "Bắt đầu trò chuyện với Zero Mail"
+    },
+    "history": {
+      "actions": "Thao tác trò chuyện",
+      "delete": "Xóa",
+      "deleted": "Đã xóa cuộc trò chuyện",
+      "empty": "Chưa có cuộc trò chuyện",
+      "new": "Tin nhắn mới",
+      "title": "Lịch sử trò chuyện"
+    },
+    "page": {
+      "subtitle": "Hỏi về inbox, quy tắc, hoặc soạn email. Zero Mail chỉ gửi sau khi bạn xác nhận.",
+      "title": "Trợ lý email"
+    },
+    "preview": {
+      "actionError": "Chưa hoàn tất thao tác. Hãy thử lại.",
+      "added": "Thêm",
+      "andMore": "và {count} thread khác",
+      "bcc": "BCC",
+      "body": "Nội dung",
+      "bulkArchive": "Lưu trữ hàng loạt",
+      "cancel": "Hủy",
+      "cancelled": "Đã hủy",
+      "cc": "CC",
+      "confirm": "Xác nhận",
+      "confirmed": "Đã xác nhận",
+      "createRule": "Tạo quy tắc",
+      "deleteRule": "Xóa quy tắc",
+      "edit": "Sửa",
+      "eyebrow": "Cần xác nhận",
+      "failed": "Thao tác lỗi",
+      "instructionsAfter": "Sau",
+      "instructionsBefore": "Trước",
+      "memoryContent": "Nội dung sẽ lưu",
+      "outsideSourceThread": "Thêm bởi AI · xác minh",
+      "overwriteNotice": "Sẽ ghi đè hướng dẫn hiện tại",
+      "removeSender": "Bỏ khỏi danh sách an toàn",
+      "ruleName": "Tên quy tắc",
+      "saveMemory": "Lưu trí nhớ",
+      "saving": "Đang lưu...",
+      "send": "Gửi qua Gmail",
+      "sender": "Người gửi",
+      "sent": "Đã gửi",
+      "sourceThread": "Thread nguồn",
+      "subject": "Tiêu đề",
+      "syncing": "Đang đồng bộ — Gửi sẽ bật ngay khi sẵn sàng",
+      "then": "Thì",
+      "threadCount": "{count} thread sẽ được lưu trữ",
+      "title": "Xem trước trước khi gửi",
+      "to": "Đến",
+      "updateInstructions": "Cập nhật hướng dẫn",
+      "when": "Khi"
+    },
+    "prompt": {
+      "placeholder": "Nhắn cho Zero Mail...",
+      "send": "Gửi tin nhắn",
+      "stop": "Dừng phản hồi"
+    },
+    "stream": {
+      "cancelled": "Đã dừng phản hồi"
+    },
+    "suggestion": {
+      "draft": "Soạn email từ chối lịch sự",
+      "memory": "Lưu ghi chú: tôi đang làm dự án X",
+      "rules": "Liệt kê quy tắc đang bật",
+      "search": "Tìm email từ Acme tuần này"
+    },
+    "vip": {
+      "acknowledge": "Tôi đã xem kỹ và muốn gửi",
+      "title": "Người nhận có trong danh sách an toàn — vẫn gửi?"
+    }
+  },
   "common": {
     "app": {
       "description": "Dọn hộp thư về zero mà vẫn giữ quyền kiểm soát.",

@@ -6,3 +6,4 @@ dist/**
 out/**
 lib/api/schema.d.ts
 components/ui/**
+components/ai/**
