@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "parts": [
+    {
+      "type": "text",
+      "text": "Tôi sẽ kiểm tra các nhãn hiện có trước."
+    },
+    {
+      "type": "tool-listLabels",
+      "toolCallId": "toolcall_labels_001",
+      "state": "output-available",
+      "input": {},
+      "output": {
+        "labels": [
+          {
+            "id": "Label_123",
+            "name": "Khách hàng"
+          },
+          {
+            "id": "Label_456",
+            "name": "Hóa đơn"
+          }
+        ]
+      }
+    }
+  ]
+}
