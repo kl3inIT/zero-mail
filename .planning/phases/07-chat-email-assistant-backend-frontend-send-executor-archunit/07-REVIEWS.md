@@ -12,6 +12,11 @@ review_cycles:
     status: HIGH concerns — replan required (text/schema contradictions)
     generated: 2026-05-18
     current_high: 3
+  - cycle: 3
+    reviewers: [codex, opencode]
+    status: HIGH concerns — Codex flags 2 residuals (catalog leftovers + stale-toolCallId CAS logic gap); OpenCode declares converged. Side with Codex per cycle-2 reconciliation precedent.
+    generated: 2026-05-18
+    current_high: 2
 ---
 
 # Phase 7 — Cross-AI Plan Review (Cycle 1)
@@ -393,3 +398,259 @@ A third cycle should be a quick scrub pass (estimated <1 hour of plan edits, no 
 - **NEW-HIGH-A** (Codex, new cycle-2 concern) — Stale "20-tool" / "6-slot" / "13-tool" / "7+7+3+3" / `createRule under write-reversible` references remain in Plan 03 line 259, Plan 05 lines 133/153/291/305/306/555, Plan 06 lines 167/317/401/484/527/588; folds in cycle-1 HIGH-1 + HIGH-2 leftover text. Independent grep verified.
 - **NEW-HIGH-B** (Codex, new cycle-2 concern) — `assistant_action_audit` CHECK constraint `(state = 'SEND_IN_FLIGHT') = (sent_at IS NULL)` in Plan 02 line 282 is a biconditional that rejects FAILED rows; HIGH-5's reconciler Sweep B + Gmail-rejection path both write FAILED rows with `sent_at NULL` and would fail the CHECK. Schema-level bug.
 - **NEW-HIGH-C** (Codex, new cycle-2 concern, also cycle-1 HIGH-4 carryover) — Plan 05 lines 67, 123, 129, 188-189 still reference `chat_message.parts.updated_at` CAS; the column was removed by HIGH-4 fix. SQL on lines 188-189 (`UPDATE chat_message SET ... updated_at = ? WHERE updated_at = ?`) would fail against the revised schema. Contradicts Plan 05's own line 518 acknowledgment.
+
+
+---
+---
+
+# Phase 7 — Cross-AI Plan Review (Cycle 3)
+
+> Re-review after cycle 2 → cycle 3 surgical scrub (commit `279ea483`). Independent reviews from **Codex CLI** and **OpenCode CLI** of revised `07-PLAN-02.md`, `07-PLAN-03.md`, `07-PLAN-05.md`, `07-PLAN-06.md`. Cycle 3 was scoped to only the 3 NEW HIGH concerns from cycle 2 (NEW-HIGH-A catalog scrub, NEW-HIGH-B CHECK constraint, NEW-HIGH-C stale CAS refs) — no architectural change.
+
+## Verdict
+
+**HIGH — convergence NOT achieved.** Reviewers diverged: **Codex** flags 2 unresolved HIGHs (NEW-HIGH-A scrub incomplete + NEW-HIGH-C stale-toolCallId race logic gap exposed by the CAS rewrite); **OpenCode** declares full convergence (current_high=0). Independent grep + trigger-semantics check confirms Codex's findings are real:
+
+1. **NEW-HIGH-A residuals** verified — Plan 02 line 426 still says `searchMemories is OUT of the locked 20-tool list`, Plan 03 line 169 still says `the 7 read-only tool handlers` (should be 8). Both are stale and contradict Plan 03's canonical 24-tool list.
+2. **NEW-HIGH-C semantic gap** verified — Plan 02 trigger `bump_pending_action_parts_updated_at` is `BEFORE UPDATE ... WHEN OLD.state IS DISTINCT FROM NEW.state` on a per-row basis. Inserting a NEW `assistant_pending_action` row for T2 does NOT trigger an UPDATE on T1's row, so T1's `parts_updated_at` does NOT advance. Plan 05:481's stale-toolCallId mitigation ("T1 returns 404 because parts_updated_at advanced via the bump trigger when T2 was created") is logically incorrect — T1 would remain PENDING and the CAS would succeed for the stale call.
+
+Per the cycle-2 reconciliation precedent (Codex catches schema/logic bugs that OpenCode treats as cosmetic), **side with Codex**.
+
+| Reviewer | Verdict | HIGH count | NEW vs carryover |
+|----------|---------|------------|------------------|
+| Codex | HIGH — not converged | 2 | NEW-HIGH-A partially resolved + NEW-HIGH-C semantic gap exposed |
+| OpenCode | LOW — converged | 0 | All 3 NEW HIGHs declared FULLY RESOLVED |
+| **Synthesis** | **HIGH — not converged** | **2 verified** | Codex correct; OpenCode missed the trigger-semantics gap and treated Plan 02:426 + Plan 03:169 as MEDIUM rather than HIGH |
+
+---
+
+## Codex Review
+
+## Verdict
+
+Not converged. Cycle 3 resolved NEW-HIGH-B, but NEW-HIGH-A is still incomplete and NEW-HIGH-C is only partially resolved.
+
+## Per-Item Resolution Audit
+
+1. **NEW-HIGH-A: PARTIAL**  
+   Plans 05/06 are mostly scrubbed, but stale catalog text remains:
+   - [07-PLAN-02.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/07-chat-email-assistant-backend-frontend-send-executor-archunit/07-PLAN-02.md:426) still says `searchMemories` is out of the locked 20-tool list.
+   - [07-PLAN-03.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/07-chat-email-assistant-backend-frontend-send-executor-archunit/07-PLAN-03.md:169) still says “7 read-only tool handlers”.
+   - `07-SPEC.md`, `07-CONTEXT.md`, `07-AI-SPEC.md`, and `07-RESEARCH.md` still contain old 20-tool / 7-read / 8-write wording. Since plans reference these artifacts, this remains execution-risk, not just historical text.
+
+2. **NEW-HIGH-B: PASS**  
+   The new CHECK truth table is correct:
+   - accepts `PENDING + sent_at NULL`, `SEND_IN_FLIGHT + NULL`, `FAILED + NULL`, `COMMITTED + NOT NULL`
+   - rejects `COMMITTED + NULL`, `FAILED + NOT NULL`, and unknown states
+   - `<done>` now requires `LiquibaseChangelogValidationTest` coverage for `FAILED + NULL` accepted and `COMMITTED + NULL` rejected.
+
+3. **NEW-HIGH-C: PARTIAL**  
+   The removed `chat_message.updated_at` CAS references are gone, and the SQL now targets existing `assistant_pending_action` columns. However, the stale-toolCallId race is not actually fixed: [07-PLAN-05.md](D:/study-materials-summer-2026/EXE202/zero-mail/.planning/phases/07-chat-email-assistant-backend-frontend-send-executor-archunit/07-PLAN-05.md:481) says T1 fails because `parts_updated_at` advances “when T2 was created”, but Plan 02’s trigger only bumps on `UPDATE ... WHEN OLD.state IS DISTINCT FROM NEW.state`. Creating T2 does not update T1. If T1 remains `PENDING`, the new CAS can still reserve and execute the stale action.
+
+4. **Prior HIGH regressions: PASS**  
+   HIGH-6 and HIGH-7 remain intact in Plan 04: explicit read-tool loop, model re-call, and assistant text persistence via `TransactionTemplate`. HIGH-3 source-aware body ban and HIGH-5 pre-send `SEND_IN_FLIGHT` + Sweep B reconciliation remain intact after the cycle 3 edits.
+
+5. **New HIGH introduced by cycle 3 scrub: FAIL**  
+   The CAS rewrite removes the invalid column reference but introduces/retains an invalid stale-edit assumption. The fix must explicitly invalidate old pending actions on edit, or CAS against a chat/message-level generation/version that changes when a new toolCallId supersedes the old one.
+
+## NEW HIGH Concerns
+
+- **NEW-HIGH-A remains unresolved**: catalog scrub missed Plan 02, Plan 03 objective text, and referenced spec/context/research artifacts.
+- **NEW-HIGH-C remains unresolved**: pending-action CAS does not prove stale-toolCallId safety unless the plan updates/cancels the old pending action or adds a true generation CAS.
+
+## Recommendation
+
+Do not exit the convergence loop. Run a narrow Cycle 4 scrub: fix the remaining catalog references, and revise stale-toolCallId handling so T1 is explicitly invalidated when T2 supersedes it.
+
+## Codex CYCLE_SUMMARY: current_high=2
+
+## Codex Current HIGH Concerns
+
+- **NEW-HIGH-A** — catalog/count scrub incomplete.
+- **NEW-HIGH-C** — stale-toolCallId CAS mitigation still unsound after moving CAS to `assistant_pending_action`.
+
+---
+
+## OpenCode Review
+
+# Phase 7 Cycle 3 Plan Review
+
+## Verdict
+
+**CONVERGED** — all 3 NEW HIGH concerns fully resolved. No new HIGHs introduced. Plans are ready to execute.
+
+---
+
+## Per-Item Resolution Audit
+
+### 1. NEW-HIGH-A: Catalog/slot count scrub → **PASS** (fully resolved within scoped plans)
+
+All 20 surgical replacements in Plans 03/05/06 are correct and complete:
+
+| Reference type | Before | After | Verified |
+|---|---|---|---|
+| Tool count in `ChatToolName` assertion (Plan 03 `<done>`) | `== 20` | `== 24` | ✅ Plan 03:259 changed |
+| Objective: remaining tool wirings (Plan 05) | "13 tool wirings" | "16 tool wirings" | ✅ Plan 05:133 changed |
+| Section header (Plan 05) | "20-Tool Authoritative List" | "24-Tool Authoritative List" | ✅ Plan 05:153 changed |
+| `ConfirmedSendToolHandlers` reference (Plan 05) | "per the 20-Tool Authoritative List" | "per the 24-Tool Authoritative List" | ✅ Plan 05:291 changed |
+| `<done>` block in Plan 05 | "13 write-side tools" / "20 (7+7+3+3)" | "16 write-side tools" / "24 (8+7+6+3)" | ✅ Plan 05:305 changed |
+| `<deviation_handling>` in Plan 05 | "20-Tool Authoritative List" | "24-Tool Authoritative List" | ✅ Plan 05:306 changed |
+| Output note (Plan 05) | "20-tool catalog size assertion" | "24-tool catalog size assertion" | ✅ Plan 05:555 changed |
+| Body slot count (Plan 06 objective) | "6 body slots" | "9 body slots" | ✅ Plan 06:167 changed |
+| Contract test assertion (Plan 06 `<done>`) | "20 tools" / "7/7/3/3" / "6 user-confirmable" | "24 tools" / "8/7/6/3" / "9 user-confirmable" | ✅ Plan 06:401 changed |
+| `BODY_SLOT_MAP` key count (Plan 06 `<done>`) | "6 keys" | "9 keys" | ✅ Plan 06:484 changed |
+| `createRule` classification (Plan 06 Task 6.6) | Listed under write-reversible | Listed as NOT write-reversible, explicitly confirm-required | ✅ Plan 06:527,588 changed |
+
+**Residual MEDIUM issue (not HIGH):** Plan 02 line 426 still says `"searchMemories" is OUT of the locked 20-tool list per Plan 03 revision` — this is stale. `searchMemories` IS in the locked 24-tool list (Plan 03 #8). The comment also uses `"20-tool list"` phrasing. Does not block execution (Plan 03's canonical list controls; Plan 05 explicitly wires searchMemories; catalog boot validation catches any miss), but should be fixed for accuracy.
+
+---
+
+### 2. NEW-HIGH-B: CHECK constraint biconditional bug → **PASS** (fully resolved)
+
+The old biconditional `(state = 'SEND_IN_FLIGHT') = (sent_at IS NULL)` has been replaced with a per-state OR form at Plan 02 line 282:
+
+```sql
+CHECK (
+  (state IN ('PENDING', 'SEND_IN_FLIGHT', 'FAILED') AND sent_at IS NULL)
+  OR
+  (state = 'COMMITTED' AND sent_at IS NOT NULL)
+)
+```
+
+**State admission analysis:**
+
+| State | `sent_at` | Admitted? | Correct? |
+|-------|-----------|-----------|----------|
+| `PENDING` | NULL | ✅ | Yes — pre-execution (unused but harmless) |
+| `SEND_IN_FLIGHT` | NULL | ✅ | Yes — pre-send (HIGH-5) |
+| `FAILED` | NULL | ✅ | Yes — rejection or reconciliation miss (HIGH-5) |
+| `COMMITTED` | NOT NULL | ✅ | Yes — confirmed delivery |
+| `COMMITTED` | NULL | ❌ | Correctly rejected — committed must have `sent_at` |
+| `FAILED` | NOT NULL | ❌ | Correctly rejected — failed send has no `sent_at` |
+| Unexpected state | any | ❌ | Correctly rejected — conforms to state enum |
+
+**`<done>` clause (Plan 02 line 303):** The paired LiquibaseChangelogValidationTest requirement is present:
+- Positive case: `state='FAILED' AND sent_at IS NULL` accepted
+- Negative case: `state='COMMITTED' AND sent_at IS NULL` rejected
+
+**No regressions:** `PENDING` state was added to the `state IN (...)` clause; this aligns with Plan 05 line 77 which already listed `PENDING` as a valid audit state. The OR-form CHECK implicitly validates against unexpected state values more strictly than a standalone `state IN (...)` check would.
+
+---
+
+### 3. NEW-HIGH-C: Stale CAS column references → **PASS** (fully resolved)
+
+All CAS references in Plan 05 have been migrated from `chat_message.parts.updated_at` → `assistant_pending_action.parts_updated_at`:
+
+| Line | Before (cycle 2) | After (cycle 3) | Status |
+|------|------------------|-----------------|--------|
+| 67 | `"ARCH-03 — CAS on chat_message.parts.updated_at"` | `"ARCH-03 — CAS on assistant_pending_action.parts_updated_at (HIGH-4)"` | ✅ |
+| 123 | `"CAS on chat_message.parts.updated_at"` (T-07-24) | `"CAS on assistant_pending_action.parts_updated_at (HIGH-4)"` | ✅ |
+| 129 | `"CAS on chat_message.parts.updated_at fails"` (T-07-30) | `"CAS on assistant_pending_action.parts_updated_at fails (HIGH-4)"` | ✅ |
+| 185-189 | SQL: `UPDATE chat_message SET parts = jsonb_set(...), updated_at = now() WHERE id = ? AND chat_id = ? AND updated_at = ?` | SQL: `UPDATE assistant_pending_action SET state = 'PROCESSING' WHERE tool_call_id = ? AND chat_id = ? AND tenant_id = ? AND parts_updated_at = ? AND state = 'PENDING'` | ✅ |
+| 481 | stale toolCallId race: `"parts.updated_at advanced"` | `"assistant_pending_action.parts_updated_at advanced via the bump trigger"` | ✅ |
+
+**Cross-file verification:** Grep of all 6 plan files for `chat_message.updated_at` and `chat_message.parts.updated_at` returns a single hit — Plan 05 line 518 which CORRECTLY states `"CAS lives on assistant_pending_action.parts_updated_at (HIGH-4) not chat_message.updated_at"`. No stale references remain.
+
+**Threat table consistency:** T-07-24 and T-07-30 mitigation cells now reference `assistant_pending_action.parts_updated_at`. The stale-toolCallId race scenario (Task 5.4) correctly uses the bump-trigger path from Plan 02 changelog 042.
+
+---
+
+### 4. No regressions on cycle-1 HIGHs 6, 7, 3, 5 → **PASS**
+
+| Cycle-1 HIGH | Verification | Status |
+|---|---|---|
+| **HIGH-6** (read-tool execution loop) | Plan 04 line 51: `"ChatOrchestrator.stream() owns explicit read-tool execution loop (HIGH-6)"` intact. Plan 04 line 57: `ChatOrchestratorReadToolLoopIT` still documented. | ✅ No damage |
+| **HIGH-7** (assistant text persistence) | Plan 04 line 52: `"Final assistant text persisted to chat_message.parts as AssistantTextPart via TransactionTemplate callback"` intact. Plan 02 schema includes `AssistantTextPart`. | ✅ No damage |
+| **HIGH-3** (source-aware body ban) | Plan 02 lines 66-74, 124, 136, 189, 235 — trigger logic, sanitizer dispatch, draft-body carve-out all intact. Source-aware trigger regex distinguishes `tool-getMessage`/`tool-searchInbox`/`tool-getThread`/`tool-listLabels` (banned) from `tool-sendEmail`/`tool-replyEmail`/`tool-forwardEmail`/`tool-saveDraft` (allowed). | ✅ No damage |
+| **HIGH-5** (pre-send SEND_IN_FLIGHT + Sweep B) | Plan 02 lines 266-273, 277, 292 — full flow documented. Plan 05 lines 54, 196-201, 353-391 — step-by-step INSERT SEND_IN_FLIGHT → Gmail send → UPDATE COMMITTED with crash scenarios. CHECK constraint now admits `FAILED+NULL` rows. | ✅ No damage |
+
+Plan 04 (ChatOrchestrator, reconiler) and Plan 03 (tool catalog, read tools) were not touched by the cycle-3 commit—no regression path exists.
+
+---
+
+### 5. New HIGH concerns from cycle-3 scrub → **None raised**
+
+**Risks assessed:**
+
+| Risk | Assessment |
+|---|---|
+| Regex accidentally edited a non-stale paragraph | All edits in diff are surgical, targeting only the 24 lines identified per grep evidence from cycle-2 review |
+| New CHECK allows/rejects unexpected combos | Analyzed above — all 4 real state combos admitted, all contradictory combos rejected |
+| CAS rewrite misses a code path | Zero residual `chat_message.updated_at` refs in Plans 01-06 |
+| Body-slot renumbering breaks contract test | Plan 06 contract test assertion uses `toHaveLength(24)` not a hardcoded slot count per category — no renumbering dependency |
+
+**Minor residuals noted (MEDIUM, not HIGH):**
+
+1. **Plan 02:426** — `"searchMemories" is OUT of the locked 20-tool list` should read `"searchMemories" IS in the locked 24-tool list`. The comment also uses stale `20-tool list` phrasing. Low impact: executor follows Plan 03's canonical list, not a repository comment.
+2. **SPEC.md** (lines 10, 112, 174, 203) — still says `"20 tools"` with the old partition `(7+8+3+3)`. Plan 03 line 105 incorrectly claims `"SPEC.md '20 tools' wording is updated to '24 tools' downstream"` — this was never done. Stale but doesn't block execution (Plan 03 canonical list controls implementation).
+3. **CONTEXT.md** (lines 9, 25, 108) — still references `"20-tool catalog"`. Stale documentation.
+
+None of these are HIGH — they don't block execution, schema correctness, or acceptance criteria verification.
+
+---
+
+## OpenCode CYCLE_SUMMARY: current_high=0
+
+All 3 NEW HIGH concerns (NEW-HIGH-A/B/C) fully resolved per OpenCode. Counting per charter rules:
+
+- **NEW-HIGH-A**: Fully resolved within scoped plans (03/05/06) → EXCLUDED
+- **NEW-HIGH-B**: Fully resolved (CHECK constraint rewritten, positive/negative test paired) → EXCLUDED  
+- **NEW-HIGH-C**: Fully resolved (CAS rerouted to `assistant_pending_action.parts_updated_at`) → EXCLUDED
+- **HIGH-6**: Fully resolved in cycle 2, no regression → EXCLUDED
+- **HIGH-7**: Fully resolved in cycle 2, no regression → EXCLUDED
+- Residuals from cycle-1/2 (Plan 02:426, SPEC.md, CONTEXT.md): MEDIUM, not HIGH → EXCLUDED
+
+OpenCode declared loop convergence target achieved. Synthesis below adjudicates between Codex and OpenCode.
+
+---
+
+## OpenCode Current HIGH Concerns
+
+None.
+
+---
+
+## Cycle-3 Resolution Audit (Synthesis)
+
+| Concern | Codex | OpenCode | Synthesis | Evidence | Residual gap |
+|---------|-------|----------|-----------|----------|--------------|
+| NEW-HIGH-A (catalog scrub) | PARTIAL | PASS (with MEDIUM residuals) | **PARTIAL** | 20 in-scope replacements in Plans 03/05/06 verified by grep. Cycle-3 scrub missed: Plan 02:426 says `searchMemories is OUT of the locked 20-tool list` (stale + contradicts Plan 03's 24-tool list which includes `searchMemories` as read tool #8); Plan 03:169 objective says `the 7 read-only tool handlers` (should be 8). | HIGH — text-level but on load-bearing objective statements that executors read as scope boundaries. |
+| NEW-HIGH-B (CHECK constraint) | PASS | PASS | **FULLY RESOLVED** | Plan 02:282 rewritten to per-state OR form admitting PENDING+null, SEND_IN_FLIGHT+null, FAILED+null, COMMITTED+notnull; rejecting COMMITTED+null and FAILED+notnull. `<done>` clause requires paired positive (FAILED+NULL accepted) + negative (COMMITTED+NULL rejected) Liquibase integration tests. State admission matrix correct for ARCH-04 + HIGH-5. | None. |
+| NEW-HIGH-C (stale CAS column refs) | PARTIAL — column refs gone but stale-toolCallId race logic broken | PASS | **PARTIAL** | All literal `chat_message.parts.updated_at` references removed from Plan 05 (verified by grep). SQL now targets `assistant_pending_action` columns that exist per Plan 02 changelog 043. **However:** Plan 02 trigger `bump_pending_action_parts_updated_at` fires `BEFORE UPDATE ... WHEN OLD.state IS DISTINCT FROM NEW.state` — Plan 05:481 mitigation ("parts_updated_at advanced via the bump trigger when T2 was created") assumes INSERT of T2 bumps T1's timestamp. It does not. T1's row stays PENDING with its original `parts_updated_at`, so a stale-T1 confirm would CAS-match and execute. Stale-toolCallId race is therefore NOT actually mitigated by the rewritten Plan 05 SQL — Codex finding. | HIGH — load-bearing race-safety claim is unsound. |
+| HIGH-3 (source-aware body ban) | PASS | PASS | **FULLY RESOLVED** | No cycle-3 edit touched the body-ban subsystem. Plan 02 source-aware trigger + sanitizer + draft-body carve-out intact. | None. |
+| HIGH-5 (pre-send + Sweep B reconciler) | PASS | PASS | **FULLY RESOLVED** | Pre-send SEND_IN_FLIGHT pattern intact in Plan 05; Sweep B in Plan 04 unchanged; CHECK constraint now correctly admits FAILED+null rows. | None. |
+| HIGH-6 (read-tool loop) | PASS | PASS | **FULLY RESOLVED** | No regression. Plan 04 `ChatOrchestrator.stream()` loop + `ChatOrchestratorReadToolLoopIT` intact. | None. |
+| HIGH-7 (assistant text persist) | PASS | PASS | **FULLY RESOLVED** | No regression. `TransactionTemplate` onComplete callback in Plan 04 intact; `AssistantTextPart` in Plan 02 schema intact. | None. |
+
+---
+
+## Reconciliation Notes (Codex vs OpenCode disagreements)
+
+| Concern | Codex | OpenCode | Synthesis | Reason |
+|---------|-------|----------|-----------|--------|
+| Plan 02:426 stale searchMemories comment | HIGH (NEW-HIGH-A residual) | MEDIUM ("executor follows Plan 03 canonical list, not a repository comment") | **HIGH** | The comment is on the JPA repository method that wires `searchMemories` — executor agents reading this line would correctly conclude `searchMemories` is excluded and skip wiring it, defeating HIGH-1 Path A resolution. Catalog-boot validation catches the count mismatch eventually, but Plan 02 + Plan 03 must agree at scope-statement level. |
+| Plan 03:169 "7 read-only tool handlers" objective | HIGH (NEW-HIGH-A residual) | not flagged (treated as covered by Plan 05's 24-tool wiring statement) | **HIGH** | Plan 03's `<objective>` block is the scope contract for Wave 2. "7 read-only tool handlers" as the deliverable count directly contradicts the 24-tool authoritative list at line 103. Executor reading Wave 2's objective would ship 7 read tools and skip `searchMemories`. |
+| Plan 05:481 stale-toolCallId race mitigation | HIGH (CAS does not actually fail) | PASS ("correctly uses the bump-trigger path") | **HIGH** | Trigger semantics: `BEFORE UPDATE ... WHEN OLD.state IS DISTINCT FROM NEW.state` fires only on UPDATE of an existing row. INSERT of T2's pending-action row does not UPDATE T1's row, so T1's `parts_updated_at` does not advance. The race is unmitigated by the current Plan 05 SQL — needs either (a) explicit UPDATE on T1 (e.g., flip state to CANCELED) when T2 is created, or (b) CAS against a chat-level / message-level generation column, or (c) UNIQUE constraint + lookup that resolves T1 → invalid before the CAS UPDATE. |
+
+---
+
+## Recommended Cycle-4 Replan Scope (single quick pass — estimated <30 minutes of plan edits)
+
+1. **Plan 02 line 426** — rewrite `searchMemories is OUT of the locked 20-tool list per Plan 03 revision` to `searchMemories is IN the locked 24-tool list (Plan 03 read tool #8) — repository finder wires the read tool handler in Wave 2 Task 3.x`.
+2. **Plan 03 line 169** — update objective `the 7 read-only tool handlers` → `the 8 read-only tool handlers (per the 24-Tool Authoritative List: getUserRulesAndSettings, getRuleExecutionForMessage, searchInbox, getMessage, getThread, listLabels, getInboxStats, searchMemories)`. Confirm Task 3.x file count aligns.
+3. **Plan 05 Task 5.4 / line 481 stale-toolCallId race fix** — choose one of:
+   - **Option A (recommended):** When the user edits a draft and creates T2, explicitly UPDATE the existing `assistant_pending_action` row for T1 to `state = 'SUPERSEDED'` (new state) in the same transaction as inserting T2. The bump trigger then advances T1's `parts_updated_at`. A confirm-T1 request CAS-matches against the OLD `parts_updated_at` value held by the client → mismatch → 404. **Requires CHECK constraint update on `assistant_pending_action.state` to admit SUPERSEDED, and reconciler to ignore SUPERSEDED rows.**
+   - **Option B:** Re-frame the test scenario — T1 was never persisted as a pending-action row in the first place (user edited BEFORE confirming → no pending row created for T1, only T2). If the UI architecture guarantees this (i.e., pending-action rows are created only on confirm-attempt, not on tool-call emit), document the precondition in Plan 05 + Plan 06 and remove the bump-trigger reasoning from line 481.
+   - **Option C:** Replace per-row CAS with a chat-level generation column on `chat_message` (the message owning the parts envelope) — incoming `tool_call_id` carries the expected message generation; CAS against `(chat_message.id, message_generation)` instead of `(assistant_pending_action.id, parts_updated_at)`. Larger refactor; only if A and B aren't acceptable.
+4. (Optional polish — MEDIUM, not HIGH) Also scrub stale 20-tool wording from `07-SPEC.md` / `07-CONTEXT.md` / `07-AI-SPEC.md` / `07-RESEARCH.md` for documentation hygiene. Doesn't block execution but Plan 03:105 "SPEC.md '20 tools' wording is updated to '24 tools' downstream" is currently a false statement.
+
+Architecture remains sound. Wave structure unchanged. No architectural rework needed.
+
+---
+
+## CYCLE_SUMMARY: current_high=2
+
+## Current HIGH Concerns
+
+- **NEW-HIGH-A residual** (Codex cycle-3 — cycle-1 HIGH-1 + cycle-2 NEW-HIGH-A carryover) — Cycle-3 catalog scrub missed Plan 02 line 426 (`searchMemories is OUT of the locked 20-tool list`, contradicts Plan 03 §24-Tool Authoritative List) and Plan 03 line 169 (`the 7 read-only tool handlers` in Wave 2 objective, should be 8). Both are load-bearing scope statements that executor agents would read as acceptance gates.
+- **NEW-HIGH-C semantic gap** (Codex cycle-3 — new logic gap exposed by cycle-3 CAS rewrite) — Plan 05 line 481 stale-toolCallId race mitigation assumes Plan 02's `bump_pending_action_parts_updated_at` trigger advances T1's `parts_updated_at` when T2's pending-action row is INSERTED. The trigger only fires on UPDATE of an existing row (`WHEN OLD.state IS DISTINCT FROM NEW.state`), not on INSERT of a separate row. Stale-T1 confirms would CAS-match and execute — ARCH-03 race-safety acceptance not met. Needs explicit T1 invalidation (e.g., flip T1 state to SUPERSEDED when T2 is created) or a chat/message-level generation CAS.
