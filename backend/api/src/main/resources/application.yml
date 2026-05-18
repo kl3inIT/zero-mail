@@ -75,6 +75,10 @@ spring:
       observations:
         log-prompt: false
         log-completion: false
+    openai:
+      chat:
+        observations:
+          include-completion: false
 zero-mail:
   api:
     web:
@@ -128,6 +132,19 @@ zero-mail:
       allowed-extra-hosts: []
       connect-timeout: 5s
       read-timeout: 15s
+  chat:
+    heartbeat-interval-seconds: 15
+    sse-timeout-minutes: 30
+    default-model: openai/gpt-4o
+    # MEDIUM-7: token budget enforcement per AI-SPEC section 4b.
+    max-history-tokens: 24576
+    max-tool-output-tokens: 4000
+    history:
+      page-size: 50
+    # MEDIUM-8: reverse-proxy timeout doc note.
+    # NGINX site config for the /api/chat location MUST set: proxy_read_timeout 31m;
+    # The 30-minute SseEmitter timeout above plus 1 min headroom prevents nginx
+    # from severing the SSE connection mid-stream.
 server:
   port: 8080
   servlet:

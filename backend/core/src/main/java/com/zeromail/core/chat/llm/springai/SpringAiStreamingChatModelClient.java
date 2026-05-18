@@ -5,6 +5,8 @@ import com.zeromail.core.chat.domain.ChatRole;
 import com.zeromail.core.chat.domain.parts.AssistantTextPart;
 import com.zeromail.core.chat.domain.parts.Part;
 import com.zeromail.core.chat.domain.parts.TextPart;
+import com.zeromail.core.chat.domain.parts.ToolCallPart;
+import com.zeromail.core.chat.domain.parts.ToolOutputPart;
 import com.zeromail.core.chat.llm.ChatToolCallRegistry;
 import com.zeromail.core.chat.llm.TenantAwareReactorScheduler;
 import com.zeromail.core.chat.usecases.ChatLlmGateway;
@@ -17,6 +19,7 @@ import java.util.List;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
+import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.model.StreamingChatModel;
@@ -25,8 +28,12 @@ import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.stereotype.Component;
 import reactor.core.Disposable;
 import reactor.core.scheduler.Scheduler;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @Component
+@SuppressWarnings("DuplicatedCode")
 public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
 
     private static final String ASSISTANT_TEXT_PART_ID = "assistant-text";
@@ -35,6 +42,7 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
     private final TenantAwareReactorScheduler tenantAwareReactorScheduler;
     private final ToolCallbackTranslator toolCallbackTranslator;
     private final com.zeromail.core.chat.usecases.ChatToolCatalog chatToolCatalog;
+    private final ObjectMapper objectMapper = JsonMapper.builder().build();
 
     public SpringAiStreamingChatModelClient(
             SpringAiChatModelFactory chatModelFactory,
@@ -130,7 +138,44 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
         if (chatMessage.role() == ChatRole.SYSTEM) {
             return new SystemMessage(textContent(chatMessage));
         }
-        return AssistantMessage.builder().content(textContent(chatMessage)).build();
+        if (chatMessage.role() == ChatRole.TOOL) {
+            return toolResponseMessage(chatMessage);
+        }
+        return assistantMessage(chatMessage);
+    }
+
+    private AssistantMessage assistantMessage(ChatMessage chatMessage) {
+        List<AssistantMessage.ToolCall> toolCalls =
+                chatMessage.parts().parts().stream()
+                        .filter(ToolCallPart.class::isInstance)
+                        .map(ToolCallPart.class::cast)
+                        .map(
+                                toolCallPart ->
+                                        new AssistantMessage.ToolCall(
+                                                toolCallPart.toolCallId(),
+                                                "function",
+                                                toolCallPart.toolName(),
+                                                writeJson(toolCallPart.inputJson())))
+                        .toList();
+        return AssistantMessage.builder()
+                .content(textContent(chatMessage))
+                .toolCalls(toolCalls)
+                .build();
+    }
+
+    private ToolResponseMessage toolResponseMessage(ChatMessage chatMessage) {
+        List<ToolResponseMessage.ToolResponse> responses =
+                chatMessage.parts().parts().stream()
+                        .filter(ToolOutputPart.class::isInstance)
+                        .map(ToolOutputPart.class::cast)
+                        .map(
+                                toolOutputPart ->
+                                        new ToolResponseMessage.ToolResponse(
+                                                toolOutputPart.toolCallId(),
+                                                toolOutputPart.toolName(),
+                                                writeJson(toolOutputPart.outputJson())))
+                        .toList();
+        return ToolResponseMessage.builder().responses(responses).build();
     }
 
     private String textContent(ChatMessage chatMessage) {
@@ -148,6 +193,15 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
             return assistantTextPart.text();
         }
         return "";
+    }
+
+    private String writeJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JacksonException jacksonException) {
+            throw new IllegalStateException(
+                    "chat prompt tool payload could not be serialized", jacksonException);
+        }
     }
 
     private static final class TextEmissionState {
