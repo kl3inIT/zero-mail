@@ -703,6 +703,55 @@
       "link": "Đọc walkthrough",
       "title": "Ba bước để đạt inbox zero — kết nối, mô tả, xem lại."
     },
+    "pricing": {
+      "annualBadge": "Giá theo năm, dùng thử miễn phí 7 ngày",
+      "perUserPerMonth": " /người /tháng",
+      "plans": {
+        "plus": {
+          "ctaText": "Dùng thử miễn phí 7 ngày",
+          "description": "Dành cho người dùng chuyên sâu cần các tiện ích tích hợp hệ thống.",
+          "features": {
+            "f1": "2 tài khoản email /người dùng",
+            "f2": "Tích hợp Slack / Discord",
+            "f3": "Gửi bản tin tổng hợp hàng tuần",
+            "f4": "Tự động lưu trữ tệp đính kèm",
+            "f5": "Kho lưu trữ kiến thức không giới hạn"
+          },
+          "includesPrefix": "Mọi thứ trong gói Starter, cộng thêm:",
+          "name": "Plus",
+          "popularBadge": "Phổ biến",
+          "price": "$28"
+        },
+        "pro": {
+          "ctaText": "Dùng thử miễn phí 7 ngày",
+          "description": "Dành cho đội ngũ và doanh nghiệp xử lý lượng lớn email.",
+          "features": {
+            "f1": "Bảng phân tích toàn nhóm",
+            "f2": "Hỗ trợ khách hàng ưu tiên 24/7",
+            "f3": "Chuyên viên hỗ trợ cài đặt riêng"
+          },
+          "includesPrefix": "Mọi thứ trong gói Plus, cộng thêm:",
+          "name": "Professional",
+          "price": "$42"
+        },
+        "starter": {
+          "ctaText": "Dùng thử miễn phí 7 ngày",
+          "description": "Dành cho cá nhân, doanh nhân muốn lấy lại thời gian của mình.",
+          "features": {
+            "f1": "Sắp xếp và gắn nhãn mọi email",
+            "f2": "Soạn nháp theo văn phong của bạn",
+            "f3": "Chặn email quảng cáo, rác",
+            "f4": "Hủy đăng ký và lưu trữ hàng loạt",
+            "f5": "Phân tích dữ liệu email",
+            "f6": "Tóm tắt trước cuộc họp"
+          },
+          "name": "Starter",
+          "price": "$18"
+        }
+      },
+      "subtitle": "Không có phí ẩn. Hủy bất cứ lúc nào.",
+      "title": "Dùng thử miễn phí, gói trả phí hợp lý"
+    },
     "primaryCta": "Đăng nhập",
     "secondaryCta": "Xem cách hoạt động",
     "tagline": "Zero Mail phân loại Gmail của bạn theo các quy tắc bạn viết bằng ngôn ngữ tự nhiên — gắn nhãn việc quan trọng, lưu trữ thư không cần thiết, và soạn sẵn những phản hồi đơn giản. Mọi thứ gửi đi đều phải qua bạn.",

@@ -703,6 +703,55 @@
       "link": "Read the walkthrough",
       "title": "Three steps to reach inbox zero — connect, describe, review."
     },
+    "pricing": {
+      "annualBadge": "Annual pricing, 7-day free trial",
+      "perUserPerMonth": " /user /month",
+      "plans": {
+        "plus": {
+          "ctaText": "Try free for 7 days",
+          "description": "For power users who need deeper integrations with their stack.",
+          "features": {
+            "f1": "2 email accounts /user",
+            "f2": "Slack / Discord integrations",
+            "f3": "Weekly digest of your inbox",
+            "f4": "Auto-archive attachments",
+            "f5": "Unlimited knowledge store"
+          },
+          "includesPrefix": "Everything in Starter, plus:",
+          "name": "Plus",
+          "popularBadge": "Popular",
+          "price": "$28"
+        },
+        "pro": {
+          "ctaText": "Try free for 7 days",
+          "description": "For teams and businesses handling high email volume.",
+          "features": {
+            "f1": "Team-wide analytics dashboard",
+            "f2": "24/7 priority customer support",
+            "f3": "Dedicated onboarding specialist"
+          },
+          "includesPrefix": "Everything in Plus, plus:",
+          "name": "Professional",
+          "price": "$42"
+        },
+        "starter": {
+          "ctaText": "Try free for 7 days",
+          "description": "For individuals and founders who want their time back.",
+          "features": {
+            "f1": "Triage and label every email",
+            "f2": "Drafts written in your voice",
+            "f3": "Block promo emails and clutter",
+            "f4": "Bulk unsubscribe and archive",
+            "f5": "Email analytics",
+            "f6": "Pre-meeting summaries"
+          },
+          "name": "Starter",
+          "price": "$18"
+        }
+      },
+      "subtitle": "No hidden fees. Cancel anytime.",
+      "title": "Free trial, fair paid plans"
+    },
     "primaryCta": "Sign in",
     "secondaryCta": "See how it works",
     "tagline": "Zero Mail triages your Gmail with rules you write in plain English — labels what matters, archives what doesn't, drafts the easy replies. You stay in the loop on everything that goes out.",

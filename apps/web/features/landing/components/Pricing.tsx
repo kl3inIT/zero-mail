@@ -1,17 +1,57 @@
-export default function Pricing() {
+import { getTranslations } from 'next-intl/server';
+
+function CheckIcon() {
+  return (
+    <svg
+      className="mt-0.5 h-5 w-5 shrink-0 text-blue-500"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+    </svg>
+  );
+}
+
+export default async function Pricing() {
+  const t = await getTranslations('landing.pricing');
+
+  const starterFeatures = [
+    t('plans.starter.features.f1'),
+    t('plans.starter.features.f2'),
+    t('plans.starter.features.f3'),
+    t('plans.starter.features.f4'),
+    t('plans.starter.features.f5'),
+    t('plans.starter.features.f6'),
+  ];
+
+  const plusFeatures = [
+    t('plans.plus.features.f1'),
+    t('plans.plus.features.f2'),
+    t('plans.plus.features.f3'),
+    t('plans.plus.features.f4'),
+    t('plans.plus.features.f5'),
+  ];
+
+  const proFeatures = [
+    t('plans.pro.features.f1'),
+    t('plans.pro.features.f2'),
+    t('plans.pro.features.f3'),
+  ];
+
   return (
     <section className="zm-section bg-(--bg)" id="pricing">
       <div className="zm-container">
         <div className="mb-16 text-center">
           <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
-            Dùng thử miễn phí, gói trả phí hợp lý
+            {t('title')}
           </h2>
           <p className="mx-auto mb-10 max-w-2xl text-xl leading-relaxed text-(--text-muted)">
-            Không có phí ẩn. Hủy bất cứ lúc nào.
+            {t('subtitle')}
           </p>
 
           <p className="inline-flex items-center rounded-full border border-(--line-strong) bg-(--bg-elevated) px-5 py-2 text-sm font-semibold text-(--text-muted) shadow-sm">
-            Giá theo năm, dùng thử miễn phí 7 ngày
+            {t('annualBadge')}
           </p>
         </div>
 
@@ -23,118 +63,30 @@ export default function Pricing() {
                 💼
               </div>
             </div>
-            <h3 className="mb-3 text-2xl font-bold text-(--ink)">Starter</h3>
+            <h3 className="mb-3 text-2xl font-bold text-(--ink)">{t('plans.starter.name')}</h3>
             <p className="h-16 text-sm leading-relaxed text-(--text-muted)">
-              Dành cho cá nhân, doanh nhân muốn lấy lại thời gian của mình.
+              {t('plans.starter.description')}
             </p>
             <div className="mt-4 mb-8">
-              <span className="text-5xl font-extrabold tracking-tight text-(--ink)">$18</span>
-              <span className="text-sm text-(--text-muted)"> /người /tháng</span>
+              <span className="text-5xl font-extrabold tracking-tight text-(--ink)">
+                {t('plans.starter.price')}
+              </span>
+              <span className="text-sm text-(--text-muted)">{t('perUserPerMonth')}</span>
             </div>
             <a
               href="#waitlist"
               className="mb-8 flex h-12 w-full items-center justify-center rounded-xl border border-(--line-strong) text-base font-semibold text-(--ink) hover:bg-(--bg-subtle)"
             >
-              Dùng thử miễn phí 7 ngày
+              {t('plans.starter.ctaText')}
             </a>
             <div className="flex-1">
               <ul className="space-y-4 text-[15px] text-(--text-muted)">
-                <li className="flex items-start gap-3">
-                  <svg
-                    className="mt-0.5 h-5 w-5 shrink-0 text-blue-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  Sắp xếp và gắn nhãn mọi email
-                </li>
-                <li className="flex items-start gap-3">
-                  <svg
-                    className="mt-0.5 h-5 w-5 shrink-0 text-blue-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  Soạn nháp theo văn phong của bạn
-                </li>
-                <li className="flex items-start gap-3">
-                  <svg
-                    className="mt-0.5 h-5 w-5 shrink-0 text-blue-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  Chặn email quảng cáo, rác
-                </li>
-                <li className="flex items-start gap-3">
-                  <svg
-                    className="mt-0.5 h-5 w-5 shrink-0 text-blue-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  Hủy đăng ký và lưu trữ hàng loạt
-                </li>
-                <li className="flex items-start gap-3">
-                  <svg
-                    className="mt-0.5 h-5 w-5 shrink-0 text-blue-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  Phân tích dữ liệu email
-                </li>
-                <li className="flex items-start gap-3">
-                  <svg
-                    className="mt-0.5 h-5 w-5 shrink-0 text-blue-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  Tóm tắt trước cuộc họp
-                </li>
+                {starterFeatures.map((feature, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <CheckIcon />
+                    {feature}
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
@@ -148,109 +100,37 @@ export default function Pricing() {
               </div>
               <div className="flex gap-2">
                 <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">
-                  Phổ biến
+                  {t('plans.plus.popularBadge')}
                 </span>
               </div>
             </div>
-            <h3 className="mb-3 text-2xl font-bold text-(--ink)">Plus</h3>
+            <h3 className="mb-3 text-2xl font-bold text-(--ink)">{t('plans.plus.name')}</h3>
             <p className="h-16 text-sm leading-relaxed text-(--text-muted)">
-              Dành cho người dùng chuyên sâu cần các tiện ích tích hợp hệ thống.
+              {t('plans.plus.description')}
             </p>
             <div className="mt-4 mb-8">
-              <span className="text-5xl font-extrabold tracking-tight text-(--ink)">$28</span>
-              <span className="text-sm text-(--text-muted)"> /người /tháng</span>
+              <span className="text-5xl font-extrabold tracking-tight text-(--ink)">
+                {t('plans.plus.price')}
+              </span>
+              <span className="text-sm text-(--text-muted)">{t('perUserPerMonth')}</span>
             </div>
             <a
               href="#waitlist"
               className="mb-8 flex h-12 w-full items-center justify-center rounded-xl bg-[#3367D6] text-base font-semibold text-white shadow-md transition-all hover:bg-[#2851A8] hover:shadow-lg"
             >
-              Dùng thử miễn phí 7 ngày
+              {t('plans.plus.ctaText')}
             </a>
             <div className="flex-1">
               <p className="mb-4 text-sm font-semibold text-(--ink)">
-                Mọi thứ trong gói Starter, cộng thêm:
+                {t('plans.plus.includesPrefix')}
               </p>
               <ul className="space-y-4 text-[15px] text-(--text-muted)">
-                <li className="flex items-start gap-3">
-                  <svg
-                    className="mt-0.5 h-5 w-5 shrink-0 text-blue-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  2 tài khoản email /người dùng
-                </li>
-                <li className="flex items-start gap-3">
-                  <svg
-                    className="mt-0.5 h-5 w-5 shrink-0 text-blue-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  Tích hợp Slack / Discord
-                </li>
-                <li className="flex items-start gap-3">
-                  <svg
-                    className="mt-0.5 h-5 w-5 shrink-0 text-blue-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  Gửi bản tin tổng hợp hàng tuần
-                </li>
-                <li className="flex items-start gap-3">
-                  <svg
-                    className="mt-0.5 h-5 w-5 shrink-0 text-blue-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  Tự động lưu trữ tệp đính kèm
-                </li>
-                <li className="flex items-start gap-3">
-                  <svg
-                    className="mt-0.5 h-5 w-5 shrink-0 text-blue-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  Kho lưu trữ kiến thức không giới hạn
-                </li>
+                {plusFeatures.map((feature, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <CheckIcon />
+                    {feature}
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
@@ -262,73 +142,33 @@ export default function Pricing() {
                 ✨
               </div>
             </div>
-            <h3 className="mb-3 text-2xl font-bold text-(--ink)">Professional</h3>
+            <h3 className="mb-3 text-2xl font-bold text-(--ink)">{t('plans.pro.name')}</h3>
             <p className="h-16 text-sm leading-relaxed text-(--text-muted)">
-              Dành cho đội ngũ và doanh nghiệp xử lý lượng lớn email.
+              {t('plans.pro.description')}
             </p>
             <div className="mt-4 mb-8">
-              <span className="text-5xl font-extrabold tracking-tight text-(--ink)">$42</span>
-              <span className="text-sm text-(--text-muted)"> /người /tháng</span>
+              <span className="text-5xl font-extrabold tracking-tight text-(--ink)">
+                {t('plans.pro.price')}
+              </span>
+              <span className="text-sm text-(--text-muted)">{t('perUserPerMonth')}</span>
             </div>
             <a
               href="#waitlist"
               className="mb-8 flex h-12 w-full items-center justify-center rounded-xl border border-(--line-strong) text-base font-semibold text-(--ink) hover:bg-(--bg-subtle)"
             >
-              Dùng thử miễn phí 7 ngày
+              {t('plans.pro.ctaText')}
             </a>
             <div className="flex-1">
               <p className="mb-4 text-sm font-semibold text-(--ink)">
-                Mọi thứ trong gói Plus, cộng thêm:
+                {t('plans.pro.includesPrefix')}
               </p>
               <ul className="space-y-4 text-[15px] text-(--text-muted)">
-                <li className="flex items-start gap-3">
-                  <svg
-                    className="mt-0.5 h-5 w-5 shrink-0 text-blue-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  Bảng phân tích toàn nhóm
-                </li>
-                <li className="flex items-start gap-3">
-                  <svg
-                    className="mt-0.5 h-5 w-5 shrink-0 text-blue-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  Hỗ trợ khách hàng ưu tiên 24/7
-                </li>
-                <li className="flex items-start gap-3">
-                  <svg
-                    className="mt-0.5 h-5 w-5 shrink-0 text-blue-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  Chuyên viên hỗ trợ cài đặt riêng
-                </li>
+                {proFeatures.map((feature, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <CheckIcon />
+                    {feature}
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
