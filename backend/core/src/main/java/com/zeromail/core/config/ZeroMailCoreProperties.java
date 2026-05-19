@@ -21,14 +21,35 @@ public record ZeroMailCoreProperties(
         @Valid @NotNull CryptoProperties crypto,
         @Valid GmailProperties gmail,
         @Valid @NotNull BillingProperties billing,
-        @Valid LlmProperties llm) {
+        @Valid LlmProperties llm,
+        @Valid AdminProperties admin) {
 
     public ZeroMailCoreProperties {
         gmail = gmail == null ? GmailProperties.defaults() : gmail;
         llm = llm == null ? LlmProperties.defaults() : llm;
+        admin = admin == null ? AdminProperties.defaults() : admin;
     }
 
     public record CryptoProperties(@NotBlank String refreshTokenKeyBase64) {}
+
+    public record AdminProperties(List<String> bootstrapEmails, @Valid AdminAuditProperties audit) {
+
+        static AdminProperties defaults() {
+            return new AdminProperties(List.of(), null);
+        }
+
+        public AdminProperties {
+            bootstrapEmails = bootstrapEmails == null ? List.of() : List.copyOf(bootstrapEmails);
+            audit = audit == null ? AdminAuditProperties.defaults() : audit;
+        }
+    }
+
+    public record AdminAuditProperties(String hmacKekBase64) {
+
+        static AdminAuditProperties defaults() {
+            return new AdminAuditProperties("");
+        }
+    }
 
     public record GmailProperties(
             @DefaultValue("https://gmail.googleapis.com/") @NotBlank String apiRootUrl,
@@ -173,6 +194,7 @@ public record ZeroMailCoreProperties(
                 + gmail
                 + ", billing="
                 + billing
-                + ", llm=****]";
+                + ", llm=****"
+                + ", admin=****]";
     }
 }

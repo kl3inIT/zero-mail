@@ -9,7 +9,9 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchRule;
 import com.zeromail.core.admin.auth.AdminContext;
 import com.zeromail.core.admin.auth.AdminUser;
+import com.zeromail.core.admin.auth.domain.AdminStatus;
 import com.zeromail.core.tenant.TenantContext;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -21,11 +23,13 @@ class AdminContextMutexTest {
                 new AdminUser(
                         UUID.fromString("00000000-0000-4000-8000-000000000801"),
                         "admin@example.com",
-                        "Admin User");
+                        AdminStatus.ACTIVE,
+                        Optional.of("Admin User"));
 
         assertThatIllegalStateException()
                 .isThrownBy(() -> AdminContext.run(adminUser, TenantContext::currentOrThrow))
-                .withMessageContaining("TenantContext");
+                .withMessageContaining("mutex")
+                .withMessageContaining("admin scope");
     }
 
     @Test

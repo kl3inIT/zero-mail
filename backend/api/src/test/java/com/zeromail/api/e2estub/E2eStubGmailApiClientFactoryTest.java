@@ -59,6 +59,7 @@ class E2eStubGmailApiClientFactoryTest {
                         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="),
                 null,
                 null,
+                null,
                 null);
     }
 }
