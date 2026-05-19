@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.context.ApplicationEventPublisher;
+import org.mockito.ArgumentCaptor;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -48,8 +48,6 @@ class AssistantSendExecutorVipIT {
     private final SenderEmailCanonicalizer senderEmailCanonicalizer =
             mock(SenderEmailCanonicalizer.class);
     private final TransactionTemplate transactionTemplate = mock(TransactionTemplate.class);
-    private final ApplicationEventPublisher applicationEventPublisher =
-            mock(ApplicationEventPublisher.class);
 
     private AssistantSendExecutor assistantSendExecutor;
 
@@ -90,7 +88,6 @@ class AssistantSendExecutorVipIT {
                         senderSafetyNetService,
                         senderEmailCanonicalizer,
                         transactionTemplate,
-                        applicationEventPublisher,
                         new ObjectMapper());
     }
 
@@ -129,6 +126,68 @@ class AssistantSendExecutorVipIT {
         verify(confirmationStateMachine).recordSendInFlight(any(SendInFlightCommand.class));
         verify(confirmationStateMachine)
                 .commitSendCompleted(eq(auditId), any(SendCommitCommand.class));
+    }
+
+    /**
+     * CR-01 regression: multi-recipient sends must include every recipient in the audit
+     * fingerprint. Earlier code used findFirst() and recorded only the lexicographically
+     * smallest canonical recipient. A send to a VIP plus a filler could be hidden by listing
+     * the filler first. We compute the hash on the joined sorted canonical list, and a single
+     * recipient produces a different hash than the same recipient mixed with other addresses.
+     */
+    @Test
+    void recipient_hash_covers_all_to_cc_and_bcc_recipients() throws Exception {
+        UUID tenantId = UUID.randomUUID();
+        UUID auditId = UUID.randomUUID();
+        when(confirmationStateMachine.recordSendInFlight(any(SendInFlightCommand.class)))
+                .thenReturn(auditId);
+        configureGmail(tenantId);
+
+        ArgumentCaptor<SendInFlightCommand> sendInFlightCaptor =
+                ArgumentCaptor.forClass(SendInFlightCommand.class);
+
+        AssistantSendCommand singleRecipientCommand =
+                new AssistantSendCommand(
+                        tenantId,
+                        UUID.randomUUID(),
+                        "tool-send-single",
+                        ChatToolName.SEND_EMAIL,
+                        "filler@acme.test",
+                        null,
+                        null,
+                        "Board note",
+                        Sensitive.of("body"),
+                        null,
+                        null,
+                        null,
+                        true,
+                        Map.of("state", "preview"));
+        withTenant(tenantId, () -> assistantSendExecutor.execute(singleRecipientCommand));
+
+        AssistantSendCommand multiRecipientCommand =
+                new AssistantSendCommand(
+                        tenantId,
+                        UUID.randomUUID(),
+                        "tool-send-multi",
+                        ChatToolName.SEND_EMAIL,
+                        "filler@acme.test, ceo@acme.test",
+                        "watcher@acme.test",
+                        "audit@acme.test",
+                        "Board note",
+                        Sensitive.of("body"),
+                        null,
+                        null,
+                        null,
+                        true,
+                        Map.of("state", "preview"));
+        withTenant(tenantId, () -> assistantSendExecutor.execute(multiRecipientCommand));
+
+        verify(confirmationStateMachine, org.mockito.Mockito.times(2))
+                .recordSendInFlight(sendInFlightCaptor.capture());
+        java.util.List<SendInFlightCommand> capturedSends = sendInFlightCaptor.getAllValues();
+        String singleHash = capturedSends.get(0).recipientHash();
+        String multiHash = capturedSends.get(1).recipientHash();
+        assertThat(singleHash).isNotEqualTo(multiHash);
     }
 
     private Gmail configureGmail(UUID tenantId) throws Exception {

@@ -5,7 +5,6 @@ import com.zeromail.core.chat.confirm.ConfirmationLeaseService;
 import com.zeromail.core.chat.confirm.ConfirmationStateMachine;
 import com.zeromail.core.chat.confirm.ConfirmationStateMachine.SendCommitCommand;
 import com.zeromail.core.chat.confirm.ConfirmationStateMachine.SendInFlightCommand;
-import com.zeromail.core.chat.domain.event.AssistantSendCompleted;
 import com.zeromail.core.chat.exception.GmailSendFailedException;
 import com.zeromail.core.chat.exception.VipAcknowledgmentMissingException;
 import com.zeromail.core.gmail.exception.InvalidGrantException;
@@ -18,13 +17,12 @@ import jakarta.mail.internet.InternetAddress;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.Instant;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import org.springframework.context.ApplicationEventPublisher;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.core.JacksonException;
@@ -41,7 +39,6 @@ public class AssistantSendExecutor {
     private final SenderSafetyNetService senderSafetyNetService;
     private final SenderEmailCanonicalizer senderEmailCanonicalizer;
     private final TransactionTemplate transactionTemplate;
-    private final ApplicationEventPublisher applicationEventPublisher;
     private final ObjectMapper objectMapper;
 
     public AssistantSendExecutor(
@@ -52,7 +49,6 @@ public class AssistantSendExecutor {
             SenderSafetyNetService senderSafetyNetService,
             SenderEmailCanonicalizer senderEmailCanonicalizer,
             TransactionTemplate transactionTemplate,
-            ApplicationEventPublisher applicationEventPublisher,
             ObjectMapper objectMapper) {
         this.gmailApiClientFactory = gmailApiClientFactory;
         this.gmailMessageBuilder = gmailMessageBuilder;
@@ -61,7 +57,6 @@ public class AssistantSendExecutor {
         this.senderSafetyNetService = senderSafetyNetService;
         this.senderEmailCanonicalizer = senderEmailCanonicalizer;
         this.transactionTemplate = transactionTemplate;
-        this.applicationEventPublisher = applicationEventPublisher;
         this.objectMapper = objectMapper;
     }
 
@@ -119,6 +114,10 @@ public class AssistantSendExecutor {
             if (sendResult != null && hasText(sendResult.getThreadId())) {
                 resultSummary.put("gmail_thread_id", sendResult.getThreadId());
             }
+            // commitSendCompleted runs the audit transition AND publishes
+            // AssistantSendCompleted inside the same @Transactional method. Idempotent: if the
+            // row was already moved to COMMITTED by the reconciliation cron, it returns false
+            // without throwing and without re-publishing the event (CR-02 / WR-10).
             transactionTemplate.executeWithoutResult(
                     _ ->
                             confirmationStateMachine.commitSendCompleted(
@@ -128,14 +127,6 @@ public class AssistantSendExecutor {
                                             command.chatId(),
                                             command.toolCallId(),
                                             writeJson(resultSummary))));
-            Instant sentAt = Instant.now();
-            applicationEventPublisher.publishEvent(
-                    new AssistantSendCompleted(
-                            command.tenantId().toString(),
-                            command.chatId(),
-                            command.toolCallId(),
-                            auditId,
-                            sentAt));
             return new AssistantSendResult("CONFIRMED", auditId, resultSummary);
         } finally {
             confirmationLeaseService.release(command.chatId(), command.toolCallId());
@@ -177,12 +168,20 @@ public class AssistantSendExecutor {
     }
 
     private String recipientHash(AssistantSendCommand command) {
-        return recipients(command).stream()
-                .map(senderEmailCanonicalizer::canonicalize)
-                .sorted()
-                .map(senderEmailCanonicalizer::redisCacheKeyComponent)
-                .findFirst()
-                .orElseGet(() -> hexSha256("missing-recipient"));
+        // Hash the joined canonicalized recipient list so the audit fingerprint covers ALL
+        // recipients (to + cc + bcc), not just the lexicographically smallest one (CR-01).
+        // The previous findFirst() implementation let a multi-recipient send to a VIP + filler
+        // record only the filler's hash, defeating the safety-net audit contract.
+        java.util.List<String> canonicalRecipients =
+                recipients(command).stream()
+                        .map(senderEmailCanonicalizer::canonicalize)
+                        .sorted()
+                        .collect(Collectors.toUnmodifiableList());
+        if (canonicalRecipients.isEmpty()) {
+            return hexSha256("missing-recipient");
+        }
+        String joinedCanonicalRecipients = String.join(",", canonicalRecipients);
+        return hexSha256(joinedCanonicalRecipients);
     }
 
     private static String subjectHash(String subject) {

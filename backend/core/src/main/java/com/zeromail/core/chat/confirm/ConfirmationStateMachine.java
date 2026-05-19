@@ -2,6 +2,7 @@ package com.zeromail.core.chat.confirm;
 
 import com.zeromail.core.chat.domain.ChatToolName;
 import com.zeromail.core.chat.domain.ToolCategory;
+import com.zeromail.core.chat.domain.event.AssistantSendCompleted;
 import com.zeromail.core.chat.domain.parts.ChatMessageParts;
 import com.zeromail.core.chat.domain.parts.Part;
 import com.zeromail.core.chat.domain.parts.ToolCallPart;
@@ -16,6 +17,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,24 +31,33 @@ public class ConfirmationStateMachine {
     private final JdbcTemplate jdbcTemplate;
     private final ChatPartsJsonConverter chatPartsJsonConverter;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher applicationEventPublisher;
     private final Clock clock;
 
     @Autowired
     public ConfirmationStateMachine(
             JdbcTemplate jdbcTemplate,
             ChatPartsJsonConverter chatPartsJsonConverter,
-            ObjectMapper objectMapper) {
-        this(jdbcTemplate, chatPartsJsonConverter, objectMapper, Clock.systemUTC());
+            ObjectMapper objectMapper,
+            ApplicationEventPublisher applicationEventPublisher) {
+        this(
+                jdbcTemplate,
+                chatPartsJsonConverter,
+                objectMapper,
+                applicationEventPublisher,
+                Clock.systemUTC());
     }
 
     ConfirmationStateMachine(
             JdbcTemplate jdbcTemplate,
             ChatPartsJsonConverter chatPartsJsonConverter,
             ObjectMapper objectMapper,
+            ApplicationEventPublisher applicationEventPublisher,
             Clock clock) {
         this.jdbcTemplate = jdbcTemplate;
         this.chatPartsJsonConverter = chatPartsJsonConverter;
         this.objectMapper = objectMapper;
+        this.applicationEventPublisher = applicationEventPublisher;
         this.clock = clock;
     }
 
@@ -180,7 +191,7 @@ public class ConfirmationStateMachine {
     }
 
     @Transactional
-    public void commitSendCompleted(UUID auditId, SendCommitCommand command) {
+    public boolean commitSendCompleted(UUID auditId, SendCommitCommand command) {
         Instant now = clock.instant();
         int changedRows =
                 jdbcTemplate.update(
@@ -200,10 +211,47 @@ public class ConfirmationStateMachine {
                         auditId,
                         command.tenantId());
         if (changedRows != 1) {
-            throw new IllegalStateException("send audit row was not in flight");
+            // Idempotent: the reconciliation cron (or a retry) may have already moved this audit
+            // row to COMMITTED. Confirm the row is in a terminal COMMITTED state and return false
+            // so the caller does not double-publish the AssistantSendCompleted event. If the row
+            // is genuinely missing or in an unexpected state, fail loud.
+            String currentState =
+                    jdbcTemplate
+                            .query(
+                                    """
+                                    SELECT state
+                                      FROM assistant_action_audit
+                                     WHERE id = ?
+                                       AND tenant_id = ?
+                                    """,
+                                    (resultSet, _) -> resultSet.getString("state"),
+                                    auditId,
+                                    command.tenantId())
+                            .stream()
+                            .findFirst()
+                            .orElse(null);
+            if ("COMMITTED".equals(currentState)) {
+                return false;
+            }
+            throw new IllegalStateException(
+                    "send audit row was not in flight (current state="
+                            + currentState
+                            + ")");
         }
         updatePendingActionState(
                 command.tenantId(), command.chatId(), command.toolCallId(), "CONFIRMED");
+        // Publish the domain event inside this transaction. Spring's
+        // @TransactionalEventListener(AFTER_COMMIT) listeners require an active tx at publish
+        // time; publishing here guarantees the event fires only on real DB commit, and not at
+        // all if the UPDATE rolls back (CR-02 / WR-10).
+        applicationEventPublisher.publishEvent(
+                new AssistantSendCompleted(
+                        command.tenantId().toString(),
+                        command.chatId(),
+                        command.toolCallId(),
+                        auditId,
+                        now));
+        return true;
     }
 
     @Transactional
