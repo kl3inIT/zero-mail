@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Email assistant chat + Settings page
-status: "Phase 7 shipped — PR #43"
+status: Awaiting next milestone
 stopped_at: Completed 07-06-PLAN.md
-last_updated: "2026-05-19T03:23:59.529Z"
-last_activity: 2026-05-19
+last_updated: "2026-05-19T04:49:13.004Z"
+last_activity: 2026-05-19 — Milestone v1.1 completed and archived
 progress:
   total_phases: 2
   completed_phases: 1
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 
 ## Current Position
 
-Phase: 8
-Plan: Not started
-Status: Phase 7 shipped — PR #43
-Last activity: 2026-05-19
+Phase: Milestone v1.1 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-05-19 — Milestone v1.1 completed and archived
 
 ## Current Milestone Roadmap
 
@@ -432,6 +432,49 @@ Items acknowledged and deferred at v1.0 milestone close on 2026-05-15.
 **UAT gaps (5):** Inside phase VERIFICATION/UAT files — moved with phase dirs. Notable: 05C live Resend deliverability acknowledged for ship 2026-05-14.
 
 **Verification gaps (2):** 01.4 + 02A status `human_needed` (manual gates: live OAuth UX, live Pub/Sub, native VI copy, visual sweep) — moved with phase dirs. All automated tests PASS.
+
+---
+
+Items acknowledged and deferred at v1.1 milestone close on 2026-05-19.
+
+**Summary:** v1.1 ships Phase 7 only; Phase 8 deferred entirely to v1.2. 22 open artifacts at close = 7 v1.1-period quick tasks (archived alongside Phase 7) + 3 todos (carried forward, unchanged from v1.0 close) + 12 seeds (carried forward; **SEED-011 admin-support-and-compliance-console activates as v1.2 Phase 1**).
+
+### v1.1 — Carried forward to v1.2
+
+**Unchecked v1.1 requirements (19):** All four SET-* groups move to v1.2 candidates.
+
+| Group | Slugs | Notes |
+|-------|-------|-------|
+| SET-AI | SET-AI-01..04 | Per-feature picker, BYOK key, default-vs-BYOK toggle, test-connection — depends on v1.2 admin-curated catalog |
+| SET-VOICE | SET-VOICE-01..06 | Writing style, personal instructions, signature, knowledge base, tone preset, output language |
+| SET-BEHV | SET-BEHV-01..05 | Auto-draft master, confidence threshold, daily digest, sensitive-data protection, shadow-mode |
+| SET-SAFE | SET-SAFE-01..04 | Safety-net CRUD, paste-import, per-entry mode, VIP-blocked audit badge |
+
+**v1.2 hardening + GA discipline (deferred from Phase 8):**
+
+- Hostile-corpus `aiEval` suite (15 hostile emails + 10 hostile personal_instructions + VIP send refusal + VI/EN fidelity)
+- Grafana dashboards: lease residuals, audit-vs-state mismatch, ordering violations, leak counters, BUDGET_EXHAUSTED rate
+- CASA evidence refresh for chat surface
+- README/CONTRIBUTING send-call-site discipline doc
+- LAUNCH-GO-NOGO checklist + v1.2 GA tag
+
+**v1.2 sequencing decision:** Phase 1 = Admin console foundation (auth/role, /admin route, RBAC, catalog persistence, master key mgmt). Subsequent phases build Settings UI on top of admin-curated catalog, plus visual refresh aligned with PR #40 brand palette (teal → purple).
+
+### v1.1-period quick tasks (7 — archived alongside Phase 7)
+
+| Slug | Description |
+|------|-------------|
+| 260515-qru-implement-inbox-zero-inspired-rules-triage-ux | Pre-Phase 7 rules/triage UX work |
+| 260517-analytics-chart-layout | Analytics chart layout polish |
+| 260517-analytics-explanation-layout | Analytics explanation copy/layout |
+| 260517-analytics-legibility-polish | Analytics legibility pass |
+| 260517-dzk-improve-analytics-dashboard-visual-hiera | Analytics visual hierarchy |
+| 260517-global-zero-glyph | Global Zero glyph brand asset |
+| 260517-metadata-only-analytics | Metadata-only analytics path |
+| 260517-shadcn-analytics-polish | shadcn analytics polish |
+| 260518-wai-replace-manual-frontend-chat-api-dtos-wi | Replace manual frontend chat API DTOs with codegen (deferred mid-Phase-7) |
+
+(Note: 9 directories on disk; SDK audit shows 7 with no SUMMARY.md — all carried forward, none archived as completed.)
 
 ## Session Continuity
 

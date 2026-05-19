@@ -6,29 +6,32 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 ## Current State
 
-**Shipped:** v1.0 MVP — `v1.0.0-rc1` tagged 2026-05-15.
+**Shipped:**
+- v1.0 MVP — `v1.0.0-rc1` tagged 2026-05-15.
+- v1.1 Email assistant chat — `v1.1` tagged 2026-05-19 (Phase 7 only; Phase 8 deferred to v1.2).
 
-- **Backend:** ~17 phases, Java 25 + Spring Boot 4.0.6 + Spring Modulith + Hibernate 7 + Liquibase 5 + Spring AI 2.0.0-M6.
-- **Frontend:** Next.js 16.2.4 + React 19.2.5 + Tailwind 4 + shadcn/ui + TanStack Query + typed OpenAPI client; Vietnamese-default with English secondary.
+- **Backend:** ~18 phases (v1.0 + Phase 7), Java 25 + Spring Boot 4.0.6 + Spring Modulith + Hibernate 7 + Liquibase 5 + Spring AI 2.0.0-M6.
+- **Frontend:** Next.js 16.2.4 + React 19.2.5 + Tailwind 4 + shadcn/ui + TanStack Query + typed OpenAPI client; Vietnamese-default with English secondary. Brand palette shifted teal `#0E5E5A` → purple `#867AEB` in PR #40 (2026-05-19) — user-page visual refresh queued for v1.2.
 - **Infra:** Single VPS — Postgres 17 + Redis 7 + reverse proxy + api + worker + web on one host. No GCP / Kafka / vector DB.
-- **Trust posture:** Auto-send architecturally blocked (ArchUnit + safety policy + repo-wide grep enforced); no long-term storage of raw email bodies, email-content LLM prompts/completions, or embeddings (rule-builder assistant chat excluded — see Privacy scope); per-tenant Scoped Values + multi-tenant leak test green; @Sensitive Logback scrub end-to-end verified.
-- **Launch state:** OAuth Testing mode (production CASA verification deferred to dormant SEED-012); 50-tenant load test 4/4 invariants PASS; LAUNCH-GO-NOGO signed.
+- **Trust posture:** Auto-send architecturally blocked (ArchUnit + safety policy + repo-wide grep enforced; v1.1 Phase 7 flipped Gmail send call sites 0 → exactly 1 via `AssistantSendExecutor`); no long-term storage of raw email bodies, email-content LLM prompts/completions, or embeddings (rule-builder assistant chat excluded — see Privacy scope); per-tenant Scoped Values + multi-tenant leak test green; @Sensitive Logback scrub end-to-end verified; chat_message body-ban enforced 3-layer (sanitizer + ArchUnit + Postgres trigger).
+- **Launch state:** OAuth Testing mode (production CASA verification deferred to dormant SEED-012). v1.1 chat surface ships **without** hostile-corpus eval gate (deferred to v1.2 hardening); v1.0 LAUNCH-GO-NOGO still applies; v1.1 GA tag annotated with deferred-eval caveat.
 
-## Current Milestone: v1.1 — Email assistant chat + Settings page
+## Next Milestone: v1.2 — Admin console + Settings + Visual refresh + GA discipline
 
-**Goal:** Ship Inbox Zero-style email assistant chat + assistant Settings UI that lets users configure AI behavior, personalization, and sender safety — keeping v1.0 trust posture intact (user-confirmed send only, no auto-send, privacy carve-outs locked in CLAUDE.md/PROJECT.md).
+**Goal:** Build admin console as foundation, then ship Settings UI on top of admin-curated catalog. Bundle user-page visual refresh aligned with PR #40 palette, plus deferred Phase 8 hardening + hostile-corpus eval + GA discipline. Tag v1.2 GA on successful hardening sweep.
 
-**Target features:**
+**Planned scope (formalize via `/gsd-new-milestone`):**
 
-- **Chat-based email assistant** — ~19 tools port từ Inbox Zero pattern (rule CRUD, inbox read, label, memory, capabilities, user-confirmed `sendEmail`/`replyEmail`/`forwardEmail` với required confirmation, `updatePersonalInstructions`). Backend Spring AI 2.0.0-M6 SSE (emit Vercel Data Stream Protocol). Frontend `@ai-sdk/react` + `ai-elements` components. New route `/chat`. ArchUnit carve-out cho exactly 1 send call site, audit log table cho mỗi confirmed send, UI preview card với edit/send/cancel.
-- **AI + Personalization Settings page** — provider/model UI cho 4 providers hiện có (OpenAI, Anthropic, Google GenAI, DeepSeek) với per-feature model picker (chat/triage/draft); AI personalization (writing style, personal instructions, email signature, knowledge base, tone preset, AI output language VI/EN); behavior toggles (auto draft replies, draft confidence, follow-up reminders, daily digest, sensitive data protection); sender safety net VIP management UI (expose existing TRG-07..08).
+1. **Admin console foundation** — auth/role + `/admin/*` route + RBAC + catalog persistence + admin UI to curate provider/model catalog + admin master key management. Activates **SEED-011** (admin-support-and-compliance-console) and **OPS-02** (deferred from v1.1).
+2. **Visual refresh of user pages** — audit Phase 7 chat UI, Settings, Triage, Rules, Analytics; align with PR #40 brand palette (teal → purple); fix hardcoded color/visual hierarchy regressions.
+3. **Settings page (full)** — 4 tabs (Personalization, Behavior, Safety Net, AI Provider/Model) via shadcn `<Tabs>` query-param-driven; carries forward 19 v1.1 reqs (SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04, SET-AI-01..04). AI tab depends on admin-curated catalog from #1.
+4. **Hardening + GA discipline** — hostile-corpus `aiEval` suite (15 hostile emails + 10 hostile personal_instructions + VIP send refusal + VI/EN fidelity); Grafana dashboards (lease residuals, audit-vs-state mismatch, ordering violations, leak counters, BUDGET_EXHAUSTED rate); CASA evidence refresh for chat surface; README/CONTRIBUTING send-call-site discipline doc; LAUNCH-GO-NOGO checklist; **v1.2 GA tag**.
 
-**Seeds in scope:**
+**Seeds activating in v1.2:**
 
-- `SEED-001` Track A — V1.1 privacy-preserving assistant umbrella
-- `SEED-003` — screen-aware AI assistant + command center
+- `SEED-011` — admin-support-and-compliance-console (promoted to v1.2 Phase 1)
 
-**Deferred to v1.2:** provider expansion (Bedrock/Azure/Groq/Perplexity/native OpenRouter/OpenAI-compatible/Vertex), waitlist OAuth provisioning, learned patterns, multi-rule selection, browser extension sync, admin/support console (SEED-011), CASA verification (SEED-012).
+**Still deferred to v1.3+:** provider expansion (Bedrock/Azure/Groq/Perplexity/native OpenRouter/OpenAI-compatible/Vertex), waitlist OAuth provisioning, learned patterns, multi-rule selection, browser extension sync, image attachments in chat, CASA production verification (SEED-012).
 
 ## Core Value
 
