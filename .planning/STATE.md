@@ -3,8 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin Console Foundation + Settings UI
 status: planning
-last_updated: "2026-05-19T05:56:29.220Z"
-last_activity: 2026-05-19
+stopped_at: Phase 8 UI-SPEC approved
+last_updated: "2026-05-19T14:22:49.928Z"
+last_activity: 2026-05-19 — Phase 8 admin auth pivoted to WebAuthn passkey + separate apps/admin Vite frontend during discuss-phase; 42 reqs locked; CONTEXT.md committed `d00bdb77`
 progress:
   total_phases: 2
   completed_phases: 0
@@ -477,9 +478,9 @@ Items acknowledged and deferred at v1.1 milestone close on 2026-05-19.
 
 ## Session Continuity
 
-Last session: 2026-05-18T16:06:27.210Z
-Stopped at: Completed 07-06-PLAN.md
-Resume file: None
+Last session: 2026-05-19T14:22:49.912Z
+Stopped at: Phase 8 UI-SPEC approved
+Resume file: .planning/phases/08-admin-console-operator-tooling/08-UI-SPEC.md
 
 ## Operator Next Steps
 
