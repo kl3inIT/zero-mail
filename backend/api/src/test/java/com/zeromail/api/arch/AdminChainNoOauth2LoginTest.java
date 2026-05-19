@@ -17,10 +17,7 @@ class AdminChainNoOauth2LoginTest {
     @Test
     void admin_security_chain_does_not_enable_oauth2_login() throws IOException {
         String source = Files.readString(SECURITY_CONFIG);
-        String adminChainBody = optionalMethodBody(source, "adminChain");
-        if (adminChainBody.isBlank()) {
-            return;
-        }
+        String adminChainBody = methodBody(source, "adminChain");
 
         assertThat(adminChainBody).doesNotContain(".oauth2Login");
         assertThat(adminChainBody).contains(".webAuthn");
