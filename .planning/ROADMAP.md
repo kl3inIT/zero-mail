@@ -66,7 +66,7 @@ Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
 Plans:
 **Wave 1**
 
-- [ ] 8A-PLAN.md — Foundation: docker-compose + runbook; SecurityFilterChain admin/user split; admin_users + WebAuthn ceremonies; append-only audit (HMAC chain + trigger); AdminContext mutex; GroupedOpenApi split; AdminAudit + RoleGrants controllers; apps/admin Vite SPA scaffold + login/enroll/dashboard/audit/role-grants routes (ADMIN-01..10, ARCH-08/09/10/12, OPS-INFRA-01..03)
+- [x] 8A-PLAN.md — Foundation: docker-compose + runbook; SecurityFilterChain admin/user split; admin_users + WebAuthn ceremonies; append-only audit (HMAC chain + trigger); AdminContext mutex; GroupedOpenApi split; AdminAudit + RoleGrants controllers; apps/admin Vite SPA scaffold + login/enroll/dashboard/audit/role-grants routes (ADMIN-01..10, ARCH-08/09/10/12, OPS-INFRA-01..03)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
