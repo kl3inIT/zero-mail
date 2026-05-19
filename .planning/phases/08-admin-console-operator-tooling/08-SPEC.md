@@ -1,22 +1,26 @@
 # Phase 8: Admin Console & Operator Tooling — Specification
 
 **Created:** 2026-05-19
-**Ambiguity score:** 0.16 (gate: ≤ 0.20)
-**Requirements:** 40 locked
+**Last amended:** 2026-05-19 (WebAuthn admin auth pivot during discuss-phase)
+**Ambiguity score:** 0.14 (gate: ≤ 0.20)
+**Requirements:** 42 locked
 **Merge note:** Consolidates original v1.2 Phase 8 (foundation, 15 reqs) and original Phase 9 (operator surface, 25 reqs) into a single phase per user directive during spec-phase 2026-05-19. Former Phase 10 renumbered → Phase 9.
+**Pivot note:** During /gsd:discuss-phase 8 on 2026-05-19, admin auth shape was re-locked from "Google OAuth bundled + `users.role` column + `GrantedAuthoritiesMapper`" to "WebAuthn passkey + separate `admin_users` table + separate `apps/admin` Vite+React frontend on `admin.zeromail.com`". Driver: best-practice research (2026 industry standard = passkeys; HTTP Basic deprecated; Google-OAuth-only admin couples admin compromise surface to user IdP). ADMIN-01/02/03/06 + ARCH-08 rewritten; ADMIN-09 + ADMIN-10 added.
 
 ## Goal
 
-An operator (admin user) can deploy v1.2 infrastructure, sign in via the existing bundled Google OAuth flow, reach a `/admin/*` console gated by `ROLE_ADMIN` with full append-only audit, configure all 6 LLM providers with master keys, curate the per-feature model catalog via 3-step Sync-from-`/models`, and inspect tenant health / worker queue / platform LLM spend — with zero tenant-content leakage (no email body, no chat content, no prompts/completions) and zero master-key byte leakage (no `sk-` / `sk-ant-` / `AIza` / `sk-or-` sentinel ever in logs, response bodies, audit rows, exceptions, or YAML).
+An operator (admin user) can deploy v1.2 infrastructure, sign in to `admin.zeromail.com` using a hardware-bound WebAuthn passkey (no Google OAuth, no password), reach a `/admin/*` console gated at the SecurityFilterChain level with full append-only audit, configure all 6 LLM providers with master keys, curate the per-feature model catalog via 3-step Sync-from-`/models`, and inspect tenant health / worker queue / platform LLM spend — with zero tenant-content leakage (no email body, no chat content, no prompts/completions) and zero master-key byte leakage (no `sk-` / `sk-ant-` / `AIza` / `sk-or-` sentinel ever in logs, response bodies, audit rows, exceptions, or YAML). User-facing app (`zeromail.com`) carries zero RBAC concept and zero admin schema types in its bundle — admin shape is fully decoupled at frontend, auth, and identity-store layers from user shape.
 
 ## Background
 
 **What exists today (v1.1 baseline):**
 
 - Spring Boot 4.0.6 + Spring Security 7.0.5 + Spring Session Redis + bundled Google OAuth (Phase 01.5 — `GoogleAuthorizationRequestResolver` finalized the one-leg login + Gmail consent flow).
-- `users` table without a `role` column; no ROLE-based authority elevation in `GoogleOAuthSuccessHandler`.
+- Single `SecurityFilterChain` bean (`@Order(3)`) in `backend/api` matches `/api/**` with OAuth2 login + `TenantBindingFilter`.
+- `users` table without a `role` column; **no admin identity store of any kind today** — admin elevation does not exist in v1.1.
+- Spring Security 7 ships `.webAuthn(...)` DSL natively (Spring Security 6.4+ feature, present in 7.0.5) — **no new dependency** required to add passkey auth.
 - `controllers/` package has no `admin/` sub-package; no `/api/admin/**` routes.
-- `apps/web/app/` has `(app)` route group only — no `(admin)` sibling group, no admin schema TypeScript client.
+- `apps/web/app/` has `(auth)`, `(public)`, `(protected)/(app)`, `(protected)/onboarding` route groups for users — no admin frontend exists today; `apps/admin` does not exist as a sibling Next.js or Vite app.
 - AES-GCM `RefreshTokenCipher` exists for OAuth refresh-token encryption; no `llm_provider_master_key` table; no `ProviderMasterKeyResolver`; LLM model selection is hardcoded per feature.
 - No catalog tables (`provider_catalog`, `model_catalog`, `feature_binding`); model IDs live in YAML config.
 - VPS reverse proxy is hand-managed nginx; no NPM container; no 9Router sidecar in `docker-compose.yml`.
@@ -61,22 +65,22 @@ An operator (admin user) can deploy v1.2 infrastructure, sign in via the existin
 
 ### Admin Auth & RBAC (ADMIN-01..03)
 
-4. **Bundled OAuth admin login**: Admin elevates via the same Google OAuth flow as regular users.
-   - Current: `GoogleOAuthSuccessHandler` does not read `users.role`; no admin authority concept
-   - Target: `users.role` column (VARCHAR, default `USER`, values `USER` | `ADMIN`); `ROLE_ADMIN` appended to `OAuth2User.getAuthorities()` via a Spring Security `GrantedAuthoritiesMapper` bean reading `users.role`; no separate IdP, no separate OAuth client, no JWT
-   - Acceptance: admin user logs in via `/login` (same Google OAuth) → session cookie carries `ROLE_ADMIN` → backend returns admin authorities on `GET /api/me`; non-admin user logging in does NOT carry `ROLE_ADMIN`
+4. **WebAuthn passkey admin login on `admin.zeromail.com`**: Admin authenticates via hardware-bound WebAuthn passkey, completely decoupled from user-facing Google OAuth flow.
+   - Current: No admin authentication exists; user-facing app uses Google OAuth bundled flow; `users` table has no `role` column
+   - Target: Admin auth implemented via Spring Security 7 `.webAuthn(...)` DSL configured in a dedicated `@Order(1) SecurityFilterChain` bean in `backend/api/SecurityConfig` with `securityMatcher("/api/admin/**")`. Relying Party config: `rpName="Zero Mail Admin"`, `rpId="admin.zeromail.com"`, `allowedOrigins("https://admin.zeromail.com")`. WebAuthn endpoints (`POST /webauthn/register/options`, `POST /webauthn/register`, `POST /login/webauthn/options`, `POST /login/webauthn`) ship via the DSL. Credential storage: `admin_users` table holds `user_handle`, `credential_id`, `public_key_cose`, `signature_counter`, `aaguid`, `attestation_format`, `created_at`. No password column. No Google OAuth integration on this chain. User-facing chain (`@Order(2)`, no `securityMatcher`) remains exactly as v1.1.
+   - Acceptance: Admin opens `admin.zeromail.com` → calls `POST /login/webauthn/options` → browser invokes `navigator.credentials.get(...)` → user verifies on hardware (Touch ID / Windows Hello / YubiKey) → `POST /login/webauthn` succeeds → session cookie issued (Spring Session Redis) → subsequent `/api/admin/*` calls authenticated with `ROLE_ADMIN` authority sourced from `admin_users` row. User logging into `zeromail.com` via Google OAuth never carries `ROLE_ADMIN`. `users` table has no `role` column added by this phase. The Google OAuth chain is never invoked for `/api/admin/**` requests.
    - REQ-ID: ADMIN-01
 
-5. **Two-layer RBAC enforcement**: Admin routes protected at URL filter + method level, CI-verifiable.
-   - Current: No `/admin/*` routes exist
-   - Target: (a) `SecurityConfig` has `requestMatchers("/api/admin/**").hasRole("ADMIN")`; (b) every `@RestController` in `controllers/admin/` carries explicit `@PreAuthorize("hasRole('ADMIN')")` (no meta-annotation — rule-of-three not yet met); (c) ArchUnit rule `every_admin_controller_must_have_preauthorize` enforces (b) in CI
-   - Acceptance: non-admin GET `/api/admin/audit/events` returns HTTP 403 (frontend redirects to `/`); admin GET returns 200; deleting `@PreAuthorize` from any admin controller fails ArchUnit test in CI
+5. **Chain-level + method-level RBAC enforcement**: Admin routes protected by a separate `SecurityFilterChain` (chain isolation) + `@PreAuthorize` per controller (defense in depth) + ArchUnit gate.
+   - Current: No `/admin/*` routes exist; only one `SecurityFilterChain` covers `/api/**`
+   - Target: (a) `@Order(1) adminChain` bean uses `securityMatcher("/api/admin/**")` + `.authorizeHttpRequests(a -> a.anyRequest().hasRole("ADMIN"))` + `.webAuthn(...)` — request-level isolation guarantees Google OAuth filters never run on admin paths and admin authority never produced on user paths; (b) every `@RestController` in `controllers/admin/` carries explicit `@PreAuthorize("hasRole('ADMIN')")` (no meta-annotation — rule-of-three not yet met); (c) ArchUnit rule `every_admin_controller_must_have_preauthorize` enforces (b) in CI; (d) ArchUnit rule `admin_chain_does_not_use_oauth2login` enforces that `adminChain` bean does not configure `.oauth2Login(...)` and `userChain` does not configure `.webAuthn(...)`.
+   - Acceptance: HTTP request to `/api/admin/audit/events` without admin WebAuthn session returns 401 (chain-level); admin with valid session returns 200; deleting `@PreAuthorize` from any admin controller fails ArchUnit test; integration test confirming Google OAuth code path never runs on `/api/admin/**` request green; integration test confirming WebAuthn code path never runs on `/api/inbox` request green.
    - REQ-ID: ADMIN-02
 
-6. **First-admin bootstrap via env-var**: First `ROLE_ADMIN` granted via `ZEROMAIL_BOOTSTRAP_ADMIN_EMAIL` env-var with idempotent guard.
-   - Current: No bootstrap mechanism
-   - Target: On OAuth success, if `users.role` is `USER` and email matches `ZEROMAIL_BOOTSTRAP_ADMIN_EMAIL`, atomically promote to `ADMIN` and write `admin_audit_event` row (action=`BOOTSTRAP_GRANT_ADMIN`, actor=`SYSTEM`); idempotent — re-promotion is no-op; subsequent admin grants via `POST /api/admin/grant-admin` (admin-only, audited)
-   - Acceptance: with env-var unset, no automatic promotion; with env-var set and matching email logging in, single audit row written; second login of same admin produces no new audit row; `POST /api/admin/grant-admin` writes audit row and elevates target user (after target re-login)
+6. **First-admin bootstrap via Liquibase seed + startup enrollment ceremony**: First admin row created via Liquibase changelog reading `zeromail.admin.bootstrap-emails` config; enrollment URL printed to STDOUT on startup; admin completes passkey ceremony to activate.
+   - Current: No bootstrap mechanism, no `admin_users` table
+   - Target: (a) `application.yml` defines `zeromail.admin.bootstrap-emails: [<list-of-operator-emails>]`; (b) Spring Boot `CommandLineRunner` on startup: for each email in config, if no `admin_users` row exists, insert one with `status='PENDING_ENROLLMENT'`, `credential_id=NULL`; (c) for each `PENDING_ENROLLMENT` row, generate a 32-byte hex one-time enrollment token (held in-memory, 10-min TTL, never persisted to disk or log file); (d) print the enrollment URL `https://admin.zeromail.com/enroll?token=<hex>` to STDOUT exactly once per startup (operator captures from terminal, never from log files); (e) admin visits URL → enters their email → server verifies token matches in-memory entry + email matches PENDING row → triggers WebAuthn registration ceremony via `.webAuthn(...)` DSL → ceremony succeeds → row updated `status='ACTIVE'`, `credential_id`, `public_key_cose`, `aaguid` populated → token consumed (one-time); (f) subsequent admin grants via `POST /api/admin/grant-admin {email}` (admin-only, audited): creates `admin_users` row PENDING_ENROLLMENT + returns a fresh 10-min enrollment URL in the response body — admin communicates URL out-of-band (Signal/paper/encrypted email) to target.
+   - Acceptance: with `zeromail.admin.bootstrap-emails` unset, no admin_users row exists on startup; with one email configured, exactly one PENDING_ENROLLMENT row created; enrollment URL printed to STDOUT (verified by capturing process output, not by tailing `application.log`); URL accessed after 10 min returns HTTP 410 Gone; valid URL completes ceremony → row status = ACTIVE; second startup with same config produces no new row and no new URL; `POST /api/admin/grant-admin` writes audit row and returns one-time URL; second access to that URL returns 410.
    - REQ-ID: ADMIN-03
 
 ### Audit Infrastructure (ADMIN-04..05)
@@ -95,10 +99,10 @@ An operator (admin user) can deploy v1.2 infrastructure, sign in via the existin
 
 ### Admin Frontend (ADMIN-06..08)
 
-9. **(admin) Next.js sibling route group with own typed client**: Admin UI lives in `(admin)` sibling of `(app)` with persistent ADMIN MODE chrome and its own OpenAPI-generated TypeScript client.
-   - Current: `apps/web/app/(app)/` only; no admin route group; single `schema.d.ts` for public API
-   - Target: `apps/web/app/(admin)/layout.tsx` with server-side `ROLE_ADMIN` gate (redirect to `/` if not admin); persistent red/yellow "ADMIN MODE" banner in chrome; `apps/web/scripts/generate-api.ts` loops over two spec URLs producing `schema.d.ts` (public) + `admin-schema.d.ts` (admin); `admin-client.ts` wraps `openapi-fetch` with the admin schema; admin pages import from `admin-client` only
-   - Acceptance: non-admin navigating to `/admin/audit` is redirected server-side to `/` (no admin DOM ever rendered); admin navigating sees ADMIN MODE chrome; `apps/web` public bundle inspected via Next.js bundle analyzer contains zero references to `admin-schema.d.ts` types; `springdoc-openapi` exposes `/v3/api-docs/public` (excludes `/api/admin/**`) and `/v3/api-docs/admin`
+9. **Separate `apps/admin` Vite + React frontend on `admin.zeromail.com`**: Admin UI is a separate single-page app, decoupled from `apps/web` Next.js bundle, served at a dedicated subdomain via NPM proxy.
+   - Current: `apps/web/app/(...)/` route groups for users only; no `apps/admin` exists; single `schema.d.ts` for public API
+   - Target: (a) NEW `apps/admin` workspace (pnpm + Turborepo) containing a Vite + React 19 SPA — **no Next.js, no SSR, no SEO**. Stack: Vite 7+, React 19, Tailwind 4, shadcn/ui (copy-paste primitives — same primitives reused from `apps/web/components/ui` via shared copy or workspace re-export), TanStack Query 5, openapi-fetch 0.17, `@simplewebauthn/browser` for WebAuthn ceremony client-side. (b) Entry routes: `/enroll` (passkey registration after token verification), `/login` (passkey assertion), `/` (post-login dashboard), `/audit`, `/role-grants`, `/master-keys/<provider>`, `/catalog/<provider>`, `/tenants`, `/tenants/<tenantId>`, `/queue`, `/spend`. (c) Persistent "ADMIN MODE — actions affect tenants" banner top of every authenticated page (defense for the "alt-tab between admin tabs" failure mode within admin app itself; DNS handles user-vs-admin cognitive cue). (d) `apps/admin/scripts/generate-api.ts` codegens `admin-schema.d.ts` from `https://api.zeromail.com/v3/api-docs/admin`; `admin-client.ts` wraps `openapi-fetch` with admin schema. (e) `apps/web` (Next.js) emits zero changes for ADMIN-06 — public bundle remains free of any admin schema types or admin routes. (f) NPM proxy routes `admin.zeromail.com` → `apps/admin` static build dir; `zeromail.com` → `apps/web`; both proxy `/api/*` to same `backend/api` JVM. (g) Optional IP allowlist for `admin.zeromail.com` configurable per OPS-INFRA-03 runbook (not mandatory v1.2 but documented).
+   - Acceptance: `apps/admin` builds standalone with `pnpm --filter @zeromail/admin build`; build artifact size <500KB gzipped (no SSR runtime, no Next.js framework code); `apps/web` Next.js bundle inspected via `next build` analyzer contains zero references to `admin-schema.d.ts` types or `apps/admin` source; `springdoc-openapi` exposes `/v3/api-docs/public` (excludes `/api/admin/**`) and `/v3/api-docs/admin`; NPM proxy serves both subdomains with separate Let's Encrypt certs; navigating `admin.zeromail.com` without session redirects to `/login` (passkey assertion form); navigating `zeromail.com/admin` returns 404 (no admin route exists in `apps/web`).
    - REQ-ID: ADMIN-06
 
 10. **Audit log viewer with filter + CSV export**: Admin can browse paginated `admin_audit_event` log with filters and export.
@@ -113,12 +117,24 @@ An operator (admin user) can deploy v1.2 infrastructure, sign in via the existin
     - Acceptance: clicking destructive action without reason or with <8-char reason rejected client-side and server-side; reason containing forbidden prefix rejected with HTTP 400; successful action writes reason to audit row
     - REQ-ID: ADMIN-08
 
+11a. **`admin_users` table schema + Liquibase changelog**: WebAuthn credential storage table.
+    - Current: No `admin_users` table exists
+    - Target: Liquibase changelog creates `admin_users` with columns: `id UUID PRIMARY KEY`, `email VARCHAR(320) UNIQUE NOT NULL`, `display_name VARCHAR(200)`, `user_handle BYTEA NOT NULL UNIQUE` (random 64-byte handle for WebAuthn user identification), `status VARCHAR(20) NOT NULL CHECK (status IN ('PENDING_ENROLLMENT', 'ACTIVE', 'REVOKED'))`, `credential_id BYTEA UNIQUE`, `public_key_cose BYTEA`, `signature_counter BIGINT DEFAULT 0`, `aaguid UUID`, `attestation_format VARCHAR(50)`, `last_used_at TIMESTAMPTZ`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`, `revoked_at TIMESTAMPTZ`, `revoked_reason VARCHAR(500)`. App DB user has INSERT + SELECT + UPDATE (for `last_used_at`, `signature_counter`, `status` transitions) on `admin_users`. DELETE forbidden — revoke via `status='REVOKED'` only (audit trail preservation).
+    - Acceptance: schema deploys; `status` CHECK constraint rejects invalid values; UNIQUE constraints on `email`, `user_handle`, `credential_id` enforced; row revocation via UPDATE status works, DELETE returns Postgres permission error.
+    - REQ-ID: ADMIN-09
+
+11b. **WebAuthn enrollment + assertion ceremonies wired to Spring Security `.webAuthn(...)` DSL**: First-time passkey registration + subsequent login flows are fully implemented end-to-end.
+    - Current: No WebAuthn ceremony endpoints exist
+    - Target: (a) Spring Security 7 `.webAuthn(...)` DSL configured on `@Order(1) adminChain` produces the 4 stock endpoints (`POST /webauthn/register/options`, `POST /webauthn/register`, `POST /login/webauthn/options`, `POST /login/webauthn`). (b) Custom `EnrollmentTokenGate` filter intercepts `/enroll` access: validates the one-time token + matches a PENDING_ENROLLMENT row + opens a short-lived enrollment session (5-min server-side state, never written to logs/DB) → user proceeds to `/webauthn/register/options` → completes ceremony → row transitions to ACTIVE. (c) `AdminUserDetailsService` resolves `Authentication` from `admin_users` row, exposing `ROLE_ADMIN` authority. (d) `WebAuthnRelyingPartyOperations` bean configured with `rpId="admin.zeromail.com"` + `origins=["https://admin.zeromail.com"]` + `userVerificationRequirement=REQUIRED` (mandates biometric/PIN, blocks silent passkeys). (e) Counter-replay defense: assertions where reported `signCount <= admin_users.signature_counter` are rejected and audited as `WEBAUTHN_REPLAY_SUSPECTED`. (f) Lost-passkey recovery: out of scope v1.2 — operator with shell access manually inserts a fresh PENDING_ENROLLMENT row for the affected email and runs through the bootstrap ceremony again; documented in OPS-INFRA-03 runbook.
+    - Acceptance: enrollment ceremony with valid token + valid platform authenticator → row ACTIVE, credential_id stored, public_key_cose stored; ceremony with expired token (>10 min) returns HTTP 410; ceremony with replayed token returns 410 (one-time consumption); login assertion with valid passkey → session issued, `signature_counter` incremented; assertion with downgraded sign count rejected + audit row `WEBAUTHN_REPLAY_SUSPECTED` written; assertion against revoked row (status=REVOKED) returns 401; `userVerificationRequirement=REQUIRED` enforced (test with `userVerified=false` flag rejected).
+    - REQ-ID: ADMIN-10
+
 ### Architectural Invariants (ARCH-08..12)
 
-12. **`AdminContext` ScopedValue mutually exclusive with `TenantContext`**: Admin scope clears tenant binding and vice versa.
+12. **`AdminContext` ScopedValue mutually exclusive with `TenantContext`**: Admin scope clears tenant binding and vice versa (codepath-level defense in depth on top of SecurityFilterChain isolation).
     - Current: Only `TenantContext` ScopedValue exists
-    - Target: `AdminContext` ScopedValue is a sibling of `TenantContext`; entering admin scope (`AdminContext.run(admin, () -> ...)`) makes `TenantContext.currentOrThrow()` throw; entering tenant scope makes `AdminContext.currentOrThrow()` throw; cross-tenant admin reads route through `AdminTenantAccess.readOnly(tenantId, supplier)` which writes one `admin_read_event` row before invoking the supplier inside a `TenantContext.run` block; ArchUnit rule forbids admin packages from reading `TenantContext` directly
-    - Acceptance: unit test confirms mutex; ArchUnit `AdminContextMutexTest` green; `AdminTenantAccess.readOnly` writes audit row before invoking supplier; admin code attempting to inject `TenantContext`-aware repo fails ArchUnit
+    - Target: `AdminContext` ScopedValue is a sibling of `TenantContext`; entering admin scope (`AdminContext.run(admin, () -> ...)`) makes `TenantContext.currentOrThrow()` throw; entering tenant scope makes `AdminContext.currentOrThrow()` throw; admin auth filter (in `@Order(1) adminChain`) binds `AdminContext` on successful WebAuthn assertion and never binds `TenantContext`; user `TenantBindingFilter` (in `@Order(2) userChain`) binds `TenantContext` and never binds `AdminContext`. Cross-tenant admin reads route through `AdminTenantAccess.readOnly(tenantId, supplier)` which writes one `admin_read_event` row before invoking the supplier inside a `TenantContext.run` block (after asserting `AdminContext.isBound()` is true). ArchUnit rule forbids admin packages from reading `TenantContext` directly.
+    - Acceptance: unit test confirms mutex (binding both throws); ArchUnit `AdminContextMutexTest` green; integration test: WebAuthn-authenticated request reaches admin controller with `AdminContext` bound + `TenantContext` unbound; Google-OAuth-authenticated request reaches user controller with `TenantContext` bound + `AdminContext` unbound; `AdminTenantAccess.readOnly` writes audit row before invoking supplier; admin code attempting to inject `TenantContext`-aware repo fails ArchUnit.
     - REQ-ID: ARCH-08
 
 13. **`AdminPathBodyBanTest` ArchUnit**: Admin packages cannot reference email-content / chat-content / prompt-content field accessors.
@@ -303,24 +319,29 @@ An operator (admin user) can deploy v1.2 infrastructure, sign in via the existin
 
 **In scope:**
 
-- VPS deployment artifacts: 9Router sidecar service + NPM proxy service in `docker-compose.yml`, `docs/ops/v1.2-deploy.md` runbook
-- Backend: `users.role` column, `GrantedAuthoritiesMapper` bean, `AdminContext` ScopedValue, `AdminTenantAccess.readOnly`, `admin_audit_event` + `admin_read_event` tables with append-only trigger + HMAC chain, env-var bootstrap, `POST /api/admin/grant-admin` audited endpoint
+- VPS deployment artifacts: 9Router sidecar service + NPM proxy service in `docker-compose.yml`, NPM subdomain routing for `admin.zeromail.com` + separate Let's Encrypt cert, `docs/ops/v1.2-deploy.md` runbook
+- Backend: `admin_users` table (WebAuthn credentials), `@Order(1) adminChain` SecurityFilterChain with Spring Security 7 `.webAuthn(...)` DSL on `admin.zeromail.com`, `AdminUserDetailsService`, `EnrollmentTokenGate` filter, `AdminContext` ScopedValue, `AdminTenantAccess.readOnly`, `admin_audit_event` + `admin_read_event` tables with append-only trigger + HMAC chain, Liquibase seed + startup-runner enrollment ceremony, `POST /api/admin/grant-admin` audited endpoint returning one-time enrollment URL
 - Backend: `llm_provider_master_key` table + `ProviderMasterKeyResolver` + 6-provider set/test/rotate REST endpoints with edit-session token + rate limit
 - Backend: `provider_catalog` + `model_catalog` + `feature_binding` tables + 3-step Sync flow + `CuratedCatalogQueryService` + `GET /api/settings/catalog`
 - Backend: tenant list + 5-tab detail read-only endpoints + pause/disconnect/delete write endpoints + `AdminResponseBodyBanFilter`
 - Backend: `/admin/queue` + `/admin/spend` read-only aggregate endpoints
 - Backend: ArchUnit rules — `AdminContextMutexTest`, `AdminPathBodyBanTest`, admin send-method ban (extends ARCH-10), admin master-key resolver confinement, `every_admin_controller_must_have_preauthorize`, admin spend prompt-accessor ban
 - Backend: `MasterKeySentinelLeakTest` CI gate
-- Frontend: `(admin)` sibling Next.js route group with `layout.tsx` server-side gate + ADMIN MODE chrome
-- Frontend: `admin-schema.d.ts` + `admin-client.ts` typed client generated from `springdoc-openapi` GroupedOpenApi admin spec
-- Frontend: admin pages — Login (existing OAuth), Audit Log viewer with filter + CSV export, Role Grants, Master Keys per-provider, Catalog browser + Sync flow per provider, Tenant List + 5-tab Detail, Queue Health, Spend Dashboard
-- Liquibase: 6 new YAML changelogs (`users.role` column, `admin_audit_event`, `admin_read_event`, `llm_provider_master_key`, `provider_catalog` + `model_catalog` + `feature_binding`, Anthropic catalog seed)
+- Frontend: NEW `apps/admin` Vite + React 19 SPA (separate from `apps/web` Next.js) served at `admin.zeromail.com` with ADMIN MODE banner chrome
+- Frontend: `admin-schema.d.ts` + `admin-client.ts` typed client generated from `springdoc-openapi` GroupedOpenApi admin spec; lives inside `apps/admin/src/lib/api/` only
+- Frontend: `@simplewebauthn/browser` for WebAuthn ceremony client-side
+- Frontend: admin pages — `/enroll` (passkey registration), `/login` (passkey assertion), Audit Log viewer with filter + CSV export, Role Grants (with one-time enrollment URL response), Master Keys per-provider, Catalog browser + Sync flow per provider, Tenant List + 5-tab Detail, Queue Health, Spend Dashboard
+- Liquibase: 7 new YAML changelogs (`admin_users`, `admin_audit_event`, `admin_read_event`, `llm_provider_master_key`, `provider_catalog` + `model_catalog` + `feature_binding`, Anthropic catalog seed) — NO `users.role` column changelog
 - Spring Modulith: new `core.admin` top-level module (sibling of `core.chat`, `core.llm`)
 - HTML prototype: `08-PROTOTYPE.html` covering Audit / Role Grants / Master Keys / Catalog / Tenants / Queue / Spend screens
 
 **Out of scope:**
 
 - **Live VPS migration from hand-managed nginx → NPM and 9Router sidecar boot on production VPS** — Phase 8 ships compose definitions + runbook; live cutover is a deploy step tracked separately (not a phase merge gate). Reason: VPS cutover needs a downtime window and is operationally distinct from code merge.
+- **Google OAuth for admin login** — explicitly NOT used; admin chain uses WebAuthn passkey exclusively. Reason: decouple admin compromise surface from Google IdP availability/incident; 2026 best practice for high-privilege auth.
+- **HTTP Basic Auth, password+TOTP, or any password-based admin auth** — locked NO. Reason: OWASP ASVS deprecates HTTP Basic for admin; WebAuthn covers all requirements without password handling code.
+- **`users.role` column or any RBAC concept on the user-facing side** — admin authority lives entirely in `admin_users` table + admin SecurityFilterChain; user codepath retains only `authenticated` concept.
+- **Self-service "I lost my passkey" recovery UI** — operator with shell access manually inserts a fresh PENDING_ENROLLMENT row via Liquibase or psql; documented in OPS-INFRA-03. Reason: lost-passkey UI invites social-engineering attack vector; out-of-band recovery is safer for v1.2 scale.
 - **Admin impersonation of a user (act-as-tenant)** — locked NO at architectural level (ARCH-08); tenant authority cannot be borrowed by admin.
 - **Auto-send / auto-forward triggered by admin action** — locked NO (auto-send ban from v1.0 ARCH).
 - **Free-form model-ID override in admin catalog** — only entries via Sync diff confirm or manual entry through admin form (validated against regex + JSON Schema).
@@ -332,7 +353,8 @@ An operator (admin user) can deploy v1.2 infrastructure, sign in via the existin
 - **Per-rule model override UI** — out of scope (model selection is per-feature `chat/triage/draft`, not per-rule).
 - **Cron-based master-key rotation** — manual rotation only (90-day reminder tag is informational).
 - **`AdminController` meta-annotation** — explicit `@PreAuthorize` per class per Decision 1.5 (rule-of-three not yet met).
-- **Two-cookie session split** — single-cookie + `AdminContext` ScopedValue + ArchUnit per Decision 1.
+- **Shared SecurityFilterChain for admin + user paths** — chain split locked per Decision 1.7 (post-pivot); admin and user chains never overlap.
+- **`(admin)` route group inside `apps/web` Next.js** — replaced by separate `apps/admin` Vite + React app on `admin.zeromail.com` per ADMIN-06 (post-pivot).
 - **Admin SQL console** — direct DB query access banned.
 - **Admin "reveal master key once" workflow** — masked-only forever post-save.
 - **Worker stop/start admin UI** — read-only queue inspection + dead-letter re-queue only.
@@ -353,13 +375,17 @@ An operator (admin user) can deploy v1.2 infrastructure, sign in via the existin
 - Privacy: no long-term storage of email content / LLM prompts/completions; rule-builder chat is DB-persistable (already shipped). Admin path doubles down — `AdminPathBodyBanTest` ArchUnit + `AdminResponseBodyBanFilter` failsafe.
 - ArchUnit + repo-wide grep gates enforced in CI; deprecation warnings from Boot 4 / Jackson 3 / Spring Security 7 must be addressed (no deprecated usage shipping).
 
-**Phase-specific locks:**
+**Phase-specific locks (post-pivot 2026-05-19):**
 
-- Single-cookie + `AdminContext` ScopedValue (not two-cookie).
-- Explicit `@PreAuthorize("hasRole('ADMIN')")` per admin controller (no meta-annotation until rule-of-three).
-- `GrantedAuthoritiesMapper` bean for `ROLE_ADMIN` elevation from `users.role` (not `OAuth2UserService` override, not `AuthenticationSuccessHandler` rewrite, not `GoogleAuthorizationRequestResolver` modification).
-- Env-var `ZEROMAIL_BOOTSTRAP_ADMIN_EMAIL` for first admin (not Liquibase data seed).
+- Admin auth = Spring Security 7 `.webAuthn(...)` DSL (WebAuthn passkey, hardware-bound, `userVerificationRequirement=REQUIRED`) on `admin.zeromail.com`; NOT Google OAuth, NOT HTTP Basic, NOT password.
+- Admin identity store = NEW `admin_users` table (separate from `users`); `users` table gains NO `role` column; no `GrantedAuthoritiesMapper` ROLE_ADMIN merge needed.
+- 2 separate `SecurityFilterChain` beans: `@Order(1) adminChain` with `securityMatcher("/api/admin/**")` + WebAuthn; `@Order(2) userChain` (no `securityMatcher`) keeps Google OAuth current. Chains never share auth method.
+- Explicit `@PreAuthorize("hasRole('ADMIN')")` per admin controller (defense in depth on top of chain-level enforcement; no meta-annotation until rule-of-three).
+- First-admin bootstrap = Liquibase seed `admin_users` row + Spring Boot startup runner reading `zeromail.admin.bootstrap-emails` config + one-time 10-min enrollment URL printed to STDOUT (never to log file or DB).
 - `admin_audit_event` indefinite retention; `admin_read_event` 30-day retention.
+- Frontend admin = NEW `apps/admin` Vite + React 19 SPA on `admin.zeromail.com`; NOT a route group inside `apps/web` Next.js. Public `apps/web` bundle stays free of admin schema types and admin route code.
+- NPM proxy serves both subdomains (`zeromail.com` → apps/web, `admin.zeromail.com` → apps/admin) with separate Let's Encrypt certs; both proxy `/api/*` and `/webauthn/*` and `/login/*` to same `backend/api` JVM port.
+- Optional IP allowlist for `admin.zeromail.com` documented in OPS-INFRA-03 runbook (not mandatory v1.2 — solo operator accessibility trade-off).
 - Tenant chat-session inspection limited to metadata (count, last activity, model selection); detail viewing deferred to v1.3+.
 - Anthropic catalog: Liquibase seed for initial Claude family; manual admin entry for new models; Sync button disabled.
 - Master-key test-connection uses `GET /v1/models` (or per-provider equivalent), never a send method.
@@ -369,9 +395,11 @@ An operator (admin user) can deploy v1.2 infrastructure, sign in via the existin
 
 **Research mandate:**
 
-- Plan-phase MUST pull Spring Security 7 docs via Context7 (`/spring-projects/spring-security`) before any RBAC code: method security, OAuth2 OIDC userinfo, `GrantedAuthoritiesMapper`, `AuthorizationManager`, meta-annotation composition, `SecurityFilterChain` ordering. Boot 4 + Security 7 has multiple breaking API surfaces vs. Security 5.x/6.x training data.
+- Plan-phase MUST pull Spring Security 7 docs via Context7 (`/spring-projects/spring-security` or `/websites/spring_io_spring-security_reference_7_0`) before any auth code: **`.webAuthn(...)` DSL (RP config, `PublicKeyCredentialUserEntityRepository`, `UserCredentialRepository`, `WebAuthnRelyingPartyOperations`, signature-counter replay defense, attestation policies)**, multiple `SecurityFilterChain` with `securityMatcher`, method security, `AuthorizationManager`. Boot 4 + Security 7 has multiple breaking API surfaces vs. Security 5.x/6.x training data. WebAuthn DSL is a Spring Security 6.4+ feature — training data may not cover it.
 - Plan-phase MUST pull Spring AI M6 docs for `StreamingChatModel` selection / `ChatModel` cache eviction across tenants on master-key rotation.
-- Plan-phase MUST pull `springdoc-openapi` 3.0.3 docs for `GroupedOpenApi` split.
+- Plan-phase MUST pull `springdoc-openapi` 3.0.3 docs for `GroupedOpenApi` split (admin spec separate from public spec).
+- Plan-phase MUST pull `@simplewebauthn/browser` docs for client-side ceremony invocation (`startRegistration`, `startAuthentication`).
+- Plan-phase MUST consult [Spring Security 7 Passkey Reference Docs](https://docs.spring.io/spring-security/reference/7.0/servlet/authentication/passkeys.html) for endpoint shapes, request/response payloads, and CSRF requirements on WebAuthn endpoints.
 
 **Planning structure (inside this phase):**
 
@@ -383,14 +411,16 @@ An operator (admin user) can deploy v1.2 infrastructure, sign in via the existin
 ## Acceptance Criteria
 
 - [ ] OPS-INFRA: docker-compose validates (`docker compose config`), 9Router sidecar service definition present, NPM service definition present, `docs/ops/v1.2-deploy.md` covers all 4 sections (migration / 9Router first-run / rollback / backup)
-- [ ] ADMIN-01: Admin user logs in via bundled OAuth and `GET /api/me` returns `ROLE_ADMIN` authority; non-admin login does NOT include `ROLE_ADMIN`
-- [ ] ADMIN-02: Non-admin GET `/api/admin/audit/events` returns HTTP 403; admin GET returns 200; ArchUnit `every_admin_controller_must_have_preauthorize` green
-- [ ] ADMIN-03: With `ZEROMAIL_BOOTSTRAP_ADMIN_EMAIL` set, first matching login auto-promotes + writes one audit row; idempotent on re-login; `POST /api/admin/grant-admin` works admin-only
+- [ ] ADMIN-01: Admin logs in at `admin.zeromail.com/login` via WebAuthn passkey ceremony → session cookie issued, `GET /api/admin/me` returns `ROLE_ADMIN` authority sourced from `admin_users`; Google-OAuth-authenticated user logging at `zeromail.com` does NOT carry `ROLE_ADMIN`; `users` table has no `role` column
+- [ ] ADMIN-02: Request to `/api/admin/audit/events` without WebAuthn session returns 401 at chain level; admin with valid session returns 200; deleting `@PreAuthorize` from any admin controller fails ArchUnit; ArchUnit `admin_chain_does_not_use_oauth2login` green; integration test confirms Google OAuth filters never run on admin path and vice versa
+- [ ] ADMIN-03: With `zeromail.admin.bootstrap-emails` set, startup creates exactly one PENDING_ENROLLMENT row per configured email + prints one-time enrollment URL to STDOUT (not to `application.log`); URL accessed after 10 min returns HTTP 410; valid URL completes WebAuthn registration ceremony → row status ACTIVE + credential_id populated; second startup produces no new row; `POST /api/admin/grant-admin` writes audit row + returns one-time URL
 - [ ] ADMIN-04: Every admin state mutation writes one `admin_audit_event` row in the same transaction with populated `hmac_chain_hash`
 - [ ] ADMIN-05: Opening tenant detail writes one `admin_read_event` row; 30-day retention enforced by nightly job
-- [ ] ADMIN-06: Non-admin redirected server-side from `/admin/audit` to `/`; public Next.js bundle contains zero admin schema types; `springdoc-openapi` exposes both `public` and `admin` API docs URLs
+- [ ] ADMIN-06: `apps/admin` builds with `pnpm --filter @zeromail/admin build`, artifact <500KB gzipped; `apps/web` Next.js bundle analyzer shows zero admin schema type references; `admin.zeromail.com/login` serves SPA login screen; `zeromail.com/admin` returns 404 (no admin code in Next.js); `springdoc-openapi` exposes `/v3/api-docs/public` + `/v3/api-docs/admin` separately
 - [ ] ADMIN-07: Audit viewer paginates + filters by actor/action/target/date; CSV export streams up to 10k rows
 - [ ] ADMIN-08: Destructive actions require confirm-twice + min-8-char reason; reason recorded in audit row; forbidden prefix rejected
+- [ ] ADMIN-09: `admin_users` Liquibase schema deploys with all columns + CHECK + UNIQUE; DELETE attempt on the table returns Postgres permission error; UPDATE for `status`/`last_used_at`/`signature_counter` allowed
+- [ ] ADMIN-10: WebAuthn enrollment ceremony succeeds with valid one-time token → row ACTIVE + credential stored; expired token returns 410; replayed token returns 410; WebAuthn assertion with downgraded `signCount` rejected + `WEBAUTHN_REPLAY_SUSPECTED` audit row written; assertion against REVOKED row returns 401; `userVerificationRequirement=REQUIRED` enforced (assertion with `userVerified=false` rejected)
 - [ ] ARCH-08: `AdminContextMutexTest` green; `AdminTenantAccess.readOnly` writes `admin_read_event` before invoking supplier
 - [ ] ARCH-09: `AdminPathBodyBanTest` green on production code; fires on test fixture
 - [ ] ARCH-10: Repo grep for Gmail send returns exactly 1 hit; admin packages cannot reference send methods (ArchUnit)
@@ -426,11 +456,11 @@ An operator (admin user) can deploy v1.2 infrastructure, sign in via the existin
 
 | Dimension          | Score | Min  | Status | Notes                                              |
 |--------------------|-------|------|--------|----------------------------------------------------|
-| Goal Clarity       | 0.85  | 0.75 | ✓      | 12 success criteria, 40 REQ-IDs                    |
-| Boundary Clarity   | 0.85  | 0.70 | ✓      | Explicit in/out scope; merge cleanly absorbed      |
-| Constraint Clarity | 0.80  | 0.65 | ✓      | 8 planning-time decisions locked + research mandate |
-| Acceptance Criteria| 0.85  | 0.70 | ✓      | 41 pass/fail criteria                              |
-| **Ambiguity**      | 0.16  | ≤0.20| ✓      |                                                    |
+| Goal Clarity       | 0.88  | 0.75 | ✓      | 12 success criteria, 42 REQ-IDs (post-pivot adds 2) |
+| Boundary Clarity   | 0.88  | 0.70 | ✓      | Explicit in/out scope; pivot adds explicit "no Google OAuth admin / no HTTP Basic / no password / no Next.js admin" |
+| Constraint Clarity | 0.85  | 0.65 | ✓      | 10 planning-time decisions locked (8 pre-pivot + 2 from discuss-phase research) + expanded research mandate |
+| Acceptance Criteria| 0.87  | 0.70 | ✓      | 43 pass/fail criteria                              |
+| **Ambiguity**      | 0.14  | ≤0.20| ✓      | Improved from 0.16 (pre-pivot) — auth shape now sharper |
 
 **Status:** ✓ = met minimum, ⚠ = below minimum (planner treats as assumption)
 
@@ -442,11 +472,12 @@ An operator (admin user) can deploy v1.2 infrastructure, sign in via the existin
 |-------|-----------------|---------------------------------------------|------------------------------------------------------------------|
 | 0     | Researcher      | What exists today; what's the delta?        | Grounded baseline from ROADMAP + REQUIREMENTS + research SUMMARY; initial ambiguity already ≤ 0.20 |
 | 1     | Boundary Keeper | Method-security mechanism — meta-annotation vs explicit `@PreAuthorize`? | Explicit `@PreAuthorize` per controller + ArchUnit gate; defer `@AdminController` meta-annotation until rule-of-three (Phase 9+) |
-| 1     | Boundary Keeper | Role elevation mechanism — where to wire?   | `GrantedAuthoritiesMapper` bean (not `OidcUserService` override, not `AuthenticationSuccessHandler`, not `GoogleAuthorizationRequestResolver`) |
-| 2     | Simplifier      | Merge Phase 8 + 9 into single phase, or keep split? | **Merged** into single Phase 8 (40 reqs); former Phase 10 renumbered → Phase 9; planning structure inside phase: 8A foundation → 8B/8C/8D/8E/8F callers wave-parallel after 8A |
+| 1     | Boundary Keeper | Role elevation mechanism — where to wire?   | (pre-pivot) `GrantedAuthoritiesMapper` bean; (POST-PIVOT discuss-phase) entire concept removed — admin authority comes from separate `admin_users` table via `AdminUserDetailsService` on dedicated chain |
+| 2     | Simplifier      | Merge Phase 8 + 9 into single phase, or keep split? | **Merged** into single Phase 8 (40 reqs, post-pivot 42 reqs); former Phase 10 renumbered → Phase 9; planning structure inside phase: 8A foundation → 8B/8C/8D/8E/8F callers wave-parallel after 8A |
 | 2     | Simplifier      | OPS-INFRA gating — merge gate or deploy step? | Compose definitions + runbook in merge gate; live VPS migration is deploy step (tracked separately) |
 | 2     | Simplifier      | ARCH-09 body-ban — ship Phase 8 or defer?   | Mandatory ship Phase 8 (OPS-TENANT projection now in scope, body-ban must precede) |
 | 3     | Failure Analyst | Spring Security 7 API surface risk          | Plan-phase MUST pull Security 7 docs via Context7 before coding; memory note `project_phase8_spring_security_7_research` saved |
+| 4 (discuss-phase pivot) | Failure Analyst + Simplifier | Admin auth method + frontend shape: bundled Google OAuth single-app vs separate frontend + Basic Auth vs WebAuthn passkey separate frontend? | **WebAuthn passkey + separate `apps/admin` Vite+React on `admin.zeromail.com` + 2 SecurityFilterChain via `securityMatcher`**. Reasoning: WebSearch + Spring Security 7 Context7 confirmed 2026 best practice = passkeys (HTTP Basic deprecated by OWASP ASVS; Google OAuth admin couples compromise surface to Google IdP). Spring Security 7 ships `.webAuthn(...)` DSL natively. Decoupling admin auth removes user-side RBAC entirely (`users.role` column not added). ADMIN-01/02/03/06 + ARCH-08 rewritten inline in SPEC.md; ADMIN-09 (admin_users schema) + ADMIN-10 (WebAuthn ceremony) added. Memory note `project_v12_admin_webauthn_pivot` saved. |
 
 ---
 

@@ -18,14 +18,16 @@
 
 ### Admin Foundation — Auth, Routing, Audit (NEW)
 
-- [ ] **ADMIN-01**: Admin user can log in via the same bundled Google OAuth flow as regular users; `ROLE_ADMIN` is elevated from a `users.role` column populated at OAuth success time (NOT a separate IdP, NOT JWT, NOT a second OAuth client)
-- [ ] **ADMIN-02**: Admin can access `/admin/*` routes after login; non-admin users hitting `/admin/*` see HTTP 403 + redirect to `/`. Backend enforcement at filter level (`requestMatchers("/api/admin/**").hasRole("ADMIN")`) AND method level (`@PreAuthorize("hasRole('ADMIN')")` on every `@RestController` in `controllers/admin/`)
-- [ ] **ADMIN-03**: First-admin bootstrap via env-var `ZEROMAIL_BOOTSTRAP_ADMIN_EMAIL` with idempotent guard (no Liquibase data seed — admin grants are mutable and must remain auditable). Operator can later grant admin to additional users via audited `POST /api/admin/grant-admin` (admin-only)
+- [ ] **ADMIN-01**: Admin authenticates at `admin.zeromail.com` via Spring Security 7 `.webAuthn(...)` DSL (hardware-bound passkey, `userVerificationRequirement=REQUIRED`) on a dedicated `@Order(1) SecurityFilterChain` with `securityMatcher("/api/admin/**")`. NOT Google OAuth, NOT password, NOT HTTP Basic. Admin identity stored in `admin_users` table (separate from `users`). User-facing `users` table gains NO `role` column. Pivoted from Google-OAuth-bundled design 2026-05-19 during discuss-phase research.
+- [ ] **ADMIN-02**: Admin chain (`@Order(1)`) and user chain (`@Order(2)`) never share auth method or authority. Request to `/api/admin/*` without WebAuthn session returns 401 at chain level; admin with valid session returns 200. Explicit `@PreAuthorize("hasRole('ADMIN')")` per `@RestController` in `controllers/admin/` for defense in depth. ArchUnit rules `every_admin_controller_must_have_preauthorize` and `admin_chain_does_not_use_oauth2login` enforced in CI.
+- [ ] **ADMIN-03**: First-admin bootstrap via Liquibase seed of `admin_users` row(s) from `zeromail.admin.bootstrap-emails` config + Spring Boot startup runner that prints one 10-min one-time enrollment URL per PENDING_ENROLLMENT row to STDOUT (never log file, never DB). Admin uses URL to complete WebAuthn registration ceremony → row status `PENDING_ENROLLMENT` → `ACTIVE`. Operator can later grant admin via audited `POST /api/admin/grant-admin` (admin-only) returning fresh one-time URL communicated out-of-band to target.
 - [ ] **ADMIN-04**: Every admin action (catalog edits, master-key set/rotate, tenant pause/disconnect/delete, role grants/revokes) writes one row to `admin_audit_event` in the SAME transaction as the state mutation. Row contains: `actor_user_id`, `actor_email`, `action`, `target_kind`, `target_id`, `before_state_json`, `after_state_json`, `reason VARCHAR(500)`, `request_ip`, `request_id`, `created_at`, `hmac_chain_hash`
 - [ ] **ADMIN-05**: Every admin READ that touches tenant data (Tenant detail view, audit log query) writes one row to `admin_read_event` (separate from `admin_audit_event`); 30-day retention for reads, indefinite retention for actions
-- [ ] **ADMIN-06**: Admin's `(admin)` Next.js route group is a **sibling** of `(app)`, has its own `layout.tsx` with server-side role gate, persistent "ADMIN MODE" indicator chrome, and uses a separately-generated TypeScript client from `admin-schema.d.ts`. Public bundle MUST NOT ship admin types
+- [ ] **ADMIN-06**: Admin frontend is a NEW separate `apps/admin` Vite + React 19 SPA (no SSR, no SEO, no Next.js) served at `admin.zeromail.com` via NPM proxy with its own Let's Encrypt cert; admin-schema TypeScript client lives only in `apps/admin/src/lib/api/`. Public `apps/web` Next.js bundle ships ZERO admin schema types and zero admin route code. Persistent "ADMIN MODE" banner inside `apps/admin` chrome for destructive-action context. Pivoted from `(admin)` Next.js sibling route group design 2026-05-19 during discuss-phase.
 - [ ] **ADMIN-07**: Admin can view paginated `admin_audit_event` log filtered by actor / action / target / date range, with CSV export (max 10k rows per export). Each row shows actor email + action + target + before/after diff
 - [ ] **ADMIN-08**: Destructive admin actions (tenant delete, master-key rotate, catalog disable-with-active-pins) require an in-modal confirm-twice + free-text "reason" (min 8 chars), which is recorded in the audit row
+- [ ] **ADMIN-09**: `admin_users` table schema (Liquibase changelog) with columns: `id UUID PRIMARY KEY`, `email VARCHAR(320) UNIQUE NOT NULL`, `display_name VARCHAR(200)`, `user_handle BYTEA NOT NULL UNIQUE`, `status VARCHAR(20) NOT NULL CHECK (status IN ('PENDING_ENROLLMENT','ACTIVE','REVOKED'))`, `credential_id BYTEA UNIQUE`, `public_key_cose BYTEA`, `signature_counter BIGINT DEFAULT 0`, `aaguid UUID`, `attestation_format VARCHAR(50)`, `last_used_at TIMESTAMPTZ`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`, `revoked_at TIMESTAMPTZ`, `revoked_reason VARCHAR(500)`. App DB user has INSERT + SELECT + UPDATE (last_used_at, signature_counter, status) only; DELETE forbidden — revocation via `status='REVOKED'` for audit trail.
+- [ ] **ADMIN-10**: WebAuthn enrollment + assertion ceremonies wired to Spring Security 7 `.webAuthn(...)` DSL. Enrollment: `EnrollmentTokenGate` filter validates one-time token + PENDING row → triggers `POST /webauthn/register/options` + `POST /webauthn/register` → row transitions ACTIVE + credential stored. Assertion: `POST /login/webauthn/options` + `POST /login/webauthn` → session issued + `signature_counter` incremented; downgraded `signCount` rejected + `WEBAUTHN_REPLAY_SUSPECTED` audit row written; REVOKED row returns 401; `userVerificationRequirement=REQUIRED` enforced. Lost-passkey recovery via shell access only (out of scope v1.2 UI).
 
 ### Master Keys / Platform Provider Config (NEW)
 
@@ -202,6 +204,8 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 | ADMIN-06 | Phase 8 | Pending |
 | ADMIN-07 | Phase 8 | Pending |
 | ADMIN-08 | Phase 8 | Pending |
+| ADMIN-09 | Phase 8 | Pending |
+| ADMIN-10 | Phase 8 | Pending |
 | MKEY-01 | Phase 8 | Pending |
 | MKEY-02 | Phase 8 | Pending |
 | MKEY-03 | Phase 8 | Pending |
@@ -251,12 +255,12 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 | ARCH-11 | Phase 8 | Pending |
 | ARCH-12 | Phase 8 | Pending |
 
-**Coverage (post-roadmap):**
-- v1.2 requirements: **59 total** (mapping confirmed 100% coverage, zero orphans)
-  - Phase 8 (Admin Console & Operator Tooling, merged 2026-05-19): 40 reqs — 3 OPS-INFRA + 8 ADMIN + 5 ARCH (08/09/10/11/12) + 8 MKEY + 7 CAT + 5 OPS-TENANT + 2 OPS-QUEUE + 2 OPS-SPEND
+**Coverage (post-roadmap, post-pivot):**
+- v1.2 requirements: **61 total** (mapping confirmed 100% coverage, zero orphans)
+  - Phase 8 (Admin Console & Operator Tooling, merged 2026-05-19 + WebAuthn pivot 2026-05-19): 42 reqs — 3 OPS-INFRA + 10 ADMIN (01-10) + 5 ARCH (08/09/10/11/12) + 8 MKEY + 7 CAT + 5 OPS-TENANT + 2 OPS-QUEUE + 2 OPS-SPEND
   - Phase 9 (User Settings UI on Curated Catalog): 19 reqs — 6 SET-VOICE + 5 SET-BEHV + 4 SET-SAFE + 4 SET-AI
 - Phase mapping: ✓ Complete
-- Merge note: original Phase 8 (foundation, 15 reqs) and original Phase 9 (operator surface, 25 reqs) merged into single Phase 8 mega (40 reqs) during spec-phase 2026-05-19; former Phase 10 renumbered → Phase 9
+- Merge note: original Phase 8 (foundation, 15 reqs) and original Phase 9 (operator surface, 25 reqs) merged into single Phase 8 mega (40 reqs) during spec-phase 2026-05-19; former Phase 10 renumbered → Phase 9. Phase 8 then gained ADMIN-09 (admin_users schema) + ADMIN-10 (WebAuthn ceremonies) during discuss-phase pivot 2026-05-19 — pre-pivot ADMIN-01/02/03/06 + ARCH-08 also rewritten to reflect the WebAuthn + separate-frontend shape.
 
 > **Note on pre-roadmap "57 total" tally:** the original pre-roadmap summary undercounted by 2; the actual REQ-ID inventory is 3 + 8 + 8 + 7 + 5 + 2 + 2 + 19 + 5 = 59 (the "5 ARCH" line was not added to the prior subtotal). Counted again during roadmapping; all 59 IDs above are explicit and mapped.
 
