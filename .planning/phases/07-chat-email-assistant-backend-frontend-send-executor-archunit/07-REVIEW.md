@@ -174,20 +174,23 @@ public boolean commitSendCompleted(UUID auditId, SendCommitCommand command) {
 
 ---
 
-### CR-03: Postgres body-ban trigger regex misses common body-shaped fields (`htmlBody`, `textBody` are in the function regex but `bodyHtml`, `bodyText` are also matched; however the regex does NOT match nested keys with the same name once they are leaves inside an array of objects with mixed types) — AND the part-type allowlist `^tool-(sendEmail|replyEmail|forwardEmail|saveDraft)$` does not include the **search results / thread output schema** where the body would land
+### CR-03: Postgres body-ban trigger HTML regex is too narrow — only catches `<script>` and `<iframe>`, missing common XSS vectors like `<svg onload>`, `<img onerror>`, event handlers, and `javascript:` URIs
 
-**File:** `backend/core/src/main/resources/db/changelog/changes/042-chat-message-and-body-ban-trigger.yaml:45, 149-159`
+**File:** `backend/core/src/main/resources/db/changelog/changes/042-chat-message-and-body-ban-trigger.yaml:149-159`
 **Issue:**
-Two related gaps:
+The HTML body-content signature regex `<[[:space:]]*(script|iframe)([[:space:]>]|/|$)` blocks `<script>` and `<iframe>` but NOT:
+- `<svg onload="...">`
+- `<img onerror="...">`
+- `<a href="javascript:...">`
+- `<style>...</style>`, `<object>`, `<embed>`, `<link>`, `<meta>`
+- Bare HTML event handlers (`onclick=`, `onmouseover=`, etc.)
 
-(a) The trigger only iterates the **top-level** `parts` array and inspects each `tool_part` jsonb. Inside the function `chat_jsonb_contains_body_key(tool_part)` recurses correctly, but the gating regex `part_type ~ '^tool-(sendEmail|replyEmail|forwardEmail|saveDraft)$'` skips body checking for those four. So if the LLM emits a `tool-getMessage` output whose `output.bodyText` is leaked, the trigger fires correctly. So far OK.
+The trigger is sold as forbidden-HTML detection in the comment but only catches two tags. Any LLM-emitted read-tool output containing a stored XSS via `<img onerror>` from malicious email content will land in DB and be re-rendered by `streamdown@2` on the frontend. If the React markdown component does not strictly sanitize, this is a real XSS path. The threat path: prompt injection via email content → LLM emits malicious HTML in tool output → sanitizer doesn't strip non-body fields → trigger doesn't match → persist → re-render → XSS executes against the recipient user, with full session cookie scope (multi-tenant breach risk).
 
-(b) **The real gap is for `assistant_pending_action.draft_body`** — that table has a `draft_body text` column (changelog 043) that is **NOT protected by any trigger**. The CLAUDE.md Privacy carve-out says draft body of user-authored send args is allowed, BUT if a write tool other than the four allow-listed names (e.g., a future "saveTemplate" tool, or a typo like `tool-send_email` instead of `tool-sendEmail`) writes to `draft_body`, the body is persisted with no defense. The persistence-layer Java code at `ChatOrchestrator.draftBody(...)` already only populates this column for `SAVE_DRAFT`, `SEND_EMAIL`, `REPLY_EMAIL`, `FORWARD_EMAIL`, but there is no defense-in-depth at the DB. ARCH-02's "3 layers" claim is therefore 2 layers for `draft_body`.
+**Out of scope:** `assistant_pending_action.draft_body` is the explicit Privacy carve-out per CLAUDE.md — user-authored draft data the user reviews on the preview card. No DB defense needed; the Java gate at `ChatOrchestrator.draftBody()` (only the 4 allow-listed write tools populate it) is the correct boundary.
 
-(c) The HTML body-content signature regex `<[[:space:]]*(script|iframe)([[:space:]>]|/|$)` blocks `<script>` and `<iframe>` but NOT `<svg onload=...>`, `<img onerror=...>`, `<a href="javascript:...">`, `<style>...</style>`, `<object>`, `<embed>`, or HTML event handlers like `onclick=`. The trigger is sold as forbidden-HTML detection in the comment but only catches two tags. Any LLM-emitted preview snapshot containing a stored XSS via `<img onerror>` will land in DB and be re-rendered by `streamdown@2`; if the React markdown component does not strictly sanitize, this is a real XSS path.
 **Fix:**
-- Add `draft_body` body-ban check (or document explicitly that `draft_body` is the carve-out target and add length+character limits there).
-- Expand the forbidden-HTML regex to cover at minimum: `<\s*(script|iframe|svg|object|embed|style|link|meta)\b`, `on[a-z]+\s*=`, `javascript\s*:` inside `href` or `src`. Better: defer HTML sanitization to the frontend `streamdown` config + a server-side jsoup whitelist, and have the trigger just reject **any** HTML tag inside non-draft fields.
+- Expand the forbidden-HTML regex to cover at minimum: `<\s*(script|iframe|svg|object|embed|style|link|meta)\b`, `on[a-z]+\s*=`, `javascript\s*:` inside `href` or `src`. Better: have the trigger reject **any** HTML tag inside non-draft fields, and defer markdown rendering safety to a server-side jsoup whitelist + strict `streamdown` config on the frontend.
 - Consider expanding the email-read allowlist check to include `tool-getThread` explicitly (currently the negative branch `IF part_type LIKE 'tool-%' AND chat_jsonb_contains_body_key(tool_part)` covers it implicitly, but the comment is misleading).
 
 ---
