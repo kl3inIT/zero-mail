@@ -35,7 +35,8 @@ public final class AdminContext {
 
     private static void requireTenantContextUnbound() {
         if (tenantContextBound()) {
-            throw new IllegalStateException("TenantContext cannot be bound inside AdminContext");
+            throw new IllegalStateException(
+                    "TenantContext/AdminContext mutex violation: tenant context cannot be bound inside admin scope");
         }
     }
 

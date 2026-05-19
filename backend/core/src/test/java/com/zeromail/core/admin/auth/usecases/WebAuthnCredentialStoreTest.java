@@ -34,6 +34,8 @@ class WebAuthnCredentialStoreTest extends PostgresContainerTest {
                 adminUserId,
                 new byte[] {0x62},
                 new byte[] {0x63},
+                new byte[] {0x64},
+                new byte[] {0x65},
                 4L,
                 UUID.fromString("00000000-0000-4000-8000-000000000852"),
                 "none");
@@ -41,6 +43,8 @@ class WebAuthnCredentialStoreTest extends PostgresContainerTest {
         var credential =
                 webAuthnCredentialStore.findByCredentialId(new byte[] {0x62}).orElseThrow();
         assertThat(credential.publicKeyCose()).containsExactly(0x63);
+        assertThat(credential.attestationObject()).containsExactly(0x64);
+        assertThat(credential.attestationClientDataJson()).containsExactly(0x65);
         webAuthnCredentialStore.verifyAndUpdateSignatureCounter(
                 new byte[] {0x62}, 5L, Instant.parse("2026-05-19T18:36:17Z"));
         assertThat(adminUserRepository.findById(adminUserId).orElseThrow().getSignatureCounter())
@@ -60,6 +64,8 @@ class WebAuthnCredentialStoreTest extends PostgresContainerTest {
         activeAdminUser.activate(
                 new byte[] {0x65},
                 new byte[] {0x66},
+                new byte[] {0x67},
+                new byte[] {0x68},
                 7L,
                 UUID.fromString("00000000-0000-4000-8000-000000000854"),
                 "none");

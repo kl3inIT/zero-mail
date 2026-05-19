@@ -80,6 +80,10 @@ spring:
         observations:
           include-completion: false
 zero-mail:
+  admin:
+    bootstrap-emails: ${ZEROMAIL_ADMIN_BOOTSTRAP_EMAILS:}
+    audit:
+      hmac-kek-base64: ${ZEROMAIL_ADMIN_AUDIT_HMAC_KEK_BASE64:}
   api:
     web:
       base-url: ${ZEROMAIL_WEB_BASE_URL:http://localhost:3000}
@@ -147,10 +151,11 @@ zero-mail:
     # from severing the SSE connection mid-stream.
 server:
   port: 8080
+  forward-headers-strategy: framework
   servlet:
     session:
       cookie:
-        name: ZEROMAIL_SESSION
+        name: SESSION_USER
         http-only: true
         secure: false  # dev; true in prod profile
         same-site: lax

@@ -24,6 +24,8 @@ public class WebAuthnCredentialStore {
             UUID adminUserId,
             byte[] credentialId,
             byte[] publicKeyCose,
+            byte[] attestationObject,
+            byte[] attestationClientDataJson,
             long signatureCounter,
             UUID aaguid,
             String attestationFormat) {
@@ -32,6 +34,8 @@ public class WebAuthnCredentialStore {
                         adminUserId,
                         copy(credentialId),
                         copy(publicKeyCose),
+                        copy(attestationObject),
+                        copy(attestationClientDataJson),
                         signatureCounter,
                         aaguid,
                         attestationFormat);
@@ -71,6 +75,8 @@ public class WebAuthnCredentialStore {
             UUID adminUserId,
             byte[] credentialId,
             byte[] publicKeyCose,
+            byte[] attestationObject,
+            byte[] attestationClientDataJson,
             long signatureCounter,
             UUID aaguid,
             String attestationFormat) {
@@ -78,6 +84,8 @@ public class WebAuthnCredentialStore {
         public AdminCredential {
             credentialId = copy(credentialId);
             publicKeyCose = copy(publicKeyCose);
+            attestationObject = copy(attestationObject);
+            attestationClientDataJson = copy(attestationClientDataJson);
         }
 
         private static AdminCredential from(AdminUserEntity adminUser) {
@@ -85,6 +93,8 @@ public class WebAuthnCredentialStore {
                     adminUser.getId(),
                     adminUser.getCredentialId(),
                     adminUser.getPublicKeyCose(),
+                    adminUser.getAttestationObject(),
+                    adminUser.getAttestationClientDataJson(),
                     adminUser.getSignatureCounter(),
                     adminUser.getAaguid(),
                     adminUser.getAttestationFormat());
@@ -98,6 +108,16 @@ public class WebAuthnCredentialStore {
         @Override
         public byte[] publicKeyCose() {
             return copy(publicKeyCose);
+        }
+
+        @Override
+        public byte[] attestationObject() {
+            return copy(attestationObject);
+        }
+
+        @Override
+        public byte[] attestationClientDataJson() {
+            return copy(attestationClientDataJson);
         }
     }
 }

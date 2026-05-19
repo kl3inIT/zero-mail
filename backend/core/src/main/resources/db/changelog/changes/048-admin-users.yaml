@@ -49,6 +49,12 @@ databaseChangeLog:
                   name: public_key_cose
                   type: bytea
               - column:
+                  name: attestation_object
+                  type: bytea
+              - column:
+                  name: attestation_client_data_json
+                  type: bytea
+              - column:
                   name: signature_counter
                   type: bigint
                   defaultValueNumeric: 0

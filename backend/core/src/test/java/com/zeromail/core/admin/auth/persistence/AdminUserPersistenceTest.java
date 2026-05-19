@@ -30,6 +30,8 @@ class AdminUserPersistenceTest extends PostgresContainerTest {
                 adminUserId,
                 new byte[] {0x31},
                 new byte[] {0x41},
+                new byte[] {0x51},
+                new byte[] {0x61},
                 7L,
                 UUID.fromString("00000000-0000-4000-8000-000000000832"),
                 "none");
@@ -38,6 +40,8 @@ class AdminUserPersistenceTest extends PostgresContainerTest {
         assertThat(activeAdminUser.getStatus()).isEqualTo(AdminStatus.ACTIVE);
         assertThat(activeAdminUser.getCredentialId()).containsExactly(0x31);
         assertThat(activeAdminUser.getPublicKeyCose()).containsExactly(0x41);
+        assertThat(activeAdminUser.getAttestationObject()).containsExactly(0x51);
+        assertThat(activeAdminUser.getAttestationClientDataJson()).containsExactly(0x61);
         assertThat(activeAdminUser.getSignatureCounter()).isEqualTo(7L);
     }
 
@@ -54,6 +58,8 @@ class AdminUserPersistenceTest extends PostgresContainerTest {
         activeAdminUser.activate(
                 new byte[] {0x32},
                 new byte[] {0x42},
+                new byte[] {0x52},
+                new byte[] {0x62},
                 10L,
                 UUID.fromString("00000000-0000-4000-8000-000000000834"),
                 "none");

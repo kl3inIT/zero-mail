@@ -28,6 +28,8 @@ public interface AdminUserRepository extends JpaRepository<AdminUserEntity, UUID
                     SET status = 'ACTIVE',
                         credential_id = :credentialId,
                         public_key_cose = :publicKeyCose,
+                        attestation_object = :attestationObject,
+                        attestation_client_data_json = :attestationClientDataJson,
                         signature_counter = :signatureCounter,
                         aaguid = :aaguid,
                         attestation_format = :attestationFormat
@@ -38,6 +40,8 @@ public interface AdminUserRepository extends JpaRepository<AdminUserEntity, UUID
             @Param("adminUserId") UUID adminUserId,
             @Param("credentialId") byte[] credentialId,
             @Param("publicKeyCose") byte[] publicKeyCose,
+            @Param("attestationObject") byte[] attestationObject,
+            @Param("attestationClientDataJson") byte[] attestationClientDataJson,
             @Param("signatureCounter") long signatureCounter,
             @Param("aaguid") UUID aaguid,
             @Param("attestationFormat") String attestationFormat);
@@ -58,4 +62,21 @@ public interface AdminUserRepository extends JpaRepository<AdminUserEntity, UUID
             @Param("adminUserId") UUID adminUserId,
             @Param("newCounter") long newCounter,
             @Param("lastUsedAt") Instant lastUsedAt);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Transactional
+    @Query(
+            value =
+                    """
+                    UPDATE admin_users
+                    SET status = 'REVOKED',
+                        revoked_at = :revokedAt,
+                        revoked_reason = :revokedReason
+                    WHERE id = :adminUserId
+                    """,
+            nativeQuery = true)
+    int revoke(
+            @Param("adminUserId") UUID adminUserId,
+            @Param("revokedAt") Instant revokedAt,
+            @Param("revokedReason") String revokedReason);
 }

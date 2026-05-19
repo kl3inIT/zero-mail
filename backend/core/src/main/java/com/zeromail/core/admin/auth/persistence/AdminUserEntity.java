@@ -33,6 +33,12 @@ public class AdminUserEntity extends AbstractEntity {
     @Column(name = "public_key_cose")
     private byte[] publicKeyCose;
 
+    @Column(name = "attestation_object")
+    private byte[] attestationObject;
+
+    @Column(name = "attestation_client_data_json")
+    private byte[] attestationClientDataJson;
+
     @Column(name = "signature_counter", nullable = false)
     private long signatureCounter;
 
@@ -91,6 +97,14 @@ public class AdminUserEntity extends AbstractEntity {
         return copy(publicKeyCose);
     }
 
+    public byte[] getAttestationObject() {
+        return copy(attestationObject);
+    }
+
+    public byte[] getAttestationClientDataJson() {
+        return copy(attestationClientDataJson);
+    }
+
     public long getSignatureCounter() {
         return signatureCounter;
     }
@@ -122,12 +136,16 @@ public class AdminUserEntity extends AbstractEntity {
     public void activate(
             byte[] newCredentialId,
             byte[] newPublicKeyCose,
+            byte[] newAttestationObject,
+            byte[] newAttestationClientDataJson,
             long newSignatureCounter,
             UUID newAaguid,
             String newAttestationFormat) {
         status = AdminStatus.ACTIVE;
         credentialId = copy(newCredentialId);
         publicKeyCose = copy(newPublicKeyCose);
+        attestationObject = copy(newAttestationObject);
+        attestationClientDataJson = copy(newAttestationClientDataJson);
         signatureCounter = newSignatureCounter;
         aaguid = newAaguid;
         attestationFormat = newAttestationFormat;

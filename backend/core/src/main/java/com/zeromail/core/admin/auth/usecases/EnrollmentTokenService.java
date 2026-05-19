@@ -38,6 +38,32 @@ public class EnrollmentTokenService {
     }
 
     public String mintToken(UUID adminUserId, String email) {
+        return issueToken(adminUserId, email).token();
+    }
+
+    public IssuedEnrollmentToken mintOrReuseToken(UUID adminUserId, String email) {
+        String normalizedEmail = normalizeEmail(email);
+        Instant now = clock.instant();
+        Optional<Map.Entry<String, EnrollmentTokenEntry>> existingTokenEntry =
+                tokenEntries.entrySet().stream()
+                        .filter(
+                                tokenEntry ->
+                                        tokenEntry.getValue().adminUserId().equals(adminUserId)
+                                                && tokenEntry
+                                                        .getValue()
+                                                        .email()
+                                                        .equals(normalizedEmail)
+                                                && tokenEntry.getValue().expiresAt().isAfter(now))
+                        .findFirst();
+        if (existingTokenEntry.isPresent()) {
+            Map.Entry<String, EnrollmentTokenEntry> tokenEntry = existingTokenEntry.orElseThrow();
+            return new IssuedEnrollmentToken(
+                    tokenEntry.getKey(), tokenEntry.getValue().expiresAt());
+        }
+        return issueToken(adminUserId, normalizedEmail);
+    }
+
+    private IssuedEnrollmentToken issueToken(UUID adminUserId, String email) {
         byte[] tokenBytes = new byte[TOKEN_BYTE_LENGTH];
         secureRandom.nextBytes(tokenBytes);
         String token = HexFormat.of().formatHex(tokenBytes);
@@ -45,7 +71,7 @@ public class EnrollmentTokenService {
         tokenEntries.put(
                 token, new EnrollmentTokenEntry(adminUserId, normalizeEmail(email), expiresAt));
         log.info("event=admin_enrollment_token_minted adminUserId={}", adminUserId);
-        return token;
+        return new IssuedEnrollmentToken(token, expiresAt);
     }
 
     public Optional<UUID> consume(String token, String email) {
@@ -69,6 +95,8 @@ public class EnrollmentTokenService {
     private static String normalizeEmail(String email) {
         return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
     }
+
+    public record IssuedEnrollmentToken(String token, Instant expiresAt) {}
 
     private record EnrollmentTokenEntry(UUID adminUserId, String email, Instant expiresAt) {}
 }
