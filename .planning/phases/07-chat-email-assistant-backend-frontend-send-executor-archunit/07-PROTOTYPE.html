@@ -1,0 +1,1624 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Phase 7 Prototype — Trợ lý email (Zero Mail)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Locked tokens — mirror apps/web/app/globals.css :root (paper-warm neutrals). */
+      :root {
+        --background: #f9f8fd;
+        --foreground: #4f496b;
+        --card: #ffffff;
+        --popover: #ffffff;
+        --primary: #0e5e5a;
+        --primary-foreground: #ffffff;
+        --secondary: #f4f2f9;
+        --muted: #f4f2f9;
+        --muted-foreground: #625c78;
+        --accent: #0e5e5a;
+        --accent-soft: #eae8f7;
+        --destructive: #b0413e;
+        --warning: #e3a023;
+        --border: #ece9f4;
+        --ring: #0e5e5a;
+        --sidebar: #f9f8fd;
+        --sidebar-accent: #f4f2f9;
+        --ink: #3d385a;
+        --ink-2: #4f496b;
+        --text-faint: #6f6883;
+        --green: #2f7d5c;
+        --green-soft: #d8ead8;
+        --amber: #7a4b0f;
+        --amber-soft: #fdecc7;
+        --red: #b0413e;
+        --red-soft: #f5d7d2;
+        --blue: #2c5ba8;
+        --blue-soft: #d7e1f1;
+        --shadow-sm: 0 1px 2px rgba(20, 20, 18, 0.05), 0 1px 0 rgba(20, 20, 18, 0.02);
+        --shadow-md:
+          0 4px 12px -2px rgba(20, 20, 18, 0.06), 0 2px 4px -1px rgba(20, 20, 18, 0.04);
+        --shadow-lg:
+          0 24px 48px -12px rgba(20, 20, 18, 0.14), 0 8px 16px -8px rgba(20, 20, 18, 0.08);
+        --radius: 7px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+        background: var(--background);
+        color: var(--foreground);
+        font-size: 14px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .mono {
+        font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+      }
+
+      .docframe {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 32px 24px 64px;
+      }
+
+      .doc-eyebrow {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11.5px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted-foreground);
+      }
+
+      .doc-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--ink);
+        letter-spacing: -0.02em;
+        margin: 6px 0 8px;
+      }
+
+      .doc-sub {
+        color: var(--muted-foreground);
+        max-width: 760px;
+      }
+
+      .doc-section-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--ink);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin: 36px 0 12px;
+        font-family: 'JetBrains Mono', monospace;
+      }
+
+      /* ============== AppShell mock ============== */
+      .shell {
+        display: grid;
+        grid-template-columns: 60px 1fr;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--background);
+        box-shadow: var(--shadow-md);
+        min-height: 720px;
+      }
+
+      .app-rail {
+        background: var(--sidebar);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 16px 8px;
+      }
+
+      .app-rail .logo {
+        width: 32px;
+        height: 32px;
+        border-radius: 7px;
+        background: var(--ink);
+        color: var(--background);
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        font-size: 12px;
+        margin-bottom: 12px;
+      }
+
+      .app-rail .nav-item {
+        width: 40px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        border-radius: 6px;
+        color: var(--muted-foreground);
+      }
+
+      .app-rail .nav-item.active {
+        background: var(--card);
+        color: var(--ink);
+        border: 1px solid var(--border);
+      }
+
+      .app-rail .nav-item.chat {
+        background: var(--card);
+        color: var(--ink);
+        border: 1px solid var(--border);
+      }
+
+      .app-rail svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .app-main {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        min-height: 720px;
+      }
+
+      /* ============== History sidebar ============== */
+      .history {
+        background: var(--background);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+      }
+
+      .history-head {
+        padding: 16px 16px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .history-head h2 {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--ink);
+        margin: 0;
+      }
+
+      .btn-new {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 28px;
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--ink);
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      .btn-new:hover {
+        border-color: var(--ink);
+      }
+
+      .btn-new svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      .history-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 6px;
+      }
+
+      .history-item {
+        position: relative;
+        padding: 10px 12px 10px 14px;
+        border-radius: 7px;
+        cursor: pointer;
+        margin-bottom: 2px;
+      }
+
+      .history-item:hover {
+        background: var(--sidebar-accent);
+      }
+
+      .history-item.active {
+        background: var(--sidebar-accent);
+      }
+
+      .history-item.active::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 12px;
+        bottom: 12px;
+        width: 3px;
+        border-radius: 2px;
+        background: var(--accent);
+      }
+
+      .history-title {
+        font-size: 13.5px;
+        font-weight: 500;
+        color: var(--ink);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 4px;
+      }
+
+      .history-time {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        color: var(--text-faint);
+      }
+
+      .history-delete {
+        position: absolute;
+        right: 8px;
+        top: 8px;
+        width: 22px;
+        height: 22px;
+        border-radius: 5px;
+        display: none;
+        place-items: center;
+        background: var(--card);
+        color: var(--muted-foreground);
+        border: 1px solid var(--border);
+        cursor: pointer;
+      }
+
+      .history-item:hover .history-delete {
+        display: grid;
+      }
+
+      .history-delete:hover {
+        color: var(--destructive);
+        border-color: var(--destructive);
+      }
+
+      .history-delete svg {
+        width: 12px;
+        height: 12px;
+      }
+
+      /* ============== Conversation pane ============== */
+      .convo {
+        display: flex;
+        flex-direction: column;
+        background: var(--background);
+        min-width: 0;
+      }
+
+      .convo-head {
+        padding: 14px 24px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .convo-head h1 {
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--ink);
+        margin: 0;
+        letter-spacing: -0.015em;
+      }
+
+      .convo-head .convo-sub {
+        font-size: 12.5px;
+        color: var(--muted-foreground);
+      }
+
+      .convo-viewport {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px;
+      }
+
+      .convo-inner {
+        max-width: 760px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      /* ============== Message bubbles ============== */
+      .msg {
+        display: flex;
+        gap: 10px;
+        max-width: 100%;
+      }
+
+      .msg.user {
+        justify-content: flex-end;
+      }
+
+      .msg-avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--ink);
+        color: var(--background);
+        display: grid;
+        place-items: center;
+        font-size: 10px;
+        font-weight: 700;
+        flex-shrink: 0;
+        margin-top: 4px;
+      }
+
+      .bubble {
+        padding: 12px 16px;
+        border-radius: 18px;
+        max-width: 78%;
+        font-size: 14px;
+        line-height: 1.55;
+        color: var(--foreground);
+      }
+
+      .bubble.user {
+        background: var(--secondary);
+        border-bottom-right-radius: 6px;
+      }
+
+      .bubble.assistant {
+        background: var(--accent-soft);
+        border-bottom-left-radius: 6px;
+      }
+
+      .stream-cursor {
+        display: inline-block;
+        width: 7px;
+        height: 13px;
+        background: var(--accent);
+        vertical-align: -2px;
+        margin-left: 2px;
+        animation: blink 1.05s steps(2, start) infinite;
+      }
+
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+
+      /* ============== Tool-call card ============== */
+      .tool-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        padding: 10px 12px;
+        font-size: 13px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .tool-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .tool-icon-wrap {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        background: var(--muted);
+        display: grid;
+        place-items: center;
+        color: var(--ink);
+        flex-shrink: 0;
+      }
+
+      .tool-icon-wrap svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      .tool-name {
+        font-size: 13.5px;
+        font-weight: 500;
+        color: var(--ink);
+        flex: 1;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10.5px;
+        font-weight: 500;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 3px 8px;
+        border-radius: 4px;
+      }
+
+      .pill.running {
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+
+      .pill.done {
+        background: var(--green-soft);
+        color: var(--green);
+      }
+
+      .pill.failed {
+        background: var(--red-soft);
+        color: var(--red);
+      }
+
+      .pill-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: currentColor;
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.55;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+
+      .tool-body {
+        border-top: 1px dashed var(--border);
+        padding-top: 8px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        color: var(--muted-foreground);
+        line-height: 1.5;
+      }
+
+      /* ============== Preview card ============== */
+      .preview {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+      }
+
+      .preview-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .preview-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 15.5px;
+        font-weight: 600;
+        color: var(--ink);
+      }
+
+      .preview-title-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        display: grid;
+        place-items: center;
+      }
+
+      .preview-title-icon svg {
+        width: 15px;
+        height: 15px;
+      }
+
+      .preview-eyebrow {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted-foreground);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .preview-eyebrow::before {
+        content: '';
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+
+      .vip-banner {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        background: var(--amber-soft);
+        border-bottom: 1px solid color-mix(in oklab, var(--amber) 18%, transparent);
+        padding: 12px 16px;
+        color: var(--amber);
+      }
+
+      .vip-banner svg {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+
+      .vip-title {
+        font-size: 13.5px;
+        font-weight: 600;
+        line-height: 1.4;
+      }
+
+      .vip-ack {
+        margin-top: 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12.5px;
+        font-weight: 500;
+      }
+
+      .vip-ack input {
+        accent-color: var(--amber);
+        width: 14px;
+        height: 14px;
+      }
+
+      .preview-rows {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .preview-row {
+        display: grid;
+        grid-template-columns: 86px minmax(0, 1fr);
+        gap: 14px;
+        padding: 11px 16px;
+        align-items: baseline;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .preview-row:last-child {
+        border-bottom: 0;
+      }
+
+      .preview-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-faint);
+      }
+
+      .preview-value {
+        font-size: 13.5px;
+        color: var(--ink-2);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        word-break: break-word;
+      }
+
+      .added-by-ai {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: var(--blue-soft);
+        color: var(--blue);
+        font-size: 11px;
+        font-weight: 500;
+        padding: 2px 8px;
+        border-radius: 999px;
+      }
+
+      .added-by-ai svg {
+        width: 11px;
+        height: 11px;
+      }
+
+      .preview-body-row {
+        grid-template-columns: 86px minmax(0, 1fr);
+      }
+
+      .preview-body {
+        background: var(--background);
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        padding: 12px 14px;
+        font-size: 13.5px;
+        line-height: 1.6;
+        color: var(--ink-2);
+        white-space: pre-wrap;
+      }
+
+      .preview-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        border-top: 1px solid var(--border);
+        background: var(--background);
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        height: 36px;
+        padding: 0 14px;
+        font-size: 13.5px;
+        font-weight: 500;
+        border-radius: 7px;
+        cursor: pointer;
+        border: 1px solid transparent;
+        font-family: inherit;
+        line-height: 1;
+        transition: all 120ms ease;
+      }
+
+      .btn svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      .btn-primary {
+        background: var(--primary);
+        color: var(--primary-foreground);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .btn-primary:hover {
+        background: #0a4a47;
+      }
+
+      .btn-primary[disabled] {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      .btn-outline {
+        background: var(--card);
+        color: var(--ink);
+        border-color: var(--border);
+      }
+
+      .btn-outline:hover {
+        border-color: var(--ink-2);
+      }
+
+      .btn-ghost {
+        background: transparent;
+        color: var(--muted-foreground);
+      }
+
+      .btn-ghost:hover {
+        color: var(--ink);
+        background: var(--secondary);
+      }
+
+      /* Replay pills */
+      .replay-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 500;
+      }
+
+      .replay-pill.sent {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .replay-pill.cancelled {
+        background: var(--muted);
+        color: var(--muted-foreground);
+      }
+
+      .replay-pill svg {
+        width: 13px;
+        height: 13px;
+      }
+
+      .preview.replay .preview-rows {
+        opacity: 0.85;
+      }
+
+      /* ============== Prompt input ============== */
+      .prompt-wrap {
+        padding: 16px 24px 24px;
+        background: linear-gradient(to top, var(--background) 60%, transparent);
+        position: sticky;
+        bottom: 0;
+      }
+
+      .prompt-inner {
+        max-width: 760px;
+        margin: 0 auto;
+      }
+
+      .prompt-box {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px 10px 10px 14px;
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .prompt-box:focus-within {
+        border-color: var(--ring);
+        box-shadow:
+          var(--shadow-sm),
+          0 0 0 3px color-mix(in oklab, var(--ring) 18%, transparent);
+      }
+
+      .prompt-textarea {
+        flex: 1;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        font-family: inherit;
+        font-size: 14px;
+        color: var(--foreground);
+        resize: none;
+        min-height: 38px;
+        max-height: 200px;
+        line-height: 1.55;
+        padding: 4px 0;
+      }
+
+      .prompt-textarea::placeholder {
+        color: var(--text-faint);
+      }
+
+      .prompt-send {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        background: var(--primary);
+        color: var(--primary-foreground);
+        border: 0;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      .prompt-send svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .prompt-stop {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        background: var(--muted);
+        color: var(--ink);
+        border: 1px solid var(--border);
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      .prompt-stop svg {
+        width: 13px;
+        height: 13px;
+      }
+
+      .prompt-helper {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        color: var(--text-faint);
+        margin-top: 8px;
+        padding: 0 4px;
+      }
+
+      /* ============== Empty state ============== */
+      .empty-wrap {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 48px 24px;
+      }
+
+      .empty-inner {
+        max-width: 480px;
+        text-align: center;
+      }
+
+      .empty-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        display: grid;
+        place-items: center;
+        margin: 0 auto 18px;
+      }
+
+      .empty-icon svg {
+        width: 22px;
+        height: 22px;
+      }
+
+      .empty-h1 {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--ink);
+        letter-spacing: -0.02em;
+        margin: 0 0 8px;
+      }
+
+      .empty-sub {
+        font-size: 14px;
+        color: var(--muted-foreground);
+        line-height: 1.55;
+        margin: 0 0 22px;
+      }
+
+      .suggestions {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+
+      .suggestion-chip {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        padding: 10px 12px;
+        font-size: 13px;
+        color: var(--ink-2);
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .suggestion-chip:hover {
+        border-color: var(--ink);
+        background: var(--secondary);
+      }
+
+      /* ============== Inline error ============== */
+      .alert-error {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        background: var(--red-soft);
+        border: 1px solid color-mix(in oklab, var(--red) 22%, transparent);
+        border-radius: 8px;
+        padding: 12px 14px;
+        color: var(--red);
+      }
+
+      .alert-error svg {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+
+      .alert-error h4 {
+        margin: 0;
+        font-size: 13.5px;
+        font-weight: 600;
+      }
+
+      .alert-error p {
+        margin: 4px 0 0;
+        color: var(--ink-2);
+        font-size: 13px;
+      }
+
+      .alert-actions {
+        margin-top: 8px;
+      }
+
+      .stopped-line {
+        font-size: 12.5px;
+        color: var(--text-faint);
+        font-style: italic;
+        margin-top: -4px;
+        padding-left: 34px;
+      }
+
+      .saving-helper {
+        font-size: 12px;
+        color: var(--text-faint);
+        text-align: right;
+        padding: 8px 16px 0;
+        background: var(--background);
+      }
+
+      /* ============== Doc + screen scaffolding ============== */
+      .screen-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-faint);
+        margin: 36px 0 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .screen-label::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--accent);
+      }
+
+      /* ============== Skeleton ============== */
+      .skel {
+        background: linear-gradient(
+          90deg,
+          var(--muted) 0%,
+          color-mix(in oklab, var(--muted) 50%, #fff) 50%,
+          var(--muted) 100%
+        );
+        background-size: 200% 100%;
+        animation: skel-pulse 1.6s ease-in-out infinite;
+        border-radius: 6px;
+      }
+
+      @keyframes skel-pulse {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .stream-cursor,
+        .pill-dot,
+        .skel {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="docframe">
+      <div class="doc-eyebrow">Phase 07 — Prototype</div>
+      <h1 class="doc-title">Trợ lý email · `/chat` · static UI prototype</h1>
+      <p class="doc-sub">
+        Self-contained mockup of the locked UI-SPEC. Not wired to APIs. Visualizes: conversation
+        with mixed message types, AI streaming, tool calls, preview card with VIP banner +
+        "Thêm bởi AI", replay-mode "Đã gửi", empty state, loading skeletons, error states.
+        Tokens match <code>apps/web/app/globals.css</code> :root (paper-warm neutrals + teal
+        primary).
+      </p>
+
+      <!-- ============================================ -->
+      <!-- SCREEN 1 — Active conversation with all states -->
+      <!-- ============================================ -->
+      <div class="screen-label">Screen 1 · Active conversation (sidebar + streaming + tool + preview)</div>
+
+      <div class="shell">
+        <!-- App rail -->
+        <div class="app-rail">
+          <div class="logo">ZM</div>
+          <div class="nav-item" title="Tổng quan">
+            <!-- LayoutDashboard -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="9"></rect>
+              <rect x="14" y="3" width="7" height="5"></rect>
+              <rect x="14" y="12" width="7" height="9"></rect>
+              <rect x="3" y="16" width="7" height="5"></rect>
+            </svg>
+          </div>
+          <div class="nav-item" title="Quy tắc">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="m3 17 2 2 4-4"></path>
+              <path d="m3 7 2 2 4-4"></path>
+              <path d="M13 6h8"></path>
+              <path d="M13 12h8"></path>
+              <path d="M13 18h8"></path>
+            </svg>
+          </div>
+          <div class="nav-item chat" title="Trợ lý">
+            <!-- MessageCircle -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+            </svg>
+          </div>
+          <div class="nav-item" title="Cần trả lời">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+          </div>
+        </div>
+
+        <div class="app-main">
+          <!-- History sidebar -->
+          <aside class="history">
+            <div class="history-head">
+              <h2>Trò chuyện</h2>
+              <button class="btn-new">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                  <line x1="12" y1="8" x2="12" y2="14"></line>
+                  <line x1="9" y1="11" x2="15" y2="11"></line>
+                </svg>
+                Mới
+              </button>
+            </div>
+            <div class="history-list">
+              <div class="history-item active">
+                <div class="history-title">Soạn email từ chối lịch sự cho Acme</div>
+                <div class="history-time">Hôm nay 14:28</div>
+              </div>
+              <div class="history-item">
+                <div class="history-title">Liệt kê quy tắc đang bật</div>
+                <div class="history-time">Hôm nay 11:02</div>
+                <button class="history-delete" aria-label="Xóa cuộc trò chuyện">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="m19 6-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="history-item">
+                <div class="history-title">Tạo rule: archive newsletter từ medium</div>
+                <div class="history-time">Hôm qua</div>
+              </div>
+              <div class="history-item">
+                <div class="history-title">Tìm email từ ceo@acme.com tuần này</div>
+                <div class="history-time">15 May</div>
+              </div>
+              <div class="history-item">
+                <div class="history-title">Lưu ghi nhớ: Q3 deadline ngày 30/6</div>
+                <div class="history-time">14 May</div>
+              </div>
+              <div class="history-item">
+                <div class="history-title">Phân loại email từ Stripe</div>
+                <div class="history-time">12 May</div>
+              </div>
+            </div>
+          </aside>
+
+          <!-- Conversation pane -->
+          <section class="convo">
+            <div class="convo-head">
+              <div>
+                <h1>Trợ lý email</h1>
+                <div class="convo-sub">Bạn duyệt trước khi gửi · Phiên: chat_42b9</div>
+              </div>
+              <div class="preview-eyebrow">Đang phản hồi</div>
+            </div>
+
+            <div class="convo-viewport">
+              <div class="convo-inner">
+                <!-- User message -->
+                <div class="msg user">
+                  <div class="bubble user">
+                    Soạn email từ chối lịch sự gửi cho ceo@acme.com về đề xuất hợp tác Q3.
+                    Giữ giọng văn chuyên nghiệp, ngắn gọn.
+                  </div>
+                </div>
+
+                <!-- Tool call: searchInbox running -->
+                <div class="tool-card">
+                  <div class="tool-row">
+                    <div class="tool-icon-wrap">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                      </svg>
+                    </div>
+                    <div class="tool-name">searchInbox <span class="mono" style="color:var(--text-faint); font-size:11.5px">· from:acme.com đề xuất Q3</span></div>
+                    <span class="pill done">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      Hoàn tất
+                    </span>
+                  </div>
+                  <div class="tool-body">3 thư khớp · luồng acme-q3-proposal</div>
+                </div>
+
+                <!-- Tool call: readEmail succeeded -->
+                <div class="tool-card">
+                  <div class="tool-row">
+                    <div class="tool-icon-wrap">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                      </svg>
+                    </div>
+                    <div class="tool-name">readEmail <span class="mono" style="color:var(--text-faint); font-size:11.5px">· msg_91ac · "Đề xuất hợp tác Q3"</span></div>
+                    <span class="pill done">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      Hoàn tất
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Assistant message — streaming with cursor -->
+                <div class="msg">
+                  <div class="msg-avatar">ZM</div>
+                  <div class="bubble assistant">
+                    Mình đã đọc luồng "Đề xuất hợp tác Q3" từ ceo@acme.com. Đây là bản nháp từ
+                    chối lịch sự — bạn xem qua trước khi gửi nhé:<span class="stream-cursor"></span>
+                  </div>
+                </div>
+
+                <!-- Preview card (sendEmail) with VIP + Added-by-AI badge -->
+                <div class="preview" role="region" aria-labelledby="preview-title-1">
+                  <div class="preview-head">
+                    <div class="preview-title" id="preview-title-1">
+                      <div class="preview-title-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="22" y1="2" x2="11" y2="13"></line>
+                          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                      </div>
+                      Xem trước trước khi gửi
+                    </div>
+                    <div class="preview-eyebrow">Cần xác nhận</div>
+                  </div>
+
+                  <!-- VIP banner -->
+                  <div class="vip-banner" role="alert">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                      <line x1="12" y1="9" x2="12" y2="13"></line>
+                      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <div>
+                      <div class="vip-title">Người nhận có trong danh sách an toàn — vẫn gửi?</div>
+                      <label class="vip-ack">
+                        <input type="checkbox" />
+                        Tôi đã xem kỹ và muốn gửi
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="preview-rows">
+                    <div class="preview-row">
+                      <div class="preview-label">Đến</div>
+                      <div class="preview-value">ceo@acme.com</div>
+                    </div>
+                    <div class="preview-row">
+                      <div class="preview-label">CC</div>
+                      <div class="preview-value">
+                        partnerships@acme.com
+                        <span class="added-by-ai">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="8.5" cy="7" r="4"></circle>
+                            <line x1="20" y1="8" x2="20" y2="14"></line>
+                            <line x1="23" y1="11" x2="17" y2="11"></line>
+                          </svg>
+                          Thêm bởi AI · xác minh
+                        </span>
+                      </div>
+                    </div>
+                    <div class="preview-row">
+                      <div class="preview-label">Tiêu đề</div>
+                      <div class="preview-value">Re: Đề xuất hợp tác Q3</div>
+                    </div>
+                    <div class="preview-row preview-body-row">
+                      <div class="preview-label">Nội dung</div>
+                      <div class="preview-value" style="display:block; width:100%">
+                        <div class="preview-body">Chào anh Quang,
+
+Cảm ơn anh và team Acme đã dành thời gian chuẩn bị đề xuất hợp tác Q3. Sau khi cân nhắc, hiện tại Zero Mail chưa thể đồng hành ở quy mô hai bên đặt ra cho quý này — chúng tôi muốn ưu tiên một số cam kết khách hàng đang diễn ra.
+
+Mình rất trân trọng đề xuất và mong có dịp trao đổi lại vào Q4. Nếu phù hợp, anh cứ liên hệ trực tiếp với mình.
+
+Trân trọng,
+An</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="saving-helper">Đang lưu...</div>
+                  <div class="preview-actions">
+                    <button class="btn btn-ghost">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 20h9"></path>
+                        <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                      </svg>
+                      Chỉnh sửa
+                    </button>
+                    <div style="display:flex; gap:8px">
+                      <button class="btn btn-outline">Hủy</button>
+                      <button class="btn btn-primary" disabled aria-disabled="true" aria-describedby="saving-helper-1" title="Đang lưu...">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite">
+                          <line x1="12" y1="2" x2="12" y2="6"></line>
+                          <line x1="12" y1="18" x2="12" y2="22"></line>
+                          <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+                          <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+                          <line x1="2" y1="12" x2="6" y2="12"></line>
+                          <line x1="18" y1="12" x2="22" y2="12"></line>
+                          <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+                          <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+                        </svg>
+                        Gửi qua Gmail
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="prompt-wrap">
+              <div class="prompt-inner">
+                <div class="prompt-box">
+                  <textarea class="prompt-textarea" placeholder="Nhập tin nhắn..." rows="1"></textarea>
+                  <!-- During streaming, Send swaps to Stop -->
+                  <button class="prompt-stop" aria-label="Dừng phản hồi">
+                    <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="0">
+                      <rect x="6" y="6" width="12" height="12" rx="1"></rect>
+                    </svg>
+                  </button>
+                </div>
+                <div class="prompt-helper">Shift+Enter để xuống dòng · ⌘+Enter để gửi</div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SCREEN 2 — Empty state -->
+      <!-- ============================================ -->
+      <div class="screen-label">Screen 2 · Empty conversation (suggestion chips)</div>
+
+      <div class="shell">
+        <div class="app-rail">
+          <div class="logo">ZM</div>
+          <div class="nav-item chat" title="Trợ lý">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="app-main">
+          <aside class="history">
+            <div class="history-head">
+              <h2>Trò chuyện</h2>
+              <button class="btn-new">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                  <line x1="12" y1="8" x2="12" y2="14"></line>
+                  <line x1="9" y1="11" x2="15" y2="11"></line>
+                </svg>
+                Mới
+              </button>
+            </div>
+            <div class="history-list" style="padding:24px; text-align:center; color:var(--text-faint); font-size:12.5px">
+              Chưa có cuộc trò chuyện
+              <div style="margin-top:10px"><a href="#" style="color:var(--accent); font-weight:500; font-size:13px">Bắt đầu cuộc trò chuyện</a></div>
+            </div>
+          </aside>
+
+          <section class="convo">
+            <div class="convo-head">
+              <div>
+                <h1>Trợ lý email</h1>
+                <div class="convo-sub">Hỏi về inbox, quy tắc, hoặc nhờ soạn email — bạn duyệt trước khi gửi.</div>
+              </div>
+            </div>
+            <div class="empty-wrap">
+              <div class="empty-inner">
+                <div class="empty-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 3v18"></path>
+                    <path d="M3 12h18"></path>
+                    <path d="m6 6 12 12"></path>
+                    <path d="m18 6-12 12"></path>
+                  </svg>
+                </div>
+                <h2 class="empty-h1">Bắt đầu trò chuyện với Zero Mail</h2>
+                <p class="empty-sub">Hỏi về inbox, quy tắc, hoặc soạn email — Zero Mail chỉ gửi sau khi bạn xác nhận.</p>
+                <div class="suggestions">
+                  <button class="suggestion-chip">Liệt kê quy tắc đang bật</button>
+                  <button class="suggestion-chip">Tìm email từ Acme tuần này</button>
+                  <button class="suggestion-chip">Soạn email từ chối lịch sự</button>
+                  <button class="suggestion-chip">Lưu ghi chú: tôi đang làm dự án X</button>
+                </div>
+              </div>
+            </div>
+            <div class="prompt-wrap">
+              <div class="prompt-inner">
+                <div class="prompt-box">
+                  <textarea class="prompt-textarea" placeholder="Nhập tin nhắn..." rows="1"></textarea>
+                  <button class="prompt-send" aria-label="Gửi tin nhắn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="19" x2="12" y2="5"></line>
+                      <polyline points="5 12 12 5 19 12"></polyline>
+                    </svg>
+                  </button>
+                </div>
+                <div class="prompt-helper">Shift+Enter để xuống dòng · ⌘+Enter để gửi</div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SCREEN 3 — Replay mode + cancelled + error -->
+      <!-- ============================================ -->
+      <div class="screen-label">Screen 3 · Replay-mode "Đã gửi", cancelled, and stream-error</div>
+
+      <div class="shell" style="min-height:auto">
+        <div class="app-rail">
+          <div class="logo">ZM</div>
+          <div class="nav-item chat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="app-main" style="grid-template-columns: 1fr">
+          <section class="convo">
+            <div class="convo-head">
+              <div>
+                <h1>Trợ lý email</h1>
+                <div class="convo-sub">Phiên: chat_3f1c · 16 tin nhắn · ngày 16/5</div>
+              </div>
+            </div>
+            <div class="convo-viewport">
+              <div class="convo-inner">
+                <!-- Replay sent card -->
+                <div class="msg user">
+                  <div class="bubble user">Gửi email cảm ơn đến partnerships@stripe.com.</div>
+                </div>
+
+                <div class="preview replay" role="region" aria-labelledby="preview-title-2">
+                  <div class="preview-head">
+                    <div class="preview-title" id="preview-title-2">
+                      <div class="preview-title-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <line x1="22" y1="2" x2="11" y2="13"></line>
+                          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                      </div>
+                      Gửi email · partnerships@stripe.com
+                    </div>
+                  </div>
+                  <div class="preview-rows">
+                    <div class="preview-row">
+                      <div class="preview-label">Đến</div>
+                      <div class="preview-value">partnerships@stripe.com</div>
+                    </div>
+                    <div class="preview-row">
+                      <div class="preview-label">Tiêu đề</div>
+                      <div class="preview-value">Cảm ơn team Stripe</div>
+                    </div>
+                  </div>
+                  <div class="preview-actions" style="justify-content:flex-end">
+                    <div class="replay-pill sent">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      Đã gửi lúc 14:32
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Cancelled card -->
+                <div class="preview replay" role="region" aria-labelledby="preview-title-3">
+                  <div class="preview-head">
+                    <div class="preview-title" id="preview-title-3">
+                      <div class="preview-title-icon" style="background:var(--muted); color:var(--muted-foreground)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="m19 6-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"></path>
+                        </svg>
+                      </div>
+                      Xóa quy tắc · "Newsletter Medium"
+                    </div>
+                  </div>
+                  <div class="preview-rows">
+                    <div class="preview-row">
+                      <div class="preview-label">Quy tắc</div>
+                      <div class="preview-value">Newsletter Medium · 142 email khớp 30 ngày qua</div>
+                    </div>
+                  </div>
+                  <div class="preview-actions" style="justify-content:flex-end">
+                    <div class="replay-pill cancelled">Đã hủy lúc 14:30</div>
+                  </div>
+                </div>
+
+                <!-- Tool failed -->
+                <div class="tool-card">
+                  <div class="tool-row">
+                    <div class="tool-icon-wrap">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                      </svg>
+                    </div>
+                    <div class="tool-name">getInboxStats</div>
+                    <span class="pill failed">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                      </svg>
+                      Lỗi
+                    </span>
+                  </div>
+                  <div class="tool-body" style="color:var(--destructive)">Công cụ gặp lỗi: hết hạn token Gmail — vui lòng kết nối lại.</div>
+                </div>
+
+                <!-- Stream error inline alert -->
+                <div class="alert-error">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                  <div style="flex:1">
+                    <h4>Mất kết nối với trợ lý</h4>
+                    <p>Hãy thử lại — tin nhắn của bạn vẫn được lưu.</p>
+                    <div class="alert-actions">
+                      <button class="btn btn-outline" style="height:30px; padding:0 12px; font-size:12.5px">
+                        Thử lại
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Stopped line -->
+                <div class="msg">
+                  <div class="msg-avatar">ZM</div>
+                  <div class="bubble assistant">Mình đang chuẩn bị phần đầu của email thì bạn bấm dừng.</div>
+                </div>
+                <div class="stopped-line">Đã dừng phản hồi</div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- SCREEN 4 — Loading skeleton (history fetch) -->
+      <!-- ============================================ -->
+      <div class="screen-label">Screen 4 · Loading skeleton (history fetch)</div>
+
+      <div class="shell" style="min-height:auto">
+        <div class="app-rail">
+          <div class="logo">ZM</div>
+          <div class="nav-item chat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="app-main">
+          <aside class="history">
+            <div class="history-head">
+              <h2>Trò chuyện</h2>
+              <button class="btn-new">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                  <line x1="12" y1="8" x2="12" y2="14"></line>
+                  <line x1="9" y1="11" x2="15" y2="11"></line>
+                </svg>
+                Mới
+              </button>
+            </div>
+            <div class="history-list">
+              <div class="skel" style="height:36px; margin:6px 6px;"></div>
+              <div class="skel" style="height:36px; margin:6px 6px;"></div>
+              <div class="skel" style="height:36px; margin:6px 6px;"></div>
+              <div class="skel" style="height:36px; margin:6px 6px;"></div>
+              <div class="skel" style="height:36px; margin:6px 6px;"></div>
+            </div>
+          </aside>
+          <section class="convo">
+            <div class="convo-head">
+              <div>
+                <h1>Trợ lý email</h1>
+                <div class="convo-sub">Đang tải cuộc trò chuyện...</div>
+              </div>
+            </div>
+            <div class="convo-viewport">
+              <div class="convo-inner">
+                <div style="display:flex; justify-content:flex-end">
+                  <div class="skel" style="height:48px; width:60%; border-radius:18px"></div>
+                </div>
+                <div style="display:flex; gap:10px; align-items:flex-start">
+                  <div class="skel" style="width:24px; height:24px; border-radius:50%; margin-top:4px"></div>
+                  <div class="skel" style="height:76px; width:72%; border-radius:18px"></div>
+                </div>
+                <div style="display:flex; justify-content:flex-end">
+                  <div class="skel" style="height:36px; width:45%; border-radius:18px"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <p style="margin-top:48px; color:var(--text-faint); font-size:12.5px">
+        Static prototype · throwaway · not wired to any API. Visual reference for UI-SPEC.md
+        before <code>/gsd:plan-phase 7</code>.
+      </p>
+    </div>
+
+    <style>
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  </body>
+</html>

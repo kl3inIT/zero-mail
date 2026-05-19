@@ -1,0 +1,59 @@
+databaseChangeLog:
+  - changeSet:
+      id: 043-assistant-pending-action
+      author: zeromail
+      comment: >
+        HIGH-4 resolution: confirmation CAS lives on assistant_pending_action, not
+        chat_message.parts. chat_message is append-only projection data; assistant_pending_action
+        is the confirmation-state source of truth. draft_body stores only user-authored draft data
+        from send/reply/forward/saveDraft preview flows and must never be logged.
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              CREATE TABLE assistant_pending_action (
+                id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+                chat_id uuid NOT NULL REFERENCES chat(id) ON DELETE CASCADE,
+                tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+                chat_message_id uuid NOT NULL REFERENCES chat_message(id) ON DELETE CASCADE,
+                tool_call_id varchar(64) NOT NULL,
+                state varchar(16) NOT NULL,
+                parts_updated_at timestamptz NOT NULL DEFAULT now(),
+                redis_lease_key varchar(128),
+                draft_body text,
+                created_at timestamptz NOT NULL DEFAULT now(),
+                updated_at timestamptz NOT NULL DEFAULT now(),
+                expires_at timestamptz NOT NULL,
+                last_tool_call_id varchar(64),
+                last_tool_call_state varchar(16),
+                version int NOT NULL DEFAULT 0,
+                CONSTRAINT ck_assistant_pending_action_state CHECK (state IN ('PENDING', 'PROCESSING', 'CONFIRMED', 'CANCELED', 'FAILED')),
+                CONSTRAINT ux_assistant_pending_action_chat_tool UNIQUE (chat_id, tool_call_id)
+              );
+
+              CREATE INDEX idx_assistant_pending_action_state_expires ON assistant_pending_action (state, expires_at);
+              CREATE INDEX idx_assistant_pending_action_chat_parts_updated ON assistant_pending_action (chat_id, parts_updated_at);
+
+              CREATE OR REPLACE FUNCTION set_pending_action_parts_updated_at()
+              RETURNS trigger
+              LANGUAGE plpgsql
+              AS $$
+              BEGIN
+                NEW.parts_updated_at = now();
+                NEW.updated_at = now();
+                RETURN NEW;
+              END;
+              $$;
+
+              CREATE TRIGGER bump_pending_action_parts_updated_at
+              BEFORE UPDATE ON assistant_pending_action
+              FOR EACH ROW
+              WHEN (OLD.state IS DISTINCT FROM NEW.state)
+              EXECUTE FUNCTION set_pending_action_parts_updated_at();
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              DROP TRIGGER IF EXISTS bump_pending_action_parts_updated_at ON assistant_pending_action;
+              DROP FUNCTION IF EXISTS set_pending_action_parts_updated_at();
+              DROP TABLE IF EXISTS assistant_pending_action;

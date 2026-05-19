@@ -33,6 +33,7 @@ export default function Features() {
             src="/images/phan-loai-dark-v2.png"
             alt="Tính năng tự động phân loại"
             fill
+            sizes="(max-width: 1024px) 100vw, 1024px"
             className="object-contain dark:hidden"
           />
           {/* Dark Mode Image */}
@@ -60,6 +61,7 @@ export default function Features() {
             src="/images/ketnoi-light.png"
             alt="Bản nháp chờ sẵn"
             fill
+            sizes="(max-width: 1024px) 100vw, 1024px"
             className="object-contain dark:hidden"
           />
           {/* Dark Mode Image */}

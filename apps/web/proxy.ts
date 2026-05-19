@@ -21,6 +21,7 @@ import { LOCALE_COOKIE_MAX_AGE, NEXT_LOCALE_COOKIE, routing } from './i18n/routi
  */
 const PROTECTED = [
   '/onboarding',
+  '/chat',
   '/rules',
   '/settings',
   '/ai',

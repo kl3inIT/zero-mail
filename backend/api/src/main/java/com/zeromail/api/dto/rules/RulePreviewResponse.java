@@ -1,8 +1,10 @@
 package com.zeromail.api.dto.rules;
 
 import com.zeromail.core.rules.usecases.RulePreviewResult;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
+@Schema(requiredProperties = {"impactSummary", "rows", "savedRuleMarkedPreviewed"})
 public record RulePreviewResponse(
         ImpactSummaryResponse impactSummary,
         List<PreviewRowResponse> rows,

@@ -1,8 +1,17 @@
 package com.zeromail.api.dto.rules;
 
 import com.zeromail.core.rules.usecases.RuleTemplateMaterializationResult;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
+@Schema(
+        requiredProperties = {
+            "createdCount",
+            "skippedCount",
+            "customizedPreservedCount",
+            "createdRules",
+            "skippedTemplates"
+        })
 public record RuleTemplateMaterializationResponse(
         int createdCount,
         int skippedCount,

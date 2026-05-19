@@ -1,0 +1,97 @@
+databaseChangeLog:
+  - changeSet:
+      id: 047-chat-forbidden-html-expanded
+      author: zeromail
+      comment: >
+        Expand chat_jsonb_contains_forbidden_html to cover XSS vectors beyond <script> and
+        <iframe>. The original 042 regex was too narrow (CR-03): it missed event-handler
+        attributes (onload, onerror, onclick, ...), javascript: URIs in href/src, and other
+        dangerous tags like <svg>, <object>, <embed>, <style>, <link>, <meta>. Without this
+        defense, a prompt-injection payload landing in a tool output could persist into
+        chat_message.parts and trigger XSS on re-render in the frontend. The Privacy
+        Draft-body carve-out is unchanged: assistant_pending_action.draft_body is not
+        affected (the existing tool-(sendEmail|replyEmail|forwardEmail|saveDraft) allow-list
+        in reject_chat_message_with_body still applies for body fields). This changeSet
+        replaces the function body via CREATE OR REPLACE so the trigger picks it up without
+        DDL on chat_message.
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              CREATE OR REPLACE FUNCTION chat_jsonb_contains_forbidden_html(candidate jsonb)
+              RETURNS boolean
+              LANGUAGE plpgsql
+              AS $$
+              DECLARE
+                object_entry record;
+                array_element jsonb;
+                string_text text;
+              BEGIN
+                IF candidate IS NULL THEN
+                  RETURN FALSE;
+                END IF;
+
+                IF jsonb_typeof(candidate) = 'string' THEN
+                  string_text := candidate #>> '{}';
+                  IF string_text ~* '<[[:space:]]*(script|iframe|svg|object|embed|style|link|meta)([[:space:]>]|/|$)' THEN
+                    RETURN TRUE;
+                  END IF;
+                  IF string_text ~* '\son[a-z]+[[:space:]]*=' THEN
+                    RETURN TRUE;
+                  END IF;
+                  IF string_text ~* '(href|src)[[:space:]]*=[[:space:]]*["'']?[[:space:]]*javascript[[:space:]]*:' THEN
+                    RETURN TRUE;
+                  END IF;
+                  RETURN FALSE;
+                ELSIF jsonb_typeof(candidate) = 'object' THEN
+                  FOR object_entry IN SELECT key, value FROM jsonb_each(candidate) LOOP
+                    IF chat_jsonb_contains_forbidden_html(object_entry.value) THEN
+                      RETURN TRUE;
+                    END IF;
+                  END LOOP;
+                ELSIF jsonb_typeof(candidate) = 'array' THEN
+                  FOR array_element IN SELECT value FROM jsonb_array_elements(candidate) LOOP
+                    IF chat_jsonb_contains_forbidden_html(array_element) THEN
+                      RETURN TRUE;
+                    END IF;
+                  END LOOP;
+                END IF;
+
+                RETURN FALSE;
+              END;
+              $$;
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              CREATE OR REPLACE FUNCTION chat_jsonb_contains_forbidden_html(candidate jsonb)
+              RETURNS boolean
+              LANGUAGE plpgsql
+              AS $$
+              DECLARE
+                object_entry record;
+                array_element jsonb;
+              BEGIN
+                IF candidate IS NULL THEN
+                  RETURN FALSE;
+                END IF;
+
+                IF jsonb_typeof(candidate) = 'string' THEN
+                  RETURN (candidate #>> '{}') ~* '<[[:space:]]*(script|iframe)([[:space:]>]|/|$)';
+                ELSIF jsonb_typeof(candidate) = 'object' THEN
+                  FOR object_entry IN SELECT key, value FROM jsonb_each(candidate) LOOP
+                    IF chat_jsonb_contains_forbidden_html(object_entry.value) THEN
+                      RETURN TRUE;
+                    END IF;
+                  END LOOP;
+                ELSIF jsonb_typeof(candidate) = 'array' THEN
+                  FOR array_element IN SELECT value FROM jsonb_array_elements(candidate) LOOP
+                    IF chat_jsonb_contains_forbidden_html(array_element) THEN
+                      RETURN TRUE;
+                    END IF;
+                  END LOOP;
+                END IF;
+
+                RETURN FALSE;
+              END;
+              $$;

@@ -66,6 +66,16 @@ public class TestSessionSupport {
     OncePerRequestFilter testAuthFilter(UserRepository users) {
         return new OncePerRequestFilter() {
             @Override
+            protected boolean shouldNotFilterAsyncDispatch() {
+                return false;
+            }
+
+            @Override
+            protected boolean shouldNotFilterErrorDispatch() {
+                return false;
+            }
+
+            @Override
             protected void doFilterInternal(
                     @NonNull HttpServletRequest req,
                     @NonNull HttpServletResponse res,

@@ -1,8 +1,7 @@
 import { api, xsrfHeader } from '@/lib/api/client';
+import type { components } from '@/lib/api/schema';
 
-export interface SelectTemplateBody {
-  templateKey: 'archive-receipts' | 'label-newsletters' | 'pin-calendar';
-}
+export type SelectTemplateBody = components['schemas']['SelectTemplateRequest'];
 
 export async function selectTemplate(body: SelectTemplateBody): Promise<void> {
   const { error, response } = await api.POST('/onboarding/select-template', {

@@ -82,7 +82,7 @@ async function openOnboardingRoute(page: Page, route: OnboardingRoute) {
   ]);
   await installOnboardingApiMock(page, route.step);
   await page.goto(route.path, { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 }
 
 async function installOnboardingApiMock(

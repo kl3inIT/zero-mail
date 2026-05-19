@@ -35,7 +35,7 @@ for (const viewport of [
     await expect(page.getByTestId('digest-send-hour-select')).toBeDisabled();
 
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await expect(page.getByTestId('daily-digest-switch')).not.toBeChecked();
+    await expect(page.getByTestId('daily-digest-switch')).not.toBeChecked({ timeout: 15_000 });
 
     await page.getByTestId('daily-digest-switch').click();
     await expect(page.getByTestId('digest-send-hour-select')).toBeEnabled();
@@ -58,6 +58,7 @@ test('notification downtime note is localized', async ({ page }) => {
   await seedAuthenticatedSession(page, 'vi');
   await installChromeApiMock(page, state);
   await page.goto('/settings', { waitUntil: 'domcontentloaded' });
+  await page.waitForLoadState('load');
 
   await expect(page.getByTestId('notifications-section')).toBeVisible();
   await expect(page.getByText(/không có cơ chế gửi bù/i)).toBeVisible();

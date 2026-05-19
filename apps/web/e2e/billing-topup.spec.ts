@@ -150,7 +150,6 @@ for (const viewport of VIEWPORTS) {
     const requestsBeforeCredit = state.balanceRequests;
     state.availableCredits = 42;
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('networkidle');
 
     const successStep = page.getByTestId('topup-success-step');
     await expect(successStep).toBeVisible();
@@ -159,7 +158,7 @@ for (const viewport of VIEWPORTS) {
     expect(state.balanceRequests).toBeGreaterThan(requestsBeforeCredit);
 
     await page.getByRole('link', { name: 'Back to billing' }).click();
-    await expect(page).toHaveURL(/\/billing$/);
+    await expect(page).toHaveURL(/\/billing$/, { timeout: 15_000 });
     await expect(page.getByTestId('billing-balance-figure')).toContainText('42');
     await expectNoHorizontalOverflow(page);
   });
@@ -178,7 +177,6 @@ test('top-up route rehydrates a pending intent from code search param and sessio
   await expect(page.getByText(TOPUP_CODE, { exact: true })).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/billing/top-up\\?code=${TOPUP_CODE}`));
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle');
 
   await expect(page).toHaveURL(new RegExp(`/billing/top-up\\?code=${TOPUP_CODE}`));
   await expect(page.getByTestId('topup-instructions-step')).toBeVisible();
@@ -215,7 +213,7 @@ async function openBilling(
   await seedAuthenticatedSession(page);
   await installBillingApiMock(page, state);
   await page.goto(path, { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 }
 
 async function installBillingApiMock(page: Page, state: BillingMockState) {

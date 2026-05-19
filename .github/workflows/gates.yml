@@ -38,6 +38,39 @@ jobs:
       - name: Run backend checks
         run: ./gradlew --no-daemon check
 
+      - name: Enforce zero non-AssistantSendExecutor Gmail send call sites (ARCH-01)
+        run: |
+          chmod +x scripts/ci/count-gmail-send-call-sites.sh
+          COUNTS=$(scripts/ci/count-gmail-send-call-sites.sh)
+          echo "$COUNTS"
+          NON_EXECUTOR=$(echo "$COUNTS" | awk -F= '/^non_executor=/{print $2}')
+          EXECUTOR=$(echo "$COUNTS" | awk -F= '/^executor=/{print $2}')
+          if [ "$NON_EXECUTOR" != "0" ]; then
+            echo "::error::Non-AssistantSendExecutor Gmail send call site detected - ARCH-01 regression"
+            exit 1
+          fi
+          # Wave 4 [ATOMIC-GROUP: arch01-flip]: AssistantSendExecutor is the single allowed send call site.
+          if [ "$EXECUTOR" != "1" ]; then
+            echo "::error::AssistantSendExecutor send call site count drifted from exactly 1 - ARCH-01"
+            exit 1
+          fi
+
+      - name: Keep Gmail send ArchUnit gates atomic (ARCH-01)
+        run: |
+          git fetch --quiet origin main --depth=1 || true
+          BASE_REF="origin/main"
+          if ! git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
+            BASE_REF="HEAD^"
+          fi
+          CHANGED_FILES=$(git diff --name-only "$BASE_REF"...HEAD || true)
+          echo "$CHANGED_FILES"
+          NO_GMAIL_SEND_CHANGED=$(echo "$CHANGED_FILES" | grep -c '^backend/core/src/test/java/com/zeromail/core/arch/NoGmailSendAllowedTest.java$' || true)
+          COUNT_GATE_CHANGED=$(echo "$CHANGED_FILES" | grep -c '^backend/core/src/test/java/com/zeromail/core/arch/OnlyOneGmailSendCallSiteTest.java$' || true)
+          if [ "$NO_GMAIL_SEND_CHANGED" != "0" ] && [ "$COUNT_GATE_CHANGED" = "0" ]; then
+            echo "::error::NoGmailSendAllowedTest changed without OnlyOneGmailSendCallSiteTest - keep ARCH-01 gates atomic"
+            exit 1
+          fi
+
   ai-eval:
     name: Backend AI Eval
     if: ${{ inputs.run-ai-eval }}

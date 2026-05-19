@@ -1,0 +1,16 @@
+# Test profile: stable diagnostics without noisy framework internals.
+logging:
+  level:
+    com.zeromail: INFO
+    org.testcontainers: WARN
+spring:
+  ai:
+    chat:
+      client:
+        observations:
+          log-prompt: false
+          log-completion: false
+      observations:
+        log-prompt: false
+        log-completion: false
+

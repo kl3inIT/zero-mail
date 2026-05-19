@@ -1,0 +1,47 @@
+databaseChangeLog:
+  - changeSet:
+      id: 044-assistant-action-audit
+      author: zeromail
+      comment: >
+        Single audit table for AssistantSendExecutor and AssistantWriteExecutor. tool_category
+        discriminates confirmed-send, write-reversible, and confirm-required rows. HIGH-5 crash
+        recovery: confirmed-send rows can be inserted as SEND_IN_FLIGHT with a pre-generated
+        Message-ID, then flipped to COMMITTED after Gmail success. FAILED rows carry sent_at NULL.
+      changes:
+        - sql: |
+            CREATE TABLE assistant_action_audit (
+              id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+              chat_id uuid NOT NULL REFERENCES chat(id) ON DELETE CASCADE,
+              tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+              tool_call_id varchar(64) NOT NULL,
+              tool_category varchar(32) NOT NULL,
+              tool_name varchar(64) NOT NULL,
+              state varchar(16) NOT NULL DEFAULT 'COMMITTED',
+              recipient_hash varchar(64),
+              subject_hash varchar(64),
+              gmail_message_id varchar(128),
+              result_summary_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+              preview_snapshot jsonb NOT NULL,
+              in_flight_at timestamptz,
+              sent_at timestamptz,
+              created_at timestamptz NOT NULL DEFAULT now(),
+              updated_at timestamptz NOT NULL DEFAULT now(),
+              version int NOT NULL DEFAULT 0,
+              CONSTRAINT ux_assistant_action_audit_chat_tool UNIQUE (chat_id, tool_call_id),
+              CONSTRAINT ck_assistant_action_audit_state CHECK (state IN ('PENDING', 'SEND_IN_FLIGHT', 'COMMITTED', 'FAILED')),
+              CONSTRAINT ck_assistant_action_audit_sent_state CHECK (
+                (state IN ('PENDING', 'SEND_IN_FLIGHT', 'FAILED') AND sent_at IS NULL)
+                OR
+                (state = 'COMMITTED' AND sent_at IS NOT NULL)
+              )
+            );
+
+            CREATE INDEX idx_assistant_action_audit_tenant_sent_committed
+              ON assistant_action_audit (tenant_id, sent_at DESC)
+              WHERE state = 'COMMITTED';
+            CREATE INDEX idx_assistant_action_audit_in_flight
+              ON assistant_action_audit (state, in_flight_at)
+              WHERE state = 'SEND_IN_FLIGHT';
+      rollback:
+        - dropTable:
+            tableName: assistant_action_audit

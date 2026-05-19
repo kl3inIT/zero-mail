@@ -1,0 +1,57 @@
+databaseChangeLog:
+  - changeSet:
+      id: 041-chat
+      author: zeromail
+      comment: >
+        Chat rows are tenant-owned conversation headers for the v1.1 assistant history sidebar.
+        They store title metadata and soft-delete state only; message content lives in
+        chat_message.parts where the ARCH-02 body-ban trigger applies.
+      changes:
+        - createTable:
+            tableName: chat
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_chat_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: title
+                  type: varchar(200)
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: soft_deleted_at
+                  type: timestamptz
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            comment: Active chat history sidebar query by tenant, newest first.
+            sql: CREATE INDEX idx_chat_tenant_updated_active ON chat (tenant_id, updated_at DESC) WHERE soft_deleted_at IS NULL
+      rollback:
+        - dropTable:
+            tableName: chat

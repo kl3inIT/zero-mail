@@ -36,6 +36,7 @@ import { cn } from '@/lib/utils';
 type NavItem = {
   href: string;
   labelKey:
+    | 'nav.chat'
     | 'nav.ai'
     | 'nav.analytics'
     | 'nav.needsReply'
@@ -48,13 +49,14 @@ type NavItem = {
 };
 
 const MAIL_NAV: NavItem[] = [
+  { href: '/chat', labelKey: 'nav.chat', icon: Sparkles },
   { href: '/rules', labelKey: 'nav.rules', icon: ListChecks },
-  { href: '/ai', labelKey: 'nav.ai', icon: Sparkles },
   { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
   { href: '/needs-reply', labelKey: 'nav.needsReply', icon: MailQuestion, badge: 'needs-reply' },
 ];
 
 const MANAGE_NAV: NavItem[] = [
+  { href: '/ai', labelKey: 'nav.ai', icon: Sparkles },
   { href: '/billing', labelKey: 'nav.billing', icon: CreditCard },
   { href: '/settings', labelKey: 'nav.settings', icon: Settings },
 ];

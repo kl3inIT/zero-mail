@@ -2,15 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Email assistant chat + Settings page
-status: planning
-last_updated: "2026-05-17T10:15:00.000Z"
-last_activity: 2026-05-17
+status: "Phase 7 shipped — PR #43"
+stopped_at: Completed 07-06-PLAN.md
+last_updated: "2026-05-19T03:23:59.529Z"
+last_activity: 2026-05-19
 progress:
   total_phases: 2
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 6
+  completed_plans: 6
+  percent: 50
 ---
 
 # Project State
@@ -20,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** v1.0 milestone complete - v1.0.0-rc1 released
+**Current focus:** Phase 8 — assistant settings page + hardening + eval + v1.1 ga
 
 ## Current Position
 
-Phase: 7 — Chat Email Assistant — pending discuss-phase
-Plan: —
-Status: Roadmap created (2 phases, 35 requirements mapped); awaiting `/gsd:discuss-phase 7`
-Last activity: 2026-05-17 — v1.1 roadmap created with 2-phase split (Phase 7 chat + Phase 8 settings/hardening/GA)
+Phase: 8
+Plan: Not started
+Status: Phase 7 shipped — PR #43
+Last activity: 2026-05-19
 
 ## Current Milestone Roadmap
 
@@ -42,7 +43,7 @@ See `.planning/ROADMAP.md` for full phase details + success criteria, and `.plan
 
 **Velocity:**
 
-- Total plans completed: 61
+- Total plans completed: 67
 - Average duration: —
 - Total execution time: 0.0 hours
 
@@ -56,6 +57,7 @@ See `.planning/ROADMAP.md` for full phase details + success criteria, and `.plan
 | 04 | 9 | - | - |
 | 05A | 6 | - | - |
 | 05B | 8 | - | - |
+| 07 | 6 | - | - |
 
 **Recent Trend:**
 
@@ -149,6 +151,12 @@ See `.planning/ROADMAP.md` for full phase details + success criteria, and `.plan
 | Phase 06-polish-casa-verified-launch P02 | 21min | 5 tasks | 10 files |
 | Phase 06 P03 | 2h 47m | 2 tasks | 11 files |
 | Phase 06 P04 | 9 min | 3 tasks | 4 files |
+| Phase 07 P01 | 21 min | 9 tasks | 12 files |
+| Phase 07 P02 | 1h 4m | 4 tasks | 51 files |
+| Phase 07 P03 | 44min | 3 tasks | 45 files |
+| Phase 07 P04 | 2h 6m | 3 tasks | 33 files |
+| Phase 07 P05 | 45min | 4 tasks | 28 files |
+| Phase 07 P06 | 7h | 8 tasks | 57 files |
 
 ## Accumulated Context
 
@@ -318,6 +326,15 @@ Recent decisions affecting current work:
 - [Phase 06]: Plan 02 uses deterministic UUID loadtest tenants from 00000000-0000-4000-8000-1de57e570001 through 00000000-0000-4000-8000-1de57e570050.
 - [Phase 06]: Plan 02 seeds gmail_connections for each synthetic loadtest tenant so PubSubIngestionService resolves emailAddress to tenant_id during the k6 workload.
 - [Phase 06]: Plan 02 wires loadtestVerify as a Gradle Exec task that shells out to psql for invariant checks instead of using JDBC on the Gradle buildscript classpath.
+- [Phase 07]: Plan 02 keeps chat_message.parts source-aware: email-read tool outputs reject body-shaped fields, while send/draft tool arguments may persist user-authored draft bodies per the privacy carve-out.
+- [Phase 07]: Plan 02 uses recursive PL/pgSQL JSONB traversal for the body-ban trigger and SQLSTATE 23514 so Spring maps trigger failures as data-integrity violations.
+- [Phase 07]: Plan 02 moves confirmation CAS to assistant_pending_action(parts_updated_at,state); chat_message remains append-only with no updated_at column.
+- [Phase 07]: Plan 03 locks the 24-tool authoritative list in ChatToolName/ChatToolCatalog: 8 read, 7 write-reversible, 6 confirm-required, 3 confirmed-send; createRule is confirm-required and searchMemories is a read tool.
+- [Phase 07]: VercelProtocolEmitter uses a core-local FrameWriter instead of SseEmitter so backend/core stays Spring-MVC-free; backend/api will adapt SseEmitter in Plan 04.
+- [Phase 07]: GetMessageToolHandler emits decoded message body as bodyText for in-memory LLM use, relying on SanitizingSink/ToolOutputSanitizer to strip it before chat_message persistence.
+- [Phase 07]: Plan 04 keeps ChatOrchestrator.stream non-transactional; prep, tool envelopes, and assistant text persistence happen through TransactionTemplate callbacks after stream lifecycle points.
+- [Phase 07]: Plan 04 places AssistantPendingActionReconciler in backend/api with API-side scheduling because v1.1 runs the chat surface in the API process, not worker-only schedulers.
+- [Phase 07]: Plan 04 ConfirmControllerShellIT is intentionally temporary and must be deleted in Plan 05 with the executor/state-machine atomic flip.
 
 ### Roadmap Evolution
 
@@ -418,8 +435,8 @@ Items acknowledged and deferred at v1.0 milestone close on 2026-05-15.
 
 ## Session Continuity
 
-Last session: 2026-05-14T23:35:33.615Z
-Stopped at: Completed 06-04-PLAN.md
+Last session: 2026-05-18T16:06:27.210Z
+Stopped at: Completed 07-06-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

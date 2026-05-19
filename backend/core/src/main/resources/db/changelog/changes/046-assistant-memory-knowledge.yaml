@@ -1,0 +1,116 @@
+databaseChangeLog:
+  - changeSet:
+      id: 046-assistant-memory-knowledge
+      author: zeromail
+      comment: >
+        Assistant memory and knowledge snippets are tenant-scoped user configuration data, not
+        extracted Gmail body content. Content length caps are enforced at the application layer so
+        future tuning does not require a database migration.
+      changes:
+        - createTable:
+            tableName: assistant_memory
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_assistant_memory_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: content
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: source
+                  type: varchar(32)
+                  defaultValue: chat
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: assistant_memory
+            indexName: idx_assistant_memory_tenant_created
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: created_at
+                  descending: true
+        - createTable:
+            tableName: assistant_knowledge_snippet
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_assistant_knowledge_snippet_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: title
+                  type: varchar(120)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: content
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropTable:
+            tableName: assistant_knowledge_snippet
+        - dropTable:
+            tableName: assistant_memory

@@ -1,0 +1,178 @@
+databaseChangeLog:
+  - changeSet:
+      id: 042-chat-message-body-ban
+      author: zeromail
+      comment: >
+        Single changeSet by design (MEDIUM-3): chat_message table, recursive JSONB body-key
+        detector, body-ban function, and trigger are applied atomically. The detector uses
+        jsonb_each/jsonb_array_elements because Postgres 17 rejects the reviewed recursive
+        $.**.keyvalue() JSONPath on scalar nodes. Trigger logic is source-aware on part type
+        (HIGH-3): rejects body in email-read tool outputs and unknown tool outputs, but allows body
+        in send/draft tool args per the CLAUDE.md Privacy Draft-body carve-out. Uses tool-getMessage,
+        not the old tool-readEmail name (LOW-1).
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              CREATE TABLE chat_message (
+                id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+                chat_id uuid NOT NULL REFERENCES chat(id) ON DELETE CASCADE,
+                tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+                role varchar(16) NOT NULL,
+                parts jsonb NOT NULL,
+                created_at timestamptz NOT NULL DEFAULT now(),
+                CONSTRAINT ck_chat_message_role CHECK (role IN ('user', 'assistant', 'tool', 'system')),
+                CONSTRAINT ck_chat_message_parts_schema_version CHECK ((parts->>'schemaVersion') = '1')
+              );
+
+              CREATE INDEX idx_chat_message_chat_created ON chat_message (chat_id, created_at);
+              CREATE INDEX idx_chat_message_tenant ON chat_message (tenant_id);
+
+              CREATE OR REPLACE FUNCTION chat_jsonb_contains_body_key(candidate jsonb)
+              RETURNS boolean
+              LANGUAGE plpgsql
+              AS $$
+              DECLARE
+                object_entry record;
+                array_element jsonb;
+              BEGIN
+                IF candidate IS NULL THEN
+                  RETURN FALSE;
+                END IF;
+
+                IF jsonb_typeof(candidate) = 'object' THEN
+                  FOR object_entry IN SELECT key, value FROM jsonb_each(candidate) LOOP
+                    IF object_entry.key ~* '^(body|emailBody|messageBody|bodyHtml|bodyText|htmlBody|textBody)$' THEN
+                      RETURN TRUE;
+                    END IF;
+                    IF chat_jsonb_contains_body_key(object_entry.value) THEN
+                      RETURN TRUE;
+                    END IF;
+                  END LOOP;
+                ELSIF jsonb_typeof(candidate) = 'array' THEN
+                  FOR array_element IN SELECT value FROM jsonb_array_elements(candidate) LOOP
+                    IF chat_jsonb_contains_body_key(array_element) THEN
+                      RETURN TRUE;
+                    END IF;
+                  END LOOP;
+                END IF;
+
+                RETURN FALSE;
+              END;
+              $$;
+
+              CREATE OR REPLACE FUNCTION chat_jsonb_contains_forbidden_html(candidate jsonb)
+              RETURNS boolean
+              LANGUAGE plpgsql
+              AS $$
+              DECLARE
+                object_entry record;
+                array_element jsonb;
+              BEGIN
+                IF candidate IS NULL THEN
+                  RETURN FALSE;
+                END IF;
+
+                IF jsonb_typeof(candidate) = 'string' THEN
+                  RETURN (candidate #>> '{}') ~* '<[[:space:]]*(script|iframe)([[:space:]>]|/|$)';
+                ELSIF jsonb_typeof(candidate) = 'object' THEN
+                  FOR object_entry IN SELECT key, value FROM jsonb_each(candidate) LOOP
+                    IF chat_jsonb_contains_forbidden_html(object_entry.value) THEN
+                      RETURN TRUE;
+                    END IF;
+                  END LOOP;
+                ELSIF jsonb_typeof(candidate) = 'array' THEN
+                  FOR array_element IN SELECT value FROM jsonb_array_elements(candidate) LOOP
+                    IF chat_jsonb_contains_forbidden_html(array_element) THEN
+                      RETURN TRUE;
+                    END IF;
+                  END LOOP;
+                END IF;
+
+                RETURN FALSE;
+              END;
+              $$;
+
+              CREATE OR REPLACE FUNCTION chat_jsonb_has_subject_over_limit(candidate jsonb)
+              RETURNS boolean
+              LANGUAGE plpgsql
+              AS $$
+              DECLARE
+                object_entry record;
+                array_element jsonb;
+              BEGIN
+                IF candidate IS NULL THEN
+                  RETURN FALSE;
+                END IF;
+
+                IF jsonb_typeof(candidate) = 'object' THEN
+                  FOR object_entry IN SELECT key, value FROM jsonb_each(candidate) LOOP
+                    IF object_entry.key = 'subject'
+                        AND jsonb_typeof(object_entry.value) = 'string'
+                        AND length(trim(both '"' from object_entry.value::text)) > 200 THEN
+                      RETURN TRUE;
+                    END IF;
+                    IF chat_jsonb_has_subject_over_limit(object_entry.value) THEN
+                      RETURN TRUE;
+                    END IF;
+                  END LOOP;
+                ELSIF jsonb_typeof(candidate) = 'array' THEN
+                  FOR array_element IN SELECT value FROM jsonb_array_elements(candidate) LOOP
+                    IF chat_jsonb_has_subject_over_limit(array_element) THEN
+                      RETURN TRUE;
+                    END IF;
+                  END LOOP;
+                END IF;
+
+                RETURN FALSE;
+              END;
+              $$;
+
+              CREATE OR REPLACE FUNCTION reject_chat_message_with_body()
+              RETURNS trigger
+              LANGUAGE plpgsql
+              AS $$
+              DECLARE
+                tool_part jsonb;
+                part_type text;
+              BEGIN
+                IF chat_jsonb_contains_forbidden_html(NEW.parts) THEN
+                  RAISE EXCEPTION 'Chat persistence violation: forbidden HTML signature in chat_message.parts; see ARCH-02'
+                    USING ERRCODE = '23514';
+                END IF;
+
+                IF chat_jsonb_has_subject_over_limit(NEW.parts) THEN
+                  RAISE EXCEPTION 'Chat persistence violation: subject exceeds 200 characters in chat_message.parts; see ARCH-02'
+                    USING ERRCODE = '23514';
+                END IF;
+
+                FOR tool_part IN SELECT value FROM jsonb_array_elements(COALESCE(NEW.parts->'parts', '[]'::jsonb)) LOOP
+                  part_type := COALESCE(tool_part->>'type', '');
+                  IF part_type ~ '^tool-(sendEmail|replyEmail|forwardEmail|saveDraft)$' THEN
+                    CONTINUE;
+                  END IF;
+
+                  IF part_type LIKE 'tool-%' AND chat_jsonb_contains_body_key(tool_part) THEN
+                    RAISE EXCEPTION 'Chat persistence violation: body content in email-read tool output; ToolOutputSanitizer was bypassed; see ARCH-02 + CLAUDE.md Privacy'
+                      USING ERRCODE = '23514';
+                  END IF;
+                END LOOP;
+
+                RETURN NEW;
+              END;
+              $$;
+
+              CREATE TRIGGER chat_message_body_ban
+              BEFORE INSERT OR UPDATE ON chat_message
+              FOR EACH ROW
+              EXECUTE FUNCTION reject_chat_message_with_body();
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              DROP TRIGGER IF EXISTS chat_message_body_ban ON chat_message;
+              DROP FUNCTION IF EXISTS reject_chat_message_with_body();
+              DROP FUNCTION IF EXISTS chat_jsonb_has_subject_over_limit(jsonb);
+              DROP FUNCTION IF EXISTS chat_jsonb_contains_forbidden_html(jsonb);
+              DROP FUNCTION IF EXISTS chat_jsonb_contains_body_key(jsonb);
+              DROP TABLE IF EXISTS chat_message;

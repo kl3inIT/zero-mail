@@ -1,5 +1,6 @@
 package com.zeromail.api.dto.account;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
@@ -12,5 +13,6 @@ import jakarta.validation.constraints.Pattern;
  * localization is owned entirely by the frontend dictionary (D-D5 / D-C1: server never builds
  * localized prose).
  */
+@Schema(requiredProperties = "language")
 public record UpdateLanguageRequest(
         @NotBlank @Pattern(regexp = "vi|en", message = "must be vi or en") String language) {}

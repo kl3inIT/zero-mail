@@ -15,6 +15,7 @@ const eslintConfig = defineConfig([
     'next-env.d.ts',
     'lib/api/schema.d.ts',
     'components/ui/**',
+    'components/ai/**',
   ]),
   // eslint-config-prettier MUST be last to disable formatting-related rules
   // that would otherwise conflict with Prettier.

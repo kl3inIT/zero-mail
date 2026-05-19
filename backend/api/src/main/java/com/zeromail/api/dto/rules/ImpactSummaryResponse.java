@@ -1,8 +1,20 @@
 package com.zeromail.api.dto.rules;
 
 import com.zeromail.core.rules.usecases.RulePreviewResult;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Map;
 
+@Schema(
+        requiredProperties = {
+            "sampleSize",
+            "sampledMessageCount",
+            "matchedCount",
+            "proposedActionCounts",
+            "deferredCount",
+            "conflictCount",
+            "noWriteNotice",
+            "noWriteNoticeKey"
+        })
 public record ImpactSummaryResponse(
         int sampleSize,
         int sampledMessageCount,
@@ -11,7 +23,7 @@ public record ImpactSummaryResponse(
         int deferredCount,
         int conflictCount,
         boolean noWriteNotice,
-        String noWriteNoticeKey) {
+        @Schema(nullable = true) String noWriteNoticeKey) {
 
     static ImpactSummaryResponse from(RulePreviewResult.ImpactSummary impactSummary) {
         return new ImpactSummaryResponse(

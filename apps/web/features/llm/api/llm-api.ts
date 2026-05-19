@@ -14,9 +14,9 @@ export async function validateByok(payload: ByokValidatePayload): Promise<ByokVa
     body: payload,
     headers: { 'Content-Type': 'application/json', ...xsrfHeader() },
   });
-  if (error || !response.ok)
+  if (error || !response.ok || data === undefined)
     throw error ?? new Error(`/api/llm/byok/validate failed: ${response.status}`);
-  return data as ByokValidateResult;
+  return data;
 }
 
 export async function saveByok(payload: ByokSavePayload): Promise<ByokSaveResult> {
@@ -24,18 +24,17 @@ export async function saveByok(payload: ByokSavePayload): Promise<ByokSaveResult
     body: payload,
     headers: { 'Content-Type': 'application/json', ...xsrfHeader() },
   });
-  if (error || !response.ok)
+  if (error || !response.ok || data === undefined)
     throw error ?? new Error(`/api/llm/byok save failed: ${response.status}`);
-  return data as ByokSaveResult;
+  return data;
 }
 
 export async function getCurrentByok(): Promise<ByokCurrentResult | null> {
   const { data, error, response } = await api.GET('/api/llm/byok', {});
   if (response.status === 204 || data === null) return null;
-  if (error || !response.ok)
+  if (error || !response.ok || data === undefined)
     throw error ?? new Error(`/api/llm/byok current failed: ${response.status}`);
 
-  const current = data as ByokCurrentResult;
-  if (!current.provider || !current.savedAt) return null;
-  return current;
+  if (!data.provider || !data.savedAt) return null;
+  return data;
 }

@@ -1,10 +1,7 @@
-import { api, xsrfHeader } from '@/lib/api/client';
-import { getApiUrl } from '@/lib/api/base-url';
+import { adaptFetchForOpenApi, api, xsrfHeader } from '@/lib/api/client';
+import type { components } from '@/lib/api/schema';
 
-export interface TenantStatus {
-  connectionStatus: 'CONNECTED' | 'DISCONNECTED' | 'NOT_CONNECTED' | 'PENDING';
-  // Mirrors the GmailConnectionStatusResponse wire shape (Phase 1.2.1 D-D4).
-}
+export type TenantStatus = components['schemas']['GmailConnectionStatusResponse'];
 
 export interface GetTenantStatusOptions {
   fetcher?: typeof fetch;
@@ -14,22 +11,16 @@ export interface GetTenantStatusOptions {
 
 export async function getTenantStatus(opts: GetTenantStatusOptions = {}): Promise<TenantStatus> {
   const { fetcher, signal, headers } = opts;
-  if (fetcher || headers) {
-    const response = await (fetcher ?? fetch)(getApiUrl('/gmail/connection/status'), {
-      headers,
-      cache: 'no-store',
-      signal,
-    });
-    if (!response.ok) {
-      throw new Error(`/gmail/connection/status failed: ${response.status}`);
-    }
-    return response.json() as Promise<TenantStatus>;
-  }
-
-  const { data, error, response } = await api.GET('/gmail/connection/status', { signal });
-  if (error || !response.ok)
+  const { data, error, response } = await api.GET('/gmail/connection/status', {
+    cache: fetcher || headers ? 'no-store' : undefined,
+    fetch: adaptFetchForOpenApi(fetcher ?? (headers ? fetch : undefined)),
+    headers,
+    signal,
+  });
+  if (error || !response.ok || data === undefined) {
     throw error ?? new Error(`/gmail/connection/status failed: ${response.status}`);
-  return data as TenantStatus;
+  }
+  return data;
 }
 
 export async function disconnectGmail(): Promise<void> {

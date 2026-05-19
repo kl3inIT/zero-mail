@@ -19,6 +19,8 @@ class NoGmailSendAllowedTest {
 
     private static final String GMAIL_MESSAGES_OWNER = "Gmail.Users.Messages";
     private static final String GMAIL_DRAFTS_OWNER = "Gmail.Users.Drafts";
+    private static final String ALLOWED_SEND_CALL_SITE =
+            "com.zeromail.core.chat.confirm.send.AllowedSendCallSite";
 
     @ArchTest
     static final ArchRule no_code_calls_gmail_send_apis =
@@ -29,6 +31,11 @@ class NoGmailSendAllowedTest {
                                 @Override
                                 public void check(
                                         JavaClass javaClass, ConditionEvents conditionEvents) {
+                                    // ARCH-01 carve-out: @AllowedSendCallSite is excluded; paired
+                                    // with OnlyOneGmailSendCallSiteTest which asserts count == 1.
+                                    if (javaClass.isAnnotatedWith(ALLOWED_SEND_CALL_SITE)) {
+                                        return;
+                                    }
                                     javaClass
                                             .getMethodCallsFromSelf()
                                             .forEach(
@@ -58,7 +65,7 @@ class NoGmailSendAllowedTest {
                             })
                     .because(
                             "TRG-03: Zero Mail v1 may label, archive, or save drafts, but must never send mail.")
-                    .allowEmptyShould(true);
+                    .allowEmptyShould(false);
 
     @Test
     void rule_action_type_send_does_not_exist() {

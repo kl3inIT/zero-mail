@@ -75,7 +75,16 @@ describe('RulesWorkspace Wave 0 contract', () => {
             sourceText: 'Archive receipts',
             enabled: false,
             orderIndex: 1,
+            sourceLanguage: 'en',
+            schemaVersion: 'v1',
+            matcherAst: '{}',
+            actionIntents: '[]',
             entityVersion: 1,
+            lastPreviewedEntityVersion: null,
+            lastPreviewedAt: null,
+            templateKey: null,
+            templateVersion: null,
+            customized: false,
           },
         ]}
         selectedRuleId="rule-html"

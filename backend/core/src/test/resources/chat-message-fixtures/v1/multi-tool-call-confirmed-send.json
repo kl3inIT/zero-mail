@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "parts": [
+    {
+      "type": "text",
+      "text": "Tôi tìm thấy email liên quan và đã chuẩn bị bản nháp trả lời để bạn xác nhận."
+    },
+    {
+      "type": "tool-searchInbox",
+      "toolCallId": "toolcall_search_001",
+      "state": "output-available",
+      "input": {
+        "query": "from:founder@example.com newer_than:7d"
+      },
+      "output": {
+        "messages": [
+          {
+            "messageId": "18f7c3ad0ab41e22",
+            "threadId": "18f7c3ad0ab41e22",
+            "subjectHash": "sha256:9c5d6e7f2a4b8c1d",
+            "snippet": "Can you send the latest status before the afternoon meeting?"
+          }
+        ]
+      }
+    },
+    {
+      "type": "tool-sendEmail",
+      "toolCallId": "toolcall_send_001",
+      "state": "output-available",
+      "input": {
+        "to": ["founder@example.com"],
+        "subject": "Cập nhật tiến độ",
+        "body": "Xin chào anh, em xin gửi cập nhật ngắn gọn trước buổi họp chiều nay."
+      },
+      "confirmation": {
+        "state": "confirmed",
+        "confirmedAt": "2026-05-18T02:26:28Z",
+        "assistantActionAuditId": "00000000-0000-4000-8000-000000070001"
+      },
+      "output": {
+        "gmailMessageId": "18f7c3ad0ab41e99",
+        "status": "sent"
+      }
+    }
+  ]
+}

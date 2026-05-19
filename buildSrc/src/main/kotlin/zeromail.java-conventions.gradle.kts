@@ -27,6 +27,12 @@ tasks.withType<JavaCompile>().configureEach {
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
     jvmArgs(utf8RuntimeJvmArgs)
+    // Phase 7 expanded the Spring context (Spring AI + 24 chat tool handlers + chat module beans),
+    // pushing the default test JVM into native-memory OOM during bean creation
+    // (EnumSet.java:118 in Spring's ConfigurationClassPostProcessor). Raise heap, metaspace,
+    // and code-cache ceilings so full @SpringBootTest contexts can load reliably on CI runners.
+    maxHeapSize = "2g"
+    jvmArgs("-XX:MaxMetaspaceSize=512m", "-XX:ReservedCodeCacheSize=256m")
 }
 
 tasks.withType<JavaExec>().configureEach {

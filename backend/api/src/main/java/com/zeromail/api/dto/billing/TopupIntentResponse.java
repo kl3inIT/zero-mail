@@ -1,8 +1,24 @@
 package com.zeromail.api.dto.billing;
 
 import com.zeromail.core.billing.persistence.BillingTopupIntentEntity;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 
+@Schema(
+        requiredProperties = {
+            "orderCode",
+            "packageCode",
+            "packageName",
+            "amountVnd",
+            "creditAmount",
+            "expiresAt",
+            "bankCode",
+            "bankName",
+            "accountNumber",
+            "accountName",
+            "transferContent",
+            "qrPayload"
+        })
 public record TopupIntentResponse(
         String orderCode,
         String packageCode,

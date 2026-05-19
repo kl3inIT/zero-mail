@@ -329,7 +329,7 @@ async function openRules(page: Page, mode: MockMode = 'full-flow') {
   ]);
   await mockRulesApis(page, mode);
   await page.goto('/rules', { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 }
 
 // TODO(rules-v2): rewrite end-to-end against the new two-tab flow

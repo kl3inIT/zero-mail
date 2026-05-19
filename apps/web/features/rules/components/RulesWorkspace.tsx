@@ -502,7 +502,6 @@ export function RulesWorkspace() {
       const response = await previewCustomMailMutation.mutateAsync({
         subject: input.subject,
         body: input.body,
-        ruleIds: null,
       });
       setCustomMailResult(response);
     } catch {
