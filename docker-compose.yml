@@ -33,6 +33,37 @@ services:
       timeout: 3s
       retries: 5
 
+  # ── Operator infrastructure (proxy + LLM-router sidecar) ────────
+  9router:
+    image: decolua/9router:latest
+    container_name: zeromail-9router
+    restart: unless-stopped
+    environment:
+      REQUIRE_API_KEY: "true"
+      JWT_SECRET: ${ZEROMAIL_9ROUTER_JWT_SECRET}
+      INITIAL_PASSWORD: ${ZEROMAIL_9ROUTER_INITIAL_PASSWORD}
+      AUTH_COOKIE_SECURE: "true"
+    ports:
+      - "127.0.0.1:20128:8080"
+    volumes:
+      - /opt/zeromail/9router-data:/data
+    networks:
+      - zeromail-internal
+
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: zeromail-nginx-proxy-manager
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "127.0.0.1:81:81"
+    volumes:
+      - /opt/zeromail/npm-data:/data
+      - /opt/zeromail/npm-letsencrypt:/etc/letsencrypt
+    networks:
+      - proxy-network
+
   # ── Worker (internal only, runs Liquibase migrations) ────────────
   worker:
     build:
