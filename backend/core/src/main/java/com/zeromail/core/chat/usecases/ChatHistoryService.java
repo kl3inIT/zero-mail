@@ -51,6 +51,7 @@ public class ChatHistoryService {
 
     @Transactional
     public void softDelete(UUID chatId) {
+        UUID tenantId = TenantContext.currentTenantUuid();
         int updatedRows =
                 jdbcTemplate.update(
                         """
@@ -61,9 +62,29 @@ public class ChatHistoryService {
                         Timestamp.from(Instant.now()),
                         Timestamp.from(Instant.now()),
                         chatId,
-                        TenantContext.currentTenantUuid());
-        if (updatedRows == 0) {
+                        tenantId);
+        if (updatedRows == 1) {
+            return;
+        }
+        // updatedRows == 0: either the chat does not exist for this tenant, or it is already
+        // soft-deleted. Distinguish the two cases so a retry on a transient network failure
+        // does not surface as 404 -- soft delete is idempotent by definition (WR-06).
+        Boolean chatExists =
+                jdbcTemplate.queryForObject(
+                        """
+                        SELECT EXISTS (
+                            SELECT 1
+                              FROM chat
+                             WHERE id = ?
+                               AND tenant_id = ?
+                        )
+                        """,
+                        Boolean.class,
+                        chatId,
+                        tenantId);
+        if (!Boolean.TRUE.equals(chatExists)) {
             throw new ChatNotFoundException(chatId);
         }
+        // Chat exists but was already soft-deleted; treat as idempotent success (204 No Content).
     }
 }
