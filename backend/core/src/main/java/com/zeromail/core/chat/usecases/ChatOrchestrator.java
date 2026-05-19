@@ -102,6 +102,15 @@ public class ChatOrchestrator {
 
         SanitizingSink sanitizingSink =
                 new SanitizingSink(streamSink, toolOutputSanitizer, preparedTurn.chatId());
+        // Two scheduler instances exist per chat turn: this one (owned by the orchestrator,
+        // disposed by TrackingDisposable on completion or external dispose) and a SECOND one
+        // allocated inside SpringAiStreamingChatModelClient.streamChat for the Spring AI
+        // subscription (disposed by that client's doFinally). They are independent virtual-thread
+        // executors and each must be released exactly once (WR-02). TrackingDisposable.dispose()
+        // is the single owner for THIS scheduler; the task-body finally below is the same path
+        // executed when the scheduled task runs to completion, and both reach
+        // streamScheduler.dispose() -- which is idempotent for the JDK ExecutorService backing a
+        // Reactor scheduler.
         Scheduler streamScheduler = tenantAwareReactorScheduler.scheduler();
         TrackingDisposable trackingDisposable = new TrackingDisposable(streamScheduler);
         trackingDisposable.add(
@@ -130,6 +139,8 @@ public class ChatOrchestrator {
                                             "chat_stream_failed", "The assistant stream failed.");
                                 }
                             } finally {
+                                // Idempotent with TrackingDisposable.dispose(); see method-level
+                                // comment above (WR-02).
                                 streamScheduler.dispose();
                             }
                         }));
