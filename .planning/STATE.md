@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Email assistant chat + Settings page
-status: Awaiting next milestone
-stopped_at: Completed 07-06-PLAN.md
-last_updated: "2026-05-19T04:49:13.004Z"
-last_activity: 2026-05-19 — Milestone v1.1 completed and archived
+milestone: v1.2
+milestone_name: Admin Console Foundation + Settings UI
+status: planning
+last_updated: "2026-05-19T05:56:29.220Z"
+last_activity: 2026-05-19
 progress:
-  total_phases: 2
-  completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
-  percent: 50
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 
 ## Current Position
 
-Phase: Milestone v1.1 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-05-19 — Milestone v1.1 completed and archived
+Status: Defining requirements
+Last activity: 2026-05-19 — Milestone v1.2 started
 
 ## Current Milestone Roadmap
 
