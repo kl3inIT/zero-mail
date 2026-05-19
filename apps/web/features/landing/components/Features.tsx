@@ -33,6 +33,7 @@ export default function Features() {
             src="/images/phan-loai-dark-v2.png"
             alt="Tính năng tự động phân loại"
             fill
+            sizes="(max-width: 1024px) 100vw, 1024px"
             className="object-contain dark:hidden"
           />
           {/* Dark Mode Image */}
@@ -40,6 +41,7 @@ export default function Features() {
             src="/images/phan-loai-light.png"
             alt="Tính năng tự động phân loại"
             fill
+            sizes="(max-width: 1024px) 100vw, 1024px"
             className="hidden object-contain dark:block"
           />
         </div>
@@ -60,6 +62,7 @@ export default function Features() {
             src="/images/ketnoi-light.png"
             alt="Bản nháp chờ sẵn"
             fill
+            sizes="(max-width: 1024px) 100vw, 1024px"
             className="object-contain dark:hidden"
           />
           {/* Dark Mode Image */}
@@ -67,6 +70,7 @@ export default function Features() {
             src="/images/ketnoi-dark.png"
             alt="Bản nháp chờ sẵn (Dark Mode)"
             fill
+            sizes="(max-width: 1024px) 100vw, 1024px"
             className="hidden object-contain dark:block"
           />
         </div>
@@ -379,12 +383,14 @@ export default function Features() {
             src="/images/huydangky-light.png"
             alt="Hủy đăng ký hàng loạt"
             fill
+            sizes="(max-width: 896px) 100vw, 896px"
             className="object-contain p-4 md:p-8 dark:hidden"
           />
           <Image
             src="/images/huydangky-dark.png"
             alt="Hủy đăng ký hàng loạt"
             fill
+            sizes="(max-width: 896px) 100vw, 896px"
             className="hidden object-contain p-4 md:p-8 dark:block"
           />
         </div>

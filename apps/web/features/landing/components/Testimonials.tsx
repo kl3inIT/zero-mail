@@ -16,32 +16,32 @@ export default function Testimonials() {
     },
     {
       text: 'Wow. Đã thiết lập xong và hủy đăng ký khỏi những kẻ gửi spam tồi tệ nhất chỉ trong 3 phút... Cảm ơn 🙏',
-      author: 'Phạm Minh Hoàng',
+      author: 'Nguyễn Thị Mai Hương',
       role: 'Trưởng phòng Growth',
       avatar: '/images/cus3.jpg',
     },
     {
       text: 'Đây là công cụ đầu tiên tôi thử mà thực sự nắm bắt được văn phong của tôi trong các bản nháp phản hồi.',
-      author: 'Lê Hoàng Long',
-      role: 'Kỹ sư Pháp chế',
+      author: 'Nguyễn Minh Ngọc',
+      role: 'Giám đốc Marketing',
       avatar: '/images/cus4.jpg',
     },
     {
       text: 'Tôi tìm thấy Zero Mail khi đang tìm một trợ lý ảo để quản lý email, nhưng sau khi dùng thử công cụ này, mọi thứ đã thay đổi hoàn toàn.',
       author: 'Nguyễn Đức Huy',
-      role: 'Nhà sáng lập',
+      role: 'Giám đốc kỹ thuật',
       avatar: '/images/cus5.jpg',
     },
     {
       text: 'Tôi là một giám đốc điều hành đang chìm ngập trong hàng trăm email mỗi ngày. Điều tôi yêu thích nhất ở Zero Mail là cách nó thay thế hoàn toàn việc xử lý email thủ công—tự động hóa thông minh.',
-      author: 'Nguyễn Thị Mai Hương',
+      author: 'Phạm Minh Hoàng',
       role: 'Giám đốc Điều hành',
       avatar: '/images/cus6.jpg',
     },
     {
       text: "Cuối cùng cũng có một ứng dụng 'hủy đăng ký' giúp bạn *thực sự* hủy đăng ký và lọc thông qua bộ lọc Gmail (thay vì luôn phụ thuộc vào ứng dụng bên thứ 3).",
       author: 'Đặng Tiến Minh',
-      role: 'Nhà sáng lập',
+      role: 'Startup',
       avatar: '/images/cus7.jpg',
     },
   ];
@@ -74,6 +74,7 @@ export default function Testimonials() {
                     alt={review.author}
                     width={40}
                     height={40}
+                    style={{ width: 'auto', height: 'auto' }}
                     className="object-cover"
                   />
                 </div>
