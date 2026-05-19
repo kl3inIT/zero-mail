@@ -1,10 +1,33 @@
-# Test profile: stable diagnostics without noisy framework internals.
-logging:
-  level:
-    com.zeromail: INFO
-    org.testcontainers: WARN
+# Worker test profile: minimal Spring context for fast, isolated integration tests.
+# Tests that need real infrastructure (Postgres, Redis) override via @DynamicPropertySource
+# from a Testcontainers base class.
+
 spring:
+  main:
+    lazy-initialization: true
+
+  docker:
+    compose:
+      enabled: false
+
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        query.plan_cache_max_size: 64
+        query.plan_parameter_metadata_max_size: 64
+
   ai:
+    openai:
+      api-key: test-openai-key
+    anthropic:
+      api-key: test-anthropic-key
     chat:
       client:
         observations:
@@ -14,3 +37,45 @@ spring:
         log-prompt: false
         log-completion: false
 
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-google-client
+            client-secret: test-google-secret
+
+zero-mail:
+  scheduling:
+    enabled: false
+  worker:
+    gmail:
+      pubsub:
+        topic-name: projects/test-project/topics/zero-mail-gmail-test
+  crypto:
+    refresh-token-key-base64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+  billing:
+    sepay:
+      webhook-api-key: test-sepay-key-fixture
+    payment-account:
+      bank-code: VCB
+      bank-name: Vietcombank
+      account-number: "0123456789"
+      account-name: Zero Mail Test
+      qr-payload: ""
+    vnd-per-credit: 1000
+    max-pending-intents-per-tenant: 5
+    intent-expiry: PT24H
+  llm:
+    platform:
+      api-key: test-platform-llm-key
+  notification:
+    email:
+      resend:
+        api-key: test-resend-key
+
+logging:
+  level:
+    com.zeromail: INFO
+    org.testcontainers: WARN
+    org.springframework.boot.docker.compose: OFF
