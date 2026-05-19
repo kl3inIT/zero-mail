@@ -83,9 +83,9 @@ public class ConfirmationLeaseService {
     }
 
     /**
-     * Releases the confirmation lease only if the stored value matches the caller's fencing
-     * token. If the TTL elapsed and another caller acquired a new lease, this is a no-op so the
-     * delayed caller never deletes a NEW lease (WR-03).
+     * Releases the confirmation lease only if the stored value matches the caller's fencing token.
+     * If the TTL elapsed and another caller acquired a new lease, this is a no-op so the delayed
+     * caller never deletes a NEW lease (WR-03).
      */
     public void release(UUID chatId, String toolCallId, String processInstanceId) {
         StringRedisTemplate stringRedisTemplate = stringRedisTemplateSupplier.get();

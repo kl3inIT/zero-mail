@@ -130,10 +130,10 @@ class AssistantSendExecutorVipIT {
 
     /**
      * CR-01 regression: multi-recipient sends must include every recipient in the audit
-     * fingerprint. Earlier code used findFirst() and recorded only the lexicographically
-     * smallest canonical recipient. A send to a VIP plus a filler could be hidden by listing
-     * the filler first. We compute the hash on the joined sorted canonical list, and a single
-     * recipient produces a different hash than the same recipient mixed with other addresses.
+     * fingerprint. Earlier code used findFirst() and recorded only the lexicographically smallest
+     * canonical recipient. A send to a VIP plus a filler could be hidden by listing the filler
+     * first. We compute the hash on the joined sorted canonical list, and a single recipient
+     * produces a different hash than the same recipient mixed with other addresses.
      */
     @Test
     void recipient_hash_covers_all_to_cc_and_bcc_recipients() throws Exception {

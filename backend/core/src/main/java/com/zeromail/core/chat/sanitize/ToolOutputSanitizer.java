@@ -120,8 +120,7 @@ public class ToolOutputSanitizer {
                     boolean stripBodyFields = toolSource.stripBodyFields();
                     // WR-08: apply length cap together with body strip in the same recursion.
                     SanitizedJson sanitizedInput = sanitizeJson(inputJson, stripBodyFields, true);
-                    SanitizedJson sanitizedOutput =
-                            sanitizeJson(outputJson, stripBodyFields, true);
+                    SanitizedJson sanitizedOutput = sanitizeJson(outputJson, stripBodyFields, true);
                     SanitizedJson sanitizedConfirmation =
                             sanitizeJson(confirmationJson, stripBodyFields, true);
                     boolean truncatedThisPart =

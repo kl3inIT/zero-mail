@@ -152,8 +152,8 @@ public class ConfirmationStateMachine {
      * Reverts a reservation from PROCESSING back to PENDING. Called when synchronous validation
      * after reserve() fails (e.g., toCommand throws) so the row does not get stuck in PROCESSING
      * until the reconciliation cron times it out (WR-01). Returns true if the revert succeeded;
-     * false if the row was already advanced past PROCESSING (e.g., concurrent reconciliation),
-     * in which case the caller should not treat this as an error.
+     * false if the row was already advanced past PROCESSING (e.g., concurrent reconciliation), in
+     * which case the caller should not treat this as an error.
      */
     @Transactional
     public boolean revertReservation(UUID chatId, UUID tenantId, String toolCallId) {
@@ -261,9 +261,7 @@ public class ConfirmationStateMachine {
                 return false;
             }
             throw new IllegalStateException(
-                    "send audit row was not in flight (current state="
-                            + currentState
-                            + ")");
+                    "send audit row was not in flight (current state=" + currentState + ")");
         }
         updatePendingActionState(
                 command.tenantId(), command.chatId(), command.toolCallId(), "CONFIRMED");

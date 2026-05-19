@@ -5,7 +5,6 @@ import com.zeromail.core.chat.llm.VercelProtocolEmitter;
 import com.zeromail.core.chat.usecases.ChatOrchestrator;
 import com.zeromail.core.chat.usecases.ZeroMailChatProperties;
 import com.zeromail.core.tenant.TenantContext;
-import tools.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -25,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.Disposable;
+import tools.jackson.databind.ObjectMapper;
 
 @RestController
 @Tag(name = "Chat")
