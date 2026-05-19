@@ -662,6 +662,95 @@
     },
     "continueSetupCta": "Continue setup",
     "eyebrow": "Gmail · Private beta · v1",
+    "features": {
+      "autoOrganize": {
+        "afterLabel": "After",
+        "beforeLabel": "Before",
+        "description": "Drowning in email? Stop spending energy trying to prioritize. Our AI assistant labels everything automatically.",
+        "imageAlt": "Automatic triage feature",
+        "title": "Auto-triage. Never miss what matters."
+      },
+      "bulkUnsubscribe": {
+        "description": "See which emails you never open and unsubscribe + archive them in a single click.",
+        "imageAlt": "Bulk unsubscribe",
+        "title": "Bulk-unsubscribe from email you never read"
+      },
+      "designedAroundYou": {
+        "col1": {
+          "previewColAmount": "Count",
+          "previewColSender": "Sender",
+          "previewTitle": "Who emails you the most",
+          "summary": "See who emails you most and what's filling your inbox. Detailed analysis and follow-up.",
+          "title": "Inbox analytics. Understand to optimize."
+        },
+        "col2": {
+          "summary": "Connect to your calendar and CRM so drafts respect your schedule and customer data.",
+          "title": "Drafts that know your schedule"
+        },
+        "col3": {
+          "createRule": "+ Create new rule",
+          "rules": {
+            "r1": "Label email from @company.com as Internal",
+            "r2": "Archive every invoice and send to accounting",
+            "r3": "Send the newsletter digest on Sunday",
+            "r4": "If anyone wants to book a meeting, respond w"
+          },
+          "summary": "Your inbox, your rules. Configure everything in plain natural language.",
+          "title": "Customize with natural language",
+          "viewExamples": "↗ See examples"
+        },
+        "subtitle": "Flexible enough for any workflow. Simple enough to set up in minutes.",
+        "title": "Designed around how you work"
+      },
+      "draftsReady": {
+        "description": "When you check your inbox, every email that needs a reply already has a draft written in your voice, ready to send.",
+        "imageAlt": "Drafts waiting in your inbox",
+        "imageAltDark": "Drafts waiting in your inbox (Dark mode)",
+        "title": "Drafts waiting in your inbox"
+      },
+      "getStarted": {
+        "step1": {
+          "label": "STEP 1",
+          "summary": "Connect your Gmail in two clicks to get started.",
+          "title": "Connect your Google account"
+        },
+        "step2": {
+          "categories": {
+            "c1": "📧 Newsletters",
+            "c2": "↩️ Needs reply",
+            "c3": "📢 Marketing",
+            "c4": "📅 Meetings",
+            "c5": "🔔 Notifications",
+            "c6": "❄️ Cold email",
+            "c7": "👥 Internal",
+            "c8": "🔥 Urgent"
+          },
+          "label": "STEP 2",
+          "summary": "Smart categories ready out of the box. Use the defaults or build your own.",
+          "title": "Organize your inbox your way"
+        },
+        "step3": {
+          "draftLabel": "DRAFTED BY AI:",
+          "draftSample": "Happy to meet at 5pm next week!",
+          "label": "STEP 3",
+          "newMessage": "New Message",
+          "sendCta": "Send",
+          "summary": "Every email that needs a reply has a draft waiting on Send.",
+          "title": "Smart auto-drafts"
+        },
+        "subtitle": "One-click setup. Start triaging and drafting email within minutes.",
+        "title": "Get started in minutes"
+      },
+      "inboxAnywhere": {
+        "channels": {
+          "telegram": "Telegram",
+          "web": "Web",
+          "zalo": "Zalo"
+        },
+        "description": "Read email, draft replies, and manage your inbox from Zalo, Telegram, or the Web — no app-switching.",
+        "title": "Your inbox, wherever you work"
+      }
+    },
     "faq": {
       "items": {
         "i1": {

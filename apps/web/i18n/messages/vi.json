@@ -662,6 +662,95 @@
     },
     "continueSetupCta": "Tiếp tục thiết lập",
     "eyebrow": "Gmail · Private beta · v1",
+    "features": {
+      "autoOrganize": {
+        "afterLabel": "Sau",
+        "beforeLabel": "Trước",
+        "description": "Đang chìm ngập trong email? Đừng lãng phí năng lượng cố gắng ưu tiên chúng nữa. Trợ lý AI của chúng tôi sẽ tự động dán nhãn mọi thứ.",
+        "imageAlt": "Tính năng tự động phân loại",
+        "title": "Tự động phân loại. Không bao giờ bỏ lỡ email quan trọng."
+      },
+      "bulkUnsubscribe": {
+        "description": "Xem những email nào bạn chưa bao giờ mở, và hủy đăng ký & lưu trữ chúng chỉ với một cú nhấp chuột.",
+        "imageAlt": "Hủy đăng ký hàng loạt",
+        "title": "Hủy đăng ký hàng loạt email bạn không bao giờ đọc"
+      },
+      "designedAroundYou": {
+        "col1": {
+          "previewColAmount": "Số lượng",
+          "previewColSender": "Người gửi",
+          "previewTitle": "Ai gửi email cho bạn nhiều nhất",
+          "summary": "Xem ai gửi email nhiều nhất và điều gì đang làm đầy hộp thư. Phân tích chi tiết và xử lý.",
+          "title": "Phân tích hộp thư. Hiểu rõ để tối ưu"
+        },
+        "col2": {
+          "summary": "Kết nối với lịch và CRM của bạn để soạn email dựa trên thời gian biểu và dữ liệu khách hàng.",
+          "title": "Bản nháp nắm rõ lịch trình của bạn"
+        },
+        "col3": {
+          "createRule": "+ Tạo luật mới",
+          "rules": {
+            "r1": "Gắn nhãn email từ @congty.com là Nội bộ",
+            "r2": "Lưu trữ mọi hóa đơn và gửi cho kế toán",
+            "r3": "Gửi bản tổng hợp newsletter vào CN",
+            "r4": "Nếu có ai muốn đặt lịch họp, hãy phản hồi k"
+          },
+          "summary": "Hộp thư của bạn, luật của bạn. Cấu hình mọi thứ bằng tiếng Việt tự nhiên.",
+          "title": "Tùy biến bằng ngôn ngữ tự nhiên",
+          "viewExamples": "↗ Xem ví dụ"
+        },
+        "subtitle": "Đủ linh hoạt cho mọi quy trình. Đủ đơn giản để cài đặt trong vài phút.",
+        "title": "Thiết kế xoay quanh cách bạn làm việc"
+      },
+      "draftsReady": {
+        "description": "Khi bạn kiểm tra hộp thư, mọi email cần phản hồi sẽ có sẵn một bản nháp được soạn theo văn phong của bạn, sẵn sàng để gửi.",
+        "imageAlt": "Bản nháp chờ sẵn",
+        "imageAltDark": "Bản nháp chờ sẵn (Dark Mode)",
+        "title": "Bản nháp chờ sẵn trong hộp thư"
+      },
+      "getStarted": {
+        "step1": {
+          "label": "STEP 1",
+          "summary": "Liên kết Gmail của bạn chỉ với hai cú nhấp chuột để bắt đầu trải nghiệm.",
+          "title": "Kết nối tài khoản Google"
+        },
+        "step2": {
+          "categories": {
+            "c1": "📧 Bản tin",
+            "c2": "↩️ Cần trả lời",
+            "c3": "📢 Marketing",
+            "c4": "📅 Lịch hẹn",
+            "c5": "🔔 Thông báo",
+            "c6": "❄️ Cold Email",
+            "c7": "👥 Nội bộ",
+            "c8": "🔥 Khẩn cấp"
+          },
+          "label": "STEP 2",
+          "summary": "Danh mục thông minh tự động thiết lập. Dùng danh mục mặc định hoặc tự tạo.",
+          "title": "Tổ chức hộp thư như ý muốn"
+        },
+        "step3": {
+          "draftLabel": "DRAFTED BY AI:",
+          "draftSample": "Tôi rất sẵn lòng gặp bạn lúc 5h chiều tuần tới nhé!",
+          "label": "STEP 3",
+          "newMessage": "New Message",
+          "sendCta": "Send",
+          "summary": "Mọi email cần phản hồi sẽ luôn có một bản nháp chờ bạn bấm Gửi.",
+          "title": "Bản nháp tự động thông minh"
+        },
+        "subtitle": "Cài đặt chỉ với một click. Bắt đầu sắp xếp và soạn email trong vài phút.",
+        "title": "Bắt đầu chỉ trong vài phút"
+      },
+      "inboxAnywhere": {
+        "channels": {
+          "telegram": "Telegram",
+          "web": "Web",
+          "zalo": "Zalo"
+        },
+        "description": "Đọc email, soạn phản hồi và quản lý hộp thư từ Zalo, Telegram hoặc Web — không cần chuyển đổi ứng dụng.",
+        "title": "Hộp thư của bạn, ở bất cứ đâu"
+      }
+    },
     "faq": {
       "items": {
         "i1": {
