@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-05-19T05:56:29.220Z"
 last_activity: 2026-05-19
 progress:
-  total_phases: 3
+  total_phases: 2
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,22 +20,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 8 — Admin Console Foundation: Auth, Audit & Ops Infra (RBAC + AdminContext mutex + append-only audit + NPM reverse-proxy migration + 9Router sidecar)
+**Current focus:** Phase 8 — Admin Console & Operator Tooling (merged auth/audit foundation + master keys + curated catalog + tenant inspection + queue + spend; original Phase 8 + 9 merged 2026-05-19 during spec-phase)
 
 ## Current Position
 
-Phase: 8 — Admin Console Foundation — Auth, Audit & Ops Infra (not started)
+Phase: 8 — Admin Console & Operator Tooling (not started, merged 2026-05-19)
 Plan: —
-Status: Planning (roadmap drafted)
-Last activity: 2026-05-19 — v1.2 roadmap drafted (3 phases, 59 requirements)
+Status: Planning (SPEC.md drafted; discuss-phase next)
+Last activity: 2026-05-19 — Phase 8 + former Phase 9 merged into single Phase 8 (40 reqs), SPEC.md written
 
 ## Current Milestone Roadmap
 
-**v1.2 — Admin Console Foundation + Settings UI on Curated Catalog** (3 phases, 59 requirements, all pending)
+**v1.2 — Admin Console + User Settings UI** (2 phases, 59 requirements, all pending; merged 2026-05-19)
 
-- **Phase 8** — Admin Console Foundation — Auth, Audit & Ops Infra (OPS-INFRA migration + RBAC + AdminContext + append-only audit + admin Next.js route group) — 15 requirements (OPS-INFRA-01..03, ADMIN-01..08, ARCH-08/09/10/12)
-- **Phase 9** — Provider Master Keys, Curated Catalog & Operator Visibility (6-provider master keys + 9Router dual-mode + 3-step catalog Sync + tenant read-only views + queue health + global spend dashboard) — 25 requirements (MKEY-01..08, CAT-01..07, OPS-TENANT-01..05, OPS-QUEUE-01..02, OPS-SPEND-01..02, ARCH-11)
-- **Phase 10** — User Settings UI on Curated Catalog (4-tab Settings: Personalization, Behavior, Safety Net, AI Provider/Model — AI tab consumes curated catalog from Phase 9) — 19 requirements (SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04, SET-AI-01..04)
+- **Phase 8** — Admin Console & Operator Tooling (foundation + master keys + curated catalog + tenant inspection + queue + spend + OPS-INFRA; planning structure inside the phase: 8A foundation → 8B master keys → 8C tenant inspection → 8D catalog Sync → 8E queue health → 8F spend dashboard) — 40 requirements (OPS-INFRA-01..03, ADMIN-01..08, ARCH-08/09/10/11/12, MKEY-01..08, CAT-01..07, OPS-TENANT-01..05, OPS-QUEUE-01..02, OPS-SPEND-01..02)
+- **Phase 9** — User Settings UI on Curated Catalog (4-tab Settings: Personalization, Behavior, Safety Net, AI Provider/Model — AI tab consumes curated catalog from Phase 8) — 19 requirements (SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04, SET-AI-01..04)
 
 See `.planning/ROADMAP.md` for full phase details + success criteria, and `.planning/REQUIREMENTS.md` Traceability section for full REQ-ID → phase mapping.
 

@@ -202,61 +202,61 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 | ADMIN-06 | Phase 8 | Pending |
 | ADMIN-07 | Phase 8 | Pending |
 | ADMIN-08 | Phase 8 | Pending |
-| MKEY-01 | Phase 9 | Pending |
-| MKEY-02 | Phase 9 | Pending |
-| MKEY-03 | Phase 9 | Pending |
-| MKEY-04 | Phase 9 | Pending |
-| MKEY-05 | Phase 9 | Pending |
-| MKEY-06 | Phase 9 | Pending |
-| MKEY-07 | Phase 9 | Pending |
-| MKEY-08 | Phase 9 | Pending |
-| CAT-01 | Phase 9 | Pending |
-| CAT-02 | Phase 9 | Pending |
-| CAT-03 | Phase 9 | Pending |
-| CAT-04 | Phase 9 | Pending |
-| CAT-05 | Phase 9 | Pending |
-| CAT-06 | Phase 9 | Pending |
-| CAT-07 | Phase 9 | Pending |
-| OPS-TENANT-01 | Phase 9 | Pending |
-| OPS-TENANT-02 | Phase 9 | Pending |
-| OPS-TENANT-03 | Phase 9 | Pending |
-| OPS-TENANT-04 | Phase 9 | Pending |
-| OPS-TENANT-05 | Phase 9 | Pending |
-| OPS-QUEUE-01 | Phase 9 | Pending |
-| OPS-QUEUE-02 | Phase 9 | Pending |
-| OPS-SPEND-01 | Phase 9 | Pending |
-| OPS-SPEND-02 | Phase 9 | Pending |
-| SET-VOICE-01 | Phase 10 | Pending |
-| SET-VOICE-02 | Phase 10 | Pending |
-| SET-VOICE-03 | Phase 10 | Pending |
-| SET-VOICE-04 | Phase 10 | Pending |
-| SET-VOICE-05 | Phase 10 | Pending |
-| SET-VOICE-06 | Phase 10 | Pending |
-| SET-BEHV-01 | Phase 10 | Pending |
-| SET-BEHV-02 | Phase 10 | Pending |
-| SET-BEHV-03 | Phase 10 | Pending |
-| SET-BEHV-04 | Phase 10 | Pending |
-| SET-BEHV-05 | Phase 10 | Pending |
-| SET-SAFE-01 | Phase 10 | Pending |
-| SET-SAFE-02 | Phase 10 | Pending |
-| SET-SAFE-03 | Phase 10 | Pending |
-| SET-SAFE-04 | Phase 10 | Pending |
-| SET-AI-01 | Phase 10 | Pending |
-| SET-AI-02 | Phase 10 | Pending |
-| SET-AI-03 | Phase 10 | Pending |
-| SET-AI-04 | Phase 10 | Pending |
+| MKEY-01 | Phase 8 | Pending |
+| MKEY-02 | Phase 8 | Pending |
+| MKEY-03 | Phase 8 | Pending |
+| MKEY-04 | Phase 8 | Pending |
+| MKEY-05 | Phase 8 | Pending |
+| MKEY-06 | Phase 8 | Pending |
+| MKEY-07 | Phase 8 | Pending |
+| MKEY-08 | Phase 8 | Pending |
+| CAT-01 | Phase 8 | Pending |
+| CAT-02 | Phase 8 | Pending |
+| CAT-03 | Phase 8 | Pending |
+| CAT-04 | Phase 8 | Pending |
+| CAT-05 | Phase 8 | Pending |
+| CAT-06 | Phase 8 | Pending |
+| CAT-07 | Phase 8 | Pending |
+| OPS-TENANT-01 | Phase 8 | Pending |
+| OPS-TENANT-02 | Phase 8 | Pending |
+| OPS-TENANT-03 | Phase 8 | Pending |
+| OPS-TENANT-04 | Phase 8 | Pending |
+| OPS-TENANT-05 | Phase 8 | Pending |
+| OPS-QUEUE-01 | Phase 8 | Pending |
+| OPS-QUEUE-02 | Phase 8 | Pending |
+| OPS-SPEND-01 | Phase 8 | Pending |
+| OPS-SPEND-02 | Phase 8 | Pending |
+| SET-VOICE-01 | Phase 9 | Pending |
+| SET-VOICE-02 | Phase 9 | Pending |
+| SET-VOICE-03 | Phase 9 | Pending |
+| SET-VOICE-04 | Phase 9 | Pending |
+| SET-VOICE-05 | Phase 9 | Pending |
+| SET-VOICE-06 | Phase 9 | Pending |
+| SET-BEHV-01 | Phase 9 | Pending |
+| SET-BEHV-02 | Phase 9 | Pending |
+| SET-BEHV-03 | Phase 9 | Pending |
+| SET-BEHV-04 | Phase 9 | Pending |
+| SET-BEHV-05 | Phase 9 | Pending |
+| SET-SAFE-01 | Phase 9 | Pending |
+| SET-SAFE-02 | Phase 9 | Pending |
+| SET-SAFE-03 | Phase 9 | Pending |
+| SET-SAFE-04 | Phase 9 | Pending |
+| SET-AI-01 | Phase 9 | Pending |
+| SET-AI-02 | Phase 9 | Pending |
+| SET-AI-03 | Phase 9 | Pending |
+| SET-AI-04 | Phase 9 | Pending |
 | ARCH-08 | Phase 8 | Pending |
 | ARCH-09 | Phase 8 | Pending |
 | ARCH-10 | Phase 8 | Pending |
-| ARCH-11 | Phase 9 | Pending |
+| ARCH-11 | Phase 8 | Pending |
 | ARCH-12 | Phase 8 | Pending |
 
 **Coverage (post-roadmap):**
 - v1.2 requirements: **59 total** (mapping confirmed 100% coverage, zero orphans)
-  - Phase 8 (Admin Console Foundation): 15 reqs — 3 OPS-INFRA + 8 ADMIN + 4 ARCH (08/09/10/12)
-  - Phase 9 (Master Keys, Catalog, Operator Visibility): 25 reqs — 8 MKEY + 7 CAT + 5 OPS-TENANT + 2 OPS-QUEUE + 2 OPS-SPEND + 1 ARCH (11)
-  - Phase 10 (User Settings UI): 19 reqs — 6 SET-VOICE + 5 SET-BEHV + 4 SET-SAFE + 4 SET-AI
+  - Phase 8 (Admin Console & Operator Tooling, merged 2026-05-19): 40 reqs — 3 OPS-INFRA + 8 ADMIN + 5 ARCH (08/09/10/11/12) + 8 MKEY + 7 CAT + 5 OPS-TENANT + 2 OPS-QUEUE + 2 OPS-SPEND
+  - Phase 9 (User Settings UI on Curated Catalog): 19 reqs — 6 SET-VOICE + 5 SET-BEHV + 4 SET-SAFE + 4 SET-AI
 - Phase mapping: ✓ Complete
+- Merge note: original Phase 8 (foundation, 15 reqs) and original Phase 9 (operator surface, 25 reqs) merged into single Phase 8 mega (40 reqs) during spec-phase 2026-05-19; former Phase 10 renumbered → Phase 9
 
 > **Note on pre-roadmap "57 total" tally:** the original pre-roadmap summary undercounted by 2; the actual REQ-ID inventory is 3 + 8 + 8 + 7 + 5 + 2 + 2 + 19 + 5 = 59 (the "5 ARCH" line was not added to the prior subtotal). Counted again during roadmapping; all 59 IDs above are explicit and mapped.
 
