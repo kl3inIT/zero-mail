@@ -1,0 +1,7 @@
+dist/
+node_modules/
+.tanstack/
+playwright-last.json
+playwright-report/
+test-results/
+src/routeTree.gen.ts
