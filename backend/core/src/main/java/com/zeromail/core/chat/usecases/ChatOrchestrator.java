@@ -208,7 +208,7 @@ public class ChatOrchestrator {
         }
         String outputJson =
                 readToolHandler.executeJson(outcome.toolInputJson(), tenantId.toString());
-        String sanitizedOutputJson = sanitizeToolOutput(tenantId, outcome, outputJson);
+        SanitizedToolOutput sanitizedOutput = sanitizeToolOutput(tenantId, outcome, outputJson);
         UUID toolCallMessageId =
                 transactionTemplate.execute(
                         _ ->
@@ -219,7 +219,7 @@ public class ChatOrchestrator {
                                         outcome.toolName().id(),
                                         outcome.toolInputJson()));
         streamSink.emitDataPersistence(toolCallMessageId, "tool-call-saved");
-        streamSink.emitToolOutputAvailable(outcome.toolCallId(), sanitizedOutputJson);
+        streamSink.emitToolOutputAvailable(outcome.toolCallId(), sanitizedOutput.outputJson());
         UUID toolOutputMessageId =
                 transactionTemplate.execute(
                         _ ->
@@ -228,7 +228,8 @@ public class ChatOrchestrator {
                                         tenantId,
                                         outcome.toolCallId(),
                                         outcome.toolName().id(),
-                                        sanitizedOutputJson));
+                                        sanitizedOutput.outputJson(),
+                                        sanitizedOutput.truncated()));
         streamSink.emitDataPersistence(toolOutputMessageId, "tool-output-saved");
     }
 
@@ -380,7 +381,12 @@ public class ChatOrchestrator {
     }
 
     private UUID persistToolOutput(
-            UUID chatId, UUID tenantId, String toolCallId, String toolName, String outputJson) {
+            UUID chatId,
+            UUID tenantId,
+            String toolCallId,
+            String toolName,
+            String outputJson,
+            boolean truncated) {
         return chatMessageRepository.insert(
                 new ChatMessage(
                         new ChatMessageId(UUID.randomUUID()),
@@ -395,11 +401,12 @@ public class ChatOrchestrator {
                                                 toolName,
                                                 "output-available",
                                                 parseJsonObject(outputJson),
-                                                false))),
+                                                truncated))),
                         Instant.now()));
     }
 
-    private String sanitizeToolOutput(UUID tenantId, TurnOutcome outcome, String outputJson) {
+    private SanitizedToolOutput sanitizeToolOutput(
+            UUID tenantId, TurnOutcome outcome, String outputJson) {
         ChatMessageParts sanitizedParts =
                 toolOutputSanitizer.sanitize(
                         ChatMessageParts.v1(
@@ -412,15 +419,20 @@ public class ChatOrchestrator {
                                                 parseJsonObject(outputJson),
                                                 false))),
                         tenantId.toString());
-        Map<String, Object> sanitizedOutput =
+        ToolOutputPart sanitizedPart =
                 sanitizedParts.parts().stream()
                         .filter(ToolOutputPart.class::isInstance)
                         .map(ToolOutputPart.class::cast)
                         .findFirst()
-                        .map(ToolOutputPart::outputJson)
-                        .orElseGet(Map::of);
-        return writeJson(sanitizedOutput);
+                        .orElse(null);
+        if (sanitizedPart == null) {
+            return new SanitizedToolOutput(writeJson(Map.of()), false);
+        }
+        return new SanitizedToolOutput(
+                writeJson(sanitizedPart.outputJson()), sanitizedPart.truncated());
     }
+
+    private record SanitizedToolOutput(String outputJson, boolean truncated) {}
 
     private Map<String, Object> parseJsonObject(String json) {
         try {
