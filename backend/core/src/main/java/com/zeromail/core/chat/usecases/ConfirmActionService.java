@@ -55,9 +55,18 @@ public class ConfirmActionService {
                     confirmationStateMachine.reserve(
                             chatId, tenantId, toolCallId, pendingAction.partsUpdatedAt());
             if (reservation.toolCategory() == ToolCategory.CONFIRMED_SEND) {
-                AssistantSendCommand sendCommand =
-                        confirmedSendToolHandlers.toCommand(
-                                reservation, vipAcknowledged, safeOverride(contentOverride));
+                AssistantSendCommand sendCommand;
+                try {
+                    sendCommand =
+                            confirmedSendToolHandlers.toCommand(
+                                    reservation, vipAcknowledged, safeOverride(contentOverride));
+                } catch (RuntimeException toCommandFailure) {
+                    // Synchronous validation (toCommand) failed AFTER reserve() committed
+                    // state=PROCESSING. Revert back to PENDING so the user is not stuck on an
+                    // infinite spinner until the 5-minute reconciliation cron fires (WR-01).
+                    confirmationStateMachine.revertReservation(chatId, tenantId, toolCallId);
+                    throw toCommandFailure;
+                }
                 executorWillReleaseLease = true;
                 AssistantSendExecutor.AssistantSendResult sendResult =
                         assistantSendExecutor.execute(sendCommand);

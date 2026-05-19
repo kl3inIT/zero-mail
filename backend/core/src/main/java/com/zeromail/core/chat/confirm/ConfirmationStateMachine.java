@@ -148,6 +148,33 @@ public class ConfirmationStateMachine {
                 pendingAction.confirmationJson());
     }
 
+    /**
+     * Reverts a reservation from PROCESSING back to PENDING. Called when synchronous validation
+     * after reserve() fails (e.g., toCommand throws) so the row does not get stuck in PROCESSING
+     * until the reconciliation cron times it out (WR-01). Returns true if the revert succeeded;
+     * false if the row was already advanced past PROCESSING (e.g., concurrent reconciliation),
+     * in which case the caller should not treat this as an error.
+     */
+    @Transactional
+    public boolean revertReservation(UUID chatId, UUID tenantId, String toolCallId) {
+        int updatedRowCount =
+                jdbcTemplate.update(
+                        """
+                        UPDATE assistant_pending_action
+                           SET state = 'PENDING',
+                               updated_at = now(),
+                               version = version + 1
+                         WHERE tool_call_id = ?
+                           AND chat_id = ?
+                           AND tenant_id = ?
+                           AND state = 'PROCESSING'
+                        """,
+                        requireText(toolCallId, "toolCallId"),
+                        chatId,
+                        tenantId);
+        return updatedRowCount == 1;
+    }
+
     @Transactional
     public UUID recordSendInFlight(SendInFlightCommand command) {
         UUID auditId = UUID.randomUUID();
