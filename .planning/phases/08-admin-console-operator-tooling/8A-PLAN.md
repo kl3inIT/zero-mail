@@ -618,6 +618,9 @@ This is a non-coding cleanup; success is `grep -c` ≤ expected occurrence count
   <read_first>
     apps/web/scripts/generate-api.ts (lines 1-43 — codegen idiom),
     apps/web/lib/api/client.ts (lines 1-15 — openapi-fetch client),
+    apps/web/lib/api/base-url.ts (post-db38a7be SSR-loop fix — internal Docker URL for server fetches vs public URL for browser; Vite version of this pattern lives in apps/admin/src/lib/api/admin-base-url.ts using `import.meta.env.VITE_*` instead of Next.js env),
+    apps/web/next.config.ts (post-db38a7be standalone output mode — analog for apps/admin Vite config build target),
+    apps/web/Dockerfile (post-db38a7be NEW file — analog for apps/admin/Dockerfile but adapted for Vite static-build flavor: no SSR runtime, serve dist/ via nginx-alpine or as static assets through NPM),
     apps/web/components/ui/button.tsx + alert-dialog.tsx + tabs.tsx + table.tsx + dialog.tsx + input.tsx + textarea.tsx + sonner.tsx + sidebar.tsx + tooltip.tsx + badge.tsx + skeleton.tsx + card.tsx (all primitives listed in UI-SPEC Component Inventory — copy byte-identical),
     apps/web/app/globals.css (`.zm-proto` palette block — copy + extend with `--warning-soft`, `--ink-2`, `--amber`),
     apps/web/components.json (preset `base-nova` for `pnpm dlx shadcn@latest init` matching),
@@ -677,7 +680,10 @@ This is a non-coding cleanup; success is `grep -c` ≤ expected occurrence count
     docs/ops/admin-load-probe.md
   </files>
   <read_first>
-    docker-compose.yml (existing — current postgres + redis services),
+    docker-compose.yml (existing post-db38a7be — FULL production stack already in place: postgres + redis + worker + api + frontend; this task ADDS 9Router sidecar + nginx-proxy-manager services + admin.zeromail.com proxy route. Do NOT replace existing services — extend),
+    apps/web/Dockerfile (post-db38a7be — Next.js standalone build pattern; analog for understanding multi-stage Docker build conventions in this repo),
+    backend/api/Dockerfile (post-db38a7be — JDK 25 + Spring Boot 4 multi-stage build; reference for what api service compose entry expects),
+    backend/worker/Dockerfile (post-db38a7be — sibling JDK 25 build for worker; reference for what worker compose entry expects),
     docs/ops/ (any existing runbook for naming conventions),
     .planning/phases/08-admin-console-operator-tooling/08-SPEC.md §OPS-INFRA-01/02/03 (full Current/Target/Acceptance),
     .planning/phases/08-admin-console-operator-tooling/08-CONTEXT.md §D-22 (merge gate scope: compose + runbook only, live migration is deploy step)
