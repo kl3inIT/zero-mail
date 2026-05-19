@@ -9,6 +9,7 @@ import com.zeromail.core.admin.auth.persistence.AdminUserRepository;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
@@ -69,7 +70,7 @@ public class AdminRoleGrantService {
                 adminUser.getId(),
                 null,
                 "{\"email\":\"" + normalizedEmail + "\",\"status\":\"PENDING_ENROLLMENT\"}",
-                "admin role grant",
+                null,
                 requestIp,
                 requestId);
         return new AdminRoleGrantResult(
@@ -152,4 +153,28 @@ public class AdminRoleGrantService {
 
     public record AdminRoleGrantResult(
             UUID adminUserId, String email, String enrollmentUrl, Instant expiresAt) {}
+
+    @Transactional(readOnly = true)
+    public List<AdminUserSummary> listAdmins() {
+        return adminUserRepository.findAllByOrderByEmailAsc().stream()
+                .map(AdminUserSummary::from)
+                .toList();
+    }
+
+    public record AdminUserSummary(
+            UUID adminUserId,
+            String email,
+            AdminStatus status,
+            Instant lastUsedAt,
+            boolean hasCredential) {
+
+        private static AdminUserSummary from(AdminUserEntity adminUser) {
+            return new AdminUserSummary(
+                    adminUser.getId(),
+                    adminUser.getEmail(),
+                    adminUser.getStatus(),
+                    adminUser.getLastUsedAt(),
+                    adminUser.getCredentialId() != null);
+        }
+    }
 }

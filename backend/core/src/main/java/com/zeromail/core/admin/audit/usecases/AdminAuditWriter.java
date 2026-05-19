@@ -110,7 +110,7 @@ public class AdminAuditWriter {
         return auditId;
     }
 
-    @Transactional(propagation = Propagation.MANDATORY)
+    @Transactional
     public UUID writeReadEvent(
             AdminUser adminUser, String action, String targetKind, UUID targetId) {
         AdminUser actor = Objects.requireNonNull(adminUser, "adminUser must not be null");
