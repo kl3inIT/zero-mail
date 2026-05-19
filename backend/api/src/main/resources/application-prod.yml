@@ -1,0 +1,27 @@
+# Production profile: concise structured events only.
+logging:
+  level:
+    root: INFO
+    com.zeromail: INFO
+    com.zeromail.core.chat: INFO
+    org.springframework.security: WARN
+spring:
+  ai:
+    chat:
+      client:
+        observations:
+          log-prompt: false
+          log-completion: false
+      observations:
+        log-prompt: false
+        log-completion: false
+    openai:
+      chat:
+        observations:
+          include-completion: false
+server:
+  servlet:
+    session:
+      cookie:
+        secure: true
+

@@ -24,7 +24,6 @@ for (const routePath of ['/rules', '/settings'] as const) {
 
       state.connectionStatus = 'DISCONNECTED';
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await page.waitForLoadState('networkidle');
 
       await expect(page.getByTestId('connection-health-dot')).toHaveAttribute(
         'data-status',

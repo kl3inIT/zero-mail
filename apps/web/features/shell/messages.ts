@@ -1,4 +1,8 @@
 export const shellMessages = {
+  'nav.chat': {
+    vi: 'Trợ lý',
+    en: 'Assistant',
+  },
   'nav.ai': {
     vi: 'AI',
     en: 'AI',

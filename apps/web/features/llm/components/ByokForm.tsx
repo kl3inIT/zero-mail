@@ -102,7 +102,7 @@ function defaultModelForPreset(preset: ByokProviderPreset): string {
 
 function providerLabelKey(
   provider: ByokProvider,
-  endpointHost?: string,
+  endpointHost?: string | null,
 ):
   | 'llm.byok.provider.anthropic'
   | 'llm.byok.provider.anthropicCompatible'
@@ -162,7 +162,7 @@ function endpointPlaceholderKey(
 }
 
 function validationMessageKey(
-  reason?: string,
+  reason?: string | null,
 ):
   | 'llm.byok.validation.invalid'
   | 'llm.byok.validation.endpointRejected'
@@ -273,7 +273,7 @@ export function ByokForm() {
     } catch (error) {
       validateMutation.reset();
       const apiError = maybeApiError(error);
-      setValidationResult({ ok: false });
+      setValidationResult({ ok: false, models: null, reason: null });
       setValidationError(
         apiError ? localizeApiError(apiError) : t('errors.llm.byokValidateFailed'),
       );

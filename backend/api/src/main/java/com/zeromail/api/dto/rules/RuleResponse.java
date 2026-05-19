@@ -1,9 +1,28 @@
 package com.zeromail.api.dto.rules;
 
 import com.zeromail.core.rules.projection.RuleStatusProjection;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.UUID;
 
+@Schema(
+        requiredProperties = {
+            "ruleId",
+            "displayName",
+            "sourceText",
+            "enabled",
+            "orderIndex",
+            "sourceLanguage",
+            "schemaVersion",
+            "matcherAst",
+            "actionIntents",
+            "entityVersion",
+            "lastPreviewedEntityVersion",
+            "lastPreviewedAt",
+            "templateKey",
+            "templateVersion",
+            "customized"
+        })
 public record RuleResponse(
         UUID ruleId,
         String displayName,
@@ -15,10 +34,10 @@ public record RuleResponse(
         String matcherAst,
         String actionIntents,
         Integer entityVersion,
-        Integer lastPreviewedEntityVersion,
-        Instant lastPreviewedAt,
-        String templateKey,
-        Integer templateVersion,
+        @Schema(nullable = true) Integer lastPreviewedEntityVersion,
+        @Schema(nullable = true) Instant lastPreviewedAt,
+        @Schema(nullable = true) String templateKey,
+        @Schema(nullable = true) Integer templateVersion,
         boolean customized) {
 
     public static RuleResponse from(RuleStatusProjection ruleStatusProjection) {

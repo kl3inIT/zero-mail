@@ -2,6 +2,7 @@ package com.zeromail.core.chat.llm.springai;
 
 import com.zeromail.core.chat.persistence.AssistantSettingsEntity;
 import com.zeromail.core.chat.persistence.AssistantSettingsJpaRepository;
+import com.zeromail.core.chat.usecases.ZeroMailChatProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.llm.domain.BYOKProvider;
@@ -22,6 +23,7 @@ public class SpringAiChatModelFactory {
     private static final String PLATFORM_PROVIDER_ID = "platform";
 
     private final ZeroMailCoreProperties zeroMailCoreProperties;
+    private final ZeroMailChatProperties chatProperties;
     private final AssistantSettingsJpaRepository assistantSettingsRepository;
     private final TenantByokCredentialsRepository tenantByokCredentialsRepository;
     private final RefreshTokenCipher refreshTokenCipher;
@@ -30,10 +32,12 @@ public class SpringAiChatModelFactory {
 
     public SpringAiChatModelFactory(
             ZeroMailCoreProperties zeroMailCoreProperties,
+            ZeroMailChatProperties chatProperties,
             AssistantSettingsJpaRepository assistantSettingsRepository,
             TenantByokCredentialsRepository tenantByokCredentialsRepository,
             RefreshTokenCipher refreshTokenCipher) {
         this.zeroMailCoreProperties = zeroMailCoreProperties;
+        this.chatProperties = chatProperties;
         this.assistantSettingsRepository = assistantSettingsRepository;
         this.tenantByokCredentialsRepository = tenantByokCredentialsRepository;
         this.refreshTokenCipher = refreshTokenCipher;
@@ -116,9 +120,7 @@ public class SpringAiChatModelFactory {
 
     private String modelId(AssistantSettingsEntity assistantSettings) {
         String modelId = assistantSettings.getDefaultModel();
-        return modelId == null || modelId.isBlank()
-                ? zeroMailCoreProperties.llm().platform().compileModel()
-                : modelId;
+        return modelId == null || modelId.isBlank() ? chatProperties.defaultModel() : modelId;
     }
 
     private record ChatModelCacheKey(String tenantId, String providerId, String modelId) {}

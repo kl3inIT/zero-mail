@@ -9,7 +9,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "assistant_knowledge_snippet")
 @SuppressWarnings({"JpaDataSourceORMInspection", "unused"})
-public class AssistantKnowledgeSnippetEntity extends AbstractTenantOwnedEntity {
+public class AssistantKnowledgeMemoryEntity extends AbstractTenantOwnedEntity {
 
     @Column(name = "title", nullable = false, length = 120)
     private String title;
@@ -17,18 +17,18 @@ public class AssistantKnowledgeSnippetEntity extends AbstractTenantOwnedEntity {
     @Column(name = "content", nullable = false)
     private String content;
 
-    protected AssistantKnowledgeSnippetEntity() {
+    protected AssistantKnowledgeMemoryEntity() {
         // Hibernate
     }
 
-    public AssistantKnowledgeSnippetEntity(
-            UUID knowledgeSnippetId, UUID tenantId, String title, String content) {
-        super(knowledgeSnippetId, tenantId);
+    public AssistantKnowledgeMemoryEntity(
+            UUID knowledgeMemoryId, UUID tenantId, String title, String content) {
+        super(knowledgeMemoryId, tenantId);
         this.title = title;
         this.content = content;
     }
 
-    public UUID getKnowledgeSnippetId() {
+    public UUID getKnowledgeMemoryId() {
         return getId();
     }
 

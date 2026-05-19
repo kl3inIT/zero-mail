@@ -86,7 +86,8 @@ class OpenRouterStreamingProbeTest {
         return FunctionToolCallback.builder(
                         toolDefinition.name().id(), (Object ignoredInput) -> Map.of())
                 .description(toolDefinition.description())
-                .inputSchema(ToolCallbackTranslator.inputSchemaFor(toolDefinition.argsRecordClass()))
+                .inputSchema(
+                        ToolCallbackTranslator.inputSchemaFor(toolDefinition.argsRecordClass()))
                 .inputType(toolDefinition.argsRecordClass())
                 .build();
     }

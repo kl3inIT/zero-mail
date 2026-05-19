@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
@@ -18,6 +19,7 @@ public class VercelProtocolEmitter implements ChatStreamSink {
     private final Set<String> openTextPartIds = ConcurrentHashMap.newKeySet();
     private final Set<String> completedTextPartIds = ConcurrentHashMap.newKeySet();
     private final Set<String> openToolCallIds = ConcurrentHashMap.newKeySet();
+    private final AtomicBoolean streamStarted = new AtomicBoolean(false);
 
     public VercelProtocolEmitter(FrameWriter frameWriter) {
         this(frameWriter, JsonMapper.builder().build());
@@ -75,12 +77,18 @@ public class VercelProtocolEmitter implements ChatStreamSink {
 
     @Override
     public void emitDataPersistence(UUID chatMessageId, String state) {
-        emit("data-persistence", fields("chatMessageId", chatMessageId.toString(), "state", state));
+        emit(
+                "data-persistence",
+                fields(
+                        "id",
+                        chatMessageId.toString(),
+                        "data",
+                        fields("chatMessageId", chatMessageId.toString(), "state", state)));
     }
 
     @Override
     public void emitFinish(String reason) {
-        emit("finish", fields("reason", reason == null ? "stop" : reason));
+        emit("finish", fields("finishReason", normalizeFinishReason(reason)));
     }
 
     @Override
@@ -88,9 +96,7 @@ public class VercelProtocolEmitter implements ChatStreamSink {
         emit(
                 "error",
                 fields(
-                        "code",
-                        code == null ? "chat_stream_error" : code,
-                        "message",
+                        "errorText",
                         userFacingMessage == null
                                 ? "The assistant stream failed."
                                 : userFacingMessage));
@@ -107,10 +113,24 @@ public class VercelProtocolEmitter implements ChatStreamSink {
         }
     }
 
-    private void emit(String type, Map<String, String> fields) {
-        Map<String, String> payload = new LinkedHashMap<>();
+    private void emit(String type, Map<String, Object> fields) {
+        emitStartIfNeeded(type);
+        Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("type", type);
         payload.putAll(fields);
+        writeJsonFrame(payload);
+    }
+
+    private void emitStartIfNeeded(String type) {
+        if ("start".equals(type) || !streamStarted.compareAndSet(false, true)) {
+            return;
+        }
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("type", "start");
+        writeJsonFrame(payload);
+    }
+
+    private void writeJsonFrame(Map<String, Object> payload) {
         try {
             writeFrame(objectMapper.writeValueAsString(payload));
         } catch (JacksonException jacksonException) {
@@ -119,10 +139,23 @@ public class VercelProtocolEmitter implements ChatStreamSink {
         }
     }
 
-    private static Map<String, String> fields(String... keyValues) {
-        Map<String, String> fields = new LinkedHashMap<>();
+    private static String normalizeFinishReason(String reason) {
+        if (reason == null || reason.isBlank() || "complete".equals(reason)) {
+            return "stop";
+        }
+        if ("awaiting-confirmation".equals(reason) || "tool-call".equals(reason)) {
+            return "tool-calls";
+        }
+        return switch (reason) {
+            case "stop", "length", "content-filter", "tool-calls", "error", "other" -> reason;
+            default -> "other";
+        };
+    }
+
+    private static Map<String, Object> fields(Object... keyValues) {
+        Map<String, Object> fields = new LinkedHashMap<>();
         for (int index = 0; index < keyValues.length; index += 2) {
-            fields.put(keyValues[index], keyValues[index + 1]);
+            fields.put((String) keyValues[index], keyValues[index + 1]);
         }
         return fields;
     }

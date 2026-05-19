@@ -1,0 +1,18 @@
+# Dev profile: verbose diagnostics for local worker debugging.
+# Keep privacy invariants: never enable prompt/completion/body/token logging.
+logging:
+  level:
+    com.zeromail.worker: DEBUG
+    com.zeromail.core.chat: DEBUG
+    com.zeromail.core.llm: DEBUG
+spring:
+  ai:
+    chat:
+      client:
+        observations:
+          log-prompt: false
+          log-completion: false
+      observations:
+        log-prompt: false
+        log-completion: false
+

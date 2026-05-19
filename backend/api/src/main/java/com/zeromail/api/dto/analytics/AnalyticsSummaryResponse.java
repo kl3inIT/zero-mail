@@ -9,8 +9,24 @@ import com.zeromail.core.analytics.projection.DomainLoadProjection;
 import com.zeromail.core.analytics.projection.ReplyBucketProjection;
 import com.zeromail.core.analytics.projection.RuleHitProjection;
 import com.zeromail.core.analytics.projection.TopSenderProjection;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
+@Schema(
+        requiredProperties = {
+            "window",
+            "volumeObserved",
+            "volumeApplied",
+            "timeSavedSeconds",
+            "topSenders",
+            "ruleHits",
+            "dailyLoad",
+            "actionMix",
+            "domainLoad",
+            "categoryLoad",
+            "replyBuckets",
+            "automationOpportunities"
+        })
 public record AnalyticsSummaryResponse(
         String window,
         long volumeObserved,
@@ -52,12 +68,14 @@ public record AnalyticsSummaryResponse(
                 AutomationOpportunityResponse.from(projection.automationOpportunities()));
     }
 
+    @Schema(requiredProperties = {"senderEmail", "count"})
     public record TopSenderResponse(String senderEmail, long count) {
         private static TopSenderResponse from(TopSenderProjection projection) {
             return new TopSenderResponse(projection.senderEmail(), projection.count());
         }
     }
 
+    @Schema(requiredProperties = {"ruleName", "decisions", "applied", "reverted"})
     public record RuleHitResponse(String ruleName, long decisions, long applied, long reverted) {
         private static RuleHitResponse from(RuleHitProjection projection) {
             return new RuleHitResponse(
@@ -68,6 +86,7 @@ public record AnalyticsSummaryResponse(
         }
     }
 
+    @Schema(requiredProperties = {"day", "observed", "applied", "reverted"})
     public record DailyLoadResponse(String day, long observed, long applied, long reverted) {
         private static DailyLoadResponse from(DailyLoadProjection projection) {
             return new DailyLoadResponse(
@@ -78,6 +97,7 @@ public record AnalyticsSummaryResponse(
         }
     }
 
+    @Schema(requiredProperties = {"actionType", "applied", "reverted", "failed"})
     public record ActionMixResponse(String actionType, long applied, long reverted, long failed) {
         private static ActionMixResponse from(ActionMixProjection projection) {
             return new ActionMixResponse(
@@ -88,18 +108,21 @@ public record AnalyticsSummaryResponse(
         }
     }
 
+    @Schema(requiredProperties = {"domain", "count"})
     public record DomainLoadResponse(String domain, long count) {
         private static DomainLoadResponse from(DomainLoadProjection projection) {
             return new DomainLoadResponse(projection.domain(), projection.count());
         }
     }
 
+    @Schema(requiredProperties = {"category", "count"})
     public record CategoryLoadResponse(String category, long count) {
         private static CategoryLoadResponse from(CategoryLoadProjection projection) {
             return new CategoryLoadResponse(projection.category(), projection.count());
         }
     }
 
+    @Schema(requiredProperties = {"bucket", "count", "withDraft"})
     public record ReplyBucketResponse(String bucket, long count, long withDraft) {
         private static ReplyBucketResponse from(ReplyBucketProjection projection) {
             return new ReplyBucketResponse(
@@ -107,6 +130,7 @@ public record AnalyticsSummaryResponse(
         }
     }
 
+    @Schema(requiredProperties = {"noRuleMatched", "failedActions", "pendingActions"})
     public record AutomationOpportunityResponse(
             long noRuleMatched, long failedActions, long pendingActions) {
         private static AutomationOpportunityResponse from(

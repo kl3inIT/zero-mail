@@ -14,6 +14,7 @@ test('streams assistant text from /api/chat with cookie auth and XSRF', async ({
   const prompt = page.getByPlaceholder('Nhắn cho Zero Mail...');
   await prompt.click();
   await prompt.pressSequentially('Tìm email từ Acme tuần này');
+  await expect(prompt).toHaveValue('Tìm email từ Acme tuần này');
   await expect(page.getByRole('button', { name: 'Gửi tin nhắn' })).toBeEnabled();
   await page.getByRole('button', { name: 'Gửi tin nhắn' }).click();
 

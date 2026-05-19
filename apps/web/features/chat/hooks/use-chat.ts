@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 
 import { getApiUrl } from '@/lib/api/base-url';
 import { xsrfHeader } from '@/lib/api/client';
+import type { ChatStreamRequest } from '@/features/chat/api/chat-api';
 
 type UseChatOptions = {
   chatId: string;
@@ -71,7 +72,7 @@ export function useChat({ chatId, initialMessages }: UseChatOptions) {
           body: {
             chatId: id,
             userText: lastUserText(messages),
-          },
+          } satisfies ChatStreamRequest,
         }),
       }),
     [],

@@ -45,7 +45,8 @@ public class GmailMessageBuilder {
             }
             mimeMessage.setSubject(
                     requireText(command.subject(), "subject"), StandardCharsets.UTF_8.name());
-            mimeMessage.setText(requireText(command.body(), "body"), StandardCharsets.UTF_8.name());
+            mimeMessage.setText(
+                    requireText(command.body().value(), "body"), StandardCharsets.UTF_8.name());
             putThreadingHeaders(mimeMessage, command);
             mimeMessage.setHeader("Message-ID", messageId);
             mimeMessage.saveChanges();

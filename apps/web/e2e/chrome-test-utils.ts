@@ -245,7 +245,7 @@ export async function openAuthenticatedRoute(
   await seedAuthenticatedSession(page, state.preferredLanguage);
   await installChromeApiMock(page, state);
   await page.goto(path, { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 }
 
 export async function expectNoHorizontalOverflow(page: Page) {

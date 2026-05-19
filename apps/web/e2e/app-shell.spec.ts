@@ -35,7 +35,7 @@ for (const viewport of [
     }
 
     await page.goto('/settings', { waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     await expect(page.getByTestId('chrome-header')).toBeVisible();
     await expectBalancePillForViewport(page, viewport.width);
     await expect(page.getByTestId('connection-health-dot')).toBeVisible();
@@ -51,20 +51,21 @@ test('app shell remains mounted across client navigation and onboarding is chrom
   const state = createChromeMockState();
   await openAuthenticatedRoute(page, '/rules', state);
 
-  const headerHandle = await page.getByTestId('chrome-header').elementHandle();
+  await page
+    .getByTestId('chrome-header')
+    .evaluate((headerElement) =>
+      headerElement.setAttribute('data-preservation-check', 'before-settings'),
+    );
   await page.getByRole('link', { name: 'Settings' }).first().click();
   await expect(page).toHaveURL(/\/settings$/);
-  const headerWasPreserved = await page.evaluate(
-    (headerNode) =>
-      headerNode?.isConnected &&
-      headerNode === document.querySelector('[data-testid="chrome-header"]'),
-    headerHandle,
+  await expect(page.getByTestId('chrome-header')).toHaveAttribute(
+    'data-preservation-check',
+    'before-settings',
   );
-  expect(headerWasPreserved).toBe(true);
 
   state.onboardingStep = 'GMAIL_CONNECTED';
   await page.goto('/onboarding/gmail-connect', { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
   await expect(page.getByTestId('chrome-header')).toHaveCount(0);
   await expect(page.getByTestId('app-sidebar')).toHaveCount(0);
 });

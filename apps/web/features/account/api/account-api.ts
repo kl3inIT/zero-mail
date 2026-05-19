@@ -1,25 +1,10 @@
 import { cache } from 'react';
 
-import { api, xsrfHeader } from '@/lib/api/client';
-import { getApiUrl } from '@/lib/api/base-url';
+import { adaptFetchForOpenApi, api, xsrfHeader } from '@/lib/api/client';
 import type { components } from '@/lib/api/schema';
 
 type ApiError = components['schemas']['ApiError'];
-
-export interface CurrentUser {
-  id?: string;
-  userId?: string;
-  tenantId?: string;
-  email: string;
-  preferredLanguage: 'vi' | 'en';
-  onboardingStep?: string;
-  triagePaused: boolean;
-  gmailConnectionStatus: {
-    status: 'CONNECTED' | 'DISCONNECTED' | 'NOT_CONNECTED' | 'PENDING' | string;
-    ingestionHealth: 'HEALTHY' | 'WATCH_UNHEALTHY' | 'HISTORY_LOST' | string;
-    googleEmail: string | null;
-  } | null;
-}
+export type CurrentUser = components['schemas']['MeResponse'];
 
 export interface GetCurrentUserOptions {
   fetcher?: typeof fetch;
@@ -45,18 +30,16 @@ export interface GetCurrentUserOptions {
  */
 export async function fetchCurrentUser(opts: GetCurrentUserOptions = {}): Promise<CurrentUser> {
   const { fetcher, signal, headers } = opts;
-  if (fetcher || headers) {
-    const res = await (fetcher ?? fetch)(getApiUrl('/me'), {
-      headers,
-      cache: 'no-store',
-      signal,
-    });
-    if (!res.ok) throw new Error(`/me failed: ${res.status}`);
-    return res.json() as Promise<CurrentUser>;
+  const { data, error, response } = await api.GET('/me', {
+    cache: fetcher || headers ? 'no-store' : undefined,
+    fetch: adaptFetchForOpenApi(fetcher ?? (headers ? fetch : undefined)),
+    headers,
+    signal,
+  });
+  if (error || !response.ok || data === undefined) {
+    throw error ?? new Error(`/me failed: ${response.status}`);
   }
-  const { data, error, response } = await api.GET('/me', { signal });
-  if (error || !response.ok) throw error ?? new Error(`/me failed: ${response.status}`);
-  return data as CurrentUser;
+  return data;
 }
 
 /**

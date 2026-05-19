@@ -3,13 +3,24 @@ package com.zeromail.api.dto.thread;
 import com.zeromail.core.gmail.usecases.GmailPreviewReadService.GmailThreadDisplay;
 import com.zeromail.core.thread.domain.ThreadReplyBucket;
 import com.zeromail.core.thread.projection.NeedsReplyRow;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 
+@Schema(
+        requiredProperties = {
+            "gmailThreadId",
+            "subject",
+            "otherParty",
+            "lastActivityAt",
+            "draftStatus",
+            "resolved",
+            "openInGmailUrl"
+        })
 public record NeedsReplyRowResponse(
         String gmailThreadId,
-        String subject,
-        String otherParty,
-        Instant lastActivityAt,
+        @Schema(nullable = true) String subject,
+        @Schema(nullable = true) String otherParty,
+        @Schema(nullable = true) Instant lastActivityAt,
         String draftStatus,
         boolean resolved,
         String openInGmailUrl) {

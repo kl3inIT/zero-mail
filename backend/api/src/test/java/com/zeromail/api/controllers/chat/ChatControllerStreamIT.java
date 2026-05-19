@@ -109,7 +109,10 @@ class ChatControllerStreamIT extends ApiPostgresTestBase {
                                         .content(
                                                 objectMapper.writeValueAsString(
                                                         java.util.Map.of(
-                                                                "userText", "Xin chào Zero Mail"))))
+                                                                "chatId",
+                                                                UUID.randomUUID(),
+                                                                "userText",
+                                                                "Xin chào Zero Mail"))))
                         .andExpect(request().asyncStarted())
                         .andReturn();
 

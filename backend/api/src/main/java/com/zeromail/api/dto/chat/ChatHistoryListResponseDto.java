@@ -1,10 +1,12 @@
 package com.zeromail.api.dto.chat;
 
 import com.zeromail.core.chat.projection.ChatHistoryProjection;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+@Schema(requiredProperties = {"chats", "pageSize", "pageOffset"})
 public record ChatHistoryListResponseDto(
         List<ChatHistorySummaryDto> chats, int pageSize, int pageOffset) {
 
@@ -16,6 +18,7 @@ public record ChatHistoryListResponseDto(
                 pageOffset);
     }
 
+    @Schema(requiredProperties = {"id", "title", "updatedAt", "messageCount"})
     public record ChatHistorySummaryDto(
             UUID id, String title, Instant updatedAt, int messageCount) {
 

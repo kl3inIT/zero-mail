@@ -30,6 +30,8 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -42,6 +44,7 @@ import tools.jackson.databind.ObjectMapper;
 @SuppressWarnings("SqlResolve")
 public class ChatOrchestrator {
 
+    private static final Logger log = LoggerFactory.getLogger(ChatOrchestrator.class);
     private static final int TITLE_MAX_LENGTH = 40;
 
     private final ChatLlmGateway chatLlmGateway;
@@ -113,6 +116,16 @@ public class ChatOrchestrator {
                                         trackingDisposable);
                             } catch (RuntimeException runtimeException) {
                                 if (!trackingDisposable.isDisposed()) {
+                                    log.warn(
+                                            "event=chat_stream_failed tenantId={} chatId={} errorClass={}",
+                                            tenantId,
+                                            preparedTurn.chatId(),
+                                            rootCause(runtimeException).getClass().getSimpleName());
+                                    log.debug(
+                                            "event=chat_stream_failed_stacktrace tenantId={} chatId={}",
+                                            tenantId,
+                                            preparedTurn.chatId(),
+                                            runtimeException);
                                     streamSink.emitError(
                                             "chat_stream_failed", "The assistant stream failed.");
                                 }
@@ -495,6 +508,14 @@ public class ChatOrchestrator {
             handlerMap.put(handler.name(), handler);
         }
         return Map.copyOf(handlerMap);
+    }
+
+    private static Throwable rootCause(Throwable throwable) {
+        Throwable currentThrowable = throwable;
+        while (currentThrowable.getCause() != null) {
+            currentThrowable = currentThrowable.getCause();
+        }
+        return currentThrowable;
     }
 
     private static String titleFrom(String userText) {

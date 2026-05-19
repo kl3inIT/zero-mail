@@ -1,5 +1,4 @@
 import { api, xsrfHeader } from '@/lib/api/client';
-import { getApiUrl } from '@/lib/api/base-url';
 import type { components } from '@/lib/api/schema';
 
 export type RuleResponse = components['schemas']['RuleResponse'];
@@ -185,80 +184,31 @@ export async function previewDraftRule(
   return unwrap(result, `/api/rules/preview failed: ${result.response.status}`);
 }
 
-export type RuleEnabledPreviewRequest = {
-  sampleSize?: number | null;
-  evaluateSemanticIntents?: boolean | null;
-};
+export type RuleEnabledPreviewRequest = components['schemas']['RuleEnabledPreviewRequest'];
 
 export async function previewAllEnabledRules(
   payload: RuleEnabledPreviewRequest,
 ): Promise<RulePreviewResponse> {
-  const response = await fetch(getApiUrl('/api/rules/preview-enabled'), {
-    method: 'POST',
-    credentials: 'include',
+  const result = await api.POST('/api/rules/preview-enabled', {
     headers: jsonHeaders(),
-    body: JSON.stringify(payload),
+    body: payload,
   });
-  if (!response.ok) {
-    let apiErrorBody: unknown;
-    try {
-      apiErrorBody = await response.json();
-    } catch {
-      apiErrorBody = undefined;
-    }
-    throw apiErrorBody && typeof apiErrorBody === 'object'
-      ? apiErrorBody
-      : new Error(`/api/rules/preview-enabled failed: ${response.status}`);
-  }
-  return (await response.json()) as RulePreviewResponse;
+  return unwrap(result, `/api/rules/preview-enabled failed: ${result.response.status}`);
 }
 
-// Manual types for the custom-mail preview endpoint. These mirror the
-// backend DTOs in com.zeromail.api.dto.rules.RuleCustomPreview{Request,Response}.
-// Once the OpenAPI spec is regenerated against the new endpoint, swap these
-// for components['schemas']['RuleCustomPreview{Request,Response}'].
-export type RuleCustomPreviewRequest = {
-  subject?: string | null;
-  body?: string | null;
-  ruleIds?: string[] | null;
-};
-
-export type RuleCustomPreviewEntry = {
-  ruleId: string;
-  displayName: string;
-  enabled: boolean;
-  matched: boolean;
-  deferred: boolean;
-  proposedActionChips: components['schemas']['ActionChipResponse'][];
-  matchedEvidenceChips: components['schemas']['EvidenceChipResponse'][];
-  deferredEvidenceChips: components['schemas']['EvidenceChipResponse'][];
-};
-
-export type RuleCustomPreviewResponse = {
-  entries: RuleCustomPreviewEntry[];
-};
+export type RuleCustomPreviewRequest = components['schemas']['RuleCustomPreviewRequest'];
+export type RuleCustomPreviewEntry =
+  components['schemas']['RuleCustomPreviewResponse']['entries'][number];
+export type RuleCustomPreviewResponse = components['schemas']['RuleCustomPreviewResponse'];
 
 export async function previewCustomMail(
   payload: RuleCustomPreviewRequest,
 ): Promise<RuleCustomPreviewResponse> {
-  const response = await fetch(getApiUrl('/api/rules/preview-custom'), {
-    method: 'POST',
-    credentials: 'include',
+  const result = await api.POST('/api/rules/preview-custom', {
     headers: jsonHeaders(),
-    body: JSON.stringify(payload),
+    body: payload,
   });
-  if (!response.ok) {
-    let apiErrorBody: unknown;
-    try {
-      apiErrorBody = await response.json();
-    } catch {
-      apiErrorBody = undefined;
-    }
-    throw apiErrorBody && typeof apiErrorBody === 'object'
-      ? apiErrorBody
-      : new Error(`/api/rules/preview-custom failed: ${response.status}`);
-  }
-  return (await response.json()) as RuleCustomPreviewResponse;
+  return unwrap(result, `/api/rules/preview-custom failed: ${result.response.status}`);
 }
 
 export async function listRuleTemplates(): Promise<RuleTemplateResponse[]> {

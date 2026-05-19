@@ -1,5 +1,6 @@
 package com.zeromail.core.chat.llm.springai;
 
+import com.openai.errors.OpenAIServiceException;
 import com.zeromail.core.chat.domain.ChatMessage;
 import com.zeromail.core.chat.domain.ChatRole;
 import com.zeromail.core.chat.domain.parts.AssistantTextPart;
@@ -16,6 +17,8 @@ import com.zeromail.core.chat.usecases.RawToolCall;
 import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -36,6 +39,8 @@ import tools.jackson.databind.json.JsonMapper;
 @SuppressWarnings("DuplicatedCode")
 public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
 
+    private static final Logger log =
+            LoggerFactory.getLogger(SpringAiStreamingChatModelClient.class);
     private static final String ASSISTANT_TEXT_PART_ID = "assistant-text";
 
     private final SpringAiChatModelFactory chatModelFactory;
@@ -68,6 +73,10 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
         Scheduler scheduler = tenantAwareReactorScheduler.scheduler();
         TextEmissionState textEmissionState = new TextEmissionState();
         Prompt prompt = prompt(streamRequest);
+        log.debug(
+                "event=chat_llm_stream_start tenantId={} modelId={}",
+                streamRequest.tenantId(),
+                streamRequest.modelId());
 
         return streamingChatModel.stream(prompt)
                 .subscribeOn(scheduler)
@@ -93,9 +102,20 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
                                         toolCall.id(), toolCall.name(), toolCall.arguments());
                             }
                         },
-                        _ ->
-                                streamSink.emitError(
-                                        "chat_stream_failed", "The assistant stream failed."),
+                        chatStreamingFailure -> {
+                            Throwable rootCause = rootCause(chatStreamingFailure);
+                            log.warn(
+                                    "event=chat_llm_stream_failed tenantId={} errorClass={} {}",
+                                    streamRequest.tenantId(),
+                                    rootCause.getClass().getSimpleName(),
+                                    serviceExceptionSummary(rootCause));
+                            log.debug(
+                                    "event=chat_llm_stream_failed_stacktrace tenantId={}",
+                                    streamRequest.tenantId(),
+                                    chatStreamingFailure);
+                            streamSink.emitError(
+                                    "chat_stream_failed", "The assistant stream failed.");
+                        },
                         () -> {
                             if (textEmissionState.started()) {
                                 streamSink.emitTextEnd(ASSISTANT_TEXT_PART_ID);
@@ -125,6 +145,7 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
                         .model(streamRequest.modelId())
                         .temperature(0.2)
                         .maxTokens(2048)
+                        .streamUsage(false)
                         .internalToolExecutionEnabled(false)
                         .toolCallbacks(
                                 toolCallbackTranslator.translate(streamRequest.toolCatalog()))
@@ -202,6 +223,34 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
             throw new IllegalStateException(
                     "chat prompt tool payload could not be serialized", jacksonException);
         }
+    }
+
+    private static Throwable rootCause(Throwable throwable) {
+        Throwable currentThrowable = throwable;
+        while (currentThrowable.getCause() != null) {
+            currentThrowable = currentThrowable.getCause();
+        }
+        return currentThrowable;
+    }
+
+    private static String serviceExceptionSummary(Throwable throwable) {
+        if (!(throwable instanceof OpenAIServiceException openAIServiceException)) {
+            return "";
+        }
+        return "statusCode="
+                + openAIServiceException.statusCode()
+                + " code="
+                + openAIServiceException.code().orElse("-")
+                + " param="
+                + openAIServiceException.param().orElse("-")
+                + " type="
+                + openAIServiceException.type().orElse("-")
+                + " body="
+                + truncate(openAIServiceException.body().toString());
+    }
+
+    private static String truncate(String text) {
+        return text.length() <= 600 ? text : text.substring(0, 600);
     }
 
     private static final class TextEmissionState {

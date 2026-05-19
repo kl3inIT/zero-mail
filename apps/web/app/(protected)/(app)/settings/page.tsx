@@ -52,9 +52,12 @@ export default function SettingsPage() {
   const togglePause = useToggleTriagePause();
 
   const gmailConnection = me.data?.gmailConnectionStatus;
+  const tenantConnectionStatus = status.data?.connectionStatus;
   const connStatus = isGmailConnectionStatus(gmailConnection?.status)
     ? gmailConnection.status
-    : (status.data?.connectionStatus ?? 'NOT_CONNECTED');
+    : isGmailConnectionStatus(tenantConnectionStatus)
+      ? tenantConnectionStatus
+      : 'NOT_CONNECTED';
   const ingestionHealth = gmailConnection?.ingestionHealth ?? 'HEALTHY';
   const triagePaused = pauseState.data ?? false;
   const preferredLanguage = (me.data?.preferredLanguage === 'en' ? 'en' : 'vi') as AppLocale;

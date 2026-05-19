@@ -41,14 +41,14 @@ async function openRules(page: Page) {
   await seedAuthenticatedSession(page);
   await installApiMock(page);
   await page.goto('/rules', { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 }
 
 async function openAi(page: Page) {
   await seedAuthenticatedSession(page);
   await installApiMock(page);
   await page.goto('/ai', { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 }
 
 async function installApiMock(page: Page) {

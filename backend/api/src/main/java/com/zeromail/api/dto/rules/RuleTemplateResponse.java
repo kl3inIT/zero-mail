@@ -1,7 +1,21 @@
 package com.zeromail.api.dto.rules;
 
 import com.zeromail.core.rules.projection.RuleTemplateProjection;
+import io.swagger.v3.oas.annotations.media.Schema;
 
+@Schema(
+        requiredProperties = {
+            "templateKey",
+            "templateVersion",
+            "displayName",
+            "localizedCopyKey",
+            "sourceText",
+            "actionSummary",
+            "status",
+            "sourcedFromOnboarding",
+            "materialized",
+            "customized"
+        })
 public record RuleTemplateResponse(
         String templateKey,
         int templateVersion,

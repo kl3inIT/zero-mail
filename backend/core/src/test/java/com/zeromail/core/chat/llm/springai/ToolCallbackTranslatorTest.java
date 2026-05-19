@@ -22,9 +22,13 @@ class ToolCallbackTranslatorTest {
         ToolCallbackTranslator toolCallbackTranslator = new ToolCallbackTranslator();
 
         JsonNode listLabelsSchema =
-                schemaFor(toolCallbackTranslator.translate(new ChatToolCatalog()), ChatToolName.LIST_LABELS);
+                schemaFor(
+                        toolCallbackTranslator.translate(new ChatToolCatalog()),
+                        ChatToolName.LIST_LABELS);
         JsonNode listRulesSchema =
-                schemaFor(toolCallbackTranslator.translate(new ChatToolCatalog()), ChatToolName.LIST_RULES);
+                schemaFor(
+                        toolCallbackTranslator.translate(new ChatToolCatalog()),
+                        ChatToolName.LIST_RULES);
 
         assertEmptyPropertiesObject(listLabelsSchema);
         assertEmptyPropertiesObject(listRulesSchema);
@@ -34,7 +38,8 @@ class ToolCallbackTranslatorTest {
     void preserves_generated_properties_for_non_empty_tool_args() throws JacksonException {
         JsonNode getMessageSchema =
                 objectMapper.readTree(
-                        ToolCallbackTranslator.inputSchemaFor(ChatToolCatalog.GetMessageArgs.class));
+                        ToolCallbackTranslator.inputSchemaFor(
+                                ChatToolCatalog.GetMessageArgs.class));
 
         assertThat(getMessageSchema.get("type").asString()).isEqualTo("object");
         assertThat(getMessageSchema.get("properties").has("messageId")).isTrue();

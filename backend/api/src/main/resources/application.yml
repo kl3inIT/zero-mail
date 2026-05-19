@@ -135,7 +135,7 @@ zero-mail:
   chat:
     heartbeat-interval-seconds: 15
     sse-timeout-minutes: 30
-    default-model: openai/gpt-4o
+    default-model: openai/gpt-5.4-nano
     # MEDIUM-7: token budget enforcement per AI-SPEC section 4b.
     max-history-tokens: 24576
     max-tool-output-tokens: 4000

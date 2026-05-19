@@ -62,6 +62,7 @@ export async function openChat(page: Page, path = '/chat', options: MockOptions 
   await seedSession(page, options.locale ?? 'vi');
   const state = await installChatApiMock(page, options);
   await page.goto(path, { waitUntil: 'domcontentloaded' });
+  await page.waitForLoadState('load');
   await page.getByTestId('chat-pane').waitFor({ state: 'visible' });
   return state;
 }

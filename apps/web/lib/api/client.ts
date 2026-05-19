@@ -14,6 +14,35 @@ export const api = createClient<paths>({
   credentials: 'include',
 });
 
+export function adaptFetchForOpenApi(
+  fetcher: typeof fetch | undefined,
+): ((request: Request) => Promise<Response>) | undefined {
+  if (!fetcher) return undefined;
+  return async (request) => {
+    const response = await fetcher(request.url, {
+      body: request.body,
+      cache: request.cache,
+      credentials: request.credentials,
+      headers: Object.fromEntries(request.headers.entries()),
+      integrity: request.integrity,
+      keepalive: request.keepalive,
+      method: request.method,
+      mode: request.mode,
+      redirect: request.redirect,
+      referrer: request.referrer,
+      referrerPolicy: request.referrerPolicy,
+      signal: request.signal,
+    });
+    if (!response.headers) {
+      Object.assign(response, { headers: new Headers() });
+    }
+    if (!response.text && typeof response.json === 'function') {
+      Object.assign(response, { text: async () => JSON.stringify(await response.json()) });
+    }
+    return response;
+  };
+}
+
 export function xsrfHeader(): HeadersInit {
   if (typeof document === 'undefined') return {};
   const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);

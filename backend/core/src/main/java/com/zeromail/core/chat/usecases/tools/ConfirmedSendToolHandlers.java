@@ -3,6 +3,7 @@ package com.zeromail.core.chat.usecases.tools;
 import com.zeromail.core.chat.confirm.ConfirmationStateMachine.Reservation;
 import com.zeromail.core.chat.confirm.send.AssistantSendCommand;
 import com.zeromail.core.chat.domain.ChatToolName;
+import com.zeromail.core.shared.privacy.Sensitive;
 import com.zeromail.core.triage.usecases.SenderSafetyNetService;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -43,7 +44,7 @@ public class ConfirmedSendToolHandlers {
                 WriteToolArguments.optionalText(effectiveInput, "cc"),
                 WriteToolArguments.optionalText(effectiveInput, "bcc"),
                 WriteToolArguments.text(effectiveInput, "subject"),
-                body(reservation.toolName(), effectiveInput),
+                Sensitive.of(body(reservation.toolName(), effectiveInput)),
                 WriteToolArguments.optionalText(effectiveInput, "sourceMessageId"),
                 WriteToolArguments.optionalText(effectiveInput, "gmailThreadId"),
                 WriteToolArguments.optionalText(effectiveInput, "inReplyToMessageId"),

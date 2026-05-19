@@ -99,7 +99,7 @@ function mapAuditEntry(row: components['schemas']['AuditEntryResponse']): AuditE
     undoableUntil: row.undoableUntil ?? new Date(0).toISOString(),
     undone: row.decisionState === 'REVERTED',
     gmailThreadId: row.gmailThreadId,
-    draftId: row.draftId,
+    draftId: row.draftId ?? undefined,
     decisionState: row.decisionState,
   };
 }

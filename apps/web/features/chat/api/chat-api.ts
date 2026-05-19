@@ -1,67 +1,18 @@
 import type { UIMessage } from 'ai';
 
-import { getApiUrl } from '@/lib/api/base-url';
-import { xsrfHeader } from '@/lib/api/client';
+import { api, xsrfHeader } from '@/lib/api/client';
+import type { components } from '@/lib/api/schema';
 
-export type ChatRole = 'USER' | 'ASSISTANT' | 'SYSTEM';
-
-export type ChatPart = {
-  type: string;
-  partId?: string | null;
-  text?: string | null;
-  completedAt?: string | null;
-  toolCallId?: string | null;
-  toolName?: string | null;
-  state?: string | null;
-  input?: Record<string, unknown> | null;
-  output?: Record<string, unknown> | null;
-  confirmation?: Record<string, unknown> | null;
-  truncated?: boolean | null;
-  errorMessage?: string | null;
-};
-
-export type ChatMessageParts = {
-  schemaVersion?: number | string;
-  parts?: ChatPart[];
-};
-
-export type ChatHistoryMessage = {
-  id: string;
-  role: ChatRole;
-  parts: ChatMessageParts;
-  createdAt: string;
-};
-
-export type ChatHistorySummary = {
-  id: string;
-  title: string;
-  updatedAt: string;
-  messageCount: number;
-};
-
-export type ChatHistoryListResponse = {
-  chats: ChatHistorySummary[];
-  pageSize: number;
-  pageOffset: number;
-};
-
-export type ChatHistoryDetailResponse = {
-  id: string;
-  title: string;
-  createdAt: string;
-  updatedAt: string;
-  messages: ChatHistoryMessage[];
-};
-
-export type ConfirmActionRequest = {
-  toolCallId: string;
-  contentOverride?: Record<string, unknown>;
-  vipAcknowledged: boolean;
-};
-
-export type ConfirmActionResponse = {
-  state: string;
-};
+export type ChatHistoryListResponse = components['schemas']['ChatHistoryListResponseDto'];
+export type ChatHistorySummary = ChatHistoryListResponse['chats'][number];
+export type ChatHistoryDetailResponse = components['schemas']['ChatHistoryDetailResponseDto'];
+export type ChatHistoryMessage = ChatHistoryDetailResponse['messages'][number];
+export type ChatRole = ChatHistoryMessage['role'];
+export type ChatMessageParts = components['schemas']['ChatMessagePartsDto'];
+export type ChatPart = components['schemas']['ChatPartDto'];
+export type ChatStreamRequest = components['schemas']['ChatStreamRequestDto'];
+export type ConfirmActionRequest = components['schemas']['ConfirmActionRequestDto'];
+export type ConfirmActionResponse = components['schemas']['ConfirmActionResponseDto'];
 
 function jsonHeaders(): HeadersInit {
   return { 'Content-Type': 'application/json', ...xsrfHeader() };
@@ -80,44 +31,43 @@ async function parseError(response: Response, fallbackMessage: string): Promise<
   }
 }
 
-async function readJson<T>(response: Response, fallbackMessage: string): Promise<T> {
-  if (!response.ok) {
-    throw await parseError(response, fallbackMessage);
+function unwrap<T>(
+  result: { data?: T; error?: unknown; response: Response },
+  fallbackMessage: string,
+): T {
+  if (result.error || !result.response.ok || result.data === undefined) {
+    throw result.error ?? new Error(fallbackMessage);
   }
-  return (await response.json()) as T;
+  return result.data;
 }
 
 export async function listChats(pageSize = 50, pageOffset = 0): Promise<ChatHistoryListResponse> {
-  const params = new URLSearchParams({
-    pageSize: String(pageSize),
-    pageOffset: String(pageOffset),
+  const result = await api.GET('/api/chat/history', {
+    params: { query: { pageSize, pageOffset } },
   });
-  const response = await fetch(
-    getApiUrl(`/api/chat/history?${params.toString()}` as `/${string}`),
-    {
-      method: 'GET',
-      credentials: 'include',
-    },
-  );
-  return readJson(response, `/api/chat/history failed: ${response.status}`);
+  return unwrap(result, `/api/chat/history failed: ${result.response.status}`);
 }
 
 export async function loadChat(chatId: string): Promise<ChatHistoryDetailResponse> {
-  const response = await fetch(getApiUrl(`/api/chat/${chatId}`), {
-    method: 'GET',
-    credentials: 'include',
+  const result = await api.GET('/api/chat/{chatId}', {
+    params: { path: { chatId } },
   });
-  return readJson(response, `/api/chat/${chatId} failed: ${response.status}`);
+  return unwrap(result, `/api/chat/${chatId} failed: ${result.response.status}`);
 }
 
 export async function softDeleteChat(chatId: string): Promise<void> {
-  const response = await fetch(getApiUrl(`/api/chat/${chatId}`), {
-    method: 'DELETE',
-    credentials: 'include',
+  const result = await api.DELETE('/api/chat/{chatId}', {
+    params: { path: { chatId } },
     headers: unsafeHeaders(),
   });
-  if (!response.ok) {
-    throw await parseError(response, `/api/chat/${chatId} delete failed: ${response.status}`);
+  if (result.error || !result.response.ok) {
+    throw (
+      result.error ??
+      (await parseError(
+        result.response,
+        `/api/chat/${chatId} delete failed: ${result.response.status}`,
+      ))
+    );
   }
 }
 
@@ -125,30 +75,42 @@ export async function confirmAction(
   chatId: string,
   body: ConfirmActionRequest,
 ): Promise<ConfirmActionResponse> {
-  const response = await fetch(getApiUrl(`/api/chat/${chatId}/confirm`), {
-    method: 'POST',
-    credentials: 'include',
+  const result = await api.POST('/api/chat/{chatId}/confirm', {
+    params: { path: { chatId } },
     headers: jsonHeaders(),
-    body: JSON.stringify(body),
+    body,
   });
-  return readJson(response, `/api/chat/${chatId}/confirm failed: ${response.status}`);
+  return unwrap(result, `/api/chat/${chatId}/confirm failed: ${result.response.status}`);
 }
 
 export async function cancelAction(
   chatId: string,
   body: ConfirmActionRequest,
 ): Promise<ConfirmActionResponse> {
-  const response = await fetch(getApiUrl(`/api/chat/${chatId}/cancel`), {
-    method: 'POST',
-    credentials: 'include',
+  const result = await api.POST('/api/chat/{chatId}/cancel', {
+    params: { path: { chatId } },
     headers: jsonHeaders(),
-    body: JSON.stringify(body),
+    body,
   });
-  return readJson(response, `/api/chat/${chatId}/cancel failed: ${response.status}`);
+  return unwrap(result, `/api/chat/${chatId}/cancel failed: ${result.response.status}`);
+}
+
+function toolUiType(part: ChatPart): string | null {
+  const type = part.type;
+  if (type.startsWith('tool-')) return type;
+  return part.toolName ? `tool-${part.toolName}` : null;
+}
+
+function uiRole(role: ChatRole): UIMessage['role'] {
+  const loweredRole = role.toLowerCase();
+  if (loweredRole === 'user' || loweredRole === 'assistant' || loweredRole === 'system') {
+    return loweredRole;
+  }
+  return 'assistant';
 }
 
 export function historyMessageToUIMessage(message: ChatHistoryMessage): UIMessage {
-  const role = message.role.toLowerCase() as UIMessage['role'];
+  const role = uiRole(message.role);
   const parts = (message.parts.parts ?? []).map((part) => {
     if (part.type === 'assistant-text') {
       return { type: 'text', text: part.text ?? '' };
@@ -166,14 +128,15 @@ export function historyMessageToUIMessage(message: ChatHistoryMessage): UIMessag
         },
       };
     }
-    if (part.type.startsWith('tool-')) {
+    const toolType = toolUiType(part);
+    if (toolType) {
       return {
-        type: part.type,
-        toolCallId: part.toolCallId ?? part.partId ?? part.type,
+        type: toolType,
+        toolCallId: part.toolCallId ?? part.partId ?? toolType,
         state: part.state ?? 'input-available',
         input: part.input ?? {},
-        output: part.output ?? undefined,
-        confirmation: part.confirmation ?? undefined,
+        output: part.output,
+        confirmation: part.confirmation,
       };
     }
     return { type: 'text', text: '' };

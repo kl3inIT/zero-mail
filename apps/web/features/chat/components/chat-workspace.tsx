@@ -18,10 +18,7 @@ export function ChatWorkspace() {
   const queryChatId = searchParams.get('chat');
   const [newChatId, setNewChatId] = useState(() => createChatId());
   const activeChatId = queryChatId ?? newChatId;
-  const paneKey = useMemo(
-    () => `${activeChatId}-${queryChatId ?? 'new'}`,
-    [activeChatId, queryChatId],
-  );
+  const paneKey = useMemo(() => activeChatId, [activeChatId]);
 
   function handleSelectChat(chatId: string) {
     router.push(`/chat?chat=${chatId}`);

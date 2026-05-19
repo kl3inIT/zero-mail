@@ -21,6 +21,7 @@ import com.zeromail.core.chat.confirm.send.GmailMessageBuilder;
 import com.zeromail.core.chat.domain.ChatToolName;
 import com.zeromail.core.chat.exception.VipAcknowledgmentMissingException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.shared.privacy.Sensitive;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.triage.usecases.SenderEmailCanonicalizer;
 import com.zeromail.core.triage.usecases.SenderSafetyNetService;
@@ -154,7 +155,7 @@ class AssistantSendExecutorVipIT {
                 null,
                 null,
                 "Board note",
-                "Please review the attached board note.",
+                Sensitive.of("Please review the attached board note."),
                 null,
                 null,
                 null,
