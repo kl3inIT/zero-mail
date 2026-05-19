@@ -137,3 +137,6 @@ databaseChangeLog:
   - include:
       file: changes/046-assistant-memory-knowledge.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/047-chat-forbidden-html-expanded.yaml
+      relativeToChangelogFile: true
