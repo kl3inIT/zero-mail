@@ -14,6 +14,7 @@ public record ZeroMailChatProperties(
         @DefaultValue("openai/gpt-5.4-nano") String defaultModel,
         @Min(1) @DefaultValue("24576") int maxHistoryTokens,
         @Min(1) @DefaultValue("4000") int maxToolOutputTokens,
+        @Min(1) @DefaultValue("4") int maxReadToolIterations,
         @Valid HistoryProperties history,
         @Valid TokenizerProperties tokenizer) {
 

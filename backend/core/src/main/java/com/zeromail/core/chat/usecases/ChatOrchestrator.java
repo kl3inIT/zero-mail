@@ -153,7 +153,10 @@ public class ChatOrchestrator {
             ChatStreamCommand command,
             ChatStreamSink streamSink,
             TrackingDisposable trackingDisposable) {
-        for (int attempt = 0; attempt < 4 && !trackingDisposable.isDisposed(); attempt++) {
+        int maxReadToolIterations = chatProperties.maxReadToolIterations();
+        for (int attempt = 0;
+                attempt < maxReadToolIterations && !trackingDisposable.isDisposed();
+                attempt++) {
             InterceptingSink interceptingSink = new InterceptingSink(streamSink);
             ChatStreamRequest streamRequest =
                     new ChatStreamRequest(
@@ -201,7 +204,17 @@ public class ChatOrchestrator {
             streamSink.emitFinish("complete");
             return;
         }
-        streamSink.emitFinish("complete");
+        // Loop exhausted the iteration cap without resolving to assistant text or a confirmable
+        // tool call -- the model hallucinated an infinite read-tool sequence. Emit an error and
+        // log so the UX shows a clear failure instead of an apparent clean finish (WR-07).
+        log.warn(
+                "event=chat_tool_iteration_capped tenantId={} chatId={} cap={}",
+                tenantId,
+                preparedTurn.chatId(),
+                maxReadToolIterations);
+        streamSink.emitError(
+                "chat_too_many_tool_calls",
+                "The assistant requested too many tool calls. Please try again.");
     }
 
     private List<ChatMessage> history(UUID chatId) {
