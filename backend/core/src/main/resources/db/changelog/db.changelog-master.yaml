@@ -140,3 +140,12 @@ databaseChangeLog:
   - include:
       file: changes/047-chat-forbidden-html-expanded.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/048-admin-users.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/049-admin-audit-event.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/050-admin-read-event.yaml
+      relativeToChangelogFile: true

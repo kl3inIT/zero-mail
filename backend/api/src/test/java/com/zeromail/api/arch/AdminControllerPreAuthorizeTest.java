@@ -27,8 +27,7 @@ class AdminControllerPreAuthorizeTest {
     }
 
     private static void assertAdminPreAuthorize(JavaClass javaClass) {
-        Optional<PreAuthorize> preAuthorize =
-                javaClass.tryGetAnnotationOfType(PreAuthorize.class).toOptional();
+        Optional<PreAuthorize> preAuthorize = javaClass.tryGetAnnotationOfType(PreAuthorize.class);
 
         assertThat(preAuthorize)
                 .as(javaClass.getName() + " must declare class-level @PreAuthorize")

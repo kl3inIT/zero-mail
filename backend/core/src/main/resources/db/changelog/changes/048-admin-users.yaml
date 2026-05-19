@@ -1,0 +1,92 @@
+databaseChangeLog:
+  - changeSet:
+      id: 048-admin-users
+      author: zeromail
+      comment: >
+        Admin identity store for WebAuthn enrollment. The application role may update credential and
+        status columns through audited services, but direct DELETE is revoked when the production
+        zeromail_app role exists.
+      changes:
+        - createTable:
+            tableName: admin_users
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: email
+                  type: varchar(320)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: ux_admin_users_email
+              - column:
+                  name: display_name
+                  type: varchar(200)
+              - column:
+                  name: user_handle
+                  type: bytea
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: ux_admin_users_user_handle
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: credential_id
+                  type: bytea
+                  constraints:
+                    unique: true
+                    uniqueConstraintName: ux_admin_users_credential_id
+              - column:
+                  name: public_key_cose
+                  type: bytea
+              - column:
+                  name: signature_counter
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: aaguid
+                  type: uuid
+              - column:
+                  name: attestation_format
+                  type: varchar(50)
+              - column:
+                  name: last_used_at
+                  type: timestamptz
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: revoked_at
+                  type: timestamptz
+              - column:
+                  name: revoked_reason
+                  type: varchar(500)
+        - sql:
+            sql: ALTER TABLE admin_users ADD CONSTRAINT ck_admin_users_status CHECK (status IN ('PENDING_ENROLLMENT','ACTIVE','REVOKED'))
+        - sql:
+            splitStatements: false
+            sql: |
+              DO $$
+              BEGIN
+                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'zeromail_app') THEN
+                  REVOKE DELETE ON admin_users FROM zeromail_app;
+                END IF;
+              END;
+              $$;
+      rollback:
+        - dropTable:
+            tableName: admin_users

@@ -11,9 +11,15 @@ public final class TenantContext {
 
     public static String currentOrThrow() {
         if (!TENANT.isBound()) {
-            throw new IllegalStateException("No tenant bound on this thread");
+            throw new IllegalStateException("No TenantContext tenant bound on this thread");
         }
         return TENANT.get();
+    }
+
+    public static void requireUnbound() {
+        if (TENANT.isBound()) {
+            throw new IllegalStateException("TenantContext cannot be bound inside AdminContext");
+        }
     }
 
     /** Convenience for callers that immediately reify the bound tenant as a {@link UUID}. */
