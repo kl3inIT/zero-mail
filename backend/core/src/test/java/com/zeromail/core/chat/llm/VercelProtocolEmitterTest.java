@@ -7,13 +7,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 class VercelProtocolEmitterTest {
 
+    private static ObjectMapper testMapper() {
+        return JsonMapper.builder().build();
+    }
+
     @Test
     void rejects_text_delta_before_text_start() {
-        VercelProtocolEmitter emitter = new VercelProtocolEmitter(ignoredFrame -> {});
+        VercelProtocolEmitter emitter = new VercelProtocolEmitter(ignoredFrame -> {}, testMapper());
 
         assertThatThrownBy(() -> emitter.emitTextDelta("part-1", "hello"))
                 .isInstanceOf(IllegalStateException.class)
@@ -23,8 +28,7 @@ class VercelProtocolEmitterTest {
     @Test
     void emits_ordered_json_frames_for_text_and_tools() {
         List<String> frames = new ArrayList<>();
-        VercelProtocolEmitter emitter =
-                new VercelProtocolEmitter(frames::add, JsonMapper.builder().build());
+        VercelProtocolEmitter emitter = new VercelProtocolEmitter(frames::add, testMapper());
 
         emitter.emitTextStart("part-1");
         emitter.emitTextDelta("part-1", "Xin");
@@ -49,8 +53,7 @@ class VercelProtocolEmitterTest {
     @Test
     void emits_ai_sdk_v6_compatible_data_and_finish_frames() {
         List<String> frames = new ArrayList<>();
-        VercelProtocolEmitter emitter =
-                new VercelProtocolEmitter(frames::add, JsonMapper.builder().build());
+        VercelProtocolEmitter emitter = new VercelProtocolEmitter(frames::add, testMapper());
         UUID chatMessageId = UUID.fromString("11111111-1111-1111-1111-111111111111");
 
         emitter.emitDataPersistence(chatMessageId, "assistant-message-saved");
@@ -68,7 +71,7 @@ class VercelProtocolEmitterTest {
     @Test
     void heartbeat_is_sse_comment_frame() {
         List<String> frames = new ArrayList<>();
-        VercelProtocolEmitter emitter = new VercelProtocolEmitter(frames::add);
+        VercelProtocolEmitter emitter = new VercelProtocolEmitter(frames::add, testMapper());
 
         emitter.emitHeartbeat();
 

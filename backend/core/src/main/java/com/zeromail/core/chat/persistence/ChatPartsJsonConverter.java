@@ -5,7 +5,6 @@ import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
 
 @Component
 public class ChatPartsJsonConverter {
@@ -14,10 +13,6 @@ public class ChatPartsJsonConverter {
 
     public ChatPartsJsonConverter(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
-    }
-
-    public ChatPartsJsonConverter() {
-        this(JsonMapper.builder().build());
     }
 
     public String toJson(ChatMessageParts chatMessageParts) {

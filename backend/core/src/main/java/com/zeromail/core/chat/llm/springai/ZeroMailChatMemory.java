@@ -23,19 +23,21 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
 
 @Component
 public class ZeroMailChatMemory implements ChatMemory {
 
     private final ChatMessageJdbcRepository chatMessageRepository;
     private final LlmTokenizer llmTokenizer;
-    private final ObjectMapper objectMapper = JsonMapper.builder().build();
+    private final ObjectMapper objectMapper;
 
     public ZeroMailChatMemory(
-            ChatMessageJdbcRepository chatMessageRepository, LlmTokenizer llmTokenizer) {
+            ChatMessageJdbcRepository chatMessageRepository,
+            LlmTokenizer llmTokenizer,
+            ObjectMapper objectMapper) {
         this.chatMessageRepository = chatMessageRepository;
         this.llmTokenizer = llmTokenizer;
+        this.objectMapper = objectMapper;
     }
 
     @Override

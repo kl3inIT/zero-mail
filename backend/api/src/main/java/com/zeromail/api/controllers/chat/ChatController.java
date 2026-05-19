@@ -5,6 +5,7 @@ import com.zeromail.core.chat.llm.VercelProtocolEmitter;
 import com.zeromail.core.chat.usecases.ChatOrchestrator;
 import com.zeromail.core.chat.usecases.ZeroMailChatProperties;
 import com.zeromail.core.tenant.TenantContext;
+import tools.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -38,14 +39,17 @@ public class ChatController {
     private final ChatOrchestrator chatOrchestrator;
     private final TaskScheduler chatHeartbeatTaskScheduler;
     private final ZeroMailChatProperties chatProperties;
+    private final ObjectMapper objectMapper;
 
     public ChatController(
             ChatOrchestrator chatOrchestrator,
             @Qualifier("chatHeartbeatTaskScheduler") TaskScheduler chatHeartbeatTaskScheduler,
-            ZeroMailChatProperties chatProperties) {
+            ZeroMailChatProperties chatProperties,
+            ObjectMapper objectMapper) {
         this.chatOrchestrator = chatOrchestrator;
         this.chatHeartbeatTaskScheduler = chatHeartbeatTaskScheduler;
         this.chatProperties = chatProperties;
+        this.objectMapper = objectMapper;
     }
 
     @PostMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -73,7 +77,8 @@ public class ChatController {
                     }
                 };
         VercelProtocolEmitter vercelProtocolEmitter =
-                new VercelProtocolEmitter(new SseEmitterFrameWriter(sseEmitter, cleanup));
+                new VercelProtocolEmitter(
+                        new SseEmitterFrameWriter(sseEmitter, cleanup), objectMapper);
         ScheduledFuture<?> heartbeatFuture =
                 chatHeartbeatTaskScheduler.scheduleAtFixedRate(
                         vercelProtocolEmitter::emitHeartbeat,

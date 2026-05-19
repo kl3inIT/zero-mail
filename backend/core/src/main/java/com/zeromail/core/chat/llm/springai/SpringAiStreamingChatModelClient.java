@@ -33,7 +33,6 @@ import reactor.core.Disposable;
 import reactor.core.scheduler.Scheduler;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
 
 @Component
 @SuppressWarnings("DuplicatedCode")
@@ -47,17 +46,19 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
     private final TenantAwareReactorScheduler tenantAwareReactorScheduler;
     private final ToolCallbackTranslator toolCallbackTranslator;
     private final com.zeromail.core.chat.usecases.ChatToolCatalog chatToolCatalog;
-    private final ObjectMapper objectMapper = JsonMapper.builder().build();
+    private final ObjectMapper objectMapper;
 
     public SpringAiStreamingChatModelClient(
             SpringAiChatModelFactory chatModelFactory,
             TenantAwareReactorScheduler tenantAwareReactorScheduler,
             ToolCallbackTranslator toolCallbackTranslator,
-            com.zeromail.core.chat.usecases.ChatToolCatalog chatToolCatalog) {
+            com.zeromail.core.chat.usecases.ChatToolCatalog chatToolCatalog,
+            ObjectMapper objectMapper) {
         this.chatModelFactory = chatModelFactory;
         this.tenantAwareReactorScheduler = tenantAwareReactorScheduler;
         this.toolCallbackTranslator = toolCallbackTranslator;
         this.chatToolCatalog = chatToolCatalog;
+        this.objectMapper = objectMapper;
     }
 
     @PostConstruct

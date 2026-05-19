@@ -10,7 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
 
 public class VercelProtocolEmitter implements ChatStreamSink {
 
@@ -21,11 +20,7 @@ public class VercelProtocolEmitter implements ChatStreamSink {
     private final Set<String> openToolCallIds = ConcurrentHashMap.newKeySet();
     private final AtomicBoolean streamStarted = new AtomicBoolean(false);
 
-    public VercelProtocolEmitter(FrameWriter frameWriter) {
-        this(frameWriter, JsonMapper.builder().build());
-    }
-
-    VercelProtocolEmitter(FrameWriter frameWriter, ObjectMapper objectMapper) {
+    public VercelProtocolEmitter(FrameWriter frameWriter, ObjectMapper objectMapper) {
         this.frameWriter = frameWriter;
         this.objectMapper = objectMapper;
     }
