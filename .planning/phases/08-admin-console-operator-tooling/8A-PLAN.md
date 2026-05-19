@@ -74,6 +74,8 @@ files_modified:
   - pnpm-workspace.yaml
   - turbo.json
   - apps/web/eslint.config.mjs
+  - docs/ops/admin-shared-file-ownership.md
+  - backend/api/src/test/java/com/zeromail/api/admin/Phase8E2ESmokeTest.java
 
 autonomous: false
 requirements:
@@ -239,6 +241,59 @@ Tasks below have been amended to resolve the following HIGH-severity concerns su
 
 ### R-8A-H10 — Liquibase numbering offset to avoid 8A/8B/8D collisions (OpenCode LOW)
 **Decision:** Keep 8A at 048–050. 8B Liquibase changeset renumbered from `051-llm-provider-master-key.yaml` → `058-llm-provider-master-key.yaml`. 8D renumbered from `052/053` → `068-catalog-tables.yaml` / `069-anthropic-catalog-seed.yaml`. 8E (if it adds `054-processing-job-extend.yaml`) → `055-processing-job-extend.yaml`. Update db.changelog-master.yaml include ordering accordingly. This addendum reserves contiguous ranges per plan (048–057 = 8A, 058–067 = 8B, 068–077 = 8D, 078+ = 8E/8C as needed) so parallel-after-8A waves cannot collide on master changelog merges. Each plan's Liquibase task acceptance criterion now references the offset number.
+
+---
+
+## Cycle 3 reviews-pass addendum — 2026-05-19 (7 remaining HIGHs from cycle 2)
+
+The cycle 2 review (`08-REVIEWS.md`) reconciled 7 unresolved HIGHs across 8A/8B/8D/8E/8F. The 8A-owned items below are authoritative over the cycle 2 R-8A-H* decisions where they conflict. Cross-plan items (HIGH-2, HIGH-4, HIGH-18, NEW-HIGH-1, NEW-HIGH-2) are addressed in the receiving plans' own cycle-3 addenda.
+
+### R-8A-H11 — Ownership matrix for shared files (closes cycle-2 HIGH-3)
+**Decision:** Task 8A-07 deliverables extend with a NEW file `docs/ops/admin-shared-file-ownership.md` (added to `<files_modified>`) that declares, for every file touched by more than one plan in Phase 8, a single owning plan and a contribution protocol. Minimum mandatory entries:
+
+| Shared artifact | Owning plan | Contributors (append-only) | Contribution protocol |
+|---|---|---|---|
+| `backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java` | 8A | 8B (no contributions expected) | All chains + filters defined in 8A; later plans MUST NOT add new chains. New filters appended via `addFilterAfter(...)` with explicit cite to `docs/ops/admin-interface-freeze.md §{section}`. |
+| `backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/admin/ChatModelCacheEvictionListener.java` | 8B | 8D (CatalogChangedEvent listener method) | Each contributor adds ONE additional `@TransactionalEventListener` method; the class stays single-responsibility "evict ChatModel cache"; signature `void on(<EventType>)` only. |
+| `backend/core/src/main/resources/db/changelog/db.changelog-master.yaml` | 8A | 8B, 8C, 8D, 8E, 8F | Append-only `<include file="changes/0NN-...yaml"/>` entries in the numeric ranges reserved by R-8A-H10 (8A=048–057, 8B=058–067, 8D=068–077, 8E=078+, 8F=079+). Last writer rebases on numeric order; no in-place edits to existing `<include>` lines. |
+| `apps/admin/src/routes/__root.tsx` (admin nav module) | 8A | 8B (`/master-keys`), 8C (`/tenants`), 8D (`/catalog`), 8E (`/queue`), 8F (`/spend`) | Each contributor registers ONE TanStack Router route via the file-based-routing convention (drop a new `routes/<feature>.tsx` file); they MUST NOT edit `__root.tsx` itself. The root layout iterates a static `NAV_ENTRIES` array — extending the array is the only allowed root edit and lives in 8A. |
+| `backend/api/src/main/java/com/zeromail/api/config/OpenApiConfig.java` | 8A | none expected | 8A defines `GroupedOpenApi publicApi()` + `GroupedOpenApi adminApi()`; later plans MUST NOT add additional groups; new admin paths under `/api/admin/**` are matched by the existing `adminApi()` glob automatically. |
+| `backend/core/src/main/resources/application.yml` (api module) | 8A | 8B (`zeromail.mkey.*`), 8D (`zeromail.catalog.*`), 8F (`zeromail.spend.*`) | Property namespaces are non-overlapping; conflict resolution is "owning plan namespace wins". |
+
+The ownership doc is a CODE-OWNERS-style contract — pre-merge any PR touching a row above MUST cite the owning plan and the contribution protocol; reviewers reject silent edits to `__root.tsx`, in-place changelog reorders, or new chains in `SecurityConfig`. Acceptance for Task 8A-07: `docs/ops/admin-shared-file-ownership.md` exists with all 6 rows above; `wc -l` ≥ 60; CI grep gate `grep -c 'apps/admin/src/routes/__root.tsx' docs/ops/admin-shared-file-ownership.md` ≥ 1.
+
+### R-8A-H12 — Extend `admin-interface-freeze.md` to pin Spring Session API (closes cycle-2 HIGH-8)
+**Decision:** The same `docs/ops/admin-interface-freeze.md` artifact produced under R-8A-H1 gains a NEW Section §Spring Session API surface fetched from Context7 `/spring-projects/spring-session` (fallback `/websites/docs_spring_io_spring-session`). The freeze pins:
+1. Whether Spring Session 4 (Boot 4) permits two `SessionRepository` beans on the same dispatcher (`RedisIndexedSessionRepository` x2) — if NO, the chosen strategy is single-repository + cookie-path scoping (`/api/admin/**` vs `/api/**`) and the R-8A-H4 implementation collapses to that variant.
+2. Exact class names + qualifier annotations for the chosen variant (e.g. `RedisIndexedSessionRepository`, `SpringSessionRepositoryFilter`, `CookieSerializer`, `DefaultCookieSerializer`).
+3. Cookie/Redis-key namespace shape locked: cookie names `SESSION_ADMIN`/`SESSION_USER`, Redis key prefixes `spring:session:admin:` and `spring:session:user:` (or `spring:session:` shared root if single-repo variant).
+4. `Last verified: 2026-05-19 against spring-session-refdoc {version}` timestamp line — re-verify required if Spring Session is upgraded.
+
+Outcome: HIGH-8 is closed by the SAME artifact that closed HIGH-1/HIGH-6 (WebAuthn endpoints), removing the "conditional on unproven Spring Session shape" residual. Task 8A-04 acceptance amended: SecurityConfig.adminChain and the Spring Session bean wiring MUST cite `docs/ops/admin-interface-freeze.md §Spring Session API` inline; `AdminChainCookieIsolationTest` covers BOTH variant outcomes (two-repo OR single-repo + path scoping) — the test that runs depends on the freeze-doc decision. CI gate `grep -c '## Spring Session API' docs/ops/admin-interface-freeze.md` ≥ 1.
+
+### R-8A-H13 — `Phase8E2ESmokeTest` capstone test (closes cycle-2 HIGH-4)
+**Decision:** Add a single cross-plan end-to-end smoke test owned by 8A: `backend/api/src/test/java/com/zeromail/api/admin/Phase8E2ESmokeTest.java` (NEW, added to Task 8A-04 `<files>`). Shape: `@SpringBootTest(webEnvironment=RANDOM_PORT)` with mocked external dependencies (Gmail, provider `/v1/models`, OpenRouter). The test walks the full admin lifecycle in one method:
+
+1. Bootstrap: STDOUT runner mints enrollment URL → consume token via `POST /api/admin/enrollment/session`.
+2. Register: drive WebAuthn registration ceremony via `WebAuthnTestHarness` (mock authenticator) → assert `admin_users.status='ACTIVE'`.
+3. Login: assert authenticated admin session cookie returned + `GET /api/admin/audit/events` returns 200.
+4. Master key: `POST /api/admin/master-keys/OPENAI/edit-session` → `PUT /api/admin/master-keys/OPENAI` with mocked-OK provider → assert masked key visible + `MASTER_KEY_SET` audit row written.
+5. Catalog Sync: `POST /api/admin/catalog/OPENAI/sync` (Fetch) → poll job until DIFF_READY → `POST /api/admin/catalog/sync/{jobId}/confirm` → assert `CATALOG_SYNC_CONFIRMED` audit row + ≥1 `model_catalog` row inserted.
+6. Tenant inspect: seed 1 tenant fixture → `GET /api/admin/tenants/{tenantId}` → assert 200 + no body-ban-tripped response.
+7. Queue requeue: seed 1 dead-letter `processing_job` row → `POST /api/admin/queue/dead-letters/{jobId}/requeue` → assert `admin_requeue_count=1` + `attempts=0`.
+8. Spend view: `GET /api/admin/spend?range=7d` → assert HTTP 200, body contains `platformCost` + `byokCost` keys.
+
+The test is the load-bearing integration gate that closes HIGH-4 (autonomous execution residual). Each contributor plan (8B/8C/8D/8E/8F) adds the relevant fixture seed via a `@TestComponent` that the smoke test wires in. If any contributor's slice is incomplete, the smoke test fails at that step — that is the integration checkpoint the cycle-1 reviewers asked for. Acceptance for Task 8A-04 amended: `./gradlew :backend:api:test --tests "*Phase8E2ESmokeTest*"` exits 0 after 8F merges; intermediate fails (during 8B-only / 8D-only execution) are expected and tolerated until the dependency chain completes. The test is tagged `@Tag("phase8-e2e")` so it runs in a dedicated CI job after the wave-3 plans land.
+
+### R-8A-H14 — Scrub stale acceptance text contradicting cycle-1/cycle-2 addendums (Codex executor-drift warning)
+**Decision:** Before Task 8A-04 / 8A-07 declare done, executor MUST `grep -RnE` the phase-8 plans + this PLAN.md for the following stale tokens and rewrite each hit to match the authoritative addendum decisions:
+
+- `EnrollmentTokenGate` (legacy `/enroll` filter — R-8A-H3 removed it; replace any `EnrollmentTokenGate` mention with `EnrollmentSessionController @ POST /api/admin/enrollment/session`).
+- `-Pdb=h2` in verify commands (R-8A-H6 replaced with `-Pdb=testcontainer-postgres`).
+- Liquibase numbers `051` (8B), `052/053` (8D), `054` (8E) — replace with the R-8A-H10 offsets `058`, `068/069/070`, `055`.
+- "second boot bootstrap" silent-skip wording — replace with R-8A-H5 three-case behavior (ACTIVE skip / PENDING-with-valid-token reprint / PENDING-no-token mint fresh).
+
+This is a non-coding cleanup; success is `grep -c` ≤ expected occurrence count per token (zero for `EnrollmentTokenGate`, zero for `-Pdb=h2`, ranges per renumbering).
 
 </reviews_addendum_8A>
 
@@ -800,6 +855,10 @@ test -s docs/ops/v1.2-deploy.md && wc -l docs/ops/v1.2-deploy.md  # expect ≥ 1
 - [ ] (reviews-pass) `turbo.json` declares `outputs: ["dist/**"]` for `@zeromail/admin#build`; `apps/web/eslint.config.mjs` also blocks `**/admin-schema*` imports
 - [ ] (reviews-pass) Runbook §Backup defaults to `tar | gpg | rsync`; §Bootstrap warns against detached mode; §Security Considerations documents heap-dump + JMX + memory-swap mitigations
 - [ ] (reviews-pass) Liquibase numbering offsets: 8A=048–057, 8B=058–067, 8D=068–077, 8E=078+
+- [ ] (cycle-3) `docs/ops/admin-shared-file-ownership.md` exists with ≥6 ownership rows covering SecurityConfig, ChatModelCacheEvictionListener, db.changelog-master.yaml, apps/admin __root.tsx, OpenApiConfig, application.yml
+- [ ] (cycle-3) `docs/ops/admin-interface-freeze.md` §Spring Session API section pins repository/cookie/namespace API names against Spring Session 4 (Boot 4) + Last-verified timestamp line present
+- [ ] (cycle-3) `Phase8E2ESmokeTest` capstone test exists in `backend/api/src/test/java/com/zeromail/api/admin/`; tagged `@Tag("phase8-e2e")`; covers bootstrap→enroll→login→set-master-key→catalog-sync→view-tenant→requeue→view-spend
+- [ ] (cycle-3) Stale-token grep scrub clean: 0 `EnrollmentTokenGate` references; 0 `-Pdb=h2` in verify commands; numbering matches R-8A-H10 offsets
 
 </success_criteria>
 

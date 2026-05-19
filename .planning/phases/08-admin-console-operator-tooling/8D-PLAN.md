@@ -183,6 +183,90 @@ This avoids in-flight schema surgery on the status CHECK constraint. The worker 
 ### R-8D-H10 — Liquibase changeset renumbering (cross-plan from 8A R-H10)
 **Decision:** `052-catalog-tables.yaml` → `068-catalog-tables.yaml`; `053-anthropic-catalog-seed.yaml` → `070-anthropic-catalog-seed.yaml`. Files reserved: 068=catalog-tables-prep, 068b=catalog-tables-fk, 069=feature-default-provider-migration, 070=anthropic-seed. All in-plan references to 052/053 updated implicitly via this addendum.
 
+---
+
+## Cycle 3 reviews-pass addendum — 2026-05-19 (NEW-HIGH-2, HIGH-2 catalog, HIGH-4 autonomous)
+
+### R-8D-H11 — Replace subquery-in-index with `feature_default_provider`-table uniqueness (closes cycle-2 NEW-HIGH-2)
+**Decision (locked, overrides R-8D-H2 partial-index proposal):** The cycle-2 R-8D-H2 fallback proposed a partial UNIQUE index whose predicate subqueries `model_catalog`:
+
+```sql
+-- NOT IMPLEMENTABLE — PostgreSQL rejects subqueries in index expressions:
+CREATE UNIQUE INDEX one_default_per_feature_per_provider
+  ON feature_binding(feature, (SELECT provider FROM model_catalog mc WHERE mc.model_id = feature_binding.model_id))
+  WHERE is_default = TRUE;
+```
+
+PostgreSQL 17 (and every prior version) does NOT allow subqueries in index expressions — only `IMMUTABLE` expressions over the indexed row's own columns are permitted. This DDL will not parse, so the R-8D-H2 design as written cannot ship.
+
+**Locked fix — Option (c) from cycle-2 Codex review: move uniqueness ENTIRELY into the dedicated `feature_default_provider` table introduced by R-8D-H8.** No `feature_binding.provider` column reinstatement; no trigger-maintained derived column; no service-only enforcement. The uniqueness invariant lives where the data lives:
+
+```yaml
+# Liquibase 069-feature-default-provider-migration.yaml (extended)
+createTable:
+  tableName: feature_default_provider
+  columns:
+    - column: { name: feature,  type: VARCHAR(16), constraints: { primaryKey: true, nullable: false } }
+    - column: { name: provider, type: VARCHAR(32), constraints: { nullable: false } }
+    - column: { name: model_id, type: VARCHAR(128), constraints: { nullable: false } }
+    - column: { name: updated_by_admin, type: UUID }
+    - column: { name: updated_at, type: TIMESTAMPTZ, constraints: { nullable: false }, defaultValueComputed: NOW() }
+addCheckConstraint: { tableName: feature_default_provider, constraintName: ck_fdp_feature, constraintBody: "feature IN ('CHAT','TRIAGE','DRAFT')" }
+addForeignKeyConstraint:
+  - baseTableName: feature_default_provider
+    baseColumnNames: model_id
+    referencedTableName: model_catalog
+    referencedColumnNames: model_id
+    constraintName: fk_fdp_model
+    onDelete: RESTRICT
+  - baseTableName: feature_default_provider
+    baseColumnNames: provider
+    referencedTableName: provider_catalog
+    referencedColumnNames: provider
+    constraintName: fk_fdp_provider
+```
+
+`feature` is the PRIMARY KEY — at most 3 rows ever exist (CHAT/TRIAGE/DRAFT). A PRIMARY KEY is a plain unique index over a single own-row column, fully implementable on PostgreSQL. Setting a feature default = `UPDATE` (or `INSERT ... ON CONFLICT(feature) DO UPDATE`). No partial index needed; no subquery; no triggers.
+
+**`feature_binding` schema (FINAL):** `(id UUID PK, model_id VARCHAR(128) NOT NULL FK model_catalog(model_id) ON DELETE CASCADE, feature VARCHAR(16) NOT NULL CHECK IN ('CHAT','TRIAGE','DRAFT'), enabled BOOLEAN NOT NULL DEFAULT TRUE, UNIQUE(model_id, feature))`. NO `is_default` column. NO `provider` column. The "default model for feature X" lives ONLY in `feature_default_provider.model_id` for the row `WHERE feature='X'`. The CASCADE on `model_id` FK means deleting a model also drops its bindings; deleting a model still pinned as a feature default is blocked by the `RESTRICT` FK on `feature_default_provider`. Provider is reachable via the FK chain `feature_default_provider → model_catalog.provider`.
+
+**`FeatureDefaultProviderService` (FINAL):** `set(feature, modelId, adminId)` = single-row `INSERT ... ON CONFLICT(feature) DO UPDATE` with `provider` derived in the same statement via `(SELECT provider FROM model_catalog WHERE model_id=:modelId)`. Inside the same `@Transactional` an `AdminAuditWriter.append(FEATURE_DEFAULT_SET, ...)` row is written. No clear-all-then-set procedural code needed.
+
+**8B addendum R-8B-H2 lifted by this:** The `feature_default_provider_chat/triage/draft` stub BOOLEAN columns on `llm_provider_master_key` from 8B are STILL added at 058 time (per R-8B-H2 + R-8B-H1's OPENROUTER row defaults) BUT the 8D Liquibase 069 migration unchanged. New step in 069: also DROP `feature_binding.is_default` and `feature_binding.provider` columns if they exist (defensive — 068 will not have created them per this addendum, but a partial rollback could leave the column present).
+
+**Task 8D-01 acceptance amended:**
+- `feature_binding` has columns `(id, model_id, feature, enabled)` only — verifiable via `mcp__postgres__execute_sql "SELECT column_name FROM information_schema.columns WHERE table_name='feature_binding'"` returns exactly 5 rows (4 + `created_at` if present).
+- `feature_default_provider` has PRIMARY KEY on `feature`; inserting a duplicate `feature='CHAT'` returns SQLSTATE 23505 (unique violation).
+- No partial UNIQUE index on `feature_binding` exists post-migration.
+
+**Task 8D-02 acceptance amended:** `FeatureDefaultProviderService.set("CHAT", "anthropic/claude-4.7-opus", adminId)` then `set("CHAT", "openai/gpt-4o", adminId2)` results in exactly ONE `feature_default_provider` row for `feature='CHAT'` pointing at `openai/gpt-4o` + 2 audit rows. No second row coexists.
+
+### R-8D-H12 — Mirror 8B versioned cache key into catalog eviction (closes cycle-2 HIGH-2)
+**Decision:** The cycle-2 HIGH-2 residual flagged that `CatalogChangedEvent` async eviction does not have a request-bound version guarantee equivalent to 8B's `provider_secret_version`. Apply the same versioned-cache-key strategy to the catalog path:
+
+**Schema change (Liquibase 068 amended):** Add `catalog_version BIGINT NOT NULL DEFAULT 1` column to `provider_catalog`. The column is a monotonic counter per-provider — when a Sync Confirm or admin edit changes the provider's `model_catalog` rows or `feature_binding` rows for that provider, the counter increments in the SAME `@Transactional` as the data change. Liquibase backfills `catalog_version=1` for the seeded ANTHROPIC row.
+
+**Code change (`CatalogSyncOrchestrator.confirm` + `AdminCatalogController` admin-edit paths amended):** Each path runs in the same `@Transactional`:
+1. Apply the diff (insert/update/delete `model_catalog` + `feature_binding` rows).
+2. `UPDATE provider_catalog SET catalog_version = catalog_version + 1 WHERE provider = :provider`.
+3. Publish `CatalogChangedEvent(provider, affectedModelIds, affectedFeatures, occurredAt, newCatalogVersion)` (event record gains a `long newCatalogVersion` field).
+
+**Code change (`SpringAiChatModelFactory` cache-key amended):** The `CacheKey` record from R-8B-H10 becomes `CacheKey(tenantId, feature, provider, modelId, providerSecretVersion, providerCatalogVersion)`. `ProviderMasterKeyResolver.resolve(provider)` exposes BOTH `providerSecretVersion` (from `llm_provider_master_key`) and `providerCatalogVersion` (from `provider_catalog.catalog_version` — read in the same call). A request after a catalog change naturally MISSES on the new `providerCatalogVersion` regardless of whether the async `ChatModelCacheEvictionListener` has fired yet. This matches 8B R-H4's "request-bound version guarantee".
+
+**Code change (`ChatModelCacheEvictionListener` amended):** Existing handler stays but evicts by `(provider, providerCatalogVersion < newCatalogVersion)` to prune the stale slots; the versioning guarantee already provides the safety net, so the listener becomes a memory-reclaim optimization rather than the correctness mechanism. Phase from `@TransactionalEventListener(phase=AFTER_COMMIT)` to `BEFORE_COMMIT` is NOT required (the versioning makes ordering moot).
+
+**`CuratedCatalogQueryService` Redis ETag (R-8D-H7 amended):** The ETag becomes SHA-256 of `(catalog_version_per_provider_map || payload_bytes)` so a single provider's version bump invalidates only its slice; cross-provider reads stay warm. `If-None-Match` returns 304 when the client's ETag matches the current concatenation.
+
+**Task 8D-01 acceptance amended:** `provider_catalog.catalog_version` column exists; CHECK `catalog_version >= 1`; `CacheKeyShapeTest` (from 8B R-H10) extended to assert the record exposes `providerCatalogVersion`.
+
+**Task 8D-02 acceptance amended:** Two parallel reads — one against `provider_catalog.catalog_version=5` (cached at `CacheKey(... 5)`) and one immediately after a Sync Confirm that bumped to `catalog_version=6` — the second read misses cache and rebuilds the ChatModel from the new `model_catalog` snapshot, even if `ChatModelCacheEvictionListener` has not yet executed (the listener may run on the next pulse, but correctness does not depend on it).
+
+### R-8D-H13 — Gate 8D autonomous=true on Phase8E2ESmokeTest green (closes cycle-2 HIGH-4 for 8D)
+**Decision:** Frontmatter `autonomous: true` remains for 8D, BUT the Wave 3 entry gate is extended: execute-phase MAY launch 8D autonomously only if `Phase8E2ESmokeTest` (defined in 8A R-H13) is present in `backend/api/src/test/java/com/zeromail/api/admin/`. After 8D completes, the smoke test step 5 (Catalog Sync) MUST be green; if it fails, the executor halts and surfaces the failure to the operator. Acceptance: post-8D, `./gradlew :backend:api:test --tests "*Phase8E2ESmokeTest*" -Dphase8.smoke.steps=1-5` exits 0; step 6+ may still fail until 8C/8E/8F land.
+
+### R-8D-H14 — Carry forward 8B `provider_secret_version` consumer wiring (closes cycle-2 NEW-HIGH-1 propagation)
+**Decision:** 8D's `ProviderMasterKeyResolver` consumer code paths (catalog-side reads that resolve provider plaintext for `ModelsProbeClient.fetchModelCatalog`) MUST read `providerSecretVersion` from `ResolvedKey` per 8B R-H10. No 8D code may reference `kekVersion` as a cache discriminator. Acceptance: grep gate `grep -RnE 'kekVersion|kek_version' backend/core/src/main/java/com/zeromail/core/admin/cat/` returns 0 hits (catalog package does not touch cipher KEK metadata).
+
 </reviews_addendum_8D>
 
 <tasks>
@@ -472,6 +556,13 @@ curl -s http://localhost:8080/v3/api-docs/admin  | jq '.paths | keys[]' | grep '
 - [ ] (reviews-pass) Liquibase 069 creates `feature_default_provider` table + migrates from 8B `llm_provider_master_key` columns + drops them
 - [ ] (reviews-pass) Anthropic seed model IDs verified against current Anthropic public list pre-merge
 - [ ] (reviews-pass) Liquibase changesets renamed: 068-catalog-tables-prep, 068b-catalog-tables-fk, 069-feature-default-provider-migration, 070-anthropic-catalog-seed
+- [ ] (cycle-3) `feature_binding` final shape `(id, model_id, feature, enabled)` — NO `is_default`, NO `provider`; uniqueness on `(model_id, feature)` only
+- [ ] (cycle-3) `feature_default_provider` PRIMARY KEY on `feature` (3-row table); single `INSERT ... ON CONFLICT(feature) DO UPDATE` enforces one-default-per-feature; no partial index, no subquery
+- [ ] (cycle-3) `provider_catalog.catalog_version BIGINT NOT NULL DEFAULT 1` column added; bumped in same `@Transactional` as catalog mutations
+- [ ] (cycle-3) `CacheKey` extended with `providerCatalogVersion`; `CatalogChangedEvent` carries `newCatalogVersion`; cache miss is request-bound (no async dependency)
+- [ ] (cycle-3) `CuratedCatalogQueryService` Redis ETag derived from per-provider catalog_version map + payload bytes
+- [ ] (cycle-3) 8D catalog package grep clean: 0 references to `kekVersion`/`kek_version` (uses `providerSecretVersion` from 8B R-H10)
+- [ ] (cycle-3) 8D autonomous gate: `Phase8E2ESmokeTest` step 5 (Catalog Sync) green post-execution; halt-on-fail
 </success_criteria>
 
 <output>

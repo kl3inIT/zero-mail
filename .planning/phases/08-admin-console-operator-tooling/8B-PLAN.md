@@ -44,6 +44,7 @@ files_modified:
   - apps/admin/src/features/master-keys/use-test-connection.ts
   - apps/admin/src/features/master-keys/use-rotate-master-key.ts
   - apps/admin/src/components/MaskedSecretField.tsx
+  - backend/core/src/test/java/com/zeromail/core/llm/gateway/springai/arch/CacheKeyShapeTest.java
 
 autonomous: false
 requirements:
@@ -187,6 +188,44 @@ CHECK constraint on Liquibase 058 encodes valid (provider, key_format) pairings:
 
 ### R-8B-H9 — Liquibase changeset renumbering (cross-plan addendum from 8A R-H10)
 **Decision:** `051-llm-provider-master-key.yaml` → `058-llm-provider-master-key.yaml` (8B reserved range 058–067). All in-plan references to `051` updated implicitly via this addendum; executor MUST rename the file and update db.changelog-master.yaml include entry to point at `changes/058-llm-provider-master-key.yaml`.
+
+---
+
+## Cycle 3 reviews-pass addendum — 2026-05-19 (NEW-HIGH-1: kek_version overload)
+
+### R-8B-H10 — Separate `provider_secret_version` from `kek_version` (closes cycle-2 NEW-HIGH-1)
+**Decision (locked, overrides R-8B-H4 step 1):** The cycle-2 R-8B-H4 decision promoted `kek_version` to double as the cache-key version, bumped on every rotation. That overloads a CRYPTOGRAPHIC KEK SELECTOR with an UNRELATED cache-bust counter — rotating an application key without rotating the actual KEK would either corrupt key metadata or break decryption (the cipher reads `kek_version` to select which KEK to decrypt with; rows written before the bump still need the OLD `kek_version`). The two concerns MUST be separated.
+
+**Schema change (Liquibase 058 amended):** Add a NEW column to `llm_provider_master_key`:
+
+```yaml
+- column:
+    name: provider_secret_version
+    type: BIGINT
+    constraints:
+      nullable: false
+      defaultValueNumeric: 1
+remarks: "Monotonic counter incremented on every successful master-key set/rotate. Used as cache-key discriminator for ChatModel cache. Distinct from kek_version (which selects the cipher KEK)."
+```
+
+`kek_version SMALLINT NOT NULL` retains its ORIGINAL semantics from the existing `RefreshTokenCipher` envelope shape: it is the CIPHER KEK SELECTOR, written once at row creation, read by `PlatformSecretCipher.decrypt(envelope, aad)` to pick the right KEK from `RefreshTokenCipher.kekRing`. Bumped ONLY when the application's KEK ring rotates (out-of-scope for 8B; handled by existing KEK rotation path).
+
+**Code change (`MasterKeyAdminService` amended):** Both `set(...)` and `rotate(...)` paths now run two distinct updates in the same `@Transactional`:
+1. Write the new `encrypted_key` + `kek_version` (whatever the active KEK index is — usually unchanged across application-key rotations).
+2. `UPDATE llm_provider_master_key SET provider_secret_version = provider_secret_version + 1 WHERE provider = :provider`.
+
+**Cache-key change (`SpringAiChatModelFactory` + `ProviderMasterKeyResolver` amended):** The `CacheKey` record from R-8B-H4 step 1 becomes `CacheKey(tenantId, feature, provider, modelId, providerSecretVersion)` (renamed from `providerKeyVersion`). `ProviderMasterKeyResolver.resolve(provider)` exposes `ResolvedKey(byte[] plaintext, KeyFormat keyFormat, String baseUrl, long providerSecretVersion)`. Synchronous AFTER_COMMIT eviction logic from R-8B-H4 step 2 is unchanged — only the field source moves from `kek_version` → `provider_secret_version`.
+
+**Audit row schema (`after_state_json` amended):** Allowed keys become `{masked_key, kek_version, provider_secret_version, last_rotated_at, provider, key_format}`. `MasterKeySentinelLeakTest` JSONB scan-set extended to include `provider_secret_version` (numeric; cannot leak sentinel bytes, but the schema enumeration MUST stay closed).
+
+**Acceptance criteria amended:**
+- Task 8B-01: Liquibase 058 deploys `provider_secret_version BIGINT NOT NULL DEFAULT 1` column; existing rows backfilled to 1; CHECK constraint NOT added (column is internal counter, not bounded enum).
+- Task 8B-02: `MasterKeyAdminService.rotate(OPENAI, goodBytes, ...)` increments `llm_provider_master_key.provider_secret_version` by exactly 1 per successful rotation; `kek_version` is UNCHANGED across rotations unless the application's KEK ring also rotates.
+- Task 8B-02: `ProviderMasterKeyResolver.resolve(OPENAI).providerSecretVersion()` returns the current row's `provider_secret_version`.
+- Task 8B-02: `CacheKey` record (in `SpringAiChatModelFactory`) carries `long providerSecretVersion` field — NOT `kek_version`. ArchUnit `CacheKeyShapeTest` (new file added to Task 8B-02 `<files>`: `backend/core/src/test/java/com/zeromail/core/llm/gateway/springai/arch/CacheKeyShapeTest.java`) asserts the record's components include `providerSecretVersion` and exclude `kekVersion`.
+- Task 8B-03 frontend: no change — `MasterKeyMaskedResponse` does NOT expose `provider_secret_version` to the operator UI (internal cache concern).
+
+**Why the separation matters:** A future ops scenario where the application's KEK is rotated (e.g. KMS key rolled, new `RefreshTokenCipher` ring loaded) must re-wrap `encrypted_key` rows with the new KEK and bump `kek_version` for those rows. If `kek_version` doubled as the cache-bust counter, that re-wrap pass would also force a cache flush — but a re-wrap of the same plaintext SHOULD NOT invalidate ChatModel caches (the plaintext key is unchanged). Separating the two columns preserves both invariants: `kek_version` change = "row re-encrypted, plaintext same"; `provider_secret_version` change = "plaintext different, caches must miss".
 
 </reviews_addendum_8B>
 
@@ -461,6 +500,10 @@ pnpm --filter @zeromail/admin generate-api  # admin-schema.d.ts should include /
 - [ ] (reviews-pass) `KeyFormat` enum locks: OPENAI/OPENROUTER/DEEPSEEK→OPENAI_FORMAT, ANTHROPIC→ANTHROPIC_FORMAT, GOOGLE→GOOGLE_FORMAT, ROUTER_9R→OPENAI|ANTHROPIC toggle
 - [ ] (reviews-pass) `@AdminRequestBody` marker excludes plaintext-carrying request DTOs from `AdminPathBodyBanTest`; response filter naturally request-immune
 - [ ] (reviews-pass) Liquibase changeset renamed `058-llm-provider-master-key.yaml`
+- [ ] (cycle-3) NEW column `provider_secret_version BIGINT NOT NULL DEFAULT 1` on `llm_provider_master_key`; `kek_version` retains cipher-KEK-selector semantics only
+- [ ] (cycle-3) `MasterKeyAdminService.set/rotate` increments `provider_secret_version` per successful operation; `kek_version` unchanged unless KEK ring rotates
+- [ ] (cycle-3) `CacheKey` record exposes `providerSecretVersion` (not `kekVersion`); `CacheKeyShapeTest` ArchUnit asserts the field name
+- [ ] (cycle-3) Audit `after_state_json` schema enumerates `{masked_key, kek_version, provider_secret_version, last_rotated_at, provider, key_format}` as the closed key set
 </success_criteria>
 
 <output>

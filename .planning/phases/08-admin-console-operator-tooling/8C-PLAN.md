@@ -52,6 +52,7 @@ files_modified:
   - apps/admin/src/features/tenants/use-tenant-disconnect.ts
   - apps/admin/src/features/tenants/use-tenant-delete.ts
   - apps/admin/e2e/tenants.spec.ts
+  - backend/api/src/test/java/com/zeromail/api/admin/fixtures/TenantFixtureSeeder.java
 
 autonomous: false
 requirements:
@@ -163,6 +164,16 @@ This keeps the DB transaction crisp and avoids the "OAuth revoked but tenant sti
 
 ### R-8C-H8 — Cross-Phase-8 ArchUnit module test suite (OpenCode MEDIUM)
 **Decision:** New test class `Phase8AdminArchTestSuite` (added to Task 8C-01 files at `backend/core/src/test/java/com/zeromail/core/admin/arch/Phase8AdminArchTestSuite.java`) — JUnit 5 `@Suite` that aggregates all admin ArchUnit tests (`AdminContextMutexTest`, `AdminPathBodyBanTest`, `AdminSendBanTest`, `AdminControllerPreAuthorizeTest`, `AdminChainNoOauth2LoginTest`, `AdminTenantOAuthGuardTest`, `OnlyBodyBanFilterCanCallAppendAsSystem`, `MasterKeyResolverConfinementTest`, `MasterKeySentinelLeakTest`, `AdminSpendPromptAccessorBanTest`) and runs them against the FULL admin module classpath (8A + 8B + 8C + 8D + 8E + 8F production code). The suite is the integration checkpoint for Phase 8 — each individual plan's ArchUnit task adds itself to the suite; the suite is verified before Wave 3 starts.
+
+---
+
+## Cycle 3 reviews-pass addendum — 2026-05-19 (HIGH-3 propagation, HIGH-4 capstone)
+
+### R-8C-H9 — Carry forward 8A ownership matrix for shared assets (closes cycle-2 HIGH-3 propagation for 8C)
+**Decision:** 8C's `apps/admin/src/routes/tenants.tsx` and `apps/admin/src/routes/tenants-id.tsx` are NEW files per the ownership protocol declared in 8A R-H11 — they MUST NOT edit `__root.tsx`. The `NAV_ENTRIES` array update for the Tenants nav entry is owned by 8A and 8A coordinates the cross-plan merge. 8C's modifications to `ChatModelCacheEvictionListener` are limited to listening for `TenantPausedEvent` / `TenantDisconnectedEvent` (if any) — 8C MUST NOT add a third event listener type without coordinating with 8B (owning plan) per the ownership matrix.
+
+### R-8C-H10 — 8C contributes step 6 to Phase8E2ESmokeTest (closes cycle-2 HIGH-4 for 8C)
+**Decision:** 8C's `TenantInspectionService` + `AdminTenantAccess.readOnly` are the contributors to `Phase8E2ESmokeTest` step 6 (Tenant inspect) defined in 8A R-H13. 8C MUST add a `@TestComponent TenantFixtureSeeder` (located at `backend/api/src/test/java/com/zeromail/api/admin/fixtures/TenantFixtureSeeder.java`) that seeds 1 active tenant with metadata-only rows (no email body, no chat content) the smoke test can read. Acceptance: post-8C, `./gradlew :backend:api:test --tests "*Phase8E2ESmokeTest*" -Dphase8.smoke.steps=1-6` exits 0; the tenant inspection step returns 200 + zero body-ban filter trips.
 
 </reviews_addendum_8C>
 
@@ -447,6 +458,9 @@ grep -rE 'String\s+(body|bodyHtml|snippet|payload|prompt|completion|content)' ba
 - [ ] (reviews-pass) Tenant disconnect uses two-step state machine (DISCONNECTING → external revoke worker → DISCONNECTED) with retry + alert on failure
 - [ ] (reviews-pass) TenantInspectionService projections use Spring Data JDBC repository-style projections (not raw JdbcTemplate)
 - [ ] (reviews-pass) `Phase8AdminArchTestSuite` aggregates all 10+ admin ArchUnit tests and runs against full Phase-8 classpath before Wave 3
+- [ ] (cycle-3) New `apps/admin/src/routes/tenants.tsx` + `tenants-id.tsx` files; no edits to `__root.tsx` (ownership protocol)
+- [ ] (cycle-3) `TenantFixtureSeeder` `@TestComponent` provides step-6 fixture for `Phase8E2ESmokeTest` (metadata-only tenant)
+- [ ] (cycle-3) Post-8C execution: `Phase8E2ESmokeTest` steps 1-6 green; step 6 (Tenant inspect) is 8C's contribution gate
 </success_criteria>
 
 <output>

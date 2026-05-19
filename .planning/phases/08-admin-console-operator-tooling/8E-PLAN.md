@@ -118,6 +118,16 @@ This prevents the lifetime-rate asymptote-to-zero degeneration the reviewer flag
 ### R-8E-H6 — Liquibase numbering offset (cross-plan from 8A R-H10)
 **Decision:** Optional `054-processing-job-extend.yaml` → `078-processing-job-extend.yaml`. Append to db.changelog-master.yaml include list in numeric order.
 
+---
+
+## Cycle 3 reviews-pass addendum — 2026-05-19 (HIGH-4 autonomous gate)
+
+### R-8E-H7 — Gate 8E autonomous=true on Phase8E2ESmokeTest green (closes cycle-2 HIGH-4 for 8E)
+**Decision:** Frontmatter `autonomous: true` remains for 8E, BUT post-execution acceptance is extended: `Phase8E2ESmokeTest` (defined in 8A R-H13) step 7 (Queue requeue) MUST be green after 8E lands. If the smoke test fails at step 7, the executor halts and surfaces the failure to the operator. Acceptance: post-8E, `./gradlew :backend:api:test --tests "*Phase8E2ESmokeTest*" -Dphase8.smoke.steps=1-7` exits 0 (steps 1-3 covered by 8A, step 4 by 8B, step 5 by 8D, step 6 by 8C, step 7 by 8E; step 8 still pending 8F).
+
+### R-8E-H8 — Carry forward 8A ownership matrix for `processing_job` schema (closes cycle-2 HIGH-3 propagation)
+**Decision:** 8E's Liquibase 078 changeset MUST cite `docs/ops/admin-shared-file-ownership.md` line for the `db.changelog-master.yaml` row in its YAML comment header (`# Owner: 8E (per docs/ops/admin-shared-file-ownership.md)`). This makes the cross-plan changelog merge audit-able.
+
 </reviews_addendum_8E>
 
 <tasks>
@@ -290,6 +300,8 @@ grep -rE "payload[_J]son" backend/core/src/main/java/com/zeromail/core/admin/que
 - [ ] (reviews-pass) Failure rate denominator is 24h-bounded (`created_at >= NOW() - INTERVAL '24h'`) not lifetime
 - [ ] (reviews-pass) `JobFailureReason` enum gates `last_failure_reason` writes; `WorkerFailureReasonEnumOnlyTest` ArchUnit green
 - [ ] (reviews-pass) `QueueHealthQueryServiceSqlSpyTest` asserts no emitted SQL string contains `payload_json` / `payloadJson` tokens
+- [ ] (cycle-3) Post-8E execution: `Phase8E2ESmokeTest` steps 1-7 green; step 7 (Queue requeue) is 8E's contribution gate
+- [ ] (cycle-3) Liquibase 078 YAML header cites `docs/ops/admin-shared-file-ownership.md` for the `db.changelog-master.yaml` include row
 </success_criteria>
 
 <output>

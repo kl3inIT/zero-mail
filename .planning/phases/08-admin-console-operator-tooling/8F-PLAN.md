@@ -120,6 +120,49 @@ The `tenantLabelHash` HMAC field is REMOVED from `TopTenantRow` (it was over-eng
 ### R-8F-H8 — Liquibase numbering (cross-plan from 8A R-H10)
 **Decision:** `079-llm-call-audit-credential-source.yaml` lives in the 078+ band reserved for 8E/8F additions. Append to db.changelog-master.yaml in numeric order.
 
+---
+
+## Cycle 3 reviews-pass addendum — 2026-05-19 (HIGH-18 historical backfill, HIGH-4 autonomous gate)
+
+### R-8F-H9 — Historical `credential_source` backfilled as UNKNOWN with UI caveat (closes cycle-2 HIGH-18)
+**Decision (overrides R-8F-H1 backfill clause):** The R-8F-H1 backfill UPDATE applied the OLD tenant-level heuristic (`tenant_id IN (SELECT ... FROM byok_credential WHERE provider = ...)`) to historical rows. That heuristic is exactly the bug R-8F-H1 was added to fix — applying it retroactively rewrites historical truth with the same wrong logic. Required correction:
+
+**Schema (Liquibase 079 amended):** Expand the `credential_source` CHECK to allow a third literal: `CHECK (credential_source IN ('PLATFORM','BYOK','UNKNOWN'))`. Column stays `NOT NULL`.
+
+**Backfill clause replaced:** Drop the heuristic UPDATE entirely. Replace with:
+
+```sql
+-- 079-llm-call-audit-credential-source.yaml backfill
+UPDATE llm_call_audit
+   SET credential_source = 'UNKNOWN'
+ WHERE credential_source IS NULL;  -- after the column is added with default 'UNKNOWN'
+```
+
+Or equivalently set the column default at add-time to `'UNKNOWN'` so existing rows inherit it without an explicit UPDATE pass. New rows written by the 8F-amended write path (per R-8F-H1 write-side enforcement) populate `'PLATFORM'` or `'BYOK'` correctly going forward; the historical rows stay honest as `'UNKNOWN'`.
+
+**Read path (`SpendAggregateQueryService` amended):** The aggregation SUMs THREE buckets per slice, not two: `platformCost`, `byokCost`, `unknownCost`. The query becomes `SELECT bucket, credential_source, SUM(cost) FROM llm_call_audit WHERE ... GROUP BY bucket, credential_source`. `SpendBucket` projection record gains `BigDecimal unknownCost` field.
+
+**UI caveat (8F-02 amended):** `/admin/spend` page renders the stacked bar with THREE segments when `unknownCost > 0` for the selected range: green = platform, blue = BYOK, gray = unknown. Below the chart a persistent caption: `"{N}% of spend in this range predates row-level credential classification and is shown as Unknown. New calls are classified at write time."` where `N = unknownCost / totalCost * 100` (1 decimal). Caption hides when `unknownCost = 0` (i.e. range starts after Phase 8F deploy date). The 90-day range picker labels the boundary date as `"Phase 8F deploy ({YYYY-MM-DD})"` from a configured `zeromail.admin.spend.row-level-classification-since` property (default = Phase 8F merge commit date, hand-set at deploy time).
+
+**Top-20 tenants amendment:** Top-20 SUMs all three buckets per tenant; the table column shows `totalCost` (sum of all 3) and an additional `unknownPct` column. Tenants whose entire spend is `UNKNOWN` still appear in the top-20 ranking — they are not filtered out.
+
+**Acceptance criteria 8F-01 amended:**
+- Liquibase 079 CHECK constraint accepts `'UNKNOWN'`; historical rows post-migration have `credential_source='UNKNOWN'` exactly (no heuristic applied).
+- `SpendBucket` projection record has three cost fields: `platformCost`, `byokCost`, `unknownCost`.
+- Aggregation query produces three rows per bucket when historical data is present.
+- `LlmCallAuditCredentialSourceCoverageTest` ArchUnit gate still passes — write-path code MUST set `credential_source` to `'PLATFORM'` or `'BYOK'` (not `'UNKNOWN'`); `'UNKNOWN'` is RESERVED for the backfill literal and the database default.
+
+**Acceptance criteria 8F-02 amended:**
+- Stacked bar renders 3 segments when test fixture seeds rows with all three `credential_source` values.
+- Caption text exact: matches the template above; visible iff `unknownCost > 0`.
+- 90-day range picker labels the Phase-8F-deploy boundary; configurable via `zeromail.admin.spend.row-level-classification-since`.
+
+### R-8F-H10 — Gate 8F autonomous=true on Phase8E2ESmokeTest green (closes cycle-2 HIGH-4 for 8F)
+**Decision:** Frontmatter `autonomous: true` remains for 8F, BUT post-execution acceptance is extended: `Phase8E2ESmokeTest` (defined in 8A R-H13) step 8 (Spend view) MUST be green after 8F lands. Step 8 fixture: seed `llm_call_audit` with 3 rows (one PLATFORM, one BYOK, one UNKNOWN) → `GET /api/admin/spend?range=7d` → assert response contains `platformCost`, `byokCost`, `unknownCost` keys with non-null numeric values. After 8F completes, the FULL Phase8E2ESmokeTest (all 8 steps) MUST be green — this is the Phase 8 closeout gate. Acceptance: `./gradlew :backend:api:test --tests "*Phase8E2ESmokeTest*"` exits 0 with no `-Dphase8.smoke.steps` filter.
+
+### R-8F-H11 — Carry forward 8A ownership matrix for shared assets (closes cycle-2 HIGH-3 propagation)
+**Decision:** 8F's Liquibase 079 YAML header cites the ownership matrix line. 8F's apps/admin route registration (`apps/admin/src/routes/spend.tsx`) MUST be a NEW file (not an edit to `__root.tsx`) per the ownership protocol; the `NAV_ENTRIES` array update is owned by 8A and 8A coordinates the cross-plan nav merge.
+
 </reviews_addendum_8F>
 
 <tasks>
@@ -311,6 +354,12 @@ grep -rE '(sk-[a-zA-Z0-9]{8,}|sk-ant-[a-zA-Z0-9]{8,}|AIza[a-zA-Z0-9]{8,}|sk-or-[
 - [ ] (reviews-pass) CSV export estimates row count pre-query; rejects >10k BEFORE streaming starts
 - [ ] (reviews-pass) `zeromail.admin.spend.k-anonymity-threshold` configurable (default 5)
 - [ ] (reviews-pass) `JdbcTemplate.queryTimeout=15s` on spend aggregate queries
+- [ ] (cycle-3) `credential_source` CHECK accepts `'PLATFORM'|'BYOK'|'UNKNOWN'`; historical rows backfilled as `'UNKNOWN'` (no tenant-level heuristic applied retroactively)
+- [ ] (cycle-3) `SpendBucket` projection carries three cost fields (`platformCost`, `byokCost`, `unknownCost`); aggregation query SUMs per `credential_source`
+- [ ] (cycle-3) `/admin/spend` renders 3-segment stacked bar when `unknownCost > 0`; persistent caption explains the historical caveat with `{unknownPct}%` and configurable boundary date
+- [ ] (cycle-3) `LlmCallAuditCredentialSourceCoverageTest` keeps write-path enforcement (PLATFORM|BYOK only); `'UNKNOWN'` reserved for backfill literal
+- [ ] (cycle-3) Post-8F execution: `Phase8E2ESmokeTest` ALL 8 steps green — Phase 8 closeout gate
+- [ ] (cycle-3) `apps/admin/src/routes/spend.tsx` is a NEW file; no edits to `__root.tsx` (ownership protocol)
 </success_criteria>
 
 <output>
