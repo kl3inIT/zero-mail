@@ -706,6 +706,47 @@
     "primaryCta": "Sign in",
     "secondaryCta": "See how it works",
     "tagline": "Zero Mail triages your Gmail with rules you write in plain English — labels what matters, archives what doesn't, drafts the easy replies. You stay in the loop on everything that goes out.",
+    "testimonials": {
+      "items": {
+        "r1": {
+          "author": "Tran Viet Anh",
+          "role": "CTO",
+          "text": "Love this brilliant email automation app: zeromail.com"
+        },
+        "r2": {
+          "author": "Nguyen Minh Tuan",
+          "role": "Director of Engineering",
+          "text": "Genuinely amazing — cleared out promo emails and newsletter clutter in minutes."
+        },
+        "r3": {
+          "author": "Nguyen Thi Mai Huong",
+          "role": "Head of Growth",
+          "text": "Wow. Got set up and unsubscribed from the worst offenders in 3 minutes flat. Thank you 🙏"
+        },
+        "r4": {
+          "author": "Nguyen Minh Ngoc",
+          "role": "Marketing Director",
+          "text": "This is the first tool I've tried that actually captures my voice in the reply drafts."
+        },
+        "r5": {
+          "author": "Nguyen Duc Huy",
+          "role": "Engineering Director",
+          "text": "I came to Zero Mail looking for a VA to manage email; after trying it, everything changed."
+        },
+        "r6": {
+          "author": "Pham Minh Hoang",
+          "role": "Executive Director",
+          "text": "I'm an executive drowning in hundreds of emails a day. What I love most about Zero Mail is how it fully replaces the manual triage work with smart automation."
+        },
+        "r7": {
+          "author": "Dang Tien Minh",
+          "role": "Startup",
+          "text": "Finally an 'unsubscribe' app that actually unsubscribes you and filters through Gmail filters (instead of relying on a third-party app forever)."
+        }
+      },
+      "subtitle": "Our customers love how much time Zero Mail gives them back.",
+      "title": "Join 20,000+ people already saving email time"
+    },
     "waitlistCta": "Register to experience Zero Mail"
   },
   "legal": {

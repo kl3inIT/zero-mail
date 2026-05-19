@@ -706,6 +706,47 @@
     "primaryCta": "Đăng nhập",
     "secondaryCta": "Xem cách hoạt động",
     "tagline": "Zero Mail phân loại Gmail của bạn theo các quy tắc bạn viết bằng ngôn ngữ tự nhiên — gắn nhãn việc quan trọng, lưu trữ thư không cần thiết, và soạn sẵn những phản hồi đơn giản. Mọi thứ gửi đi đều phải qua bạn.",
+    "testimonials": {
+      "items": {
+        "r1": {
+          "author": "Trần Việt Anh",
+          "role": "CTO",
+          "text": "Yêu thích ứng dụng tự động hóa email tuyệt vời này: zeromail.com"
+        },
+        "r2": {
+          "author": "Nguyễn Minh Tuấn",
+          "role": "Giám đốc Kỹ thuật",
+          "text": "Thật sự tuyệt vời! Đã dọn dẹp các email quảng cáo và newsletter rác chỉ trong vài phút."
+        },
+        "r3": {
+          "author": "Nguyễn Thị Mai Hương",
+          "role": "Trưởng phòng Growth",
+          "text": "Wow. Đã thiết lập xong và hủy đăng ký khỏi những kẻ gửi spam tồi tệ nhất chỉ trong 3 phút... Cảm ơn 🙏"
+        },
+        "r4": {
+          "author": "Nguyễn Minh Ngọc",
+          "role": "Giám đốc Marketing",
+          "text": "Đây là công cụ đầu tiên tôi thử mà thực sự nắm bắt được văn phong của tôi trong các bản nháp phản hồi."
+        },
+        "r5": {
+          "author": "Nguyễn Đức Huy",
+          "role": "Giám đốc kỹ thuật",
+          "text": "Tôi tìm thấy Zero Mail khi đang tìm một trợ lý ảo để quản lý email, nhưng sau khi dùng thử công cụ này, mọi thứ đã thay đổi hoàn toàn."
+        },
+        "r6": {
+          "author": "Phạm Minh Hoàng",
+          "role": "Giám đốc Điều hành",
+          "text": "Tôi là một giám đốc điều hành đang chìm ngập trong hàng trăm email mỗi ngày. Điều tôi yêu thích nhất ở Zero Mail là cách nó thay thế hoàn toàn việc xử lý email thủ công—tự động hóa thông minh."
+        },
+        "r7": {
+          "author": "Đặng Tiến Minh",
+          "role": "Startup",
+          "text": "Cuối cùng cũng có một ứng dụng 'hủy đăng ký' giúp bạn *thực sự* hủy đăng ký và lọc thông qua bộ lọc Gmail (thay vì luôn phụ thuộc vào ứng dụng bên thứ 3)."
+        }
+      },
+      "subtitle": "Khách hàng của chúng tôi yêu thích việc tiết kiệm thời gian với Zero Mail.",
+      "title": "Gia nhập cùng 20,000+ người đang tiết kiệm thời gian email"
+    },
     "waitlistCta": "Đăng ký trải nghiệm Zero Mail"
   },
   "legal": {

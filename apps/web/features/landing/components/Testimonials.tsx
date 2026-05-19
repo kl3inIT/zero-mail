@@ -1,47 +1,50 @@
+import { getTranslations } from 'next-intl/server';
 import Image from 'next/image';
 
-export default function Testimonials() {
+export default async function Testimonials() {
+  const t = await getTranslations('landing.testimonials');
+
   const reviews = [
     {
-      text: 'Yêu thích ứng dụng tự động hóa email tuyệt vời này: zeromail.com',
-      author: 'Trần Việt Anh',
-      role: 'CTO',
+      text: t('items.r1.text'),
+      author: t('items.r1.author'),
+      role: t('items.r1.role'),
       avatar: '/images/cus1.jpg',
     },
     {
-      text: 'Thật sự tuyệt vời! Đã dọn dẹp các email quảng cáo và newsletter rác chỉ trong vài phút.',
-      author: 'Nguyễn Minh Tuấn',
-      role: 'Giám đốc Kỹ thuật',
+      text: t('items.r2.text'),
+      author: t('items.r2.author'),
+      role: t('items.r2.role'),
       avatar: '/images/cus2.jpg',
     },
     {
-      text: 'Wow. Đã thiết lập xong và hủy đăng ký khỏi những kẻ gửi spam tồi tệ nhất chỉ trong 3 phút... Cảm ơn 🙏',
-      author: 'Nguyễn Thị Mai Hương',
-      role: 'Trưởng phòng Growth',
+      text: t('items.r3.text'),
+      author: t('items.r3.author'),
+      role: t('items.r3.role'),
       avatar: '/images/cus3.jpg',
     },
     {
-      text: 'Đây là công cụ đầu tiên tôi thử mà thực sự nắm bắt được văn phong của tôi trong các bản nháp phản hồi.',
-      author: 'Nguyễn Minh Ngọc',
-      role: 'Giám đốc Marketing',
+      text: t('items.r4.text'),
+      author: t('items.r4.author'),
+      role: t('items.r4.role'),
       avatar: '/images/cus4.jpg',
     },
     {
-      text: 'Tôi tìm thấy Zero Mail khi đang tìm một trợ lý ảo để quản lý email, nhưng sau khi dùng thử công cụ này, mọi thứ đã thay đổi hoàn toàn.',
-      author: 'Nguyễn Đức Huy',
-      role: 'Giám đốc kỹ thuật',
+      text: t('items.r5.text'),
+      author: t('items.r5.author'),
+      role: t('items.r5.role'),
       avatar: '/images/cus5.jpg',
     },
     {
-      text: 'Tôi là một giám đốc điều hành đang chìm ngập trong hàng trăm email mỗi ngày. Điều tôi yêu thích nhất ở Zero Mail là cách nó thay thế hoàn toàn việc xử lý email thủ công—tự động hóa thông minh.',
-      author: 'Phạm Minh Hoàng',
-      role: 'Giám đốc Điều hành',
+      text: t('items.r6.text'),
+      author: t('items.r6.author'),
+      role: t('items.r6.role'),
       avatar: '/images/cus6.jpg',
     },
     {
-      text: "Cuối cùng cũng có một ứng dụng 'hủy đăng ký' giúp bạn *thực sự* hủy đăng ký và lọc thông qua bộ lọc Gmail (thay vì luôn phụ thuộc vào ứng dụng bên thứ 3).",
-      author: 'Đặng Tiến Minh',
-      role: 'Startup',
+      text: t('items.r7.text'),
+      author: t('items.r7.author'),
+      role: t('items.r7.role'),
       avatar: '/images/cus7.jpg',
     },
   ];
@@ -51,10 +54,10 @@ export default function Testimonials() {
       <div className="zm-container">
         <div className="mb-16 text-center">
           <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
-            Gia nhập cùng 20,000+ người đang tiết kiệm thời gian email
+            {t('title')}
           </h2>
           <p className="mx-auto max-w-2xl text-xl leading-relaxed text-(--text-muted)">
-            Khách hàng của chúng tôi yêu thích việc tiết kiệm thời gian với Zero Mail.
+            {t('subtitle')}
           </p>
         </div>
 
