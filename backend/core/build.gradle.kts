@@ -59,7 +59,7 @@ dependencies {
     api("org.springframework.boot:spring-boot-starter-jdbc")
     api("org.springframework.boot:spring-boot-starter-data-redis")
     api("org.springframework.boot:spring-boot-starter-liquibase")
-    api("org.liquibase:liquibase-core:5.0.2")
+    api("org.liquibase:liquibase-core:5.0.3")
     api(libs.google.api.services.gmail)
     api("net.logstash.logback:logstash-logback-encoder:9.0")
     implementation(platform(libs.spring.ai.bom))
