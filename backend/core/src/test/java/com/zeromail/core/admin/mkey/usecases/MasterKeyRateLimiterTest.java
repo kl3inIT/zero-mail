@@ -29,8 +29,11 @@ class MasterKeyRateLimiterTest {
 
         rateLimiter.checkEditAllowed(actorId);
 
+        long epochHour = fixedClock().instant().getEpochSecond() / 3600L;
         verify(redisTemplate)
-                .expire(eq("zeromail:mkey:edits:" + actorId + ":494016"), eq(Duration.ofHours(1)));
+                .expire(
+                        eq("zeromail:mkey:edits:" + actorId + ":" + epochHour),
+                        eq(Duration.ofHours(1)));
     }
 
     @Test
