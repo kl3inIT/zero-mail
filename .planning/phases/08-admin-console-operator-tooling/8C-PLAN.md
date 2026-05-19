@@ -34,6 +34,14 @@ files_modified:
   - backend/api/src/main/java/com/zeromail/api/dto/admin/tenant/TenantDeletionPreviewResponse.java
   - backend/core/src/test/java/com/zeromail/core/admin/arch/AdminTenantOAuthGuardTest.java
   - backend/api/src/test/java/com/zeromail/api/security/AdminResponseBodyBanFilterTest.java
+  - backend/api/src/test/java/com/zeromail/api/security/AdminResponseBodyBanFilterOrderingTest.java
+  - backend/core/src/test/java/com/zeromail/core/admin/arch/OnlyBodyBanFilterCanCallAppendAsSystem.java
+  - backend/core/src/test/java/com/zeromail/core/admin/arch/Phase8AdminArchTestSuite.java
+  - backend/core/src/main/java/com/zeromail/core/admin/audit/AdminBodyBanRegex.java
+  - backend/core/src/main/java/com/zeromail/core/admin/tenant/usecases/TenantDeletionRegistry.java
+  - backend/core/src/main/java/com/zeromail/core/admin/tenant/usecases/TenantOAuthRevocationWorker.java
+  - backend/core/src/main/java/com/zeromail/core/admin/tenant/domain/event/TenantOAuthRevocationEvent.java
+  - backend/core/src/test/java/com/zeromail/core/admin/tenant/TenantDeletionCoverageTest.java
   - apps/admin/src/routes/tenants.tsx
   - apps/admin/src/routes/tenants-detail.tsx
   - apps/admin/src/features/tenants/tenants-api.ts
@@ -120,6 +128,43 @@ Output: Operator can inspect tenant health + pause/disconnect/delete a tenant wi
 @backend/core/src/main/java/com/zeromail/core/gmail/
 @backend/core/src/test/java/com/zeromail/core/draft/DraftPathArchUnitTest.java
 </context>
+
+<reviews_addendum_8C>
+## Reviews-pass replan addendum — 2026-05-19 (Codex + OpenCode HIGHs incorporated)
+
+### R-8C-H1 — `appendAsSystem` FK violation fixed by seeded system actor (Codex HIGH)
+**Decision:** The `actor_user_id` column in `admin_audit_event` is NOT NULL with FK to `admin_users.id`. Using `ZERO_UUID` will fail the FK on insert. Two-part fix:
+- **Schema:** 8A Liquibase 049 (per 8A R-H2 addendum) ALSO seeds a **system actor** row into `admin_users`: `id='00000000-0000-0000-0000-000000000001', email='<system>', status='ACTIVE', user_handle=<32 random bytes>, created_at=NOW()`. This row exists exclusively for system-issued audit writes (body-ban filter, chain-verify mismatch detection). It has NO WebAuthn credential — login is impossible.
+- **AdminAuditWriter.appendAsSystem:** Inserts with `actor_user_id='00000000-0000-0000-0000-000000000001'`, `actor_email='<system>'`. This is the ONLY supported FK target for system audit writes.
+
+### R-8C-H2 — `appendAsSystem` ArchUnit singleton pin (OpenCode HIGH)
+**Decision:** New ArchUnit `OnlyBodyBanFilterCanCallAppendAsSystem` (added to Task 8C-01 files): `noClasses().that().areNotAssignableTo(AdminResponseBodyBanFilter.class).and().areNotAssignableTo(AdminAuditChainVerifyJob.class).should().callMethod(AdminAuditWriter.class, "appendAsSystem", ...)`. Two whitelisted callers: the body-ban filter and the chain-verify job. Any other class calling `appendAsSystem` fails CI.
+
+### R-8C-H3 — Tenant deletion cascade via deletion registry, not hand-maintained list (Codex HIGH)
+**Decision:** Hand-maintained cascade list is fragile (future tables silently missed → partial deletion). Replace with:
+- **Deletion registry:** `TenantDeletionRegistry` (new class added to Task 8C-02 files at `backend/core/src/main/java/com/zeromail/core/admin/tenant/usecases/TenantDeletionRegistry.java`) — exposes `List<TenantOwnedTable> orderedDeletionPath()` where `TenantOwnedTable` records (`tableName`, `tenantIdColumn`, `deletionOrder`). All modules register their tenant-owned tables here at startup via Spring bean.
+- **FK-introspection assertion test:** `TenantDeletionCoverageTest` (added to Task 8C-02 files) queries Postgres `information_schema.referential_constraints` + `key_column_usage` for all FKs pointing to `tenants(id)` and asserts the registry covers each one. Test fails CI when a new tenant-owned table is added without registry entry — forcing the developer to consciously register or document why deletion is intentional manual cleanup.
+- `TenantDeletionService.delete()` iterates `TenantDeletionRegistry.orderedDeletionPath()` and DELETEs each table by `tenantIdColumn=:tenantId`. Order respects FK direction (children before parents).
+
+### R-8C-H4 — Body-ban filter regex parity with ArchUnit (Codex HIGH, OpenCode MEDIUM)
+**Decision:** `AdminResponseBodyBanFilter` JSON field-key match becomes SUBSTRING+CASE-INSENSITIVE matching the same regex as `AdminPathBodyBanTest`: `(?i).*(body|bodyHtml|snippet|payload|prompt|completion|content).*`. Compile the regex ONCE as a class constant shared between the ArchUnit test and the runtime filter — both reference `AdminBodyBanRegex.FORBIDDEN_FIELD_NAME` (new shared constant class at `backend/core/src/main/java/com/zeromail/core/admin/audit/AdminBodyBanRegex.java`, added to Task 8C-01 files). The filter no longer relies on exact field-name matching; even camelCase variants (`postBodyText`, `chatPromptString`) trip the filter when value length >200. Acceptance test fixture: response `{"postBodyText":"<300 chars>"}` trips the filter; response `{"summary":"<300 chars>"}` does not (no banned substring in key).
+
+### R-8C-H5 — Body-ban filter ordering vs response compression (OpenCode MEDIUM→treat as HIGH for correctness)
+**Decision:** Filter ordering pinned in SecurityConfig.adminChain (extending 8A): `AdminResponseBodyBanFilter` MUST run AFTER controller serialization (post-`HandlerInterceptor`) but BEFORE any compression filter. Spring Boot's `ShallowEtagHeaderFilter` and `OncePerRequestFilter`-based gzip wrappers run early; ensure the ban filter is registered with `Ordered.HIGHEST_PRECEDENCE + 10` (or specifically `addFilterAfter(adminResponseBodyBanFilter, ResourceUrlEncodingFilter.class)` — verify via Context7 `/spring-projects/spring-boot` for current Boot 4 filter chain order). The `ContentCachingResponseWrapper` MUST wrap BEFORE any compression — meaning the ban filter is the outermost wrapper of the response. Add `AdminResponseBodyBanFilterOrderingTest` integration test (added to Task 8C-02 files) that posts a controller returning a 300-char `content` field through a gzip-enabled filter chain and asserts the ban filter still trips.
+
+### R-8C-H6 — OAuth revoke compensation if DB rollback (Codex MEDIUM→HIGH due to data inconsistency risk)
+**Decision:** External OAuth revocation is NOT idempotent against rollback. Split tenant disconnect into a two-step state machine:
+- **Step 1 (DB-only):** `TenantDisconnectService.markDisconnecting(tenantId, reason)` flips `tenants.status='DISCONNECTING'` + writes audit TENANT_DISCONNECTING + commits.
+- **Step 2 (external):** post-commit, dispatch `TenantOAuthRevocationEvent(tenantId)` to a `@ApplicationModuleListener` `TenantOAuthRevocationWorker`. Worker calls `TenantOAuthRevocationGateway.revoke(tenantId)`; on success writes audit TENANT_DISCONNECTED + flips status to `DISCONNECTED`; on failure retries up to 5 times via the processing_job/outbox pattern + writes audit TENANT_OAUTH_REVOCATION_FAILED with retry count. If all retries fail, status remains `DISCONNECTING` and an operational alert fires (Micrometer counter `admin.tenant.oauth_revoke.failed`).
+This keeps the DB transaction crisp and avoids the "OAuth revoked but tenant still ACTIVE" inconsistency.
+
+### R-8C-H7 — Spring Data JDBC repository projections vs JdbcTemplate (Codex MEDIUM)
+**Decision:** Per CONVENTIONS §6 (read-side hot paths use Spring Data JDBC, not JPA), tenant projections in Task 8C-01 use **Spring Data JDBC repository-style** projections (interface-projection or DTO-projection) over `JdbcTemplate`. Each projection record (`TenantListRow`, `TenantHealthSnapshot`, etc.) is bound by Spring Data JDBC's mapping layer. `TenantInspectionService` injects 6 Spring Data JDBC `Repository<...>` interfaces (one per projection) NOT raw `JdbcTemplate`. This delivers compile-time SQL binding + Spring Data observability + consistent with the project's data-access posture.
+
+### R-8C-H8 — Cross-Phase-8 ArchUnit module test suite (OpenCode MEDIUM)
+**Decision:** New test class `Phase8AdminArchTestSuite` (added to Task 8C-01 files at `backend/core/src/test/java/com/zeromail/core/admin/arch/Phase8AdminArchTestSuite.java`) — JUnit 5 `@Suite` that aggregates all admin ArchUnit tests (`AdminContextMutexTest`, `AdminPathBodyBanTest`, `AdminSendBanTest`, `AdminControllerPreAuthorizeTest`, `AdminChainNoOauth2LoginTest`, `AdminTenantOAuthGuardTest`, `OnlyBodyBanFilterCanCallAppendAsSystem`, `MasterKeyResolverConfinementTest`, `MasterKeySentinelLeakTest`, `AdminSpendPromptAccessorBanTest`) and runs them against the FULL admin module classpath (8A + 8B + 8C + 8D + 8E + 8F production code). The suite is the integration checkpoint for Phase 8 — each individual plan's ArchUnit task adds itself to the suite; the suite is verified before Wave 3 starts.
+
+</reviews_addendum_8C>
 
 <tasks>
 
@@ -394,6 +439,14 @@ grep -rE 'String\s+(body|bodyHtml|snippet|payload|prompt|completion|content)' ba
 - [ ] Destructive actions use ConfirmTwiceDialog with correct step-2 tokens (pause / email / email)
 - [ ] Activity tab "Show details" disabled with v1.3+ tooltip
 - [ ] Playwright tenants spec green
+- [ ] (reviews-pass) System actor row `id='00000000-0000-0000-0000-000000000001'` seeded in admin_users (8A Liquibase 049) so `appendAsSystem` FK is satisfied
+- [ ] (reviews-pass) `OnlyBodyBanFilterCanCallAppendAsSystem` ArchUnit pins appendAsSystem to body-ban filter + chain-verify job only
+- [ ] (reviews-pass) `TenantDeletionRegistry` + `TenantDeletionCoverageTest` enforce cascade coverage via Postgres `information_schema` FK introspection
+- [ ] (reviews-pass) `AdminResponseBodyBanFilter` uses shared regex constant (`AdminBodyBanRegex.FORBIDDEN_FIELD_NAME`) matching ArchUnit substring/case-insensitive semantics
+- [ ] (reviews-pass) `AdminResponseBodyBanFilterOrderingTest` confirms filter runs AFTER serialization but BEFORE compression
+- [ ] (reviews-pass) Tenant disconnect uses two-step state machine (DISCONNECTING → external revoke worker → DISCONNECTED) with retry + alert on failure
+- [ ] (reviews-pass) TenantInspectionService projections use Spring Data JDBC repository-style projections (not raw JdbcTemplate)
+- [ ] (reviews-pass) `Phase8AdminArchTestSuite` aggregates all 10+ admin ArchUnit tests and runs against full Phase-8 classpath before Wave 3
 </success_criteria>
 
 <output>

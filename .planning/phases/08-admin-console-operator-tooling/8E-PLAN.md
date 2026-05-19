@@ -28,6 +28,10 @@ files_modified:
   - apps/admin/src/components/KpiCard.tsx
   - apps/admin/src/components/AutoRefreshIndicator.tsx
   - apps/admin/e2e/queue.spec.ts
+  - backend/core/src/main/resources/db/changelog/changes/078-processing-job-extend.yaml
+  - backend/core/src/main/java/com/zeromail/core/queue/domain/JobFailureReason.java
+  - backend/core/src/test/java/com/zeromail/core/admin/arch/WorkerFailureReasonEnumOnlyTest.java
+  - backend/core/src/test/java/com/zeromail/core/admin/queue/QueueHealthQueryServiceSqlSpyTest.java
 
 autonomous: true
 requirements:
@@ -87,6 +91,34 @@ Output: Operator sees backend job-queue health with 10s freshness; can re-queue 
 @backend/core/src/main/java/com/zeromail/core/triage/projection/AuditLogPage.java
 @backend/core/src/main/java/com/zeromail/core/gmail/persistence/PubSubDeliveryRepository.java
 </context>
+
+<reviews_addendum_8E>
+## Reviews-pass replan addendum — 2026-05-19 (Codex + OpenCode HIGHs incorporated)
+
+### R-8E-H1 — Requeue semantics: separate `admin_requeue_count` (Codex HIGH)
+**Decision (locked):** OPS-QUEUE-02 requirement language ("increments retry counter") and current plan ("resets attempts to 0") conflict. Resolution: BOTH semantics, on TWO columns:
+- `processing_job.attempts` — RESET to 0 on requeue (gives worker a fresh retry budget so the job can drain; this is the existing in-plan behavior).
+- `processing_job.admin_requeue_count` — INCREMENT by 1 on requeue (new column; tracks "how many times has an admin manually intervened on this job" so repeat-offender jobs surface in queue health KPIs).
+Liquibase 078 (renamed from `054-processing-job-extend.yaml` per 8A R-H10) adds `admin_requeue_count INTEGER NOT NULL DEFAULT 0` and `last_failure_reason VARCHAR(100)` to `processing_job` if not already present. Update `DeadLetterRequeueService.requeue` UPDATE statement to set `attempts=0, locked_until=NULL, last_failed_at=NULL, admin_requeue_count=admin_requeue_count+1` and write audit row with `before_state_json={jobId, jobType, attemptsBeforeRequeue, lastFailureReason, adminRequeueCountBefore}` + `after_state_json={status:PENDING, attempts:0, adminRequeueCountAfter}`. Queue health `KpiCard` adds a 6th KPI "Admin-requeued (24h)" = COUNT WHERE admin_requeue_count > 0 AND last_requeued_at >= NOW() - 24h. Update Task 8E-01 acceptance criteria.
+
+### R-8E-H2 — Failure rate 24h denominator (OpenCode MEDIUM→HIGH for KPI correctness)
+**Decision:** `QueueHealthQueryService.snapshot()` failure-rate SQL becomes time-window bounded on BOTH numerator and denominator:
+`failureRateLast24h = COUNT(*) FILTER (WHERE status='FAILED' AND last_failed_at >= NOW() - INTERVAL '24h') * 1.0 / NULLIF(COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24h'), 0)`
+This prevents the lifetime-rate asymptote-to-zero degeneration the reviewer flagged. Acceptance criterion 8E-01 amended: fixture of 100 PENDING rows from 30 days ago + 5 FAILED rows in last 24h + 95 SUCCEEDED rows in last 24h → failure rate = 5/100 = 5%, not 5/100k.
+
+### R-8E-H3 — `last_failure_reason` sanitization at WORKER write time (Codex MEDIUM, OpenCode MEDIUM)
+**Decision:** Worker code path that writes `last_failure_reason` MUST store enum-shaped short codes only, max 100 chars, NEVER raw exception text. New enum `JobFailureReason` (lives in `backend/core/src/main/java/com/zeromail/core/queue/domain/JobFailureReason.java`, added to Task 8E-01 files) with values like `DOWNSTREAM_TIMEOUT, GMAIL_API_RATE_LIMIT, ENCRYPTION_KEY_MISSING, VALIDATION_FAILED, UNKNOWN`. Worker error handlers map exceptions to enum BEFORE persistence. The schema column type stays VARCHAR(100) but a CHECK constraint validates value is one of the enum names. ArchUnit `WorkerFailureReasonEnumOnlyTest` (added to Task 8E-01 files): worker classes that UPDATE `processing_job.last_failure_reason` must reference `JobFailureReason.name()` only — no raw `Throwable.getMessage()` flows through.
+
+### R-8E-H4 — SQL contract test verifying no `payload_json` selection (Codex MEDIUM)
+**Decision:** Per Codex feedback, grep is weaker than runtime SQL contract. Add `QueueHealthQueryServiceSqlSpyTest` (added to Task 8E-01 files): integration test using a `JdbcTemplate` wrapper / Datasource proxy that captures every emitted SQL string during `snapshot()` + `deadLetterPage()` and asserts NONE contain `payload_json` / `payloadJson` tokens. This is the load-bearing SQL contract test the grep gate complements.
+
+### R-8E-H5 — Per-job-type breakdown on failure rate (OpenCode LOW, accepted)
+**Decision:** Defer per-job-type breakdown to v1.3+; KpiCard text already shows aggregate. Add a `// TODO v1.3+: per-job-type failure histogram` comment in `QueueHealthQueryService` so the deferral is discoverable. Task 8E acceptance unchanged.
+
+### R-8E-H6 — Liquibase numbering offset (cross-plan from 8A R-H10)
+**Decision:** Optional `054-processing-job-extend.yaml` → `078-processing-job-extend.yaml`. Append to db.changelog-master.yaml include list in numeric order.
+
+</reviews_addendum_8E>
 
 <tasks>
 
@@ -253,6 +285,11 @@ grep -rE "payload[_J]son" backend/core/src/main/java/com/zeromail/core/admin/que
 - [ ] Re-queue uses ConfirmTwiceDialog with first-8-char jobId step-2 token
 - [ ] Playwright queue spec green
 - [ ] AdminPathBodyBanTest green over queue projection + DTO packages
+- [ ] (reviews-pass) Liquibase 078 adds `admin_requeue_count INTEGER NOT NULL DEFAULT 0` + `last_failure_reason VARCHAR(100)` to `processing_job`
+- [ ] (reviews-pass) Requeue increments `admin_requeue_count` (NOT resets) while resetting `attempts=0`; 6th KPI surfaces admin-requeued count
+- [ ] (reviews-pass) Failure rate denominator is 24h-bounded (`created_at >= NOW() - INTERVAL '24h'`) not lifetime
+- [ ] (reviews-pass) `JobFailureReason` enum gates `last_failure_reason` writes; `WorkerFailureReasonEnumOnlyTest` ArchUnit green
+- [ ] (reviews-pass) `QueueHealthQueryServiceSqlSpyTest` asserts no emitted SQL string contains `payload_json` / `payloadJson` tokens
 </success_criteria>
 
 <output>

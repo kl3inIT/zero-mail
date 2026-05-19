@@ -24,7 +24,8 @@ files_modified:
   - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/admin/package-info.java
   - backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/SpringAiChatModelFactory.java
   - backend/core/src/main/java/com/zeromail/core/shared/crypto/PlatformSecretCipher.java
-  - backend/core/src/main/resources/db/changelog/changes/051-llm-provider-master-key.yaml
+  - backend/core/src/main/resources/db/changelog/changes/058-llm-provider-master-key.yaml
+  - backend/api/src/main/java/com/zeromail/api/security/AdminRequestBody.java
   - backend/core/src/main/resources/db/changelog/db.changelog-master.yaml
   - backend/api/src/main/java/com/zeromail/api/controllers/admin/AdminMasterKeyController.java
   - backend/api/src/main/java/com/zeromail/api/dto/admin/mkey/MasterKeyMaskedResponse.java
@@ -139,6 +140,55 @@ Context7 mandatory before coding:
 - `/spring-projects/spring-modulith` for `@ApplicationModuleListener` event semantics + same-process delivery guarantees.
 - `/spring-projects/spring-data-redis` for atomic INCR-with-TTL rate-limit idiom (used by MasterKeyRateLimiter).
 </documentation_lookup>
+
+<reviews_addendum_8B>
+## Reviews-pass replan addendum — 2026-05-19 (Codex + OpenCode HIGHs incorporated)
+
+### R-8B-H1 — `encrypted_key NOT NULL` conflicts with seeded pre-key provider rows (Codex HIGH)
+**Decision:** Change `llm_provider_master_key.encrypted_key` to **NULLABLE**. Seed all 6 provider rows at Liquibase 058 time with `encrypted_key=NULL`, `kek_version=NULL`, `last_rotated_at=NULL`, `key_format=NULL`. Set `OPENROUTER` row with `feature_default_provider_chat=TRUE`, `feature_default_provider_triage=TRUE`, `feature_default_provider_draft=TRUE` per ROADMAP launch default. Add CHECK constraint `(encrypted_key IS NULL AND kek_version IS NULL AND last_rotated_at IS NULL) OR (encrypted_key IS NOT NULL AND kek_version IS NOT NULL)` — encrypted_key and kek_version travel together. UI list endpoint returns `masked_key: null` / `status: NOT_SET` for unkeyed providers (already in must_haves). MasterKeyAdminService.set/rotate paths transition the row from NULL → non-NULL.
+
+### R-8B-H2 — `feature_default_provider_*` moves OFF master-key table (Codex HIGH)
+**Decision:** Relocate feature-default routing to a dedicated lookup. Two-phase plan:
+- **Phase 8B (this plan):** ADD columns to `llm_provider_master_key` as currently specified (stub) BUT mark them `DEPRECATED` in the Liquibase column comment and document a planned migration in 8D Liquibase 068.
+- **Phase 8D:** Liquibase 068 creates `feature_default_provider(feature VARCHAR(16) PRIMARY KEY CHECK IN ('CHAT','TRIAGE','DRAFT'), provider VARCHAR(32) NOT NULL FK provider_catalog(provider), updated_by_admin UUID NOT NULL FK admin_users.id, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())` with exactly 3 seeded rows. 8D's Liquibase 068 MUST include an `<update>` migration that backfills `feature_default_provider.provider` from any TRUE flags on `llm_provider_master_key.feature_default_provider_*`, then a DROP of those 3 columns. This addendum updates 8B's success criterion to "feature defaults are a STUB pending 8D migration"; the partial UNIQUE indexes claim is REMOVED (3 columns × 6 rows can have ≥1 TRUE per column at most — global single-default is enforced procedurally in MasterKeyAdminService `setFeatureDefault` by clearing TRUE on all OTHER rows in same @Transactional, then setting the chosen one).
+
+### R-8B-H3 — Sentinel-vs-mask reconciliation (Codex HIGH)
+**Decision:** `MasterKeySentinelLeakTest` regex is REFINED to ban RAW key shapes but ALLOW exact masked forms. New banned regex (case-sensitive):
+- `sk-[A-Za-z0-9]{16,}` (raw OpenAI/OpenRouter) — BAN
+- `sk-ant-[A-Za-z0-9]{16,}` (raw Anthropic) — BAN
+- `sk-or-[A-Za-z0-9]{16,}` (raw OpenRouter explicit) — BAN
+- `AIza[A-Za-z0-9_\-]{16,}` (raw Google) — BAN
+Masked forms allowed: `sk-\*{4}[A-Za-z0-9]{4}` (e.g. `sk-****abc1`), `sk-ant-\*{4}[A-Za-z0-9]{4}`. Test fixture: insert literal `sk-proj-abcdefghij1234567890` → fails; insert literal `sk-****abc1` → passes; insert base64 of raw form `c2stcHJvai1hYmNkZWZnaGlqMTIzNDU2Nzg5MA==` → fails. Acceptance criterion of Task 8B-01 updated.
+
+### R-8B-H4 — Synchronous/versioned cache eviction at request boundary (Codex HIGH, OpenCode MEDIUM)
+**Decision:** Rotation response MUST NOT return until cache eviction is observable. Two changes:
+1. **Versioned cache keys.** `ChatModel` cache key becomes `CacheKey(tenantId, feature, provider, modelId, providerKeyVersion)` where `providerKeyVersion` is `llm_provider_master_key.kek_version` BUMPED on every successful rotation. `ProviderMasterKeyResolver.resolve(provider)` reads the current row and exposes `keyVersion` along with `plaintext`. `SpringAiChatModelFactory` consults `keyVersion` in the cache lookup — a request for the rotated provider after commit naturally MISSES on the new key version, bypassing any stale entry.
+2. **Synchronous AFTER_COMMIT eviction.** Replace `@ApplicationModuleListener` (async by default) with `@TransactionalEventListener(phase=AFTER_COMMIT)` on a `@Component ChatModelCacheEvictionListener` method, OR explicitly tag the `@ApplicationModuleListener` with synchronous semantics (`propagation=Propagation.MANDATORY` and `@Transactional(...)` is NOT applied — verify Spring Modulith 1.4+ semantics via Context7 `/spring-projects/spring-modulith` before coding). The MasterKeyAdminService.rotate response is the HTTP write boundary — by the time the response thread serializes the success JSON, cache eviction MUST be complete; if Modulith insists on async, mark the response as `202 Accepted + eviction_pending_until: instant` and the frontend re-reads the masked key after that instant before showing success.
+
+### R-8B-H5 — Heap-dump master-key exposure documented + mitigated (OpenCode HIGH)
+**Decision:** `ProviderMasterKeyResolver` in-memory plaintext cache is a documented threat. Mitigations layered:
+- **Operational** (runbook): `docs/ops/v1.2-deploy.md` §Security Considerations (added in 8A R-H9) bans `/actuator/heapdump` endpoint in production (`management.endpoint.heapdump.enabled: false`), restricts JMX to loopback, sets container `--memory-swap=0`.
+- **Code-level:** `ProviderMasterKeyResolver` cache TTL reduced from 60 min to 15 min; on eviction the plaintext `byte[]` is overwritten with zeros via `java.util.Arrays.fill(plaintextBytes, (byte)0)` before the reference is released (best-effort, no JVM mlock).
+- **Threat acknowledgement:** Add T-08-25 (renumbered to avoid clash with 8C) to `<threat_model>`: "Heap-dump master-key exfiltration — mitigated by ops hardening + 15-min TTL + byte-wipe-on-evict; residual risk accepted on single-VPS v1.2."
+
+### R-8B-H6 — Direct test-connection rate limit, not only edit-session minting (Codex MEDIUM→treat as HIGH for oracle safety)
+**Decision:** `POST /api/admin/master-keys/{provider}/test-connection` is rate-limited DIRECTLY (separate Redis bucket from edit-session minting): `zeromail:mkey:test:{actorId}:{epoch_hour}` with 30/hr/admin cap. Test-connection also requires a valid edit-session token (already in plan) — both gates apply. This closes the "test-connection used as oracle without mint" attack path. Acceptance criterion added to Task 8B-02: 31st test-connection call in same hour returns HTTP 429.
+
+### R-8B-H7 — 9Router/Google `KeyFormat` mapping resolved (Codex MEDIUM)
+**Decision:** Per Spring AI M6 adapter mapping confirmed via Context7 `/spring-projects/spring-ai`:
+- OPENAI, OPENROUTER, DEEPSEEK → `OPENAI_FORMAT` (OpenAI-compatible adapter at provider base_url).
+- ANTHROPIC → `ANTHROPIC_FORMAT`.
+- GOOGLE → `GOOGLE_FORMAT` (Spring AI Google GenAI native adapter; NOT OpenAI-compat). `KeyFormat` enum gains `GOOGLE_FORMAT(3)` per existing speculation.
+- ROUTER_9R → toggle between `OPENAI_FORMAT` and `ANTHROPIC_FORMAT` (operator picks).
+CHECK constraint on Liquibase 058 encodes valid (provider, key_format) pairings: 9Router accepts both; others have exactly one valid mapping. Executor MUST verify the Google GenAI adapter class name + key shape (`AIza...`) via Context7 `/spring-projects/spring-ai` before locking the enum value.
+
+### R-8B-H8 — Body-ban regex CARVE-OUT for request DTOs documented explicitly (Codex HIGH for 8C body-ban semantic; affects 8B request-DTO design)
+**Decision:** `MasterKeySetRequest.plaintextKey` / `RotateMasterKeyRequest.newPlaintextKey` / `TestConnectionRequest.plaintextKey` are REQUEST DTOs flowing IN to the server — they are the user's writing of secret data. They MUST be excluded from `AdminPathBodyBanTest` and `AdminResponseBodyBanFilter` runtime scan. Mechanism: add marker annotation `@AdminRequestBody` at the class level (lives in `backend/api/src/main/java/com/zeromail/api/security/AdminRequestBody.java`); `AdminPathBodyBanTest` skips classes annotated with it; `AdminResponseBodyBanFilter` only scans RESPONSE bytes (post-controller, pre-network) and is naturally request-immune — but document the asymmetry in filter Javadoc. Acceptance criterion in Task 8B-03 amended: `MasterKeySetRequest` carries `@AdminRequestBody` annotation; ArchUnit AdminPathBodyBanTest scan-set excludes it; runtime filter scans only outgoing responses.
+
+### R-8B-H9 — Liquibase changeset renumbering (cross-plan addendum from 8A R-H10)
+**Decision:** `051-llm-provider-master-key.yaml` → `058-llm-provider-master-key.yaml` (8B reserved range 058–067). All in-plan references to `051` updated implicitly via this addendum; executor MUST rename the file and update db.changelog-master.yaml include entry to point at `changes/058-llm-provider-master-key.yaml`.
+
+</reviews_addendum_8B>
 
 <tasks>
 
@@ -402,6 +452,15 @@ pnpm --filter @zeromail/admin generate-api  # admin-schema.d.ts should include /
 - [ ] Playwright e2e green on master-keys flow
 - [ ] MasterKeySentinelLeakTest green; sentinel scan over build artifacts returns 0 hits
 - [ ] Feature-default selector flips provider per feature with audit + UNIQUE partial index enforcement
+- [ ] (reviews-pass) `llm_provider_master_key.encrypted_key` is NULLABLE; all 6 provider rows seeded at 058 with NULL key; OPENROUTER row has feature-default flags TRUE
+- [ ] (reviews-pass) `feature_default_provider_*` columns marked DEPRECATED in 058; 8D Liquibase 068 migrates to `feature_default_provider` table and drops them
+- [ ] (reviews-pass) MasterKeySentinelLeakTest banned regex changed to `sk-[A-Za-z0-9]{16,}` (raw shape); masked `sk-****abc1` passes
+- [ ] (reviews-pass) Rotation uses versioned cache keys (`providerKeyVersion`) + synchronous AFTER_COMMIT eviction; rotation response never returns before stale entries unreachable
+- [ ] (reviews-pass) `ProviderMasterKeyResolver` cache TTL reduced to 15 min + byte-wipe-on-evict; heap-dump threat documented in runbook §Security Considerations
+- [ ] (reviews-pass) `POST /api/admin/master-keys/{provider}/test-connection` rate-limited 30/hr/admin directly (separate bucket from edit-session)
+- [ ] (reviews-pass) `KeyFormat` enum locks: OPENAI/OPENROUTER/DEEPSEEK→OPENAI_FORMAT, ANTHROPIC→ANTHROPIC_FORMAT, GOOGLE→GOOGLE_FORMAT, ROUTER_9R→OPENAI|ANTHROPIC toggle
+- [ ] (reviews-pass) `@AdminRequestBody` marker excludes plaintext-carrying request DTOs from `AdminPathBodyBanTest`; response filter naturally request-immune
+- [ ] (reviews-pass) Liquibase changeset renamed `058-llm-provider-master-key.yaml`
 </success_criteria>
 
 <output>

@@ -9,8 +9,10 @@ files_modified:
   - docs/ops/v1.2-deploy.md
   - backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java
   - backend/api/src/main/java/com/zeromail/api/security/AdminBindingFilter.java
-  - backend/api/src/main/java/com/zeromail/api/security/EnrollmentTokenGate.java
+  - backend/api/src/main/java/com/zeromail/api/security/EnrollmentSessionController.java
   - backend/api/src/main/java/com/zeromail/api/admin/AdminBootstrapRunner.java
+  - docs/ops/admin-interface-freeze.md
+  - backend/api/src/test/java/com/zeromail/api/admin/AdminChainIntegrationTest.java
   - backend/api/src/main/java/com/zeromail/api/config/OpenApiConfig.java
   - backend/api/src/main/java/com/zeromail/api/controllers/admin/AdminAuditController.java
   - backend/api/src/main/java/com/zeromail/api/controllers/admin/AdminRoleGrantsController.java
@@ -202,6 +204,43 @@ Output: A bootstrapped operator can run `docker compose config` successfully, co
 <documentation_lookup>
 Before any auth code, planner-time research (Context7) is mandatory and supplied. Executor MUST verify current Spring Security 7 `.webAuthn(...)` DSL via Context7 `/websites/spring_io_spring-security_reference_7_0` (fallback: `/spring-projects/spring-security`) before writing `SecurityConfig.adminChain(...)` — surface `WebAuthnRelyingPartyOperations`, `PublicKeyCredentialUserEntityRepository`, `UserCredentialRepository` interfaces. For STDOUT runner: Context7 `/spring-projects/spring-boot` `CommandLineRunner`. For frontend ceremony: Context7 `/MasterKale/SimpleWebAuthn` (`startRegistration`, `startAuthentication`, `optionsJSON` wrapper v10 shape). For OpenAPI split: Context7 `/springdoc/springdoc-openapi` `GroupedOpenApi`.
 </documentation_lookup>
+
+<reviews_addendum_8A>
+## Reviews-pass replan addendum — 2026-05-19 (Codex + OpenCode HIGHs incorporated)
+
+Tasks below have been amended to resolve the following HIGH-severity concerns surfaced in `08-REVIEWS.md`. Where a task's `<behavior>` / `<action>` / `<acceptance_criteria>` sections still reference legacy shapes, this addendum is authoritative — executor MUST apply these corrections.
+
+### R-8A-H1 — WebAuthn interface freeze (Codex HIGH, OpenCode HIGH)
+**Decision:** Before any of 8A-04 / 8A-06 coding starts, produce `docs/ops/admin-interface-freeze.md` (new file, added to Task 8A-07 deliverables) containing the verified Spring Security 7.0.5 `.webAuthn(...)` DSL surface fetched from Context7 `/websites/spring_io_spring-security_reference_7_0`. The freeze pins: (a) exact bean names and signatures for `WebAuthnRelyingPartyOperations`, `PublicKeyCredentialUserEntityRepository`, `UserCredentialRepository`; (b) exact stock endpoint paths emitted by `.webAuthn(...)` (e.g. `/webauthn/register/options`, `/webauthn/authenticate/options`, `/login/webauthn` — confirm exact paths against Context7 docs, do NOT assume); (c) the `securityMatcher(...)` glob list MUST be a superset of those stock paths; (d) `apps/admin` route `/enroll` is RESERVED for SPA only — backend token validation lives at `/api/admin/enrollment/session` (new path, see R-8A-H3), never at `/enroll`. The freeze doc is the contract; SecurityConfig + apps/admin routing MUST cite it inline as `// see docs/ops/admin-interface-freeze.md §{section}`.
+
+### R-8A-H2 — Audit chain ordering deterministic under concurrency (Codex HIGH)
+**Decision:** Add column `chain_index BIGSERIAL NOT NULL UNIQUE` to `admin_audit_event` (Liquibase 049). HMAC chain ordering is now by `chain_index`, NOT `created_at`. `HmacChainHasher` hashes `(previous_hash || canonical(chain_index || actor_user_id || action || target_kind || target_id || before_json || after_json || reason || request_ip || request_id || canonical_timestamp_ms))` where `canonical_timestamp_ms` is set by the application (`Instant.now().toEpochMilli()`) at insert time and stored alongside `created_at` (DB default) in a new `canonical_timestamp_ms BIGINT NOT NULL` column. `AdminAuditEventRepository.findLatestHmac()` becomes `SELECT hmac_chain_hash FROM admin_audit_event ORDER BY chain_index DESC LIMIT 1 FOR UPDATE`. `AdminAuditChainVerifyJob.verifyOnce()` re-derives from `chain_index=1` ascending. AcceptanceCriteria for Task 8A-01 and 8A-03 extended: insert 1000 rows concurrently across 4 threads → chain re-derives green; mutating any row's `chain_index=500` reason then re-verifying detects mismatch at exactly chain_index=500.
+
+### R-8A-H3 — Enrollment routing split: SPA vs backend (Codex HIGH)
+**Decision:** `/enroll` is exclusively an `apps/admin` SPA route. Backend token validation moves to a NEW REST path `POST /api/admin/enrollment/session` (request body `{token, email}` → response `{enrollmentSessionCookie, expiresAt}`); NPM proxy routes `/enroll` to the SPA bundle and `/api/admin/**` to backend. `EnrollmentTokenGate` is REMOVED (no filter on `/enroll`). Replace with `EnrollmentSessionController` (added to Task 8A-04 files): handles `POST /api/admin/enrollment/session` (validates one-time token via `EnrollmentTokenService.consume`, mints short-lived enrollment session cookie scoped to admin domain), `POST /api/admin/enrollment/register` (consumes enrollment cookie, drives the WebAuthn registration ceremony through the stock Spring Security endpoint chain). SPA `/enroll?token=` page first POSTs the token+email to `/api/admin/enrollment/session`, then on 200 invokes `startRegistration({optionsJSON})` which hits the stock Spring Security registration-options endpoint (path pinned in R-8A-H1 freeze). Task 8A-04 acceptance criteria extended: NPM routing manifest in runbook documents path split; unauthenticated GET `/api/admin/enrollment/session` returns 401; valid token POST returns 200 + Set-Cookie; expired/used token returns HTTP 410 Gone.
+
+### R-8A-H4 — Per-chain Spring Session cookie isolation (Codex HIGH)
+**Decision:** Two `SpringSessionRepositoryFilter` registrations bound to separate `RedisIndexedSessionRepository` beans (`adminSessionRepository`, `userSessionRepository`) backed by different Redis key namespaces (`spring:session:admin:*` vs `spring:session:user:*`). Two `CookieSerializer` beans: `adminCookieSerializer` with `cookieName="SESSION_ADMIN"` and `cookieDomain="admin.zeromail.com"` (or `cookiePath="/api/admin"` for dev/localhost where subdomain is unavailable); `userCookieSerializer` with `cookieName="SESSION_USER"` and `cookieDomain="zeromail.com"`. Admin chain installs `addFilterBefore(springSessionRepositoryFilter("admin"), SecurityContextPersistenceFilter.class)` referencing the admin repository bean explicitly; user chain references the user repository bean. Executor MUST verify the multi-`SessionRepositoryFilter` registration shape via Context7 `/spring-projects/spring-session` before coding — if Spring Session 4 (Boot 4) forbids two repository beans on the same dispatcher, fall back to single repository + cookie path scoping (`/api/admin/**` vs `/api/**`) and document the deviation in `admin-interface-freeze.md`. Task 8A-04 acceptance criteria extended: cookie isolation test `AdminChainCookieIsolationTest` asserts request to `/api/admin/audit/events` with only `SESSION_USER=...` returns 401 and that the admin chain never reads `SESSION_USER`.
+
+### R-8A-H5 — Bootstrap moves from Liquibase seed to startup runner (Codex MEDIUM→HIGH per net effect)
+**Decision:** REMOVE `zeromail.admin.bootstrap-emails` Liquibase `<insert>` seed if any was implied. Bootstrap is ENTIRELY runtime: `AdminBootstrapRunner` (Task 8A-04) is `CommandLineRunner` reading `zeromail.admin.bootstrap-emails` from `application.yml`/env and upserting `admin_users(status='PENDING_ENROLLMENT')` rows at startup. Idempotency rules clarified: (a) row with `status='ACTIVE'` → skip silently (no token, no audit); (b) row with `status='PENDING_ENROLLMENT'` and an outstanding non-expired token in `EnrollmentTokenService` cache → reprint same token (re-emit STDOUT line for ops convenience); (c) row with `status='PENDING_ENROLLMENT'` and NO valid token → mint a fresh token, print URL. This matches the spec intent that `PENDING` rows get a fresh enrollment URL on second boot when needed, not silent skip.
+
+### R-8A-H6 — Replace H2 verification with Postgres Testcontainers (Codex MEDIUM)
+**Decision:** Task 8A-01 verify command now uses `:liquibaseUpdate -Pdb=testcontainer-postgres` (Liquibase against a Postgres Testcontainer) instead of `-Pdb=h2`. H2 cannot validate Postgres-specific features: BEFORE-trigger SQLSTATE 23514, REVOKE UPDATE/DELETE grants, INET column type, BYTEA, JSONB CHECK constraints, BIGSERIAL. Add Gradle task `:backend:core:liquibaseUpdateTestcontainer` that boots a `postgres:17.6-alpine` container, applies all changelogs (048–050), then runs four direct-SQL assertions: (1) `UPDATE admin_audit_event SET reason='x' WHERE id=...` raises SQLSTATE 23514; (2) `DELETE FROM admin_users WHERE id=...` as `zeromail_app` role returns permission denied; (3) `INSERT INTO admin_audit_event` works for the `zeromail_app` role; (4) `chain_index` column exists and is BIGSERIAL UNIQUE. Acceptance criteria for Task 8A-01 amended accordingly.
+
+### R-8A-H7 — `AdminChainNoOauth2LoginTest` source-parsing is fragile; add MockMvc integration test
+**Decision:** Keep `AdminChainNoOauth2LoginTest` as a lightweight ArchUnit complement but add `AdminChainIntegrationTest` (new file added to Task 8A-04 files list): `@SpringBootTest(webEnvironment=RANDOM_PORT)` MockMvc test that (a) presents a valid user OAuth session cookie to `/api/admin/audit/events` → expect 401; (b) presents a valid admin WebAuthn session cookie to `/api/inbox` (user-side route) → expect 401; (c) admin chain has zero `OAuth2LoginAuthenticationFilter` instances in its filter list (introspect via `FilterChainProxy.getFilters("/api/admin/x")`). The integration test is the load-bearing guarantee; ArchUnit stays as a fast lint.
+
+### R-8A-H8 — Turborepo + apps-web ESLint hardening (OpenCode MEDIUM)
+**Decision:** Task 8A-06 `turbo.json` MUST set `outputs: ["dist/**"]` for `@zeromail/admin#build` and `outputs: ["coverage/**"]` for `@zeromail/admin#test`. Add an additional ESLint rule on `apps/web/eslint.config.mjs`: `no-restricted-imports` patterns `**/apps/admin/**` AND `**/admin-schema*`. Update Task 8A-06 acceptance criteria to assert: `grep -c '"@zeromail/admin#build"' turbo.json` ≥1 and `grep -c '"outputs"' turbo.json` ≥1; `pnpm --filter @zeromail/web lint` flags an injected `import './admin-schema'` as violation.
+
+### R-8A-H9 — Runbook backup default + detached-Docker warning (OpenCode LOW + cross-cutting MEDIUM)
+**Decision:** Task 8A-07 runbook adds (a) §Backup defaults to `tar | gpg | rsync` to `/opt/zeromail/backups/` with optional AWS S3 variant noted; (b) §Bootstrap interactive-mode warning: explicit block "Run `docker compose up api` in foreground for first bootstrap; capture the enrollment URL; Ctrl-C then restart in detached mode (`docker compose up -d`)" with a callout that `docker compose run -d` writes STDOUT to Docker logging driver, which violates the "never in log file" invariant; (c) §Security Considerations: disable `/actuator/heapdump`, restrict JMX to loopback, `--memory-swap` limit on api container, document `ProviderMasterKeyResolver` heap-residence threat from 8B (cross-reference). Section heading count in acceptance criteria bumps from ≥5 to ≥7.
+
+### R-8A-H10 — Liquibase numbering offset to avoid 8A/8B/8D collisions (OpenCode LOW)
+**Decision:** Keep 8A at 048–050. 8B Liquibase changeset renumbered from `051-llm-provider-master-key.yaml` → `058-llm-provider-master-key.yaml`. 8D renumbered from `052/053` → `068-catalog-tables.yaml` / `069-anthropic-catalog-seed.yaml`. 8E (if it adds `054-processing-job-extend.yaml`) → `055-processing-job-extend.yaml`. Update db.changelog-master.yaml include ordering accordingly. This addendum reserves contiguous ranges per plan (048–057 = 8A, 058–067 = 8B, 068–077 = 8D, 078+ = 8E/8C as needed) so parallel-after-8A waves cannot collide on master changelog merges. Each plan's Liquibase task acceptance criterion now references the offset number.
+
+</reviews_addendum_8A>
 
 <tasks>
 
@@ -752,6 +791,15 @@ test -s docs/ops/v1.2-deploy.md && wc -l docs/ops/v1.2-deploy.md  # expect ≥ 1
 - [ ] All 8A ArchUnit gates green: AdminContextMutexTest, AdminPathBodyBanTest, AdminSendBanTest, AdminControllerPreAuthorizeTest, AdminChainNoOauth2LoginTest, AdminChainCookieIsolationTest, AuditChainIntegrityTest
 - [ ] Repo-wide grep gate still asserts exactly 1 Gmail send call site
 - [ ] Human checkpoint 8A-08 approved with all 11 manual checks
+- [ ] (reviews-pass) `docs/ops/admin-interface-freeze.md` exists and is cited by SecurityConfig + EnrollmentSessionController + apps/admin enroll route
+- [ ] (reviews-pass) `admin_audit_event.chain_index BIGSERIAL UNIQUE` + `canonical_timestamp_ms BIGINT NOT NULL` columns deployed; chain re-derive uses chain_index ordering
+- [ ] (reviews-pass) `/enroll` is SPA-only; backend validates token via `POST /api/admin/enrollment/session`; `EnrollmentTokenGate` filter removed
+- [ ] (reviews-pass) Two `CookieSerializer` beans with distinct cookie names (`SESSION_ADMIN` vs `SESSION_USER`) + namespaced Redis session repositories; cross-cookie 401 verified
+- [ ] (reviews-pass) Liquibase verification runs against Postgres Testcontainer (not H2); 4 Postgres-specific assertions green
+- [ ] (reviews-pass) `AdminChainIntegrationTest` MockMvc-based green; ArchUnit source-parse test kept as lightweight complement
+- [ ] (reviews-pass) `turbo.json` declares `outputs: ["dist/**"]` for `@zeromail/admin#build`; `apps/web/eslint.config.mjs` also blocks `**/admin-schema*` imports
+- [ ] (reviews-pass) Runbook §Backup defaults to `tar | gpg | rsync`; §Bootstrap warns against detached mode; §Security Considerations documents heap-dump + JMX + memory-swap mitigations
+- [ ] (reviews-pass) Liquibase numbering offsets: 8A=048–057, 8B=058–067, 8D=068–077, 8E=078+
 
 </success_criteria>
 

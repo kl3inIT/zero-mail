@@ -5,6 +5,7 @@ type: execute
 wave: 2
 depends_on:
   - 08-8A
+  - 08-8E
 files_modified:
   - backend/core/src/main/java/com/zeromail/core/admin/spend/usecases/SpendAggregateQueryService.java
   - backend/core/src/main/java/com/zeromail/core/admin/spend/usecases/SpendCsvExporter.java
@@ -27,6 +28,8 @@ files_modified:
   - apps/admin/src/features/spend/query-keys.ts
   - apps/admin/src/features/spend/use-spend-dashboard.ts
   - apps/admin/e2e/spend.spec.ts
+  - backend/core/src/main/resources/db/changelog/changes/079-llm-call-audit-credential-source.yaml
+  - backend/core/src/test/java/com/zeromail/core/admin/arch/LlmCallAuditCredentialSourceCoverageTest.java
 
 autonomous: true
 requirements:
@@ -83,6 +86,41 @@ Output: Operator gets metadata-only spend visibility with k-anonymity on deleted
 @.planning/phases/08-admin-console-operator-tooling/08-8E-SUMMARY.md
 @backend/core/src/main/java/com/zeromail/core/triage/projection/AuditLogPage.java
 </context>
+
+<reviews_addendum_8F>
+## Reviews-pass replan addendum — 2026-05-19 (Codex + OpenCode HIGHs incorporated)
+
+### R-8F-H1 — Platform-vs-BYOK row-level classification, not tenant-level (Codex HIGH)
+**Decision (critical):** The original plan splits platform-vs-BYOK by joining `byok_credential.tenant_id` — this is WRONG. A tenant with BYOK pinned for some features may still consume platform spend for OTHER features (e.g., user has BYOK Anthropic for chat but uses platform OpenRouter for triage). Tenant-level classification corrupts the dashboard. Required fix:
+- **Schema:** add `credential_source VARCHAR(16) NOT NULL CHECK IN ('PLATFORM','BYOK')` column to `llm_call_audit`. Liquibase 079 (new file, added to Task 8F-01 files: `backend/core/src/main/resources/db/changelog/changes/079-llm-call-audit-credential-source.yaml`) adds the column with a backfill `<sql>UPDATE llm_call_audit SET credential_source = CASE WHEN tenant_id IN (SELECT tenant_id FROM byok_credential WHERE provider = llm_call_audit.provider) THEN 'BYOK' ELSE 'PLATFORM' END WHERE credential_source IS NULL;</sql>` (best-effort backfill on historical rows; the column is the source of truth going forward).
+- **Write path:** every LLM call site (`SpringAiChatModelFactory` resolution path + any direct ChatModel callers) MUST set `credential_source` based on which key the call actually used at request time. Add `LlmCallAuditCredentialSourceCoverageTest` ArchUnit (added to Task 8F-01 files) that fails CI if any class constructing `LlmCallAuditEntity` does not set `credential_source` — scans constructor + setter call sites.
+- **Read path:** `SpendAggregateQueryService` aggregates SUM(cost) GROUP BY credential_source — TWO sums per bucket (`platformCost`, `byokCost`) come directly from this column, not from a join. Acceptance criterion 8F-01 amended.
+
+### R-8F-H2 — 8F formally depends on 8E for KpiCard + AutoRefreshIndicator (OpenCode MEDIUM→HIGH for dependency correctness)
+**Decision:** Update 8F frontmatter `depends_on: [08-8A, 08-8E]`. The two shared components MUST be available before 8F renders. If 8E waveplan changes, 8F replan accordingly. (Original `depends_on: [08-8A]` is corrected.)
+
+### R-8F-H3 — Active tenant emails surfaced; `[deleted]` reserved for deleted tenants (Codex MEDIUM)
+**Decision:** `TopTenantRow` is updated:
+- For ACTIVE tenants: show `gmailAccountEmail` (per OPS-SPEND-02 acceptance — "top-20 tenants" must be operationally useful; emails are admin-only data already accessible via 8C tenant inspection).
+- For DELETED tenants: show literal `[deleted]` placeholder + roll up below-k-threshold counts into a single "Deleted (k aggregated)" entry per OPS-SPEND-02.
+The `tenantLabelHash` HMAC field is REMOVED from `TopTenantRow` (it was over-engineered hiding; cross-screen correlation is a non-goal). Update record signature: `TopTenantRow(UUID tenantId, String gmailAccountEmailOrPlaceholder, BigDecimal totalCost, int callCount, boolean isKAnonymized)`. `tenantId` is included so the admin can click through to `/tenants/{tenantId}` (8C) directly.
+
+### R-8F-H4 — `admin_read_event` debounce per range AND session (Codex MEDIUM)
+**Decision:** `AdminSpendController.getDashboard` debounce key becomes `(adminId, sessionId, hash(from, to, providers, features))` not just `(adminId, hash)`. This prevents auto-refresh every 60s from writing 1440 read rows/day per admin × N admins. Debounce TTL = 60s; same range within 60s in same session = no audit write. Implement via Redis SETNX on key `zeromail:admin:spend:read-debounce:{sessionId}:{rangeHash}` with TTL 60s. Acceptance criterion 8F-02 amended: 100 sequential refresh ticks (over 100 minutes) of identical range write only ~100 read events, not 1440.
+
+### R-8F-H5 — CSV row estimate pre-query (OpenCode LOW)
+**Decision:** `SpendCsvExporter.streamCsv` runs a pre-query `SELECT COUNT(DISTINCT (bucket_date, provider, feature)) FROM llm_call_audit WHERE created_at BETWEEN :from AND :to`. If count > 10,000 returns HTTP 400 `error.admin.spend_export_too_large` BEFORE streaming starts. No partial-CSV failure.
+
+### R-8F-H6 — `kAnonymityThreshold` configurable (OpenCode LOW)
+**Decision:** Add property `zeromail.admin.spend.k-anonymity-threshold` (default 5) to `ZeroMailCoreProperties`. `SpendAggregateQueryService` reads from property. Default unchanged; configurable per environment for future tightening. Acceptance: setting threshold to 10 in test profile → buckets with 6-9 entries roll up.
+
+### R-8F-H7 — Query timeout guard (OpenCode LOW)
+**Decision:** `SpendAggregateQueryService.snapshot()` queries set `.queryTimeout(15, TimeUnit.SECONDS)` on `JdbcTemplate`. `llm_call_audit` could grow to millions of rows over months; 90-day range queries cap at 15s.
+
+### R-8F-H8 — Liquibase numbering (cross-plan from 8A R-H10)
+**Decision:** `079-llm-call-audit-credential-source.yaml` lives in the 078+ band reserved for 8E/8F additions. Append to db.changelog-master.yaml in numeric order.
+
+</reviews_addendum_8F>
 
 <tasks>
 
@@ -265,6 +303,14 @@ grep -rE '(sk-[a-zA-Z0-9]{8,}|sk-ant-[a-zA-Z0-9]{8,}|AIza[a-zA-Z0-9]{8,}|sk-or-[
 - [ ] Playwright spend spec green
 - [ ] MasterKeySentinelLeakTest still green after full Phase 8 build
 - [ ] AdminResponseBodyBanFilter never trips on production spend response
+- [ ] (reviews-pass) Platform-vs-BYOK classified by `llm_call_audit.credential_source` column (row-level), NOT tenant-level join
+- [ ] (reviews-pass) Liquibase 079 adds `credential_source VARCHAR(16) NOT NULL` + backfill; `LlmCallAuditCredentialSourceCoverageTest` ArchUnit forces every audit write to set it
+- [ ] (reviews-pass) `depends_on` includes `08-8E` (KpiCard + AutoRefreshIndicator dependency)
+- [ ] (reviews-pass) `TopTenantRow` surfaces `gmailAccountEmail` for active tenants + `[deleted]` placeholder for deleted; `tenantLabelHash` HMAC field removed
+- [ ] (reviews-pass) Read-audit debounced per `(sessionId, rangeHash)` with 60s TTL — auto-refresh ticks do not flood admin_read_event
+- [ ] (reviews-pass) CSV export estimates row count pre-query; rejects >10k BEFORE streaming starts
+- [ ] (reviews-pass) `zeromail.admin.spend.k-anonymity-threshold` configurable (default 5)
+- [ ] (reviews-pass) `JdbcTemplate.queryTimeout=15s` on spend aggregate queries
 </success_criteria>
 
 <output>

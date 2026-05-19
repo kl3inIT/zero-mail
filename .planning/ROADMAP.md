@@ -47,6 +47,7 @@ Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
 (ADMIN-09 = admin_users table schema; ADMIN-10 = WebAuthn enrollment + assertion ceremonies — both added during discuss-phase pivot 2026-05-19.)
 
 **Success Criteria** (what must be TRUE):
+
 1. Operator can run `docker compose up` on the VPS and reach `apps/web` + `/api/*` + `9router-dashboard` through a single `jc21/nginx-proxy-manager` reverse proxy, with Let's Encrypt auto-renewal and Google OAuth callback URLs unchanged from v1.1 (live VPS migration itself is a deploy step, gated on compose + runbook deliverables landing in the merged phase)
 2. A bootstrapped admin user can sign in at `admin.zeromail.com` via WebAuthn passkey ceremony (hardware-bound, `userVerificationRequirement=REQUIRED`) and access `/api/admin/*` routes; a request without a valid admin WebAuthn session returns HTTP 401 at the chain level. Two separate `SecurityFilterChain` beans isolate admin and user auth: `@Order(1) adminChain` uses `securityMatcher("/api/admin/**")` + `.webAuthn(...)`; `@Order(2) userChain` retains Google OAuth bundled flow unchanged. Chain-level enforcement plus explicit `@PreAuthorize("hasRole('ADMIN')")` per admin controller (defense in depth) + ArchUnit rules `every_admin_controller_must_have_preauthorize` and `admin_chain_does_not_use_oauth2login`. The user-facing `users` table gains NO `role` column — admin identity lives entirely in a separate `admin_users` table.
 3. Every admin state mutation (role grants, catalog edits, master-key set/rotate, tenant pause/disconnect/delete) writes one row to `admin_audit_event` in the same transaction with HMAC-chained hash; the application DB user cannot `UPDATE` or `DELETE` that table, and a Postgres trigger raises `EXCEPTION` on any attempt regardless of role
@@ -63,15 +64,25 @@ Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
 **Plans:** 6 plans (8A foundation → 8B/8C/8E/8F parallel after 8A → 8D after 8B):
 
 Plans:
+**Wave 1**
+
 - [ ] 8A-PLAN.md — Foundation: docker-compose + runbook; SecurityFilterChain admin/user split; admin_users + WebAuthn ceremonies; append-only audit (HMAC chain + trigger); AdminContext mutex; GroupedOpenApi split; AdminAudit + RoleGrants controllers; apps/admin Vite SPA scaffold + login/enroll/dashboard/audit/role-grants routes (ADMIN-01..10, ARCH-08/09/10/12, OPS-INFRA-01..03)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 8B-PLAN.md — Master Keys: llm_provider_master_key + PlatformSecretCipher + MasterKeyAdminService (set/test/rotate) + edit-session + rate-limit + ChatModel cache eviction + ProviderMasterKeyResolver + 9Router dual-mode + MasterKeySentinelLeakTest; /master-keys list + per-provider edit (MKEY-01..08, ARCH-11)
 - [ ] 8C-PLAN.md — Tenant Inspection: AdminTenantAccess.readOnly + 5-tab projections + AdminResponseBodyBanFilter + TenantOAuthRevocationGateway + pause/disconnect/delete; /tenants list + /tenants/:id 5-tab detail (OPS-TENANT-01..05)
-- [ ] 8D-PLAN.md — Catalog: provider_catalog + model_catalog + feature_binding + 3-step Sync (Fetch/Diff/Confirm) + Anthropic seed + GET /api/settings/catalog + CatalogChangedEvent; /catalog browser + Sync wizard (CAT-01..07)
 - [ ] 8E-PLAN.md — Queue Health: QueueHealthQueryService + DeadLetterRequeueService + KpiCard + AutoRefreshIndicator + /queue page with 10s auto-refresh (OPS-QUEUE-01/02)
 - [ ] 8F-PLAN.md — Spend Dashboard: SpendAggregateQueryService + k-anonymity + AdminSpendPromptAccessorBanTest + /spend page with 90d picker + stacked bar + donut + top-20 (OPS-SPEND-01/02)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 8D-PLAN.md — Catalog: provider_catalog + model_catalog + feature_binding + 3-step Sync (Fetch/Diff/Confirm) + Anthropic seed + GET /api/settings/catalog + CatalogChangedEvent; /catalog browser + Sync wizard (CAT-01..07)
+
 **UI hint**: yes
 
 **Planning-time decisions locked during spec-phase 2026-05-19 + discuss-phase pivot 2026-05-19** (from research SUMMARY + spec interview + WebSearch + Spring Security 7 Context7):
+
 - **Decision 1 (admin auth method, POST-PIVOT 2026-05-19):** WebAuthn passkey via Spring Security 7 `.webAuthn(...)` DSL on `admin.zeromail.com` with `userVerificationRequirement=REQUIRED`. NOT Google OAuth (decouple admin from Google IdP), NOT HTTP Basic (OWASP ASVS deprecated), NOT password.
 - **Decision 1.1 (frontend shape, POST-PIVOT 2026-05-19):** Separate `apps/admin` Vite + React 19 SPA on `admin.zeromail.com`. NOT a Next.js route group inside `apps/web`. Admin doesn't need SEO/SSR; DNS subdomain provides cognitive cue; admin schema types stay out of public Next.js bundle.
 - **Decision 1.2 (chain isolation, POST-PIVOT 2026-05-19):** Two `SecurityFilterChain` beans via `securityMatcher`: `@Order(1)` admin chain with `.webAuthn(...)`; `@Order(2)` user chain unchanged `.oauth2Login(...)`. ArchUnit enforces non-overlap. `AdminContext` ScopedValue mutex with `TenantContext` remains locked as codepath-level defense in depth.
@@ -96,6 +107,7 @@ Plans:
 **Requirements**: SET-VOICE-01, SET-VOICE-02, SET-VOICE-03, SET-VOICE-04, SET-VOICE-05, SET-VOICE-06, SET-BEHV-01, SET-BEHV-02, SET-BEHV-03, SET-BEHV-04, SET-BEHV-05, SET-SAFE-01, SET-SAFE-02, SET-SAFE-03, SET-SAFE-04, SET-AI-01, SET-AI-02, SET-AI-03, SET-AI-04
 
 **Success Criteria** (what must be TRUE):
+
 1. User can open `/settings` and switch between four shadcn `<Tabs>` (Personalization, Behavior, Safety Net, AI Provider/Model) via query-param-driven active tab on a single flat-folder `/settings/page.tsx` route
 2. In Personalization, user can edit free-text writing style (200–500 words), personal instructions (XML-fenced, prompt-injection-sentinel-sanitized, 2000-char cap), email signature, titled knowledge-base snippets, a tone preset (professional/friendly/casual/formal/custom), and pick AI output language (VI default, EN secondary) independent of UI language
 3. In Behavior, user can toggle auto-draft replies, set a draft confidence threshold slider (0.0–1.0), toggle daily digest (reuses v1.0 ANL-03), toggle sensitive-data protection (default ON), and surface the shadow-mode toggle from v1.0 TRG-07

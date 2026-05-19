@@ -26,8 +26,14 @@ files_modified:
   - backend/core/src/main/java/com/zeromail/core/admin/cat/usecases/ModelSchemaValidator.java
   - backend/core/src/main/java/com/zeromail/core/admin/cat/usecases/CatalogAdminService.java
   - backend/core/src/main/java/com/zeromail/core/admin/cat/package-info.java
-  - backend/core/src/main/resources/db/changelog/changes/052-catalog-tables.yaml
-  - backend/core/src/main/resources/db/changelog/changes/053-anthropic-catalog-seed.yaml
+  - backend/core/src/main/resources/db/changelog/changes/068-catalog-tables-prep.yaml
+  - backend/core/src/main/resources/db/changelog/changes/068b-catalog-tables-fk.yaml
+  - backend/core/src/main/resources/db/changelog/changes/069-feature-default-provider-migration.yaml
+  - backend/core/src/main/resources/db/changelog/changes/070-anthropic-catalog-seed.yaml
+  - backend/core/src/main/java/com/zeromail/core/admin/cat/usecases/CatalogSyncJobJanitor.java
+  - backend/core/src/main/java/com/zeromail/core/admin/cat/persistence/FeatureDefaultProviderEntity.java
+  - backend/core/src/main/java/com/zeromail/core/admin/cat/persistence/FeatureDefaultProviderRepository.java
+  - backend/core/src/main/java/com/zeromail/core/admin/cat/usecases/FeatureDefaultProviderService.java
   - backend/core/src/main/resources/db/changelog/db.changelog-master.yaml
   - backend/api/src/main/java/com/zeromail/api/controllers/admin/AdminCatalogController.java
   - backend/api/src/main/java/com/zeromail/api/controllers/settings/SettingsCatalogController.java
@@ -132,6 +138,52 @@ Context7 mandatory:
 - `/networknt/json-schema-validator` or built-in `com.networknt:json-schema-validator` already on classpath (verify via `./gradlew :backend:core:dependencies | grep json-schema`).
 - `/spring-projects/spring-data-redis` for SETNX-based debounce lease pattern.
 </documentation_lookup>
+
+<reviews_addendum_8D>
+## Reviews-pass replan addendum — 2026-05-19 (Codex + OpenCode HIGHs incorporated)
+
+### R-8D-H1 — FK on `assistant_settings.*_model_id` needs verified backfill (Codex HIGH)
+**Decision:** Liquibase 068 (renamed from 052 per 8A R-H10) MUST run a **pre-FK audit + backfill** changeset BEFORE the `addForeignKeyConstraint` step:
+- Step 1 (`068a-catalog-tables-prep.yaml`): `<sql>UPDATE assistant_settings SET chat_model_id = NULL WHERE chat_model_id IS NOT NULL AND chat_model_id NOT IN (SELECT model_id FROM model_catalog);</sql>` for chat/triage/draft columns. Logs a count: `<sqlCheck>SELECT COUNT(*) FROM assistant_settings WHERE chat_model_id IS NULL OR triage_model_id IS NULL OR draft_model_id IS NULL;</sqlCheck>` (logged via Liquibase precondition reporting).
+- Step 2 (`068b-catalog-tables-fk.yaml`): adds the 3 FKs. Executor MUST run `mcp__postgres__execute_sql` against the dev database BEFORE deploy to log the count of about-to-be-NULLed rows; operator decides whether to seed missing model_catalog rows manually (preserve pins) or accept the NULL backfill (tenants re-pick model in UI). Acceptance criterion added: count logged in deploy runbook §Catalog migration; FK addition only proceeds if operator signs off the count.
+
+### R-8D-H2 — `feature_binding.provider` consistency with `model_catalog.provider` (Codex MEDIUM→HIGH for integrity)
+**Decision:** Remove `provider` column from `feature_binding` entirely — it duplicates `model_catalog.provider` reachable via FK join. `feature_binding` becomes `(id UUID PK, model_id VARCHAR(128) NOT NULL FK model_catalog(model_id) ON DELETE CASCADE, feature VARCHAR(16) NOT NULL, enabled BOOLEAN, is_default BOOLEAN, UNIQUE(model_id, feature))`. Queries that need provider join through `model_catalog`. Partial UNIQUE index for one-default-per-feature-per-provider becomes a composite expression index: `CREATE UNIQUE INDEX one_default_per_feature_per_provider ON feature_binding(feature, (SELECT provider FROM model_catalog mc WHERE mc.model_id = feature_binding.model_id)) WHERE is_default = TRUE` — verify Postgres 17 supports the expression form; if not, fall back to enforcing in MasterKeyAdminService.setFeatureDefault transactionally (clear all TRUE for the feature, set chosen). Acceptance criterion of Task 8D-01 amended to assert single source of truth for provider.
+
+### R-8D-H3 — `ModelsProbeClient` split: `probeConnection` vs `fetchModelCatalog` (Codex MEDIUM)
+**Decision:** 8B's `ModelsProbeClient` exposed a single `probe(provider, key)` returning enum. 8D's Sync flow needs the FULL model list. Split into two distinct methods on the SAME client (already in 8B's package per Task 8B-02):
+- `ModelsProbeClient.probeConnection(provider, key) -> ProbeResult` (enum: OK/INVALID_KEY/RATE_LIMITED/NETWORK_ERROR/TIMEOUT) — unchanged from 8B; used by master-key test-connection.
+- `ModelsProbeClient.fetchModelCatalog(provider, key) -> List<RawModel>` — NEW method; returns typed parsed list `{model_id, display_name?, created_at?}`; throws `ProbeFailedException(reason: ProbeResult)` mapping to the same enum on failure. Used by 8D Sync Fetch.
+This avoids leaking that catalog Sync uses the same HTTP path; both methods route through the same `RestClient` instance + interceptor for log scrubbing. Update Task 8B-02 and Task 8D-02 accordingly.
+
+### R-8D-H4 — `processing_job.status` enum extension AVOIDED via payload-based step tracking (Codex MEDIUM, OpenCode HIGH)
+**Decision (locked):** Do NOT alter the existing `processing_job.status` CHECK constraint. Use `processing_job.payload_json->>'step'` as the step discriminator. States:
+- Sync Fetch enqueue: `status='PENDING', payload_json={provider, actorId, jobId, step:'FETCH'}`.
+- Worker picks up → `status='PROCESSING'` (existing standard transition), payload mutates `step:'FETCHING'`.
+- Models fetched + diff computed: `status='PENDING'` (re-enqueue for confirm), `step:'DIFF_READY'`, `step_payload:{added,removed,changed}` inside payload_json.
+- Operator clicks Confirm: orchestrator UPDATE sets `step:'CONFIRMING'`, applies diff in @Transactional, sets `status='COMPLETED'`, `step:'CONFIRMED'`.
+- Cancel: `status='COMPLETED'`, `step:'CANCELLED'`.
+This avoids in-flight schema surgery on the status CHECK constraint. The worker poller filters CATALOG_SYNC jobs by `job_type='CATALOG_SYNC' AND status='PENDING' AND (payload_json->>'step') IN ('FETCH','DIFF_READY')` — DIFF_READY rows are NOT auto-applied; they wait for explicit Confirm.
+
+### R-8D-H5 — Stale SKIP LOCKED jobs cleanup (OpenCode MEDIUM)
+**Decision:** Worker poller SKIP LOCKED claim query includes `AND (locked_until IS NULL OR locked_until < NOW())`. Add `CatalogSyncJobJanitor` (new file added to Task 8D-02 files): `@Scheduled(fixedDelay=60000)` scans CATALOG_SYNC jobs WHERE `locked_at IS NOT NULL AND age(NOW(), locked_at) > interval '5 minutes' AND status='PROCESSING'`; marks them `status='FAILED', payload_json.step='ABANDONED', payload_json.last_failure_reason='LOCK_TIMEOUT'` so they don't loop forever holding the Redis debounce. Releases the Redis debounce key on cleanup. Acceptance: simulated worker crash + 6-minute clock advance → janitor marks the job FAILED + clears Redis key + a second Sync Fetch for same provider can start fresh.
+
+### R-8D-H6 — `CatalogSyncOrchestrator.confirm` relaxed admin matching (OpenCode MEDIUM)
+**Decision:** Original plan required `actor matches initiating admin`. Relaxed: ANY ACTIVE admin can confirm a DIFF_READY job (not just the initiator). Rationale: prevents UX dead-end when initiator session expires; team operations may need handoff. Document in the code comment that the audit row records BOTH `payload_json.actorId` (initiator) AND `AdminContext.currentOrThrow().id()` (confirmer). Acceptance criterion 8D-02 amended.
+
+### R-8D-H7 — Redis ETag cache spec for CuratedCatalogQueryService (OpenCode LOW)
+**Decision:** Locked parameters: key `catalog:etag:v1`, TTL 30 seconds, payload is JSON of `Map<Feature, PerFeatureCatalog>` + ETag header is SHA-256 of payload bytes. Invalidation on `CatalogChangedEvent` via `@CacheEvict(value="catalog:etag:v1", allEntries=true)` PLUS explicit `RedisTemplate.delete("catalog:etag:v1")` call (defense-in-depth). HTTP `If-None-Match` match returns 304 with no body.
+
+### R-8D-H8 — `feature_default_provider` migration (lifts 8B R-H2)
+**Decision:** Liquibase 069 (separate file added to Task 8D-01 files: `069-feature-default-provider-migration.yaml`) creates `feature_default_provider(feature, provider, updated_by_admin, updated_at)` table per 8B R-H2. The same changeset runs the `<sql>` migration: `INSERT INTO feature_default_provider(feature, provider, updated_by_admin, updated_at) SELECT 'CHAT', provider, NULL, NOW() FROM llm_provider_master_key WHERE feature_default_provider_chat=TRUE` (and TRIAGE, DRAFT). Then `<dropColumn>` for the 3 boolean columns on `llm_provider_master_key`. `MasterKeyAdminService.setFeatureDefault` (and the new `FeatureDefaultProviderService` introduced here) target the new table. Task 8D-01 acceptance: post-migration, exactly 3 rows exist in `feature_default_provider`; OPENROUTER pre-seeded values preserved.
+
+### R-8D-H9 — Hardcoded Anthropic seed verification (Codex LOW)
+**Decision:** Before merge, executor MUST cross-check the seed model IDs (`anthropic/claude-4.7-opus`, `anthropic/claude-4.6-sonnet`, `anthropic/claude-4.5-haiku`) against current Anthropic public model list via Context7 `/spring-projects/spring-ai` (Anthropic adapter docs) or `/anthropics/anthropic-sdk-java`. If a 4.7-class model name shifts at GA, update Liquibase 069 (renamed from 053) before commit.
+
+### R-8D-H10 — Liquibase changeset renumbering (cross-plan from 8A R-H10)
+**Decision:** `052-catalog-tables.yaml` → `068-catalog-tables.yaml`; `053-anthropic-catalog-seed.yaml` → `070-anthropic-catalog-seed.yaml`. Files reserved: 068=catalog-tables-prep, 068b=catalog-tables-fk, 069=feature-default-provider-migration, 070=anthropic-seed. All in-plan references to 052/053 updated implicitly via this addendum.
+
+</reviews_addendum_8D>
 
 <tasks>
 
@@ -410,6 +462,16 @@ curl -s http://localhost:8080/v3/api-docs/admin  | jq '.paths | keys[]' | grep '
 - [ ] Admin catalog flows via Playwright e2e
 - [ ] GroupedOpenApi places /api/settings/catalog in public; admin catalog endpoints in admin
 - [ ] Stepper wizard renders with shadcn primitives composed raw (no new wrapper)
+- [ ] (reviews-pass) Pre-FK backfill changeset (068a) NULLs orphan `assistant_settings.*_model_id` references + count logged in runbook before FK addition (068b)
+- [ ] (reviews-pass) `feature_binding.provider` column REMOVED; provider reached via FK join to `model_catalog.provider`; single source of truth
+- [ ] (reviews-pass) `ModelsProbeClient` split into `probeConnection` (enum) + `fetchModelCatalog` (typed list)
+- [ ] (reviews-pass) `processing_job.status` enum NOT extended; step tracking via `payload_json->>'step'` discriminator
+- [ ] (reviews-pass) `CatalogSyncJobJanitor` reclaims stuck PROCESSING rows after 5-min lock timeout + clears Redis debounce
+- [ ] (reviews-pass) `CatalogSyncOrchestrator.confirm` accepts any ACTIVE admin (not just initiator); audit records both
+- [ ] (reviews-pass) Redis ETag cache spec locked: key `catalog:etag:v1`, TTL 30s, invalidation via @CacheEvict + explicit delete
+- [ ] (reviews-pass) Liquibase 069 creates `feature_default_provider` table + migrates from 8B `llm_provider_master_key` columns + drops them
+- [ ] (reviews-pass) Anthropic seed model IDs verified against current Anthropic public list pre-merge
+- [ ] (reviews-pass) Liquibase changesets renamed: 068-catalog-tables-prep, 068b-catalog-tables-fk, 069-feature-default-provider-migration, 070-anthropic-catalog-seed
 </success_criteria>
 
 <output>
