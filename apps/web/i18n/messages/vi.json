@@ -662,6 +662,31 @@
     },
     "continueSetupCta": "Tiếp tục thiết lập",
     "eyebrow": "Gmail · Private beta · v1",
+    "faq": {
+      "items": {
+        "i1": {
+          "a": "Chúng tôi hỗ trợ các tài khoản email Gmail, Google Workspace và Microsoft Outlook.",
+          "q": "Zero Mail hỗ trợ các nhà cung cấp email nào?"
+        },
+        "i2": {
+          "a": "Hãy gửi email cho chúng tôi. Chúng tôi luôn sẵn sàng lắng nghe để cải thiện trải nghiệm email của bạn.",
+          "q": "Làm thế nào tôi có thể yêu cầu tính năng mới?"
+        },
+        "i3": {
+          "a": "Không! Zero Mail không phải là một ứng dụng email khách (email client). Nó được sử dụng song song với ứng dụng email hiện tại của bạn. Bạn vẫn sử dụng Google hoặc Outlook như bình thường.",
+          "q": "Zero Mail có thay thế ứng dụng email hiện tại của tôi không?"
+        },
+        "i4": {
+          "a": "Có, nếu bạn cảm thấy chúng tôi không mang lại giá trị cho bạn, hãy gửi email cho chúng tôi trong vòng 14 ngày kể từ khi nâng cấp và chúng tôi sẽ hoàn tiền cho bạn.",
+          "q": "Bạn có cung cấp hoàn tiền không?"
+        },
+        "i5": {
+          "a": "Chắc chắn rồi, chúng tôi có bản dùng thử miễn phí 7 ngày cho tất cả các gói để bạn có thể trải nghiệm ngay lập tức, không cần thẻ tín dụng!",
+          "q": "Tôi có thể dùng thử Zero Mail miễn phí không?"
+        }
+      },
+      "title": "Các câu hỏi thường gặp"
+    },
     "heading": {
       "accent": "nút gửi.",
       "line1": "Hộp thư gọn sạch,",

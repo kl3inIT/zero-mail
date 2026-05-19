@@ -662,6 +662,31 @@
     },
     "continueSetupCta": "Continue setup",
     "eyebrow": "Gmail · Private beta · v1",
+    "faq": {
+      "items": {
+        "i1": {
+          "a": "We support Gmail, Google Workspace and Microsoft Outlook email accounts.",
+          "q": "Which email providers does Zero Mail support?"
+        },
+        "i2": {
+          "a": "Send us an email — we love hearing what would make your email experience better.",
+          "q": "How can I request a new feature?"
+        },
+        "i3": {
+          "a": "No. Zero Mail is not a standalone email client. It runs alongside your existing email app — you still use Google or Outlook the way you always have.",
+          "q": "Does Zero Mail replace my current email app?"
+        },
+        "i4": {
+          "a": "Yes. If you feel we're not delivering value, email us within 14 days of upgrading and we'll refund you.",
+          "q": "Do you offer refunds?"
+        },
+        "i5": {
+          "a": "Absolutely — every plan includes a 7-day free trial, no credit card required.",
+          "q": "Can I try Zero Mail for free?"
+        }
+      },
+      "title": "Frequently asked questions"
+    },
     "heading": {
       "accent": "the send button.",
       "line1": "Inbox zero,",
