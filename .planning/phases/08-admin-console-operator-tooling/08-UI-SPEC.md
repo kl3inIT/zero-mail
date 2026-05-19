@@ -1,7 +1,10 @@
 ---
 phase: 8
 slug: admin-console-operator-tooling
-status: draft
+status: approved
+reviewed_at: 2026-05-19
+reviewed_by: gsd-ui-checker
+verification: 6/6 dimensions passed; HTML prototype delivered + token-consistent; 11 routes covered; privacy gates honored; ADMIN MODE banner + confirm-twice + WebAuthn ceremony states documented
 shadcn_initialized: true
 preset: base-nova (inherited from apps/web — apps/admin must run `pnpm dlx shadcn@latest init` with identical preset before copying primitives)
 created: 2026-05-19
