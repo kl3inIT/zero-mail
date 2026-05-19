@@ -87,7 +87,10 @@ public class ToolOutputSanitizer {
                                 boolean truncated)) {
                     ToolSource toolSource = ToolSource.from(toolName);
                     boolean stripBodyFields = toolSource.stripBodyFields();
-                    SanitizedJson sanitizedInput = sanitizeJson(inputJson, stripBodyFields, false);
+                    // WR-08: apply length cap during the body-strip pass so a large string in
+                    // a non-body field is bounded immediately, instead of carrying it through
+                    // the recursion to stage 2. Stage 2 is idempotent for already-capped strings.
+                    SanitizedJson sanitizedInput = sanitizeJson(inputJson, stripBodyFields, true);
                     sanitizedParts.add(
                             new ToolCallPart(
                                     partId,
@@ -95,12 +98,12 @@ public class ToolOutputSanitizer {
                                     toolName,
                                     stateValue,
                                     asMap(sanitizedInput.value()),
-                                    truncated));
+                                    truncated || sanitizedInput.truncated()));
                     logEntries.add(
                             new ToolLogEntry(
                                     toolName,
                                     toolSource,
-                                    false,
+                                    sanitizedInput.truncated(),
                                     sanitizedInput.signatureMatches()));
                 } else if (part
                         instanceof
@@ -115,11 +118,16 @@ public class ToolOutputSanitizer {
                                 boolean truncated)) {
                     ToolSource toolSource = ToolSource.from(toolName);
                     boolean stripBodyFields = toolSource.stripBodyFields();
-                    SanitizedJson sanitizedInput = sanitizeJson(inputJson, stripBodyFields, false);
+                    // WR-08: apply length cap together with body strip in the same recursion.
+                    SanitizedJson sanitizedInput = sanitizeJson(inputJson, stripBodyFields, true);
                     SanitizedJson sanitizedOutput =
-                            sanitizeJson(outputJson, stripBodyFields, false);
+                            sanitizeJson(outputJson, stripBodyFields, true);
                     SanitizedJson sanitizedConfirmation =
-                            sanitizeJson(confirmationJson, stripBodyFields, false);
+                            sanitizeJson(confirmationJson, stripBodyFields, true);
+                    boolean truncatedThisPart =
+                            sanitizedInput.truncated()
+                                    || sanitizedOutput.truncated()
+                                    || sanitizedConfirmation.truncated();
                     sanitizedParts.add(
                             new ToolOutputPart(
                                     partId,
@@ -129,12 +137,12 @@ public class ToolOutputSanitizer {
                                     asMap(sanitizedInput.value()),
                                     asMap(sanitizedOutput.value()),
                                     asMap(sanitizedConfirmation.value()),
-                                    truncated));
+                                    truncated || truncatedThisPart));
                     logEntries.add(
                             new ToolLogEntry(
                                     toolName,
                                     toolSource,
-                                    false,
+                                    truncatedThisPart,
                                     sanitizedInput.signatureMatches()
                                             + sanitizedOutput.signatureMatches()
                                             + sanitizedConfirmation.signatureMatches()));
