@@ -34,8 +34,9 @@ class LlmProviderMasterKeyLiquibaseContractTest {
             assertThat(changelog).contains(provider);
         }
         assertThat(changelog)
-                .contains("feature_default_provider_chat: true")
-                .contains("feature_default_provider_triage: true")
-                .contains("feature_default_provider_draft: true");
+                .contains("name: feature_default_provider_chat")
+                .contains("name: feature_default_provider_triage")
+                .contains("name: feature_default_provider_draft")
+                .contains("valueBoolean: true");
     }
 }

@@ -27,7 +27,7 @@ class MasterKeySentinelLeakTest {
                     Pattern.compile("sk-ant-[A-Za-z0-9]{16,}"),
                     Pattern.compile("sk-or-[A-Za-z0-9]{16,}"),
                     Pattern.compile("AIza[A-Za-z0-9_\\-]{16,}"));
-    private static final Pattern BASE64_TOKEN = Pattern.compile("[A-Za-z0-9+/=]{24,}");
+    private static final Pattern BASE64_TOKEN = Pattern.compile("[A-Za-z0-9+/]{24,}={0,2}");
     private static final Pattern HEX_TOKEN = Pattern.compile("[A-Fa-f0-9]{32,}");
 
     @Test

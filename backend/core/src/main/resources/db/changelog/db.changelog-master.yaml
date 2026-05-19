@@ -149,3 +149,6 @@ databaseChangeLog:
   - include:
       file: changes/050-admin-read-event.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/058-llm-provider-master-key.yaml
+      relativeToChangelogFile: true
