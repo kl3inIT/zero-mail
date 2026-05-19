@@ -66,6 +66,57 @@
 
 ---
 
+## Milestone: v1.1 — Email assistant chat (Phase 7 only)
+
+**Shipped:** 2026-05-19
+**Phases:** 1 (Phase 7) | **Plans:** 6 | **Tasks:** 31
+
+### What Was Built
+
+- **Chat backend (`core.chat` Modulith module):** 6 Liquibase changelogs (041–046), `ToolOutputSanitizer` runtime body-ban, `TenantAwareReactorScheduler` for tenant-safe fan-out, `ChatToolCallRegistry` + `ZeroMailChatMemory` adapter (workaround Spring AI #3366/#5167), SSE bridge with `VercelProtocolEmitter` + heartbeat + lifecycle, `LlmGateway.streamChat(...)` + `SpringAiLlmModelClient` with per-request `internalToolExecutionEnabled(false)`.
+- **20 tools wired:** 7 read + 8 write-reversible + 3 confirm-required + 3 confirmed-send (sendEmail/replyEmail/forwardEmail). `AssistantSendExecutor` is the single carved-out send call site annotated `@AllowedSendCallSite`.
+- **ArchUnit 3-layer carve-out:** paired negative + positive tests + CI grep gate that fail the build if Gmail send call-site count drifts from exactly 1. Atomic flip 0 → 1 landed in Wave 4 with the executor commit.
+- **Confirmation state machine:** 5-min Redis lease + optimistic concurrency + persistence retry + same-tx audit row write + reconciliation cron. Per-race integration test covers double-click, stale `toolCallId`, confirm-during-stream.
+- **3-layer body-ban defense for `chat_message.parts`:** `ToolOutputSanitizer` (runtime) + `ChatPersistenceContentBanTest` (ArchUnit) + `chat_message_body_ban` PostgreSQL trigger (DB). Multi-tenant chat leak integration test green.
+- **Hardened system prompt:** XML-fenced personalization slot + suspicious-sender warning + evidence-vs-instruction separation. Confirmed sends to a sender-safety-net recipient render an extra-friction VIP banner on the preview card.
+- **Frontend `/chat` route:** Next.js + `@ai-sdk/react@3` + AI Elements primitives + recipient-prominent preview cards + first-contact-domain friction + persisted-message-gating of Send + replay-mode rendering + Vietnamese-default chrome + chat history sidebar.
+
+### What Worked
+
+- **Three-layer defense for `chat_message.parts` body-ban** — runtime sanitizer + ArchUnit + DB trigger gave independent enforcement axes. CR-03 narrowed the trigger to the HTML regex gap (drop draft_body trigger overreach) — matched memory rule [[feedback-draft-body-carve-out-no-defense]].
+- **Phase 7 as one coherent capability** — single phase landed backend module + send executor + ArchUnit flip + frontend in 6 plans across 4 days. No artificial phase split between backend and frontend.
+- **`@AllowedSendCallSite` annotation + ArchUnit dual gate** — declarative carve-out beat manual "remember to update grep" maintenance. New send sites would have to be both annotated AND ArchUnit-allowlisted to compile.
+- **Spring AI 2.0.0-M6 workaround via Zero Mail-owned `ChatToolCallRegistry`** — bypassed the framework bugs `spring-ai#3366`/`#5167` by reading from `chat_message.parts` directly instead of relying on Spring AI's broken in-memory cache.
+
+### What Was Inefficient
+
+- **Phase 8 scope discovery too late** — spec-phase 8 (2026-05-19) surfaced that Settings UI requires infrastructure (curated catalog source, per-feature picker schema) that didn't exist, AND that PR #40 brand palette shift (teal → purple) had silently invalidated visual baseline for *any* settings UI work. Discovery during /gsd-spec-phase 8 forced full Phase 8 defer to v1.2.
+- **No hostile-corpus eval gate at v1.1 GA** — Phase 7 shipped chat surface with 3-layer technical defense but no behavioral validation. Eval suite design was bundled into Phase 8 which got deferred. v1.1 ships with implicit "trust the ArchUnit, no eval data."
+- **Brand palette shift mid-milestone** (PR #40, 2026-05-19) — landed without milestone-level awareness. CSS variables propagated automatically but hardcoded color usage and visual hierarchy assumptions in Phase 7 chat UI now need v1.2 audit.
+- **REQUIREMENTS.md "curated list only" Out-of-Scope lock** was aspirational, not enforced — v1.0 BYOK form has free-text model input and carries forward to v1.1 unchanged. Spec phase surfaced the contradiction.
+
+### Patterns Established
+
+- **3-layer defense for cross-cutting invariants** (runtime + arch test + DB trigger). Reusable template for future "this MUST never happen" rules.
+- **Single-phase end-to-end capability** when scope is coherent and tightly coupled (Phase 7 = backend + executor + arch + frontend). Beats artificial backend/frontend split when contract surface is locked.
+- **`@AllowedSendCallSite`-style declarative carve-out** for "exactly N instances allowed" invariants where N=1.
+- **Solo-operator coherent-milestone preference** — interim YAML catalog rejected in favor of admin-console-first v1.2 sequencing. Saved to memory [[feedback-coherent-milestone-over-interim]].
+
+### Key Lessons
+
+- **Surface palette/brand-token changes at milestone level** — a single PR (#40) that flips primary color invalidates downstream UI work. Treat brand token changes like API breaking changes.
+- **Spec-phase is the right gate to defer scope** — discovering Phase 8 doesn't fit during /gsd-spec-phase 8 → defer cleanly without writing SPEC.md is cheaper than locking spec then re-planning.
+- **GA tag discipline = eval gate + ops dashboards + LAUNCH-GO-NOGO**, not just "merge to main." v1.1 ships `v1.1` tag without those — accept caveat in tag annotation, move discipline to v1.2.
+- **For solo-operator projects, interim tooling rarely saves real work** — admin UI vs YAML edit are the same person's labor; build the proper tool when scope is coherent.
+
+### Cost Observations
+
+- **Sessions:** ~5 across the milestone (Phase 7 plan/execute + REVIEW + REVIEW-FIX + spec-phase 8 exit).
+- **Model mix:** Opus 4.7 throughout (planning + execution); some Sonnet usage in executor subagents.
+- **Notable:** Phase 7 had no LLM eval runs at GA — hostile-corpus deferred. Cost spike postponed to v1.2 hardening sweep.
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -73,6 +124,7 @@
 | Milestone | Sessions | Phases | Key Change |
 |-----------|----------|--------|------------|
 | v1.0 | ~30+ | 17 | Established Wave 0 RED test scaffolding, Spring Modulith JDBC event spine, ArchUnit safety floor, single-VPS deployment baseline, Vietnamese-default i18n. |
+| v1.1 | ~5 | 1 (Phase 7 of 2) | Single-phase end-to-end coherent capability (backend + frontend + executor + arch + UI in one phase). Discovered spec-phase as proper scope-defer gate. Brand palette shift PR #40 surfaced as cross-cutting impact mid-milestone. |
 
 ### Cumulative Quality
 
