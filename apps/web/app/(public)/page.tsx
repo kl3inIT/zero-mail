@@ -23,6 +23,12 @@ export default async function LandingPage() {
           description: t('desc'),
           emailPlaceholder: t('emailPlaceholder'),
           button: t('button'),
+          closeAria: t('closeAria'),
+          closeCta: t('closeCta'),
+          submitting: t('submitting'),
+          privacyNote: t('privacyNote'),
+          successTitle: t('success.title'),
+          successBody: (email: string) => t('success.body', { email }),
         }}
       />
     </>

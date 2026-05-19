@@ -8,6 +8,12 @@ type WaitlistDialogCopy = {
   description: string;
   emailPlaceholder: string;
   button: string;
+  closeAria: string;
+  closeCta: string;
+  submitting: string;
+  privacyNote: string;
+  successTitle: string;
+  successBody: (email: string) => string;
 };
 
 function clearWaitlistHash() {
@@ -112,11 +118,16 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
       aria-labelledby="waitlist-title"
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 px-4 py-8 backdrop-blur-sm"
     >
-      <button type="button" aria-label="Đóng" className="absolute inset-0" onClick={closeDialog} />
+      <button
+        type="button"
+        aria-label={copy.closeAria}
+        className="absolute inset-0"
+        onClick={closeDialog}
+      />
       <div className="relative z-10 w-full max-w-[420px] overflow-hidden rounded-[24px] border border-(--line-strong) bg-(--bg-elevated) p-6 shadow-2xl">
         <button
           type="button"
-          aria-label="Đóng"
+          aria-label={copy.closeAria}
           onClick={closeDialog}
           className="absolute top-4 right-4 z-20 grid size-8 place-items-center rounded-full text-(--text-muted) hover:bg-(--bg-subtle) hover:text-(--ink)"
         >
@@ -133,10 +144,10 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
             id="waitlist-title"
             className="text-2xl leading-tight font-extrabold tracking-tight text-(--ink)"
           >
-            {isSuccess ? 'Đăng ký thành công!' : copy.title}
+            {isSuccess ? copy.successTitle : copy.title}
           </h2>
           <p className="mt-2 max-w-sm text-[14px] leading-relaxed text-(--text-muted)">
-            {isSuccess ? `Cảm ơn bạn! Chúng tôi đã ghi nhận ${email}.` : copy.description}
+            {isSuccess ? copy.successBody(email) : copy.description}
           </p>
         </div>
 
@@ -150,7 +161,7 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
               onClick={closeDialog}
               className="flex h-11 w-full items-center justify-center rounded-xl border border-(--line-strong) bg-(--bg) text-sm font-semibold text-(--ink) hover:bg-(--bg-subtle)"
             >
-              Đóng lại
+              {copy.closeCta}
             </button>
           </div>
         ) : (
@@ -170,11 +181,11 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
               className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-(--ink) text-[15px] font-bold text-(--bg) shadow-md transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting && <Loader2Icon className="size-4 animate-spin" aria-hidden="true" />}
-              {isSubmitting ? 'Đang đăng ký...' : copy.button}
+              {isSubmitting ? copy.submitting : copy.button}
             </button>
             <div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-(--text-faint)">
               <LockIcon className="size-3 text-(--green)" aria-hidden="true" />
-              <span>Chúng tôi không lưu email của bạn vĩnh viễn và không spam.</span>
+              <span>{copy.privacyNote}</span>
             </div>
           </form>
         )}

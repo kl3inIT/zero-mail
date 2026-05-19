@@ -370,6 +370,8 @@
     "b2": "Không cần thẻ",
     "b3": "Hủy đăng ký bằng một cú nhấp",
     "button": "Đăng ký trải nghiệm",
+    "closeAria": "Đóng",
+    "closeCta": "Đóng lại",
     "desc": "Hãy đăng ký chờ. Mỗi tuần chúng tôi đón thêm 50 nhà sáng lập và quản lý vận hành theo thứ tự. Bạn sẽ nhận lời mời để cài đặt Zero Mail với tài khoản Gmail thật của mình.",
     "emailPlaceholder": "ban@congty.com",
     "eyebrow": "Truy cập sớm",
@@ -377,11 +379,17 @@
       "body": "Chúng tôi đào sâu vào Gmail trước khi mở rộng sang Outlook hay IMAP. Nếu bạn dùng hộp thư khác, để lại email và chúng tôi sẽ báo khi có hỗ trợ.",
       "title": "Chỉ Gmail · v1"
     },
+    "privacyNote": "Chúng tôi không lưu email của bạn vĩnh viễn và không spam.",
     "stats": {
       "s1": "trong danh sách chờ",
       "s2": "lời mời mỗi tuần",
       "s3": "giảm hộp thư trung bình",
       "s4": "email tự động gửi"
+    },
+    "submitting": "Đang đăng ký...",
+    "success": {
+      "body": "Cảm ơn bạn! Chúng tôi đã ghi nhận {email}.",
+      "title": "Đăng ký thành công!"
     },
     "title": {
       "a": "Đăng ký trải nghiệm Zero Mail",

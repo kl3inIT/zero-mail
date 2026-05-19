@@ -370,6 +370,8 @@
     "b2": "No card required",
     "b3": "Unsubscribe in one click",
     "button": "Register to experience",
+    "closeAria": "Close",
+    "closeCta": "Close",
     "desc": "Join the waitlist. We're onboarding 50 founders and operators a week, in order. You'll get an invite to set up Zero Mail with your real Gmail account.",
     "emailPlaceholder": "you@company.com",
     "eyebrow": "Early access",
@@ -377,11 +379,17 @@
       "body": "We're going deep on Gmail before adding Outlook or IMAP. If you live in another inbox, leave your email and we'll let you know when we expand.",
       "title": "Gmail-only · v1"
     },
+    "privacyNote": "We never store your email permanently and we don't spam.",
     "stats": {
       "s1": "on the waitlist",
       "s2": "invites going out",
       "s3": "avg inbox reduction",
       "s4": "emails auto-sent"
+    },
+    "submitting": "Registering...",
+    "success": {
+      "body": "Thank you! We've saved {email}.",
+      "title": "You're on the list!"
     },
     "title": {
       "a": "Register to experience Zero Mail",
