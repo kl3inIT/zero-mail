@@ -24,16 +24,16 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 
 ## Current Position
 
-Phase: 8 — Admin Console & Operator Tooling (not started, merged 2026-05-19)
+Phase: 8 — Admin Console & Operator Tooling (not started, merged 2026-05-19, WebAuthn pivot 2026-05-19)
 Plan: —
-Status: Planning (SPEC.md drafted; discuss-phase next)
-Last activity: 2026-05-19 — Phase 8 + former Phase 9 merged into single Phase 8 (40 reqs), SPEC.md written
+Status: Planning (SPEC.md + CONTEXT.md + DISCUSSION-LOG.md ready; plan-phase next)
+Last activity: 2026-05-19 — Phase 8 admin auth pivoted to WebAuthn passkey + separate apps/admin Vite frontend during discuss-phase; 42 reqs locked; CONTEXT.md committed `d00bdb77`
 
 ## Current Milestone Roadmap
 
-**v1.2 — Admin Console + User Settings UI** (2 phases, 59 requirements, all pending; merged 2026-05-19)
+**v1.2 — Admin Console + User Settings UI** (2 phases, 61 requirements, all pending; merged 2026-05-19; WebAuthn pivot 2026-05-19)
 
-- **Phase 8** — Admin Console & Operator Tooling (foundation + master keys + curated catalog + tenant inspection + queue + spend + OPS-INFRA; planning structure inside the phase: 8A foundation → 8B master keys → 8C tenant inspection → 8D catalog Sync → 8E queue health → 8F spend dashboard) — 40 requirements (OPS-INFRA-01..03, ADMIN-01..08, ARCH-08/09/10/11/12, MKEY-01..08, CAT-01..07, OPS-TENANT-01..05, OPS-QUEUE-01..02, OPS-SPEND-01..02)
+- **Phase 8** — Admin Console & Operator Tooling (WebAuthn admin auth + audit foundation + master keys + curated catalog + tenant inspection + queue + spend + OPS-INFRA; planning structure inside the phase: 8A foundation → 8B master keys → 8C tenant inspection → 8D catalog Sync → 8E queue health → 8F spend dashboard) — 42 requirements (OPS-INFRA-01..03, ADMIN-01..10, ARCH-08/09/10/11/12, MKEY-01..08, CAT-01..07, OPS-TENANT-01..05, OPS-QUEUE-01..02, OPS-SPEND-01..02)
 - **Phase 9** — User Settings UI on Curated Catalog (4-tab Settings: Personalization, Behavior, Safety Net, AI Provider/Model — AI tab consumes curated catalog from Phase 8) — 19 requirements (SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04, SET-AI-01..04)
 
 See `.planning/ROADMAP.md` for full phase details + success criteria, and `.planning/REQUIREMENTS.md` Traceability section for full REQ-ID → phase mapping.
