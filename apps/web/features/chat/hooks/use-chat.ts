@@ -59,12 +59,17 @@ function xsrfHeaderRecord(): Record<string, string> {
 
 export function useChat({ chatId, initialMessages }: UseChatOptions) {
   const [persistenceAckCount, setPersistenceAckCount] = useState(0);
+  // The constructor used to snapshot xsrfHeaderRecord() into transport.headers, but the XSRF
+  // token rotates mid-session under Spring Security defaults and the snapshot would go stale
+  // until a full page reload (WR-09). prepareSendMessagesRequest already re-reads the header
+  // on every call so per-request sends are safe; drop the top-level headers field so it does
+  // not freeze a stale token. Empty deps are correct because all callable closures
+  // (xsrfHeader, getApiUrl) re-evaluate inside prepareSendMessagesRequest on each invocation.
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: getApiUrl('/api/chat'),
         credentials: 'include',
-        headers: xsrfHeaderRecord(),
         prepareSendMessagesRequest: ({ id, messages }) => ({
           api: getApiUrl('/api/chat'),
           credentials: 'include',
