@@ -1,0 +1,30 @@
+package com.zeromail.core.admin.audit.domain;
+
+import com.zeromail.core.shared.lang.IdentifiedEnum;
+import java.util.NoSuchElementException;
+import java.util.stream.Stream;
+
+public enum AdminAuditAction implements IdentifiedEnum {
+    ADMIN_BOOTSTRAP_CREATED,
+    ADMIN_GRANTED,
+    ADMIN_REVOKED,
+    ADMIN_ROLE_GRANTED,
+    ADMIN_ROLE_REVOKED,
+    ADMIN_PASSKEY_REGISTERED,
+    ADMIN_LOGIN,
+    ADMIN_READ,
+    WEBAUTHN_REPLAY_SUSPECTED;
+
+    @Override
+    public String id() {
+        return name();
+    }
+
+    public static AdminAuditAction fromId(String id) {
+        return Stream.of(values())
+                .filter(adminAuditAction -> adminAuditAction.id().equals(id))
+                .findFirst()
+                .orElseThrow(
+                        () -> new NoSuchElementException("Unknown AdminAuditAction id: " + id));
+    }
+}

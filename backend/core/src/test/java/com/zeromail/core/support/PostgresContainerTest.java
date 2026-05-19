@@ -47,6 +47,9 @@ public abstract class PostgresContainerTest {
         r.add(
                 "zero-mail.crypto.refresh-token-key-base64",
                 () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        r.add(
+                "zero-mail.admin.audit.hmac-kek-base64",
+                () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
         // GmailApiClientFactory is in backend/core and is constructed by this test context.
         r.add(
                 "spring.security.oauth2.client.registration.google.client-id",

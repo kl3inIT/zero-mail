@@ -60,6 +60,9 @@ public abstract class PostgresContainerTest {
                 "zero-mail.crypto.refresh-token-key-base64",
                 () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
         dynamicPropertyRegistry.add(
+                "zero-mail.admin.audit.hmac-kek-base64",
+                () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        dynamicPropertyRegistry.add(
                 "zero-mail.worker.gmail.pubsub.topic-name", () -> "projects/test/topics/gmail");
         dynamicPropertyRegistry.add("zero-mail.gmail.api-root-url", GMAIL::baseUrl);
         dynamicPropertyRegistry.add(
