@@ -12,22 +12,22 @@
 
 ### Operations / Infrastructure (NEW — Phase 8B.0 prerequisite)
 
-- [ ] **OPS-INFRA-01**: Operator can deploy `decolua/9router:latest` as a sidecar Docker container in the existing `docker-compose.yml`, bound to loopback (`127.0.0.1:20128`), with `REQUIRE_API_KEY=true`, persistent SQLite volume at `/opt/zeromail/9router-data`, `JWT_SECRET` + `INITIAL_PASSWORD` overrides, and `AUTH_COOKIE_SECURE=true`
-- [ ] **OPS-INFRA-02**: Operator can migrate the existing VPS reverse-proxy (currently hand-managed nginx serving `apps/web` + `/api/*`) to a single `jc21/nginx-proxy-manager` container, manage routes (`web`, `api`, `9router-dashboard`) through NPM admin UI, and auto-renew Let's Encrypt certs through NPM. Existing OAuth callback URLs (Google) MUST remain bit-for-bit identical after migration
-- [ ] **OPS-INFRA-03**: Operator has a written runbook at `docs/ops/v1.2-deploy.md` covering: (a) zero-downtime migration steps from manual nginx → NPM, (b) 9Router sidecar first-run setup (default password reset, API-key generation, provider account connection), (c) rollback procedure if NPM/9Router fail, (d) backup of NPM `/data` + 9Router SQLite volumes
+- [x] **OPS-INFRA-01**: Operator can deploy `decolua/9router:latest` as a sidecar Docker container in the existing `docker-compose.yml`, bound to loopback (`127.0.0.1:20128`), with `REQUIRE_API_KEY=true`, persistent SQLite volume at `/opt/zeromail/9router-data`, `JWT_SECRET` + `INITIAL_PASSWORD` overrides, and `AUTH_COOKIE_SECURE=true`
+- [x] **OPS-INFRA-02**: Operator can migrate the existing VPS reverse-proxy (currently hand-managed nginx serving `apps/web` + `/api/*`) to a single `jc21/nginx-proxy-manager` container, manage routes (`web`, `api`, `9router-dashboard`) through NPM admin UI, and auto-renew Let's Encrypt certs through NPM. Existing OAuth callback URLs (Google) MUST remain bit-for-bit identical after migration
+- [x] **OPS-INFRA-03**: Operator has a written runbook at `docs/ops/v1.2-deploy.md` covering: (a) zero-downtime migration steps from manual nginx → NPM, (b) 9Router sidecar first-run setup (default password reset, API-key generation, provider account connection), (c) rollback procedure if NPM/9Router fail, (d) backup of NPM `/data` + 9Router SQLite volumes
 
 ### Admin Foundation — Auth, Routing, Audit (NEW)
 
-- [ ] **ADMIN-01**: Admin authenticates at `admin.zeromail.com` via Spring Security 7 `.webAuthn(...)` DSL (hardware-bound passkey, `userVerificationRequirement=REQUIRED`) on a dedicated `@Order(1) SecurityFilterChain` with `securityMatcher("/api/admin/**")`. NOT Google OAuth, NOT password, NOT HTTP Basic. Admin identity stored in `admin_users` table (separate from `users`). User-facing `users` table gains NO `role` column. Pivoted from Google-OAuth-bundled design 2026-05-19 during discuss-phase research.
-- [ ] **ADMIN-02**: Admin chain (`@Order(1)`) and user chain (`@Order(2)`) never share auth method or authority. Request to `/api/admin/*` without WebAuthn session returns 401 at chain level; admin with valid session returns 200. Explicit `@PreAuthorize("hasRole('ADMIN')")` per `@RestController` in `controllers/admin/` for defense in depth. ArchUnit rules `every_admin_controller_must_have_preauthorize` and `admin_chain_does_not_use_oauth2login` enforced in CI.
-- [ ] **ADMIN-03**: First-admin bootstrap via Liquibase seed of `admin_users` row(s) from `zeromail.admin.bootstrap-emails` config + Spring Boot startup runner that prints one 10-min one-time enrollment URL per PENDING_ENROLLMENT row to STDOUT (never log file, never DB). Admin uses URL to complete WebAuthn registration ceremony → row status `PENDING_ENROLLMENT` → `ACTIVE`. Operator can later grant admin via audited `POST /api/admin/grant-admin` (admin-only) returning fresh one-time URL communicated out-of-band to target.
-- [ ] **ADMIN-04**: Every admin action (catalog edits, master-key set/rotate, tenant pause/disconnect/delete, role grants/revokes) writes one row to `admin_audit_event` in the SAME transaction as the state mutation. Row contains: `actor_user_id`, `actor_email`, `action`, `target_kind`, `target_id`, `before_state_json`, `after_state_json`, `reason VARCHAR(500)`, `request_ip`, `request_id`, `created_at`, `hmac_chain_hash`
-- [ ] **ADMIN-05**: Every admin READ that touches tenant data (Tenant detail view, audit log query) writes one row to `admin_read_event` (separate from `admin_audit_event`); 30-day retention for reads, indefinite retention for actions
-- [ ] **ADMIN-06**: Admin frontend is a NEW separate `apps/admin` Vite + React 19 SPA (no SSR, no SEO, no Next.js) served at `admin.zeromail.com` via NPM proxy with its own Let's Encrypt cert; admin-schema TypeScript client lives only in `apps/admin/src/lib/api/`. Public `apps/web` Next.js bundle ships ZERO admin schema types and zero admin route code. Persistent "ADMIN MODE" banner inside `apps/admin` chrome for destructive-action context. Pivoted from `(admin)` Next.js sibling route group design 2026-05-19 during discuss-phase.
-- [ ] **ADMIN-07**: Admin can view paginated `admin_audit_event` log filtered by actor / action / target / date range, with CSV export (max 10k rows per export). Each row shows actor email + action + target + before/after diff
-- [ ] **ADMIN-08**: Destructive admin actions (tenant delete, master-key rotate, catalog disable-with-active-pins) require an in-modal confirm-twice + free-text "reason" (min 8 chars), which is recorded in the audit row
-- [ ] **ADMIN-09**: `admin_users` table schema (Liquibase changelog) with columns: `id UUID PRIMARY KEY`, `email VARCHAR(320) UNIQUE NOT NULL`, `display_name VARCHAR(200)`, `user_handle BYTEA NOT NULL UNIQUE`, `status VARCHAR(20) NOT NULL CHECK (status IN ('PENDING_ENROLLMENT','ACTIVE','REVOKED'))`, `credential_id BYTEA UNIQUE`, `public_key_cose BYTEA`, `signature_counter BIGINT DEFAULT 0`, `aaguid UUID`, `attestation_format VARCHAR(50)`, `last_used_at TIMESTAMPTZ`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`, `revoked_at TIMESTAMPTZ`, `revoked_reason VARCHAR(500)`. App DB user has INSERT + SELECT + UPDATE (last_used_at, signature_counter, status) only; DELETE forbidden — revocation via `status='REVOKED'` for audit trail.
-- [ ] **ADMIN-10**: WebAuthn enrollment + assertion ceremonies wired to Spring Security 7 `.webAuthn(...)` DSL. Enrollment: `EnrollmentTokenGate` filter validates one-time token + PENDING row → triggers `POST /webauthn/register/options` + `POST /webauthn/register` → row transitions ACTIVE + credential stored. Assertion: `POST /login/webauthn/options` + `POST /login/webauthn` → session issued + `signature_counter` incremented; downgraded `signCount` rejected + `WEBAUTHN_REPLAY_SUSPECTED` audit row written; REVOKED row returns 401; `userVerificationRequirement=REQUIRED` enforced. Lost-passkey recovery via shell access only (out of scope v1.2 UI).
+- [x] **ADMIN-01**: Admin authenticates at `admin.zeromail.com` via Spring Security 7 `.webAuthn(...)` DSL (hardware-bound passkey, `userVerificationRequirement=REQUIRED`) on a dedicated `@Order(1) SecurityFilterChain` with `securityMatcher("/api/admin/**")`. NOT Google OAuth, NOT password, NOT HTTP Basic. Admin identity stored in `admin_users` table (separate from `users`). User-facing `users` table gains NO `role` column. Pivoted from Google-OAuth-bundled design 2026-05-19 during discuss-phase research.
+- [x] **ADMIN-02**: Admin chain (`@Order(1)`) and user chain (`@Order(2)`) never share auth method or authority. Request to `/api/admin/*` without WebAuthn session returns 401 at chain level; admin with valid session returns 200. Explicit `@PreAuthorize("hasRole('ADMIN')")` per `@RestController` in `controllers/admin/` for defense in depth. ArchUnit rules `every_admin_controller_must_have_preauthorize` and `admin_chain_does_not_use_oauth2login` enforced in CI.
+- [x] **ADMIN-03**: First-admin bootstrap via Liquibase seed of `admin_users` row(s) from `zeromail.admin.bootstrap-emails` config + Spring Boot startup runner that prints one 10-min one-time enrollment URL per PENDING_ENROLLMENT row to STDOUT (never log file, never DB). Admin uses URL to complete WebAuthn registration ceremony → row status `PENDING_ENROLLMENT` → `ACTIVE`. Operator can later grant admin via audited `POST /api/admin/grant-admin` (admin-only) returning fresh one-time URL communicated out-of-band to target.
+- [x] **ADMIN-04**: Every admin action (catalog edits, master-key set/rotate, tenant pause/disconnect/delete, role grants/revokes) writes one row to `admin_audit_event` in the SAME transaction as the state mutation. Row contains: `actor_user_id`, `actor_email`, `action`, `target_kind`, `target_id`, `before_state_json`, `after_state_json`, `reason VARCHAR(500)`, `request_ip`, `request_id`, `created_at`, `hmac_chain_hash`
+- [x] **ADMIN-05**: Every admin READ that touches tenant data (Tenant detail view, audit log query) writes one row to `admin_read_event` (separate from `admin_audit_event`); 30-day retention for reads, indefinite retention for actions
+- [x] **ADMIN-06**: Admin frontend is a NEW separate `apps/admin` Vite + React 19 SPA (no SSR, no SEO, no Next.js) served at `admin.zeromail.com` via NPM proxy with its own Let's Encrypt cert; admin-schema TypeScript client lives only in `apps/admin/src/lib/api/`. Public `apps/web` Next.js bundle ships ZERO admin schema types and zero admin route code. Persistent "ADMIN MODE" banner inside `apps/admin` chrome for destructive-action context. Pivoted from `(admin)` Next.js sibling route group design 2026-05-19 during discuss-phase.
+- [x] **ADMIN-07**: Admin can view paginated `admin_audit_event` log filtered by actor / action / target / date range, with CSV export (max 10k rows per export). Each row shows actor email + action + target + before/after diff
+- [x] **ADMIN-08**: Destructive admin actions (tenant delete, master-key rotate, catalog disable-with-active-pins) require an in-modal confirm-twice + free-text "reason" (min 8 chars), which is recorded in the audit row
+- [x] **ADMIN-09**: `admin_users` table schema (Liquibase changelog) with columns: `id UUID PRIMARY KEY`, `email VARCHAR(320) UNIQUE NOT NULL`, `display_name VARCHAR(200)`, `user_handle BYTEA NOT NULL UNIQUE`, `status VARCHAR(20) NOT NULL CHECK (status IN ('PENDING_ENROLLMENT','ACTIVE','REVOKED'))`, `credential_id BYTEA UNIQUE`, `public_key_cose BYTEA`, `signature_counter BIGINT DEFAULT 0`, `aaguid UUID`, `attestation_format VARCHAR(50)`, `last_used_at TIMESTAMPTZ`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`, `revoked_at TIMESTAMPTZ`, `revoked_reason VARCHAR(500)`. App DB user has INSERT + SELECT + UPDATE (last_used_at, signature_counter, status) only; DELETE forbidden — revocation via `status='REVOKED'` for audit trail.
+- [x] **ADMIN-10**: WebAuthn enrollment + assertion ceremonies wired to Spring Security 7 `.webAuthn(...)` DSL. Enrollment: `EnrollmentTokenGate` filter validates one-time token + PENDING row → triggers `POST /webauthn/register/options` + `POST /webauthn/register` → row transitions ACTIVE + credential stored. Assertion: `POST /login/webauthn/options` + `POST /login/webauthn` → session issued + `signature_counter` incremented; downgraded `signCount` rejected + `WEBAUTHN_REPLAY_SUSPECTED` audit row written; REVOKED row returns 401; `userVerificationRequirement=REQUIRED` enforced. Lost-passkey recovery via shell access only (out of scope v1.2 UI).
 
 ### Master Keys / Platform Provider Config (NEW)
 
@@ -101,11 +101,11 @@
 
 ### Architecture Invariants — must hold at v1.2 close
 
-- [ ] **ARCH-08**: `AdminContext` is a `ScopedValue` mutually exclusive with `TenantContext` — entering admin scope clears the tenant binding and vice versa. Cross-tenant admin reads route through `AdminTenantAccess.readOnly(tenantId, supplier)` which writes one `admin_read_event` row before invoking the supplier. ArchUnit rule forbids admin packages from reading `TenantContext` directly
-- [ ] **ARCH-09**: ArchUnit `AdminPathBodyBanTest` enforces that classes under `..controllers.admin..` and `..core.admin..projection..` cannot reference `GmailClient` body-exposing methods, `ChatMessageRepository.findContent*`, `LlmCallAudit.prompt*` / `.completion*` field accessors, or any field named per the forbidden regex `body|bodyHtml|snippet|payload|prompt|completion|content`. Test runs in CI
-- [ ] **ARCH-10**: Single Gmail send call-site invariant from v1.1 ARCH-01 holds at v1.2 close — admin packages are forbidden by ArchUnit from referencing Gmail send methods entirely; the repo-wide grep gate continues to assert exactly 1 call site (the v1.1 `AssistantSendExecutor`). Master-key test-connection uses `GET /v1/models` (or per-provider equivalent), never a send method
+- [x] **ARCH-08**: `AdminContext` is a `ScopedValue` mutually exclusive with `TenantContext` — entering admin scope clears the tenant binding and vice versa. Cross-tenant admin reads route through `AdminTenantAccess.readOnly(tenantId, supplier)` which writes one `admin_read_event` row before invoking the supplier. ArchUnit rule forbids admin packages from reading `TenantContext` directly
+- [x] **ARCH-09**: ArchUnit `AdminPathBodyBanTest` enforces that classes under `..controllers.admin..` and `..core.admin..projection..` cannot reference `GmailClient` body-exposing methods, `ChatMessageRepository.findContent*`, `LlmCallAudit.prompt*` / `.completion*` field accessors, or any field named per the forbidden regex `body|bodyHtml|snippet|payload|prompt|completion|content`. Test runs in CI
+- [x] **ARCH-10**: Single Gmail send call-site invariant from v1.1 ARCH-01 holds at v1.2 close — admin packages are forbidden by ArchUnit from referencing Gmail send methods entirely; the repo-wide grep gate continues to assert exactly 1 call site (the v1.1 `AssistantSendExecutor`). Master-key test-connection uses `GET /v1/models` (or per-provider equivalent), never a send method
 - [ ] **ARCH-11**: A `MasterKeySentinelLeakTest` runs in CI and asserts that no log line, no admin response body, no exception message, no `application*.yml`, and no audit row contains any of the sentinel prefixes `sk-`, `sk-ant-`, `AIza`, `sk-or-` (or their masked-encoded forms). The test seeds dummy sentinel-prefixed master keys, exercises every admin endpoint that touches them, and greps the captured logs + responses
-- [ ] **ARCH-12**: `admin_audit_event` is append-only at the database level — the application DB user has no `UPDATE` or `DELETE` privilege on the table; a Postgres `BEFORE UPDATE OR DELETE` trigger raises `EXCEPTION` regardless of role; per-row `hmac_chain_hash` chains to the previous row's hash; a nightly verification job re-derives the chain and alerts on mismatch
+- [x] **ARCH-12**: `admin_audit_event` is append-only at the database level — the application DB user has no `UPDATE` or `DELETE` privilege on the table; a Postgres `BEFORE UPDATE OR DELETE` trigger raises `EXCEPTION` regardless of role; per-row `hmac_chain_hash` chains to the previous row's hash; a nightly verification job re-derives the chain and alerts on mismatch
 
 ---
 
@@ -193,19 +193,19 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| OPS-INFRA-01 | Phase 8 | Pending |
-| OPS-INFRA-02 | Phase 8 | Pending |
-| OPS-INFRA-03 | Phase 8 | Pending |
-| ADMIN-01 | Phase 8 | Pending |
-| ADMIN-02 | Phase 8 | Pending |
-| ADMIN-03 | Phase 8 | Pending |
-| ADMIN-04 | Phase 8 | Pending |
-| ADMIN-05 | Phase 8 | Pending |
-| ADMIN-06 | Phase 8 | Pending |
-| ADMIN-07 | Phase 8 | Pending |
-| ADMIN-08 | Phase 8 | Pending |
-| ADMIN-09 | Phase 8 | Pending |
-| ADMIN-10 | Phase 8 | Pending |
+| OPS-INFRA-01 | Phase 8 | Complete |
+| OPS-INFRA-02 | Phase 8 | Complete |
+| OPS-INFRA-03 | Phase 8 | Complete |
+| ADMIN-01 | Phase 8 | Complete |
+| ADMIN-02 | Phase 8 | Complete |
+| ADMIN-03 | Phase 8 | Complete |
+| ADMIN-04 | Phase 8 | Complete |
+| ADMIN-05 | Phase 8 | Complete |
+| ADMIN-06 | Phase 8 | Complete |
+| ADMIN-07 | Phase 8 | Complete |
+| ADMIN-08 | Phase 8 | Complete |
+| ADMIN-09 | Phase 8 | Complete |
+| ADMIN-10 | Phase 8 | Complete |
 | MKEY-01 | Phase 8 | Pending |
 | MKEY-02 | Phase 8 | Pending |
 | MKEY-03 | Phase 8 | Pending |
@@ -249,11 +249,11 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 | SET-AI-02 | Phase 9 | Pending |
 | SET-AI-03 | Phase 9 | Pending |
 | SET-AI-04 | Phase 9 | Pending |
-| ARCH-08 | Phase 8 | Pending |
-| ARCH-09 | Phase 8 | Pending |
-| ARCH-10 | Phase 8 | Pending |
+| ARCH-08 | Phase 8 | Complete |
+| ARCH-09 | Phase 8 | Complete |
+| ARCH-10 | Phase 8 | Complete |
 | ARCH-11 | Phase 8 | Pending |
-| ARCH-12 | Phase 8 | Pending |
+| ARCH-12 | Phase 8 | Complete |
 
 **Coverage (post-roadmap, post-pivot):**
 - v1.2 requirements: **61 total** (mapping confirmed 100% coverage, zero orphans)

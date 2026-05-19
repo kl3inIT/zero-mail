@@ -4,13 +4,13 @@ milestone: v1.2
 milestone_name: Admin Console Foundation + Settings UI
 status: executing
 stopped_at: Phase 8 planned (6 plans 8A-8F, 42 reqs)
-last_updated: "2026-05-19T16:18:39.134Z"
-last_activity: 2026-05-19 -- Phase 08 planning complete
+last_updated: "2026-05-19T20:57:53.650Z"
+last_activity: 2026-05-19
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 6
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 8 — Admin Console & Operator Tooling (merged auth/audit foundation + master keys + curated catalog + tenant inspection + queue + spend; original Phase 8 + 9 merged 2026-05-19 during spec-phase)
+**Current focus:** Phase 08 — admin-console-operator-tooling
 
 ## Current Position
 
-Phase: 8 — Admin Console & Operator Tooling (not started, merged 2026-05-19, WebAuthn pivot 2026-05-19)
-Plan: —
+Phase: 08 (admin-console-operator-tooling) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-05-19 -- Phase 08 planning complete
+Last activity: 2026-05-19
 
 ## Current Milestone Roadmap
 
@@ -157,6 +157,7 @@ See `.planning/ROADMAP.md` for full phase details + success criteria, and `.plan
 | Phase 07 P04 | 2h 6m | 3 tasks | 33 files |
 | Phase 07 P05 | 45min | 4 tasks | 28 files |
 | Phase 07 P06 | 7h | 8 tasks | 57 files |
+| Phase 08 P8A | multi-session | 8 tasks | 100+ files |
 
 ## Accumulated Context
 
@@ -335,6 +336,9 @@ Recent decisions affecting current work:
 - [Phase 07]: Plan 04 keeps ChatOrchestrator.stream non-transactional; prep, tool envelopes, and assistant text persistence happen through TransactionTemplate callbacks after stream lifecycle points.
 - [Phase 07]: Plan 04 places AssistantPendingActionReconciler in backend/api with API-side scheduling because v1.1 runs the chat surface in the API process, not worker-only schedulers.
 - [Phase 07]: Plan 04 ConfirmControllerShellIT is intentionally temporary and must be deleted in Plan 05 with the executor/state-machine atomic flip.
+- [Phase 08 8A]: /enroll remains SPA-only; backend enrollment token validation lives at POST /api/admin/enrollment/session.
+- [Phase 08 8A]: NPM admin UI port 81 is loopback-bound and reached through SSH tunneling, not public exposure.
+- [Phase 08 8A]: Task 8A-08 human-verify checkpoint auto-approved because workflow.auto_advance=true and it was not a package-legitimacy gate.
 
 ### Roadmap Evolution
 
@@ -363,6 +367,7 @@ Recent decisions affecting current work:
 - Open decisions deferred to phase execution: credit unit economics (Phase 2B), tokenizer choice (Phase 2C), payment provider Stripe vs LemonSqueezy (Phase 2B), observability vendor (any), CASA tier (Phase 1/6).
 - **Refresh-token key rotation drill** (Phase 2C or dedicated security-ceremony phase) — verification protocol: deploy v2 key alongside v1 in the deployment secret source (current VPS baseline: Docker secrets / systemd credentials / locked-down env files; future production options may include GCP Secret Manager, AWS Secrets Manager, or HashiCorp Vault); verify multi-version decrypt path reads `key_version` byte from envelope and selects correct key; rotate v1 → v2 + re-encrypt all rows; verify v1 envelopes still decrypt during overlap window. Per CLAUDE.md TL;DR ("No GCP hosting baseline; do not add spring-cloud-gcp starters by default"), the drill must be deployment-source-agnostic.
 - **Production cookie `secure: true` profile override + `REFRESH_TOKEN_KEY_BASE64` deployment secret resolution** (Phase 6 launch hardening) — verification protocol: assert `application-prod.yml` overrides `server.servlet.session.cookie.secure: true`; assert `REFRESH_TOKEN_KEY_BASE64` resolves successfully from the configured deployment secret source in prod profile (Docker secret / systemd credential / env file mounted via the VPS deployment pipeline; possible future production options: GCP Secret Manager, AWS Secrets Manager, HashiCorp Vault); assert app fails-fast at boot if the secret is missing (no fallback to plain env-var in prod). Per CLAUDE.md TL;DR, no GCP-specific resolution is required by default.
+- Phase 08 8A final verification found pre-existing public API test drift from db38a7be: legacy tests still call /me and /tenant routes while production controllers map /api/**; admin gates pass, cleanup deferred in phase deferred-items.md.
 
 ### Quick Tasks Completed
 
@@ -478,9 +483,9 @@ Items acknowledged and deferred at v1.1 milestone close on 2026-05-19.
 
 ## Session Continuity
 
-Last session: 2026-05-19T15:20:03.801Z
+Last session: 2026-05-19T20:56:14.626Z
 Stopped at: Phase 8 planned (6 plans 8A-8F, 42 reqs)
-Resume file: .planning/phases/08-admin-console-operator-tooling/8A-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
