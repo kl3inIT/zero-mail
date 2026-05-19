@@ -85,7 +85,7 @@ Downstream agents (`gsd-phase-researcher`, `gsd-planner`, `gsd-executor`) MUST r
 - **D-10:** `AdminContext` ScopedValue + `TenantContext` ScopedValue are **mutually exclusive** — entering one binding makes `currentOrThrow()` of the other throw. Codepath-level belt-and-suspenders defense on top of `SecurityFilterChain` isolation. `AdminTenantAccess.readOnly(tenantId, supplier)` is the only legitimate path for cross-tenant admin reads + writes `admin_read_event` row before invoking supplier inside `TenantContext.run`.
 
 ### Tenant Detail Routing
-- **D-11:** Tenant detail 5-tab page (`/tenants/:tenantId` in `apps/admin`) uses **single React Router route + shadcn `<Tabs>` + `?tab=` query param**. URL: `/tenants/abc?tab=health`. TanStack Query lazy per-tab (overview loads immediately; health/billing/spend/activity load on tab click). `admin_read_event` writes 1 row per tab visit (5 rows max per session) — useful audit granularity. URL shareable for co-admin reproducible-view.
+- **D-11:** Tenant detail 5-tab page (`/tenants/:tenantId` in `apps/admin`) uses **single TanStack Router file route (`tenants.$tenantId.tsx`) + shadcn `<Tabs>` + `?tab=` query param validated via `validateSearch: zodSchema` (type-inferred enum)**. URL: `/tenants/abc?tab=health`. TanStack Query lazy per-tab (overview loads immediately; health/billing/spend/activity load on tab click). `admin_read_event` writes 1 row per tab visit (5 rows max per session) — useful audit granularity. URL shareable for co-admin reproducible-view. NOT React Router. See D-24 for full apps/admin stack.
 
 ### Audit & Append-Only Invariants
 - **D-12:** `admin_audit_event` **indefinite retention**; `admin_read_event` **30-day retention** enforced by nightly cleanup job.
@@ -106,6 +106,75 @@ Downstream agents (`gsd-phase-researcher`, `gsd-planner`, `gsd-executor`) MUST r
 ### OPS-INFRA Gating
 - **D-22:** Phase 8 merge gate ships docker-compose changes + NPM subdomain config for `admin.zeromail.com` + `docs/ops/v1.2-deploy.md` runbook. **Live VPS migration** from hand-managed nginx → NPM + 9Router sidecar boot + admin subdomain DNS = separate deploy step, tracked but not blocking phase merge.
 - **D-23:** Optional **IP allowlist for `admin.zeromail.com`** at NPM proxy layer documented in OPS-INFRA-03 runbook — not mandatory v1.2 (solo operator accessibility trade-off) but trivial to enable later.
+
+### Stack Versions Lock (added 2026-05-20 — verified live on npm registry + Maven Central direct HTTP probes)
+
+- **D-24 (apps/admin frontend stack):** New Vite + React SPA pins these versions exactly (verified via `npm view <pkg> version` 2026-05-20):
+
+  | Package | Version | Role |
+  |---|---|---|
+  | `vite` | **8.0.13** | Build tool (Rolldown bundler default in v8) |
+  | `@vitejs/plugin-react-swc` | 4.3.1 | SWC React plugin (faster HMR than Babel) |
+  | `react` + `react-dom` | 19.2.6 | UI runtime |
+  | `typescript` | 6.0.3 | Compiler |
+  | `@tanstack/react-router` | **1.170.4** | File-based routing — REPLACES initial "React Router" intent |
+  | `@tanstack/router-plugin` | 1.168.6 | Vite plugin (MUST come BEFORE `react()` in `vite.config.ts` — Context7-verified silent-fail otherwise) |
+  | `@tanstack/router-devtools` | 1.167.0 | Dev only |
+  | `@tanstack/react-query` | 5.100.11 | Server state |
+  | `@tanstack/react-query-devtools` | 5.100.11 | Dev only |
+  | `@tanstack/react-form` | **1.32.0** | Form state — REPLACES initial "react-hook-form" intent |
+  | `zod` | **4.4.3** | Validation — Zod 4 implements Standard Schema 1.0 spec; passed directly to `validators: { onChange: schema }` |
+  | ~~`@tanstack/zod-form-adapter`~~ | ~~DEPRECATED~~ | DO NOT install — Zod 4 + TanStack Form v1 integrate via Standard Schema; the adapter package (last 0.42.1 early-2024) is end-of-life |
+  | `tailwindcss` | 4.3.0 | Styling — CSS-only `@theme` block, NO `tailwind.config.ts`, NO `postcss.config.js` |
+  | `@tailwindcss/vite` | 4.3.0 | Tailwind Vite plugin |
+  | `openapi-fetch` | 0.17.0 | Typed HTTP client |
+  | `openapi-typescript` | 7.13.0 | OpenAPI → TS codegen |
+  | `@simplewebauthn/browser` | 13.3.0 | WebAuthn client ceremony |
+  | `vitest` + `@vitest/ui` | 4.1.6 | Unit tests |
+  | `@playwright/test` | 1.60.0 | E2E tests |
+
+  **File-based routing convention** (D-11 implementation, supersedes earlier React-Router-style assumption):
+  ```
+  apps/admin/src/routes/
+  ├── __root.tsx                    # AdminLayout + AdminModeBanner + <Outlet />
+  ├── enroll.tsx                    # /enroll
+  ├── login.tsx                     # /login
+  ├── _authenticated.tsx            # layout route — WebAuthn session gate
+  └── _authenticated/
+      ├── index.tsx                 # /
+      ├── audit.tsx                 # /audit
+      ├── role-grants.tsx           # /role-grants
+      ├── master-keys.tsx           # /master-keys              (8B)
+      ├── catalog.tsx               # /catalog                  (8D)
+      ├── tenants.tsx               # /tenants                  (8C)
+      ├── tenants.$tenantId.tsx     # /tenants/:id?tab=…        (8C, D-11)
+      ├── queue.tsx                 # /queue                    (8E)
+      └── spend.tsx                 # /spend                    (8F)
+  ```
+
+  D-11's `?tab=` query param wired via TanStack Router `validateSearch: zodSchema` + `Route.useSearch()` (fully type-inferred from the Zod enum schema). NO React Router; NO manual route definitions.
+
+- **D-25 (backend stack — Phase 8 additions):** Verified via direct Maven Central HTTP probes 2026-05-20 (Solr search index has lag; `repo1.maven.org/maven2/...pom` is authoritative). Phase 8 adds **ZERO new runtime dependencies**:
+  - **Spring Boot 4.0.6** — locked (4.0.7 not released yet)
+  - **Spring Framework 7.0.7** — locked (7.0.8 not released yet)
+  - **Spring Security 7.0.5** — locked (7.0.6 not released yet); `.webAuthn(...)` DSL native; `webauthn4j-core 0.30.0.RELEASE` pulled transitively (do NOT add explicit declaration)
+  - **Spring Modulith 2.0.2** — Boot 4.x compatible (BOM-managed)
+  - **Spring AI 2.0.0-M6** — locked (M7 not released yet)
+  - **Hibernate 7.0.x** — Boot 4.0.6 BOM pin (7.1.0.Final exists but accept BOM)
+  - **Liquibase 5.0.3** — **optional patch bump** from project-locked 5.0.2 (safe semver bugfix)
+  - **PostgreSQL JDBC 42.7.x** — Boot BOM-managed
+  - **Jackson 3.1.x** — Boot BOM-managed
+  - **springdoc-openapi 3.0.3** — locked (3.0.4 not released yet)
+  - **ArchUnit 1.4.2** — optional patch bump
+
+  Every Phase 8 capability sources from already-locked deps:
+  - WebAuthn server → `org.springframework.security.web.webauthn.*` (built into spring-security-web)
+  - HMAC chain audit → `javax.crypto.Mac.getInstance("HmacSHA256")` (JDK 25 stdlib)
+  - Catalog `/v1/models` HTTP probe → `org.springframework.web.client.RestClient` (Spring Framework 7 stdlib)
+  - Nightly verification job → `@Scheduled` (spring-context)
+  - AES-GCM master keys → existing `RefreshTokenCipher` reuse
+
+  Plan-phase research SUMMARY claim of "zero new backend runtime deps" verified accurate.
 
 ### Claude's Discretion
 - **Tenant detail tab routing decision (D-11)** locked by Claude when user said "vụ này bạn decide". Recommended choice rationale: shadcn Tabs primitive already installed, query-param URL shareable, audit granularity per tab visit useful, balanced data-fetch strategy.
