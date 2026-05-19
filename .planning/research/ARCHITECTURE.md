@@ -1227,3 +1227,1265 @@ The question asks how to split into shippable phases and what blocks what. Recom
 
 *Architecture research for: Zero Mail v1.1 — chat email assistant + AI settings page integration into existing Spring Boot 4 + Spring Modulith + Next.js 16 monorepo*
 *Researched: 2026-05-17 by gsd-researcher (direct codebase read + sibling research integration + verified ArchUnit/Modulith patterns)*
+# Architecture Research — Zero Mail v1.2 Delta (Admin Console Foundation + Settings UI)
+
+**Domain:** Integration of an admin console (Phase 8) + the Settings UI on top of an admin-curated LLM catalog (Phase 9), bolted onto the shipped v1.0 + v1.1 Java 25 / Spring Boot 4 / Spring Modulith / Next.js 16 monorepo.
+**Researched:** 2026-05-19
+**Confidence:** HIGH on existing module layout, ArchUnit gates, Modulith allowedDependencies, Liquibase changelog cadence, controller-grouping convention, AES-GCM BYOK pattern, Spring Session Redis cookie auth, `@Sensitive` Logback scrub, `csrf().spa()` SPA-token pattern, OpenAPI codegen pipeline (all directly verified by reading `backend/core/src/main/java/com/zeromail/core/llm/**`, `backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java`, `backend/core/src/main/resources/db/changelog/changes/0[1-4]*.yaml`). MEDIUM-HIGH on admin role storage placement (Spring Security authority model verified, role attached to user vs separate admin_user table is a design choice argued below). MEDIUM on Sync-from-`/models` flow (depends on which providers expose a `/models` listing endpoint at Spring AI M6 maturity — DeepSeek and OpenAI do; Anthropic does not, requires manual catalog seeding).
+
+> **Scope.** This is the v1.2 architecture delta only. The v1.0 baseline (Modulith module list, Scoped Values tenant context, single LLM gateway, AES-GCM BYOK via `RefreshTokenCipher`, Liquibase YAML migrations, cookie sessions) AND the v1.1 delta (the `core.chat` Modulith module, `AssistantSendExecutor` send carve-out, `@AllowedSendCallSite` 3-layer gate, `csrf().spa()` SPA-token CSRF, AI Elements primitives in `apps/web`) are locked. This document only describes new packages, new controllers, new tables, new ArchUnit gates, and new dependency edges for the admin console foundation (Phase 8) and the Settings UI consumption layer (Phase 9). It explicitly does NOT re-research parts that already exist.
+
+---
+
+## System Overview (v1.2 additions on top of v1.0 + v1.1)
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│                              apps/web (Next.js 16, React 19)                          │
+├──────────────────────────────────────────────────────────────────────────────────────┤
+│   Existing route groups:                                                              │
+│     app/(public)/   app/(auth)/   app/(protected)/(app)/                              │
+│                                                                                       │
+│   NEW v1.2 route group:                                                               │
+│     app/(protected)/(admin)/                  ← NEW route group (admin shell)         │
+│       ├── layout.tsx                          ← ROLE_ADMIN gate (server component)    │
+│       ├── admin/page.tsx                      ← dashboard (spend, queue health)       │
+│       ├── admin/catalog/                                                              │
+│       │     ├── page.tsx                      ← provider list                         │
+│       │     ├── [providerId]/page.tsx         ← model list per provider               │
+│       │     └── feature-bindings/page.tsx     ← chat/triage/draft/compile model pins  │
+│       ├── admin/master-keys/page.tsx          ← AES-GCM master-key CRUD               │
+│       ├── admin/tenants/                                                              │
+│       │     ├── page.tsx                      ← tenant search (read-only)             │
+│       │     └── [tenantId]/page.tsx           ← tenant detail (read-only)             │
+│       ├── admin/queue/page.tsx                ← worker queue health (read-only)       │
+│       ├── admin/audit/page.tsx                ← admin action log (read-only)          │
+│       └── admin/spend/page.tsx                ← global LLM spend dashboard            │
+│                                                                                       │
+│   EXTEND v1.1 routes (no new routes):                                                 │
+│     app/(protected)/(app)/settings/page.tsx                                           │
+│       └── add ai/personalization/behavior/safety-net tabs                             │
+│       └── ai tab consumes /api/settings/catalog (admin-curated)                       │
+│                                                                                       │
+│   NEW v1.2 features:                                                                  │
+│     features/admin-catalog/{api,components,hooks,query-keys.ts,messages.ts}           │
+│     features/admin-master-keys/{api,components,hooks,query-keys.ts,messages.ts}       │
+│     features/admin-tenants/{api,components,hooks,query-keys.ts,messages.ts}           │
+│     features/admin-queue/{api,components,hooks,query-keys.ts,messages.ts}             │
+│     features/admin-audit/{api,components,hooks,query-keys.ts,messages.ts}             │
+│     features/admin-spend/{api,components,hooks,query-keys.ts,messages.ts}             │
+│     features/assistant-settings/  ← v1.1 deferred reqs land here in Phase 9           │
+│                                                                                       │
+│   middleware.ts (existing) extended to redirect /admin/* away on non-admin session    │
+└──────────────────────────────────────────────────────────────────────────────────────┘
+                                          │  HTTP same-origin behind reverse proxy
+                                          ▼
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│                       backend/api (Spring MVC, Tomcat + virtual threads)              │
+├──────────────────────────────────────────────────────────────────────────────────────┤
+│   Existing controllers:  rules/  triage/  gmail/  analytics/  billing/  llm/  chat/   │
+│                          assistant/  ...                                              │
+│                                                                                       │
+│   NEW v1.2 controllers (controllers/admin/, dto/admin/):                              │
+│     AdminCatalogController         CRUD /api/admin/catalog/providers, /models         │
+│                                    POST /api/admin/catalog/providers/{id}/sync-models │
+│     AdminFeatureBindingController  GET/PUT /api/admin/catalog/feature-bindings        │
+│     AdminMasterKeyController       CRUD /api/admin/master-keys (per provider)         │
+│                                    POST /api/admin/master-keys/{provider}/rotate      │
+│                                    POST /api/admin/master-keys/{provider}/test        │
+│     AdminTenantController          GET /api/admin/tenants (search, paginate)          │
+│                                    GET /api/admin/tenants/{tenantId} (read-only)      │
+│     AdminQueueController           GET /api/admin/queue/health                        │
+│     AdminAuditController           GET /api/admin/audit (filter+paginate)             │
+│     AdminSpendController           GET /api/admin/spend/global, /by-tenant, /by-model │
+│                                                                                       │
+│   NEW v1.2 user-facing controller (read curated catalog):                             │
+│     SettingsCatalogController      GET /api/settings/catalog                          │
+│                                    (returns admin-curated subset filtered to features │
+│                                     the current tenant is allowed to override)        │
+│                                                                                       │
+│   NEW security layer:                                                                 │
+│     AdminAccessVoter (or @PreAuthorize("hasRole('ADMIN')"))                           │
+│     /api/admin/** → requires ROLE_ADMIN                                               │
+│     Existing SecurityFilterChain (Order 3) extended with new authorizeHttpRequests    │
+│     entry; NO new filter chain unless admin needs different CSRF/CORS rules           │
+│     (it does not).                                                                    │
+└──────────────────────────────────────────────────────────────────────────────────────┘
+                                          │  in-process service calls
+                                          ▼
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│                       backend/core (Spring Modulith modules)                          │
+├──────────────────────────────────────────────────────────────────────────────────────┤
+│  Existing modules:                                                                    │
+│   tenant  account  gmail  llm  rules  triage  draft  thread  analytics                │
+│   billing  notification  onboarding  chat (v1.1)  shared.*                            │
+│                                                                                       │
+│  NEW v1.2 Modulith module:  com.zeromail.core.admin                                   │
+│    Allowed deps: tenant, account, llm, billing, analytics, gmail, triage,             │
+│                  chat (read-only projections), shared.persistence, shared.lang,       │
+│                  shared.privacy                                                       │
+│                                                                                       │
+│  Sub-packages of admin/:                                                              │
+│   admin/                                                                              │
+│    ├── package-info.java        @ApplicationModule(displayName="Admin Console")       │
+│    ├── domain/                  AdminRole, AdminAction, AdminAuditEventType,          │
+│    │                            CatalogProvider, CatalogModel, FeatureBindingKey,     │
+│    │                            ProviderMasterKeyState                                │
+│    ├── usecases/                                                                      │
+│    │   ├── catalog/             ProviderCatalogService, ModelCatalogService,          │
+│    │   │                        FeatureBindingService, CatalogSyncService             │
+│    │   ├── masterkey/           MasterKeyService, MasterKeyRotationService,           │
+│    │   │                        MasterKeyTestService                                  │
+│    │   ├── tenantview/          AdminTenantQueryService (read-only)                   │
+│    │   ├── queue/               WorkerQueueHealthService (read-only)                  │
+│    │   ├── spend/               GlobalSpendQueryService                               │
+│    │   └── audit/               AdminAuditLogger, AdminAuditQueryService              │
+│    ├── projection/              CatalogProviderProjection, CatalogModelProjection,    │
+│    │                            FeatureBindingProjection, MasterKeyStateProjection,   │
+│    │                            TenantSummaryProjection, QueueHealthProjection,       │
+│    │                            GlobalSpendProjection, AdminAuditEntryProjection,     │
+│    │                            CuratedCatalogProjection (for user Settings)          │
+│    ├── persistence/             LlmProviderCatalogEntity, LlmModelCatalogEntity,      │
+│    │                            LlmFeatureBindingEntity, LlmProviderMasterKeyEntity,  │
+│    │                            AdminAuditEntity, *Repository interfaces              │
+│    └── exception/               CatalogValidationException, MasterKeyValidation...    │
+│                                                                                       │
+│  NEW v1.2 module:  com.zeromail.core.settings.catalog (or settings sub-package)       │
+│    Purpose: thin read-side that exposes the admin-curated catalog to per-tenant       │
+│             Settings UI. Lives in core because it crosses chat/triage/draft feature   │
+│             concerns. ONE service: CuratedCatalogQueryService.                        │
+│    Allowed deps: admin (projection), tenant, shared.lang.                             │
+│                                                                                       │
+│  v1.2 changes to EXISTING modules:                                                    │
+│   llm/    ADD: ProviderMasterKeyResolver (reads admin.persistence master-key table)   │
+│           NO change to LlmGateway shape.                                              │
+│           The platform-default API keys move from application.yml properties to       │
+│           the new admin-managed master-key table (with config-fallback for dev).      │
+│   account/ ADD: UserEntity.role column (UUID? AccountRole enum) OR new                │
+│            user_admin_grant table — see decision below.                               │
+│   chat/   NO change. Chat catalog binding still reads through new                     │
+│           CuratedCatalogQueryService inside AssistantSettingsService.                 │
+└──────────────────────────────────────────────────────────────────────────────────────┘
+                                          │  JDBC
+                                          ▼
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│                           PostgreSQL 17 (same VPS)                                    │
+├──────────────────────────────────────────────────────────────────────────────────────┤
+│  NEW v1.2 tables (changelogs 048–056):                                                │
+│   048-admin-role.yaml                ALTER users ADD COLUMN role                      │
+│   049-llm-provider-catalog.yaml      llm_provider_catalog                             │
+│   050-llm-model-catalog.yaml         llm_model_catalog                                │
+│   051-llm-feature-binding.yaml       llm_feature_binding                              │
+│   052-llm-provider-master-key.yaml   llm_provider_master_key (+ rotation history row) │
+│   053-admin-audit.yaml               admin_audit (append-only)                        │
+│   054-catalog-seed.yaml              seed: openai/anthropic/google-genai/deepseek     │
+│                                            + initial known-good models                │
+│   055-catalog-sync-job.yaml          processing_job augment (job_type catalog_sync)   │
+│   056-admin-master-key-backfill.yaml backfill: move application.yml platform keys     │
+│                                       into llm_provider_master_key (dev-only path)    │
+└──────────────────────────────────────────────────────────────────────────────────────┘
+                                          ▲
+                                          │  Redis 7 (same VPS)
+                                          │
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│   Existing: Spring Session Redis + per-tenant ChatModel cache + assistant:lease:* +   │
+│             rate-limit buckets.                                                       │
+│   NEW v1.2: admin:catalog:sync:{provider}     ← SET NX EX 300, prevents duplicate     │
+│                                                  sync clicks during in-flight job     │
+│             admin:masterkey:test:{provider}   ← rate-limit test-connection (60/min)   │
+│   NO worker queue use for hot paths — admin actions are synchronous request-scoped    │
+│   except sync-from-/models, which dispatches a processing_job.                        │
+└──────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Decisions (the load-bearing ones)
+
+### D1. Admin lives in `core.admin` (new module), NOT inside `core.llm`
+
+**Decision:** Create new top-level Modulith module `com.zeromail.core.admin`.
+
+**Why.** `core.llm` is the **horizontal gateway** — every domain calls it. Its current `allowedDependencies` is narrow (`tenant`, `billing`, `shared.persistence`, `shared.lang`, `gmail.persistence.crypto`) by design — that narrowness is what makes the Spring AI 2.0.0-M6 → GA migration small. Folding admin in inflates `llm/` to depend on `account` (admin RBAC), `analytics` (spend), `triage` (queue read), `chat` (tenant view) — that broadens the gateway from "anyone calls in" to "knows about every domain," destroying the contract.
+
+Catalog management, master-key rotation, audit, tenant read-views, and queue health are all admin-domain concerns. They orchestrate **across** the existing modules — exactly the shape v1.1 chose for `core.chat`. Same rationale, same pattern.
+
+**Alternative considered (rejected):** `core.llm.admin` sub-package. Rejected because (a) Modulith treats sub-packages as part of the parent module's API surface; (b) ArchUnit's `DomainPurityArchTest` would have to whitelist admin-specific framework deps inside `llm/`; (c) the tenant-view + audit + queue-health responsibilities are non-LLM, so the package name would lie about what's in it.
+
+**What `core.llm` does gain:** ONE new file — `ProviderMasterKeyResolver` — that reads from `admin.persistence.LlmProviderMasterKeyRepository`. That goes inside `llm.gateway.springai` (where existing platform-key resolution already lives) and adds `admin` to `llm`'s `allowedDependencies` list. This is the only crack in `llm`'s narrow contract, and it is justified: master keys are the data `llm` already consumes today (currently from `application.yml`), just sourced differently.
+
+### D2. Admin RBAC: `users.role` column + Spring Security authority, NOT a separate `admin_user` table
+
+**Decision:** Add `role` column to existing `users` table (`USER` | `ADMIN` | `SUPPORT`), surface as Spring Security `GrantedAuthority` (`ROLE_USER`, `ROLE_ADMIN`, `ROLE_SUPPORT`) from the OAuth provisioning step. Enforce with `@PreAuthorize("hasRole('ADMIN')")` on admin controllers plus a single `authorizeHttpRequests` matcher `.requestMatchers("/api/admin/**").hasRole("ADMIN")` in `SecurityConfig`.
+
+**Why.**
+- **One identity per Google account.** Admins are Zero Mail employees logging in with Google, same OAuth bundled-scopes flow. A separate `admin_user` table forces dual-login or stub-Gmail-connection workarounds.
+- **Spring Security has a first-class authority model.** Re-inventing role checks via custom annotations / `ArchUnit` gates is strictly worse — Spring's `MethodSecurityInterceptor` already short-circuits at the AOP boundary with full audit-log integration.
+- **No new auth provider.** Admin uses the same Google OAuth, same Spring Session Redis cookie, same `TenantBindingFilter`, same `csrf().spa()` SPA-token. The admin's *own* tenant (the one that gets provisioned when a Zero Mail employee signs up with their own Google account) coexists with the admin role grant — admins can also be ordinary users of the product.
+- **Role grant mechanism is an email allowlist read at provisioning time.** A new `admin.email-allowlist` config property in `application.yml` (and the Postgres-backed `tenant_property` or a new `admin_email_allowlist` table for runtime updates without redeploy) is consulted inside `GoogleOAuthSuccessHandler` to elevate `role=ADMIN` if the email matches. Initial bootstrap is a single config-file entry; subsequent grants/revokes happen through the admin console itself (an admin promotes another email via `/api/admin/grant-admin`).
+
+**Alternative considered (rejected): separate `admin_user` table.** Pros: hard separation of user data and admin grants; revoke admin without touching the user record. Cons (decisive): doubles the OAuth flow (admin login vs user login), forces a second `ROLE_ADMIN` check that doesn't see `TenantContext`, and breaks the "admin is also a user" prosumer-friendly model. Vetoed.
+
+**Alternative considered (rejected): a Spring Security `oauth2Login` UserService that reads role from Google Workspace group membership.** Pros: no DB column. Cons: requires Workspace API scope expansion (not in current bundle, would re-trigger CASA review), couples role to Google's directory, and the project explicitly avoids GCP-specific dependencies (`STACK.md` no-GCP-baseline). Vetoed.
+
+**ArchUnit gate to keep this honest:** new `AdminAccessOnlyOnAdminControllersTest` — any class under `controllers/admin/` MUST be class-annotated with `@PreAuthorize` OR have every public method `@PreAuthorize`-annotated. Forces explicit role gating at every entry point.
+
+### D3. Catalog persistence: 3 tables (`llm_provider_catalog`, `llm_model_catalog`, `llm_feature_binding`)
+
+**Decision:** Normalize provider + model + feature-binding into three tables, NOT a single JSONB blob.
+
+**Why.**
+- **Filter + sort.** Admin UI needs to filter models by provider, by capability (supports-tools, supports-streaming, context-window-min), by status (enabled/disabled). JSONB queries are doable but harder to index than a normal columnar schema, and the cardinality is small (4 providers × ~30 models = 120 rows). No reason to JSONB it.
+- **Foreign keys keep it consistent.** `llm_feature_binding.model_id → llm_model_catalog.id ON DELETE RESTRICT` means an admin can't disable a model that's still pinned as the default for a feature without first re-pointing the binding. A JSONB column gives no such guarantee.
+- **Versioning is per-row.** Each model row carries `release_date`, `pricing_input_usd_per_mtok`, `pricing_output_usd_per_mtok`, `context_window_tokens`, `supports_tools`, `supports_streaming`, `is_deprecated`, `provider_model_id` (the vendor's wire ID, e.g. `gpt-4o-2024-08-06`). Updating pricing for one model is a single `UPDATE` against one row.
+
+**Schema sketch:**
+
+```yaml
+# 049-llm-provider-catalog.yaml
+- createTable:
+    tableName: llm_provider_catalog
+    columns:
+      - column: { name: id, type: uuid, constraints: { primaryKey: true } }
+      - column: { name: provider_key, type: varchar(32), constraints: { nullable: false, unique: true } }
+        # openai / anthropic / google-genai / deepseek (matches BYOKProvider.id())
+      - column: { name: display_name, type: varchar(64), constraints: { nullable: false } }
+      - column: { name: enabled, type: boolean, defaultValueBoolean: true, constraints: { nullable: false } }
+      - column: { name: byok_supported, type: boolean, defaultValueBoolean: true, constraints: { nullable: false } }
+      - column: { name: models_listing_endpoint, type: varchar(256) }
+        # e.g. https://api.openai.com/v1/models — nullable; null means manual catalog only
+      - column: { name: created_at, type: timestamptz, defaultValueComputed: now(), constraints: { nullable: false } }
+      - column: { name: updated_at, type: timestamptz, defaultValueComputed: now(), constraints: { nullable: false } }
+      - column: { name: version, type: int, defaultValueNumeric: 0, constraints: { nullable: false } }
+
+# 050-llm-model-catalog.yaml
+- createTable:
+    tableName: llm_model_catalog
+    columns:
+      - column: { name: id, type: uuid, constraints: { primaryKey: true } }
+      - column:
+          name: provider_id
+          type: uuid
+          constraints: { nullable: false, foreignKeyName: fk_llm_model_catalog_provider, references: llm_provider_catalog(id) }
+      - column: { name: provider_model_id, type: varchar(128), constraints: { nullable: false } }
+        # vendor wire id: gpt-4o-2024-08-06, claude-3-5-sonnet-20241022, etc.
+      - column: { name: display_name, type: varchar(128), constraints: { nullable: false } }
+      - column: { name: enabled, type: boolean, defaultValueBoolean: true, constraints: { nullable: false } }
+      - column: { name: context_window_tokens, type: int, constraints: { nullable: false } }
+      - column: { name: supports_tools, type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }
+      - column: { name: supports_streaming, type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }
+      - column: { name: pricing_input_usd_per_mtok, type: numeric(10,4) }
+      - column: { name: pricing_output_usd_per_mtok, type: numeric(10,4) }
+      - column: { name: is_deprecated, type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }
+      - column: { name: release_date, type: date }
+      - column: { name: notes, type: text }
+        # admin-authored notes shown to users in the Settings AI tab tooltip
+      - column: { name: synced_at, type: timestamptz }
+        # last time the row came from a provider /models call; null = hand-added
+      - column: { name: created_at, type: timestamptz, defaultValueComputed: now(), constraints: { nullable: false } }
+      - column: { name: updated_at, type: timestamptz, defaultValueComputed: now(), constraints: { nullable: false } }
+      - column: { name: version, type: int, defaultValueNumeric: 0, constraints: { nullable: false } }
+- addUniqueConstraint:
+    tableName: llm_model_catalog
+    columnNames: provider_id, provider_model_id
+    constraintName: uq_llm_model_catalog_provider_modelid
+
+# 051-llm-feature-binding.yaml
+- createTable:
+    tableName: llm_feature_binding
+    columns:
+      - column: { name: id, type: uuid, constraints: { primaryKey: true } }
+      - column: { name: feature_key, type: varchar(32), constraints: { nullable: false, unique: true } }
+        # chat / triage / draft / rule-compile / semantic-intent — IdentifiedEnum FeatureKey
+      - column:
+          name: default_model_id
+          type: uuid
+          constraints: { nullable: false, foreignKeyName: fk_llm_feature_binding_model, references: llm_model_catalog(id) }
+      - column: { name: user_override_allowed, type: boolean, defaultValueBoolean: true, constraints: { nullable: false } }
+      - column: { name: byok_allowed, type: boolean, defaultValueBoolean: true, constraints: { nullable: false } }
+      - column: { name: updated_at, type: timestamptz, defaultValueComputed: now(), constraints: { nullable: false } }
+      - column: { name: version, type: int, defaultValueNumeric: 0, constraints: { nullable: false } }
+```
+
+**Why `provider_model_id` is separate from `id`:** vendor IDs change naming (`gpt-4o` → `gpt-4o-2024-08-06`); we keep a stable internal UUID + the wire ID as a versioned field. Bindings reference internal UUID — a model deprecation does not break bindings until the admin re-points.
+
+**Catalog seed (changelog 054)** ships with the current v1.0/v1.1 known-good combos: OpenAI `gpt-4o-mini` + `gpt-4o`, Anthropic `claude-3-5-sonnet-20241022` + `claude-3-5-haiku-20241022`, Google `gemini-1.5-pro` + `gemini-1.5-flash`, DeepSeek `deepseek-chat`. This is the safety net so the system boots even if /models sync fails.
+
+### D4. Master-key storage: new `llm_provider_master_key` table, reuse `RefreshTokenCipher` (AES-GCM)
+
+**Decision:** New table `llm_provider_master_key`, one row per provider, key envelope encrypted with the existing app-layer `RefreshTokenCipher` (AES-GCM, key version, AAD = provider key). DO NOT extend `tenant_byok_credentials` — that table is tenant-scoped (FK to `tenants`), and master keys are tenant-less (platform-wide).
+
+**Why.**
+- **AES-GCM at app layer is the project's locked crypto story** (CLAUDE.md "no `pgp_sym_encrypt`"). Reusing `RefreshTokenCipher` means one crypto codepath, one key-rotation procedure, one ArchUnit gate.
+- **Rotation history matters.** Master-key rotation needs to track: current encrypted key, previous encrypted key (for grace window), key_version, rotated_by (admin user UUID), rotated_at. A simple `(provider, encrypted_key, key_version, rotated_by, rotated_at)` shape covers it; rotation is a single transactional UPDATE that bumps `key_version` + writes an `admin_audit` row.
+- **Plaintext never persists.** `RefreshTokenCipher.decrypt(...)` returns plaintext bytes that the `ProviderMasterKeyResolver` hands to Spring AI's per-request ChatClient (existing per-tenant cache key scheme already wipes the key after the request — same as BYOK in v1.0).
+
+**Schema sketch (changelog 052):**
+
+```yaml
+- createTable:
+    tableName: llm_provider_master_key
+    columns:
+      - column: { name: id, type: uuid, constraints: { primaryKey: true } }
+      - column:
+          name: provider_id
+          type: uuid
+          constraints: { nullable: false, unique: true, uniqueConstraintName: uq_llm_provider_master_key_provider, foreignKeyName: fk_llm_provider_master_key_provider, references: llm_provider_catalog(id) }
+      - column: { name: encrypted_key, type: bytea, constraints: { nullable: false } }
+      - column: { name: key_version, type: smallint, constraints: { nullable: false } }
+      - column: { name: previous_encrypted_key, type: bytea }
+        # grace window: keep previous after rotation for in-flight requests holding the old key
+      - column: { name: previous_key_version, type: smallint }
+      - column: { name: rotated_by_user_id, type: uuid, constraints: { foreignKeyName: fk_llm_provider_master_key_rotated_by, references: users(id) } }
+      - column: { name: rotated_at, type: timestamptz }
+      - column: { name: created_at, type: timestamptz, defaultValueComputed: now(), constraints: { nullable: false } }
+      - column: { name: updated_at, type: timestamptz, defaultValueComputed: now(), constraints: { nullable: false } }
+      - column: { name: version, type: int, defaultValueNumeric: 0, constraints: { nullable: false } }
+```
+
+**Sensitive-log scrub:** `LlmProviderMasterKeyEntity.encryptedKey` and `.previousEncryptedKey` are `@Sensitive` (existing Logback scrub catches it). The entity NEVER exposes the decrypted plaintext through a getter — `ProviderMasterKeyResolver` is the only consumer and it hands the plaintext directly into the Spring AI options builder, then zeroes the buffer.
+
+**Test-connection flow:**
+```
+[Admin clicks "Test connection" for OpenAI]
+    ↓ POST /api/admin/master-keys/openai/test
+[AdminMasterKeyController.test(provider)]
+    ↓ rate-limit check Redis admin:masterkey:test:openai (max 60/min)
+[MasterKeyTestService.test(provider)]
+    ↓ decrypt key via RefreshTokenCipher (in-memory only)
+    ↓ build a one-off Spring AI ChatClient with the key
+    ↓ send a 3-token "ping" prompt to the cheapest model for that provider
+    ↓ on success: write admin_audit row (action=MASTER_KEY_TEST_OK, target=provider)
+    ↓ on failure: write admin_audit row (action=MASTER_KEY_TEST_FAILED, target=provider, error_kind=...)
+    ↓ return AdminMasterKeyTestResponse { ok, latencyMs, modelTested, errorKind? }
+```
+
+### D5. Sync-from-`/models`: dispatched as a `processing_job`, NOT synchronous
+
+**Decision:** Admin clicks "Sync models" → POST `/api/admin/catalog/providers/{providerId}/sync-models` → backend writes a `processing_job(job_type=catalog_sync, payload={providerId})` and returns `202 Accepted` with a `jobId`. The worker (`backend/worker`) picks it up via SKIP LOCKED, calls the provider's `/v1/models` endpoint, upserts `llm_model_catalog` rows. Admin UI polls `GET /api/admin/jobs/{jobId}` every 2s for status.
+
+**Why.**
+- **Provider `/models` calls can take 2–15 seconds** for cold connections. Holding an HTTP request thread for that is bad UX (admin sees a spinner with no progress; if it times out, the catalog is half-synced).
+- **Already have the queue.** v1.0 ships a Postgres `processing_job` table with SKIP LOCKED in `backend/worker`. Adding a new `job_type=catalog_sync` is one new handler class. Don't introduce a parallel async mechanism.
+- **Redis idempotency lease** (`admin:catalog:sync:{provider}` SET NX EX 300) prevents double-dispatch if the admin double-clicks. The lease is independent of the processing-job row; it short-circuits the controller before the row is written.
+- **Resilient to mid-sync failure.** A processing_job that fails halfway leaves the catalog in a consistent intermediate state — we upsert per-model in its own transaction, so a network blip between models 17 and 18 leaves models 1–17 updated and 18–N untouched. Re-running the job is idempotent (UPSERT by `(provider_id, provider_model_id)`).
+
+**Worker handler (new `backend/worker` code):**
+```java
+@Component
+public class CatalogSyncJobHandler implements ProcessingJobHandler {
+    @Override public String jobType() { return "catalog_sync"; }
+    @Override public void handle(ProcessingJobRecord job) {
+        UUID providerId = UUID.fromString(job.payload().get("providerId").asText());
+        // calls into core.admin.usecases.catalog.CatalogSyncService.runForProvider(providerId)
+    }
+}
+```
+
+Sync logic lives in `core.admin.usecases.catalog.CatalogSyncService` — the worker is a thin dispatcher.
+
+**Audit:** every sync run (success or fail) writes an `admin_audit` row (`action=CATALOG_SYNC_RUN`, `actor=<admin user>`, `target=<provider>`, `meta={modelsAdded,modelsUpdated,modelsDeprecated,durationMs,errorKind?}`).
+
+### D6. Admin audit log: separate `admin_audit` table, NOT unified with triage audit
+
+**Decision:** New table `admin_audit`. Distinct from v1.0's `triage_audit` and v1.1's `assistant_send_audit`.
+
+**Why three audit tables instead of one unified `audit_log`?**
+- **Different actors, different schemas.** Triage audit: actor=system (rule engine), target=Gmail message. Send audit: actor=user-confirmed, target=Gmail message. Admin audit: actor=admin user, target=catalog row / master key / tenant record / config setting. A unified shape would need polymorphic `actor_type` + `actor_id` + `target_type` + `target_id` + `meta JSONB`, and queries against it would be slower than three focused tables.
+- **Retention requirements differ.** Triage audit = 30-day rolling window with auto-prune. Send audit = append-only, no auto-prune (the trust story requires it). Admin audit = append-only, indefinite (compliance / forensics). Mixing them in one table forces a single retention policy that's wrong for two of three.
+- **Query patterns differ.** Triage audit is queried per-tenant per-day for UI. Send audit is queried per-chat for the audit UI. Admin audit is queried globally with filters (admin user, action type, target type, date range) — a different index strategy.
+
+**Schema sketch (changelog 053):**
+
+```yaml
+- createTable:
+    tableName: admin_audit
+    columns:
+      - column: { name: id, type: uuid, constraints: { primaryKey: true } }
+      - column:
+          name: actor_user_id
+          type: uuid
+          constraints: { nullable: false, foreignKeyName: fk_admin_audit_actor, references: users(id) }
+      - column: { name: actor_email_snapshot, type: varchar(320), constraints: { nullable: false } }
+        # captured at write time so deleting the admin's user row doesn't erase the audit trail
+      - column: { name: action_type, type: varchar(64), constraints: { nullable: false } }
+        # CATALOG_PROVIDER_UPDATED, CATALOG_MODEL_TOGGLED, FEATURE_BINDING_CHANGED,
+        # MASTER_KEY_ROTATED, MASTER_KEY_TEST_OK, MASTER_KEY_TEST_FAILED,
+        # CATALOG_SYNC_RUN, TENANT_VIEWED, ADMIN_GRANTED, ADMIN_REVOKED
+      - column: { name: target_type, type: varchar(32) }
+        # provider | model | feature-binding | master-key | tenant | user
+      - column: { name: target_id, type: varchar(64) }
+      - column: { name: diff, type: jsonb }
+        # { before: {...}, after: {...} } for mutation actions; null for view actions
+      - column: { name: client_ip, type: varchar(64) }
+      - column: { name: user_agent, type: varchar(256) }
+      - column: { name: occurred_at, type: timestamptz, defaultValueComputed: now(), constraints: { nullable: false } }
+- createIndex:
+    indexName: idx_admin_audit_actor_occurred
+    tableName: admin_audit
+    columns: [ { column: { name: actor_user_id } }, { column: { name: occurred_at, descending: true } } ]
+- createIndex:
+    indexName: idx_admin_audit_action_occurred
+    tableName: admin_audit
+    columns: [ { column: { name: action_type } }, { column: { name: occurred_at, descending: true } } ]
+```
+
+**ArchUnit gate:** new `AdminMutationsMustAuditTest` — any method on a `controllers/admin/*` controller that has HTTP verb `POST`, `PUT`, `PATCH`, `DELETE` MUST call `AdminAuditLogger.log(...)`. Prevents "forgot to audit" silently shipping.
+
+### D7. Tenant read-only views: Spring Data JDBC projections, ArchUnit-banned from JPA writes
+
+**Decision:** `core.admin.usecases.tenantview.AdminTenantQueryService` uses Spring Data JDBC (already a project dep — used by analytics for read paths) to project tenant summaries. The repository in `admin.persistence.AdminTenantQueryRepository` is a `@Repository`-annotated interface extending `org.springframework.data.repository.Repository<TenantSummaryProjection, UUID>` with only `find...` methods — NO `save` / `delete`. ArchUnit verifies admin's tenant-read path has zero `EntityManager` / `JpaRepository` / `@Modifying` references for tenant entities.
+
+**Why JPA-free reads here.**
+- **Cross-domain query.** Tenant detail needs columns from `tenants`, `users`, `gmail_connection`, `tenant_byok_credentials` (status only, not key bytes), `credit_ledger_entry` aggregates, `triage_audit` counts, recent `chat` activity. JPA forces either N+1 fetches or fetch-graph annotations that complicate the entity definitions. A single SQL with joins is clearer.
+- **Read-only guarantee at the type level.** A `Repository` (not `CrudRepository`) interface with only query methods physically can't write. The ArchUnit gate makes that contract enforceable across refactors.
+- **Body content stays out.** The projection records have no `body` / `bodyText` / `parts` fields. ArchUnit `AdminProjectionPrivacyTest` rejects any projection record whose name suggests body content (regex `(?i)body|content|prompt|completion`) — extends the v1.1 chat persistence privacy gate to admin reads.
+
+**Spend dashboard:** same pattern — Spring Data JDBC against `credit_ledger_entry` joined with `llm_model_catalog` (for pricing) and `tenants` (for grouping). The aggregation runs as a parameterized SQL query, not a JPQL.
+
+### D8. Worker queue health: read-only projection over existing `processing_job` table — NO new schema
+
+**Decision:** `WorkerQueueHealthService` runs read-only Spring Data JDBC queries against the existing v1.0 `processing_job` + `mail_message_observed` + `pubsub_delivery` tables and the Modulith event publication table. Returns counts grouped by `(job_type, state)`, oldest-unstarted timestamp per job_type, and stuck-job count (`state=PROCESSING AND leased_until < now()`).
+
+**Why not new schema.**
+- The queue *is* the schema. Adding a `queue_health_snapshot` table would either be a denormalization that's stale (write-on-trigger) or a duplication that's racy (write-on-cron).
+- The dashboard refresh interval is "user clicks refresh" or 30s auto-poll — query latency on `processing_job` with proper indexes is sub-50ms even at v1.2 scale (50 tenants × low hundreds of jobs/day).
+- Existing indexes on `(state, leased_until)` (added in v1.0 for the worker SKIP LOCKED scan) make this query cheap.
+
+**Three projection records:**
+- `QueueDepthByJobTypeProjection(jobType, state, count)`
+- `OldestUnstartedByJobTypeProjection(jobType, oldestQueuedAt, ageSeconds)`
+- `StuckJobProjection(jobId, jobType, state, leasedUntil, attempts)`
+
+### D9. Settings AI tab consumes a **curated** catalog via `SettingsCatalogController`
+
+**Decision:** New user-facing endpoint `GET /api/settings/catalog` returns the admin-curated catalog filtered to:
+- providers with `enabled=true`,
+- models with `enabled=true AND is_deprecated=false`,
+- feature bindings where `user_override_allowed=true`.
+
+The response shape is the **user-facing projection** (`CuratedCatalogProjection`) — admin-only fields (`pricing_*`, `synced_at`, `notes` if internal) are stripped.
+
+**Why not have Settings UI hit `/api/admin/catalog/...` directly with a public ACL?**
+- **Privilege separation by URL prefix is auditable.** `/api/admin/**` is `hasRole('ADMIN')` and that's it. Mixing user-readable subsets into admin endpoints with conditional field stripping is a leak waiting to happen.
+- **Different shape.** Admin sees pricing, deprecated flags, sync metadata. Users see only what they can choose. Two endpoints, two DTOs, no `?adminMode=true` flag.
+- **Cache differently.** User catalog is cached per-locale with a long TTL (changes are admin-rare). Admin catalog is uncached.
+
+`CuratedCatalogQueryService` lives in `core.admin.usecases.catalog` (it queries admin's tables) but is exposed via `backend/api`'s `SettingsCatalogController`, which sits under the existing user `/api/settings/*` controller group — NOT under `/api/admin/*`. The controller path determines ACL, not the underlying service.
+
+### D10. Frontend `/admin/*` routes are a SEPARATE route group `(admin)`, NOT layered onto `(app)`
+
+**Decision:** New route group `apps/web/app/(protected)/(admin)/` with its own `layout.tsx` that:
+1. Server-side reads the session (existing `getServerSession()` or equivalent).
+2. Checks the `role` claim from `/api/me` (extend the existing `MeResponse` DTO with `role`).
+3. Redirects to `/` (or `/403`) if `role !== 'ADMIN'`.
+4. Renders a distinct admin shell (top nav: "Catalog • Master Keys • Tenants • Queue • Spend • Audit") — different from the user app shell.
+
+**Why a separate route group.**
+- **Different navigation.** Admin nav is not "Rules / Chat / Settings"; it's "Catalog / Master Keys / Tenants / Queue / Spend / Audit." Sharing the `(app)` layout forces a conditional nav with role-based filtering, which is uglier and easier to bug.
+- **Different middleware concern.** `middleware.ts` already handles `(protected)` redirect-to-login. Adding `(admin)` lets us layer a second middleware check (admin role → admin layout) without touching the user app path. Existing protected check still runs; admin check is an additional layer.
+- **Different visual language.** Admin pages don't need the purple Zero Mail brand chrome — they should look like a workshop console (denser tables, less brand). A separate layout makes that natural.
+- **No deep-link confusion.** A user accidentally visiting `/admin/catalog` gets the redirect; they don't see a partial admin page render with permission errors.
+
+Existing user routes are unchanged. The Settings AI tab in `(app)/settings` reads from `/api/settings/catalog` — it does NOT cross into `/admin/*`.
+
+---
+
+## Component Responsibilities (v1.2 only)
+
+| Component | Responsibility | Where it lives |
+|-----------|----------------|----------------|
+| `AdminCatalogController` | CRUD on providers + models; trigger sync-from-`/models` (returns 202 + jobId). | `backend/api/.../controllers/admin/AdminCatalogController.java` |
+| `AdminFeatureBindingController` | GET + PUT for `(featureKey → defaultModel, userOverrideAllowed, byokAllowed)` bindings. | `backend/api/.../controllers/admin/AdminFeatureBindingController.java` |
+| `AdminMasterKeyController` | Per-provider master-key CRUD + rotate + test. | `backend/api/.../controllers/admin/AdminMasterKeyController.java` |
+| `AdminTenantController` | Read-only tenant search + detail. | `backend/api/.../controllers/admin/AdminTenantController.java` |
+| `AdminQueueController` | Read-only `processing_job` health view. | `backend/api/.../controllers/admin/AdminQueueController.java` |
+| `AdminAuditController` | Read-only `admin_audit` paginated query. | `backend/api/.../controllers/admin/AdminAuditController.java` |
+| `AdminSpendController` | Global + by-tenant + by-model LLM spend aggregates. | `backend/api/.../controllers/admin/AdminSpendController.java` |
+| `SettingsCatalogController` | User-facing curated catalog GET. | `backend/api/.../controllers/settings/SettingsCatalogController.java` |
+| `ProviderCatalogService` | Provider CRUD + toggle. Writes `admin_audit` on mutation. | `backend/core/.../admin/usecases/catalog/ProviderCatalogService.java` |
+| `ModelCatalogService` | Model CRUD + toggle + manual add. | `backend/core/.../admin/usecases/catalog/ModelCatalogService.java` |
+| `FeatureBindingService` | Feature → model pin + override flags. | `backend/core/.../admin/usecases/catalog/FeatureBindingService.java` |
+| `CatalogSyncService` | The actual /models call + upsert loop. Called BOTH from the admin controller (for tiny one-off catalogs that don't need a job) AND from the worker job handler. Idempotent. | `backend/core/.../admin/usecases/catalog/CatalogSyncService.java` |
+| `MasterKeyService` | Create + read (status only, never plaintext) + delete. Encrypts via `RefreshTokenCipher`. | `backend/core/.../admin/usecases/masterkey/MasterKeyService.java` |
+| `MasterKeyRotationService` | Rotate (encrypt new → move old to `previous_*` → bump version → audit). Grace window cleanup is a worker job (out of v1.2). | `backend/core/.../admin/usecases/masterkey/MasterKeyRotationService.java` |
+| `MasterKeyTestService` | Decrypt + cheap /ping LLM call through Spring AI; never logs the key. | `backend/core/.../admin/usecases/masterkey/MasterKeyTestService.java` |
+| `ProviderMasterKeyResolver` | NEW in `core.llm.gateway.springai`. The one place that reads `llm_provider_master_key` and supplies plaintext key bytes to Spring AI options. | `backend/core/.../llm/gateway/springai/ProviderMasterKeyResolver.java` |
+| `AdminTenantQueryService` | Spring Data JDBC projections of tenant data; NO writes; NO body content. | `backend/core/.../admin/usecases/tenantview/AdminTenantQueryService.java` |
+| `WorkerQueueHealthService` | Read-only aggregation over `processing_job`. | `backend/core/.../admin/usecases/queue/WorkerQueueHealthService.java` |
+| `GlobalSpendQueryService` | Spend rollups joining `credit_ledger_entry` × `llm_model_catalog` × `tenants`. | `backend/core/.../admin/usecases/spend/GlobalSpendQueryService.java` |
+| `AdminAuditLogger` | One-line API: `log(action, target, diff)` reads `TenantContext` + Spring Security principal + request meta and writes one row. | `backend/core/.../admin/usecases/audit/AdminAuditLogger.java` |
+| `AdminAuditQueryService` | Paginated filter query. | `backend/core/.../admin/usecases/audit/AdminAuditQueryService.java` |
+| `CuratedCatalogQueryService` | User-facing read (curated subset). | `backend/core/.../admin/usecases/catalog/CuratedCatalogQueryService.java` |
+| `CatalogSyncJobHandler` | Worker dispatcher for `job_type=catalog_sync`. Thin wrapper that calls `CatalogSyncService`. | `backend/worker/.../jobs/CatalogSyncJobHandler.java` |
+| `AdminAccessVoter` (if needed) | If Spring Security `@PreAuthorize("hasRole('ADMIN')")` is not enough — only add if discoveries during execution show role grants need per-tenant context (probably not). | `backend/api/.../security/AdminAccessVoter.java` |
+
+---
+
+## Recommended Project Structure
+
+### Backend — new packages under `backend/core/src/main/java/com/zeromail/core/`
+
+```
+admin/
+├── package-info.java                  # @ApplicationModule(displayName="Admin Console", allowedDependencies={...})
+├── domain/                            # framework-free vocabulary
+│   ├── package-info.java
+│   ├── AdminRole.java                 # IdentifiedEnum: USER, ADMIN, SUPPORT (SUPPORT = read-only admin)
+│   ├── AdminActionType.java           # IdentifiedEnum of all auditable action types
+│   ├── FeatureKey.java                # IdentifiedEnum: CHAT, TRIAGE, DRAFT, RULE_COMPILE, SEMANTIC_INTENT
+│   ├── ProviderKey.java               # value object — wraps the 4 provider identifiers (matches BYOKProvider)
+│   ├── ModelCapability.java           # bit-flag style record: supportsTools, supportsStreaming, contextWindow
+│   ├── CatalogValidationRules.java    # pure validation of provider_model_id shape, pricing ranges, etc.
+│   └── MasterKeyValidator.java        # checks key looks like a key for that provider (sk-... for OpenAI, etc.)
+├── usecases/
+│   ├── package-info.java
+│   ├── catalog/
+│   │   ├── ProviderCatalogService.java
+│   │   ├── ModelCatalogService.java
+│   │   ├── FeatureBindingService.java
+│   │   ├── CatalogSyncService.java
+│   │   ├── CuratedCatalogQueryService.java
+│   │   └── commands/results records
+│   ├── masterkey/
+│   │   ├── MasterKeyService.java
+│   │   ├── MasterKeyRotationService.java
+│   │   ├── MasterKeyTestService.java
+│   │   └── commands/results records
+│   ├── tenantview/
+│   │   ├── AdminTenantQueryService.java
+│   │   └── TenantSearchQuery.java
+│   ├── queue/
+│   │   └── WorkerQueueHealthService.java
+│   ├── spend/
+│   │   ├── GlobalSpendQueryService.java
+│   │   └── SpendBucket.java
+│   └── audit/
+│       ├── AdminAuditLogger.java
+│       └── AdminAuditQueryService.java
+├── projection/
+│   ├── package-info.java
+│   ├── CatalogProviderProjection.java
+│   ├── CatalogModelProjection.java
+│   ├── FeatureBindingProjection.java
+│   ├── MasterKeyStateProjection.java    # { provider, hasKey, keyVersion, lastRotatedAt, lastTestStatus }
+│   ├── TenantSummaryProjection.java
+│   ├── TenantDetailProjection.java
+│   ├── QueueDepthProjection.java
+│   ├── OldestUnstartedProjection.java
+│   ├── StuckJobProjection.java
+│   ├── GlobalSpendProjection.java
+│   ├── AdminAuditEntryProjection.java
+│   └── CuratedCatalogProjection.java    # user-facing — stripped of admin-only fields
+├── persistence/
+│   ├── package-info.java
+│   ├── LlmProviderCatalogEntity.java
+│   ├── LlmProviderCatalogRepository.java
+│   ├── LlmModelCatalogEntity.java
+│   ├── LlmModelCatalogRepository.java
+│   ├── LlmFeatureBindingEntity.java
+│   ├── LlmFeatureBindingRepository.java
+│   ├── LlmProviderMasterKeyEntity.java       # encrypted bytea fields are @Sensitive
+│   ├── LlmProviderMasterKeyRepository.java
+│   ├── AdminAuditEntity.java                  # append-only
+│   ├── AdminAuditRepository.java
+│   └── jdbc/                                  # Spring Data JDBC read-side
+│       ├── AdminTenantQueryRepository.java    # read-only, no save/delete
+│       ├── QueueHealthQueryRepository.java
+│       └── GlobalSpendQueryRepository.java
+└── exception/
+    ├── package-info.java
+    ├── CatalogValidationException.java
+    ├── ProviderInUseException.java            # can't disable provider with active bindings
+    ├── ModelInUseException.java               # can't delete model that's a feature default
+    ├── MasterKeyMissingException.java
+    ├── MasterKeyTestFailedException.java
+    └── AdminAccessDeniedException.java
+```
+
+### Backend — changes to existing modules
+
+```
+backend/core/src/main/java/com/zeromail/core/
+├── account/
+│   └── persistence/UserEntity.java                  # ADD: @Column role (AdminRole)
+├── account/usecases/OAuthProvisioningService.java   # ADD: consult AdminEmailAllowlist, set role=ADMIN if listed
+├── account/projection/CurrentUserProjection.java    # ADD: role field
+└── llm/
+    ├── package-info.java                            # ADD allowedDependencies: "admin"
+    └── gateway/springai/
+        └── ProviderMasterKeyResolver.java           # NEW — reads admin.persistence.LlmProviderMasterKeyRepository
+```
+
+### Backend — new files under `backend/api`
+
+```
+backend/api/src/main/java/com/zeromail/api/
+├── controllers/
+│   ├── admin/
+│   │   ├── AdminCatalogController.java
+│   │   ├── AdminFeatureBindingController.java
+│   │   ├── AdminMasterKeyController.java
+│   │   ├── AdminTenantController.java
+│   │   ├── AdminQueueController.java
+│   │   ├── AdminAuditController.java
+│   │   ├── AdminSpendController.java
+│   │   └── AdminGrantController.java          # POST /api/admin/grant-admin (promote a user)
+│   └── settings/
+│       └── SettingsCatalogController.java     # GET /api/settings/catalog (user-facing)
+├── dto/
+│   ├── admin/
+│   │   ├── CatalogProviderRequest.java + Response.java
+│   │   ├── CatalogModelRequest.java + Response.java
+│   │   ├── FeatureBindingRequest.java + Response.java
+│   │   ├── MasterKeyCreateRequest.java + Response.java
+│   │   ├── MasterKeyTestResponse.java
+│   │   ├── TenantSummaryResponse.java
+│   │   ├── TenantDetailResponse.java
+│   │   ├── QueueHealthResponse.java
+│   │   ├── GlobalSpendResponse.java
+│   │   ├── AdminAuditPageResponse.java
+│   │   └── CatalogSyncJobAcceptedResponse.java
+│   └── settings/
+│       └── CuratedCatalogResponse.java
+└── security/
+    └── AdminEmailAllowlistProperties.java     # @ConfigurationProperties("zeromail.admin")
+```
+
+### Backend — new files under `backend/worker`
+
+```
+backend/worker/src/main/java/com/zeromail/worker/
+└── jobs/
+    └── CatalogSyncJobHandler.java             # dispatcher for job_type=catalog_sync
+```
+
+### Backend — new test files
+
+```
+backend/core/src/test/java/com/zeromail/core/arch/
+├── AdminAccessOnlyOnAdminControllersTest.java     # all admin controllers @PreAuthorize-gated
+├── AdminMutationsMustAuditTest.java               # write verbs on admin controllers call AdminAuditLogger
+├── AdminProjectionPrivacyTest.java                # admin projections have no body/content fields
+└── AdminTenantViewIsReadOnlyTest.java             # AdminTenantQueryRepository has no save/delete
+
+backend/core/src/test/java/com/zeromail/core/admin/
+├── CatalogSyncServiceIdempotencyTest.java
+├── MasterKeyRotationServiceTest.java               # grace window correctness
+├── MasterKeyTestServiceTest.java                   # mocked Spring AI, no real LLM
+├── AdminAuditLoggerTest.java
+├── CuratedCatalogQueryServiceTest.java             # admin-only fields stripped
+└── FeatureBindingServiceRestrictTest.java          # can't delete model with active binding
+```
+
+### Frontend — new route group + features
+
+```
+apps/web/
+├── app/(protected)/(admin)/
+│   ├── layout.tsx                              # role gate + admin shell
+│   ├── admin/page.tsx                          # dashboard
+│   ├── admin/catalog/page.tsx                  # providers list
+│   ├── admin/catalog/[providerId]/page.tsx     # models per provider
+│   ├── admin/catalog/feature-bindings/page.tsx
+│   ├── admin/master-keys/page.tsx
+│   ├── admin/tenants/page.tsx
+│   ├── admin/tenants/[tenantId]/page.tsx
+│   ├── admin/queue/page.tsx
+│   ├── admin/audit/page.tsx
+│   └── admin/spend/page.tsx
+├── app/(protected)/(app)/settings/page.tsx     # MODIFY — add 4 tabs; AI tab pulls from /api/settings/catalog
+├── features/
+│   ├── admin-catalog/{api,components,hooks,query-keys.ts,messages.ts}
+│   ├── admin-master-keys/{api,components,hooks,query-keys.ts,messages.ts}
+│   ├── admin-tenants/{api,components,hooks,query-keys.ts,messages.ts}
+│   ├── admin-queue/{api,components,hooks,query-keys.ts,messages.ts}
+│   ├── admin-audit/{api,components,hooks,query-keys.ts,messages.ts}
+│   ├── admin-spend/{api,components,hooks,query-keys.ts,messages.ts}
+│   ├── admin-shell/                            # cross-admin shell (nav, layout pieces)
+│   └── assistant-settings/{api,components,hooks,query-keys.ts,messages.ts}    # Phase 9
+└── middleware.ts                               # MODIFY — add admin role check for /admin/*
+```
+
+### Structure rationale (admin module placement)
+
+- **`admin/` is a new top-level Modulith module, sibling of `chat/`.** Same reasoning v1.1 used: catalog management, master-key rotation, audit, tenant read-views, queue health, and spend reporting are cross-cutting concerns that touch every other module. Folding them inside any one existing module (`llm/`, `account/`, `analytics/`) inflates that module's `allowedDependencies` and destroys its narrow contract.
+
+- **`admin.usecases.catalog/`, `admin.usecases.masterkey/`, `admin.usecases.tenantview/`, etc. are sub-packages, NOT sub-modules.** Spring Modulith treats sub-packages as part of the parent module's internals. The directory split is organizational; the Modulith boundary is at `admin/`. This is the same pattern `core.chat.usecases.tools.*` uses in v1.1.
+
+- **`ProviderMasterKeyResolver` lives in `core.llm.gateway.springai/`, NOT in `core.admin.usecases.masterkey/`.** The resolver's *consumer* is Spring AI's option builder, which already lives in `llm.gateway.springai`. Putting the resolver there keeps the Spring AI confinement zone intact (the resolver imports `org.springframework.ai.*` to call `withApiKey(...)`; if it lived in `admin/`, the admin module would have to allow Spring AI imports, which is exactly what we're avoiding). The resolver depends on `admin.persistence.LlmProviderMasterKeyRepository` — that's the one new dependency edge in `llm`'s `allowedDependencies`.
+
+- **`CuratedCatalogQueryService` lives in `core.admin.usecases.catalog/`, NOT in a new `core.settings/` module.** A separate "settings" module that just re-exports a curated view of admin's catalog is a one-class module — the kind of premature split that violates the project's flat-folder rule. Instead, the admin module owns both the admin-facing and user-facing read services for the same data; the URL prefix (`/api/admin/*` vs `/api/settings/*`) and the DTO shape determine the privilege level.
+
+- **`SettingsCatalogController` lives in `backend/api/.../controllers/settings/`, NOT in `controllers/admin/`.** The controller path determines URL prefix determines ACL. Putting the curated-catalog endpoint under `controllers/admin/` would either require `/api/admin/settings-catalog` (wrong URL for a user endpoint) or break the `/api/admin/** → hasRole('ADMIN')` matcher (wrong ACL).
+
+- **Frontend `(admin)` route group is a sibling of `(app)`, NOT a sub-folder of it.** Two reasons: (1) the user's locked memory rule against single-purpose nested parents (a nested `(app)/admin/` would be exactly that for one admin shell); (2) the admin shell is a different visual surface (denser, less brand, no Vietnamese-first translation requirement since admins read English).
+
+- **`features/admin-*` are flat top-level features, NOT one `features/admin/{catalog,master-keys,...}` super-folder.** Same flat-folder rule. Each admin capability is a feature in its own right; the `admin-` prefix is naming, not hierarchy.
+
+---
+
+## Architectural Patterns
+
+### Pattern A1: Admin controller class-level `@PreAuthorize` + service-level audit
+
+**What:** Every controller in `controllers/admin/` is class-annotated `@PreAuthorize("hasRole('ADMIN')")`. Inside each write handler, the first line in the service (NOT the controller) calls `AdminAuditLogger.log(action, target, diff)` before the mutation. The logger captures actor + request meta from `SecurityContextHolder` + `RequestContextHolder`.
+
+**Why:** Two reasons to put audit in the service, not the controller. (1) The controller doesn't know what to record (it doesn't have the "before" state for a diff). (2) If a refactor moves the controller, the audit follows the service — it's an invariant of the use case, not of the HTTP edge.
+
+**Example:**
+
+```java
+@RestController
+@RequestMapping("/api/admin/catalog/models")
+@PreAuthorize("hasRole('ADMIN')")
+@Tag(name = "admin-catalog")
+public class AdminCatalogModelController {
+
+    private final ModelCatalogService modelCatalogService;
+
+    public AdminCatalogModelController(ModelCatalogService modelCatalogService) {
+        this.modelCatalogService = modelCatalogService;
+    }
+
+    @PutMapping("/{modelId}")
+    public CatalogModelResponse update(
+            @PathVariable UUID modelId,
+            @Valid @RequestBody CatalogModelUpdateRequest request) {
+        CatalogModelProjection updated = modelCatalogService.update(modelId, request.toCommand());
+        return CatalogModelResponse.from(updated);
+    }
+}
+```
+
+```java
+@Service
+public class ModelCatalogService {
+    public CatalogModelProjection update(UUID modelId, ModelUpdateCommand command) {
+        LlmModelCatalogEntity before = modelCatalogRepository.findById(modelId)
+                .orElseThrow(() -> new CatalogValidationException("Model not found: " + modelId));
+        ModelDiff diff = ModelDiff.between(before, command);  // pure
+        // audit BEFORE the mutation — failed audit aborts the change
+        adminAuditLogger.log(AdminActionType.CATALOG_MODEL_UPDATED, "model", modelId.toString(), diff.asJson());
+        before.applyUpdate(command);
+        LlmModelCatalogEntity saved = modelCatalogRepository.save(before);
+        return CatalogModelProjection.from(saved);
+    }
+}
+```
+
+**Trade-offs:**
+- (+) Consistent gate. Any new admin endpoint that forgets `@PreAuthorize` fails `AdminAccessOnlyOnAdminControllersTest`.
+- (+) Audit row exists even if the mutation fails later (the row says "attempted update," which is more useful than "no record").
+- (-) The audit row is written in the same transaction as the mutation — so if the mutation rolls back, the audit also rolls back. Acceptable for v1.2 (compliance doesn't yet require "failed-attempts" audit; existing audit semantics for triage are also "successful actions only").
+
+### Pattern A2: AES-GCM master-key access via a single resolver class
+
+**What:** Only `ProviderMasterKeyResolver` decrypts the master key. All Spring AI ChatClient construction in `core.llm.gateway.springai` goes through it. The decrypted plaintext is a local variable in one method, handed to Spring AI's options builder, and goes out of scope. There is no field, cache, or static holding plaintext.
+
+**Why:** Same crypto discipline as v1.0 BYOK. The decrypted key only exists for the duration of a single LLM request. ArchUnit gate `NoMasterKeyPlaintextHeldTest` rejects any field of type `byte[]` or `String` named like `(?i)apiKey|masterKey|providerKey|plainKey` outside `ProviderMasterKeyResolver`.
+
+### Pattern A3: Spring Data JDBC read-side for admin views, JPA for admin writes
+
+**What:** Catalog mutations use JPA (`LlmModelCatalogRepository extends JpaRepository<...>`). Admin views (tenant detail, queue health, spend) use Spring Data JDBC (`AdminTenantQueryRepository extends Repository<TenantDetailProjection, UUID>`). The JDBC interface only declares query methods — no `save`, no `delete`.
+
+**Why:** Reads are cross-domain joins that would force JPA fetch-graph annotations on entities that don't otherwise need them. Writes are aggregate-internal — JPA's `@Transactional` + dirty checking is the cheaper code path.
+
+### Pattern A4: Processing-job dispatch for sync, Redis lease for click-debounce
+
+**What:** Admin clicks "Sync models" → controller acquires Redis `admin:catalog:sync:{provider}` lease (SET NX EX 300) → writes `processing_job(job_type=catalog_sync, payload={providerId})` → returns 202 + jobId. Worker picks up via SKIP LOCKED. Admin UI polls `/api/admin/jobs/{jobId}` for status.
+
+**Why:** Same `processing_job` table v1.0's mail ingestion uses. No new queue infrastructure. Redis lease prevents the click-twice race; the processing_job row is the durable record.
+
+### Pattern A5: User-facing curated catalog endpoint stays under `/api/settings/*`
+
+**What:** `GET /api/settings/catalog` (NOT `/api/admin/catalog`) returns the curated subset. The controller calls `CuratedCatalogQueryService` in `core.admin.usecases.catalog/` — different DTO shape than admin's catalog response, no pricing or sync metadata.
+
+**Why:** URL path determines ACL. Users hit `/api/settings/*` which is `.authenticated()` (no role). The service layer can be shared across admin and user reads because the service returns a projection, and the controller/DTO determines what fields ship to the client.
+
+---
+
+## Data Flow
+
+### Admin sync-from-/models (async)
+
+```
+[Admin clicks "Sync OpenAI models"]
+    ↓
+[POST /api/admin/catalog/providers/{providerId}/sync-models]
+    ↓ @PreAuthorize hasRole(ADMIN) passes
+[AdminCatalogController.sync(providerId)]
+    ↓
+[CatalogSyncService.dispatch(providerId)]
+    ↓ ConfirmationLeaseService.acquireOrFail("admin:catalog:sync:openai", 300s)  ← Redis SET NX EX
+    ↓ ProcessingJobRepository.save(new ProcessingJob(jobType=catalog_sync, payload={providerId}, state=QUEUED))
+    ↓ AdminAuditLogger.log(CATALOG_SYNC_REQUESTED, "provider", providerId, null)
+    ↓ return CatalogSyncJobAcceptedResponse { jobId, providerId, acceptedAt }
+[Client renders "Syncing... (job 12345)" + starts polling]
+
+[backend/worker poll loop]
+    ↓ SELECT ... FROM processing_job WHERE state='QUEUED' AND job_type='catalog_sync' FOR UPDATE SKIP LOCKED LIMIT 1
+    ↓ marks state=PROCESSING, leased_until=now()+5min
+[CatalogSyncJobHandler.handle(record)]
+    ↓ calls CatalogSyncService.runForProvider(providerId)
+[CatalogSyncService.runForProvider]
+    ↓ decrypts master key for provider via ProviderMasterKeyResolver
+    ↓ HTTP GET https://api.openai.com/v1/models with Bearer key
+    ↓ parses { data: [{id, object, created, owned_by}, ...] }
+    ↓ for each model in response:
+        ↓ UPSERT llm_model_catalog (provider_id, provider_model_id, ...)
+        ↓ if model already present: SET synced_at=now(); pricing/context fields NOT auto-touched
+                                    (admin manually maintains pricing because /models doesn't return it)
+        ↓ if model new: INSERT with sensible defaults, enabled=false (admin must explicitly enable)
+    ↓ for each existing row NOT in response and NOT in the seed list:
+        ↓ SET is_deprecated=true, enabled=false (don't DELETE — bindings might reference)
+    ↓ marks processing_job state=COMPLETED, completed_at=now()
+    ↓ writes admin_audit row (CATALOG_SYNC_RUN, "provider", providerId, {modelsAdded, modelsUpdated, modelsDeprecated})
+    ↓ releases Redis lease (admin:catalog:sync:openai)
+[Client poll detects state=COMPLETED]
+    ↓ invalidates admin-catalog query key
+    ↓ re-fetches model list — updated
+```
+
+### Settings AI tab catalog binding (user-facing)
+
+```
+[User navigates to Settings → AI tab]
+    ↓
+[features/assistant-settings/hooks/useCatalog.ts]
+    ↓ TanStack Query useQuery({ queryKey: ['settings-catalog'], queryFn: api.GET('/api/settings/catalog') })
+[GET /api/settings/catalog]
+    ↓ .authenticated() passes (cookie session)
+[SettingsCatalogController.get]
+    ↓ TenantContext bound by TenantBindingFilter
+[CuratedCatalogQueryService.getForCurrentTenant()]
+    ↓ Spring Data JDBC query joining llm_provider_catalog × llm_model_catalog × llm_feature_binding
+    ↓ filters: provider.enabled=true AND model.enabled=true AND model.is_deprecated=false
+    ↓ groups by feature_key where user_override_allowed=true
+    ↓ returns CuratedCatalogProjection { features: [{ featureKey, defaultModel, allowedModels, byokAllowed }] }
+[Client renders per-feature dropdowns with allowedModels]
+
+[User picks "Anthropic claude-3-5-sonnet" for chat]
+    ↓ TanStack Query useMutation
+[PUT /api/assistant/settings]
+    ↓ body: { chatModel: "<model-uuid>" }     ← note: we store the catalog UUID, not the wire id
+[AssistantSettingsController.update]
+    ↓ TenantContext bound
+[AssistantSettingsService.update]
+    ↓ validate chatModel UUID exists in llm_model_catalog and is allowed for chat
+    ↓ save assistant_settings row
+[Next chat turn]
+    ↓ ChatPromptBuilder reads tenant's assistant_settings.chat_model
+    ↓ resolves UUID → provider + provider_model_id via llm_model_catalog
+    ↓ resolves provider master key via ProviderMasterKeyResolver
+    ↓ Spring AI request uses { model: providerModelId, apiKey: <decrypted bytes> }
+```
+
+### Admin tenant view (read-only)
+
+```
+[Admin searches "founder@example.com"]
+    ↓
+[GET /api/admin/tenants?q=founder@example.com]
+    ↓ @PreAuthorize hasRole(ADMIN) passes
+[AdminTenantController.search]
+    ↓ AdminAuditLogger.log(TENANT_SEARCHED, "search", "founder@example.com", null)
+[AdminTenantQueryService.search(query)]
+    ↓ Spring Data JDBC: SELECT t.id, t.created_at, u.email, gc.status, ... FROM tenants t JOIN users u ON ... WHERE u.email ILIKE '%founder@example.com%' LIMIT 50
+    ↓ returns List<TenantSummaryProjection>     ← no body content; no token bytes
+[Client renders paginated table]
+
+[Admin clicks a row]
+    ↓
+[GET /api/admin/tenants/{tenantId}]
+    ↓ AdminAuditLogger.log(TENANT_VIEWED, "tenant", tenantId, null)
+[AdminTenantQueryService.detail(tenantId)]
+    ↓ joins tenants + users + gmail_connection + tenant_byok_credentials (status only) + 
+            credit_ledger_entry aggregates + triage_audit counts + chat counts
+    ↓ returns TenantDetailProjection
+[Client renders tenant detail with sections: Identity, Gmail, BYOK Status, Billing, Triage Activity, Chat Activity]
+```
+
+### Admin master-key rotation
+
+```
+[Admin clicks "Rotate OpenAI master key" with new key in form]
+    ↓
+[POST /api/admin/master-keys/openai/rotate body: { newKey: "sk-..." }]
+    ↓
+[AdminMasterKeyController.rotate]
+[MasterKeyRotationService.rotate(provider, newKeyPlaintext)]
+    ↓ MasterKeyValidator.checkShape(provider, newKeyPlaintext)
+    ↓ optional: MasterKeyTestService.testWithPlaintext(provider, newKeyPlaintext)  ← ping the provider
+    ↓ inside one @Transactional:
+        ↓ load existing LlmProviderMasterKeyEntity
+        ↓ entity.previousEncryptedKey ← entity.encryptedKey
+        ↓ entity.previousKeyVersion ← entity.keyVersion
+        ↓ entity.encryptedKey ← RefreshTokenCipher.encrypt(newKeyPlaintext, aad=providerKey)
+        ↓ entity.keyVersion ← entity.keyVersion + 1
+        ↓ entity.rotatedByUserId ← currentAdminUser.id
+        ↓ entity.rotatedAt ← now()
+        ↓ AdminAuditLogger.log(MASTER_KEY_ROTATED, "master-key", providerKey, { fromVersion, toVersion })
+    ↓ zero newKeyPlaintext buffer
+    ↓ return MasterKeyStateResponse { provider, keyVersion, lastRotatedAt }
+[Client renders "Rotated successfully — version 7"]
+
+[Next LLM request using OpenAI]
+    ↓ ProviderMasterKeyResolver loads the row, decrypts encryptedKey
+    ↓ in-flight requests holding the OLD plaintext (zeroed-out by request scope) are unaffected
+    ↓ next request uses new key
+[Grace-window cleanup — out of v1.2 scope]
+```
+
+---
+
+## Anti-Patterns
+
+### Anti-Pattern A1: Hardcoded model lists in Settings UI
+
+**What:** Frontend `apps/web/features/assistant-settings/components/ProviderModelSection.tsx` ships a static `const MODELS = { openai: ['gpt-4o', 'gpt-4o-mini'], anthropic: [...] }`.
+
+**Why it is wrong:** Every model deprecation forces a frontend release. v1.0/v1.1 already shipped a hardcoded model list inside `features/llm/ByokForm.tsx`; v1.2 is the chance to fix that AND build a paved path for the new Settings AI tab. If the AI tab also hardcodes, we've shipped the bug a second time.
+
+**Do this instead:** Settings AI tab pulls from `/api/settings/catalog` exclusively. BYOK form (existing `features/llm/`) is migrated in Phase 9 to the same endpoint. No model name appears in TypeScript outside `apps/web/lib/api/schema.d.ts` (which is generated from the backend DTO that returns the catalog).
+
+### Anti-Pattern A2: Single unified `audit_log` table for triage + send + admin
+
+**What:** "Three audit tables is too many — unify them." A single `audit_log` with `actor_type | actor_id | target_type | target_id | meta_json` covers everything.
+
+**Why it is wrong:** Different retention (30-day rolling vs. indefinite). Different actors (system vs. user vs. admin). Different query patterns (per-tenant/day vs. per-chat vs. global filter). Different privacy invariants (triage audit must never carry body content; admin audit must capture before/after diffs that ARE meta-only by construction). Unifying forces every query into a `WHERE actor_type = 'admin'` discriminator and every retention policy into a per-row check.
+
+**Do this instead:** Three tables, three retention policies, three privacy gates. `admin_audit` is its own thing.
+
+### Anti-Pattern A3: Admin RBAC via a custom `@Admin` annotation enforced only by ArchUnit
+
+**What:** "Spring Security feels heavy — let's annotate admin controllers with our own `@Admin`, write an ArchUnit rule that `@Admin` methods must be inside `/api/admin/**` controllers, and call it done."
+
+**Why it is wrong:** ArchUnit runs at build time. A runtime path that bypasses `@Admin` (a new controller someone forgets to annotate, a programmatic `RequestMappingHandlerMapping` registration, a Spring Cloud Function endpoint) doesn't get checked. Spring Security's `@PreAuthorize` runs at every request — including bypass paths. The cost of one extra annotation per controller is trivial.
+
+**Do this instead:** Class-level `@PreAuthorize("hasRole('ADMIN')")` + path matcher `.requestMatchers("/api/admin/**").hasRole("ADMIN")` + ArchUnit `AdminAccessOnlyOnAdminControllersTest` that verifies the annotation is present. Three independent gates.
+
+### Anti-Pattern A4: Synchronous sync-from-/models holding the admin HTTP request
+
+**What:** "It's just one HTTP call to OpenAI — let the admin wait." `AdminCatalogController.sync` calls `CatalogSyncService.runForProvider` directly and returns the new catalog in the response.
+
+**Why it is wrong:** /models responses for OpenAI can take 2–15s; Anthropic doesn't have a /models endpoint (we'd silently no-op or 404 — both bad UX); on slow networks 30s+ is realistic. Tomcat virtual threads make holding the connection cheap, but the user's spinner is the actual UX concern. Worse, a half-completed sync that the admin browser-closes leaves the catalog in an undefined state (which models were upserted before the connection dropped?).
+
+**Do this instead:** Dispatch `processing_job`, return 202 + jobId, poll for status. Same pattern v1.0 already uses for mail ingestion. The worker is the durable runner.
+
+### Anti-Pattern A5: Storing master-key plaintext in environment variables / `application.yml` "for v1.2 transition"
+
+**What:** "We already have `spring.ai.openai.api-key=${OPENAI_API_KEY}` in `application.yml`. Let's keep that as the master key source and skip the new `llm_provider_master_key` table for v1.2 — admin UI just edits a config file."
+
+**Why it is wrong:** (1) Defeats the entire point of admin master-key management (rotation, audit, test, multi-admin governance). (2) `application.yml` master keys can't be rotated without a redeploy. (3) Spreads the secret across deployment env vars, the deployer's shell history, and the VPS process listing. (4) Forces the admin UI to be either read-only (useless) or to ship a YAML editor (worse — admin shouldn't have shell-equivalent power).
+
+**Do this instead:** Migrate platform keys to `llm_provider_master_key` in changelog 056. `application.yml` keeps the `${OPENAI_API_KEY:}` style env vars ONLY for dev-mode bootstrap (the new resolver falls back to env var if no row exists yet — so a fresh checkout still boots). Production keys come from the table, set via the admin UI on first run.
+
+### Anti-Pattern A6: One Spring Security filter chain per privilege level
+
+**What:** "Admin is a different privilege; let's add a second `SecurityFilterChain` for `/api/admin/**` at `@Order(2)`, before the existing `@Order(3)` user chain."
+
+**Why it is wrong:** Spring Security filter chains route the request entirely — adding a second chain duplicates the OAuth2 login config, CSRF config, exception handling, and `TenantBindingFilter` placement. Two chains drift over time; a CSRF token fix in one is forgotten in the other.
+
+**Do this instead:** ONE filter chain, ONE filter ordering, role-checks via `authorizeHttpRequests` matchers AND `@PreAuthorize`. The existing chain at `@Order(3)` is extended with `.requestMatchers("/api/admin/**").hasRole("ADMIN")` plus `.requestMatchers("/api/settings/catalog").authenticated()` (the user-facing curated endpoint stays under the existing "anyRequest authenticated" default but listing it explicitly is documentation).
+
+### Anti-Pattern A7: Frontend admin routes nested inside `(app)`
+
+**What:** `apps/web/app/(protected)/(app)/admin/page.tsx` — admin pages share the user app's layout, persistent chrome, brand palette.
+
+**Why it is wrong:** Forces the user app's persistent chrome (pause toggle, credit balance, connection health) to render for admins who don't need it. Forces a conditional `if (role==='ADMIN') { showAdminLink }` in the user nav. Forces every admin page to "look like" the user app, which fights the workshop-console UX admin pages want. Most importantly, it violates the project's flat-folder rule by nesting a single-purpose `admin/` segment inside the user app group.
+
+**Do this instead:** Sibling route group `(admin)`. Separate `layout.tsx` with admin shell. Server-side role check at the layout level.
+
+---
+
+## Integration Points
+
+### Cross-domain dependency map (admin module → existing modules)
+
+| Caller (in `admin.usecases.*`) | Callee | Purpose | Module dep edge |
+|---|---|---|---|
+| `ProviderCatalogService` / `ModelCatalogService` / `FeatureBindingService` | own persistence repos | catalog CRUD | none |
+| `CatalogSyncService` | `ProviderMasterKeyResolver` (in `core.llm.gateway.springai`) | decrypt key to call provider /models | `admin → llm` |
+| `MasterKeyService` / `MasterKeyRotationService` | `RefreshTokenCipher` (in `core.gmail.persistence.crypto`) | AES-GCM enc/dec | `admin → gmail.persistence.crypto` |
+| `MasterKeyTestService` | `LlmGateway` (existing) | mini ping prompt | `admin → llm` |
+| `AdminTenantQueryService` | own JDBC read repos (cross-table reads via SQL, NOT cross-module service calls) | tenant detail | none at JPA layer; SQL touches `tenants`, `users`, `gmail_connection`, `credit_ledger_entry`, `triage_audit`, `chat` tables read-only |
+| `WorkerQueueHealthService` | own JDBC read repo over `processing_job` | queue health | none at JPA layer |
+| `GlobalSpendQueryService` | own JDBC read repo joining `credit_ledger_entry × llm_model_catalog × tenants` | spend rollup | `admin → billing` (read), `admin → analytics` (for time bucketing helpers) |
+| `AdminAuditLogger` | Spring Security `SecurityContextHolder` + `RequestContextHolder` | capture actor + request meta | none (Spring infra) |
+| `AdminAuditQueryService` | own repo | audit search | none |
+| `CuratedCatalogQueryService` | own repos | user-facing catalog read | none |
+| `AssistantSettingsService` (existing v1.1) | `CuratedCatalogQueryService` (NEW v1.2) | resolve model UUID → wire id at request time | `chat → admin` (read-only projection only) |
+
+**Final `admin/package-info.java` `allowedDependencies` list:**
+
+```java
+@ApplicationModule(
+        displayName = "Admin Console",
+        allowedDependencies = {
+            "tenant",
+            "account",
+            "llm",
+            "billing",
+            "analytics",
+            "gmail.persistence.crypto",
+            "shared.persistence",
+            "shared.lang",
+            "shared.privacy"
+        })
+package com.zeromail.core.admin;
+```
+
+**Why `admin` does NOT depend on `chat` or `triage`:** admin only READS those modules' tables, through Spring Data JDBC queries. Spring Modulith's dependency rules apply to Java-level package imports — a Spring Data JDBC repository in `admin.persistence.jdbc` that selects from `chat_message` doesn't import any `com.zeromail.core.chat.*` class, so no Modulith edge is needed. (This is the same way `analytics` reads `triage_audit` rows without depending on the `triage` module.)
+
+**Why `chat → admin` (new edge):** `AssistantSettingsService` needs to validate that the user's `chat_model` setting is a UUID that exists in `llm_model_catalog`. That validation call goes through `CuratedCatalogQueryService` in `admin/`. `chat`'s `allowedDependencies` adds `"admin"`.
+
+### v1.2 changes to EXISTING module `package-info.java` files
+
+| Module | Change | Why |
+|---|---|---|
+| `llm` | ADD `"admin"` to `allowedDependencies`. | New `ProviderMasterKeyResolver` reads `LlmProviderMasterKeyRepository` from `admin.persistence`. |
+| `chat` | ADD `"admin"` to `allowedDependencies`. | `AssistantSettingsService` validates model UUID against the catalog via `CuratedCatalogQueryService`. |
+| `account` | NO change to `allowedDependencies`. | Adding `role` column is an internal schema change; no new outgoing deps. |
+| `billing`, `triage`, `analytics`, `gmail`, `rules`, `draft` | NO change. | Admin reads their tables via JDBC SQL; no Java-package imports. |
+
+### External service integrations (no new external services in v1.2)
+
+| Service | Integration Pattern | Notes |
+|---|---|---|
+| Provider /models endpoints (OpenAI, Google GenAI, DeepSeek) | New: HTTPS GET via standard Java `HttpClient` from inside `CatalogSyncService` | Anthropic has NO /models endpoint → manual catalog only for Anthropic, surface this in admin UI. Sync timeout = 30s, retried by `processing_job` standard retry. |
+| Spring AI 2.0.0-M6 LLM providers | Existing — `LlmGateway` adds master-key path | New `ProviderMasterKeyResolver` replaces `application.yml`-sourced platform keys with table-sourced keys. |
+| PostgreSQL 17 | Existing — Liquibase YAML + JPA writes + Spring Data JDBC reads | Nine new changelogs (048–056). |
+| Redis 7 | Existing — Spring Session + chat lease | Two new key namespaces: `admin:catalog:sync:{provider}`, `admin:masterkey:test:{provider}`. |
+| Spring Session Redis | Unchanged | Admin uses the same session cookie. |
+| Spring Modulith event spine | Unchanged | No new events in v1.2 (admin actions are audit-row-only). |
+
+### Internal boundaries (cross-module / cross-process)
+
+| Boundary | Communication | Notes |
+|---|---|---|
+| `backend/api` admin controllers ↔ `backend/core` admin services | Direct in-process service injection | Same pattern as v1.0/v1.1. |
+| `admin.usecases.catalog` ↔ `llm.gateway.springai.ProviderMasterKeyResolver` | Direct call | `admin → llm` dep edge. |
+| `chat.usecases.AssistantSettingsService` ↔ `admin.usecases.catalog.CuratedCatalogQueryService` | Direct call | `chat → admin` dep edge (NEW). |
+| `backend/api` ↔ `backend/worker` (catalog sync) | Postgres `processing_job` table with SKIP LOCKED | Existing pattern (mail ingestion uses it). |
+| Frontend `(admin)` shell ↔ `/api/admin/*` | Typed OpenAPI client (`api.GET` / `api.POST`) | Same generated-types pipeline. No raw fetch except SSE (not used by admin in v1.2). |
+| Frontend `(app)/settings/page.tsx` ↔ `/api/settings/catalog` | Typed OpenAPI client | Curated catalog endpoint emits its own DTO schema. |
+
+---
+
+## ArchUnit Gate Strategy (v1.2)
+
+Six new ArchUnit tests. All complement (not replace) the existing v1.0 + v1.1 gates.
+
+1. **`AdminAccessOnlyOnAdminControllersTest`** — every class under `com.zeromail.api.controllers.admin..` MUST be class-annotated with `@PreAuthorize` (any value) OR have every public method `@PreAuthorize`-annotated. Catches "forgot to gate an admin endpoint."
+
+2. **`AdminMutationsMustAuditTest`** — every method annotated with `@PostMapping`, `@PutMapping`, `@PatchMapping`, or `@DeleteMapping` in `controllers.admin..` MUST transitively call `AdminAuditLogger.log(...)`. Implemented via ArchUnit's `MethodCallTarget` reachability check.
+
+3. **`AdminProjectionPrivacyTest`** — every record class in `core.admin.projection..` MUST NOT have a field whose name matches `(?i)body|content|prompt|completion|emailBody|messageBody|rawText`. Catches accidental body content leaking into admin views.
+
+4. **`AdminTenantViewIsReadOnlyTest`** — every interface in `core.admin.persistence.jdbc..` whose name contains "Query" MUST extend `org.springframework.data.repository.Repository<...>` (NOT `CrudRepository` / `JpaRepository`) AND MUST NOT declare methods starting with `save`, `delete`, `update`, `insert`, `merge`.
+
+5. **`NoMasterKeyPlaintextHeldTest`** — outside `core.llm.gateway.springai.ProviderMasterKeyResolver`, no class may have a field of type `byte[]` or `java.lang.String` whose name matches `(?i)apiKey|masterKey|providerKey|plainKey|decryptedKey`. The resolver itself MUST NOT declare such a field at class scope (only as a method-local).
+
+6. **`AdminModuleBoundaryTest`** — verifies the `admin/package-info.java` `allowedDependencies` list matches the documented set in this file. Implemented via Spring Modulith's `ApplicationModules.verify()` already, but a specific test asserts the expected list to catch silent drift.
+
+**Existing gates that remain unchanged and continue to pass in v1.2:**
+- `NoGmailSendAllowedTest` + `AssistantSendCallSiteAllowlistTest` (v1.1 send-carve-out)
+- `ChatPersistencePrivacyTest` (v1.1 chat body-ban)
+- `DomainPurityArchTest` (v1.0 framework-free domain)
+- `NoThreadLocalInRequestPathTest` (v1.0 Scoped Values)
+- `SensitiveLogScrubArchTest` (v1.0 `@Sensitive` log gate)
+- All Modulith `ApplicationModules.verify()` boundary tests
+
+---
+
+## Schema Sketches (concise — full YAML at execution time)
+
+| Changelog | Table / Change | Purpose |
+|---|---|---|
+| `048-add-user-role.yaml` | ALTER `users` ADD `role varchar(16) NOT NULL DEFAULT 'USER'` + CHECK constraint `role IN ('USER','ADMIN','SUPPORT')` | RBAC source of truth. |
+| `049-llm-provider-catalog.yaml` | `llm_provider_catalog` (4 seed rows in 054) | Provider master list. |
+| `050-llm-model-catalog.yaml` | `llm_model_catalog` + unique `(provider_id, provider_model_id)` | Model master list. |
+| `051-llm-feature-binding.yaml` | `llm_feature_binding` keyed on `feature_key` (chat / triage / draft / rule-compile / semantic-intent) | Default model per feature + override flags. |
+| `052-llm-provider-master-key.yaml` | `llm_provider_master_key` (encrypted bytea, key_version, previous_*, rotated_by_user_id) | AES-GCM master keys. |
+| `053-admin-audit.yaml` | `admin_audit` (actor_user_id, actor_email_snapshot, action_type, target_type, target_id, diff JSONB, client_ip, occurred_at) + indexes on `(actor_user_id, occurred_at DESC)` and `(action_type, occurred_at DESC)` | Append-only admin trail. |
+| `054-catalog-seed.yaml` | Seed: 4 providers + ~10 known-good models + 5 default feature bindings | Boot in a known-good state without /models sync. |
+| `055-catalog-sync-job.yaml` | DML: insert into `processing_job_kind` (or similar lookup) if such a table exists, otherwise no-op | Registers `catalog_sync` as a valid job type. |
+| `056-admin-master-key-backfill.yaml` | Conditional backfill: if `application.yml` env vars are set, the boot path writes them into `llm_provider_master_key` on first startup (Spring `ApplicationRunner`, NOT Liquibase SQL — Liquibase can't read env vars cleanly) | Dev → prod transition. |
+
+**`db.changelog-master.yaml` append:**
+
+```yaml
+  - include: { file: changes/048-add-user-role.yaml, relativeToChangelogFile: true }
+  - include: { file: changes/049-llm-provider-catalog.yaml, relativeToChangelogFile: true }
+  - include: { file: changes/050-llm-model-catalog.yaml, relativeToChangelogFile: true }
+  - include: { file: changes/051-llm-feature-binding.yaml, relativeToChangelogFile: true }
+  - include: { file: changes/052-llm-provider-master-key.yaml, relativeToChangelogFile: true }
+  - include: { file: changes/053-admin-audit.yaml, relativeToChangelogFile: true }
+  - include: { file: changes/054-catalog-seed.yaml, relativeToChangelogFile: true }
+  - include: { file: changes/055-catalog-sync-job.yaml, relativeToChangelogFile: true }
+```
+
+(Note: 056 backfill is bootstrap code, not a Liquibase changelog — runs once in `ApplicationRunner`.)
+
+---
+
+## Suggested Build Order (Phase 8 → Phase 9)
+
+### Phase 8 — Admin Console Foundation (`SEED-011` + `OPS-02`)
+
+**Goal:** Production-shaped admin module with RBAC + catalog + master keys + audit + tenant view + queue health + spend dashboard. NO user-facing Settings tab work yet.
+
+**Sub-phase A — Backend foundation (no UI yet)**
+
+1. Changelog 048 — `users.role` + CHECK constraint.
+2. `AdminRole` enum (`USER` | `ADMIN` | `SUPPORT`) implementing `IdentifiedEnum`.
+3. `UserEntity.role` field + repository methods.
+4. `OAuthProvisioningService` reads `AdminEmailAllowlistProperties` and assigns role on provisioning.
+5. `CurrentUserProjection.role` + `/api/me` response includes role.
+6. `SecurityConfig` extension: `.requestMatchers("/api/admin/**").hasRole("ADMIN")`.
+7. `@EnableMethodSecurity` (if not already on) so `@PreAuthorize` works at method level.
+
+**Sub-phase B — Catalog backend**
+
+8. Changelogs 049–051 (provider, model, feature-binding tables) + 054 (seed).
+9. `core.admin` Modulith module skeleton with `package-info.java`.
+10. `admin.persistence.*` entities + JPA repositories.
+11. `admin.usecases.catalog.*` services (`ProviderCatalogService`, `ModelCatalogService`, `FeatureBindingService`, `CuratedCatalogQueryService`).
+12. `admin.usecases.audit.AdminAuditLogger` + changelog 053 (admin_audit table) + `AdminAuditEntity`.
+13. `controllers/admin/AdminCatalogController` + `AdminFeatureBindingController` + DTOs.
+14. ArchUnit tests: `AdminAccessOnlyOnAdminControllersTest`, `AdminMutationsMustAuditTest`, `AdminModuleBoundaryTest`.
+15. Slice tests: catalog CRUD + audit row written on each mutation.
+
+**Sub-phase C — Master keys backend**
+
+16. Changelog 052 + 056 backfill `ApplicationRunner`.
+17. `LlmProviderMasterKeyEntity` (`@Sensitive` on encrypted_key fields) + repository.
+18. `admin.usecases.masterkey.*` (`MasterKeyService`, `MasterKeyRotationService`, `MasterKeyTestService`).
+19. `core.llm.gateway.springai.ProviderMasterKeyResolver` — the one decryption point.
+20. `LlmGatewayImpl` switches platform-key source from `application.yml` to `ProviderMasterKeyResolver`.
+21. `controllers/admin/AdminMasterKeyController` + DTOs.
+22. ArchUnit: `NoMasterKeyPlaintextHeldTest`.
+23. Slice tests: rotation + test-connection + master-key revoke + audit.
+
+**Sub-phase D — Catalog sync (async)**
+
+24. Changelog 055 + `CatalogSyncJobHandler` in `backend/worker`.
+25. `admin.usecases.catalog.CatalogSyncService` — the actual sync loop, idempotent UPSERTs.
+26. Admin controller endpoint `POST /api/admin/catalog/providers/{id}/sync-models` → 202 + jobId.
+27. `GET /api/admin/jobs/{jobId}` status endpoint (or extend existing job-status endpoint if one exists).
+28. Slice tests: sync idempotency, error recovery, Anthropic-no-/models graceful path.
+
+**Sub-phase E — Tenant view + Queue health + Spend (read-side)**
+
+29. `admin.persistence.jdbc.*` Spring Data JDBC interfaces.
+30. `admin.usecases.tenantview.AdminTenantQueryService` + `admin.usecases.queue.WorkerQueueHealthService` + `admin.usecases.spend.GlobalSpendQueryService`.
+31. Controllers: `AdminTenantController`, `AdminQueueController`, `AdminSpendController`, `AdminAuditController`.
+32. ArchUnit: `AdminProjectionPrivacyTest`, `AdminTenantViewIsReadOnlyTest`.
+33. Slice tests: pagination, privacy gate, no body content in any projection.
+
+**Sub-phase F — Admin frontend**
+
+34. New route group `apps/web/app/(protected)/(admin)/`.
+35. `middleware.ts` admin role check.
+36. `apps/web/features/admin-shell/` (layout pieces, nav).
+37. `apps/web/features/admin-catalog/`, `admin-master-keys/`, `admin-tenants/`, `admin-queue/`, `admin-audit/`, `admin-spend/`.
+38. Regenerate OpenAPI client (`pnpm --filter web generate:api`).
+39. Playwright E2E: admin role redirect, catalog edit + audit appears, master-key test, queue dashboard renders.
+
+**Phase 8 success criteria:**
+- A non-admin user cannot reach `/admin/*` (frontend redirect + backend 403).
+- An admin can edit a provider/model/feature-binding and the change is audited.
+- An admin can rotate a master key and the next LLM request uses the new key.
+- The user Settings page still works exactly as before (no v1.1 functionality changed).
+- All ArchUnit gates pass.
+
+### Phase 9 — Settings UI on Curated Catalog (carries forward 19 deferred v1.1 reqs)
+
+**Goal:** Ship the 4-tab Settings UI (Personalization, Behavior, Safety Net, AI Provider/Model) consuming the admin-curated catalog. NO new admin work in this phase.
+
+**Sub-phase A — Backend: user-facing catalog + settings**
+
+40. `SettingsCatalogController` (`GET /api/settings/catalog`) + `CuratedCatalogResponse` DTO.
+41. `AssistantSettingsService.update` validates `chatModel` / `triageModel` / `draftModel` UUIDs against `llm_feature_binding` allowed models.
+42. `chat → admin` dep edge added to `chat/package-info.java`.
+43. Regenerate OpenAPI client.
+
+**Sub-phase B — Frontend: 4 tabs**
+
+44. `apps/web/features/assistant-settings/` skeleton.
+45. AI Provider/Model tab (SET-AI-01..04): per-feature dropdowns from `/api/settings/catalog`; BYOK form migrated to consume curated catalog (replaces hardcoded model lists); default-vs-BYOK toggle; test-connection button.
+46. Personalization tab (SET-VOICE-01..06): writing style, personal instructions, signature, knowledge base CRUD, tone preset, output language VI/EN.
+47. Behavior tab (SET-BEHV-01..05): auto-draft master toggle, confidence threshold, daily digest, sensitive-data protection, shadow-mode surface.
+48. Safety Net tab (SET-SAFE-01..04): VIP add/remove, paste-import, per-entry mode, audit log VIP-blocked badge.
+49. Vietnamese + English strings (i18n parity gate).
+50. Playwright E2E: per-feature model swap → next chat turn uses new model; BYOK migration from hardcoded list to curated catalog; tab switching is query-param-driven.
+
+**Sub-phase C — Migration & cleanup**
+
+51. Remove hardcoded model lists from `features/llm/ByokForm.tsx` (the existing v1.0 list) — all model names now flow from the catalog.
+52. Regenerate OpenAPI client one final time.
+53. Documentation update: admin runbook for first-time master-key setup, catalog seeding, role grant.
+
+**Phase 9 success criteria:**
+- Settings AI tab shows only models the admin has enabled for that feature.
+- Disabling a model in admin → user Settings dropdown loses that option on next page load (no caching beyond TanStack's normal stale-time).
+- All 19 deferred v1.1 reqs (SET-AI-01..04, SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04) validated.
+- No model name string appears in any `.ts`/`.tsx` outside generated schema.
+
+### Dependency rationale (build order)
+
+- **Phase 8.A (RBAC) blocks all other admin work** — without role gating, every admin endpoint is publicly accessible from staging.
+- **Phase 8.B (catalog backend) blocks 8.C, 8.D, 8.E, and Phase 9.** Master keys reference the provider catalog. Sync writes into the model catalog. Spend joins on the model catalog. Settings reads the catalog.
+- **Phase 8.C (master keys) blocks 8.D** — sync needs a working key to call /models.
+- **Phase 8.D (sync) and 8.E (read-side) are independent of each other** — can run in parallel.
+- **Phase 8.F (frontend) blocks Phase 9.A** — Phase 9.A piggybacks on the same OpenAPI codegen pipeline; you want the admin DTOs stable before generating user-facing DTOs against the same schema.
+- **Phase 9 cannot start until Phase 8 ships** — the Settings AI tab requires a curated catalog to read.
+
+---
+
+## Confidence & Validation
+
+| Area | Confidence | Why |
+|---|---|---|
+| `admin` as new Modulith module | HIGH | Identical pattern to v1.1's `chat` module; verified `allowedDependencies` shape against existing module package-info files. |
+| RBAC via `users.role` + `@PreAuthorize` | HIGH | Spring Security canonical pattern; verified existing `SecurityConfig` is single-chain and `@EnableMethodSecurity` is the standard enabler. |
+| Catalog 3-table normalization | HIGH | Standard SQL design; FK + unique constraints prevent the failure modes a JSONB blob would have. |
+| AES-GCM master keys via `RefreshTokenCipher` | HIGH | Reuses verified v1.0 crypto class (`gmail.persistence.crypto`); same pattern that protects BYOK keys today. |
+| Async sync via `processing_job` | HIGH | Existing v1.0 queue infrastructure; one new job_type, one new handler. |
+| Three audit tables (triage/send/admin) | MEDIUM-HIGH | Different actors/retention/queries justify separation; unified table is feasible but trades clarity for storage micro-optimization that doesn't matter at v1.2 scale. |
+| Spring Data JDBC for admin reads | HIGH | Existing pattern (analytics module already does this); ArchUnit makes the read-only contract enforceable. |
+| `(admin)` route group sibling of `(app)` | HIGH | Next.js 16 standard pattern; matches user's locked flat-folder rule. |
+| `/api/settings/catalog` as separate user-facing endpoint | HIGH | URL-prefix → ACL is the cleanest privilege boundary. |
+| Provider /models endpoint shapes | MEDIUM | OpenAI and DeepSeek expose /v1/models; Google GenAI exposes /v1beta/models. Anthropic does NOT — verified by Anthropic API docs (no /models endpoint at Messages API v1). Catalog must accommodate manual-only providers. |
+| Role grant via email allowlist + admin UI | MEDIUM-HIGH | Bootstrap-by-config + runtime-grant pattern is standard; the runtime grant endpoint `/api/admin/grant-admin` is a small surface and audit-logged. |
+
+---
+
+## Files Read / Sources
+
+**Direct codebase read (HIGH confidence):**
+- `D:/study-materials-summer-2026/EXE202/zero-mail/backend/core/src/main/java/com/zeromail/core/llm/package-info.java` — `allowedDependencies` shape and rationale comment.
+- `D:/study-materials-summer-2026/EXE202/zero-mail/backend/core/src/main/java/com/zeromail/core/llm/domain/BYOKProvider.java` — provider enum used to align `llm_provider_catalog.provider_key`.
+- `D:/study-materials-summer-2026/EXE202/zero-mail/backend/core/src/main/java/com/zeromail/core/account/persistence/UserEntity.java` — entity shape to extend with `role`.
+- `D:/study-materials-summer-2026/EXE202/zero-mail/backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java` — current single-chain `@Order(3)` config; `.requestMatchers("/api/admin/**")` extension point.
+- `D:/study-materials-summer-2026/EXE202/zero-mail/backend/core/src/main/resources/db/changelog/changes/018-tenant-byok-credentials.yaml` — Liquibase pattern for encrypted bytea + key_version columns (master-key schema mirrors this).
+- Liquibase changelog index 001–047 (latest: 047-chat-forbidden-html-expanded.yaml) — next free changelog id starts at 048.
+- Package-info inventory of `core/*/package-info.java` (14 existing modules including v1.1's `chat`) — confirms the new-module pattern.
+- `D:/study-materials-summer-2026/EXE202/zero-mail/CONVENTIONS.md` §§1–8 — thin-controllers, package layout, records-vs-classes, enums, privacy logging, events-vs-direct-calls, shadcn-first, feature-folder pattern.
+- `D:/study-materials-summer-2026/EXE202/zero-mail/CLAUDE.md` — locked constraints (Java 25, Spring Boot 4, no Lombok, no WebFlux, no Kafka, AES-GCM, no JWT, no GCP starters).
+
+**Sibling research (already locked):**
+- `.planning/research/ARCHITECTURE.md` (v1.0 baseline + v1.1 delta lines 1–1229) — Modulith pattern, `core.chat` precedent, ArchUnit gates, send carve-out, JSONB privacy gate.
+- `.planning/research/STACK.md` — locked stack (Postgres 17, Redis 7, Spring AI M6 confinement, Spring Data JDBC for reads).
+- `.planning/PROJECT.md` lines 19–40 — v1.2 milestone scope, SEED-011 activation, deferred v1.1 reqs to carry into Phase 9.
+- `.planning/STATE.md` — current position (Phase 8 not started; defining requirements).
+- `.planning/MILESTONES.md` — v1.2 sequencing decision: Phase 1 (admin) before Settings (now Phase 8 → Phase 9 per ROADMAP).
+
+**Reference repo (inbox-zero) — NOT a code source:**
+- `D:/study-materials-summer-2026/EXE202/inbox-zero/apps/web/app/(app)/admin/` — UX reference for admin nav structure (mapped to Next.js 16 `(admin)` route group pattern).
+
+---
+
+*Architecture research for: Zero Mail v1.2 — admin console foundation + Settings UI on curated catalog, integrating into existing Spring Boot 4 + Spring Modulith + Next.js 16 monorepo*
+*Researched: 2026-05-19 by gsd-researcher (direct codebase read + sibling research integration + verified Modulith/ArchUnit patterns)*
