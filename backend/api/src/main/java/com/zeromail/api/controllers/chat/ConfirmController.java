@@ -57,17 +57,19 @@ public class ConfirmController {
         return new ConfirmActionResponseDto(result.state());
     }
 
-    @org.springframework.web.bind.annotation.ExceptionHandler({
-        PendingActionNotFoundException.class,
-        StaleToolCallException.class
-    })
+    @org.springframework.web.bind.annotation.ExceptionHandler(PendingActionNotFoundException.class)
     ResponseEntity<Void> pendingActionNotFound() {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 
+    // StaleToolCallException is a parts_updated_at mismatch (the stream raced ahead of the
+    // user). It is semantically a conflict, not a missing resource, and belongs in the 409 bucket
+    // alongside ConfirmationLeaseConflictException so the frontend can distinguish "refresh
+    // needed" from "chat/tool call doesn't exist" (WR-11).
     @org.springframework.web.bind.annotation.ExceptionHandler({
         ConfirmationLeaseConflictException.class,
-        VipAcknowledgmentMissingException.class
+        VipAcknowledgmentMissingException.class,
+        StaleToolCallException.class
     })
     ResponseEntity<Void> confirmationConflict() {
         return ResponseEntity.status(HttpStatus.CONFLICT).build();
