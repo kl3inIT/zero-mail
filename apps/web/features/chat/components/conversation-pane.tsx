@@ -3,7 +3,7 @@
 import type { UIMessage } from 'ai';
 import { ArrowUp, Sparkles } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   Conversation,
@@ -173,6 +173,7 @@ export function ConversationPane({
   const chat = useChat({ chatId, initialMessages });
   const [input, setInput] = useState('');
   const [stopped, setStopped] = useState(false);
+  const chatStartedNotifiedRef = useRef(false);
   const suggestions = [
     t('suggestion.rules'),
     t('suggestion.search'),
@@ -180,10 +181,17 @@ export function ConversationPane({
     t('suggestion.memory'),
   ];
 
+  useEffect(() => {
+    if (historyChatId || chatStartedNotifiedRef.current || chat.persistenceAckCount === 0) {
+      return;
+    }
+    chatStartedNotifiedRef.current = true;
+    onChatStarted();
+  }, [chat.persistenceAckCount, historyChatId, onChatStarted]);
+
   async function handleSubmit(message: PromptInputMessage) {
     const text = message.text.trim();
     if (!text) return;
-    onChatStarted();
     setStopped(false);
     await chat.sendMessage({ text });
     setInput('');
@@ -194,7 +202,7 @@ export function ConversationPane({
     setStopped(true);
   }
 
-  if (detail.isLoading && historyChatId) {
+  if (detail.isLoading && historyChatId && chat.messages.length === 0) {
     return (
       <div className="flex h-full flex-col gap-4 p-6">
         <Skeleton className="h-16 w-2/3 rounded-lg" />
