@@ -1,11 +1,121 @@
 services:
+
+  # ── Data layer (zeromail-internal only, not exposed to proxy) ────
   postgres:
-    image: postgres:17.6
+    image: postgres:18.4
+    container_name: zeromail-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: zeromail
       POSTGRES_USER: zeromail
       POSTGRES_PASSWORD: zeromail
-    ports: ["15432:5432"]
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    networks:
+      - zeromail-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zeromail -d zeromail"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   redis:
-    image: redis:7.2
-    ports: ["6379:6379"]
+    image: redis:8.6.3
+    container_name: zeromail-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - zeromail-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ── Worker (internal only, runs Liquibase migrations) ────────────
+  worker:
+    build:
+      context: .
+      dockerfile: backend/worker/Dockerfile
+    image: zeromail-worker:latest
+    container_name: zeromail-worker
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://zeromail-postgres:5432/zeromail
+      REDIS_HOST: zeromail-redis
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+    networks:
+      - zeromail-internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8081/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 3
+
+  # ── Frontend (proxy-network, NPM trỏ bằng tên zeromail-frontend) ──
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE: https://zeromail.vn
+    image: zeromail-frontend:latest
+    container_name: zeromail-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      API_BASE_URL: http://zeromail-api:8080
+    networks:
+      - proxy-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+  # ── API (proxy-network + internal, NPM trỏ bằng tên zeromail-api) ─
+  api:
+    build:
+      context: .
+      dockerfile: backend/api/Dockerfile
+    image: zeromail-api:latest
+    container_name: zeromail-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://zeromail-postgres:5432/zeromail
+      REDIS_HOST: zeromail-redis
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+    networks:
+      - proxy-network
+      - zeromail-internal
+    depends_on:
+      worker:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 3
+
+networks:
+  proxy-network:
+    external: true
+  zeromail-internal:
+    external: true
+
+volumes:
+  postgres_data:
+  redis_data:

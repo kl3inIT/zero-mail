@@ -160,7 +160,7 @@ function ConnectionHealth() {
           size="sm"
           className="h-8 rounded-full px-3 text-xs"
           onClick={() => {
-            window.location.href = getApiUrl('/tenant/connect-gmail');
+            window.location.href = getApiUrl('/api/tenant/connect-gmail');
           }}
           aria-label={t('shell.connection.reconnect')}
           data-testid="reconnect-gmail-button"

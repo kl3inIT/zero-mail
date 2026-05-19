@@ -30,14 +30,14 @@ export interface GetCurrentUserOptions {
  */
 export async function fetchCurrentUser(opts: GetCurrentUserOptions = {}): Promise<CurrentUser> {
   const { fetcher, signal, headers } = opts;
-  const { data, error, response } = await api.GET('/me', {
+  const { data, error, response } = await api.GET('/api/me', {
     cache: fetcher || headers ? 'no-store' : undefined,
     fetch: adaptFetchForOpenApi(fetcher ?? (headers ? fetch : undefined)),
     headers,
     signal,
   });
   if (error || !response.ok || data === undefined) {
-    throw error ?? new Error(`/me failed: ${response.status}`);
+    throw error ?? new Error(`/api/me failed: ${response.status}`);
   }
   return data;
 }
@@ -73,16 +73,16 @@ export const getCurrentUserCached = cache(
 export const getCurrentUser = fetchCurrentUser;
 
 export async function deleteAccount(): Promise<void> {
-  const { error, response } = await api.DELETE('/me/account', {
+  const { error, response } = await api.DELETE('/api/me/account', {
     headers: { ...xsrfHeader() },
   });
   if (error || !response.ok) {
-    throw error ?? new Error(`/me/account DELETE failed: ${response.status}`);
+    throw error ?? new Error(`/api/me/account DELETE failed: ${response.status}`);
   }
 }
 
 export async function updateLanguage(language: 'vi' | 'en') {
-  const response = await api.PATCH('/me/language', {
+  const response = await api.PATCH('/api/me/language', {
     body: { language },
     headers: { 'Content-Type': 'application/json', ...xsrfHeader() },
   });

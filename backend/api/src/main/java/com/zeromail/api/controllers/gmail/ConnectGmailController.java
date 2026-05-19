@@ -12,7 +12,7 @@ public class ConnectGmailController {
     // GET is semantically correct for an OAuth redirect trigger.
     // The actual mutation (refresh-token rotation) happens on the OAuth callback,
     // not on this endpoint. GET requires no CSRF token per Spring Security defaults.
-    @GetMapping("/tenant/connect-gmail")
+    @GetMapping("/api/tenant/connect-gmail")
     public ResponseEntity<Void> connect() {
         // Reconnect path forces prompt=consent via resolver signal parameter.
         return ResponseEntity.status(HttpStatus.FOUND)

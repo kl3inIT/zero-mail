@@ -105,12 +105,12 @@ function mapAuditEntry(row: components['schemas']['AuditEntryResponse']): AuditE
 }
 
 export async function setTriagePaused(paused: boolean): Promise<void> {
-  const { error, response } = await api.PUT('/tenant/triage-pause', {
+  const { error, response } = await api.PUT('/api/tenant/triage-pause', {
     body: { paused },
     headers: jsonHeaders(),
   });
   if (error || !response.ok)
-    throw error ?? new Error(`/tenant/triage-pause failed: ${response.status}`);
+    throw error ?? new Error(`/api/tenant/triage-pause failed: ${response.status}`);
 }
 
 export async function getAuditLog(options: AuditLogOptions = {}): Promise<AuditLogPage> {

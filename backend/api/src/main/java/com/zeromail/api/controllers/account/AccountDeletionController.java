@@ -46,7 +46,7 @@ public class AccountDeletionController {
         this.tenantService = tenantService;
     }
 
-    @DeleteMapping("/me/account")
+    @DeleteMapping("/api/me/account")
     @Transactional
     public void deleteAccount() {
         UUID tenantId = TenantContext.currentTenantUuid();

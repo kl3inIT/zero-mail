@@ -147,24 +147,21 @@ public class GoogleOAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
         // (b) Null refresh-token check.
         if (authorizedClient.getRefreshToken() == null) {
-            // First-login null: no existing user → throw consent_denied.
             boolean existingUser = userRepository.findByGoogleSubject(googleSubject).isPresent();
             if (!existingUser) {
-                log.info("event=oauth_no_refresh_token_first_login");
-                // Clean up partial AuthorizedClient before throwing.
-                // authenticationToken.getName() is always available; request.getUserPrincipal()
-                // is null here.
+                // First-login with no refresh token: Google already had a prior authorization for
+                // this client without offline access. Auto-retry with prompt=consent so the user
+                // sees the consent screen and Google issues a fresh refresh token — avoids
+                // showing a confusing "consent_denied" error for a normal re-auth scenario.
+                log.info("event=oauth_no_refresh_token_first_login_retry_consent");
                 try {
                     authorizedClientService.removeAuthorizedClient(
                             "google", authenticationToken.getName());
                 } catch (Exception ignored) {
                     /* best-effort */
                 }
-                throw new OAuth2AuthenticationException(
-                        new OAuth2Error(
-                                "consent_denied",
-                                "Refresh token was not issued — user must re-authenticate with consent",
-                                null));
+                response.sendRedirect("/oauth2/authorization/google?reconnect=true");
+                return;
             }
             // Reconnect null: fall through to provisioning (service handles gracefully).
         }

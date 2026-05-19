@@ -62,7 +62,7 @@ export default function SettingsPage() {
   const triagePaused = pauseState.data ?? false;
   const preferredLanguage = (me.data?.preferredLanguage === 'en' ? 'en' : 'vi') as AppLocale;
   const reconnect = () => {
-    window.location.href = getApiUrl('/tenant/connect-gmail');
+    window.location.href = getApiUrl('/api/tenant/connect-gmail');
   };
 
   return (
@@ -128,7 +128,7 @@ export default function SettingsPage() {
             {connStatus === 'NOT_CONNECTED' && (
               <Button
                 onClick={() => {
-                  window.location.href = getApiUrl('/tenant/connect-gmail');
+                  window.location.href = getApiUrl('/api/tenant/connect-gmail');
                 }}
               >
                 {t('onboarding.connect.cta')}

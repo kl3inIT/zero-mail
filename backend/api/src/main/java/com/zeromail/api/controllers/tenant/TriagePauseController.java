@@ -25,7 +25,7 @@ public class TriagePauseController {
         this.tenantService = tenantService;
     }
 
-    @PutMapping("/tenant/triage-pause")
+    @PutMapping("/api/tenant/triage-pause")
     public TriagePauseResponse setTriagePause(@RequestBody @Valid TriagePauseRequest request) {
         UUID tenantId = TenantContext.currentTenantUuid();
         tenantService.setTriagePaused(tenantId, request.paused());

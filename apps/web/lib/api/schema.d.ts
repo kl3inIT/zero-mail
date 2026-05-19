@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/tenant/triage-pause": {
+    "/api/tenant/triage-pause": {
         parameters: {
             query?: never;
             header?: never;
@@ -36,7 +36,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/tenant/disconnect": {
+    "/api/tenant/disconnect": {
         parameters: {
             query?: never;
             header?: never;
@@ -52,7 +52,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/onboarding/select-template": {
+    "/api/onboarding/select-template": {
         parameters: {
             query?: never;
             header?: never;
@@ -68,7 +68,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/onboarding/complete": {
+    "/api/onboarding/complete": {
         parameters: {
             query?: never;
             header?: never;
@@ -372,7 +372,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/me/language": {
+    "/api/me/language": {
         parameters: {
             query?: never;
             header?: never;
@@ -420,7 +420,7 @@ export interface paths {
         patch: operations["update"];
         trace?: never;
     };
-    "/tenant/connect-gmail": {
+    "/api/tenant/connect-gmail": {
         parameters: {
             query?: never;
             header?: never;
@@ -436,7 +436,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/me": {
+    "/api/me": {
         parameters: {
             query?: never;
             header?: never;
@@ -452,7 +452,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/gmail/connection/status": {
+    "/api/gmail/connection/status": {
         parameters: {
             query?: never;
             header?: never;
@@ -628,7 +628,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/me/account": {
+    "/api/me/account": {
         parameters: {
             query?: never;
             header?: never;
