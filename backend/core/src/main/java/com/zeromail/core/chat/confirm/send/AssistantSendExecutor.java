@@ -129,7 +129,8 @@ public class AssistantSendExecutor {
                                             writeJson(resultSummary))));
             return new AssistantSendResult("CONFIRMED", auditId, resultSummary);
         } finally {
-            confirmationLeaseService.release(command.chatId(), command.toolCallId());
+            confirmationLeaseService.release(
+                    command.chatId(), command.toolCallId(), command.processInstanceId());
         }
     }
 

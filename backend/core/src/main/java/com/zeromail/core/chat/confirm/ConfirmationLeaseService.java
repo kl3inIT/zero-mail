@@ -3,6 +3,7 @@ package com.zeromail.core.chat.confirm;
 import com.zeromail.core.shared.lock.LockBackendUnavailableException;
 import com.zeromail.core.tenant.TenantContext;
 import java.time.Duration;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -11,6 +12,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -18,6 +21,19 @@ public class ConfirmationLeaseService {
 
     private static final Logger log = LoggerFactory.getLogger(ConfirmationLeaseService.class);
     private static final Duration CONFIRMATION_LEASE_TTL = Duration.ofMinutes(5);
+    // Lua script for compare-and-delete: only DEL if the stored value matches the caller's
+    // fencing token (WR-03). Prevents a delayed caller from deleting a NEW lease held by a
+    // different process after the original lease TTL expired.
+    private static final RedisScript<Long> RELEASE_IF_OWNER_SCRIPT =
+            new DefaultRedisScript<>(
+                    """
+                    if redis.call('get', KEYS[1]) == ARGV[1] then
+                      return redis.call('del', KEYS[1])
+                    else
+                      return 0
+                    end
+                    """,
+                    Long.class);
 
     private final Supplier<StringRedisTemplate> stringRedisTemplateSupplier;
 
@@ -66,17 +82,33 @@ public class ConfirmationLeaseService {
         return false;
     }
 
-    public void release(UUID chatId, String toolCallId) {
+    /**
+     * Releases the confirmation lease only if the stored value matches the caller's fencing
+     * token. If the TTL elapsed and another caller acquired a new lease, this is a no-op so the
+     * delayed caller never deletes a NEW lease (WR-03).
+     */
+    public void release(UUID chatId, String toolCallId, String processInstanceId) {
         StringRedisTemplate stringRedisTemplate = stringRedisTemplateSupplier.get();
         if (stringRedisTemplate == null) {
             return;
         }
+        String lockKey = lockKey(chatId, toolCallId);
+        String leaseValue = requireText(processInstanceId, "processInstanceId");
         try {
-            stringRedisTemplate.delete(lockKey(chatId, toolCallId));
-            log.info(
-                    "event=chat_confirmation_lease_released tenantId={} chatId={}",
-                    tenantIdForLog(),
-                    chatId);
+            Long deletedCount =
+                    stringRedisTemplate.execute(
+                            RELEASE_IF_OWNER_SCRIPT, List.of(lockKey), leaseValue);
+            if (deletedCount != null && deletedCount > 0) {
+                log.info(
+                        "event=chat_confirmation_lease_released tenantId={} chatId={}",
+                        tenantIdForLog(),
+                        chatId);
+            } else {
+                log.info(
+                        "event=chat_confirmation_lease_release_skipped tenantId={} chatId={} reason=fencing_token_mismatch",
+                        tenantIdForLog(),
+                        chatId);
+            }
         } catch (RuntimeException redisFailure) {
             log.debug(
                     "event=chat_confirmation_lease_release_failed tenantId={} reason={}",

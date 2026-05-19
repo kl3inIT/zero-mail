@@ -19,4 +19,5 @@ public record AssistantSendCommand(
         String gmailThreadId,
         String inReplyToMessageId,
         boolean vipAcknowledged,
-        Map<String, Object> previewSnapshot) {}
+        Map<String, Object> previewSnapshot,
+        String processInstanceId) {}

@@ -48,7 +48,8 @@ public class ConfirmActionService {
         PendingAction pendingAction =
                 confirmationStateMachine.loadPendingAction(chatId, tenantId, toolCallId);
         requirePendingConfirmable(pendingAction);
-        acquireLease(chatId, toolCallId);
+        String processInstanceId = newProcessInstanceId();
+        acquireLease(chatId, toolCallId, processInstanceId);
         boolean executorWillReleaseLease = false;
         try {
             Reservation reservation =
@@ -59,7 +60,10 @@ public class ConfirmActionService {
                 try {
                     sendCommand =
                             confirmedSendToolHandlers.toCommand(
-                                    reservation, vipAcknowledged, safeOverride(contentOverride));
+                                    reservation,
+                                    vipAcknowledged,
+                                    safeOverride(contentOverride),
+                                    processInstanceId);
                 } catch (RuntimeException toCommandFailure) {
                     // Synchronous validation (toCommand) failed AFTER reserve() committed
                     // state=PROCESSING. Revert back to PENDING so the user is not stuck on an
@@ -81,11 +85,12 @@ public class ConfirmActionService {
                                     reservation.toolCallId(),
                                     reservation.toolName(),
                                     effectiveInput(reservation, contentOverride),
-                                    reservation.confirmationJson()));
+                                    reservation.confirmationJson(),
+                                    processInstanceId));
             return new ConfirmActionResult(writeResult.state(), writeResult.resultSummary());
         } finally {
             if (!executorWillReleaseLease) {
-                confirmationLeaseService.release(chatId, toolCallId);
+                confirmationLeaseService.release(chatId, toolCallId, processInstanceId);
             }
         }
     }
@@ -95,12 +100,13 @@ public class ConfirmActionService {
         PendingAction pendingAction =
                 confirmationStateMachine.loadPendingAction(chatId, tenantId, toolCallId);
         requirePendingConfirmable(pendingAction);
-        acquireLease(chatId, toolCallId);
+        String processInstanceId = newProcessInstanceId();
+        acquireLease(chatId, toolCallId, processInstanceId);
         try {
             confirmationStateMachine.commitCanceled(chatId, tenantId, toolCallId);
             return new ConfirmActionResult("CANCELED", Map.of("state", "canceled"));
         } finally {
-            confirmationLeaseService.release(chatId, toolCallId);
+            confirmationLeaseService.release(chatId, toolCallId, processInstanceId);
         }
     }
 
@@ -113,13 +119,16 @@ public class ConfirmActionService {
         }
     }
 
-    private void acquireLease(UUID chatId, String toolCallId) {
+    private void acquireLease(UUID chatId, String toolCallId, String processInstanceId) {
         boolean leaseAcquired =
-                confirmationLeaseService.tryAcquire(
-                        chatId, toolCallId, "confirm-" + UUID.randomUUID());
+                confirmationLeaseService.tryAcquire(chatId, toolCallId, processInstanceId);
         if (!leaseAcquired) {
             throw new ConfirmationLeaseConflictException();
         }
+    }
+
+    private static String newProcessInstanceId() {
+        return "confirm-" + UUID.randomUUID();
     }
 
     private static Map<String, Object> effectiveInput(

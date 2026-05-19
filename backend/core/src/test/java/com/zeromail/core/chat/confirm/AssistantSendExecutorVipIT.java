@@ -161,7 +161,8 @@ class AssistantSendExecutorVipIT {
                         null,
                         null,
                         true,
-                        Map.of("state", "preview"));
+                        Map.of("state", "preview"),
+                        "confirm-test-single");
         withTenant(tenantId, () -> assistantSendExecutor.execute(singleRecipientCommand));
 
         AssistantSendCommand multiRecipientCommand =
@@ -179,7 +180,8 @@ class AssistantSendExecutorVipIT {
                         null,
                         null,
                         true,
-                        Map.of("state", "preview"));
+                        Map.of("state", "preview"),
+                        "confirm-test-multi");
         withTenant(tenantId, () -> assistantSendExecutor.execute(multiRecipientCommand));
 
         verify(confirmationStateMachine, org.mockito.Mockito.times(2))
@@ -219,7 +221,8 @@ class AssistantSendExecutorVipIT {
                 null,
                 null,
                 vipAcknowledged,
-                Map.of("state", "preview"));
+                Map.of("state", "preview"),
+                "confirm-test-vip");
     }
 
     private static <T> T withTenant(UUID tenantId, TenantCallable<T> tenantCallable)

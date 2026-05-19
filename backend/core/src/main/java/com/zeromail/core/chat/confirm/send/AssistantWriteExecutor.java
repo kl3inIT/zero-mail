@@ -51,7 +51,8 @@ public class AssistantWriteExecutor {
                             command.previewSnapshot()));
             return new AssistantWriteResult("CONFIRMED", writeToolResult.resultSummary());
         } finally {
-            confirmationLeaseService.release(command.chatId(), command.toolCallId());
+            confirmationLeaseService.release(
+                    command.chatId(), command.toolCallId(), command.processInstanceId());
         }
     }
 

@@ -19,7 +19,10 @@ public class ConfirmedSendToolHandlers {
     }
 
     public AssistantSendCommand toCommand(
-            Reservation reservation, boolean vipAcknowledged, Map<String, Object> contentOverride) {
+            Reservation reservation,
+            boolean vipAcknowledged,
+            Map<String, Object> contentOverride,
+            String processInstanceId) {
         if (reservation.toolCategory()
                 != com.zeromail.core.chat.domain.ToolCategory.CONFIRMED_SEND) {
             throw new IllegalArgumentException("tool is not a confirmed-send tool");
@@ -49,7 +52,8 @@ public class ConfirmedSendToolHandlers {
                 WriteToolArguments.optionalText(effectiveInput, "gmailThreadId"),
                 WriteToolArguments.optionalText(effectiveInput, "inReplyToMessageId"),
                 vipAcknowledged,
-                Map.copyOf(previewSnapshot));
+                Map.copyOf(previewSnapshot),
+                processInstanceId);
     }
 
     private static String body(ChatToolName toolName, Map<String, Object> effectiveInput) {

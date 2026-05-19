@@ -10,4 +10,5 @@ public record AssistantWriteCommand(
         String toolCallId,
         ChatToolName toolName,
         Map<String, Object> inputJson,
-        Map<String, Object> previewSnapshot) {}
+        Map<String, Object> previewSnapshot,
+        String processInstanceId) {}
