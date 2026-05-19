@@ -60,7 +60,15 @@ Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
 11. Operator can view at `/admin/queue` real-time read-only aggregates over `outbox` + `processing_job` (depth by type, oldest-unleased age, retry distribution, failure rate, dead-letter count) with 10s auto-refresh, and re-queue a dead-letter row without viewing its payload or editing its fields
 12. Operator can view at `/admin/spend` a metadata-only dashboard aggregating `llm_call_audit` (today / 7d / 30d totals split platform-vs-BYOK, stacked bar by provider, donut by feature, top-20 tenants, max 90-day picker) with k-anonymity on deleted tenants and no per-prompt drill-down; the CI `MasterKeySentinelLeakTest` (ARCH-11) is green — no log line, response body, exception, YAML, or audit row contains `sk-`, `sk-ant-`, `AIza`, or `sk-or-` sentinels (or masked-encoded forms)
 
-**Plans**: TBD (planning structure: 8A foundation → 8B master keys → 8C tenant inspection → 8D catalog Sync → 8E queue health → 8F spend dashboard; 8A is hard gate, 8B/8C/8D/8E/8F can wave-parallelize after 8A)
+**Plans:** 6 plans (8A foundation → 8B/8C/8E/8F parallel after 8A → 8D after 8B):
+
+Plans:
+- [ ] 8A-PLAN.md — Foundation: docker-compose + runbook; SecurityFilterChain admin/user split; admin_users + WebAuthn ceremonies; append-only audit (HMAC chain + trigger); AdminContext mutex; GroupedOpenApi split; AdminAudit + RoleGrants controllers; apps/admin Vite SPA scaffold + login/enroll/dashboard/audit/role-grants routes (ADMIN-01..10, ARCH-08/09/10/12, OPS-INFRA-01..03)
+- [ ] 8B-PLAN.md — Master Keys: llm_provider_master_key + PlatformSecretCipher + MasterKeyAdminService (set/test/rotate) + edit-session + rate-limit + ChatModel cache eviction + ProviderMasterKeyResolver + 9Router dual-mode + MasterKeySentinelLeakTest; /master-keys list + per-provider edit (MKEY-01..08, ARCH-11)
+- [ ] 8C-PLAN.md — Tenant Inspection: AdminTenantAccess.readOnly + 5-tab projections + AdminResponseBodyBanFilter + TenantOAuthRevocationGateway + pause/disconnect/delete; /tenants list + /tenants/:id 5-tab detail (OPS-TENANT-01..05)
+- [ ] 8D-PLAN.md — Catalog: provider_catalog + model_catalog + feature_binding + 3-step Sync (Fetch/Diff/Confirm) + Anthropic seed + GET /api/settings/catalog + CatalogChangedEvent; /catalog browser + Sync wizard (CAT-01..07)
+- [ ] 8E-PLAN.md — Queue Health: QueueHealthQueryService + DeadLetterRequeueService + KpiCard + AutoRefreshIndicator + /queue page with 10s auto-refresh (OPS-QUEUE-01/02)
+- [ ] 8F-PLAN.md — Spend Dashboard: SpendAggregateQueryService + k-anonymity + AdminSpendPromptAccessorBanTest + /spend page with 90d picker + stacked bar + donut + top-20 (OPS-SPEND-01/02)
 **UI hint**: yes
 
 **Planning-time decisions locked during spec-phase 2026-05-19 + discuss-phase pivot 2026-05-19** (from research SUMMARY + spec interview + WebSearch + Spring Security 7 Context7):
