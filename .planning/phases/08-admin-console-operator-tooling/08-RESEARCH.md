@@ -1290,3 +1290,241 @@ Hard directives the planner must verify against:
 
 **Research date:** 2026-05-19
 **Valid until:** 2026-06-19 (30 days — Spring Security 7.0.5 is stable; webauthn4j-core 0.29.x is stable; `@simplewebauthn/browser` 13.x stable line; revalidate if planner sees a version skew >2 minor releases at plan-phase start).
+
+## Followup Verification (2026-05-19)
+
+This section answers the 5 open questions surfaced by the main research pass (lines 1015-1041). Verifications use Spring official docs, Maven Central API, Docker Hub, and the upstream GitHub repos. Each answer is tagged with provenance per the GSD research convention.
+
+### Q1: Spring Session per-chain cookie scoping
+
+**Verdict: per-chain `CookieSerializer` is NOT supported as a first-class bean.** `CookieSerializer` is a single, application-wide bean in Spring Session 4.x — instantiating two of them in one context will cause `@EnableRedisHttpSession` autoconfig to fail with a duplicate-bean error. The Spring Session reference documentation does not document any chain-scoped `HttpSessionIdResolver` injection point. [CITED: https://docs.spring.io/spring-session/reference/http-session.html] [VERIFIED: WebFetch + WebSearch corroborated, no GitHub issue contradicting this]
+
+**Recommended pattern for Phase 8 (path-aware single-process resolver):**
+
+```java
+@Bean
+public CookieSerializer cookieSerializer() {
+    DefaultCookieSerializer serializer = new DefaultCookieSerializer();
+    serializer.setCookieName("ZEROMAIL_SESSION");
+    serializer.setCookiePath("/");
+    serializer.setUseHttpOnlyFlag(true);
+    serializer.setUseSecureCookie(true);
+    serializer.setSameSite("Lax");
+    // Subdomain isolation enforced by Set-Cookie Domain attribute.
+    // Do NOT set DomainNamePattern that bridges admin.zeromail.com and zeromail.com.
+    return serializer;
+}
+```
+
+Because the cookie name + domain are global, the **isolation mechanism shifts to the subdomain boundary**, not to the cookie name. Two options for the Phase 8 plan:
+
+1. **Two separate Spring Boot processes** — `backend/api-admin` and `backend/api-user` as distinct runnable modules, each with its own `application.yml`, its own `CookieSerializer` bean, and its own Redis namespace (`spring.session.redis.namespace=zeromail:admin:session` vs `zeromail:user:session`). NPM routes `admin.zeromail.com` to admin process, `zeromail.com` to user process. This is the **clean answer** but doubles the JVM footprint on the VPS.
+
+2. **Single process + custom `HttpSessionIdResolver`** — wrap `CookieHttpSessionIdResolver` so that on `/api/admin/**` it reads/writes `ADMIN_SESSION`; on all other paths it reads/writes `SESSION`. Redis namespaces still cannot be split per chain inside a single `@EnableRedisHttpSession` (`redisNamespace` is per-`@Configuration` annotation), so the planner must accept that **admin sessions and user sessions share the same Redis namespace** but are distinguished by the path-aware resolver. Risk: a custom `HttpSessionIdResolver` is undocumented territory and Spring Session 4.x may regress this pattern. [ASSUMED]
+
+```java
+public final class PathAwareCookieSessionIdResolver implements HttpSessionIdResolver {
+    private final CookieHttpSessionIdResolver userResolver;   // cookieName=SESSION
+    private final CookieHttpSessionIdResolver adminResolver;  // cookieName=ADMIN_SESSION
+
+    @Override
+    public List<String> resolveSessionIds(HttpServletRequest request) {
+        return pickResolver(request).resolveSessionIds(request);
+    }
+
+    @Override
+    public void setSessionId(HttpServletRequest request, HttpServletResponse response, String sessionId) {
+        pickResolver(request).setSessionId(request, response, sessionId);
+    }
+
+    @Override
+    public void expireSession(HttpServletRequest request, HttpServletResponse response) {
+        pickResolver(request).expireSession(request, response);
+    }
+
+    private CookieHttpSessionIdResolver pickResolver(HttpServletRequest request) {
+        return request.getRequestURI().startsWith("/api/admin/") ? adminResolver : userResolver;
+    }
+}
+```
+
+**Planner guidance:** Write 8A foundation task `8A-T-SESSION-ISOLATION` that picks **Option 2** (single-process + `PathAwareCookieSessionIdResolver`) for v1.2 — the VPS footprint cost of Option 1 is not justified by current scale, and admin and user code already share the JVM. Add an explicit acceptance test `ChainCookieIsolationTest` that asserts: (a) hitting `/api/admin/**` with a `SESSION` cookie returns 401; (b) hitting `/api/me` with `ADMIN_SESSION` cookie returns 401; (c) the `Set-Cookie` Domain attribute is `admin.zeromail.com` on admin responses and `zeromail.com` on user responses. ArchUnit rule `AdminSessionCookieNameTest` enforces that any code in `controllers/admin/**` returning a session-establishing response uses `adminResolver` only.
+
+Citation URLs:
+- https://docs.spring.io/spring-session/reference/http-session.html — `CookieSerializer` is global
+- https://docs.spring.io/spring-session/docs/current/api/org/springframework/session/web/http/CookieSerializer.html — `DefaultCookieSerializer` API surface
+- https://docs.spring.io/spring-session/docs/current/api/org/springframework/session/web/http/HttpSessionIdResolver.html — interface contract used by `PathAwareCookieSessionIdResolver`
+
+---
+
+### Q2: Spring AI 2.0.0-M6 OpenAI/Anthropic adapter base_url runtime configurability
+
+**Verdict: YES — both `OpenAiChatModel` and `AnthropicChatModel` in Spring AI 2.0.0-M6 accept `baseUrl` and `apiKey` at construction time via `*ChatOptions.builder()` / `*Api.builder()`.** Runtime construction per `ChatModel` instance is the documented pattern, and our existing v1.1 BYOK code already uses it. The 9Router toggle (`OPENAI_FORMAT` vs `ANTHROPIC_FORMAT`) at the same `base_url` is implementable by selecting the adapter type at runtime and pointing both to the same URL. [CITED: https://docs.spring.io/spring-ai/reference/2.0/api/chat/anthropic-chat.html] [VERIFIED: official Spring AI 2.0 docs explicit on this surface]
+
+**Code pattern for the Phase 8 9Router factory** (lives inside `core.llm.gateway.springai.admin`, the only package allowed to talk Spring AI per CLAUDE.md "Hard do not use"):
+
+```java
+public final class NineRouterChatModelFactory {
+
+    public ChatModel buildOpenAiFormat(NineRouterConfig nineRouterConfig, String resolvedApiKey, String modelId) {
+        OpenAiChatOptions openAiChatOptions = OpenAiChatOptions.builder()
+                .model(modelId)
+                .build();
+        OpenAiApi openAiApi = OpenAiApi.builder()
+                .baseUrl(nineRouterConfig.baseUrl())     // e.g. http://9router:20128/v1
+                .apiKey(resolvedApiKey)
+                .build();
+        return new OpenAiChatModel(openAiApi, openAiChatOptions);
+    }
+
+    public ChatModel buildAnthropicFormat(NineRouterConfig nineRouterConfig, String resolvedApiKey, String modelId) {
+        AnthropicChatOptions anthropicChatOptions = AnthropicChatOptions.builder()
+                .model(modelId)
+                .maxTokens(1024)
+                .apiKey(resolvedApiKey)
+                .baseUrl(nineRouterConfig.baseUrl())     // same URL, different format on adapter side
+                .build();
+        return new AnthropicChatModel(anthropicChatOptions);
+    }
+}
+```
+
+**Caching strategy:** Build is per-request expensive (HTTP client init). Cache `ChatModel` instances keyed by `(provider, baseUrl, adapterFormat, kekVersion, apiKeyDigest)` inside a Caffeine cache held by `core.llm.gateway.springai` (this matches the existing v1.1 BYOK ChatModel cache). On `MasterKeyRotatedEvent`, evict by `(provider)` granularity per Pitfall #10 — no carve-out for BYOK. [VERIFIED: pattern is documented for OpenAiApi.builder; AnthropicChatOptions.builder().baseUrl/apiKey surface confirmed in Spring AI 2.0 reference]
+
+**Planner guidance:** Write `8B-T-NINEROUTER-FACTORY` to create `NineRouterChatModelFactory` with two methods (`buildOpenAiFormat`, `buildAnthropicFormat`). Add acceptance test `NineRouterAdapterToggleTest` that constructs both adapters against a WireMock stub on the same base URL and asserts request body shape matches the format (OpenAI: `messages: [{role, content}]`; Anthropic: `messages: [{role, content}], max_tokens: N`). The 6-provider cache key already exists in v1.1 — extend the cache key tuple to include `adapterFormat` for the 9Router slot only.
+
+Citation URLs:
+- https://docs.spring.io/spring-ai/reference/2.0/api/chat/anthropic-chat.html — `AnthropicChatOptions.builder().baseUrl().apiKey()` documented in 2.0 series
+- https://docs.spring.io/spring-ai/reference/api/chat/openai-chat.html — `OpenAiApi.builder().baseUrl().apiKey()` + `OpenAiChatModel(api, options)` constructor
+
+---
+
+### Q3: springdoc-openapi GroupedOpenApi split idiom
+
+**Verdict: confirmed standard pattern.** `springdoc-openapi` v2.x exposes one `GroupedOpenApi` bean per group with `pathsToMatch()` + `pathsToExclude()` filters, served at `/v3/api-docs/{group}`. The pattern is unchanged between Spring Boot 3 and Spring Boot 4 — both use the same springdoc-openapi-starter-webmvc-ui artifact and bean API. [CITED: https://springdoc.org] [VERIFIED: Spring Boot 3.x and 4.x both publish to springdoc 2.x compatibility track]
+
+**Bean snippet for `backend/api/src/main/java/com/zeromail/api/config/OpenApiConfig.java`** (extends the existing `OpenApiConfig`, which already has `GlobalOpenApiCustomizer` per main RESEARCH.md):
+
+```java
+@Bean
+public GroupedOpenApi userApi() {
+    return GroupedOpenApi.builder()
+            .group("user")
+            .pathsToMatch("/api/**")
+            .pathsToExclude("/api/admin/**")
+            .build();
+}
+
+@Bean
+public GroupedOpenApi adminApi() {
+    return GroupedOpenApi.builder()
+            .group("admin")
+            .pathsToMatch("/api/admin/**")
+            .build();
+}
+```
+
+Served at:
+- `https://zeromail.com/v3/api-docs/user` — consumed by `apps/web`'s existing codegen pipeline
+- `https://admin.zeromail.com/v3/api-docs/admin` — new consumer in `apps/admin` Vite SPA
+
+**openapi-typescript 7.13.0 consumption:** the CLI accepts a URL or local file. Add to `apps/admin/package.json`:
+
+```json
+{
+  "scripts": {
+    "codegen:admin-schema": "openapi-typescript http://localhost:8080/v3/api-docs/admin --output src/lib/api/admin-schema.d.ts"
+  }
+}
+```
+
+[VERIFIED: openapi-typescript 7.x docs confirm URL input is supported]
+
+**Existing v1.1 setup:** `backend/api/src/main/java/com/zeromail/api/config/OpenApiConfig.java` already imports springdoc (uses `GlobalOpenApiCustomizer`). Phase 8 does NOT need to introduce springdoc as a new dependency — it only adds two `GroupedOpenApi` beans. [VERIFIED: cross-referenced with main RESEARCH.md Sources section line 1267]
+
+**Planner guidance:** Write `8A-T-OPENAPI-SPLIT` to add the two `GroupedOpenApi` beans inside the existing `OpenApiConfig` class (NOT a new file — keep config consolidated). Add npm script `codegen:admin-schema` to `apps/admin/package.json` once the Vite scaffold lands. Acceptance test: `curl -s http://localhost:8080/v3/api-docs/admin | jq '.paths | keys | all(startswith("/api/admin/"))'` returns `true`.
+
+Citation URLs:
+- https://springdoc.org/ — `GroupedOpenApi.builder()` API + `/v3/api-docs/{group}` endpoint
+- https://github.com/springdoc/springdoc-openapi — Spring Boot 4 compatibility track
+
+---
+
+### Q4: decolua/9router Docker image existence + maintenance
+
+**Verdict: image EXISTS, is ACTIVELY maintained, but the API surface for `ANTHROPIC_FORMAT` is NOT publicly documented — verification needed before locking MKEY-05.** [VERIFIED: Docker Hub + GitHub] [PARTIAL — Anthropic-format endpoint not confirmed via upstream docs]
+
+**Confirmed facts:**
+- `docker.io/decolua/9router:latest` exists; latest digest `sha256:efb23bc42…` (161.4 MB), pushed 1 day before research date (2026-05-18).
+- Source repo: https://github.com/decolua/9router; build tag = git tag (GitHub Actions pipeline).
+- Latest release: **v0.4.55** (2026-05-18) — 58+ releases on the repo indicates active development.
+- Listening port: **20128** (single port for dashboard + API).
+- Documented endpoint: `POST http://localhost:20128/v1/chat/completions` (OpenAI-compatible format).
+- Translation capabilities advertised: "OpenAI ↔ Claude ↔ Gemini ↔ Cursor ↔ Kiro ↔ Vertex ↔ Antigravity ↔ Ollama ↔ OpenAI Responses".
+
+**Unconfirmed (the gap that matters for MKEY-05):** the upstream README documents only the OpenAI-format endpoint. Whether `POST http://localhost:20128/v1/messages` (Anthropic-format) is exposed on the same port — or whether the toggle between formats is via request header / config flag / separate port — is **not stated in upstream docs**. The advertised "OpenAI ↔ Claude" capability appears to be **internal routing translation** (the 9Router converts between formats internally before hitting the upstream LLM), not **dual ingress API surface**. [ASSUMED — this distinction matters and is not documentable from current sources alone]
+
+**Fallback recommendation:**
+1. **Pin a specific version** — do not use `:latest`. Pin to `decolua/9router:0.4.55` in `docker-compose.yml` so a future breaking change in 9Router does not surprise the VPS deploy. Bump deliberately as part of a v1.2.x maintenance task.
+2. **Add a 8A pre-implementation spike** — a 30-minute exploration task `8A-T-9ROUTER-API-SHAPE-SPIKE` where the executor runs `docker run -p 20128:20128 decolua/9router:0.4.55` locally and curls both `/v1/chat/completions` AND `/v1/messages` to confirm the dual-format ingress hypothesis. If `/v1/messages` returns 404, MKEY-05 acceptance criteria must be amended to "9Router ships as `OPENAI_FORMAT` only in v1.2; `ANTHROPIC_FORMAT` toggle deferred to v1.3" — this would require a discuss-phase amendment because Decision D-19 is locked. Per project policy [feedback_skip_derisking_spikes.md], surface the spike as an option, do not insist; the planner can also take the risk and let MKEY-05 acceptance discover the truth at integration time.
+3. **Image legitimacy** — `decolua/9router` is a single-maintainer image. Add `OPS-INFRA-RUNBOOK` content: "9Router upstream maintenance status MUST be checked quarterly; if the repo is archived/abandoned, fork to internal mirror." [VERIFIED: only one maintainer @decolua on the GitHub org]
+
+**Planner guidance:** Write `8A-T-9ROUTER-COMPOSE` pinning `decolua/9router:0.4.55` in `docker-compose.yml`. Write `8A-T-9ROUTER-API-SHAPE-SPIKE` (30 min, optional but recommended) before `8B-T-NINEROUTER-FACTORY` lands. If the spike fails, the planner amends 8B scope and surfaces a discuss-phase ticket for D-19 / MKEY-05.
+
+Citation URLs:
+- https://hub.docker.com/r/decolua/9router — image existence + tag + size + maintainer
+- https://github.com/decolua/9router — source repo + release cadence
+- Upstream README does NOT document `/v1/messages` ingress — this is the unconfirmed gap
+
+---
+
+### Q5: webauthn4j-test availability + Spring Security 7 WebAuthn test utilities
+
+**Verdict on the artifact: EXISTS and matches our pinned core version exactly.** Maven Central confirms `com.webauthn4j:webauthn4j-test:0.29.1.RELEASE` is published (92 versions in the artifact's history; latest version returned by Maven Central solrsearch API is exactly `0.29.1.RELEASE`, timestamp 2025-05-01). Compatibility with `webauthn4j-core:0.29.1.RELEASE` is guaranteed because both are released together from the same Gradle multi-module project. [VERIFIED: Maven Central solrsearch API `q=g:com.webauthn4j+AND+a:webauthn4j-test`]
+
+```
+testImplementation("com.webauthn4j:webauthn4j-test:0.29.1.RELEASE")
+```
+
+**Verdict on Spring Security MockMvc support: `SecurityMockMvcRequestPostProcessors.webAuthn()` does NOT exist in Spring Security 7.0.5.** The reference docs list MockMvc post-processors for users, CSRF, form-login, http-basic, OAuth2, and logout — WebAuthn/Passkeys is absent. [VERIFIED: https://docs.spring.io/spring-security/reference/servlet/test/mockmvc/index.html]
+
+**Recommended integration test pattern for Phase 8** (replaces the speculative option (b) in main RESEARCH.md § WebAuthn integration testing strategy):
+
+Use `webauthn4j-test`'s authenticator emulator end-to-end against the real Spring Security 7 WebAuthn endpoints via `MockMvc` or `WebApplicationContext`. Pattern:
+
+```java
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+class AdminWebAuthnCeremonyIntegrationTest {
+
+    private final EmulatorAuthenticator emulatorAuthenticator =
+            new EmulatorAuthenticator(EmulatorAuthenticatorOption.builder()
+                    .credentialId(new byte[32])
+                    .userVerification(true)            // matches REQUIRED policy
+                    .build());
+
+    @Test
+    void registration_then_login_round_trip() {
+        // 1. POST /webauthn/register/options with enrollment token -> get challenge JSON.
+        // 2. Use emulatorAuthenticator.makeCredential(challenge, rpId, origin) to forge attestation.
+        // 3. POST /webauthn/register with attestation JSON -> assert 201 + admin_credential row.
+        // 4. POST /webauthn/authenticate/options -> get assertion challenge.
+        // 5. Use emulatorAuthenticator.getAssertion(challenge, rpId, origin) -> sign.
+        // 6. POST /webauthn/authenticate with assertion -> assert 200 + ADMIN_SESSION cookie set.
+    }
+}
+```
+
+**Known gotchas (planner must encode as test invariants):**
+1. **signCount in tests:** `EmulatorAuthenticator` increments its internal counter on each `getAssertion()` call by default. Tests asserting "signCount replay rejected" must construct two assertions with the SAME counter value (use the option override) and expect the second to return 403. Tests asserting "syncable passkey with counter=0 is accepted" must set counter=0 on both attestation and assertion (Pitfall #6 carve-out).
+2. **Attestation format:** `webauthn4j-test` defaults to `packed` attestation. Spring Security 7 default policy may require `none` or `direct` based on the configured `AttestationConveyancePreference` — set explicitly in test setup.
+3. **Origin / rpId mismatch:** `EmulatorAuthenticator.makeCredential(...)` needs the exact `origin` value Spring Security expects on the server side. In Phase 8 admin chain, `allowedOrigins=https://admin.zeromail.com` — tests must pass exactly that string; do NOT inject `http://localhost:8080` from `WebEnvironment.RANDOM_PORT`. Workaround: configure `allowedOrigins` to include test-only host `https://test.admin.local` and have the test pass that origin.
+4. **Challenge persistence:** Open Question #4 in main research already flags `HttpSession`-backed `PublicKeyCredentialCreationOptionsRepository`. Integration tests under `MockMvc` automatically carry session via `mockMvc.session(...)`; tests under `TestRestTemplate` need explicit cookie jar. Default to MockMvc for ceremony tests.
+5. **HMAC chain side-effect:** registration also writes to `admin_audit_event` with HMAC link. Tests must seed the genesis HMAC row in test fixture, otherwise the first registration row fails the chain invariant.
+
+**Planner guidance:** Write `8A-T-WEBAUTHN-TEST-INFRA` adding `webauthn4j-test:0.29.1.RELEASE` to `backend/api/build.gradle.kts` testImplementation, plus a shared test fixture `AdminWebAuthnTestSupport` exposing a configured `EmulatorAuthenticator` + `withTestOrigin()` helper. Then `8A-T-CEREMONY-IT` writes `WebAuthnCeremonyIntegrationTest` covering registration + login + signCount replay rejection. Do NOT write a `SecurityMockMvcRequestPostProcessors.webAuthn()`-style chain-isolation test (Spring Security 7 does not ship it); instead, write chain isolation tests by setting an authenticated `Principal` via `SecurityMockMvcRequestPostProcessors.user(...).authorities("ROLE_ADMIN")` against the admin chain and asserting controllers respond — this proves the chain wiring without exercising the WebAuthn ceremony at all.
+
+Citation URLs:
+- Maven Central solrsearch API `q=g:com.webauthn4j+AND+a:webauthn4j-test` — confirmed `0.29.1.RELEASE` is latest (verified 2026-05-19)
+- https://docs.spring.io/spring-security/reference/servlet/test/mockmvc/index.html — `webAuthn()` post-processor is NOT listed
+- https://docs.spring.io/spring-security/reference/servlet/authentication/passkeys.html — production WebAuthn DSL (no test counterpart)
+- https://github.com/webauthn4j/webauthn4j — `EmulatorAuthenticator` source under `webauthn4j-test` module
