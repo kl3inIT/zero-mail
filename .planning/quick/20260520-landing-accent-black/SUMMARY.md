@@ -9,7 +9,9 @@ status: complete
 
 ## What changed
 
-Single file: `apps/web/app/globals.css`, 2 block (8 dòng):
+Single file: `apps/web/app/globals.css`. Follow-up edits sau commit đầu tiên (ce507729): mở rộng scope sang `--ink` (dual-role: body text + button bg) và surface tokens cho dark mode để theme thật sự monochrome.
+
+### Final commit (this update)
 
 **Light mode (`.zm-proto, .zm-auth`)** — dòng 242-245
 | Token | Trước | Sau |
