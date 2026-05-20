@@ -2,6 +2,7 @@ package com.zeromail.core.admin.spend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.zeromail.core.admin.spend.persistence.lowlevel.SpendAggregateReadRepository;
 import com.zeromail.core.admin.spend.projection.SpendDashboardSnapshot;
 import com.zeromail.core.admin.spend.projection.SpendQuery;
 import com.zeromail.core.admin.spend.usecases.SpendAggregateQueryService;
@@ -44,11 +45,11 @@ class SpendAggregateQueryServiceSqlSpyTest extends PostgresContainerTest {
     void snapshot_never_selects_prompt_or_completion_columns() {
         List<String> capturedSql = Collections.synchronizedList(new ArrayList<>());
         DataSource spyingDataSource = new SqlCapturingDataSource(dataSource, capturedSql);
+        SpendAggregateReadRepository spendAggregateReadRepository =
+                new SpendAggregateReadRepository(new NamedParameterJdbcTemplate(spyingDataSource));
         SpendAggregateQueryService spendAggregateQueryService =
                 new SpendAggregateQueryService(
-                        new NamedParameterJdbcTemplate(spyingDataSource),
-                        Clock.systemUTC(),
-                        coreProperties);
+                        spendAggregateReadRepository, Clock.systemUTC(), coreProperties);
 
         Instant now = Instant.now();
         SpendQuery spendQuery =

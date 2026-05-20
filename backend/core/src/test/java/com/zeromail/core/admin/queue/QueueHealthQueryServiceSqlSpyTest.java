@@ -2,6 +2,7 @@ package com.zeromail.core.admin.queue;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.zeromail.core.admin.queue.persistence.lowlevel.QueueHealthReadRepository;
 import com.zeromail.core.admin.queue.projection.DeadLetterPage;
 import com.zeromail.core.admin.queue.projection.QueueHealthSnapshot;
 import com.zeromail.core.admin.queue.usecases.QueueHealthQueryService;
@@ -50,9 +51,10 @@ class QueueHealthQueryServiceSqlSpyTest extends PostgresContainerTest {
     void snapshot_and_dead_letter_page_never_select_payload_json() {
         List<String> capturedSql = Collections.synchronizedList(new ArrayList<>());
         DataSource spyingDataSource = new SqlCapturingDataSource(dataSource, capturedSql);
+        QueueHealthReadRepository queueHealthReadRepository =
+                new QueueHealthReadRepository(new NamedParameterJdbcTemplate(spyingDataSource));
         QueueHealthQueryService queueHealthQueryService =
-                new QueueHealthQueryService(
-                        new NamedParameterJdbcTemplate(spyingDataSource), Clock.systemUTC());
+                new QueueHealthQueryService(queueHealthReadRepository, Clock.systemUTC());
 
         QueueHealthSnapshot snapshot = queueHealthQueryService.snapshot();
         DeadLetterPage deadLetterPage = queueHealthQueryService.deadLetterPage(null, 25);
