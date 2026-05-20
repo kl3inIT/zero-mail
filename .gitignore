@@ -18,3 +18,4 @@ apps/web/node_modules/
 loadtest/run/
 .codex-runs/
 .ssh/
+.last-deploy.txt
