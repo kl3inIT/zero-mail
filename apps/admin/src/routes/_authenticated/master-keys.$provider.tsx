@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { MaskedSecretField } from '@/components/MaskedSecretField';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -108,12 +108,10 @@ function MasterKeyProviderRoute() {
     <div className="space-y-6">
       <header className="flex items-end justify-between gap-4">
         <div>
-          <Button variant="ghost" size="sm" asChild className="mb-2 px-0">
-            <Link to="/master-keys">
-              <ArrowLeftIcon className="size-4" />
-              Master keys
-            </Link>
-          </Button>
+          <Link to="/master-keys" className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'mb-2 px-0' })}>
+            <ArrowLeftIcon className="size-4" />
+            Master keys
+          </Link>
           <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">LLM operations</p>
           <h1 className="text-xl font-semibold text-ink">{row?.displayName ?? provider} master key</h1>
         </div>
