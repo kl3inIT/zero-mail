@@ -70,6 +70,35 @@ public class AdminAuditWriter {
                 requestId);
     }
 
+    /**
+     * Appends an audit row in a NEW transaction, suspending any active one. Use when the audit row
+     * must survive a rollback of the caller's transaction (e.g. recording a test/probe failure
+     * before throwing a business exception that would otherwise roll the audit row back).
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public UUID appendInNewTransaction(
+            AdminAuditAction action,
+            String targetKind,
+            UUID targetId,
+            String beforeStateJson,
+            String afterStateJson,
+            String reason,
+            String requestIp,
+            UUID requestId) {
+        AdminUser adminUser = AdminContext.currentOrThrow();
+        return appendForActor(
+                adminUser.id(),
+                adminUser.email(),
+                action,
+                targetKind,
+                targetId,
+                beforeStateJson,
+                afterStateJson,
+                reason,
+                requestIp,
+                requestId);
+    }
+
     @Transactional
     public UUID appendAsSystem(
             AdminAuditAction action,

@@ -303,7 +303,10 @@ public class MasterKeyAdminService {
             String reason,
             String requestIp,
             UUID requestId) {
-        adminAuditWriter.append(
+        // REQUIRES_NEW so the audit row survives the rollback caused by
+        // MasterKeyTestFailedException thrown right after this call. Mirrors the
+        // "every test/set/rotate attempt is auditable" R-8B invariant.
+        adminAuditWriter.appendInNewTransaction(
                 AdminAuditAction.MASTER_KEY_TESTED,
                 "llm_provider_master_key",
                 null,
