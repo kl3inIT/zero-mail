@@ -7,6 +7,12 @@ export function useSyncDiff(jobId: string) {
   return useQuery({
     queryKey: catalogQueryKeys.syncJob(jobId),
     queryFn: () => fetchCatalogSyncDiff(jobId),
-    refetchInterval: (query) => (query.state.data?.status === 'AWAITING_CONFIRM' ? false : 2000),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      // Only keep polling while the worker is still producing the diff. All other
+      // states (AWAITING_CONFIRM, CONFIRMED, CANCELLED, FAILED) are terminal for
+      // polling purposes — the user must act or the job is finished.
+      return status === 'IN_PROGRESS' ? 2000 : false;
+    },
   });
 }

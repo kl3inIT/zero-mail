@@ -104,12 +104,25 @@ public class CatalogSyncOrchestrator {
                                         new CatalogSyncJobRepository
                                                 .CatalogSyncJobNotFoundException(jobId));
         String step = catalogSyncJob.stepStateJson().path("step").asString();
-        String responseStatus = "DIFF_READY".equals(step) ? "AWAITING_CONFIRM" : "IN_PROGRESS";
+        String responseStatus = mapStepToResponseStatus(step);
         CatalogDiff catalogDiff =
                 "DIFF_READY".equals(step)
                         ? catalogSyncJobRepository.diffForJob(jobId)
                         : CatalogDiff.empty();
         return new CatalogSyncDiffResult(jobId, responseStatus, catalogDiff);
+    }
+
+    private static String mapStepToResponseStatus(String step) {
+        if (step == null) {
+            return "IN_PROGRESS";
+        }
+        return switch (step) {
+            case "DIFF_READY" -> "AWAITING_CONFIRM";
+            case "CONFIRMED" -> "CONFIRMED";
+            case "CANCELLED" -> "CANCELLED";
+            case "FAILED", "ABANDONED" -> "FAILED";
+            default -> "IN_PROGRESS";
+        };
     }
 
     @Transactional
