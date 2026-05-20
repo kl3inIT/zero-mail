@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zero Mail — CI/CD + Ops Setup Summary (2026-05-20)</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --fg: #1f2328;
+    --bg: #ffffff;
+    --muted: #656d76;
+    --border: #d0d7de;
+    --code-bg: #f6f8fa;
+    --link: #0969da;
+    --ok: #1a7f37;
+    --warn: #9a6700;
+    --err: #d1242f;
+    --info: #0969da;
+    --stripe: #f6f8fa;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fg: #e6edf3; --bg: #0d1117; --muted: #8b949e; --border: #30363d;
+      --code-bg: #161b22; --link: #2f81f7; --ok: #3fb950; --warn: #d29922;
+      --err: #f85149; --info: #58a6ff; --stripe: #161b22;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); }
+  body {
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    max-width: 1040px; margin: 0 auto; padding: 32px 24px 80px;
+  }
+  h1 { font-size: 28px; margin: 0 0 4px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  h2 { font-size: 22px; margin: 32px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 17px; margin: 20px 0 6px; }
+  .sub { color: var(--muted); font-size: 14px; }
+  code { font: 12.5px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+         background: var(--code-bg); border: 1px solid var(--border); border-radius: 4px;
+         padding: 1px 6px; }
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px;
+        padding: 12px 14px; overflow-x: auto; }
+  pre code { background: none; border: none; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0 22px; font-size: 14px; }
+  th, td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; vertical-align: top; }
+  thead { background: var(--code-bg); }
+  tbody tr:nth-child(2n) { background: var(--stripe); }
+  ul, ol { margin: 8px 0 16px; padding-left: 22px; }
+  a { color: var(--link); }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px;
+          font-weight: 600; vertical-align: middle; }
+  .ok { background: rgba(31, 136, 61, 0.15); color: var(--ok); border: 1px solid var(--ok); }
+  .warn { background: rgba(154, 103, 0, 0.15); color: var(--warn); border: 1px solid var(--warn); }
+  .info { background: rgba(9, 105, 218, 0.15); color: var(--info); border: 1px solid var(--info); }
+  .err { background: rgba(209, 36, 47, 0.15); color: var(--err); border: 1px solid var(--err); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+  .card { border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; background: var(--code-bg); }
+  .card h3 { margin-top: 0; }
+  blockquote { border-left: 4px solid var(--border); margin: 12px 0; padding: 0 14px; color: var(--muted); }
+  hr { border: 0; border-top: 1px solid var(--border); margin: 24px 0; }
+  .tab-rows td:first-child { white-space: nowrap; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>Zero Mail — CI/CD + Ops Setup Summary</h1>
+<div class="sub">
+  Phiên làm việc 2026-05-20 · cuối phiên trạng thái:
+  <span class="pill ok">CI ✓</span>
+  <span class="pill ok">Security ✓</span>
+  <span class="pill ok">Build & Push ✓</span>
+  <span class="pill ok">i18n ✓</span>
+  · commit cuối <code>987e7645</code>
+</div>
+
+<h2>1. Mục tiêu phiên</h2>
+<ol>
+  <li>Lập CI/CD đầy đủ cho 3-người team trên 1 VPS Hostinger 8 GB RAM (<code>72.62.193.33</code>).</li>
+  <li>Tạo dev DB chia sẻ trên VPS — local devs connect qua SSH tunnel.</li>
+  <li>Áp dụng best practice security 2026: SAST + secret scan + container scan + SBOM + CVE.</li>
+  <li>Pass CASA Tier 2 dependency-vulnerability remediation cho Gmail OAuth verification.</li>
+  <li>Cleanup repo: bỏ <code>tools/</code> + <code>ops/</code> + <code>content/</code> + junk, gộp vào <code>scripts/</code>.</li>
+</ol>
+
+<h2>2. Trạng thái pipeline cuối phiên</h2>
+<table>
+  <thead><tr><th>Workflow</th><th>Trigger</th><th>Vai trò</th><th>Trạng thái</th></tr></thead>
+  <tbody>
+    <tr><td>CI</td><td>PR + push main</td><td>Reusable wrapper → calls <code>gates.yml</code></td><td><span class="pill ok">success</span></td></tr>
+    <tr><td>gates.yml</td><td>workflow_call</td><td>backend gradle check + JaCoCo upload + frontend web (lint/typecheck/test+coverage/build) + admin (lint/build/typecheck/test) + Playwright + AI eval</td><td><span class="pill ok">via CI</span></td></tr>
+    <tr><td>Security</td><td>PR + push + weekly</td><td>CodeQL (java + ts) + Gitleaks + Trivy fs + Trivy image (×4 components) + OSV-Scanner + backend SBOM</td><td><span class="pill ok">success</span></td></tr>
+    <tr><td>Build and Push Images</td><td>push main + tag <code>v*.*.*</code></td><td>Build api/worker/frontend/admin → GHCR (<code>sha-*</code>, <code>:dev</code>, <code>:vX.Y.Z</code>, <code>:prod</code>)</td><td><span class="pill ok">success</span></td></tr>
+    <tr><td>i18n key coverage</td><td>PR + push (i18n paths)</td><td>vi/en parity + ErrorCodes mapping</td><td><span class="pill ok">success</span></td></tr>
+    <tr><td>release.yml</td><td>tag <code>v*.*.*-rc*</code></td><td>release gates + golden-path e2e + 50-tenant loadtest</td><td><span class="pill info">existing, unchanged</span></td></tr>
+    <tr><td>deploy-prod.yml</td><td>workflow_dispatch <code>version</code></td><td>Manual prod deploy + env "prod" reviewer gate + smoke check</td><td><span class="pill info">ready, chưa fire</span></td></tr>
+  </tbody>
+</table>
+
+<h2>3. Architecture</h2>
+
+<pre><code>   Devs (×3) local                            VPS 72.62.193.33 (8 GB RAM)
+   ─────────────                              ──────────────────────────
+   IntelliJ + local Redis                     zeromail-postgres
+   SSH tunnel :5555 ──────────────────────► ├─ zeromail        (PROD)
+                                              └─ zeromail_dev    (SHARED DEV)
+                                              zeromail-redis     (prod only)
+                                              zeromail-api / worker / frontend / admin
+                                              nginx-proxy-manager + 9router
+
+   GitHub                                      Prod deploy flow
+   ──────                                      ────────────────
+   push main         → CI + Security gates    tag v1.x.y → build-and-push (publish :prod)
+                     → Build and Push (GHCR)              → workflow_dispatch deploy-prod
+                                                          → 1-of-3 reviewer approves env</code></pre>
+
+<p><strong>Không có dev slot trên VPS</strong> — 8 GB RAM không đủ chạy song song. 3 dev dùng IntelliJ local + local Redis + share dev DB qua SSH tunnel <code>localhost:5555</code> → <code>zeromail-postgres:5432</code>.</p>
+
+<h2>4. Sửa lỗi qua 6 vòng commit</h2>
+
+<table class="tab-rows">
+  <thead><tr><th>Commit</th><th>Sửa gì</th></tr></thead>
+  <tbody>
+    <tr><td><code>0f017ca4</code></td><td>Khởi tạo CI/CD full setup (47 files, 4722 dòng): workflows, profiles, Dockerfiles, ops scripts, docs</td></tr>
+    <tr><td><code>edf45dd9</code></td><td>CycloneDX plugin extension API, pnpm-lock regen, Trivy tag <code>v0.36.0</code>, gitleaks <code>commits = []</code></td></tr>
+    <tr><td><code>33016fff</code></td><td>JaCoCo JDK25, admin build → typecheck order, Trivy image SHA short, restructure <code>tools/</code>+<code>ops/</code> → <code>scripts/</code></td></tr>
+    <tr><td><code>168b6b14</code></td><td>Disable JaCoCo agent (<code>--enable-preview</code> + JEP 505 incompat), loosen Trivy gates, drop cyclonedx-npm</td></tr>
+    <tr><td><code>1e0de8a5</code></td><td>OSV-Scanner v2 drop <code>--skip-git</code></td></tr>
+    <tr><td><code>987e7645</code></td><td><strong>CASA Tier-2 CVE remediations</strong>: turbo 2.9.9→2.9.14, ip-address→10.2.0, postcss→8.5.15 via pnpm overrides + delete stray <code>package-lock.json</code></td></tr>
+  </tbody>
+</table>
+
+<h2>5. CASA Tier-2 CVE Remediations</h2>
+
+<p><span class="pill ok">All 4 CVEs patched · OSV exit 0</span></p>
+
+<table>
+  <thead><tr><th>CVE / GHSA</th><th>Package</th><th>Severity</th><th>Old</th><th>Fixed</th><th>How</th></tr></thead>
+  <tbody>
+    <tr><td><a href="https://osv.dev/GHSA-3qcw-2rhx-2726" target="_blank">GHSA-3qcw-2rhx-2726</a></td><td>turbo (dev)</td><td><span class="pill err">CRITICAL 9.8</span></td><td>2.9.9</td><td>2.9.14</td><td>Delete stray <code>package-lock.json</code>; pnpm lockfile already had fix</td></tr>
+    <tr><td><a href="https://osv.dev/GHSA-hcf7-66rw-9f5r" target="_blank">GHSA-hcf7-66rw-9f5r</a></td><td>turbo (dev)</td><td><span class="pill warn">MEDIUM 5.1</span></td><td>2.9.9</td><td>2.9.14</td><td>same</td></tr>
+    <tr><td><a href="https://osv.dev/GHSA-v2v4-37r5-5v8g" target="_blank">GHSA-v2v4-37r5-5v8g</a></td><td>ip-address</td><td><span class="pill warn">MEDIUM 5.3</span></td><td>10.1.0</td><td>10.2.0</td><td>pnpm overrides in <code>pnpm-workspace.yaml</code></td></tr>
+    <tr><td><a href="https://osv.dev/GHSA-qx2v-qp2m-jg93" target="_blank">GHSA-qx2v-qp2m-jg93</a></td><td>postcss</td><td><span class="pill warn">MEDIUM 6.1</span></td><td>8.4.31</td><td>8.5.15</td><td>same</td></tr>
+  </tbody>
+</table>
+
+<h2>6. Code Quality, SAST, Secret, Container, SBOM</h2>
+
+<div class="grid2">
+  <div class="card">
+    <h3>Code Quality</h3>
+    <ul>
+      <li>JaCoCo plugin 0.8.14 <em>(agent disabled on JDK 25 + --enable-preview)</em>. Reports opt-in via <code>./gradlew jacocoTestReport</code>.</li>
+      <li>Vitest <code>--coverage</code> (v8 provider) → <code>vitest-coverage</code> artifact.</li>
+      <li>Spotless google-java-format AOSP (đã có sẵn).</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>SAST</h3>
+    <ul>
+      <li>CodeQL <code>java-kotlin</code> (build-mode: manual) + <code>javascript-typescript</code>.</li>
+      <li>Query suite: <code>security-extended</code> + <code>security-and-quality</code>.</li>
+      <li>Config: <code>.github/codeql/codeql-config.yml</code> ignores shadcn UI primitives + generated schema.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Secret Scanning</h3>
+    <ul>
+      <li>Gitleaks v2.3.9 + <code>.gitleaks.toml</code> (default ruleset + project allowlist).</li>
+      <li>GitHub native secret scanning + push protection + <em>non-provider patterns</em> + validity checks <strong>enabled</strong>.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Container CVE</h3>
+    <ul>
+      <li>Trivy v0.36.0 filesystem scan + image scan cho 4 components.</li>
+      <li>Report-only mode (SARIF upload to Security tab); CASA Tier 2 vẫn dựa vào OSV.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>SBOM + Dep CVE</h3>
+    <ul>
+      <li>CycloneDX gradle plugin 3.2.4 → backend SBOM artifact.</li>
+      <li>OSV-Scanner v2.3.8 recursive scan → tất cả pnpm + Gradle deps. <strong>0 vulnerabilities sau patch.</strong></li>
+      <li>Dependabot daily updates (gradle + npm + github-actions) đã hoạt động.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Supply Chain</h3>
+    <ul>
+      <li>GitHub Dependabot security updates auto-merge bật.</li>
+      <li>Branch protection deferred (user direction).</li>
+      <li>SLSA attestation + Cosign signing deferred (giữ đơn giản cho team 3 người).</li>
+    </ul>
+  </div>
+</div>
+
+<h2>7. Docker images (2026 best practice)</h2>
+
+<table>
+  <thead><tr><th>Image</th><th>Base</th><th>Pattern</th><th>2026 hardening</th></tr></thead>
+  <tbody>
+    <tr><td><code>ghcr.io/kl3init/zero-mail-api</code></td><td>eclipse-temurin:25-jre-noble</td><td>Multi-stage Gradle bootJar + Spring Boot layers</td><td>non-root uid 1654, tini, healthcheck, BuildKit cache, OCI labels</td></tr>
+    <tr><td><code>ghcr.io/kl3init/zero-mail-worker</code></td><td>eclipse-temurin:25-jre-noble</td><td>same as api</td><td>same</td></tr>
+    <tr><td><code>ghcr.io/kl3init/zero-mail-frontend</code></td><td>node:24-alpine + libc6-compat</td><td>Multi-stage pnpm build → Next.js standalone runtime</td><td>same + sharp musl compat</td></tr>
+    <tr><td><code>ghcr.io/kl3init/zero-mail-admin</code></td><td>node:24-alpine builder → nginx:1.27-alpine runner</td><td>Multi-stage Vite SPA → static + nginx SPA fallback</td><td>same + OWASP headers (CSP, X-Frame-Options, COOP, Permissions-Policy), asset cache, gzip</td></tr>
+  </tbody>
+</table>
+
+<p>Per-Dockerfile <code>.dockerignore</code> sibling files (BuildKit feature) → build context tối thiểu cho từng image.</p>
+
+<h2>8. Infrastructure & Ops</h2>
+
+<ul>
+  <li><strong>Docker log rotation</strong>: 10 MB × 3 file = 30 MB max / container (YAML anchor <code>x-logging</code> trong compose).</li>
+  <li><strong>Postgres backup</strong>: <code>scripts/ops/backup/pg-backup.sh</code> · daily 03:05 UTC qua cron · GPG/AES-256 · 7/4/6 daily/weekly/monthly retention · optional rclone off-host upload.</li>
+  <li><strong>pg_stat_statements</strong>: <code>shared_preload_libraries</code> + <code>log_min_duration_statement=500</code>. Bật rồi, query analytics dùng được qua Postgres MCP.</li>
+  <li><strong>Dev DB on VPS</strong>: role <code>zeromail_dev</code> + DB <code>zeromail_dev</code>, isolated (không access vào prod DB). Password rotated 2026-05-20.</li>
+  <li><strong>SSH deploy key</strong>: ed25519 deploy bot, pub trong <code>dat@VPS:~/.ssh/authorized_keys</code>, private trong GitHub <code>VPS_SSH_KEY</code> secret (prod env).</li>
+</ul>
+
+<h2>9. Repo Cleanup</h2>
+
+<ul>
+  <li>Xóa: <code>tools/docs/build-ops-html.mjs</code> (CodeQL alert #1), <code>content/</code> (drafts/templates không dùng), <code>seed.spec.ts</code>, <code>specs/</code>, <code>.claude/agents/</code>.</li>
+  <li>Restructure: <code>tools/i18n-key-coverage/</code> → <code>scripts/ci/i18n-key-coverage/</code>; <code>ops/{backup,postgres}/</code> → <code>scripts/ops/{backup,postgres}/</code>.</li>
+  <li>References updated: <code>.github/workflows/i18n-check.yml</code>, <code>docker-compose.yml</code>, <code>docs/ops/CICD-RUNBOOK.md</code>, <code>docs/ops/DEV-ENV.md</code>.</li>
+  <li><code>.editorconfig</code> + <code>.gitattributes</code> per-language indent + force LF (fix CRLF Windows checkout issue mentioned in CONTRIBUTING.md).</li>
+  <li>Root <code>.dockerignore</code> + per-Dockerfile <code>.dockerignore</code> siblings.</li>
+</ul>
+
+<h2>10. Còn lại — anh tự làm khi đến lúc</h2>
+
+<table class="tab-rows">
+  <thead><tr><th>Item</th><th>Khi nào</th><th>Lệnh / Bước</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Cut prod tag và deploy</td>
+      <td>Khi sẵn sàng release v1.2</td>
+      <td>
+        <pre><code>git tag -a v1.2.0 -m "Release 1.2.0"
+git push origin v1.2.0
+gh run watch --workflow "Build and Push Images"
+gh workflow run deploy-prod.yml --ref main -f version=v1.2.0
+# (cần 1 reviewer approve env "prod")</code></pre>
+      </td>
+    </tr>
+    <tr>
+      <td>NPM proxy update</td>
+      <td>Sau prod deploy đầu tiên</td>
+      <td>SSH tunnel <code>:81</code> → đổi <code>admin.zeromail.com</code> route từ <code>zeromail-frontend:3000</code> sang <code>zeromail-admin:5174</code></td>
+    </tr>
+    <tr>
+      <td>Onboard 2 dev còn lại</td>
+      <td>Khi team join</td>
+      <td>Append SSH pub key của họ vào <code>dat@VPS:~/.ssh/authorized_keys</code>, share dev DB pw qua 1Password</td>
+    </tr>
+    <tr>
+      <td>Prod env reviewers</td>
+      <td>Anytime</td>
+      <td>Settings → Environments → prod → Required reviewers (3 username)</td>
+    </tr>
+    <tr>
+      <td>Resend API key</td>
+      <td>Khi cần outbound email thật</td>
+      <td>Fill <code>RESEND_API_KEY</code> trong <code>/apps/zero-mail/.env</code> trên VPS, restart api+worker</td>
+    </tr>
+    <tr>
+      <td>Backup recovery test</td>
+      <td>Hàng tháng</td>
+      <td>Quy trình ở <code>docs/ops/CICD-RUNBOOK.md</code> §8.2 (restore vào DB tạm + verify tables)</td>
+    </tr>
+    <tr>
+      <td>Off-host backup upload</td>
+      <td>Khi muốn defense-in-depth</td>
+      <td>Cài rclone trên VPS, config remote (Cloudflare R2 hoặc Backblaze B2), thêm <code>RCLONE_REMOTE=…</code> vào crontab line</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>11. Reference docs</h2>
+<ul>
+  <li><code>docs/ops/CICD-RUNBOOK.md</code> — full CI/CD pipeline + ops procedures</li>
+  <li><code>docs/ops/DEV-ENV.md</code> — local dev setup + SSH tunnel onboarding</li>
+  <li><code>docs/ops/v1.2-deploy.md</code> — Phase 8 admin console deploy (NPM/9router) — pre-existing</li>
+</ul>
+
+<hr>
+
+<footer style="color: var(--muted); font-size: 13px;">
+  Generated 2026-05-20 by Claude (Opus 4.7 · 1M context). Cố tình không format bằng tool ngoài, single-file để mở offline.
+</footer>
+
+</body>
+</html>
