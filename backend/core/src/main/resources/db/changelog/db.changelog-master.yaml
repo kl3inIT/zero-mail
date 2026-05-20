@@ -167,3 +167,6 @@ databaseChangeLog:
   - include:
       file: changes/070-anthropic-catalog-seed.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/078-processing-job-extend.yaml
+      relativeToChangelogFile: true

@@ -28,6 +28,7 @@ public enum AdminAuditAction implements IdentifiedEnum {
     TENANT_PAUSED,
     TENANT_DISCONNECTED,
     TENANT_DELETED,
+    DEAD_LETTER_REQUEUED,
     WEBAUTHN_REPLAY_SUSPECTED;
 
     @Override
