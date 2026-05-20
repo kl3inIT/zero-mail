@@ -2,14 +2,12 @@ package com.zeromail.core.admin.audit.usecases;
 
 import com.zeromail.core.admin.audit.domain.AdminAuditAction;
 import com.zeromail.core.admin.audit.persistence.AdminAuditEventRepository;
+import com.zeromail.core.admin.audit.persistence.lowlevel.AdminAuditEventWriteRepository;
 import com.zeromail.core.admin.auth.AdminContext;
 import com.zeromail.core.admin.auth.AdminUser;
-import com.zeromail.core.config.ZeroMailCoreProperties;
 import java.time.Clock;
-import java.util.Base64;
 import java.util.Objects;
 import java.util.UUID;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,29 +15,33 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AdminAuditWriter {
 
-    private static final long AUDIT_CHAIN_ADVISORY_LOCK_ID = 8_001_001L;
     private static final byte[] EMPTY_HASH = new byte[0];
     private static final UUID SYSTEM_ACTOR_ID =
             UUID.fromString("00000000-0000-0000-0000-000000000001");
     private static final String SYSTEM_ACTOR_EMAIL = "<system>";
 
-    private final JdbcTemplate jdbcTemplate;
+    private final AdminAuditEventWriteRepository adminAuditEventWriteRepository;
     private final AdminAuditEventRepository adminAuditEventRepository;
+    private final AdminAuditHmacSecretProvider adminAuditHmacSecretProvider;
     private final HmacChainHasher hmacChainHasher;
-    private final ZeroMailCoreProperties coreProperties;
     private final Clock clock;
 
     public AdminAuditWriter(
-            JdbcTemplate jdbcTemplate,
+            AdminAuditEventWriteRepository adminAuditEventWriteRepository,
             AdminAuditEventRepository adminAuditEventRepository,
-            ZeroMailCoreProperties coreProperties,
+            AdminAuditHmacSecretProvider adminAuditHmacSecretProvider,
             Clock clock) {
-        this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate, "jdbcTemplate must not be null");
+        this.adminAuditEventWriteRepository =
+                Objects.requireNonNull(
+                        adminAuditEventWriteRepository,
+                        "adminAuditEventWriteRepository must not be null");
         this.adminAuditEventRepository =
                 Objects.requireNonNull(
                         adminAuditEventRepository, "adminAuditEventRepository must not be null");
-        this.coreProperties =
-                Objects.requireNonNull(coreProperties, "coreProperties must not be null");
+        this.adminAuditHmacSecretProvider =
+                Objects.requireNonNull(
+                        adminAuditHmacSecretProvider,
+                        "adminAuditHmacSecretProvider must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
         hmacChainHasher = new HmacChainHasher();
     }
@@ -104,18 +106,14 @@ public class AdminAuditWriter {
             UUID requestId) {
         AdminAuditAction auditAction = Objects.requireNonNull(action, "action must not be null");
         UUID auditId = UUID.randomUUID();
-        jdbcTemplate.query(
-                "SELECT pg_advisory_xact_lock(?)", _ -> {}, AUDIT_CHAIN_ADVISORY_LOCK_ID);
+        adminAuditEventWriteRepository.acquireChainAdvisoryLock();
         byte[] previousHash =
                 adminAuditEventRepository.findLatestHmacForUpdate().orElse(EMPTY_HASH);
-        Long chainIndex =
-                jdbcTemplate.queryForObject(
-                        "SELECT nextval('admin_audit_event_chain_index_seq')", Long.class);
-        if (chainIndex == null) {
-            throw new IllegalStateException("Unable to reserve admin audit chain index");
-        }
-        String canonicalBeforeStateJson = canonicalJson(beforeStateJson);
-        String canonicalAfterStateJson = canonicalJson(afterStateJson);
+        long chainIndex = adminAuditEventWriteRepository.reserveNextChainIndex();
+        String canonicalBeforeStateJson =
+                adminAuditEventWriteRepository.canonicalJson(beforeStateJson);
+        String canonicalAfterStateJson =
+                adminAuditEventWriteRepository.canonicalJson(afterStateJson);
         long canonicalTimestampMs = clock.instant().toEpochMilli();
         HmacChainHasher.AuditChainEntry unsignedAuditChainEntry =
                 new HmacChainHasher.AuditChainEntry(
@@ -133,16 +131,11 @@ public class AdminAuditWriter {
                         canonicalTimestampMs,
                         EMPTY_HASH);
         byte[] hmacChainHash =
-                hmacChainHasher.computeHash(hmacSecret(), previousHash, unsignedAuditChainEntry);
-        jdbcTemplate.update(
-                """
-                INSERT INTO admin_audit_event(
-                    id, chain_index, actor_user_id, actor_email, action, target_kind, target_id,
-                    before_state_json, after_state_json, reason, request_ip, request_id,
-                    canonical_timestamp_ms, hmac_chain_hash
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), CAST(? AS jsonb), ?, CAST(? AS inet), ?, ?, ?)
-                """,
+                hmacChainHasher.computeHash(
+                        adminAuditHmacSecretProvider.secret(),
+                        previousHash,
+                        unsignedAuditChainEntry);
+        adminAuditEventWriteRepository.insertAuditEvent(
                 auditId,
                 chainIndex,
                 actorUserId,
@@ -165,13 +158,7 @@ public class AdminAuditWriter {
             AdminUser adminUser, String action, String targetKind, UUID targetId) {
         AdminUser actor = Objects.requireNonNull(adminUser, "adminUser must not be null");
         UUID readEventId = UUID.randomUUID();
-        jdbcTemplate.update(
-                """
-                INSERT INTO admin_read_event(
-                    id, actor_user_id, actor_email, action, target_kind, target_id
-                )
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
+        adminAuditEventWriteRepository.insertReadEvent(
                 readEventId,
                 actor.id(),
                 actor.email(),
@@ -179,28 +166,6 @@ public class AdminAuditWriter {
                 targetKind,
                 targetId);
         return readEventId;
-    }
-
-    private String canonicalJson(String jsonValue) {
-        if (jsonValue == null) {
-            return null;
-        }
-        return jdbcTemplate.queryForObject(
-                "SELECT CAST(? AS jsonb)::text", String.class, jsonValue);
-    }
-
-    private byte[] hmacSecret() {
-        String hmacSecretBase64 = coreProperties.admin().audit().hmacKekBase64();
-        if (hmacSecretBase64 == null || hmacSecretBase64.isBlank()) {
-            throw new IllegalStateException(
-                    "zero-mail.admin.audit.hmac-kek-base64 must be configured");
-        }
-        byte[] hmacSecret = Base64.getDecoder().decode(hmacSecretBase64);
-        if (hmacSecret.length < 32) {
-            throw new IllegalStateException(
-                    "zero-mail.admin.audit.hmac-kek-base64 must decode to at least 32 bytes");
-        }
-        return hmacSecret;
     }
 
     private static String requireText(String value, String parameterName) {
