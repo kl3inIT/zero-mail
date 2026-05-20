@@ -342,6 +342,144 @@
       }
     }
   },
+  "cleanup": {
+    "suppression": {
+      "add": "Add to suppression",
+      "addOk": "Added to suppression list.",
+      "col": {
+        "added": "Added",
+        "source": "Source",
+        "target": "Sender / Domain"
+      },
+      "empty": {
+        "body": "Add senders or domains you never want to unsubscribe (e.g. boss, colleagues, bank).",
+        "title": "No senders in the suppression list yet"
+      },
+      "err": {
+        "duplicate": "This entry is already in the suppression list.",
+        "generic": "Could not add. Please try again shortly.",
+        "invalid": "Invalid email or domain."
+      },
+      "error": "Could not load the list. Please try again shortly.",
+      "helper": "Each entry blocks a single sender or an entire domain.",
+      "input": {
+        "label": "Sender email",
+        "placeholder": "Email or domain (e.g. boss@example.com or example.com)"
+      },
+      "lead": "Senders or domains on this list will never appear in an unsubscribe campaign.",
+      "remove": {
+        "aria": "Remove from suppression",
+        "cancel": "Cancel",
+        "confirmBody": "After removal, this sender or domain will reappear as a campaign candidate.",
+        "confirmCta": "Confirm remove",
+        "confirmTitle": "Remove this entry?"
+      },
+      "removeOk": "Removed from suppression list.",
+      "source": {
+        "auto": "Auto",
+        "manual": "Manual",
+        "replied": "Replied"
+      },
+      "title": "Suppression list"
+    },
+    "unsubscribe": {
+      "list": {
+        "clear": "Clear selection",
+        "col": {
+          "count": "Mail (30 days)",
+          "domain": "Domain",
+          "method": "Method",
+          "risk": "Status",
+          "sender": "Sender"
+        },
+        "counter": "{count} / 25 senders selected",
+        "counterOver": "{count} / 25 senders — over the limit",
+        "empty": {
+          "body": "Zero Mail detects newsletters via the `List-Unsubscribe` header from recent ingest. New candidate senders will appear here as data arrives.",
+          "link": "Learn how Zero Mail detects newsletters →",
+          "title": "No newsletters in the last 30 days"
+        },
+        "error": "Could not load the sender list. Please try again shortly.",
+        "lead": "Pick the newsletters you want to stop receiving. Zero Mail unsubscribes safely and archives the history from the selected senders.",
+        "preview": "Preview campaign",
+        "retry": "Retry",
+        "suppressionLink": "Manage suppression list →",
+        "title": "Bulk unsubscribe"
+      },
+      "method": {
+        "mailto": "Mailto",
+        "none": "Unsupported",
+        "oneClick": "One-click (RFC 8058)"
+      },
+      "preview": {
+        "cancel": "Back",
+        "capMessage": "History mail limit of 2,000 exceeded ({count}). Go back and deselect some.",
+        "capSender": "Sender limit of 25 exceeded. Go back and deselect some.",
+        "confirm": "Execute campaign",
+        "description": "Review the list before executing. The campaign runs in the background and is undoable for 30 days.",
+        "errCapMessage": "History mail limit of 2,000 exceeded. Please deselect some.",
+        "errCapSender": "Sender limit of 25 exceeded. Please deselect some.",
+        "errGeneric": "Could not create the campaign. Please try again shortly.",
+        "submitOk": "Campaign created. Tracking progress…",
+        "submitting": "Creating…",
+        "title": "Preview campaign",
+        "totalMail": "Total mail to archive: {count}",
+        "totalSender": "Total senders: {count}",
+        "willArchive": "{count} mail will be archived",
+        "willNotArchive": "No archive (missing header)"
+      },
+      "retry": {
+        "alreadyOk": "This sender has already unsubscribed — no retry needed.",
+        "generic": "Retry failed. Please try again shortly."
+      },
+      "risk": {
+        "noHeader": "Not supported",
+        "noHeaderTooltip": "This sender has no `List-Unsubscribe` header — automatic unsubscribe is unavailable.",
+        "safe": "Ready",
+        "suppressed": "Blocked"
+      },
+      "status": {
+        "breadcrumb": "Cleanup / Unsubscribe / #{shortId}",
+        "col": {
+          "action": "Action",
+          "archived": "Mail archived",
+          "sender": "Sender",
+          "state": "State"
+        },
+        "completed": "Completed",
+        "error": "Could not load campaign status. Please try again shortly.",
+        "errorBanner": "System error — did not complete. Contact support if needed.",
+        "failed": "Error — did not complete",
+        "progress": "{percent}% ({okCount} OK / {failedCount} failed / {totalCount} senders)",
+        "queued": "Waiting for worker",
+        "retry": "Retry",
+        "retryOk": "Retry enqueued for {sender}.",
+        "running": "Running",
+        "state": {
+          "failed": "Failed",
+          "ok": "OK",
+          "pending": "Pending",
+          "running": "Running"
+        },
+        "title": "Campaign #{shortId}",
+        "undo": {
+          "body": "You can undo within the next {daysLeft} days: restore mail to INBOX and remove the `Zero Mail/Unsubscribed` label.",
+          "button": "Undo campaign",
+          "title": "Campaign completed"
+        }
+      },
+      "undo": {
+        "cancel": "Cancel",
+        "confirmBody": "This will restore {count} mail to INBOX and remove the `Zero Mail/Unsubscribed` label. This action cannot be reversed again.",
+        "confirmCta": "Confirm undo",
+        "confirmTitle": "Undo campaign?",
+        "generic": "Undo failed. Please try again shortly.",
+        "ok": "Restored {count} mail to INBOX.",
+        "windowExpired": "More than 30 days have passed since the campaign — undo is no longer available.",
+        "windowExpiredToast": "Past the 30-day window — undo is no longer available."
+      }
+    }
+  },
   "common": {
     "app": {
       "description": "Reach inbox zero without giving up control.",
@@ -670,6 +808,31 @@
     },
     "continueSetupCta": "Continue setup",
     "eyebrow": "Gmail · Private beta · v1",
+    "faq": {
+      "items": {
+        "i1": {
+          "a": "We support Gmail, Google Workspace and Microsoft Outlook email accounts.",
+          "q": "Which email providers does Zero Mail support?"
+        },
+        "i2": {
+          "a": "Send us an email — we love hearing what would make your email experience better.",
+          "q": "How can I request a new feature?"
+        },
+        "i3": {
+          "a": "No. Zero Mail is not a standalone email client. It runs alongside your existing email app — you still use Google or Outlook the way you always have.",
+          "q": "Does Zero Mail replace my current email app?"
+        },
+        "i4": {
+          "a": "Yes. If you feel we're not delivering value, email us within 14 days of upgrading and we'll refund you.",
+          "q": "Do you offer refunds?"
+        },
+        "i5": {
+          "a": "Absolutely — every plan includes a 7-day free trial, no credit card required.",
+          "q": "Can I try Zero Mail for free?"
+        }
+      },
+      "title": "Frequently asked questions"
+    },
     "features": {
       "autoOrganize": {
         "afterLabel": "After",
@@ -758,31 +921,6 @@
         "description": "Read email, draft replies, and manage your inbox from Zalo, Telegram, or the Web — no app-switching.",
         "title": "Your inbox, wherever you work"
       }
-    },
-    "faq": {
-      "items": {
-        "i1": {
-          "a": "We support Gmail, Google Workspace and Microsoft Outlook email accounts.",
-          "q": "Which email providers does Zero Mail support?"
-        },
-        "i2": {
-          "a": "Send us an email — we love hearing what would make your email experience better.",
-          "q": "How can I request a new feature?"
-        },
-        "i3": {
-          "a": "No. Zero Mail is not a standalone email client. It runs alongside your existing email app — you still use Google or Outlook the way you always have.",
-          "q": "Does Zero Mail replace my current email app?"
-        },
-        "i4": {
-          "a": "Yes. If you feel we're not delivering value, email us within 14 days of upgrading and we'll refund you.",
-          "q": "Do you offer refunds?"
-        },
-        "i5": {
-          "a": "Absolutely — every plan includes a 7-day free trial, no credit card required.",
-          "q": "Can I try Zero Mail for free?"
-        }
-      },
-      "title": "Frequently asked questions"
     },
     "heading": {
       "accent": "the send button.",

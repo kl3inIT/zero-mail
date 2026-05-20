@@ -29,6 +29,8 @@ const mocks = vi.hoisted(() => ({
   removeSuppression: vi.fn(),
   useQuery: vi.fn(),
   useMutation: vi.fn(),
+  useQueryClient: vi.fn(),
+  useTranslations: vi.fn(),
 }));
 
 vi.mock('@/features/cleanup/suppression/api/suppression-api', () => ({
@@ -40,6 +42,15 @@ vi.mock('@/features/cleanup/suppression/api/suppression-api', () => ({
 vi.mock('@tanstack/react-query', () => ({
   useQuery: (options: unknown) => mocks.useQuery(options),
   useMutation: (options: unknown) => mocks.useMutation(options),
+  useQueryClient: () => mocks.useQueryClient(),
+}));
+
+vi.mock('next-intl', () => ({
+  useTranslations: () => mocks.useTranslations(),
+}));
+
+vi.mock('sonner', () => ({
+  toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
 import {
@@ -55,8 +66,17 @@ describe('useSuppressionList', () => {
     mocks.removeSuppression.mockReset();
     mocks.useQuery.mockReset();
     mocks.useMutation.mockReset();
+    mocks.useQueryClient.mockReset();
+    mocks.useTranslations.mockReset();
     mocks.useQuery.mockImplementation(() => ({ data: [] as SuppressionEntry[] }));
     mocks.useMutation.mockImplementation(() => ({ mutate: vi.fn(), isPending: false }));
+    mocks.useQueryClient.mockImplementation(() => ({
+      cancelQueries: vi.fn(),
+      getQueryData: vi.fn(() => []),
+      setQueryData: vi.fn(),
+      invalidateQueries: vi.fn(),
+    }));
+    mocks.useTranslations.mockImplementation(() => (key: string) => key);
   });
 
   it('fetchesSuppressionList_returnsArray', () => {

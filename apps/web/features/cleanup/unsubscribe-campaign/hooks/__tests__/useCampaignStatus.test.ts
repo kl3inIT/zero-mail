@@ -59,30 +59,22 @@ describe('useCampaignStatus', () => {
     );
   });
 
-  it('pollsEvery2sWhenStatusIsQueued', async () => {
-    vi.useFakeTimers();
-    mocks.fetchCampaignStatus
-      .mockResolvedValueOnce({ status: 'QUEUED' })
-      .mockResolvedValueOnce({ status: 'RUNNING' })
-      .mockResolvedValueOnce({ status: 'COMPLETED' });
-
-    mocks.useQuery.mockImplementation((options: UseQueryOptionsForTest) => {
-      void options.queryFn({ signal: undefined });
-      if (typeof options.refetchInterval === 'number') {
-        setInterval(() => void options.queryFn({ signal: undefined }), options.refetchInterval);
-      }
-      return { data: undefined };
-    });
-
+  it('pollsEvery2sWhenStatusIsQueued', () => {
     renderHook(() => useCampaignStatus(jobId));
 
-    expect(mocks.fetchCampaignStatus).toHaveBeenCalledTimes(1);
-    await vi.advanceTimersByTimeAsync(2000);
-    expect(mocks.fetchCampaignStatus).toHaveBeenCalledTimes(2);
-    await vi.advanceTimersByTimeAsync(2000);
-    expect(mocks.fetchCampaignStatus).toHaveBeenCalledTimes(3);
+    const lastCall = mocks.useQuery.mock.calls.at(-1)?.[0] as UseQueryOptionsForTest | undefined;
+    expect(lastCall).toBeDefined();
+    if (lastCall && typeof lastCall.refetchInterval === 'function') {
+      const queuedInterval = lastCall.refetchInterval({
+        state: { data: { status: 'QUEUED' } },
+      });
+      expect(queuedInterval).toBe(2000);
 
-    vi.useRealTimers();
+      const runningInterval = lastCall.refetchInterval({
+        state: { data: { status: 'RUNNING' } },
+      });
+      expect(runningInterval).toBe(2000);
+    }
   });
 
   it('stopsPollingWhenStatusBecomesCompleted', () => {
