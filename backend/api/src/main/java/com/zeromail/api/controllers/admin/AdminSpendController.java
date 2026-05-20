@@ -8,6 +8,7 @@ import com.zeromail.core.admin.auth.AdminUser;
 import com.zeromail.core.admin.cat.domain.Feature;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.spend.exception.SpendExportTooLargeException;
+import com.zeromail.core.admin.spend.exception.SpendInvalidRangeException;
 import com.zeromail.core.admin.spend.projection.SpendDashboardSnapshot;
 import com.zeromail.core.admin.spend.projection.SpendQuery;
 import com.zeromail.core.admin.spend.usecases.SpendAggregateQueryService;
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -60,13 +62,15 @@ public class AdminSpendController {
     private final AdminAuditWriter adminAuditWriter;
     private final AdminReadEventDebouncer adminReadEventDebouncer;
     private final LocalDate rowLevelClassificationSince;
+    private final Clock clock;
 
     public AdminSpendController(
             SpendAggregateQueryService spendAggregateQueryService,
             SpendCsvExporter spendCsvExporter,
             AdminAuditWriter adminAuditWriter,
             AdminReadEventDebouncer adminReadEventDebouncer,
-            ZeroMailCoreProperties coreProperties) {
+            ZeroMailCoreProperties coreProperties,
+            Clock clock) {
         this.spendAggregateQueryService =
                 Objects.requireNonNull(
                         spendAggregateQueryService, "spendAggregateQueryService must not be null");
@@ -80,6 +84,7 @@ public class AdminSpendController {
         Objects.requireNonNull(coreProperties, "coreProperties must not be null");
         this.rowLevelClassificationSince =
                 coreProperties.admin().spend().rowLevelClassificationSince();
+        this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
 
     @GetMapping("/dashboard")
@@ -123,8 +128,9 @@ public class AdminSpendController {
                 .body(responseBody);
     }
 
-    private static SpendQuery buildQuery(
+    private SpendQuery buildQuery(
             Instant from, Instant to, Set<LlmProvider> providers, Set<Feature> features) {
+        validateRange(from, to);
         return new SpendQuery(
                 from,
                 to,
@@ -132,6 +138,19 @@ public class AdminSpendController {
                         ? Optional.empty()
                         : Optional.of(providers),
                 features == null || features.isEmpty() ? Optional.empty() : Optional.of(features));
+    }
+
+    private void validateRange(Instant from, Instant to) {
+        if (from == null || to == null) {
+            throw new SpendInvalidRangeException("from and to are required");
+        }
+        if (from.isAfter(to)) {
+            throw new SpendInvalidRangeException("from must not be after to");
+        }
+        Instant maxFutureTo = clock.instant().plus(Duration.ofDays(1));
+        if (to.isAfter(maxFutureTo)) {
+            throw new SpendInvalidRangeException("to must not be more than one day in the future");
+        }
     }
 
     private void writeReadEventIfNeeded(

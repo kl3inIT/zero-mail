@@ -45,21 +45,25 @@ function SpendRoute() {
   const [paused, setPaused] = useState(false);
   const [preset, setPreset] = useState<PresetId>('30d');
   const [customRangeError, setCustomRangeError] = useState<string | null>(null);
+  // Draft inputs the user is typing.
   const [customFrom, setCustomFrom] = useState<string>('');
   const [customTo, setCustomTo] = useState<string>('');
+  // Applied values that actually drive the fetch — only updated on Apply (WR-06/WR-09).
+  const [appliedFrom, setAppliedFrom] = useState<string>('');
+  const [appliedTo, setAppliedTo] = useState<string>('');
   const [csvDownloading, setCsvDownloading] = useState(false);
   const [csvError, setCsvError] = useState<string | null>(null);
 
   const queryInput = useMemo<SpendQueryInput>(() => {
-    if (preset === 'custom' && customFrom && customTo) {
-      return { from: new Date(customFrom), to: new Date(customTo) };
+    if (preset === 'custom' && appliedFrom && appliedTo) {
+      return { from: new Date(appliedFrom), to: new Date(appliedTo) };
     }
     const presetKey = (preset === 'custom' ? '30d' : preset) as Exclude<PresetId, 'custom'>;
     const now = new Date();
     const from = new Date(now);
     from.setDate(from.getDate() - PRESET_DAY_COUNT[presetKey]);
     return { from, to: now };
-  }, [preset, customFrom, customTo]);
+  }, [preset, appliedFrom, appliedTo]);
 
   const rangeOk = isRangeWithinLimit(queryInput);
 
@@ -125,6 +129,9 @@ function SpendRoute() {
               return;
             }
             setCustomRangeError(null);
+            // Commit the draft inputs so the fetch picks them up.
+            setAppliedFrom(customFrom);
+            setAppliedTo(customTo);
           }}
           customRangeError={customRangeError}
         />
