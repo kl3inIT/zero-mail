@@ -98,7 +98,7 @@ describe('LanguageSwitcher', () => {
       expect(patchSpy).toHaveBeenCalledTimes(1);
     });
     const call = patchSpy.mock.calls[0];
-    expect(call[0]).toBe('/me/language');
+    expect(call[0]).toBe('/api/me/language');
     expect(call[1].body).toEqual({ language: 'en' });
     expect(document.cookie).toMatch(/NEXT_LOCALE=en/);
     await waitFor(() => expect(refreshSpy).toHaveBeenCalled());

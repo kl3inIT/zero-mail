@@ -26,12 +26,12 @@ class OpenApiSchemaTest extends ApiPostgresTestBase {
         // Phase 1.1 Plan 03 bumped this from 0.1.0 to 0.1.1 to signal the new ApiError contract.
         assertThat(root.path("info").path("version").asString()).isEqualTo("0.1.1");
         JsonNode paths = root.path("paths");
-        assertThat(paths.has("/me")).isTrue();
-        assertThat(paths.has("/gmail/connection/status")).isTrue();
-        assertThat(paths.has("/tenant/connect-gmail")).isTrue();
-        assertThat(paths.has("/tenant/disconnect")).isTrue();
-        assertThat(paths.has("/me/account")).isTrue();
-        assertThat(paths.has("/onboarding/select-template")).isTrue();
-        assertThat(paths.has("/onboarding/complete")).isTrue();
+        assertThat(paths.has("/api/me")).isTrue();
+        assertThat(paths.has("/api/gmail/connection/status")).isTrue();
+        assertThat(paths.has("/api/tenant/connect-gmail")).isTrue();
+        assertThat(paths.has("/api/tenant/disconnect")).isTrue();
+        assertThat(paths.has("/api/me/account")).isTrue();
+        assertThat(paths.has("/api/onboarding/select-template")).isTrue();
+        assertThat(paths.has("/api/onboarding/complete")).isTrue();
     }
 }

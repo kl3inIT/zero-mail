@@ -39,7 +39,7 @@ class TriagePauseControllerTest extends ApiPostgresTestBase {
 
         String raw =
                 client.put()
-                        .uri("/tenant/triage-pause")
+                        .uri("/api/tenant/triage-pause")
                         .header(TestSessionSupport.HEADER_SUBJECT, seed.googleSubject())
                         .header(TestSessionSupport.HEADER_EMAIL, seed.email())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -60,7 +60,7 @@ class TriagePauseControllerTest extends ApiPostgresTestBase {
 
         String raw =
                 client.put()
-                        .uri("/tenant/triage-pause")
+                        .uri("/api/tenant/triage-pause")
                         .header(TestSessionSupport.HEADER_SUBJECT, seed.googleSubject())
                         .header(TestSessionSupport.HEADER_EMAIL, seed.email())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -79,7 +79,7 @@ class TriagePauseControllerTest extends ApiPostgresTestBase {
 
         ResponseEntity<String> res =
                 client.put()
-                        .uri("/tenant/triage-pause")
+                        .uri("/api/tenant/triage-pause")
                         .contentType(MediaType.APPLICATION_JSON)
                         .body("{\"paused\":true}")
                         .retrieve()

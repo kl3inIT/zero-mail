@@ -86,7 +86,7 @@ export async function installChatApiMock(page: Page, options: MockOptions = {}) 
       return;
     }
 
-    if (url.pathname === '/me') {
+    if (url.pathname === '/api/me') {
       await fulfillJson(route, {
         userId: 'user-1',
         tenantId: 'tenant-1',
@@ -108,12 +108,12 @@ export async function installChatApiMock(page: Page, options: MockOptions = {}) 
       return;
     }
 
-    if (url.pathname === '/gmail/connection/status' && request.method() === 'GET') {
+    if (url.pathname === '/api/gmail/connection/status' && request.method() === 'GET') {
       await fulfillJson(route, { connectionStatus: 'CONNECTED' });
       return;
     }
 
-    if (url.pathname === '/tenant/triage-pause' && request.method() === 'PUT') {
+    if (url.pathname === '/api/tenant/triage-pause' && request.method() === 'PUT') {
       await route.fulfill({ status: 204, headers: corsHeaders(route), body: '' });
       return;
     }
