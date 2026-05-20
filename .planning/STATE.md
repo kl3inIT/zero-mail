@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin Console Foundation + Settings UI
-status: verifying
-stopped_at: Completed 08-8F-PLAN.md
-last_updated: "2026-05-20T08:51:22.660Z"
-last_activity: 2026-05-20
+status: shipped
+stopped_at: Phase 8 shipped — PR #46
+last_updated: "2026-05-21T02:45:00.000Z"
+last_activity: 2026-05-21
 progress:
   total_phases: 2
   completed_phases: 1
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 
 ## Current Position
 
-Phase: 08 (admin-console-operator-tooling) — COMPLETE (ready for verification)
+Phase: 08 (admin-console-operator-tooling) — SHIPPED (PR #46)
 Plan: 6 of 6 (8A → 8B → 8C → 8D → 8E → 8F all complete)
-Status: Phase complete — ready for verification
-Last activity: 2026-05-20
+Status: Phase 8 shipped — PR #46 open against main (UAT 11/11 pass, audit-emission gap closed by fe5d2cf9)
+Last activity: 2026-05-21
 
 ## Current Milestone Roadmap
 
