@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Awaiting operator checkpoint for candidate gate URL, launch sign-off, final rc tag, and STATE closure
-stopped_at: Phase 8 context gathered
-last_updated: "2026-05-17T12:27:25.772Z"
-last_activity: 2026-05-19
+stopped_at: Phase 08 Plan 03 (Wave 2) complete — cleanup domain + persistence + H-3 triage extension shipped
+last_updated: "2026-05-20T14:55:00.000Z"
+last_activity: 2026-05-20
 progress:
   total_phases: 19
   completed_phases: 0
@@ -381,6 +381,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-17T12:27:25.745Z
-Stopped at: Phase 8 context gathered
-Resume file: .planning/phases/08-bulk-unsubscribe-campaign/08-CONTEXT.md
+Last session: 2026-05-20T14:55:00.000Z
+Stopped at: Phase 08 Plan 03 (Wave 2) complete — core.cleanup module + 4 entities + 4 repos + 5 exceptions + H-3 triage source extension all landed (21 files created, 7 modified, 3 commits)
+Resume file: .planning/phases/08-bulk-unsubscribe-campaign/08-04-PLAN.md

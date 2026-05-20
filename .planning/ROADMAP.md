@@ -465,9 +465,9 @@ Plans:
   8. Code review + security review PASS; ArchUnit + Modulith verification + Playwright e2e campaign flow GREEN.
 **Plans**: 9 plans
 Plans:
-- [ ] 08-01-PLAN.md — Wave 0 test scaffolding (17 file + 1 rename) — RED stubs cho UNS-01..UNS-09
-- [ ] 08-02-PLAN.md — Liquibase changelogs 041..045 (mail_message_observed extend + processing_job + sender_suppression + unsubscribe_campaign + unsubscribe_attempt)
-- [ ] 08-03-PLAN.md — Spring Modulith core.cleanup module + 4 enum + 1 policy + 4 entity + 4 repository + 5 exception
+- [x] 08-01-PLAN.md — Wave 0 test scaffolding (17 file + 1 rename) — RED stubs cho UNS-01..UNS-09 _(completed 2026-05-19)_
+- [x] 08-02-PLAN.md — Liquibase changelogs 041..046 (mail_message_observed extend + processing_job + sender_suppression + unsubscribe_campaign + unsubscribe_attempt + triage_audit source for H-3) _(completed 2026-05-20)_
+- [x] 08-03-PLAN.md — Spring Modulith core.cleanup module + 4 enum + 1 policy + 4 entity + 4 repository + 5 exception + H-3 triage extension _(completed 2026-05-20)_
 - [ ] 08-04-PLAN.md — Extend GmailPreviewReadService + 4 projection + CandidateQueryService (UNS-01) + SuppressionCrudService + SuppressionAutoAddService (UNS-02)
 - [ ] 08-05-PLAN.md — UnsubscribeHttpClient (RFC 8058) + UnsubscribeMailtoSender (Gmail send-as-self) + UnsubscribeMailtoUriParser + UnsubscribeResult (UNS-04c + UNS-08)
 - [ ] 08-06-PLAN.md — UnsubscribeDomainThrottle (Redis) + ProcessingJobWorker (SKIP LOCKED) + UnsubscribeCampaignHandler + ProcessingJobReaperBatch + ProcessingJobPurgeBatch (UNS-04)
@@ -506,4 +506,4 @@ Parallelization: Phases 2A, 2B, and 2C can run concurrently once Phase 1 complet
 | 5C. User Surface — Analytics & Daily Digest | 0/TBD | Not started | - |
 | 6. Polish & CASA-Verified Launch | 2/5 | In Progress|  |
 | 7. Analytics Enhancement | 0/TBD | Not started | - |
-| 8. Bulk Unsubscribe Campaign | 0/TBD | Not started | - |
+| 8. Bulk Unsubscribe Campaign | 3/9 | In Progress | - |
