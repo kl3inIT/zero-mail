@@ -27,6 +27,11 @@ class AdminControllersContractTest {
                     "src/main/java/com/zeromail/api/security/validation/NoSentinelLeakValidator.java");
     private static final Path ADMIN_ERROR_ADVICE =
             Path.of("src/main/java/com/zeromail/api/error/AdminErrorAdvice.java");
+    private static final Path ADMIN_AUTH_EXCEPTION =
+            Path.of(
+                    "../core/src/main/java/com/zeromail/core/admin/auth/exception/AdminAuthException.java");
+    private static final Path AUDIT_EXPORT_TOO_LARGE_EXCEPTION =
+            Path.of("src/main/java/com/zeromail/api/error/AuditExportTooLargeException.java");
 
     @Test
     void admin_controllers_are_pre_authorized_and_use_admin_context() throws IOException {
@@ -74,16 +79,26 @@ class AdminControllersContractTest {
     void sentinel_guard_and_admin_error_mapping_are_declared() throws IOException {
         assertThat(Files.exists(NO_SENTINEL_LEAK_VALIDATOR)).isTrue();
         assertThat(Files.exists(ADMIN_ERROR_ADVICE)).isTrue();
+        assertThat(Files.exists(ADMIN_AUTH_EXCEPTION)).isTrue();
+        assertThat(Files.exists(AUDIT_EXPORT_TOO_LARGE_EXCEPTION)).isTrue();
 
         String validator = Files.readString(NO_SENTINEL_LEAK_VALIDATOR);
         String adminErrorAdvice = Files.readString(ADMIN_ERROR_ADVICE);
+        String adminAuthException = Files.readString(ADMIN_AUTH_EXCEPTION);
+        String auditExportTooLargeException = Files.readString(AUDIT_EXPORT_TOO_LARGE_EXCEPTION);
 
         for (String sentinelPrefix : List.of("sk-", "sk-ant-", "AIza", "sk-or-")) {
             assertThat(validator).contains(sentinelPrefix);
         }
-        assertThat(adminErrorAdvice)
-                .contains("AdminAuthException")
-                .contains("error.admin.reason_sentinel_leak")
+        // The AdminErrorAdvice still owns the validation field-error elevation; per-exception
+        // mappings now live on each AdminBusinessException subclass so the GlobalExceptionHandler
+        // BusinessException handler translates them centrally.
+        assertThat(adminErrorAdvice).contains("error.admin.reason_sentinel_leak");
+        assertThat(adminAuthException)
+                .contains("extends AdminBusinessException")
+                .contains("error.admin.auth");
+        assertThat(auditExportTooLargeException)
+                .contains("extends AdminBusinessException")
                 .contains("error.admin.audit_export_too_large");
     }
 }

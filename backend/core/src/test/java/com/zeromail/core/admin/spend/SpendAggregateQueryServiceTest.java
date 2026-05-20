@@ -3,6 +3,7 @@ package com.zeromail.core.admin.spend;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.zeromail.core.admin.spend.exception.SpendRangeTooWideException;
 import com.zeromail.core.admin.spend.projection.FeatureDonutSlice;
 import com.zeromail.core.admin.spend.projection.ProviderStackBarRow;
 import com.zeromail.core.admin.spend.projection.SpendDashboardSnapshot;
@@ -98,8 +99,7 @@ class SpendAggregateQueryServiceTest extends PostgresContainerTest {
                                         now,
                                         Optional.empty(),
                                         Optional.empty()))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("error.admin.spend_range_too_wide");
+                .isInstanceOf(SpendRangeTooWideException.class);
     }
 
     @Test

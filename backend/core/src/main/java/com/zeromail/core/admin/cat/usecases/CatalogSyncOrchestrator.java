@@ -10,6 +10,8 @@ import com.zeromail.core.admin.cat.projection.CatalogDiff;
 import com.zeromail.core.admin.cat.projection.CatalogModelRow;
 import com.zeromail.core.admin.cat.projection.CatalogSyncJob;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.admin.shared.AdminBusinessException;
+import com.zeromail.core.shared.exception.ErrorClass;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -226,7 +228,47 @@ public class CatalogSyncOrchestrator {
 
     public record CatalogSyncDiffResult(UUID jobId, String status, CatalogDiff catalogDiff) {}
 
-    public static class CatalogSyncAnthropicDisabledException extends RuntimeException {}
+    public static class CatalogSyncAnthropicDisabledException extends AdminBusinessException {
+        @Override
+        public ErrorClass errorClass() {
+            return ErrorClass.BAD_REQUEST;
+        }
 
-    public static class CatalogSyncNotReadyException extends RuntimeException {}
+        @Override
+        public String errorCode() {
+            return "error.admin.catalog_sync_anthropic_disabled";
+        }
+
+        @Override
+        public String logEvent() {
+            return "admin_catalog_sync_anthropic_disabled";
+        }
+
+        @Override
+        public String detail() {
+            return "Anthropic catalog sync is disabled for the current provider configuration.";
+        }
+    }
+
+    public static class CatalogSyncNotReadyException extends AdminBusinessException {
+        @Override
+        public ErrorClass errorClass() {
+            return ErrorClass.CONFLICT;
+        }
+
+        @Override
+        public String errorCode() {
+            return "error.admin.catalog_sync_not_ready";
+        }
+
+        @Override
+        public String logEvent() {
+            return "admin_catalog_sync_not_ready";
+        }
+
+        @Override
+        public String detail() {
+            return "The catalog sync job is not in a state that allows this action.";
+        }
+    }
 }

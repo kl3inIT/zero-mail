@@ -8,6 +8,8 @@ import com.zeromail.core.admin.cat.domain.event.CatalogChangedEvent;
 import com.zeromail.core.admin.cat.projection.CatalogModelRow;
 import com.zeromail.core.admin.cat.projection.PerFeatureCatalog;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.admin.shared.AdminBusinessException;
+import com.zeromail.core.shared.exception.ErrorClass;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -328,7 +330,7 @@ public class CatalogAdminService {
 
     private record ProviderModelRow(Feature feature, CatalogModelRow catalogModelRow) {}
 
-    public static class CatalogDisablePinsUnconfirmedException extends RuntimeException {
+    public static class CatalogDisablePinsUnconfirmedException extends AdminBusinessException {
 
         private final long pinnedTenantCount;
 
@@ -339,6 +341,31 @@ public class CatalogAdminService {
 
         public long pinnedTenantCount() {
             return pinnedTenantCount;
+        }
+
+        @Override
+        public ErrorClass errorClass() {
+            return ErrorClass.BAD_REQUEST;
+        }
+
+        @Override
+        public String errorCode() {
+            return "error.admin.catalog_disable_pins_unconfirmed";
+        }
+
+        @Override
+        public String logEvent() {
+            return "admin_catalog_disable_pins_unconfirmed";
+        }
+
+        @Override
+        public String detail() {
+            return "Disabling this catalog model requires explicit confirmation because tenants pin it.";
+        }
+
+        @Override
+        public Map<String, Object> params() {
+            return Map.of("pinnedTenantCount", pinnedTenantCount);
         }
     }
 }

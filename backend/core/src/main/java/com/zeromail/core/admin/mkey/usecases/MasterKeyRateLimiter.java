@@ -1,5 +1,7 @@
 package com.zeromail.core.admin.mkey.usecases;
 
+import com.zeromail.core.admin.shared.AdminBusinessException;
+import com.zeromail.core.shared.exception.ErrorClass;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Objects;
@@ -66,7 +68,27 @@ public class MasterKeyRateLimiter {
         return stringRedisTemplate;
     }
 
-    public static class RateLimitExceededException extends RuntimeException {}
+    public static class RateLimitExceededException extends AdminBusinessException {
+        @Override
+        public ErrorClass errorClass() {
+            return ErrorClass.TOO_MANY_REQUESTS;
+        }
+
+        @Override
+        public String errorCode() {
+            return "error.admin.master_key_rate_limited";
+        }
+
+        @Override
+        public String logEvent() {
+            return "admin_master_key_rate_limited";
+        }
+
+        @Override
+        public String detail() {
+            return "Too many master-key requests; retry after the cooldown window.";
+        }
+    }
 
     public static class RateLimitBackendUnavailableException extends RuntimeException {}
 }

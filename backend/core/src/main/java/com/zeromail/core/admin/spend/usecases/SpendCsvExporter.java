@@ -2,6 +2,7 @@ package com.zeromail.core.admin.spend.usecases;
 
 import com.zeromail.core.admin.cat.domain.Feature;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.admin.spend.exception.SpendExportTooLargeException;
 import com.zeromail.core.admin.spend.projection.SpendQuery;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -83,11 +84,7 @@ public class SpendCsvExporter {
         Objects.requireNonNull(outputStream, "outputStream must not be null");
         int estimate = estimateRowCount(spendQuery);
         if (estimate > MAX_ROWS) {
-            throw new IllegalArgumentException(
-                    "error.admin.spend_export_too_large: estimated "
-                            + estimate
-                            + " rows exceeds maximum "
-                            + MAX_ROWS);
+            throw new SpendExportTooLargeException(estimate, MAX_ROWS);
         }
 
         Writer writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);

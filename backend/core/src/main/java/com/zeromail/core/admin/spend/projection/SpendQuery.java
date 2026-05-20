@@ -2,6 +2,7 @@ package com.zeromail.core.admin.spend.projection;
 
 import com.zeromail.core.admin.cat.domain.Feature;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.admin.spend.exception.SpendRangeTooWideException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
@@ -36,12 +37,7 @@ public record SpendQuery(
         }
         Duration range = Duration.between(from, to);
         if (range.compareTo(MAX_RANGE) > 0) {
-            throw new IllegalArgumentException(
-                    "error.admin.spend_range_too_wide: requested range "
-                            + range.toDays()
-                            + " days exceeds maximum "
-                            + MAX_RANGE.toDays()
-                            + " days");
+            throw new SpendRangeTooWideException(range.toDays(), MAX_RANGE.toDays());
         }
     }
 }

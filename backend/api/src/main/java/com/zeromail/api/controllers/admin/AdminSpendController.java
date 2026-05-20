@@ -6,6 +6,7 @@ import com.zeromail.core.admin.auth.AdminContext;
 import com.zeromail.core.admin.auth.AdminUser;
 import com.zeromail.core.admin.cat.domain.Feature;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.admin.spend.exception.SpendExportTooLargeException;
 import com.zeromail.core.admin.spend.projection.SpendDashboardSnapshot;
 import com.zeromail.core.admin.spend.projection.SpendQuery;
 import com.zeromail.core.admin.spend.usecases.SpendAggregateQueryService;
@@ -106,11 +107,7 @@ public class AdminSpendController {
         // R-8F-H5 pre-query: rejects > 10k row estimates BEFORE streaming starts.
         int estimate = spendCsvExporter.estimateRowCount(spendQuery);
         if (estimate > SpendCsvExporter.MAX_ROWS) {
-            throw new IllegalArgumentException(
-                    "error.admin.spend_export_too_large: estimated "
-                            + estimate
-                            + " rows exceeds maximum "
-                            + SpendCsvExporter.MAX_ROWS);
+            throw new SpendExportTooLargeException(estimate, SpendCsvExporter.MAX_ROWS);
         }
         StreamingResponseBody responseBody =
                 outputStream -> {

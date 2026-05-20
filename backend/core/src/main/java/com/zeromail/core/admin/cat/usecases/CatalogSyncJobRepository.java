@@ -4,6 +4,8 @@ import com.zeromail.core.admin.cat.projection.CatalogDiff;
 import com.zeromail.core.admin.cat.projection.CatalogModelRow;
 import com.zeromail.core.admin.cat.projection.CatalogSyncJob;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.admin.shared.AdminBusinessException;
+import com.zeromail.core.shared.exception.ErrorClass;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
@@ -298,10 +300,30 @@ public class CatalogSyncJobRepository {
         return reason.length() > 64 ? reason.substring(0, 64) : reason;
     }
 
-    public static class CatalogSyncJobNotFoundException extends RuntimeException {
+    public static class CatalogSyncJobNotFoundException extends AdminBusinessException {
 
         public CatalogSyncJobNotFoundException(UUID jobId) {
             super("Catalog sync job not found: " + jobId);
+        }
+
+        @Override
+        public ErrorClass errorClass() {
+            return ErrorClass.NOT_FOUND;
+        }
+
+        @Override
+        public String errorCode() {
+            return "error.admin.catalog_sync_job_not_found";
+        }
+
+        @Override
+        public String logEvent() {
+            return "admin_catalog_sync_job_not_found";
+        }
+
+        @Override
+        public String detail() {
+            return "The requested catalog sync job could not be located.";
         }
     }
 }

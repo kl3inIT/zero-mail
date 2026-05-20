@@ -5,7 +5,9 @@ import com.networknt.schema.Schema;
 import com.networknt.schema.SchemaRegistry;
 import com.networknt.schema.SpecificationVersion;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.admin.shared.AdminBusinessException;
 import com.zeromail.core.llm.gateway.springai.admin.ModelsProbeClient;
+import com.zeromail.core.shared.exception.ErrorClass;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -94,7 +96,47 @@ public class ModelSchemaValidator {
         }
     }
 
-    public static class CatalogModelIdInvalidException extends RuntimeException {}
+    public static class CatalogModelIdInvalidException extends AdminBusinessException {
+        @Override
+        public ErrorClass errorClass() {
+            return ErrorClass.BAD_REQUEST;
+        }
 
-    public static class CatalogModelSchemaMismatchException extends RuntimeException {}
+        @Override
+        public String errorCode() {
+            return "error.admin.catalog_model_id_invalid";
+        }
+
+        @Override
+        public String logEvent() {
+            return "admin_catalog_model_id_invalid";
+        }
+
+        @Override
+        public String detail() {
+            return "The supplied catalog model identifier is not in the accepted format.";
+        }
+    }
+
+    public static class CatalogModelSchemaMismatchException extends AdminBusinessException {
+        @Override
+        public ErrorClass errorClass() {
+            return ErrorClass.BAD_REQUEST;
+        }
+
+        @Override
+        public String errorCode() {
+            return "error.admin.catalog_model_schema_mismatch";
+        }
+
+        @Override
+        public String logEvent() {
+            return "admin_catalog_model_schema_mismatch";
+        }
+
+        @Override
+        public String detail() {
+            return "The supplied catalog model payload does not match the required schema.";
+        }
+    }
 }

@@ -7,6 +7,8 @@ import com.zeromail.core.admin.auth.AdminUser;
 import com.zeromail.core.admin.cat.domain.Feature;
 import com.zeromail.core.admin.cat.domain.event.CatalogChangedEvent;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.admin.shared.AdminBusinessException;
+import com.zeromail.core.shared.exception.ErrorClass;
 import java.time.Clock;
 import java.util.List;
 import java.util.Objects;
@@ -142,10 +144,30 @@ public class FeatureDefaultProviderService {
         return catalogVersion == null ? 1L : catalogVersion;
     }
 
-    public static class CatalogModelNotFoundException extends RuntimeException {
+    public static class CatalogModelNotFoundException extends AdminBusinessException {
 
         public CatalogModelNotFoundException(String modelId) {
             super("Catalog model not found: " + modelId);
+        }
+
+        @Override
+        public ErrorClass errorClass() {
+            return ErrorClass.NOT_FOUND;
+        }
+
+        @Override
+        public String errorCode() {
+            return "error.admin.catalog_model_not_found";
+        }
+
+        @Override
+        public String logEvent() {
+            return "admin_catalog_model_not_found";
+        }
+
+        @Override
+        public String detail() {
+            return "The requested catalog model could not be located.";
         }
     }
 }

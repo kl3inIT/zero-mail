@@ -9,14 +9,17 @@ import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.domain.MasterKeyFeature;
 import com.zeromail.core.admin.mkey.domain.event.MasterKeyRotatedEvent;
 import com.zeromail.core.admin.mkey.projection.MasterKeyMaskedRow;
+import com.zeromail.core.admin.shared.AdminBusinessException;
 import com.zeromail.core.llm.gateway.springai.admin.MasterKeyTestResult;
 import com.zeromail.core.llm.gateway.springai.admin.ModelsProbeClient;
 import com.zeromail.core.llm.gateway.springai.admin.ProviderMasterKeyResolver;
 import com.zeromail.core.shared.crypto.PlatformSecretCipher;
+import com.zeromail.core.shared.exception.ErrorClass;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.context.ApplicationEventPublisher;
@@ -358,18 +361,78 @@ public class MasterKeyAdminService {
     private record StoredMasterKey(
             short kekVersion, long providerSecretVersion, Instant lastRotatedAt) {}
 
-    public static class EditSessionRequiredException extends RuntimeException {}
+    public static class EditSessionRequiredException extends AdminBusinessException {
+        @Override
+        public ErrorClass errorClass() {
+            return ErrorClass.BAD_REQUEST;
+        }
 
-    public static class InvalidKeyFormatException extends RuntimeException {}
+        @Override
+        public String errorCode() {
+            return "error.admin.master_key_edit_session_required";
+        }
 
-    public static class MissingMasterKeyRowException extends RuntimeException {
+        @Override
+        public String logEvent() {
+            return "admin_master_key_edit_session_required";
+        }
+
+        @Override
+        public String detail() {
+            return "An open master-key edit session is required before performing this action.";
+        }
+    }
+
+    public static class InvalidKeyFormatException extends AdminBusinessException {
+        @Override
+        public ErrorClass errorClass() {
+            return ErrorClass.BAD_REQUEST;
+        }
+
+        @Override
+        public String errorCode() {
+            return "error.admin.master_key_invalid_format";
+        }
+
+        @Override
+        public String logEvent() {
+            return "admin_master_key_invalid_format";
+        }
+
+        @Override
+        public String detail() {
+            return "The supplied master key does not match the required format.";
+        }
+    }
+
+    public static class MissingMasterKeyRowException extends AdminBusinessException {
 
         public MissingMasterKeyRowException(LlmProvider provider) {
             super("Missing master key row for provider " + provider.id());
         }
+
+        @Override
+        public ErrorClass errorClass() {
+            return ErrorClass.NOT_FOUND;
+        }
+
+        @Override
+        public String errorCode() {
+            return "error.admin.master_key_missing";
+        }
+
+        @Override
+        public String logEvent() {
+            return "admin_master_key_missing";
+        }
+
+        @Override
+        public String detail() {
+            return "No master key has been configured for the requested provider.";
+        }
     }
 
-    public static class MasterKeyTestFailedException extends RuntimeException {
+    public static class MasterKeyTestFailedException extends AdminBusinessException {
 
         private final MasterKeyTestResult result;
 
@@ -380,6 +443,31 @@ public class MasterKeyAdminService {
 
         public MasterKeyTestResult result() {
             return result;
+        }
+
+        @Override
+        public ErrorClass errorClass() {
+            return ErrorClass.BAD_REQUEST;
+        }
+
+        @Override
+        public String errorCode() {
+            return "error.admin.master_key_test_failed";
+        }
+
+        @Override
+        public String logEvent() {
+            return "admin_master_key_test_failed";
+        }
+
+        @Override
+        public String detail() {
+            return "The master-key connectivity probe did not return OK.";
+        }
+
+        @Override
+        public Map<String, Object> params() {
+            return Map.of("result", result);
         }
     }
 }
