@@ -17,6 +17,8 @@ import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
@@ -55,9 +57,13 @@ public class GmailPreviewReadService {
                     "In-Reply-To",
                     "Reply-To",
                     "List-Unsubscribe",
+                    "List-Unsubscribe-Post",
                     "List-Id",
                     "Precedence",
                     "Content-Type");
+    private static final int LIST_UNSUBSCRIBE_URL_MAX_LENGTH = 2048;
+    private static final int LIST_UNSUBSCRIBE_MAILTO_MAX_LENGTH = 512;
+    private static final String LIST_UNSUBSCRIBE_ONE_CLICK_TRIGGER = "List-Unsubscribe=One-Click";
     private static final int SUBJECT_EXCERPT_MAX_LENGTH = 120;
     private static final String METADATA_FIELDS =
             "id,threadId,labelIds,internalDate,payload/headers,payload/parts/filename,"
@@ -512,7 +518,24 @@ public class GmailPreviewReadService {
         List<String> toRecipients = parseRecipients(headerValue(payload, "To").orElse(""));
         List<String> ccRecipients = parseRecipients(headerValue(payload, "Cc").orElse(""));
         boolean hasAttachment = hasAttachment(payload);
-        boolean listUnsubscribePresent = headerValue(payload, "List-Unsubscribe").isPresent();
+        String listUnsubscribeHeaderValue = headerValue(payload, "List-Unsubscribe").orElse(null);
+        String listUnsubscribePostHeaderValue =
+                headerValue(payload, "List-Unsubscribe-Post").orElse(null);
+        ListUnsubscribeExtraction listUnsubscribeExtraction =
+                extractListUnsubscribe(listUnsubscribeHeaderValue, listUnsubscribePostHeaderValue);
+        String listUnsubscribeUrl = listUnsubscribeExtraction.url();
+        String listUnsubscribeMailto = listUnsubscribeExtraction.mailto();
+        boolean listUnsubscribeOneClick = listUnsubscribeExtraction.oneClick();
+        boolean listUnsubscribePresent =
+                listUnsubscribeUrl != null || listUnsubscribeMailto != null;
+        if (listUnsubscribeHeaderValue != null) {
+            log.info(
+                    "event=gmail_preview_list_unsubscribe_extracted gmailMessageId={} hasUrl={} hasMailto={} oneClick={}",
+                    observedMessage.gmailMessageId(),
+                    listUnsubscribeUrl != null,
+                    listUnsubscribeMailto != null,
+                    listUnsubscribeOneClick);
+        }
         boolean newsletterIndicatorPresent =
                 listUnsubscribePresent
                         || headerValue(payload, "List-Id").isPresent()
@@ -568,6 +591,102 @@ public class GmailPreviewReadService {
                 .map(MessagePartHeader::getValue)
                 .filter(Objects::nonNull)
                 .findFirst();
+    }
+
+    /**
+     * Parse the RFC 2369 {@code List-Unsubscribe} header value into a structured (URL, mailto,
+     * one-click) triple persisted by the ingest path on {@code
+     * mail_message_observed.list_unsubscribe_url} / {@code list_unsubscribe_mailto} / {@code
+     * list_unsubscribe_one_click} (changelog 041).
+     *
+     * <p>D-11 parse-time guard: HTTPS-only — any {@code http://} URI is dropped silently to
+     * eliminate the downgrade attack surface at ingest time, so the DB never sees a plaintext
+     * unsubscribe endpoint. The DB column has no scheme check (forward-only D-10) — this guard is
+     * the only enforcement point.
+     *
+     * <p>RFC 8058 one-click flag: {@code listUnsubscribeOneClick} is {@code true} iff both the
+     * HTTPS URL is present AND the {@code List-Unsubscribe-Post: List-Unsubscribe=One-Click} header
+     * is present. A mailto-only sender with a {@code List-Unsubscribe-Post} header stays {@code
+     * MAILTO} (one-click semantics requires the URL leg per RFC 8058).
+     *
+     * <p>Privacy: callers MUST NOT log {@link ListUnsubscribeExtraction#url()} or {@link
+     * ListUnsubscribeExtraction#mailto()} values — they may carry the sender's canonical
+     * unsubscribe endpoint plus opaque per-user tokens. Log boolean presence flags only ({@code
+     * event=gmail_preview_list_unsubscribe_extracted}).
+     */
+    static ListUnsubscribeExtraction extractListUnsubscribe(
+            String listUnsubscribeHeaderValue, String listUnsubscribePostHeaderValue) {
+        if (listUnsubscribeHeaderValue == null || listUnsubscribeHeaderValue.isBlank()) {
+            return ListUnsubscribeExtraction.empty();
+        }
+        String listUnsubscribeUrl = null;
+        String listUnsubscribeMailto = null;
+        for (String rawCandidateUri : listUnsubscribeHeaderValue.split(",")) {
+            String candidateUri = stripAngleBrackets(rawCandidateUri.trim());
+            if (candidateUri.isBlank()) {
+                continue;
+            }
+            if (listUnsubscribeUrl == null && candidateUri.startsWith("https://")) {
+                if (candidateUri.length() <= LIST_UNSUBSCRIBE_URL_MAX_LENGTH) {
+                    listUnsubscribeUrl = candidateUri;
+                }
+                continue;
+            }
+            if (listUnsubscribeMailto == null && candidateUri.startsWith("mailto:")) {
+                String parsedMailto = parseMailtoUri(candidateUri);
+                if (parsedMailto != null
+                        && parsedMailto.length() <= LIST_UNSUBSCRIBE_MAILTO_MAX_LENGTH) {
+                    listUnsubscribeMailto = parsedMailto;
+                }
+                // D-11: http:// (and any other non-HTTPS, non-mailto scheme) is dropped silently.
+            }
+        }
+        boolean listUnsubscribeOneClick =
+                listUnsubscribeUrl != null
+                        && listUnsubscribePostHeaderValue != null
+                        && LIST_UNSUBSCRIBE_ONE_CLICK_TRIGGER.equalsIgnoreCase(
+                                listUnsubscribePostHeaderValue.trim());
+        return new ListUnsubscribeExtraction(
+                listUnsubscribeUrl, listUnsubscribeMailto, listUnsubscribeOneClick);
+    }
+
+    private static String stripAngleBrackets(String candidateUri) {
+        String stripped = candidateUri;
+        if (stripped.startsWith("<")) {
+            stripped = stripped.substring(1);
+        }
+        if (stripped.endsWith(">")) {
+            stripped = stripped.substring(0, stripped.length() - 1);
+        }
+        return stripped.trim();
+    }
+
+    private static String parseMailtoUri(String candidateUri) {
+        // D-23: use java.net.URI for structured parsing; reject malformed mailto: URIs so they
+        // never reach the DB. Preserves the full original URI (including ?subject= and &body=
+        // parameters) on success — downstream worker uses the parsed query string to populate
+        // the Gmail-sent unsubscribe message.
+        try {
+            URI mailtoUri = new URI(candidateUri);
+            if (!"mailto".equalsIgnoreCase(mailtoUri.getScheme())) {
+                return null;
+            }
+            return candidateUri;
+        } catch (URISyntaxException mailtoParseFailure) {
+            return null;
+        }
+    }
+
+    /**
+     * Structured output of {@link #extractListUnsubscribe(String, String)}. Three nullable fields
+     * map 1-to-1 to the {@code mail_message_observed.list_unsubscribe_*} columns shipped by
+     * changelog 041.
+     */
+    public record ListUnsubscribeExtraction(String url, String mailto, boolean oneClick) {
+
+        public static ListUnsubscribeExtraction empty() {
+            return new ListUnsubscribeExtraction(null, null, false);
+        }
     }
 
     private static List<String> parseRecipients(String headerValue) {
