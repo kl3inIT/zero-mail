@@ -53,7 +53,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # --repo is required because this job runs without a checkout (gh run list
+          # otherwise tries to inspect the cwd as a git repository).
           conclusion=$(gh run list \
+            --repo "${{ github.repository }}" \
             --workflow "Build and Push Images" \
             --event push \
             --branch "${{ steps.check.outputs.tag }}" \
