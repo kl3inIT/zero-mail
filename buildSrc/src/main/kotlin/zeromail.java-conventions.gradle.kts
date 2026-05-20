@@ -4,7 +4,11 @@ plugins {
 }
 
 jacoco {
-    toolVersion = "0.8.12"
+    // 0.8.14 published Dec 2024 added JDK 25 class-file reader support, but the
+    // runtime agent still cannot instrument classes compiled with --enable-preview
+    // (JEP 505 markers fail at Instrumenter#instrument). Coverage stays opt-in
+    // until the agent catches up — see comment on jacocoTestReport below.
+    toolVersion = "0.8.14"
 }
 
 tasks.withType<JacocoReport>().configureEach {
@@ -31,12 +35,20 @@ tasks.withType<JacocoReport>().configureEach {
     )
 }
 
-tasks.named<Test>("test") {
-    finalizedBy(tasks.named("jacocoTestReport"))
+tasks.withType<Test>().configureEach {
+    // Disable the JaCoCo Java agent on tests until JaCoCo officially supports
+    // --enable-preview JDK 25 bytecode. With the agent disabled, the test JVM
+    // boots cleanly and `gradle check` no longer fails on instrumentation.
+    extensions.findByType<JacocoTaskExtension>()?.isEnabled = false
 }
 
 tasks.named("jacocoTestReport") {
     dependsOn(tasks.named("test"))
+    onlyIf {
+        // Skip cleanly when no execution data is present (the agent is disabled
+        // above — re-enable per-module to generate a real report locally).
+        fileTree(layout.buildDirectory.dir("jacoco")).matching { include("**/*.exec") }.any()
+    }
 }
 
 java {

@@ -1,5 +1,7 @@
 .gradle/
 build/
+.kotlin/
+**/.kotlin/
 .env
 .env.local
 .env.dev

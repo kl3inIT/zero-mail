@@ -109,7 +109,10 @@ jobs:
           severity: CRITICAL
           format: sarif
           output: trivy-fs.sarif
-          exit-code: '1'
+          # Report-only — surface findings to the Security tab via SARIF upload
+          # but do not block CI. A 3-person team triages issues from the Security
+          # dashboard, not from a red CI light.
+          exit-code: '0'
 
       - name: Upload Trivy SARIF
         if: ${{ !cancelled() }}
@@ -153,14 +156,11 @@ jobs:
       - name: Generate backend SBOM (CycloneDX)
         run: ./gradlew --no-daemon cyclonedxBom -PsbomReason=ci || true
 
-      - name: Generate frontend SBOM (CycloneDX)
-        # cyclonedx-npm v2+ auto-detects pnpm workspaces; no --package-lock-only flag
-        # (only npm shrinkwrap supports it). Workspace root pnpm-lock.yaml is the input.
-        run: |
-          pnpm dlx @cyclonedx/cyclonedx-npm@latest \
-            --output-format JSON \
-            --output-file apps/web/sbom-frontend.cdx.json \
-            apps/web/package.json || true
+      # Frontend SBOM via cyclonedx-npm is incompatible with pnpm workspaces
+      # (it runs `npm ls` internally which doesn't recognise the workspace layout).
+      # OSV-Scanner reads pnpm-lock.yaml directly below — no separate SBOM needed
+      # to gate vulnerabilities. Switch to @cyclonedx/cdxgen if a CycloneDX file
+      # ever becomes a hard requirement.
 
       - name: Run OSV-Scanner
         uses: google/osv-scanner-action/osv-scanner-action@v2.3.8
@@ -170,15 +170,14 @@ jobs:
             --skip-git
             ./
 
-      - name: Upload SBOM artifacts
+      - name: Upload backend SBOM artifact
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: sbom
+          name: sbom-backend
           path: |
             backend/**/build/reports/bom*.json
             backend/**/build/reports/bom*.xml
-            apps/web/sbom-frontend.cdx.json
           retention-days: 30
           if-no-files-found: warn
 
@@ -227,7 +226,8 @@ jobs:
           severity: CRITICAL
           format: sarif
           output: trivy-image-${{ matrix.component }}.sarif
-          exit-code: '1'
+          # Report-only (same rationale as trivy-fs above).
+          exit-code: '0'
 
       - name: Upload Trivy SARIF
         if: ${{ !cancelled() }}
