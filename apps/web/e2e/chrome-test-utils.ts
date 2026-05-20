@@ -239,7 +239,13 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
 
 export async function openAuthenticatedRoute(
   page: Page,
-  path: '/analytics' | '/rules' | '/settings' | '/onboarding/gmail-connect',
+  path:
+    | '/analytics'
+    | '/rules'
+    | '/settings'
+    | '/onboarding/gmail-connect'
+    | '/cleanup/unsubscribe-campaign'
+    | '/cleanup/suppression',
   state: ChromeMockState,
 ) {
   await seedAuthenticatedSession(page, state.preferredLanguage);
