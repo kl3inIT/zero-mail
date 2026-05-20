@@ -109,7 +109,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version: "24"
           check-latest: true
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
@@ -144,7 +144,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version: "24"
           check-latest: true
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
