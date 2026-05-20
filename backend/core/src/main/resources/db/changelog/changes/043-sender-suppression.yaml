@@ -1,0 +1,64 @@
+databaseChangeLog:
+  - changeSet:
+      id: 043-sender-suppression
+      author: zeromail
+      comment: >
+        Per-tenant sender suppression list (D-09). Each row suppresses either a specific
+        sender_email OR a sender_domain — never both — enforced by ck_sender_suppression_one_target
+        XOR check. `reason` records provenance: `manual` (user-added), `replied` (auto-added
+        when user replies to a suppressed-style sender), `auto` (system policy). Tenant-scoped
+        FK cascades on tenant delete (privacy invariant). Partial unique indexes prevent
+        duplicate suppression rows per (tenant, target) without forcing both targets to
+        unique simultaneously. No raw email content stored; sender_email/domain are already
+        the sanitized + canonicalized form (SenderEmailCanonicalizer contract).
+      changes:
+        - createTable:
+            tableName: sender_suppression
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_sender_suppression_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: sender_email
+                  type: varchar(320)
+              - column:
+                  name: sender_domain
+                  type: varchar(255)
+              - column:
+                  name: reason
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - sql:
+            comment: Exactly one target — either sender_email or sender_domain (XOR).
+            sql: ALTER TABLE sender_suppression ADD CONSTRAINT ck_sender_suppression_one_target CHECK ((sender_email IS NOT NULL) <> (sender_domain IS NOT NULL))
+        - sql:
+            comment: Reason enum matches SenderSuppressionReason ids (D-09).
+            sql: ALTER TABLE sender_suppression ADD CONSTRAINT ck_sender_suppression_reason CHECK (reason IN ('manual','replied','auto'))
+        - sql:
+            comment: Partial unique index — no duplicate email suppression per tenant.
+            sql: CREATE UNIQUE INDEX ux_sender_suppression_email ON sender_suppression (tenant_id, sender_email) WHERE sender_email IS NOT NULL
+        - sql:
+            comment: Partial unique index — no duplicate domain suppression per tenant.
+            sql: CREATE UNIQUE INDEX ux_sender_suppression_domain ON sender_suppression (tenant_id, sender_domain) WHERE sender_domain IS NOT NULL
+      rollback:
+        - dropTable:
+            tableName: sender_suppression

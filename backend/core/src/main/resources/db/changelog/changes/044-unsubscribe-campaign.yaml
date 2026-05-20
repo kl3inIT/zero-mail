@@ -1,0 +1,87 @@
+databaseChangeLog:
+  - changeSet:
+      id: 044-unsubscribe-campaign
+      author: zeromail
+      comment: >
+        Campaign aggregate root for bulk unsubscribe runs (Phase 8). One row per
+        user-triggered campaign holds counts (sender + history message totals) and lifecycle
+        timestamps (applied_at when COMPLETED, reverted_at if undo runs). job_id FK is
+        nullable because D-04 transactional INSERT order is campaign → attempts → job
+        (job inserted last so the worker can never pick up before child rows exist).
+        Once enqueued, job_id is set and remains stable; the FK to processing_job uses
+        default ON DELETE NO ACTION because completed jobs are purged after 90d while
+        campaign rows are kept indefinitely (D-25) for support + analytics retro.
+      changes:
+        - createTable:
+            tableName: unsubscribe_campaign
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_unsubscribe_campaign_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: job_id
+                  type: uuid
+                  constraints:
+                    foreignKeyName: fk_unsubscribe_campaign_job
+                    references: processing_job(id)
+              - column:
+                  name: status
+                  type: varchar(16)
+                  defaultValue: QUEUED
+                  constraints:
+                    nullable: false
+              - column:
+                  name: applied_at
+                  type: timestamptz
+              - column:
+                  name: reverted_at
+                  type: timestamptz
+              - column:
+                  name: total_sender_count
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_history_message_count
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - sql:
+            comment: Campaign status enum matches UnsubscribeCampaignStatus ids.
+            sql: ALTER TABLE unsubscribe_campaign ADD CONSTRAINT ck_unsubscribe_campaign_status CHECK (status IN ('QUEUED','RUNNING','COMPLETED','FAILED'))
+        - createIndex:
+            tableName: unsubscribe_campaign
+            indexName: idx_unsubscribe_campaign_tenant_created
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: created_at
+                  descending: true
+        - createIndex:
+            tableName: unsubscribe_campaign
+            indexName: idx_unsubscribe_campaign_job
+            columns:
+              - column:
+                  name: job_id
+      rollback:
+        - dropTable:
+            tableName: unsubscribe_campaign

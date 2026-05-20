@@ -1,0 +1,93 @@
+databaseChangeLog:
+  - changeSet:
+      id: 045-unsubscribe-attempt
+      author: zeromail
+      comment: >
+        Per-sender attempt row within a campaign. campaign_id FK uses ON DELETE CASCADE so
+        purging a campaign (only via tenant deletion, never time-based — D-25) wipes its
+        attempts atomically. unsubscribe_method records which transport was used
+        (ONE_CLICK = RFC 8058 one-click POST, MAILTO = List-Unsubscribe mailto: message).
+        state machine: PENDING → RUNNING → OK or FAILED, with failure_reason capturing the
+        compact, non-PII reason code (e.g. `http_5xx`, `mailto_send_failed`). The
+        (campaign_id, sender_domain) index supports the throttle bucket-by-domain query
+        the worker uses to enforce per-domain pacing during a campaign run.
+      changes:
+        - createTable:
+            tableName: unsubscribe_attempt
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: campaign_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_unsubscribe_attempt_campaign
+                    references: unsubscribe_campaign(id)
+                    deleteCascade: true
+              - column:
+                  name: sender_email
+                  type: varchar(320)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sender_domain
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: unsubscribe_method
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: state
+                  type: varchar(16)
+                  defaultValue: PENDING
+                  constraints:
+                    nullable: false
+              - column:
+                  name: failure_reason
+                  type: varchar(255)
+              - column:
+                  name: archived_message_count
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: started_at
+                  type: timestamptz
+              - column:
+                  name: finished_at
+                  type: timestamptz
+        - sql:
+            comment: Unsubscribe transport enum (D-09).
+            sql: ALTER TABLE unsubscribe_attempt ADD CONSTRAINT ck_unsubscribe_attempt_method CHECK (unsubscribe_method IN ('ONE_CLICK','MAILTO'))
+        - sql:
+            comment: Per-attempt state machine ids.
+            sql: ALTER TABLE unsubscribe_attempt ADD CONSTRAINT ck_unsubscribe_attempt_state CHECK (state IN ('PENDING','RUNNING','OK','FAILED'))
+        - createIndex:
+            tableName: unsubscribe_attempt
+            indexName: idx_unsubscribe_attempt_campaign_state
+            columns:
+              - column:
+                  name: campaign_id
+              - column:
+                  name: state
+        - createIndex:
+            tableName: unsubscribe_attempt
+            indexName: idx_unsubscribe_attempt_campaign_domain
+            columns:
+              - column:
+                  name: campaign_id
+              - column:
+                  name: sender_domain
+      rollback:
+        - dropTable:
+            tableName: unsubscribe_attempt

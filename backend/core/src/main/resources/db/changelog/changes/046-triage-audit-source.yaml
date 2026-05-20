@@ -1,0 +1,41 @@
+databaseChangeLog:
+  - changeSet:
+      id: 046-triage-audit-source
+      author: zeromail
+      comment: >
+        H-3 Path A — distinguish triage-driven vs cleanup-driven audit rows.
+        `source='TRIAGE'` for backfill + future rule-driven writes (default);
+        `source='CLEANUP_CAMPAIGN'` written by TriageAuditWriter.recordCleanupArchive
+        when UnsubscribeCampaignHandler archives a history message during a campaign run.
+        The undo query path (CampaignUndoService, Plan 07) filters by
+        `source='CLEANUP_CAMPAIGN'` to avoid touching non-cleanup audit rows. The partial
+        index supports the cleanup-undo query pattern
+        (tenant_id, sanitized_sender_email, applied_at DESC) — scoped to cleanup-source
+        rows only so total index size and write overhead remain small versus a full index.
+        sanitized_sender_email is the same canonicalized form that CandidateQueryService
+        returns; TriageAuditWriter.recordCleanupArchive must persist that exact form so
+        the undo JOIN against unsubscribe_attempt.sender_email is sound.
+      changes:
+        - addColumn:
+            tableName: triage_audit
+            columns:
+              - column:
+                  name: source
+                  type: text
+                  defaultValue: TRIAGE
+                  constraints:
+                    nullable: false
+        - sql:
+            comment: Source enum — TRIAGE for rule-driven writes, CLEANUP_CAMPAIGN for cleanup-archive writes.
+            sql: ALTER TABLE triage_audit ADD CONSTRAINT ck_triage_audit_source CHECK (source IN ('TRIAGE', 'CLEANUP_CAMPAIGN'))
+        - sql:
+            comment: Partial index for cleanup-undo lookup path (Plan 07 Task 3).
+            sql: CREATE INDEX idx_triage_audit_cleanup ON triage_audit (tenant_id, sanitized_sender_email, applied_at DESC) WHERE source = 'CLEANUP_CAMPAIGN'
+      rollback:
+        - sql:
+            sql: DROP INDEX IF EXISTS idx_triage_audit_cleanup
+        - sql:
+            sql: ALTER TABLE triage_audit DROP CONSTRAINT IF EXISTS ck_triage_audit_source
+        - dropColumn:
+            tableName: triage_audit
+            columnName: source

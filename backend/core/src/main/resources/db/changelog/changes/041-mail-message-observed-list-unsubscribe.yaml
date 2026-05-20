@@ -1,0 +1,37 @@
+databaseChangeLog:
+  - changeSet:
+      id: 041-mail-message-observed-list-unsubscribe
+      author: zeromail
+      comment: >
+        Forward-only backfill (D-10). Rows ingested before Phase 8 keep NULL.
+        Candidate query filters `(list_unsubscribe_url IS NOT NULL OR list_unsubscribe_mailto IS NOT NULL)`.
+        URL invariant: any non-NULL value begins with `https://` (D-11 parse-time guard
+        enforced by GmailPreviewReadService; intentionally not enforced at DB layer to
+        keep legacy data tolerant). `list_unsubscribe_one_click` defaults to false so existing
+        rows participate in the boolean column NOT NULL contract without backfill writes.
+      changes:
+        - addColumn:
+            tableName: mail_message_observed
+            columns:
+              - column:
+                  name: list_unsubscribe_url
+                  type: varchar(2048)
+              - column:
+                  name: list_unsubscribe_mailto
+                  type: varchar(512)
+              - column:
+                  name: list_unsubscribe_one_click
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropColumn:
+            tableName: mail_message_observed
+            columnName: list_unsubscribe_one_click
+        - dropColumn:
+            tableName: mail_message_observed
+            columnName: list_unsubscribe_mailto
+        - dropColumn:
+            tableName: mail_message_observed
+            columnName: list_unsubscribe_url
