@@ -21,5 +21,11 @@
     }
   },
   "include": ["src", "vite.config.ts", "vitest.config.ts", "playwright.config.ts"],
-  "exclude": ["dist", "node_modules"]
+  "exclude": [
+    "dist",
+    "node_modules",
+    "src/components/ui",
+    "src/routeTree.gen.ts",
+    "src/lib/api/admin-schema.d.ts"
+  ]
 }
