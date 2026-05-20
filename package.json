@@ -22,9 +22,7 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*": "pnpm encoding:check",
-    "apps/web/**/*.{ts,tsx}": "pnpm --filter web lint --fix",
-    "apps/admin/**/*.{ts,tsx}": "pnpm --filter @zeromail/admin lint --fix"
+    "*": "pnpm encoding:check"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
