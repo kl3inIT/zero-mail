@@ -6,6 +6,7 @@ import com.zeromail.core.admin.auth.AdminContext;
 import com.zeromail.core.admin.auth.AdminUser;
 import com.zeromail.core.admin.cat.domain.Feature;
 import com.zeromail.core.admin.cat.domain.event.CatalogChangedEvent;
+import com.zeromail.core.admin.cat.persistence.lowlevel.CatalogSyncJobRepository;
 import com.zeromail.core.admin.cat.projection.CatalogDiff;
 import com.zeromail.core.admin.cat.projection.CatalogModelRow;
 import com.zeromail.core.admin.cat.projection.CatalogSyncJob;

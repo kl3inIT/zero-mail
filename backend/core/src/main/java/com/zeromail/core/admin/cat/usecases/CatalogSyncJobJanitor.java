@@ -1,5 +1,6 @@
 package com.zeromail.core.admin.cat.usecases;
 
+import com.zeromail.core.admin.cat.persistence.lowlevel.CatalogSyncJobRepository;
 import java.time.Duration;
 import java.util.Objects;
 import org.springframework.scheduling.annotation.Scheduled;

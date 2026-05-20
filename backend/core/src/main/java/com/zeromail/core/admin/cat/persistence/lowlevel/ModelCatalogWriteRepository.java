@@ -212,6 +212,25 @@ public class ModelCatalogWriteRepository {
                 adminId);
     }
 
+    public java.util.Map<String, String> findActiveModelDisplayNames(LlmProvider provider) {
+        java.util.Map<String, String> displayNamesById = new java.util.HashMap<>();
+        org.springframework.jdbc.core.RowCallbackHandler rowCallbackHandler =
+                resultSet ->
+                        displayNamesById.put(
+                                resultSet.getString("model_id"),
+                                resultSet.getString("display_name"));
+        jdbcTemplate.query(
+                """
+                SELECT model_id, display_name
+                FROM model_catalog
+                WHERE provider = ?
+                  AND deprecated_at IS NULL
+                """,
+                rowCallbackHandler,
+                provider.id());
+        return displayNamesById;
+    }
+
     public long bumpProviderCatalogVersionById(String providerId) {
         Long catalogVersion =
                 jdbcTemplate.queryForObject(

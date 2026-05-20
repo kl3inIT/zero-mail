@@ -1,5 +1,7 @@
 package com.zeromail.core.admin.cat.usecases;
 
+import com.zeromail.core.admin.cat.persistence.lowlevel.CatalogSyncJobRepository;
+import com.zeromail.core.admin.cat.persistence.lowlevel.ModelCatalogWriteRepository;
 import com.zeromail.core.admin.cat.projection.CatalogDiff;
 import com.zeromail.core.admin.cat.projection.CatalogModelRow;
 import com.zeromail.core.admin.cat.projection.CatalogSyncJob;
@@ -12,7 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,14 +27,14 @@ public class CatalogSyncJobConsumer {
     private final ProviderMasterKeyResolver providerMasterKeyResolver;
     private final ModelsProbeClient modelsProbeClient;
     private final ModelSchemaValidator modelSchemaValidator;
-    private final JdbcTemplate jdbcTemplate;
+    private final ModelCatalogWriteRepository modelCatalogWriteRepository;
 
     public CatalogSyncJobConsumer(
             CatalogSyncJobRepository catalogSyncJobRepository,
             ProviderMasterKeyResolver providerMasterKeyResolver,
             ModelsProbeClient modelsProbeClient,
             ModelSchemaValidator modelSchemaValidator,
-            JdbcTemplate jdbcTemplate) {
+            ModelCatalogWriteRepository modelCatalogWriteRepository) {
         this.catalogSyncJobRepository =
                 Objects.requireNonNull(catalogSyncJobRepository, "catalogSyncJobRepository");
         this.providerMasterKeyResolver =
@@ -41,7 +42,10 @@ public class CatalogSyncJobConsumer {
         this.modelsProbeClient = Objects.requireNonNull(modelsProbeClient, "modelsProbeClient");
         this.modelSchemaValidator =
                 Objects.requireNonNull(modelSchemaValidator, "modelSchemaValidator");
-        this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate, "jdbcTemplate must not be null");
+        this.modelCatalogWriteRepository =
+                Objects.requireNonNull(
+                        modelCatalogWriteRepository,
+                        "modelCatalogWriteRepository must not be null");
     }
 
     @Scheduled(fixedDelay = 2000)
@@ -132,23 +136,12 @@ public class CatalogSyncJobConsumer {
     }
 
     private Map<String, ExistingModel> existingModels(LlmProvider provider) {
-        List<ExistingModel> rows =
-                jdbcTemplate.query(
-                        """
-                        SELECT model_id, display_name
-                        FROM model_catalog
-                        WHERE provider = ?
-                          AND deprecated_at IS NULL
-                        """,
-                        (resultSet, rowNumber) ->
-                                new ExistingModel(
-                                        resultSet.getString("model_id"),
-                                        resultSet.getString("display_name")),
-                        provider.id());
-        Map<String, ExistingModel> modelsById = new HashMap<>();
-        for (ExistingModel row : rows) {
-            modelsById.put(row.modelId(), row);
-        }
+        Map<String, String> displayNamesById =
+                modelCatalogWriteRepository.findActiveModelDisplayNames(provider);
+        Map<String, ExistingModel> modelsById = new java.util.HashMap<>();
+        displayNamesById.forEach(
+                (modelId, displayName) ->
+                        modelsById.put(modelId, new ExistingModel(modelId, displayName)));
         return modelsById;
     }
 

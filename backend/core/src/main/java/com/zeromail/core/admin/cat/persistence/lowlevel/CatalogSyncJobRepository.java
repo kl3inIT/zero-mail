@@ -1,4 +1,4 @@
-package com.zeromail.core.admin.cat.usecases;
+package com.zeromail.core.admin.cat.persistence.lowlevel;
 
 import com.zeromail.core.admin.cat.projection.CatalogDiff;
 import com.zeromail.core.admin.cat.projection.CatalogModelRow;
