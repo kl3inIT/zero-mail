@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.NonNull;
@@ -19,68 +20,38 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 public record ZeroMailCoreProperties(
         @Valid @NotNull CryptoProperties crypto,
-        @Valid GmailProperties gmail,
+        @Valid @DefaultValue GmailProperties gmail,
         @Valid @NotNull BillingProperties billing,
-        @Valid LlmProperties llm,
-        @Valid AdminProperties admin) {
-
-    public ZeroMailCoreProperties {
-        gmail = gmail == null ? GmailProperties.defaults() : gmail;
-        llm = llm == null ? LlmProperties.defaults() : llm;
-        admin = admin == null ? AdminProperties.defaults() : admin;
-    }
+        @Valid @DefaultValue LlmProperties llm,
+        @Valid @DefaultValue AdminProperties admin) {
 
     public record CryptoProperties(@NotBlank String refreshTokenKeyBase64) {}
 
     public record AdminProperties(
             List<String> bootstrapEmails,
-            @Valid AdminAuditProperties audit,
-            @Valid AdminSpendProperties spend) {
-
-        static AdminProperties defaults() {
-            return new AdminProperties(List.of(), null, null);
-        }
+            @Valid @DefaultValue AdminAuditProperties audit,
+            @Valid @DefaultValue AdminSpendProperties spend) {
 
         public AdminProperties {
             bootstrapEmails = bootstrapEmails == null ? List.of() : List.copyOf(bootstrapEmails);
-            audit = audit == null ? AdminAuditProperties.defaults() : audit;
-            spend = spend == null ? AdminSpendProperties.defaults() : spend;
         }
     }
 
-    public record AdminAuditProperties(String hmacKekBase64) {
-
-        static AdminAuditProperties defaults() {
-            return new AdminAuditProperties("");
-        }
-    }
+    public record AdminAuditProperties(@DefaultValue("") String hmacKekBase64) {}
 
     /**
      * Spend-dashboard tunables per Phase 8F reviews-pass addenda.
      *
      * @param kAnonymityThreshold (R-8F-H6) minimum bucket size before exact per-tenant figures are
-     *     exposed; smaller buckets collapse into a rollup row. Default 5.
+     *     exposed; smaller buckets collapse into a rollup row. {@code @Min(1)} is enforced by
+     *     {@code @Validated} at bind time — no silent recovery.
      * @param rowLevelClassificationSince (R-8F-H9) boundary date for the credential_source
      *     row-level classification rollout; rows with {@code created_at} before this date are
      *     classified as UNKNOWN. The UI surfaces this date in the 90-day range picker label.
      */
     public record AdminSpendProperties(
-            @Min(1) int kAnonymityThreshold, String rowLevelClassificationSince) {
-
-        static AdminSpendProperties defaults() {
-            return new AdminSpendProperties(5, "2026-05-20");
-        }
-
-        public AdminSpendProperties {
-            if (kAnonymityThreshold < 1) {
-                kAnonymityThreshold = 5;
-            }
-            rowLevelClassificationSince =
-                    rowLevelClassificationSince == null || rowLevelClassificationSince.isBlank()
-                            ? "2026-05-20"
-                            : rowLevelClassificationSince;
-        }
-    }
+            @Min(1) @DefaultValue("5") int kAnonymityThreshold,
+            @NotNull @DefaultValue("2026-05-20") LocalDate rowLevelClassificationSince) {}
 
     public record GmailProperties(
             @DefaultValue("https://gmail.googleapis.com/") @NotBlank String apiRootUrl,
@@ -226,6 +197,19 @@ public record ZeroMailCoreProperties(
                 + ", billing="
                 + billing
                 + ", llm=****"
-                + ", admin=****]";
+                + ", admin="
+                + adminForLog()
+                + "]";
+    }
+
+    private String adminForLog() {
+        if (admin == null) {
+            return "null";
+        }
+        return "AdminProperties[bootstrapEmails="
+                + admin.bootstrapEmails().size()
+                + " entries, audit.hmacKekBase64=****, spend="
+                + admin.spend()
+                + "]";
     }
 }

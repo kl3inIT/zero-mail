@@ -3,6 +3,7 @@ package com.zeromail.api.dto.admin.spend;
 import com.zeromail.core.admin.spend.projection.SpendDashboardSnapshot;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 @Schema(
@@ -24,7 +25,7 @@ public record SpendDashboardResponse(
         Instant snapshotAt,
         String kAnonymityFooterNote,
         double unknownPercentOfTotal,
-        String rowLevelClassificationSince) {
+        LocalDate rowLevelClassificationSince) {
 
     public SpendDashboardResponse {
         stackBar = List.copyOf(stackBar);
@@ -33,7 +34,7 @@ public record SpendDashboardResponse(
     }
 
     public static SpendDashboardResponse from(
-            SpendDashboardSnapshot snapshot, String rowLevelClassificationSince) {
+            SpendDashboardSnapshot snapshot, LocalDate rowLevelClassificationSince) {
         return new SpendDashboardResponse(
                 SpendKpiResponse.from(snapshot.kpis()),
                 snapshot.stackBar().stream().map(ProviderStackBarRowResponse::from).toList(),

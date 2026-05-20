@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -58,7 +59,7 @@ public class AdminSpendController {
     private final SpendCsvExporter spendCsvExporter;
     private final AdminAuditWriter adminAuditWriter;
     private final Clock clock;
-    private final String rowLevelClassificationSince;
+    private final LocalDate rowLevelClassificationSince;
     private final Map<String, Instant> readEventDebounce = new ConcurrentHashMap<>();
 
     public AdminSpendController(
