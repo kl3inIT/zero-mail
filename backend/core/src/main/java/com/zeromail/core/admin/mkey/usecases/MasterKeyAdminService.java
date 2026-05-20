@@ -254,15 +254,16 @@ public class MasterKeyAdminService {
         return new StoredMasterKey(kekVersion, providerSecretVersion, now);
     }
 
+    /**
+     * Runs the connectivity probe for the supplied master-key candidate. Ownership note: the
+     * caller retains ownership of {@code plaintextKey}. This method does NOT zero the buffer —
+     * test-only callers (the controller's {@code test-connection} endpoint) zero after returning,
+     * and write callers ({@link #set}, {@link #rotate}) flow the same buffer into {@link
+     * #storeMasterKey} which zeros it in its own {@code finally}.
+     */
     private MasterKeyTestResult probe(
             LlmProvider provider, KeyFormat keyFormat, String baseUrl, byte[] plaintextKey) {
-        try {
-            return modelsProbeClient.probe(
-                    provider, keyFormat, cleanBaseUrl(baseUrl), plaintextKey);
-        } finally {
-            // The caller may still need the bytes for encryption; zeroing happens after successful
-            // storage or in the controller for test-only requests.
-        }
+        return modelsProbeClient.probe(provider, keyFormat, cleanBaseUrl(baseUrl), plaintextKey);
     }
 
     private void writeChangedAudit(
