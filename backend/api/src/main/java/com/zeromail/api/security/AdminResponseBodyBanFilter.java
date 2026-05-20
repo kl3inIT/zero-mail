@@ -25,7 +25,6 @@ import tools.jackson.core.json.JsonFactory;
 @Component
 public class AdminResponseBodyBanFilter extends OncePerRequestFilter {
 
-    private static final int MAX_ALLOWED_FORBIDDEN_STRING_LENGTH = 200;
     private static final JsonFactory JSON_FACTORY = new JsonFactory();
 
     private final AdminAuditWriter adminAuditWriter;
@@ -48,8 +47,16 @@ public class AdminResponseBodyBanFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         ContentCachingResponseWrapper responseWrapper = new ContentCachingResponseWrapper(response);
         filterChain.doFilter(request, responseWrapper);
+        // WR-04: only inspect JSON bodies that were buffered. text/csv exports and any
+        // StreamingResponseBody path write bytes directly to the underlying response and
+        // bypass ContentCachingResponseWrapper's buffer — we leave those alone instead of
+        // calling resetBuffer() on an already-committed response (which throws and emits
+        // a half-written body).
         byte[] responseBody = responseWrapper.getContentAsByteArray();
-        if (isJson(responseWrapper.getContentType()) && containsForbiddenBodyField(responseBody)) {
+        if (!response.isCommitted()
+                && isJson(responseWrapper.getContentType())
+                && responseBody.length > 0
+                && containsForbiddenBodyField(responseBody)) {
             UUID auditId =
                     adminAuditWriter.appendAsSystem(
                             AdminAuditAction.ADMIN_RESPONSE_BODY_BAN_TRIPPED,
@@ -72,6 +79,9 @@ public class AdminResponseBodyBanFilter extends OncePerRequestFilter {
     }
 
     private static boolean containsForbiddenBodyField(byte[] responseBody) throws IOException {
+        // WR-04: any string value whose property name matches the forbidden regex trips
+        // the filter, regardless of length. The 200-char threshold was the only line of
+        // defense for borderline cases (truncated subjects, short PII fragments).
         try (JsonParser jsonParser =
                 JSON_FACTORY.createParser(
                         ObjectReadContext.empty(), new ByteArrayInputStream(responseBody))) {
@@ -83,8 +93,7 @@ public class AdminResponseBodyBanFilter extends OncePerRequestFilter {
                 String propertyName = jsonParser.currentName();
                 JsonToken valueToken = jsonParser.nextToken();
                 if (AdminBodyBanRegex.FORBIDDEN_FIELD_NAME.matcher(propertyName).matches()
-                        && valueToken == JsonToken.VALUE_STRING
-                        && jsonParser.getString().length() > MAX_ALLOWED_FORBIDDEN_STRING_LENGTH) {
+                        && valueToken == JsonToken.VALUE_STRING) {
                     return true;
                 }
             }
