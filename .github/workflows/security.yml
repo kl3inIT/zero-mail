@@ -165,9 +165,10 @@ jobs:
       - name: Run OSV-Scanner
         uses: google/osv-scanner-action/osv-scanner-action@v2.3.8
         with:
+          # OSV-Scanner v2 dropped --skip-git (it never scans history anyway).
+          # `--recursive ./` walks pnpm-lock.yaml + Gradle build files in one pass.
           scan-args: |-
             --recursive
-            --skip-git
             ./
 
       - name: Upload backend SBOM artifact
