@@ -1,5 +1,6 @@
 package com.zeromail.core.llm.gateway.springai.admin;
 
+import com.zeromail.core.admin.cat.persistence.lowlevel.ProviderCatalogLookupRepository;
 import com.zeromail.core.admin.mkey.domain.KeyFormat;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyEntity;
@@ -17,8 +18,6 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -29,7 +28,7 @@ public class ProviderMasterKeyResolver {
 
     private final LlmProviderMasterKeyRepository llmProviderMasterKeyRepository;
     private final PlatformSecretCipher platformSecretCipher;
-    private final JdbcTemplate jdbcTemplate;
+    private final ProviderCatalogLookupRepository providerCatalogLookupRepository;
     private final Clock clock;
     private final Duration cacheTtl;
     private final ConcurrentMap<LlmProvider, CachedMasterKey> cachedKeysByProvider =
@@ -39,11 +38,11 @@ public class ProviderMasterKeyResolver {
     public ProviderMasterKeyResolver(
             LlmProviderMasterKeyRepository llmProviderMasterKeyRepository,
             PlatformSecretCipher platformSecretCipher,
-            JdbcTemplate jdbcTemplate) {
+            ProviderCatalogLookupRepository providerCatalogLookupRepository) {
         this(
                 llmProviderMasterKeyRepository,
                 platformSecretCipher,
-                jdbcTemplate,
+                providerCatalogLookupRepository,
                 Clock.systemUTC(),
                 DEFAULT_CACHE_TTL);
     }
@@ -59,7 +58,7 @@ public class ProviderMasterKeyResolver {
     public ProviderMasterKeyResolver(
             LlmProviderMasterKeyRepository llmProviderMasterKeyRepository,
             PlatformSecretCipher platformSecretCipher,
-            JdbcTemplate jdbcTemplate,
+            ProviderCatalogLookupRepository providerCatalogLookupRepository,
             Clock clock,
             Duration cacheTtl) {
         this.llmProviderMasterKeyRepository =
@@ -67,7 +66,7 @@ public class ProviderMasterKeyResolver {
                         llmProviderMasterKeyRepository, "llmProviderMasterKeyRepository");
         this.platformSecretCipher =
                 Objects.requireNonNull(platformSecretCipher, "platformSecretCipher");
-        this.jdbcTemplate = jdbcTemplate;
+        this.providerCatalogLookupRepository = providerCatalogLookupRepository;
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
         this.cacheTtl = Objects.requireNonNull(cacheTtl, "cacheTtl must not be null");
     }
@@ -105,19 +104,10 @@ public class ProviderMasterKeyResolver {
     }
 
     public long providerCatalogVersionOrOne(LlmProvider provider) {
-        if (jdbcTemplate == null) {
+        if (providerCatalogLookupRepository == null) {
             return 1L;
         }
-        try {
-            Long catalogVersion =
-                    jdbcTemplate.queryForObject(
-                            "SELECT catalog_version FROM provider_catalog WHERE provider = ?",
-                            Long.class,
-                            provider.id());
-            return catalogVersion == null ? 1L : catalogVersion;
-        } catch (DataAccessException dataAccessException) {
-            return 1L;
-        }
+        return providerCatalogLookupRepository.findCatalogVersionOrOne(provider);
     }
 
     public List<MasterKeyMaskedRow> maskedRows() {
@@ -189,25 +179,10 @@ public class ProviderMasterKeyResolver {
     }
 
     private boolean isFeatureDefaultProvider(LlmProvider provider, String feature) {
-        if (jdbcTemplate == null) {
+        if (providerCatalogLookupRepository == null) {
             return false;
         }
-        try {
-            Integer count =
-                    jdbcTemplate.queryForObject(
-                            """
-                            SELECT COUNT(*)
-                            FROM feature_default_provider
-                            WHERE provider = ?
-                              AND feature = ?
-                            """,
-                            Integer.class,
-                            provider.id(),
-                            feature);
-            return count != null && count > 0;
-        } catch (DataAccessException dataAccessException) {
-            return false;
-        }
+        return providerCatalogLookupRepository.isFeatureDefaultProvider(provider, feature);
     }
 
     public static String associatedData(LlmProvider provider) {

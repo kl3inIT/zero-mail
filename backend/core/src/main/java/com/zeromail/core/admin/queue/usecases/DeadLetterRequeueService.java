@@ -3,10 +3,10 @@ package com.zeromail.core.admin.queue.usecases;
 import com.zeromail.core.admin.audit.domain.AdminAuditAction;
 import com.zeromail.core.admin.audit.usecases.AdminAuditWriter;
 import com.zeromail.core.admin.auth.AdminContext;
+import com.zeromail.core.admin.queue.persistence.lowlevel.ProcessingJobRequeueRepository;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,11 +26,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class DeadLetterRequeueService {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final ProcessingJobRequeueRepository processingJobRequeueRepository;
     private final AdminAuditWriter adminAuditWriter;
 
-    public DeadLetterRequeueService(JdbcTemplate jdbcTemplate, AdminAuditWriter adminAuditWriter) {
-        this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate, "jdbcTemplate must not be null");
+    public DeadLetterRequeueService(
+            ProcessingJobRequeueRepository processingJobRequeueRepository,
+            AdminAuditWriter adminAuditWriter) {
+        this.processingJobRequeueRepository =
+                Objects.requireNonNull(
+                        processingJobRequeueRepository,
+                        "processingJobRequeueRepository must not be null");
         this.adminAuditWriter =
                 Objects.requireNonNull(adminAuditWriter, "adminAuditWriter must not be null");
     }
@@ -44,69 +49,29 @@ public class DeadLetterRequeueService {
         AdminContext.currentOrThrow();
         UUID targetJobId = Objects.requireNonNull(jobId, "jobId must not be null");
 
-        Map<String, Object> beforeStateMap = readJobState(targetJobId);
+        Map<String, Object> beforeStateMap =
+                processingJobRequeueRepository.findMetadata(targetJobId);
         if (beforeStateMap == null || !"DEAD_LETTER".equals(beforeStateMap.get("status"))) {
             return 0;
         }
 
-        // Reset attempts to 0 (fresh retry budget), increment admin_requeue_count (R-8E-H1),
-        // clear last_failed_at + locked_until, and stamp last_requeued_at = NOW().
-        // The UPDATE intentionally never touches the stored job body column.
-        int updatedRows =
-                jdbcTemplate.update(
-                        """
-                        UPDATE processing_job
-                        SET status = 'PENDING',
-                            attempts = 0,
-                            locked_until = NULL,
-                            locked_at = NULL,
-                            last_failed_at = NULL,
-                            admin_requeue_count = admin_requeue_count + 1,
-                            last_requeued_at = NOW(),
-                            updated_at = NOW()
-                        WHERE id = ? AND status = 'DEAD_LETTER'
-                        """,
-                        targetJobId);
-
+        int updatedRows = processingJobRequeueRepository.requeueFromDeadLetter(targetJobId);
         if (updatedRows == 0) {
             // Lost the race against another admin / janitor; treat as idempotent no-op.
             return 0;
         }
 
-        String beforeStateJson = formatBeforeState(beforeStateMap);
-        String afterStateJson = formatAfterState(beforeStateMap);
-
         adminAuditWriter.append(
                 AdminAuditAction.DEAD_LETTER_REQUEUED,
                 "PROCESSING_JOB",
                 targetJobId,
-                beforeStateJson,
-                afterStateJson,
+                formatBeforeState(beforeStateMap),
+                formatAfterState(beforeStateMap),
                 reason,
                 requestIp,
                 requestId);
 
         return updatedRows;
-    }
-
-    /** Reads only metadata fields — never the stored job body column. */
-    private Map<String, Object> readJobState(UUID jobId) {
-        try {
-            return jdbcTemplate.queryForMap(
-                    """
-                    SELECT id::text AS id,
-                           job_type AS "jobType",
-                           status,
-                           attempts,
-                           admin_requeue_count AS "adminRequeueCount",
-                           last_failure_reason AS "lastFailureReason"
-                    FROM processing_job
-                    WHERE id = ?
-                    """,
-                    jobId);
-        } catch (org.springframework.dao.EmptyResultDataAccessException emptyResult) {
-            return null;
-        }
     }
 
     private static String formatBeforeState(Map<String, Object> beforeStateMap) {
