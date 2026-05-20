@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useLocation, useNavigate } from '@tanstack/react-router';
 import { Building2Icon, FilterIcon } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { z } from 'zod';
 
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +32,18 @@ function TenantsRoute() {
   const [status, setStatus] = useState<TenantStatusFilter>(search.status ?? 'ALL');
   const [from, setFrom] = useState(search.from ?? '');
   const [to, setTo] = useState(search.to ?? '');
+  // Mirror URL search params into the form draft when the URL changes (browser
+  // back, deep links). Uses React 19's "adjust state during render" pattern —
+  // tracks the previous search value and resets the draft inline rather than
+  // via useEffect, so there is no cascading render and no setState-in-effect.
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  const [prevSearch, setPrevSearch] = useState(search);
+  if (prevSearch !== search) {
+    setPrevSearch(search);
+    setStatus(search.status ?? 'ALL');
+    setFrom(search.from ?? '');
+    setTo(search.to ?? '');
+  }
   const filters = useMemo<TenantListFilters>(
     () => ({
       status: search.status,
@@ -45,12 +57,6 @@ function TenantsRoute() {
   const isListRoute = location.pathname === '/tenants';
   const tenantList = useTenantList(filters, isListRoute);
   const rows = tenantList.data?.rows ?? [];
-
-  useEffect(() => {
-    setStatus(search.status ?? 'ALL');
-    setFrom(search.from ?? '');
-    setTo(search.to ?? '');
-  }, [search]);
 
   if (!isListRoute) {
     return <Outlet />;

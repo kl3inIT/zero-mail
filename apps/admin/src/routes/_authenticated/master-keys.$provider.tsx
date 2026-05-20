@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { ArrowLeftIcon, RotateCwIcon } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { MaskedSecretField } from '@/components/MaskedSecretField';
 import { Badge } from '@/components/ui/badge';
@@ -49,11 +49,17 @@ function MasterKeyProviderRoute() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const row = masterKey.data;
 
-  useEffect(() => {
-    if (!row) return;
+  // Mirror the loaded master-key row into the form draft when row changes (data
+  // arrives after suspense, refetch, provider switch). Uses React 19's "adjust
+  // state during render" pattern instead of useEffect so there is no cascading
+  // render and no setState-in-effect.
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  const [prevRow, setPrevRow] = useState(row);
+  if (row && prevRow !== row) {
+    setPrevRow(row);
     setKeyFormat(row.keyFormat ?? fixedFormats[row.provider] ?? 'OPENAI_FORMAT');
     setBaseUrl(row.baseUrl ?? '');
-  }, [row]);
+  }
 
   function setPlaintextKey(value: string) {
     plaintextKeyRef.current = value;
