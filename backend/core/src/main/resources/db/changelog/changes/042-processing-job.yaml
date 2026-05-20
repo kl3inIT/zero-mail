@@ -81,6 +81,12 @@ databaseChangeLog:
                   defaultValueComputed: now()
                   constraints:
                     nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
         - sql:
             comment: Status enum matches ProcessingJobStatus ids (D-01).
             sql: ALTER TABLE processing_job ADD CONSTRAINT ck_processing_job_status CHECK (status IN ('QUEUED','RUNNING','COMPLETED','FAILED'))

@@ -64,6 +64,18 @@ databaseChangeLog:
                   defaultValueComputed: now()
                   constraints:
                     nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
         - sql:
             comment: Campaign status enum matches UnsubscribeCampaignStatus ids.
             sql: ALTER TABLE unsubscribe_campaign ADD CONSTRAINT ck_unsubscribe_campaign_status CHECK (status IN ('QUEUED','RUNNING','COMPLETED','FAILED'))

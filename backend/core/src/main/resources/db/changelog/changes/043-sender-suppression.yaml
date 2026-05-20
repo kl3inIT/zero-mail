@@ -47,6 +47,18 @@ databaseChangeLog:
                   defaultValueComputed: now()
                   constraints:
                     nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
         - sql:
             comment: Exactly one target — either sender_email or sender_domain (XOR).
             sql: ALTER TABLE sender_suppression ADD CONSTRAINT ck_sender_suppression_one_target CHECK ((sender_email IS NOT NULL) <> (sender_domain IS NOT NULL))
