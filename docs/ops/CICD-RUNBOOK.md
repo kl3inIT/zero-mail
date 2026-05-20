@@ -39,17 +39,17 @@ Dev work happens on local laptops against the shared `zeromail_dev` DB; see
 
 ### NPM routing (admin SPA moved off the Next.js container)
 
-Phase 8 originally routed `admin.zeromail.com` → `zeromail-frontend:3000` because
+Phase 8 originally routed `admin.zeromail.vn` → `zeromail-frontend:3000` because
 the admin app was still a placeholder route inside the Next.js project. With the
 admin SPA now living in its own container (`zeromail-admin:5174` serving Vite
 static output via nginx), update NPM proxy hosts:
 
 | Host | Forward host | Forward port | Notes |
 |------|--------------|--------------|-------|
-| `zeromail.com`             | `zeromail-frontend` | `3000` | Unchanged (Next.js SSR). |
-| `zeromail.com/api`         | `zeromail-api`      | `8080` | Unchanged. |
-| `admin.zeromail.com`       | `zeromail-admin`    | `5174` | **Changed** — was `zeromail-frontend:3000`. |
-| `admin.zeromail.com/api/admin` | `zeromail-api`  | `8080` | Unchanged. |
+| `zeromail.vn`             | `zeromail-frontend` | `3000` | Unchanged (Next.js SSR). |
+| `zeromail.vn/api`         | `zeromail-api`      | `8080` | Unchanged. |
+| `admin.zeromail.vn`       | `zeromail-admin`    | `5174` | **Changed** — was `zeromail-frontend:3000`. |
+| `admin.zeromail.vn/api/admin` | `zeromail-api`  | `8080` | Unchanged. |
 
 Update once via the NPM UI (`http://127.0.0.1:81` via SSH tunnel — see
 `v1.2-deploy.md` §2).

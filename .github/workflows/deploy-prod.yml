@@ -73,7 +73,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: prod
-      url: https://zeromail.com
+      url: https://zeromail.vn
     timeout-minutes: 20
 
     steps:
@@ -132,8 +132,11 @@ jobs:
 
       - name: Post-deploy smoke check
         run: |
+          # /api/actuator/health is Spring-Security-protected publicly (401).
+          # Frontend root is the only public anonymous probe — covers SSL,
+          # NPM proxy, frontend container, and (indirectly) Next.js boot.
           for attempt in {1..20}; do
-            code=$(curl -o /dev/null -s -w '%{http_code}' https://zeromail.com/api/actuator/health || echo 000)
+            code=$(curl -o /dev/null -s -w '%{http_code}' https://zeromail.vn/ || echo 000)
             if [[ "$code" == "200" ]]; then
               echo "prod smoke OK"; exit 0
             fi

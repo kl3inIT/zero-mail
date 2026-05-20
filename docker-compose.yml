@@ -149,13 +149,13 @@ services:
       retries: 3
     logging: *default-logging
 
-  # ── Admin SPA (proxy-network, NPM trỏ admin.zeromail.com → zeromail-admin:5174) ──
+  # ── Admin SPA (proxy-network, NPM trỏ admin.zeromail.vn → zeromail-admin:5174) ──
   admin:
     build:
       context: .
       dockerfile: apps/admin/Dockerfile
       args:
-        VITE_API_BASE: https://zeromail.com
+        VITE_API_BASE: https://zeromail.vn
     image: ${ZEROMAIL_ADMIN_IMAGE:-zeromail-admin:latest}
     container_name: zeromail-admin
     restart: unless-stopped

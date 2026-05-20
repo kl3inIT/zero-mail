@@ -47,7 +47,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/admin ./apps/admin
 
 # Bake the API base URL at build time. Override in compose when needed.
-ARG VITE_API_BASE=https://zeromail.com
+ARG VITE_API_BASE=https://zeromail.vn
 ENV VITE_API_BASE=${VITE_API_BASE}
 
 RUN pnpm --filter @zeromail/admin run build
@@ -99,7 +99,7 @@ server {
     add_header Cross-Origin-Resource-Policy "same-site"     always;
     # CSP: SPA only fetches same-origin code; allow inline styles for dev-debug;
     # allow connect to api host. Tighten as the admin app stabilizes.
-    add_header Content-Security-Policy   "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://zeromail.com https://*.zeromail.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+    add_header Content-Security-Policy   "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://zeromail.vn https://*.zeromail.vn; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
     add_header Cache-Control             $cache_control     always;
 
     # ─── Compression ────────────────────────────────────────────────────────
