@@ -758,6 +758,87 @@
     "tagline": "Zero Mail triages your Gmail with rules you write in plain English — labels what matters, archives what doesn't, drafts the easy replies. You stay in the loop on everything that goes out.",
     "waitlistCta": "Register to experience Zero Mail"
   },
+  "landingFeatures": {
+    "sec1": {
+      "title": {
+        "line1": "Auto-categorized.",
+        "line2": "Never miss an important email."
+      },
+      "body": "Drowning in email? Stop spending energy prioritizing them. Our AI assistant labels everything automatically.",
+      "before": "Before",
+      "after": "After"
+    },
+    "sec2": {
+      "title": "Drafts waiting in your inbox",
+      "body": "When you check your inbox, every email that needs a reply has a draft already written in your voice, ready to send."
+    },
+    "sec3": {
+      "title": "Your inbox, wherever you work",
+      "body": "Read email, draft replies, and manage your inbox from Zalo, Telegram, or Web — no app switching."
+    },
+    "sec4": {
+      "title": "Get started in minutes",
+      "body": "One-click install. Start organizing and drafting in minutes.",
+      "step1": {
+        "label": "STEP 1",
+        "title": "Connect your Google account",
+        "body": "Link your Gmail in two clicks to get started."
+      },
+      "step2": {
+        "label": "STEP 2",
+        "title": "Organize your inbox your way",
+        "body": "Smart categories set up automatically. Use defaults or create your own.",
+        "chips": {
+          "newsletter": "📧 Newsletter",
+          "needsReply": "↩️ Needs reply",
+          "marketing": "📢 Marketing",
+          "calendar": "📅 Calendar",
+          "notifications": "🔔 Notifications",
+          "coldEmail": "❄️ Cold Email",
+          "internal": "👥 Internal",
+          "urgent": "🔥 Urgent"
+        }
+      },
+      "step3": {
+        "label": "STEP 3",
+        "title": "Smart auto-drafts",
+        "body": "Every email that needs a reply has a draft waiting for you to hit Send.",
+        "mockHeader": "New Message",
+        "draftedBy": "DRAFTED BY AI:",
+        "draftBody": "Happy to meet at 5pm next week!",
+        "sendButton": "Send"
+      }
+    },
+    "sec5": {
+      "title": "Bulk-unsubscribe from email you never read",
+      "body": "See which emails you've never opened, then unsubscribe and archive them in one click."
+    },
+    "sec6": {
+      "title": "Designed around how you work",
+      "body": "Flexible enough for any workflow. Simple enough to set up in minutes.",
+      "col1": {
+        "title": "Analyze your inbox. Understand to optimize",
+        "body": "See who emails you most and what's filling your inbox. Detailed analytics and cleanup.",
+        "mockHeading": "Who emails you most",
+        "mockSenderHeader": "Sender",
+        "mockCountHeader": "Count"
+      },
+      "col2": {
+        "title": "Drafts that know your schedule",
+        "body": "Connect your calendar and CRM to draft based on your schedule and customer data."
+      },
+      "col3": {
+        "title": "Customize in natural language",
+        "body": "Your inbox, your rules. Configure everything in natural English.",
+        "rule1": "Label emails from @company.com as Internal",
+        "rule2": "Archive all invoices and forward to accounting",
+        "rule3": "Send newsletter digest on Sundays",
+        "rule4": "If someone wants to schedule a meeting, reply w",
+        "newRule": "+ New rule",
+        "examples": "↗ See examples"
+      }
+    }
+  },
   "legal": {
     "googleApiPolicy": {
       "body": "Zero Mail's use and transfer of information received from Google APIs to any other app will adhere to <link>Google API Services User Data</link> Policy, including the Limited Use requirements."

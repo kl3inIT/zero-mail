@@ -758,6 +758,87 @@
     "tagline": "Zero Mail phân loại Gmail của bạn theo các quy tắc bạn viết bằng ngôn ngữ tự nhiên — gắn nhãn việc quan trọng, lưu trữ thư không cần thiết, và soạn sẵn những phản hồi đơn giản. Mọi thứ gửi đi đều phải qua bạn.",
     "waitlistCta": "Đăng ký trải nghiệm Zero Mail"
   },
+  "landingFeatures": {
+    "sec1": {
+      "title": {
+        "line1": "Tự động phân loại.",
+        "line2": "Không bao giờ bỏ lỡ email quan trọng."
+      },
+      "body": "Đang chìm ngập trong email? Đừng lãng phí năng lượng cố gắng ưu tiên chúng nữa. Trợ lý AI của chúng tôi sẽ tự động dán nhãn mọi thứ.",
+      "before": "Trước",
+      "after": "Sau"
+    },
+    "sec2": {
+      "title": "Bản nháp chờ sẵn trong hộp thư",
+      "body": "Khi bạn kiểm tra hộp thư, mọi email cần phản hồi sẽ có sẵn một bản nháp được soạn theo văn phong của bạn, sẵn sàng để gửi."
+    },
+    "sec3": {
+      "title": "Hộp thư của bạn, ở bất cứ đâu",
+      "body": "Đọc email, soạn phản hồi và quản lý hộp thư từ Zalo, Telegram hoặc Web — không cần chuyển đổi ứng dụng."
+    },
+    "sec4": {
+      "title": "Bắt đầu chỉ trong vài phút",
+      "body": "Cài đặt chỉ với một click. Bắt đầu sắp xếp và soạn email trong vài phút.",
+      "step1": {
+        "label": "STEP 1",
+        "title": "Kết nối tài khoản Google",
+        "body": "Liên kết Gmail của bạn chỉ với hai cú nhấp chuột để bắt đầu trải nghiệm."
+      },
+      "step2": {
+        "label": "STEP 2",
+        "title": "Tổ chức hộp thư như ý muốn",
+        "body": "Danh mục thông minh tự động thiết lập. Dùng danh mục mặc định hoặc tự tạo.",
+        "chips": {
+          "newsletter": "📧 Bản tin",
+          "needsReply": "↩️ Cần trả lời",
+          "marketing": "📢 Marketing",
+          "calendar": "📅 Lịch hẹn",
+          "notifications": "🔔 Thông báo",
+          "coldEmail": "❄️ Cold Email",
+          "internal": "👥 Nội bộ",
+          "urgent": "🔥 Khẩn cấp"
+        }
+      },
+      "step3": {
+        "label": "STEP 3",
+        "title": "Bản nháp tự động thông minh",
+        "body": "Mọi email cần phản hồi sẽ luôn có một bản nháp chờ bạn bấm Gửi.",
+        "mockHeader": "Thư mới",
+        "draftedBy": "AI SOẠN:",
+        "draftBody": "Tôi rất sẵn lòng gặp bạn lúc 5h chiều tuần tới nhé!",
+        "sendButton": "Gửi"
+      }
+    },
+    "sec5": {
+      "title": "Hủy đăng ký hàng loạt email bạn không bao giờ đọc",
+      "body": "Xem những email nào bạn chưa bao giờ mở, và hủy đăng ký & lưu trữ chúng chỉ với một cú nhấp chuột."
+    },
+    "sec6": {
+      "title": "Thiết kế xoay quanh cách bạn làm việc",
+      "body": "Đủ linh hoạt cho mọi quy trình. Đủ đơn giản để cài đặt trong vài phút.",
+      "col1": {
+        "title": "Phân tích hộp thư. Hiểu rõ để tối ưu",
+        "body": "Xem ai gửi email nhiều nhất và điều gì đang làm đầy hộp thư. Phân tích chi tiết và xử lý.",
+        "mockHeading": "Ai gửi email cho bạn nhiều nhất",
+        "mockSenderHeader": "Người gửi",
+        "mockCountHeader": "Số lượng"
+      },
+      "col2": {
+        "title": "Bản nháp nắm rõ lịch trình của bạn",
+        "body": "Kết nối với lịch và CRM của bạn để soạn email dựa trên thời gian biểu và dữ liệu khách hàng."
+      },
+      "col3": {
+        "title": "Tùy biến bằng ngôn ngữ tự nhiên",
+        "body": "Hộp thư của bạn, luật của bạn. Cấu hình mọi thứ bằng tiếng Việt tự nhiên.",
+        "rule1": "Gắn nhãn email từ @congty.com là Nội bộ",
+        "rule2": "Lưu trữ mọi hóa đơn và gửi cho kế toán",
+        "rule3": "Gửi bản tổng hợp newsletter vào CN",
+        "rule4": "Nếu có ai muốn đặt lịch họp, hãy phản hồi k",
+        "newRule": "+ Tạo luật mới",
+        "examples": "↗ Xem ví dụ"
+      }
+    }
+  },
   "legal": {
     "googleApiPolicy": {
       "body": "Việc Zero Mail sử dụng và chuyển giao thông tin nhận được từ Google API sang bất kỳ ứng dụng nào khác sẽ tuân thủ <link>Chính sách bảo mật dữ liệu người dùng của Google API</link>, bao gồm các yêu cầu Sử dụng có giới hạn (Limited Use)."
