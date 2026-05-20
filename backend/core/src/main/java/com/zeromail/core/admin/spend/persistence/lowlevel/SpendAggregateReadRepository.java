@@ -4,6 +4,7 @@ import com.zeromail.core.admin.cat.domain.Feature;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.spend.projection.FeatureSpendBucket;
 import com.zeromail.core.admin.spend.projection.ProviderStackBarRow;
+import com.zeromail.core.admin.spend.projection.SpendCsvRow;
 import com.zeromail.core.admin.spend.projection.SpendKpis;
 import com.zeromail.core.admin.spend.projection.SpendQuery;
 import com.zeromail.core.admin.spend.projection.TenantSpendBucket;
@@ -224,6 +225,62 @@ public class SpendAggregateReadRepository {
                                 resultSet.getString("gmail_account_email"),
                                 resultSet.getBigDecimal("total_cost"),
                                 resultSet.getBigDecimal("unknown_cost"),
+                                resultSet.getInt("call_count")));
+    }
+
+    public int estimateCsvGroupCount(SpendQuery spendQuery) {
+        MapSqlParameterSource parameters = baseRangeParameters(spendQuery);
+        StringBuilder sql =
+                new StringBuilder(
+                        """
+                        SELECT COUNT(*)::int FROM (
+                            SELECT 1 FROM llm_call_audit
+                            WHERE created_at >= :from AND created_at < :to
+                        """);
+        appendOptionalFilters(spendQuery, sql, parameters, null);
+        sql.append(
+                """
+                        GROUP BY date_trunc('day', created_at), provider, feature, credential_source
+                        ) AS counted
+                """);
+        Integer count =
+                namedParameterJdbcTemplate.queryForObject(
+                        sql.toString(), parameters, Integer.class);
+        return count == null ? 0 : count;
+    }
+
+    public java.util.List<SpendCsvRow> findCsvRows(SpendQuery spendQuery, int rowLimit) {
+        MapSqlParameterSource parameters =
+                baseRangeParameters(spendQuery).addValue("row_limit", rowLimit);
+        StringBuilder sql =
+                new StringBuilder(
+                        """
+                        SELECT date_trunc('day', created_at) AS bucket_date,
+                               provider,
+                               feature,
+                               credential_source,
+                               SUM(total_cost_usd) AS total_cost,
+                               COUNT(*)::int AS call_count
+                        FROM llm_call_audit
+                        WHERE created_at >= :from AND created_at < :to
+                        """);
+        appendOptionalFilters(spendQuery, sql, parameters, null);
+        sql.append(
+                """
+                GROUP BY date_trunc('day', created_at), provider, feature, credential_source
+                ORDER BY bucket_date ASC, provider ASC, feature ASC, credential_source ASC
+                LIMIT :row_limit
+                """);
+        return namedParameterJdbcTemplate.query(
+                sql.toString(),
+                parameters,
+                (resultSet, _) ->
+                        new SpendCsvRow(
+                                resultSet.getTimestamp("bucket_date").toInstant(),
+                                resultSet.getString("provider"),
+                                resultSet.getString("feature"),
+                                resultSet.getString("credential_source"),
+                                resultSet.getBigDecimal("total_cost"),
                                 resultSet.getInt("call_count")));
     }
 

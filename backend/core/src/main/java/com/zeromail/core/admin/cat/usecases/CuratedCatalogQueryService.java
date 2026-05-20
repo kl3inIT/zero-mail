@@ -1,6 +1,8 @@
 package com.zeromail.core.admin.cat.usecases;
 
 import com.zeromail.core.admin.cat.domain.Feature;
+import com.zeromail.core.admin.cat.persistence.lowlevel.CuratedCatalogReadRepository;
+import com.zeromail.core.admin.cat.persistence.lowlevel.CuratedCatalogReadRepository.CatalogModelRowWithFeature;
 import com.zeromail.core.admin.cat.projection.CatalogModelRow;
 import com.zeromail.core.admin.cat.projection.PerFeatureCatalog;
 import java.nio.charset.StandardCharsets;
@@ -16,7 +18,6 @@ import java.util.Objects;
 import java.util.Optional;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -28,15 +29,18 @@ public class CuratedCatalogQueryService {
     static final String CACHE_KEY = "catalog:etag:v1";
     private static final Duration CACHE_TTL = Duration.ofSeconds(30);
 
-    private final JdbcTemplate jdbcTemplate;
+    private final CuratedCatalogReadRepository curatedCatalogReadRepository;
     private final ObjectMapper objectMapper;
     private final Optional<StringRedisTemplate> redisTemplate;
 
     public CuratedCatalogQueryService(
-            JdbcTemplate jdbcTemplate,
+            CuratedCatalogReadRepository curatedCatalogReadRepository,
             ObjectMapper objectMapper,
             ObjectProvider<StringRedisTemplate> redisTemplateProvider) {
-        this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate, "jdbcTemplate must not be null");
+        this.curatedCatalogReadRepository =
+                Objects.requireNonNull(
+                        curatedCatalogReadRepository,
+                        "curatedCatalogReadRepository must not be null");
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper must not be null");
         this.redisTemplate = Optional.ofNullable(redisTemplateProvider.getIfAvailable());
     }
@@ -62,39 +66,7 @@ public class CuratedCatalogQueryService {
 
     private CuratedCatalogResult loadCatalog() {
         List<CatalogModelRowWithFeature> rows =
-                jdbcTemplate.query(
-                        """
-                        SELECT binding.feature,
-                               model.provider,
-                               model.model_id,
-                               model.display_name,
-                               (defaults.model_id = model.model_id AND defaults.feature = binding.feature) AS default_model,
-                               model.is_recommended,
-                               model.cost_per_1k_input,
-                               model.cost_per_1k_output,
-                               model.deprecated_at
-                        FROM model_catalog model
-                        JOIN provider_catalog provider ON provider.provider = model.provider
-                        JOIN feature_binding binding ON binding.model_id = model.model_id
-                        LEFT JOIN feature_default_provider defaults ON defaults.feature = binding.feature
-                        WHERE provider.enabled = TRUE
-                          AND binding.enabled = TRUE
-                          AND model.deprecated_at IS NULL
-                        ORDER BY binding.feature, default_model DESC, model.is_recommended DESC, model.provider, model.model_id
-                        """,
-                        (resultSet, rowNumber) ->
-                                new CatalogModelRowWithFeature(
-                                        Feature.fromId(resultSet.getString("feature")),
-                                        new CatalogModelRow(
-                                                resultSet.getString("provider"),
-                                                resultSet.getString("model_id"),
-                                                resultSet.getString("display_name"),
-                                                resultSet.getBoolean("default_model"),
-                                                resultSet.getBoolean("is_recommended"),
-                                                resultSet.getBigDecimal("cost_per_1k_input"),
-                                                resultSet.getBigDecimal("cost_per_1k_output"),
-                                                null,
-                                                0L)));
+                curatedCatalogReadRepository.findEnabledCatalogRows();
         Map<Feature, List<CatalogModelRow>> rowsByFeature = new EnumMap<>(Feature.class);
         Map<Feature, String> defaultByFeature = new EnumMap<>(Feature.class);
         for (Feature feature : Feature.values()) {
@@ -114,15 +86,7 @@ public class CuratedCatalogQueryService {
                             feature, rowsByFeature.get(feature), defaultByFeature.get(feature)));
         }
         String catalogVersionFingerprint =
-                jdbcTemplate
-                        .queryForList(
-                                """
-                                SELECT provider || ':' || catalog_version
-                                FROM provider_catalog
-                                ORDER BY provider
-                                """,
-                                String.class)
-                        .toString();
+                curatedCatalogReadRepository.findCatalogVersionFingerprintParts().toString();
         String payloadJson = writeJson(catalog);
         String etag = quote(sha256(catalogVersionFingerprint + payloadJson));
         CuratedCatalogResult result = new CuratedCatalogResult(catalog, etag, false);
@@ -162,8 +126,6 @@ public class CuratedCatalogQueryService {
     private static String quote(String value) {
         return "\"" + value + "\"";
     }
-
-    private record CatalogModelRowWithFeature(Feature feature, CatalogModelRow catalogModelRow) {}
 
     public record CuratedCatalogResult(
             Map<Feature, PerFeatureCatalog> catalog, String etag, boolean notModified) {
