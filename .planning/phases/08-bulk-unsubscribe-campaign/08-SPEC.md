@@ -44,7 +44,7 @@ Suppression list ("never touch these senders/domains") chưa có table — cần
 
 5. **Campaign status & per-sender state**: User theo dõi tiến độ job.
    - Current: Không có status endpoint.
-   - Target: `GET /api/unsubscribe/campaigns/{jobId}` trả `{jobId, status ∈ {QUEUED, RUNNING, COMPLETED, FAILED}, progressPct (0-100), perSender: [{senderEmail, state ∈ {PENDING, RUNNING, OK, FAILED}, failureReason?, archivedMessageCount}]}`. Frontend `/unsubscribe-campaign/{jobId}` poll endpoint mỗi 2s khi `status ∈ {QUEUED, RUNNING}`, dừng poll khi terminal.
+   - Target: `GET /api/unsubscribe/campaigns/{jobId}` trả `{jobId, status ∈ {QUEUED, RUNNING, COMPLETED, FAILED}, progressPct (0-100), perSender: [{senderEmail, state ∈ {PENDING, RUNNING, OK, FAILED}, failureReason?, archivedMessageCount}]}`. Frontend `/cleanup/unsubscribe-campaign/{jobId}` poll endpoint mỗi 2s khi `status ∈ {QUEUED, RUNNING}`, dừng poll khi terminal.
    - Acceptance: Trong test với 5 sender, lúc job đang chạy endpoint trả `status=RUNNING` với progressPct tăng dần; khi xong trả `status=COMPLETED` và mảng perSender đủ 5 phần tử với state terminal.
 
 6. **Per-sender retry**: Sender FAILED có thể retry độc lập.
@@ -76,7 +76,7 @@ Suppression list ("never touch these senders/domains") chưa có table — cần
 - `UnsubscribeExecutor` + `UnsubscribeHttpClient` (RFC 8058 one-click POST) + `UnsubscribeMailtoSender` (gửi mailto qua Gmail send-as-self qua `TriageGmailWriter`)
 - Extend `GmailPreviewReadService` để extract `List-Unsubscribe` URL/mailto + `List-Unsubscribe-Post` flag, persist vào `mail_message_observed` (Liquibase changelog)
 - Worker job type `UNSUBSCRIBE_CAMPAIGN` với throttle bucket per-domain
-- Frontend `/unsubscribe-campaign` (Next.js page): candidate list, preview modal, execute button, job status, undo button, suppression page
+- Frontend `/cleanup/unsubscribe-campaign`, `/cleanup/unsubscribe-campaign/[jobId]`, `/cleanup/suppression` (Next.js pages — namespace `/cleanup/*` chốt tại CONTEXT D-12 để anticipate SEED-009): candidate list, preview modal, execute button, job status, undo button, suppression page
 - Audit log integration: 1 audit row per message archived; 1 audit row per unsubscribe step
 - Privacy sweep test riêng cho module mới
 
@@ -120,7 +120,7 @@ Suppression list ("never touch these senders/domains") chưa có table — cần
 - [ ] ArchUnit test reject `HttpClient` / `RestClient` mới trong `core.cleanup.*` ngoài `UnsubscribeHttpClient`
 - [ ] `UnsubscribeHttpClient` reject URL `http://...` và URL không đến từ `List-Unsubscribe` header đã persist
 - [ ] `CleanupPrivacySweepTest` (sibling của `TriagePrivacySweepTest`) PASS — không log full email/body/subject
-- [ ] Frontend `/unsubscribe-campaign`: candidate list + preview modal + execute + job status + undo button + suppression page — hoạt động trong Playwright e2e golden path
+- [ ] Frontend `/cleanup/unsubscribe-campaign` + `/cleanup/unsubscribe-campaign/[jobId]` + `/cleanup/suppression`: candidate list + preview modal + execute + job status + undo button + suppression page — hoạt động trong Playwright e2e golden path
 - [ ] `pnpm tsc` + ESLint + Vitest + `i18n:check` GREEN; Spring `./gradlew test` + ArchUnit + Modulith verification GREEN
 
 ## Ambiguity Report

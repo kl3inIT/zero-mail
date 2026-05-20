@@ -453,7 +453,7 @@ Plans:
 ### Phase 08: Bulk Unsubscribe Campaign
 **Goal**: Cho phép user chọn một nhóm sender newsletter và thực hiện "unsubscribe + archive lịch sử" theo lô (campaign), với preview bắt buộc trước khi execute, đường unsubscribe ưu tiên `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058), fallback `mailto:`, không bao giờ click HTTP unsubscribe link không thuộc whitelist provider. Mọi action đều reversible bằng audit + label restore.
 **Depends on**: Phase 7 (analytics top-sender + domain grouping cung cấp đầu vào candidate list), Phase 4 (audit + undo infrastructure), Phase 2A (Gmail history + List-Unsubscribe header đã được trích trong `GmailPreviewReadService`)
-**Requirements**: TBD (ssẽ chốt qua /gsd:spec-phase 8)
+**Requirements**: UNS-01, UNS-02, UNS-03, UNS-04, UNS-05, UNS-06, UNS-07, UNS-08, UNS-09
 **Success Criteria** (what must be TRUE):
   1. Trang `/unsubscribe-campaign` (hoặc tương đương) hiển thị danh sách candidate sender với count, last seen, có `List-Unsubscribe` hay không, và kiểu unsubscribe khả thi (`one-click` / `mailto` / `none`).
   2. User chọn ≥1 sender → bấm "Preview campaign" → thấy số mail lịch sử sẽ bị archive + cảnh báo per-sender + risk badge cho sender không có header an toàn (bị disable).
@@ -463,7 +463,18 @@ Plans:
   6. KHÔNG xóa vĩnh viễn message — chỉ archive (skip inbox) + label, reversible trong N ngày.
   7. Privacy invariant Phase 1 vẫn pass: không log body, subject, hay token; tenant isolation enforced.
   8. Code review + security review PASS; ArchUnit + Modulith verification + Playwright e2e campaign flow GREEN.
-**Plans**: TBD
+**Plans**: 9 plans
+Plans:
+- [ ] 08-01-PLAN.md — Wave 0 test scaffolding (17 file + 1 rename) — RED stubs cho UNS-01..UNS-09
+- [ ] 08-02-PLAN.md — Liquibase changelogs 041..045 (mail_message_observed extend + processing_job + sender_suppression + unsubscribe_campaign + unsubscribe_attempt)
+- [ ] 08-03-PLAN.md — Spring Modulith core.cleanup module + 4 enum + 1 policy + 4 entity + 4 repository + 5 exception
+- [ ] 08-04-PLAN.md — Extend GmailPreviewReadService + 4 projection + CandidateQueryService (UNS-01) + SuppressionCrudService + SuppressionAutoAddService (UNS-02)
+- [ ] 08-05-PLAN.md — UnsubscribeHttpClient (RFC 8058) + UnsubscribeMailtoSender (Gmail send-as-self) + UnsubscribeMailtoUriParser + UnsubscribeResult (UNS-04c + UNS-08)
+- [ ] 08-06-PLAN.md — UnsubscribeDomainThrottle (Redis) + ProcessingJobWorker (SKIP LOCKED) + UnsubscribeCampaignHandler + ProcessingJobReaperBatch + ProcessingJobPurgeBatch (UNS-04)
+- [ ] 08-07-PLAN.md — CampaignPreviewService (UNS-03) + CampaignExecuteService (D-04 transaction) + CampaignStatusQueryService (UNS-05) + CampaignRetryService (UNS-06) + CampaignUndoService (UNS-07)
+- [ ] 08-08-PLAN.md — 4 controller (UnsubscribeCandidate/Campaign/Status/Suppression) + 13 DTO + @ExceptionHandler maps + OpenAPI codegen regen
+- [ ] 08-09-PLAN.md — Frontend features (2 sub-feature × 7-8 file) + 4 page route + sidebar nav extend + i18n bundle regen + CleanupPrivacySweepTest (UNS-09) + Playwright e2e golden path
+
 
 ## External Track (not a phase)
 

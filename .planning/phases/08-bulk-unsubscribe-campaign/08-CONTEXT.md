@@ -59,11 +59,16 @@ Downstream agents MUST read `08-SPEC.md` before planning or implementing. Requir
 - **D-08:** Success gate (gate archive): chỉ HTTP `200`, `202`, `204` → state=OK. 3xx (redirect) / 4xx / 5xx / timeout / IO exception → state=FAILED với `failureReason` chi tiết (`HTTP_3XX_REDIRECT`, `HTTP_4XX_{code}`, `TIMEOUT`, `NETWORK_ERROR`). Per-sender atomic: FAILED → không archive history. Mailto: nếu `UnsubscribeMailtoSender` trả messageId → OK; bất kỳ exception → FAILED.
 
 ### List-Unsubscribe URL/mailto persistence
-- **D-09:** Extend `mail_message_observed` table với 3 column mới (Liquibase changelog kế tiếp `038-billing-packages.yaml` → `039-mail-message-observed-list-unsubscribe.yaml`):
-  - `list_unsubscribe_url VARCHAR(2048) NULL`
-  - `list_unsubscribe_mailto VARCHAR(512) NULL`
-  - `list_unsubscribe_one_click BOOLEAN NOT NULL DEFAULT false`
-  KHÔNG dùng sidecar table (JOIN overhead trên candidate query), KHÔNG dùng JSONB (CLAUDE.md "JSONB chỉ cho rule matchers").
+- **D-09:** Extend `mail_message_observed` table với 3 column mới. **5 changelog tổng cho Phase 8** (numbering `041..045`, all YAML — next free sau `040-triage-audit-message-ref.yaml`):
+  - `041-mail-message-observed-list-unsubscribe.yaml` — ADD COLUMN trên `mail_message_observed`:
+    - `list_unsubscribe_url VARCHAR(2048) NULL`
+    - `list_unsubscribe_mailto VARCHAR(512) NULL`
+    - `list_unsubscribe_one_click BOOLEAN NOT NULL DEFAULT false`
+  - `042-processing-job.yaml` — Generic worker queue (D-01): `id UUID PK`, `tenant_id`, `job_type` enum, `payload JSONB`, `status`, `attempts INT`, `next_run_at`, `heartbeat_at`, `created_at`, `started_at`, `finished_at`, `failure_reason` + index `(status, next_run_at)` cho SKIP LOCKED query.
+  - `043-sender-suppression.yaml` — `tenant_id`, `sender_email NULL`, `sender_domain NULL` (1 trong 2 NOT NULL, check constraint), `reason` enum (`manual`, `replied`, `auto`), `created_at` + unique index `(tenant_id, sender_email)` và `(tenant_id, sender_domain)`.
+  - `044-unsubscribe-campaign.yaml` — `id UUID PK`, `tenant_id`, `job_id UUID FK→processing_job`, `status`, `applied_at`, `reverted_at`, `total_sender INT`, `total_history_msg INT`, `created_at`.
+  - `045-unsubscribe-attempt.yaml` — `id UUID PK`, `campaign_id FK→unsubscribe_campaign`, `sender_email`, `sender_domain`, `unsubscribe_method` enum (`ONE_CLICK`, `MAILTO`), `state` enum (`PENDING/RUNNING/OK/FAILED`), `failure_reason`, `archived_message_count INT DEFAULT 0`, `started_at`, `finished_at` + index `(campaign_id, state)`.
+  KHÔNG dùng sidecar table (JOIN overhead trên candidate query), KHÔNG dùng JSONB cho domain table (CLAUDE.md "JSONB chỉ cho rule matchers + processing_job payload").
 - **D-10:** Backfill = forward-only. Liquibase chỉ ADD COLUMN với default NULL/false. Row cũ giữ `list_unsubscribe_url IS NULL` dù `listUnsubscribePresent=true`. Candidate query filter `(list_unsubscribe_url IS NOT NULL OR list_unsubscribe_mailto IS NOT NULL)`. User chờ 30 ngày (= candidate window) để có đủ data — không Gmail quota burn.
 - **D-11:** URL HTTPS validation = parse-time + execute-time (defense in depth). Trong `GmailPreviewReadService` parser: DROP URL nếu không bắt đầu bằng `https://` (không persist vào DB). `UnsubscribeHttpClient.post(url)` re-validate `url.startsWith("https://")` + lookup audit trail từ `mail_message_observed` để verify URL có nguồn header. Persistent invariant: mọi row trong DB có `list_unsubscribe_url` LUÔN là `https://...`. Mailto value lưu dạng `mailto:user@host?subject=...` đầy đủ (không strip subject).
 
@@ -77,17 +82,28 @@ Downstream agents MUST read `08-SPEC.md` before planning or implementing. Requir
 - **D-14:** Entry point = menu only — không can thiệp Phase 7 `TopSendersPanel`. User vào `/cleanup/unsubscribe-campaign` từ sidebar → candidate list multi-select. Tách concern: analytics = read, cleanup = action. CTA cross-link từ analytics có thể add ở phase polish sau khi UX phase 8 đã ổn.
 - **D-15:** Status page polling = TanStack Query `refetchInterval: 2000` khi `data.status ∈ {QUEUED, RUNNING}`, polling dừng khi terminal. Match SPEC requirement 5.
 
-### Claude's Discretion
-- Exact i18n namespace keys: dự kiến `cleanup.unsubscribe.*`, `cleanup.suppression.*` lock-step `apps/web/i18n/messages/{vi,en}.json`. Planner chốt key list chi tiết.
-- Exact package layout trong `core.cleanup`: `domain/`, `application/`, `persistence/`, `projection/`, `exception/` (theo Phase 7 pattern + CLAUDE.md convention §2).
-- Reaper batch class placement: trong `backend/worker/src/main/java/com/zeromail/worker/cleanup/ProcessingJobReaperBatch.java` (hoặc generic `worker/scheduling/`). Planner chọn.
-- `processing_job` payload schema cho `UNSUBSCRIBE_CAMPAIGN`: `{"campaignId": "uuid"}` đủ (worker query `unsubscribe_attempt` rows bằng campaignId). Planner xác nhận khi viết JSON schema.
-- Throttle bucket implementation: default Redis (CLAUDE.md "Redis cho rate-limit") — planner chốt key format `throttle:unsubscribe:domain:{domain}:60s` + `throttle:unsubscribe:domain:{domain}:1h` với Redis INCR + EXPIRE.
-- Candidate query data source: default = method mới trong `core.cleanup.application.CandidateQueryService` (theo Spring Modulith boundary; tránh `core.analytics` phải expose internal). Planner xem có overlap đủ lớn với `AnalyticsSummaryQueryService` không để justify share.
-- ArchUnit rule chi tiết cho `core.cleanup.*` (cấm `HttpClient`/`RestClient` ngoài `UnsubscribeHttpClient.java`, cấm `Gmail.send()` ngoài `UnsubscribeMailtoSender.java` + `TriageGmailWriter`): planner viết khi tạo test class.
-- Recipient parsing từ `mailto:` URI (`mailto:user@host?subject=...&body=...`): chuẩn RFC 6068 parse — Java built-in hay regex? Planner chọn.
-- UI risk badge color tokens: `SAFE` = teal, `NO_HEADER_DISABLED` = muted/gray (disable hint), `SUPPRESSED_BLOCKED` = destructive (red). Theo Phase 7 D-15 thresholds palette.
-- Status terminal cleanup: Whether `processing_job` row được giữ vĩnh viễn hay batch purge sau 90d. Phase 4 purge pattern tham khảo.
+### Locked Decisions — addendum (chốt 2026-05-19 sau evaluation review)
+
+- **D-16:** i18n namespace = `cleanup.unsubscribe.*` + `cleanup.suppression.*` (2 root namespace tách biệt, lock-step `apps/web/i18n/messages/{vi,en}.json`). Sidebar nav key = `nav.cleanup`. Planner viết key list chi tiết khi sinh wave frontend; bắt buộc qua `pnpm i18n:check`.
+- **D-17:** Package layout `core.cleanup` = `domain/`, `application/`, `persistence/`, `projection/`, `exception/` (đúng CONVENTIONS §2 + Phase 7 pattern). `package-info.java` ở root khai báo `@ApplicationModule(allowedDependencies = {"core.gmail", "core.triage", "core.analytics", "core.shared"})`.
+- **D-18:** Reaper batch placement = `backend/worker/src/main/java/com/zeromail/worker/scheduling/ProcessingJobReaperBatch.java` (generic dưới `worker/scheduling/` để reuse cho SEED-009 job types, KHÔNG đặt trong `worker/cleanup/`).
+- **D-19:** `processing_job` payload cho `UNSUBSCRIBE_CAMPAIGN` = `{"campaignId": "uuid", "schemaVersion": 1}`. Worker resolve attempt rows qua `unsubscribe_attempt.campaign_id`. `schemaVersion` field reserved cho payload evolution sau này.
+- **D-20:** Throttle bucket key format (Redis INCR + EXPIRE):
+  - 60s window: `throttle:unsubscribe:domain:{tenantId}:{domain}:60s` (TTL 60s)
+  - 1h window: `throttle:unsubscribe:domain:{tenantId}:{domain}:1h` (TTL 3600s)
+  Per-tenant scope **bắt buộc** để tenant này không block tenant khác trên cùng domain. Implementation qua `RedisTemplate.opsForValue().increment(...)` + `expire(...)`.
+- **D-21:** Candidate query data source = `CandidateQueryService` mới trong `core.cleanup.application` với `JdbcTemplate` + `@Transactional(readOnly=true)`. KHÔNG share với `AnalyticsSummaryQueryService` (khác filter — top-sender không quan tâm `List-Unsubscribe`). Spring Modulith boundary giữ sạch.
+- **D-22:** ArchUnit rule (planner viết trong Wave 0 test stubs):
+  - `core.cleanup.*` cấm `import java.net.http.HttpClient` + `org.springframework.web.client.RestClient` ngoài file `UnsubscribeHttpClient.java`.
+  - Extend `GmailWriteBoundaryTest` (rename từ `TriageGmailWriteBoundaryTest`): allow-list `TriageGmailWriter` + `UnsubscribeMailtoSender` cho `Gmail.users().messages().send()`.
+  - `core.cleanup.*` cấm import `java.lang.ThreadLocal` + cấm `WebClient` (carry-over Phase 1).
+- **D-23:** Mailto URI parsing = `java.net.URI` built-in (Java 25 đã RFC 6068 conform). KHÔNG regex. Parser: `URI.create("mailto:...").getSchemeSpecificPart()` lấy recipient + query string; recipient validate match `mail_message_observed.list_unsubscribe_mailto` (đã persist qua D-09).
+- **D-24:** UI risk badge color = `--green/--green-soft` cho `SAFE` (KHÔNG dùng `--primary`/teal để tránh conflict với CTA), `--muted/--muted-foreground` cho `NO_HEADER_DISABLED`, `--red/--red-soft` cho `SUPPRESSED_BLOCKED`. **Lock-step UI-SPEC D-15** (đã chốt trong UI-SPEC). Phase 1.6 D-15 palette áp dụng.
+- **D-25:** `processing_job` retention = **purge 90 ngày** sau `finished_at` (status `COMPLETED`|`FAILED`). Implementation = `@Scheduled(cron = "0 0 3 * * *")` daily 03:00 UTC, DELETE batch ≤ 1000 row/lần. Audit trail `unsubscribe_campaign` + `unsubscribe_attempt` **giữ vĩnh viễn** (cho support + analytics retro). Placement = `backend/worker/scheduling/ProcessingJobPurgeBatch.java` (sibling của reaper batch D-18).
+
+### Phase 7 Dependency Note
+
+**Verify trước khi execute Phase 8:** ROADMAP.md ghi Phase 8 depends on Phase 7 (Analytics Enhancement). CONTEXT D-14 đã clarify entry point của Phase 8 là menu only — KHÔNG truy cập Phase 7 `TopSendersPanel` endpoint. Phase 7 dependency là **soft** (cho UX cross-link sau ship), **không phải hard runtime dependency**. Planner có thể bắt đầu Wave 0 Phase 8 ngay cả khi Phase 7 chưa land.
 
 </decisions>
 
@@ -176,7 +192,6 @@ Downstream agents MUST read `08-SPEC.md` before planning or implementing. Requir
 - **Multi-tenant team suppression list (shared across workspace)** — out of scope per SPEC.md; phase tương lai khi team plan ra mắt.
 - **Scheduled/recurring campaign** — out of scope per SPEC.md; weekly digest "newsletter mới phát hiện" là phase sau khi UX one-shot ổn.
 - **Provider-aware success heuristic** (recognize "click to confirm" HTML page) — không làm v1 vì vi phạm RFC 8058 "no user interaction required"; defer cho phase observability sau.
-- **`processing_job` purge batch** — defer cho phase ops sau (90d retention chuẩn).
 - **Bulk archive (archive theo sender/category/age không unsubscribe), cold-email blocker, attachment auto-filing** — out of scope; phase riêng từ SEED-009. `core.cleanup` module + `processing_job` framework + `/cleanup/*` namespace ở phase 8 dọn đường cho 3 phase này.
 
 </deferred>
