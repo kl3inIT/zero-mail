@@ -248,6 +248,16 @@ async function installBillingApiMock(page: Page, state: BillingMockState) {
       return;
     }
 
+    if (url.pathname === '/api/me/notifications' && request.method() === 'GET') {
+      await fulfillJson(route, {
+        channel: 'DAILY_DIGEST',
+        digestEnabled: true,
+        digestSendHourLocal: 20,
+        timeZone: 'Asia/Ho_Chi_Minh',
+      });
+      return;
+    }
+
     if (url.pathname === '/api/billing/packages' && request.method() === 'GET') {
       await fulfillJson(route, state.packages);
       return;

@@ -31,7 +31,7 @@ class MeControllerTest extends ApiPostgresTestBase {
     @Autowired JdbcTemplate jdbc;
 
     @Test
-    @DisplayName("GET /me includes triagePaused from tenant state")
+    @DisplayName("GET /api/me includes triagePaused from tenant state")
     void me_response_contains_triagePaused_field() {
         Seed seed = seedUser("me-triage-paused", true, false);
         String raw = getMe(seed);
@@ -40,7 +40,7 @@ class MeControllerTest extends ApiPostgresTestBase {
     }
 
     @Test
-    @DisplayName("GET /me includes Gmail status with ingestionHealth")
+    @DisplayName("GET /api/me includes Gmail status with ingestionHealth")
     void me_response_contains_gmailConnectionStatus_with_ingestionHealth() {
         Seed seed = seedUser("me-gmail-health", true, true);
         String raw = getMe(seed);
@@ -52,7 +52,7 @@ class MeControllerTest extends ApiPostgresTestBase {
     }
 
     @Test
-    @DisplayName("GET /me serializes extended shape cleanly")
+    @DisplayName("GET /api/me serializes extended shape cleanly")
     void me_response_json_shape_serializes_cleanly() {
         Seed seed = seedUser("me-json-shape", false, false);
         String raw = getMe(seed);
@@ -64,7 +64,7 @@ class MeControllerTest extends ApiPostgresTestBase {
     }
 
     @Test
-    @DisplayName("GET /me without test auth returns 401")
+    @DisplayName("GET /api/me without test auth returns 401")
     void me_missingTestAuth_returns401() {
         ResponseEntity<String> res =
                 RestClient.create("http://localhost:" + port)
