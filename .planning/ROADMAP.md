@@ -468,11 +468,11 @@ Plans:
 - [x] 08-01-PLAN.md — Wave 0 test scaffolding (17 file + 1 rename) — RED stubs cho UNS-01..UNS-09 _(completed 2026-05-19)_
 - [x] 08-02-PLAN.md — Liquibase changelogs 041..046 (mail_message_observed extend + processing_job + sender_suppression + unsubscribe_campaign + unsubscribe_attempt + triage_audit source for H-3) _(completed 2026-05-20)_
 - [x] 08-03-PLAN.md — Spring Modulith core.cleanup module + 4 enum + 1 policy + 4 entity + 4 repository + 5 exception + H-3 triage extension _(completed 2026-05-20)_
-- [ ] 08-04-PLAN.md — Extend GmailPreviewReadService + 4 projection + CandidateQueryService (UNS-01) + SuppressionCrudService + SuppressionAutoAddService (UNS-02)
-- [ ] 08-05-PLAN.md — UnsubscribeHttpClient (RFC 8058) + UnsubscribeMailtoSender (Gmail send-as-self) + UnsubscribeMailtoUriParser + UnsubscribeResult (UNS-04c + UNS-08)
-- [ ] 08-06-PLAN.md — UnsubscribeDomainThrottle (Redis) + ProcessingJobWorker (SKIP LOCKED) + UnsubscribeCampaignHandler + ProcessingJobReaperBatch + ProcessingJobPurgeBatch (UNS-04)
-- [ ] 08-07-PLAN.md — CampaignPreviewService (UNS-03) + CampaignExecuteService (D-04 transaction) + CampaignStatusQueryService (UNS-05) + CampaignRetryService (UNS-06) + CampaignUndoService (UNS-07)
-- [ ] 08-08-PLAN.md — 4 controller (UnsubscribeCandidate/Campaign/Status/Suppression) + 13 DTO + @ExceptionHandler maps + OpenAPI codegen regen
+- [x] 08-04-PLAN.md — Extend GmailPreviewReadService + 4 projection + CandidateQueryService (UNS-01) + SuppressionCrudService + SuppressionAutoAddService (UNS-02) _(completed 2026-05-20)_
+- [x] 08-05-PLAN.md — UnsubscribeHttpClient (RFC 8058) + UnsubscribeMailtoSender (Gmail send-as-self) + UnsubscribeMailtoUriParser + UnsubscribeResult (UNS-04c + UNS-08) _(completed 2026-05-20)_
+- [x] 08-06-PLAN.md — UnsubscribeDomainThrottle (Redis) + ProcessingJobWorker (SKIP LOCKED) + UnsubscribeCampaignHandler + ProcessingJobReaperBatch + ProcessingJobPurgeBatch (UNS-04) _(completed 2026-05-20)_
+- [x] 08-07-PLAN.md — CampaignPreviewService (UNS-03) + CampaignExecuteService (D-04 transaction) + CampaignStatusQueryService (UNS-05) + CampaignRetryService (UNS-06) + CampaignUndoService (UNS-07) _(completed 2026-05-20)_
+- [x] 08-08-PLAN.md — 4 controller (UnsubscribeCandidate/Campaign/Status/Suppression) + 13 DTO + @ExceptionHandler maps + OpenAPI codegen regen _(completed 2026-05-20)_
 - [ ] 08-09-PLAN.md — Frontend features (2 sub-feature × 7-8 file) + 4 page route + sidebar nav extend + i18n bundle regen + CleanupPrivacySweepTest (UNS-09) + Playwright e2e golden path
 
 

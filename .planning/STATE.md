@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Awaiting operator checkpoint for candidate gate URL, launch sign-off, final rc tag, and STATE closure
-stopped_at: Phase 08 Plan 03 (Wave 2) complete — cleanup domain + persistence + H-3 triage extension shipped
-last_updated: "2026-05-20T14:55:00.000Z"
+stopped_at: Phase 08 Plan 08 (Wave 7) complete — 4 thin cleanup controllers + 13 DTOs + OpenAPI regen shipped; Wave 0 controller tests flipped GREEN
+last_updated: "2026-05-20T17:43:00.000Z"
 last_activity: 2026-05-20
 progress:
   total_phases: 19
@@ -143,6 +143,7 @@ Progress: [██████████] 99%
 | Phase 06-polish-casa-verified-launch P02 | 21min | 5 tasks | 10 files |
 | Phase 06 P03 | 2h 47m | 2 tasks | 11 files |
 | Phase 06 P04 | 9 min | 3 tasks | 4 files |
+| Phase 08 P08 | 45min | 3 tasks | 21 files |
 
 ## Accumulated Context
 
@@ -312,6 +313,9 @@ Recent decisions affecting current work:
 - [Phase 06]: Plan 02 uses deterministic UUID loadtest tenants from 00000000-0000-4000-8000-1de57e570001 through 00000000-0000-4000-8000-1de57e570050.
 - [Phase 06]: Plan 02 seeds gmail_connections for each synthetic loadtest tenant so PubSubIngestionService resolves emailAddress to tenant_id during the k6 workload.
 - [Phase 06]: Plan 02 wires loadtestVerify as a Gradle Exec task that shells out to psql for invariant checks instead of using JDBC on the Gradle buildscript classpath.
+- [Phase 08]: Plan 08 (Wave 7) ships 4 thin cleanup controllers + 13 record DTOs + regenerates apps/web/lib/api/schema.d.ts. Controller-local @ExceptionHandler is used only to override two GlobalExceptionHandler defaults — CampaignCapExceededException → 400 (overrides UNPROCESSABLE/422) and UndoWindowExpiredException → 410 (overrides CONFLICT/409). Other cleanup exceptions keep their ErrorClass-driven mapping.
+- [Phase 08]: Plan 08 (Wave 7) undo endpoint resolves jobId → campaignId via CampaignStatusQueryService instead of injecting UnsubscribeCampaignRepository directly — keeps ArchUnit WR-01 controllers_do_not_touch_repositories rule passing.
+- [Phase 08]: Plan 08 (Wave 7) OpenAPI regen workaround — springdoc-openapi-gradle-plugin's forkedSpringBootRun ignores the Gradle JDK toolchain and uses JAVA_HOME directly, hitting UnsupportedClassVersionError when JAVA_HOME=jdk-21 and the project requires JDK 25. Workaround documented in 08-08-SUMMARY: start backend via standard bootRun with --spring.docker.compose.enabled=false --spring.jpa.hibernate.ddl-auto=none --spring.liquibase.enabled=true against the locally-running PG/Redis containers, then curl /v3/api-docs → openapi.json → pnpm exec openapi-typescript.
 
 ### Roadmap Evolution
 
@@ -381,6 +385,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-20T14:55:00.000Z
-Stopped at: Phase 08 Plan 03 (Wave 2) complete — core.cleanup module + 4 entities + 4 repos + 5 exceptions + H-3 triage source extension all landed (21 files created, 7 modified, 3 commits)
-Resume file: .planning/phases/08-bulk-unsubscribe-campaign/08-04-PLAN.md
+Last session: 2026-05-20T17:43:00.000Z
+Stopped at: Phase 08 Plan 08 (Wave 7) complete — 4 thin cleanup controllers + 13 DTO records + OpenAPI typed-client regen all landed (18 files created, 3 modified, 3 commits). Wave 0 controller tests UnsubscribeCampaignControllerTest + CampaignStatusControllerTest flipped GREEN.
+Resume file: .planning/phases/08-bulk-unsubscribe-campaign/ROADMAP.md (next plan in Phase 8 is Wave 5b frontend feature wave)
