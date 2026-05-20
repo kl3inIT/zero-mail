@@ -4,16 +4,12 @@ plugins {
     alias(libs.plugins.cyclonedxBom)
 }
 
-cyclonedxBom {
-    includeConfigs.set(listOf("runtimeClasspath"))
-    skipConfigs.set(listOf("testRuntimeClasspath", "compileClasspath", "testCompileClasspath"))
-    outputFormat.set("json")
-    outputName.set("sbom")
-    destination.set(layout.buildDirectory.dir("reports").get().asFile)
-    includeBomSerialNumber.set(true)
-    includeLicenseText.set(false)
-    schemaVersion.set("1.5")
-}
+// CycloneDX 3.x defaults are fine for our use:
+//   - includeConfigs: runtimeClasspath
+//   - outputFormat: XML (OSV-Scanner reads XML + JSON)
+//   - schemaVersion: 1.5
+//   - destination: build/reports/
+// Override per-module only if a sub-module needs a custom scope.
 
 configure(
     listOf(

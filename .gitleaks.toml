@@ -38,7 +38,7 @@ regexes = [
     '''<32hex>''',
 ]
 
-# Per-rule overrides — JWT pattern is noisy for our test fixtures and OpenAPI examples.
-[[allowlist.commits]]
-# Reserve this stanza for commits where a secret leak was already remediated by rotation;
-# add the commit SHA here so re-scanning history does not re-flag the rotated value.
+# Commits to skip during history scans (e.g., a secret was committed, then rotated and
+# revoked — add the original commit SHA here so gitleaks does not re-flag it forever).
+# Add string entries like: commits = ["abc123...", "def456..."]
+commits = []
