@@ -15,24 +15,24 @@ import com.zeromail.core.chat.domain.parts.ToolOutputPart;
 import com.zeromail.core.chat.llm.TenantAwareReactorScheduler;
 import com.zeromail.core.chat.llm.springai.ZeroMailChatMemory;
 import com.zeromail.core.chat.persistence.ChatMessageJdbcRepository;
+import com.zeromail.core.chat.persistence.lowlevel.ChatTurnRepository;
 import com.zeromail.core.chat.sanitize.ToolOutputSanitizer;
 import com.zeromail.core.chat.sanitize.XmlFencedPersonalizationRenderer;
 import com.zeromail.core.chat.usecases.tools.ChatReadToolHandler;
 import com.zeromail.core.tenant.TenantContext;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import reactor.core.Disposable;
@@ -41,7 +41,6 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 @Service
-@SuppressWarnings("SqlResolve")
 public class ChatOrchestrator {
 
     private static final Logger log = LoggerFactory.getLogger(ChatOrchestrator.class);
@@ -57,7 +56,7 @@ public class ChatOrchestrator {
     private final ZeroMailChatProperties chatProperties;
     private final LlmTokenizer llmTokenizer;
     private final TransactionTemplate transactionTemplate;
-    private final JdbcTemplate jdbcTemplate;
+    private final ChatTurnRepository chatTurnRepository;
     private final ObjectMapper objectMapper;
     private final Map<ChatToolName, ChatReadToolHandler> readToolHandlers;
 
@@ -72,21 +71,27 @@ public class ChatOrchestrator {
             ZeroMailChatProperties chatProperties,
             LlmTokenizer llmTokenizer,
             TransactionTemplate transactionTemplate,
-            JdbcTemplate jdbcTemplate,
+            ChatTurnRepository chatTurnRepository,
             ObjectMapper objectMapper,
             List<ChatReadToolHandler> readToolHandlers) {
-        this.chatLlmGateway = chatLlmGateway;
-        this.zeroMailChatMemory = zeroMailChatMemory;
-        this.toolOutputSanitizer = toolOutputSanitizer;
-        this.tenantAwareReactorScheduler = tenantAwareReactorScheduler;
-        this.personalizationRenderer = personalizationRenderer;
-        this.chatMessageRepository = chatMessageRepository;
-        this.chatToolCatalog = chatToolCatalog;
-        this.chatProperties = chatProperties;
-        this.llmTokenizer = llmTokenizer;
-        this.transactionTemplate = transactionTemplate;
-        this.jdbcTemplate = jdbcTemplate;
-        this.objectMapper = objectMapper;
+        this.chatLlmGateway = Objects.requireNonNull(chatLlmGateway, "chatLlmGateway");
+        this.zeroMailChatMemory = Objects.requireNonNull(zeroMailChatMemory, "zeroMailChatMemory");
+        this.toolOutputSanitizer =
+                Objects.requireNonNull(toolOutputSanitizer, "toolOutputSanitizer");
+        this.tenantAwareReactorScheduler =
+                Objects.requireNonNull(tenantAwareReactorScheduler, "tenantAwareReactorScheduler");
+        this.personalizationRenderer =
+                Objects.requireNonNull(personalizationRenderer, "personalizationRenderer");
+        this.chatMessageRepository =
+                Objects.requireNonNull(chatMessageRepository, "chatMessageRepository");
+        this.chatToolCatalog = Objects.requireNonNull(chatToolCatalog, "chatToolCatalog");
+        this.chatProperties = Objects.requireNonNull(chatProperties, "chatProperties");
+        this.llmTokenizer = Objects.requireNonNull(llmTokenizer, "llmTokenizer");
+        this.transactionTemplate =
+                Objects.requireNonNull(transactionTemplate, "transactionTemplate");
+        this.chatTurnRepository =
+                Objects.requireNonNull(chatTurnRepository, "chatTurnRepository must not be null");
+        this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper");
         this.readToolHandlers = readToolHandlerMap(readToolHandlers);
     }
 
@@ -273,26 +278,8 @@ public class ChatOrchestrator {
     private PreparedTurn prepareTurn(UUID tenantId, UUID requestedChatId, String userText) {
         UUID chatId = requestedChatId == null ? UUID.randomUUID() : requestedChatId;
         Instant now = Instant.now();
-        jdbcTemplate.update(
-                """
-                INSERT INTO chat (id, tenant_id, title, created_at, updated_at, version)
-                VALUES (?, ?, ?, ?, ?, 0)
-                ON CONFLICT (id) DO NOTHING
-                """,
-                chatId,
-                tenantId,
-                titleFrom(userText),
-                Timestamp.from(now),
-                Timestamp.from(now));
-        jdbcTemplate.update(
-                """
-                UPDATE chat
-                SET updated_at = ?
-                WHERE id = ? AND tenant_id = ?
-                """,
-                Timestamp.from(now),
-                chatId,
-                tenantId);
+        chatTurnRepository.insertChatIfAbsent(chatId, tenantId, titleFrom(userText), now);
+        chatTurnRepository.touchChatUpdatedAt(chatId, tenantId, now);
         UUID userMessageId =
                 chatMessageRepository.insert(
                         new ChatMessage(
@@ -360,35 +347,15 @@ public class ChatOrchestrator {
             ChatToolName chatToolName,
             Map<String, Object> input) {
         Instant now = Instant.now();
-        jdbcTemplate.update(
-                """
-                INSERT INTO assistant_pending_action (
-                    id,
-                    chat_id,
-                    tenant_id,
-                    chat_message_id,
-                    tool_call_id,
-                    state,
-                    draft_body,
-                    expires_at,
-                    last_tool_call_id,
-                    last_tool_call_state,
-                    created_at,
-                    updated_at,
-                    version
-                )
-                VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, ?, 'input-available', ?, ?, 0)
-                """,
-                UUID.randomUUID(),
+        Instant expiresAt = now.plusSeconds(chatProperties.sseTimeoutMinutes() * 60L);
+        chatTurnRepository.insertPendingAction(
                 chatId,
                 tenantId,
                 chatMessageId,
                 toolCallId,
                 draftBody(chatToolName, input),
-                Timestamp.from(now.plusSeconds(chatProperties.sseTimeoutMinutes() * 60L)),
-                toolCallId,
-                Timestamp.from(now),
-                Timestamp.from(now));
+                expiresAt,
+                now);
     }
 
     private static String draftBody(ChatToolName chatToolName, Map<String, Object> input) {

@@ -10,7 +10,7 @@ import com.zeromail.core.chat.domain.parts.ToolOutputPart;
 import com.zeromail.core.chat.exception.PendingActionNotFoundException;
 import com.zeromail.core.chat.exception.StaleToolCallException;
 import com.zeromail.core.chat.persistence.ChatPartsJsonConverter;
-import java.sql.Timestamp;
+import com.zeromail.core.chat.persistence.lowlevel.ConfirmationStateRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
@@ -18,17 +18,15 @@ import java.util.Objects;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 @Service
-@SuppressWarnings("SqlResolve")
 public class ConfirmationStateMachine {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final ConfirmationStateRepository confirmationStateRepository;
     private final ChatPartsJsonConverter chatPartsJsonConverter;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher applicationEventPublisher;
@@ -36,12 +34,12 @@ public class ConfirmationStateMachine {
 
     @Autowired
     public ConfirmationStateMachine(
-            JdbcTemplate jdbcTemplate,
+            ConfirmationStateRepository confirmationStateRepository,
             ChatPartsJsonConverter chatPartsJsonConverter,
             ObjectMapper objectMapper,
             ApplicationEventPublisher applicationEventPublisher) {
         this(
-                jdbcTemplate,
+                confirmationStateRepository,
                 chatPartsJsonConverter,
                 objectMapper,
                 applicationEventPublisher,
@@ -49,63 +47,45 @@ public class ConfirmationStateMachine {
     }
 
     ConfirmationStateMachine(
-            JdbcTemplate jdbcTemplate,
+            ConfirmationStateRepository confirmationStateRepository,
             ChatPartsJsonConverter chatPartsJsonConverter,
             ObjectMapper objectMapper,
             ApplicationEventPublisher applicationEventPublisher,
             Clock clock) {
-        this.jdbcTemplate = jdbcTemplate;
-        this.chatPartsJsonConverter = chatPartsJsonConverter;
-        this.objectMapper = objectMapper;
-        this.applicationEventPublisher = applicationEventPublisher;
-        this.clock = clock;
+        this.confirmationStateRepository =
+                Objects.requireNonNull(
+                        confirmationStateRepository,
+                        "confirmationStateRepository must not be null");
+        this.chatPartsJsonConverter =
+                Objects.requireNonNull(
+                        chatPartsJsonConverter, "chatPartsJsonConverter must not be null");
+        this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper must not be null");
+        this.applicationEventPublisher =
+                Objects.requireNonNull(
+                        applicationEventPublisher, "applicationEventPublisher must not be null");
+        this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
 
     @Transactional(readOnly = true)
     public PendingAction loadPendingAction(UUID chatId, UUID tenantId, String toolCallId) {
-        return jdbcTemplate
-                .query(
-                        """
-                        SELECT pending_action.id,
-                               pending_action.tenant_id,
-                               pending_action.chat_id,
-                               pending_action.chat_message_id,
-                               pending_action.tool_call_id,
-                               pending_action.state,
-                               pending_action.parts_updated_at,
-                               pending_action.draft_body,
-                               chat_message.parts::text AS parts_json
-                          FROM assistant_pending_action pending_action
-                          JOIN chat_message chat_message
-                            ON chat_message.id = pending_action.chat_message_id
-                         WHERE pending_action.chat_id = ?
-                           AND pending_action.tenant_id = ?
-                           AND pending_action.tool_call_id = ?
-                        """,
-                        (resultSet, _) -> {
-                            ToolSnapshot toolSnapshot =
-                                    toolSnapshot(
-                                            resultSet.getString("parts_json"),
-                                            resultSet.getString("tool_call_id"));
-                            return new PendingAction(
-                                    resultSet.getObject("id", UUID.class),
-                                    resultSet.getObject("tenant_id", UUID.class),
-                                    resultSet.getObject("chat_id", UUID.class),
-                                    resultSet.getObject("chat_message_id", UUID.class),
-                                    resultSet.getString("tool_call_id"),
-                                    resultSet.getString("state"),
-                                    resultSet.getTimestamp("parts_updated_at").toInstant(),
-                                    resultSet.getString("draft_body"),
-                                    toolSnapshot.toolName(),
-                                    toolSnapshot.inputJson(),
-                                    toolSnapshot.confirmationJson());
-                        },
-                        chatId,
-                        tenantId,
-                        toolCallId)
-                .stream()
-                .findFirst()
-                .orElseThrow(() -> new PendingActionNotFoundException(toolCallId));
+        ConfirmationStateRepository.PendingActionRow pendingActionRow =
+                confirmationStateRepository
+                        .findPendingActionRow(chatId, tenantId, toolCallId)
+                        .orElseThrow(() -> new PendingActionNotFoundException(toolCallId));
+        ToolSnapshot toolSnapshot =
+                toolSnapshot(pendingActionRow.partsJson(), pendingActionRow.toolCallId());
+        return new PendingAction(
+                pendingActionRow.pendingActionId(),
+                pendingActionRow.tenantId(),
+                pendingActionRow.chatId(),
+                pendingActionRow.chatMessageId(),
+                pendingActionRow.toolCallId(),
+                pendingActionRow.state(),
+                pendingActionRow.partsUpdatedAt(),
+                pendingActionRow.draftBody(),
+                toolSnapshot.toolName(),
+                toolSnapshot.inputJson(),
+                toolSnapshot.confirmationJson());
     }
 
     @Transactional
@@ -116,22 +96,11 @@ public class ConfirmationStateMachine {
             Instant previouslyObservedPartsUpdatedAt) {
         Objects.requireNonNull(previouslyObservedPartsUpdatedAt, "partsUpdatedAt must not be null");
         int updatedRowCount =
-                jdbcTemplate.update(
-                        """
-                        UPDATE assistant_pending_action
-                           SET state = 'PROCESSING',
-                               updated_at = now(),
-                               version = version + 1
-                         WHERE tool_call_id = ?
-                           AND chat_id = ?
-                           AND tenant_id = ?
-                           AND parts_updated_at = ?
-                           AND state = 'PENDING'
-                        """,
-                        requireText(toolCallId, "toolCallId"),
+                confirmationStateRepository.reservePendingAction(
                         chatId,
                         tenantId,
-                        Timestamp.from(previouslyObservedPartsUpdatedAt));
+                        requireText(toolCallId, "toolCallId"),
+                        previouslyObservedPartsUpdatedAt);
         if (updatedRowCount != 1) {
             throw new StaleToolCallException(toolCallId);
         }
@@ -158,20 +127,8 @@ public class ConfirmationStateMachine {
     @Transactional
     public boolean revertReservation(UUID chatId, UUID tenantId, String toolCallId) {
         int updatedRowCount =
-                jdbcTemplate.update(
-                        """
-                        UPDATE assistant_pending_action
-                           SET state = 'PENDING',
-                               updated_at = now(),
-                               version = version + 1
-                         WHERE tool_call_id = ?
-                           AND chat_id = ?
-                           AND tenant_id = ?
-                           AND state = 'PROCESSING'
-                        """,
-                        requireText(toolCallId, "toolCallId"),
-                        chatId,
-                        tenantId);
+                confirmationStateRepository.revertReservation(
+                        chatId, tenantId, requireText(toolCallId, "toolCallId"));
         return updatedRowCount == 1;
     }
 
@@ -179,28 +136,7 @@ public class ConfirmationStateMachine {
     public UUID recordSendInFlight(SendInFlightCommand command) {
         UUID auditId = UUID.randomUUID();
         Instant now = clock.instant();
-        jdbcTemplate.update(
-                """
-                INSERT INTO assistant_action_audit (
-                    id,
-                    tenant_id,
-                    chat_id,
-                    tool_call_id,
-                    tool_category,
-                    tool_name,
-                    state,
-                    recipient_hash,
-                    subject_hash,
-                    gmail_message_id,
-                    result_summary_json,
-                    preview_snapshot,
-                    in_flight_at,
-                    created_at,
-                    updated_at,
-                    version
-                )
-                VALUES (?, ?, ?, ?, 'confirmed-send', ?, 'SEND_IN_FLIGHT', ?, ?, ?, ?::jsonb, ?::jsonb, ?, ?, ?, 0)
-                """,
+        confirmationStateRepository.insertSendInFlightAudit(
                 auditId,
                 command.tenantId(),
                 command.chatId(),
@@ -211,9 +147,7 @@ public class ConfirmationStateMachine {
                 command.gmailMessageId(),
                 command.resultSummaryJson(),
                 command.previewSnapshotJson(),
-                Timestamp.from(now),
-                Timestamp.from(now),
-                Timestamp.from(now));
+                now);
         return auditId;
     }
 
@@ -221,41 +155,16 @@ public class ConfirmationStateMachine {
     public boolean commitSendCompleted(UUID auditId, SendCommitCommand command) {
         Instant now = clock.instant();
         int changedRows =
-                jdbcTemplate.update(
-                        """
-                        UPDATE assistant_action_audit
-                           SET state = 'COMMITTED',
-                               result_summary_json = ?::jsonb,
-                               sent_at = ?,
-                               updated_at = now(),
-                               version = version + 1
-                         WHERE id = ?
-                           AND tenant_id = ?
-                           AND state = 'SEND_IN_FLIGHT'
-                        """,
-                        command.resultSummaryJson(),
-                        Timestamp.from(now),
-                        auditId,
-                        command.tenantId());
+                confirmationStateRepository.markSendCommittedAudit(
+                        auditId, command.tenantId(), command.resultSummaryJson(), now);
         if (changedRows != 1) {
             // Idempotent: the reconciliation cron (or a retry) may have already moved this audit
             // row to COMMITTED. Confirm the row is in a terminal COMMITTED state and return false
             // so the caller does not double-publish the AssistantSendCompleted event. If the row
             // is genuinely missing or in an unexpected state, fail loud.
             String currentState =
-                    jdbcTemplate
-                            .query(
-                                    """
-                                    SELECT state
-                                      FROM assistant_action_audit
-                                     WHERE id = ?
-                                       AND tenant_id = ?
-                                    """,
-                                    (resultSet, _) -> resultSet.getString("state"),
-                                    auditId,
-                                    command.tenantId())
-                            .stream()
-                            .findFirst()
+                    confirmationStateRepository
+                            .findAuditState(auditId, command.tenantId())
                             .orElse(null);
             if ("COMMITTED".equals(currentState)) {
                 return false;
@@ -263,7 +172,7 @@ public class ConfirmationStateMachine {
             throw new IllegalStateException(
                     "send audit row was not in flight (current state=" + currentState + ")");
         }
-        updatePendingActionState(
+        confirmationStateRepository.updatePendingActionState(
                 command.tenantId(), command.chatId(), command.toolCallId(), "CONFIRMED");
         // Publish the domain event inside this transaction. Spring's
         // @TransactionalEventListener(AFTER_COMMIT) listeners require an active tx at publish
@@ -281,49 +190,26 @@ public class ConfirmationStateMachine {
 
     @Transactional
     public void commitSendFailed(UUID auditId, String toolCallId, String reasonCode) {
-        AuditPointer auditPointer = auditPointer(auditId);
+        ConfirmationStateRepository.AuditPointer auditPointer =
+                confirmationStateRepository
+                        .findAuditPointer(auditId)
+                        .orElseThrow(
+                                () -> new IllegalStateException("send audit row was not found"));
         int changedRows =
-                jdbcTemplate.update(
-                        """
-                        UPDATE assistant_action_audit
-                           SET state = 'FAILED',
-                               result_summary_json = ?::jsonb,
-                               updated_at = now(),
-                               version = version + 1
-                         WHERE id = ?
-                           AND state = 'SEND_IN_FLIGHT'
-                        """,
-                        writeJson(Map.of("state", "failed", "reason", safeReasonCode(reasonCode))),
-                        auditId);
+                confirmationStateRepository.markSendFailedAudit(
+                        auditId,
+                        writeJson(Map.of("state", "failed", "reason", safeReasonCode(reasonCode))));
         if (changedRows != 1) {
             return;
         }
-        updatePendingActionState(
+        confirmationStateRepository.updatePendingActionState(
                 auditPointer.tenantId(), auditPointer.chatId(), toolCallId, "FAILED");
     }
 
     @Transactional
     public void commitWriteReversible(WriteCommitCommand command) {
         Instant now = clock.instant();
-        jdbcTemplate.update(
-                """
-                INSERT INTO assistant_action_audit (
-                    id,
-                    tenant_id,
-                    chat_id,
-                    tool_call_id,
-                    tool_category,
-                    tool_name,
-                    state,
-                    result_summary_json,
-                    preview_snapshot,
-                    sent_at,
-                    created_at,
-                    updated_at,
-                    version
-                )
-                VALUES (?, ?, ?, ?, ?, ?, 'COMMITTED', ?::jsonb, ?::jsonb, ?, ?, ?, 0)
-                """,
+        confirmationStateRepository.insertCommittedAudit(
                 UUID.randomUUID(),
                 command.tenantId(),
                 command.chatId(),
@@ -332,10 +218,8 @@ public class ConfirmationStateMachine {
                 command.toolName().id(),
                 writeJson(command.resultSummary()),
                 writeJson(command.previewSnapshot()),
-                Timestamp.from(now),
-                Timestamp.from(now),
-                Timestamp.from(now));
-        updatePendingActionState(
+                now);
+        confirmationStateRepository.updatePendingActionState(
                 command.tenantId(), command.chatId(), command.toolCallId(), "CONFIRMED");
     }
 
@@ -344,43 +228,11 @@ public class ConfirmationStateMachine {
         PendingAction pendingAction = loadPendingAction(chatId, tenantId, toolCallId);
         Instant now = clock.instant();
         int changedRows =
-                jdbcTemplate.update(
-                        """
-                        UPDATE assistant_pending_action
-                           SET state = 'CANCELED',
-                               updated_at = now(),
-                               version = version + 1
-                         WHERE tenant_id = ?
-                           AND chat_id = ?
-                           AND tool_call_id = ?
-                           AND state = 'PENDING'
-                        """,
-                        tenantId,
-                        chatId,
-                        toolCallId);
+                confirmationStateRepository.markPendingActionCanceled(tenantId, chatId, toolCallId);
         if (changedRows != 1) {
             throw new StaleToolCallException(toolCallId);
         }
-        jdbcTemplate.update(
-                """
-                INSERT INTO assistant_action_audit (
-                    id,
-                    tenant_id,
-                    chat_id,
-                    tool_call_id,
-                    tool_category,
-                    tool_name,
-                    state,
-                    result_summary_json,
-                    preview_snapshot,
-                    sent_at,
-                    created_at,
-                    updated_at,
-                    version
-                )
-                VALUES (?, ?, ?, ?, ?, ?, 'COMMITTED', ?::jsonb, ?::jsonb, ?, ?, ?, 0)
-                ON CONFLICT (chat_id, tool_call_id) DO NOTHING
-                """,
+        confirmationStateRepository.insertCanceledAudit(
                 UUID.randomUUID(),
                 tenantId,
                 chatId,
@@ -389,52 +241,13 @@ public class ConfirmationStateMachine {
                 pendingAction.toolName().id(),
                 writeJson(Map.of("state", "canceled")),
                 writeJson(pendingAction.inputJson()),
-                Timestamp.from(now),
-                Timestamp.from(now),
-                Timestamp.from(now));
+                now);
     }
 
     @Transactional
     public void commitFailedFromReconciler(UUID chatId, UUID tenantId, String toolCallId) {
-        updatePendingActionState(tenantId, chatId, toolCallId, "FAILED");
-    }
-
-    private void updatePendingActionState(
-            UUID tenantId, UUID chatId, String toolCallId, String state) {
-        jdbcTemplate.update(
-                """
-                UPDATE assistant_pending_action
-                   SET state = ?,
-                       updated_at = now(),
-                       version = version + 1
-                 WHERE tenant_id = ?
-                   AND chat_id = ?
-                   AND tool_call_id = ?
-                   AND state <> ?
-                """,
-                state,
-                tenantId,
-                chatId,
-                toolCallId,
-                state);
-    }
-
-    private AuditPointer auditPointer(UUID auditId) {
-        return jdbcTemplate
-                .query(
-                        """
-                        SELECT tenant_id, chat_id
-                          FROM assistant_action_audit
-                         WHERE id = ?
-                        """,
-                        (resultSet, _) ->
-                                new AuditPointer(
-                                        resultSet.getObject("tenant_id", UUID.class),
-                                        resultSet.getObject("chat_id", UUID.class)),
-                        auditId)
-                .stream()
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("send audit row was not found"));
+        confirmationStateRepository.updatePendingActionState(
+                tenantId, chatId, toolCallId, "FAILED");
     }
 
     private ToolSnapshot toolSnapshot(String partsJson, String toolCallId) {
@@ -548,6 +361,4 @@ public class ConfirmationStateMachine {
             ChatToolName toolName,
             Map<String, Object> inputJson,
             Map<String, Object> confirmationJson) {}
-
-    private record AuditPointer(UUID tenantId, UUID chatId) {}
 }
