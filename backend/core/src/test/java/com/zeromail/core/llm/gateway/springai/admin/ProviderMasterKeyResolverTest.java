@@ -43,7 +43,8 @@ class ProviderMasterKeyResolverTest {
                                         null,
                                         Instant.parse("2026-05-20T00:00:00Z"),
                                         Instant.parse("2026-05-20T00:00:00Z"),
-                                        "https://api.openai.com/v1")));
+                                        "https://api.openai.com/v1",
+                                        "sk-****key")));
         ProviderMasterKeyResolver resolver =
                 new ProviderMasterKeyResolver(
                         repository, cipher, fixedClock(), Duration.ofMinutes(15));

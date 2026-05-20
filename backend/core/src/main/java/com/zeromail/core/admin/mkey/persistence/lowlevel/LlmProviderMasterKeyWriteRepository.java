@@ -45,7 +45,8 @@ public class LlmProviderMasterKeyWriteRepository {
             short kekVersion,
             UUID actorId,
             Instant lastRotatedAt,
-            String baseUrl) {
+            String baseUrl,
+            String maskedKey) {
         return jdbcTemplate.queryForObject(
                 """
                 UPDATE llm_provider_master_key
@@ -55,7 +56,8 @@ public class LlmProviderMasterKeyWriteRepository {
                     provider_secret_version = provider_secret_version + 1,
                     created_by_user_id = COALESCE(created_by_user_id, ?),
                     last_rotated_at = ?,
-                    base_url = ?
+                    base_url = ?,
+                    masked_key = ?
                 WHERE provider = ?
                 RETURNING provider_secret_version
                 """,
@@ -66,6 +68,7 @@ public class LlmProviderMasterKeyWriteRepository {
                 actorId,
                 lastRotatedAt,
                 baseUrl,
+                maskedKey,
                 provider.id());
     }
 }

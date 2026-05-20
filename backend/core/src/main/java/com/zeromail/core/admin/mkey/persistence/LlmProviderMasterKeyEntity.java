@@ -45,6 +45,9 @@ public class LlmProviderMasterKeyEntity {
     @Column(name = "base_url", length = 500)
     private String baseUrl;
 
+    @Column(name = "masked_key", length = 64)
+    private String maskedKey;
+
     protected LlmProviderMasterKeyEntity() {
         // Hibernate
     }
@@ -58,7 +61,8 @@ public class LlmProviderMasterKeyEntity {
             UUID createdByUserId,
             Instant createdAt,
             Instant lastRotatedAt,
-            String baseUrl) {
+            String baseUrl,
+            String maskedKey) {
         this.provider = provider;
         this.keyFormat = keyFormat;
         this.encryptedKey = copyEncryptedKey(encryptedKey);
@@ -68,6 +72,7 @@ public class LlmProviderMasterKeyEntity {
         this.createdAt = createdAt;
         this.lastRotatedAt = lastRotatedAt;
         this.baseUrl = baseUrl;
+        this.maskedKey = maskedKey;
     }
 
     public LlmProvider getProvider() {
@@ -104,6 +109,10 @@ public class LlmProviderMasterKeyEntity {
 
     public String getBaseUrl() {
         return baseUrl;
+    }
+
+    public String getMaskedKey() {
+        return maskedKey;
     }
 
     public boolean hasEncryptedKey() {

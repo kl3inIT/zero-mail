@@ -148,16 +148,25 @@ public class ProviderMasterKeyResolver {
     }
 
     private MasterKeyMaskedRow toMaskedRow(LlmProviderMasterKeyEntity entity) {
-        String maskedKey =
-                entity.hasEncryptedKey()
-                        ? resolveOptional(entity.getProvider())
-                                .map(
-                                        resolvedMasterKey ->
-                                                MasterKeyMasker.mask(
-                                                        resolvedMasterKey.plaintextKey(),
-                                                        entity.getProvider()))
-                                .orElse(null)
-                        : null;
+        // WR-02: prefer the stored mask (populated at write time) to avoid decrypting the master
+        // key just to render the list page. Legacy rows persisted before changelog 080 may still
+        // have a null masked_key; in that case fall back to the decrypt path but only for that row.
+        String storedMaskedKey = entity.getMaskedKey();
+        String maskedKey;
+        if (storedMaskedKey != null && !storedMaskedKey.isBlank()) {
+            maskedKey = storedMaskedKey;
+        } else if (entity.hasEncryptedKey()) {
+            maskedKey =
+                    resolveOptional(entity.getProvider())
+                            .map(
+                                    resolvedMasterKey ->
+                                            MasterKeyMasker.mask(
+                                                    resolvedMasterKey.plaintextKey(),
+                                                    entity.getProvider()))
+                            .orElse(null);
+        } else {
+            maskedKey = null;
+        }
         return new MasterKeyMaskedRow(
                 entity.getProvider(),
                 maskedKey,

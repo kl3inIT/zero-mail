@@ -138,7 +138,8 @@ public class MasterKeyAdminService {
         }
         String maskedKey = MasterKeyMasker.mask(plaintextKey, provider);
         StoredMasterKey storedMasterKey =
-                storeMasterKey(provider, keyFormat, baseUrl, plaintextKey, adminUser.id());
+                storeMasterKey(
+                        provider, keyFormat, baseUrl, plaintextKey, maskedKey, adminUser.id());
         writeChangedAudit(
                 AdminAuditAction.MASTER_KEY_SET,
                 provider,
@@ -186,7 +187,8 @@ public class MasterKeyAdminService {
         }
         String maskedKey = MasterKeyMasker.mask(plaintextKey, provider);
         StoredMasterKey storedMasterKey =
-                storeMasterKey(provider, keyFormat, baseUrl, plaintextKey, adminUser.id());
+                storeMasterKey(
+                        provider, keyFormat, baseUrl, plaintextKey, maskedKey, adminUser.id());
         writeChangedAudit(
                 AdminAuditAction.MASTER_KEY_ROTATED,
                 provider,
@@ -227,6 +229,7 @@ public class MasterKeyAdminService {
             KeyFormat keyFormat,
             String baseUrl,
             byte[] plaintextKey,
+            String maskedKey,
             UUID actorId) {
         byte[] encryptedKey;
         try {
@@ -246,7 +249,8 @@ public class MasterKeyAdminService {
                         kekVersion,
                         actorId,
                         now,
-                        cleanBaseUrl(baseUrl));
+                        cleanBaseUrl(baseUrl),
+                        maskedKey);
         if (providerSecretVersion == null) {
             throw new MissingMasterKeyRowException(provider);
         }

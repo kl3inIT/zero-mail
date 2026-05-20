@@ -173,3 +173,6 @@ databaseChangeLog:
   - include:
       file: changes/079-llm-call-audit-credential-source.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/080-llm-provider-master-key-masked-key.yaml
+      relativeToChangelogFile: true
