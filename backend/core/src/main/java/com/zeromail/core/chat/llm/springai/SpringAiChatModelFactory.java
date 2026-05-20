@@ -117,25 +117,41 @@ public class SpringAiChatModelFactory {
                 zeroMailCoreProperties.llm().platform();
         String baseUrl = llmProperties.baseUrl();
         String apiKey = llmProperties.apiKey();
-        if (resolvedMasterKey != null) {
-            if (resolvedMasterKey.keyFormat() != KeyFormat.OPENAI_FORMAT) {
-                throw new IllegalStateException(
-                        "Assistant streaming platform provider requires OpenAI-compatible format");
+        // WR-11: when sourcing the api key from a master-key row, take a local defensive
+        // byte[] copy, decode once into a String, then zero the local copy in a finally.
+        // The ResolvedMasterKey's own byte[] is owned by the resolver cache and is zeroed
+        // on cache eviction (see ProviderMasterKeyResolver.invalidate). The apiKey String
+        // itself remains long-lived inside the built ChatModel — this is the accepted
+        // trade-off for chat-model reuse and is documented in CLAUDE.md privacy notes.
+        byte[] localKeyCopy = null;
+        try {
+            if (resolvedMasterKey != null) {
+                if (resolvedMasterKey.keyFormat() != KeyFormat.OPENAI_FORMAT) {
+                    throw new IllegalStateException(
+                            "Assistant streaming platform provider requires OpenAI-compatible"
+                                    + " format");
+                }
+                baseUrl = resolvedMasterKey.baseUrl();
+                byte[] sourceKey = resolvedMasterKey.plaintextKey();
+                localKeyCopy = java.util.Arrays.copyOf(sourceKey, sourceKey.length);
+                apiKey = new String(localKeyCopy, StandardCharsets.UTF_8);
             }
-            baseUrl = resolvedMasterKey.baseUrl();
-            apiKey = new String(resolvedMasterKey.plaintextKey(), StandardCharsets.UTF_8);
+            return OpenAiChatModel.builder()
+                    .options(
+                            OpenAiChatOptions.builder()
+                                    .baseUrl(baseUrl)
+                                    .apiKey(apiKey)
+                                    .model(modelId)
+                                    .temperature(0.2)
+                                    .timeout(llmProperties.readTimeout())
+                                    .internalToolExecutionEnabled(false)
+                                    .build())
+                    .build();
+        } finally {
+            if (localKeyCopy != null) {
+                java.util.Arrays.fill(localKeyCopy, (byte) 0);
+            }
         }
-        return OpenAiChatModel.builder()
-                .options(
-                        OpenAiChatOptions.builder()
-                                .baseUrl(baseUrl)
-                                .apiKey(apiKey)
-                                .model(modelId)
-                                .temperature(0.2)
-                                .timeout(llmProperties.readTimeout())
-                                .internalToolExecutionEnabled(false)
-                                .build())
-                .build();
     }
 
     private StreamingChatModel byokModel(UUID tenantId, String providerId, String modelId) {
