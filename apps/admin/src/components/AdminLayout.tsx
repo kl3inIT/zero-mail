@@ -14,7 +14,7 @@ const navigationItems = [
   { to: '/', label: 'Dashboard', icon: GaugeIcon },
   { to: '/audit', label: 'Audit log', icon: ClipboardListIcon },
   { to: '/role-grants', label: 'Role grants', icon: UsersIcon },
-  { to: '/master-keys', label: 'Master keys', icon: KeyRoundIcon, disabled: true },
+  { to: '/master-keys', label: 'Master keys', icon: KeyRoundIcon },
   { to: '/catalog', label: 'Catalog', icon: BookOpenIcon, disabled: true },
 ] as const;
 

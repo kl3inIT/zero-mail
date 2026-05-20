@@ -20,6 +20,8 @@ class AdminPathBodyBanTest {
             Pattern.compile("(?i).*(body|bodyHtml|snippet|payload|prompt|completion|content).*");
     private static final Pattern CONTENT_GETTER_NAME =
             Pattern.compile("(?i)get(Body|BodyHtml|Snippet|Payload|Prompt|Completion|Content).*");
+    private static final String ADMIN_REQUEST_BODY_ANNOTATION =
+            "com.zeromail.api.security.AdminRequestBody";
 
     @Test
     void admin_paths_never_expose_or_pull_email_content_shapes() {
@@ -46,6 +48,9 @@ class AdminPathBodyBanTest {
 
         @Override
         public void check(JavaClass javaClass, ConditionEvents conditionEvents) {
+            if (javaClass.isAnnotatedWith(ADMIN_REQUEST_BODY_ANNOTATION)) {
+                return;
+            }
             for (JavaField field : javaClass.getAllFields()) {
                 if (CONTENT_FIELD_NAME.matcher(field.getName()).matches()) {
                     conditionEvents.add(

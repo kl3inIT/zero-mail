@@ -1,6 +1,8 @@
 package com.zeromail.api.error;
 
 import com.zeromail.core.admin.auth.exception.AdminAuthException;
+import com.zeromail.core.admin.mkey.usecases.MasterKeyAdminService;
+import com.zeromail.core.admin.mkey.usecases.MasterKeyRateLimiter;
 import java.util.List;
 import java.util.Map;
 import org.springframework.core.Ordered;
@@ -25,6 +27,33 @@ public class AdminErrorAdvice {
     ResponseEntity<ProblemDetail> onAuditExportTooLarge(
             AuditExportTooLargeException auditExportTooLargeException) {
         return problem(HttpStatus.BAD_REQUEST, "error.admin.audit_export_too_large");
+    }
+
+    @ExceptionHandler(MasterKeyAdminService.EditSessionRequiredException.class)
+    ResponseEntity<ProblemDetail> onEditSessionRequired(
+            MasterKeyAdminService.EditSessionRequiredException editSessionRequiredException) {
+        return problem(HttpStatus.BAD_REQUEST, "error.admin.master_key_edit_session_required");
+    }
+
+    @ExceptionHandler(MasterKeyAdminService.InvalidKeyFormatException.class)
+    ResponseEntity<ProblemDetail> onInvalidKeyFormat(
+            MasterKeyAdminService.InvalidKeyFormatException invalidKeyFormatException) {
+        return problem(HttpStatus.BAD_REQUEST, "error.admin.master_key_invalid_format");
+    }
+
+    @ExceptionHandler(MasterKeyAdminService.MasterKeyTestFailedException.class)
+    ResponseEntity<ProblemDetail> onMasterKeyTestFailed(
+            MasterKeyAdminService.MasterKeyTestFailedException masterKeyTestFailedException) {
+        ProblemDetail problemDetail =
+                problemDetail(HttpStatus.BAD_REQUEST, "error.admin.master_key_test_failed");
+        problemDetail.setProperty("result", masterKeyTestFailedException.result());
+        return ResponseEntity.badRequest().body(problemDetail);
+    }
+
+    @ExceptionHandler(MasterKeyRateLimiter.RateLimitExceededException.class)
+    ResponseEntity<ProblemDetail> onMasterKeyRateLimited(
+            MasterKeyRateLimiter.RateLimitExceededException rateLimitExceededException) {
+        return problem(HttpStatus.TOO_MANY_REQUESTS, "error.admin.master_key_rate_limited");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
