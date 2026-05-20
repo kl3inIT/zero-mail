@@ -230,67 +230,6 @@
         }
       }
     },
-    "/api/rules/reorder": {
-      "put": {
-        "tags": ["rules"],
-        "operationId": "reorderRules",
-        "requestBody": {
-          "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/RuleReorderRequest" } }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "type": "array",
-                  "items": { "$ref": "#/components/schemas/RuleResponse" }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          }
-        }
-      }
-    },
     "/tenant/disconnect": {
       "post": {
         "tags": ["disconnect-controller"],
@@ -434,6 +373,229 @@
         }
       }
     },
+    "/api/unsubscribe/campaigns/{jobId}/undo": {
+      "post": {
+        "tags": ["cleanup"],
+        "operationId": "undo",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "No Content" },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/unsubscribe/campaigns/{jobId}/senders/{senderEmail}/retry": {
+      "post": {
+        "tags": ["cleanup"],
+        "operationId": "retrySender",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          { "name": "senderEmail", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "202": { "description": "Accepted" },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/unsubscribe/campaigns/preview": {
+      "post": {
+        "tags": ["cleanup"],
+        "operationId": "preview",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CampaignPreviewRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/CampaignPreviewResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/unsubscribe/campaigns/execute": {
+      "post": {
+        "tags": ["cleanup"],
+        "operationId": "execute",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CampaignExecuteRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/CampaignExecuteResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
     "/api/triage/sender-safety-net/{senderEmail}/opt-in": {
       "post": {
         "tags": ["triage"],
@@ -490,7 +652,7 @@
     "/api/triage/audit/{auditId}/undo": {
       "post": {
         "tags": ["triage"],
-        "operationId": "undo",
+        "operationId": "undo_1",
         "parameters": [
           {
             "name": "auditId",
@@ -552,73 +714,45 @@
             "name": "gmailThreadId",
             "in": "path",
             "required": true,
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
+          "200": { "description": "OK" },
           "400": {
             "description": "Bad Request",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "401": {
             "description": "Unauthorized",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "403": {
             "description": "Forbidden",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "404": {
             "description": "Not Found",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "409": {
             "description": "Conflict",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "500": {
             "description": "Internal Server Error",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           }
         }
@@ -633,80 +767,50 @@
             "name": "gmailThreadId",
             "in": "path",
             "required": true,
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ThreadDraftResponse"
-                }
-              }
+              "*/*": { "schema": { "$ref": "#/components/schemas/ThreadDraftResponse" } }
             }
           },
           "400": {
             "description": "Bad Request",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "401": {
             "description": "Unauthorized",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "403": {
             "description": "Forbidden",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "404": {
             "description": "Not Found",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "409": {
             "description": "Conflict",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "500": {
             "description": "Internal Server Error",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           }
         }
@@ -931,17 +1035,23 @@
         }
       }
     },
-    "/api/rules/templates/materialize-selected": {
+    "/api/rules/preview": {
       "post": {
         "tags": ["rules"],
-        "operationId": "materializeSelectedTemplates",
+        "operationId": "previewDraftRule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RuleDraftPreviewRequest" }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "OK",
             "content": {
-              "*/*": {
-                "schema": { "$ref": "#/components/schemas/RuleTemplateMaterializationResponse" }
-              }
+              "*/*": { "schema": { "$ref": "#/components/schemas/RulePreviewResponse" } }
             }
           },
           "400": {
@@ -983,14 +1093,14 @@
         }
       }
     },
-    "/api/rules/preview": {
+    "/api/rules/preview-enabled": {
       "post": {
         "tags": ["rules"],
-        "operationId": "previewDraftRule",
+        "operationId": "previewAllEnabledRules",
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/RuleDraftPreviewRequest" }
+              "schema": { "$ref": "#/components/schemas/RuleEnabledPreviewRequest" }
             }
           },
           "required": true
@@ -1000,6 +1110,64 @@
             "description": "OK",
             "content": {
               "*/*": { "schema": { "$ref": "#/components/schemas/RulePreviewResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/rules/preview-custom": {
+      "post": {
+        "tags": ["rules"],
+        "operationId": "previewCustomMail",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RuleCustomPreviewRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/RuleCustomPreviewResponse" } }
             }
           },
           "400": {
@@ -1214,6 +1382,112 @@
             "description": "OK",
             "content": {
               "*/*": { "schema": { "$ref": "#/components/schemas/ByokValidateResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/cleanup/suppression": {
+      "get": {
+        "tags": ["cleanup"],
+        "operationId": "list",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/SuppressionListResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["cleanup"],
+        "operationId": "add",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SuppressionAddRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/SuppressionEntryResponse" } }
             }
           },
           "400": {
@@ -1492,70 +1766,44 @@
             "description": "OK",
             "content": {
               "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotificationPreferencesResponse"
-                }
+                "schema": { "$ref": "#/components/schemas/NotificationPreferencesResponse" }
               }
             }
           },
           "400": {
             "description": "Bad Request",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "401": {
             "description": "Unauthorized",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "403": {
             "description": "Forbidden",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "404": {
             "description": "Not Found",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "409": {
             "description": "Conflict",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "500": {
             "description": "Internal Server Error",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           }
         }
@@ -1566,9 +1814,7 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NotificationPreferencesUpdateRequest"
-              }
+              "schema": { "$ref": "#/components/schemas/NotificationPreferencesUpdateRequest" }
             }
           },
           "required": true
@@ -1578,70 +1824,44 @@
             "description": "OK",
             "content": {
               "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotificationPreferencesResponse"
-                }
+                "schema": { "$ref": "#/components/schemas/NotificationPreferencesResponse" }
               }
             }
           },
           "400": {
             "description": "Bad Request",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "401": {
             "description": "Unauthorized",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "403": {
             "description": "Forbidden",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "404": {
             "description": "Not Found",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "409": {
             "description": "Conflict",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "500": {
             "description": "Internal Server Error",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           }
         }
@@ -1790,6 +2010,125 @@
         }
       }
     },
+    "/api/unsubscribe/candidates": {
+      "get": {
+        "tags": ["cleanup"],
+        "operationId": "listCandidates",
+        "parameters": [
+          { "name": "window", "in": "query", "required": false, "schema": { "type": "string" } },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 25 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/UnsubscribeCandidateListResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/unsubscribe/campaigns/{jobId}": {
+      "get": {
+        "tags": ["cleanup"],
+        "operationId": "getStatus",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": { "schema": { "$ref": "#/components/schemas/CampaignStatusResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
     "/api/triage/sender-safety-net": {
       "get": {
         "tags": ["triage"],
@@ -1843,122 +2182,68 @@
     "/api/triage/audit": {
       "get": {
         "tags": ["triage"],
-        "operationId": "list",
+        "operationId": "list_1",
         "parameters": [
           {
             "name": "limit",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 50
-            }
+            "schema": { "type": "integer", "format": "int32", "default": 50 }
           },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "action",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
+          { "name": "cursor", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "action", "in": "query", "required": false, "schema": { "type": "string" } },
           {
             "name": "since",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            }
+            "schema": { "type": "string", "format": "date-time" }
           },
           {
             "name": "until",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "string",
-              "format": "date-time"
-            }
+            "schema": { "type": "string", "format": "date-time" }
           }
         ],
         "responses": {
           "200": {
             "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuditListResponse"
-                }
-              }
-            }
+            "content": { "*/*": { "schema": { "$ref": "#/components/schemas/AuditListResponse" } } }
           },
           "400": {
             "description": "Bad Request",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "401": {
             "description": "Unauthorized",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "403": {
             "description": "Forbidden",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "404": {
             "description": "Not Found",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "409": {
             "description": "Conflict",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "500": {
             "description": "Internal Server Error",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           }
         }
@@ -1967,113 +2252,64 @@
     "/api/threads": {
       "get": {
         "tags": ["thread-inbox"],
-        "operationId": "list_1",
+        "operationId": "list_2",
         "parameters": [
-          {
-            "name": "bucket",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
+          { "name": "bucket", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "cursor", "in": "query", "required": false, "schema": { "type": "string" } },
           {
             "name": "limit",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 50
-            }
+            "schema": { "type": "integer", "format": "int32", "default": 50 }
           },
           {
             "name": "resolved",
             "in": "query",
             "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false
-            }
+            "schema": { "type": "boolean", "default": false }
           }
         ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/NeedsReplyListResponse"
-                }
-              }
+              "*/*": { "schema": { "$ref": "#/components/schemas/NeedsReplyListResponse" } }
             }
           },
           "400": {
             "description": "Bad Request",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "401": {
             "description": "Unauthorized",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "403": {
             "description": "Forbidden",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "404": {
             "description": "Not Found",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "409": {
             "description": "Conflict",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "500": {
             "description": "Internal Server Error",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           }
         }
@@ -2087,71 +2323,43 @@
           "200": {
             "description": "OK",
             "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToReplyCountResponse"
-                }
-              }
+              "*/*": { "schema": { "$ref": "#/components/schemas/ToReplyCountResponse" } }
             }
           },
           "400": {
             "description": "Bad Request",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "401": {
             "description": "Unauthorized",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "403": {
             "description": "Forbidden",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "404": {
             "description": "Not Found",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "409": {
             "description": "Conflict",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "500": {
             "description": "Internal Server Error",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           }
         }
@@ -2322,77 +2530,49 @@
         "tags": ["analytics"],
         "operationId": "summary",
         "parameters": [
-          {
-            "name": "window",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
+          { "name": "window", "in": "query", "required": false, "schema": { "type": "string" } }
         ],
         "responses": {
-          "400": {
-            "description": "Bad Request"
-          },
           "200": {
             "description": "OK",
             "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/AnalyticsSummaryResponse"
-                }
-              }
+              "*/*": { "schema": { "$ref": "#/components/schemas/AnalyticsSummaryResponse" } }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "401": {
             "description": "Unauthorized",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "403": {
             "description": "Forbidden",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "404": {
             "description": "Not Found",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "409": {
             "description": "Conflict",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           },
           "500": {
             "description": "Internal Server Error",
             "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
           }
         }
@@ -2404,6 +2584,59 @@
         "operationId": "deleteAccount",
         "responses": {
           "200": { "description": "OK" },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/cleanup/suppression/{suppressionId}": {
+      "delete": {
+        "tags": ["cleanup"],
+        "operationId": "remove",
+        "parameters": [
+          {
+            "name": "suppressionId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "No Content" },
           "400": {
             "description": "Bad Request",
             "content": {
@@ -2496,25 +2729,6 @@
           "customized": { "type": "boolean" }
         }
       },
-      "RuleOrderEntryRequest": {
-        "type": "object",
-        "properties": {
-          "ruleId": { "type": "string", "format": "uuid" },
-          "entityVersion": { "type": "integer", "format": "int32" }
-        },
-        "required": ["entityVersion", "ruleId"]
-      },
-      "RuleReorderRequest": {
-        "type": "object",
-        "properties": {
-          "entries": {
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/RuleOrderEntryRequest" },
-            "minItems": 1
-          }
-        },
-        "required": ["entries"]
-      },
       "SelectTemplateRequest": {
         "type": "object",
         "properties": {
@@ -2525,6 +2739,59 @@
           }
         },
         "required": ["templateKey"]
+      },
+      "CampaignPreviewRequest": {
+        "type": "object",
+        "properties": {
+          "senderEmails": {
+            "type": "array",
+            "items": { "type": "string", "maxLength": 320, "minLength": 0 },
+            "maxItems": 25,
+            "minItems": 0
+          }
+        },
+        "required": ["senderEmails"]
+      },
+      "CampaignPreviewResponse": {
+        "type": "object",
+        "properties": {
+          "perSender": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PerSenderPreviewResponse" }
+          },
+          "totalHistoryCount": { "type": "integer", "format": "int64" }
+        }
+      },
+      "PerSenderPreviewResponse": {
+        "type": "object",
+        "properties": {
+          "senderEmail": { "type": "string" },
+          "senderDomain": { "type": "string" },
+          "unsubscribeMethod": { "type": "string" },
+          "historyMessageCount": { "type": "integer", "format": "int64" },
+          "willArchive": { "type": "boolean" },
+          "riskBadge": { "type": "string" }
+        }
+      },
+      "CampaignExecuteRequest": {
+        "type": "object",
+        "properties": {
+          "senderEmails": {
+            "type": "array",
+            "items": { "type": "string", "maxLength": 320, "minLength": 0 },
+            "maxItems": 25,
+            "minItems": 0
+          }
+        },
+        "required": ["senderEmails"]
+      },
+      "CampaignExecuteResponse": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "string", "format": "uuid" },
+          "jobId": { "type": "string", "format": "uuid" },
+          "status": { "type": "string" }
+        }
       },
       "SenderOptInResponse": {
         "type": "object",
@@ -2541,18 +2808,10 @@
       "ThreadDraftResponse": {
         "type": "object",
         "properties": {
-          "draftId": {
-            "type": "string"
-          },
-          "gmailThreadId": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "openInGmailUrl": {
-            "type": "string"
-          }
+          "draftId": { "type": "string" },
+          "gmailThreadId": { "type": "string" },
+          "status": { "type": "string" },
+          "openInGmailUrl": { "type": "string" }
         }
       },
       "RuleCreateRequest": {
@@ -2566,7 +2825,10 @@
       },
       "RulePreviewRequest": {
         "type": "object",
-        "properties": { "sampleSize": { "type": "integer", "format": "int32" } }
+        "properties": {
+          "sampleSize": { "type": "integer", "format": "int32" },
+          "evaluateSemanticIntents": { "type": "boolean" }
+        }
       },
       "ActionChipResponse": {
         "type": "object",
@@ -2675,16 +2937,67 @@
         "type": "object",
         "properties": {
           "compiled": { "$ref": "#/components/schemas/CompiledPayloadRequest" },
-          "sampleSize": { "type": "integer", "format": "int32" }
+          "sampleSize": { "type": "integer", "format": "int32" },
+          "evaluateSemanticIntents": { "type": "boolean" }
         },
         "required": ["compiled"]
+      },
+      "RuleEnabledPreviewRequest": {
+        "type": "object",
+        "properties": {
+          "sampleSize": { "type": "integer", "format": "int32" },
+          "evaluateSemanticIntents": { "type": "boolean" }
+        }
+      },
+      "RuleCustomPreviewRequest": {
+        "type": "object",
+        "properties": {
+          "subject": { "type": "string", "maxLength": 500, "minLength": 0 },
+          "body": { "type": "string", "maxLength": 50000, "minLength": 0 },
+          "ruleIds": {
+            "type": "array",
+            "items": { "type": "string", "format": "uuid" },
+            "maxItems": 64,
+            "minItems": 0
+          }
+        }
+      },
+      "Entry": {
+        "type": "object",
+        "properties": {
+          "ruleId": { "type": "string", "format": "uuid" },
+          "displayName": { "type": "string" },
+          "enabled": { "type": "boolean" },
+          "matched": { "type": "boolean" },
+          "deferred": { "type": "boolean" },
+          "proposedActionChips": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ActionChipResponse" }
+          },
+          "matchedEvidenceChips": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/EvidenceChipResponse" }
+          },
+          "deferredEvidenceChips": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/EvidenceChipResponse" }
+          }
+        }
+      },
+      "RuleCustomPreviewResponse": {
+        "type": "object",
+        "properties": {
+          "entries": { "type": "array", "items": { "$ref": "#/components/schemas/Entry" } }
+        }
       },
       "RuleCompileRequest": {
         "type": "object",
         "properties": {
           "sourceText": { "type": "string", "maxLength": 4000, "minLength": 0 },
           "clarificationAnswer": { "type": "string", "maxLength": 1000, "minLength": 0 },
-          "priorCompileContext": { "type": "string", "maxLength": 2000, "minLength": 0 }
+          "priorCompileContext": { "type": "string", "maxLength": 2000, "minLength": 0 },
+          "priorDraftJson": { "type": "string", "maxLength": 4000, "minLength": 0 },
+          "editInstruction": { "type": "string", "maxLength": 500, "minLength": 0 }
         },
         "required": ["sourceText"]
       },
@@ -2773,6 +3086,23 @@
           "reason": { "type": "string" }
         }
       },
+      "SuppressionAddRequest": {
+        "type": "object",
+        "properties": {
+          "senderEmailOrDomain": { "type": "string", "maxLength": 320, "minLength": 0 }
+        },
+        "required": ["senderEmailOrDomain"]
+      },
+      "SuppressionEntryResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "senderEmail": { "type": "string" },
+          "senderDomain": { "type": "string" },
+          "reason": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
       "TopupIntentRequest": {
         "type": "object",
         "properties": { "packageCode": { "type": "string", "minLength": 1 } },
@@ -2846,9 +3176,7 @@
       "NotificationPreferencesUpdateRequest": {
         "type": "object",
         "properties": {
-          "digestEnabled": {
-            "type": "boolean"
-          },
+          "digestEnabled": { "type": "boolean" },
           "digestSendHourLocal": {
             "type": "integer",
             "format": "int32",
@@ -2861,19 +3189,10 @@
       "NotificationPreferencesResponse": {
         "type": "object",
         "properties": {
-          "channel": {
-            "type": "string"
-          },
-          "digestEnabled": {
-            "type": "boolean"
-          },
-          "digestSendHourLocal": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "timeZone": {
-            "type": "string"
-          }
+          "channel": { "type": "string" },
+          "digestEnabled": { "type": "boolean" },
+          "digestSendHourLocal": { "type": "integer", "format": "int32" },
+          "timeZone": { "type": "string" }
         }
       },
       "GmailConnectionStatusResponse": {
@@ -2881,6 +3200,57 @@
         "properties": {
           "connectionStatus": { "type": "string" },
           "googleEmail": { "type": "string" }
+        }
+      },
+      "UnsubscribeCandidateListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/UnsubscribeCandidateResponse" }
+          }
+        }
+      },
+      "UnsubscribeCandidateResponse": {
+        "type": "object",
+        "properties": {
+          "senderEmail": { "type": "string" },
+          "senderDomain": { "type": "string" },
+          "messageCount": { "type": "integer", "format": "int64" },
+          "lastSeenAt": { "type": "string", "format": "date-time" },
+          "unsubscribeMethod": { "type": "string" },
+          "suppressed": { "type": "boolean" }
+        }
+      },
+      "CampaignStatusResponse": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "string", "format": "uuid" },
+          "jobId": { "type": "string", "format": "uuid" },
+          "status": { "type": "string" },
+          "progressPct": { "type": "integer", "format": "int32" },
+          "appliedAt": { "type": "string", "format": "date-time" },
+          "revertedAt": { "type": "string", "format": "date-time" },
+          "totalSenderCount": { "type": "integer", "format": "int32" },
+          "totalHistoryMessageCount": { "type": "integer", "format": "int32" },
+          "perSender": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PerSenderStateResponse" }
+          },
+          "undoAvailable": { "type": "boolean" }
+        }
+      },
+      "PerSenderStateResponse": {
+        "type": "object",
+        "properties": {
+          "senderEmail": { "type": "string" },
+          "senderDomain": { "type": "string" },
+          "unsubscribeMethod": { "type": "string" },
+          "state": { "type": "string" },
+          "failureReason": { "type": "string" },
+          "archivedMessageCount": { "type": "integer", "format": "int32" },
+          "startedAt": { "type": "string", "format": "date-time" },
+          "finishedAt": { "type": "string", "format": "date-time" }
         }
       },
       "ProtectedSenderResponse": {
@@ -2899,45 +3269,18 @@
       "AuditEntryResponse": {
         "type": "object",
         "properties": {
-          "auditId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "gmailThreadId": {
-            "type": "string"
-          },
-          "gmailMessageId": {
-            "type": "string"
-          },
-          "subject": {
-            "type": "string"
-          },
-          "senderEmail": {
-            "type": "string"
-          },
-          "ruleName": {
-            "type": "string"
-          },
-          "action": {
-            "type": "string"
-          },
-          "reason": {
-            "type": "string"
-          },
-          "decisionState": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "undoableUntil": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "draftId": {
-            "type": "string"
-          }
+          "auditId": { "type": "string", "format": "uuid" },
+          "gmailThreadId": { "type": "string" },
+          "gmailMessageId": { "type": "string" },
+          "subject": { "type": "string" },
+          "senderEmail": { "type": "string" },
+          "ruleName": { "type": "string" },
+          "action": { "type": "string" },
+          "reason": { "type": "string" },
+          "decisionState": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "undoableUntil": { "type": "string", "format": "date-time" },
+          "draftId": { "type": "string" }
         }
       },
       "AuditListResponse": {
@@ -2945,13 +3288,9 @@
         "properties": {
           "items": {
             "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AuditEntryResponse"
-            }
+            "items": { "$ref": "#/components/schemas/AuditEntryResponse" }
           },
-          "nextCursor": {
-            "type": "string"
-          }
+          "nextCursor": { "type": "string" }
         }
       },
       "NeedsReplyListResponse": {
@@ -2959,54 +3298,27 @@
         "properties": {
           "items": {
             "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/NeedsReplyRowResponse"
-            }
+            "items": { "$ref": "#/components/schemas/NeedsReplyRowResponse" }
           },
-          "nextCursor": {
-            "type": "string"
-          },
-          "toReplyCount": {
-            "type": "integer",
-            "format": "int64"
-          }
+          "nextCursor": { "type": "string" },
+          "toReplyCount": { "type": "integer", "format": "int64" }
         }
       },
       "NeedsReplyRowResponse": {
         "type": "object",
         "properties": {
-          "gmailThreadId": {
-            "type": "string"
-          },
-          "subject": {
-            "type": "string"
-          },
-          "otherParty": {
-            "type": "string"
-          },
-          "lastActivityAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "draftStatus": {
-            "type": "string"
-          },
-          "resolved": {
-            "type": "boolean"
-          },
-          "openInGmailUrl": {
-            "type": "string"
-          }
+          "gmailThreadId": { "type": "string" },
+          "subject": { "type": "string" },
+          "otherParty": { "type": "string" },
+          "lastActivityAt": { "type": "string", "format": "date-time" },
+          "draftStatus": { "type": "string" },
+          "resolved": { "type": "boolean" },
+          "openInGmailUrl": { "type": "string" }
         }
       },
       "ToReplyCountResponse": {
         "type": "object",
-        "properties": {
-          "toReplyCount": {
-            "type": "integer",
-            "format": "int64"
-          }
-        }
+        "properties": { "toReplyCount": { "type": "integer", "format": "int64" } }
       },
       "RuleTemplateResponse": {
         "type": "object",
@@ -3046,6 +3358,15 @@
           "savedAt": { "type": "string", "format": "date-time" }
         }
       },
+      "SuppressionListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/SuppressionEntryResponse" }
+          }
+        }
+      },
       "BillingPackageResponse": {
         "type": "object",
         "properties": {
@@ -3065,68 +3386,108 @@
           "currency": { "type": "string" }
         }
       },
+      "ActionMixResponse": {
+        "type": "object",
+        "properties": {
+          "actionType": { "type": "string" },
+          "applied": { "type": "integer", "format": "int64" },
+          "reverted": { "type": "integer", "format": "int64" },
+          "failed": { "type": "integer", "format": "int64" }
+        }
+      },
       "AnalyticsSummaryResponse": {
         "type": "object",
         "properties": {
-          "window": {
-            "type": "string"
-          },
-          "volumeObserved": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "volumeApplied": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "timeSavedSeconds": {
-            "type": "integer",
-            "format": "int64"
-          },
+          "window": { "type": "string" },
+          "volumeObserved": { "type": "integer", "format": "int64" },
+          "volumeApplied": { "type": "integer", "format": "int64" },
+          "timeSavedSeconds": { "type": "integer", "format": "int64" },
           "topSenders": {
             "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TopSenderResponse"
-            }
+            "items": { "$ref": "#/components/schemas/TopSenderResponse" }
           },
           "ruleHits": {
             "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RuleHitResponse"
-            }
+            "items": { "$ref": "#/components/schemas/RuleHitResponse" }
+          },
+          "dailyLoad": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DailyLoadResponse" }
+          },
+          "actionMix": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ActionMixResponse" }
+          },
+          "domainLoad": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DomainLoadResponse" }
+          },
+          "categoryLoad": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CategoryLoadResponse" }
+          },
+          "replyBuckets": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ReplyBucketResponse" }
+          },
+          "automationOpportunities": {
+            "$ref": "#/components/schemas/AutomationOpportunityResponse"
           }
+        }
+      },
+      "AutomationOpportunityResponse": {
+        "type": "object",
+        "properties": {
+          "noRuleMatched": { "type": "integer", "format": "int64" },
+          "failedActions": { "type": "integer", "format": "int64" },
+          "pendingActions": { "type": "integer", "format": "int64" }
+        }
+      },
+      "CategoryLoadResponse": {
+        "type": "object",
+        "properties": {
+          "category": { "type": "string" },
+          "count": { "type": "integer", "format": "int64" }
+        }
+      },
+      "DailyLoadResponse": {
+        "type": "object",
+        "properties": {
+          "day": { "type": "string" },
+          "observed": { "type": "integer", "format": "int64" },
+          "applied": { "type": "integer", "format": "int64" },
+          "reverted": { "type": "integer", "format": "int64" }
+        }
+      },
+      "DomainLoadResponse": {
+        "type": "object",
+        "properties": {
+          "domain": { "type": "string" },
+          "count": { "type": "integer", "format": "int64" }
+        }
+      },
+      "ReplyBucketResponse": {
+        "type": "object",
+        "properties": {
+          "bucket": { "type": "string" },
+          "count": { "type": "integer", "format": "int64" },
+          "withDraft": { "type": "integer", "format": "int64" }
         }
       },
       "RuleHitResponse": {
         "type": "object",
         "properties": {
-          "ruleName": {
-            "type": "string"
-          },
-          "decisions": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "applied": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "reverted": {
-            "type": "integer",
-            "format": "int64"
-          }
+          "ruleName": { "type": "string" },
+          "decisions": { "type": "integer", "format": "int64" },
+          "applied": { "type": "integer", "format": "int64" },
+          "reverted": { "type": "integer", "format": "int64" }
         }
       },
       "TopSenderResponse": {
         "type": "object",
         "properties": {
-          "senderEmail": {
-            "type": "string"
-          },
-          "count": {
-            "type": "integer",
-            "format": "int64"
-          }
+          "senderEmail": { "type": "string" },
+          "count": { "type": "integer", "format": "int64" }
         }
       },
       "ApiError": {

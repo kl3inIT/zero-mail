@@ -94,3 +94,25 @@ runs:
 
 These items are tracked here so the verifier does not re-discover them as new regressions.
 Plan 07 verified these failures are unchanged by its scope.
+
+## From Plan 08 (Wave 7 — Controllers + DTOs + OpenAPI codegen)
+
+### Pre-existing Wave 0 RED frontend hook test stubs — owned by Wave 5b
+
+Two TypeScript test files committed in Wave 0 (`65bbf9d7`) reference frontend hooks +
+query-keys that are scheduled for Wave 5b (frontend feature wave). They block `pnpm tsc
+--noEmit` until the hook files exist. Plan 08 ships the backend HTTP surface they will
+eventually consume, but the Wave 5b frontend code itself is out of scope for this plan:
+
+- `apps/web/features/cleanup/suppression/hooks/__tests__/useSuppressionList.test.ts`
+  - Missing modules: `@/features/cleanup/suppression/query-keys`,
+    `@/features/cleanup/suppression/hooks/useSuppressionList`.
+- `apps/web/features/cleanup/unsubscribe-campaign/hooks/__tests__/useCampaignStatus.test.ts`
+  - Missing modules: `@/features/cleanup/unsubscribe-campaign/query-keys`,
+    `@/features/cleanup/unsubscribe-campaign/hooks/useCampaignStatus`.
+
+Action: Wave 5b ships the missing hook files (with the regenerated `schema.d.ts` types from
+Plan 08) and these tests flip GREEN automatically. No backend change required.
+
+Plan 08 verified these failures are unchanged by its scope (backend-only controllers + DTOs
++ OpenAPI codegen).
