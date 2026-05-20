@@ -28,11 +28,23 @@ export async function createEnrollmentSession(token: string, email: string): Pro
 export async function registerPasskey(email: string): Promise<void> {
   const optionsResponse = await postJson<unknown>('/webauthn/register/options', { email });
   const attestationResponse = await startRegistration({ optionsJSON: optionsResponse });
-  await postJson('/webauthn/register', attestationResponse);
+  // Spring Security 7's WebAuthnRegistrationFilter expects the credential nested
+  // under `publicKey` with an optional `label`; sending the flat SimpleWebAuthn
+  // response yields IllegalArgumentException("publicKey cannot be null").
+  await postJson('/webauthn/register', {
+    publicKey: {
+      credential: attestationResponse,
+      label: 'Zero Mail Admin Passkey',
+    },
+  });
 }
 
 export async function authenticatePasskey(email: string): Promise<void> {
   const optionsResponse = await postJson<unknown>('/webauthn/authenticate/options', { email });
   const assertionResponse = await startAuthentication({ optionsJSON: optionsResponse });
+  // Per Spring Security 7 docs the authentication endpoint expects the assertion
+  // flat at the root (id, rawId, response, clientExtensionResults,
+  // authenticatorAttachment) -- NOT wrapped in `publicKey` like the register
+  // ceremony. Wrapping it yields a silent 401.
   await postJson('/login/webauthn', assertionResponse);
 }

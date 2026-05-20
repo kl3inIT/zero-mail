@@ -15,6 +15,7 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.webauthn.api.AuthenticatorSelectionCriteria;
@@ -37,13 +38,26 @@ public class SecurityConfig {
     private static final PathPatternRequestMatcher ADMIN_REQUEST_MATCHER =
             PathPatternRequestMatcher.withDefaults().matcher("/api/admin/**");
 
+    // Production defaults; override via env for local dev (rpId=localhost,
+    // allowedOrigins=http://localhost:5174). Browser-side WebAuthn rejects any
+    // ceremony where the rpId is not a registrable suffix of the current origin.
+    @Value("${zeromail.admin.webauthn.rp-id:admin.zeromail.com}")
+    private String adminWebAuthnRpId;
+
+    @Value("${zeromail.admin.webauthn.rp-name:Zero Mail Admin}")
+    private String adminWebAuthnRpName;
+
+    @Value("${zeromail.admin.webauthn.allowed-origins:https://admin.zeromail.com}")
+    private Set<String> adminWebAuthnAllowedOrigins;
+
     @Bean
     @Order(1)
     SecurityFilterChain adminChain(
             HttpSecurity http,
             AdminBindingFilter adminBindingFilter,
             AdminResponseBodyBanFilter adminResponseBodyBanFilter,
-            AdminUserDetailsService adminUserDetailsService)
+            AdminUserDetailsService adminUserDetailsService,
+            EnrollmentSessionAuthFilter enrollmentSessionAuthFilter)
             throws Exception {
         // see docs/ops/admin-interface-freeze.md §Spring Security WebAuthn Endpoints
         http.securityMatcher("/api/admin/**", "/webauthn/**", "/login/webauthn/**")
@@ -60,9 +74,10 @@ public class SecurityConfig {
                                         .hasRole("ADMIN"))
                 .webAuthn(
                         webAuthn ->
-                                webAuthn.rpName("Zero Mail Admin")
-                                        .rpId("admin.zeromail.com")
-                                        .allowedOrigins("https://admin.zeromail.com")
+                                webAuthn.rpName(adminWebAuthnRpName)
+                                        .rpId(adminWebAuthnRpId)
+                                        .allowedOrigins(
+                                                adminWebAuthnAllowedOrigins.toArray(new String[0]))
                                         .disableDefaultRegistrationPage(true))
                 .userDetailsService(adminUserDetailsService)
                 .csrf(
@@ -78,6 +93,7 @@ public class SecurityConfig {
                                         new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
                                         ADMIN_REQUEST_MATCHER))
                 .sessionManagement(Customizer.withDefaults())
+                .addFilterAfter(enrollmentSessionAuthFilter, AnonymousAuthenticationFilter.class)
                 .addFilterAfter(adminResponseBodyBanFilter, AuthorizationFilter.class)
                 .addFilterAfter(adminBindingFilter, AdminResponseBodyBanFilter.class);
         return http.build();
@@ -140,10 +156,10 @@ public class SecurityConfig {
                         publicKeyCredentialUserEntityRepository,
                         userCredentialRepository,
                         PublicKeyCredentialRpEntity.builder()
-                                .id("admin.zeromail.com")
-                                .name("Zero Mail Admin")
+                                .id(adminWebAuthnRpId)
+                                .name(adminWebAuthnRpName)
                                 .build(),
-                        Set.of("https://admin.zeromail.com", "http://localhost:5174"));
+                        adminWebAuthnAllowedOrigins);
         relyingPartyOperations.setCustomizeCreationOptions(
                 creationOptionsBuilder ->
                         creationOptionsBuilder.authenticatorSelection(
