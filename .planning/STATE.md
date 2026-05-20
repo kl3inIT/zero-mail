@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin Console Foundation + Settings UI
-status: executing
-stopped_at: Completed 08-8D-PLAN.md
-last_updated: "2026-05-20T08:03:08.526Z"
+status: verifying
+stopped_at: Completed 08-8F-PLAN.md
+last_updated: "2026-05-20T08:51:22.660Z"
 last_activity: 2026-05-20
 progress:
   total_phases: 2
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 6
-  completed_plans: 5
-  percent: 0
+  completed_plans: 6
+  percent: 50
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 
 ## Current Position
 
-Phase: 08 (admin-console-operator-tooling) — EXECUTING
-Plan: 6 of 6 (8D complete; 8E/8F remaining in Wave 2)
-Status: Ready to execute
+Phase: 08 (admin-console-operator-tooling) — COMPLETE (ready for verification)
+Plan: 6 of 6 (8A → 8B → 8C → 8D → 8E → 8F all complete)
+Status: Phase complete — ready for verification
 Last activity: 2026-05-20
 
 ## Current Milestone Roadmap
@@ -161,6 +161,7 @@ See `.planning/ROADMAP.md` for full phase details + success criteria, and `.plan
 | Phase 08 P8C | multi-session | 3 tasks | 71 files |
 | Phase 08 P8D | single-commit | 3 tasks | 71 files |
 | Phase 08 P8E | 00:45:00 | 2 tasks | 36 files |
+| Phase 08 P8F | 31min | 2 tasks | 31 files |
 
 ## Accumulated Context
 
@@ -351,6 +352,8 @@ Recent decisions affecting current work:
 - [Phase 08 8D]: SettingsCatalogController is the first user-side controller mirroring admin-curated state; lives under api.controllers.settings.*, gated by @PreAuthorize("isAuthenticated()"), and joins the public GroupedOpenApi group. CuratedCatalogResponse excludes admin-only fields (sync_history, dependents_count); ETag derived from per-provider catalog_version map + SHA-256 of payload, key `catalog:etag:v1`, TTL 30s, 304 on If-None-Match.
 - [Phase ?]: 8E adds admin_requeue_count alongside attempts so manual interventions and worker retries don't conflict
 - [Phase ?]: 8E uses three-layer privacy gate against payload exposure: DTO field-name regex (compile), explicit SELECT lists (review), JDBC Connection JDK-proxy SQL spy (runtime)
+- [Phase ?]: Phase 8F shipped /admin/spend dashboard with row-level credential_source classification
+- [Phase ?]: Phase 8F created llm_call_audit table from scratch (Liquibase 079); plan and research described it as pre-existing but no changeset existed — Rule 3 deviation
 
 ### Roadmap Evolution
 
@@ -495,7 +498,7 @@ Items acknowledged and deferred at v1.1 milestone close on 2026-05-19.
 
 ## Session Continuity
 
-Last session: 2026-05-20T08:02:03.809Z
+Last session: 2026-05-20T08:49:56.382Z
 Stopped at: Completed 08-8D-PLAN.md
 Resume file: None
 

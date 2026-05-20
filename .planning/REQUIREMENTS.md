@@ -65,8 +65,8 @@
 
 ### Global LLM Spend Dashboard (NEW)
 
-- [ ] **OPS-SPEND-01**: Admin can view at `/admin/spend` a metadata-only spend dashboard aggregating existing `llm_call_audit` rows (which already store no prompt/completion content). Top-line cards: today / last 7d / last 30d total cost split platform-vs-BYOK. Charts: stacked bar by provider, donut by feature (chat/triage/draft), top-N tenants table (N=20)
-- [ ] **OPS-SPEND-02**: Spend dashboard supports a date-range picker (max 90 days) and respects k-anonymity: the top-N tenants table hides rows where the tenant's email cannot be resolved (deleted tenants show as "[deleted]"). No drill-down to per-prompt detail, no WebSocket streaming, no public sharing URL
+- [x] **OPS-SPEND-01**: Admin can view at `/admin/spend` a metadata-only spend dashboard aggregating existing `llm_call_audit` rows (which already store no prompt/completion content). Top-line cards: today / last 7d / last 30d total cost split platform-vs-BYOK. Charts: stacked bar by provider, donut by feature (chat/triage/draft), top-N tenants table (N=20)
+- [x] **OPS-SPEND-02**: Spend dashboard supports a date-range picker (max 90 days) and respects k-anonymity: the top-N tenants table hides rows where the tenant's email cannot be resolved (deleted tenants show as "[deleted]"). No drill-down to per-prompt detail, no WebSocket streaming, no public sharing URL
 
 ### Settings Page — Personalization (carried from v1.1)
 
@@ -228,8 +228,8 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 | OPS-TENANT-05 | Phase 8 | Complete |
 | OPS-QUEUE-01 | Phase 8 | Complete |
 | OPS-QUEUE-02 | Phase 8 | Complete |
-| OPS-SPEND-01 | Phase 8 | Pending |
-| OPS-SPEND-02 | Phase 8 | Pending |
+| OPS-SPEND-01 | Phase 8 | Complete |
+| OPS-SPEND-02 | Phase 8 | Complete |
 | SET-VOICE-01 | Phase 9 | Pending |
 | SET-VOICE-02 | Phase 9 | Pending |
 | SET-VOICE-03 | Phase 9 | Pending |
