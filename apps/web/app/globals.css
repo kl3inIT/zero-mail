@@ -239,9 +239,9 @@
    prototype's clay accent, earnest copy tone, and subtle grid paper texture. */
 .zm-proto,
 .zm-auth {
-  --accent: #867aeb;
-  --accent-hover: #7062df;
-  --accent-soft: #e7e5fc;
+  --accent: #0a0a0a;
+  --accent-hover: #1f1f1f;
+  --accent-soft: #f4f4f5;
   --accent-fg: #ffffff;
   --accent-foreground: var(--accent-fg);
   --bg: var(--background);
@@ -274,10 +274,10 @@
 
 .dark .zm-proto,
 .dark .zm-auth {
-  --accent: #a39cf4;
-  --accent-hover: #b5b0f8;
-  --accent-soft: rgba(163, 156, 244, 0.16);
-  --accent-fg: #1e1a5a;
+  --accent: #f5f5f5;
+  --accent-hover: #ffffff;
+  --accent-soft: rgba(245, 245, 245, 0.12);
+  --accent-fg: #0a0a0a;
   --line-strong: #3d385a;
   --ink: #f2f0fa;
   --ink-2: #e3dff2;
