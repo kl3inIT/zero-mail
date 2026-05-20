@@ -239,4 +239,76 @@ public interface TriageAuditRepository extends JpaRepository<TriageAuditEntity, 
 
     List<TriageAuditEntity> findByTenantIdAndGmailMessageIdOrderByDecidedAtDesc(
             UUID tenantId, String gmailMessageId);
+
+    /**
+     * H-3 Path A insert path for cleanup-campaign archive audit rows. Mirrors the structure of
+     * {@code insertAuditTerminalIfAbsent} but writes {@code source='CLEANUP_CAMPAIGN'}, {@code
+     * action_type='ARCHIVE'}, {@code decision='APPLIED'} in one shot. Returns the inserted audit_id
+     * or empty on duplicate-key conflict (idempotent retry safety).
+     *
+     * <p>Caller (TriageAuditWriter.recordCleanupArchive) is responsible for canonicalizing the
+     * sender email and supplying a deterministic 32-byte args_hash so the unique key {@code
+     * (tenant_id, gmail_message_id, rule_id, action_type, args_hash)} prevents duplicate inserts on
+     * worker retry. {@code rule_id} stays NULL for cleanup writes — these rows are driven by user
+     * campaign action, not a saved rule.
+     */
+    @Query(
+            value =
+                    """
+          INSERT INTO triage_audit (
+            audit_id, tenant_id, gmail_message_id, gmail_thread_id,
+            sanitized_subject, sanitized_sender_email,
+            rule_id, rule_name_snapshot,
+            action_type, args_hash, action_args_json, gmail_change_token, reason, decision,
+            external_ref, attempt_count, last_attempt_at, lease_owner,
+            decided_at, applied_at, created_at, updated_at, version, source
+          )
+          VALUES (
+            gen_random_uuid(), :tenantId, :gmailMessageId, NULL,
+            NULL, :sanitizedSenderEmail,
+            NULL, NULL, 'ARCHIVE', :argsHash, CAST(:actionArgsJson AS jsonb),
+            CAST(:gmailChangeToken AS jsonb), NULL, 'APPLIED',
+            :externalRef, 0, NULL, NULL,
+            NOW(), NOW(), NOW(), NOW(), 0, 'CLEANUP_CAMPAIGN'
+          )
+          ON CONFLICT (tenant_id, gmail_message_id, rule_id, action_type, args_hash) DO NOTHING
+          RETURNING audit_id
+          """,
+            nativeQuery = true)
+    @Transactional
+    Optional<UUID> insertCleanupArchiveAudit(
+            @Param("tenantId") UUID tenantId,
+            @Param("gmailMessageId") String gmailMessageId,
+            @Param("sanitizedSenderEmail") String sanitizedSenderEmail,
+            @Param("argsHash") byte[] argsHash,
+            @Param("actionArgsJson") String actionArgsJson,
+            @Param("gmailChangeToken") String gmailChangeToken,
+            @Param("externalRef") String externalRef);
+
+    /**
+     * H-3 undo lookup (Plan 07 Task 3). Returns the cleanup-sourced audit rows for a given tenant
+     * and sender that were applied inside the undo window and have not yet been reverted. The
+     * partial index {@code idx_triage_audit_cleanup} (changelog 046) makes this scan O(log n) for
+     * cleanup rows only.
+     *
+     * <p>Returns raw column tuples (gmail_message_id, gmail_change_token, external_ref) so the undo
+     * service can drive {@code restoreToInbox} + {@code removeLabel} without round-tripping the
+     * full entity.
+     */
+    @Query(
+            value =
+                    """
+          SELECT gmail_message_id, gmail_change_token, external_ref
+          FROM triage_audit
+          WHERE tenant_id = :tenantId
+            AND sanitized_sender_email = :senderEmail
+            AND source = 'CLEANUP_CAMPAIGN'
+            AND applied_at >= :undoWindowStart
+            AND reverted_at IS NULL
+          """,
+            nativeQuery = true)
+    List<Object[]> findCleanupArchiveRowsForUndo(
+            @Param("tenantId") UUID tenantId,
+            @Param("senderEmail") String senderEmail,
+            @Param("undoWindowStart") Instant undoWindowStart);
 }

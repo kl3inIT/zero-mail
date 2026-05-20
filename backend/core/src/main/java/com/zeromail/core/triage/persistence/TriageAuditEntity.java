@@ -2,11 +2,14 @@ package com.zeromail.core.triage.persistence;
 
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.shared.persistence.AbstractTenantOwnedEntity;
+import com.zeromail.core.triage.domain.CleanupAuditSource;
 import com.zeromail.core.triage.domain.TriageDecision;
 import com.zeromail.core.triage.usecases.TriageActionResultJsonValidator;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -92,6 +95,16 @@ public class TriageAuditEntity extends AbstractTenantOwnedEntity {
     @Column(name = "lease_owner", length = 255)
     private String leaseOwner;
 
+    /**
+     * H-3 Path A discriminator (changelog 046). Defaults to {@link CleanupAuditSource#TRIAGE} for
+     * every existing rule-driven write site; cleanup-campaign writes go through {@link
+     * TriageAuditWriter#recordCleanupArchive(java.util.UUID, String, java.util.UUID, String,
+     * String)} which sets {@link CleanupAuditSource#CLEANUP_CAMPAIGN}.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source", nullable = false, length = 32)
+    private CleanupAuditSource source = CleanupAuditSource.TRIAGE;
+
     protected TriageAuditEntity() {
         // Hibernate
     }
@@ -136,6 +149,7 @@ public class TriageAuditEntity extends AbstractTenantOwnedEntity {
         this.attemptCount = attemptCount;
         this.lastAttemptAt = lastAttemptAt;
         this.leaseOwner = leaseOwner;
+        this.source = CleanupAuditSource.TRIAGE;
         validateBeforeWrite();
     }
 
@@ -232,6 +246,10 @@ public class TriageAuditEntity extends AbstractTenantOwnedEntity {
         return leaseOwner;
     }
 
+    public CleanupAuditSource getSource() {
+        return source;
+    }
+
     @PrePersist
     @PreUpdate
     private void validateBeforeWrite() {
@@ -249,6 +267,9 @@ public class TriageAuditEntity extends AbstractTenantOwnedEntity {
         RuleActionType.fromId(actionType);
         if (decidedAt == null) {
             decidedAt = Instant.now();
+        }
+        if (source == null) {
+            source = CleanupAuditSource.TRIAGE;
         }
     }
 
