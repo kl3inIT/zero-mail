@@ -1294,13 +1294,18 @@ All test files in the requirements map are **NEW**. None exist yet. Wave 0 must 
 
 ---
 
-## Open Questions for Planner
+## Open Questions (RESOLVED)
 
-1. **`cleanup_audit` table vs extend `triage_audit`?** (Section 9). Đề xuất: tạo bảng riêng. Final decision khi viết PLAN.md.
-2. **Single `processing_job` row per campaign vs multiple (1 per retry)?** Đề xuất: single + state-driven attempt loop (Section 4). Final khi viết worker.
-3. **Auto-add suppression heuristic data source:** SPEC.md ghi "user reply ≥1/90d" but doesn't specify how to detect "reply". `TriageAuditEntity` có `action_type='SAVE_DRAFT'` (user-confirmed-send qua Gmail), nhưng "user gửi reply trong Gmail" KHÔNG được ingest qua Pub/Sub (Pub/Sub chỉ push received, not sent). **Cách đo tốt nhất:** scan `mail_message_observed.label_ids` cho `SENT` label + sender_email = current user's gmail address, JOIN với original sender's domain. Planner verify khi viết.
-4. **Suppression sender_email vs sender_domain priority:** Nếu suppressed `boss@example.com` AND suppressed `example.com`, query treat both. SPEC.md không clarify. Đề xuất: suppression check OR (email match OR domain match).
-5. **Frontend candidate list pagination:** SPEC.md không nói. 25-cap là per-campaign, không per-page. Nếu user có 100 candidates thì paginate thế nào? Đề xuất: top 50 by message count, scroll, không paginate v1.
+1. **`cleanup_audit` table vs extend `triage_audit`?** (Section 9). Đề xuất ban đầu: tạo bảng riêng.
+   **RESOLVED: extend `triage_audit` with a `source` column (Path A) (see 08-CONTEXT.md:D-09 addendum + 08-02-PLAN.md:Task 4 + 08-03-PLAN.md:Task 4).** Adds 6th Liquibase changelog `046-triage-audit-source.yaml`; surfaces `source` enum (`TRIAGE` | `CLEANUP_CAMPAIGN`) on `TriageAuditEntity`; exposes typed `TriageAuditWriter.recordCleanupArchive(UUID, String, UUID, String, String) (labelId is opaque Gmail String — see Plan 06 Task 3 ensureLabelExists return type)`. Source of truth for the undo query path in 08-07-PLAN.md:Task 3.
+2. **Single `processing_job` row per campaign vs multiple (1 per retry)?** Đề xuất ban đầu: single + state-driven attempt loop.
+   **RESOLVED: single `processing_job` row per campaign (see 08-CONTEXT.md:D-19).** Payload `{"campaignId": "uuid", "schemaVersion": 1}`. Retry resets the matching `unsubscribe_attempt.state` from FAILED→PENDING and re-queues the existing `processing_job` row; never inserts a second `processing_job` row for the same campaign.
+3. **Auto-add suppression heuristic data source:** SPEC.md ghi "user reply ≥1/90d" nhưng không specify cách detect.
+   **RESOLVED: heuristic over `mail_message_observed` last 30 days (see 08-04-PLAN.md:Task 3 `AutoAddService`).** For each candidate sender, count messages where the tenant's `user_open_count = 0` AND (`archive_count + delete_count`) `>= 3` within the trailing 30-day window. Senders meeting both gates auto-add to `sender_suppression` with `reason='auto'`. Low-cost proxy for "never opened, repeatedly dismissed" — does not require detecting outbound replies.
+4. **Suppression `sender_email` vs `sender_domain` priority:** SPEC.md không clarify. Đề xuất ban đầu: OR (email match OR domain match).
+   **RESOLVED: exact email-match takes precedence over domain-match (see 08-04-PLAN.md:Task 2 `SuppressionLookup` + unit test `emailEntryOverridesDomainEntry` in `SuppressionServiceTest`).** Domain entry only blocks if no `sender_email` entry exists for that exact sender. Allows whitelisting a single sender inside an otherwise-suppressed domain by adding an explicit `sender_email` entry with `reason='manual'`.
+5. **Frontend candidate list pagination:** SPEC.md không nói.
+   **RESOLVED: cursor-based pagination `?after=<lastSenderEmail>&pageSize=25` (see 08-UI-SPEC.md:candidate-list + 08-04-PLAN.md:Task 1 `CandidateQueryService` + analog `PreviewListPager` from Phase 5C/7).** Stable ordering by `(messageCount DESC, senderEmail ASC)` keyset cursor; subsequent pages pass back the last sender email of the previous page.
 
 ---
 

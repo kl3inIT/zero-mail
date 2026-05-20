@@ -67,7 +67,7 @@ created: 2026-05-17
 
 All test files referenced are **NEW** unless explicitly marked as a rename. Wave 0 (test scaffolding before Wave 1 implementation):
 
-**Backend (10 new files + 1 rename):**
+**Backend (12 new files + 1 rename):**
 - [ ] `backend/core/src/test/java/com/zeromail/core/cleanup/application/CandidateQueryServiceTest.java` — stubs for UNS-01
 - [ ] `backend/core/src/test/java/com/zeromail/core/cleanup/application/SuppressionServiceTest.java` — UNS-02
 - [ ] `backend/core/src/test/java/com/zeromail/core/cleanup/application/CampaignUndoServiceTest.java` — UNS-07a
@@ -79,12 +79,15 @@ All test files referenced are **NEW** unless explicitly marked as a rename. Wave
 - [ ] `backend/core/src/test/java/com/zeromail/core/cleanup/CleanupPrivacySweepTest.java` (mirror `TriagePrivacySweepTest`) — UNS-09
 - [ ] `backend/core/src/test/java/com/zeromail/core/cleanup/CleanupModuleVerificationTest.java` — Modulith allowedDependencies verify
 - [ ] `backend/core/src/test/java/com/zeromail/core/cleanup/UnsubscribeMailtoSenderRecipientGuardTest.java` — D-23 mailto recipient provenance guard
+- [ ] `backend/core/src/test/java/com/zeromail/core/triage/usecases/TriageGmailWriterLookupLabelIdTest.java` — H-2 `lookupLabelId` returns `Optional<String>` (empty if label deleted)
+- [ ] `backend/core/src/test/java/com/zeromail/core/triage/persistence/TriageAuditWriterCleanupArchiveTest.java` — H-3 `recordCleanupArchive(...)` persists row with `source='CLEANUP_CAMPAIGN'`
 
-**Worker (4 new files):**
+**Worker (5 new files):**
 - [ ] `backend/worker/src/test/java/com/zeromail/worker/cleanup/UnsubscribeCampaignE2ETest.java` — UNS-04a
 - [ ] `backend/worker/src/test/java/com/zeromail/worker/cleanup/UnsubscribeDomainThrottleTest.java` — UNS-04b
 - [ ] `backend/worker/src/test/java/com/zeromail/worker/scheduling/ProcessingJobReaperBatchTest.java` — Crash recovery (D-03)
 - [ ] `backend/worker/src/test/java/com/zeromail/worker/scheduling/ProcessingJobPurgeBatchTest.java` — Retention purge deletes only terminal jobs older than 90d (D-25)
+- [ ] `backend/worker/src/test/java/com/zeromail/worker/cleanup/ProcessingJobWorkerThrottleDeferralTest.java` — M-2: deferred path leaves `processing_job.status='QUEUED'` (NOT FAILED) after `ThrottleDeferredException` is thrown
 
 **Frontend Vitest (2 new files):**
 - [ ] `apps/web/features/cleanup/unsubscribe-campaign/hooks/__tests__/useCampaignStatus.test.ts` — polling termination logic
@@ -94,7 +97,7 @@ All test files referenced are **NEW** unless explicitly marked as a rename. Wave
 - [ ] `apps/web/e2e/cleanup-unsubscribe-campaign.spec.ts` — Golden path UNS-05 + UNS-06 + UNS-07
 - [ ] `apps/web/e2e/cleanup-suppression.spec.ts` — Suppression CRUD + auto-add visibility
 
-**Liquibase rollback verification:** Re-use existing `LiquibaseRollbackTest` pattern (project-wide); add the 5 new changelogs `041..045` (xem CONTEXT D-09 cho chi tiết schema từng file) vào rollback test set.
+**Liquibase rollback verification:** Re-use existing `LiquibaseRollbackTest` pattern (project-wide); add the 6 new changelogs `041..046` (xem CONTEXT D-09 cho chi tiết schema từng file + iteration H-3 Path A addendum for `046-triage-audit-source.yaml`) vào rollback test set.
 
 **Test data fixtures needed:**
 - 3 sender Gmail fixtures: 1 one-click, 1 mailto-only, 1 no `List-Unsubscribe` header (HTTPS fixtures via WireMock for one-click POST).
@@ -133,7 +136,7 @@ All test files referenced are **NEW** unless explicitly marked as a rename. Wave
 
 - [ ] All tasks have `<automated>` verify or Wave 0 dependencies
 - [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references (18 new test files + 1 rename)
+- [ ] Wave 0 covers all MISSING references (21 new test files + 1 rename — adds 3 stubs per H-2/H-3/M-2 iteration: TriageGmailWriterLookupLabelIdTest, TriageAuditWriterCleanupArchiveTest, ProcessingJobWorkerThrottleDeferralTest)
 - [ ] No watch-mode flags trong test commands
 - [ ] Feedback latency < 90s (quick), < 6m (full)
 - [ ] `nyquist_compliant: true` set in frontmatter (sau khi planner finalize task → req mapping)
