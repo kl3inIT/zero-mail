@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin Console Foundation + Settings UI
 status: executing
-stopped_at: Completed 08-8C-PLAN.md
-last_updated: "2026-05-20T04:26:54.671Z"
+stopped_at: Completed 08-8D-PLAN.md
+last_updated: "2026-05-20T13:49:37+07:00"
 last_activity: 2026-05-20
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 ## Current Position
 
 Phase: 08 (admin-console-operator-tooling) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6 (8D complete; 8E/8F remaining in Wave 2)
 Status: Ready to execute
 Last activity: 2026-05-20
 
@@ -159,6 +159,7 @@ See `.planning/ROADMAP.md` for full phase details + success criteria, and `.plan
 | Phase 07 P06 | 7h | 8 tasks | 57 files |
 | Phase 08 P8A | multi-session | 8 tasks | 100+ files |
 | Phase 08 P8C | multi-session | 3 tasks | 71 files |
+| Phase 08 P8D | single-commit | 3 tasks | 71 files |
 
 ## Accumulated Context
 
@@ -340,6 +341,13 @@ Recent decisions affecting current work:
 - [Phase 08 8A]: /enroll remains SPA-only; backend enrollment token validation lives at POST /api/admin/enrollment/session.
 - [Phase 08 8A]: NPM admin UI port 81 is loopback-bound and reached through SSH tunneling, not public exposure.
 - [Phase 08 8A]: Task 8A-08 human-verify checkpoint auto-approved because workflow.auto_advance=true and it was not a package-legitimacy gate.
+- [Phase 08 8D]: feature_binding final shape (id, model_id, feature, enabled) with UNIQUE(model_id, feature) only — no is_default or provider columns. Per-feature default lives in feature_default_provider with feature as PRIMARY KEY; Postgres rejects subqueries in index expressions, so a partial UNIQUE is replaced by a 3-row dedicated table + INSERT ... ON CONFLICT(feature) DO UPDATE.
+- [Phase 08 8D]: Catalog Sync sub-steps live in processing_job.payload_json->>'step' (FETCH / FETCHING / DIFF_READY / CONFIRMING / CONFIRMED / CANCELLED / ABANDONED); existing processing_job.status CHECK constraint untouched. Worker filters CATALOG_SYNC jobs by step IN ('FETCH','DIFF_READY'); DIFF_READY rows wait for explicit operator Confirm rather than auto-apply.
+- [Phase 08 8D]: provider_catalog.catalog_version BIGINT bumped in the same @Transactional as catalog mutations and carried on CatalogChangedEvent. Extended SpringAiChatModelFactory.CacheKey + ProviderMasterKeyResolver.ResolvedKey with providerCatalogVersion so cache misses are request-bound; the async ChatModelCacheEvictionListener becomes a memory-reclaim optimization, not the correctness mechanism.
+- [Phase 08 8D]: ModelsProbeClient split — probeConnection(provider, key) -> ProbeResult enum (unchanged from 8B) + fetchModelCatalog(provider, key) -> List<RawModel> on the same RestClient + scrub interceptor. Sync Fetch consumes the typed list; 8B test-connection still consumes the enum.
+- [Phase 08 8D]: Any active admin can Confirm a DIFF_READY job (not only the initiator). Audit row records both payload_json.actorId (initiator) and AdminContext.currentOrThrow().id() (confirmer) to avoid UX dead-ends on session expiry.
+- [Phase 08 8D]: Liquibase changesets renamed per 8A R-H10 — 068-catalog-tables-prep (pre-FK NULL backfill of orphan assistant_settings.*_model_id), 068b-catalog-tables-fk (FKs to model_catalog), 069-feature-default-provider-migration (8B BOOLEAN columns -> table + drop), 070-anthropic-catalog-seed (3 Claude models via `<insert>` so rollback removes them).
+- [Phase 08 8D]: SettingsCatalogController is the first user-side controller mirroring admin-curated state; lives under api.controllers.settings.*, gated by @PreAuthorize("isAuthenticated()"), and joins the public GroupedOpenApi group. CuratedCatalogResponse excludes admin-only fields (sync_history, dependents_count); ETag derived from per-provider catalog_version map + SHA-256 of payload, key `catalog:etag:v1`, TTL 30s, 304 on If-None-Match.
 
 ### Roadmap Evolution
 
@@ -484,8 +492,8 @@ Items acknowledged and deferred at v1.1 milestone close on 2026-05-19.
 
 ## Session Continuity
 
-Last session: 2026-05-20T04:26:54.646Z
-Stopped at: Completed 08-8C-PLAN.md
+Last session: 2026-05-20T13:49:37+07:00
+Stopped at: Completed 08-8D-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

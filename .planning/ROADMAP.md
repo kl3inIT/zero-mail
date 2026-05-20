@@ -61,7 +61,7 @@ Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
 11. Operator can view at `/admin/queue` real-time read-only aggregates over `outbox` + `processing_job` (depth by type, oldest-unleased age, retry distribution, failure rate, dead-letter count) with 10s auto-refresh, and re-queue a dead-letter row without viewing its payload or editing its fields
 12. Operator can view at `/admin/spend` a metadata-only dashboard aggregating `llm_call_audit` (today / 7d / 30d totals split platform-vs-BYOK, stacked bar by provider, donut by feature, top-20 tenants, max 90-day picker) with k-anonymity on deleted tenants and no per-prompt drill-down; the CI `MasterKeySentinelLeakTest` (ARCH-11) is green — no log line, response body, exception, YAML, or audit row contains `sk-`, `sk-ant-`, `AIza`, or `sk-or-` sentinels (or masked-encoded forms)
 
-**Plans:** 3/6 plans executed
+**Plans:** 4/6 plans executed
 
 Plans:
 **Wave 1**
@@ -77,7 +77,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 8D-PLAN.md — Catalog: provider_catalog + model_catalog + feature_binding + 3-step Sync (Fetch/Diff/Confirm) + Anthropic seed + GET /api/settings/catalog + CatalogChangedEvent; /catalog browser + Sync wizard (CAT-01..07)
+- [x] 8D-PLAN.md — Catalog: provider_catalog + model_catalog + feature_binding + 3-step Sync (Fetch/Diff/Confirm) + Anthropic seed + GET /api/settings/catalog + CatalogChangedEvent; /catalog browser + Sync wizard (CAT-01..07)
 
 **UI hint**: yes
 
@@ -125,7 +125,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 1-6 (collapsed) | v1.0 | 123/123 | Complete | 2026-05-15 |
 | 7. Chat Email Assistant | v1.1 | 6/6 | Complete | 2026-05-18 |
-| 8. Admin Console & Operator Tooling | v1.2 | 3/6 | In Progress|  |
+| 8. Admin Console & Operator Tooling | v1.2 | 4/6 | In Progress|  |
 | 9. User Settings UI on Curated Catalog | v1.2 | 0/0 | Not started | — |
 
 ---
