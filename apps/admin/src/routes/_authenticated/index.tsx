@@ -17,43 +17,43 @@ function DashboardRoute() {
   return (
     <div className="space-y-8">
       <header>
-        <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">Overview</p>
-        <h1 className="text-xl font-semibold text-ink">Admin dashboard</h1>
+        <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">Tổng quan</p>
+        <h1 className="text-xl font-semibold text-ink">Bảng điều khiển quản trị</h1>
       </header>
       <section className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardDescription>Audit rows</CardDescription>
+            <CardDescription>Bản ghi audit</CardDescription>
             <CardTitle className="tabular-nums text-3xl">{auditPage.data?.totalEstimate ?? 0}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
-            <CardDescription>Admin sessions</CardDescription>
+            <CardDescription>Phiên đăng nhập admin</CardDescription>
             <CardTitle className="tabular-nums text-3xl">1</CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
-            <CardDescription>Queue health</CardDescription>
-            <CardTitle className="text-3xl">Ready</CardTitle>
+            <CardDescription>Tình trạng hàng đợi</CardDescription>
+            <CardTitle className="text-3xl">Sẵn sàng</CardTitle>
           </CardHeader>
         </Card>
       </section>
       <section className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <Card>
           <CardHeader>
-            <CardTitle>Recent audit events</CardTitle>
-            <CardDescription>Latest admin mutations and read events.</CardDescription>
+            <CardTitle>Sự kiện audit gần đây</CardTitle>
+            <CardDescription>Các thao tác và lượt đọc mới nhất của quản trị viên.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Actor</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Target</TableHead>
-                  <TableHead>Created</TableHead>
+                  <TableHead>Người thao tác</TableHead>
+                  <TableHead>Hành động</TableHead>
+                  <TableHead>Đối tượng</TableHead>
+                  <TableHead>Thời điểm</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -75,20 +75,20 @@ function DashboardRoute() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Quick links</CardTitle>
-            <CardDescription>Common operator checks.</CardDescription>
+            <CardTitle>Lối tắt</CardTitle>
+            <CardDescription>Các kiểm tra vận hành thường dùng.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2">
             <Link to="/audit" className="flex items-center gap-2 rounded-md border border-border p-3 text-sm hover:bg-secondary">
               <ClipboardListIcon className="size-4 text-primary" />
-              Audit log
+              Nhật ký audit
             </Link>
             <Link
               to="/role-grants"
               className="flex items-center gap-2 rounded-md border border-border p-3 text-sm hover:bg-secondary"
             >
               <UsersIcon className="size-4 text-primary" />
-              Role grants
+              Phân quyền admin
             </Link>
           </CardContent>
         </Card>

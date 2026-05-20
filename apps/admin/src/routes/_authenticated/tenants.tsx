@@ -72,16 +72,16 @@ function TenantsRoute() {
     <div className="space-y-6">
       <header className="flex items-end justify-between gap-4">
         <div>
-          <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">Operations</p>
-          <h1 className="text-xl font-semibold text-ink">Tenants</h1>
+          <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">Vận hành</p>
+          <h1 className="text-xl font-semibold text-ink">Khách hàng</h1>
         </div>
-        <Badge variant="secondary">{tenantList.isLoading ? 'Loading' : `${rows.length} visible`}</Badge>
+        <Badge variant="secondary">{tenantList.isLoading ? 'Đang tải' : `${rows.length} hiển thị`}</Badge>
       </header>
 
       <Card>
         <CardHeader>
-          <CardTitle>Filters</CardTitle>
-          <CardDescription>Tenant metadata only. Exact per-tenant cost is not exposed.</CardDescription>
+          <CardTitle>Bộ lọc</CardTitle>
+          <CardDescription>Chỉ siêu dữ liệu khách hàng. Không hiển thị chi phí chính xác từng khách hàng.</CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -92,31 +92,31 @@ function TenantsRoute() {
             }}
           >
             <div className="space-y-2">
-              <Label>Status</Label>
+              <Label>Trạng thái</Label>
               <Select value={status} onValueChange={(value) => setStatus(value as TenantStatusFilter)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">All statuses</SelectItem>
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                  <SelectItem value="PAUSED">Paused</SelectItem>
-                  <SelectItem value="DISCONNECTED">Disconnected</SelectItem>
+                  <SelectItem value="ALL">Tất cả trạng thái</SelectItem>
+                  <SelectItem value="ACTIVE">Đang hoạt động</SelectItem>
+                  <SelectItem value="PAUSED">Tạm dừng</SelectItem>
+                  <SelectItem value="DISCONNECTED">Đã ngắt kết nối</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tenant-from">From</Label>
+              <Label htmlFor="tenant-from">Từ ngày</Label>
               <Input id="tenant-from" type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tenant-to">To</Label>
+              <Label htmlFor="tenant-to">Đến ngày</Label>
               <Input id="tenant-to" type="date" value={to} onChange={(event) => setTo(event.target.value)} />
             </div>
             <div className="flex items-end gap-2">
               <Button type="submit">
                 <FilterIcon className="size-4" />
-                Apply filters
+                Áp dụng
               </Button>
               <Button
                 type="button"
@@ -128,7 +128,7 @@ function TenantsRoute() {
                   void navigate({ to: '/tenants', search: {} });
                 }}
               >
-                Clear
+                Xóa bộ lọc
               </Button>
             </div>
           </form>
@@ -137,36 +137,36 @@ function TenantsRoute() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Tenant directory</CardTitle>
+          <CardTitle>Danh sách khách hàng</CardTitle>
           <CardDescription>
-            Per-tenant spend bucketed by 7-day k-anonymity (k&gt;=5). Exact per-tenant cost is not exposed.
+            Chi phí từng khách hàng được nhóm theo k-anonymity 7 ngày (k&gt;=5). Không hiển thị chi phí chính xác.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Tenant</TableHead>
-                <TableHead>Created</TableHead>
+                <TableHead>Khách hàng</TableHead>
+                <TableHead>Ngày tạo</TableHead>
                 <TableHead>Gmail</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>7d spend bucket</TableHead>
-                <TableHead className="text-right">Action</TableHead>
+                <TableHead>Trạng thái</TableHead>
+                <TableHead>Nhóm chi phí 7 ngày</TableHead>
+                <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {tenantList.isLoading && (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                    Loading tenants.
+                    Đang tải danh sách khách hàng.
                   </TableCell>
                 </TableRow>
               )}
               {!tenantList.isLoading && rows.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">
-                    <div className="font-medium">No tenants in this segment</div>
-                    <div className="text-sm text-muted-foreground">Adjust the date range or status filter.</div>
+                    <div className="font-medium">Không có khách hàng nào trong nhóm này</div>
+                    <div className="text-sm text-muted-foreground">Điều chỉnh khoảng ngày hoặc bộ lọc trạng thái.</div>
                   </TableCell>
                 </TableRow>
               )}
@@ -177,7 +177,7 @@ function TenantsRoute() {
           </Table>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" disabled={!search.cursor} onClick={() => applyFilters()}>
-              First page
+              Trang đầu
             </Button>
             <Button
               type="button"
@@ -185,7 +185,7 @@ function TenantsRoute() {
               disabled={!tenantList.data?.hasNextPage || !tenantList.data.nextCursor}
               onClick={() => applyFilters(tenantList.data?.nextCursor)}
             >
-              Next page
+              Trang sau
             </Button>
           </div>
         </CardContent>
@@ -218,7 +218,7 @@ function TenantRow({ row }: { row: TenantListRow }) {
           search={{ tab: 'overview' }}
           className={buttonVariants({ variant: 'outline', size: 'sm' })}
         >
-          View details
+          Xem chi tiết
         </Link>
       </TableCell>
     </TableRow>
@@ -227,22 +227,22 @@ function TenantRow({ row }: { row: TenantListRow }) {
 
 export function StatusBadge({ status }: { status: TenantListRow['status'] }) {
   if (status === 'ACTIVE') {
-    return <Badge>Active</Badge>;
+    return <Badge>Đang hoạt động</Badge>;
   }
   if (status === 'PAUSED') {
-    return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Paused</Badge>;
+    return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Tạm dừng</Badge>;
   }
-  return <Badge variant="secondary">Disconnected</Badge>;
+  return <Badge variant="secondary">Đã ngắt kết nối</Badge>;
 }
 
 export function SpendBucketBadge({ bucket }: { bucket: TenantListRow['spendBucket7d'] }) {
   if (bucket === 'HIGH') {
-    return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">High</Badge>;
+    return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Cao</Badge>;
   }
   if (bucket === 'MEDIUM') {
-    return <Badge variant="outline">Medium</Badge>;
+    return <Badge variant="outline">Trung bình</Badge>;
   }
-  return <Badge variant="secondary">Low</Badge>;
+  return <Badge variant="secondary">Thấp</Badge>;
 }
 
 export function formatDateTime(value?: string): string {

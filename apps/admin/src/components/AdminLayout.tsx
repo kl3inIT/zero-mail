@@ -27,21 +27,28 @@ type NavigationItem = {
   disabled?: boolean;
 };
 
+function resolveEnv(): 'prod' | 'staging' | 'dev' {
+  const viteMode = import.meta.env.MODE;
+  if (viteMode === 'production') return 'prod';
+  if (viteMode === 'staging') return 'staging';
+  return 'dev';
+}
+
 const navigationItems: ReadonlyArray<NavigationItem> = [
-  { to: '/', label: 'Dashboard', icon: GaugeIcon },
-  { to: '/audit', label: 'Audit log', icon: ClipboardListIcon },
-  { to: '/role-grants', label: 'Role grants', icon: UsersIcon },
-  { to: '/master-keys', label: 'Master keys', icon: KeyRoundIcon },
-  { to: '/tenants', label: 'Tenants', icon: Building2Icon },
-  { to: '/catalog', label: 'Catalog', icon: BookOpenIcon },
-  { to: '/queue', label: 'Queue', icon: ActivityIcon },
-  { to: '/spend', label: 'Spend', icon: DollarSignIcon },
+  { to: '/', label: 'Bảng điều khiển', icon: GaugeIcon },
+  { to: '/audit', label: 'Nhật ký audit', icon: ClipboardListIcon },
+  { to: '/role-grants', label: 'Phân quyền admin', icon: UsersIcon },
+  { to: '/master-keys', label: 'Khóa nền tảng', icon: KeyRoundIcon },
+  { to: '/tenants', label: 'Khách hàng', icon: Building2Icon },
+  { to: '/catalog', label: 'Danh mục mô hình', icon: BookOpenIcon },
+  { to: '/queue', label: 'Hàng đợi', icon: ActivityIcon },
+  { to: '/spend', label: 'Chi phí', icon: DollarSignIcon },
 ];
 
 export function AdminLayout({ admin }: AdminLayoutProps) {
   return (
     <div className="bg-background text-foreground min-h-screen">
-      <AdminModeBanner email={admin.email} env={admin.env} />
+      <AdminModeBanner email={admin.email} env={resolveEnv()} />
       <div className="grid min-h-[calc(100vh-40px)] grid-cols-[240px_1fr]">
         <aside className="border-border bg-secondary border-r px-4 py-4">
           <div className="border-border mb-4 flex items-center gap-2 border-b pb-4">
@@ -86,7 +93,7 @@ export function AdminLayout({ admin }: AdminLayoutProps) {
           </nav>
           <Button variant="ghost" className="text-ink-2 mt-8 w-full justify-start">
             <LogOutIcon className="size-4" />
-            Sign out
+            Đăng xuất
           </Button>
         </aside>
         <main className="min-w-0">

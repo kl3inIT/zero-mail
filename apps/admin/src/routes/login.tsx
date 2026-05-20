@@ -28,7 +28,7 @@ function LoginRoute() {
       email: search.email ?? '',
     },
     validators: {
-      onChange: z.object({ email: z.email('Enter a valid admin email.') }),
+      onChange: z.object({ email: z.email('Nhập email quản trị viên hợp lệ.') }),
     },
     onSubmit: async ({ value }) => {
       setErrorText(null);
@@ -44,8 +44,8 @@ function LoginRoute() {
           <div className="mx-auto mb-2 grid size-12 place-items-center rounded-lg bg-violet-soft text-primary">
             <ShieldCheckIcon className="size-6" />
           </div>
-          <h1 className="text-base leading-snug font-medium">Admin sign-in</h1>
-          <CardDescription>Authenticate with your passkey to enter the admin console.</CardDescription>
+          <h1 className="text-base leading-snug font-medium">Đăng nhập quản trị</h1>
+          <CardDescription>Xác thực bằng passkey để vào trang quản trị.</CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -53,14 +53,14 @@ function LoginRoute() {
             onSubmit={(event) => {
               event.preventDefault();
               void form.handleSubmit().catch((error: unknown) => {
-                setErrorText(error instanceof Error ? error.message : 'Passkey ceremony failed.');
+                setErrorText(error instanceof Error ? error.message : 'Xác thực passkey thất bại.');
               });
             }}
           >
             <form.Field name="email">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor={field.name}>Admin email</Label>
+                  <Label htmlFor={field.name}>Email quản trị viên</Label>
                   <Input
                     id={field.name}
                     value={field.state.value}
@@ -73,7 +73,7 @@ function LoginRoute() {
             </form.Field>
             {errorText && <p className="text-sm text-destructive">{errorText}</p>}
             <Button type="submit" className="w-full">
-              Sign in with passkey
+              Đăng nhập bằng passkey
             </Button>
           </form>
         </CardContent>

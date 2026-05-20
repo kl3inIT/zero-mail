@@ -8,10 +8,10 @@ export async function getCurrentAdmin(): Promise<AdminMe> {
     credentials: 'include',
   });
   if (response.status === 401) {
-    throw new Error('admin session expired');
+    throw new Error('Phiên quản trị đã hết hạn');
   }
   if (!response.ok) {
-    throw new Error(`admin session lookup failed: ${response.status}`);
+    throw new Error(`Truy vấn phiên quản trị thất bại: ${response.status}`);
   }
   return (await response.json()) as AdminMe;
 }

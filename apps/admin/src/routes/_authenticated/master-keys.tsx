@@ -16,8 +16,8 @@ export const Route = createFileRoute('/_authenticated/master-keys')({
 
 const features: Array<{ id: MasterKeyFeature; label: string; field: keyof MasterKeyRow }> = [
   { id: 'CHAT', label: 'Chat', field: 'featureDefaultProviderChat' },
-  { id: 'TRIAGE', label: 'Triage', field: 'featureDefaultProviderTriage' },
-  { id: 'DRAFT', label: 'Draft', field: 'featureDefaultProviderDraft' },
+  { id: 'TRIAGE', label: 'Phân loại', field: 'featureDefaultProviderTriage' },
+  { id: 'DRAFT', label: 'Soạn nháp', field: 'featureDefaultProviderDraft' },
 ];
 
 function MasterKeysRoute() {
@@ -30,26 +30,26 @@ function MasterKeysRoute() {
     <div className="space-y-6">
       <header className="flex items-end justify-between gap-4">
         <div>
-          <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">LLM operations</p>
-          <h1 className="text-xl font-semibold text-ink">Master keys</h1>
+          <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">Vận hành LLM</p>
+          <h1 className="text-xl font-semibold text-ink">Khóa nền tảng</h1>
         </div>
       </header>
       <Outlet />
       <Card>
         <CardHeader>
-          <CardTitle>Provider keys</CardTitle>
-          <CardDescription>{masterKeys.isLoading ? 'Loading providers.' : `${rows.length} providers`}</CardDescription>
+          <CardTitle>Khóa nhà cung cấp</CardTitle>
+          <CardDescription>{masterKeys.isLoading ? 'Đang tải nhà cung cấp.' : `${rows.length} nhà cung cấp`}</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Provider</TableHead>
-                <TableHead>Key</TableHead>
-                <TableHead>Format</TableHead>
-                <TableHead>Dependents</TableHead>
-                <TableHead>Last rotated</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Nhà cung cấp</TableHead>
+                <TableHead>Khóa</TableHead>
+                <TableHead>Định dạng</TableHead>
+                <TableHead>Phụ thuộc</TableHead>
+                <TableHead>Lần xoay gần nhất</TableHead>
+                <TableHead>Trạng thái</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -65,9 +65,9 @@ function MasterKeysRoute() {
                       {row.displayName}
                     </span>
                   </TableCell>
-                  <TableCell className="font-mono text-xs">{row.maskedKey ?? 'Not set'}</TableCell>
+                  <TableCell className="font-mono text-xs">{row.maskedKey ?? 'Chưa thiết lập'}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{row.keyFormat ?? 'Unset'}</Badge>
+                    <Badge variant="secondary">{row.keyFormat ?? 'Chưa đặt'}</Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">{row.dependentsCount}</Badge>
@@ -75,9 +75,9 @@ function MasterKeysRoute() {
                   <TableCell className="font-mono text-xs">{row.lastRotatedAt ?? '-'}</TableCell>
                   <TableCell>
                     {row.rotationRecommended ? (
-                      <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Rotation recommended</Badge>
+                      <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Nên xoay khóa</Badge>
                     ) : (
-                      <Badge variant={row.maskedKey ? 'default' : 'secondary'}>{row.maskedKey ? 'Set' : 'Not set'}</Badge>
+                      <Badge variant={row.maskedKey ? 'default' : 'secondary'}>{row.maskedKey ? 'Đã đặt' : 'Chưa đặt'}</Badge>
                     )}
                   </TableCell>
                 </TableRow>
@@ -88,8 +88,8 @@ function MasterKeysRoute() {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Feature defaults</CardTitle>
-          <CardDescription>Temporary 8B routing flags pending the 8D feature-default table.</CardDescription>
+          <CardTitle>Mặc định theo tính năng</CardTitle>
+          <CardDescription>Cấu hình định tuyến tạm thời cho 8B trong khi chờ bảng feature-default của 8D.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
           {features.map((feature) => (
@@ -101,7 +101,7 @@ function MasterKeysRoute() {
                   setFeatureDefault.mutate({
                     feature: feature.id,
                     provider: provider as LlmProvider,
-                    reason: `Set ${feature.label} default provider`,
+                    reason: `Đặt nhà cung cấp mặc định cho ${feature.label}`,
                   })
                 }
               >

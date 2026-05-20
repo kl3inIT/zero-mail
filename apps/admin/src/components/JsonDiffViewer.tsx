@@ -21,13 +21,13 @@ export function JsonDiffViewer({ before, after }: JsonDiffViewerProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <section>
-        <h3 className="mb-2 font-mono text-[11px] tracking-wider text-muted-foreground uppercase">Before</h3>
+        <h3 className="mb-2 font-mono text-[11px] tracking-wider text-muted-foreground uppercase">Trước</h3>
         <pre className="max-h-72 overflow-auto rounded-md border border-border bg-secondary p-3 font-mono text-xs whitespace-pre-wrap text-ink">
           {formatJson(before)}
         </pre>
       </section>
       <section>
-        <h3 className="mb-2 font-mono text-[11px] tracking-wider text-muted-foreground uppercase">After</h3>
+        <h3 className="mb-2 font-mono text-[11px] tracking-wider text-muted-foreground uppercase">Sau</h3>
         <pre className="max-h-72 overflow-auto rounded-md border border-border bg-secondary p-3 font-mono text-xs whitespace-pre-wrap text-ink">
           {formatJson(after)}
         </pre>

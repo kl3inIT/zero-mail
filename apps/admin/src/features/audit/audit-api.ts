@@ -23,7 +23,7 @@ export async function fetchAuditPage(filters: AuditFilters): Promise<AuditPage> 
     },
   });
   if (error || !data) {
-    throw new Error('Unable to load admin audit events.');
+    throw new Error('Không thể tải sự kiện audit quản trị.');
   }
   return data;
 }

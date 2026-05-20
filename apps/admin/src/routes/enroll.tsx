@@ -30,13 +30,13 @@ function EnrollRoute() {
       email: search.email ?? '',
     },
     validators: {
-      onChange: z.object({ email: z.email('Enter a valid admin email.') }),
+      onChange: z.object({ email: z.email('Nhập email quản trị viên hợp lệ.') }),
     },
     onSubmit: async ({ value }) => {
       setErrorText(null);
-      setStatusText('Creating enrollment session.');
+      setStatusText('Đang tạo phiên đăng ký.');
       await createEnrollmentSession(search.token, value.email);
-      setStatusText('Opening passkey prompt.');
+      setStatusText('Đang mở cửa sổ tạo passkey.');
       await registerPasskey(value.email);
       await navigate({ to: '/login', search: { email: value.email } });
     },
@@ -49,8 +49,8 @@ function EnrollRoute() {
           <div className="mb-2 grid size-10 place-items-center rounded-md bg-violet-soft text-primary">
             <KeyRoundIcon className="size-5" />
           </div>
-          <h1 className="text-base leading-snug font-medium">Register a passkey</h1>
-          <CardDescription>Complete the one-time admin enrollment ceremony.</CardDescription>
+          <h1 className="text-base leading-snug font-medium">Đăng ký passkey</h1>
+          <CardDescription>Hoàn tất quy trình đăng ký quản trị viên một lần.</CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -59,14 +59,14 @@ function EnrollRoute() {
               event.preventDefault();
               void form.handleSubmit().catch((error: unknown) => {
                 setStatusText(null);
-                setErrorText(error instanceof Error ? error.message : 'Passkey ceremony failed.');
+                setErrorText(error instanceof Error ? error.message : 'Xác thực passkey thất bại.');
               });
             }}
           >
             <form.Field name="email">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor={field.name}>Admin email</Label>
+                  <Label htmlFor={field.name}>Email quản trị viên</Label>
                   <Input
                     id={field.name}
                     value={field.state.value}
@@ -80,7 +80,7 @@ function EnrollRoute() {
             {statusText && <p className="text-sm text-muted-foreground">{statusText}</p>}
             {errorText && <p className="text-sm text-destructive">{errorText}</p>}
             <Button type="submit" className="w-full">
-              Register passkey
+              Đăng ký passkey
             </Button>
           </form>
         </CardContent>

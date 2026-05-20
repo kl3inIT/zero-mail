@@ -79,12 +79,11 @@ function SpendRoute() {
       <header className="flex items-end justify-between gap-4">
         <div>
           <p className="text-muted-foreground font-mono text-[11px] tracking-wider uppercase">
-            Operations
+            Vận hành
           </p>
-          <h1 className="text-ink text-xl font-semibold">Spend dashboard</h1>
+          <h1 className="text-ink text-xl font-semibold">Bảng chi phí</h1>
           <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-            Aggregate-only spend over <code>llm_call_audit</code>. Prompt and completion text
-            are never read by this page.
+            Chỉ tổng hợp chi phí từ <code>llm_call_audit</code>. Trang này không bao giờ đọc văn bản prompt và completion.
           </p>
         </div>
         <AutoRefreshIndicator
@@ -114,18 +113,18 @@ function SpendRoute() {
           }}
           onApplyCustom={() => {
             if (!customFrom || !customTo) {
-              setCustomRangeError('Pick both a start and end date.');
+              setCustomRangeError('Vui lòng chọn cả ngày bắt đầu và ngày kết thúc.');
               return;
             }
             const candidate = { from: new Date(customFrom), to: new Date(customTo) };
             if (!isRangeWithinLimit(candidate)) {
               setCustomRangeError(
-                'Date range maximum is 90 days. Choose a narrower window or use 7d/30d presets.',
+                'Khoảng ngày tối đa là 90 ngày. Chọn khoảng nhỏ hơn hoặc dùng preset 7 ngày / 30 ngày.',
               );
               return;
             }
             if (candidate.from >= candidate.to) {
-              setCustomRangeError('Start date must be before end date.');
+              setCustomRangeError('Ngày bắt đầu phải trước ngày kết thúc.');
               return;
             }
             setCustomRangeError(null);
@@ -149,7 +148,7 @@ function SpendRoute() {
                 await downloadSpendCsv(queryInput);
               } catch (error) {
                 setCsvError(
-                  error instanceof Error ? error.message : 'CSV export failed.',
+                  error instanceof Error ? error.message : 'Xuất CSV thất bại.',
                 );
               } finally {
                 setCsvDownloading(false);
@@ -157,7 +156,7 @@ function SpendRoute() {
             }}
           >
             <DownloadIcon className="size-3.5" />
-            {csvDownloading ? 'Exporting…' : 'Export CSV'}
+            {csvDownloading ? 'Đang xuất…' : 'Xuất CSV'}
           </Button>
         </div>
       </div>
@@ -176,9 +175,7 @@ function SpendRoute() {
           className="text-muted-foreground text-xs"
           data-testid="spend-unknown-caveat"
         >
-          {spendDashboard.data.unknownPercentOfTotal.toFixed(1)}% of spend in this range
-          predates row-level credential classification and is shown as Unknown. New calls are
-          classified at write time. (Phase 8F deploy:{' '}
+          {spendDashboard.data.unknownPercentOfTotal.toFixed(1)}% chi phí trong khoảng này có trước khi phân loại nguồn khóa theo bản ghi và được hiển thị là Không xác định. Các lượt gọi mới sẽ được phân loại ngay khi ghi nhận. (Triển khai Phase 8F:{' '}
           {spendDashboard.data.rowLevelClassificationSince})
         </p>
       )}
@@ -186,11 +183,11 @@ function SpendRoute() {
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Daily spend by provider</CardTitle>
+            <CardTitle>Chi phí theo ngày và nhà cung cấp</CardTitle>
             <CardDescription>
-              Stacked: <span className="text-emerald-600">platform</span> +{' '}
+              Xếp chồng: <span className="text-emerald-600">nền tảng</span> +{' '}
               <span className="text-blue-600">BYOK</span> +{' '}
-              <span className="text-muted-foreground">unknown</span>. All values in USD.
+              <span className="text-muted-foreground">không xác định</span>. Toàn bộ giá trị tính bằng USD.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -203,8 +200,8 @@ function SpendRoute() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Spend by feature</CardTitle>
-            <CardDescription>Share of cost split across CHAT, TRIAGE, DRAFT.</CardDescription>
+            <CardTitle>Chi phí theo tính năng</CardTitle>
+            <CardDescription>Tỷ lệ chi phí phân bổ giữa CHAT, TRIAGE, DRAFT.</CardDescription>
           </CardHeader>
           <CardContent>
             {spendDashboard.isLoading ? (
@@ -218,28 +215,27 @@ function SpendRoute() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Top 20 tenants</CardTitle>
+          <CardTitle>Top 20 khách hàng</CardTitle>
           <CardDescription>
-            Ranked by total cost. Buckets below k = 5 are rolled up; deleted-tenant rows
-            collapse into a single aggregate entry.
+            Xếp hạng theo tổng chi phí. Các nhóm dưới k = 5 được gộp lại; bản ghi của khách hàng đã xóa được gộp thành một mục tổng hợp.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Tenant</TableHead>
-                <TableHead className="text-right">Total cost</TableHead>
-                <TableHead className="text-right">Unknown %</TableHead>
-                <TableHead className="text-right">Calls</TableHead>
-                <TableHead className="text-right">Bucket</TableHead>
+                <TableHead>Khách hàng</TableHead>
+                <TableHead className="text-right">Tổng chi phí</TableHead>
+                <TableHead className="text-right">% Không xác định</TableHead>
+                <TableHead className="text-right">Lượt gọi</TableHead>
+                <TableHead className="text-right">Nhóm</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {spendDashboard.isLoading && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-muted-foreground h-24 text-center">
-                    Loading tenant breakdown.
+                    Đang tải phân tích theo khách hàng.
                   </TableCell>
                 </TableRow>
               )}
@@ -250,7 +246,7 @@ function SpendRoute() {
                       colSpan={5}
                       className="text-muted-foreground h-24 text-center"
                     >
-                      No tenant spend in this range.
+                      Không có chi phí khách hàng trong khoảng này.
                     </TableCell>
                   </TableRow>
                 )}
@@ -267,7 +263,7 @@ function SpendRoute() {
                     {row.callCount.toLocaleString()}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-right text-xs">
-                    {row.isKAnonymized ? 'Aggregated' : 'Individual'}
+                    {row.isKAnonymized ? 'Tổng hợp' : 'Riêng lẻ'}
                   </TableCell>
                 </TableRow>
               ))}
@@ -333,39 +329,39 @@ function KpiTiles({
     <>
       <KpiCard
         testId="kpi-today-platform"
-        label="Today platform"
+        label="Nền tảng hôm nay"
         value={`$${formatMoney(kpis.todayPlatformCost)}`}
-        hint={`${kpis.todayCallCount.toLocaleString()} calls today`}
+        hint={`${kpis.todayCallCount.toLocaleString()} lượt gọi hôm nay`}
       />
       <KpiCard
         testId="kpi-today-byok"
-        label="Today BYOK"
+        label="BYOK hôm nay"
         value={`$${formatMoney(kpis.todayByokCost)}`}
-        hint="User-supplied keys"
+        hint="Khóa do người dùng cung cấp"
       />
       <KpiCard
         testId="kpi-7d-platform"
-        label="7d platform"
+        label="Nền tảng 7 ngày"
         value={`$${formatMoney(kpis.sevenDayPlatformCost)}`}
-        hint={`${kpis.sevenDayCallCount.toLocaleString()} calls in 7d`}
+        hint={`${kpis.sevenDayCallCount.toLocaleString()} lượt gọi trong 7 ngày`}
       />
       <KpiCard
         testId="kpi-7d-byok"
-        label="7d BYOK"
+        label="BYOK 7 ngày"
         value={`$${formatMoney(kpis.sevenDayByokCost)}`}
-        hint="User-supplied keys"
+        hint="Khóa do người dùng cung cấp"
       />
       <KpiCard
         testId="kpi-30d-platform"
-        label="30d platform"
+        label="Nền tảng 30 ngày"
         value={`$${formatMoney(kpis.thirtyDayPlatformCost)}`}
-        hint={`${kpis.thirtyDayCallCount.toLocaleString()} calls in 30d`}
+        hint={`${kpis.thirtyDayCallCount.toLocaleString()} lượt gọi trong 30 ngày`}
       />
       <KpiCard
         testId="kpi-30d-byok"
-        label="30d BYOK"
+        label="BYOK 30 ngày"
         value={`$${formatMoney(kpis.thirtyDayByokCost)}`}
-        hint="User-supplied keys"
+        hint="Khóa do người dùng cung cấp"
       />
     </>
   );
@@ -375,7 +371,7 @@ function StackedProviderBar({ rows }: { rows: ProviderStackBarRowResponse[] }) {
   if (rows.length === 0) {
     return (
       <div className="text-muted-foreground py-8 text-center text-sm">
-        No spend in this range.
+        Không có chi phí trong khoảng này.
       </div>
     );
   }
@@ -442,7 +438,7 @@ function FeatureDonut({ slices }: { slices: FeatureDonutSliceResponse[] }) {
   if (total <= 0) {
     return (
       <div className="text-muted-foreground py-8 text-center text-sm">
-        No feature spend in this range.
+        Không có chi phí tính năng trong khoảng này.
       </div>
     );
   }
@@ -516,7 +512,7 @@ function PresetPicker(props: {
           onClick={() => props.onPresetChange(option)}
           data-testid={`spend-preset-${option}`}
         >
-          {option === 'today' ? 'Today' : option === 'custom' ? 'Custom' : option}
+          {option === 'today' ? 'Hôm nay' : option === 'custom' ? 'Tùy chỉnh' : option}
         </Button>
       ))}
       {props.preset === 'custom' && (
@@ -526,16 +522,16 @@ function PresetPicker(props: {
             value={props.customFrom}
             onChange={(event) => props.onCustomFromChange(event.target.value)}
             className="border-border bg-background h-8 rounded border px-2 text-xs"
-            aria-label="From date"
+            aria-label="Từ ngày"
             data-testid="spend-custom-from"
           />
-          <span className="text-muted-foreground text-xs">to</span>
+          <span className="text-muted-foreground text-xs">đến</span>
           <input
             type="date"
             value={props.customTo}
             onChange={(event) => props.onCustomToChange(event.target.value)}
             className="border-border bg-background h-8 rounded border px-2 text-xs"
-            aria-label="To date"
+            aria-label="Đến ngày"
             data-testid="spend-custom-to"
           />
           <Button
@@ -546,7 +542,7 @@ function PresetPicker(props: {
             onClick={props.onApplyCustom}
             data-testid="spend-custom-apply"
           >
-            Apply
+            Áp dụng
           </Button>
           {props.customRangeError && (
             <span

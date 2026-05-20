@@ -13,35 +13,35 @@ describe('ConfirmTwiceDialog', () => {
       <ConfirmTwiceDialog
         open
         onOpenChange={() => undefined}
-        actionLabel="Revoke admin grant"
+        actionLabel="Thu hồi quyền admin"
         targetLabel="admin@example.com"
-        consequences={['The admin cannot sign in.']}
+        consequences={['Tài khoản admin này sẽ không đăng nhập được nữa.']}
         confirmationToken="admin@example.com"
-        finalButtonLabel="Revoke admin"
+        finalButtonLabel="Thu hồi admin"
         onConfirm={onConfirm}
       />,
     );
 
-    const reasonField = screen.getByLabelText('Reason (recorded in audit log)');
+    const reasonField = screen.getByLabelText('Lý do (ghi vào nhật ký audit)');
     await user.type(reasonField, 'key:sk-test123');
 
-    expect(await screen.findByText(/forbidden token prefix/i)).toBeInTheDocument();
+    expect(await screen.findByText(/tiền tố token bị cấm/i)).toBeInTheDocument();
 
     await user.clear(reasonField);
-    await user.type(reasonField, 'compromised hardware');
-    await user.click(screen.getByRole('button', { name: /continue/i }));
+    await user.type(reasonField, 'phần cứng bị xâm phạm');
+    await user.click(screen.getByRole('button', { name: /tiếp tục/i }));
 
-    const finalButton = await screen.findByRole('button', { name: /revoke admin/i });
+    const finalButton = await screen.findByRole('button', { name: /thu hồi admin/i });
     expect(finalButton).toBeDisabled();
 
-    await user.type(screen.getByLabelText(/type "admin@example.com" to confirm/i), 'wrong-token');
+    await user.type(screen.getByLabelText(/nhập "admin@example.com" để xác nhận/i), 'wrong-token');
     expect(finalButton).toBeDisabled();
 
-    await user.clear(screen.getByLabelText(/type "admin@example.com" to confirm/i));
-    await user.type(screen.getByLabelText(/type "admin@example.com" to confirm/i), 'admin@example.com');
+    await user.clear(screen.getByLabelText(/nhập "admin@example.com" để xác nhận/i));
+    await user.type(screen.getByLabelText(/nhập "admin@example.com" để xác nhận/i), 'admin@example.com');
     expect(finalButton).toBeEnabled();
     await user.click(finalButton);
 
-    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith('compromised hardware'));
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith('phần cứng bị xâm phạm'));
   });
 });

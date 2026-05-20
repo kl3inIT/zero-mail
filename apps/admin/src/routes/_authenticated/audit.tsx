@@ -15,6 +15,15 @@ import { useAuditPage } from '@/features/audit/use-audit-page';
 const auditFilterFields = ['actorEmail', 'action', 'targetKind', 'targetId', 'from', 'to'] as const;
 
 type AuditFilterField = (typeof auditFilterFields)[number];
+
+const filterLabels: Record<AuditFilterField, string> = {
+  actorEmail: 'Email người thao tác',
+  action: 'Hành động',
+  targetKind: 'Loại đối tượng',
+  targetId: 'Mã đối tượng',
+  from: 'Từ ngày',
+  to: 'Đến ngày',
+};
 type AuditSearch = Partial<Record<AuditFilterField | 'cursor', string>>;
 
 function optionalString(value: unknown): string | undefined {
@@ -52,8 +61,8 @@ function AuditRoute() {
     <div className="space-y-6">
       <header className="flex items-end justify-between gap-4">
         <div>
-          <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">Audit & access</p>
-          <h1 className="text-xl font-semibold text-ink">Audit log</h1>
+          <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">Audit và truy cập</p>
+          <h1 className="text-xl font-semibold text-ink">Nhật ký audit</h1>
         </div>
         <Button
           type="button"
@@ -63,13 +72,13 @@ function AuditRoute() {
           }}
         >
           <DownloadIcon className="size-4" />
-          Export CSV
+          Xuất CSV
         </Button>
       </header>
       <Card>
         <CardHeader>
-          <CardTitle>Filters</CardTitle>
-          <CardDescription>Filter rows by actor, action, target, and date range.</CardDescription>
+          <CardTitle>Bộ lọc</CardTitle>
+          <CardDescription>Lọc bản ghi theo người thao tác, hành động, đối tượng, khoảng ngày.</CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -86,7 +95,7 @@ function AuditRoute() {
           >
             {auditFilterFields.map((fieldName) => (
               <div key={fieldName} className="space-y-2">
-                <Label htmlFor={fieldName}>{fieldName}</Label>
+                <Label htmlFor={fieldName}>{filterLabels[fieldName]}</Label>
                 <Input
                   id={fieldName}
                   value={formValues[fieldName]}
@@ -100,25 +109,25 @@ function AuditRoute() {
               </div>
             ))}
             <div className="flex items-end">
-              <Button type="submit">Apply filters</Button>
+              <Button type="submit">Áp dụng bộ lọc</Button>
             </div>
           </form>
         </CardContent>
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Events</CardTitle>
-          <CardDescription>{auditPage.isLoading ? 'Loading audit rows.' : `${auditPage.data?.rows.length ?? 0} rows`}</CardDescription>
+          <CardTitle>Sự kiện</CardTitle>
+          <CardDescription>{auditPage.isLoading ? 'Đang tải dữ liệu audit.' : `${auditPage.data?.rows.length ?? 0} bản ghi`}</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Actor</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Target</TableHead>
-                <TableHead>Reason</TableHead>
-                <TableHead>Created</TableHead>
+                <TableHead>Người thao tác</TableHead>
+                <TableHead>Hành động</TableHead>
+                <TableHead>Đối tượng</TableHead>
+                <TableHead>Lý do</TableHead>
+                <TableHead>Thời điểm</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

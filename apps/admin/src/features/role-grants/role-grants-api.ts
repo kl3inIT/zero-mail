@@ -7,7 +7,7 @@ export type GrantAdminResponse = components['schemas']['GrantAdminResponse'];
 export async function fetchAdmins(): Promise<AdminUserSummary[]> {
   const { data, error } = await api.GET('/api/admin/admins');
   if (error || !data) {
-    throw new Error('Unable to load admins.');
+    throw new Error('Không thể tải danh sách quản trị viên.');
   }
   return data;
 }
@@ -17,7 +17,7 @@ export async function grantAdmin(email: string): Promise<GrantAdminResponse> {
     body: { email },
   });
   if (error || !data) {
-    throw new Error('Unable to grant admin access.');
+    throw new Error('Không thể cấp quyền quản trị.');
   }
   return data;
 }
@@ -30,6 +30,6 @@ export async function revokeAdmin(adminUserId: string, reason: string): Promise<
     body: { reason },
   });
   if (error) {
-    throw new Error('Unable to revoke admin access.');
+    throw new Error('Không thể thu hồi quyền quản trị.');
   }
 }

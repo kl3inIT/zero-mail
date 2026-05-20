@@ -50,7 +50,7 @@ function CatalogSyncRoute() {
   async function confirm() {
     await confirmSync.mutateAsync({
       jobId,
-      reason: `Confirm ${providerLabel(provider as CatalogProvider)} catalog sync`,
+      reason: `Xác nhận đồng bộ danh mục ${providerLabel(provider as CatalogProvider)}`,
     });
     await navigate({
       to: '/catalog',
@@ -83,53 +83,53 @@ function CatalogSyncRoute() {
             className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'mb-2 px-0' })}
           >
             <ArrowLeftIcon className="size-4" />
-            Catalog
+            Danh mục mô hình
           </Link>
           <p className="text-muted-foreground font-mono text-[11px] tracking-wider uppercase">
-            Catalog sync
+            Đồng bộ danh mục
           </p>
           <h1 className="text-ink text-xl font-semibold">
-            {providerLabel(provider as CatalogProvider)} sync
+            Đồng bộ {providerLabel(provider as CatalogProvider)}
           </h1>
         </div>
         <Badge variant={ready ? 'default' : 'secondary'}>
-          {ready ? `${totalChanges} changes` : 'Fetching'}
+          {ready ? `${totalChanges} thay đổi` : 'Đang lấy dữ liệu'}
         </Badge>
       </header>
 
       <Card>
         <CardHeader>
-          <CardTitle>Sync from /models</CardTitle>
+          <CardTitle>Đồng bộ từ /models</CardTitle>
           <CardDescription>
-            Review provider output before any catalog mutation is committed.
+            Xem lại đầu ra từ nhà cung cấp trước khi commit bất kỳ thay đổi nào vào danh mục.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <ol className="grid gap-3 md:grid-cols-3">
-            <Step done label="1. Fetch" />
-            <Step active={!ready} done={ready} label="2. Diff" />
-            <Step active={ready} label="3. Confirm" />
+            <Step done label="1. Lấy dữ liệu" />
+            <Step active={!ready} done={ready} label="2. So sánh" />
+            <Step active={ready} label="3. Xác nhận" />
           </ol>
 
           {!ready && (
             <div className="border-border bg-secondary text-muted-foreground rounded-md border px-4 py-8 text-sm">
               <Loader2Icon className="mr-2 inline size-4 animate-spin" />
-              Waiting for the worker to fetch and validate provider models.
+              Đang chờ worker lấy và xác thực các mô hình của nhà cung cấp.
             </div>
           )}
 
           {syncDiff.isError && (
             <div className="border-border bg-secondary text-destructive rounded-md border px-4 py-8 text-sm">
-              Unable to load catalog sync diff.
+              Không tải được bản so sánh đồng bộ danh mục.
             </div>
           )}
 
           {ready && diff && (
             <div className="space-y-5">
               <div className="grid gap-3 md:grid-cols-3">
-                <ChangeCount label="Added" value={diff.added.length} />
-                <ChangeCount label="Removed" value={diff.removed.length} />
-                <ChangeCount label="Changed" value={diff.changed.length} />
+                <ChangeCount label="Thêm" value={diff.added.length} />
+                <ChangeCount label="Xóa" value={diff.removed.length} />
+                <ChangeCount label="Thay đổi" value={diff.changed.length} />
               </div>
               <JsonDiffViewer
                 before={{ removed: diff.removed, changed: diff.changed }}
@@ -148,7 +148,7 @@ function CatalogSyncRoute() {
                   disabled={cancelSync.isPending || confirmSync.isPending}
                 >
                   <XCircleIcon className="size-4" />
-                  Cancel
+                  Hủy
                 </Button>
                 <Button
                   type="button"
@@ -156,7 +156,7 @@ function CatalogSyncRoute() {
                   disabled={confirmSync.isPending}
                 >
                   <CheckCircle2Icon className="size-4" />
-                  Confirm sync
+                  Xác nhận đồng bộ
                 </Button>
               </div>
             </div>
@@ -212,11 +212,11 @@ function FeatureChangePreview({
   return (
     <section className="border-border rounded-md border px-3 py-2">
       <div className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
-        {featureLabel(feature)} impact
+        Ảnh hưởng tới {featureLabel(feature)}
       </div>
       <div className="flex flex-wrap gap-2">
         {rows.length === 0 ? (
-          <span className="text-muted-foreground text-sm">No model changes.</span>
+          <span className="text-muted-foreground text-sm">Không có thay đổi mô hình.</span>
         ) : (
           rows.slice(0, 4).map((model) => (
             <Badge key={`${feature}:${model.modelId}`} variant="secondary" className="font-mono">

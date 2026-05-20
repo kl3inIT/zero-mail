@@ -35,7 +35,7 @@ export function MaskedSecretField({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="master-key-plaintext">{editing ? 'Plaintext key' : 'Saved key'}</Label>
+      <Label htmlFor="master-key-plaintext">{editing ? 'Khóa nhập trực tiếp' : 'Khóa đã lưu'}</Label>
       <div className="flex gap-2">
         <div className="relative flex-1">
           <EyeOffIcon className="absolute top-2.5 left-3 size-4 text-muted-foreground" />
@@ -44,7 +44,7 @@ export function MaskedSecretField({
               key={editingKey}
               ref={inputRef}
               id="master-key-plaintext"
-              aria-label="Plaintext key"
+              aria-label="Khóa nhập trực tiếp"
               type="password"
               defaultValue={defaultPlaintextValue}
               onChange={(event) => onPlaintextChange(event.target.value)}
@@ -57,10 +57,10 @@ export function MaskedSecretField({
             <Input
               key={editingKey}
               id="master-key-plaintext"
-              aria-label="Saved key"
+              aria-label="Khóa đã lưu"
               type="text"
               readOnly
-              value={maskedValue ?? 'Not set'}
+              value={maskedValue ?? 'Chưa thiết lập'}
               className="pl-9 font-mono"
               autoComplete="off"
             />
@@ -68,7 +68,7 @@ export function MaskedSecretField({
         </div>
         <Button type="button" variant="secondary" onClick={onEdit} disabled={editDisabled}>
           <KeyRoundIcon className="size-4" />
-          Edit key
+          Chỉnh sửa khóa
         </Button>
       </div>
     </div>

@@ -26,9 +26,9 @@ const SENTINEL_PATTERN = /(sk-ant-|sk-or-|sk-|AIza)/;
 const reasonSchema = z.object({
   reason: z
     .string()
-    .min(8, 'Provide a reason of at least 8 characters.')
-    .max(500, 'Reason must be 500 characters or fewer.')
-    .refine((value) => !SENTINEL_PATTERN.test(value), 'Forbidden token prefix detected.'),
+    .min(8, 'Vui lòng nhập lý do tối thiểu 8 ký tự.')
+    .max(500, 'Lý do không được vượt quá 500 ký tự.')
+    .refine((value) => !SENTINEL_PATTERN.test(value), 'Phát hiện tiền tố token bị cấm.'),
 });
 
 function fieldErrors(errors: unknown[]): string {
@@ -99,11 +99,11 @@ export function ConfirmTwiceDialog({
         </div>
         <div className="p-5">
           <DialogHeader>
-            <DialogTitle>{step === 1 ? 'Record a reason' : 'Confirm the target'}</DialogTitle>
+            <DialogTitle>{step === 1 ? 'Ghi nhận lý do' : 'Xác nhận đối tượng'}</DialogTitle>
             <DialogDescription>
               {step === 1
-                ? 'This reason is recorded in the admin audit log.'
-                : `Type "${confirmationToken}" to confirm.`}
+                ? 'Lý do này sẽ được ghi vào nhật ký audit của quản trị viên.'
+                : `Nhập "${confirmationToken}" để xác nhận.`}
             </DialogDescription>
           </DialogHeader>
 
@@ -127,7 +127,7 @@ export function ConfirmTwiceDialog({
                 {(field) => (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor={field.name}>Reason (recorded in audit log)</Label>
+                      <Label htmlFor={field.name}>Lý do (ghi vào nhật ký audit)</Label>
                       <span className="font-mono text-xs text-muted-foreground">
                         {String(field.state.value).length} / 500
                       </span>
@@ -135,7 +135,7 @@ export function ConfirmTwiceDialog({
                     <Textarea
                       id={field.name}
                       value={field.state.value}
-                      placeholder="e.g. decommissioning test admin"
+                      placeholder="VD: ngừng sử dụng tài khoản admin thử nghiệm"
                       onBlur={field.handleBlur}
                       onChange={(event) => {
                         setReasonValue(event.target.value);
@@ -150,17 +150,17 @@ export function ConfirmTwiceDialog({
               </form.Field>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
+                  Hủy
                 </Button>
                 <Button type="submit" variant="secondary">
-                  Continue
+                  Tiếp tục
                 </Button>
               </div>
             </form>
           ) : (
             <div className="mt-5 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="confirmation-token">Type "{confirmationToken}" to confirm</Label>
+                <Label htmlFor="confirmation-token">Nhập "{confirmationToken}" để xác nhận</Label>
                 <Input
                   id="confirmation-token"
                   value={typedToken}
@@ -171,13 +171,13 @@ export function ConfirmTwiceDialog({
               {successAuditId !== null && (
                 <p className="text-sm text-green">
                   {successAuditId === ''
-                    ? 'Action recorded.'
-                    : `Action recorded. Audit row ${successAuditId}.`}
+                    ? 'Đã ghi nhận thao tác.'
+                    : `Đã ghi nhận thao tác. Bản ghi audit ${successAuditId}.`}
                 </p>
               )}
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setStep(1)}>
-                  Back
+                  Quay lại
                 </Button>
                 <Button
                   type="button"
@@ -188,7 +188,7 @@ export function ConfirmTwiceDialog({
                     void onConfirm(reasonValue)
                       .then((result) => setSuccessAuditId(result.auditId ?? ''))
                       .catch((error: unknown) => {
-                        setSubmitError(error instanceof Error ? error.message : 'Unable to complete action.');
+                        setSubmitError(error instanceof Error ? error.message : 'Không thể hoàn tất thao tác.');
                       });
                   }}
                 >

@@ -110,6 +110,11 @@ function CatalogRoute() {
   }
 
   async function startSync() {
+    if (selectedProvider === 'ANTHROPIC') {
+      // Anthropic has no list-models endpoint; the Sync button is disabled for
+      // this provider so this branch should be unreachable.
+      return;
+    }
     const result = await syncFetch.mutateAsync(selectedProvider);
     await navigate({
       to: '/catalog-sync/$jobId',
@@ -135,16 +140,16 @@ function CatalogRoute() {
       <header className="flex items-end justify-between gap-4">
         <div>
           <p className="text-muted-foreground font-mono text-[11px] tracking-wider uppercase">
-            LLM operations
+            Vận hành LLM
           </p>
-          <h1 className="text-ink text-xl font-semibold">Catalog</h1>
+          <h1 className="text-ink text-xl font-semibold">Danh mục mô hình</h1>
         </div>
         <div className="flex items-center gap-2">
           {search.syncOk && (
-            <Badge className="bg-green-soft text-green hover:bg-green-soft">Sync OK</Badge>
+            <Badge className="bg-green-soft text-green hover:bg-green-soft">Đồng bộ OK</Badge>
           )}
           <Badge variant="secondary">
-            {catalog.isLoading ? 'Loading' : `${selectedModelCount} models`}
+            {catalog.isLoading ? 'Đang tải' : `${selectedModelCount} mô hình`}
           </Badge>
         </div>
       </header>
@@ -154,10 +159,10 @@ function CatalogRoute() {
           <div>
             <CardTitle className="inline-flex items-center gap-2">
               <BookOpenIcon className="text-muted-foreground size-4" />
-              Provider catalog
+              Danh mục theo nhà cung cấp
             </CardTitle>
             <CardDescription>
-              Curated model list for chat, triage, and draft generation.
+              Danh sách mô hình đã chọn lọc cho chat, phân loại và soạn nháp.
             </CardDescription>
           </div>
           <SyncAction
@@ -198,7 +203,7 @@ function CatalogRoute() {
                       provider: selectedProvider,
                       feature,
                       modelId: model.modelId,
-                      reason: `Set ${featureLabel(feature)} default model`,
+                      reason: `Đặt mô hình mặc định cho ${featureLabel(feature)}`,
                     })
                   }
                   onDisable={setModelPendingDisable}
@@ -213,12 +218,12 @@ function CatalogRoute() {
         <CardHeader>
           <CardTitle className="inline-flex items-center gap-2">
             <PlusIcon className="text-muted-foreground size-4" />
-            Add model manually
+            Thêm mô hình thủ công
           </CardTitle>
           <CardDescription>
             {selectedProvider === 'ANTHROPIC'
-              ? 'Anthropic sync is disabled; manual entry is the primary catalog path.'
-              : 'Manual entry is available for provider exceptions and private routing aliases.'}
+              ? 'Đồng bộ Anthropic bị vô hiệu; nhập thủ công là luồng chính để cập nhật danh mục.'
+              : 'Nhập thủ công khả dụng cho các trường hợp đặc biệt và alias định tuyến riêng.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -230,7 +235,7 @@ function CatalogRoute() {
             }}
           >
             <div className="space-y-2">
-              <Label htmlFor="catalog-model-id">Model ID</Label>
+              <Label htmlFor="catalog-model-id">Mã mô hình</Label>
               <Input
                 id="catalog-model-id"
                 className="font-mono"
@@ -242,7 +247,7 @@ function CatalogRoute() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="catalog-display-name">Display name</Label>
+              <Label htmlFor="catalog-display-name">Tên hiển thị</Label>
               <Input
                 id="catalog-display-name"
                 value={manualForm.displayName}
@@ -252,7 +257,7 @@ function CatalogRoute() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="catalog-cost-in">Input / 1K</Label>
+              <Label htmlFor="catalog-cost-in">Đầu vào / 1K</Label>
               <Input
                 id="catalog-cost-in"
                 inputMode="decimal"
@@ -263,7 +268,7 @@ function CatalogRoute() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="catalog-cost-out">Output / 1K</Label>
+              <Label htmlFor="catalog-cost-out">Đầu ra / 1K</Label>
               <Input
                 id="catalog-cost-out"
                 inputMode="decimal"
@@ -281,7 +286,7 @@ function CatalogRoute() {
                     setManualForm((current) => ({ ...current, recommended: value === true }))
                   }
                 />
-                Recommended
+                Khuyến nghị
               </Label>
               <Button
                 type="submit"
@@ -292,7 +297,7 @@ function CatalogRoute() {
                 }
               >
                 <PlusIcon className="size-4" />
-                Add
+                Thêm
               </Button>
             </div>
           </form>
@@ -307,13 +312,13 @@ function CatalogRoute() {
               setModelPendingDisable(null);
             }
           }}
-          actionLabel="Disable model"
+          actionLabel="Vô hiệu mô hình"
           targetLabel={modelPendingDisable.modelId}
           confirmationToken={modelPendingDisable.modelId}
           finalButtonLabel={
             modelPendingDisable.pinnedTenantCount > 0
-              ? `Disable ${modelPendingDisable.pinnedTenantCount} pinned model`
-              : 'Disable model'
+              ? `Vô hiệu mô hình đang được ${modelPendingDisable.pinnedTenantCount} khách hàng dùng`
+              : 'Vô hiệu mô hình'
           }
           consequences={disableConsequences(modelPendingDisable)}
           onConfirm={async (reason) => {
@@ -348,11 +353,11 @@ function SyncAction({
           <TooltipTrigger render={<span className="inline-flex" />}>
             <Button disabled>
               <CloudDownloadIcon className="size-4" />
-              Sync from /models
+              Đồng bộ từ /models
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            Anthropic has no public /models endpoint - add new models via manual entry.
+            Anthropic không cung cấp endpoint /models công khai — vui lòng thêm mô hình mới qua nhập thủ công.
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -390,14 +395,14 @@ function CatalogTable({
   if (isLoading) {
     return (
       <div className="border-border bg-secondary text-muted-foreground rounded-md border px-3 py-8 text-sm">
-        Loading catalog.
+        Đang tải danh mục.
       </div>
     );
   }
   if (isError) {
     return (
       <div className="border-border bg-secondary text-destructive rounded-md border px-3 py-8 text-sm">
-        Unable to load catalog.
+        Không tải được danh mục.
       </div>
     );
   }
@@ -405,19 +410,19 @@ function CatalogTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Model</TableHead>
-          <TableHead>Display</TableHead>
-          <TableHead>Flags</TableHead>
-          <TableHead>Pins</TableHead>
-          <TableHead>Cost</TableHead>
-          <TableHead className="text-right">Action</TableHead>
+          <TableHead>Mô hình</TableHead>
+          <TableHead>Tên hiển thị</TableHead>
+          <TableHead>Nhãn</TableHead>
+          <TableHead>Ghim</TableHead>
+          <TableHead>Chi phí</TableHead>
+          <TableHead className="text-right">Hành động</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {models.length === 0 && (
           <TableRow>
             <TableCell colSpan={6} className="text-muted-foreground h-24 text-center">
-              No {featureLabel(feature).toLowerCase()} models for {providerLabel(provider)}.
+              Không có mô hình {featureLabel(feature).toLowerCase()} cho {providerLabel(provider)}.
             </TableCell>
           </TableRow>
         )}
@@ -437,16 +442,16 @@ function CatalogTable({
                 {model.defaultModel && (
                   <Badge className="bg-green-soft text-green hover:bg-green-soft">
                     <CheckCircle2Icon className="size-3" />
-                    Default
+                    Mặc định
                   </Badge>
                 )}
                 {model.recommended && (
                   <Badge className="bg-amber-soft text-amber hover:bg-amber-soft">
                     <StarIcon className="size-3" />
-                    Recommended
+                    Khuyến nghị
                   </Badge>
                 )}
-                {model.deprecatedAt && <Badge variant="secondary">Disabled</Badge>}
+                {model.deprecatedAt && <Badge variant="secondary">Đã vô hiệu</Badge>}
               </div>
             </TableCell>
             <TableCell>
@@ -465,7 +470,7 @@ function CatalogTable({
                   onClick={() => onSetDefault(model)}
                 >
                   <SlidersHorizontalIcon className="size-3.5" />
-                  Set default
+                  Đặt mặc định
                 </Button>
                 <Button
                   type="button"
@@ -474,7 +479,7 @@ function CatalogTable({
                   disabled={Boolean(model.deprecatedAt)}
                   onClick={() => onDisable(model)}
                 >
-                  Disable
+                  Vô hiệu
                 </Button>
               </div>
             </TableCell>
@@ -499,13 +504,13 @@ function formatCost(value?: number): string {
 
 function disableConsequences(model: CatalogModel): string[] {
   const consequences = [
-    'The model remains in the catalog for existing foreign-key references.',
-    'New selections will hide this model after the catalog refreshes.',
-    'The reason is recorded in the admin audit log.',
+    'Mô hình vẫn tồn tại trong danh mục để giữ ràng buộc khóa ngoại hiện có.',
+    'Sau khi làm mới danh mục, các lượt chọn mới sẽ không thấy mô hình này.',
+    'Lý do sẽ được ghi vào nhật ký audit của quản trị viên.',
   ];
   if (model.pinnedTenantCount > 0) {
     consequences.unshift(
-      `${model.pinnedTenantCount} tenants are currently using this model; they will continue using it until they pick a different one.`,
+      `${model.pinnedTenantCount} khách hàng đang dùng mô hình này; họ sẽ tiếp tục dùng cho đến khi chọn mô hình khác.`,
     );
   }
   return consequences;

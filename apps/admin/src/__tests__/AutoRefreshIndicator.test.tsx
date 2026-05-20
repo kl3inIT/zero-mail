@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AutoRefreshIndicator } from '@/components/AutoRefreshIndicator';
 
 describe('AutoRefreshIndicator', () => {
-  it('renders "Updated Ns ago" with tabular-nums when not paused', () => {
+  it('renders the elapsed-time line with tabular-nums when not paused', () => {
     render(
       <AutoRefreshIndicator
         lastUpdatedAt={new Date(Date.now() - 4_000)}
@@ -14,11 +14,11 @@ describe('AutoRefreshIndicator', () => {
         onPauseToggle={() => undefined}
       />,
     );
-    expect(screen.getByText(/Updated/i).className).toMatch(/tabular-nums/);
-    expect(screen.getByText(/Updated \d+s ago/i)).toBeInTheDocument();
+    expect(screen.getByText(/Cập nhật cách đây/i).className).toMatch(/tabular-nums/);
+    expect(screen.getByText(/Cập nhật cách đây \d+s/i)).toBeInTheDocument();
   });
 
-  it('shows "Paused" and exposes a Resume control when paused', async () => {
+  it('shows the paused label and exposes a resume control when paused', async () => {
     const user = userEvent.setup();
     const onToggle = vi.fn();
     render(
@@ -29,8 +29,8 @@ describe('AutoRefreshIndicator', () => {
         onPauseToggle={onToggle}
       />,
     );
-    expect(screen.getByText('Paused')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /Resume auto-refresh/i }));
+    expect(screen.getByText('Đã tạm dừng')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Tiếp tục tự làm mới/i }));
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
@@ -43,7 +43,7 @@ describe('AutoRefreshIndicator', () => {
         onPauseToggle={() => undefined}
       />,
     );
-    const elapsedTextNode = screen.getByText(/Updated/i);
+    const elapsedTextNode = screen.getByText(/Cập nhật cách đây/i);
     expect(elapsedTextNode).toHaveAttribute('aria-live', 'polite');
   });
 });

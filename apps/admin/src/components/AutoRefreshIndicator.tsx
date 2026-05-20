@@ -47,25 +47,25 @@ export function AutoRefreshIndicator({
       >
         {lastUpdatedAt
           ? paused
-            ? 'Paused'
-            : `Updated ${formatElapsed(elapsedSeconds)} ago`
-          : 'Waiting…'}
+            ? 'Đã tạm dừng'
+            : `Cập nhật cách đây ${formatElapsed(elapsedSeconds)}`
+          : 'Đang chờ…'}
       </span>
       <Button
         type="button"
         variant="ghost"
         size="sm"
         onClick={onPauseToggle}
-        aria-label={paused ? 'Resume auto-refresh' : 'Pause auto-refresh'}
+        aria-label={paused ? 'Tiếp tục tự làm mới' : 'Tạm dừng tự làm mới'}
         title={
           paused
-            ? `Resume auto-refresh (every ${intervalSeconds}s)`
-            : `Pause auto-refresh (currently every ${intervalSeconds}s)`
+            ? `Tiếp tục tự làm mới (mỗi ${intervalSeconds}s)`
+            : `Tạm dừng tự làm mới (đang chạy mỗi ${intervalSeconds}s)`
         }
         className="h-7 gap-1 px-2"
       >
         {paused ? <PlayIcon className="size-3.5" /> : <PauseIcon className="size-3.5" />}
-        <span className="text-xs">{paused ? 'Resume' : 'Pause'}</span>
+        <span className="text-xs">{paused ? 'Tiếp tục' : 'Tạm dừng'}</span>
       </Button>
     </div>
   );

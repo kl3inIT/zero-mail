@@ -1,4 +1,9 @@
-import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
+import {
+  startAuthentication,
+  startRegistration,
+  type PublicKeyCredentialCreationOptionsJSON,
+  type PublicKeyCredentialRequestOptionsJSON,
+} from '@simplewebauthn/browser';
 
 import { getAdminApiUrl } from './api/admin-base-url';
 
@@ -26,7 +31,10 @@ export async function createEnrollmentSession(token: string, email: string): Pro
 }
 
 export async function registerPasskey(email: string): Promise<void> {
-  const optionsResponse = await postJson<unknown>('/webauthn/register/options', { email });
+  const optionsResponse = await postJson<PublicKeyCredentialCreationOptionsJSON>(
+    '/webauthn/register/options',
+    { email },
+  );
   const attestationResponse = await startRegistration({ optionsJSON: optionsResponse });
   // Spring Security 7's WebAuthnRegistrationFilter expects the credential nested
   // under `publicKey` with an optional `label`; sending the flat SimpleWebAuthn
@@ -40,7 +48,10 @@ export async function registerPasskey(email: string): Promise<void> {
 }
 
 export async function authenticatePasskey(email: string): Promise<void> {
-  const optionsResponse = await postJson<unknown>('/webauthn/authenticate/options', { email });
+  const optionsResponse = await postJson<PublicKeyCredentialRequestOptionsJSON>(
+    '/webauthn/authenticate/options',
+    { email },
+  );
   const assertionResponse = await startAuthentication({ optionsJSON: optionsResponse });
   // Per Spring Security 7 docs the authentication endpoint expects the assertion
   // flat at the root (id, rawId, response, clientExtensionResults,

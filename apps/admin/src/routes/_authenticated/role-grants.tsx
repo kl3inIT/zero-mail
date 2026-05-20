@@ -32,28 +32,28 @@ function RoleGrantsRoute() {
     <div className="space-y-6">
       <header className="flex items-end justify-between gap-4">
         <div>
-          <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">Audit & access</p>
-          <h1 className="text-xl font-semibold text-ink">Role grants</h1>
+          <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">Audit và truy cập</p>
+          <h1 className="text-xl font-semibold text-ink">Phân quyền admin</h1>
         </div>
         <Button onClick={() => setGrantDialogOpen(true)}>
           <UserPlusIcon className="size-4" />
-          Grant admin
+          Cấp quyền admin
         </Button>
       </header>
       <Card>
         <CardHeader>
-          <CardTitle>Admins</CardTitle>
-          <CardDescription>Passkey-backed operator accounts.</CardDescription>
+          <CardTitle>Quản trị viên</CardTitle>
+          <CardDescription>Tài khoản vận hành xác thực bằng passkey.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Email</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last used</TableHead>
-                <TableHead>Credential</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>Trạng thái</TableHead>
+                <TableHead>Sử dụng gần nhất</TableHead>
+                <TableHead>Thông tin xác thực</TableHead>
+                <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -66,14 +66,14 @@ function RoleGrantsRoute() {
                     </Badge>
                   </TableCell>
                   <TableCell className="font-mono text-xs">{adminUser.lastUsedAt ?? '-'}</TableCell>
-                  <TableCell>{adminUser.hasCredential ? 'Registered' : 'Pending'}</TableCell>
+                  <TableCell>{adminUser.hasCredential ? 'Đã đăng ký' : 'Đang chờ'}</TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="destructive"
                       size="sm"
                       onClick={() => setRevokeTarget({ id: adminUser.adminUserId, email: adminUser.email })}
                     >
-                      Revoke admin
+                      Thu hồi quyền
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -86,8 +86,8 @@ function RoleGrantsRoute() {
       <Dialog open={grantDialogOpen} onOpenChange={setGrantDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Grant admin</DialogTitle>
-            <DialogDescription>Creates a one-time enrollment URL for another operator.</DialogDescription>
+            <DialogTitle>Cấp quyền admin</DialogTitle>
+            <DialogDescription>Tạo URL đăng ký một lần cho quản trị viên khác.</DialogDescription>
           </DialogHeader>
           <form
             className="space-y-4"
@@ -95,7 +95,7 @@ function RoleGrantsRoute() {
               event.preventDefault();
               setEmailError(null);
               if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                setEmailError('Enter a valid admin email.');
+                setEmailError('Vui lòng nhập email quản trị viên hợp lệ.');
                 return;
               }
               void grantAdmin.mutateAsync(email).then((result) => {
@@ -104,7 +104,7 @@ function RoleGrantsRoute() {
             }}
           >
             <div className="space-y-2">
-              <Label htmlFor="grant-admin-email">Admin email</Label>
+              <Label htmlFor="grant-admin-email">Email quản trị viên</Label>
               <Input
                 id="grant-admin-email"
                 value={email}
@@ -114,12 +114,12 @@ function RoleGrantsRoute() {
               {emailError && <p className="text-sm text-destructive">{emailError}</p>}
             </div>
             <Button type="submit" disabled={grantAdmin.isPending}>
-              Grant admin
+              Cấp quyền admin
             </Button>
           </form>
           {grantedEnrollmentUrl && (
             <div className="rounded-md border border-border bg-secondary p-3">
-              <Label>One-time enrollment URL</Label>
+              <Label>URL đăng ký một lần</Label>
               <div className="mt-2 flex gap-2">
                 <Input readOnly value={grantedEnrollmentUrl} className="font-mono text-xs" />
                 <Button
@@ -128,7 +128,7 @@ function RoleGrantsRoute() {
                   onClick={() => void navigator.clipboard.writeText(grantedEnrollmentUrl)}
                 >
                   <CopyIcon className="size-4" />
-                  Copy URL
+                  Sao chép
                 </Button>
               </div>
             </div>
@@ -142,11 +142,11 @@ function RoleGrantsRoute() {
           onOpenChange={(open) => {
             if (!open) setRevokeTarget(null);
           }}
-          actionLabel="Revoke admin grant"
+          actionLabel="Thu hồi quyền admin"
           targetLabel={revokeTarget.email}
-          consequences={['The admin cannot sign in with their passkey.', 'The reason is stored in the audit log.']}
+          consequences={['Quản trị viên này sẽ không thể đăng nhập bằng passkey nữa.', 'Lý do sẽ được lưu vào nhật ký audit.']}
           confirmationToken={revokeTarget.email}
-          finalButtonLabel="Revoke admin"
+          finalButtonLabel="Thu hồi quyền"
           onConfirm={async (reason) => {
             await revokeAdmin.mutateAsync({ adminUserId: revokeTarget.id, reason });
             return { auditId: 'pending-refresh' };

@@ -33,7 +33,7 @@ export type TenantDeleteInput = TenantActionInput & {
 };
 
 function errorFor(operation: string): Error {
-  return new Error(`Unable to ${operation}.`);
+  return new Error(`Không thể ${operation}.`);
 }
 
 function toTenantListQuery(filters: TenantListFilters): TenantListQuery {
@@ -63,7 +63,7 @@ export async function fetchTenantList(filters: TenantListFilters): Promise<Tenan
     },
   });
   if (error || !data) {
-    throw errorFor('load tenants');
+    throw errorFor('tải danh sách khách hàng');
   }
   return data;
 }
@@ -75,7 +75,7 @@ export async function fetchTenantOverview(tenantId: string): Promise<TenantDetai
     },
   });
   if (error || !data) {
-    throw errorFor('load tenant overview');
+    throw errorFor('tải tổng quan khách hàng');
   }
   return data;
 }
@@ -87,7 +87,7 @@ export async function fetchTenantHealth(tenantId: string): Promise<TenantHealthR
     },
   });
   if (error || !data) {
-    throw errorFor('load tenant health');
+    throw errorFor('tải tình trạng khách hàng');
   }
   return data;
 }
@@ -99,7 +99,7 @@ export async function fetchTenantBilling(tenantId: string): Promise<TenantBillin
     },
   });
   if (error || !data) {
-    throw errorFor('load tenant billing');
+    throw errorFor('tải thông tin thanh toán khách hàng');
   }
   return data;
 }
@@ -111,7 +111,7 @@ export async function fetchTenantSpend(tenantId: string): Promise<TenantSpendRes
     },
   });
   if (error || !data) {
-    throw errorFor('load tenant spend');
+    throw errorFor('tải chi phí khách hàng');
   }
   return data;
 }
@@ -123,7 +123,7 @@ export async function fetchTenantActivity(tenantId: string): Promise<TenantActiv
     },
   });
   if (error || !data) {
-    throw errorFor('load tenant activity');
+    throw errorFor('tải hoạt động khách hàng');
   }
   return data;
 }
@@ -135,7 +135,7 @@ export async function fetchTenantDeletionPreview(tenantId: string): Promise<Tena
     },
   });
   if (error || !data) {
-    throw errorFor('load tenant deletion preview');
+    throw errorFor('tải bản xem trước xóa khách hàng');
   }
   return data;
 }
@@ -148,7 +148,7 @@ export async function pauseTenant(input: TenantActionInput): Promise<void> {
     body: { reason: input.reason },
   });
   if (error) {
-    throw errorFor('pause tenant');
+    throw errorFor('tạm dừng khách hàng');
   }
 }
 
@@ -160,7 +160,7 @@ export async function disconnectTenant(input: TenantActionInput): Promise<void> 
     body: { reason: input.reason },
   });
   if (error) {
-    throw errorFor('disconnect tenant');
+    throw errorFor('ngắt kết nối khách hàng');
   }
 }
 
@@ -176,6 +176,6 @@ export async function deleteTenant(input: TenantDeleteInput): Promise<void> {
     body: request,
   });
   if (error) {
-    throw errorFor('delete tenant');
+    throw errorFor('xóa khách hàng');
   }
 }

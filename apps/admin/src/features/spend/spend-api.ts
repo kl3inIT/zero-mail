@@ -79,7 +79,7 @@ async function fetchJson<T>(path: `/${string}`, init?: RequestInit): Promise<T> 
     ...init,
   });
   if (!response.ok) {
-    throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+    throw new Error(`Yêu cầu thất bại: ${response.status} ${response.statusText}`);
   }
   return (await response.json()) as T;
 }
@@ -114,7 +114,7 @@ export async function downloadSpendCsv(input: SpendQueryInput): Promise<void> {
     },
   );
   if (!response.ok) {
-    throw new Error(`CSV export failed: ${response.status} ${response.statusText}`);
+    throw new Error(`Xuất CSV thất bại: ${response.status} ${response.statusText}`);
   }
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);

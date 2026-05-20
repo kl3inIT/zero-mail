@@ -60,7 +60,7 @@ async function fetchJson<T>(path: `/${string}`, init?: RequestInit): Promise<T> 
     ...init,
   });
   if (!response.ok) {
-    throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+    throw new Error(`Yêu cầu thất bại: ${response.status} ${response.statusText}`);
   }
   if (response.status === 204) {
     // Caller is expected to coerce a no-content response into a non-data result.

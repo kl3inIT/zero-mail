@@ -30,7 +30,7 @@ export type EditSessionResponse = {
   expiresAt: string;
 };
 
-async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
+async function adminFetch<T>(path: `/${string}`, init?: RequestInit): Promise<T> {
   // TODO: switch to typed openapi-fetch after admin-schema.d.ts is regenerated with 8B paths.
   const response = await fetch(getAdminApiUrl(path), {
     credentials: 'include',
@@ -38,7 +38,7 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
   });
   if (!response.ok) {
-    throw new Error(`Admin request failed: ${response.status}`);
+    throw new Error(`Yêu cầu quản trị thất bại: ${response.status}`);
   }
   if (response.status === 204) {
     return undefined as T;

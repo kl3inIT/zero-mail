@@ -47,12 +47,11 @@ function QueueRoute() {
       <header className="flex items-end justify-between gap-4">
         <div>
           <p className="text-muted-foreground font-mono text-[11px] tracking-wider uppercase">
-            Operations
+            Vận hành
           </p>
-          <h1 className="text-ink text-xl font-semibold">Queue health</h1>
+          <h1 className="text-ink text-xl font-semibold">Tình trạng hàng đợi</h1>
           <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-            Worker queue aggregates over <code>processing_job</code>. No job payload is exposed
-            to admin surfaces.
+            Hàng đợi worker tổng hợp từ <code>processing_job</code>. Không hiển thị payload công việc trên giao diện quản trị.
           </p>
         </div>
         <AutoRefreshIndicator
@@ -69,9 +68,9 @@ function QueueRoute() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Depth by job type</CardTitle>
+          <CardTitle>Số lượng theo loại công việc</CardTitle>
           <CardDescription>
-            Pending and processing rows in the active queue, grouped by worker job type.
+            Số bản ghi đang chờ và đang xử lý trong hàng đợi, nhóm theo loại công việc của worker.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -81,9 +80,9 @@ function QueueRoute() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Job type</TableHead>
-                  <TableHead className="text-right">Pending</TableHead>
-                  <TableHead className="text-right">Processing</TableHead>
+                  <TableHead>Loại công việc</TableHead>
+                  <TableHead className="text-right">Đang chờ</TableHead>
+                  <TableHead className="text-right">Đang xử lý</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -93,7 +92,7 @@ function QueueRoute() {
                       colSpan={3}
                       className="text-muted-foreground h-16 text-center"
                     >
-                      No active jobs.
+                      Không có công việc đang hoạt động.
                     </TableCell>
                   </TableRow>
                 )}
@@ -119,16 +118,15 @@ function QueueRoute() {
           <div>
             <CardTitle className="flex items-center gap-2">
               <GaugeIcon className="size-4" />
-              Dead letters
+              Công việc thất bại
             </CardTitle>
             <CardDescription>
-              Re-queue restores a fresh retry budget (attempts=0) and stamps an audit row. The
-              job&apos;s stored body is never read or shown.
+              Đưa lại vào hàng đợi sẽ cấp ngân sách retry mới (attempts=0) và ghi một bản audit. Hệ thống không đọc hay hiển thị nội dung công việc đã lưu.
             </CardDescription>
           </div>
           {queueHealth.data && (
             <Badge variant="secondary" className="tabular-nums">
-              {queueHealth.data.deadLetterCount} total
+              {queueHealth.data.deadLetterCount} tổng
             </Badge>
           )}
         </CardHeader>
@@ -136,27 +134,27 @@ function QueueRoute() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Job</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Failure</TableHead>
-                <TableHead className="text-right">Retries</TableHead>
-                <TableHead className="text-right">Admin re-queues</TableHead>
-                <TableHead>Last failed</TableHead>
-                <TableHead className="text-right">Action</TableHead>
+                <TableHead>Công việc</TableHead>
+                <TableHead>Loại</TableHead>
+                <TableHead>Lỗi</TableHead>
+                <TableHead className="text-right">Số lần retry</TableHead>
+                <TableHead className="text-right">Lần admin đưa lại</TableHead>
+                <TableHead>Thất bại gần nhất</TableHead>
+                <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {deadLetters.isLoading && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-muted-foreground h-24 text-center">
-                    Loading dead letters.
+                    Đang tải danh sách công việc thất bại.
                   </TableCell>
                 </TableRow>
               )}
               {!deadLetters.isLoading && (deadLetters.data?.rows.length ?? 0) === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-muted-foreground h-24 text-center">
-                    No dead letters.
+                    Không có công việc thất bại.
                   </TableCell>
                 </TableRow>
               )}
@@ -182,7 +180,7 @@ function QueueRoute() {
                       onClick={() => setRowPendingRequeue(row)}
                     >
                       <RefreshCwIcon className="size-3.5" />
-                      Re-queue
+                      Đưa lại
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -198,15 +196,15 @@ function QueueRoute() {
           onOpenChange={(nextOpen) => {
             if (!nextOpen) setRowPendingRequeue(null);
           }}
-          actionLabel="Re-queue dead-letter job"
+          actionLabel="Đưa lại công việc thất bại vào hàng đợi"
           targetLabel={`${rowPendingRequeue.jobType} • ${shortJobToken(rowPendingRequeue.jobId)}`}
           consequences={[
-            'Attempts counter resets to 0 — worker gets a fresh retry budget.',
-            'Admin re-queue counter increments — repeat offenders surface in the KPI.',
-            'Re-queue is recorded in the admin audit chain (DEAD_LETTER_REQUEUED).',
+            'Bộ đếm số lần thử lại sẽ về 0 — worker được cấp ngân sách retry mới.',
+            'Bộ đếm admin đưa lại sẽ tăng — các công việc lặp lại sẽ hiện trên KPI.',
+            'Lần đưa lại được ghi vào chuỗi audit của quản trị viên (DEAD_LETTER_REQUEUED).',
           ]}
           confirmationToken={shortJobToken(rowPendingRequeue.jobId)}
-          finalButtonLabel="Re-queue job"
+          finalButtonLabel="Đưa lại công việc"
           variant="warning"
           onConfirm={async (reason) =>
             requeueMutation.mutateAsync({
@@ -248,39 +246,39 @@ function KpiTiles({
     <>
       <KpiCard
         testId="kpi-pending"
-        label="Pending"
+        label="Đang chờ"
         value={totalPending.toLocaleString()}
-        hint={`${totalProcessing.toLocaleString()} currently processing`}
+        hint={`${totalProcessing.toLocaleString()} đang xử lý`}
       />
       <KpiCard
         testId="kpi-oldest-age"
-        label="Oldest unleased"
+        label="Chờ lâu nhất"
         value={formatDuration(queueHealth.oldestUnleasedJobAgeSeconds)}
-        hint="Time the oldest PENDING job has been waiting."
+        hint="Thời gian công việc PENDING lâu nhất đã chờ."
       />
       <KpiCard
         testId="kpi-retry-rate"
-        label="Retry rate"
+        label="Tỷ lệ retry"
         value={formatRetryRate(queueHealth.retryHistogram)}
-        hint="Share of rows that already attempted 1+ times."
+        hint="Tỷ lệ bản ghi đã thử lại ít nhất 1 lần."
       />
       <KpiCard
         testId="kpi-failure-rate"
-        label="Failure rate (24h)"
+        label="Tỷ lệ thất bại (24h)"
         value={`${(queueHealth.failureRateLast24h * 100).toFixed(1)}%`}
-        hint="FAILED ÷ rows created in the last 24h."
+        hint="FAILED chia cho số bản ghi tạo trong 24h qua."
       />
       <KpiCard
         testId="kpi-dead-letter"
-        label="Dead letters"
+        label="Công việc thất bại"
         value={queueHealth.deadLetterCount.toLocaleString()}
-        hint="Rows in DEAD_LETTER. Re-queue from the table below."
+        hint="Bản ghi ở DEAD_LETTER. Đưa lại từ bảng bên dưới."
       />
       <KpiCard
         testId="kpi-admin-requeued"
-        label="Admin-requeued (24h)"
+        label="Admin đưa lại (24h)"
         value={queueHealth.adminRequeuedLast24h.toLocaleString()}
-        hint="Repeat offenders flagged by operator intervention."
+        hint="Công việc tái phát do can thiệp của quản trị viên."
       />
     </>
   );

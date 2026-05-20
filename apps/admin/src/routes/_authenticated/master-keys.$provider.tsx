@@ -103,7 +103,7 @@ function MasterKeyProviderRoute() {
       editSessionToken,
       reason,
     });
-    setSuccessMessage(`${row?.displayName ?? provider} key saved`);
+    setSuccessMessage(`Đã lưu khóa ${row?.displayName ?? provider}`);
   }
 
   async function rotateCurrentKey() {
@@ -128,17 +128,17 @@ function MasterKeyProviderRoute() {
         <div>
           <Link to="/master-keys" className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'mb-2 px-0' })}>
             <ArrowLeftIcon className="size-4" />
-            Master keys
+            Khóa nền tảng
           </Link>
-          <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">LLM operations</p>
-          <h1 className="text-xl font-semibold text-ink">{row?.displayName ?? provider} master key</h1>
+          <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">Vận hành LLM</p>
+          <h1 className="text-xl font-semibold text-ink">Khóa nền tảng {row?.displayName ?? provider}</h1>
         </div>
-        {testResult && <Badge variant={testResult === 'OK' ? 'default' : 'destructive'}>Tested {testResult}</Badge>}
+        {testResult && <Badge variant={testResult === 'OK' ? 'default' : 'destructive'}>Đã test {testResult}</Badge>}
       </header>
       <Card>
         <CardHeader>
-          <CardTitle>Credential</CardTitle>
-          <CardDescription>Responses render masked-only after save.</CardDescription>
+          <CardTitle>Thông tin xác thực</CardTitle>
+          <CardDescription>Phản hồi chỉ hiển thị bản che mặt nạ sau khi lưu.</CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -163,15 +163,15 @@ function MasterKeyProviderRoute() {
             />
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Key format</Label>
+                <Label>Định dạng khóa</Label>
                 <Select value={keyFormat} onValueChange={(value) => setKeyFormat(value as KeyFormat)} disabled={provider !== 'ROUTER_9R'}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="OPENAI_FORMAT">OpenAI format</SelectItem>
-                    <SelectItem value="ANTHROPIC_FORMAT">Anthropic format</SelectItem>
-                    {provider === 'GOOGLE' && <SelectItem value="GOOGLE_FORMAT">Google format</SelectItem>}
+                    <SelectItem value="OPENAI_FORMAT">Định dạng OpenAI</SelectItem>
+                    <SelectItem value="ANTHROPIC_FORMAT">Định dạng Anthropic</SelectItem>
+                    {provider === 'GOOGLE' && <SelectItem value="GOOGLE_FORMAT">Định dạng Google</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>
@@ -186,24 +186,24 @@ function MasterKeyProviderRoute() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="master-key-reason">Reason</Label>
-              <Input id="master-key-reason" aria-label="Reason" value={reason} onChange={(event) => setReason(event.target.value)} />
+              <Label htmlFor="master-key-reason">Lý do</Label>
+              <Input id="master-key-reason" aria-label="Lý do" value={reason} onChange={(event) => setReason(event.target.value)} />
             </div>
             {successMessage && <div className="rounded-md border border-border bg-secondary px-3 py-2 text-sm">{successMessage}</div>}
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="secondary" disabled={!editing || plaintextLength < 10 || !editSessionToken} onClick={() => void testCurrentKey()}>
-                Test connection
+                Kiểm tra kết nối
               </Button>
               <Button type="submit" disabled={!canSave}>
-                Save key
+                Lưu khóa
               </Button>
               <Button type="button" variant="destructive" disabled={!canSave} onClick={() => void rotateCurrentKey()}>
                 <RotateCwIcon className="size-4" />
-                Rotate key
+                Xoay khóa
               </Button>
             </div>
             {!canSave && editing && (
-              <p className="text-sm text-muted-foreground">Save blocked - run Test connection first and wait for PASS.</p>
+              <p className="text-sm text-muted-foreground">Không thể lưu — vui lòng chạy Kiểm tra kết nối và đợi kết quả PASS.</p>
             )}
           </form>
         </CardContent>

@@ -45,7 +45,7 @@ export type SetCatalogDefaultInput = {
 };
 
 function errorFor(operation: string): Error {
-  return new Error(`Unable to ${operation}.`);
+  return new Error(`Không thể ${operation}.`);
 }
 
 export function providerLabel(provider: CatalogProvider): string {
@@ -62,8 +62,8 @@ export function providerLabel(provider: CatalogProvider): string {
 export function featureLabel(feature: CatalogFeature): string {
   return {
     CHAT: 'Chat',
-    TRIAGE: 'Triage',
-    DRAFT: 'Draft',
+    TRIAGE: 'Phân loại',
+    DRAFT: 'Soạn nháp',
   }[feature];
 }
 
@@ -76,7 +76,7 @@ export async function fetchCatalogProvider(
     },
   });
   if (error || !data) {
-    throw errorFor('load catalog');
+    throw errorFor('tải danh mục');
   }
   return data;
 }
@@ -90,7 +90,7 @@ export async function startCatalogSync(
     },
   });
   if (error || !data) {
-    throw errorFor('start catalog sync');
+    throw errorFor('bắt đầu đồng bộ danh mục');
   }
   return data;
 }
@@ -102,7 +102,7 @@ export async function fetchCatalogSyncDiff(jobId: string): Promise<CatalogSyncDi
     },
   });
   if (error || !data) {
-    throw errorFor('load catalog sync diff');
+    throw errorFor('tải bản so sánh đồng bộ danh mục');
   }
   return data;
 }
@@ -115,7 +115,7 @@ export async function confirmCatalogSync(input: { jobId: string; reason?: string
     body: input.reason ? { reason: input.reason } : {},
   });
   if (error) {
-    throw errorFor('confirm catalog sync');
+    throw errorFor('xác nhận đồng bộ danh mục');
   }
 }
 
@@ -126,7 +126,7 @@ export async function cancelCatalogSync(jobId: string): Promise<void> {
     },
   });
   if (error) {
-    throw errorFor('cancel catalog sync');
+    throw errorFor('hủy đồng bộ danh mục');
   }
 }
 
@@ -145,7 +145,7 @@ export async function createCatalogModel(input: CreateCatalogModelInput): Promis
     body: request,
   });
   if (error) {
-    throw errorFor('create catalog model');
+    throw errorFor('tạo mô hình danh mục');
   }
 }
 
@@ -160,7 +160,7 @@ export async function disableCatalogModel(input: DisableCatalogModelInput): Prom
     body: request,
   });
   if (error) {
-    throw errorFor('disable catalog model');
+    throw errorFor('vô hiệu mô hình danh mục');
   }
 }
 
@@ -178,6 +178,6 @@ export async function setCatalogDefault(input: SetCatalogDefaultInput): Promise<
     },
   });
   if (error) {
-    throw errorFor('set catalog default');
+    throw errorFor('đặt mô hình mặc định');
   }
 }
