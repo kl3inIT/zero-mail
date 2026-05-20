@@ -55,3 +55,42 @@ RED before Plan 05 started and Plan 05 does not alter their dependencies.
 
 All items above are pre-existing Wave 0 RED stubs whose dependencies live in future plans, NOT
 caused by Plan 05.
+
+## From Plan 07 (Wave 6 — Campaign orchestration services)
+
+### Resolved by Plan 07
+
+These Wave 0 RED stubs flipped GREEN during Plan 07 execution:
+
+- **`CampaignUndoServiceTest.*` (5 tests now, was 3)** — `CampaignUndoService` shipped per
+  UNS-07. Plan 07 also added 2 new pin tests (H-3 false-positive guard + H-2 user-deleted-label
+  tolerance). Schema-column-name bugs in the seed (deferred items #1 partial) were fixed under
+  Rule 1.
+- **`CleanupPrivacySweepTest.future_campaign_execute_service_is_present`** — `CampaignExecuteService`
+  shipped per UNS-04 / D-04. (The other privacy sweep method `campaignExecution_doesNotLeakSensitiveTokensInLogs`
+  still fails due to a separate `mail_message_observed` seed schema bug, see "Still deferred" below.)
+- **`TriageAuditWriterCleanupArchiveTest.recordCleanupArchive_doesNotInterfereWithSourceTriageRows`**
+  (deferred item #1) — same `subject_excerpt`/`matcher_evidence` seed bug as the undo test was
+  fixed under Rule 1 (auto-fix bugs) since the diagnosis was identical and the fix was a small
+  schema-column rename in the test seed.
+
+### Still deferred — out-of-scope for Plan 07
+
+These remain RED but are not caused by Plan 07. They will be addressed when their owning wave
+runs:
+
+- **`CleanupModuleVerificationTest.cleanupModuleIsDeclaredAndVerifies`** (deferred item #3) —
+  `IllegalArgumentException: No classes found in packages [com.zeromail.core.support]!`. The
+  Spring Modulith verifier references a package that does not contain bootable classes. Owned
+  by the wave that introduces the actual `core.support` package layout fix or moves the
+  verifier reference.
+- **`CleanupPrivacySweepTest.campaignExecution_doesNotLeakSensitiveTokensInLogs`** — seed insert
+  into `mail_message_observed` uses unspecified column names (likely `id` PK or `sender_domain`
+  schema drift) and throws `BadSqlGrammarException` before the privacy assertion runs. Same
+  class of schema-drift bug as the audit-writer test that Plan 07 fixed, but in a different
+  test file in a different module surface (privacy sweep, not undo/audit-write). Will be
+  fixed by the wave that owns the privacy sweep test (likely Plan 08 — controller wave —
+  which will also need to verify the privacy-sweep across the controller surface).
+
+These items are tracked here so the verifier does not re-discover them as new regressions.
+Plan 07 verified these failures are unchanged by its scope.
