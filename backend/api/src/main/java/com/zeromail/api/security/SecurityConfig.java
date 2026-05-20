@@ -41,6 +41,7 @@ public class SecurityConfig {
     SecurityFilterChain adminChain(
             HttpSecurity http,
             AdminBindingFilter adminBindingFilter,
+            AdminResponseBodyBanFilter adminResponseBodyBanFilter,
             AdminUserDetailsService adminUserDetailsService)
             throws Exception {
         // see docs/ops/admin-interface-freeze.md §Spring Security WebAuthn Endpoints
@@ -76,7 +77,8 @@ public class SecurityConfig {
                                         new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
                                         ADMIN_REQUEST_MATCHER))
                 .sessionManagement(Customizer.withDefaults())
-                .addFilterAfter(adminBindingFilter, AuthorizationFilter.class);
+                .addFilterAfter(adminResponseBodyBanFilter, AuthorizationFilter.class)
+                .addFilterAfter(adminBindingFilter, AdminResponseBodyBanFilter.class);
         return http.build();
     }
 

@@ -11,13 +11,13 @@ import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
+import com.zeromail.core.admin.audit.AdminBodyBanRegex;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
 class AdminPathBodyBanTest {
 
-    private static final Pattern CONTENT_FIELD_NAME =
-            Pattern.compile("(?i).*(body|bodyHtml|snippet|payload|prompt|completion|content).*");
+    private static final Pattern CONTENT_FIELD_NAME = AdminBodyBanRegex.FORBIDDEN_FIELD_NAME;
     private static final Pattern CONTENT_GETTER_NAME =
             Pattern.compile("(?i)get(Body|BodyHtml|Snippet|Payload|Prompt|Completion|Content).*");
     private static final String ADMIN_REQUEST_BODY_ANNOTATION =

@@ -19,6 +19,9 @@ public class AdminAuditWriter {
 
     private static final long AUDIT_CHAIN_ADVISORY_LOCK_ID = 8_001_001L;
     private static final byte[] EMPTY_HASH = new byte[0];
+    private static final UUID SYSTEM_ACTOR_ID =
+            UUID.fromString("00000000-0000-0000-0000-000000000001");
+    private static final String SYSTEM_ACTOR_EMAIL = "<system>";
 
     private final JdbcTemplate jdbcTemplate;
     private final AdminAuditEventRepository adminAuditEventRepository;
@@ -52,6 +55,53 @@ public class AdminAuditWriter {
             String requestIp,
             UUID requestId) {
         AdminUser adminUser = AdminContext.currentOrThrow();
+        return appendForActor(
+                adminUser.id(),
+                adminUser.email(),
+                action,
+                targetKind,
+                targetId,
+                beforeStateJson,
+                afterStateJson,
+                reason,
+                requestIp,
+                requestId);
+    }
+
+    @Transactional
+    public UUID appendAsSystem(
+            AdminAuditAction action,
+            String targetKind,
+            UUID targetId,
+            String beforeStateJson,
+            String afterStateJson,
+            String reason,
+            String requestIp,
+            UUID requestId) {
+        return appendForActor(
+                SYSTEM_ACTOR_ID,
+                SYSTEM_ACTOR_EMAIL,
+                action,
+                targetKind,
+                targetId,
+                beforeStateJson,
+                afterStateJson,
+                reason,
+                requestIp,
+                requestId);
+    }
+
+    private UUID appendForActor(
+            UUID actorUserId,
+            String actorEmail,
+            AdminAuditAction action,
+            String targetKind,
+            UUID targetId,
+            String beforeStateJson,
+            String afterStateJson,
+            String reason,
+            String requestIp,
+            UUID requestId) {
         AdminAuditAction auditAction = Objects.requireNonNull(action, "action must not be null");
         UUID auditId = UUID.randomUUID();
         jdbcTemplate.query(
@@ -70,8 +120,8 @@ public class AdminAuditWriter {
         HmacChainHasher.AuditChainEntry unsignedAuditChainEntry =
                 new HmacChainHasher.AuditChainEntry(
                         chainIndex,
-                        adminUser.id(),
-                        adminUser.email(),
+                        actorUserId,
+                        actorEmail,
                         auditAction.id(),
                         targetKind,
                         targetId,
@@ -95,8 +145,8 @@ public class AdminAuditWriter {
                 """,
                 auditId,
                 chainIndex,
-                adminUser.id(),
-                adminUser.email(),
+                actorUserId,
+                actorEmail,
                 auditAction.id(),
                 targetKind,
                 targetId,

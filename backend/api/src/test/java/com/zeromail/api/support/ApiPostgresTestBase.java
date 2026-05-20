@@ -10,7 +10,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 /**
- * Base for API-side integration tests. Starts a singleton Postgres 17.6 container, applies the
+ * Base for API-side integration tests. Starts a singleton Postgres 18.4 container, applies the
  * Liquibase schema, and disables redis-backed session in favor of an in-memory MapSessionRepository
  * contributed by TestSessionConfig — so Spring Security session resolution still works end-to-end
  * without requiring a live redis at test time.
@@ -25,7 +25,7 @@ public abstract class ApiPostgresTestBase {
     @Autowired private JdbcTemplate jdbcTemplate;
 
     static {
-        POSTGRES = new PostgreSQLContainer<>("postgres:17.6").withDatabaseName("zeromail_api_test");
+        POSTGRES = new PostgreSQLContainer<>("postgres:18.4").withDatabaseName("zeromail_api_test");
         POSTGRES.start();
     }
 

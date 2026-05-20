@@ -1,5 +1,5 @@
 import { Link, Outlet } from '@tanstack/react-router';
-import { BookOpenIcon, ClipboardListIcon, GaugeIcon, KeyRoundIcon, LogOutIcon, UsersIcon } from 'lucide-react';
+import { BookOpenIcon, Building2Icon, ClipboardListIcon, GaugeIcon, KeyRoundIcon, LogOutIcon, UsersIcon } from 'lucide-react';
 
 import type { AdminMe } from '@/lib/admin-session';
 
@@ -15,6 +15,7 @@ const navigationItems = [
   { to: '/audit', label: 'Audit log', icon: ClipboardListIcon },
   { to: '/role-grants', label: 'Role grants', icon: UsersIcon },
   { to: '/master-keys', label: 'Master keys', icon: KeyRoundIcon },
+  { to: '/tenants', label: 'Tenants', icon: Building2Icon },
   { to: '/catalog', label: 'Catalog', icon: BookOpenIcon, disabled: true },
 ] as const;
 

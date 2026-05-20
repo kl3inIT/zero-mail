@@ -3,6 +3,7 @@ package com.zeromail.api.error;
 import com.zeromail.core.admin.auth.exception.AdminAuthException;
 import com.zeromail.core.admin.mkey.usecases.MasterKeyAdminService;
 import com.zeromail.core.admin.mkey.usecases.MasterKeyRateLimiter;
+import com.zeromail.core.admin.tenant.usecases.TenantNotFoundException;
 import java.util.List;
 import java.util.Map;
 import org.springframework.core.Ordered;
@@ -56,6 +57,18 @@ public class AdminErrorAdvice {
         return problem(HttpStatus.TOO_MANY_REQUESTS, "error.admin.master_key_rate_limited");
     }
 
+    @ExceptionHandler(TenantNotFoundException.class)
+    ResponseEntity<ProblemDetail> onTenantNotFound(
+            TenantNotFoundException tenantNotFoundException) {
+        return problem(HttpStatus.NOT_FOUND, "error.admin.tenant_not_found");
+    }
+
+    @ExceptionHandler(TenantConfirmEmailMismatchException.class)
+    ResponseEntity<ProblemDetail> onTenantConfirmEmailMismatch(
+            TenantConfirmEmailMismatchException tenantConfirmEmailMismatchException) {
+        return problem(HttpStatus.BAD_REQUEST, "error.admin.confirm_email_mismatch");
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ProblemDetail> onAdminValidation(MethodArgumentNotValidException exception) {
         String code =
@@ -63,7 +76,13 @@ public class AdminErrorAdvice {
                         .map(fieldError -> fieldError.getDefaultMessage())
                         .filter("error.admin.reason_sentinel_leak"::equals)
                         .findFirst()
-                        .orElse("error.validation");
+                        .orElseGet(
+                                () ->
+                                        exception.getBindingResult().getFieldErrors().stream()
+                                                .map(fieldError -> fieldError.getDefaultMessage())
+                                                .filter("error.admin.reason_too_short"::equals)
+                                                .findFirst()
+                                                .orElse("error.validation"));
         ProblemDetail problemDetail = problemDetail(HttpStatus.BAD_REQUEST, code);
         problemDetail.setProperty("fieldErrors", List.of());
         return ResponseEntity.badRequest().body(problemDetail);

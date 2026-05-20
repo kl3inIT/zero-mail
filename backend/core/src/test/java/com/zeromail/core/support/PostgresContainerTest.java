@@ -6,7 +6,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 /**
- * Shared base for integration tests that require a real Postgres 17 instance with the Liquibase
+ * Shared base for integration tests that require a real Postgres 18 instance with the Liquibase
  * schema applied. Subclasses inherit the container plus dynamic datasource properties; Spring
  * Boot's Liquibase auto-config does the schema push on context start.
  *
@@ -22,7 +22,7 @@ public abstract class PostgresContainerTest {
     protected static final PostgreSQLContainer<?> POSTGRES;
 
     static {
-        POSTGRES = new PostgreSQLContainer<>("postgres:17.6").withDatabaseName("zeromail_test");
+        POSTGRES = new PostgreSQLContainer<>("postgres:18.4").withDatabaseName("zeromail_test");
         POSTGRES.start();
     }
 
