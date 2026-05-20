@@ -276,13 +276,13 @@ public class ProviderMasterKeyResolver {
         }
 
         /**
-         * Zeros the cache's own copy of the plaintext bytes. WR-13: this does NOT reach
-         * consumer copies — every call to {@link #toResolved()} hands out a new
-         * {@link ResolvedMasterKey} record whose constructor takes a defensive copy. Those
-         * caller-side copies are managed independently (see {@link
-         * com.zeromail.core.chat.llm.springai.SpringAiChatModelFactory} for the long-lived
-         * chat-model String trade-off, and {@code MasterKeyAdminService.storeMasterKey} for
-         * the eager-zero pattern used by write-path callers).
+         * Zeros the cache's own copy of the plaintext bytes. WR-13: this does NOT reach consumer
+         * copies — every call to {@link #toResolved()} hands out a new {@link ResolvedMasterKey}
+         * record whose constructor takes a defensive copy. Those caller-side copies are managed
+         * independently (see {@link com.zeromail.core.chat.llm.springai.SpringAiChatModelFactory}
+         * for the long-lived chat-model String trade-off, and {@code
+         * MasterKeyAdminService.storeMasterKey} for the eager-zero pattern used by write-path
+         * callers).
          */
         private void wipe() {
             Arrays.fill(plaintextKey, (byte) 0);

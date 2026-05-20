@@ -255,11 +255,11 @@ public class MasterKeyAdminService {
     }
 
     /**
-     * Runs the connectivity probe for the supplied master-key candidate. Ownership note: the
-     * caller retains ownership of {@code plaintextKey}. This method does NOT zero the buffer —
-     * test-only callers (the controller's {@code test-connection} endpoint) zero after returning,
-     * and write callers ({@link #set}, {@link #rotate}) flow the same buffer into {@link
-     * #storeMasterKey} which zeros it in its own {@code finally}.
+     * Runs the connectivity probe for the supplied master-key candidate. Ownership note: the caller
+     * retains ownership of {@code plaintextKey}. This method does NOT zero the buffer — test-only
+     * callers (the controller's {@code test-connection} endpoint) zero after returning, and write
+     * callers ({@link #set}, {@link #rotate}) flow the same buffer into {@link #storeMasterKey}
+     * which zeros it in its own {@code finally}.
      */
     private MasterKeyTestResult probe(
             LlmProvider provider, KeyFormat keyFormat, String baseUrl, byte[] plaintextKey) {
