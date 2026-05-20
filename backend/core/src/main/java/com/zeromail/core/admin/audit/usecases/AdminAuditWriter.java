@@ -165,6 +165,37 @@ public class AdminAuditWriter {
                 requestId);
     }
 
+    /**
+     * Append an audit row for an explicit actor identity, without requiring an active {@link
+     * AdminContext}. Use this from security event listeners (WebAuthn login / passkey registration)
+     * where the admin is authenticated for Spring Security purposes but the {@code AdminContext}
+     * scoped value has not been bound yet by {@code AdminBindingFilter}.
+     */
+    @Transactional
+    public UUID appendForActor(
+            UUID actorUserId,
+            String actorEmail,
+            AdminAuditAction action,
+            String targetKind,
+            UUID targetId,
+            Map<String, ?> beforeState,
+            Map<String, ?> afterState,
+            String reason,
+            String requestIp,
+            UUID requestId) {
+        return appendForActor(
+                Objects.requireNonNull(actorUserId, "actorUserId must not be null"),
+                Objects.requireNonNull(actorEmail, "actorEmail must not be null"),
+                action,
+                targetKind,
+                targetId,
+                serializeStateOrNull(beforeState),
+                serializeStateOrNull(afterState),
+                reason,
+                requestIp,
+                requestId);
+    }
+
     @Transactional
     public UUID appendAsSystem(
             AdminAuditAction action,

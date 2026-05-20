@@ -1,5 +1,7 @@
 package com.zeromail.api.security;
 
+import com.zeromail.core.admin.audit.domain.AdminAuditAction;
+import com.zeromail.core.admin.audit.usecases.AdminAuditWriter;
 import com.zeromail.core.admin.auth.domain.AdminStatus;
 import com.zeromail.core.admin.auth.exception.AdminAuthException;
 import com.zeromail.core.admin.auth.persistence.AdminUserEntity;
@@ -9,6 +11,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -32,14 +35,17 @@ public class AdminWebAuthnRepositoryAdapter
 
     private final AdminUserRepository adminUserRepository;
     private final WebAuthnCredentialStore webAuthnCredentialStore;
+    private final AdminAuditWriter adminAuditWriter;
     private final Clock clock;
 
     public AdminWebAuthnRepositoryAdapter(
             AdminUserRepository adminUserRepository,
             WebAuthnCredentialStore webAuthnCredentialStore,
+            AdminAuditWriter adminAuditWriter,
             Clock clock) {
         this.adminUserRepository = adminUserRepository;
         this.webAuthnCredentialStore = webAuthnCredentialStore;
+        this.adminAuditWriter = adminAuditWriter;
         this.clock = clock;
     }
 
@@ -104,6 +110,21 @@ public class AdminWebAuthnRepositoryAdapter
                     credentialRecord.getSignatureCount(),
                     null,
                     "none");
+            adminAuditWriter.appendForActor(
+                    adminUser.getId(),
+                    adminUser.getEmail(),
+                    AdminAuditAction.ADMIN_PASSKEY_REGISTERED,
+                    "admin_user",
+                    adminUser.getId(),
+                    null,
+                    Map.of(
+                            "credential_id_prefix",
+                            shortHexPrefix(credentialRecord.getCredentialId().getBytes()),
+                            "attestation_format",
+                            "none"),
+                    "Admin enrolled a WebAuthn passkey",
+                    null,
+                    null);
             return;
         }
 
@@ -173,6 +194,18 @@ public class AdminWebAuthnRepositoryAdapter
                         .lastUsed(lastUsedAt)
                         .label(DEFAULT_CREDENTIAL_LABEL)
                         .build());
+    }
+
+    private static String shortHexPrefix(byte[] bytes) {
+        if (bytes == null || bytes.length == 0) {
+            return "";
+        }
+        int length = Math.min(bytes.length, 4);
+        StringBuilder hex = new StringBuilder(length * 2);
+        for (int index = 0; index < length; index++) {
+            hex.append(String.format("%02x", bytes[index]));
+        }
+        return hex.toString();
     }
 
     private static byte[] bytesOrNull(Bytes bytes) {
