@@ -79,6 +79,13 @@ spring:
       chat:
         observations:
           include-completion: false
+zeromail:
+  session:
+    cookie:
+      # Default in SecurityConfig is secure=true (prod). Dev runs on http://localhost,
+      # so the browser would drop a Secure cookie — override to false locally. Production
+      # leaves this unset to inherit the secure default. CR-04.
+      secure: ${ZEROMAIL_SESSION_COOKIE_SECURE:false}
 zero-mail:
   admin:
     bootstrap-emails: ${ZEROMAIL_ADMIN_BOOTSTRAP_EMAILS:}

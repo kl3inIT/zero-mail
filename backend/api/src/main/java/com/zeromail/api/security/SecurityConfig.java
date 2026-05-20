@@ -3,6 +3,7 @@ package com.zeromail.api.security;
 import com.zeromail.core.admin.auth.usecases.AdminUserDetailsService;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -167,24 +168,26 @@ public class SecurityConfig {
     }
 
     @Bean
-    CookieSerializer adminCookieSerializer() {
+    CookieSerializer adminCookieSerializer(
+            @Value("${zeromail.session.cookie.secure:true}") boolean secureCookie) {
         DefaultCookieSerializer cookieSerializer = new DefaultCookieSerializer();
         cookieSerializer.setCookieName("SESSION_ADMIN");
         cookieSerializer.setCookiePath("/");
         cookieSerializer.setSameSite("Lax");
         cookieSerializer.setUseHttpOnlyCookie(true);
-        cookieSerializer.setUseSecureCookie(false);
+        cookieSerializer.setUseSecureCookie(secureCookie);
         return cookieSerializer;
     }
 
     @Bean
-    CookieSerializer userCookieSerializer() {
+    CookieSerializer userCookieSerializer(
+            @Value("${zeromail.session.cookie.secure:true}") boolean secureCookie) {
         DefaultCookieSerializer cookieSerializer = new DefaultCookieSerializer();
         cookieSerializer.setCookieName("SESSION_USER");
         cookieSerializer.setCookiePath("/");
         cookieSerializer.setSameSite("Lax");
         cookieSerializer.setUseHttpOnlyCookie(true);
-        cookieSerializer.setUseSecureCookie(false);
+        cookieSerializer.setUseSecureCookie(secureCookie);
         return cookieSerializer;
     }
 }

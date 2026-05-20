@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { ArrowLeftIcon, RotateCwIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { MaskedSecretField } from '@/components/MaskedSecretField';
 import { Badge } from '@/components/ui/badge';
@@ -36,7 +36,11 @@ function MasterKeyProviderRoute() {
   const saveMasterKey = useSaveMasterKey();
   const rotateMasterKey = useRotateMasterKey();
   const [editing, setEditing] = useState(false);
-  const [plaintextKey, setPlaintextKey] = useState('');
+  // CR-04: keep plaintext out of React fiber state. The ref is mutable, not snapshot-able by
+  // React DevTools/HMR, and is read imperatively at mutation time. Only the length is mirrored
+  // into state for UI gating (length is not secret).
+  const plaintextKeyRef = useRef<string>('');
+  const [plaintextLength, setPlaintextLength] = useState(0);
   const [editSessionToken, setEditSessionToken] = useState<string | null>(null);
   const [keyFormat, setKeyFormat] = useState<KeyFormat>('OPENAI_FORMAT');
   const [baseUrl, setBaseUrl] = useState('');
@@ -51,7 +55,17 @@ function MasterKeyProviderRoute() {
     setBaseUrl(row.baseUrl ?? '');
   }, [row]);
 
-  const canSave = editing && plaintextKey.length >= 10 && editSessionToken && testResult === 'OK' && reason.length >= 8;
+  function setPlaintextKey(value: string) {
+    plaintextKeyRef.current = value;
+    setPlaintextLength(value.length);
+  }
+
+  function clearPlaintextKey() {
+    plaintextKeyRef.current = '';
+    setPlaintextLength(0);
+  }
+
+  const canSave = editing && plaintextLength >= 10 && editSessionToken && testResult === 'OK' && reason.length >= 8;
 
   async function startEditing() {
     const session = await editSession.mutateAsync();
@@ -65,7 +79,7 @@ function MasterKeyProviderRoute() {
     if (!editSessionToken) return;
     const result = await testConnection.mutateAsync({
       provider,
-      plaintextKey,
+      plaintextKey: plaintextKeyRef.current,
       keyFormat,
       baseUrl: baseUrl || null,
       editSessionToken,
@@ -75,33 +89,37 @@ function MasterKeyProviderRoute() {
 
   async function saveCurrentKey() {
     if (!editSessionToken) return;
+    // Capture the secret locally, wipe the ref BEFORE awaiting so any error in the
+    // mutation cannot leave the secret reachable from React state during render.
+    const capturedKey = plaintextKeyRef.current;
+    clearPlaintextKey();
+    setEditing(false);
+    setTestResult(null);
     await saveMasterKey.mutateAsync({
       provider,
-      plaintextKey,
+      plaintextKey: capturedKey,
       keyFormat,
       baseUrl: baseUrl || null,
       editSessionToken,
       reason,
     });
-    setPlaintextKey('');
-    setEditing(false);
-    setTestResult(null);
     setSuccessMessage(`${row?.displayName ?? provider} key saved`);
   }
 
   async function rotateCurrentKey() {
     if (!editSessionToken) return;
+    const capturedKey = plaintextKeyRef.current;
+    clearPlaintextKey();
+    setEditing(false);
+    setTestResult(null);
     await rotateMasterKey.mutateAsync({
       provider,
-      plaintextKey,
+      plaintextKey: capturedKey,
       keyFormat,
       baseUrl: baseUrl || null,
       editSessionToken,
       reason,
     });
-    setPlaintextKey('');
-    setEditing(false);
-    setTestResult(null);
   }
 
   return (
@@ -133,7 +151,9 @@ function MasterKeyProviderRoute() {
             <MaskedSecretField
               maskedValue={row?.maskedKey ?? null}
               editing={editing}
-              plaintextValue={plaintextKey}
+              // Initial value when an edit session starts is always empty; the field
+              // is uncontrolled while editing — value lives in the input DOM + ref only.
+              defaultPlaintextValue=""
               onPlaintextChange={(value) => {
                 setPlaintextKey(value);
                 setTestResult(null);
@@ -171,7 +191,7 @@ function MasterKeyProviderRoute() {
             </div>
             {successMessage && <div className="rounded-md border border-border bg-secondary px-3 py-2 text-sm">{successMessage}</div>}
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="secondary" disabled={!editing || plaintextKey.length < 10 || !editSessionToken} onClick={() => void testCurrentKey()}>
+              <Button type="button" variant="secondary" disabled={!editing || plaintextLength < 10 || !editSessionToken} onClick={() => void testCurrentKey()}>
                 Test connection
               </Button>
               <Button type="submit" disabled={!canSave}>
