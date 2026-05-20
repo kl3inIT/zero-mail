@@ -28,9 +28,9 @@ class SpendAggregateQueryServiceTest extends PostgresContainerTest {
 
     @BeforeEach
     void cleanTables() {
-        jdbcTemplate.execute("DELETE FROM llm_call_audit");
-        jdbcTemplate.execute("DELETE FROM gmail_connections");
-        jdbcTemplate.execute("DELETE FROM tenants");
+        // CASCADE so any other test class that leaves rows in tables that FK to `tenants`
+        // (users, rules, chat, billing, etc.) does not block this DELETE in CI ordering.
+        jdbcTemplate.execute("TRUNCATE TABLE tenants RESTART IDENTITY CASCADE");
     }
 
     @Test

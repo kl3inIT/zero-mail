@@ -24,11 +24,11 @@ import org.springframework.stereotype.Repository;
  * Raw JDBC read access to {@code llm_call_audit} for the admin spend dashboard.
  *
  * <p><b>Privacy invariant (OPS-SPEND-01/02 + T-08-50 + ARCH-11):</b> every SELECT list is
- * explicitly enumerated and reads ONLY metadata columns. Forbidden columns (prompt text, completion
- * text, request body, response body) DO NOT EXIST on this table; the projection records carry no
- * body-shaped fields; the runtime SQL spy ({@code SpendAggregateQueryServiceSqlSpyTest}) catches
- * regression at runtime; the ArchUnit gate ({@code AdminSpendPromptAccessorBanTest}) catches
- * regression at compile.
+ * explicitly enumerated and reads ONLY metadata columns. Forbidden content columns (LLM
+ * input/output text, request/response payloads) DO NOT EXIST on this table; the projection records
+ * carry no body-shaped fields; the runtime SQL spy ({@code SpendAggregateQueryServiceSqlSpyTest})
+ * catches regression at runtime; an ArchUnit gate (see {@code
+ * backend/core/src/test/java/com/zeromail/core/admin/arch}) catches regression at compile.
  *
  * <p>Query timeout (R-8F-H7): all queries set a 15-second timeout so 90-day range queries do not
  * exceed the operator HTTP timeout budget.
