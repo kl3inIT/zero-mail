@@ -18,7 +18,7 @@ type ConfirmTwiceDialogProps = {
   confirmationToken: string;
   finalButtonLabel: string;
   variant?: 'destructive' | 'warning';
-  onConfirm: (reason: string) => Promise<{ auditId: string }>;
+  onConfirm: (reason: string) => Promise<{ auditId?: string | null }>;
 };
 
 const SENTINEL_PATTERN = /(sk-ant-|sk-or-|sk-|AIza)/;
@@ -58,6 +58,10 @@ export function ConfirmTwiceDialog({
   const [reasonValue, setReasonValue] = useState('');
   const [typedToken, setTypedToken] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Either the real audit row id surfaced by the backend, or the empty string when
+  // the backend returned 204 No Content (mutation succeeded but no id was surfaced).
+  // We only use this to gate the second click — the message text never claims an id
+  // unless one was actually returned. WR-10.
   const [successAuditId, setSuccessAuditId] = useState<string | null>(null);
   const form = useForm({
     defaultValues: {
@@ -164,8 +168,12 @@ export function ConfirmTwiceDialog({
                 />
               </div>
               {submitError && <p className="text-sm text-destructive">{submitError}</p>}
-              {successAuditId && (
-                <p className="text-sm text-green">Action recorded. Audit row {successAuditId}.</p>
+              {successAuditId !== null && (
+                <p className="text-sm text-green">
+                  {successAuditId === ''
+                    ? 'Action recorded.'
+                    : `Action recorded. Audit row ${successAuditId}.`}
+                </p>
               )}
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setStep(1)}>
@@ -178,7 +186,7 @@ export function ConfirmTwiceDialog({
                   onClick={() => {
                     setSubmitError(null);
                     void onConfirm(reasonValue)
-                      .then((result) => setSuccessAuditId(result.auditId))
+                      .then((result) => setSuccessAuditId(result.auditId ?? ''))
                       .catch((error: unknown) => {
                         setSubmitError(error instanceof Error ? error.message : 'Unable to complete action.');
                       });

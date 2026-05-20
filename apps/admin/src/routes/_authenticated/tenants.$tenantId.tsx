@@ -296,7 +296,8 @@ function TenantDetailRoute() {
             } else if (dialogAction === 'delete') {
               await deleteTenant.mutateAsync({ tenantId, reason, confirmEmail: targetEmail });
             }
-            return { auditId: 'recorded' };
+            // WR-10: backend returns 204 No Content; no fabricated audit id.
+            return {};
           }}
         />
       )}

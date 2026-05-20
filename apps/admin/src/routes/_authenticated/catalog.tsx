@@ -323,7 +323,8 @@ function CatalogRoute() {
               confirmedPinned: modelPendingDisable.pinnedTenantCount > 0,
               pinnedCountAcknowledged: modelPendingDisable.pinnedTenantCount,
             });
-            return { auditId: 'recorded' };
+            // WR-10: backend returns 204 No Content; no fabricated audit id.
+            return {};
           }}
         />
       )}

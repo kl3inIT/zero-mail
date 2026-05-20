@@ -50,7 +50,7 @@ export type RequeueInput = {
 };
 
 export type RequeueResult = {
-  auditId: string;
+  auditId?: string | null;
 };
 
 async function fetchJson<T>(path: `/${string}`, init?: RequestInit): Promise<T> {
@@ -88,10 +88,11 @@ export async function requeueDeadLetter(input: RequeueInput): Promise<RequeueRes
     method: 'POST',
     body: JSON.stringify({ reason: input.reason }),
   });
-  // Backend currently returns 204 No Content. The ConfirmTwiceDialog API expects an auditId
-  // string; we synthesize a stable placeholder so the toast renders. A follow-up will surface
-  // the real audit row id from a Location header or response body.
-  return { auditId: 'recorded' };
+  // Backend currently returns 204 No Content with no body. WR-10: do not fabricate an
+  // audit id — let the dialog render "Action recorded." A future backend change will
+  // surface the real admin_audit_event.id (Location header or 201 body) and we'll pass
+  // it through here.
+  return {};
 }
 
 export function shortJobToken(jobId: string): string {
