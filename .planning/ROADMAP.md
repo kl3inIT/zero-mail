@@ -61,7 +61,7 @@ Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
 11. Operator can view at `/admin/queue` real-time read-only aggregates over `outbox` + `processing_job` (depth by type, oldest-unleased age, retry distribution, failure rate, dead-letter count) with 10s auto-refresh, and re-queue a dead-letter row without viewing its payload or editing its fields
 12. Operator can view at `/admin/spend` a metadata-only dashboard aggregating `llm_call_audit` (today / 7d / 30d totals split platform-vs-BYOK, stacked bar by provider, donut by feature, top-20 tenants, max 90-day picker) with k-anonymity on deleted tenants and no per-prompt drill-down; the CI `MasterKeySentinelLeakTest` (ARCH-11) is green — no log line, response body, exception, YAML, or audit row contains `sk-`, `sk-ant-`, `AIza`, or `sk-or-` sentinels (or masked-encoded forms)
 
-**Plans:** 1/6 plans executed
+**Plans:** 2/6 plans executed
 
 Plans:
 **Wave 1**
@@ -70,7 +70,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 8B-PLAN.md — Master Keys: llm_provider_master_key + PlatformSecretCipher + MasterKeyAdminService (set/test/rotate) + edit-session + rate-limit + ChatModel cache eviction + ProviderMasterKeyResolver + 9Router dual-mode + MasterKeySentinelLeakTest; /master-keys list + per-provider edit (MKEY-01..08, ARCH-11)
+- [x] 8B-PLAN.md — Master Keys: llm_provider_master_key + PlatformSecretCipher + MasterKeyAdminService (set/test/rotate) + edit-session + rate-limit + ChatModel cache eviction + ProviderMasterKeyResolver + 9Router dual-mode + MasterKeySentinelLeakTest; /master-keys list + per-provider edit (MKEY-01..08, ARCH-11)
 - [ ] 8C-PLAN.md — Tenant Inspection: AdminTenantAccess.readOnly + 5-tab projections + AdminResponseBodyBanFilter + TenantOAuthRevocationGateway + pause/disconnect/delete; /tenants list + /tenants/:id 5-tab detail (OPS-TENANT-01..05)
 - [ ] 8E-PLAN.md — Queue Health: QueueHealthQueryService + DeadLetterRequeueService + KpiCard + AutoRefreshIndicator + /queue page with 10s auto-refresh (OPS-QUEUE-01/02)
 - [ ] 8F-PLAN.md — Spend Dashboard: SpendAggregateQueryService + k-anonymity + AdminSpendPromptAccessorBanTest + /spend page with 90d picker + stacked bar + donut + top-20 (OPS-SPEND-01/02)
@@ -125,7 +125,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 1-6 (collapsed) | v1.0 | 123/123 | Complete | 2026-05-15 |
 | 7. Chat Email Assistant | v1.1 | 6/6 | Complete | 2026-05-18 |
-| 8. Admin Console & Operator Tooling | v1.2 | 1/6 | In Progress|  |
+| 8. Admin Console & Operator Tooling | v1.2 | 2/6 | In Progress|  |
 | 9. User Settings UI on Curated Catalog | v1.2 | 0/0 | Not started | — |
 
 ---

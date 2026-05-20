@@ -31,14 +31,14 @@
 
 ### Master Keys / Platform Provider Config (NEW)
 
-- [ ] **MKEY-01**: Admin can edit the 6 platform provider entries through one unified form at `/admin/master-keys/<provider>`: `OpenAI, Anthropic, Google, DeepSeek, OpenRouter, 9Router`. Form fields per provider: `{api_key, base_url, enabled, notes}` — same shape as the user-facing BYOK form, with `api_key` AES-GCM-encrypted at rest via the existing `RefreshTokenCipher`, never returned to the frontend after save, never logged
-- [ ] **MKEY-02**: `base_url` is editable for ALL 6 providers (not just 9Router) — defaulting to each provider's official URL, but admin can override to point at a corporate proxy / Vertex AI / Bedrock-compatible endpoint / self-hosted gateway
-- [ ] **MKEY-03**: Admin can test-connection per provider — backend calls the provider's lightweight discovery endpoint (`/v1/models` for OpenAI-shape; provider-specific for Anthropic/Google) using the saved master key. Response strips provider error bodies; returns only an enum: `OK | INVALID_KEY | RATE_LIMITED | NETWORK_ERROR | TIMEOUT`. Rate-limited to 10 test-connections per admin per hour
-- [ ] **MKEY-04**: Admin can rotate a master key: enter new key → backend test-connects → on success, encrypts new + stores old in `previous_encrypted_key` for grace window → emits `MasterKeyRotatedEvent` → eviction of every cached `ChatModel` instance for that provider across ALL tenants. On test-connect failure, rotation aborts, old key stays ACTIVE, audit row records the failed attempt
-- [ ] **MKEY-05**: Admin can pick a **per-feature default provider** for `chat`, `triage`, and `draft` features from the 6 providers. Default-provider selection is what platform users fall back to when they have NOT set their own BYOK. v1.0 hard-coded default `OpenRouter` is preserved for all three features at v1.2 launch and admin can rebind per-feature after
-- [ ] **MKEY-06**: 9Router-specific dual-mode — admin can toggle the 9Router master-key entry between `OPENAI_FORMAT` (default; calls `/v1/chat/completions` via Spring AI OpenAI adapter at the configured base-url) and `ANTHROPIC_FORMAT` (calls `/v1/messages` via Spring AI Anthropic adapter at the configured base-url with `anthropic-version: 2023-06-01`). All other providers are single-mode
-- [ ] **MKEY-07**: Admin sees masked display only (`sk-****abc1`) for every saved key. There is no "reveal key once" affordance, no copy-to-clipboard for the plaintext key, no `GET /api/admin/master-keys/<provider>?reveal=true`
-- [ ] **MKEY-08**: Admin sees a Dependents count per master-key entry: how many tenants are currently configured to use this provider as platform default for chat/triage/draft. Disabling a provider that has Dependents > 0 requires confirm-twice + a written reason
+- [x] **MKEY-01**: Admin can edit the 6 platform provider entries through one unified form at `/admin/master-keys/<provider>`: `OpenAI, Anthropic, Google, DeepSeek, OpenRouter, 9Router`. Form fields per provider: `{api_key, base_url, enabled, notes}` — same shape as the user-facing BYOK form, with `api_key` AES-GCM-encrypted at rest via the existing `RefreshTokenCipher`, never returned to the frontend after save, never logged
+- [x] **MKEY-02**: `base_url` is editable for ALL 6 providers (not just 9Router) — defaulting to each provider's official URL, but admin can override to point at a corporate proxy / Vertex AI / Bedrock-compatible endpoint / self-hosted gateway
+- [x] **MKEY-03**: Admin can test-connection per provider — backend calls the provider's lightweight discovery endpoint (`/v1/models` for OpenAI-shape; provider-specific for Anthropic/Google) using the saved master key. Response strips provider error bodies; returns only an enum: `OK | INVALID_KEY | RATE_LIMITED | NETWORK_ERROR | TIMEOUT`. Rate-limited to 10 test-connections per admin per hour
+- [x] **MKEY-04**: Admin can rotate a master key: enter new key → backend test-connects → on success, encrypts new + stores old in `previous_encrypted_key` for grace window → emits `MasterKeyRotatedEvent` → eviction of every cached `ChatModel` instance for that provider across ALL tenants. On test-connect failure, rotation aborts, old key stays ACTIVE, audit row records the failed attempt
+- [x] **MKEY-05**: Admin can pick a **per-feature default provider** for `chat`, `triage`, and `draft` features from the 6 providers. Default-provider selection is what platform users fall back to when they have NOT set their own BYOK. v1.0 hard-coded default `OpenRouter` is preserved for all three features at v1.2 launch and admin can rebind per-feature after
+- [x] **MKEY-06**: 9Router-specific dual-mode — admin can toggle the 9Router master-key entry between `OPENAI_FORMAT` (default; calls `/v1/chat/completions` via Spring AI OpenAI adapter at the configured base-url) and `ANTHROPIC_FORMAT` (calls `/v1/messages` via Spring AI Anthropic adapter at the configured base-url with `anthropic-version: 2023-06-01`). All other providers are single-mode
+- [x] **MKEY-07**: Admin sees masked display only (`sk-****abc1`) for every saved key. There is no "reveal key once" affordance, no copy-to-clipboard for the plaintext key, no `GET /api/admin/master-keys/<provider>?reveal=true`
+- [x] **MKEY-08**: Admin sees a Dependents count per master-key entry: how many tenants are currently configured to use this provider as platform default for chat/triage/draft. Disabling a provider that has Dependents > 0 requires confirm-twice + a written reason
 
 ### Curated LLM Catalog (NEW)
 
@@ -104,7 +104,7 @@
 - [x] **ARCH-08**: `AdminContext` is a `ScopedValue` mutually exclusive with `TenantContext` — entering admin scope clears the tenant binding and vice versa. Cross-tenant admin reads route through `AdminTenantAccess.readOnly(tenantId, supplier)` which writes one `admin_read_event` row before invoking the supplier. ArchUnit rule forbids admin packages from reading `TenantContext` directly
 - [x] **ARCH-09**: ArchUnit `AdminPathBodyBanTest` enforces that classes under `..controllers.admin..` and `..core.admin..projection..` cannot reference `GmailClient` body-exposing methods, `ChatMessageRepository.findContent*`, `LlmCallAudit.prompt*` / `.completion*` field accessors, or any field named per the forbidden regex `body|bodyHtml|snippet|payload|prompt|completion|content`. Test runs in CI
 - [x] **ARCH-10**: Single Gmail send call-site invariant from v1.1 ARCH-01 holds at v1.2 close — admin packages are forbidden by ArchUnit from referencing Gmail send methods entirely; the repo-wide grep gate continues to assert exactly 1 call site (the v1.1 `AssistantSendExecutor`). Master-key test-connection uses `GET /v1/models` (or per-provider equivalent), never a send method
-- [ ] **ARCH-11**: A `MasterKeySentinelLeakTest` runs in CI and asserts that no log line, no admin response body, no exception message, no `application*.yml`, and no audit row contains any of the sentinel prefixes `sk-`, `sk-ant-`, `AIza`, `sk-or-` (or their masked-encoded forms). The test seeds dummy sentinel-prefixed master keys, exercises every admin endpoint that touches them, and greps the captured logs + responses
+- [x] **ARCH-11**: A `MasterKeySentinelLeakTest` runs in CI and asserts that no log line, no admin response body, no exception message, no `application*.yml`, and no audit row contains any of the sentinel prefixes `sk-`, `sk-ant-`, `AIza`, `sk-or-` (or their masked-encoded forms). The test seeds dummy sentinel-prefixed master keys, exercises every admin endpoint that touches them, and greps the captured logs + responses
 - [x] **ARCH-12**: `admin_audit_event` is append-only at the database level — the application DB user has no `UPDATE` or `DELETE` privilege on the table; a Postgres `BEFORE UPDATE OR DELETE` trigger raises `EXCEPTION` regardless of role; per-row `hmac_chain_hash` chains to the previous row's hash; a nightly verification job re-derives the chain and alerts on mismatch
 
 ---
@@ -206,14 +206,14 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 | ADMIN-08 | Phase 8 | Complete |
 | ADMIN-09 | Phase 8 | Complete |
 | ADMIN-10 | Phase 8 | Complete |
-| MKEY-01 | Phase 8 | Pending |
-| MKEY-02 | Phase 8 | Pending |
-| MKEY-03 | Phase 8 | Pending |
-| MKEY-04 | Phase 8 | Pending |
-| MKEY-05 | Phase 8 | Pending |
-| MKEY-06 | Phase 8 | Pending |
-| MKEY-07 | Phase 8 | Pending |
-| MKEY-08 | Phase 8 | Pending |
+| MKEY-01 | Phase 8 | Complete |
+| MKEY-02 | Phase 8 | Complete |
+| MKEY-03 | Phase 8 | Complete |
+| MKEY-04 | Phase 8 | Complete |
+| MKEY-05 | Phase 8 | Complete |
+| MKEY-06 | Phase 8 | Complete |
+| MKEY-07 | Phase 8 | Complete |
+| MKEY-08 | Phase 8 | Complete |
 | CAT-01 | Phase 8 | Pending |
 | CAT-02 | Phase 8 | Pending |
 | CAT-03 | Phase 8 | Pending |
@@ -252,7 +252,7 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 | ARCH-08 | Phase 8 | Complete |
 | ARCH-09 | Phase 8 | Complete |
 | ARCH-10 | Phase 8 | Complete |
-| ARCH-11 | Phase 8 | Pending |
+| ARCH-11 | Phase 8 | Complete |
 | ARCH-12 | Phase 8 | Complete |
 
 **Coverage (post-roadmap, post-pivot):**
