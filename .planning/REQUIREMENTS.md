@@ -52,11 +52,11 @@
 
 ### Tenant Read-Only Views (NEW)
 
-- [ ] **OPS-TENANT-01**: Admin can browse a paginated list of tenants at `/admin/tenants` with columns: connected email, status (CONNECTED/DISCONNECTED/PAUSED/DELETED), last Gmail event, watch expiry, credit balance, total spend last-30d, member-since. List excludes raw email content
-- [ ] **OPS-TENANT-02**: Admin can drill into a tenant at `/admin/tenants/<tenantId>` with 5 tabs: **Overview** (connection state, watch state, pause toggle), **Health** (Pub/Sub delivery, last events count, error rate), **Billing** (ledger balance, holds, recent top-ups), **Spend** (per-feature LLM cost over selectable window), **Activity** (chat session count, last activity timestamp, model selection — NO chat content, NO email body, NO prompts/completions)
-- [ ] **OPS-TENANT-03**: Admin can pause, disconnect, or delete a tenant from the Tenant detail view; each action requires confirm-twice + reason and writes to `admin_audit_event`. Delete shows preview counts (messages, rules, audit rows that will be removed) before final confirm
-- [ ] **OPS-TENANT-04**: All admin tenant-projection DTOs are served by Spring Data JDBC `Repository<...>` interfaces (NOT `CrudRepository`, NOT JPA). Field names matching `body|bodyHtml|snippet|payload|prompt|completion|content` are forbidden in admin projection DTOs at compile time via ArchUnit
-- [ ] **OPS-TENANT-05**: An `AdminResponseBodyBanFilter` (Spring MVC filter, runs after admin controllers) scans the outbound JSON for any string field >200 chars whose key matches the forbidden regex AND rejects the response with HTTP 500 + an audit row, as a defense-in-depth failsafe against future leaks
+- [x] **OPS-TENANT-01**: Admin can browse a paginated list of tenants at `/admin/tenants` with columns: connected email, status (CONNECTED/DISCONNECTED/PAUSED/DELETED), last Gmail event, watch expiry, credit balance, total spend last-30d, member-since. List excludes raw email content
+- [x] **OPS-TENANT-02**: Admin can drill into a tenant at `/admin/tenants/<tenantId>` with 5 tabs: **Overview** (connection state, watch state, pause toggle), **Health** (Pub/Sub delivery, last events count, error rate), **Billing** (ledger balance, holds, recent top-ups), **Spend** (per-feature LLM cost over selectable window), **Activity** (chat session count, last activity timestamp, model selection — NO chat content, NO email body, NO prompts/completions)
+- [x] **OPS-TENANT-03**: Admin can pause, disconnect, or delete a tenant from the Tenant detail view; each action requires confirm-twice + reason and writes to `admin_audit_event`. Delete shows preview counts (messages, rules, audit rows that will be removed) before final confirm
+- [x] **OPS-TENANT-04**: All admin tenant-projection DTOs are served by Spring Data JDBC `Repository<...>` interfaces (NOT `CrudRepository`, NOT JPA). Field names matching `body|bodyHtml|snippet|payload|prompt|completion|content` are forbidden in admin projection DTOs at compile time via ArchUnit
+- [x] **OPS-TENANT-05**: An `AdminResponseBodyBanFilter` (Spring MVC filter, runs after admin controllers) scans the outbound JSON for any string field >200 chars whose key matches the forbidden regex AND rejects the response with HTTP 500 + an audit row, as a defense-in-depth failsafe against future leaks
 
 ### Worker Queue Health (NEW)
 
@@ -221,11 +221,11 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 | CAT-05 | Phase 8 | Pending |
 | CAT-06 | Phase 8 | Pending |
 | CAT-07 | Phase 8 | Pending |
-| OPS-TENANT-01 | Phase 8 | Pending |
-| OPS-TENANT-02 | Phase 8 | Pending |
-| OPS-TENANT-03 | Phase 8 | Pending |
-| OPS-TENANT-04 | Phase 8 | Pending |
-| OPS-TENANT-05 | Phase 8 | Pending |
+| OPS-TENANT-01 | Phase 8 | Complete |
+| OPS-TENANT-02 | Phase 8 | Complete |
+| OPS-TENANT-03 | Phase 8 | Complete |
+| OPS-TENANT-04 | Phase 8 | Complete |
+| OPS-TENANT-05 | Phase 8 | Complete |
 | OPS-QUEUE-01 | Phase 8 | Pending |
 | OPS-QUEUE-02 | Phase 8 | Pending |
 | OPS-SPEND-01 | Phase 8 | Pending |
