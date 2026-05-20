@@ -176,21 +176,26 @@ jobs:
       - name: Run admin lint
         run: pnpm --filter @zeromail/admin run lint
 
+      # Build runs first so the TanStack Router Vite plugin can generate
+      # `routeTree.gen.ts`. Without that file, `tsc --noEmit` fails with
+      # `Argument of type '"/route"' is not assignable to parameter of type 'undefined'`.
+      - name: Build admin
+        run: pnpm --filter @zeromail/admin run build
+
       - name: Run admin typecheck
         run: pnpm --filter @zeromail/admin run typecheck
 
       - name: Run admin unit tests
         run: pnpm --filter @zeromail/admin run test
 
-      - name: Build admin
-        run: pnpm --filter @zeromail/admin run build
-
-      - name: Upload admin build artifact
+      - name: Upload admin dist + route tree
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: admin-dist
-          path: apps/admin/dist/
+          path: |
+            apps/admin/dist/
+            apps/admin/src/routeTree.gen.ts
           retention-days: 14
           if-no-files-found: warn
 

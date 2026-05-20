@@ -169,7 +169,7 @@ cat .last-deploy.txt   # snapshot written by every Deploy Prod run
 
 ### 8.1 Bootstrap dev DB on the VPS
 
-Already done 2026-05-20 by `ops/postgres/init/10-create-dev-db.sql`. To rotate
+Already done 2026-05-20 by `scripts/ops/postgres/init/10-create-dev-db.sql`. To rotate
 the shared dev password:
 
 ```sh
@@ -178,7 +178,7 @@ NEW_PW="$(openssl rand -base64 24 | tr -d '/+=' | head -c 28)"
 docker exec -i -e PGPASSWORD=zeromail zeromail-postgres \
   psql -U zeromail -d postgres -v ON_ERROR_STOP=1 \
   -v dev_password="$NEW_PW" \
-  < /apps/zero-mail/ops/postgres/init/10-create-dev-db.sql > /dev/null
+  < /apps/zero-mail/scripts/ops/postgres/init/10-create-dev-db.sql > /dev/null
 echo "$NEW_PW"   # share via 1Password / pinned chat; then clear shell history
 ```
 
@@ -201,7 +201,7 @@ Cron entry (run as root so it can read the passphrase):
 
 ```sh
 sudo crontab -e
-# 5 3 * * *  /apps/zero-mail/ops/backup/pg-backup.sh >> /var/log/zeromail-backup.log 2>&1
+# 5 3 * * *  /apps/zero-mail/scripts/ops/backup/pg-backup.sh >> /var/log/zeromail-backup.log 2>&1
 ```
 
 Daily 03:05 UTC: dumps both `zeromail` + `zeromail_dev`, encrypts with GPG/AES-256,
@@ -211,7 +211,7 @@ Off-host upload (optional, recommended): install rclone, configure a remote
 (`r2:zeromail-backups` or `b2:zeromail-backups`), then set the cron line:
 
 ```
-5 3 * * *  RCLONE_REMOTE=r2:zeromail-backups /apps/zero-mail/ops/backup/pg-backup.sh >> /var/log/zeromail-backup.log 2>&1
+5 3 * * *  RCLONE_REMOTE=r2:zeromail-backups /apps/zero-mail/scripts/ops/backup/pg-backup.sh >> /var/log/zeromail-backup.log 2>&1
 ```
 
 Recovery verification (do this monthly):

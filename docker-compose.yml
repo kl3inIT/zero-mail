@@ -22,7 +22,7 @@ services:
       POSTGRES_PASSWORD: zeromail
     # Mount custom init scripts (only run on fresh data volumes) + tuned config.
     # 10-create-dev-db.sql is also runnable manually via `docker exec psql` for
-    # existing volumes — see ops/postgres/init/10-create-dev-db.sql.
+    # existing volumes — see scripts/ops/postgres/init/10-create-dev-db.sql.
     command:
       - "postgres"
       - "-c"
@@ -39,7 +39,7 @@ services:
       - "log_temp_files=0"
     volumes:
       - postgres_data:/var/lib/postgresql
-      - ./ops/postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./scripts/ops/postgres/init:/docker-entrypoint-initdb.d:ro
     networks:
       - zeromail-internal
     healthcheck:

@@ -123,7 +123,7 @@ NEW_PW="$(openssl rand -base64 24 | tr -d '/+=' | head -c 28)"
 docker exec -i -e PGPASSWORD=zeromail zeromail-postgres \
   psql -U zeromail -d postgres -v ON_ERROR_STOP=1 \
   -v dev_password="$NEW_PW" \
-  < ops/postgres/init/10-create-dev-db.sql > /dev/null
+  < scripts/ops/postgres/init/10-create-dev-db.sql > /dev/null
 echo "$NEW_PW"   # share via the secret store; clear shell history after
 ```
 
