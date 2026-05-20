@@ -30,3 +30,28 @@ Plan 05 verified these failures are unchanged by its scope (HTTP client + mailto
      or rewrites the tests against `resolveOrCreateLabelId`.
 
 Both items are tracked here so the verifier does not re-discover them as new regressions.
+
+### Wave 0 RED stubs for classes shipped in later Phase 8 plans
+
+These tests reference production classes that will ship in Wave 4b, Wave 5, etc. They were
+written in Wave 0 to lock the contract surface (per the GSD RED-first pattern). They were
+RED before Plan 05 started and Plan 05 does not alter their dependencies.
+
+3. **`CleanupModuleVerificationTest.cleanupModuleIsDeclaredAndVerifies`**
+   - Failure: `IllegalArgumentException: No classes found in packages [com.zeromail.core.support]!`
+   - Root cause: Spring Modulith verifier references a package `com.zeromail.core.support` that
+     does not exist yet. Owned by a later wave that introduces shared cleanup support utilities
+     or that fixes the verifier reference to point at the actual package layout.
+
+4. **`CleanupPrivacySweepTest.future_campaign_execute_service_is_present` / `campaignExecution_doesNotLeakSensitiveTokensInLogs`**
+   - Failure: `ClassNotFoundException: com.zeromail.core.cleanup.usecases.CampaignExecuteService`.
+   - Root cause: `CampaignExecuteService` is the Wave 4b orchestrator (campaign POST /execute).
+     Will ship in Plan 06 (Wave 4b) per the phase plan layout.
+
+5. **`CampaignUndoServiceTest.*` (3 tests)**
+   - Failure: `ClassNotFoundException: com.zeromail.core.cleanup.usecases.CampaignUndoService`.
+   - Root cause: `CampaignUndoService` is the 30-day undo window service. Will ship in Plan 07
+     (Wave 5) per the phase plan layout.
+
+All items above are pre-existing Wave 0 RED stubs whose dependencies live in future plans, NOT
+caused by Plan 05.
