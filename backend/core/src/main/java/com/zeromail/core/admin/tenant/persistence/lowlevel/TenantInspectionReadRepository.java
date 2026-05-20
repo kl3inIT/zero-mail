@@ -76,7 +76,7 @@ public class TenantInspectionReadRepository {
                         GROUP BY tenant_id
                     ) spend ON spend.tenant_id = t.id
                 ) tenant_rows
-                WHERE (:status IS NULL OR status = :status)
+                WHERE (CAST(:status AS text) IS NULL OR status = :status)
                   AND (CAST(:from AS timestamptz) IS NULL OR created_at >= :from)
                   AND (CAST(:to AS timestamptz) IS NULL OR created_at <= :to)
                 ORDER BY created_at DESC, tenant_id DESC

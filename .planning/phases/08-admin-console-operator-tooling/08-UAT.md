@@ -48,7 +48,13 @@ notes: |
 
 ### 3. Tenant List + Detail Tabs
 expected: /tenants shows paginated list (each row: tenant id, google email, status, created_at). Click a row → /tenants/{id}?tab=overview opens detail with tabs: Overview, Health, Billing, Spend, Activity, Deletion Preview. Each tab fetches its own data; Activity tab tooltip "Activity is disabled for this tenant" on disabled rows.
-result: [pending]
+result: pass
+notes: |
+  List view + filters + columns render correctly. Privacy invariant verified: response body is {rows:[], nextCursor:null, hasNextPage:false}; zero occurrences of payload_json / body_text / prompt_text / completion_text / request_body / response_body field names.
+
+  Phase 8 SQL bug found + fixed inline: TenantInspectionReadRepository#findTenantListPage used `WHERE (:status IS NULL OR status = :status)` which Postgres couldn't type-infer (parameter $1 type unknown). Other params already used CAST(? AS timestamptz); status filter now uses CAST(:status AS text) for parity.
+
+  Detail tabs not exercised because dev DB has zero Gmail-connected tenants. Tab traversal would need a Gmail OAuth flow to seed — separate UAT scope.
 
 ### 4. Master Keys List + Edit (CR-04 / WR-02 verify)
 expected: /master-keys shows 6 provider rows (OpenAI, Anthropic, Google, OpenRouter, DeepSeek, BYOK) with masked_key value (e.g., `sk-…AbCd`) loaded WITHOUT a decrypt round-trip per row. Click a provider → /master-keys/{provider} edit page. Paste a fake plaintext key → click Test → click Save. After save, the plaintext field is cleared (NOT retained in React state — DevTools heap inspection should not show the plaintext). Cookie sent on requests has `Secure` attribute when served over HTTPS dev.
@@ -85,9 +91,9 @@ result: [pending]
 ## Summary
 
 total: 11
-passed: 2
+passed: 3
 issues: 0
-pending: 9
+pending: 8
 skipped: 0
 blocked: 0
 
