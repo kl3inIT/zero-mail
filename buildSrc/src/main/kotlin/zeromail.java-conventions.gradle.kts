@@ -15,7 +15,13 @@ repositories {
 }
 
 val utf8RuntimeJvmArgs =
-    listOf("--enable-preview", "-Dfile.encoding=UTF-8", "-Dsun.stdout.encoding=UTF-8", "-Dsun.stderr.encoding=UTF-8")
+    listOf(
+        "--enable-preview",
+        "-Dfile.encoding=UTF-8",
+        "-Dsun.stdout.encoding=UTF-8",
+        "-Dsun.stderr.encoding=UTF-8",
+        "-Duser.timezone=UTC",
+    )
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"

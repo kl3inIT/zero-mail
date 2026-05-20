@@ -42,6 +42,20 @@ async function mockSettingsApis(page: Page) {
       return;
     }
 
+    if (url.pathname === '/api/me/notifications' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          channel: 'DAILY_DIGEST',
+          digestEnabled: true,
+          digestSendHourLocal: 20,
+          timeZone: 'Asia/Ho_Chi_Minh',
+        }),
+      });
+      return;
+    }
+
     if (url.pathname === '/api/llm/byok/validate' && request.method() === 'POST') {
       const payload = request.postDataJSON();
       expect(payload).toMatchObject({

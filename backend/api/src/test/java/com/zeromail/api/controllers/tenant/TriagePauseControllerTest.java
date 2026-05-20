@@ -32,7 +32,7 @@ class TriagePauseControllerTest extends ApiPostgresTestBase {
     @Autowired JdbcTemplate jdbc;
 
     @Test
-    @DisplayName("PUT /tenant/triage-pause with paused=true persists triage_paused")
+    @DisplayName("PUT /api/tenant/triage-pause with paused=true persists triage_paused")
     void putTriagePause_true_persists_triage_paused() {
         RestClient client = RestClient.create("http://localhost:" + port);
         Seed seed = seedUser("triage-pause-true");
@@ -52,7 +52,7 @@ class TriagePauseControllerTest extends ApiPostgresTestBase {
     }
 
     @Test
-    @DisplayName("PUT /tenant/triage-pause with paused=false clears triage_paused")
+    @DisplayName("PUT /api/tenant/triage-pause with paused=false clears triage_paused")
     void putTriagePause_false_clears_triage_paused() {
         RestClient client = RestClient.create("http://localhost:" + port);
         Seed seed = seedUser("triage-pause-false");
@@ -73,7 +73,7 @@ class TriagePauseControllerTest extends ApiPostgresTestBase {
     }
 
     @Test
-    @DisplayName("PUT /tenant/triage-pause without test auth returns 401")
+    @DisplayName("PUT /api/tenant/triage-pause without test auth returns 401")
     void putTriagePause_missingTestAuth_returns401() {
         RestClient client = RestClient.create("http://localhost:" + port);
 

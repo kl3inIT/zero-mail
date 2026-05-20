@@ -239,9 +239,9 @@
    prototype's clay accent, earnest copy tone, and subtle grid paper texture. */
 .zm-proto,
 .zm-auth {
-  --accent: #867aeb;
-  --accent-hover: #7062df;
-  --accent-soft: #e7e5fc;
+  --accent: #0a0a0a;
+  --accent-hover: #1f1f1f;
+  --accent-soft: #f4f4f5;
   --accent-fg: #ffffff;
   --accent-foreground: var(--accent-fg);
   --bg: var(--background);
@@ -250,8 +250,8 @@
   --bg-muted: var(--muted);
   --line: var(--border);
   --line-strong: #e3dff2;
-  --ink: #3d385a;
-  --ink-2: #4f496b;
+  --ink: #0a0a0a;
+  --ink-2: #3f3f3f;
   --text: var(--foreground);
   --text-muted: var(--muted-foreground);
   --text-faint: #6f6883;
@@ -274,14 +274,22 @@
 
 .dark .zm-proto,
 .dark .zm-auth {
-  --accent: #a39cf4;
-  --accent-hover: #b5b0f8;
-  --accent-soft: rgba(163, 156, 244, 0.16);
-  --accent-fg: #1e1a5a;
-  --line-strong: #3d385a;
-  --ink: #f2f0fa;
-  --ink-2: #e3dff2;
-  --text-faint: #a7a3c4;
+  /* Inverse-of-light surfaces — override interior navy with neutral grayscale */
+  --bg: #0a0a0a;
+  --bg-elevated: #1a1a1a;
+  --bg-subtle: #1f1f1f;
+  --bg-muted: #262626;
+  --line: #2a2a2a;
+  --line-strong: #3f3f3f;
+  --text: #f5f5f5;
+  --text-muted: #a3a3a3;
+  --text-faint: #737373;
+  --accent: #f5f5f5;
+  --accent-hover: #ffffff;
+  --accent-soft: rgba(245, 245, 245, 0.12);
+  --accent-fg: #0a0a0a;
+  --ink: #f5f5f5;
+  --ink-2: #d4d4d4;
   --green: #6fb389;
   --green-soft: rgba(111, 179, 137, 0.14);
   --amber: #d9a064;

@@ -758,6 +758,176 @@
     "tagline": "Zero Mail phân loại Gmail của bạn theo các quy tắc bạn viết bằng ngôn ngữ tự nhiên — gắn nhãn việc quan trọng, lưu trữ thư không cần thiết, và soạn sẵn những phản hồi đơn giản. Mọi thứ gửi đi đều phải qua bạn.",
     "waitlistCta": "Đăng ký trải nghiệm Zero Mail"
   },
+  "landingFeatures": {
+    "sec1": {
+      "title": {
+        "line1": "Tự động phân loại.",
+        "line2": "Không bao giờ bỏ lỡ email quan trọng."
+      },
+      "body": "Đang chìm ngập trong email? Đừng lãng phí năng lượng cố gắng ưu tiên chúng nữa. Trợ lý AI của chúng tôi sẽ tự động dán nhãn mọi thứ.",
+      "before": "Trước",
+      "after": "Sau"
+    },
+    "sec2": {
+      "title": "Bản nháp chờ sẵn trong hộp thư",
+      "body": "Khi bạn kiểm tra hộp thư, mọi email cần phản hồi sẽ có sẵn một bản nháp được soạn theo văn phong của bạn, sẵn sàng để gửi."
+    },
+    "sec3": {
+      "title": "Hộp thư của bạn, ở bất cứ đâu",
+      "body": "Đọc email, soạn phản hồi và quản lý hộp thư từ Zalo, Telegram hoặc Web — không cần chuyển đổi ứng dụng."
+    },
+    "sec4": {
+      "title": "Bắt đầu chỉ trong vài phút",
+      "body": "Cài đặt chỉ với một click. Bắt đầu sắp xếp và soạn email trong vài phút.",
+      "step1": {
+        "label": "STEP 1",
+        "title": "Kết nối tài khoản Google",
+        "body": "Liên kết Gmail của bạn chỉ với hai cú nhấp chuột để bắt đầu trải nghiệm."
+      },
+      "step2": {
+        "label": "STEP 2",
+        "title": "Tổ chức hộp thư như ý muốn",
+        "body": "Danh mục thông minh tự động thiết lập. Dùng danh mục mặc định hoặc tự tạo.",
+        "chips": {
+          "newsletter": "📧 Bản tin",
+          "needsReply": "↩️ Cần trả lời",
+          "marketing": "📢 Marketing",
+          "calendar": "📅 Lịch hẹn",
+          "notifications": "🔔 Thông báo",
+          "coldEmail": "❄️ Cold Email",
+          "internal": "👥 Nội bộ",
+          "urgent": "🔥 Khẩn cấp"
+        }
+      },
+      "step3": {
+        "label": "STEP 3",
+        "title": "Bản nháp tự động thông minh",
+        "body": "Mọi email cần phản hồi sẽ luôn có một bản nháp chờ bạn bấm Gửi.",
+        "mockHeader": "Thư mới",
+        "draftedBy": "AI SOẠN:",
+        "draftBody": "Tôi rất sẵn lòng gặp bạn lúc 5h chiều tuần tới nhé!",
+        "sendButton": "Gửi"
+      }
+    },
+    "sec5": {
+      "title": "Hủy đăng ký hàng loạt email bạn không bao giờ đọc",
+      "body": "Xem những email nào bạn chưa bao giờ mở, và hủy đăng ký & lưu trữ chúng chỉ với một cú nhấp chuột."
+    },
+    "sec6": {
+      "title": "Thiết kế xoay quanh cách bạn làm việc",
+      "body": "Đủ linh hoạt cho mọi quy trình. Đủ đơn giản để cài đặt trong vài phút.",
+      "col1": {
+        "title": "Phân tích hộp thư. Hiểu rõ để tối ưu",
+        "body": "Xem ai gửi email nhiều nhất và điều gì đang làm đầy hộp thư. Phân tích chi tiết và xử lý.",
+        "mockHeading": "Ai gửi email cho bạn nhiều nhất",
+        "mockSenderHeader": "Người gửi",
+        "mockCountHeader": "Số lượng"
+      },
+      "col2": {
+        "title": "Bản nháp nắm rõ lịch trình của bạn",
+        "body": "Kết nối với lịch và CRM của bạn để soạn email dựa trên thời gian biểu và dữ liệu khách hàng."
+      },
+      "col3": {
+        "title": "Tùy biến bằng ngôn ngữ tự nhiên",
+        "body": "Hộp thư của bạn, luật của bạn. Cấu hình mọi thứ bằng tiếng Việt tự nhiên.",
+        "rule1": "Gắn nhãn email từ @congty.com là Nội bộ",
+        "rule2": "Lưu trữ mọi hóa đơn và gửi cho kế toán",
+        "rule3": "Gửi bản tổng hợp newsletter vào CN",
+        "rule4": "Nếu có ai muốn đặt lịch họp, hãy phản hồi k",
+        "newRule": "+ Tạo luật mới",
+        "examples": "↗ Xem ví dụ"
+      }
+    }
+  },
+  "landingFaq": {
+    "header": {
+      "title": "Các câu hỏi thường gặp"
+    },
+    "items": {
+      "q1": "Zero Mail hỗ trợ các nhà cung cấp email nào?",
+      "a1": "Chúng tôi hỗ trợ các tài khoản email Gmail, Google Workspace và Microsoft Outlook.",
+      "q2": "Làm thế nào tôi có thể yêu cầu tính năng mới?",
+      "a2": "Hãy gửi email cho chúng tôi. Chúng tôi luôn sẵn sàng lắng nghe để cải thiện trải nghiệm email của bạn.",
+      "q3": "Zero Mail có thay thế ứng dụng email hiện tại của tôi không?",
+      "a3": "Không! Zero Mail không phải là một ứng dụng email khách (email client). Nó được sử dụng song song với ứng dụng email hiện tại của bạn. Bạn vẫn sử dụng Google hoặc Outlook như bình thường.",
+      "q4": "Bạn có cung cấp hoàn tiền không?",
+      "a4": "Có, nếu bạn cảm thấy chúng tôi không mang lại giá trị cho bạn, hãy gửi email cho chúng tôi trong vòng 14 ngày kể từ khi nâng cấp và chúng tôi sẽ hoàn tiền cho bạn.",
+      "q5": "Tôi có thể dùng thử Zero Mail miễn phí không?",
+      "a5": "Chắc chắn rồi, chúng tôi có bản dùng thử miễn phí 7 ngày cho tất cả các gói để bạn có thể trải nghiệm ngay lập tức, không cần thẻ tín dụng!"
+    }
+  },
+  "landingPricing": {
+    "header": {
+      "title": "Dùng thử miễn phí, gói trả phí hợp lý",
+      "body": "Không có phí ẩn. Hủy bất cứ lúc nào.",
+      "badge": "Giá theo năm, dùng thử miễn phí 7 ngày"
+    },
+    "ctaTrial": "Dùng thử miễn phí 7 ngày",
+    "popular": "Phổ biến",
+    "perPersonMonth": " /người /tháng",
+    "starter": {
+      "title": "Starter",
+      "description": "Dành cho cá nhân, doanh nhân muốn lấy lại thời gian của mình.",
+      "b1": "Sắp xếp và gắn nhãn mọi email",
+      "b2": "Soạn nháp theo văn phong của bạn",
+      "b3": "Chặn email quảng cáo, rác",
+      "b4": "Hủy đăng ký và lưu trữ hàng loạt",
+      "b5": "Phân tích dữ liệu email",
+      "b6": "Tóm tắt trước cuộc họp"
+    },
+    "plus": {
+      "title": "Plus",
+      "description": "Dành cho người dùng chuyên sâu cần các tiện ích tích hợp hệ thống.",
+      "includesIntro": "Mọi thứ trong gói Starter, cộng thêm:",
+      "b1": "2 tài khoản email /người dùng",
+      "b2": "Tích hợp Slack / Discord",
+      "b3": "Gửi bản tin tổng hợp hàng tuần",
+      "b4": "Tự động lưu trữ tệp đính kèm",
+      "b5": "Kho lưu trữ kiến thức không giới hạn"
+    },
+    "pro": {
+      "title": "Professional",
+      "description": "Dành cho đội ngũ và doanh nghiệp xử lý lượng lớn email.",
+      "includesIntro": "Mọi thứ trong gói Plus, cộng thêm:",
+      "b1": "Bảng phân tích toàn nhóm",
+      "b2": "Hỗ trợ khách hàng ưu tiên 24/7",
+      "b3": "Chuyên viên hỗ trợ cài đặt riêng"
+    }
+  },
+  "landingTestimonials": {
+    "header": {
+      "title": "Gia nhập cùng 20,000+ người đang tiết kiệm thời gian email",
+      "body": "Khách hàng của chúng tôi yêu thích việc tiết kiệm thời gian với Zero Mail."
+    },
+    "r1": {
+      "text": "Yêu thích ứng dụng tự động hóa email tuyệt vời này: zeromail.com",
+      "role": "CTO"
+    },
+    "r2": {
+      "text": "Thật sự tuyệt vời! Đã dọn dẹp các email quảng cáo và newsletter rác chỉ trong vài phút.",
+      "role": "Giám đốc Kỹ thuật"
+    },
+    "r3": {
+      "text": "Wow. Đã thiết lập xong và hủy đăng ký khỏi những kẻ gửi spam tồi tệ nhất chỉ trong 3 phút... Cảm ơn 🙏",
+      "role": "Trưởng phòng Growth"
+    },
+    "r4": {
+      "text": "Đây là công cụ đầu tiên tôi thử mà thực sự nắm bắt được văn phong của tôi trong các bản nháp phản hồi.",
+      "role": "Kỹ sư Pháp chế"
+    },
+    "r5": {
+      "text": "Tôi tìm thấy Zero Mail khi đang tìm một trợ lý ảo để quản lý email, nhưng sau khi dùng thử công cụ này, mọi thứ đã thay đổi hoàn toàn.",
+      "role": "Nhà sáng lập"
+    },
+    "r6": {
+      "text": "Tôi là một giám đốc điều hành đang chìm ngập trong hàng trăm email mỗi ngày. Điều tôi yêu thích nhất ở Zero Mail là cách nó thay thế hoàn toàn việc xử lý email thủ công—tự động hóa thông minh.",
+      "role": "Giám đốc Điều hành"
+    },
+    "r7": {
+      "text": "Cuối cùng cũng có một ứng dụng 'hủy đăng ký' giúp bạn *thực sự* hủy đăng ký và lọc thông qua bộ lọc Gmail (thay vì luôn phụ thuộc vào ứng dụng bên thứ 3).",
+      "role": "Nhà sáng lập"
+    }
+  },
   "legal": {
     "googleApiPolicy": {
       "body": "Việc Zero Mail sử dụng và chuyển giao thông tin nhận được từ Google API sang bất kỳ ứng dụng nào khác sẽ tuân thủ <link>Chính sách bảo mật dữ liệu người dùng của Google API</link>, bao gồm các yêu cầu Sử dụng có giới hạn (Limited Use)."
