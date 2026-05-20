@@ -17,6 +17,8 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -27,6 +29,7 @@ public class ProviderMasterKeyResolver {
 
     private final LlmProviderMasterKeyRepository llmProviderMasterKeyRepository;
     private final PlatformSecretCipher platformSecretCipher;
+    private final JdbcTemplate jdbcTemplate;
     private final Clock clock;
     private final Duration cacheTtl;
     private final ConcurrentMap<LlmProvider, CachedMasterKey> cachedKeysByProvider =
@@ -35,10 +38,12 @@ public class ProviderMasterKeyResolver {
     @Autowired
     public ProviderMasterKeyResolver(
             LlmProviderMasterKeyRepository llmProviderMasterKeyRepository,
-            PlatformSecretCipher platformSecretCipher) {
+            PlatformSecretCipher platformSecretCipher,
+            JdbcTemplate jdbcTemplate) {
         this(
                 llmProviderMasterKeyRepository,
                 platformSecretCipher,
+                jdbcTemplate,
                 Clock.systemUTC(),
                 DEFAULT_CACHE_TTL);
     }
@@ -48,11 +53,21 @@ public class ProviderMasterKeyResolver {
             PlatformSecretCipher platformSecretCipher,
             Clock clock,
             Duration cacheTtl) {
+        this(llmProviderMasterKeyRepository, platformSecretCipher, null, clock, cacheTtl);
+    }
+
+    public ProviderMasterKeyResolver(
+            LlmProviderMasterKeyRepository llmProviderMasterKeyRepository,
+            PlatformSecretCipher platformSecretCipher,
+            JdbcTemplate jdbcTemplate,
+            Clock clock,
+            Duration cacheTtl) {
         this.llmProviderMasterKeyRepository =
                 Objects.requireNonNull(
                         llmProviderMasterKeyRepository, "llmProviderMasterKeyRepository");
         this.platformSecretCipher =
                 Objects.requireNonNull(platformSecretCipher, "platformSecretCipher");
+        this.jdbcTemplate = jdbcTemplate;
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
         this.cacheTtl = Objects.requireNonNull(cacheTtl, "cacheTtl must not be null");
     }
@@ -89,6 +104,22 @@ public class ProviderMasterKeyResolver {
                 .orElse(0L);
     }
 
+    public long providerCatalogVersionOrOne(LlmProvider provider) {
+        if (jdbcTemplate == null) {
+            return 1L;
+        }
+        try {
+            Long catalogVersion =
+                    jdbcTemplate.queryForObject(
+                            "SELECT catalog_version FROM provider_catalog WHERE provider = ?",
+                            Long.class,
+                            provider.id());
+            return catalogVersion == null ? 1L : catalogVersion;
+        } catch (DataAccessException dataAccessException) {
+            return 1L;
+        }
+    }
+
     public List<MasterKeyMaskedRow> maskedRows() {
         return llmProviderMasterKeyRepository.findAllOrderedByProvider().stream()
                 .map(this::toMaskedRow)
@@ -121,6 +152,7 @@ public class ProviderMasterKeyResolver {
                 resolvedBaseUrl(entity),
                 entity.getKekVersion(),
                 entity.getProviderSecretVersion(),
+                providerCatalogVersionOrOne(provider),
                 clock.instant(),
                 cacheTtl);
     }
@@ -146,14 +178,36 @@ public class ProviderMasterKeyResolver {
                 0L,
                 rotationRecommended(entity.getLastRotatedAt()),
                 resolvedBaseUrl(entity),
-                entity.isFeatureDefaultProviderChat(),
-                entity.isFeatureDefaultProviderTriage(),
-                entity.isFeatureDefaultProviderDraft());
+                isFeatureDefaultProvider(entity.getProvider(), "CHAT"),
+                isFeatureDefaultProvider(entity.getProvider(), "TRIAGE"),
+                isFeatureDefaultProvider(entity.getProvider(), "DRAFT"));
     }
 
     private boolean rotationRecommended(Instant lastRotatedAt) {
         return lastRotatedAt != null
                 && lastRotatedAt.plus(ROTATION_RECOMMENDED_AFTER).isBefore(clock.instant());
+    }
+
+    private boolean isFeatureDefaultProvider(LlmProvider provider, String feature) {
+        if (jdbcTemplate == null) {
+            return false;
+        }
+        try {
+            Integer count =
+                    jdbcTemplate.queryForObject(
+                            """
+                            SELECT COUNT(*)
+                            FROM feature_default_provider
+                            WHERE provider = ?
+                              AND feature = ?
+                            """,
+                            Integer.class,
+                            provider.id(),
+                            feature);
+            return count != null && count > 0;
+        } catch (DataAccessException dataAccessException) {
+            return false;
+        }
     }
 
     public static String associatedData(LlmProvider provider) {
@@ -174,7 +228,8 @@ public class ProviderMasterKeyResolver {
             KeyFormat keyFormat,
             String baseUrl,
             Short kekVersion,
-            long providerSecretVersion) {
+            long providerSecretVersion,
+            long providerCatalogVersion) {
 
         public ResolvedMasterKey {
             plaintextKey = Arrays.copyOf(plaintextKey, plaintextKey.length);
@@ -196,6 +251,7 @@ public class ProviderMasterKeyResolver {
         private final String baseUrl;
         private final Short kekVersion;
         private final long providerSecretVersion;
+        private final long providerCatalogVersion;
         private final Instant fetchedAt;
         private final Duration cacheTtl;
 
@@ -206,6 +262,7 @@ public class ProviderMasterKeyResolver {
                 String baseUrl,
                 Short kekVersion,
                 long providerSecretVersion,
+                long providerCatalogVersion,
                 Instant fetchedAt,
                 Duration cacheTtl) {
             this.provider = provider;
@@ -214,6 +271,7 @@ public class ProviderMasterKeyResolver {
             this.baseUrl = baseUrl;
             this.kekVersion = kekVersion;
             this.providerSecretVersion = providerSecretVersion;
+            this.providerCatalogVersion = providerCatalogVersion;
             this.fetchedAt = fetchedAt;
             this.cacheTtl = cacheTtl;
         }
@@ -224,7 +282,13 @@ public class ProviderMasterKeyResolver {
 
         private ResolvedMasterKey toResolved() {
             return new ResolvedMasterKey(
-                    provider, plaintextKey, keyFormat, baseUrl, kekVersion, providerSecretVersion);
+                    provider,
+                    plaintextKey,
+                    keyFormat,
+                    baseUrl,
+                    kekVersion,
+                    providerSecretVersion,
+                    providerCatalogVersion);
         }
 
         private void wipe() {

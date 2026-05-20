@@ -47,15 +47,6 @@ public class LlmProviderMasterKeyEntity {
     @Column(name = "base_url", length = 500)
     private String baseUrl;
 
-    @Column(name = "feature_default_provider_chat", nullable = false)
-    private boolean featureDefaultProviderChat;
-
-    @Column(name = "feature_default_provider_triage", nullable = false)
-    private boolean featureDefaultProviderTriage;
-
-    @Column(name = "feature_default_provider_draft", nullable = false)
-    private boolean featureDefaultProviderDraft;
-
     protected LlmProviderMasterKeyEntity() {
         // Hibernate
     }
@@ -69,10 +60,7 @@ public class LlmProviderMasterKeyEntity {
             UUID createdByUserId,
             Instant createdAt,
             Instant lastRotatedAt,
-            String baseUrl,
-            boolean featureDefaultProviderChat,
-            boolean featureDefaultProviderTriage,
-            boolean featureDefaultProviderDraft) {
+            String baseUrl) {
         this.provider = provider;
         this.keyFormat = keyFormat;
         this.encryptedKey = copyEncryptedKey(encryptedKey);
@@ -82,9 +70,6 @@ public class LlmProviderMasterKeyEntity {
         this.createdAt = createdAt;
         this.lastRotatedAt = lastRotatedAt;
         this.baseUrl = baseUrl;
-        this.featureDefaultProviderChat = featureDefaultProviderChat;
-        this.featureDefaultProviderTriage = featureDefaultProviderTriage;
-        this.featureDefaultProviderDraft = featureDefaultProviderDraft;
     }
 
     public LlmProvider getProvider() {
@@ -121,18 +106,6 @@ public class LlmProviderMasterKeyEntity {
 
     public String getBaseUrl() {
         return baseUrl;
-    }
-
-    public boolean isFeatureDefaultProviderChat() {
-        return featureDefaultProviderChat;
-    }
-
-    public boolean isFeatureDefaultProviderTriage() {
-        return featureDefaultProviderTriage;
-    }
-
-    public boolean isFeatureDefaultProviderDraft() {
-        return featureDefaultProviderDraft;
     }
 
     public boolean hasEncryptedKey() {

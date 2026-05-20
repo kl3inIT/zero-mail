@@ -43,10 +43,7 @@ class ProviderMasterKeyResolverTest {
                                         null,
                                         Instant.parse("2026-05-20T00:00:00Z"),
                                         Instant.parse("2026-05-20T00:00:00Z"),
-                                        "https://api.openai.com/v1",
-                                        false,
-                                        false,
-                                        false)));
+                                        "https://api.openai.com/v1")));
         ProviderMasterKeyResolver resolver =
                 new ProviderMasterKeyResolver(
                         repository, cipher, fixedClock(), Duration.ofMinutes(15));
@@ -61,6 +58,7 @@ class ProviderMasterKeyResolverTest {
                                 StandardCharsets.UTF_8))
                 .isEqualTo("provider-key-value");
         assertThat(resolvedKey.providerSecretVersion()).isEqualTo(4L);
+        assertThat(resolvedKey.providerCatalogVersion()).isEqualTo(1L);
         resolver.invalidate(LlmProvider.OPENAI);
         resolver.resolve(LlmProvider.OPENAI);
         verify(repository, org.mockito.Mockito.times(2)).findById(LlmProvider.OPENAI);

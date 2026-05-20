@@ -1,6 +1,11 @@
 package com.zeromail.api.error;
 
 import com.zeromail.core.admin.auth.exception.AdminAuthException;
+import com.zeromail.core.admin.cat.usecases.CatalogAdminService;
+import com.zeromail.core.admin.cat.usecases.CatalogSyncJobRepository;
+import com.zeromail.core.admin.cat.usecases.CatalogSyncOrchestrator;
+import com.zeromail.core.admin.cat.usecases.FeatureDefaultProviderService;
+import com.zeromail.core.admin.cat.usecases.ModelSchemaValidator;
 import com.zeromail.core.admin.mkey.usecases.MasterKeyAdminService;
 import com.zeromail.core.admin.mkey.usecases.MasterKeyRateLimiter;
 import com.zeromail.core.admin.tenant.usecases.TenantNotFoundException;
@@ -67,6 +72,58 @@ public class AdminErrorAdvice {
     ResponseEntity<ProblemDetail> onTenantConfirmEmailMismatch(
             TenantConfirmEmailMismatchException tenantConfirmEmailMismatchException) {
         return problem(HttpStatus.BAD_REQUEST, "error.admin.confirm_email_mismatch");
+    }
+
+    @ExceptionHandler(CatalogSyncOrchestrator.CatalogSyncAnthropicDisabledException.class)
+    ResponseEntity<ProblemDetail> onCatalogSyncAnthropicDisabled(
+            CatalogSyncOrchestrator.CatalogSyncAnthropicDisabledException
+                    catalogSyncAnthropicDisabledException) {
+        return problem(HttpStatus.BAD_REQUEST, "error.admin.catalog_sync_anthropic_disabled");
+    }
+
+    @ExceptionHandler(CatalogSyncOrchestrator.CatalogSyncNotReadyException.class)
+    ResponseEntity<ProblemDetail> onCatalogSyncNotReady(
+            CatalogSyncOrchestrator.CatalogSyncNotReadyException catalogSyncNotReadyException) {
+        return problem(HttpStatus.CONFLICT, "error.admin.catalog_sync_not_ready");
+    }
+
+    @ExceptionHandler(CatalogSyncJobRepository.CatalogSyncJobNotFoundException.class)
+    ResponseEntity<ProblemDetail> onCatalogSyncJobNotFound(
+            CatalogSyncJobRepository.CatalogSyncJobNotFoundException
+                    catalogSyncJobNotFoundException) {
+        return problem(HttpStatus.NOT_FOUND, "error.admin.catalog_sync_job_not_found");
+    }
+
+    @ExceptionHandler(CatalogAdminService.CatalogDisablePinsUnconfirmedException.class)
+    ResponseEntity<ProblemDetail> onCatalogDisablePinsUnconfirmed(
+            CatalogAdminService.CatalogDisablePinsUnconfirmedException
+                    catalogDisablePinsUnconfirmedException) {
+        ProblemDetail problemDetail =
+                problemDetail(
+                        HttpStatus.BAD_REQUEST, "error.admin.catalog_disable_pins_unconfirmed");
+        problemDetail.setProperty(
+                "pinnedTenantCount", catalogDisablePinsUnconfirmedException.pinnedTenantCount());
+        return ResponseEntity.badRequest().body(problemDetail);
+    }
+
+    @ExceptionHandler(FeatureDefaultProviderService.CatalogModelNotFoundException.class)
+    ResponseEntity<ProblemDetail> onCatalogModelNotFound(
+            FeatureDefaultProviderService.CatalogModelNotFoundException
+                    catalogModelNotFoundException) {
+        return problem(HttpStatus.NOT_FOUND, "error.admin.catalog_model_not_found");
+    }
+
+    @ExceptionHandler(ModelSchemaValidator.CatalogModelIdInvalidException.class)
+    ResponseEntity<ProblemDetail> onCatalogModelIdInvalid(
+            ModelSchemaValidator.CatalogModelIdInvalidException catalogModelIdInvalidException) {
+        return problem(HttpStatus.BAD_REQUEST, "error.admin.catalog_model_id_invalid");
+    }
+
+    @ExceptionHandler(ModelSchemaValidator.CatalogModelSchemaMismatchException.class)
+    ResponseEntity<ProblemDetail> onCatalogModelSchemaMismatch(
+            ModelSchemaValidator.CatalogModelSchemaMismatchException
+                    catalogModelSchemaMismatchException) {
+        return problem(HttpStatus.BAD_REQUEST, "error.admin.catalog_model_schema_mismatch");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

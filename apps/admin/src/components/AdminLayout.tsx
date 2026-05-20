@@ -1,5 +1,13 @@
 import { Link, Outlet } from '@tanstack/react-router';
-import { BookOpenIcon, Building2Icon, ClipboardListIcon, GaugeIcon, KeyRoundIcon, LogOutIcon, UsersIcon } from 'lucide-react';
+import {
+  BookOpenIcon,
+  Building2Icon,
+  ClipboardListIcon,
+  GaugeIcon,
+  KeyRoundIcon,
+  LogOutIcon,
+  UsersIcon,
+} from 'lucide-react';
 
 import type { AdminMe } from '@/lib/admin-session';
 
@@ -16,22 +24,24 @@ const navigationItems = [
   { to: '/role-grants', label: 'Role grants', icon: UsersIcon },
   { to: '/master-keys', label: 'Master keys', icon: KeyRoundIcon },
   { to: '/tenants', label: 'Tenants', icon: Building2Icon },
-  { to: '/catalog', label: 'Catalog', icon: BookOpenIcon, disabled: true },
+  { to: '/catalog', label: 'Catalog', icon: BookOpenIcon },
 ] as const;
 
 export function AdminLayout({ admin }: AdminLayoutProps) {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="bg-background text-foreground min-h-screen">
       <AdminModeBanner email={admin.email} env={admin.env} />
       <div className="grid min-h-[calc(100vh-40px)] grid-cols-[240px_1fr]">
-        <aside className="border-r border-border bg-secondary px-4 py-4">
-          <div className="mb-4 flex items-center gap-2 border-b border-border pb-4">
-            <div className="grid size-8 place-items-center rounded-md bg-ink text-sm font-semibold text-background">
+        <aside className="border-border bg-secondary border-r px-4 py-4">
+          <div className="border-border mb-4 flex items-center gap-2 border-b pb-4">
+            <div className="bg-ink text-background grid size-8 place-items-center rounded-md text-sm font-semibold">
               Z
             </div>
             <div>
-              <div className="font-semibold text-ink">Zero Mail</div>
-              <div className="font-mono text-[10px] tracking-wider text-muted-foreground uppercase">admin</div>
+              <div className="text-ink font-semibold">Zero Mail</div>
+              <div className="text-muted-foreground font-mono text-[10px] tracking-wider uppercase">
+                admin
+              </div>
             </div>
           </div>
           <nav className="space-y-1">
@@ -63,7 +73,7 @@ export function AdminLayout({ admin }: AdminLayoutProps) {
               );
             })}
           </nav>
-          <Button variant="ghost" className="mt-8 w-full justify-start text-ink-2">
+          <Button variant="ghost" className="text-ink-2 mt-8 w-full justify-start">
             <LogOutIcon className="size-4" />
             Sign out
           </Button>

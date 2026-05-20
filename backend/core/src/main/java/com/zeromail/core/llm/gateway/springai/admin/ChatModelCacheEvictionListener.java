@@ -1,5 +1,7 @@
 package com.zeromail.core.llm.gateway.springai.admin;
 
+import com.zeromail.core.admin.cat.domain.event.CatalogChangedEvent;
+import com.zeromail.core.admin.cat.usecases.CuratedCatalogQueryService;
 import com.zeromail.core.admin.mkey.domain.event.MasterKeyRotatedEvent;
 import com.zeromail.core.chat.llm.springai.SpringAiChatModelFactory;
 import org.slf4j.Logger;
@@ -15,12 +17,15 @@ public class ChatModelCacheEvictionListener {
 
     private final SpringAiChatModelFactory chatModelFactory;
     private final ProviderMasterKeyResolver providerMasterKeyResolver;
+    private final CuratedCatalogQueryService curatedCatalogQueryService;
 
     public ChatModelCacheEvictionListener(
             SpringAiChatModelFactory chatModelFactory,
-            ProviderMasterKeyResolver providerMasterKeyResolver) {
+            ProviderMasterKeyResolver providerMasterKeyResolver,
+            CuratedCatalogQueryService curatedCatalogQueryService) {
         this.chatModelFactory = chatModelFactory;
         this.providerMasterKeyResolver = providerMasterKeyResolver;
+        this.curatedCatalogQueryService = curatedCatalogQueryService;
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -30,5 +35,15 @@ public class ChatModelCacheEvictionListener {
         log.info(
                 "event=chat_model_cache_evicted reason=master_key_rotated provider={}",
                 event.provider());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void on(CatalogChangedEvent event) {
+        chatModelFactory.evictByModelIds(event.affectedModelIds());
+        curatedCatalogQueryService.invalidateCache();
+        log.info(
+                "event=chat_model_cache_evicted reason=catalog_changed provider={} catalogVersion={}",
+                event.provider(),
+                event.newCatalogVersion());
     }
 }

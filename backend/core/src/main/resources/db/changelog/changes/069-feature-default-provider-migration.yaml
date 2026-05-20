@@ -1,0 +1,105 @@
+# Owner: 8D (per docs/ops/admin-shared-file-ownership.md)
+databaseChangeLog:
+  - changeSet:
+      id: 069-01-feature-default-provider
+      author: zeromail
+      comment: >
+        Move feature defaults out of llm_provider_master_key stub booleans into a three-row
+        catalog table keyed by feature. Defaults are seeded in 070 after model rows exist.
+      changes:
+        - createTable:
+            tableName: feature_default_provider
+            columns:
+              - column:
+                  name: feature
+                  type: varchar(16)
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_feature_default_provider
+                    nullable: false
+              - column:
+                  name: provider
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: model_id
+                  type: varchar(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_by_admin
+                  type: uuid
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: feature_default_provider
+            baseColumnNames: provider
+            referencedTableName: provider_catalog
+            referencedColumnNames: provider
+            constraintName: fk_fdp_provider
+            onDelete: RESTRICT
+        - addForeignKeyConstraint:
+            baseTableName: feature_default_provider
+            baseColumnNames: model_id
+            referencedTableName: model_catalog
+            referencedColumnNames: model_id
+            constraintName: fk_fdp_model
+            onDelete: RESTRICT
+        - addForeignKeyConstraint:
+            baseTableName: feature_default_provider
+            baseColumnNames: provider, model_id
+            referencedTableName: model_catalog
+            referencedColumnNames: provider, model_id
+            constraintName: fk_fdp_provider_model
+            onDelete: RESTRICT
+        - addForeignKeyConstraint:
+            baseTableName: feature_default_provider
+            baseColumnNames: updated_by_admin
+            referencedTableName: admin_users
+            referencedColumnNames: id
+            constraintName: fk_fdp_updated_by_admin
+            onDelete: SET NULL
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE feature_default_provider
+                ADD CONSTRAINT ck_fdp_feature
+                CHECK (feature IN ('CHAT','TRIAGE','DRAFT'));
+        - dropColumn:
+            tableName: llm_provider_master_key
+            columns:
+              - column:
+                  name: feature_default_provider_chat
+              - column:
+                  name: feature_default_provider_triage
+              - column:
+                  name: feature_default_provider_draft
+      rollback:
+        - addColumn:
+            tableName: llm_provider_master_key
+            columns:
+              - column:
+                  name: feature_default_provider_chat
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: feature_default_provider_triage
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: feature_default_provider_draft
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+        - dropTable:
+            tableName: feature_default_provider

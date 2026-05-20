@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import tools.jackson.databind.ObjectMapper;
 
 class ModelsProbeClientTest {
 
@@ -24,7 +25,8 @@ class ModelsProbeClientTest {
                 .andRespond(
                         withStatus(HttpStatus.UNAUTHORIZED)
                                 .body("{\"error\":\"provider detail\"}"));
-        ModelsProbeClient modelsProbeClient = new ModelsProbeClient(restClientBuilder);
+        ModelsProbeClient modelsProbeClient =
+                new ModelsProbeClient(restClientBuilder, new ObjectMapper());
 
         assertThat(
                         modelsProbeClient.probe(
@@ -47,7 +49,8 @@ class ModelsProbeClientTest {
                         withSuccess(
                                 "{\"models\":[]}",
                                 org.springframework.http.MediaType.APPLICATION_JSON));
-        ModelsProbeClient modelsProbeClient = new ModelsProbeClient(restClientBuilder);
+        ModelsProbeClient modelsProbeClient =
+                new ModelsProbeClient(restClientBuilder, new ObjectMapper());
 
         assertThat(
                         modelsProbeClient.probe(

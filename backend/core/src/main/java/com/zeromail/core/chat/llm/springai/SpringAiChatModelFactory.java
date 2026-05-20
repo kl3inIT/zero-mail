@@ -70,6 +70,13 @@ public class SpringAiChatModelFactory {
                                 () ->
                                         providerMasterKeyResolver.providerSecretVersionOrZero(
                                                 platformProvider));
+        long providerCatalogVersion =
+                platformMasterKey
+                        .map(ProviderMasterKeyResolver.ResolvedMasterKey::providerCatalogVersion)
+                        .orElseGet(
+                                () ->
+                                        providerMasterKeyResolver.providerCatalogVersionOrOne(
+                                                platformProvider));
         ChatModelCacheKey cacheKey =
                 new ChatModelCacheKey(
                         tenantId,
@@ -78,7 +85,8 @@ public class SpringAiChatModelFactory {
                                 ? platformProvider.id()
                                 : providerId,
                         modelId,
-                        providerSecretVersion);
+                        providerSecretVersion,
+                        providerCatalogVersion);
         return chatModelsByKey.computeIfAbsent(
                 cacheKey,
                 ignored -> {
@@ -91,6 +99,16 @@ public class SpringAiChatModelFactory {
 
     public void evictByProvider(LlmProvider provider) {
         chatModelsByKey.keySet().removeIf(cacheKey -> cacheKey.providerId().equals(provider.id()));
+    }
+
+    public void evictByModelIds(java.util.Collection<String> modelIds) {
+        if (modelIds == null || modelIds.isEmpty()) {
+            return;
+        }
+        java.util.Set<String> affectedModelIds = java.util.Set.copyOf(modelIds);
+        chatModelsByKey
+                .keySet()
+                .removeIf(cacheKey -> affectedModelIds.contains(cacheKey.modelId()));
     }
 
     private StreamingChatModel platformModel(
@@ -188,5 +206,6 @@ public class SpringAiChatModelFactory {
             String feature,
             String providerId,
             String modelId,
-            long providerSecretVersion) {}
+            long providerSecretVersion,
+            long providerCatalogVersion) {}
 }

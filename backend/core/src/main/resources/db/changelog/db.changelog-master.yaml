@@ -155,3 +155,15 @@ databaseChangeLog:
   - include:
       file: changes/058-llm-provider-master-key.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/068-catalog-tables-prep.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/068b-catalog-tables-fk.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/069-feature-default-provider-migration.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/070-anthropic-catalog-seed.yaml
+      relativeToChangelogFile: true

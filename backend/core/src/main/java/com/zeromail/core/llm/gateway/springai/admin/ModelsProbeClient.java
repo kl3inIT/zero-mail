@@ -4,12 +4,17 @@ import com.zeromail.core.admin.mkey.domain.KeyFormat;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 @Component
 public class ModelsProbeClient {
@@ -17,12 +22,19 @@ public class ModelsProbeClient {
     private static final String ANTHROPIC_VERSION = "2023-06-01";
 
     private final RestClient.Builder restClientBuilder;
+    private final ObjectMapper objectMapper;
 
-    public ModelsProbeClient(RestClient.Builder restClientBuilder) {
+    public ModelsProbeClient(RestClient.Builder restClientBuilder, ObjectMapper objectMapper) {
         this.restClientBuilder = restClientBuilder;
+        this.objectMapper = objectMapper;
     }
 
     public MasterKeyTestResult probe(
+            LlmProvider provider, KeyFormat keyFormat, String baseUrl, byte[] plaintextKey) {
+        return probeConnection(provider, keyFormat, baseUrl, plaintextKey);
+    }
+
+    public MasterKeyTestResult probeConnection(
             LlmProvider provider, KeyFormat keyFormat, String baseUrl, byte[] plaintextKey) {
         try {
             RestClient.RequestHeadersSpec<?> requestHeadersSpecification =
@@ -44,6 +56,80 @@ public class ModelsProbeClient {
         } catch (RestClientException restClientException) {
             return withConstantJitter(MasterKeyTestResult.NETWORK_ERROR);
         }
+    }
+
+    public List<RawModel> fetchModelCatalog(
+            LlmProvider provider, KeyFormat keyFormat, String baseUrl, byte[] plaintextKey) {
+        try {
+            RestClient.RequestHeadersSpec<?> requestHeadersSpecification =
+                    restClientBuilder
+                            .build()
+                            .get()
+                            .uri(joinPath(baseUrlFor(provider, baseUrl), "models"));
+            String apiKey = new String(plaintextKey, StandardCharsets.UTF_8);
+            applyHeaders(requestHeadersSpecification, provider, keyFormat, apiKey);
+            String responseBody = requestHeadersSpecification.retrieve().body(String.class);
+            if (responseBody == null || responseBody.isBlank()) {
+                return List.of();
+            }
+            return parseModels(provider, responseBody);
+        } catch (RestClientResponseException providerRejection) {
+            throw new ProbeFailedException(mapStatus(providerRejection.getStatusCode().value()));
+        } catch (ResourceAccessException resourceAccessException) {
+            throw new ProbeFailedException(
+                    isTimeout(resourceAccessException)
+                            ? MasterKeyTestResult.TIMEOUT
+                            : MasterKeyTestResult.NETWORK_ERROR);
+        } catch (RestClientException restClientException) {
+            throw new ProbeFailedException(MasterKeyTestResult.NETWORK_ERROR);
+        }
+    }
+
+    private List<RawModel> parseModels(LlmProvider provider, String responseBody) {
+        try {
+            JsonNode rootNode = objectMapper.readTree(responseBody);
+            JsonNode modelsNode =
+                    provider == LlmProvider.GOOGLE
+                            ? rootNode.path("models")
+                            : rootNode.path("data");
+            if (!modelsNode.isArray()) {
+                throw new ProbeFailedException(MasterKeyTestResult.NETWORK_ERROR);
+            }
+            List<RawModel> models = new ArrayList<>();
+            for (JsonNode modelNode : modelsNode) {
+                String modelId =
+                        provider == LlmProvider.GOOGLE
+                                ? googleModelId(modelNode)
+                                : modelNode.path("id").asString();
+                if (modelId == null || modelId.isBlank()) {
+                    continue;
+                }
+                String displayName = optionalText(modelNode.path("display_name"));
+                if (displayName == null) {
+                    displayName = optionalText(modelNode.path("displayName"));
+                }
+                models.add(new RawModel(modelId, displayName));
+            }
+            return models;
+        } catch (JacksonException jacksonException) {
+            throw new ProbeFailedException(MasterKeyTestResult.NETWORK_ERROR);
+        }
+    }
+
+    private static String googleModelId(JsonNode modelNode) {
+        String name = modelNode.path("name").asString();
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        return name.startsWith("models/") ? name.substring("models/".length()) : name;
+    }
+
+    private static String optionalText(JsonNode jsonNode) {
+        if (jsonNode.isMissingNode() || jsonNode.isNull() || !jsonNode.isString()) {
+            return null;
+        }
+        String value = jsonNode.asString();
+        return value == null || value.isBlank() ? null : value;
     }
 
     private static void applyHeaders(
@@ -110,5 +196,21 @@ public class ModelsProbeClient {
             Thread.currentThread().interrupt();
         }
         return result;
+    }
+
+    public record RawModel(String modelId, String displayName) {}
+
+    public static class ProbeFailedException extends RuntimeException {
+
+        private final MasterKeyTestResult reason;
+
+        public ProbeFailedException(MasterKeyTestResult reason) {
+            super("Provider model catalog probe failed");
+            this.reason = reason;
+        }
+
+        public MasterKeyTestResult reason() {
+            return reason;
+        }
     }
 }
