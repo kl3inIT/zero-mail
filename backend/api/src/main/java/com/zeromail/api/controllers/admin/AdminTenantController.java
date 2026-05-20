@@ -17,6 +17,8 @@ import com.zeromail.core.admin.tenant.usecases.TenantDisconnectService;
 import com.zeromail.core.admin.tenant.usecases.TenantInspectionService;
 import com.zeromail.core.admin.tenant.usecases.TenantNotFoundException;
 import com.zeromail.core.admin.tenant.usecases.TenantPauseService;
+import com.zeromail.core.shared.exception.ErrorClass;
+import com.zeromail.core.admin.shared.AdminBusinessException;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -165,10 +167,45 @@ public class AdminTenantController {
         if (cursor == null || cursor.isBlank()) {
             return 0;
         }
+        // WR-14: a malformed cursor used to silently fall through to offset 0, which made
+        // copy-paste / stale-cursor bugs invisible. Reject with 400 instead so the FE can
+        // surface a clear error and reset to page 1. A future fix will replace the integer
+        // offset with a keyset cursor over (created_at DESC, tenant_id ASC).
         try {
-            return Math.max(0, Integer.parseInt(cursor));
+            int parsedOffset = Integer.parseInt(cursor);
+            if (parsedOffset < 0) {
+                throw new InvalidTenantCursorException();
+            }
+            return parsedOffset;
         } catch (NumberFormatException numberFormatException) {
-            return 0;
+            throw new InvalidTenantCursorException();
+        }
+    }
+
+    static final class InvalidTenantCursorException extends AdminBusinessException {
+
+        InvalidTenantCursorException() {
+            super("Invalid tenant pagination cursor");
+        }
+
+        @Override
+        public ErrorClass errorClass() {
+            return ErrorClass.BAD_REQUEST;
+        }
+
+        @Override
+        public String errorCode() {
+            return "error.admin.invalid_cursor";
+        }
+
+        @Override
+        public String logEvent() {
+            return "admin_tenant_invalid_cursor";
+        }
+
+        @Override
+        public String detail() {
+            return "The supplied pagination cursor is not a valid value.";
         }
     }
 }
