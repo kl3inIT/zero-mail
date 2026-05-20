@@ -20,7 +20,14 @@ type AdminLayoutProps = {
   admin: AdminMe;
 };
 
-const navigationItems = [
+type NavigationItem = {
+  to: string;
+  label: string;
+  icon: typeof GaugeIcon;
+  disabled?: boolean;
+};
+
+const navigationItems: ReadonlyArray<NavigationItem> = [
   { to: '/', label: 'Dashboard', icon: GaugeIcon },
   { to: '/audit', label: 'Audit log', icon: ClipboardListIcon },
   { to: '/role-grants', label: 'Role grants', icon: UsersIcon },
@@ -29,7 +36,7 @@ const navigationItems = [
   { to: '/catalog', label: 'Catalog', icon: BookOpenIcon },
   { to: '/queue', label: 'Queue', icon: ActivityIcon },
   { to: '/spend', label: 'Spend', icon: DollarSignIcon },
-] as const;
+];
 
 export function AdminLayout({ admin }: AdminLayoutProps) {
   return (
