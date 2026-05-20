@@ -124,15 +124,18 @@ class TriageAuditWriterCleanupArchiveTest extends PostgresContainerTest {
         UUID tenantId = seedTenant();
         UUID attemptId = UUID.randomUUID();
         UUID triageAuditId = UUID.randomUUID();
-        // Pre-seed a TRIAGE-sourced row for the same sender.
+        // Pre-seed a TRIAGE-sourced row for the same sender. Schema column names align with
+        // changelogs 025 / 040 (sanitized_subject) / 046 (source). The legacy `subject_excerpt` /
+        // `matcher_evidence` names from the Wave 0 RED stub never matched the real schema and are
+        // dropped here.
         jdbcTemplate.update(
                 """
                 insert into triage_audit(
-                    audit_id, tenant_id, gmail_message_id, gmail_thread_id, subject_excerpt,
+                    audit_id, tenant_id, gmail_message_id, gmail_thread_id, sanitized_subject,
                     sanitized_sender_email, rule_id, reason, action_type, args_hash,
-                    action_args_json, matcher_evidence, decision, created_at, decided_at,
-                    attempt_count, source)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), 1, 'TRIAGE')
+                    action_args_json, decision, created_at, decided_at,
+                    attempt_count, source, updated_at, version)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, NOW(), NOW(), 1, 'TRIAGE', NOW(), 0)
                 """,
                 triageAuditId,
                 tenantId,
@@ -145,7 +148,6 @@ class TriageAuditWriterCleanupArchiveTest extends PostgresContainerTest {
                 "ARCHIVE",
                 new byte[32],
                 "{\"type\":\"archive\"}",
-                "matcher",
                 "APPLIED");
 
         withTenant(
