@@ -29,7 +29,7 @@ Zero Mail is an AI Gmail triage SaaS where trust is the product. This roadmap wa
 - [ ] **Phase 5C: User Surface — Analytics & Daily Digest** - Metadata-only analytics screen (volume, time saved, top senders, rule hits over a window) + daily digest email
 - [ ] **Phase 6: Polish & CASA-Verified Launch** - End-to-end integration hardening, CASA Tier verification sign-off, launch readiness
 - [ ] **Phase 7: Analytics Enhancement** *(workstream: `analytics-enhancement`)* - Nâng cấp dashboard analytics: trend chart theo ngày (7d/30d/90d), Δ% badges, action breakdown, rule precision rate + Trust Score, Noise Reduction panel, credits dashboard, top senders mở rộng (top 10 + domain grouping) — chỉ metadata, không vi phạm privacy. Depends on Phase 5C.
-- [ ] **Phase 8: Bulk Unsubscribe Campaign** - Bulk preview + dry-run + execute "unsubscribe + archive history" trên các newsletter sender mà user chọn, sử dụng `List-Unsubscribe` header (RFC 8058 one-click POST + `mailto:`) phát hiện ở Phase 2A/3. Adds `UNSUBSCRIBE` RuleActionType (gated, preview-only at first), suppression list, reversible audit. Depends on Phase 7.
+- [x] **Phase 8: Bulk Unsubscribe Campaign** _(complete 2026-05-20)_ - Bulk preview + dry-run + execute "unsubscribe + archive history" trên các newsletter sender mà user chọn, sử dụng `List-Unsubscribe` header (RFC 8058 one-click POST + `mailto:`) phát hiện ở Phase 2A/3. Adds `UNSUBSCRIBE` RuleActionType (gated, preview-only at first), suppression list, reversible audit. Depends on Phase 7.
 
 ## Phase Details
 
@@ -473,7 +473,7 @@ Plans:
 - [x] 08-06-PLAN.md — UnsubscribeDomainThrottle (Redis) + ProcessingJobWorker (SKIP LOCKED) + UnsubscribeCampaignHandler + ProcessingJobReaperBatch + ProcessingJobPurgeBatch (UNS-04) _(completed 2026-05-20)_
 - [x] 08-07-PLAN.md — CampaignPreviewService (UNS-03) + CampaignExecuteService (D-04 transaction) + CampaignStatusQueryService (UNS-05) + CampaignRetryService (UNS-06) + CampaignUndoService (UNS-07) _(completed 2026-05-20)_
 - [x] 08-08-PLAN.md — 4 controller (UnsubscribeCandidate/Campaign/Status/Suppression) + 13 DTO + @ExceptionHandler maps + OpenAPI codegen regen _(completed 2026-05-20)_
-- [ ] 08-09-PLAN.md — Frontend features (2 sub-feature × 7-8 file) + 4 page route + sidebar nav extend + i18n bundle regen + CleanupPrivacySweepTest (UNS-09) + Playwright e2e golden path
+- [x] 08-09-PLAN.md — Frontend features (2 sub-feature × 7-8 file) + 4 page route + sidebar nav extend + i18n bundle regen + CleanupPrivacySweepTest (UNS-09) + Playwright e2e golden path _(completed 2026-05-20)_
 
 
 ## External Track (not a phase)

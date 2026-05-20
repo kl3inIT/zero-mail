@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Awaiting operator checkpoint for candidate gate URL, launch sign-off, final rc tag, and STATE closure
-stopped_at: Phase 08 Plan 08 (Wave 7) complete — 4 thin cleanup controllers + 13 DTOs + OpenAPI regen shipped; Wave 0 controller tests flipped GREEN
-last_updated: "2026-05-20T17:43:00.000Z"
+status: Phase 08 ship-complete — bulk unsubscribe campaign + suppression list end-to-end GREEN
+stopped_at: Phase 08 Plan 09 (Wave 8) complete — frontend cleanup UI (2 feature folders, 4 routes, sidebar nav, 75+ i18n keys) + CleanupPrivacySweepTest UNS-09 GREEN + Playwright e2e golden path GREEN
+last_updated: "2026-05-20T19:16:00.000Z"
 last_activity: 2026-05-20
 progress:
   total_phases: 19
@@ -144,6 +144,7 @@ Progress: [██████████] 99%
 | Phase 06 P03 | 2h 47m | 2 tasks | 11 files |
 | Phase 06 P04 | 9 min | 3 tasks | 4 files |
 | Phase 08 P08 | 45min | 3 tasks | 21 files |
+| Phase 08 P09 | 1h 25min | 3 tasks | 36 created + 10 modified |
 
 ## Accumulated Context
 
@@ -385,6 +386,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-20T17:43:00.000Z
-Stopped at: Phase 08 Plan 08 (Wave 7) complete — 4 thin cleanup controllers + 13 DTO records + OpenAPI typed-client regen all landed (18 files created, 3 modified, 3 commits). Wave 0 controller tests UnsubscribeCampaignControllerTest + CampaignStatusControllerTest flipped GREEN.
-Resume file: .planning/phases/08-bulk-unsubscribe-campaign/ROADMAP.md (next plan in Phase 8 is Wave 5b frontend feature wave)
+Last session: 2026-05-20T19:16:00.000Z
+Stopped at: Phase 08 Plan 09 (Wave 8) complete — frontend cleanup UI (2 feature folders, 4 routes, sidebar nav, 75+ i18n keys) + CleanupPrivacySweepTest UNS-09 final assertion GREEN + Playwright e2e golden path GREEN (4 passing). 36 files created + 10 modified across 4 commits (1432f37f + 86a460dd + eb492f79 + b4653c45). Phase 08 ship-complete — all UNS-01..UNS-09 contracts on the GREEN side.
+Resume file: Phase 8 COMPLETE. Next phase entry point lives in the parent ROADMAP.md.
