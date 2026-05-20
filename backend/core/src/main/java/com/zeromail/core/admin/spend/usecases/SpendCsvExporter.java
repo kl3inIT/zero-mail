@@ -93,12 +93,20 @@ public class SpendCsvExporter {
         if (value == null) {
             return "";
         }
-        if (value.indexOf(',') >= 0
-                || value.indexOf('"') >= 0
-                || value.indexOf('\n') >= 0
-                || value.indexOf('\r') >= 0) {
-            return "\"" + value.replace("\"", "\"\"") + "\"";
+        // WR-05: prefix cells that start with =/+/-/@/\t/\r with a leading single quote so
+        // Excel/LibreOffice/Numbers do not interpret them as formulas. Current columns are
+        // all enum/numeric so this is forward-looking, but the cost is trivial and the
+        // exploit (e.g. =HYPERLINK("…")) is well known.
+        String cell = value;
+        if (!cell.isEmpty() && "=+-@\t\r".indexOf(cell.charAt(0)) >= 0) {
+            cell = "'" + cell;
         }
-        return value;
+        if (cell.indexOf(',') >= 0
+                || cell.indexOf('"') >= 0
+                || cell.indexOf('\n') >= 0
+                || cell.indexOf('\r') >= 0) {
+            return "\"" + cell.replace("\"", "\"\"") + "\"";
+        }
+        return cell;
     }
 }
