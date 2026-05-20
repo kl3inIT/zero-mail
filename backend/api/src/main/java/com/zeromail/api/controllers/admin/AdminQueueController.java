@@ -62,6 +62,7 @@ public class AdminQueueController {
             @PathVariable UUID jobId,
             @Valid @RequestBody RequeueRequest request,
             HttpServletRequest httpServletRequest) {
+        AdminContext.currentOrThrow();
         deadLetterRequeueService.requeue(
                 jobId, request.reason(), httpServletRequest.getRemoteAddr(), UUID.randomUUID());
     }
