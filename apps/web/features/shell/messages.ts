@@ -119,4 +119,16 @@ export const shellMessages = {
     vi: 'Tổng quan',
     en: 'Dashboard',
   },
+  'nav.cleanupGroup': {
+    vi: 'Cleanup',
+    en: 'Cleanup',
+  },
+  'nav.cleanupUnsubscribe': {
+    vi: 'Unsubscribe',
+    en: 'Unsubscribe',
+  },
+  'nav.cleanupSuppression': {
+    vi: 'Suppression',
+    en: 'Suppression',
+  },
 } as const;

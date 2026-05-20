@@ -587,6 +587,16 @@
       "reset": "Try again",
       "title": "Something went wrong"
     },
+    "cleanup": {
+      "campaign": {
+        "not_found": "Campaign not found. Please return to the campaign list.",
+        "retry_conflict": "This sender has already unsubscribed — no retry needed.",
+        "too_many_messages": "History mail limit of 2,000 exceeded. Please deselect some.",
+        "too_many_senders": "Sender limit of 25 exceeded. Please deselect some.",
+        "undo_window_expired": "Past the 30-day window — undo is no longer available."
+      },
+      "sender_suppressed": "This sender is in the suppression list. Remove from suppression before unsubscribing."
+    },
     "conflict": "The data changed before the action finished. Reload the page and try again.",
     "dataIntegrity": "The change could not be saved because the data is invalid.",
     "draft": {
@@ -1114,6 +1124,9 @@
     "analytics": "Analytics",
     "beta": "beta",
     "billing": "Billing",
+    "cleanupGroup": "Cleanup",
+    "cleanupSuppression": "Suppression",
+    "cleanupUnsubscribe": "Unsubscribe",
     "continueSetup": "Continue setup",
     "dashboard": "Dashboard",
     "features": "Features",

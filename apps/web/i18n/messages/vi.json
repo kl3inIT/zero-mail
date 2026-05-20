@@ -587,6 +587,16 @@
       "reset": "Thử lại",
       "title": "Đã xảy ra lỗi"
     },
+    "cleanup": {
+      "campaign": {
+        "not_found": "Không tìm thấy campaign. Hãy quay lại danh sách campaign.",
+        "retry_conflict": "Sender này đã unsubscribe thành công, không cần thử lại.",
+        "too_many_messages": "Vượt giới hạn 2.000 mail lịch sử. Hãy bỏ chọn bớt.",
+        "too_many_senders": "Vượt giới hạn 25 sender. Hãy bỏ chọn bớt.",
+        "undo_window_expired": "Quá window 30 ngày — không undo được nữa."
+      },
+      "sender_suppressed": "Sender này đang trong suppression list. Xóa khỏi suppression trước khi unsubscribe."
+    },
     "conflict": "Dữ liệu đã thay đổi trước khi thao tác hoàn tất. Hãy tải lại trang rồi thử lại.",
     "dataIntegrity": "Không thể lưu thay đổi vì dữ liệu không hợp lệ.",
     "draft": {
@@ -1114,6 +1124,9 @@
     "analytics": "Phân tích",
     "beta": "beta",
     "billing": "Thanh toán",
+    "cleanupGroup": "Cleanup",
+    "cleanupSuppression": "Suppression",
+    "cleanupUnsubscribe": "Unsubscribe",
     "continueSetup": "Tiếp tục cài đặt",
     "dashboard": "Tổng quan",
     "features": "Tính năng",

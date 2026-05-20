@@ -288,4 +288,31 @@ export const unsubscribeCampaignMessages = {
     vi: 'Không undo được. Hãy thử lại sau một chút.',
     en: 'Undo failed. Please try again shortly.',
   },
+
+  // Backend error-code translations (CONVENTIONS i18n parity gate — every
+  // ErrorCodes.java cleanup constant must have a matching `errors.cleanup.*` leaf).
+  'errors.cleanup.campaign.too_many_senders': {
+    vi: 'Vượt giới hạn 25 sender. Hãy bỏ chọn bớt.',
+    en: 'Sender limit of 25 exceeded. Please deselect some.',
+  },
+  'errors.cleanup.campaign.too_many_messages': {
+    vi: 'Vượt giới hạn 2.000 mail lịch sử. Hãy bỏ chọn bớt.',
+    en: 'History mail limit of 2,000 exceeded. Please deselect some.',
+  },
+  'errors.cleanup.campaign.not_found': {
+    vi: 'Không tìm thấy campaign. Hãy quay lại danh sách campaign.',
+    en: 'Campaign not found. Please return to the campaign list.',
+  },
+  'errors.cleanup.campaign.undo_window_expired': {
+    vi: 'Quá window 30 ngày — không undo được nữa.',
+    en: 'Past the 30-day window — undo is no longer available.',
+  },
+  'errors.cleanup.campaign.retry_conflict': {
+    vi: 'Sender này đã unsubscribe thành công, không cần thử lại.',
+    en: 'This sender has already unsubscribed — no retry needed.',
+  },
+  'errors.cleanup.sender_suppressed': {
+    vi: 'Sender này đang trong suppression list. Xóa khỏi suppression trước khi unsubscribe.',
+    en: 'This sender is in the suppression list. Remove from suppression before unsubscribing.',
+  },
 } as const;
