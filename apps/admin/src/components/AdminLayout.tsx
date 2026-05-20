@@ -1,5 +1,6 @@
 import { Link, Outlet } from '@tanstack/react-router';
 import {
+  ActivityIcon,
   BookOpenIcon,
   Building2Icon,
   ClipboardListIcon,
@@ -25,6 +26,7 @@ const navigationItems = [
   { to: '/master-keys', label: 'Master keys', icon: KeyRoundIcon },
   { to: '/tenants', label: 'Tenants', icon: Building2Icon },
   { to: '/catalog', label: 'Catalog', icon: BookOpenIcon },
+  { to: '/queue', label: 'Queue', icon: ActivityIcon },
 ] as const;
 
 export function AdminLayout({ admin }: AdminLayoutProps) {
