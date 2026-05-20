@@ -4,6 +4,7 @@ import {
   BookOpenIcon,
   Building2Icon,
   ClipboardListIcon,
+  DollarSignIcon,
   GaugeIcon,
   KeyRoundIcon,
   LogOutIcon,
@@ -27,6 +28,7 @@ const navigationItems = [
   { to: '/tenants', label: 'Tenants', icon: Building2Icon },
   { to: '/catalog', label: 'Catalog', icon: BookOpenIcon },
   { to: '/queue', label: 'Queue', icon: ActivityIcon },
+  { to: '/spend', label: 'Spend', icon: DollarSignIcon },
 ] as const;
 
 export function AdminLayout({ admin }: AdminLayoutProps) {

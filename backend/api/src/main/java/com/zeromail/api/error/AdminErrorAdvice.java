@@ -126,6 +126,18 @@ public class AdminErrorAdvice {
         return problem(HttpStatus.BAD_REQUEST, "error.admin.catalog_model_schema_mismatch");
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    ResponseEntity<ProblemDetail> onIllegalArgument(IllegalArgumentException exception) {
+        String message = exception.getMessage() == null ? "" : exception.getMessage();
+        if (message.startsWith("error.admin.spend_range_too_wide")) {
+            return problem(HttpStatus.BAD_REQUEST, "error.admin.spend_range_too_wide");
+        }
+        if (message.startsWith("error.admin.spend_export_too_large")) {
+            return problem(HttpStatus.BAD_REQUEST, "error.admin.spend_export_too_large");
+        }
+        return problem(HttpStatus.BAD_REQUEST, "error.validation");
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ProblemDetail> onAdminValidation(MethodArgumentNotValidException exception) {
         String code =
