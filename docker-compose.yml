@@ -1,3 +1,14 @@
+x-logging: &default-logging
+  # Cap container log files at 3 × 10 MB per service (30 MB max) so a noisy
+  # service can never fill the host disk. Older rotations are auto-deleted.
+  # This is the 2026-best-practice docker-compose pattern: YAML anchor +
+  # `<<: *default-logging` on every service.
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+    compress: "true"
+
 services:
 
   # ── Data layer (zeromail-internal only, not exposed to proxy) ────
@@ -9,8 +20,26 @@ services:
       POSTGRES_DB: zeromail
       POSTGRES_USER: zeromail
       POSTGRES_PASSWORD: zeromail
+    # Mount custom init scripts (only run on fresh data volumes) + tuned config.
+    # 10-create-dev-db.sql is also runnable manually via `docker exec psql` for
+    # existing volumes — see ops/postgres/init/10-create-dev-db.sql.
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_preload_libraries=pg_stat_statements"
+      - "-c"
+      - "pg_stat_statements.track=all"
+      - "-c"
+      - "pg_stat_statements.max=10000"
+      - "-c"
+      - "log_min_duration_statement=500"
+      - "-c"
+      - "log_lock_waits=on"
+      - "-c"
+      - "log_temp_files=0"
     volumes:
       - postgres_data:/var/lib/postgresql
+      - ./ops/postgres/init:/docker-entrypoint-initdb.d:ro
     networks:
       - zeromail-internal
     healthcheck:
@@ -18,6 +47,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging: *default-logging
 
   redis:
     image: redis:8.6.3
@@ -32,6 +62,7 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+    logging: *default-logging
 
   # ── Operator infrastructure (proxy + LLM-router sidecar) ────────
   9router:
@@ -49,6 +80,7 @@ services:
       - /opt/zeromail/9router-data:/data
     networks:
       - zeromail-internal
+    logging: *default-logging
 
   nginx-proxy-manager:
     image: jc21/nginx-proxy-manager:latest
@@ -63,13 +95,14 @@ services:
       - /opt/zeromail/npm-letsencrypt:/etc/letsencrypt
     networks:
       - proxy-network
+    logging: *default-logging
 
   # ── Worker (internal only, runs Liquibase migrations) ────────────
   worker:
     build:
       context: .
       dockerfile: backend/worker/Dockerfile
-    image: zeromail-worker:latest
+    image: ${ZEROMAIL_WORKER_IMAGE:-zeromail-worker:latest}
     container_name: zeromail-worker
     restart: unless-stopped
     env_file: .env
@@ -91,6 +124,7 @@ services:
       timeout: 10s
       start_period: 90s
       retries: 3
+    logging: *default-logging
 
   # ── Frontend (proxy-network, NPM trỏ bằng tên zeromail-frontend) ──
   frontend:
@@ -99,7 +133,7 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_BASE: https://zeromail.vn
-    image: zeromail-frontend:latest
+    image: ${ZEROMAIL_FRONTEND_IMAGE:-zeromail-frontend:latest}
     container_name: zeromail-frontend
     restart: unless-stopped
     environment:
@@ -113,13 +147,34 @@ services:
       timeout: 10s
       start_period: 60s
       retries: 3
+    logging: *default-logging
+
+  # ── Admin SPA (proxy-network, NPM trỏ admin.zeromail.com → zeromail-admin:5174) ──
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        VITE_API_BASE: https://zeromail.com
+    image: ${ZEROMAIL_ADMIN_IMAGE:-zeromail-admin:latest}
+    container_name: zeromail-admin
+    restart: unless-stopped
+    networks:
+      - proxy-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5174/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    logging: *default-logging
 
   # ── API (proxy-network + internal, NPM trỏ bằng tên zeromail-api) ─
   api:
     build:
       context: .
       dockerfile: backend/api/Dockerfile
-    image: zeromail-api:latest
+    image: ${ZEROMAIL_API_IMAGE:-zeromail-api:latest}
     container_name: zeromail-api
     restart: unless-stopped
     env_file: .env
@@ -140,6 +195,7 @@ services:
       timeout: 10s
       start_period: 90s
       retries: 3
+    logging: *default-logging
 
 networks:
   proxy-network:

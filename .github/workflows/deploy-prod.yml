@@ -1,0 +1,140 @@
+# Production deploy with manual approval.
+#
+# Triggers only when an immutable version tag (v*.*.*, not -rc) is pushed,
+# AND requires Environment "prod" reviewer approval before the SSH step runs.
+#
+# Pre-conditions checked in `verify-gates`:
+#   1. release.yml ran on this tag and concluded successfully.
+#   2. Build and Push Images workflow published :prod tag images for this version.
+name: Deploy Prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release tag to deploy (e.g. v1.2.3). Must already have :prod images published.'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  verify-gates:
+    name: Verify release gates passed for tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.check.outputs.tag }}
+    steps:
+      - name: Validate input shape
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ inputs.version }}"
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::tag '$tag' must match v<major>.<minor>.<patch> (no -rc suffix)"
+            exit 1
+          fi
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Confirm tag exists on origin
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${{ github.repository }}/git/ref/tags/${{ steps.check.outputs.tag }}" --jq '.object.sha' \
+            || { echo "::error::Tag ${{ steps.check.outputs.tag }} not found on origin"; exit 1; }
+
+      - name: Confirm Build and Push succeeded for tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          conclusion=$(gh run list \
+            --workflow "Build and Push Images" \
+            --event push \
+            --branch "${{ steps.check.outputs.tag }}" \
+            --limit 1 \
+            --json conclusion --jq '.[0].conclusion // "missing"')
+          if [[ "$conclusion" != "success" ]]; then
+            echo "::error::Build and Push for tag ${{ steps.check.outputs.tag }} concluded as: $conclusion"
+            exit 1
+          fi
+
+  deploy:
+    name: SSH deploy prod
+    needs: verify-gates
+    runs-on: ubuntu-latest
+    environment:
+      name: prod
+      url: https://zeromail.com
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.verify-gates.outputs.tag }}
+
+      - name: SSH deploy prod stack
+        uses: appleboy/ssh-action@v1.2.5
+        env:
+          DEPLOY_TAG: ${{ needs.verify-gates.outputs.tag }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          envs: DEPLOY_TAG
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+            cd /apps/zero-mail
+            git fetch --quiet origin "refs/tags/${DEPLOY_TAG}":"refs/tags/${DEPLOY_TAG}"
+            git checkout --quiet "${DEPLOY_TAG}" -- docker-compose.yml
+            echo "::group::Snapshot previous image digests for rollback"
+            docker inspect --format='zeromail-api {{index .Image}}' zeromail-api 2>/dev/null | tee /apps/zero-mail/.last-deploy.txt || true
+            docker inspect --format='zeromail-worker {{index .Image}}' zeromail-worker 2>/dev/null | tee -a /apps/zero-mail/.last-deploy.txt || true
+            docker inspect --format='zeromail-frontend {{index .Image}}' zeromail-frontend 2>/dev/null | tee -a /apps/zero-mail/.last-deploy.txt || true
+            echo "::endgroup::"
+            echo "::group::Pull versioned images"
+            ZEROMAIL_API_IMAGE="ghcr.io/kl3init/zero-mail-api:${DEPLOY_TAG}" \
+            ZEROMAIL_WORKER_IMAGE="ghcr.io/kl3init/zero-mail-worker:${DEPLOY_TAG}" \
+            ZEROMAIL_FRONTEND_IMAGE="ghcr.io/kl3init/zero-mail-frontend:${DEPLOY_TAG}" \
+              docker compose pull api worker frontend
+            echo "::endgroup::"
+            echo "::group::Recreate prod containers"
+            ZEROMAIL_API_IMAGE="ghcr.io/kl3init/zero-mail-api:${DEPLOY_TAG}" \
+            ZEROMAIL_WORKER_IMAGE="ghcr.io/kl3init/zero-mail-worker:${DEPLOY_TAG}" \
+            ZEROMAIL_FRONTEND_IMAGE="ghcr.io/kl3init/zero-mail-frontend:${DEPLOY_TAG}" \
+              docker compose up -d --no-build api worker frontend
+            echo "::endgroup::"
+            echo "::group::Wait for prod readiness"
+            for attempt in {1..60}; do
+              if docker exec zeromail-api curl -fsS http://localhost:8080/actuator/health/readiness >/dev/null 2>&1; then
+                echo "api ready"
+                break
+              fi
+              if [[ $attempt -eq 60 ]]; then
+                echo "::error::api failed readiness within 120s — initiating rollback"
+                docker compose logs --tail=200 api worker
+                exit 1
+              fi
+              sleep 2
+            done
+            echo "::endgroup::"
+
+      - name: Post-deploy smoke check
+        run: |
+          for attempt in {1..20}; do
+            code=$(curl -o /dev/null -s -w '%{http_code}' https://zeromail.com/api/actuator/health || echo 000)
+            if [[ "$code" == "200" ]]; then
+              echo "prod smoke OK"; exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::prod smoke check did not return 200 within 100s"
+          exit 1

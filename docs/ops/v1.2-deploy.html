@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zero Mail v1.2 Deploy Runbook — Zero Mail Ops</title>
+<style>:root {
+  color-scheme: light dark;
+  --fg: #1f2328;
+  --bg: #ffffff;
+  --muted: #656d76;
+  --border: #d0d7de;
+  --code-bg: #f6f8fa;
+  --code-fg: #1f2328;
+  --link: #0969da;
+  --accent: #218bff;
+  --table-stripe: #f6f8fa;
+  --callout: #ddf4ff;
+  --callout-border: #54aeff;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #e6edf3;
+    --bg: #0d1117;
+    --muted: #8b949e;
+    --border: #30363d;
+    --code-bg: #161b22;
+    --code-fg: #e6edf3;
+    --link: #2f81f7;
+    --accent: #58a6ff;
+    --table-stripe: #161b22;
+    --callout: #051d4d;
+    --callout-border: #1f6feb;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); }
+body {
+  font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+        "Helvetica Neue", Arial, sans-serif;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+header.meta {
+  margin: 0 0 32px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+header.meta h1 { font-size: 28px; margin: 0 0 8px; }
+header.meta .meta-row {
+  color: var(--muted);
+  font-size: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+header.meta .meta-row span strong { color: var(--fg); font-weight: 600; }
+nav.toc {
+  background: var(--callout);
+  border: 1px solid var(--callout-border);
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 0 0 32px;
+  font-size: 14px;
+}
+nav.toc h2 { font-size: 14px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+nav.toc ul { margin: 0; padding-left: 18px; }
+nav.toc li { margin: 2px 0; }
+nav.toc a { color: var(--link); text-decoration: none; }
+nav.toc a:hover { text-decoration: underline; }
+h1, h2, h3, h4, h5, h6 {
+  margin: 24px 0 8px;
+  font-weight: 600;
+  line-height: 1.25;
+  scroll-margin-top: 16px;
+}
+h1 { font-size: 28px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+h2 { font-size: 22px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+h3 { font-size: 18px; }
+h4 { font-size: 16px; }
+.anchor { color: var(--muted); margin-left: 6px; text-decoration: none; opacity: 0; font-weight: normal; }
+h1:hover .anchor, h2:hover .anchor, h3:hover .anchor, h4:hover .anchor,
+h5:hover .anchor, h6:hover .anchor { opacity: 1; }
+a { color: var(--link); }
+p, ul, ol { margin: 8px 0 16px; }
+code {
+  font: 13px/1.45 ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+pre {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 14px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  margin: 12px 0 20px;
+}
+pre code { background: none; border: none; padding: 0; }
+table {
+  border-collapse: collapse;
+  margin: 12px 0 20px;
+  width: 100%;
+  font-size: 14px;
+}
+th, td {
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+thead { background: var(--code-bg); }
+tbody tr:nth-child(2n) { background: var(--table-stripe); }
+blockquote {
+  border-left: 4px solid var(--border);
+  padding: 0 14px;
+  color: var(--muted);
+  margin: 12px 0;
+}
+hr { border: 0; border-top: 1px solid var(--border); margin: 24px 0; }
+footer {
+  margin-top: 64px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+}</style>
+</head>
+<body>
+<header class="meta">
+  <h1>Zero Mail v1.2 Deploy Runbook</h1>
+  <div class="meta-row"><span><strong>title:</strong> Zero Mail v1.2 Deploy Runbook</span><span><strong>phase:</strong> 08-admin-console-operator-tooling</span><span><strong>plan:</strong> 8A</span><span><strong>status:</strong> merge-ready</span></div>
+</header>
+<nav class="toc"><h2>Contents</h2><ul><li><a href="#1-pre-migration-backup">1. Pre-Migration Backup</a></li><li><a href="#2-npm-boot-and-parallel-routing-test">2. NPM Boot And Parallel Routing Test</a></li><li><a href="#3-dns-cutover">3. DNS Cutover</a></li><li><a href="#4-rollback">4. Rollback</a></li><li><a href="#5-post-migration-backup">5. Post-Migration Backup</a></li><li><a href="#6-9router-first-run">6. 9Router First-Run</a></li><li><a href="#7-admin-bootstrap-stdout-capture">7. Admin Bootstrap STDOUT Capture</a></li><li><a href="#8-lost-passkey-recovery">8. Lost-Passkey Recovery</a></li><li><a href="#9-ip-allowlist">9. IP Allowlist</a></li><li><a href="#10-security-considerations">10. Security Considerations</a></li></ul></nav>
+<main>
+<p>This runbook lands the compose and operator procedure for the v1.2 admin
+console foundation. The live VPS cutover is out-of-scope-for-merge: merge only
+the compose definitions and this runbook, then schedule the migration as a
+separate deploy step with a rollback operator present.</p>
+<p>The target stack keeps the existing <code>postgres</code>, <code>redis</code>, <code>worker</code>, <code>api</code>, and
+<code>frontend</code> services. Phase 8A adds <code>nginx-proxy-manager</code> for public TLS routing
+and <code>9router</code> as a loopback-bound sidecar on <code>127.0.0.1:20128</code>.</p>
+<h2 id="1-pre-migration-backup"><a class="anchor" href="#1-pre-migration-backup" aria-label="link">¶</a> 1. Pre-Migration Backup</h2>
+<ol>
+<li>
+<p>SSH into the VPS as the deploy operator.</p>
+<pre><code class="language-sh">ssh root@vps
+cd /opt/zeromail
+</code></pre>
+</li>
+<li>
+<p>Capture the current hand-managed nginx configuration before starting NPM.</p>
+<pre><code class="language-sh">mkdir -p /opt/zeromail/backups/nginx-$(date -u +%Y%m%dT%H%M%SZ)
+cp -a /etc/nginx /opt/zeromail/backups/nginx-$(date -u +%Y%m%dT%H%M%SZ)/
+nginx -T &gt; /opt/zeromail/backups/nginx-current-full.conf
+</code></pre>
+</li>
+<li>
+<p>Capture the active compose model and env names.</p>
+<pre><code class="language-sh">docker compose config &gt; /opt/zeromail/backups/compose-before-v1.2.yml
+env | grep '^ZEROMAIL_' | sort &gt; /opt/zeromail/backups/env-names-before-v1.2.txt
+</code></pre>
+</li>
+<li>
+<p>Confirm the OAuth callback URL must remain bit-for-bit identical:</p>
+<pre><code class="language-text">https://zeromail.com/login/oauth2/code/google
+</code></pre>
+</li>
+<li>
+<p>Confirm these secrets exist before first boot:</p>
+<pre><code class="language-sh">test -n &quot;$ZEROMAIL_9ROUTER_JWT_SECRET&quot;
+test -n &quot;$ZEROMAIL_9ROUTER_INITIAL_PASSWORD&quot;
+test -n &quot;$ZEROMAIL_ADMIN_AUDIT_HMAC_KEK_BASE64&quot;
+</code></pre>
+</li>
+</ol>
+<h2 id="2-npm-boot-and-parallel-routing-test"><a class="anchor" href="#2-npm-boot-and-parallel-routing-test" aria-label="link">¶</a> 2. NPM Boot And Parallel Routing Test</h2>
+<ol>
+<li>
+<p>Start NPM without stopping the existing nginx service yet.</p>
+<pre><code class="language-sh">docker compose pull nginx-proxy-manager 9router
+docker compose up -d nginx-proxy-manager 9router
+docker compose ps nginx-proxy-manager 9router
+</code></pre>
+</li>
+<li>
+<p>Access the NPM UI only through an SSH tunnel. Compose binds port 81 to
+<code>127.0.0.1</code> for this reason.</p>
+<pre><code class="language-sh">ssh -L 8181:127.0.0.1:81 root@vps
+</code></pre>
+</li>
+<li>
+<p>Open <code>http://127.0.0.1:8181</code> locally, rotate the default NPM password, and
+create proxy hosts:</p>
+<table>
+<thead>
+<tr>
+<th>Host</th>
+<th>Scheme</th>
+<th>Forward host</th>
+<th>Forward port</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>zeromail.com</code></td>
+<td><code>http</code></td>
+<td><code>zeromail-frontend</code></td>
+<td><code>3000</code></td>
+<td>Preserve Google OAuth callback path.</td>
+</tr>
+<tr>
+<td><code>zeromail.com/api</code></td>
+<td><code>http</code></td>
+<td><code>zeromail-api</code></td>
+<td><code>8080</code></td>
+<td>Use NPM location rule for <code>/api</code>.</td>
+</tr>
+<tr>
+<td><code>admin.zeromail.com</code></td>
+<td><code>http</code></td>
+<td><code>zeromail-frontend</code></td>
+<td><code>3000</code></td>
+<td>Admin SPA route <code>/enroll</code> is frontend-owned.</td>
+</tr>
+<tr>
+<td><code>admin.zeromail.com/api/admin</code></td>
+<td><code>http</code></td>
+<td><code>zeromail-api</code></td>
+<td><code>8080</code></td>
+<td>Backend token path is <code>/api/admin/enrollment/session</code>.</td>
+</tr>
+</tbody>
+</table>
+</li>
+<li>
+<p>Configure NPM advanced headers for both public hosts.</p>
+<pre><code class="language-nginx">proxy_set_header Host $server_name;
+proxy_set_header X-Forwarded-Host $server_name;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+</code></pre>
+</li>
+<li>
+<p>Validate routing through a staging host or local hosts-file override before
+DNS cutover.</p>
+<pre><code class="language-sh">curl -I https://staging.zeromail.com/
+curl -I https://staging.zeromail.com/api/actuator/health
+curl -I https://admin-staging.zeromail.com/login
+curl -I https://admin-staging.zeromail.com/api/admin/me
+</code></pre>
+</li>
+</ol>
+<h2 id="3-dns-cutover"><a class="anchor" href="#3-dns-cutover" aria-label="link">¶</a> 3. DNS Cutover</h2>
+<ol>
+<li>
+<p>Lower DNS TTL for <code>zeromail.com</code> and <code>admin.zeromail.com</code> before the window.</p>
+</li>
+<li>
+<p>Ensure NPM has certificates for both hosts.</p>
+<pre><code class="language-sh">docker compose logs --tail=200 nginx-proxy-manager
+</code></pre>
+</li>
+<li>
+<p>Stop hand-managed nginx only after the NPM staging route is healthy.</p>
+<pre><code class="language-sh">systemctl stop nginx
+docker compose up -d nginx-proxy-manager
+</code></pre>
+</li>
+<li>
+<p>Point public DNS records at the VPS IP:</p>
+<pre><code class="language-text">zeromail.com          A     &lt;vps-ip&gt;
+admin.zeromail.com    A     &lt;vps-ip&gt;
+</code></pre>
+</li>
+<li>
+<p>Recheck the OAuth callback and admin split.</p>
+<pre><code class="language-sh">curl -I https://zeromail.com/login/oauth2/code/google
+curl -I https://admin.zeromail.com/enroll
+curl -I https://admin.zeromail.com/api/admin/enrollment/session
+</code></pre>
+</li>
+</ol>
+<h2 id="4-rollback"><a class="anchor" href="#4-rollback" aria-label="link">¶</a> 4. Rollback</h2>
+<ol>
+<li>
+<p>If NPM cannot route either public host, stop it first.</p>
+<pre><code class="language-sh">docker compose stop nginx-proxy-manager
+</code></pre>
+</li>
+<li>
+<p>Restore hand-managed nginx from the pre-migration backup.</p>
+<pre><code class="language-sh">cp -a /opt/zeromail/backups/nginx-*/nginx /etc/nginx
+nginx -t
+systemctl start nginx
+</code></pre>
+</li>
+<li>
+<p>Restore DNS if the cutover already changed records.</p>
+</li>
+<li>
+<p>Keep <code>9router</code> stopped during rollback unless the API already points at it.</p>
+<pre><code class="language-sh">docker compose stop 9router
+</code></pre>
+</li>
+<li>
+<p>Write an incident note with the failed curl command, NPM access logs, and the
+rollback timestamp.</p>
+</li>
+</ol>
+<h2 id="5-post-migration-backup"><a class="anchor" href="#5-post-migration-backup" aria-label="link">¶</a> 5. Post-Migration Backup</h2>
+<ol>
+<li>
+<p>Back up NPM <code>/data</code>, NPM LetsEncrypt material, and 9Router SQLite state.
+The default backup flow is <code>tar | gpg | rsync</code>.</p>
+<pre><code class="language-sh">backup_stamp=$(date -u +%Y%m%dT%H%M%SZ)
+tar -C /opt/zeromail -cpf - npm-data npm-letsencrypt 9router-data \
+  | gpg --symmetric --cipher-algo AES256 \
+  | rsync -av - backup@example-backup-host:/srv/backups/zeromail/v1.2-$backup_stamp.tar.gpg
+</code></pre>
+</li>
+<li>
+<p>Keep only encrypted backups off-host. Do not copy plaintext NPM data or the
+9Router SQLite database to a workstation.</p>
+</li>
+<li>
+<p>Verify the backup is readable without restoring over production.</p>
+<pre><code class="language-sh">rsync -av backup@example-backup-host:/srv/backups/zeromail/v1.2-$backup_stamp.tar.gpg /tmp/
+gpg --decrypt /tmp/v1.2-$backup_stamp.tar.gpg | tar -tf - | head
+rm -f /tmp/v1.2-$backup_stamp.tar.gpg
+</code></pre>
+</li>
+</ol>
+<h2 id="6-9router-first-run"><a class="anchor" href="#6-9router-first-run" aria-label="link">¶</a> 6. 9Router First-Run</h2>
+<ol>
+<li>
+<p>Start 9Router and open it through an SSH tunnel only.</p>
+<pre><code class="language-sh">docker compose up -d 9router
+ssh -L 20128:127.0.0.1:20128 root@vps
+</code></pre>
+</li>
+<li>
+<p>Open <code>http://127.0.0.1:20128</code>, rotate <code>ZEROMAIL_9ROUTER_INITIAL_PASSWORD</code>,
+generate an API key, and connect provider accounts.</p>
+</li>
+<li>
+<p>Store the generated API key in the VPS secret source used by the API service.
+Do not paste the value into shell history.</p>
+</li>
+<li>
+<p>Restart the API only after the secret source is updated.</p>
+<pre><code class="language-sh">docker compose restart api
+</code></pre>
+</li>
+</ol>
+<h2 id="7-admin-bootstrap-stdout-capture"><a class="anchor" href="#7-admin-bootstrap-stdout-capture" aria-label="link">¶</a> 7. Admin Bootstrap STDOUT Capture</h2>
+<ol>
+<li>
+<p>Bootstrap admin enrollment tokens are printed to STDOUT only. Do not run the
+first API boot detached when capturing a new enrollment URL.</p>
+<pre><code class="language-sh">ZEROMAIL_ADMIN_BOOTSTRAP_EMAILS=you@example.com \
+ZEROMAIL_ADMIN_AUDIT_HMAC_KEK_BASE64=$(openssl rand -base64 32) \
+docker compose up api 2&gt;&amp;1 | tee /tmp/admin-bootstrap.log
+</code></pre>
+</li>
+<li>
+<p>Extract the enrollment URL and delete the temporary file.</p>
+<pre><code class="language-sh">grep enrollment /tmp/admin-bootstrap.log
+shred -u /tmp/admin-bootstrap.log || rm -f /tmp/admin-bootstrap.log
+</code></pre>
+</li>
+<li>
+<p>Expected line shape:</p>
+<pre><code class="language-text">[ZeroMail Admin Bootstrap] you@example.com enrollment URL: https://admin.zeromail.com/enroll?token=&lt;32hex&gt; (valid 10 minutes)
+</code></pre>
+</li>
+</ol>
+<h2 id="8-lost-passkey-recovery"><a class="anchor" href="#8-lost-passkey-recovery" aria-label="link">¶</a> 8. Lost-Passkey Recovery</h2>
+<p>Use this only for a verified operator identity. This is the lost-passkey recovery
+path for a passkey that cannot satisfy WebAuthn user verification.</p>
+<pre><code class="language-sh">ssh root@vps
+cd /opt/zeromail
+docker compose exec api psql -U zeromail_app zeromail
+</code></pre>
+<pre><code class="language-sql">UPDATE admin_users
+SET status='PENDING_ENROLLMENT',
+    credential_id=NULL,
+    public_key_cose=NULL,
+    signature_counter=0
+WHERE email='lost@example.com';
+</code></pre>
+<p>Single-command form for audited recovery notes:</p>
+<pre><code class="language-sh">docker compose exec api psql -U zeromail_app zeromail -c &quot;UPDATE admin_users SET status='PENDING_ENROLLMENT', credential_id=NULL, public_key_cose=NULL, signature_counter=0 WHERE email='lost@example.com';&quot;
+</code></pre>
+<p>Then restart the API without detached mode and capture the new STDOUT enrollment
+URL using the bootstrap procedure above.</p>
+<h2 id="9-ip-allowlist"><a class="anchor" href="#9-ip-allowlist" aria-label="link">¶</a> 9. IP Allowlist</h2>
+<p>NPM Access List is the approved optional IP allowlist mechanism for
+<code>admin.zeromail.com</code>.</p>
+<ol>
+<li>In NPM, create an Access List named <code>Zero Mail Admin Operators</code>.</li>
+<li>Add trusted office/VPN CIDRs only.</li>
+<li>Apply the Access List to <code>admin.zeromail.com</code>.</li>
+<li>Do not apply the Access List to <code>zeromail.com</code> because it would block users
+and Google OAuth callback traffic.</li>
+</ol>
+<h2 id="10-security-considerations"><a class="anchor" href="#10-security-considerations" aria-label="link">¶</a> 10. Security Considerations</h2>
+<ul>
+<li>Heap dumps: keep <code>-XX:+HeapDumpOnOutOfMemoryError</code> disabled unless running a
+supervised incident capture. Heap dumps can contain session, token, or prompt
+material.</li>
+<li>JMX: do not expose remote JMX on the VPS. Use local <code>docker compose exec</code> and
+actuator health endpoints instead.</li>
+<li>Memory swap: keep swap encrypted or disabled. If swap is enabled, verify the
+host uses encrypted swap before production traffic.</li>
+<li>NPM admin UI: port 81 is loopback-bound in compose. Use SSH tunneling rather
+than opening it to the internet.</li>
+<li>Host headers: NPM config must pin <code>Host</code> and <code>X-Forwarded-Host</code> to
+<code>$server_name</code> to avoid cookie-scope confusion between <code>zeromail.com</code> and
+<code>admin.zeromail.com</code>.</li>
+</ul>
+
+</main>
+<footer>
+  Generated from <code>docs/ops/v1.2-deploy.md</code> at 2026-05-20 21:55:45 UTC by <code>tools/docs/build-ops-html.mjs</code>.
+  Edit the markdown source, then re-run the build script.
+</footer>
+</body>
+</html>

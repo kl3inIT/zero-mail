@@ -1,5 +1,42 @@
 plugins {
     `java-library`
+    jacoco
+}
+
+jacoco {
+    toolVersion = "0.8.12"
+}
+
+tasks.withType<JacocoReport>().configureEach {
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(false)
+    }
+    classDirectories.setFrom(
+        files(
+            classDirectories.files.map {
+                fileTree(it) {
+                    // Exclude generated, DTOs (records), and Spring config glue from coverage stats.
+                    exclude(
+                        "**/dto/**",
+                        "**/config/**",
+                        "**/generated/**",
+                        "**/*Application.class",
+                        "**/*Configuration*.class",
+                    )
+                }
+            },
+        ),
+    )
+}
+
+tasks.named<Test>("test") {
+    finalizedBy(tasks.named("jacocoTestReport"))
+}
+
+tasks.named("jacocoTestReport") {
+    dependsOn(tasks.named("test"))
 }
 
 java {

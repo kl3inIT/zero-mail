@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zero Mail Local Dev Setup — Zero Mail Ops</title>
+<style>:root {
+  color-scheme: light dark;
+  --fg: #1f2328;
+  --bg: #ffffff;
+  --muted: #656d76;
+  --border: #d0d7de;
+  --code-bg: #f6f8fa;
+  --code-fg: #1f2328;
+  --link: #0969da;
+  --accent: #218bff;
+  --table-stripe: #f6f8fa;
+  --callout: #ddf4ff;
+  --callout-border: #54aeff;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #e6edf3;
+    --bg: #0d1117;
+    --muted: #8b949e;
+    --border: #30363d;
+    --code-bg: #161b22;
+    --code-fg: #e6edf3;
+    --link: #2f81f7;
+    --accent: #58a6ff;
+    --table-stripe: #161b22;
+    --callout: #051d4d;
+    --callout-border: #1f6feb;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); }
+body {
+  font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+        "Helvetica Neue", Arial, sans-serif;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+header.meta {
+  margin: 0 0 32px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+header.meta h1 { font-size: 28px; margin: 0 0 8px; }
+header.meta .meta-row {
+  color: var(--muted);
+  font-size: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+header.meta .meta-row span strong { color: var(--fg); font-weight: 600; }
+nav.toc {
+  background: var(--callout);
+  border: 1px solid var(--callout-border);
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 0 0 32px;
+  font-size: 14px;
+}
+nav.toc h2 { font-size: 14px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+nav.toc ul { margin: 0; padding-left: 18px; }
+nav.toc li { margin: 2px 0; }
+nav.toc a { color: var(--link); text-decoration: none; }
+nav.toc a:hover { text-decoration: underline; }
+h1, h2, h3, h4, h5, h6 {
+  margin: 24px 0 8px;
+  font-weight: 600;
+  line-height: 1.25;
+  scroll-margin-top: 16px;
+}
+h1 { font-size: 28px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+h2 { font-size: 22px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+h3 { font-size: 18px; }
+h4 { font-size: 16px; }
+.anchor { color: var(--muted); margin-left: 6px; text-decoration: none; opacity: 0; font-weight: normal; }
+h1:hover .anchor, h2:hover .anchor, h3:hover .anchor, h4:hover .anchor,
+h5:hover .anchor, h6:hover .anchor { opacity: 1; }
+a { color: var(--link); }
+p, ul, ol { margin: 8px 0 16px; }
+code {
+  font: 13px/1.45 ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+pre {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 14px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  margin: 12px 0 20px;
+}
+pre code { background: none; border: none; padding: 0; }
+table {
+  border-collapse: collapse;
+  margin: 12px 0 20px;
+  width: 100%;
+  font-size: 14px;
+}
+th, td {
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+thead { background: var(--code-bg); }
+tbody tr:nth-child(2n) { background: var(--table-stripe); }
+blockquote {
+  border-left: 4px solid var(--border);
+  padding: 0 14px;
+  color: var(--muted);
+  margin: 12px 0;
+}
+hr { border: 0; border-top: 1px solid var(--border); margin: 24px 0; }
+footer {
+  margin-top: 64px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+}</style>
+</head>
+<body>
+<header class="meta">
+  <h1>Zero Mail Local Dev Setup</h1>
+  <div class="meta-row"><span><strong>title:</strong> Zero Mail Local Dev Setup</span><span><strong>status:</strong> active</span><span><strong>last-updated:</strong> Wed May 20 2026 00:00:00 GMT+0000 (Coordinated Universal Time)</span><span><strong>audience:</strong> 3-person engineering team</span></div>
+</header>
+<nav class="toc"><h2>Contents</h2><ul><li><a href="#architecture">Architecture</a></li><li><a href="#1-prerequisites">1. Prerequisites</a></li><li><a href="#2-get-ssh-access-to-the-dev-db">2. Get SSH access to the dev DB</a></li><li><a href="#3-open-the-ssh-tunnel-to-the-shared-dev-db">3. Open the SSH tunnel to the shared dev DB</a></li>  <li><a href="#background-tunnel-recommended">Background tunnel (recommended)</a></li>  <li><a href="#keep-the-tunnel-up-automatically">Keep the tunnel up automatically</a></li>  <li><a href="#get-the-shared-dev-password">Get the shared dev password</a></li><li><a href="#4-configure">4. Configure .env.local</a></li><li><a href="#5-first-boot">5. First boot</a></li><li><a href="#6-working-with-the-shared-dev-db">6. Working with the shared dev DB</a></li>  <li><a href="#conventions">Conventions</a></li>  <li><a href="#reset-to-a-clean-state-operator">Reset to a clean state (operator)</a></li><li><a href="#7-going-fully-local-offline-mode">7. Going fully local (offline mode)</a></li><li><a href="#8-troubleshooting">8. Troubleshooting</a></li></ul></nav>
+<main>
+<p>This is the onboarding runbook for engineers working on Zero Mail. The team uses
+<strong>local development</strong> with a <strong>shared dev database</strong> hosted on the production
+VPS — local code, shared data.</p>
+<h2 id="architecture"><a class="anchor" href="#architecture" aria-label="link">¶</a> Architecture</h2>
+<pre><code>   Your laptop                              Hostinger VPS (72.62.193.33)
+   ─────────────                            ─────────────────────────────
+   IntelliJ ZeroMailApi          ┌────────► zeromail-postgres
+   IntelliJ ZeroMailWorker  ─SSH─┤           ├─ zeromail        (PROD,  role zeromail)
+   Local Postgres (offline)      │           └─ zeromail_dev    (DEV,   role zeromail_dev)
+   Local Redis (always)          │
+                                 └──────────► zeromail-redis    (PROD only — devs DO NOT share)
+</code></pre>
+<ul>
+<li><strong>Shared dev DB</strong> lives on the VPS Postgres container. The <code>zeromail_dev</code> role
+cannot read or write the prod <code>zeromail</code> database (verified by ArchUnit /
+Postgres role checks).</li>
+<li><strong>Local Redis</strong> is per-developer to avoid session / idempotency races.</li>
+<li><strong>Local OAuth + LLM + Pub/Sub</strong> — each dev uses their own dev-only credentials.</li>
+<li><strong>No dev slot on the VPS</strong> (VPS has 8 GB RAM; we cannot sustain a second
+dev stack alongside prod). The shared DB is the only dev resource on the VPS.</li>
+</ul>
+<h2 id="1-prerequisites"><a class="anchor" href="#1-prerequisites" aria-label="link">¶</a> 1. Prerequisites</h2>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Min version</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>JDK 25 (Temurin)</td>
+<td>25</td>
+</tr>
+<tr>
+<td>Docker / Docker Desktop</td>
+<td>27+</td>
+</tr>
+<tr>
+<td>pnpm</td>
+<td>11.0.8 (pinned in package.json)</td>
+</tr>
+<tr>
+<td>Node</td>
+<td>LTS (≥20.9)</td>
+</tr>
+<tr>
+<td><code>gh</code> CLI</td>
+<td>2.45+ (optional, for cloning + secret read access)</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-sh"># macOS
+brew install temurin@25 docker pnpm node gh
+
+# Ubuntu
+sudo apt install -y docker.io docker-compose-plugin
+curl -fsSL https://get.pnpm.io/install.sh | sh -
+# install JDK 25 via sdkman or asdf
+</code></pre>
+<h2 id="2-get-ssh-access-to-the-dev-db"><a class="anchor" href="#2-get-ssh-access-to-the-dev-db" aria-label="link">¶</a> 2. Get SSH access to the dev DB</h2>
+<p>Each dev needs their <code>id_ed25519.pub</code> added to <code>dat@72.62.193.33:~/.ssh/authorized_keys</code>.</p>
+<p><strong>Operator (Dat)</strong> — for each new team member:</p>
+<pre><code class="language-sh">ssh dat@72.62.193.33
+# paste the dev's ed25519 pubkey into ~/.ssh/authorized_keys
+echo &quot;ssh-ed25519 AAAA... &lt;dev-name&gt;@&lt;their-machine&gt;&quot; &gt;&gt; ~/.ssh/authorized_keys
+</code></pre>
+<p><strong>Each dev</strong> — verify the connection works:</p>
+<pre><code class="language-sh">ssh -T dat@72.62.193.33
+# Expected: PTY allocated and you land in the VPS shell.
+</code></pre>
+<h2 id="3-open-the-ssh-tunnel-to-the-shared-dev-db"><a class="anchor" href="#3-open-the-ssh-tunnel-to-the-shared-dev-db" aria-label="link">¶</a> 3. Open the SSH tunnel to the shared dev DB</h2>
+<p>The dev DB Postgres container is <strong>not exposed</strong> to the public internet —
+the only way in is through SSH on the VPS.</p>
+<h3 id="background-tunnel-recommended"><a class="anchor" href="#background-tunnel-recommended" aria-label="link">¶</a> Background tunnel (recommended)</h3>
+<pre><code class="language-sh">ssh -fN -L 5555:zeromail-postgres:5432 dat@72.62.193.33
+</code></pre>
+<ul>
+<li><code>-f</code>: background after authentication.</li>
+<li><code>-N</code>: don't open a remote shell — pure port-forward.</li>
+<li><code>5555</code> on your laptop ⇄ <code>zeromail-postgres:5432</code> in the VPS docker network.</li>
+</ul>
+<p>Verify:</p>
+<pre><code class="language-sh">psql -h localhost -p 5555 -U zeromail_dev -d zeromail_dev
+# password prompt: paste the shared dev password from the operator
+</code></pre>
+<h3 id="keep-the-tunnel-up-automatically"><a class="anchor" href="#keep-the-tunnel-up-automatically" aria-label="link">¶</a> Keep the tunnel up automatically</h3>
+<p>Add to <code>~/.ssh/config</code>:</p>
+<pre><code class="language-sshconfig">Host zeromail-db-tunnel
+    HostName 72.62.193.33
+    User dat
+    LocalForward 5555 zeromail-postgres:5432
+    ServerAliveInterval 30
+    ExitOnForwardFailure yes
+</code></pre>
+<p>Then start it with <code>ssh -fN zeromail-db-tunnel</code> (or use <a href="https://www.harding.motd.ca/autossh/" target="_blank" rel="noopener">autossh</a>
+for crash-resilient tunnels: <code>autossh -M 0 -fN zeromail-db-tunnel</code>).</p>
+<h3 id="get-the-shared-dev-password"><a class="anchor" href="#get-the-shared-dev-password" aria-label="link">¶</a> Get the shared dev password</h3>
+<p>The operator stores the current shared dev DB password in the team's
+out-of-band secret store (1Password / Bitwarden / pinned chat). Ask the
+operator the first time — never commit it.</p>
+<p>To rotate (operator only):</p>
+<pre><code class="language-sh">ssh dat@72.62.193.33
+cd /apps/zero-mail
+NEW_PW=&quot;$(openssl rand -base64 24 | tr -d '/+=' | head -c 28)&quot;
+docker exec -i -e PGPASSWORD=zeromail zeromail-postgres \
+  psql -U zeromail -d postgres -v ON_ERROR_STOP=1 \
+  -v dev_password=&quot;$NEW_PW&quot; \
+  &lt; ops/postgres/init/10-create-dev-db.sql &gt; /dev/null
+echo &quot;$NEW_PW&quot;   # share via the secret store; clear shell history after
+</code></pre>
+<h2 id="4-configure"><a class="anchor" href="#4-configure" aria-label="link">¶</a> 4. Configure <code>.env.local</code></h2>
+<pre><code class="language-sh">cd zero-mail
+cp .env.example .env.local
+</code></pre>
+<p>Then fill in:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>How to get it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DB_PASSWORD</code></td>
+<td>Shared dev pw from operator (see §3).</td>
+</tr>
+<tr>
+<td><code>GOOGLE_OAUTH_CLIENT_ID</code> / <code>_SECRET</code></td>
+<td>Operator shares the team dev OAuth client. Add <code>http://localhost:8080/login/oauth2/code/google</code> as an authorized redirect URI if missing.</td>
+</tr>
+<tr>
+<td><code>REFRESH_TOKEN_KEY_BASE64</code></td>
+<td><code>openssl rand -base64 32</code> — per-dev, never share.</td>
+</tr>
+<tr>
+<td><code>LOCAL_REFRESH_TOKEN_KEY_BASE64</code></td>
+<td>Mirror <code>REFRESH_TOKEN_KEY_BASE64</code>.</td>
+</tr>
+<tr>
+<td><code>ZEROMAIL_LLM_PLATFORM_API_KEY</code></td>
+<td>Your own OpenRouter key with $5–10 cap.</td>
+</tr>
+<tr>
+<td><code>PUBSUB_PUSH_AUDIENCE_URL</code></td>
+<td>Run <code>pnpm tailscale:funnel:api</code>, paste the <code>*.ts.net/internal/pubsub/gmail</code> URL.</td>
+</tr>
+<tr>
+<td><code>GOOGLE_PUBSUB_TOPIC_NAME</code></td>
+<td>Your own dev Pub/Sub subscription topic.</td>
+</tr>
+<tr>
+<td><code>ZEROMAIL_ADMIN_BOOTSTRAP_EMAILS</code></td>
+<td>Your gmail (you'll receive the enrollment URL on boot).</td>
+</tr>
+<tr>
+<td><code>ZEROMAIL_ADMIN_AUDIT_HMAC_KEK_BASE64</code></td>
+<td><code>openssl rand -base64 32</code> — per-dev.</td>
+</tr>
+</tbody>
+</table>
+<p>The remaining fields have sane localhost defaults.</p>
+<h2 id="5-first-boot"><a class="anchor" href="#5-first-boot" aria-label="link">¶</a> 5. First boot</h2>
+<pre><code class="language-sh"># 1. Bring up local Redis (and optional local Postgres if you skip the tunnel).
+docker compose up -d redis
+docker compose up -d postgres    # optional, only if you want a local DB instead of the tunnel
+
+# 2. Start the SSH tunnel to the shared dev DB.
+ssh -fN zeromail-db-tunnel        # uses the ~/.ssh/config entry from §3
+
+# 3. Run the worker once — it runs all Liquibase migrations against zeromail_dev.
+#    IntelliJ: run the &quot;ZeroMailWorker&quot; run configuration.
+#    CLI:      ./gradlew :backend:worker:bootRun
+
+# 4. Run the API.
+#    IntelliJ: run &quot;ZeroMailApi&quot; with profile=dev.
+#    CLI:      ./gradlew :backend:api:bootRun
+
+# 5. Run the frontend.
+pnpm install
+pnpm web:dev
+</code></pre>
+<p>On first API boot you'll see in the console (because you set yourself as a
+bootstrap admin):</p>
+<pre><code>[ZeroMail Admin Bootstrap] you@example.com enrollment URL:
+   http://localhost:8080/api/admin/enrollment?token=&lt;32hex&gt; (valid 10 minutes)
+</code></pre>
+<p>Open that URL in the frontend (<code>http://localhost:5174/enroll?token=...</code>) to set
+up your WebAuthn passkey for the admin console.</p>
+<h2 id="6-working-with-the-shared-dev-db"><a class="anchor" href="#6-working-with-the-shared-dev-db" aria-label="link">¶</a> 6. Working with the shared dev DB</h2>
+<p>Connect with <code>psql</code> for ad-hoc queries:</p>
+<pre><code class="language-sh">psql -h localhost -p 5555 -U zeromail_dev -d zeromail_dev
+</code></pre>
+<p>Or in IntelliJ Database tool:</p>
+<ul>
+<li>Type: PostgreSQL</li>
+<li>Host: <code>localhost</code></li>
+<li>Port: <code>5555</code></li>
+<li>Database: <code>zeromail_dev</code></li>
+<li>User: <code>zeromail_dev</code></li>
+<li>Password: shared dev pw</li>
+</ul>
+<h3 id="conventions"><a class="anchor" href="#conventions" aria-label="link">¶</a> Conventions</h3>
+<ul>
+<li><strong>No DROP TABLE / TRUNCATE without coordination.</strong> All three of us are
+reading + writing this DB. If you need a clean slate, drop your tenant rows
+by tenant ID rather than nuking tables.</li>
+<li><strong>Migrations:</strong> every Liquibase changeset you author runs against this DB
+whenever any teammate boots the worker. Coordinate destructive changesets
+(column drop, NOT NULL backfill) in PR review before merging.</li>
+<li><strong>Seed data:</strong> the dev DB is intentionally not auto-seeded. Use
+<code>loadtest/scripts/seed-tenants.sql</code> against <code>zeromail_dev</code> if you want
+representative load.</li>
+</ul>
+<h3 id="reset-to-a-clean-state-operator"><a class="anchor" href="#reset-to-a-clean-state-operator" aria-label="link">¶</a> Reset to a clean state (operator)</h3>
+<pre><code class="language-sh">ssh dat@72.62.193.33
+docker exec -e PGPASSWORD=zeromail zeromail-postgres \
+  psql -U zeromail -d postgres -c &quot;DROP DATABASE zeromail_dev&quot;
+docker exec -e PGPASSWORD=zeromail zeromail-postgres \
+  psql -U zeromail -d postgres -v dev_password=&quot;$NEW_PW&quot; \
+  -f /docker-entrypoint-initdb.d/10-create-dev-db.sql
+# Now any teammate's worker boot re-runs Liquibase from a fresh DB.
+</code></pre>
+<h2 id="7-going-fully-local-offline-mode"><a class="anchor" href="#7-going-fully-local-offline-mode" aria-label="link">¶</a> 7. Going fully local (offline mode)</h2>
+<p>If you're working offline or want to test destructive migrations:</p>
+<pre><code class="language-sh"># In .env.local, swap the tunnel pointers for the local compose stack:
+DB_URL=jdbc:postgresql://localhost:15432/zeromail
+DB_USER=zeromail
+DB_PASSWORD=zeromail
+
+# Then:
+docker compose up -d postgres redis
+./gradlew :backend:worker:bootRun    # applies migrations to your local DB
+</code></pre>
+<h2 id="8-troubleshooting"><a class="anchor" href="#8-troubleshooting" aria-label="link">¶</a> 8. Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Likely cause</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Connection refused</code> on <code>localhost:5555</code></td>
+<td>tunnel down</td>
+<td><code>ssh -fN zeromail-db-tunnel</code> or check <code>pgrep -af 5555</code></td>
+</tr>
+<tr>
+<td><code>password authentication failed for &quot;zeromail_dev&quot;</code></td>
+<td>password rotated</td>
+<td>ask operator for the new pw</td>
+</tr>
+<tr>
+<td><code>relation … does not exist</code></td>
+<td>Liquibase changeset missing on the dev DB</td>
+<td>someone needs to boot the worker against <code>zeromail_dev</code> to apply the changeset</td>
+</tr>
+<tr>
+<td><code>Permission denied (publickey)</code> to VPS</td>
+<td>SSH pub key not added</td>
+<td>operator: <code>echo &quot;&lt;your pubkey&gt;&quot; &gt;&gt; /home/dat/.ssh/authorized_keys</code></td>
+</tr>
+<tr>
+<td><code>Could not lock — DatabaseChangeLogLock</code></td>
+<td>another worker is mid-migration on the same DB</td>
+<td>wait 1 min, or have the worker holding the lock crash/exit cleanly</td>
+</tr>
+</tbody>
+</table>
+
+</main>
+<footer>
+  Generated from <code>docs/ops/DEV-ENV.md</code> at 2026-05-20 21:55:45 UTC by <code>tools/docs/build-ops-html.mjs</code>.
+  Edit the markdown source, then re-run the build script.
+</footer>
+</body>
+</html>

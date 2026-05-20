@@ -31,6 +31,23 @@ export default defineConfig({
     // not load them because Playwright's test() throws outside its runner.
     exclude: ['**/node_modules/**'],
     setupFiles: ['__tests__/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov', 'json-summary'],
+      reportsDirectory: './coverage',
+      include: ['features/**/*.{ts,tsx}', 'app/**/*.{ts,tsx}', 'lib/**/*.{ts,tsx}'],
+      exclude: [
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/.next/**',
+        'e2e/**',
+        '__tests__/**',
+        '**/*.d.ts',
+        '**/*.config.{ts,js,mjs,mts}',
+        'components/ui/**',
+        'lib/api/schema.d.ts',
+      ],
+    },
   },
   resolve: {
     alias: [

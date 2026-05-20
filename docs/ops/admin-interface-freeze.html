@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Interface Freeze — Zero Mail Ops</title>
+<style>:root {
+  color-scheme: light dark;
+  --fg: #1f2328;
+  --bg: #ffffff;
+  --muted: #656d76;
+  --border: #d0d7de;
+  --code-bg: #f6f8fa;
+  --code-fg: #1f2328;
+  --link: #0969da;
+  --accent: #218bff;
+  --table-stripe: #f6f8fa;
+  --callout: #ddf4ff;
+  --callout-border: #54aeff;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #e6edf3;
+    --bg: #0d1117;
+    --muted: #8b949e;
+    --border: #30363d;
+    --code-bg: #161b22;
+    --code-fg: #e6edf3;
+    --link: #2f81f7;
+    --accent: #58a6ff;
+    --table-stripe: #161b22;
+    --callout: #051d4d;
+    --callout-border: #1f6feb;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); }
+body {
+  font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+        "Helvetica Neue", Arial, sans-serif;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+header.meta {
+  margin: 0 0 32px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+header.meta h1 { font-size: 28px; margin: 0 0 8px; }
+header.meta .meta-row {
+  color: var(--muted);
+  font-size: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+header.meta .meta-row span strong { color: var(--fg); font-weight: 600; }
+nav.toc {
+  background: var(--callout);
+  border: 1px solid var(--callout-border);
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 0 0 32px;
+  font-size: 14px;
+}
+nav.toc h2 { font-size: 14px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+nav.toc ul { margin: 0; padding-left: 18px; }
+nav.toc li { margin: 2px 0; }
+nav.toc a { color: var(--link); text-decoration: none; }
+nav.toc a:hover { text-decoration: underline; }
+h1, h2, h3, h4, h5, h6 {
+  margin: 24px 0 8px;
+  font-weight: 600;
+  line-height: 1.25;
+  scroll-margin-top: 16px;
+}
+h1 { font-size: 28px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+h2 { font-size: 22px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+h3 { font-size: 18px; }
+h4 { font-size: 16px; }
+.anchor { color: var(--muted); margin-left: 6px; text-decoration: none; opacity: 0; font-weight: normal; }
+h1:hover .anchor, h2:hover .anchor, h3:hover .anchor, h4:hover .anchor,
+h5:hover .anchor, h6:hover .anchor { opacity: 1; }
+a { color: var(--link); }
+p, ul, ol { margin: 8px 0 16px; }
+code {
+  font: 13px/1.45 ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+pre {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 14px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  margin: 12px 0 20px;
+}
+pre code { background: none; border: none; padding: 0; }
+table {
+  border-collapse: collapse;
+  margin: 12px 0 20px;
+  width: 100%;
+  font-size: 14px;
+}
+th, td {
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+thead { background: var(--code-bg); }
+tbody tr:nth-child(2n) { background: var(--table-stripe); }
+blockquote {
+  border-left: 4px solid var(--border);
+  padding: 0 14px;
+  color: var(--muted);
+  margin: 12px 0;
+}
+hr { border: 0; border-top: 1px solid var(--border); margin: 24px 0; }
+footer {
+  margin-top: 64px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+}</style>
+</head>
+<body>
+<header class="meta">
+  <h1>Admin Interface Freeze</h1>
+  <div class="meta-row"><span><strong>title:</strong> Admin Interface Freeze</span><span><strong>phase:</strong> 08-admin-console-operator-tooling</span><span><strong>plan:</strong> 8A</span><span><strong>last_verified:</strong> Wed May 20 2026 00:00:00 GMT+0000 (Coordinated Universal Time)</span></div>
+</header>
+<nav class="toc"><h2>Contents</h2><ul><li><a href="#spring-security-webauthn-api">Spring Security WebAuthn API</a></li><li><a href="#spring-security-webauthn-endpoints">Spring Security WebAuthn Endpoints</a></li><li><a href="#webauthn-repository-contracts">WebAuthn Repository Contracts</a></li><li><a href="#enrollment-routing">Enrollment Routing</a></li><li><a href="#spring-session-api">Spring Session API</a></li><li><a href="#springdoc-groupedopenapi-api">Springdoc GroupedOpenApi API</a></li></ul></nav>
+<main>
+<p>This file freezes the admin auth and session integration surface used by Phase 8A.
+It is the contract for <code>SecurityConfig</code>, <code>EnrollmentSessionController</code>, and the
+<code>apps/admin</code> enrollment/login routes.</p>
+<h2 id="spring-security-webauthn-api"><a class="anchor" href="#spring-security-webauthn-api" aria-label="link">¶</a> Spring Security WebAuthn API</h2>
+<p>Verified with Context7 against <code>/websites/spring_io_spring-security_reference_7_0</code>
+and against the local Spring Security 7.0.5 source jar on 2026-05-20.</p>
+<p><code>HttpSecurity.webAuthn(...)</code> exposes the relying-party DSL used by the admin
+chain:</p>
+<ul>
+<li><code>rpName(&quot;Zero Mail Admin&quot;)</code></li>
+<li><code>rpId(&quot;admin.zeromail.com&quot;)</code></li>
+<li><code>allowedOrigins(&quot;https://admin.zeromail.com&quot;)</code></li>
+<li><code>creationOptionsRepository(...)</code></li>
+<li><code>messageConverter(...)</code></li>
+</ul>
+<p>The admin chain must not configure <code>.oauth2Login(...)</code>. The user chain must not
+configure <code>.webAuthn(...)</code>.</p>
+<h2 id="spring-security-webauthn-endpoints"><a class="anchor" href="#spring-security-webauthn-endpoints" aria-label="link">¶</a> Spring Security WebAuthn Endpoints</h2>
+<p>The stock WebAuthn endpoint surface used by Spring Security 7 is:</p>
+<ul>
+<li><code>POST /webauthn/register/options</code></li>
+<li><code>POST /webauthn/register</code></li>
+<li><code>DELETE /webauthn/register/{id}</code> (denied by default unless explicitly authorized)</li>
+<li><code>POST /webauthn/authenticate/options</code></li>
+<li><code>POST /login/webauthn</code></li>
+</ul>
+<p>The admin <code>securityMatcher(...)</code> list must include <code>/api/admin/**</code>,
+<code>/webauthn/**</code>, and <code>/login/webauthn/**</code>. The <code>/enroll</code> path is reserved for the
+admin SPA and must not be consumed by a backend servlet filter.</p>
+<h2 id="webauthn-repository-contracts"><a class="anchor" href="#webauthn-repository-contracts" aria-label="link">¶</a> WebAuthn Repository Contracts</h2>
+<p>Spring Security 7 exposes these WebAuthn management contracts:</p>
+<ul>
+<li><code>PublicKeyCredentialUserEntityRepository</code>
+<ul>
+<li><code>void delete(Bytes id)</code></li>
+<li><code>PublicKeyCredentialUserEntity findById(Bytes id)</code></li>
+<li><code>PublicKeyCredentialUserEntity findByUsername(String username)</code></li>
+<li><code>void save(PublicKeyCredentialUserEntity userEntity)</code></li>
+</ul>
+</li>
+<li><code>UserCredentialRepository</code>
+<ul>
+<li><code>void delete(Bytes credentialId)</code></li>
+<li><code>CredentialRecord findByCredentialId(Bytes credentialId)</code></li>
+<li><code>List&lt;CredentialRecord&gt; findByUserId(Bytes userId)</code></li>
+<li><code>void save(CredentialRecord credentialRecord)</code></li>
+</ul>
+</li>
+</ul>
+<p>Implementations must persist only the WebAuthn credential bytes required for
+authentication. Admin summary and grant APIs must never expose <code>credential_id</code>,
+<code>public_key_cose</code>, or <code>user_handle</code>.</p>
+<h2 id="enrollment-routing"><a class="anchor" href="#enrollment-routing" aria-label="link">¶</a> Enrollment Routing</h2>
+<p><code>/enroll</code> is SPA-only. Token validation is a REST call:</p>
+<ul>
+<li><code>POST /api/admin/enrollment/session</code>
+<ul>
+<li>Request: <code>{ &quot;token&quot;: &quot;...&quot;, &quot;email&quot;: &quot;operator@example.com&quot; }</code></li>
+<li>Success: <code>200 OK</code>, short-lived enrollment session cookie, and <code>expiresAt</code></li>
+<li>Expired or used token: <code>410 Gone</code></li>
+</ul>
+</li>
+</ul>
+<p>The controller may store only the pending admin user id in server-side session
+state. The token value must not be logged, stored in the database, or written to
+SLF4J output.</p>
+<h2 id="spring-session-api"><a class="anchor" href="#spring-session-api" aria-label="link">¶</a> Spring Session API</h2>
+<p>Verified with Context7 against <code>/spring-projects/spring-session</code> on 2026-05-20.</p>
+<p><code>DefaultCookieSerializer</code> is the supported cookie customization API:</p>
+<ul>
+<li><code>setCookieName(String)</code></li>
+<li><code>setCookiePath(String)</code></li>
+<li><code>setDomainName(String)</code></li>
+<li><code>setSameSite(String)</code></li>
+<li><code>setUseSecureCookie(boolean)</code></li>
+<li><code>setUseHttpOnlyCookie(boolean)</code></li>
+</ul>
+<p><code>spring.session.redis.namespace</code> is the supported property for isolating Redis
+session keys. Spring Session auto-configuration expects one effective
+<code>CookieSerializer</code> for the servlet application context, so 8A uses a primary
+route-aware serializer that delegates to two <code>DefaultCookieSerializer</code> instances
+by request path. The cookie names are the load-bearing isolation primitive in
+8A; a later hardening pass may split Redis repositories if Spring Session 4
+adds a cleaner first-class multi-repository hook.</p>
+<p>The default v1.2 target names are:</p>
+<ul>
+<li>Admin cookie: <code>SESSION_ADMIN</code></li>
+<li>User cookie: <code>SESSION_USER</code></li>
+<li>Admin Redis namespace: <code>spring:session:admin</code></li>
+<li>User Redis namespace: <code>spring:session:user</code></li>
+</ul>
+<p>If local development cannot use <code>admin.zeromail.com</code>, admin cookies must be
+path-scoped to <code>/api/admin</code> and must still use <code>SESSION_ADMIN</code>.</p>
+<h2 id="springdoc-groupedopenapi-api"><a class="anchor" href="#springdoc-groupedopenapi-api" aria-label="link">¶</a> Springdoc GroupedOpenApi API</h2>
+<p>Verified with Context7 against <code>/springdoc/springdoc-openapi</code> on 2026-05-20.</p>
+<p>The API split uses <code>GroupedOpenApi.builder()</code>:</p>
+<ul>
+<li>Public group: <code>.group(&quot;public&quot;).pathsToMatch(&quot;/api/**&quot;).pathsToExclude(&quot;/api/admin/**&quot;)</code></li>
+<li>Admin group: <code>.group(&quot;admin&quot;).pathsToMatch(&quot;/api/admin/**&quot;)</code></li>
+</ul>
+<p><code>apps/web</code> codegen consumes <code>/v3/api-docs/public</code>. <code>apps/admin</code> codegen consumes
+<code>/v3/api-docs/admin</code>.</p>
+
+</main>
+<footer>
+  Generated from <code>docs/ops/admin-interface-freeze.md</code> at 2026-05-20 21:55:45 UTC by <code>tools/docs/build-ops-html.mjs</code>.
+  Edit the markdown source, then re-run the build script.
+</footer>
+</body>
+</html>

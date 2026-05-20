@@ -1,0 +1,229 @@
+# Aggregated security scanning: SAST (CodeQL), secrets (Gitleaks), dependency CVE
+# (OSV-Scanner against generated SBOMs), filesystem scan (Trivy), and container
+# image scan (Trivy) — last one only on push to main where images get published.
+#
+# Runs on:
+#   - every PR + push to main (fast jobs)
+#   - weekly schedule (Monday 03:00 UTC) — keeps CVE feeds fresh
+#   - manual dispatch
+name: Security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  packages: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  codeql:
+    name: CodeQL ${{ matrix.language }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: java-kotlin
+            build-mode: manual
+          - language: javascript-typescript
+            build-mode: none
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        if: ${{ matrix.language == 'java-kotlin' }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          check-latest: true
+
+      - name: Set up Gradle
+        if: ${{ matrix.language == 'java-kotlin' }}
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Build backend (manual mode)
+        if: ${{ matrix.language == 'java-kotlin' }}
+        run: ./gradlew --no-daemon classes -x test
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  gitleaks:
+    name: Gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+          # GITLEAKS_LICENSE only required for org-wide scanning; per-repo OSS use is free.
+
+  trivy-fs:
+    name: Trivy filesystem scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+          format: sarif
+          output: trivy-fs.sarif
+          exit-code: '1'
+
+      - name: Upload Trivy SARIF
+        if: ${{ !cancelled() }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+
+  sbom-and-osv:
+    name: SBOM + OSV-Scanner
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          check-latest: true
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install workspace deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate backend SBOM (CycloneDX)
+        run: ./gradlew --no-daemon cyclonedxBom -PsbomReason=ci || true
+
+      - name: Generate frontend SBOM (CycloneDX)
+        run: |
+          pnpm dlx @cyclonedx/cyclonedx-npm@latest \
+            --output-format JSON \
+            --output-file apps/web/sbom-frontend.cdx.json \
+            --package-lock-only \
+            apps/web/package.json || true
+
+      - name: Run OSV-Scanner
+        uses: google/osv-scanner-action/osv-scanner-action@v2.3.8
+        with:
+          scan-args: |-
+            --recursive
+            --skip-git
+            ./
+          fail-on-vuln: true
+
+      - name: Upload SBOM artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom
+          path: |
+            backend/**/build/reports/bom*.json
+            backend/**/build/reports/bom*.xml
+            apps/web/sbom-frontend.cdx.json
+          retention-days: 30
+          if-no-files-found: warn
+
+  trivy-image:
+    name: Trivy image scan
+    needs: []
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [api, worker, frontend, admin]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for image to exist
+        run: |
+          for attempt in {1..20}; do
+            if docker manifest inspect "ghcr.io/kl3init/zero-mail-${{ matrix.component }}:sha-${GITHUB_SHA:0:7}" >/dev/null 2>&1; then
+              echo "image ready"; exit 0
+            fi
+            sleep 15
+          done
+          echo "::warning::image ghcr.io/kl3init/zero-mail-${{ matrix.component }}:sha-${GITHUB_SHA:0:7} not found after 5min — skipping scan"
+          exit 0
+
+      - name: Run Trivy image scan
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: ghcr.io/kl3init/zero-mail-${{ matrix.component }}:sha-${{ github.sha }}
+          ignore-unfixed: true
+          severity: CRITICAL
+          format: sarif
+          output: trivy-image-${{ matrix.component }}.sarif
+          exit-code: '1'
+
+      - name: Upload Trivy SARIF
+        if: ${{ !cancelled() }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-image-${{ matrix.component }}.sarif
+          category: trivy-image-${{ matrix.component }}

@@ -5,7 +5,12 @@
 # ============================================================================
 # STAGE 1: base — Node + pnpm
 # ============================================================================
-FROM node:22-alpine AS base
+FROM node:24-alpine AS base
+
+# libc6-compat shims glibc so prebuilt musl-incompatible native modules (sharp,
+# better-sqlite3, etc.) keep working on alpine. Next.js image-optimization
+# pulls sharp transitively; without this, runtime falls back silently.
+RUN apk add --no-cache libc6-compat
 
 RUN corepack enable && corepack prepare pnpm@11.0.8 --activate
 
@@ -48,7 +53,7 @@ RUN pnpm --filter web run build
 # ============================================================================
 # STAGE 4: runner — minimal production image
 # ============================================================================
-FROM node:22-alpine AS runner
+FROM node:24-alpine AS runner
 
 RUN apk add --no-cache tini curl && \
     rm -rf /var/cache/apk/*

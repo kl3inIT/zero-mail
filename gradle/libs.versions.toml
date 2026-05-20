@@ -48,3 +48,4 @@ resend-java = { module = "com.resend:resend-java", version.ref = "resend" }
 [plugins]
 springBoot = { id = "org.springframework.boot", version.ref = "springBoot" }
 springDependencyManagement = { id = "io.spring.dependency-management", version = "1.1.7" }
+cyclonedxBom = { id = "org.cyclonedx.bom", version = "2.4.1" }

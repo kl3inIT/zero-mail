@@ -1,0 +1,35 @@
+name: Zero Mail CodeQL config
+
+queries:
+  - uses: security-extended
+  - uses: security-and-quality
+
+paths-ignore:
+  # shadcn primitive sources — copied upstream, not our code.
+  - apps/web/components/ui
+  # Generated OpenAPI client types.
+  - apps/web/lib/api/schema.d.ts
+  # Build outputs.
+  - "**/build"
+  - "**/dist"
+  - "**/.next"
+  - "**/node_modules"
+  # Loadtest scripts — k6 fixtures, not production code paths.
+  - loadtest
+  # Test fixtures (still scanned via Spring Boot test suite, not CodeQL).
+  - "**/src/test"
+
+paths:
+  - backend
+  - apps/web/app
+  - apps/web/features
+  - apps/web/lib
+  - apps/web/components
+  - tools
+
+# Disable noisy queries that flag patterns we intentionally use.
+query-filters:
+  - exclude:
+      id: js/unused-local-variable
+  - exclude:
+      id: java/unused-format-argument

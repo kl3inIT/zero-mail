@@ -2,6 +2,8 @@
 build/
 .env
 .env.local
+.env.dev
+.env.prod
 node_modules/
 .idea/
 *.iml

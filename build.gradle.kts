@@ -1,6 +1,18 @@
 plugins {
     base
     id("com.diffplug.spotless") version "8.5.1"
+    alias(libs.plugins.cyclonedxBom)
+}
+
+cyclonedxBom {
+    includeConfigs.set(listOf("runtimeClasspath"))
+    skipConfigs.set(listOf("testRuntimeClasspath", "compileClasspath", "testCompileClasspath"))
+    outputFormat.set("json")
+    outputName.set("sbom")
+    destination.set(layout.buildDirectory.dir("reports").get().asFile)
+    includeBomSerialNumber.set(true)
+    includeLicenseText.set(false)
+    schemaVersion.set("1.5")
 }
 
 configure(
