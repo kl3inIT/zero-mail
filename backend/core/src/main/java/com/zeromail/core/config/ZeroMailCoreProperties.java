@@ -32,15 +32,19 @@ public record ZeroMailCoreProperties(
 
     public record CryptoProperties(@NotBlank String refreshTokenKeyBase64) {}
 
-    public record AdminProperties(List<String> bootstrapEmails, @Valid AdminAuditProperties audit) {
+    public record AdminProperties(
+            List<String> bootstrapEmails,
+            @Valid AdminAuditProperties audit,
+            @Valid AdminSpendProperties spend) {
 
         static AdminProperties defaults() {
-            return new AdminProperties(List.of(), null);
+            return new AdminProperties(List.of(), null, null);
         }
 
         public AdminProperties {
             bootstrapEmails = bootstrapEmails == null ? List.of() : List.copyOf(bootstrapEmails);
             audit = audit == null ? AdminAuditProperties.defaults() : audit;
+            spend = spend == null ? AdminSpendProperties.defaults() : spend;
         }
     }
 
@@ -48,6 +52,33 @@ public record ZeroMailCoreProperties(
 
         static AdminAuditProperties defaults() {
             return new AdminAuditProperties("");
+        }
+    }
+
+    /**
+     * Spend-dashboard tunables per Phase 8F reviews-pass addenda.
+     *
+     * @param kAnonymityThreshold (R-8F-H6) minimum bucket size before exact per-tenant figures are
+     *     exposed; smaller buckets collapse into a rollup row. Default 5.
+     * @param rowLevelClassificationSince (R-8F-H9) boundary date for the credential_source
+     *     row-level classification rollout; rows with {@code created_at} before this date are
+     *     classified as UNKNOWN. The UI surfaces this date in the 90-day range picker label.
+     */
+    public record AdminSpendProperties(
+            @Min(1) int kAnonymityThreshold, String rowLevelClassificationSince) {
+
+        static AdminSpendProperties defaults() {
+            return new AdminSpendProperties(5, "2026-05-20");
+        }
+
+        public AdminSpendProperties {
+            if (kAnonymityThreshold < 1) {
+                kAnonymityThreshold = 5;
+            }
+            rowLevelClassificationSince =
+                    rowLevelClassificationSince == null || rowLevelClassificationSince.isBlank()
+                            ? "2026-05-20"
+                            : rowLevelClassificationSince;
         }
     }
 

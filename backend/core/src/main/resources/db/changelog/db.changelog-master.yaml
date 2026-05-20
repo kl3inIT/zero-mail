@@ -170,3 +170,6 @@ databaseChangeLog:
   - include:
       file: changes/078-processing-job-extend.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/079-llm-call-audit-credential-source.yaml
+      relativeToChangelogFile: true
