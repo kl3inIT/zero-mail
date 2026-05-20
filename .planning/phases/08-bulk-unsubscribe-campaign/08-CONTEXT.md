@@ -20,7 +20,7 @@ New Spring Modulith module `core.cleanup` (depend `core.gmail`, `core.triage`, `
 Downstream agents MUST read `08-SPEC.md` before planning or implementing. Requirements are not duplicated here.
 
 **In scope (from SPEC.md):**
-- `core.cleanup` Spring Modulith module (domain/application/persistence)
+- `core.cleanup` Spring Modulith module (domain/usecases/persistence)
 - Tables: `sender_suppression`, `unsubscribe_campaign`, `unsubscribe_attempt`
 - Endpoints: `GET /api/unsubscribe/candidates`, `POST /api/unsubscribe/campaigns/preview|execute`, `GET /api/unsubscribe/campaigns/{id}`, `POST /api/unsubscribe/campaigns/{id}/senders/{email}/retry`, `POST /api/unsubscribe/campaigns/{id}/undo`, suppression CRUD
 - `UnsubscribeExecutor` + `UnsubscribeHttpClient` (RFC 8058 one-click POST) + `UnsubscribeMailtoSender` (mailto qua Gmail send-as-self)
@@ -53,7 +53,7 @@ Downstream agents MUST read `08-SPEC.md` before planning or implementing. Requir
 - **D-04:** Transactional boundary khi POST `/execute`: API endpoint trong 1 transaction INSERT `unsubscribe_campaign` row + N × `unsubscribe_attempt` rows (state=PENDING) + 1 `processing_job` row payload `{campaignId}`. Worker pick job → loop qua attempt rows và update state. GET endpoint trả `perSender[]` đầy đủ ngay từ status=QUEUED → frontend không phải handle empty state mid-flight.
 
 ### Mailto send + auto-send boundary
-- **D-05:** New isolated class `UnsubscribeMailtoSender` trong `core.cleanup.application` với `@TriageGmailWriteAllowed` boundary annotation (mở rộng từ Phase 4). ArchUnit rule extend cover class này: chỉ `TriageGmailWriter` + `UnsubscribeMailtoSender` được phép gọi `Gmail.users().messages().send()`. KHÔNG extend `TriageGmailWriter` (giữ SRP: triage vs cleanup tách biệt).
+- **D-05:** New isolated class `UnsubscribeMailtoSender` trong `core.cleanup.usecases` với `@TriageGmailWriteAllowed` boundary annotation (mở rộng từ Phase 4). ArchUnit rule extend cover class này: chỉ `TriageGmailWriter` + `UnsubscribeMailtoSender` được phép gọi `Gmail.users().messages().send()`. KHÔNG extend `TriageGmailWriter` (giữ SRP: triage vs cleanup tách biệt).
 - **D-06:** Method `sendUnsubscribeMailto(...)` validate input: (a) URL ngồn là `mailto:`, (b) recipient đến từ `List-Unsubscribe` header đã persist trong `mail_message_observed`, (c) body cố định "unsubscribe" theo RFC convention. ArchUnit `TriageGmailWriteBoundaryTest` (Phase 4) extend cover class mới.
 - **D-07:** New class `UnsubscribeHttpClient` trong `core.cleanup` dùng Spring `RestClient` (synchronous, virtual-thread friendly). Configuration: `redirectPolicy=NEVER` (RFC 8058 cấm follow redirect), connect timeout 5s, read timeout 10s. ArchUnit ban `WebClient` (WebFlux) vẫn enforce. ArchUnit rule mới trong `core.cleanup`: cấm `new HttpClient()` / `RestClient.create()` ngoài file `UnsubscribeHttpClient.java`.
 - **D-08:** Success gate (gate archive): chỉ HTTP `200`, `202`, `204` → state=OK. 3xx (redirect) / 4xx / 5xx / timeout / IO exception → state=FAILED với `failureReason` chi tiết (`HTTP_3XX_REDIRECT`, `HTTP_4XX_{code}`, `TIMEOUT`, `NETWORK_ERROR`). Per-sender atomic: FAILED → không archive history. Mailto: nếu `UnsubscribeMailtoSender` trả messageId → OK; bất kỳ exception → FAILED.
@@ -85,14 +85,14 @@ Downstream agents MUST read `08-SPEC.md` before planning or implementing. Requir
 ### Locked Decisions — addendum (chốt 2026-05-19 sau evaluation review)
 
 - **D-16:** i18n namespace = `cleanup.unsubscribe.*` + `cleanup.suppression.*` (2 root namespace tách biệt, lock-step `apps/web/i18n/messages/{vi,en}.json`). Sidebar nav key = `nav.cleanup`. Planner viết key list chi tiết khi sinh wave frontend; bắt buộc qua `pnpm i18n:check`.
-- **D-17:** Package layout `core.cleanup` = `domain/`, `application/`, `persistence/`, `projection/`, `exception/` (đúng CONVENTIONS §2 + Phase 7 pattern). `package-info.java` ở root khai báo `@ApplicationModule(allowedDependencies = {"core.gmail", "core.triage", "core.analytics", "core.shared"})`.
+- **D-17:** Package layout `core.cleanup` = `domain/`, `usecases/`, `persistence/`, `projection/`, `exception/` (đúng CONVENTIONS §2 + Phase 7 pattern). `package-info.java` ở root khai báo `@ApplicationModule(allowedDependencies = {"core.gmail", "core.triage", "core.analytics", "core.shared"})`.
 - **D-18:** Reaper batch placement = `backend/worker/src/main/java/com/zeromail/worker/scheduling/ProcessingJobReaperBatch.java` (generic dưới `worker/scheduling/` để reuse cho SEED-009 job types, KHÔNG đặt trong `worker/cleanup/`).
 - **D-19:** `processing_job` payload cho `UNSUBSCRIBE_CAMPAIGN` = `{"campaignId": "uuid", "schemaVersion": 1}`. Worker resolve attempt rows qua `unsubscribe_attempt.campaign_id`. `schemaVersion` field reserved cho payload evolution sau này.
 - **D-20:** Throttle bucket key format (Redis INCR + EXPIRE):
   - 60s window: `throttle:unsubscribe:domain:{tenantId}:{domain}:60s` (TTL 60s)
   - 1h window: `throttle:unsubscribe:domain:{tenantId}:{domain}:1h` (TTL 3600s)
   Per-tenant scope **bắt buộc** để tenant này không block tenant khác trên cùng domain. Implementation qua `RedisTemplate.opsForValue().increment(...)` + `expire(...)`.
-- **D-21:** Candidate query data source = `CandidateQueryService` mới trong `core.cleanup.application` với `JdbcTemplate` + `@Transactional(readOnly=true)`. KHÔNG share với `AnalyticsSummaryQueryService` (khác filter — top-sender không quan tâm `List-Unsubscribe`). Spring Modulith boundary giữ sạch.
+- **D-21:** Candidate query data source = `CandidateQueryService` mới trong `core.cleanup.usecases` với `JdbcTemplate` + `@Transactional(readOnly=true)`. KHÔNG share với `AnalyticsSummaryQueryService` (khác filter — top-sender không quan tâm `List-Unsubscribe`). Spring Modulith boundary giữ sạch.
 - **D-22:** ArchUnit rule (planner viết trong Wave 0 test stubs):
   - `core.cleanup.*` cấm `import java.net.http.HttpClient` + `org.springframework.web.client.RestClient` ngoài file `UnsubscribeHttpClient.java`.
   - Extend `GmailWriteBoundaryTest` (rename từ `TriageGmailWriteBoundaryTest`): allow-list `TriageGmailWriter` + `UnsubscribeMailtoSender` cho `Gmail.users().messages().send()`.
@@ -131,7 +131,7 @@ Downstream agents MUST read `08-SPEC.md` before planning or implementing. Requir
 
 ### Project conventions
 - `CLAUDE.md` — Java 25, Spring Boot 4, privacy invariants, backend code style (no abbreviations), Postgres-backed queue (`SKIP LOCKED`), Redis chỉ rate-limit/cache, KHÔNG WebFlux, KHÔNG raw HTTP outside Spring AI adapter (exception: `core.cleanup.UnsubscribeHttpClient` cho RFC 8058).
-- `CONVENTIONS.md` §2 (backend domain package layout: domain/application/persistence/projection/exception), §5 (privacy logging format `event=<name> tenantId={}`), §6 (Spring Modulith events vs direct calls), §7 (shadcn/ui primitive selection), §8 (feature API/hooks/query keys).
+- `CONVENTIONS.md` §2 (backend domain package layout: domain/usecases/persistence/projection/exception), §5 (privacy logging format `event=<name> tenantId={}`), §6 (Spring Modulith events vs direct calls), §7 (shadcn/ui primitive selection), §8 (feature API/hooks/query keys).
 - `TESTING.md` — Spring Boot 4 slice ladder; ArchUnit rules; privacy sweep pattern.
 
 ### RFC standards (external)

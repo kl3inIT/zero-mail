@@ -70,7 +70,7 @@ Suppression list ("never touch these senders/domains") chưa có table — cần
 ## Boundaries
 
 **In scope:**
-- `core.cleanup` Spring Modulith module (domain/application/persistence)
+- `core.cleanup` Spring Modulith module (domain/usecases/persistence)
 - Tables: `sender_suppression`, `unsubscribe_campaign`, `unsubscribe_attempt` (per-sender state)
 - Endpoints: `GET /api/unsubscribe/candidates`, `POST /api/unsubscribe/campaigns/preview|execute`, `GET /api/unsubscribe/campaigns/{id}`, `POST /api/unsubscribe/campaigns/{id}/senders/{email}/retry`, `POST /api/unsubscribe/campaigns/{id}/undo`, suppression CRUD
 - `UnsubscribeExecutor` + `UnsubscribeHttpClient` (RFC 8058 one-click POST) + `UnsubscribeMailtoSender` (gửi mailto qua Gmail send-as-self qua `TriageGmailWriter`)

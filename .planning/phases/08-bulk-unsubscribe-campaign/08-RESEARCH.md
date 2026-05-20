@@ -32,7 +32,7 @@ These directives must be honored by every plan and task in Phase 8:
 - **D-04:** Transactional boundary tại POST `/execute`: 1 transaction INSERT campaign row + N attempt rows (PENDING) + 1 processing_job row. GET trả `perSender[]` đầy đủ từ QUEUED.
 
 **Mailto + auto-send boundary:**
-- **D-05:** New `UnsubscribeMailtoSender` trong `core.cleanup.application` với annotation boundary mở rộng từ Phase 4. ArchUnit cover. **KHÔNG extend `TriageGmailWriter`** (SRP).
+- **D-05:** New `UnsubscribeMailtoSender` trong `core.cleanup.usecases` với annotation boundary mở rộng từ Phase 4. ArchUnit cover. **KHÔNG extend `TriageGmailWriter`** (SRP).
 - **D-06:** `sendUnsubscribeMailto(...)` validate: (a) URL `mailto:`, (b) recipient từ `List-Unsubscribe` header persist trong `mail_message_observed`, (c) body cố định "unsubscribe". ArchUnit `TriageGmailWriteBoundaryTest` extend cover class mới.
 - **D-07:** `UnsubscribeHttpClient` dùng Spring `RestClient` synchronous. `redirectPolicy=NEVER` (RFC 8058 cấm). Connect timeout 5s, read timeout 10s. ArchUnit ban `new HttpClient()` / `RestClient.create()` ngoài file `UnsubscribeHttpClient.java`.
 - **D-08:** Success gate (gate archive): chỉ HTTP `200`, `202`, `204` → state=OK. 3xx / 4xx / 5xx / timeout / IO → FAILED với failureReason chi tiết. Per-sender atomic: FAILED → KHÔNG archive.
@@ -50,7 +50,7 @@ These directives must be honored by every plan and task in Phase 8:
 
 ### Claude's Discretion (planner / executor được quyết)
 - i18n namespace keys chi tiết (`cleanup.unsubscribe.*`, `cleanup.suppression.*`).
-- Exact package layout trong `core.cleanup` (domain/application/persistence/projection/exception per CONVENTIONS §2).
+- Exact package layout trong `core.cleanup` (domain/usecases/persistence/projection/exception per CONVENTIONS §2).
 - Reaper batch class placement (likely `backend/worker/src/main/java/com/zeromail/worker/cleanup/ProcessingJobReaperBatch.java`).
 - `processing_job` payload schema cho `UNSUBSCRIBE_CAMPAIGN` (`{"campaignId":"uuid"}`).
 - Throttle bucket key format chính xác (đề xuất trong section 5 dưới đây).
@@ -107,15 +107,15 @@ Phase 8 là phase phức tạp về **multi-protocol HTTP / mail boundary + asyn
 | Capability | Primary Tier | Secondary Tier | Rationale |
 |------------|--------------|-----------------|-----------|
 | List-Unsubscribe header parsing | `backend/core` (`core.gmail.usecases.GmailPreviewReadService`) | `backend/core` (persistence layer Phase 2A) | Giữ Gmail header parsing chỉ ở 1 chỗ; tránh duplicate parser. |
-| Candidate query (top sender + filter suppressed) | `backend/core` (`core.cleanup.application.CandidateQueryService`) | — | Read-side projection, `@Transactional(readOnly=true)` JdbcTemplate giống `AnalyticsSummaryQueryService`. |
+| Candidate query (top sender + filter suppressed) | `backend/core` (`core.cleanup.usecases.CandidateQueryService`) | — | Read-side projection, `@Transactional(readOnly=true)` JdbcTemplate giống `AnalyticsSummaryQueryService`. |
 | Campaign preview validation (25/2000 cap) | `backend/api` (controller validates cap) → `backend/core` (CandidateQueryService re-uses) | — | Cap check là HTTP contract → controller layer; CONVENTIONS §1 (thin controllers nhưng được phép validate input). |
-| Campaign execute (transaction INSERT campaign + attempts + job row) | `backend/core` (`core.cleanup.application.CampaignExecuteService` `@Transactional`) | — | Multi-row commit là service-owned transaction (CONVENTIONS §1). |
+| Campaign execute (transaction INSERT campaign + attempts + job row) | `backend/core` (`core.cleanup.usecases.CampaignExecuteService` `@Transactional`) | — | Multi-row commit là service-owned transaction (CONVENTIONS §1). |
 | Worker job dispatch loop | `backend/worker` (`worker.cleanup.ProcessingJobWorker`) | `backend/core` (handler injection) | Worker process; `SKIP LOCKED` chạy trên worker JVM. |
-| HTTP POST RFC 8058 | `backend/core` (`core.cleanup.application.UnsubscribeHttpClient`) | — | Class duy nhất trong cleanup được phép tạo RestClient. |
-| Mailto send-as-self | `backend/core` (`core.cleanup.application.UnsubscribeMailtoSender`) | — | Sibling boundary class cùng cấp `TriageGmailWriter`. |
+| HTTP POST RFC 8058 | `backend/core` (`core.cleanup.usecases.UnsubscribeHttpClient`) | — | Class duy nhất trong cleanup được phép tạo RestClient. |
+| Mailto send-as-self | `backend/core` (`core.cleanup.usecases.UnsubscribeMailtoSender`) | — | Sibling boundary class cùng cấp `TriageGmailWriter`. |
 | Gmail label apply + archive (post-unsubscribe step) | `backend/core` (reuse `TriageGmailWriter.applyLabel` + `archiveSkipInbox`) | — | KHÔNG duplicate Gmail write code — reuse Phase 4 boundary class. |
 | Per-sender state polling | `backend/api` GET endpoint → `apps/web` TanStack Query | `apps/web` (TanStack `refetchInterval`) | Frontend owns polling cadence; backend trả snapshot. |
-| Undo (restore INBOX) | `backend/core` (`core.cleanup.application.CampaignUndoService`) → reuse `TriageGmailWriter.restoreToInbox` + `removeLabel` | — | Cùng pattern `TriageUndoService` Phase 4. |
+| Undo (restore INBOX) | `backend/core` (`core.cleanup.usecases.CampaignUndoService`) → reuse `TriageGmailWriter.restoreToInbox` + `removeLabel` | — | Cùng pattern `TriageUndoService` Phase 4. |
 | Domain throttle bucket | `backend/worker` (Redis client) | `backend/core` (key format constants) | Throttle là worker-side gating; key format có thể chia sẻ trong core. |
 
 ---
@@ -772,7 +772,7 @@ class GmailWriteBoundaryTest {
 
     private static final List<String> ALLOWED_GMAIL_WRITE_CLASSES = List.of(
         "com.zeromail.core.triage.usecases.TriageGmailWriter",
-        "com.zeromail.core.cleanup.application.UnsubscribeMailtoSender"
+        "com.zeromail.core.cleanup.usecases.UnsubscribeMailtoSender"
     );
 
     @ArchTest
@@ -846,7 +846,7 @@ databaseChangeLog:
         Per-tenant suppression list: senders or domains that bulk-unsubscribe campaigns must skip.
         Either sender_email or sender_domain (not both), enforced by CHECK. reason='manual' (user
         added) or 'replied' (auto-added when user replied >=1 time within 90d window — heuristic
-        in core.cleanup.application.SuppressionAutoAddService).
+        in core.cleanup.usecases.SuppressionAutoAddService).
       changes:
         - createTable:
             tableName: sender_suppression

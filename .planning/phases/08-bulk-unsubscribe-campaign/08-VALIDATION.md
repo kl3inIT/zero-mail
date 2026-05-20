@@ -68,9 +68,9 @@ created: 2026-05-17
 All test files referenced are **NEW** unless explicitly marked as a rename. Wave 0 (test scaffolding before Wave 1 implementation):
 
 **Backend (12 new files + 1 rename):**
-- [ ] `backend/core/src/test/java/com/zeromail/core/cleanup/application/CandidateQueryServiceTest.java` — stubs for UNS-01
-- [ ] `backend/core/src/test/java/com/zeromail/core/cleanup/application/SuppressionServiceTest.java` — UNS-02
-- [ ] `backend/core/src/test/java/com/zeromail/core/cleanup/application/CampaignUndoServiceTest.java` — UNS-07a
+- [ ] `backend/core/src/test/java/com/zeromail/core/cleanup/usecases/CandidateQueryServiceTest.java` — stubs for UNS-01
+- [ ] `backend/core/src/test/java/com/zeromail/core/cleanup/usecases/SuppressionServiceTest.java` — UNS-02
+- [ ] `backend/core/src/test/java/com/zeromail/core/cleanup/usecases/CampaignUndoServiceTest.java` — UNS-07a
 - [ ] `backend/api/src/test/java/com/zeromail/api/controllers/cleanup/UnsubscribeCampaignControllerTest.java` — UNS-03a/b, UNS-06, UNS-07b
 - [ ] `backend/api/src/test/java/com/zeromail/api/controllers/cleanup/CampaignStatusControllerTest.java` — UNS-05 (backend half)
 - [ ] `backend/core/src/test/java/com/zeromail/core/cleanup/http/UnsubscribeHttpClientTest.java` — UNS-04c, UNS-08c (WireMock)

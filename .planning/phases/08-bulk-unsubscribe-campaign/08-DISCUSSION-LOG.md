@@ -64,7 +64,7 @@
 
 | Option | Description | Selected |
 |--------|-------------|----------|
-| New isolated class + narrow ArchUnit allow (Recommended) | `UnsubscribeMailtoSender` trong `core.cleanup.application` với `@TriageGmailWriteAllowed`; ArchUnit allow Gmail send chỉ class này + `TriageGmailWriter` | ✓ |
+| New isolated class + narrow ArchUnit allow (Recommended) | `UnsubscribeMailtoSender` trong `core.cleanup.usecases` với `@TriageGmailWriteAllowed`; ArchUnit allow Gmail send chỉ class này + `TriageGmailWriter` | ✓ |
 | Extend `TriageGmailWriter` method | 1 boundary class duy nhất nhưng vi phạm SRP (triage + cleanup trộn lẫn) | |
 | Layered: low-level `GmailSendClient` + high-level guard | 2 class, enforce input validation ở high-level; robust nhưng over-engineer cho 1 use case | |
 
@@ -160,8 +160,8 @@
 ## Claude's Discretion
 
 - **Throttle bucket implementation:** Default Redis (CLAUDE.md "Redis cho rate-limit"). Key format `throttle:unsubscribe:domain:{domain}:60s` + `:1h` với Redis INCR + EXPIRE. Planner finalize.
-- **Candidate query data source:** Default = method mới trong `core.cleanup.application.CandidateQueryService` (tránh `core.analytics` expose internal). Planner xem có overlap đủ lớn với `AnalyticsSummaryQueryService` không.
-- **Package layout `core.cleanup`:** Standard `domain/application/persistence/projection/exception/` theo CONVENTIONS §2.
+- **Candidate query data source:** Default = method mới trong `core.cleanup.usecases.CandidateQueryService` (tránh `core.analytics` expose internal). Planner xem có overlap đủ lớn với `AnalyticsSummaryQueryService` không.
+- **Package layout `core.cleanup`:** Standard `domain/usecases/persistence/projection/exception/` theo CONVENTIONS §2.
 - **`processing_job` payload schema:** `{"campaignId": "uuid"}` cho `UNSUBSCRIBE_CAMPAIGN`.
 - **Reaper batch placement:** `backend/worker/.../cleanup/ProcessingJobReaperBatch.java` hoặc `worker/scheduling/` — planner chọn.
 - **i18n keys:** Dự kiến `cleanup.unsubscribe.*`, `cleanup.suppression.*` namespace; planner chốt key list chi tiết.
