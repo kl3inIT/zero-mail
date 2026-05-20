@@ -64,7 +64,8 @@ public class CatalogSyncOrchestrator {
         if (provider == LlmProvider.ANTHROPIC) {
             throw new CatalogSyncAnthropicDisabledException();
         }
-        Optional<UUID> redisDebouncedJobId = acquireDebounce(provider);
+        UUID candidateJobId = UUID.randomUUID();
+        Optional<UUID> redisDebouncedJobId = acquireDebounce(provider, candidateJobId);
         if (redisDebouncedJobId.isPresent()) {
             return new CatalogSyncFetchResult(redisDebouncedJobId.get(), "IN_PROGRESS");
         }
@@ -72,24 +73,20 @@ public class CatalogSyncOrchestrator {
                 catalogSyncJobRepository.findActiveJobWithin(
                         provider, clock.instant().minus(DEBOUNCE_TTL));
         if (recentJobId.isPresent()) {
+            releaseDebounce(provider);
             return new CatalogSyncFetchResult(recentJobId.get(), "IN_PROGRESS");
         }
-        UUID jobId = UUID.randomUUID();
-        catalogSyncJobRepository.insertFetchJob(jobId, provider, adminUser.id());
+        catalogSyncJobRepository.insertFetchJob(candidateJobId, provider, adminUser.id());
         adminAuditWriter.append(
                 AdminAuditAction.CATALOG_SYNC_FETCH_STARTED,
                 "processing_job",
-                jobId,
+                candidateJobId,
                 null,
-                "{\"provider\":\"" + provider.id() + "\",\"job_id\":\"" + jobId + "\"}",
+                "{\"provider\":\"" + provider.id() + "\",\"job_id\":\"" + candidateJobId + "\"}",
                 "Catalog sync fetch started",
                 requestIp,
                 requestId);
-        redisTemplate.ifPresent(
-                template ->
-                        template.opsForValue()
-                                .set(debounceKey(provider), jobId.toString(), DEBOUNCE_TTL));
-        return new CatalogSyncFetchResult(jobId, "IN_PROGRESS");
+        return new CatalogSyncFetchResult(candidateJobId, "IN_PROGRESS");
     }
 
     @Transactional(readOnly = true)
@@ -199,15 +196,17 @@ public class CatalogSyncOrchestrator {
         releaseDebounce(catalogSyncJob.provider());
     }
 
-    private Optional<UUID> acquireDebounce(LlmProvider provider) {
+    private Optional<UUID> acquireDebounce(LlmProvider provider, UUID candidateJobId) {
         if (redisTemplate.isEmpty()) {
             return Optional.empty();
         }
         String key = debounceKey(provider);
-        String jobId = UUID.randomUUID().toString();
-        Boolean acquired = redisTemplate.get().opsForValue().setIfAbsent(key, jobId, DEBOUNCE_TTL);
+        Boolean acquired =
+                redisTemplate
+                        .get()
+                        .opsForValue()
+                        .setIfAbsent(key, candidateJobId.toString(), DEBOUNCE_TTL);
         if (Boolean.TRUE.equals(acquired)) {
-            redisTemplate.get().delete(key);
             return Optional.empty();
         }
         String existingJobId = redisTemplate.get().opsForValue().get(key);
