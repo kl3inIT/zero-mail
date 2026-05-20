@@ -8,6 +8,7 @@ import com.google.api.services.gmail.model.Message;
 import com.zeromail.core.config.ZeroMailCoreProperties;
 import com.zeromail.core.triage.domain.ReplyHeaders;
 import com.zeromail.core.triage.usecases.ReplyMimeBuilder;
+import java.net.URI;
 import org.junit.jupiter.api.Test;
 
 class E2eStubGmailApiClientFactoryTest {
@@ -57,6 +58,11 @@ class E2eStubGmailApiClientFactoryTest {
         return new ZeroMailCoreProperties(
                 new ZeroMailCoreProperties.CryptoProperties(
                         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="),
+                // GmailApiClientFactory dereferences properties.gmail().apiRootUrl() in its
+                // constructor — passing null here NPEs before the test body runs.
+                new ZeroMailCoreProperties.GmailProperties(
+                        "https://gmail.googleapis.com/",
+                        URI.create("https://oauth2.googleapis.com/token")),
                 null,
                 null,
                 null);

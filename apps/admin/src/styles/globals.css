@@ -1,0 +1,113 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-green: var(--green);
+  --color-green-soft: var(--green-soft);
+  --color-blue: var(--blue);
+  --color-blue-soft: var(--blue-soft);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+}
+
+:root {
+  --background: #f9f8fd;
+  --foreground: #3d385a;
+  --card: #ffffff;
+  --card-foreground: #3d385a;
+  --popover: #ffffff;
+  --popover-foreground: #3d385a;
+  --primary: #867aeb;
+  --primary-hover: #7062df;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f2f9;
+  --secondary-foreground: #3d385a;
+  --muted: #f4f2f9;
+  --muted-foreground: #625c78;
+  --accent: #867aeb;
+  --accent-hover: #7062df;
+  --accent-foreground: #ffffff;
+  --destructive: #b0413e;
+  --destructive-soft: #f5d7d2;
+  --border: #e6e3d8;
+  --input: #e6e3d8;
+  --ring: #867aeb;
+  --warning: #e3a023;
+  --warning-soft: #fde8ba;
+  --amber: #e3a023;
+  --amber-soft: #fde8ba;
+  --green: #2f7d5c;
+  --green-soft: #d8ead8;
+  --blue: #2c5ba8;
+  --blue-soft: #d7e1f1;
+  --violet: #5e4b8b;
+  --violet-soft: #e0dbec;
+  --ink: #3d385a;
+  --ink-2: #4f496b;
+  --radius: 7px;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    background: var(--background);
+    color: var(--foreground);
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    min-width: 1024px;
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

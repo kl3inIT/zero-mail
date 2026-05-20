@@ -93,7 +93,7 @@ async function installOnboardingApiMock(
     const request = route.request();
     const url = new URL(request.url());
 
-    if (url.pathname === '/me') {
+    if (url.pathname === '/api/me') {
       await fulfillJson(route, {
         userId: 'user-1',
         tenantId: 'tenant-1',
@@ -110,7 +110,7 @@ async function installOnboardingApiMock(
       return;
     }
 
-    if (url.pathname === '/gmail/connection/status' && request.method() === 'GET') {
+    if (url.pathname === '/api/gmail/connection/status' && request.method() === 'GET') {
       await fulfillJson(route, { connectionStatus: 'CONNECTED' });
       return;
     }

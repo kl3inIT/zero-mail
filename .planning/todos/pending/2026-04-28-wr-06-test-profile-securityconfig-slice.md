@@ -6,6 +6,7 @@ source:
   phase: 01.5
   finding: WR-06 (REVIEW.md)
   status: deferred_in_review_fix
+resolves_phase: 8
 files:
   - backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java
   - backend/api/src/test/java/com/zeromail/api/ApiPostgresTestBase.java

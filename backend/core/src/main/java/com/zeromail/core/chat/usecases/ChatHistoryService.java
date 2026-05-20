@@ -1,33 +1,36 @@
 package com.zeromail.core.chat.usecases;
 
 import com.zeromail.core.chat.exception.ChatNotFoundException;
+import com.zeromail.core.chat.persistence.lowlevel.ChatHistoryRepository;
 import com.zeromail.core.chat.projection.ChatHistoryDetail;
 import com.zeromail.core.chat.projection.ChatHistoryProjection;
 import com.zeromail.core.chat.projection.ChatHistoryProjector;
 import com.zeromail.core.tenant.TenantContext;
-import java.sql.Timestamp;
-import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@SuppressWarnings("SqlResolve")
 public class ChatHistoryService {
 
     private final ChatHistoryProjector chatHistoryProjector;
     private final ZeroMailChatProperties chatProperties;
-    private final JdbcTemplate jdbcTemplate;
+    private final ChatHistoryRepository chatHistoryRepository;
 
     public ChatHistoryService(
             ChatHistoryProjector chatHistoryProjector,
             ZeroMailChatProperties chatProperties,
-            JdbcTemplate jdbcTemplate) {
-        this.chatHistoryProjector = chatHistoryProjector;
-        this.chatProperties = chatProperties;
-        this.jdbcTemplate = jdbcTemplate;
+            ChatHistoryRepository chatHistoryRepository) {
+        this.chatHistoryProjector =
+                Objects.requireNonNull(
+                        chatHistoryProjector, "chatHistoryProjector must not be null");
+        this.chatProperties =
+                Objects.requireNonNull(chatProperties, "chatProperties must not be null");
+        this.chatHistoryRepository =
+                Objects.requireNonNull(
+                        chatHistoryRepository, "chatHistoryRepository must not be null");
     }
 
     @Transactional(readOnly = true)
@@ -52,37 +55,14 @@ public class ChatHistoryService {
     @Transactional
     public void softDelete(UUID chatId) {
         UUID tenantId = TenantContext.currentTenantUuid();
-        int updatedRows =
-                jdbcTemplate.update(
-                        """
-                        UPDATE chat
-                        SET soft_deleted_at = ?, updated_at = ?
-                        WHERE id = ? AND tenant_id = ? AND soft_deleted_at IS NULL
-                        """,
-                        Timestamp.from(Instant.now()),
-                        Timestamp.from(Instant.now()),
-                        chatId,
-                        tenantId);
+        int updatedRows = chatHistoryRepository.softDeleteChat(tenantId, chatId);
         if (updatedRows == 1) {
             return;
         }
         // updatedRows == 0: either the chat does not exist for this tenant, or it is already
         // soft-deleted. Distinguish the two cases so a retry on a transient network failure
         // does not surface as 404 -- soft delete is idempotent by definition (WR-06).
-        Boolean chatExists =
-                jdbcTemplate.queryForObject(
-                        """
-                        SELECT EXISTS (
-                            SELECT 1
-                              FROM chat
-                             WHERE id = ?
-                               AND tenant_id = ?
-                        )
-                        """,
-                        Boolean.class,
-                        chatId,
-                        tenantId);
-        if (!Boolean.TRUE.equals(chatExists)) {
+        if (!chatHistoryRepository.chatExists(tenantId, chatId)) {
             throw new ChatNotFoundException(chatId);
         }
         // Chat exists but was already soft-deleted; treat as idempotent success (204 No Content).

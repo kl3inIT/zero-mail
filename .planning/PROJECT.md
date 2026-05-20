@@ -16,22 +16,28 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Trust posture:** Auto-send architecturally blocked (ArchUnit + safety policy + repo-wide grep enforced; v1.1 Phase 7 flipped Gmail send call sites 0 → exactly 1 via `AssistantSendExecutor`); no long-term storage of raw email bodies, email-content LLM prompts/completions, or embeddings (rule-builder assistant chat excluded — see Privacy scope); per-tenant Scoped Values + multi-tenant leak test green; @Sensitive Logback scrub end-to-end verified; chat_message body-ban enforced 3-layer (sanitizer + ArchUnit + Postgres trigger).
 - **Launch state:** OAuth Testing mode (production CASA verification deferred to dormant SEED-012). v1.1 chat surface ships **without** hostile-corpus eval gate (deferred to v1.2 hardening); v1.0 LAUNCH-GO-NOGO still applies; v1.1 GA tag annotated with deferred-eval caveat.
 
-## Next Milestone: v1.2 — Admin console + Settings + Visual refresh + GA discipline
+## Current Milestone: v1.2 — Admin Console Foundation + Settings UI (Slice 2 capability)
 
-**Goal:** Build admin console as foundation, then ship Settings UI on top of admin-curated catalog. Bundle user-page visual refresh aligned with PR #40 palette, plus deferred Phase 8 hardening + hostile-corpus eval + GA discipline. Tag v1.2 GA on successful hardening sweep.
+**Goal:** Ship admin console as the foundation (Phase 8), then ship the user Settings UI on top of the admin-curated catalog (Phase 9). No GA tag this milestone — visual refresh, hostile-corpus eval, Grafana, CASA refresh, LAUNCH-GO-NOGO, and the formal GA tag are explicitly deferred to v1.3+.
 
-**Planned scope (formalize via `/gsd-new-milestone`):**
+**Target features:**
 
-1. **Admin console foundation** — auth/role + `/admin/*` route + RBAC + catalog persistence + admin UI to curate provider/model catalog + admin master key management. Activates **SEED-011** (admin-support-and-compliance-console) and **OPS-02** (deferred from v1.1).
-2. **Visual refresh of user pages** — audit Phase 7 chat UI, Settings, Triage, Rules, Analytics; align with PR #40 brand palette (teal → purple); fix hardcoded color/visual hierarchy regressions.
-3. **Settings page (full)** — 4 tabs (Personalization, Behavior, Safety Net, AI Provider/Model) via shadcn `<Tabs>` query-param-driven; carries forward 19 v1.1 reqs (SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04, SET-AI-01..04). AI tab depends on admin-curated catalog from #1.
-4. **Hardening + GA discipline** — hostile-corpus `aiEval` suite (15 hostile emails + 10 hostile personal_instructions + VIP send refusal + VI/EN fidelity); Grafana dashboards (lease residuals, audit-vs-state mismatch, ordering violations, leak counters, BUDGET_EXHAUSTED rate); CASA evidence refresh for chat surface; README/CONTRIBUTING send-call-site discipline doc; LAUNCH-GO-NOGO checklist; **v1.2 GA tag**.
+1. **Admin foundation (Phase 8)** — `/admin/*` routes + `ROLE_ADMIN` RBAC + admin action audit logs + per-provider/per-feature LLM catalog curation UI with Sync-from-`/models` flow + AES-GCM-encrypted master key management for OpenAI/Anthropic/Google/DeepSeek + test-connection + tenant read-only views + worker queue health (read-only) + promoted global LLM spend dashboard. Activates **SEED-011** (admin-support-and-compliance-console) and **OPS-02** (deferred from v1.1).
+2. **Settings UI on curated catalog (Phase 9)** — 4 tabs (Personalization, Behavior, Safety Net, AI Provider/Model) via shadcn `<Tabs>` query-param-driven; carries forward the 19 deferred v1.1 reqs (SET-AI-01..04, SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04). AI Provider/Model tab depends on the admin-curated catalog from Phase 8.
 
 **Seeds activating in v1.2:**
 
-- `SEED-011` — admin-support-and-compliance-console (promoted to v1.2 Phase 1)
+- `SEED-011` — admin-support-and-compliance-console (promoted to v1.2 Phase 8)
 
-**Still deferred to v1.3+:** provider expansion (Bedrock/Azure/Groq/Perplexity/native OpenRouter/OpenAI-compatible/Vertex), waitlist OAuth provisioning, learned patterns, multi-rule selection, browser extension sync, image attachments in chat, CASA production verification (SEED-012).
+**Explicitly deferred to v1.3+:**
+
+- Visual refresh of user pages (purple brand palette alignment from PR #40)
+- Hostile-corpus `aiEval` suite (15 hostile emails + 10 hostile personal_instructions + VIP send refusal + VI/EN fidelity)
+- Grafana ops dashboards (lease residuals, audit-vs-state mismatch, ordering violations, leak counters, BUDGET_EXHAUSTED rate)
+- CASA evidence refresh for chat surface
+- LAUNCH-GO-NOGO checklist
+- Formal **v1.2 GA tag**
+- Provider expansion (Bedrock/Azure/Groq/Perplexity/native OpenRouter/OpenAI-compatible/Vertex), waitlist OAuth provisioning, learned patterns, multi-rule selection, browser extension sync, image attachments in chat, CASA production verification (SEED-012).
 
 ## Core Value
 
@@ -112,7 +118,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 <!-- Next milestone scope. Define via `/gsd:new-milestone`. -->
 
-**v1.1 in progress** (started 2026-05-17). Scope: Email assistant chat + Settings page (see "Current Milestone" section above). Requirements: `.planning/REQUIREMENTS.md`. Roadmap: `.planning/ROADMAP.md`.
+**v1.2 in progress** (started 2026-05-19). Scope: Admin console foundation + Settings UI on curated catalog (see "Current Milestone" section above). Requirements: `.planning/REQUIREMENTS.md`. Roadmap: `.planning/ROADMAP.md`.
 
 *Deferred from v1.1 candidate list:* CASA production verification (SEED-012), live Resend deliverability + payment-provider smoke tests, Outlook/Microsoft 365, Auto-send opt-in for narrow rules with per-rule approval flow, bulk unsubscribe, cold-email blocker, reply-tracker, attachment auto-filing, team/seat plans, waitlist OAuth provisioning.
 
@@ -204,4 +210,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-17 — v1.1 milestone started (Email assistant chat + Settings page)*
+*Last updated: 2026-05-19 — v1.2 milestone started (Admin Console Foundation + Settings UI)*

@@ -1,0 +1,277 @@
+# Owner: 8D (per docs/ops/admin-shared-file-ownership.md)
+databaseChangeLog:
+  - changeSet:
+      id: 068-01-catalog-tables-prep
+      author: zeromail
+      comment: >
+        Curated provider/model catalog plus the baseline processing_job queue used by catalog
+        Sync. 8E owns queue-health extensions, but 8D needs the queue table for Fetch/Diff.
+      changes:
+        - createTable:
+            tableName: provider_catalog
+            columns:
+              - column:
+                  name: provider
+                  type: varchar(32)
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_provider_catalog
+                    nullable: false
+              - column:
+                  name: enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: catalog_version
+                  type: bigint
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_synced_at
+                  type: timestamptz
+        - createTable:
+            tableName: model_catalog
+            columns:
+              - column:
+                  name: model_id
+                  type: varchar(128)
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_model_catalog
+                    nullable: false
+              - column:
+                  name: provider
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: display_name
+                  type: varchar(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: cost_per_1k_input
+                  type: numeric(10,6)
+              - column:
+                  name: cost_per_1k_output
+                  type: numeric(10,6)
+              - column:
+                  name: deprecated_at
+                  type: timestamptz
+              - column:
+                  name: is_recommended
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: feature_binding
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_feature_binding
+                    nullable: false
+              - column:
+                  name: model_id
+                  type: varchar(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: feature
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: processing_job
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_processing_job
+                    nullable: false
+              - column:
+                  name: job_type
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(32)
+                  defaultValue: PENDING
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payload_json
+                  type: jsonb
+                  defaultValueComputed: "'{}'::jsonb"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: attempts
+                  type: integer
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: locked_at
+                  type: timestamptz
+              - column:
+                  name: locked_until
+                  type: timestamptz
+              - column:
+                  name: last_failed_at
+                  type: timestamptz
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: completed_at
+                  type: timestamptz
+        - addColumn:
+            tableName: assistant_settings
+            columns:
+              - column:
+                  name: chat_model_id
+                  type: varchar(128)
+              - column:
+                  name: triage_model_id
+                  type: varchar(128)
+              - column:
+                  name: draft_model_id
+                  type: varchar(128)
+        - addForeignKeyConstraint:
+            baseTableName: model_catalog
+            baseColumnNames: provider
+            referencedTableName: provider_catalog
+            referencedColumnNames: provider
+            constraintName: fk_model_catalog_provider
+            onDelete: RESTRICT
+        - addForeignKeyConstraint:
+            baseTableName: feature_binding
+            baseColumnNames: model_id
+            referencedTableName: model_catalog
+            referencedColumnNames: model_id
+            constraintName: fk_feature_binding_model
+            onDelete: CASCADE
+        - addUniqueConstraint:
+            tableName: model_catalog
+            columnNames: provider, model_id
+            constraintName: ux_model_catalog_provider_model
+        - addUniqueConstraint:
+            tableName: feature_binding
+            columnNames: model_id, feature
+            constraintName: ux_feature_binding_model_feature
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE provider_catalog
+                ADD CONSTRAINT ck_provider_catalog_provider
+                CHECK (provider IN ('OPENAI','ANTHROPIC','GOOGLE','DEEPSEEK','OPENROUTER','ROUTER_9R'));
+
+              ALTER TABLE provider_catalog
+                ADD CONSTRAINT ck_provider_catalog_version
+                CHECK (catalog_version >= 1);
+
+              ALTER TABLE model_catalog
+                ADD CONSTRAINT ck_model_catalog_model_id_format
+                CHECK (model_id ~ '^[a-zA-Z0-9._:/\-]{1,128}$');
+
+              ALTER TABLE feature_binding
+                ADD CONSTRAINT ck_feature_binding_feature
+                CHECK (feature IN ('CHAT','TRIAGE','DRAFT'));
+
+              ALTER TABLE processing_job
+                ADD CONSTRAINT ck_processing_job_status
+                CHECK (status IN ('PENDING','PROCESSING','COMPLETED','FAILED','DEAD_LETTER'));
+
+              CREATE INDEX idx_model_catalog_provider_active
+                ON model_catalog (provider, model_id)
+                WHERE deprecated_at IS NULL;
+
+              CREATE INDEX idx_feature_binding_feature_enabled
+                ON feature_binding (feature, enabled);
+
+              CREATE INDEX idx_processing_job_claim
+                ON processing_job (job_type, status, locked_until, created_at);
+
+              UPDATE assistant_settings
+              SET chat_model_id = NULL
+              WHERE chat_model_id IS NOT NULL
+                AND chat_model_id NOT IN (SELECT model_id FROM model_catalog);
+
+              UPDATE assistant_settings
+              SET triage_model_id = NULL
+              WHERE triage_model_id IS NOT NULL
+                AND triage_model_id NOT IN (SELECT model_id FROM model_catalog);
+
+              UPDATE assistant_settings
+              SET draft_model_id = NULL
+              WHERE draft_model_id IS NOT NULL
+                AND draft_model_id NOT IN (SELECT model_id FROM model_catalog);
+      rollback:
+        - dropColumn:
+            tableName: assistant_settings
+            columns:
+              - column:
+                  name: chat_model_id
+              - column:
+                  name: triage_model_id
+              - column:
+                  name: draft_model_id
+        - dropTable:
+            tableName: processing_job
+        - dropTable:
+            tableName: feature_binding
+        - dropTable:
+            tableName: model_catalog
+        - dropTable:
+            tableName: provider_catalog

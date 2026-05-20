@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.NonNull;
@@ -19,16 +20,38 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 public record ZeroMailCoreProperties(
         @Valid @NotNull CryptoProperties crypto,
-        @Valid GmailProperties gmail,
+        @Valid @DefaultValue GmailProperties gmail,
         @Valid @NotNull BillingProperties billing,
-        @Valid LlmProperties llm) {
-
-    public ZeroMailCoreProperties {
-        gmail = gmail == null ? GmailProperties.defaults() : gmail;
-        llm = llm == null ? LlmProperties.defaults() : llm;
-    }
+        @Valid @DefaultValue LlmProperties llm,
+        @Valid @DefaultValue AdminProperties admin) {
 
     public record CryptoProperties(@NotBlank String refreshTokenKeyBase64) {}
+
+    public record AdminProperties(
+            List<String> bootstrapEmails,
+            @Valid @DefaultValue AdminAuditProperties audit,
+            @Valid @DefaultValue AdminSpendProperties spend) {
+
+        public AdminProperties {
+            bootstrapEmails = bootstrapEmails == null ? List.of() : List.copyOf(bootstrapEmails);
+        }
+    }
+
+    public record AdminAuditProperties(@DefaultValue("") String hmacKekBase64) {}
+
+    /**
+     * Spend-dashboard tunables per Phase 8F reviews-pass addenda.
+     *
+     * @param kAnonymityThreshold (R-8F-H6) minimum bucket size before exact per-tenant figures are
+     *     exposed; smaller buckets collapse into a rollup row. {@code @Min(1)} is enforced by
+     *     {@code @Validated} at bind time — no silent recovery.
+     * @param rowLevelClassificationSince (R-8F-H9) boundary date for the credential_source
+     *     row-level classification rollout; rows with {@code created_at} before this date are
+     *     classified as UNKNOWN. The UI surfaces this date in the 90-day range picker label.
+     */
+    public record AdminSpendProperties(
+            @Min(1) @DefaultValue("5") int kAnonymityThreshold,
+            @NotNull @DefaultValue("2026-05-20") LocalDate rowLevelClassificationSince) {}
 
     public record GmailProperties(
             @DefaultValue("https://gmail.googleapis.com/") @NotBlank String apiRootUrl,
@@ -173,6 +196,20 @@ public record ZeroMailCoreProperties(
                 + gmail
                 + ", billing="
                 + billing
-                + ", llm=****]";
+                + ", llm=****"
+                + ", admin="
+                + adminForLog()
+                + "]";
+    }
+
+    private String adminForLog() {
+        if (admin == null) {
+            return "null";
+        }
+        return "AdminProperties[bootstrapEmails="
+                + admin.bootstrapEmails().size()
+                + " entries, audit.hmacKekBase64=****, spend="
+                + admin.spend()
+                + "]";
     }
 }

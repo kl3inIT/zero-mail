@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * [BLOCKING] Wave 0 schema-push proof for Phase 1.1: boots Spring against the shared Postgres 17
+ * [BLOCKING] Wave 0 schema-push proof for Phase 1.1: boots Spring against the shared Postgres 18
  * Testcontainer (so Liquibase auto-applies every changeset including 006-), then asserts via {@code
  * information_schema} that the new {@code users.preferred_language} column has the exact shape
  * locked by CONTEXT.md decision D-B2:

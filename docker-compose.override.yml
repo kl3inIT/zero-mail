@@ -1,0 +1,20 @@
+# Dev-only override: publish Postgres + Redis to host loopback so JVMs
+# launched from IntelliJ (ZeroMailApi, ZeroMailWorker, tests) can connect.
+# Production compose stays internal-only (zeromail-internal network).
+#
+# Bound to 127.0.0.1 — never the wildcard interface — so the services are
+# not exposed to LAN/WAN even on shared dev machines.
+#
+# docker compose auto-merges this file when it sits next to docker-compose.yml.
+# To run without the override (e.g. integration tests using Testcontainers):
+#   docker compose -f docker-compose.yml up -d postgres redis
+
+services:
+  postgres:
+    # Dev convention (.env.local): JVM connects on host port 15432
+    # so it does not collide with any host Postgres instance on 5432.
+    ports:
+      - "127.0.0.1:15432:5432"
+  redis:
+    ports:
+      - "127.0.0.1:6379:6379"

@@ -88,6 +88,7 @@ class RestClientConfigTest {
                                 Duration.ofSeconds(5),
                                 Duration.ofSeconds(30)),
                         new ZeroMailLlmByokProperties(
-                                false, List.of(), Duration.ofSeconds(5), Duration.ofSeconds(15))));
+                                false, List.of(), Duration.ofSeconds(5), Duration.ofSeconds(15))),
+                null);
     }
 }

@@ -12,7 +12,7 @@ async function mockSettingsApis(page: Page) {
     const request = route.request();
     const url = new URL(request.url());
 
-    if (url.pathname === '/me') {
+    if (url.pathname === '/api/me') {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -33,7 +33,7 @@ async function mockSettingsApis(page: Page) {
       return;
     }
 
-    if (url.pathname === '/gmail/connection/status') {
+    if (url.pathname === '/api/gmail/connection/status') {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
