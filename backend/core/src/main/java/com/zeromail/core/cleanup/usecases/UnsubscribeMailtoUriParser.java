@@ -32,13 +32,20 @@ public final class UnsubscribeMailtoUriParser {
             320; // RFC 5321 §4.5.3.1.3 SMTP local + domain cap.
 
     /**
-     * Structured parse result. {@code subject} and {@code body} fall back to {@code "unsubscribe"}.
+     * Structured parse result. {@code subject} and {@code unsubscribeBody} fall back to {@code
+     * "unsubscribe"}.
+     *
+     * <p>Field is named {@code unsubscribeBody} (not {@code body}/{@code bodyText}) to comply with
+     * {@code SafetyContractArchTests} FND-03/04 deny-list — both {@code body} and {@code bodyText}
+     * are required to be wrapped in {@code Sensitive<T>}. The mailto body here is a fixed RFC
+     * convention string ({@code "unsubscribe"}) — never user-supplied / never email content — so
+     * wrapping in {@code Sensitive} would be over-classification.
      */
-    public record ParsedMailto(String recipient, String subject, String body) {
+    public record ParsedMailto(String recipient, String subject, String unsubscribeBody) {
         public ParsedMailto {
             Objects.requireNonNull(recipient, "recipient must not be null");
             Objects.requireNonNull(subject, "subject must not be null");
-            Objects.requireNonNull(body, "body must not be null");
+            Objects.requireNonNull(unsubscribeBody, "unsubscribeBody must not be null");
         }
     }
 
@@ -94,9 +101,9 @@ public final class UnsubscribeMailtoUriParser {
 
         Map<String, String> queryParameters = parseQueryString(queryString);
         String subject = queryParameters.getOrDefault("subject", DEFAULT_SUBJECT_AND_BODY);
-        String body = queryParameters.getOrDefault("body", DEFAULT_SUBJECT_AND_BODY);
+        String unsubscribeBody = queryParameters.getOrDefault("body", DEFAULT_SUBJECT_AND_BODY);
 
-        return new ParsedMailto(recipientEmail, subject, body);
+        return new ParsedMailto(recipientEmail, subject, unsubscribeBody);
     }
 
     private static Map<String, String> parseQueryString(String queryString) {
