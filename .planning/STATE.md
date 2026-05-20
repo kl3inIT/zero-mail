@@ -4,13 +4,13 @@ milestone: v1.2
 milestone_name: Admin Console Foundation + Settings UI
 status: executing
 stopped_at: Completed 08-8D-PLAN.md
-last_updated: "2026-05-20T13:49:37+07:00"
+last_updated: "2026-05-20T08:03:08.526Z"
 last_activity: 2026-05-20
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 ## Current Position
 
 Phase: 08 (admin-console-operator-tooling) — EXECUTING
-Plan: 5 of 6 (8D complete; 8E/8F remaining in Wave 2)
+Plan: 6 of 6 (8D complete; 8E/8F remaining in Wave 2)
 Status: Ready to execute
 Last activity: 2026-05-20
 
@@ -160,6 +160,7 @@ See `.planning/ROADMAP.md` for full phase details + success criteria, and `.plan
 | Phase 08 P8A | multi-session | 8 tasks | 100+ files |
 | Phase 08 P8C | multi-session | 3 tasks | 71 files |
 | Phase 08 P8D | single-commit | 3 tasks | 71 files |
+| Phase 08 P8E | 00:45:00 | 2 tasks | 36 files |
 
 ## Accumulated Context
 
@@ -348,6 +349,8 @@ Recent decisions affecting current work:
 - [Phase 08 8D]: Any active admin can Confirm a DIFF_READY job (not only the initiator). Audit row records both payload_json.actorId (initiator) and AdminContext.currentOrThrow().id() (confirmer) to avoid UX dead-ends on session expiry.
 - [Phase 08 8D]: Liquibase changesets renamed per 8A R-H10 — 068-catalog-tables-prep (pre-FK NULL backfill of orphan assistant_settings.*_model_id), 068b-catalog-tables-fk (FKs to model_catalog), 069-feature-default-provider-migration (8B BOOLEAN columns -> table + drop), 070-anthropic-catalog-seed (3 Claude models via `<insert>` so rollback removes them).
 - [Phase 08 8D]: SettingsCatalogController is the first user-side controller mirroring admin-curated state; lives under api.controllers.settings.*, gated by @PreAuthorize("isAuthenticated()"), and joins the public GroupedOpenApi group. CuratedCatalogResponse excludes admin-only fields (sync_history, dependents_count); ETag derived from per-provider catalog_version map + SHA-256 of payload, key `catalog:etag:v1`, TTL 30s, 304 on If-None-Match.
+- [Phase ?]: 8E adds admin_requeue_count alongside attempts so manual interventions and worker retries don't conflict
+- [Phase ?]: 8E uses three-layer privacy gate against payload exposure: DTO field-name regex (compile), explicit SELECT lists (review), JDBC Connection JDK-proxy SQL spy (runtime)
 
 ### Roadmap Evolution
 
@@ -492,7 +495,7 @@ Items acknowledged and deferred at v1.1 milestone close on 2026-05-19.
 
 ## Session Continuity
 
-Last session: 2026-05-20T13:49:37+07:00
+Last session: 2026-05-20T08:02:03.809Z
 Stopped at: Completed 08-8D-PLAN.md
 Resume file: None
 

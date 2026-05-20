@@ -60,8 +60,8 @@
 
 ### Worker Queue Health (NEW)
 
-- [ ] **OPS-QUEUE-01**: Admin can view at `/admin/queue` real-time read-only aggregates over existing `outbox` + `processing_job` tables: depth by job type, oldest-unleased age, retry-count distribution, failure rate (last 1h / 24h), dead-letter row count. UI auto-refreshes every 10s
-- [ ] **OPS-QUEUE-02**: Admin can re-queue a dead-letter row from the dead-letter list view (sets state back to PENDING, increments retry counter, writes audit row). Cannot view the row payload (which may contain tenant-scoped context); cannot manually edit row fields
+- [x] **OPS-QUEUE-01**: Admin can view at `/admin/queue` real-time read-only aggregates over existing `outbox` + `processing_job` tables: depth by job type, oldest-unleased age, retry-count distribution, failure rate (last 1h / 24h), dead-letter row count. UI auto-refreshes every 10s
+- [x] **OPS-QUEUE-02**: Admin can re-queue a dead-letter row from the dead-letter list view (sets state back to PENDING, increments retry counter, writes audit row). Cannot view the row payload (which may contain tenant-scoped context); cannot manually edit row fields
 
 ### Global LLM Spend Dashboard (NEW)
 
@@ -226,8 +226,8 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 | OPS-TENANT-03 | Phase 8 | Complete |
 | OPS-TENANT-04 | Phase 8 | Complete |
 | OPS-TENANT-05 | Phase 8 | Complete |
-| OPS-QUEUE-01 | Phase 8 | Pending |
-| OPS-QUEUE-02 | Phase 8 | Pending |
+| OPS-QUEUE-01 | Phase 8 | Complete |
+| OPS-QUEUE-02 | Phase 8 | Complete |
 | OPS-SPEND-01 | Phase 8 | Pending |
 | OPS-SPEND-02 | Phase 8 | Pending |
 | SET-VOICE-01 | Phase 9 | Pending |
