@@ -1,184 +1,164 @@
 package com.zeromail.core.cleanup.usecases;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.zeromail.core.cleanup.domain.SuppressionReason;
+import com.zeromail.core.cleanup.projection.SenderSuppressionProjection;
+import com.zeromail.core.cleanup.usecases.SuppressionCrudService.AddSuppressionCommand;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
-import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * UNS-02 — Suppression list CRUD + auto-add heuristic stub.
- *
- * <p>Future production classes (Wave 2 / Plan 04):
+ * UNS-02 — Suppression list CRUD + auto-add heuristic (Wave 2 / Plan 04, flipped from Wave 0 RED to
+ * GREEN).
  *
  * <ul>
- *   <li>{@code SuppressionCrudService} — manual add/remove of {@code (sender_email | sender_domain,
- *       reason, created_at)}, exactly one of {@code sender_email} / {@code sender_domain} NOT NULL
- *       (CHECK constraint enforced at DB layer).
- *   <li>{@code SuppressionAutoAddService} — heuristic: if user replied to {@code sender_email} ≥1
- *       time in the last 90 days, auto-insert with {@code reason='replied'}.
+ *   <li>{@link SuppressionCrudService} — manual add/remove of {@code (sender_email | sender_domain,
+ *       reason, created_at)}, exactly one of {@code sender_email} / {@code sender_domain} NOT NULL.
+ *   <li>{@link SuppressionAutoAddService} — heuristic: if user replied to {@code sender_email} ≥1
+ *       time in the last 90 days (via SAVE_DRAFT / APPLIED triage audit), auto-insert with {@code
+ *       reason='replied'}.
  * </ul>
- *
- * <p>Wave 0 RED: production classes not present → {@code Class.forName(...)} throws.
  */
 @SuppressWarnings("SqlResolve")
 class SuppressionServiceTest extends PostgresContainerTest {
 
-    private static final String SUPPRESSION_CRUD_SERVICE =
-            "com.zeromail.core.cleanup.usecases.SuppressionCrudService";
-    private static final String SUPPRESSION_AUTO_ADD_SERVICE =
-            "com.zeromail.core.cleanup.usecases.SuppressionAutoAddService";
-
     @Autowired JdbcTemplate jdbcTemplate;
 
-    @Test
-    void future_suppression_service_types_are_present() {
-        assertThatCode(() -> Class.forName(SUPPRESSION_CRUD_SERVICE))
-                .as("Future production type must exist: " + SUPPRESSION_CRUD_SERVICE)
-                .doesNotThrowAnyException();
-        assertThatCode(() -> Class.forName(SUPPRESSION_AUTO_ADD_SERVICE))
-                .as("Future production type must exist: " + SUPPRESSION_AUTO_ADD_SERVICE)
-                .doesNotThrowAnyException();
-    }
+    @Autowired SuppressionCrudService suppressionCrudService;
+
+    @Autowired SuppressionAutoAddService suppressionAutoAddService;
 
     @Test
-    void addSenderEmail_isPersisted() throws Exception {
-        Class.forName(SUPPRESSION_CRUD_SERVICE);
+    void addSenderEmail_isPersisted() {
         UUID tenantId = seedTenant();
-        Object suppressionCrudService = lookupSuppressionCrudBean();
 
-        UUID suppressionId =
-                (UUID)
-                        withTenant(
-                                tenantId,
-                                () ->
-                                        invokeAddSenderEmail(
-                                                suppressionCrudService,
-                                                tenantId,
+        SenderSuppressionProjection projection =
+                withTenant(
+                        tenantId,
+                        () ->
+                                suppressionCrudService.addManual(
+                                        tenantId,
+                                        new AddSuppressionCommand(
                                                 "boss@example.com",
-                                                "manual"));
+                                                null,
+                                                SuppressionReason.MANUAL)));
 
         Long rowCount =
                 jdbcTemplate.queryForObject(
                         "select count(*) from sender_suppression where id = ?",
                         Long.class,
-                        suppressionId);
+                        projection.id());
         assertThat(rowCount).as("row must be persisted").isEqualTo(1L);
+        assertThat(projection.senderEmail()).isEqualTo("boss@example.com");
+        assertThat(projection.senderDomain()).isNull();
+        assertThat(projection.reason()).isEqualTo(SuppressionReason.MANUAL);
     }
 
     @Test
-    void addSenderDomain_isPersisted() throws Exception {
-        Class.forName(SUPPRESSION_CRUD_SERVICE);
+    void addSenderDomain_isPersisted() {
         UUID tenantId = seedTenant();
-        Object suppressionCrudService = lookupSuppressionCrudBean();
 
-        UUID suppressionId =
-                (UUID)
-                        withTenant(
-                                tenantId,
-                                () ->
-                                        invokeAddSenderDomain(
-                                                suppressionCrudService,
-                                                tenantId,
-                                                "blocked.test",
-                                                "manual"));
+        SenderSuppressionProjection projection =
+                withTenant(
+                        tenantId,
+                        () ->
+                                suppressionCrudService.addManual(
+                                        tenantId,
+                                        new AddSuppressionCommand(
+                                                null, "blocked.test", SuppressionReason.MANUAL)));
 
         Long rowCount =
                 jdbcTemplate.queryForObject(
                         "select count(*) from sender_suppression where id = ?",
                         Long.class,
-                        suppressionId);
+                        projection.id());
         assertThat(rowCount).as("row must be persisted").isEqualTo(1L);
+        assertThat(projection.senderEmail()).isNull();
+        assertThat(projection.senderDomain()).isEqualTo("blocked.test");
     }
 
     @Test
-    void add_rejectsBothNull() throws Exception {
-        Class.forName(SUPPRESSION_CRUD_SERVICE);
+    void add_rejectsBothNull() {
         UUID tenantId = seedTenant();
-        Object suppressionCrudService = lookupSuppressionCrudBean();
 
         assertThatThrownBy(
                         () ->
                                 withTenant(
                                         tenantId,
                                         () ->
-                                                invokeAddBoth(
-                                                        suppressionCrudService,
+                                                suppressionCrudService.addManual(
                                                         tenantId,
-                                                        null,
-                                                        null,
-                                                        "manual")))
+                                                        new AddSuppressionCommand(
+                                                                null,
+                                                                null,
+                                                                SuppressionReason.MANUAL))))
                 .as("must reject when both sender_email and sender_domain are null")
-                .isInstanceOf(RuntimeException.class);
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    void add_rejectsBothNonNull() throws Exception {
-        Class.forName(SUPPRESSION_CRUD_SERVICE);
+    void add_rejectsBothNonNull() {
         UUID tenantId = seedTenant();
-        Object suppressionCrudService = lookupSuppressionCrudBean();
 
         assertThatThrownBy(
                         () ->
                                 withTenant(
                                         tenantId,
                                         () ->
-                                                invokeAddBoth(
-                                                        suppressionCrudService,
+                                                suppressionCrudService.addManual(
                                                         tenantId,
-                                                        "boss@example.com",
-                                                        "example.com",
-                                                        "manual")))
-                .as("CHECK constraint must reject when both columns are set")
-                .isInstanceOf(RuntimeException.class);
+                                                        new AddSuppressionCommand(
+                                                                "boss@example.com",
+                                                                "example.com",
+                                                                SuppressionReason.MANUAL))))
+                .as("must reject when both sender_email and sender_domain are set")
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    void remove_byId_softCheckRowAbsent() throws Exception {
-        Class.forName(SUPPRESSION_CRUD_SERVICE);
+    void remove_byId_softCheckRowAbsent() {
         UUID tenantId = seedTenant();
-        Object suppressionCrudService = lookupSuppressionCrudBean();
-
-        UUID suppressionId =
-                (UUID)
-                        withTenant(
-                                tenantId,
-                                () ->
-                                        invokeAddSenderEmail(
-                                                suppressionCrudService,
-                                                tenantId,
+        SenderSuppressionProjection added =
+                withTenant(
+                        tenantId,
+                        () ->
+                                suppressionCrudService.addManual(
+                                        tenantId,
+                                        new AddSuppressionCommand(
                                                 "removable@example.com",
-                                                "manual"));
-        withTenant(
-                tenantId, () -> invokeRemoveById(suppressionCrudService, tenantId, suppressionId));
+                                                null,
+                                                SuppressionReason.MANUAL)));
+
+        TenantContext.runWith(tenantId, () -> suppressionCrudService.remove(tenantId, added.id()));
 
         Long rowCount =
                 jdbcTemplate.queryForObject(
                         "select count(*) from sender_suppression where id = ?",
                         Long.class,
-                        suppressionId);
+                        added.id());
         assertThat(rowCount).as("row must be removed").isZero();
     }
 
     @Test
-    void autoAddAfterUserRepliedOnce_within90d_appearsAsRepliedReason() throws Exception {
-        Class.forName(SUPPRESSION_AUTO_ADD_SERVICE);
+    void autoAddAfterUserRepliedOnce_within90d_appearsAsRepliedReason() {
         UUID tenantId = seedTenant();
         String repliedSenderEmail = "newsletter@replied.test";
-        seedUserReplyAudit(tenantId, repliedSenderEmail, Instant.parse("2026-04-01T00:00:00Z"));
-        Clock fixedClock = Clock.fixed(Instant.parse("2026-05-15T00:00:00Z"), ZoneOffset.UTC);
+        // Seed an APPLIED SAVE_DRAFT row from "30 days ago" so the 90-day window catches it
+        // regardless of test wall-clock.
+        Instant repliedAt = Instant.now().minusSeconds(60L * 60L * 24L * 30L);
+        seedUserReplyAudit(tenantId, repliedSenderEmail, repliedAt);
 
-        Object suppressionAutoAddService = lookupSuppressionAutoAddBean(fixedClock);
-        withTenant(tenantId, () -> invokeRunAutoAddCycle(suppressionAutoAddService, tenantId));
+        int insertedCount =
+                withTenant(tenantId, () -> suppressionAutoAddService.scanAndAutoAdd(tenantId));
 
+        assertThat(insertedCount).as("one new suppression row must be added").isEqualTo(1);
         String reason =
                 jdbcTemplate.queryForObject(
                         """
@@ -191,6 +171,10 @@ class SuppressionServiceTest extends PostgresContainerTest {
         assertThat(reason).as("auto-add must set reason='replied'").isEqualTo("replied");
     }
 
+    private static <T> T withTenant(UUID tenantId, java.util.function.Supplier<T> supplier) {
+        return ScopedValue.where(TenantContext.TENANT, tenantId.toString()).call(supplier::get);
+    }
+
     private UUID seedTenant() {
         UUID tenantId = UUID.randomUUID();
         jdbcTemplate.update(
@@ -201,22 +185,21 @@ class SuppressionServiceTest extends PostgresContainerTest {
     }
 
     private void seedUserReplyAudit(UUID tenantId, String senderEmail, Instant repliedAt) {
-        // Wave 2 implementation will scan triage_audit for SAVE_DRAFT/sent reactions to a sender;
-        // the exact schema is shipped in Plan 02. This stub seeds a placeholder row so the test
-        // describes intent even though the real auto-add scan is not yet implemented.
+        // Mirrors the triage_audit schema columns that exist after Phase 7 ships. The
+        // SuppressionAutoAddService scan looks for action_type='SAVE_DRAFT' + decision='APPLIED'
+        // rows whose sanitized_sender_email is not yet on the suppression list.
         jdbcTemplate.update(
                 """
                 insert into triage_audit(
-                    audit_id, tenant_id, gmail_message_id, gmail_thread_id, subject_excerpt,
+                    audit_id, tenant_id, gmail_message_id, gmail_thread_id, sanitized_subject,
                     sanitized_sender_email, rule_id, reason, action_type, args_hash,
-                    action_args_json, matcher_evidence, decision, created_at, decided_at,
-                    attempt_count)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    action_args_json, decision, created_at, decided_at, attempt_count)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?)
                 """,
                 UUID.randomUUID(),
                 tenantId,
-                "reply-source",
-                "reply-thread",
+                "reply-source-" + UUID.randomUUID(),
+                "reply-thread-" + UUID.randomUUID(),
                 "Subject",
                 senderEmail,
                 null,
@@ -224,97 +207,9 @@ class SuppressionServiceTest extends PostgresContainerTest {
                 "SAVE_DRAFT",
                 new byte[32],
                 "{\"type\":\"save_draft\"}",
-                "n/a",
                 "APPLIED",
-                repliedAt,
-                repliedAt,
+                java.sql.Timestamp.from(repliedAt),
+                java.sql.Timestamp.from(repliedAt),
                 1);
-    }
-
-    private Object lookupSuppressionCrudBean() throws Exception {
-        return Class.forName(SUPPRESSION_CRUD_SERVICE).getDeclaredConstructor().newInstance();
-    }
-
-    private Object lookupSuppressionAutoAddBean(Clock fixedClock) throws Exception {
-        return Class.forName(SUPPRESSION_AUTO_ADD_SERVICE)
-                .getDeclaredConstructor(Clock.class)
-                .newInstance(fixedClock);
-    }
-
-    private static Object invokeAddSenderEmail(
-            Object suppressionCrudService, UUID tenantId, String senderEmail, String reason) {
-        try {
-            return suppressionCrudService
-                    .getClass()
-                    .getMethod("addSenderEmail", UUID.class, String.class, String.class)
-                    .invoke(suppressionCrudService, tenantId, senderEmail, reason);
-        } catch (ReflectiveOperationException reflectiveOperationException) {
-            throw new RuntimeException(reflectiveOperationException);
-        }
-    }
-
-    private static Object invokeAddSenderDomain(
-            Object suppressionCrudService, UUID tenantId, String senderDomain, String reason) {
-        try {
-            return suppressionCrudService
-                    .getClass()
-                    .getMethod("addSenderDomain", UUID.class, String.class, String.class)
-                    .invoke(suppressionCrudService, tenantId, senderDomain, reason);
-        } catch (ReflectiveOperationException reflectiveOperationException) {
-            throw new RuntimeException(reflectiveOperationException);
-        }
-    }
-
-    private static Object invokeAddBoth(
-            Object suppressionCrudService,
-            UUID tenantId,
-            String senderEmail,
-            String senderDomain,
-            String reason) {
-        try {
-            return suppressionCrudService
-                    .getClass()
-                    .getMethod("add", UUID.class, String.class, String.class, String.class)
-                    .invoke(suppressionCrudService, tenantId, senderEmail, senderDomain, reason);
-        } catch (ReflectiveOperationException reflectiveOperationException) {
-            throw new RuntimeException(reflectiveOperationException);
-        }
-    }
-
-    private static Object invokeRemoveById(
-            Object suppressionCrudService, UUID tenantId, UUID suppressionId) {
-        try {
-            return suppressionCrudService
-                    .getClass()
-                    .getMethod("removeById", UUID.class, UUID.class)
-                    .invoke(suppressionCrudService, tenantId, suppressionId);
-        } catch (ReflectiveOperationException reflectiveOperationException) {
-            throw new RuntimeException(reflectiveOperationException);
-        }
-    }
-
-    private static Object invokeRunAutoAddCycle(Object suppressionAutoAddService, UUID tenantId) {
-        try {
-            return suppressionAutoAddService
-                    .getClass()
-                    .getMethod("runAutoAddCycle", UUID.class)
-                    .invoke(suppressionAutoAddService, tenantId);
-        } catch (ReflectiveOperationException reflectiveOperationException) {
-            throw new RuntimeException(reflectiveOperationException);
-        }
-    }
-
-    private static <T> T withTenant(UUID tenantId, TenantOperation<T> tenantOperation) {
-        return ScopedValue.where(TenantContext.TENANT, tenantId.toString())
-                .call(tenantOperation::run);
-    }
-
-    private static void withTenant(UUID tenantId, Runnable runnable) {
-        ScopedValue.where(TenantContext.TENANT, tenantId.toString()).run(runnable);
-    }
-
-    @FunctionalInterface
-    private interface TenantOperation<T> {
-        T run();
     }
 }
