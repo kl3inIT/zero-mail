@@ -5,6 +5,8 @@ import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
@@ -15,8 +17,12 @@ import java.util.UUID;
 @Table(name = "llm_provider_master_key")
 public class LlmProviderMasterKeyEntity {
 
+    // JPA forbids @Convert on @Id; sibling tables (FeatureDefaultProviderEntity,
+    // ModelCatalogEntity) use @Convert because their provider column is not the
+    // identifier. Keep @Enumerated(STRING) here — the underlying column is the
+    // same VARCHAR(32) so round-trip parity holds.
     @Id
-    @Convert(converter = LlmProviderAttributeConverter.class)
+    @Enumerated(EnumType.STRING)
     @Column(name = "provider", nullable = false, length = 32)
     private LlmProvider provider;
 

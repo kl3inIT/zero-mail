@@ -6,10 +6,12 @@ spring:
       enabled: true
   docker:
     compose:
+      # Opt-in via env var so IntelliJ Run does not trigger Boot's compose
+      # lifecycle (which currently tries to build the app image and fails on
+      # Windows checkouts where gradlew lacks the executable bit).
+      # Bring infra up manually: `docker compose up -d postgres redis`.
+      enabled: ${SPRING_DOCKER_COMPOSE_ENABLED:false}
       lifecycle-management: start_only
-      # Resolve from the repo root. IntelliJ run configs use the
-      # repo root by default; backend:api bootRun is configured the same way.
-      # Override with -Dspring.docker.compose.file=... if needed.
       file: ${SPRING_DOCKER_COMPOSE_FILE:docker-compose.yml}
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/zeromail}
