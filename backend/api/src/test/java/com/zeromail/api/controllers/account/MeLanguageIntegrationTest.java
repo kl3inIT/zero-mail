@@ -94,7 +94,7 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
 
         ResponseEntity<String> res =
                 client().get()
-                        .uri("/me")
+                        .uri("/api/me")
                         .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
                         .header(TestSessionSupport.HEADER_EMAIL, s.email())
                         .retrieve()
@@ -113,7 +113,7 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
 
         ResponseEntity<String> patchRes =
                 client().patch()
-                        .uri("/me/language")
+                        .uri("/api/me/language")
                         .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
                         .header(TestSessionSupport.HEADER_EMAIL, s.email())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -127,7 +127,7 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
 
         ResponseEntity<String> getRes =
                 client().get()
-                        .uri("/me")
+                        .uri("/api/me")
                         .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
                         .header(TestSessionSupport.HEADER_EMAIL, s.email())
                         .retrieve()
@@ -154,7 +154,7 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
 
         ResponseEntity<String> res =
                 client().patch()
-                        .uri("/me/language")
+                        .uri("/api/me/language")
                         .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
                         .header(TestSessionSupport.HEADER_EMAIL, s.email())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -212,7 +212,7 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
         // Authenticate as tenant A only and PATCH.
         ResponseEntity<String> res =
                 client().patch()
-                        .uri("/me/language")
+                        .uri("/api/me/language")
                         .header(TestSessionSupport.HEADER_SUBJECT, a.googleSubject())
                         .header(TestSessionSupport.HEADER_EMAIL, a.email())
                         .contentType(MediaType.APPLICATION_JSON)

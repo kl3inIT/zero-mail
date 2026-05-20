@@ -12,9 +12,9 @@ import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 /**
- * Preflight for the exact Postgres 17 body-key detector used by reject_chat_message_with_body().
+ * Preflight for the exact Postgres 18 body-key detector used by reject_chat_message_with_body().
  *
- * <p>The first reviewed JSONPath candidate used {@code $.**.keyvalue()}, but Postgres 17 rejects
+ * <p>The first reviewed JSONPath candidate used {@code $.**.keyvalue()}, but Postgres 18 rejects
  * that against recursive scalar nodes with "jsonpath item method .keyvalue() can only be applied to
  * an object". The trigger therefore uses the recursive PL/pgSQL function validated here: {@code
  * chat_jsonb_contains_body_key(jsonb)} built on {@code jsonb_each} and {@code
@@ -35,7 +35,7 @@ class PostgresJsonPathPreflightIT {
     void recursive_body_key_function_detects_body_fields_for_each_trigger_source_type()
             throws Exception {
         try (PostgreSQLContainer<?> postgresContainer =
-                new PostgreSQLContainer<>("postgres:17.6").withDatabaseName("jsonpath_preflight")) {
+                new PostgreSQLContainer<>("postgres:18.4").withDatabaseName("jsonpath_preflight")) {
             postgresContainer.start();
             try (Connection connection =
                     DriverManager.getConnection(

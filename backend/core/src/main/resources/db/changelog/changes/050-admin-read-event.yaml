@@ -1,0 +1,62 @@
+databaseChangeLog:
+  - changeSet:
+      id: 050-admin-read-event
+      author: zeromail
+      comment: >
+        Admin read audit table for tenant data access. It intentionally has no append-only trigger
+        because the worker purges rows after the 30-day retention window.
+      changes:
+        - createTable:
+            tableName: admin_read_event
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: actor_user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_admin_read_event_actor
+                    references: admin_users(id)
+              - column:
+                  name: actor_email
+                  type: varchar(320)
+              - column:
+                  name: action
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: target_kind
+                  type: varchar(32)
+              - column:
+                  name: target_id
+                  type: uuid
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: admin_read_event
+            indexName: idx_admin_read_event_created_at
+            columns:
+              - column:
+                  name: created_at
+        - createIndex:
+            tableName: admin_read_event
+            indexName: idx_admin_read_event_actor_created
+            columns:
+              - column:
+                  name: actor_user_id
+              - column:
+                  name: created_at
+      rollback:
+        - dropTable:
+            tableName: admin_read_event

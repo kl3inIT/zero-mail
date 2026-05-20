@@ -1,23 +1,104 @@
 package com.zeromail.api.security;
 
+import com.zeromail.core.admin.auth.usecases.AdminUserDetailsService;
+import java.util.Set;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.security.web.webauthn.api.AuthenticatorSelectionCriteria;
+import org.springframework.security.web.webauthn.api.PublicKeyCredentialRpEntity;
+import org.springframework.security.web.webauthn.api.ResidentKeyRequirement;
+import org.springframework.security.web.webauthn.api.UserVerificationRequirement;
+import org.springframework.security.web.webauthn.management.PublicKeyCredentialUserEntityRepository;
+import org.springframework.security.web.webauthn.management.UserCredentialRepository;
+import org.springframework.security.web.webauthn.management.WebAuthnRelyingPartyOperations;
+import org.springframework.security.web.webauthn.management.Webauthn4JRelyingPartyOperations;
+import org.springframework.session.web.http.CookieSerializer;
+import org.springframework.session.web.http.DefaultCookieSerializer;
 
 @Configuration
-@Profile("!test")
+@Profile("!test & !e2e-stub")
 public class SecurityConfig {
 
     private static final PathPatternRequestMatcher API_REQUEST_MATCHER =
             PathPatternRequestMatcher.withDefaults().matcher("/api/**");
+    private static final PathPatternRequestMatcher ADMIN_REQUEST_MATCHER =
+            PathPatternRequestMatcher.withDefaults().matcher("/api/admin/**");
+
+    // Production defaults; override via env for local dev (rpId=localhost,
+    // allowedOrigins=http://localhost:5174). Browser-side WebAuthn rejects any
+    // ceremony where the rpId is not a registrable suffix of the current origin.
+    @Value("${zeromail.admin.webauthn.rp-id:admin.zeromail.com}")
+    private String adminWebAuthnRpId;
+
+    @Value("${zeromail.admin.webauthn.rp-name:Zero Mail Admin}")
+    private String adminWebAuthnRpName;
+
+    @Value("${zeromail.admin.webauthn.allowed-origins:https://admin.zeromail.com}")
+    private Set<String> adminWebAuthnAllowedOrigins;
+
+    @Bean
+    @Order(1)
+    SecurityFilterChain adminChain(
+            HttpSecurity http,
+            AdminBindingFilter adminBindingFilter,
+            AdminResponseBodyBanFilter adminResponseBodyBanFilter,
+            AdminUserDetailsService adminUserDetailsService,
+            EnrollmentSessionAuthFilter enrollmentSessionAuthFilter)
+            throws Exception {
+        // see docs/ops/admin-interface-freeze.md §Spring Security WebAuthn Endpoints
+        http.securityMatcher("/api/admin/**", "/webauthn/**", "/login/webauthn/**")
+                .cors(Customizer.withDefaults())
+                .authorizeHttpRequests(
+                        authorizationRequests ->
+                                authorizationRequests
+                                        .requestMatchers("/webauthn/**", "/login/webauthn/**")
+                                        .permitAll()
+                                        .requestMatchers(
+                                                HttpMethod.POST, "/api/admin/enrollment/session")
+                                        .permitAll()
+                                        .anyRequest()
+                                        .hasRole("ADMIN"))
+                .webAuthn(
+                        webAuthn ->
+                                webAuthn.rpName(adminWebAuthnRpName)
+                                        .rpId(adminWebAuthnRpId)
+                                        .allowedOrigins(
+                                                adminWebAuthnAllowedOrigins.toArray(new String[0]))
+                                        .disableDefaultRegistrationPage(true))
+                .userDetailsService(adminUserDetailsService)
+                .csrf(
+                        csrf ->
+                                csrf.spa()
+                                        .ignoringRequestMatchers(
+                                                "/api/admin/enrollment/session",
+                                                "/webauthn/**",
+                                                "/login/webauthn/**"))
+                .exceptionHandling(
+                        exceptionHandling ->
+                                exceptionHandling.defaultAuthenticationEntryPointFor(
+                                        new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                                        ADMIN_REQUEST_MATCHER))
+                .sessionManagement(Customizer.withDefaults())
+                .addFilterAfter(enrollmentSessionAuthFilter, AnonymousAuthenticationFilter.class)
+                .addFilterAfter(adminResponseBodyBanFilter, AuthorizationFilter.class)
+                .addFilterAfter(adminBindingFilter, AdminResponseBodyBanFilter.class);
+        return http.build();
+    }
 
     @Bean
     @Order(3)
@@ -27,10 +108,25 @@ public class SecurityConfig {
             GoogleOAuthSuccessHandler successHandler,
             LoginRedirectAuthenticationFailureHandler failureHandler,
             GoogleAuthorizationRequestResolver authRequestResolver) {
-        http.cors(Customizer.withDefaults())
+        // Default catch-all for user-session traffic. Explicit securityMatcher excluding
+        // chains owned by earlier @Order beans (PubSub @Order(1), AdminChain @Order(1),
+        // Billing @Order(2)) so Spring Security 7's WebSecurityFilterChainValidator does not
+        // flag this chain as shadowing a more-specific matcher.
+        RequestMatcher userChainMatcher =
+                request -> {
+                    String path = request.getServletPath();
+                    return !path.startsWith("/internal/pubsub/")
+                            && !path.startsWith("/api/admin/")
+                            && !path.startsWith("/webauthn/")
+                            && !path.startsWith("/login/webauthn/")
+                            && !path.startsWith("/api/billing/sepay/");
+                };
+        http.securityMatcher(userChainMatcher)
+                .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(
-                        a ->
-                                a.requestMatchers(
+                        authorizationRequests ->
+                                authorizationRequests
+                                        .requestMatchers(
                                                 "/login",
                                                 "/actuator/health",
                                                 "/actuator/health/**",
@@ -42,13 +138,15 @@ public class SecurityConfig {
                                         .anyRequest()
                                         .authenticated())
                 .oauth2Login(
-                        o ->
-                                o.successHandler(successHandler)
+                        oauth2Login ->
+                                oauth2Login
+                                        .successHandler(successHandler)
                                         .failureHandler(failureHandler)
                                         .authorizationEndpoint(
-                                                a ->
-                                                        a.authorizationRequestResolver(
-                                                                authRequestResolver)))
+                                                authorizationEndpoint ->
+                                                        authorizationEndpoint
+                                                                .authorizationRequestResolver(
+                                                                        authRequestResolver)))
                 .csrf(
                         csrf ->
                                 csrf.spa()
@@ -62,5 +160,65 @@ public class SecurityConfig {
                 .sessionManagement(Customizer.withDefaults())
                 .addFilterAfter(tenantFilter, AuthorizationFilter.class);
         return http.build();
+    }
+
+    @Bean
+    WebAuthnRelyingPartyOperations adminWebAuthnRelyingPartyOperations(
+            PublicKeyCredentialUserEntityRepository publicKeyCredentialUserEntityRepository,
+            UserCredentialRepository userCredentialRepository) {
+        Webauthn4JRelyingPartyOperations relyingPartyOperations =
+                new Webauthn4JRelyingPartyOperations(
+                        publicKeyCredentialUserEntityRepository,
+                        userCredentialRepository,
+                        PublicKeyCredentialRpEntity.builder()
+                                .id(adminWebAuthnRpId)
+                                .name(adminWebAuthnRpName)
+                                .build(),
+                        adminWebAuthnAllowedOrigins);
+        relyingPartyOperations.setCustomizeCreationOptions(
+                creationOptionsBuilder ->
+                        creationOptionsBuilder.authenticatorSelection(
+                                AuthenticatorSelectionCriteria.builder()
+                                        .residentKey(ResidentKeyRequirement.REQUIRED)
+                                        .userVerification(UserVerificationRequirement.REQUIRED)
+                                        .build()));
+        relyingPartyOperations.setCustomizeRequestOptions(
+                requestOptionsBuilder ->
+                        requestOptionsBuilder.userVerification(
+                                UserVerificationRequirement.REQUIRED));
+        return relyingPartyOperations;
+    }
+
+    @Bean
+    @Primary
+    CookieSerializer cookieSerializer(
+            @Qualifier("adminCookieSerializer") CookieSerializer adminCookieSerializer,
+            @Qualifier("userCookieSerializer") CookieSerializer userCookieSerializer) {
+        // see docs/ops/admin-interface-freeze.md §Spring Session API
+        return new PathRoutingCookieSerializer(adminCookieSerializer, userCookieSerializer);
+    }
+
+    @Bean
+    CookieSerializer adminCookieSerializer(
+            @Value("${zeromail.session.cookie.secure:true}") boolean secureCookie) {
+        DefaultCookieSerializer cookieSerializer = new DefaultCookieSerializer();
+        cookieSerializer.setCookieName("SESSION_ADMIN");
+        cookieSerializer.setCookiePath("/");
+        cookieSerializer.setSameSite("Lax");
+        cookieSerializer.setUseHttpOnlyCookie(true);
+        cookieSerializer.setUseSecureCookie(secureCookie);
+        return cookieSerializer;
+    }
+
+    @Bean
+    CookieSerializer userCookieSerializer(
+            @Value("${zeromail.session.cookie.secure:true}") boolean secureCookie) {
+        DefaultCookieSerializer cookieSerializer = new DefaultCookieSerializer();
+        cookieSerializer.setCookieName("SESSION_USER");
+        cookieSerializer.setCookiePath("/");
+        cookieSerializer.setSameSite("Lax");
+        cookieSerializer.setUseHttpOnlyCookie(true);
+        cookieSerializer.setUseSecureCookie(secureCookie);
+        return cookieSerializer;
     }
 }

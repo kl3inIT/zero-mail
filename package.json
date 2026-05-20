@@ -8,7 +8,7 @@
   },
   "scripts": {
     "encoding:check": "node scripts/check-encoding.mjs",
-    "check": "pnpm encoding:check && pnpm --filter web i18n:check && pnpm --filter web typecheck",
+    "check": "pnpm encoding:check && pnpm --filter web i18n:check && pnpm --filter web typecheck && pnpm --filter web lint && pnpm --filter @zeromail/admin typecheck && pnpm --filter @zeromail/admin lint",
     "web:dev": "pnpm --filter web dev",
     "web:dev:tailscale": "pnpm run tailscale:serve:web && pnpm run web:dev",
     "web:build": "pnpm --filter web build",

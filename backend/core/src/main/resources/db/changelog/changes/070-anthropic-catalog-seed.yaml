@@ -1,0 +1,119 @@
+databaseChangeLog:
+  - changeSet:
+      id: 070-01-provider-catalog-seed
+      author: zeromail
+      comment: Seed all provider rows plus launch catalog defaults. OpenRouter remains the launch default provider.
+      changes:
+        - insert:
+            tableName: provider_catalog
+            columns:
+              - column: { name: provider, value: OPENAI }
+        - insert:
+            tableName: provider_catalog
+            columns:
+              - column: { name: provider, value: ANTHROPIC }
+        - insert:
+            tableName: provider_catalog
+            columns:
+              - column: { name: provider, value: GOOGLE }
+        - insert:
+            tableName: provider_catalog
+            columns:
+              - column: { name: provider, value: DEEPSEEK }
+        - insert:
+            tableName: provider_catalog
+            columns:
+              - column: { name: provider, value: OPENROUTER }
+        - insert:
+            tableName: provider_catalog
+            columns:
+              - column: { name: provider, value: ROUTER_9R }
+        - insert:
+            tableName: model_catalog
+            columns:
+              - column: { name: model_id, value: openai/gpt-5.4-nano }
+              - column: { name: provider, value: OPENROUTER }
+              - column: { name: display_name, value: GPT-5.4 Nano }
+              - column: { name: is_recommended, valueBoolean: true }
+        - insert:
+            tableName: model_catalog
+            columns:
+              - column: { name: model_id, value: claude-opus-4-7 }
+              - column: { name: provider, value: ANTHROPIC }
+              - column: { name: display_name, value: Claude Opus 4.7 }
+              - column: { name: is_recommended, valueBoolean: true }
+        - insert:
+            tableName: model_catalog
+            columns:
+              - column: { name: model_id, value: claude-sonnet-4-6 }
+              - column: { name: provider, value: ANTHROPIC }
+              - column: { name: display_name, value: Claude Sonnet 4.6 }
+              - column: { name: is_recommended, valueBoolean: true }
+        - insert:
+            tableName: model_catalog
+            columns:
+              - column: { name: model_id, value: claude-haiku-4-5-20251001 }
+              - column: { name: provider, value: ANTHROPIC }
+              - column: { name: display_name, value: Claude Haiku 4.5 }
+              - column: { name: is_recommended, valueBoolean: true }
+        - insert:
+            tableName: feature_binding
+            columns:
+              - column: { name: model_id, value: openai/gpt-5.4-nano }
+              - column: { name: feature, value: CHAT }
+        - insert:
+            tableName: feature_binding
+            columns:
+              - column: { name: model_id, value: openai/gpt-5.4-nano }
+              - column: { name: feature, value: TRIAGE }
+        - insert:
+            tableName: feature_binding
+            columns:
+              - column: { name: model_id, value: openai/gpt-5.4-nano }
+              - column: { name: feature, value: DRAFT }
+        - insert:
+            tableName: feature_binding
+            columns:
+              - column: { name: model_id, value: claude-opus-4-7 }
+              - column: { name: feature, value: CHAT }
+        - insert:
+            tableName: feature_binding
+            columns:
+              - column: { name: model_id, value: claude-sonnet-4-6 }
+              - column: { name: feature, value: TRIAGE }
+        - insert:
+            tableName: feature_binding
+            columns:
+              - column: { name: model_id, value: claude-haiku-4-5-20251001 }
+              - column: { name: feature, value: DRAFT }
+        - insert:
+            tableName: feature_default_provider
+            columns:
+              - column: { name: feature, value: CHAT }
+              - column: { name: provider, value: OPENROUTER }
+              - column: { name: model_id, value: openai/gpt-5.4-nano }
+        - insert:
+            tableName: feature_default_provider
+            columns:
+              - column: { name: feature, value: TRIAGE }
+              - column: { name: provider, value: OPENROUTER }
+              - column: { name: model_id, value: openai/gpt-5.4-nano }
+        - insert:
+            tableName: feature_default_provider
+            columns:
+              - column: { name: feature, value: DRAFT }
+              - column: { name: provider, value: OPENROUTER }
+              - column: { name: model_id, value: openai/gpt-5.4-nano }
+      rollback:
+        - delete:
+            tableName: feature_default_provider
+            where: feature IN ('CHAT','TRIAGE','DRAFT')
+        - delete:
+            tableName: feature_binding
+            where: model_id IN ('openai/gpt-5.4-nano','claude-opus-4-7','claude-sonnet-4-6','claude-haiku-4-5-20251001')
+        - delete:
+            tableName: model_catalog
+            where: model_id IN ('openai/gpt-5.4-nano','claude-opus-4-7','claude-sonnet-4-6','claude-haiku-4-5-20251001')
+        - delete:
+            tableName: provider_catalog
+            where: provider IN ('OPENAI','ANTHROPIC','GOOGLE','DEEPSEEK','OPENROUTER','ROUTER_9R')

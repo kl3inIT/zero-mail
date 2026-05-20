@@ -13,7 +13,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * [BLOCKING] schema-push proof: boots Spring against a real Postgres 17 Testcontainer, Liquibase
+ * [BLOCKING] schema-push proof: boots Spring against a real Postgres 18 Testcontainer, Liquibase
  * applies all changesets, then asserts every required table is present.
  */
 @SuppressWarnings({"SqlResolve", "SameParameterValue"})

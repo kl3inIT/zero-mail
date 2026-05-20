@@ -97,12 +97,12 @@ class ApiErrorSchemaTest extends ApiPostgresTestBase {
     @Test
     void me_get_response_401_uses_problem_json_referencing_ApiError() throws Exception {
         JsonNode root = fetchApiDocs();
-        JsonNode meGet = root.path("paths").path("/me").path("get");
-        assertThat(meGet.isMissingNode()).as("/me GET operation must be present").isFalse();
+        JsonNode meGet = root.path("paths").path("/api/me").path("get");
+        assertThat(meGet.isMissingNode()).as("/api/me GET operation must be present").isFalse();
 
         JsonNode r401 = meGet.path("responses").path("401");
         assertThat(r401.isMissingNode())
-                .as("/me GET 401 response must be defaulted by the customizer")
+                .as("/api/me GET 401 response must be defaulted by the customizer")
                 .isFalse();
 
         String ref =

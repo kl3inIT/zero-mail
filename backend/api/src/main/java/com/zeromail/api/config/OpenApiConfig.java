@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Set;
 import org.springdoc.core.customizers.GlobalOpenApiCustomizer;
 import org.springdoc.core.customizers.OpenApiCustomizer;
+import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -75,6 +76,20 @@ public class OpenApiConfig {
                                 .title("Zero Mail API")
                                 .version("0.1.1")
                                 .description("Phase 1 skeleton + Phase 1.1 i18n/error contract"));
+    }
+
+    @Bean
+    GroupedOpenApi publicApi() {
+        return GroupedOpenApi.builder()
+                .group("public")
+                .pathsToMatch("/api/**")
+                .pathsToExclude("/api/admin/**")
+                .build();
+    }
+
+    @Bean
+    GroupedOpenApi adminApi() {
+        return GroupedOpenApi.builder().group("admin").pathsToMatch("/api/admin/**").build();
     }
 
     @Bean

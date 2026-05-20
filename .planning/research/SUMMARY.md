@@ -1,190 +1,177 @@
-# Research Summary — Zero Mail v1.1 (Chat Email Assistant + Settings Page)
+# Project Research Summary — Zero Mail v1.2
 
-**Project:** Zero Mail
-**Milestone:** v1.1 — Email assistant chat + Settings page
-**Domain:** AI chat email assistant + assistant Settings UI (sidecar SaaS on top of Gmail), built on top of a shipped Java 25 / Spring Boot 4 / Spring AI 2.0.0-M6 backend
-**Researched:** 2026-05-17
+**Project:** Zero Mail v1.2 — Admin Console Foundation (Phase 8) + Settings UI on Curated Catalog (Phase 9)
+**Domain:** Operator/admin surface + per-provider × per-feature LLM catalog + 4-tab user Settings on top of a shipped Java 25 / Spring Boot 4 / Spring Modulith / Next.js 16 multi-tenant SaaS
+**Researched:** 2026-05-19
 **Confidence:** HIGH overall
-
-> Detailed research lives in:
-> - [`.planning/research/STACK.md`](STACK.md)
-> - [`.planning/research/FEATURES.md`](FEATURES.md)
-> - [`.planning/research/ARCHITECTURE.md`](ARCHITECTURE.md)
-> - [`.planning/research/PITFALLS.md`](PITFALLS.md)
-
----
 
 ## Executive Summary
 
-v1.1 adds two surfaces — a streaming `/chat` route and an `/settings` AI tab — on top of the shipped v1.0 backend. The defining capability is a chat-based email assistant that can read inbox, manage rules, save memory, and (only with explicit per-message user click) send/reply/forward via Gmail. Architecturally, this is a **streaming SSE controller built on existing Spring MVC + existing Spring AI 2.0.0-M6 + existing virtual threads** — zero new backend dependencies, three new frontend dependencies (`ai@6`, `@ai-sdk/react@3`, `streamdown@2`), and one new top-level Modulith module (`core.chat`).
+v1.2 stacks two surfaces on the v1.0 + v1.1 baseline: a `/admin/*` console gated by `ROLE_ADMIN` (Phase 8) and a four-tab user `/settings` rebuilt on the admin-curated LLM catalog (Phase 9). The four research outputs converge: **zero new backend/frontend runtime dependencies** — every capability is built from artifacts already on the classpath (Spring Security 7.0.5, springdoc-openapi 3.0.3, AES-GCM `RefreshTokenCipher`, Liquibase 5, openapi-typescript 7.13, all shadcn/ui primitives) plus a small set of new schema, new ArchUnit gates, and one new Modulith module (`core.admin`).
 
-The single highest-risk decision is **carving out exactly one Gmail send call site** from v1.0's "no auto-send" ArchUnit rule. v1.0 ships `NoGmailSendAllowedTest` with `allowEmptyShould(true)` (production code has ZERO send calls). v1.1 must move that constant from 0 to 1 — and **only 1** — enforced by paired negative + positive ArchUnit tests plus a CI grep gate.
+The architectural keystone is a **3-table normalized catalog** (`provider_catalog`, `model_catalog`, `feature_binding`) — not JSONB — with FK + UNIQUE preventing stale-pin failures from `assistant_settings` → catalog. Master keys reuse the existing AES-GCM `RefreshTokenCipher` via a new `llm_provider_master_key` table; resolution flows through a single `ProviderMasterKeyResolver` inside `llm.gateway.springai`, preserving the locked "one adapter" boundary. Sync-from-`/models` is **async** (existing `processing_job` SKIP LOCKED + Redis debounce lease); Anthropic has no `/models` endpoint so its catalog path is manual-only. The Settings AI tab pulls from `GET /api/settings/catalog` served by a distinct `CuratedCatalogQueryService` (different DTO shape from admin endpoints) so admin schemas never leak into the public OpenAPI document — `springdoc-openapi` `GroupedOpenApi` splits `public` vs `admin` specs and the frontend codegens **two** typed clients.
 
-The recommended phase split is **5 phases**: (1) chat foundation + persistence + ArchUnit before (2) send executor + confirmation state machine before (3) chat frontend before (4) Settings page before (5) eval/hardening.
-
----
-
-## Key Findings
-
-### Stack Additions TL;DR
-
-**Backend — zero new dependencies.** Reuse existing `spring-boot-starter-web` (SseEmitter), Spring AI 2.0.0-M6 (StreamingChatModel), Reactor Core (transitive), Spring Session Redis, Liquibase YAML, JPA. Vercel UI Message Stream Protocol hand-written in ~250 LoC inside `chat.usecases.ChatSseFrameEmitter`.
-
-**Frontend — three runtime deps + one CLI install:**
-
-```bash
-pnpm add ai@^6.0.184 @ai-sdk/react@^3.0.186 streamdown@^2.5.0
-pnpm dlx ai-elements@latest add conversation message prompt-input response tool reasoning loader suggestion confirmation
-```
-
-**Spring AI mode change:** `ToolCallingChatOptions.builder().internalToolExecutionEnabled(false)` per-request inside chat path (not global) so orchestrator intercepts every tool call for confirmation rendering.
-
-**Required SSE header:** `x-vercel-ai-ui-message-stream: v1` or `useChat` silently falls back to text-only.
-
-### What NOT to add
-
-| Avoid | Why |
-|---|---|
-| `spring-boot-starter-webflux` | Breaks v1.0 Spring MVC + virtual threads lock |
-| Vercel AI SDK `ai` package on Java backend | TypeScript-only; splits LLM gateway |
-| `@ai-sdk/openai`/`-anthropic` on frontend | Leaks tenant keys to browser |
-| `reconnectToStream` | `vercel/ai#14027` crashes on tool parts in `input-streaming` |
-| WebSockets/STOMP for chat | SSE sufficient |
-| Long-term persistence of email body in `chat_message.parts` | Privacy invariant — short-lived in-memory only |
-
-### Feature Table-Stakes vs Differentiators
-
-**CHAT** — Table stakes: bubbles, streaming, thinking indicator, multi-turn history, stop button, tool-call cards, composer, error surfacing, empty state. Differentiators: CHAT-D3 per-tool preview cards (= CONFIRMATION), CHAT-D7 Vietnamese-default chrome. Defer to v1.2: image attachments, context-pack, stale-rules detection.
-
-**TOOL_CATALOG** (20 tools — "~19" matches if `deleteRule` folded; recommend keep distinct → 20):
-- Read (no confirm, 7): `getAssistantCapabilities`, `getUserRulesAndSettings`, `getRuleExecutionForMessage`, `searchInbox`, `readEmail`, `listLabels`, `getInboxStats`
-- Write reversible (no confirm, 8): `createOrGetLabel`, `manageInbox`, `updateRuleConditions`, `updateRuleActions`, `updatePersonalInstructions`, `updateAssistantSettings`, `addToKnowledgeBase`, `searchMemories`
-- Write confirm required (3): `createRule`, `deleteRule`, `saveMemory`
-- Send CRITICAL (confirm + audit + ArchUnit, 3): `sendEmail`, `replyEmail`, `forwardEmail`
-
-**CONFIRMATION** — Table stakes (ALL ship): state machine `pending → processing → confirmed | canceled | failed`, preview card with Edit + Send + Cancel, Redis 5-min lease, audit row before lease release, Send disabled until message persisted, replay-mode rendering, `contentOverride` plumbing, per-tool risk message.
-
-**SETTINGS_PROVIDER** — 4 providers (OpenAI/Anthropic/Google/DeepSeek), per-feature model picker (chat/triage/draft), curated model list, BYOK + AES-GCM, "Use default OpenRouter" vs "Use my key" toggle, per-feature cost estimate. Anti: free-text model id, per-call provider switching via chat, provider expansion (defer v1.2).
-
-**SETTINGS_PERSONALIZATION** — writing style, personal instructions (XML-fenced injection), email signature, knowledge base, tone preset, AI output language VI/EN. Anti: persistent embeddings, learned patterns auto-update.
-
-**SETTINGS_BEHAVIOR** — auto-draft toggle, draft confidence slider, daily digest, sensitive-data protection toggle, shadow-mode surface. Anti: "auto-send if confidence ≥ X" (NEVER).
-
-**SETTINGS_SAFETY** — sender safety net UI: view/add/remove, paste-import, per-entry mode (`protect`/`escalate`), audit-log "blocked by VIP" badge.
-
-### Architecture Decisions Locked-In
-
-1. **New top-level Modulith module `core.chat`** (NOT sub-package of `core.llm`). Sub-package layout: `domain/usecases/projection/persistence/exception`.
-2. **SseEmitter (imperative)** — NOT `Flux<ServerSentEvent>` return type. Preserves `TenantContext` ScopedValue + `@Transactional` boundaries. Mandatory lifecycle wiring: `onCompletion/onTimeout/onError` → upstream `Disposable.dispose()`.
-3. **6 new Liquibase YAML changelogs (041–046):** `chat`, `chat_message` (+body-ban trigger), `assistant_pending_action`, `assistant_send_audit`, `assistant_settings`, `assistant_memory + assistant_knowledge_snippet`. Schema versioning: every `parts` envelope carries `schemaVersion: 1`.
-4. **ArchUnit 3-layer carve-out** (ALL three required): negative `NoGmailSendAllowedTest` (update — exclude `@AllowedSendCallSite`), positive `OnlyOneGmailSendCallSiteTest` (count == 1, not ≤1), CI grep gate. PR diff modifying negative test without adding positive test = critical warning.
-5. **Settings extends `/settings` with shadcn `<Tabs>`** — NO `/settings/ai` sub-routes. Tabs query-param-driven (`/settings?tab=ai|personalization|behavior|safety-net|knowledge`). `/settings/privacy` stays for v1.0 back-compat.
-6. **Chat is request-scoped only**; `backend/worker` NOT involved in v1.1. Reconciliation cron is residual-cleanup path only.
-7. **Spring Modulith event policy for chat:** NO event per SSE turn (request-scoped). ONE event `AssistantSendCompleted` after audit row commit; analytics subscribes via `@TransactionalEventListener(AFTER_COMMIT)`.
+The three highest-risk seams are (1) **master-key handling** (test-connection oracle, response-roundtrip leaks, ChatModel cache not evicted on rotation), (2) **admin session bleed** into user endpoints (one-cookie design lets a rogue `if (isAdmin) skip tenant filter` fallback collapse tenant isolation), and (3) **tenant inspection silently leaking email body / chat content** the v1.0/v1.1 privacy contract bans. Three architectural enforcement layers — `AdminContext` Scoped Value mutually exclusive with `TenantContext`, ArchUnit `AdminPathBodyBanTest`, and an `AdminResponseBodyBanFilter` failsafe — must land in sub-phase 8A **before** any tenant-inspection view ships.
 
 ---
 
-## Watch Out For (top 7 critical pitfalls)
+## Stack Additions for v1.2
 
-### 1. Weakening the ArchUnit "no Gmail send" rule instead of scope-narrowing it
-Developer hits failing ArchUnit on first compile of `AssistantSendExecutor.send(...)`, deletes the test or weakens it without paired positive test → "no auto-send" trust contract evaporates. **Prevention:** negative + positive ArchUnit + CI grep gate (count == 1, not ≤1). PR diff modifying `NoGmailSendAllowedTest` without simultaneously adding `OnlyOneGmailSendCallSiteTest` is the warning sign. **Phase:** Phase 1.
+**Backend — zero new runtime deps, three architectural switches:**
 
-### 2. Race conditions in user-confirmed send (double-send, stale toolCallId)
-Three races: double-click sends twice, confirm-before-persist 404, second confirm during slow Gmail call re-sends. **Prevention:** Port Inbox Zero state machine exactly: optimistic concurrency via `chat_message.parts updated_at` compare-and-swap, Redis lease commits BEFORE Gmail call, Send disabled until `persistedMessageIds.has(messageId)`, `UNIQUE (chat_id, tool_call_id)` on audit for idempotent retries. **Phase:** Phase 2.
+- **Spring Security 7.0.5 `@EnableMethodSecurity`** (already on classpath) — method-level `@PreAuthorize("hasRole('ADMIN')")` complementing URL-pattern `requestMatchers("/api/admin/**").hasRole("ADMIN")`. Two-layer defense at filter + method boundary.
+- **DB-backed admin elevation via `users.role` column** — `ROLE_ADMIN` appended to existing `OAuth2User` authorities in `GoogleOAuthSuccessHandler`. Bundled-OAuth flow untouched; no second IdP, no Keycloak, no JWT. Cookie + Spring Session Redis stays.
+- **`springdoc-openapi 3.0.3` `GroupedOpenApi` split** — two beans (`publicApi`, `adminApi`) producing `/v3/api-docs/public` (excludes `/api/admin/**`) and `/v3/api-docs/admin`. Existing `GlobalOpenApiCustomizer` was authored anticipating this split.
+- **Master keys reuse existing AES-GCM `RefreshTokenCipher`** — same algorithm (AES-256-GCM, 96-bit IV, 128-bit tag), same KEK rotation, same `@Sensitive` Logback scrub. New `llm_provider_master_key` table mirrors `byok_credential` shape; KEK from `ZeroMailCoreProperties.crypto.masterKeys.kekBase64`. Not HashiCorp Vault, not GCP/AWS KMS (single-VPS locked), not pgcrypto (CLAUDE.md do-not-use list).
+- **Sync-from-`/models`** via Spring AI provider starter clients or `RestClient` calls confined inside `core.llm.gateway.springai.admin` — vendor-SDK confinement ArchUnit rule stays in force.
 
-### 3. Prompt-injected recipient in confirmed send ("user clicks Send without reading" attack)
-Adversary embeds white-on-white instructions in email body → assistant calls `sendEmail` with attacker `to:` → user clicks Send. **Prevention (ALL required):** system prompt evidence-vs-instruction separation; preview UX recipient-prominent + "Recipient suggested by AI" badge + first-contact-domain friction; tool-input sanitization (reject exfil hosts); `aiEval` hostile-email suite. **Phase:** Phase 2 + Phase 3.
+**Frontend — zero new runtime deps:**
 
-### 4. Privacy regression — email body persisted in `chat_message.parts`
-`readEmail` returns body to LLM in-memory; assistant quotes body; `parts` persists with body forever. **Prevention (three layers):** `ToolOutputSanitizer` before persist; ArchUnit `ChatPersistenceContentBanTest` proves sanitizer on every path; PostgreSQL trigger `chat_message_body_ban`. **Phase:** Phase 1.
+- All admin primitives (`table`, `tabs`, `alert-dialog`, `select`, `command`, `popover`, `sidebar`, `sheet`, `chart`, `switch`, `skeleton`, `sonner`) already in `apps/web/components/ui/**`.
+- `apps/web/scripts/generate-api.ts` loops over two spec URLs → emits `schema.d.ts` (public) + `admin-schema.d.ts` (admin). New `admin-client.ts` is a 3-line wrapper over `openapi-fetch@0.17.0`.
+- Memory note "Use raw shadcn primitives first" → defer `@tanstack/react-table`; hand-compose tables on `table.tsx` for Phase 8.
 
-### 5. Tenant boundary leak across virtual threads in chat tool execution
-Long-lived SSE + fan-out tool work without `TenantAwareTaskScope` → unbound ScopedValue → tenant leak. **Prevention:** `TenantAwareReactorScheduler` wrapping every `.subscribeOn()`; ArchUnit ban on `Schedulers.{boundedElastic,parallel,single}` in `..chat..`; multi-tenant chat leak test. **Phase:** Phase 1.
-
-### 6. Spring AI 2.0.0-M6 streaming + tool-call: `AssistantMessage.toolCalls` lost
-Confirmed bug `spring-projects/spring-ai#3366 + #5167`: streaming + `internalToolExecutionEnabled=false` → aggregated `toolCalls` empty → confirmation handler breaks. **Prevention:** `ChatToolCallRegistry` populated from raw SSE events (not Spring AI aggregator); `ZeroMailChatMemory` reads from our `chat_message.parts`. TODO recheck M7/GA. **Phase:** Phase 1.
-
-### 7. SSE bridge edge cases — orphan virtual threads, partial JSON, cancellation
-Client disconnect → server keeps streaming + paying tokens; mid-stream cuts; partial JSON on HTTP/2 packets; `reconnectToStream` crashes. **Prevention:** `SseEmitter.onCompletion/onTimeout/onError` → `Disposable.dispose()`; `VercelProtocolEmitter` ordering enforcement; heartbeat `: keepalive\n\n` every 15s; do NOT implement reconnect (document as out-of-scope); `useChat({experimental_throttle: 100})`. **Phase:** Phase 1.
+**New persistence (six Liquibase YAML changelogs):** `user.is_admin` column add, `admin_audit_event`, `llm_provider_catalog`, `llm_provider_model`, `llm_model_feature_capability`, `llm_provider_master_key`.
 
 ---
 
-## Open Questions (need user input before locking REQ-IDs)
+## Feature Categories — 10 Categories
 
-1. **Phase split count and ordering** — confirm 5-phase (foundation → executor → frontend → settings → eval) or collapse to 3 (ARCHITECTURE view)?
-2. **Sender Safety Net policy scope** — cover BOTH incoming triage AND outgoing chat sends? **Recommend yes** with extra-friction banner.
-3. **Chat-vs-Settings GA delivery order** — recommend chat first; Settings can land as v1.1.0 follow-up.
-4. **CHAT-T9 history sidebar at GA or v1.1.1?** Recommend GA — without it refresh loses conversation.
-5. **`deleteRule` distinct tool or fold into `updateRuleActions`?** Recommend distinct → tool count 20, not 19.
-6. **Image attachments (CHAT-D4) — defer or stretch?** Recommend defer v1.2.
-7. **`sender_safety_entry.mode VARCHAR(16)` column** — verify TRG-08 shipped this; if not, extra Liquibase changelog.
-8. **OAuth scope check** — confirm `gmail.send` in bundled OAuth from v1.0 phase 1.5. If missing, one-time re-grant needed.
+| Category | Table stakes | Differentiators | Anti-features |
+|---|---|---|---|
+| **ADMIN** (RBAC + audit) | `/admin/*` 403 gate, DB-backed `ROLE_ADMIN`, append-only `admin_audit_event` + `admin_read_event`, tenant-keyed audit, confirm-twice destructive actions | Audit diff view, filter chips, CSV export | Admin-impersonate-user, SQL console, separate admin password |
+| **CAT** (curated catalog) | Per-provider × per-feature catalog (chat/triage/draft), 3-step Sync (fetch → diff → confirm), sync run history, disable-with-dependent-count, provider status pill | Cost-per-1k display, "Recommended for" badge, deprecation tag, `GET /api/settings/catalog` | Free-form model-ID override, auto-approve Sync, embedding curation, per-tenant allowlist |
+| **MKEY** (master keys) | Per-provider set/test/rotate with transactional rollback, masked display only, oracle hardening, key-history mini-list | Dependents count, 90-day rotation reminder | "Reveal key once", automatic cron rotation, per-tenant master keys |
+| **OPS-TENANT** (read-only inspection) | Tenant list + detail tabs (Overview/Health/Billing/Spend/Activity), pause/disconnect/delete admin actions, metadata-only on PII | Spend sparkline, replay-watch-renewal, deletion preview counts | View tenant inbox, chat content, prompts/completions, OAuth token, edit-on-behalf |
+| **OPS-QUEUE** (worker health) | Outbox lag + max age, `processing_job` depth by type, retry distribution, failure rate, dead-letter view + re-queue, 10s auto-refresh | Worker heartbeat, backpressure banner | Worker stop/start UI, view job payload, manually edit row |
+| **OPS-SPEND** (global dashboard) | Top-line cards (today/7d/30d), stacked bar by provider, donut by feature, platform-vs-BYOK split, top-N tenants, date-range picker | Spend forecast, per-model p50/p95, cap-vs-actual chart | Drill-down to prompts, websocket streaming, public marketing page |
+| **SET-AI** (carries SET-AI-01..04) | Per-feature provider+model picker reading catalog, BYOK key cards, use-BYOK-if-available toggle, cost-per-1k display, reset-to-recommended | Last-7d-cost hint, deprecation inline banner, per-feature spend cap | Free-form model-ID textbox, per-rule model override, show master-key bytes, user-triggered Sync |
+| **SET-VOICE** (carries SET-VOICE-01..06) | Writing style, personal instructions (injection-hardened), signature, tone preset, AI output language (VI/EN), knowledge-snippet CRUD | — | Two-way settings↔rule-prompt sync, AI-learned style from sent mail |
+| **SET-BEHV** (carries SET-BEHV-01..05) | Auto-draft toggle, draft confidence slider, follow-up reminders, daily digest opt-in, sensitive-data protection | — | "Always auto-send on confidence > X" (hard ban — TRG-03) |
+| **SET-SAFE** (carries SET-SAFE-01..04) | VIP allow-list, never-archive, never-trash (future-proof), quick-add from triage audit | — | First-class block-list (expressible as rule) |
 
 ---
 
-## Phase Split Recommendation
+## Architecture Highlights
 
-### Adopt the 5-phase split
+**Module placement.** `core.admin` is a **NEW top-level Modulith module**, sibling of `core.chat` and `core.llm` — **not** inside `core.llm`. Rationale: `llm` is horizontal capability (gateway); `admin` is vertical operator domain. Sub-packages follow `domain/ application/ projection/ persistence/ exception/`.
 
-ARCHITECTURE's 3-phase view bundles foundation + executor + state machine, burying the ArchUnit invariant flip (0 → 1 send call sites) inside a larger PR. PITFALLS' 5-phase split surfaces that flip as its own phase boundary — matches v1.0's discipline around TRG-03.
+**RBAC + tenant context separation.** `AdminContext` is a separate `ScopedValue` from `TenantContext`, mutually exclusive — `TenantContext.currentOrThrow()` throws inside admin call, and vice versa. Cross-tenant admin reads route through `AdminTenantAccess.readOnly(tenantId, supplier)` which writes an `admin_audit_event` row.
 
-**Phase 1 — Chat foundation, persistence, infra (no UI; behind feature flag)**
-- 6 Liquibase changelogs (041–046) including `chat_message_body_ban` trigger
-- `ToolOutputSanitizer` + ArchUnit `ChatPersistenceContentBanTest`
-- `TenantAwareReactorScheduler` + multi-tenant chat leak test
-- `ChatToolCallRegistry` + `ZeroMailChatMemory` (workaround Spring AI #3366/#5167)
-- SSE bridge: lifecycle, `VercelProtocolEmitter` ordering, heartbeat, spend-cap envelope
-- `LlmGateway.streamChat(...)` + impl
-- ArchUnit carve-out tests (Phase 1 count == 0)
-- Read-only tools: `getAssistantCapabilities`, `getUserRulesAndSettings`, `searchInbox`, `readEmail`, `listLabels`, `getInboxStats`, `getRuleExecutionForMessage`
+**Catalog shape.** Three normalized tables — `provider_catalog`, `model_catalog`, `feature_binding` (M:N model × {CHAT, TRIAGE, DRAFT}, with `enabled`, `is_default`, `is_recommended`). **Not** JSONB. FK + UNIQUE partial indexes prevent stale-pin failures from `assistant_settings.{chat|triage|draft}_model_id`.
 
-**Phase 2 — Confirmation state machine + send executors (HIGH RISK)**
-- `AssistantSendExecutor` (single carved-out call site, `@AllowedSendCallSite`)
-- State machine: Redis lease + optimistic concurrency + persistence retry (max 3 attempts)
-- Same-transaction audit + state flip
-- Reconciliation cron
-- System prompt: safety/confirmation policy + XML-fenced `<user_personalization>` + suspicious-sender warning
-- `sendEmail`/`replyEmail`/`forwardEmail` tools (pre-generated `Message-ID` for retry idempotency)
-- Write tools needing confirm (`createRule`, `saveMemory`, `deleteRule`)
-- Direct-write tools (8 remaining)
-- ArchUnit count flips 0 → 1
+**Master-key resolution.** `ProviderMasterKeyResolver` lives inside `llm.gateway.springai` as single resolution point. Rotation emits `MasterKeyRotatedEvent` → `@ApplicationModuleListener` evicts all cached `ChatModel` instances for that provider across **every** tenant.
 
-**Phase 3 — Chat frontend (`/chat` + `@ai-sdk/react` + AI Elements)**
-- Install 3 npm deps + AI Elements primitives
-- `features/chat/` folder
-- `useChat({experimental_throttle: 100, transport: DefaultChatTransport({credentials: 'include'})})`
-- Preview cards: recipient-prominent + VIP banner + first-contact-domain friction + recipient-origin badge
-- Send disabled until `persistedMessageIds.has(messageId)`
-- Replay-mode confirmed cards
-- Cancel button
-- Stream-error/budget-exhausted banners
-- Vietnamese-default chrome (CHAT-D7)
-- Chat history sidebar (CHAT-T9 at GA)
-- Playwright tests (tab-close cancel, prompt-injection UX, double-click confirm)
+**Read views.** Tenant projections use **Spring Data JDBC `Repository<...>`** (not `CrudRepository`). ArchUnit gate forbids body-content field names (`body|bodyHtml|snippet|payload|prompt|completion`) in admin projection DTOs.
 
-**Phase 4 — Settings page (BYOK + Personalization + Behavior + Safety Net UI)**
-- BYOK mask-only contract + sentinel-leak test + logout eviction + `@Sensitive` ArchUnit
-- Personalization columns + XML-fenced injection verified + hostile-corpus eval + length cap + sanitization
-- 5 behavior toggles
-- Safety net UI (per-entry mode, paste-import, VIP-intersect, audit "blocked by VIP" badge)
-- Single `/settings` route with shadcn `<Tabs>` (query-param-driven)
+**Frontend layout.** `(admin)` is **sibling** Next.js route group of `(app)`, with own server-side `ROLE_ADMIN` gate in `layout.tsx`. Independent typed client from `admin-schema.d.ts`; admin code-splits so public bundle never ships admin types.
 
-**Phase 5 — Hardening + eval + docs**
-- `aiEval` suite (`@Tag("llm-eval")`, separate Gradle task): 15 hostile email + 10 hostile `personal_instructions` + VIP send refusal + VI/EN output language
-- Grafana dashboards: lease residuals, audit-vs-state mismatch, ordering violations, leak counters, BUDGET_EXHAUSTED rate
-- CASA evidence update
-- PROJECT.md decisions: VIP outgoing policy, reconnect-not-implemented, persistence carve-out scope, 20-tool count
-- v1.1 GA tag + launch GO/NOGO checklist
+**Three separate audit tables** — `triage_audit` (rules), `assistant_send_audit` (chat-confirmed send, v1.1), `admin_audit_event` (new). Different retention/actors/queries.
 
-### Research flags
+**Build order — sub-phases:**
 
-| Phase | Research flag | Reason |
-|-------|---------------|--------|
-| Phase 1 — Foundation | **Skip** | Modulith + Liquibase + ArchUnit + SSE + virtual threads are v1.0 patterns |
-| Phase 2 — Confirmation | **Needs** | Spring AI M6 streaming + tool-call has open bugs; build 100-LoC prototype before committing orchestrator design |
-| Phase 3 — Chat frontend | **Skip** | `@ai-sdk/react` v3 + AI Elements well-documented; inbox-zero has production examples |
-| Phase 4 — Settings | **Skip** | shadcn + TanStack Query + openapi-fetch is v1.0 frontend convention |
-| Phase 5 — Hardening | **Needs** | `aiEval` harness design; Inbox Zero has no portable pattern; v1.0 LLM-11 doesn't cover hostile scenarios |
+- **8A** RBAC + `AdminContext` + audit primitive (foundation; everything depends)
+- **8B** Master-key management (gated behind 8A; sentinel-leak test in CI)
+- **8C** Tenant read-only views (depends on 8A — parallel with 8B; ArchUnit body-ban + response filter land first)
+- **8D** Catalog Sync flow (depends on 8B for master key)
+- **8E** Worker queue health (depends on 8A — parallel with 8C/8D)
+- **8F** Global spend dashboard (depends on 8A — parallel with 8C/8D/8E)
+- **9A** Settings chrome + tab routing (independent)
+- **9B** SET-VOICE + SET-BEHV + SET-SAFE (parallel with 9A)
+- **9C** SET-AI tab (depends on 8B + 8D)
+
+---
+
+## Watch Out For (Top Pitfalls)
+
+1. **Single-cookie admin session bleeds into user endpoints.** Mitigation: ArchUnit rule forbidding admin controllers from reading `TenantContext` directly; mandatory `AdminContext.currentOrThrow()` first statement; persistent red/yellow "ADMIN MODE" chrome bar.
+
+2. **Master-key oracle via test-connection.** Mitigation: edit-session token (5-min TTL), 10 req/hour/admin rate limit, response strips provider error body (returns only enum codes `INVALID_KEY | RATE_LIMITED | NETWORK_ERROR`), `/models` HTTP client isolated from logging proxy, sentinel-leak CI test.
+
+3. **Tenant inspection leaks body/chat/prompt content.** Mitigation: `AdminPathBodyBanTest` ArchUnit blocks admin packages from `GmailClient` body-exposing methods; `AdminResponseBodyBanFilter` failsafe scrubs JSON fields named `body|bodyHtml|snippet|prompt|completion|content` >200 chars; admin paths cannot resolve tenant OAuth credentials.
+
+4. **Catalog Sync supply-chain.** Mitigation: strict per-provider JSON Schema validation; three-step flow (Fetch → Diff → Confirm); soft-delete only (`deprecated_at`); model-ID regex allow-list `^[a-zA-Z0-9._:/\-]{1,128}$`; per-feature toggles preserved across Sync; "ping completion" before enabling; Anthropic manual-only.
+
+5. **Send call-site count regresses 1 → 2+.** Mitigation: ArchUnit extended — admin packages forbidden from calling Gmail send methods entirely; grep gate stays at exactly 1; master-key test-connection uses `/models` GET, never send.
+
+6. **Audit log used as exfiltration channel OR admin edits own audit.** Mitigation: DB-level append-only Postgres trigger + app DB user has no `UPDATE`/`DELETE` grant on `admin_audit_event`; `reason VARCHAR(500)` with regex sanitizer rejecting key-prefix patterns; audit insert in separate same-request transactions; HMAC chain-hash per row with nightly verification; co-admin required to read full audit log.
+
+7. **Catalog cache race on hot path.** Mitigation: Sync diff applies atomically in transaction with `SELECT ... FOR UPDATE` on small lock table (not catalog itself); `CuratedCatalogQueryService` reads `READ COMMITTED` with short Redis ETag cache; `MASTER_KEY_ROTATED` + `CATALOG_CHANGED` Modulith events evict per-tenant `ChatModel` cache.
+
+---
+
+## Implications for Roadmap
+
+### Phase 8 — Admin Console Foundation
+
+**8A: Admin foundation (RBAC + AdminContext + audit primitive)**
+Rationale: Foundation; everything depends. Delivers: `user.is_admin` + Liquibase, `@EnableMethodSecurity`, `requestMatchers("/api/admin/**").hasRole("ADMIN")`, `AdminContext` ScopedValue mutex with `TenantContext`, `admin_audit_event` + `admin_read_event` with append-only trigger + HMAC chain hash, ArchUnit rules, `GroupedOpenApi` split, `(admin)` Next.js route group. Avoids: Pitfalls 1, 3, 6.
+
+**8B: Master-key management** (depends on 8A)
+Rationale: Catalog Sync (8D) needs master keys to call `/models`. Delivers: `llm_provider_master_key` reusing `RefreshTokenCipher`, `ProviderMasterKeyResolver` inside `llm.gateway.springai`, set/test/rotate UI with edit-session token + rate limit + error-body stripping, `MasterKeyRotatedEvent` → ChatModel cache eviction, sentinel-leak CI test. Avoids: Pitfall 2.
+
+**8C: Tenant read-only views** (depends on 8A — parallel with 8B)
+Rationale: Independent of catalog/master-keys. Delivers: Tenant list + 5-tab detail, pause/disconnect/delete actions, `AdminPathBodyBanTest`, `AdminResponseBodyBanFilter`. Avoids: Pitfalls 4, 5.
+
+**8D: Catalog management + Sync flow** (depends on 8B)
+Rationale: Sync calls `/models` with master key. Delivers: `provider_catalog` + `model_catalog` + `feature_binding`, 3-step Sync with JSON Schema validation, model-ID regex allow-list, soft-delete, Anthropic manual-only, `CuratedCatalogQueryService` + `GET /api/settings/catalog`. Avoids: Pitfalls 5, 7.
+
+**8E: Worker queue health** (depends on 8A — parallel with 8C/8D)
+Read-only aggregates over existing `outbox` + `processing_job`.
+
+**8F: Global LLM spend dashboard** (depends on 8A — parallel with 8C/8D/8E)
+Read aggregates over existing `llm_call_audit` (metadata-only).
+
+### Phase 9 — Settings UI on Curated Catalog
+
+**9A: Settings chrome + tab routing** (independent)
+shadcn `<Tabs>` on single `/settings/page.tsx` route (flat-folder rule: no `/settings/ai` sub-route), query-param-driven active tab.
+
+**9B: SET-VOICE + SET-BEHV + SET-SAFE** (parallel with 9A/9C)
+15 of 19 deferred v1.1 reqs. All independent of catalog/master-keys.
+
+**9C: SET-AI tab** (depends on 8B + 8D)
+Per-feature provider+model picker from `GET /api/settings/catalog`; BYOK cards reusing v1.0 `byok_credential`; use-BYOK toggle; cost display; reset-to-recommended; deprecation banner.
+
+### Research Flags
+
+Needs deeper research (`/gsd:plan-phase --research-phase`): **8B** (master keys), **8D** (catalog Sync), **9C** (SET-AI cost display + reset UX).
+Standard patterns (skip research): **8A**, **8C**, **8E**, **8F**, **9A**, **9B**.
+
+---
+
+## Open Decisions for Roadmap
+
+### Decision 1: One-filter-chain RBAC vs two-cookie split
+
+- **Architecture** recommends single `SecurityConfig` chain + `@EnableMethodSecurity` + DB-backed `user.is_admin` + one cookie.
+- **Pitfalls (Pitfall 3)** argues two cookies (`zm_session` + `zm_admin_session`), two filter chains, separate `/admin/login` OAuth round-trip, `SameSite=Strict` on admin cookie, persistent admin-mode chrome bar.
+- **Recommendation:** Start single-cookie + `AdminContext` ScopedValue + ArchUnit "no `TenantContext` in admin packages" rule (90% of safety at 20% of code); revisit two-cookie if real CSRF/impersonation vector surfaces.
+- **Resolve in:** 8A planning.
+
+### Decision 2: First-admin bootstrap mechanism
+
+- Options: (a) Liquibase changeset (rejected — Pitfall 1 forever-admin), (b) env-var `ZEROMAIL_BOOTSTRAP_ADMIN_EMAIL` with idempotent guard, (c) CLI command.
+- **Recommendation:** (b) env-var. Document in Constraints.
+- **Resolve in:** 8A planning.
+
+### Decision 3: Audit retention
+
+- STACK suggests 90+ days; FEATURES says 90d write/30d read; PITFALLS implies indefinite for trust backstop.
+- **Recommendation:** Indefinite for `admin_audit_event`; 30 days for `admin_read_event`. Revisit at first compliance milestone.
+- **Resolve in:** 8A planning.
+
+### Decision 4: Chat-session inspection scope in OPS-TENANT
+
+- Question: zero chat surface, session metadata only, or metadata + redacted tool-output summaries?
+- **Recommendation:** Session metadata only (count, last activity, model selection). Disable "Show details" with tooltip "Chat content access requires tenant-bound support ticket grant (v1.3+)."
+- **Resolve in:** 8C planning.
+
+### Decision 5: Anthropic manual-only catalog seeding cadence
+
+- Anthropic has no public `/models` endpoint.
+- **Recommendation:** Hybrid — Liquibase data seed for initial Anthropic catalog (Claude 3.5 Sonnet/Haiku, Claude 3 Opus); manual admin entry for new models. Sync button disabled on Anthropic provider page with tooltip.
+- **Resolve in:** 8D planning.
 
 ---
 
@@ -192,14 +179,19 @@ ARCHITECTURE's 3-phase view bundles foundation + executor + state machine, buryi
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | **HIGH** | Frontend verified via npm + Context7 + Inbox Zero reference. Backend zero new deps. Spring MVC SSE verified against Spring Framework reference |
-| Features | **HIGH** | Inbox Zero source inspected directly with file paths/line numbers |
-| Architecture | **HIGH** for module layout, schema, ArchUnit, Modulith conventions. **MEDIUM-HIGH** for Spring AI M6 tool-call streaming loop |
-| Pitfalls | **HIGH** for v1.0 invariants + confirmation state machine + prompt-injection threat model. **MEDIUM-HIGH** for Spring AI M6 streaming gaps |
+| Stack | **HIGH** | Zero new runtime deps; verified via Context7 `/springdoc/springdoc-openapi` + existing classpath. |
+| Features | **HIGH** (admin/audit/tenant) / **MEDIUM** (catalog UX) | RBAC + audit well-trodden; LiteLLM is closest curated-catalog peer. |
+| Architecture | **HIGH** | Follows shipped v1.0/v1.1 conventions (CONVENTIONS.md package layout). |
+| Pitfalls | **HIGH** | Well-documented patterns (CWE-522/532/798, NIST SP 800-57, OWASP A04/A09:2021). |
 
-**Overall:** **HIGH**
+**Overall confidence:** **HIGH** — proceed to roadmap. Five open decisions are resolvable inside 8A/8C/8D planning; none block roadmap shape.
 
 ---
 
-*Research synthesis completed: 2026-05-17*
-*Ready for roadmap: yes (pending answers to open questions 1–8)*
+## Sources
+
+**Primary (HIGH):** Context7 `/springdoc/springdoc-openapi`; Spring Security 7.0.x reference; Spring Framework 7 reference; existing repo (`SecurityConfig.java`, `OpenApiConfig.java`, `generate-api.ts`, `apps/web/components/ui/**`, `gradle/libs.versions.toml`); internal docs (CLAUDE.md, CONVENTIONS.md, PROJECT.md, SEED-011); npm registry.
+
+**Secondary (MEDIUM):** Local Inbox Zero clone (rejected env-var allowlist pattern); WorkOS multi-tenant RBAC; Agnite Studio audit logging; Microsoft Learn multitenant identity; LiteLLM proxy admin UI (closest peer); PlanetScale Postgres queue; Neon `SKIP LOCKED`.
+
+**Tertiary (LOW):** Idee cross-tenant impersonation; Crypteron PCI rotation cadence; Ubiq Security key wrapping.

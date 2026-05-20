@@ -69,7 +69,7 @@ class MeControllerTest extends ApiPostgresTestBase {
         ResponseEntity<String> res =
                 RestClient.create("http://localhost:" + port)
                         .get()
-                        .uri("/me")
+                        .uri("/api/me")
                         .retrieve()
                         .onStatus(HttpStatusCode::is4xxClientError, (_, _) -> {})
                         .toEntity(String.class);
@@ -80,7 +80,7 @@ class MeControllerTest extends ApiPostgresTestBase {
     private String getMe(Seed seed) {
         return RestClient.create("http://localhost:" + port)
                 .get()
-                .uri("/me")
+                .uri("/api/me")
                 .header(TestSessionSupport.HEADER_SUBJECT, seed.googleSubject())
                 .header(TestSessionSupport.HEADER_EMAIL, seed.email())
                 .retrieve()

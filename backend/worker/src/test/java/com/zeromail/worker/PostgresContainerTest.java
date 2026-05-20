@@ -30,7 +30,7 @@ public abstract class PostgresContainerTest {
 
     static {
         POSTGRES =
-                new PostgreSQLContainer<>("postgres:17.6").withDatabaseName("zeromail_worker_test");
+                new PostgreSQLContainer<>("postgres:18.4").withDatabaseName("zeromail_worker_test");
         POSTGRES.start();
         GMAIL = new MockGmailHistoryServer();
         try {
@@ -58,6 +58,9 @@ public abstract class PostgresContainerTest {
                 () -> "test-google-secret");
         dynamicPropertyRegistry.add(
                 "zero-mail.crypto.refresh-token-key-base64",
+                () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        dynamicPropertyRegistry.add(
+                "zero-mail.admin.audit.hmac-kek-base64",
                 () -> "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
         dynamicPropertyRegistry.add(
                 "zero-mail.worker.gmail.pubsub.topic-name", () -> "projects/test/topics/gmail");

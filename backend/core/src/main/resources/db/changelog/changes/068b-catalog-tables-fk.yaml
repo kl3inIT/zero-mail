@@ -1,0 +1,40 @@
+# Owner: 8D (per docs/ops/admin-shared-file-ownership.md)
+databaseChangeLog:
+  - changeSet:
+      id: 068b-01-assistant-settings-catalog-fks
+      author: zeromail
+      comment: >
+        Enforce catalog-backed model pins. Existing orphan pins are nulled by the 068 prep
+        changeset before these FKs are added.
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: assistant_settings
+            baseColumnNames: chat_model_id
+            referencedTableName: model_catalog
+            referencedColumnNames: model_id
+            constraintName: fk_assistant_settings_chat_model
+            onDelete: RESTRICT
+        - addForeignKeyConstraint:
+            baseTableName: assistant_settings
+            baseColumnNames: triage_model_id
+            referencedTableName: model_catalog
+            referencedColumnNames: model_id
+            constraintName: fk_assistant_settings_triage_model
+            onDelete: RESTRICT
+        - addForeignKeyConstraint:
+            baseTableName: assistant_settings
+            baseColumnNames: draft_model_id
+            referencedTableName: model_catalog
+            referencedColumnNames: model_id
+            constraintName: fk_assistant_settings_draft_model
+            onDelete: RESTRICT
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: assistant_settings
+            constraintName: fk_assistant_settings_draft_model
+        - dropForeignKeyConstraint:
+            baseTableName: assistant_settings
+            constraintName: fk_assistant_settings_triage_model
+        - dropForeignKeyConstraint:
+            baseTableName: assistant_settings
+            constraintName: fk_assistant_settings_chat_model

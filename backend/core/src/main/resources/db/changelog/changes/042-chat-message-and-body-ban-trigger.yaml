@@ -5,7 +5,7 @@ databaseChangeLog:
       comment: >
         Single changeSet by design (MEDIUM-3): chat_message table, recursive JSONB body-key
         detector, body-ban function, and trigger are applied atomically. The detector uses
-        jsonb_each/jsonb_array_elements because Postgres 17 rejects the reviewed recursive
+        jsonb_each/jsonb_array_elements because Postgres 18 rejects the reviewed recursive
         $.**.keyvalue() JSONPath on scalar nodes. Trigger logic is source-aware on part type
         (HIGH-3): rejects body in email-read tool outputs and unknown tool outputs, but allows body
         in send/draft tool args per the CLAUDE.md Privacy Draft-body carve-out. Uses tool-getMessage,

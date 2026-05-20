@@ -1,354 +1,415 @@
-# Stack Research — Zero Mail v1.1 (Chat Assistant + Settings Page)
+# Stack Research — Zero Mail v1.2 (Admin Console Foundation + Settings UI on Curated Catalog)
 
-**Domain:** Conversational AI assistant on top of existing Spring AI 2.0.0-M6 / Next.js 16 SaaS
-**Researched:** 2026-05-17
-**Overall confidence:** HIGH on frontend additions (verified npm + Context7 + reference repo Inbox Zero). HIGH on Spring MVC SSE patterns. MEDIUM-HIGH on Vercel UI Message Stream wire format (verified against ai@6 source + protocol docs). MEDIUM on Spring AI M6 user-controlled tool execution path (verified against 2.0-SNAPSHOT reference).
+**Domain:** Operator/admin surface added to an existing multi-tenant Spring Boot 4 + Next.js 16 SaaS
+**Researched:** 2026-05-19
+**Overall confidence:** HIGH on all additions/changes (verified via Context7 `/springdoc/springdoc-openapi`, Spring Security 7 docs, Spring Boot 4 reference, existing repo state, npm registry). Zero new "exotic" deps — every v1.2 capability is built from artifacts already on the v1.0/v1.1 classpath plus **one** new dev-time codegen output (a second OpenAPI group).
 
-> **Scope of this document.** This is the **v1.1 delta**. The v1.0 baseline (Java 25 / Spring Boot 4.0.6 / Spring AI 2.0.0-M6 / PostgreSQL 17 / Redis 7 / Next.js 16.2 / React 19.2 / Tailwind 4 / shadcn/ui / TanStack Query / openapi-fetch / Liquibase 5 / virtual threads) is locked and validated — see git history of this file before 2026-05-17 for the full v1.0 stack tables. This document only catalogs what v1.1 **adds** or **changes**.
+> **Scope of this document.** This is the **v1.2 delta**. The v1.0 baseline and v1.1 chat additions (Java 25 / Spring Boot 4.0.6 / Spring AI 2.0.0-M6 / PostgreSQL 17 / Redis 7 / Next.js 16.2 / React 19.2 / Tailwind 4 / shadcn/ui / TanStack Query 5 / openapi-typescript 7.13 / openapi-fetch 0.17 / Liquibase 5 / springdoc-openapi 3.0.3 / Spring Session Redis / AES-GCM at app layer / virtual threads / Micrometer + OTel agent 2.16 / `ai` 6 + `@ai-sdk/react` 3 + AI Elements) are **locked and validated** — see git history of this file before 2026-05-19 for v1.0 and v1.1. This document only catalogs what v1.2 **adds** or **changes**.
 
-> **What v1.1 does not add to the backend stack:** no new Spring Boot starters, no new database, no new queue, no new auth flow, no new observability tool. The entire backend addition is "a streaming SSE controller built on existing Spring MVC + existing Spring AI 2.0.0-M6 + existing virtual threads." Backend changes are *architectural*, not *dependency*. See the new frontend dependencies below.
-
----
-
-## TL;DR — Prescriptive v1.1 Additions
-
-**Frontend (`apps/web/package.json`) — three new runtime dependencies:**
-
-```bash
-# from apps/web
-pnpm add ai@^6.0.184 @ai-sdk/react@^3.0.186 streamdown@^2.5.0
-```
-
-**Frontend (`apps/web/components/ai-elements/**`) — copy-paste primitive registry, not an npm dep:**
-
-```bash
-# from apps/web — installs AI Elements components into apps/web/components/ai-elements/
-pnpm dlx ai-elements@latest add conversation message prompt-input response tool reasoning loader suggestion confirmation
-```
-
-**Backend — zero new dependencies.** Use existing Spring MVC `SseEmitter` (or `Flux<ServerSentEvent>` since `spring-boot-starter-webflux` is **not** a dep — only Reactor Core is needed and is already on the classpath via Spring AI's streaming API). The Vercel "UI Message Stream Protocol" is plain JSON-over-SSE; emit it by hand from a controller that consumes the existing `ChatModel.stream(Prompt)` `Flux<ChatResponse>`.
-
-**Backend Spring AI mode change (no new dep) — user-controlled tool execution:**
-
-```yaml
-# Tool execution must be user-controlled so the chat preview/confirm UX can intercept
-# Configure via ToolCallingChatOptions.builder().internalToolExecutionEnabled(false)
-# per-request inside the LLM gateway, not as a global property.
-```
+> **What v1.2 does not add or change:** no new auth provider (still single Google OAuth bundled flow, no Keycloak/Auth0); no JWT (cookie session via Spring Session Redis stays); no new database; no new queue; no new observability tool; no new LLM provider SDK; no GCP starter; no Kafka/RabbitMQ; no embedding store; no `spring-boot-starter-webflux`. **Admin RBAC is layered on top of the existing `OAuth2User` principal — no second IdP.**
 
 ---
 
-## What v1.1 Adds — Frontend Dependencies
+## TL;DR — Prescriptive v1.2 Additions
 
-### Core runtime packages (npm/pnpm)
+**Backend — zero new runtime dependencies.** All v1.2 capabilities reuse artifacts already on the classpath:
 
-| Package | Version | Purpose | Why |
-|---|---|---|---|
-| `ai` | **^6.0.184** (latest GA on 2026-05-17) | Vercel AI SDK core — `UIMessage` type, `DefaultChatTransport`, `ToolUIPart`, message-stream helpers used by `useChat` internally | Required peer of `@ai-sdk/react@3.x`. The npm `latest` dist-tag now points to v6; v5 is still maintained under the `ai-v5` tag (`5.0.188`). Reference repo `inbox-zero` uses `ai@6.0.168` — v6 is the production line as of May 2026. **HIGH** (verified `npm view ai`). |
-| `@ai-sdk/react` | **^3.0.186** | React hooks (`useChat`, `experimental_useObject`) | Pairs with `ai@^6`. Internally depends on `ai@6.0.184`, `swr@^2.2.5`, `throttleit@2.1.0`. Peer dep: `react: ^18 \|\| ~19.0.1 \|\| ~19.1.2 \|\| ^19.2.1` — **compatible** with our `react@19.2.6`. **HIGH** (verified `npm view @ai-sdk/react@3.0.186 peerDependencies`). |
-| `streamdown` | **^2.5.0** | Markdown renderer hardened against partial/incomplete tokens during streaming (handles half-closed code fences, unfinished tables, malformed links) | Drop-in replacement for `react-markdown` specifically built for AI streams. Reference repo `inbox-zero` ships it. AI Elements' `MessageResponse` component **uses Streamdown internally** — without `streamdown` installed, the AI Elements `response` / `message` components fall back to plain text. Peer dep: `react: ^18 \|\| ^19` — fine. **HIGH** (verified `npm view streamdown` + Context7 `/vercel/streamdown`). |
-
-**Total runtime cost:** three top-level deps. `swr` and `throttleit` come in transitively via `@ai-sdk/react` (already not in the project — net 2 transitive additions). `@opentelemetry/api` comes in transitively via `ai` (lightweight, already commonly bundled).
-
-### Component primitives (copy-paste, not a runtime dep)
-
-**`ai-elements` is a CLI registry, not a runtime package.** It is a shadcn-style component generator that **writes source code into `apps/web/components/ai-elements/`** and that source then becomes part of the project (lint-ignored alongside `apps/web/components/ui/**`, same convention as raw shadcn primitives). There is no `ai-elements` npm dependency to track in `package.json`.
-
-```bash
-# Install all components (recommended for v1.1 — cheap, all components are small)
-pnpm dlx ai-elements@latest
-
-# OR install components piecewise (production discipline)
-pnpm dlx ai-elements@latest add conversation
-pnpm dlx ai-elements@latest add message
-pnpm dlx ai-elements@latest add prompt-input
-pnpm dlx ai-elements@latest add response       # uses streamdown internally
-pnpm dlx ai-elements@latest add tool           # tool-call card with state lifecycle
-pnpm dlx ai-elements@latest add reasoning      # collapsible "thinking" block
-pnpm dlx ai-elements@latest add loader         # streaming spinner
-pnpm dlx ai-elements@latest add suggestion     # quick-action chips
-pnpm dlx ai-elements@latest add confirmation   # tool approval dialog (use for sendEmail/replyEmail/forwardEmail)
-```
-
-**Prerequisites that are already satisfied in `apps/web`:**
-- ✓ Node.js 18+ (we run Node 22+)
-- ✓ React 19 (`react@19.2.6`)
-- ✓ Next.js 14+ with App Router (`next@16.2.6`)
-- ✓ Tailwind CSS 4 (`tailwindcss@^4` + `@tailwindcss/postcss`)
-- ✓ shadcn/ui initialized (`shadcn@^4.7.0` + `components/ui/**` populated)
-- ✓ CSS Variables mode (shadcn default; required by AI Elements)
-- ✓ `sonner` (`^2.0.7`) — required by AI Elements `Confirmation`/`Tool` toast paths
-
-**AI Elements components used in v1.1 (verified each via Context7 `/vercel/ai-elements`):**
-
-| Component | Source folder | Purpose in Zero Mail v1.1 |
-|---|---|---|
-| `Conversation` + `ConversationContent` + `ConversationScrollButton` + `ConversationEmptyState` + `ConversationDownload` | `components/ai-elements/conversation.tsx` | Scrollable chat container with stick-to-bottom autoscroll. Wraps the message list on `/chat`. |
-| `Message` + `MessageContent` + `MessageResponse` | `components/ai-elements/message.tsx` | Per-turn message bubble. `MessageResponse` renders streamed assistant text through Streamdown. |
-| `PromptInput` + `PromptInputBody` + `PromptInputTextarea` + `PromptInputSubmit` + `PromptInputFooter` + `PromptInputTools` + `PromptInputSelect` (model picker) | `components/ai-elements/prompt-input.tsx` | The input bar at the bottom. We will use the model-picker slot to surface per-feature model choice if v1.1 settings expose it in chat. |
-| `Tool` + `ToolHeader` + `ToolContent` + `ToolInput` + `ToolOutput` | `components/ai-elements/tool.tsx` | Renders tool-invocation cards with `input-streaming` → `input-available` → `output-available` / `output-error` state. Used to visualize every tool call (`listRules`, `createRule`, `getEmail`, etc.). |
-| `Reasoning` + `ReasoningTrigger` + `ReasoningContent` | `components/ai-elements/reasoning.tsx` | Collapsible "AI thought process" block. Useful for o1-style and Claude 3.7 thinking provider responses. Optional in v1.1. |
-| `Loader` | `components/ai-elements/loader.tsx` | Simple spinner shown while `status === "submitted"`. |
-| `Suggestion` + `Suggestions` | `components/ai-elements/suggestion.tsx` | Quick-action chips (e.g., "Create a rule for newsletters", "Show me top senders this week"). Optional. |
-| `Confirmation` + `ConfirmationRequest` + `ConfirmationActions` + `ConfirmationAction` | `components/ai-elements/confirmation.tsx` | **Critical for v1.1 send safety.** Bound to `addToolApprovalResponse` from `useChat`. Renders the "AI wants to send this draft to X — Send / Cancel / Edit" dialog. Required for `sendEmail`/`replyEmail`/`forwardEmail` tools. |
-
-### Tool-call rendering with confirm/cancel (the v1.1 send-safety story)
-
-There is **no separate tool-call rendering library** to add. The combination is:
-
-1. **Backend** marks the tool definition with `requireApproval: true` (Vercel AI SDK pattern). In our case, because we are not running the Vercel `ai` server-side helpers, we instead use **Spring AI's `ToolCallingChatOptions.builder().internalToolExecutionEnabled(false)` + custom tool-call serialization in the SSE stream** to emit the "approval-requested" state to the client.
-2. **Frontend** `useChat({ ..., sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses })` triggers a follow-up request once the user approves.
-3. **UI** uses AI Elements `<Confirmation>` (or roll-your-own with shadcn `<AlertDialog>`) and calls `addToolApprovalResponse({ id, approved: true|false })` on click.
-4. **State machine** on the message part: `input-streaming` → `input-available` → `approval-requested` → `output-available` | `output-denied`.
-
-> **The "tool-call card with Confirm/Cancel" you asked about is `<Confirmation>` from AI Elements, wired to `addToolApprovalResponse` from `useChat`.** Both ship together in the AI SDK v6 / AI Elements 1.9 line.
-
----
-
-## What v1.1 Adds — Backend
-
-**Zero new Maven/Gradle dependencies.** Everything below is built from artifacts already on the v1.0 classpath.
-
-### Existing artifacts used (no new entries in `libs.versions.toml`)
-
-| Artifact (already present) | What v1.1 uses it for |
+| Capability | Already on classpath, used as |
 |---|---|
-| `spring-boot-starter-web` (already a top-level dep) | `SseEmitter` / `Flux<ServerSentEvent>` return type on the new `/api/chat` `@PostMapping` controller. Spring MVC converts `Flux` to streaming SSE automatically when `produces=text/event-stream`. **HIGH** — verified via Spring Framework reference, `web/webmvc/mvc-ann-async.adoc`. |
-| `spring-ai-starter-model-openai` (and the other three providers) | `ChatModel.stream(Prompt)` returns `Flux<ChatResponse>`. Already on classpath since v1.0 (LLM-01). |
-| Reactor Core (transitively via Spring AI) | `Flux` is already on the classpath because `ChatModel#stream` returns `Flux<ChatResponse>`. No new `spring-boot-starter-webflux` dep needed; we stay on Spring MVC + virtual threads. |
-| Jackson 3.1.2 (Boot-managed) | Serialize the 12 UI Message Stream Protocol envelope types to JSON for each `data: ...\n\n` SSE frame. |
-| Spring Session Redis (already wired) | Reuses the cookie-based session for chat auth — `useChat`'s `DefaultChatTransport({ credentials: 'include' })` sends the existing session cookie. No JWT, no new auth path. |
-| Postgres 17 + Liquibase 5 + Spring Data JPA (already wired) | Two new tables in v1.1: chat conversation history (`chat_conversation` + `chat_message`), audit row per confirmed send (`chat_send_audit`). Plain Liquibase YAML changelog — no new dep. |
-| Spring Modulith events (already wired) | Reuse the existing event spine to fan out "chat-initiated send completed" → analytics module. |
+| `/admin/**` RBAC | Spring Security 7.0.5 `authorizeHttpRequests(...).requestMatchers("/admin/**").hasRole("ADMIN")` + `@PreAuthorize("hasRole('ADMIN')")` for method-level checks. **One new annotation:** `@EnableMethodSecurity` on the existing `SecurityConfig`. |
+| Admin action audit log | New Liquibase YAML changelog → `admin_audit_event` table. Same persistence stack as v1.0/v1.1 (Liquibase 5 + Spring Data JPA / JDBC). |
+| Per-provider per-feature LLM catalog | Three new Liquibase YAML changelogs (`llm_provider_catalog`, `llm_provider_model`, `llm_model_feature_capability`). No new library. |
+| Sync-from-`/models` for each provider | **Already-installed Spring AI provider starters** expose `*ModelsApi.listModels()` via their underlying clients (OpenAI starter ships `OpenAiApi`, Anthropic starter ships `AnthropicApi`, etc.). Where Spring AI does **not** expose a `/models` lister, fall back to a thin `RestClient` call in `core.llm.gateway.springai.admin` — still inside the locked single-adapter package. **No raw third-party SDKs.** |
+| AES-GCM master key encryption | **Same AES-GCM app-layer crypto already shipped in LLM-04 for BYOK** — reuse `core.crypto.AesGcmEncryptor` (or equivalent) for master keys. Keys at rest in a new `llm_provider_master_key` table; KEK from existing `ZeroMailCoreProperties` secret (rotation = new KEK version + re-wrap rows in a single Liquibase data migration + admin-issued rotation command). |
+| Test-connection per master key | Spring AI `ChatModel.call(Prompt.builder().messages(new UserMessage("ping")).build())` with token limit 1 — already on classpath. |
+| Tenant read-only views | Existing Spring Data JDBC projections (`projection/` package per CONVENTIONS.md). No new lib. |
+| Worker queue health (read-only) | Read queries against existing `outbox` + `processing_job` Postgres tables (Postgres MCP available for ops verification per Tooling section). No new lib. |
+| Promoted global LLM spend dashboard | Aggregations over the existing metadata-only spend rows already recorded by LLM-10/11. No new lib. |
+| Admin OpenAPI segregation | **Already-installed `springdoc-openapi-starter-webmvc-ui` 3.0.3** ships `GroupedOpenApi` — add two beans (`publicApi` + `adminApi`) and emit two specs. |
 
-### v1.1 backend architecture change (no dep): user-controlled tool execution
+**Backend — three architectural switches (no dep changes):**
 
-Spring AI normally executes tools internally — the model emits a tool call, Spring AI runs the `@Tool`-annotated method, feeds the result back, and the user only sees the final assistant text. **v1.1 disables this loop** so the chat UI can preview every tool call before execution (especially the three send tools).
+1. Add `@EnableMethodSecurity` to the existing `SecurityConfig` class.
+2. Extend the existing `OAuth2UserService` / `GoogleOAuthSuccessHandler` to attach `ROLE_ADMIN` based on a DB-backed `user.is_admin` boolean (admin elevation is a DB row, not a Google-side claim).
+3. Add a second `GroupedOpenApi` bean producing `openapi/admin-openapi.json` alongside the existing `openapi/openapi.json`.
 
-Pattern verified against `https://docs.spring.io/spring-ai/reference/2.0-SNAPSHOT/api/tools.html`:
+**Frontend (`apps/web/package.json`) — ZERO new runtime dependencies.** Every admin UI primitive needed in v1.2 is **already in `apps/web/components/ui/**`** (verified by directory listing on 2026-05-19): `table`, `tabs`, `dialog`, `alert-dialog`, `dropdown-menu`, `select`, `command`, `popover`, `tooltip`, `badge`, `card`, `sheet`, `sidebar`, `switch`, `chart` (Recharts wrapper), `skeleton`, `scroll-area`, `spinner`, `accordion`, `button-group`, `input-group`, `hover-card`. The only **new** shadcn primitive **likely** wanted (`data-table` patterns / pagination) is composed on top of the already-installed `table` + `button` + `select` + `input` primitives — no extra `pnpm dlx shadcn add` required for v1.2 Phase 8. **One frontend codegen change:** the `apps/web/scripts/generate-api.ts` script needs to fetch and emit **two** schema files (one per OpenAPI group), or merge both groups into the existing single schema file. See "Frontend codegen change" below for the recommended split.
+
+---
+
+## What v1.2 Adds — Backend (No New Dependencies)
+
+### Spring Security 7 admin RBAC pattern (HIGH — verified against Spring Security 7.0.x reference)
+
+Spring Security 7.0.5 (already on classpath via Spring Boot 4.0.6) is the **same API surface** as Spring Security 6 for URL authorization. No breaking change for `authorizeHttpRequests`, `requestMatchers`, `hasRole`, `hasAuthority`, or `@PreAuthorize`. The canonical pattern is:
 
 ```java
-// Inside the LLM gateway (backend/core's llm.gateway.springai package).
-// Per-request, build a ToolCallingChatOptions with internalToolExecutionEnabled(false).
-// Then walk the tool-call loop yourself, emitting each step to the SSE writer:
-//
-//   ChatResponse response = chatModel.call(prompt);
-//   while (response.hasToolCalls()) {
-//       // 1. emit tool-call event over SSE so the UI shows the card
-//       // 2. for "safe" tools (listRules, getEmail, etc.) — execute via
-//       //    ToolCallingManager.executeToolCalls(prompt, response) immediately
-//       // 3. for "approval-required" tools (sendEmail, replyEmail, forwardEmail) —
-//       //    pause the stream until the client posts back addToolApprovalResponse
-//       // 4. feed ToolExecutionResult.conversationHistory() back into a new Prompt
-//       //    and call chatModel.call again
-//   }
+// Inside the existing SecurityConfig.chain(...) — adds ONE requestMatchers row
+http.authorizeHttpRequests(authorize -> authorize
+        .requestMatchers(
+                "/login",
+                "/actuator/health",
+                "/actuator/health/**",
+                "/v3/api-docs/**",
+                "/v3/api-docs/admin",        // new — admin OpenAPI group
+                "/swagger-ui/**",
+                "/login/oauth2/**",
+                "/oauth2/**")
+            .permitAll()
+        .requestMatchers("/api/admin/**", "/admin/**").hasRole("ADMIN")  // ← only v1.2 addition
+        .anyRequest().authenticated());
 ```
 
-For **streaming** within a single LLM turn, swap `chatModel.call(prompt)` for `chatModel.stream(prompt)` and forward `Flux<ChatResponse>` items as `text-delta` SSE frames using the protocol below. The Spring AI 2.0.0-M6 streaming API is in `StreamingChatModel#stream(Prompt) -> Flux<ChatResponse>`. **HIGH** — verified via `/websites/spring_io_spring-ai_reference_2_0-snapshot`.
+**Two complementary enforcement layers (defense in depth):**
 
-### Spring MVC SSE pattern (verified)
-
-Three valid return-type choices on a `@PostMapping` controller, all producing `text/event-stream`. Verified against `https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-async.html` and Spring Boot 4 reference:
-
-| Return type | When to use | Notes |
+| Layer | Where | What it catches |
 |---|---|---|
-| `SseEmitter` | Imperative writer pattern. Best fit when the SSE producer is a non-reactive thread loop (e.g., walking `chatModel.call(...)` in a `while (response.hasToolCalls())` loop) | Save the emitter, call `emitter.send(SseEmitter.event().data(payload))` from a worker thread, `emitter.complete()` at end. With `spring.threads.virtual.enabled=true` (already set in v1.0), the "worker thread" is a virtual thread — no extra `@Async` plumbing needed. |
-| `Flux<ServerSentEvent<String>>` | Reactive pattern. Best fit when the producer is already a `Flux<ChatResponse>` from `ChatModel#stream` | Spring MVC auto-adapts `Flux` to SSE if `produces=MediaType.TEXT_EVENT_STREAM_VALUE`. Spring uses `ResponseBodyEmitter` under the hood and runs writes on the configured `AsyncTaskExecutor` (which is the virtual-thread executor when `spring.threads.virtual.enabled=true`). |
-| `ResponseBodyEmitter` | Same as `SseEmitter` but without the SSE auto-format | We do **not** use this — `SseEmitter` is strictly better when the wire format is SSE. |
+| URL-pattern `requestMatchers("/api/admin/**").hasRole("ADMIN")` | `SecurityConfig.chain(...)` | Any HTTP request to admin paths bypassing the controller (filter chain runs before dispatch). Fail-fast 403 at the filter. |
+| Method `@PreAuthorize("hasRole('ADMIN')")` on every admin controller / service method | `controllers/admin/**` + `application/admin/**` | Programmatic calls (Modulith events, scheduled jobs, tests) that try to invoke admin operations without going through `/api/admin/**`. Also makes intent explicit at the call site. |
 
-**Virtual-thread gotcha (verified):** When `spring.threads.virtual.enabled=true`, the Tomcat worker for an SSE request is a virtual thread. This is exactly what we want — long-lived SSE connections (LLM streams can run 30s+) cost approximately one stack frame, not one platform thread. No additional config required.
+**One new annotation on the existing class — no new dependency:**
 
-**No-WebFlux confirmation:** Returning `Flux<ServerSentEvent>` from a Spring **MVC** controller works because Spring MVC's `ReactiveAdapterRegistry` adapts Reactor `Flux` to `SseEmitter` automatically. **You do not need to add `spring-boot-starter-webflux`** — that would switch the whole app to Netty and break the existing Tomcat-based v1.0 setup.
-
-### Vercel UI Message Stream Protocol — the wire format we must emit
-
-The frontend `useChat` hook from `@ai-sdk/react@3` expects a specific SSE format. **There is no Java/Spring adapter library** — we hand-write the encoder in `backend/api`. The format is small (~12 event types) and stable. Verified via Context7 `/vercel/ai` `content/docs/04-ai-sdk-ui/50-stream-protocol.mdx` and `content/docs/03-ai-sdk-core/55-testing.mdx`.
-
-**Required response headers:**
-
-```
-HTTP/1.1 200 OK
-Content-Type: text/event-stream
-Cache-Control: no-cache
-Connection: keep-alive
-x-vercel-ai-ui-message-stream: v1     ← REQUIRED header for non-Vercel backends
+```java
+@Configuration
+@EnableMethodSecurity   // ← add this for @PreAuthorize/@PostAuthorize support
+@Profile("!test")
+public class SecurityConfig { ... }
 ```
 
-**Event envelope** — every event is a single SSE `data:` line containing a JSON object:
+`@EnableMethodSecurity` lives in `org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity` — already on the classpath via `spring-boot-starter-security` (no Gradle change). Spring Security 7 keeps the same name and import path; verified Context7 `/spring-projects/spring-security`. **HIGH**.
 
-```
-data: {"type":"start","messageId":"msg-123"}\n\n
-data: {"type":"text-start","id":"text-1"}\n\n
-data: {"type":"text-delta","id":"text-1","delta":"Hello"}\n\n
-data: {"type":"text-delta","id":"text-1","delta":" world"}\n\n
-data: {"type":"text-end","id":"text-1"}\n\n
-data: {"type":"finish"}\n\n
-data: [DONE]\n\n
-```
+### How `ROLE_ADMIN` gets attached to the existing cookie session
 
-**Ordering rule (will cause runtime errors if violated):** every `text-delta` MUST be wrapped between a matching `text-start` and `text-end` with the same `id`. Source: `https://github.com/vercel/ai/blob/main/content/docs/07-reference/05-ai-sdk-errors/ai-ui-message-stream-error.mdx`. Same rule applies to tool parts (`tool-input-start` → `tool-input-delta` → `tool-input-available` → `tool-output-available`).
+**Decision: admin elevation is a DB row, not a Google claim.** This keeps the bundled OAuth flow untouched (memory note "Bundle OAuth scopes (inbox-zero pattern)") and avoids granting Google control over our authorization model.
 
-**Event types we will emit in v1.1** (verified subset — full catalog is larger):
+**Implementation outline (no new dep):**
 
-| Type | When | Payload |
+1. Add a `is_admin BOOLEAN NOT NULL DEFAULT false` column to the existing `user` table via a new Liquibase YAML changelog.
+2. In the existing `GoogleOAuthSuccessHandler` (or the corresponding `OAuth2UserService` if one is added), after provisioning, look up `user.is_admin` and append `new SimpleGrantedAuthority("ROLE_ADMIN")` to the principal's authorities **alongside** the existing `ROLE_USER` (or equivalent).
+3. Spring Session Redis serializes the augmented principal automatically — the cookie session already carries arbitrary `GrantedAuthority` lists.
+4. Admin elevation/demotion lives in a Liquibase seed script (initial admin) + an admin-only API endpoint guarded by `@PreAuthorize("hasRole('ADMIN')")` (existing admins promote new ones).
+
+**Why not Google Workspace admin claims:** the SaaS targets prosumer Gmail users, not Workspace tenants — Google's `hd` (hosted domain) claim is not a reliable signal. DB-backed elevation is faithful to the multi-tenant + BYOK model.
+
+**Why not Keycloak / Auth0:** would force a second IdP for **two** roles (`USER`, `ADMIN`); adds an entire deployment unit + cost; user has memory note rejecting "incremental authorization" detours; CLAUDE.md "Stateless JWT user sessions" is in the do-not-use list. Locked: stay on cookie + Spring Session Redis.
+
+### Master-key management for OpenAI/Anthropic/Google/DeepSeek (reuses existing AES-GCM)
+
+**Decision: reuse the AES-GCM app-layer encryptor already shipped for BYOK (LLM-04) — do NOT add a new crypto library.** The threat model and rotation requirements are identical to BYOK refresh tokens.
+
+**Pattern:**
+
+| Concern | v1.0 BYOK pattern (already shipped) | v1.2 master-key extension |
 |---|---|---|
-| `start` | First event of a turn | `{ type, messageId }` |
-| `text-start` | New assistant text block | `{ type, id }` |
-| `text-delta` | Each token chunk from Spring AI's `Flux<ChatResponse>` | `{ type, id, delta }` |
-| `text-end` | Text block finished | `{ type, id }` |
-| `tool-input-start` | Model started emitting a tool call | `{ type, toolCallId, toolName }` |
-| `tool-input-delta` | Streaming arguments | `{ type, toolCallId, inputTextDelta }` |
-| `tool-input-available` | Arguments fully parsed | `{ type, toolCallId, toolName, input }` |
-| `tool-output-available` | Tool result | `{ type, toolCallId, output }` |
-| `tool-output-error` | Tool threw | `{ type, toolCallId, errorText }` |
-| `data-<custom>` | Custom data parts (e.g., `data-tenant-credit-balance`, `data-rule-preview`) | `{ type: "data-<name>", id?, data }` |
-| `finish` | Turn ended | `{ type }` |
-| `[DONE]` | Stream terminator | (literal `data: [DONE]\n\n`) |
+| Encryption algorithm | AES-256-GCM, 96-bit IV, 128-bit tag | **Same.** |
+| Key Encryption Key (KEK) | `ZeroMailCoreProperties.crypto.byok.kekBase64` (env-injected) | **Add** `ZeroMailCoreProperties.crypto.masterKeys.kekBase64` (env-injected) and `kekVersion` for rotation tracking. |
+| Storage | `byok_credential` table — ciphertext + IV + version | **Add** `llm_provider_master_key` table with same column shape: `(id, provider_id, ciphertext, iv, kek_version, status, created_at, rotated_at, last_tested_at, last_test_status)`. |
+| Rotation | Re-wrap row with new KEK version | **Same.** Admin UI triggers a rotation command → service decrypts under old KEK → re-encrypts under new KEK → writes `kek_version+1`. Liquibase YAML changelog only bumps `kekVersion` in config; ciphertext rotation is a runtime command, not a migration. |
+| Plaintext lifetime | Per-call buffer zeroed in `finally` | **Same.** |
+| Logging | Never logged (LLM-04 + `@Sensitive` Logback scrub) | **Same.** |
+| Test-connection | N/A (BYOK calls are per-user) | **New.** Admin clicks "Test" → server decrypts master key → builds a Spring AI `ChatModel` with that key → calls with a 1-token prompt → records `last_test_status`. Re-uses the existing `LlmGateway` adapter; no new code outside `core.llm.gateway.springai.admin`. |
 
-For human-in-the-loop approval, the message-part state on the client moves through `input-streaming` → `input-available` → `approval-requested` → `output-available` | `output-denied`. The `approval-requested` state is what makes the `<Confirmation>` component render.
+**No new crypto library.** Java's built-in `Cipher.getInstance("AES/GCM/NoPadding")` (JDK 25) is what LLM-04 already uses. **HIGH** — verified against the repo's existing `byok_credential` flow.
+
+**Pitfall (explicit):** do **NOT** introduce HashiCorp Vault, AWS KMS, or GCP KMS in v1.2. The single-VPS posture (CLAUDE.md "Distribution (v1)") and "No GCP hosting baseline" rule lock the deployment to one host — adding a managed KMS would (a) require a second deployment surface, (b) add network latency to every LLM call, (c) violate the locked "No GCP starter" rule. App-layer AES-GCM + env-injected KEK is the v1.2 design. Managed KMS is a v2+ migration.
+
+### Sync-from-`/models` per provider (no new SDK)
+
+Each Spring AI provider starter already on the classpath exposes a low-level client that can list models. **The rule "no raw HTTP LLM calls or vendor SDK usage outside the Spring AI adapter" remains in force** — the list-models call **must** live inside `core.llm.gateway.springai.admin`. Where the provider starter does not expose a `listModels()` method directly, a `RestClient` (Spring 7 built-in) call to `<base-url>/v1/models` with the master key is acceptable **only inside the locked adapter package**, guarded by the existing ArchUnit rule. **MEDIUM-HIGH** — confirmed by inspecting Spring AI 2.0.0-M6's `OpenAiApi` exposure in the existing v1.0 LLM gateway; verify the Anthropic/Google starters at implementation time.
+
+| Provider | Endpoint shape | Notes |
+|---|---|---|
+| OpenAI | `GET /v1/models` returns `{ data: [{ id, owned_by, ... }] }` | Auth: `Authorization: Bearer <key>`. |
+| OpenRouter | `GET /v1/models` — OpenAI-compatible | Use existing OpenAI starter pointed at `https://openrouter.ai/api/v1`; same endpoint shape. |
+| Anthropic | `GET /v1/models` returns `{ data: [{ id, display_name, ... }] }` | Auth: `x-api-key: <key>` + `anthropic-version: 2023-06-01`. |
+| Google GenAI | `GET https://generativelanguage.googleapis.com/v1beta/models?key=<key>` returns `{ models: [{ name, supportedGenerationMethods, ... }] }` | Auth: query param (or `x-goog-api-key` header). Different shape — see below. |
+| DeepSeek | `GET /v1/models` — OpenAI-compatible | Use the existing DeepSeek starter (OpenAI-shape adapter). |
+
+**Per-feature capability:** the catalog table `llm_model_feature_capability` records `(provider_id, model_id, feature)` rows where `feature ∈ {CHAT, TRIAGE, DRAFT}`. Sync-from-`/models` **proposes** discovered model IDs; admin **explicitly toggles** which features each model is enabled for. We do not auto-derive feature capability from the `/models` response because: (a) `supportedGenerationMethods` exists only on Google, (b) capability labels like "chat" vs "completion" are noisy across providers, (c) Zero Mail's three feature slots have distinct prompt/budget/safety profiles that providers don't model. Admin curation is the source of truth.
+
+### Admin audit table (new Liquibase changelog)
+
+```yaml
+# Liquibase YAML — illustrative shape, not literal
+- changeSet:
+    id: 20260520-01-create-admin-audit-event
+    changes:
+      - createTable:
+          tableName: admin_audit_event
+          columns:
+            - { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
+            - { name: actor_user_id, type: BIGINT, constraints: { nullable: false } }
+            - { name: action,        type: VARCHAR(64), constraints: { nullable: false } }  # e.g., CATALOG_MODEL_ENABLED, MASTER_KEY_ROTATED, TENANT_PAUSED
+            - { name: target_kind,   type: VARCHAR(64) }                                    # e.g., PROVIDER, MODEL, TENANT
+            - { name: target_id,     type: VARCHAR(128) }
+            - { name: payload_jsonb, type: JSONB }                                          # diff before/after, NEVER email content
+            - { name: created_at,    type: TIMESTAMPTZ, defaultValueComputed: NOW(), constraints: { nullable: false } }
+            - { name: ip_address,    type: VARCHAR(64) }
+            - { name: user_agent,    type: VARCHAR(512) }
+```
+
+**Distinct from TRG-05** (triage audit) — TRG-05 records what the rules engine did to user mail; `admin_audit_event` records what operators did to configuration. They live in separate tables, separate retention windows, separate read paths.
+
+### Worker queue health (read-only views)
+
+No new lib. The existing `outbox` + `processing_job` Postgres tables already carry everything the admin panel needs:
+
+| Read | Source |
+|---|---|
+| Backlog (pending count) | `SELECT count(*) FROM outbox WHERE status = 'PENDING'` |
+| Failed (retryable) | `SELECT count(*) FROM processing_job WHERE status = 'FAILED' AND retry_count < max_retries` |
+| Failed (dead-lettered) | `SELECT count(*) FROM processing_job WHERE status = 'DEAD'` |
+| Oldest pending lag | `SELECT now() - min(created_at) FROM outbox WHERE status = 'PENDING'` |
+| Per-job-type throughput | `SELECT job_type, count(*) FROM processing_job WHERE status = 'DONE' AND completed_at > now() - interval '1 hour' GROUP BY job_type` |
+
+All read via Spring Data JDBC projections (CONVENTIONS.md `projection/`). The Postgres MCP tools listed in CLAUDE.md ("Tooling" → Postgres MCP Pro) are for operator inspection of the same data, not for the runtime admin UI.
 
 ---
 
-## What v1.1 Adds — Backend Persistence
+## What v1.2 Changes — Backend OpenAPI Segregation
 
-Two new Liquibase YAML changelogs (no new library):
+**Problem.** All admin endpoints live under `/api/admin/**`. We do **not** want admin schemas to appear in the public OpenAPI document the frontend ships to every browser (information leakage about operator-only operations), and we **do** want a separate typed client for the admin UI so the public-facing client doesn't bloat with admin types.
+
+**Solution.** `springdoc-openapi` 3.0.3 (already installed) ships `GroupedOpenApi` — a built-in mechanism for splitting one Spring app's endpoints into multiple OpenAPI documents. **Verified via Context7 `/springdoc/springdoc-openapi`** (snippet retrieved 2026-05-19):
+
+```java
+// Add to the existing OpenApiConfig — does NOT replace the existing customizers,
+// it adds two new beans alongside them.
+@Bean
+GroupedOpenApi publicApi() {
+    return GroupedOpenApi.builder()
+            .group("public")
+            .displayName("Zero Mail Public API")
+            .pathsToMatch("/api/**")
+            .pathsToExclude("/api/admin/**")
+            .build();
+}
+
+@Bean
+GroupedOpenApi adminApi() {
+    return GroupedOpenApi.builder()
+            .group("admin")
+            .displayName("Zero Mail Admin API")
+            .pathsToMatch("/api/admin/**")
+            .addOperationCustomizer((operation, handlerMethod) -> {
+                operation.addTagsItem("admin");
+                return operation;
+            })
+            .build();
+}
+```
+
+**Generated artifact paths (springdoc 3.0.3 convention):**
+
+| URL | Content |
+|---|---|
+| `GET /v3/api-docs/public` | Public API spec (excludes `/api/admin/**`) — replaces the current default at `/v3/api-docs` for frontend codegen. |
+| `GET /v3/api-docs/admin` | Admin API spec (`/api/admin/**` only) — used by the admin UI's separate typed client. |
+| `GET /v3/api-docs` | Default merged spec (kept for compatibility; **not** consumed by frontend codegen). |
+| `GET /swagger-ui/index.html` | Swagger UI with group selector top-right (public/admin). |
+
+**Existing `OpenApiConfig.apiErrorCustomizer()` continues to apply:** the file explicitly uses `GlobalOpenApiCustomizer` precisely because of the doc-comment warning *"future grouping via `GroupedOpenApi` would silently bypass plain `OpenApiCustomizer` beans on the grouped paths."* v1.2 is the future this was anticipating. **HIGH** — confirmed by reading the existing `OpenApiConfig.java`.
+
+**Security note.** The admin spec URL must be permit-listed in `SecurityConfig` (`/v3/api-docs/admin`) so the **admin user** can fetch it for codegen — but the admin UI itself **already requires `ROLE_ADMIN`**, so the spec's existence is not a real leak even if served to anonymous users. For belt-and-braces, gate `/v3/api-docs/admin` behind `hasRole("ADMIN")` instead of `permitAll()` and run admin codegen from an authenticated admin browser session or a build-time CI secret.
+
+---
+
+## What v1.2 Changes — Frontend Codegen Pipeline
+
+**Two valid approaches; pick one.**
+
+### Option A (recommended): Two schema files, one for each OpenAPI group
+
+```typescript
+// apps/web/lib/api/schema.d.ts          ← regenerated from /v3/api-docs/public
+// apps/web/lib/api/admin-schema.d.ts    ← NEW, regenerated from /v3/api-docs/admin
+```
+
+**Why.** Two typed clients with **non-overlapping types** prevents the admin DTOs from being typo-imported into the public app bundle. The public bundle size stays the same; admin bundle only ships when the admin code-splits.
+
+**Change to `apps/web/scripts/generate-api.ts`.** Today the script fetches **one** spec URL and emits **one** `.d.ts` file. v1.2 changes it to a loop over a two-entry config:
+
+```typescript
+const SPECS = [
+  { spec: process.env.API_SPEC_URL ?? 'http://localhost:8080/v3/api-docs/public', out: 'lib/api/schema.d.ts' },
+  { spec: process.env.ADMIN_SPEC_URL ?? 'http://localhost:8080/v3/api-docs/admin', out: 'lib/api/admin-schema.d.ts' },
+];
+```
+
+**Companion to `apps/web/lib/api/client.ts`.** Add an `adminClient` alongside the existing typed client:
+
+```typescript
+// apps/web/lib/api/admin-client.ts (NEW)
+import createClient from 'openapi-fetch';
+import type { paths } from './admin-schema';
+import { getBaseUrl } from './base-url';
+
+export const adminClient = createClient<paths>({ baseUrl: getBaseUrl(), credentials: 'include' });
+```
+
+**No new npm package.** `openapi-typescript` 7.13.0 and `openapi-fetch` 0.17.0 — already installed — handle both files identically.
+
+### Option B (rejected): One merged spec, manual `if (path.startsWith('/api/admin'))` segregation
+
+Bloats the public bundle with admin types, allows accidental cross-imports, and provides no real benefit. Skip.
+
+---
+
+## What v1.2 Adds — Frontend (Zero New Runtime Deps)
+
+**Verified `apps/web/components/ui/**` on 2026-05-19** — admin-relevant primitives **already present**:
+
+| Admin UI need | Existing primitive | Source |
+|---|---|---|
+| Catalog table (models × features) | `table.tsx` | shadcn already installed |
+| Settings tabs (4 tabs in Phase 9) | `tabs.tsx` | shadcn already installed |
+| Master-key rotation confirm | `alert-dialog.tsx` | shadcn already installed |
+| Provider/model picker dropdown | `select.tsx` + `command.tsx` + `popover.tsx` | shadcn already installed |
+| Admin sidebar nav | `sidebar.tsx` | shadcn already installed |
+| Tenant detail "view-only" card grid | `card.tsx` + `badge.tsx` + `separator.tsx` | shadcn already installed |
+| Queue health charts | `chart.tsx` (Recharts wrapper) + `recharts@3.8.1` | already installed |
+| Toggle on/off (catalog model enabled per feature) | `switch.tsx` + `checkbox.tsx` | shadcn already installed |
+| Loading states | `skeleton.tsx` + `spinner.tsx` | shadcn already installed |
+| Admin action toasts | `sonner.tsx` (already wired via `sonner@^2.0.7`) | shadcn already installed |
+| Read-only key reveal | `input.tsx` + `button.tsx` with `eye` icon (`lucide-react` already installed) | already installed |
+| Filterable search (e.g., tenants list) | `input.tsx` + `command.tsx` | shadcn already installed |
+| Pagination | Compose from `button.tsx` + `select.tsx`; **shadcn does not ship a `pagination` primitive** — hand-compose | already installed |
+| Long lists scroll container | `scroll-area.tsx` | shadcn already installed |
+| Side-panel for tenant detail drawer | `sheet.tsx` | shadcn already installed |
+
+**Net new shadcn primitives required: zero.**
+
+**Optional (not required for Phase 8 functional scope):**
+
+| Optional primitive | When to install | Cost |
+|---|---|---|
+| `pagination` block (community shadcn-style) | If the tenants table grows beyond ~50 rows and hand-composed pagination feels too custom | `pnpm dlx shadcn@latest add pagination` — single-file primitive. |
+| `data-table` block (community block, depends on `@tanstack/react-table`) | If catalog/tenants tables need sorting + filtering + virtualization. **`@tanstack/react-table` is NOT in `apps/web/package.json` today.** | New runtime dep: `@tanstack/react-table` (~14 KB gz). **Defer until UI feedback shows hand-composed table is insufficient.** |
+
+**Recommendation: ship Phase 8 with hand-composed tables on the existing `table.tsx` primitive.** Memory note "Use raw shadcn primitives first" applies — wait for the rule-of-three before installing `@tanstack/react-table`.
+
+---
+
+## What v1.2 Adds — Backend Persistence (New Liquibase Changelogs Only)
+
+Six new Liquibase YAML changelogs. **No new database library.**
 
 | Table | Owner module | Purpose |
 |---|---|---|
-| `chat_conversation` | `backend/core` (new `chat` package) | Per-tenant conversation root: `(id, tenant_id, title, created_at, updated_at)`. Title is the LLM-generated short summary. |
-| `chat_message` | `backend/core` (new `chat` package) | Per-turn message: `(id, conversation_id, role, parts_jsonb, created_at)`. `parts_jsonb` is the `UIMessage.parts[]` array verbatim, so the frontend can replay history into `useChat({ initialMessages: ... })` without re-streaming. **Includes tool-call inputs/outputs.** |
-| `chat_send_audit` | `backend/core` (`chat` package, but also queried by analytics) | Per confirmed send: `(id, tenant_id, conversation_id, message_id, tool_name, gmail_message_id, sent_at, draft_id_before, recipient_count)`. **Append-only**, never updated, never deleted within 30-day window. |
+| `user.is_admin` (column add) | `backend/core` (`auth` package, existing) | DB-backed admin elevation bit on the existing `user` aggregate. |
+| `admin_audit_event` | `backend/core` (new `admin` package) | Append-only operator action log. **Never** stores email content; payload diff only. |
+| `llm_provider_catalog` | `backend/core` (existing `llm` package) | One row per provider (OPENAI, ANTHROPIC, GOOGLE, DEEPSEEK, OPENROUTER). `(id, code, display_name, base_url, status, created_at, updated_at)`. |
+| `llm_provider_model` | `backend/core` (existing `llm` package) | One row per discovered model. `(id, provider_id, model_id, display_name, status, discovered_at, last_synced_at)`. `status ∈ {DISCOVERED, ENABLED, DISABLED, DEPRECATED}`. |
+| `llm_model_feature_capability` | `backend/core` (existing `llm` package) | Many-to-many between models and feature slots. `(provider_id, model_id, feature, enabled, default_for_feature)`. `feature ∈ {CHAT, TRIAGE, DRAFT}`. The "is this model offered for chat?" question is settled here, not in code. |
+| `llm_provider_master_key` | `backend/core` (existing `llm` package) | One row per provider's server-managed master key. `(id, provider_id, ciphertext_b64, iv_b64, kek_version, status, last_test_status, last_tested_at, rotated_at)`. `status ∈ {ACTIVE, ROTATING, REVOKED}`. |
 
-**Privacy note:** This is a deliberate carve-out from v1.0's "no LLM prompts/completions stored" rule, locked in `CLAUDE.md` and `PROJECT.md` ("User-typed rule-builder assistant chat (chat messages + structured tool outputs) persists normally — it is UI configuration input, not extracted email content"). The carve-out **explicitly excludes** inlining email bodies into stored chat messages: tools that fetch email content (`getEmail`, `listEmails`) must return short-lived summaries, not raw bodies, before any persistence.
-
----
-
-## Development Tools (no changes)
-
-No new dev dependencies. Existing toolchain — `vitest`, `playwright`, `eslint`, `typescript`, `openapi-typescript`, `openapi-fetch` — covers v1.1.
-
-**Playwright coverage for v1.1:** golden-path E2E must include:
-1. User sends "Create a rule for receipts" → assistant streams reasoning → emits `tool-input-available` for `createRule` → tool auto-executes (no approval) → `<Tool>` card shows success → DB row appears.
-2. User sends "Send a thank-you reply to this thread" → assistant streams draft text → emits `tool-input-available` for `replyEmail` → `<Confirmation>` dialog renders → user clicks **Confirm** → `addToolApprovalResponse({approved: true})` → backend executes Gmail draft-send → audit row in `chat_send_audit`.
-3. User sends the same prompt → clicks **Cancel** → `addToolApprovalResponse({approved: false})` → backend skips the Gmail call → no audit row, no Gmail state mutation.
+**Privacy & sensitivity:** `llm_provider_master_key.ciphertext_b64` is `@Sensitive` (Logback scrub). `admin_audit_event.payload_jsonb` MUST NOT include decrypted key bytes — only metadata (key id, kek version transitions, test result codes). Existing `@Sensitive` ArchUnit rule (FND-04) covers logging; payload sanitation is a code-review checklist item plus a unit test that asserts no field named `*Plaintext` / `*Decrypted` is ever written into the JSONB column.
 
 ---
 
-## Alternatives Considered (and rejected)
+## Version Compatibility Matrix (v1.2 Delta)
 
-| Recommended | Alternative | When Alternative Would Win | Why We Reject for v1.1 |
+| Component | Version | Compatible with | Verified via |
 |---|---|---|---|
-| `ai@^6.0.184` + `@ai-sdk/react@^3.0.186` | `ai@^5.0.188` (`ai-v5` dist-tag) | If `@ai-sdk/react@2.x` were the only stable line — it is not. v5 is still maintained but in maintenance mode. | v6 is the current `latest` tag on npm, used by Inbox Zero in production, and supported by AI Elements 1.9. Adopting v5 now means a forced migration in 3-6 months. |
-| `ai@^6` | `ai@^7.0.0-beta.116` | If we wanted to track the bleeding edge | v7 is beta on the `beta` dist-tag. Our v1.0 LLM gateway is locked to a *milestone* (Spring AI 2.0.0-M6) — adding *another* pre-release dependency on the frontend doubles the migration burden. |
-| AI Elements CLI (copy-paste primitives) | `npm install ai-elements@1.9.0` as runtime dep | If we wanted version-pinned upgrades of the components | The whole point of the shadcn-style model is that components become *your code* — we can edit them, restyle them, and translate strings (Vietnamese) without forking a runtime package. This matches our existing convention with `components/ui/**`. |
-| `streamdown@^2.5.0` | `react-markdown@^9` + custom partial-token handling | If we needed an ecosystem older than 2024 | Streamdown is **the** Vercel-supported renderer for AI streams; AI Elements `MessageResponse` and `Response` components depend on it. Using `react-markdown` would require monkey-patching AI Elements or replacing both. |
-| Hand-written UI Message Stream encoder (Java) | Look for a "Vercel AI SDK Java" adapter | If a maintained Java adapter existed | No production-grade Java adapter exists in the Vercel ecosystem (verified via Context7 search). The 12-event protocol is small and stable enough to hand-write in 1 file (~300 LoC) inside `backend/api/.../ChatStreamingController`. |
-| Spring MVC `SseEmitter` / `Flux<ServerSentEvent>` | `spring-boot-starter-webflux` | If the whole app were reactive | v1.0 is MVC + virtual threads. Adding WebFlux would create dual web stacks (Tomcat + Netty), break existing servlet filters (security, MDC, `@Sensitive` logback scrubbers), and contradict the locked `CLAUDE.md` rule "Spring WebFlux (use Spring MVC + virtual threads via `spring.threads.virtual.enabled=true`)." |
-| `Flux<ChatResponse>` from Spring AI 2.0.0-M6 `StreamingChatModel` | Direct vendor SDK streaming (OpenAI Java SDK, Anthropic Java SDK) | If Spring AI's stream wrapping introduced unacceptable latency | Direct vendor SDKs would violate `CLAUDE.md`'s `do not use` list ("Raw HTTP LLM calls or vendor SDK usage outside the Spring AI adapter"). Spring AI's `Flux<ChatResponse>` is the locked path. |
-| Spring AI `ToolCallingChatOptions.builder().internalToolExecutionEnabled(false)` | Let Spring AI run all tools internally | If no tool needed user approval | Three tools (`sendEmail`, `replyEmail`, `forwardEmail`) **must** pause for user approval per v1.1 safety story. Disabling internal execution is the only Spring AI 2.0.0-M6 path that gives the chat UI a chance to intercept. |
-| Cookie session via existing Spring Session Redis | Issue a separate JWT for SSE auth | If we wanted to skip the session round-trip | The cookie is already `HttpOnly + SameSite=Lax + Secure`. `useChat({ transport: new DefaultChatTransport({ credentials: 'include' }) })` sends it on every SSE `POST`. Anything else duplicates auth and violates `CLAUDE.md`'s "Stateless JWT user sessions (cookie + Redis-backed Spring Session)" do-not-use rule. |
+| Spring Security 7.0.5 `authorizeHttpRequests().requestMatchers().hasRole()` | already on classpath (Spring Boot 4.0.6 transitive) | Cookie session, OAuth2 client login | Spring Security 7 reference + existing `SecurityConfig.java` |
+| Spring Security 7.0.5 `@EnableMethodSecurity` + `@PreAuthorize` | already on classpath | `prePostEnabled=true` is the default in `@EnableMethodSecurity` | Spring Security 7 reference |
+| springdoc-openapi 3.0.3 `GroupedOpenApi` | already on classpath | Spring Boot 4.0.6 (springdoc 3.x targets Boot 4.x; v2.8.x targets Boot 3.5.x) | Context7 `/springdoc/springdoc-openapi` + `gradle/libs.versions.toml` |
+| AES-GCM via JDK `Cipher` | JDK 25 (already in toolchain) | Reuses existing `core.crypto.AesGcmEncryptor` pattern from LLM-04 | Existing repo |
+| Spring Data JPA / JDBC | already on classpath | Existing `projection/` + `persistence/` packages handle read-side and aggregates | Existing repo |
+| Liquibase 5.0.2 | already on classpath | YAML changelogs only, per CLAUDE.md constraint | Existing repo |
+| `openapi-typescript` 7.13.0 | already in `apps/web/devDependencies` | Multiple specs handled by running the CLI twice; no version bump needed | `apps/web/package.json` |
+| `openapi-fetch` 0.17.0 | already in `apps/web/dependencies` | Two `createClient<paths>(...)` instances (public + admin) — no version bump needed | `apps/web/package.json` |
+| All shadcn primitives listed above | already in `apps/web/components/ui/**` | React 19.2.6 + Tailwind 4 + Base UI / Radix dependencies already present | Directory listing 2026-05-19 |
 
 ---
 
-## What NOT to Use
+## What NOT to Use in v1.2
 
 | Avoid | Why | Use Instead |
 |---|---|---|
-| **Vercel AI SDK `ai` package on the Java backend** | It is a TypeScript-only package; there is no JVM port. Any attempt to invoke `streamText`/`generateText` from Java means standing up a Node sidecar — splits the LLM gateway across two runtimes, breaks `LlmGateway`'s tenant context and credit-ledger interceptors. | Keep all LLM orchestration in **Spring AI 2.0.0-M6** inside `core.llm.gateway.springai` (already locked). The "Vercel" surface area is only the SSE wire format the frontend expects — emit it from a Spring MVC controller. |
-| **`@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/google`, etc. on the frontend** | These are *server-side* model adapters intended for Next.js API routes that would *bypass* our Java backend. Using them duplicates LLM auth, leaks tenant API keys to the browser, and breaks credit metering. | The frontend never speaks to a model provider. All model traffic goes through `POST /api/chat` on `backend/api` → `LlmGateway` → Spring AI → provider. `@ai-sdk/react` is the *only* `@ai-sdk/*` package the frontend needs. |
-| **WebSockets / STOMP** for chat streaming | A WebSocket adds bidirectional state we do not need (chat is request → stream-response), forces a separate auth handshake, and breaks corporate proxies that block long-lived non-SSE connections. **And `@stomp/stompjs@^7.3.0` is already in `apps/web/package.json`** — that is for a different feature; do **not** repurpose it for chat. | SSE over the existing HTTPS endpoint via `SseEmitter` or `Flux<ServerSentEvent>`. `useChat` natively consumes SSE. |
-| **`spring-boot-starter-webflux`** | Adds Netty alongside Tomcat, breaks all v1.0 servlet filters (security, `@Sensitive` logback, MDC, tenant Scoped Values), and contradicts a locked `CLAUDE.md` constraint. | `spring-boot-starter-web` (already present) + `SseEmitter` or `Flux<ServerSentEvent>` return type. Spring MVC handles both. |
-| **Long-term persistence of LLM prompts/completions touching email content** | Locked privacy invariant. The chat-message persistence carve-out is **only** for user text + structured tool inputs/outputs. Email bodies fetched by `getEmail` tools must be summarized in-memory and discarded before being written to `chat_message.parts_jsonb`. | Store user messages and structured tool args/results in `chat_message`. For tool outputs that include email content, store a short metadata summary (subject, sender, date, ≤120 char snippet) — never the raw body. |
-| **Streaming prompt/completion telemetry into logs or DB** | Same privacy invariant as v1.0 (LLM-09). Existing `@Sensitive` Logback scrub is the safety net. | Use existing Micrometer + OTel observability. Spans should record provider, model, token counts, latency — never content. |
-| **`@vercel/ai-utils` or `@vercel/ai-sdk-*` on the backend (Node)** | Not applicable — we have no Node backend. | N/A. |
-| **`ai-elements` as a runtime npm dep** | It is a **CLI** that scaffolds source code. `npm install ai-elements` would install the CLI as a runtime dep — bloat with no benefit. | `pnpm dlx ai-elements@latest add <component>` writes the source to `components/ai-elements/**`. Treat that folder like `components/ui/**` (already lint-ignored). |
-| **`@ai-sdk/anthropic-tools` / experimental human-in-the-loop helpers on a Node server** | We have no Node server. The HITL workflow lives in Java (`ToolCallingChatOptions.internalToolExecutionEnabled(false)` + manual SSE emission) and React (`addToolApprovalResponse` + `<Confirmation>`). | Spring AI's user-controlled tool execution + the SSE protocol described above. |
-| **Inbox Zero's `streamdown@2.5.0` markdown patches** | Use the public `streamdown` package — do not vendor Inbox Zero's local copy. | `pnpm add streamdown@^2.5.0`. |
+| **Keycloak / Auth0 / Ory / FusionAuth for admin RBAC** | Adds a full second IdP for **two** roles. Memory note rejects multi-IdP detours; CLAUDE.md locks cookie+Redis session. Operational cost (separate deploy, separate failure mode, separate cert) far exceeds the one-column-plus-one-annotation alternative. | DB-backed `user.is_admin` + `SimpleGrantedAuthority("ROLE_ADMIN")` appended in the existing `GoogleOAuthSuccessHandler`. |
+| **Stateless JWT for admin sessions** | Already in CLAUDE.md "do not use" list ("Stateless JWT user sessions"). Admin uses **the same cookie** as regular users — the difference is the authority list inside the session, not the session medium. | Existing Spring Session Redis cookie. |
+| **Separate admin subdomain (`admin.zero.mail`)** | Forces a second OAuth client, a second CORS origin, and breaks `SameSite=Lax` cookie sharing. Adds complexity for no security gain vs. path-based `/admin/**` + `ROLE_ADMIN`. | Path-prefix `/admin/**` on the same origin, layered RBAC. (If isolation later proves valuable, revisit in v2 with a second cookie scope.) |
+| **HashiCorp Vault / AWS KMS / GCP KMS for master keys** | Locked: single-VPS posture; "No GCP hosting baseline"; CLAUDE.md `pgp_sym_encrypt` rejection already enforces app-layer encryption. Adds network latency to every LLM call. | Reuse existing AES-GCM app-layer pattern (LLM-04); KEK in env, rotation via re-wrap command. |
+| **`pgp_sym_encrypt` (pgcrypto) for master keys** | Same reason BYOK doesn't use it — key in DB → key leak on DB leak. Already on CLAUDE.md "do not use" list. | AES-GCM app-layer with env-injected KEK. |
+| **Raw OpenAI/Anthropic/Google Java SDKs for sync-from-`/models`** | CLAUDE.md "Raw HTTP LLM calls or vendor SDK usage outside the Spring AI adapter" — locked. | Spring AI provider starter clients (already on classpath) or `RestClient` calls **inside** `core.llm.gateway.springai.admin`, gated by the existing ArchUnit confinement rule. |
+| **Spring `RestTemplate`** for `/models` HTTP calls | Spring Framework 7 deprecates `RestTemplate` in favor of `RestClient`. | `RestClient.create().get().uri(...).retrieve()` — already in Spring Framework 7. |
+| **`@tanstack/react-table` for admin tables in Phase 8** | Yet-another runtime dep for tables that may stay small for the foreseeable future. Memory note "Use raw shadcn primitives first" + "Skip de-risking spikes" — ship hand-composed first. | Hand-compose pagination/sort on existing `table.tsx` + `select.tsx`. Install `@tanstack/react-table` later if rule-of-three triggers it. |
+| **A second OAuth client (`google-admin`)** | Same pattern Phase 1.4 already rejected for Gmail scope splitting. Memory note "Bundle OAuth scopes". | One OAuth client, role appended in the success handler. |
+| **A second Spring Boot module (`backend/admin`)** | CLAUDE.md backend topology is **locked** to `backend/core + backend/api + backend/worker`. Adding a fourth module ("admin") is out of scope; admin controllers live in `backend/api` under `controllers/admin/`, admin use-case services in `backend/core` under `application/admin/`. | Package-based separation per CONVENTIONS.md `domain/`, `application/`, `projection/`. |
+| **Persisting LLM prompts/completions for admin "debug" features** | Privacy carve-out applies to user chat configuration text only — admin debugging of LLM exchanges does **not** unlock body persistence. | Use Micrometer + OTel metadata (model, tokens, latency, error class). Spring AI prompt/completion capture stays **disabled** (LLM-09). |
+| **Storing the actual decrypted key in the admin UI even momentarily** | Server-side decrypt → display once → user copies is the prevailing pattern. Storing in client memory beyond one render risks DOM/devtools leak. | Test-connection runs **server-side** (admin clicks "Test" → server uses decrypted key → returns OK/FAIL). The plaintext key never leaves the server. |
+| **OpenAPI generator (CodeGen, swagger-codegen) for the admin client** | `openapi-typescript` + `openapi-fetch` is the locked frontend pattern (CONVENTIONS.md #8). Switching generators per surface area would fragment the client model. | Reuse `openapi-typescript` 7.13.0 with two specs. |
 
 ---
 
 ## Stack Patterns by Variant
 
-**If a tool is read-only (no side effects):**
-- Use Spring AI's default internal tool execution (do **not** set `internalToolExecutionEnabled(false)` for that request)
-- Emit `tool-input-available` then `tool-output-available` back-to-back in the SSE stream
-- Examples: `listRules`, `getRule`, `getEmail`, `listEmails`, `getAnalytics`, `getCredits`, `listSenders`, `getMemory`
+**If admin endpoint reads tenant data (e.g., "list tenants", "view Gmail connection state"):**
+- Controller in `backend/api/controllers/admin/<domain>/` (e.g., `controllers/admin/tenants/`)
+- `@PreAuthorize("hasRole('ADMIN')")` on the controller class
+- Service in `backend/core/application/admin/<domain>/` returning projections from `projection/`
+- Tenant context for the **read** is still important — the admin is reading data **about** a tenant, so the response includes `tenantId` in the audit row, but the request is **not** Scoped-Values-bound to that tenant (admin operates above tenancy). Pattern: log `event=admin_read tenantId=<viewed> actorUserId=<admin>` on every read.
 
-**If a tool mutates state but is non-destructive (label, archive, save draft, update rule):**
-- Same as read-only — auto-execute. Mutations are reversible via existing v1.0 30-day undo (TRG-06). No approval card.
-- Examples: `createRule`, `updateRule`, `deleteRule` (reversible), `addLabel`, `archive`, `saveDraft`, `updatePersonalInstructions`, `updateMemory`
+**If admin endpoint mutates global state (e.g., "enable model X for feature CHAT", "rotate master key for provider Y"):**
+- Same controller/service location.
+- **Write an `admin_audit_event` row in the same transaction** as the state change (`@Transactional` boundary owns both).
+- Emit a Spring Modulith event (`AdminCatalogChanged`, `MasterKeyRotated`) for cache invalidation in dependent modules (e.g., `LlmGateway` per-tenant `ChatModel` cache in Redis).
 
-**If a tool is **destructive or external-facing** (sends email):**
-- Set `internalToolExecutionEnabled(false)` for the parent request
-- Emit `tool-input-available` with `approval: { id }` data part
-- **Pause the stream** until the next `POST /api/chat` carries the approval response
-- On approval: execute via `ToolCallingManager.executeToolCalls` and emit `tool-output-available`
-- On rejection: skip execution and emit `tool-output-denied`
-- Examples: `sendEmail`, `replyEmail`, `forwardEmail` — the v1.1 high-risk set
+**If admin endpoint mutates tenant-specific state (e.g., "pause tenant", "release ledger hold"):**
+- Same controller/service location.
+- Audit row includes `target_kind=TENANT`, `target_id=<tenantId>`.
+- The mutation **may** need to bind a Scoped Value for the tenant context if downstream services require it; emulate via `ScopedValue.where(TENANT_ID, target).run(() -> service.pauseTenant(target))`. CONVENTIONS.md tenant Scoped Values rule still holds.
 
-**If the model supports thinking / reasoning (Claude 3.7 Sonnet, OpenAI o-series):**
-- Emit `reasoning-start` / `reasoning-delta` / `reasoning-end` events alongside `text-*`
-- Frontend `<Reasoning>` component collapses by default — opt-in disclosure for power users
-
----
-
-## Version Compatibility Matrix
-
-| Package | Compatible With | Notes |
-|---|---|---|
-| `ai@^6.0.184` | `@ai-sdk/react@^3.0.186`, `zod@^3.25.76 \|\| ^4.1.8` | We have `zod@4.4.3` — compatible. |
-| `@ai-sdk/react@^3.0.186` | `react@^18 \|\| ~19.0.1 \|\| ~19.1.2 \|\| ^19.2.1` | We have `react@19.2.6` — compatible. |
-| `@ai-sdk/react@^3.0.186` | `ai@6.0.184` (transitive dep, exact pin) | The two version-track together; do not mix `@ai-sdk/react@3` with `ai@5`. |
-| `streamdown@^2.5.0` | `react@^18 \|\| ^19`, `react-dom@^18 \|\| ^19` | Compatible with our React 19.2.6. |
-| `ai-elements@1.9.0` (CLI) | shadcn/ui initialized, Tailwind CSS 4, AI SDK installed | All prereqs satisfied. |
-| Spring AI 2.0.0-M6 `StreamingChatModel#stream(Prompt)` | Reactor Core (transitive) | Already on classpath; no need to import `spring-boot-starter-webflux`. |
-| Spring MVC `SseEmitter` | Spring Boot 4.0.6 + `spring-boot-starter-web` | Already on classpath. Works with `spring.threads.virtual.enabled=true`. |
-| Spring MVC `Flux<ServerSentEvent>` return | Spring Framework 7.0.7's `ReactiveAdapterRegistry` | Works on MVC without WebFlux. |
-| Vercel `useChat` SSE consumption | `text/event-stream` + `x-vercel-ai-ui-message-stream: v1` response header | The header is **mandatory** for non-Vercel backends. Missing it causes `useChat` to silently fall back to text-only mode. |
-| `addToolApprovalResponse` (`@ai-sdk/react@3`) | `requireApproval: true` (Vercel server-side) **or** custom `approval-requested` state part (our Java backend) | We will emit the custom part — the frontend hook does not care whether the server is Node or Spring. |
+**If admin endpoint exposes data NOT to be cached publicly:**
+- `Cache-Control: no-store, max-age=0` response header on every admin controller (cross-cutting interceptor or `@RestController` base class).
+- Existing privacy logging format (`event=admin_action`) per CONVENTIONS.md #5.
 
 ---
 
-## Integration Points (where v1.1 touches v1.0)
+## Integration Points (where v1.2 touches v1.0/v1.1)
 
-| Touch point | v1.1 change | Risk |
+| Touch point | v1.2 change | Risk |
 |---|---|---|
-| `LlmGateway` (`core.llm.gateway.springai`) | Add `stream(Prompt)` method returning `Flux<ChatResponse>` + per-request `internalToolExecutionEnabled` flag | Localized to the gateway module — well within the ArchUnit-enforced single-adapter rule. |
-| `backend/api` controllers | Add `ChatStreamingController` with `@PostMapping(path="/api/chat", produces=MediaType.TEXT_EVENT_STREAM_VALUE)` | New controller — no impact on existing endpoints. |
-| Spring Session Redis | No code change | `useChat` sends the existing session cookie via `credentials: 'include'`. |
-| Spring Security filter chain | Whitelist `/api/chat` for authenticated tenants only; CSRF — chat requests use the same session token, so the existing CSRF approach (per-form token) needs an SSE-aware exception or the same double-submit pattern as existing API endpoints | Verify existing CSRF config; v1.0 may already disable CSRF for `/api/**` if it is a same-origin JSON API. |
-| `springdoc-openapi` (v1.0 OpenAPI generator) | Add a schema entry for `POST /api/chat` request body and a "see UI Message Stream Protocol" note in the response | The streaming response cannot be fully expressed in OpenAPI — document the protocol in `apps/web/lib/chat-protocol.md` and reference it. |
-| `apps/web/scripts/generate-api.ts` | No change needed for the chat endpoint (streaming is not OpenAPI-modeled). Settings page endpoints **do** flow through OpenAPI as normal | Settings page reuses existing typed-client pattern. |
-| ArchUnit rule TRG-03 ("zero send call sites") | Update to allow **exactly one** new call site: the chat-tool implementation of `sendEmail` / `replyEmail` / `forwardEmail` inside the approved branch of the HITL flow | Locked in by repo-wide grep + ArchUnit assertion; cannot regress without a test failure. |
-| Liquibase | Add three new YAML changelogs (`chat_conversation`, `chat_message`, `chat_send_audit`) | Standard pattern; no migration risk. |
+| `SecurityConfig.chain(...)` (existing) | Add one `requestMatchers("/api/admin/**", "/admin/**").hasRole("ADMIN")` row before `.anyRequest().authenticated()`. Add class-level `@EnableMethodSecurity`. | Low — `authorizeHttpRequests` ordering is preserved (specific before generic). Existing E2E tests stay green; new E2E test covers 403 for non-admin on `/api/admin/**`. |
+| `GoogleOAuthSuccessHandler` (existing) | Look up `user.is_admin` post-provisioning; append `SimpleGrantedAuthority("ROLE_ADMIN")` to the principal's authorities. | Low — additive; existing tests still pass; new test for admin-authority attachment. |
+| `OpenApiConfig` (existing) | Add `publicApi` + `adminApi` `GroupedOpenApi` beans. The existing `GlobalOpenApiCustomizer apiErrorCustomizer` was deliberately authored to survive grouping — verified in its doc comment. | Low — grouping was anticipated when `GlobalOpenApiCustomizer` was chosen. |
+| `apps/web/scripts/generate-api.ts` | Loop over two spec URLs/paths, emit two `.d.ts` files. | Low — same CLI under the hood; one extra file. |
+| `apps/web/lib/api/` | Add `admin-schema.d.ts` (generated) + `admin-client.ts` (3-line wrapper). | Low — additive; existing public client untouched. |
+| `apps/web/components/ui/**` | Zero changes. | None. |
+| Liquibase changelogs | Six new YAML files. | Low — standard pattern. |
+| `core.llm.gateway.springai.admin` (new package, inside the locked adapter) | New service for list-models + master-key crypto + test-connection. ArchUnit rule confining vendor SDK usage **stays in force** — the new package is still inside `core.llm.gateway.springai.**`. | Low — package addition, not boundary change. |
+| `LlmGateway` per-tenant ChatModel cache (Redis, existing) | Add a cache invalidation hook for `AdminCatalogChanged` + `MasterKeyRotated` Modulith events so model swaps take effect within seconds. | Low — Spring Modulith `@ApplicationModuleListener` pattern already in use. |
+| `ArchUnit` rules | Add: `admin_audit_event.payload_jsonb` never receives `*Plaintext` / `*Decrypted` field names. Add: admin services never call rules-engine write paths (admin is read-only on tenant mail). | Low — ArchUnit is the existing enforcement layer for the same class of invariants. |
+| Logback `@Sensitive` scrub (existing) | `LlmProviderMasterKey.ciphertext` is `@Sensitive`. New entity, same annotation. | Low — additive. |
+| Micrometer + OTel agent 2.16 (existing) | New counters: `zero_mail_admin_action_total{action,actor_id}`, `zero_mail_master_key_test_total{provider,result}`, `zero_mail_catalog_sync_total{provider,result}`. | Low — additive labels. |
 
 ---
 
 ## Sources
 
 **Context7 (HIGH confidence):**
-- `/vercel/ai` — `useChat` v6 API, `DefaultChatTransport`, UI Message Stream Protocol event types, HITL tool approval, message parts state machine, headers required for non-Node backends. Fetched 2026-05-17.
-- `/vercel/ai-elements` — Component catalog (`Conversation`, `Message`, `PromptInput`, `Tool`, `Reasoning`, `Loader`, `Suggestion`, `Confirmation`), CLI installation via `pnpm dlx ai-elements@latest add <component>`, prerequisites (React 19, Next 14+, Tailwind 4, shadcn). Fetched 2026-05-17.
-- `/vercel/streamdown` — Drop-in replacement for `react-markdown`, partial-token handling. Fetched 2026-05-17.
-- `/websites/spring_io_spring-ai_reference_2_0-snapshot` — `StreamingChatModel#stream(Prompt) → Flux<ChatResponse>`, `ToolCallingChatOptions.builder().internalToolExecutionEnabled(false)`, `ToolCallingManager.executeToolCalls`, `@Tool` annotation. Fetched 2026-05-17.
-- `/spring-projects/spring-framework` and `/websites/spring_io_spring-framework_reference` — `SseEmitter`, `ResponseBodyEmitter`, `Flux<ServerSentEvent>` return adaptation in Spring MVC, reactive back-pressure with `AsyncTaskExecutor`. Fetched 2026-05-17.
-- `/websites/spring_io_spring-boot_4_0-snapshot` — Virtual thread enablement via `spring.threads.virtual.enabled=true`, `SimpleAsyncTaskExecutor` with virtual threads behavior, `spring.main.keep-alive=true` caveat for `@Scheduled` daemon scheduler threads. Fetched 2026-05-17.
+- `/springdoc/springdoc-openapi` — `GroupedOpenApi` builder with `pathsToMatch`/`pathsToExclude`/`addOperationCustomizer`/`displayName`; multi-group split for public+admin APIs. Fetched 2026-05-19.
 
-**npm registry (HIGH confidence, exact versions on 2026-05-17):**
-- `npm view ai` → latest `6.0.184`; v5 latest under `ai-v5` tag = `5.0.188`; v7 beta under `beta` tag = `7.0.0-beta.116`. Peer dep: `zod ^3.25.76 || ^4.1.8`. Node ≥ 18.
-- `npm view @ai-sdk/react` → latest `3.0.186`. Depends on `ai@6.0.184` (exact), `swr@^2.2.5`, `throttleit@2.1.0`, `@ai-sdk/provider-utils@4.0.27`. Peer dep: `react ^18 || ~19.0.1 || ~19.1.2 || ^19.2.1`.
-- `npm view ai-elements` → CLI package, latest `1.9.0`.
-- `npm view streamdown` → latest `2.5.0`. Peer dep: `react ^18 || ^19`.
+**Spring Security 7 official reference (HIGH confidence):**
+- `https://docs.spring.io/spring-security/reference/servlet/authorization/authorize-http-requests.html` — `authorizeHttpRequests().requestMatchers("/admin/**").hasRole("ADMIN")` is the current canonical pattern in 7.0.x; no breaking change from 6 to 7 for this API; deferred Authentication lookup is the 7.x improvement. Fetched 2026-05-19.
 
-**Local reference repo (HIGH confidence, mirrors production usage):**
-- `D:/study materials summer 2026/EXE202/inbox-zero/apps/web/package.json` — production Inbox Zero on 2026-05-17 uses `ai@6.0.168`, `@ai-sdk/react@3.0.170`, `react@19.2.5`, `streamdown@2.5.0`, `use-stick-to-bottom@1.1.3` (the latter is already vendored inside AI Elements' `Conversation` component, so we do not need to install it separately).
+**Spring Framework 7 reference (already on classpath via Boot 4.0.6):**
+- `RestClient` (replaces deprecated `RestTemplate`) — used for `/models` calls inside the locked LLM adapter package when Spring AI starter does not expose a `listModels()` directly.
 
-**Existing v1.0 stack reference (validated, unchanged):**
-- `apps/web/package.json` on `main` at 2026-05-17 — `react@19.2.6`, `next@16.2.6`, `zod@4.4.3`, `@tanstack/react-query@5.100.9`, `shadcn@^4.7.0`, `tailwindcss@^4`, `sonner@^2.0.7` (required by AI Elements Confirmation toasts).
-- `CLAUDE.md` — locked do-not-use list (Lombok, WebFlux, raw vendor SDKs, stateless JWT, Kafka, embeddings), tool-call allow-list, privacy carve-outs for chat persistence.
-- `.planning/research/STACK.md` (v1.0 history before this update) — full Java 25 / Spring Boot 4.0.6 / Spring AI 2.0.0-M6 backend stack and Next.js 16.2.4 frontend stack details.
+**npm registry / existing `apps/web/package.json` (HIGH confidence):**
+- `openapi-typescript@7.13.0` and `openapi-fetch@0.17.0` already installed; both transparently support multi-spec workflows via repeated invocations.
+- All listed shadcn primitives (`table`, `tabs`, `dialog`, `alert-dialog`, `select`, `command`, `popover`, `sidebar`, `sheet`, `chart`, etc.) are present in `apps/web/components/ui/**` on the working tree at 2026-05-19.
+
+**Existing repo (HIGH confidence — single source of truth for v1.0/v1.1 baseline):**
+- `gradle/libs.versions.toml` — `springdoc = "3.0.3"`, Spring Boot 4.0.6, Spring AI 2.0.0-M6.
+- `backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java` — current `authorizeHttpRequests` chain; cookie session via `oauth2Login`; CSRF SPA mode; `@Order(3)` non-test profile.
+- `backend/api/src/main/java/com/zeromail/api/config/OpenApiConfig.java` — explicit use of `GlobalOpenApiCustomizer` to survive future `GroupedOpenApi` grouping (the doc comment in this file calls out v1.2 directly).
+- `apps/web/scripts/generate-api.ts` — current single-spec codegen pipeline; single-file extension is mechanically straightforward.
+- CLAUDE.md "do not use" list — JWT, Lombok, WebFlux, GCP starter, raw vendor SDKs, Kafka/RabbitMQ, pgcrypto for keys, vector DB.
+- Memory notes — bundled OAuth scopes, no parallel admin IdP detour, raw shadcn first, skip de-risking spikes, coherent milestone over interim.
 
 ---
 
-*Stack research for: Zero Mail v1.1 — chat email assistant + AI settings page*
-*Researched: 2026-05-17 by gsd-researcher (Context7 + npm + Inbox Zero reference + Spring AI 2.0-SNAPSHOT docs)*
+*Stack research for: Zero Mail v1.2 — admin console foundation + Settings UI on curated catalog*
+*Researched: 2026-05-19 by gsd-researcher (Context7 `/springdoc/springdoc-openapi` + Spring Security 7 reference + existing repo state)*
