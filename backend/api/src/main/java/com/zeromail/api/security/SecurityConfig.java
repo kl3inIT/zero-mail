@@ -18,6 +18,7 @@ import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.security.web.webauthn.api.AuthenticatorSelectionCriteria;
 import org.springframework.security.web.webauthn.api.PublicKeyCredentialRpEntity;
 import org.springframework.security.web.webauthn.api.ResidentKeyRequirement;
@@ -30,7 +31,7 @@ import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
 
 @Configuration
-@Profile("!test")
+@Profile("!test & !e2e-stub")
 public class SecurityConfig {
 
     private static final PathPatternRequestMatcher API_REQUEST_MATCHER =
@@ -100,14 +101,28 @@ public class SecurityConfig {
     }
 
     @Bean
-    @Order(2)
+    @Order(3)
     SecurityFilterChain chain(
             HttpSecurity http,
             TenantBindingFilter tenantFilter,
             GoogleOAuthSuccessHandler successHandler,
             LoginRedirectAuthenticationFailureHandler failureHandler,
             GoogleAuthorizationRequestResolver authRequestResolver) {
-        http.cors(Customizer.withDefaults())
+        // Default catch-all for user-session traffic. Explicit securityMatcher excluding
+        // chains owned by earlier @Order beans (PubSub @Order(1), AdminChain @Order(1),
+        // Billing @Order(2)) so Spring Security 7's WebSecurityFilterChainValidator does not
+        // flag this chain as shadowing a more-specific matcher.
+        RequestMatcher userChainMatcher =
+                request -> {
+                    String path = request.getServletPath();
+                    return !path.startsWith("/internal/pubsub/")
+                            && !path.startsWith("/api/admin/")
+                            && !path.startsWith("/webauthn/")
+                            && !path.startsWith("/login/webauthn/")
+                            && !path.startsWith("/api/billing/sepay/");
+                };
+        http.securityMatcher(userChainMatcher)
+                .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(
                         authorizationRequests ->
                                 authorizationRequests
