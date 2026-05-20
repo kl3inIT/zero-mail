@@ -8,6 +8,7 @@ import com.zeromail.core.admin.mkey.domain.KeyFormat;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.domain.MasterKeyFeature;
 import com.zeromail.core.admin.mkey.domain.event.MasterKeyRotatedEvent;
+import com.zeromail.core.admin.mkey.persistence.lowlevel.LlmProviderMasterKeyWriteRepository;
 import com.zeromail.core.admin.mkey.projection.MasterKeyMaskedRow;
 import com.zeromail.core.admin.shared.AdminBusinessException;
 import com.zeromail.core.llm.gateway.springai.admin.MasterKeyTestResult;
@@ -23,14 +24,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class MasterKeyAdminService {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final LlmProviderMasterKeyWriteRepository llmProviderMasterKeyWriteRepository;
     private final ProviderMasterKeyResolver providerMasterKeyResolver;
     private final PlatformSecretCipher platformSecretCipher;
     private final MasterKeyEditSessionService masterKeyEditSessionService;
@@ -41,7 +41,7 @@ public class MasterKeyAdminService {
     private final Clock clock;
 
     public MasterKeyAdminService(
-            JdbcTemplate jdbcTemplate,
+            LlmProviderMasterKeyWriteRepository llmProviderMasterKeyWriteRepository,
             ProviderMasterKeyResolver providerMasterKeyResolver,
             PlatformSecretCipher platformSecretCipher,
             MasterKeyEditSessionService masterKeyEditSessionService,
@@ -50,7 +50,10 @@ public class MasterKeyAdminService {
             AdminAuditWriter adminAuditWriter,
             ApplicationEventPublisher applicationEventPublisher,
             Clock clock) {
-        this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate, "jdbcTemplate must not be null");
+        this.llmProviderMasterKeyWriteRepository =
+                Objects.requireNonNull(
+                        llmProviderMasterKeyWriteRepository,
+                        "llmProviderMasterKeyWriteRepository must not be null");
         this.providerMasterKeyResolver =
                 Objects.requireNonNull(providerMasterKeyResolver, "providerMasterKeyResolver");
         this.platformSecretCipher =
@@ -207,11 +210,7 @@ public class MasterKeyAdminService {
             String requestIp,
             UUID requestId) {
         AdminContext.currentOrThrow();
-        String columnName = feature.columnName();
-        jdbcTemplate.update("UPDATE llm_provider_master_key SET " + columnName + " = FALSE");
-        jdbcTemplate.update(
-                "UPDATE llm_provider_master_key SET " + columnName + " = TRUE WHERE provider = ?",
-                provider.id());
+        llmProviderMasterKeyWriteRepository.setFeatureDefault(feature, provider);
         adminAuditWriter.append(
                 AdminAuditAction.MASTER_KEY_FEATURE_DEFAULT_SET,
                 "llm_provider_master_key",
@@ -240,27 +239,14 @@ public class MasterKeyAdminService {
         short kekVersion = PlatformSecretCipher.keyVersionFromEnvelope(encryptedKey);
         Instant now = clock.instant();
         Long providerSecretVersion =
-                jdbcTemplate.queryForObject(
-                        """
-                        UPDATE llm_provider_master_key
-                        SET key_format = ?,
-                            encrypted_key = ?,
-                            kek_version = ?,
-                            provider_secret_version = provider_secret_version + 1,
-                            created_by_user_id = COALESCE(created_by_user_id, ?),
-                            last_rotated_at = ?,
-                            base_url = ?
-                        WHERE provider = ?
-                        RETURNING provider_secret_version
-                        """,
-                        Long.class,
-                        keyFormat.id(),
+                llmProviderMasterKeyWriteRepository.storeEncryptedKeyAndReturnVersion(
+                        provider,
+                        keyFormat,
                         encryptedKey,
                         kekVersion,
                         actorId,
                         now,
-                        cleanBaseUrl(baseUrl),
-                        provider.id());
+                        cleanBaseUrl(baseUrl));
         if (providerSecretVersion == null) {
             throw new MissingMasterKeyRowException(provider);
         }
