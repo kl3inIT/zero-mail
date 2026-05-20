@@ -18,6 +18,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -82,7 +83,7 @@ public class CatalogSyncOrchestrator {
                 "processing_job",
                 candidateJobId,
                 null,
-                "{\"provider\":\"" + provider.id() + "\",\"job_id\":\"" + candidateJobId + "\"}",
+                Map.of("provider", provider.id(), "job_id", candidateJobId.toString()),
                 "Catalog sync fetch started",
                 requestIp,
                 requestId);
@@ -160,13 +161,13 @@ public class CatalogSyncOrchestrator {
                 "processing_job",
                 jobId,
                 null,
-                "{\"provider\":\""
-                        + catalogSyncJob.provider().id()
-                        + "\",\"job_id\":\""
-                        + jobId
-                        + "\",\"confirmer_id\":\""
-                        + confirmer.id()
-                        + "\"}",
+                Map.of(
+                        "provider",
+                        catalogSyncJob.provider().id(),
+                        "job_id",
+                        jobId.toString(),
+                        "confirmer_id",
+                        confirmer.id().toString()),
                 reason == null || reason.isBlank() ? "Catalog sync confirmed" : reason,
                 requestIp,
                 requestId);
@@ -198,11 +199,7 @@ public class CatalogSyncOrchestrator {
                 "processing_job",
                 jobId,
                 null,
-                "{\"provider\":\""
-                        + catalogSyncJob.provider().id()
-                        + "\",\"job_id\":\""
-                        + jobId
-                        + "\"}",
+                Map.of("provider", catalogSyncJob.provider().id(), "job_id", jobId.toString()),
                 "Catalog sync cancelled",
                 requestIp,
                 requestId);

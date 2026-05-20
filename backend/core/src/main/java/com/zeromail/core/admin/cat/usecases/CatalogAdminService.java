@@ -103,7 +103,7 @@ public class CatalogAdminService {
                 "model_catalog",
                 null,
                 null,
-                "{\"provider\":\"" + provider.id() + "\",\"model_id\":\"" + modelId + "\"}",
+                Map.of("provider", provider.id(), "model_id", modelId),
                 "Manual catalog model create",
                 requestIp,
                 requestId);
@@ -147,11 +147,7 @@ public class CatalogAdminService {
                 "model_catalog",
                 null,
                 null,
-                "{\"model_id\":\""
-                        + modelId
-                        + "\",\"pinned_tenant_count\":"
-                        + pinnedTenantCount
-                        + "}",
+                Map.of("model_id", modelId, "pinned_tenant_count", pinnedTenantCount),
                 reason,
                 requestIp,
                 requestId);

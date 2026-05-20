@@ -6,11 +6,14 @@ import com.zeromail.core.admin.audit.persistence.lowlevel.AdminAuditEventWriteRe
 import com.zeromail.core.admin.auth.AdminContext;
 import com.zeromail.core.admin.auth.AdminUser;
 import java.time.Clock;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class AdminAuditWriter {
@@ -19,6 +22,7 @@ public class AdminAuditWriter {
     private static final UUID SYSTEM_ACTOR_ID =
             UUID.fromString("00000000-0000-0000-0000-000000000001");
     private static final String SYSTEM_ACTOR_EMAIL = "<system>";
+    private static final ObjectMapper AUDIT_JSON_MAPPER = new ObjectMapper();
 
     private final AdminAuditEventWriteRepository adminAuditEventWriteRepository;
     private final AdminAuditEventRepository adminAuditEventRepository;
@@ -71,6 +75,46 @@ public class AdminAuditWriter {
     }
 
     /**
+     * Typed overload that serialises {@code beforeState}/{@code afterState} maps through Jackson
+     * before writing. Prefer this over the raw-String {@link #append(AdminAuditAction, String,
+     * UUID, String, String, String, String, UUID)} when assembling state payloads — manual JSON
+     * concatenation breaks on any value containing a quote, backslash, or control character (see
+     * WR-03). Either map argument may be {@code null} for "no before/after state".
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public UUID append(
+            AdminAuditAction action,
+            String targetKind,
+            UUID targetId,
+            Map<String, ?> beforeState,
+            Map<String, ?> afterState,
+            String reason,
+            String requestIp,
+            UUID requestId) {
+        return append(
+                action,
+                targetKind,
+                targetId,
+                serializeStateOrNull(beforeState),
+                serializeStateOrNull(afterState),
+                reason,
+                requestIp,
+                requestId);
+    }
+
+    private static String serializeStateOrNull(Map<String, ?> state) {
+        if (state == null) {
+            return null;
+        }
+        try {
+            return AUDIT_JSON_MAPPER.writeValueAsString(state);
+        } catch (JacksonException jacksonException) {
+            throw new IllegalArgumentException(
+                    "Unable to serialise audit state map to JSON", jacksonException);
+        }
+    }
+
+    /**
      * Appends an audit row in a NEW transaction, suspending any active one. Use when the audit row
      * must survive a rollback of the caller's transaction (e.g. recording a test/probe failure
      * before throwing a business exception that would otherwise roll the audit row back).
@@ -94,6 +138,28 @@ public class AdminAuditWriter {
                 targetId,
                 beforeStateJson,
                 afterStateJson,
+                reason,
+                requestIp,
+                requestId);
+    }
+
+    /** Typed overload of {@link #appendInNewTransaction}. See WR-03 for rationale. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public UUID appendInNewTransaction(
+            AdminAuditAction action,
+            String targetKind,
+            UUID targetId,
+            Map<String, ?> beforeState,
+            Map<String, ?> afterState,
+            String reason,
+            String requestIp,
+            UUID requestId) {
+        return appendInNewTransaction(
+                action,
+                targetKind,
+                targetId,
+                serializeStateOrNull(beforeState),
+                serializeStateOrNull(afterState),
                 reason,
                 requestIp,
                 requestId);

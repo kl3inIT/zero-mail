@@ -110,7 +110,7 @@ public class MasterKeyAdminService {
                 "llm_provider_master_key",
                 null,
                 null,
-                "{\"provider\":\"" + provider.id() + "\",\"result_enum\":\"" + result + "\"}",
+                Map.of("provider", provider.id(), "result_enum", result.name()),
                 "Master key connection tested",
                 requestIp,
                 requestId);
@@ -175,11 +175,7 @@ public class MasterKeyAdminService {
                     "llm_provider_master_key",
                     null,
                     null,
-                    "{\"provider\":\""
-                            + provider.id()
-                            + "\",\"key_format\":\""
-                            + keyFormat.id()
-                            + "\"}",
+                    Map.of("provider", provider.id(), "key_format", keyFormat.id()),
                     reason,
                     requestIp,
                     requestId);
@@ -218,7 +214,7 @@ public class MasterKeyAdminService {
                 "llm_provider_master_key",
                 null,
                 null,
-                "{\"provider\":\"" + provider.id() + "\",\"feature\":\"" + feature.id() + "\"}",
+                Map.of("provider", provider.id(), "feature", feature.id()),
                 reason,
                 requestIp,
                 requestId);
@@ -278,24 +274,23 @@ public class MasterKeyAdminService {
             String reason,
             String requestIp,
             UUID requestId) {
+        Map<String, Object> afterState = new java.util.LinkedHashMap<>();
+        afterState.put("masked_key", maskedKey);
+        afterState.put("kek_version", storedMasterKey.kekVersion());
+        afterState.put("provider_secret_version", storedMasterKey.providerSecretVersion());
+        afterState.put(
+                "last_rotated_at",
+                storedMasterKey.lastRotatedAt() == null
+                        ? null
+                        : storedMasterKey.lastRotatedAt().toString());
+        afterState.put("provider", provider.id());
+        afterState.put("key_format", keyFormat.id());
         adminAuditWriter.append(
                 action,
                 "llm_provider_master_key",
                 null,
                 null,
-                "{\"masked_key\":\""
-                        + maskedKey
-                        + "\",\"kek_version\":"
-                        + storedMasterKey.kekVersion()
-                        + ",\"provider_secret_version\":"
-                        + storedMasterKey.providerSecretVersion()
-                        + ",\"last_rotated_at\":\""
-                        + storedMasterKey.lastRotatedAt()
-                        + "\",\"provider\":\""
-                        + provider.id()
-                        + "\",\"key_format\":\""
-                        + keyFormat.id()
-                        + "\"}",
+                afterState,
                 reason,
                 requestIp,
                 requestId);
@@ -315,7 +310,7 @@ public class MasterKeyAdminService {
                 "llm_provider_master_key",
                 null,
                 null,
-                "{\"provider\":\"" + provider.id() + "\",\"result_enum\":\"" + testResult + "\"}",
+                Map.of("provider", provider.id(), "result_enum", testResult.name()),
                 reason,
                 requestIp,
                 requestId);

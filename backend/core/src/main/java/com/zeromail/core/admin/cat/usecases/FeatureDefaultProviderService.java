@@ -12,6 +12,7 @@ import com.zeromail.core.admin.shared.AdminBusinessException;
 import com.zeromail.core.shared.exception.ErrorClass;
 import java.time.Clock;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -59,13 +60,7 @@ public class FeatureDefaultProviderService {
                 "feature_default_provider",
                 null,
                 null,
-                "{\"feature\":\""
-                        + feature.id()
-                        + "\",\"provider\":\""
-                        + provider
-                        + "\",\"model_id\":\""
-                        + modelId
-                        + "\"}",
+                Map.of("feature", feature.id(), "provider", provider, "model_id", modelId),
                 reason,
                 requestIp,
                 requestId);
