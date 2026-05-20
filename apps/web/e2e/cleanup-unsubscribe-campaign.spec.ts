@@ -2,12 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import type { Page } from '@playwright/test';
 
-import {
-  createChromeMockState,
-  installChromeApiMock,
-  openAuthenticatedRoute,
-  seedAuthenticatedSession,
-} from './chrome-test-utils';
+import { createChromeMockState, openAuthenticatedRoute } from './chrome-test-utils';
 
 /**
  * Phase 8 — Golden path Playwright e2e for `/cleanup/unsubscribe-campaign` (UI-SPEC §Playwright
@@ -37,12 +32,12 @@ for (const viewport of [
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     const state = createChromeMockState({ preferredLanguage: 'vi' });
 
-    await seedAuthenticatedSession(page, 'vi');
-    await installChromeApiMock(page, state);
-    await installUnsubscribeCampaignMock(page);
-
-    // Step 1 — open the campaign page.
+    // Step 1 — open the campaign page. openAuthenticatedRoute installs the chrome API mock
+    // (catch-all 204 for /api/*), so we install the cleanup-specific routes AFTERWARDS to
+    // take LIFO precedence — Playwright tries newer page.route() handlers first.
     await openAuthenticatedRoute(page, '/cleanup/unsubscribe-campaign', state);
+    await installUnsubscribeCampaignMock(page);
+    await page.reload({ waitUntil: 'networkidle' });
 
     // Step 2 — candidate list rows (3 fixture + 1 header = 4 rows).
     await expect(page.getByRole('row')).toHaveCount(4);
@@ -55,15 +50,26 @@ for (const viewport of [
     // Step 4 — open preview dialog.
     await page.getByRole('button', { name: 'Xem trước campaign' }).click();
 
-    // Step 5 — preview summary.
-    await expect(page.getByText(/2 mail sẽ archive/)).toBeVisible();
+    // Step 5 — preview summary. The dialog shows `Tổng mail sẽ archive: 2` (UI-SPEC
+    // §Copywriting Contract — Vietnamese places the count at the end of the phrase).
+    await expect(page.getByText('Tổng mail sẽ archive: 2')).toBeVisible();
 
-    // Step 6 — execute campaign.
-    await page.getByRole('button', { name: 'Execute campaign' }).click();
-    await expect(page).toHaveURL(/\/cleanup\/unsubscribe-campaign\/[0-9a-f-]{36}/);
+    // Step 6 — execute campaign. The mutation onSuccess in useExecuteCampaign navigates to
+    // `/cleanup/unsubscribe-campaign/{jobId}` via router.push after the POST resolves; wait
+    // for the POST to round-trip first, then for the URL change.
+    await Promise.all([
+      page.waitForResponse((response) =>
+        response.url().includes('/api/unsubscribe/campaigns/execute'),
+      ),
+      page.getByRole('button', { name: 'Execute campaign' }).click(),
+    ]);
+    await expect(page).toHaveURL(/\/cleanup\/unsubscribe-campaign\/[0-9a-f-]{36}/, {
+      timeout: 10_000,
+    });
 
-    // Step 7 — polling reaches "Hoàn tất".
-    await expect(page.getByText('Hoàn tất')).toBeVisible({ timeout: 10_000 });
+    // Step 7 — polling reaches "Hoàn tất" (exact match on the status label paragraph; the
+    // undo banner separately contains "Campaign đã hoàn tất" which would match a substring).
+    await expect(page.getByText('Hoàn tất', { exact: true })).toBeVisible({ timeout: 10_000 });
 
     // Step 8 — undo button visible (within 30-day window).
     await expect(page.getByRole('button', { name: 'Undo campaign' })).toBeVisible();
@@ -136,7 +142,7 @@ async function installUnsubscribeCampaignMock(page: Page) {
             riskBadge: 'SAFE',
           },
         ],
-        totalArchiveCount: 2,
+        totalHistoryCount: 2,
       }),
     });
   });

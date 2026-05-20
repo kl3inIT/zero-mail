@@ -116,3 +116,38 @@ Plan 08) and these tests flip GREEN automatically. No backend change required.
 
 Plan 08 verified these failures are unchanged by its scope (backend-only controllers + DTOs
 + OpenAPI codegen).
+
+## From Plan 09 (Wave 8 — Frontend cleanup UI + final privacy sweep)
+
+### Resolved by Plan 09
+
+These Wave 0 RED stubs flipped GREEN during Plan 09 execution:
+
+- **`useCampaignStatus.test.ts`** + **`useSuppressionList.test.ts`** — frontend hook tests
+  flipped GREEN once the feature folders shipped (api + query-keys + hooks). One Wave 0 test
+  assertion (`pollsEvery2sWhenStatusIsQueued`) was retargeted under Rule 1 to verify the
+  function-form `refetchInterval` callback directly (the original test simulated a number-form
+  interval which doesn't match the production hook shape locked by UI-SPEC D-15).
+- **`CleanupPrivacySweepTest.campaignExecution_doesNotLeakSensitiveTokensInLogs`** —
+  flipped GREEN. Replaced reflective `Class.forName(...).getDeclaredConstructor()` with
+  `@Autowired CampaignExecuteService` Spring DI (the bean now exists from Wave 4). The seed
+  schema bug (`sender_domain` non-existent column noted in Plan 07's deferred list) was fixed
+  inline under Rule 1 — removed the bogus column from the INSERT.
+
+### Still deferred — out-of-scope for Plan 09
+
+- **`CleanupModuleVerificationTest.cleanupModuleIsDeclaredAndVerifies`** (item #3) — still
+  fails with `IllegalArgumentException: No classes found in packages [com.zeromail.core.support]!`.
+  Root cause confirmed: `ZeroMailCoreTestApplication` lives only in the test source set under
+  `com.zeromail.core.support` — Spring Modulith's `ApplicationModules.of(...)` scans
+  `getBasePackages()` from the application class location and the main classpath has no classes
+  there. The test was added in Wave 0 as a RED stub expected to flip GREEN once the package
+  exists; Wave 2 did ship the cleanup package-info but the test still fails for the unrelated
+  test-fixture-discovery reason above. Plan 09 is the frontend + privacy-test wave — fixing the
+  test-fixture entry point is a backend-test-infrastructure change to be addressed in a follow-up
+  Phase 8 cleanup plan or as part of the general test-fixture refresh. **Recommended fix:** move
+  `ZeroMailCoreTestApplication` to a main-package location, OR change the test to use a
+  `@SpringBootApplication`-annotated class in main sources.
+
+Plan 09 verified this failure is unchanged by its scope (verified against Wave 7 HEAD
+`21147e1b` — same failure mode).
