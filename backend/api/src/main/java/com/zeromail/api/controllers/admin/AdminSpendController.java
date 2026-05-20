@@ -2,6 +2,7 @@ package com.zeromail.api.controllers.admin;
 
 import com.zeromail.api.dto.admin.spend.SpendDashboardResponse;
 import com.zeromail.core.admin.audit.usecases.AdminAuditWriter;
+import com.zeromail.core.admin.audit.usecases.AdminReadEventDebouncer;
 import com.zeromail.core.admin.auth.AdminContext;
 import com.zeromail.core.admin.auth.AdminUser;
 import com.zeromail.core.admin.cat.domain.Feature;
@@ -16,14 +17,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -52,22 +51,21 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminSpendController {
 
-    private static final long READ_EVENT_DEBOUNCE_SECONDS = 60;
+    private static final Duration READ_EVENT_DEBOUNCE_WINDOW = Duration.ofSeconds(60);
     private static final String READ_ACTION = "ADMIN_SPEND_DASHBOARD_READ";
     private static final String READ_TARGET_KIND = "SPEND_DASHBOARD";
 
     private final SpendAggregateQueryService spendAggregateQueryService;
     private final SpendCsvExporter spendCsvExporter;
     private final AdminAuditWriter adminAuditWriter;
-    private final Clock clock;
+    private final AdminReadEventDebouncer adminReadEventDebouncer;
     private final LocalDate rowLevelClassificationSince;
-    private final Map<String, Instant> readEventDebounce = new ConcurrentHashMap<>();
 
     public AdminSpendController(
             SpendAggregateQueryService spendAggregateQueryService,
             SpendCsvExporter spendCsvExporter,
             AdminAuditWriter adminAuditWriter,
-            Clock clock,
+            AdminReadEventDebouncer adminReadEventDebouncer,
             ZeroMailCoreProperties coreProperties) {
         this.spendAggregateQueryService =
                 Objects.requireNonNull(
@@ -76,7 +74,9 @@ public class AdminSpendController {
                 Objects.requireNonNull(spendCsvExporter, "spendCsvExporter must not be null");
         this.adminAuditWriter =
                 Objects.requireNonNull(adminAuditWriter, "adminAuditWriter must not be null");
-        this.clock = Objects.requireNonNull(clock, "clock must not be null");
+        this.adminReadEventDebouncer =
+                Objects.requireNonNull(
+                        adminReadEventDebouncer, "adminReadEventDebouncer must not be null");
         Objects.requireNonNull(coreProperties, "coreProperties must not be null");
         this.rowLevelClassificationSince =
                 coreProperties.admin().spend().rowLevelClassificationSince();
@@ -137,10 +137,13 @@ public class AdminSpendController {
     private void writeReadEventIfNeeded(
             AdminUser adminUser, SpendQuery spendQuery, HttpServletRequest httpServletRequest) {
         String debounceKey =
-                adminUser.id() + "|" + sessionId(httpServletRequest) + "|" + rangeHash(spendQuery);
-        Instant now = clock.instant();
-        Instant previous = readEventDebounce.put(debounceKey, now);
-        if (previous != null && previous.plusSeconds(READ_EVENT_DEBOUNCE_SECONDS).isAfter(now)) {
+                "spend-dashboard:"
+                        + adminUser.id()
+                        + "|"
+                        + sessionId(httpServletRequest)
+                        + "|"
+                        + rangeHash(spendQuery);
+        if (!adminReadEventDebouncer.shouldEmit(debounceKey, READ_EVENT_DEBOUNCE_WINDOW)) {
             return;
         }
         adminAuditWriter.writeReadEvent(adminUser, READ_ACTION, READ_TARGET_KIND, null);

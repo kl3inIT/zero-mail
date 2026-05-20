@@ -7,16 +7,15 @@ import com.zeromail.core.admin.audit.projection.AdminAuditPage;
 import com.zeromail.core.admin.audit.projection.AdminAuditPageQuery;
 import com.zeromail.core.admin.audit.usecases.AdminAuditQueryService;
 import com.zeromail.core.admin.audit.usecases.AdminAuditWriter;
+import com.zeromail.core.admin.audit.usecases.AdminReadEventDebouncer;
 import com.zeromail.core.admin.audit.usecases.AuditCsvExporter;
 import com.zeromail.core.admin.auth.AdminContext;
 import com.zeromail.core.admin.auth.AdminUser;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
-import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -34,23 +33,22 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 public class AdminAuditController {
 
     private static final int EXPORT_LIMIT = 10_000;
-    private static final long READ_EVENT_DEBOUNCE_SECONDS = 60;
+    private static final Duration READ_EVENT_DEBOUNCE_WINDOW = Duration.ofSeconds(60);
 
     private final AdminAuditQueryService adminAuditQueryService;
     private final AdminAuditWriter adminAuditWriter;
     private final AuditCsvExporter auditCsvExporter;
-    private final Clock clock;
-    private final Map<String, Instant> readEventDebounce = new ConcurrentHashMap<>();
+    private final AdminReadEventDebouncer adminReadEventDebouncer;
 
     public AdminAuditController(
             AdminAuditQueryService adminAuditQueryService,
             AdminAuditWriter adminAuditWriter,
             AuditCsvExporter auditCsvExporter,
-            Clock clock) {
+            AdminReadEventDebouncer adminReadEventDebouncer) {
         this.adminAuditQueryService = adminAuditQueryService;
         this.adminAuditWriter = adminAuditWriter;
         this.auditCsvExporter = auditCsvExporter;
-        this.clock = clock;
+        this.adminReadEventDebouncer = adminReadEventDebouncer;
     }
 
     @GetMapping("/events")
@@ -101,14 +99,13 @@ public class AdminAuditController {
             AdminAuditPageRequest pageRequest,
             HttpServletRequest httpServletRequest) {
         String debounceKey =
-                adminUser.id()
+                "audit-events:"
+                        + adminUser.id()
                         + "|"
                         + sessionId(httpServletRequest)
                         + "|"
                         + pageRequest.debounceKey();
-        Instant now = clock.instant();
-        Instant previous = readEventDebounce.put(debounceKey, now);
-        if (previous != null && previous.plusSeconds(READ_EVENT_DEBOUNCE_SECONDS).isAfter(now)) {
+        if (!adminReadEventDebouncer.shouldEmit(debounceKey, READ_EVENT_DEBOUNCE_WINDOW)) {
             return;
         }
         adminAuditWriter.writeReadEvent(
