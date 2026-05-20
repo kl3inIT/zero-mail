@@ -55,7 +55,7 @@ RUN pnpm --filter @zeromail/admin run build
 # ============================================================================
 # STAGE 4: runner — minimal nginx serving the static SPA
 # ============================================================================
-FROM nginx:1.27-alpine AS runner
+FROM nginx:1.30-alpine AS runner
 
 RUN apk add --no-cache tini curl && \
     rm -rf /var/cache/apk/*

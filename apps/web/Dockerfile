@@ -55,8 +55,14 @@ RUN pnpm --filter web run build
 # ============================================================================
 FROM node:24-alpine AS runner
 
+# Upgrade the system npm to refresh bundled node_modules (brace-expansion,
+# picomatch, ip-address) that Trivy flags as CVE-vulnerable in old npm releases.
+# Next.js standalone does not invoke npm at runtime, so this only patches the
+# image surface for security scans.
 RUN apk add --no-cache tini curl && \
-    rm -rf /var/cache/apk/*
+    rm -rf /var/cache/apk/* && \
+    npm install -g npm@latest && \
+    npm cache clean --force
 
 RUN addgroup -g 1654 -S appgroup && \
     adduser  -u 1654 -S appuser -G appgroup

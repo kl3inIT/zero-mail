@@ -137,6 +137,10 @@ jobs:
           context: .
           file: ${{ matrix.dockerfile }}
           push: true
+          # Pull base image fresh every build so OS-level CVE patches in the
+          # rolling tags (eclipse-temurin:25-jre-noble, nginx:1.30-alpine,
+          # node:24-alpine) land in our derived images without manual pin bumps.
+          pull: true
           tags: ${{ steps.tags.outputs.tags }}
           build-args: ${{ matrix.build-args }}
           cache-from: type=gha,scope=${{ matrix.component }}
