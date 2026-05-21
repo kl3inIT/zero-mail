@@ -7,6 +7,9 @@ export type EditSessionResponse = components['schemas']['MasterKeyEditSessionRes
 export type TestConnectionRequest = components['schemas']['TestConnectionRequest'];
 export type TestConnectionResponse = components['schemas']['TestConnectionResponse'];
 export type SetFeatureDefaultRequest = components['schemas']['SetFeatureDefaultRequest'];
+export type ProviderKey = components['schemas']['ProviderKey'];
+export type ProviderKeyList = components['schemas']['ProviderKeyList'];
+export type ProviderKeyStatus = ProviderKey['status'];
 
 // MasterKeyMaskedResponse uses loose `string` for provider/keyFormat (no enum on
 // Response DTO). Derive the strict unions from the Request DTOs so callers get
@@ -105,6 +108,16 @@ export async function rotateMasterKey(input: {
   });
   if (error || !data) {
     throw new Error('Không thể xoay master key.');
+  }
+  return data;
+}
+
+export async function fetchProviderKeys(provider: string): Promise<ProviderKeyList> {
+  const { data, error } = await api.GET('/api/admin/master-keys/{provider}/keys', {
+    params: { path: { provider: provider as LlmProvider } },
+  });
+  if (error || !data) {
+    throw new Error('Không thể tải danh sách key của provider.');
   }
   return data;
 }

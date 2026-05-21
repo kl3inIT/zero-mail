@@ -13,6 +13,7 @@ import com.zeromail.core.admin.mkey.exception.EditSessionRequiredException;
 import com.zeromail.core.admin.mkey.exception.InvalidKeyFormatException;
 import com.zeromail.core.admin.mkey.exception.MasterKeyTestFailedException;
 import com.zeromail.core.admin.mkey.exception.MissingMasterKeyRowException;
+import com.zeromail.core.admin.mkey.exception.ProviderKeyReorderMismatchException;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyEntity;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyRepository;
 import com.zeromail.core.admin.mkey.persistence.lowlevel.LlmProviderMasterKeyWriteRepository;
@@ -95,6 +96,154 @@ public class MasterKeyAdminService {
         AdminContext.currentOrThrow();
         return llmProviderMasterKeyRepository.findByProviderOrderByPriority(provider);
     }
+
+    /**
+     * Inserts a new credential row into a provider's failover chain. The key is probed first; only
+     * OK results are persisted. The new row's priority lands at the end of the existing ACTIVE
+     * chain.
+     */
+    @Transactional
+    public ProviderKeyAddResult addKey(
+            LlmProvider provider,
+            KeyFormat keyFormat,
+            String baseUrl,
+            byte[] plaintextKey,
+            String label,
+            String editSessionToken,
+            String requestIp,
+            UUID requestId) {
+        AdminUser adminUser = AdminContext.currentOrThrow();
+        requireValidKeyFormat(provider, keyFormat);
+        requireEditSession(adminUser.id(), provider, editSessionToken, true);
+        masterKeyRateLimiter.checkEditAllowed(adminUser.id());
+
+        MasterKeyTestResult testResult = probe(provider, keyFormat, baseUrl, plaintextKey);
+        if (testResult != MasterKeyTestResult.OK) {
+            writeSetFailedAudit(provider, testResult, requestIp, requestId);
+            throw new MasterKeyTestFailedException(testResult);
+        }
+
+        String maskedKey = MasterKeyMasker.mask(plaintextKey, provider);
+        byte[] encryptedKey;
+        try {
+            encryptedKey =
+                    platformSecretCipher.encrypt(
+                            plaintextKey, ProviderMasterKeyResolver.associatedData(provider));
+        } finally {
+            Arrays.fill(plaintextKey, (byte) 0);
+        }
+        short kekVersion = PlatformSecretCipher.keyVersionFromEnvelope(encryptedKey);
+        Instant now = clock.instant();
+        UUID keyId = UUID.randomUUID();
+
+        int nextPriority =
+                llmProviderMasterKeyRepository.findByProviderOrderByPriority(provider).stream()
+                                .mapToInt(LlmProviderMasterKeyEntity::getPriority)
+                                .max()
+                                .orElse(0)
+                        + 1;
+
+        llmProviderMasterKeyWriteRepository.insertKey(
+                provider,
+                keyId,
+                nextPriority,
+                MasterKeyStatus.ACTIVE,
+                label,
+                keyFormat,
+                encryptedKey,
+                kekVersion,
+                adminUser.id(),
+                now,
+                cleanBaseUrl(baseUrl),
+                maskedKey);
+        providerMasterKeyResolver.invalidate(provider);
+
+        adminAuditWriter.append(
+                AdminAuditAction.MASTER_KEY_SET,
+                "llm_provider_master_key",
+                null,
+                null,
+                Map.of(
+                        "provider",
+                        provider.id(),
+                        "key_id",
+                        keyId.toString(),
+                        "priority",
+                        nextPriority,
+                        "label",
+                        label == null ? "" : label),
+                null,
+                requestIp,
+                requestId);
+        return new ProviderKeyAddResult(keyId, nextPriority);
+    }
+
+    /**
+     * Reorders priorities atomically within a provider. Caller supplies the full desired ordering
+     * of key IDs; this method assigns sequential priorities 1..N.
+     */
+    @Transactional
+    public void reorderKeys(
+            LlmProvider provider, List<UUID> orderedKeyIds, String requestIp, UUID requestId) {
+        AdminContext.currentOrThrow();
+        Objects.requireNonNull(orderedKeyIds, "orderedKeyIds");
+
+        List<LlmProviderMasterKeyEntity> existing =
+                llmProviderMasterKeyRepository.findByProviderOrderByPriority(provider);
+        if (existing.size() != orderedKeyIds.size()
+                || !existing.stream()
+                        .map(LlmProviderMasterKeyEntity::getKeyId)
+                        .toList()
+                        .containsAll(orderedKeyIds)) {
+            throw new ProviderKeyReorderMismatchException(provider);
+        }
+
+        // Two-pass shift to dodge the deferrable uq_priority constraint.
+        int offset = existing.size() + 1;
+        for (LlmProviderMasterKeyEntity row : existing) {
+            llmProviderMasterKeyWriteRepository.setPriority(
+                    provider, row.getKeyId(), -(row.getPriority() + offset));
+        }
+        for (int index = 0; index < orderedKeyIds.size(); index++) {
+            llmProviderMasterKeyWriteRepository.setPriority(
+                    provider, orderedKeyIds.get(index), index + 1);
+        }
+        providerMasterKeyResolver.invalidate(provider);
+
+        adminAuditWriter.append(
+                AdminAuditAction.MASTER_KEY_FEATURE_DEFAULT_SET,
+                "llm_provider_master_key",
+                null,
+                null,
+                Map.of(
+                        "provider", provider.id(),
+                        "ordered_key_ids", orderedKeyIds.stream().map(UUID::toString).toList()),
+                "Reordered failover priorities",
+                requestIp,
+                requestId);
+    }
+
+    /** Marks a specific key row REVOKED. Idempotent. */
+    @Transactional
+    public void revokeKey(LlmProvider provider, UUID keyId, String requestIp, UUID requestId) {
+        AdminContext.currentOrThrow();
+        int rowsAffected = llmProviderMasterKeyWriteRepository.revokeKey(provider, keyId);
+        if (rowsAffected == 0) {
+            throw new MissingMasterKeyRowException(provider);
+        }
+        providerMasterKeyResolver.invalidate(provider);
+        adminAuditWriter.append(
+                AdminAuditAction.MASTER_KEY_ROTATED,
+                "llm_provider_master_key",
+                null,
+                null,
+                Map.of("provider", provider.id(), "key_id", keyId.toString(), "action", "REVOKE"),
+                null,
+                requestIp,
+                requestId);
+    }
+
+    public record ProviderKeyAddResult(UUID keyId, int priority) {}
 
     @Transactional(readOnly = true)
     public MasterKeyMaskedRow getMasked(LlmProvider provider) {

@@ -1,6 +1,6 @@
-import { ChevronRightIcon, ZapIcon } from 'lucide-react';
+import { ChevronRightIcon } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   type FeatureDefaultBinding,
@@ -41,17 +41,7 @@ export function RoutingMatrixCard({ onCellClick }: RoutingMatrixCardProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-ink flex items-center gap-2 text-base">
-          <ZapIcon className="text-primary size-4" />
-          Mặc định theo tính năng (3-tier failover)
-        </CardTitle>
-        <CardDescription>
-          Mỗi tính năng đi qua chuỗi Primary → Fallback → Last Resort. Hệ thống tự chuyển sang tier
-          kế tiếp nếu tier hiện tại trả lỗi hoặc không có key ACTIVE.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         {matrixQuery.isPending ? (
           <Skeleton className="h-48 w-full" />
         ) : (

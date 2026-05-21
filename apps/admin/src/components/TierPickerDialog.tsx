@@ -24,7 +24,11 @@ import {
   type RoutingTier,
 } from '@/features/feature-defaults/feature-defaults-api';
 import { useAssignTier } from '@/features/feature-defaults/use-assign-tier';
-import { catalogProviders, type CatalogProvider } from '@/features/catalog/catalog-api';
+import {
+  catalogProviders,
+  providerLabel,
+  type CatalogProvider,
+} from '@/features/catalog/catalog-api';
 import { useCatalog } from '@/features/catalog/use-catalog';
 
 const FEATURE_LABELS: Record<RoutingFeature, string> = {
@@ -110,95 +114,97 @@ function PickerForm({
     !assignMutation.isPending && provider && modelId && modelId.trim().length > 0;
 
   return (
-    <>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Gán mặc định — {FEATURE_LABELS[state.feature]}</DialogTitle>
-          <DialogDescription>{TIER_LABELS[state.tier]}</DialogDescription>
-        </DialogHeader>
+    <DialogContent className="sm:max-w-xl">
+      <DialogHeader>
+        <DialogTitle>Gán mặc định — {FEATURE_LABELS[state.feature]}</DialogTitle>
+        <DialogDescription>{TIER_LABELS[state.tier]}</DialogDescription>
+      </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="tier-provider">Provider</Label>
-            <Select
-              value={provider}
-              onValueChange={(next) => {
-                setProvider(next as CatalogProvider);
-                setModelId('');
-              }}
-            >
-              <SelectTrigger id="tier-provider">
-                <SelectValue placeholder="Chọn provider" />
-              </SelectTrigger>
-              <SelectContent>
-                {catalogProviders.map((entry) => (
-                  <SelectItem key={entry} value={entry}>
-                    {entry}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="tier-model">Model</Label>
-            <Select
-              value={modelId}
-              onValueChange={(next) => setModelId(next ?? '')}
-              disabled={catalogQuery.isPending || models.length === 0}
-            >
-              <SelectTrigger id="tier-model">
-                <SelectValue
-                  placeholder={
-                    catalogQuery.isPending
-                      ? 'Đang tải models…'
-                      : models.length === 0
-                        ? 'Provider chưa có model'
-                        : 'Chọn model'
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {models.map((model) => (
-                  <SelectItem key={model.modelId} value={model.modelId}>
-                    <span className="block text-sm">{model.displayName}</span>
-                    <span className="text-muted-foreground block font-mono text-[11px]">
-                      {model.modelId}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-muted-foreground text-xs">
-              Backend chỉ chấp nhận model đã <span className="font-medium">VERIFIED</span> hoặc
-              STALE — nếu chọn model FAILED/UNTESTED, request sẽ bị từ chối.
-            </p>
-          </div>
+      <div className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="tier-provider">Provider</Label>
+          <Select
+            value={provider}
+            onValueChange={(next) => {
+              setProvider(next as CatalogProvider);
+              setModelId('');
+            }}
+          >
+            <SelectTrigger id="tier-provider" className="h-11 w-full">
+              <SelectValue placeholder="Chọn provider" />
+            </SelectTrigger>
+            <SelectContent>
+              {catalogProviders.map((entry) => (
+                <SelectItem key={entry} value={entry}>
+                  {providerLabel(entry)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        <DialogFooter className="gap-2">
-          <DialogClose render={(p) => <Button variant="ghost" {...p} />}>Hủy</DialogClose>
-          <Button
-            type="button"
-            disabled={!canSubmit}
-            onClick={() =>
-              assignMutation.mutate(
-                {
-                  feature: state.feature,
-                  tier: state.tier,
-                  provider: provider as CatalogProvider,
-                  modelId,
-                },
-                {
-                  onSuccess: () => onClose(),
-                },
-              )
-            }
+        <div className="space-y-2">
+          <Label htmlFor="tier-model">Model</Label>
+          <Select
+            value={modelId}
+            onValueChange={(next) => setModelId(next ?? '')}
+            disabled={catalogQuery.isPending || models.length === 0}
           >
-            {assignMutation.isPending ? 'Đang lưu…' : 'Gán'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </>
+            <SelectTrigger id="tier-model" className="h-11 w-full">
+              <SelectValue
+                placeholder={
+                  catalogQuery.isPending
+                    ? 'Đang tải models…'
+                    : models.length === 0
+                      ? 'Provider chưa có model'
+                      : 'Chọn model'
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {models.map((model) => (
+                <SelectItem key={model.modelId} value={model.modelId}>
+                  <div className="flex flex-col">
+                    <span>{model.displayName}</span>
+                    <span className="text-muted-foreground font-mono text-xs">
+                      {model.modelId}
+                    </span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-muted-foreground text-xs">
+            Backend chỉ chấp nhận model đã <span className="font-medium">VERIFIED</span> hoặc
+            STALE.
+          </p>
+        </div>
+      </div>
+
+      <DialogFooter className="gap-2">
+        <DialogClose render={(closeProps) => <Button variant="ghost" {...closeProps} />}>
+          Hủy
+        </DialogClose>
+        <Button
+          type="button"
+          disabled={!canSubmit}
+          onClick={() =>
+            assignMutation.mutate(
+              {
+                feature: state.feature,
+                tier: state.tier,
+                provider: provider as CatalogProvider,
+                modelId,
+              },
+              {
+                onSuccess: () => onClose(),
+              },
+            )
+          }
+        >
+          {assignMutation.isPending ? 'Đang lưu…' : 'Gán'}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
   );
 }
