@@ -308,7 +308,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/admin/catalog/models/{modelId}/verify": {
+    "/api/admin/catalog/models/verify": {
         parameters: {
             query?: never;
             header?: never;
@@ -805,6 +805,9 @@ export interface components {
         };
         CatalogSyncConfirmRequest: {
             reason?: string;
+        };
+        CatalogModelVerifyRequest: {
+            modelId: string;
         };
         CatalogModelVerificationResponse: {
             /**
@@ -2926,12 +2929,14 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                modelId: string;
-            };
+            path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogModelVerifyRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {

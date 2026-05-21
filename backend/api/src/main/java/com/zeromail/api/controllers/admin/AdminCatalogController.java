@@ -5,6 +5,7 @@ import com.zeromail.api.dto.admin.cat.CatalogListResponse;
 import com.zeromail.api.dto.admin.cat.CatalogModelCreateRequest;
 import com.zeromail.api.dto.admin.cat.CatalogModelDisableRequest;
 import com.zeromail.api.dto.admin.cat.CatalogModelVerificationResponse;
+import com.zeromail.api.dto.admin.cat.CatalogModelVerifyRequest;
 import com.zeromail.api.dto.admin.cat.CatalogSyncConfirmRequest;
 import com.zeromail.api.dto.admin.cat.CatalogSyncDiffResponse;
 import com.zeromail.api.dto.admin.cat.CatalogSyncFetchResponse;
@@ -154,13 +155,14 @@ public class AdminCatalogController {
                 UUID.randomUUID());
     }
 
-    @PostMapping("/models/{modelId}/verify")
+    @PostMapping("/models/verify")
     public CatalogModelVerificationResponse verifyModel(
-            @PathVariable String modelId, HttpServletRequest httpServletRequest) {
+            @Valid @RequestBody CatalogModelVerifyRequest request,
+            HttpServletRequest httpServletRequest) {
         AdminContext.currentOrThrow();
         ModelVerificationStatus status =
                 modelVerificationService.verify(
-                        modelId, httpServletRequest.getRemoteAddr(), UUID.randomUUID());
+                        request.modelId(), httpServletRequest.getRemoteAddr(), UUID.randomUUID());
         // The service has already persisted the latency + error onto the row;
         // we re-read minimally by exposing only the status here. Callers that
         // need richer detail can hit the read endpoint that lists models.

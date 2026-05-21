@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { Link, useMatches } from '@tanstack/react-router';
 
 import {
@@ -68,11 +69,11 @@ export function AdminBreadcrumb() {
         {crumbs.map((crumb, index) => {
           const isLast = index === crumbs.length - 1;
           return (
-            <BreadcrumbItem key={crumb.to}>
-              {isLast ? (
-                <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-              ) : (
-                <>
+            <Fragment key={crumb.to}>
+              <BreadcrumbItem>
+                {isLast ? (
+                  <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                ) : (
                   <BreadcrumbLink
                     render={(renderProps) => (
                       <Link to={crumb.to} {...renderProps}>
@@ -80,10 +81,10 @@ export function AdminBreadcrumb() {
                       </Link>
                     )}
                   />
-                  <BreadcrumbSeparator />
-                </>
-              )}
-            </BreadcrumbItem>
+                )}
+              </BreadcrumbItem>
+              {!isLast && <BreadcrumbSeparator />}
+            </Fragment>
           );
         })}
       </BreadcrumbList>

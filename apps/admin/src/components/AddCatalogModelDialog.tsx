@@ -1,4 +1,5 @@
 import { useForm } from '@tanstack/react-form';
+import { useState } from 'react';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,10 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { CatalogProvider } from '@/features/catalog/catalog-api';
+import type {
+  CatalogModelVerificationResponse,
+  CatalogProvider,
+} from '@/features/catalog/catalog-api';
 import { useCreateModel } from '@/features/catalog/use-create-model';
 
 const formSchema = z.object({
@@ -61,6 +65,8 @@ function AddCatalogModelForm({
   onSuccess: () => void;
 }) {
   const createMutation = useCreateModel();
+  const [failedVerification, setFailedVerification] =
+    useState<CatalogModelVerificationResponse | null>(null);
 
   const form = useForm({
     defaultValues: {
@@ -70,13 +76,20 @@ function AddCatalogModelForm({
     },
     validators: { onChange: formSchema },
     onSubmit: async ({ value }) => {
-      await createMutation.mutateAsync({
+      setFailedVerification(null);
+      const { verification } = await createMutation.mutateAsync({
         provider,
         modelId: value.modelId.trim(),
         displayName: value.displayName.trim(),
         recommended: value.recommended,
       });
-      onSuccess();
+      if (verification.status === 'VERIFIED' || verification.status === 'STALE') {
+        onSuccess();
+        return;
+      }
+      // FAILED / UNTESTED — keep the dialog open so the admin sees the probe error
+      // and can either fix the model id or close to defer the verify step.
+      setFailedVerification(verification);
     },
   });
 
@@ -151,14 +164,29 @@ function AddCatalogModelForm({
           )}
         </form.Field>
 
+        {failedVerification && (
+          <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs">
+            <p className="font-medium text-destructive">
+              Model đã được lưu nhưng probe thất bại ({failedVerification.status}). Model vẫn ở
+              trạng thái <code>{failedVerification.status}</code> và chưa thể gán vào tier — chỉnh
+              lại Model ID rồi thử lại, hoặc đóng để giữ row và verify sau.
+            </p>
+            {failedVerification.error && (
+              <p className="text-muted-foreground mt-2 break-all">
+                Provider trả về: {failedVerification.error}
+              </p>
+            )}
+          </div>
+        )}
+
         <DialogFooter className="gap-2">
           <DialogClose render={(closeProps) => <Button variant="ghost" {...closeProps} />}>
-            Hủy
+            {failedVerification ? 'Đóng' : 'Hủy'}
           </DialogClose>
           <form.Subscribe selector={(state) => state.canSubmit}>
             {(canSubmit) => (
               <Button type="submit" disabled={!canSubmit || createMutation.isPending}>
-                {createMutation.isPending ? 'Đang lưu…' : 'Thêm'}
+                {createMutation.isPending ? 'Đang lưu + verify…' : 'Thêm'}
               </Button>
             )}
           </form.Subscribe>

@@ -20,6 +20,8 @@ export type CatalogSyncFetchResponse = components['schemas']['CatalogSyncFetchRe
 export type CatalogSyncDiffResponse = components['schemas']['CatalogSyncDiffResponse'];
 export type CatalogModelCreateRequest = components['schemas']['CatalogModelCreateRequest'];
 export type CatalogModelDisableRequest = components['schemas']['CatalogModelDisableRequest'];
+export type CatalogModelVerificationResponse =
+  components['schemas']['CatalogModelVerificationResponse'];
 
 export type CreateCatalogModelInput = {
   provider: CatalogProvider;
@@ -162,6 +164,18 @@ export async function disableCatalogModel(input: DisableCatalogModelInput): Prom
   if (error) {
     throw errorFor('vô hiệu mô hình danh mục');
   }
+}
+
+export async function verifyCatalogModel(
+  modelId: string,
+): Promise<CatalogModelVerificationResponse> {
+  const { data, error } = await api.POST('/api/admin/catalog/models/verify', {
+    body: { modelId },
+  });
+  if (error || !data) {
+    throw errorFor('xác thực model');
+  }
+  return data;
 }
 
 export async function setCatalogDefault(input: SetCatalogDefaultInput): Promise<void> {
