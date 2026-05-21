@@ -12,18 +12,29 @@ import org.junit.jupiter.api.Test;
 class MasterKeyResolverConfinementTest {
 
     @Test
-    void only_provider_master_key_resolver_depends_on_master_key_repository_for_reads() {
+    void only_authorised_callers_depend_on_master_key_repository() {
+        // Phase B v2 split key access across three legitimate consumers:
+        //   - core.llm.gateway.springai.admin (cipher decrypt + resolver cache)
+        //   - core.admin.mkey.usecases        (admin CRUD: addKey, reorderKeys, revokeKey, ...)
+        //   - core.admin.cat.usecases         (LlmRouter walks ACTIVE keys per tier)
+        // Anything else touching the repo is still suspicious — the encrypted material must stay
+        // confined to the resolver, and write paths must stay confined to the admin services.
         ArchRule rule =
                 noClasses()
                         .that()
                         .resideOutsideOfPackage("..core.llm.gateway.springai.admin..")
+                        .and()
+                        .resideOutsideOfPackage("..core.admin.mkey.usecases..")
+                        .and()
+                        .resideOutsideOfPackage("..core.admin.cat.usecases..")
                         .and()
                         .areNotAssignableTo(LlmProviderMasterKeyRepository.class)
                         .should()
                         .dependOnClassesThat()
                         .areAssignableTo(LlmProviderMasterKeyRepository.class)
                         .because(
-                                "ProviderMasterKeyResolver is the single reader for llm_provider_master_key")
+                                "Only the resolver and the admin mkey/cat use-case packages may"
+                                        + " touch llm_provider_master_key directly")
                         .allowEmptyShould(true);
 
         rule.check(importProductionClasses());
