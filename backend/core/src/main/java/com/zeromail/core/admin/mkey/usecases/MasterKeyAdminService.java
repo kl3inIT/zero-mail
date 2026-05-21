@@ -7,7 +7,10 @@ import com.zeromail.core.admin.auth.AdminUser;
 import com.zeromail.core.admin.mkey.domain.KeyFormat;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.domain.MasterKeyFeature;
+import com.zeromail.core.admin.mkey.domain.MasterKeyStatus;
 import com.zeromail.core.admin.mkey.domain.event.MasterKeyRotatedEvent;
+import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyEntity;
+import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyRepository;
 import com.zeromail.core.admin.mkey.persistence.lowlevel.LlmProviderMasterKeyWriteRepository;
 import com.zeromail.core.admin.mkey.projection.MasterKeyMaskedRow;
 import com.zeromail.core.admin.shared.AdminBusinessException;
@@ -30,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class MasterKeyAdminService {
 
+    private final LlmProviderMasterKeyRepository llmProviderMasterKeyRepository;
     private final LlmProviderMasterKeyWriteRepository llmProviderMasterKeyWriteRepository;
     private final ProviderMasterKeyResolver providerMasterKeyResolver;
     private final PlatformSecretCipher platformSecretCipher;
@@ -41,6 +45,7 @@ public class MasterKeyAdminService {
     private final Clock clock;
 
     public MasterKeyAdminService(
+            LlmProviderMasterKeyRepository llmProviderMasterKeyRepository,
             LlmProviderMasterKeyWriteRepository llmProviderMasterKeyWriteRepository,
             ProviderMasterKeyResolver providerMasterKeyResolver,
             PlatformSecretCipher platformSecretCipher,
@@ -50,6 +55,10 @@ public class MasterKeyAdminService {
             AdminAuditWriter adminAuditWriter,
             ApplicationEventPublisher applicationEventPublisher,
             Clock clock) {
+        this.llmProviderMasterKeyRepository =
+                Objects.requireNonNull(
+                        llmProviderMasterKeyRepository,
+                        "llmProviderMasterKeyRepository must not be null");
         this.llmProviderMasterKeyWriteRepository =
                 Objects.requireNonNull(
                         llmProviderMasterKeyWriteRepository,
@@ -196,22 +205,31 @@ public class MasterKeyAdminService {
                 "OK", testResult, storedMasterKey.providerSecretVersion());
     }
 
+    /**
+     * Phase B v2 deprecates the boolean-column feature-default flow that the v1 admin UI drove
+     * through this method. The new admin surface writes to {@code feature_default_provider} via the
+     * tier matrix endpoints instead, so this method now throws — callers must migrate. Kept on the
+     * controller to surface a meaningful 410 response until the v2 routes ship.
+     */
     @Transactional
     public void setFeatureDefault(
             MasterKeyFeature feature, LlmProvider provider, String requestIp, UUID requestId) {
         AdminContext.currentOrThrow();
-        llmProviderMasterKeyWriteRepository.setFeatureDefault(feature, provider);
-        adminAuditWriter.append(
-                AdminAuditAction.MASTER_KEY_FEATURE_DEFAULT_SET,
-                "llm_provider_master_key",
-                null,
-                null,
-                Map.of("provider", provider.id(), "feature", feature.id()),
-                null,
-                requestIp,
-                requestId);
+        throw new UnsupportedOperationException(
+                "Legacy boolean-column feature-default flow removed in Phase B v2. "
+                        + "Use the tier matrix endpoint to set feature defaults.");
     }
 
+    /**
+     * Upserts the canonical (priority=1) key row for a provider. Bridges the v1 "one canonical key
+     * per provider" admin contract onto the v2 multi-key schema by:
+     *
+     * <ul>
+     *   <li>looking up an existing priority=1 row (regardless of status),
+     *   <li>REPLACEing its encrypted material + bumping {@code provider_secret_version} when found,
+     *   <li>INSERTing a fresh ACTIVE priority=1 row when no row exists.
+     * </ul>
+     */
     private StoredMasterKey storeMasterKey(
             LlmProvider provider,
             KeyFormat keyFormat,
@@ -229,18 +247,43 @@ public class MasterKeyAdminService {
         }
         short kekVersion = PlatformSecretCipher.keyVersionFromEnvelope(encryptedKey);
         Instant now = clock.instant();
-        Long providerSecretVersion =
-                llmProviderMasterKeyWriteRepository.storeEncryptedKeyAndReturnVersion(
-                        provider,
-                        keyFormat,
-                        encryptedKey,
-                        kekVersion,
-                        actorId,
-                        now,
-                        cleanBaseUrl(baseUrl),
-                        maskedKey);
-        if (providerSecretVersion == null) {
-            throw new MissingMasterKeyRowException(provider);
+        String cleanedBaseUrl = cleanBaseUrl(baseUrl);
+
+        LlmProviderMasterKeyEntity existingPrimary =
+                llmProviderMasterKeyRepository.findByProviderOrderByPriority(provider).stream()
+                        .filter(entity -> entity.getPriority() == 1)
+                        .findFirst()
+                        .orElse(null);
+
+        long providerSecretVersion;
+        if (existingPrimary != null) {
+            providerSecretVersion =
+                    llmProviderMasterKeyWriteRepository.replaceKeyAndReturnVersion(
+                            provider,
+                            existingPrimary.getKeyId(),
+                            keyFormat,
+                            encryptedKey,
+                            kekVersion,
+                            actorId,
+                            now,
+                            cleanedBaseUrl,
+                            maskedKey);
+        } else {
+            UUID newKeyId = UUID.randomUUID();
+            llmProviderMasterKeyWriteRepository.insertKey(
+                    provider,
+                    newKeyId,
+                    1,
+                    MasterKeyStatus.ACTIVE,
+                    "primary",
+                    keyFormat,
+                    encryptedKey,
+                    kekVersion,
+                    actorId,
+                    now,
+                    cleanedBaseUrl,
+                    maskedKey);
+            providerSecretVersion = 1L;
         }
         providerMasterKeyResolver.invalidate(provider);
         return new StoredMasterKey(kekVersion, providerSecretVersion, now);
