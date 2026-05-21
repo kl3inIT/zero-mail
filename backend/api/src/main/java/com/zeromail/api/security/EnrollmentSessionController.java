@@ -47,7 +47,7 @@ public class EnrollmentSessionController {
         httpSession.setAttribute(
                 ENROLLMENT_ADMIN_USER_ID_SESSION_ATTRIBUTE, adminUserId.toString());
         return new EnrollmentSessionResponse(
-                "SESSION_ADMIN", clock.instant().plus(ENROLLMENT_SESSION_TTL));
+                "ZEROMAIL_ADMIN", clock.instant().plus(ENROLLMENT_SESSION_TTL));
     }
 
     record EnrollmentSessionRequest(String token, String email) {}

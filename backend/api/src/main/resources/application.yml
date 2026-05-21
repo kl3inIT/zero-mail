@@ -165,7 +165,7 @@ server:
   servlet:
     session:
       cookie:
-        name: SESSION_USER
+        name: ZEROMAIL_SESSION
         http-only: true
         secure: false  # dev; true in prod profile
         same-site: lax

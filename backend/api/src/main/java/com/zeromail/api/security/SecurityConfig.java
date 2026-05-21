@@ -202,7 +202,7 @@ public class SecurityConfig {
     CookieSerializer adminCookieSerializer(
             @Value("${zeromail.session.cookie.secure:true}") boolean secureCookie) {
         DefaultCookieSerializer cookieSerializer = new DefaultCookieSerializer();
-        cookieSerializer.setCookieName("SESSION_ADMIN");
+        cookieSerializer.setCookieName("ZEROMAIL_ADMIN");
         cookieSerializer.setCookiePath("/");
         cookieSerializer.setSameSite("Lax");
         cookieSerializer.setUseHttpOnlyCookie(true);
@@ -214,7 +214,7 @@ public class SecurityConfig {
     CookieSerializer userCookieSerializer(
             @Value("${zeromail.session.cookie.secure:true}") boolean secureCookie) {
         DefaultCookieSerializer cookieSerializer = new DefaultCookieSerializer();
-        cookieSerializer.setCookieName("SESSION_USER");
+        cookieSerializer.setCookieName("ZEROMAIL_SESSION");
         cookieSerializer.setCookiePath("/");
         cookieSerializer.setSameSite("Lax");
         cookieSerializer.setUseHttpOnlyCookie(true);

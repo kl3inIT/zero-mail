@@ -36,7 +36,7 @@ class AdminChainCookieIsolationTest {
                 .contains("\"/login/webauthn/**\"");
         assertThat(securityConfig).doesNotContain("EnrollmentTokenGate");
         assertThat(securityConfig).doesNotContain("\"/enroll\"");
-        assertThat(securityConfig).contains("SESSION_ADMIN").contains("SESSION_USER");
+        assertThat(securityConfig).contains("ZEROMAIL_ADMIN").contains("ZEROMAIL_SESSION");
     }
 
     @Test
@@ -88,8 +88,8 @@ class AdminChainCookieIsolationTest {
         assertThat(interfaceFreeze)
                 .contains("last_verified")
                 .contains("POST /api/admin/enrollment/session")
-                .contains("SESSION_ADMIN")
-                .contains("SESSION_USER")
+                .contains("ZEROMAIL_ADMIN")
+                .contains("ZEROMAIL_SESSION")
                 .contains("spring:session:admin")
                 .contains("GroupedOpenApi");
     }
