@@ -167,13 +167,10 @@ function MasterKeyProviderRoute() {
   }
 
   function disableModel(model: CatalogModel) {
-    const reason = window.prompt(
-      `Vô hiệu model ${model.modelId}?\n\nNhập lý do (audit):`,
-    );
-    if (!reason || reason.trim().length === 0) return;
+    if (!window.confirm(`Vô hiệu model ${model.modelId}?`)) return;
     disableModelMutation.mutate({
       modelId: model.modelId,
-      reason: reason.trim(),
+      reason: '',
       confirmedPinned: model.pinnedTenantCount > 0,
       pinnedCountAcknowledged: model.pinnedTenantCount,
     });

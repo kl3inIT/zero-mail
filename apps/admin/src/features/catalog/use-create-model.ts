@@ -9,6 +9,7 @@ import {
 import { catalogQueryKeys } from './query-keys';
 
 export type CreateModelResult = {
+  outcome: 'created' | 'already-exists';
   verification: CatalogModelVerificationResponse;
 };
 
@@ -16,13 +17,15 @@ export function useCreateModel() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateCatalogModelInput): Promise<CreateModelResult> => {
-      await createCatalogModel(input);
-      // Newly-added catalog rows start as UNTESTED; the router refuses UNTESTED/FAILED
-      // models when admins assign tier defaults. Run the live /models probe right away
-      // so the row lands as VERIFIED (happy path) — if it returns FAILED, the dialog
-      // surfaces the provider error so the admin can correct the model id.
+      // Newly-inserted catalog rows start as UNTESTED, and the router refuses
+      // UNTESTED/FAILED models when admins assign tier defaults. Chain the live
+      // probe so the row lands as VERIFIED on the happy path. If a previous
+      // attempt already inserted the row (failed verify → row still exists),
+      // createCatalogModel returns 'already-exists' instead of throwing — we
+      // re-run verify so the admin can retry without manually deleting first.
+      const outcome = await createCatalogModel(input);
       const verification = await verifyCatalogModel(input.modelId);
-      return { verification };
+      return { outcome, verification };
     },
     onSuccess: async (_data, variables) => {
       await queryClient.invalidateQueries({

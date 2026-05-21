@@ -132,7 +132,11 @@ export async function cancelCatalogSync(jobId: string): Promise<void> {
   }
 }
 
-export async function createCatalogModel(input: CreateCatalogModelInput): Promise<void> {
+export type CreateCatalogModelOutcome = 'created' | 'already-exists';
+
+export async function createCatalogModel(
+  input: CreateCatalogModelInput,
+): Promise<CreateCatalogModelOutcome> {
   const request: CatalogModelCreateRequest = {
     modelId: input.modelId,
     displayName: input.displayName,
@@ -140,15 +144,17 @@ export async function createCatalogModel(input: CreateCatalogModelInput): Promis
     costPer1kOutput: input.costPer1kOutput,
     recommended: input.recommended,
   };
-  const { error } = await api.POST('/api/admin/catalog/{provider}/models', {
+  const { error, response } = await api.POST('/api/admin/catalog/{provider}/models', {
     params: {
       path: { provider: input.provider },
     },
     body: request,
   });
-  if (error) {
-    throw errorFor('tạo mô hình danh mục');
-  }
+  if (!error) return 'created';
+  // 409 = the row was inserted by a previous attempt whose verify probe failed
+  // and the user is retrying. Treat as success so the caller can re-run verify.
+  if (response?.status === 409) return 'already-exists';
+  throw errorFor('tạo mô hình danh mục');
 }
 
 export async function disableCatalogModel(input: DisableCatalogModelInput): Promise<void> {
