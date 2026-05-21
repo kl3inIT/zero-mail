@@ -4,14 +4,22 @@ import java.net.http.HttpClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 @Configuration
 class RestClientConfig {
 
-    /** Default outbound HTTP client. HTTPS uses HTTP/2 via ALPN automatically. */
+    /**
+     * Default outbound HTTP client. HTTPS uses HTTP/2 via ALPN automatically. Marked {@link
+     * Primary} so Spring AI auto-config (DeepSeek/OpenAI/Anthropic chat models) that autowires a
+     * bare {@code RestClient.Builder} resolves to this builder rather than failing with a {@code
+     * NoUniqueBeanDefinitionException} when {@link #cleartextRestClientBuilder} is also on the
+     * classpath.
+     */
     @Bean
+    @Primary
     @ConditionalOnMissingBean(RestClient.Builder.class)
     RestClient.Builder restClientBuilder(ZeroMailCoreProperties zeroMailCoreProperties) {
         ZeroMailCoreProperties.ZeroMailLlmByokProperties byokProperties =

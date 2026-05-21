@@ -25,8 +25,11 @@ class ModelsProbeClientTest {
                 .andRespond(
                         withStatus(HttpStatus.UNAUTHORIZED)
                                 .body("{\"error\":\"provider detail\"}"));
+        // ModelsProbeClient now takes a second builder for cleartext (h2c-disabled) targets.
+        // Both test cases hit HTTPS URLs, so reuse the same builder for both — the cleartext
+        // path is not exercised here.
         ModelsProbeClient modelsProbeClient =
-                new ModelsProbeClient(restClientBuilder, new ObjectMapper());
+                new ModelsProbeClient(restClientBuilder, restClientBuilder, new ObjectMapper());
 
         assertThat(
                         modelsProbeClient.probe(
@@ -49,8 +52,11 @@ class ModelsProbeClientTest {
                         withSuccess(
                                 "{\"models\":[]}",
                                 org.springframework.http.MediaType.APPLICATION_JSON));
+        // ModelsProbeClient now takes a second builder for cleartext (h2c-disabled) targets.
+        // Both test cases hit HTTPS URLs, so reuse the same builder for both — the cleartext
+        // path is not exercised here.
         ModelsProbeClient modelsProbeClient =
-                new ModelsProbeClient(restClientBuilder, new ObjectMapper());
+                new ModelsProbeClient(restClientBuilder, restClientBuilder, new ObjectMapper());
 
         assertThat(
                         modelsProbeClient.probe(
