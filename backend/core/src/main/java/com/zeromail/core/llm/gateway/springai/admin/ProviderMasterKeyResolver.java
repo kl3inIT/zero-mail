@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -111,8 +112,15 @@ public class ProviderMasterKeyResolver {
     }
 
     public List<MasterKeyMaskedRow> maskedRows() {
+        // Batch the feature-default lookup ONCE so toMaskedRow doesn't fire 3 extra queries per
+        // row. With 6 providers × 1-2 keys × 3 features that was ~36 round-trips over the SSH
+        // tunnel = ~3s; the batched form is 1 query.
+        Set<String> featureDefaultPairs =
+                providerCatalogLookupRepository == null
+                        ? Set.of()
+                        : providerCatalogLookupRepository.findAllFeatureDefaultPairs();
         return llmProviderMasterKeyRepository.findAllOrderedByProviderAndPriority().stream()
-                .map(this::toMaskedRow)
+                .map(entity -> toMaskedRow(entity, featureDefaultPairs))
                 .toList();
     }
 
@@ -147,7 +155,8 @@ public class ProviderMasterKeyResolver {
                 cacheTtl);
     }
 
-    private MasterKeyMaskedRow toMaskedRow(LlmProviderMasterKeyEntity entity) {
+    private MasterKeyMaskedRow toMaskedRow(
+            LlmProviderMasterKeyEntity entity, Set<String> featureDefaultPairs) {
         // WR-02: prefer the stored mask (populated at write time) to avoid decrypting the master
         // key just to render the list page. Legacy rows persisted before changelog 080 may still
         // have a null masked_key; in that case fall back to the decrypt path but only for that row.
@@ -177,9 +186,18 @@ public class ProviderMasterKeyResolver {
                 0L,
                 rotationRecommended(entity.getLastRotatedAt()),
                 resolvedBaseUrl(entity),
-                isFeatureDefaultProvider(entity.getProvider(), "CHAT"),
-                isFeatureDefaultProvider(entity.getProvider(), "TRIAGE"),
-                isFeatureDefaultProvider(entity.getProvider(), "DRAFT"));
+                featureDefaultPairs.contains(
+                        com.zeromail.core.admin.cat.persistence.lowlevel
+                                .ProviderCatalogLookupRepository.pairKey(
+                                entity.getProvider(), "CHAT")),
+                featureDefaultPairs.contains(
+                        com.zeromail.core.admin.cat.persistence.lowlevel
+                                .ProviderCatalogLookupRepository.pairKey(
+                                entity.getProvider(), "TRIAGE")),
+                featureDefaultPairs.contains(
+                        com.zeromail.core.admin.cat.persistence.lowlevel
+                                .ProviderCatalogLookupRepository.pairKey(
+                                entity.getProvider(), "DRAFT")));
     }
 
     private boolean rotationRecommended(Instant lastRotatedAt) {
