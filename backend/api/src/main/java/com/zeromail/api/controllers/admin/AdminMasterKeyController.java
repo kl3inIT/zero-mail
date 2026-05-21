@@ -1,11 +1,13 @@
 package com.zeromail.api.controllers.admin;
 
+import com.zeromail.api.dto.admin.mkey.AddProviderKeyRequest;
 import com.zeromail.api.dto.admin.mkey.MasterKeyEditSessionResponse;
 import com.zeromail.api.dto.admin.mkey.MasterKeyListResponse;
 import com.zeromail.api.dto.admin.mkey.MasterKeyMaskedResponse;
 import com.zeromail.api.dto.admin.mkey.MasterKeySetRequest;
 import com.zeromail.api.dto.admin.mkey.ProviderKeyListResponse;
 import com.zeromail.api.dto.admin.mkey.ProviderKeyResponse;
+import com.zeromail.api.dto.admin.mkey.ReorderProviderKeysRequest;
 import com.zeromail.api.dto.admin.mkey.RotateMasterKeyRequest;
 import com.zeromail.api.dto.admin.mkey.RotationResponse;
 import com.zeromail.api.dto.admin.mkey.SetFeatureDefaultRequest;
@@ -14,6 +16,7 @@ import com.zeromail.api.dto.admin.mkey.TestConnectionResponse;
 import com.zeromail.core.admin.auth.AdminContext;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.usecases.MasterKeyAdminService;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -22,6 +25,7 @@ import java.util.Arrays;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -143,6 +147,70 @@ public class AdminMasterKeyController {
             Arrays.fill(plaintextKey, (byte) 0);
         }
     }
+
+    /**
+     * Appends a new credential row to the provider's failover chain. The plaintext is probed first;
+     * non-OK probes are rejected. New rows land at the end of the chain (priority = max + 1).
+     */
+    @PostMapping("/{provider}/keys")
+    public AddProviderKeyResponse addKey(
+            @PathVariable LlmProvider provider,
+            @Valid @RequestBody AddProviderKeyRequest request,
+            HttpServletRequest httpServletRequest) {
+        AdminContext.currentOrThrow();
+        byte[] plaintextKey = request.plaintextKey().getBytes(StandardCharsets.UTF_8);
+        try {
+            MasterKeyAdminService.ProviderKeyAddResult result =
+                    masterKeyAdminService.addKey(
+                            provider,
+                            request.keyFormat(),
+                            request.baseUrl(),
+                            plaintextKey,
+                            request.label(),
+                            request.editSessionToken(),
+                            httpServletRequest.getRemoteAddr(),
+                            UUID.randomUUID());
+            return new AddProviderKeyResponse(result.keyId(), result.priority());
+        } finally {
+            Arrays.fill(plaintextKey, (byte) 0);
+        }
+    }
+
+    /**
+     * Atomically reassigns priorities 1..N within a provider. Payload must include every existing
+     * key (no additions, no removals); ordering defines the new priority.
+     */
+    @PutMapping("/{provider}/keys/reorder")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reorderKeys(
+            @PathVariable LlmProvider provider,
+            @Valid @RequestBody ReorderProviderKeysRequest request,
+            HttpServletRequest httpServletRequest) {
+        AdminContext.currentOrThrow();
+        masterKeyAdminService.reorderKeys(
+                provider,
+                request.orderedKeyIds(),
+                httpServletRequest.getRemoteAddr(),
+                UUID.randomUUID());
+    }
+
+    /** Marks a single key row REVOKED. Idempotent on the key-id level. */
+    @DeleteMapping("/{provider}/keys/{keyId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void revokeKey(
+            @PathVariable LlmProvider provider,
+            @PathVariable UUID keyId,
+            HttpServletRequest httpServletRequest) {
+        AdminContext.currentOrThrow();
+        masterKeyAdminService.revokeKey(
+                provider, keyId, httpServletRequest.getRemoteAddr(), UUID.randomUUID());
+    }
+
+    @Schema(
+            name = "AddProviderKeyResponse",
+            description = "Identity + assigned priority of the newly inserted credential row.",
+            requiredProperties = {"keyId", "priority"})
+    public record AddProviderKeyResponse(UUID keyId, int priority) {}
 
     @PutMapping("/feature-default")
     @ResponseStatus(HttpStatus.NO_CONTENT)

@@ -7,9 +7,10 @@ import {
   PlusIcon,
   TrashIcon,
 } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import { AddProviderKeyDialog } from '@/components/AddProviderKeyDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Switch } from '@/components/ui/switch';
 import { useCatalog } from '@/features/catalog/use-catalog';
 import type { CatalogModel, CatalogProvider } from '@/features/catalog/catalog-api';
 import type {
@@ -31,6 +31,8 @@ import type {
   ProviderKeyStatus,
 } from '@/features/master-keys/master-keys-api';
 import { useMasterKey, useProviderKeys } from '@/features/master-keys/use-master-keys';
+import { useReorderProviderKeys } from '@/features/master-keys/use-reorder-provider-keys';
+import { useRevokeProviderKey } from '@/features/master-keys/use-revoke-provider-key';
 
 export const Route = createFileRoute('/_authenticated/master-keys/$provider')({
   component: MasterKeyProviderRoute,
@@ -108,9 +110,28 @@ function MasterKeyProviderRoute() {
   const masterKey = useMasterKey(provider);
   const keysQuery = useProviderKeys(provider);
   const catalogQuery = useCatalog(provider as CatalogProvider);
+  const reorderMutation = useReorderProviderKeys(provider);
+  const revokeMutation = useRevokeProviderKey(provider);
+  const [addKeyOpen, setAddKeyOpen] = useState(false);
 
   const keys = keysQuery.data?.keys ?? [];
   const activeKeyCount = keys.filter((entry) => entry.status === 'ACTIVE').length;
+
+  function moveKey(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= keys.length) return;
+    const reordered = keys.slice();
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    reorderMutation.mutate({
+      provider,
+      orderedKeyIds: reordered.map((entry) => entry.keyId),
+    });
+  }
+
+  function revokeKey(entry: ProviderKey) {
+    if (!window.confirm(`Xoá key ${entry.label ?? entry.maskedKey ?? entry.keyId}?`)) return;
+    revokeMutation.mutate({ provider, keyId: entry.keyId });
+  }
 
   const models = useMemo<CatalogModel[]>(() => {
     const featureMap = catalogQuery.data?.features;
@@ -149,9 +170,22 @@ function MasterKeyProviderRoute() {
         pending={keysQuery.isPending || catalogQuery.isPending}
       />
 
-      <ConnectionsCard keys={keys} pending={keysQuery.isPending} />
+      <ConnectionsCard
+        keys={keys}
+        pending={keysQuery.isPending}
+        onAddKey={() => setAddKeyOpen(true)}
+        onMoveKey={moveKey}
+        onRevokeKey={revokeKey}
+        mutationPending={reorderMutation.isPending || revokeMutation.isPending}
+      />
 
       <ModelsCard models={models} pending={catalogQuery.isPending} />
+
+      <AddProviderKeyDialog
+        provider={provider}
+        open={addKeyOpen}
+        onOpenChange={setAddKeyOpen}
+      />
     </div>
   );
 }
@@ -191,9 +225,17 @@ function Kpi({ label, value }: { label: string; value: string }) {
 function ConnectionsCard({
   keys,
   pending,
+  onAddKey,
+  onMoveKey,
+  onRevokeKey,
+  mutationPending,
 }: {
   keys: ProviderKey[];
   pending: boolean;
+  onAddKey: () => void;
+  onMoveKey: (index: number, direction: -1 | 1) => void;
+  onRevokeKey: (entry: ProviderKey) => void;
+  mutationPending: boolean;
 }) {
   return (
     <Card>
@@ -207,15 +249,11 @@ function ConnectionsCard({
             variant="outline"
             size="sm"
             disabled={pending || keys.length === 0}
-            onClick={() => toast.info('Test all keys — đang chờ backend endpoint.')}
+            onClick={() => toast.info('Test all keys — chưa wire endpoint test-per-key.')}
           >
             Test all
           </Button>
-          <Button
-            size="sm"
-            disabled
-            onClick={() => toast.info('Add key — đang chờ backend endpoint.')}
-          >
+          <Button size="sm" onClick={onAddKey} disabled={pending}>
             <PlusIcon className="size-3.5" />
             Thêm key
           </Button>
@@ -233,6 +271,10 @@ function ConnectionsCard({
               entry={entry}
               isFirst={index === 0}
               isLast={index === keys.length - 1}
+              onMoveUp={() => onMoveKey(index, -1)}
+              onMoveDown={() => onMoveKey(index, 1)}
+              onRevoke={() => onRevokeKey(entry)}
+              disabled={mutationPending}
             />
           ))
         )}
@@ -245,10 +287,18 @@ function ConnectionRow({
   entry,
   isFirst,
   isLast,
+  onMoveUp,
+  onMoveDown,
+  onRevoke,
+  disabled,
 }: {
   entry: ProviderKey;
   isFirst: boolean;
   isLast: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onRevoke: () => void;
+  disabled: boolean;
 }) {
   const isActive = entry.status === 'ACTIVE';
   return (
@@ -262,8 +312,8 @@ function ConnectionRow({
         <button
           type="button"
           aria-label="Lên ưu tiên"
-          disabled={isFirst}
-          onClick={() => toast.info('Đổi priority — đang chờ backend endpoint.')}
+          disabled={isFirst || disabled}
+          onClick={onMoveUp}
           className="text-muted-foreground hover:text-foreground disabled:opacity-30"
         >
           <ChevronUpIcon className="size-4" />
@@ -271,8 +321,8 @@ function ConnectionRow({
         <button
           type="button"
           aria-label="Xuống ưu tiên"
-          disabled={isLast}
-          onClick={() => toast.info('Đổi priority — đang chờ backend endpoint.')}
+          disabled={isLast || disabled}
+          onClick={onMoveDown}
           className="text-muted-foreground hover:text-foreground disabled:opacity-30"
         >
           <ChevronDownIcon className="size-4" />
@@ -299,7 +349,7 @@ function ConnectionRow({
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => toast.info('Test key — đang chờ backend endpoint.')}
+        onClick={() => toast.info('Test key — chưa wire endpoint test-per-key.')}
       >
         Test
       </Button>
@@ -307,7 +357,7 @@ function ConnectionRow({
         variant="ghost"
         size="icon"
         aria-label="Sửa key"
-        onClick={() => toast.info('Sửa key — đang chờ backend endpoint.')}
+        onClick={() => toast.info('Sửa key — chưa wire endpoint.')}
       >
         <PencilIcon className="size-4" />
       </Button>
@@ -315,17 +365,11 @@ function ConnectionRow({
         variant="ghost"
         size="icon"
         aria-label="Xoá key"
-        onClick={() => toast.info('Xoá key — đang chờ backend endpoint.')}
+        disabled={disabled}
+        onClick={onRevoke}
       >
         <TrashIcon className="size-4" />
       </Button>
-
-      <Switch
-        checked={isActive}
-        onCheckedChange={() =>
-          toast.info('Bật/tắt key — đang chờ backend endpoint.')
-        }
-      />
     </div>
   );
 }
