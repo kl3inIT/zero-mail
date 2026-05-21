@@ -16,10 +16,14 @@ const FEATURES: { id: RoutingFeature; label: string; description: string }[] = [
   { id: 'DRAFT', label: 'Soạn nháp', description: 'Soạn reply/forward theo template.' },
 ];
 
-const TIERS: { id: RoutingTier; label: string }[] = [
-  { id: 'PRIMARY', label: 'Tier 1 — Primary' },
-  { id: 'FALLBACK', label: 'Tier 2 — Fallback' },
-  { id: 'LAST_RESORT', label: 'Tier 3 — Last Resort' },
+const TIERS: { id: RoutingTier; label: string; tone: string }[] = [
+  { id: 'PRIMARY', label: 'Tier 1 — Primary', tone: 'bg-green-soft text-green border-transparent' },
+  { id: 'FALLBACK', label: 'Tier 2 — Fallback', tone: 'bg-blue-soft text-blue border-transparent' },
+  {
+    id: 'LAST_RESORT',
+    label: 'Tier 3 — Last Resort',
+    tone: 'bg-amber-soft text-amber border-transparent',
+  },
 ];
 
 export type RoutingMatrixCardProps = {
@@ -84,7 +88,7 @@ function FeatureColumn({
         <div className="flex items-center gap-2">
           <div className="font-semibold">{feature.label}</div>
           {warn && (
-            <Badge variant="outline" className="text-xs">
+            <Badge className="bg-amber-soft text-amber border-transparent text-xs">
               Trùng provider giữa tier
             </Badge>
           )}
@@ -114,7 +118,7 @@ function TierCell({
   current,
   onClick,
 }: {
-  tier: { id: RoutingTier; label: string };
+  tier: { id: RoutingTier; label: string; tone: string };
   current: FeatureDefaultBinding | null;
   onClick: () => void;
 }) {
@@ -126,9 +130,7 @@ function TierCell({
       onClick={onClick}
       className="group border-border hover:border-primary/40 bg-card flex w-full items-start gap-3 rounded-md border px-3 py-2 text-left transition-colors"
     >
-      <Badge variant="secondary" className="shrink-0 font-mono">
-        {tier.label}
-      </Badge>
+      <Badge className={`shrink-0 font-mono ${tier.tone}`}>{tier.label}</Badge>
       <span className="min-w-0 flex-1 space-y-1">
         {isAssigned ? (
           <>
@@ -137,7 +139,10 @@ function TierCell({
             </span>
             <span className="flex flex-wrap gap-1">
               {modelIds.map((modelId, index) => (
-                <Badge key={modelId} variant="outline" className="font-mono text-[10px]">
+                <Badge
+                  key={modelId}
+                  className="bg-violet-soft text-primary border-transparent font-mono text-[10px]"
+                >
                   {index + 1}. {modelId}
                 </Badge>
               ))}

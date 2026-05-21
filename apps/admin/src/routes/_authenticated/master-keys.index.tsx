@@ -138,12 +138,22 @@ function ProviderCard({ row, onClick }: { row: MasterKeyRow; onClick: () => void
         </div>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-2">
-        <Badge variant={activeKeyCount > 0 ? 'default' : 'secondary'}>
+        <Badge
+          className={
+            activeKeyCount > 0
+              ? 'bg-green-soft text-green border-transparent'
+              : 'bg-muted text-muted-foreground border-transparent'
+          }
+        >
           {activeKeyCount} key đang hoạt động
         </Badge>
-        {row.rotationRecommended && <Badge variant="outline">Nên xoay khóa</Badge>}
+        {row.rotationRecommended && (
+          <Badge className="bg-amber-soft text-amber border-transparent">Nên xoay khóa</Badge>
+        )}
         {row.dependentsCount > 0 && (
-          <Badge variant="outline">{row.dependentsCount} dependents</Badge>
+          <Badge className="bg-blue-soft text-blue border-transparent">
+            {row.dependentsCount} dependents
+          </Badge>
         )}
       </CardContent>
     </Card>
