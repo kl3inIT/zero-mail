@@ -42,5 +42,13 @@ export default defineConfig({
     url: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // Activate the MSW node interceptor in instrumentation.ts so RSC and
+    // proxy.ts server-side fetches (e.g. /api/me from layouts) are mocked
+    // BEFORE Playwright's browser-side route handlers run. Without this, the
+    // App Router server fetches the real backend (or fails when none exists),
+    // which breaks RSC pages like /settings.
+    env: {
+      NEXT_PUBLIC_E2E_MSW: '1',
+    },
   },
 });
