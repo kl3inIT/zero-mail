@@ -185,3 +185,6 @@ databaseChangeLog:
   - include:
       file: changes/083-credit-grants.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/084-credit-reservation-grant.yaml
+      relativeToChangelogFile: true

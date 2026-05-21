@@ -6,11 +6,15 @@ import com.zeromail.core.billing.domain.CreditReservationStatus;
 import com.zeromail.core.billing.domain.ReservationId;
 import com.zeromail.core.billing.exception.IllegalLedgerStateException;
 import com.zeromail.core.billing.exception.InsufficientCreditsException;
+import com.zeromail.core.billing.persistence.CreditGrantEntity;
+import com.zeromail.core.billing.persistence.CreditGrantRepository;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryEntity;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryRepository;
 import com.zeromail.core.billing.persistence.CreditReservationEntity;
 import com.zeromail.core.billing.persistence.CreditReservationRepository;
 import com.zeromail.core.billing.persistence.lowlevel.AdvisoryLockJdbcHelper;
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -26,14 +30,17 @@ class CreditLedgerService implements CreditLedger {
     private static final Logger log = LoggerFactory.getLogger(CreditLedgerService.class);
 
     private final CreditLedgerEntryRepository entryRepository;
+    private final CreditGrantRepository grantRepository;
     private final CreditReservationRepository reservationRepository;
     private final AdvisoryLockJdbcHelper advisoryLockHelper;
 
     CreditLedgerService(
             CreditLedgerEntryRepository entryRepository,
+            CreditGrantRepository grantRepository,
             CreditReservationRepository reservationRepository,
             AdvisoryLockJdbcHelper advisoryLockHelper) {
         this.entryRepository = entryRepository;
+        this.grantRepository = grantRepository;
         this.reservationRepository = reservationRepository;
         this.advisoryLockHelper = advisoryLockHelper;
     }
@@ -43,10 +50,22 @@ class CreditLedgerService implements CreditLedger {
     public ReservationId reserve(UUID tenantId, CallSite callSite) {
         advisoryLockHelper.acquireTenantLock(tenantId);
 
-        int availableCredits =
-                Math.toIntExact(entryRepository.sumAvailableCreditsForTenant(tenantId));
-        if (availableCredits < callSite.cost()) {
-            throw new InsufficientCreditsException();
+        int requiredCredits = callSite.cost();
+        if (requiredCredits < 0) {
+            throw new IllegalLedgerStateException("Call-site cost cannot be negative: " + callSite);
+        }
+
+        UUID selectedGrantId = null;
+        if (requiredCredits > 0) {
+            selectedGrantId = findGrantWithAvailableCredits(tenantId, requiredCredits).orElse(null);
+            if (selectedGrantId == null) {
+                int availableUnscopedCredits =
+                        Math.toIntExact(
+                                entryRepository.sumAvailableUnscopedCreditsForTenant(tenantId));
+                if (availableUnscopedCredits < requiredCredits) {
+                    throw new InsufficientCreditsException();
+                }
+            }
         }
 
         UUID reservationUuid = UUID.randomUUID();
@@ -54,15 +73,22 @@ class CreditLedgerService implements CreditLedger {
                 new CreditReservationEntity(
                         reservationUuid,
                         tenantId,
-                        callSite.cost(),
+                        requiredCredits,
+                        selectedGrantId,
                         callSite,
                         CreditReservationStatus.PENDING);
         reservationRepository.save(reservation);
 
-        CreditLedgerEntryEntity reserveEntry =
-                CreditLedgerEntryEntity.reserve(
-                        UUID.randomUUID(), tenantId, callSite.cost(), reservationUuid);
-        entryRepository.save(reserveEntry);
+        if (requiredCredits > 0) {
+            CreditLedgerEntryEntity reserveEntry =
+                    CreditLedgerEntryEntity.reserve(
+                            UUID.randomUUID(),
+                            tenantId,
+                            requiredCredits,
+                            reservationUuid,
+                            selectedGrantId);
+            entryRepository.save(reserveEntry);
+        }
 
         log.info("event=credit_reserved tenantId={} reservationId={}", tenantId, reservationUuid);
         return new ReservationId(reservationUuid);
@@ -127,16 +153,19 @@ class CreditLedgerService implements CreditLedger {
         reservation.markReleased();
         reservationRepository.save(reservation);
 
-        CreditLedgerEntryEntity releaseEntry =
-                CreditLedgerEntryEntity.release(
-                        UUID.randomUUID(),
-                        reservation.getTenantId(),
-                        reservation.getAmountCredits(),
-                        reservationUuid);
-        try {
-            entryRepository.saveAndFlush(releaseEntry);
-        } catch (DataIntegrityViolationException duplicateReleaseEntry) {
-            // UNIQUE(ref_type, ref_id, kind) makes repeat RELEASE journal writes idempotent.
+        if (reservation.getAmountCredits() > 0) {
+            CreditLedgerEntryEntity releaseEntry =
+                    CreditLedgerEntryEntity.release(
+                            UUID.randomUUID(),
+                            reservation.getTenantId(),
+                            reservation.getAmountCredits(),
+                            reservationUuid,
+                            reservation.getGrantId());
+            try {
+                entryRepository.saveAndFlush(releaseEntry);
+            } catch (DataIntegrityViolationException duplicateReleaseEntry) {
+                // UNIQUE(ref_type, ref_id, kind) makes repeat RELEASE journal writes idempotent.
+            }
         }
 
         log.info(
@@ -152,5 +181,11 @@ class CreditLedgerService implements CreditLedger {
                 Math.toIntExact(entryRepository.sumAvailableCreditsForTenant(tenantId));
         int heldCredits = Math.toIntExact(entryRepository.sumHeldCreditsForTenant(tenantId));
         return new CreditBalance(availableCredits, heldCredits);
+    }
+
+    private Optional<UUID> findGrantWithAvailableCredits(UUID tenantId, int requiredCredits) {
+        List<CreditGrantEntity> spendableGrants =
+                grantRepository.findSpendableGrants(tenantId, Instant.now(), requiredCredits);
+        return spendableGrants.stream().map(CreditGrantEntity::getId).findFirst();
     }
 }

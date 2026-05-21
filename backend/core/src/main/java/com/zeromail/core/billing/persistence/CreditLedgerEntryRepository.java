@@ -11,6 +11,15 @@ public interface CreditLedgerEntryRepository extends JpaRepository<CreditLedgerE
             "SELECT COALESCE(SUM(entry.amountCredits), 0) FROM CreditLedgerEntryEntity entry WHERE entry.tenantId = :tenantId")
     long sumAvailableCreditsForTenant(@Param("tenantId") UUID tenantId);
 
+    @Query(
+            """
+            SELECT COALESCE(SUM(entry.amountCredits), 0)
+              FROM CreditLedgerEntryEntity entry
+             WHERE entry.tenantId = :tenantId
+               AND entry.grantId IS NULL
+            """)
+    long sumAvailableUnscopedCreditsForTenant(@Param("tenantId") UUID tenantId);
+
     /**
      * Held credits are RESERVE debits that have not yet been finalized by SETTLE or RELEASE. The
      * signed journal stores RESERVE as negative, so this returns the positive held amount.
