@@ -1,5 +1,6 @@
 package com.zeromail.core.billing.persistence;
 
+import java.time.Instant;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -19,6 +20,26 @@ public interface CreditLedgerEntryRepository extends JpaRepository<CreditLedgerE
                AND entry.grantId IS NULL
             """)
     long sumAvailableUnscopedCreditsForTenant(@Param("tenantId") UUID tenantId);
+
+    @Query(
+            """
+            SELECT COALESCE(SUM(entry.amountCredits), 0)
+              FROM CreditLedgerEntryEntity entry
+             WHERE entry.tenantId = :tenantId
+               AND entry.grantId = :grantId
+            """)
+    long sumAvailableCreditsForGrant(
+            @Param("tenantId") UUID tenantId, @Param("grantId") UUID grantId);
+
+    @Query(
+            """
+            SELECT COALESCE(-SUM(entry.amountCredits), 0)
+              FROM CreditLedgerEntryEntity entry
+             WHERE entry.tenantId = :tenantId
+               AND entry.kind = 'RESERVE'
+               AND entry.createdAt >= :since
+            """)
+    long sumReservedCreditsSince(@Param("tenantId") UUID tenantId, @Param("since") Instant since);
 
     /**
      * Held credits are RESERVE debits that have not yet been finalized by SETTLE or RELEASE. The

@@ -1,6 +1,7 @@
 package com.zeromail.core.billing.persistence;
 
 import com.zeromail.core.billing.domain.CreditGrantCategory;
+import com.zeromail.core.billing.domain.CreditGrantStatus;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -13,6 +14,9 @@ public interface CreditGrantRepository extends JpaRepository<CreditGrantEntity, 
 
     Optional<CreditGrantEntity> findByTenantIdAndCategoryAndRefTypeAndRefId(
             UUID tenantId, CreditGrantCategory category, String refType, String refId);
+
+    List<CreditGrantEntity> findByTenantIdAndStatusAndExpiresAtBefore(
+            UUID tenantId, CreditGrantStatus status, Instant now);
 
     @Query(
             """

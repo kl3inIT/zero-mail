@@ -68,6 +68,7 @@ public record ZeroMailCoreProperties(
             @Valid @NotNull BillingSepayProperties sepay,
             @Valid @NotNull BillingPaymentAccountProperties paymentAccount,
             @Valid @NotNull BillingCostProperties cost,
+            @Valid @DefaultValue BillingBetaProperties beta,
             @Min(1) @DefaultValue("1000") long vndPerCredit,
             @Min(1) @DefaultValue("5") int maxPendingIntentsPerTenant,
             @DefaultValue("PT24H") Duration intentExpiry) {
@@ -79,6 +80,7 @@ public record ZeroMailCoreProperties(
          */
         public BillingProperties {
             cost = cost == null ? BillingCostProperties.defaults() : cost;
+            beta = beta == null ? BillingBetaProperties.defaults() : beta;
             if (sepay != null && sepay.webhookApiKey() != null) {
                 String webhookApiKey = sepay.webhookApiKey();
                 String lowerCaseWebhookApiKey = webhookApiKey.toLowerCase();
@@ -91,6 +93,16 @@ public record ZeroMailCoreProperties(
                                     + "Set SEPAY_WEBHOOK_API_KEY to the real SePay webhook API key from the "
                                     + "deployment secret source.");
                 }
+            }
+        }
+
+        public record BillingBetaProperties(
+                @DefaultValue("true") boolean enabled,
+                @Min(0) @DefaultValue("300") int monthlyCredits,
+                @Min(0) @DefaultValue("100") int dailyHardCap) {
+
+            static BillingBetaProperties defaults() {
+                return new BillingBetaProperties(true, 300, 100);
             }
         }
 
@@ -117,6 +129,8 @@ public record ZeroMailCoreProperties(
                     + ", paymentAccount=****"
                     + ", cost="
                     + cost
+                    + ", beta="
+                    + beta
                     + ", maxPendingIntentsPerTenant="
                     + maxPendingIntentsPerTenant
                     + ", intentExpiry="

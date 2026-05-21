@@ -13,7 +13,9 @@ import com.zeromail.core.billing.persistence.CreditLedgerEntryRepository;
 import com.zeromail.core.billing.persistence.CreditReservationEntity;
 import com.zeromail.core.billing.persistence.CreditReservationRepository;
 import com.zeromail.core.billing.persistence.lowlevel.AdvisoryLockJdbcHelper;
+import com.zeromail.core.config.ZeroMailCoreProperties;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -31,28 +33,42 @@ class CreditLedgerService implements CreditLedger {
 
     private final CreditLedgerEntryRepository entryRepository;
     private final CreditGrantRepository grantRepository;
+    private final CreditGrantService grantService;
     private final CreditReservationRepository reservationRepository;
     private final AdvisoryLockJdbcHelper advisoryLockHelper;
+    private final ZeroMailCoreProperties coreProperties;
 
     CreditLedgerService(
             CreditLedgerEntryRepository entryRepository,
             CreditGrantRepository grantRepository,
+            CreditGrantService grantService,
             CreditReservationRepository reservationRepository,
-            AdvisoryLockJdbcHelper advisoryLockHelper) {
+            AdvisoryLockJdbcHelper advisoryLockHelper,
+            ZeroMailCoreProperties coreProperties) {
         this.entryRepository = entryRepository;
         this.grantRepository = grantRepository;
+        this.grantService = grantService;
         this.reservationRepository = reservationRepository;
         this.advisoryLockHelper = advisoryLockHelper;
+        this.coreProperties = coreProperties;
     }
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ReservationId reserve(UUID tenantId, CallSite callSite) {
-        advisoryLockHelper.acquireTenantLock(tenantId);
-
         int requiredCredits = callSite.cost();
         if (requiredCredits < 0) {
             throw new IllegalLedgerStateException("Call-site cost cannot be negative: " + callSite);
+        }
+
+        if (requiredCredits > 0) {
+            grantService.grantCurrentBetaCredits(tenantId);
+        }
+
+        advisoryLockHelper.acquireTenantLock(tenantId);
+
+        if (requiredCredits > 0) {
+            enforceDailyHardCap(tenantId, requiredCredits);
         }
 
         UUID selectedGrantId = null;
@@ -175,8 +191,9 @@ class CreditLedgerService implements CreditLedger {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(propagation = Propagation.REQUIRED)
     public CreditBalance balance(UUID tenantId) {
+        grantService.grantCurrentBetaCredits(tenantId);
         int availableCredits =
                 Math.toIntExact(entryRepository.sumAvailableCreditsForTenant(tenantId));
         int heldCredits = Math.toIntExact(entryRepository.sumHeldCreditsForTenant(tenantId));
@@ -187,5 +204,21 @@ class CreditLedgerService implements CreditLedger {
         List<CreditGrantEntity> spendableGrants =
                 grantRepository.findSpendableGrants(tenantId, Instant.now(), requiredCredits);
         return spendableGrants.stream().map(CreditGrantEntity::getId).findFirst();
+    }
+
+    private void enforceDailyHardCap(UUID tenantId, int requiredCredits) {
+        ZeroMailCoreProperties.BillingProperties.BillingBetaProperties betaProperties =
+                coreProperties.billing().beta();
+        if (!betaProperties.enabled() || betaProperties.dailyHardCap() <= 0) {
+            return;
+        }
+        LocalDate currentDate = LocalDate.now(CreditGrantService.BETA_CREDIT_ZONE);
+        Instant dayStart =
+                currentDate.atStartOfDay(CreditGrantService.BETA_CREDIT_ZONE).toInstant();
+        int reservedCreditsToday =
+                Math.toIntExact(entryRepository.sumReservedCreditsSince(tenantId, dayStart));
+        if (reservedCreditsToday + requiredCredits > betaProperties.dailyHardCap()) {
+            throw new InsufficientCreditsException();
+        }
     }
 }
