@@ -388,6 +388,7 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260522-37g | Review trang Quản lý LLM (master-keys + tier matrix) + 5 invariant tests (router walk, tier validation, reorder priorities, listMasked dedup, batch pairs perf) | 2026-05-22 | edb23805 | Verified | [260522-37g-review-trang-quan-ly-llm-targeted-tests](./quick/260522-37g-review-trang-quan-ly-llm-targeted-tests/) |
 | 260514-ta7 | Review PR #36 CodeRabbit and Copilot comments, apply warranted fixes, and recheck CI | 2026-05-14 | 4409e0e | Verified | [260514-ta7-review-pr-36-coderabbit-and-copilot-comm](./quick/260514-ta7-review-pr-36-coderabbit-and-copilot-comm/) |
 | 260514-j7v | PR #33 merge readiness and CI refresh while preserving PR UI | 2026-05-14 | e3e6639 | Verified | [260514-j7v-big-update-ui-33-check-pr-to-merge-into-](./quick/260514-j7v-big-update-ui-33-check-pr-to-merge-into-/) |
 | 260514-leb | Lighthouse mobile audit for apps/web landing — all 4 scores ≥ 90 (Perf 96, A11y 100, BP 100, SEO 100) | 2026-05-14 | 4917efd | — | [260514-leb-chay-lighthouse-audit-cho-apps-web-mobil](./quick/260514-leb-chay-lighthouse-audit-cho-apps-web-mobil/) |
