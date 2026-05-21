@@ -42,13 +42,13 @@ public class SecurityConfig {
     // Production defaults; override via env for local dev (rpId=localhost,
     // allowedOrigins=http://localhost:5174). Browser-side WebAuthn rejects any
     // ceremony where the rpId is not a registrable suffix of the current origin.
-    @Value("${zeromail.admin.webauthn.rp-id:admin.zeromail.com}")
+    @Value("${zeromail.admin.webauthn.rp-id:admin.zeromail.vn}")
     private String adminWebAuthnRpId;
 
     @Value("${zeromail.admin.webauthn.rp-name:Zero Mail Admin}")
     private String adminWebAuthnRpName;
 
-    @Value("${zeromail.admin.webauthn.allowed-origins:https://admin.zeromail.com}")
+    @Value("${zeromail.admin.webauthn.allowed-origins:https://admin.zeromail.vn}")
     private Set<String> adminWebAuthnAllowedOrigins;
 
     @Bean

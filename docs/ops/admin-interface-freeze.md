@@ -20,8 +20,8 @@ and against the local Spring Security 7.0.5 source jar on 2026-05-20.
 chain:
 
 - `rpName("Zero Mail Admin")`
-- `rpId("admin.zeromail.com")`
-- `allowedOrigins("https://admin.zeromail.com")`
+- `rpId("admin.zeromail.vn")`
+- `allowedOrigins("https://admin.zeromail.vn")`
 - `creationOptionsRepository(...)`
 - `messageConverter(...)`
 
@@ -97,13 +97,13 @@ adds a cleaner first-class multi-repository hook.
 
 The default v1.2 target names are:
 
-- Admin cookie: `SESSION_ADMIN`
-- User cookie: `SESSION_USER`
+- Admin cookie: `ZEROMAIL_ADMIN`
+- User cookie: `ZEROMAIL_SESSION`
 - Admin Redis namespace: `spring:session:admin`
 - User Redis namespace: `spring:session:user`
 
-If local development cannot use `admin.zeromail.com`, admin cookies must be
-path-scoped to `/api/admin` and must still use `SESSION_ADMIN`.
+If local development cannot use `admin.zeromail.vn`, admin cookies must be
+path-scoped to `/api/admin` and must still use `ZEROMAIL_ADMIN`.
 
 ## Springdoc GroupedOpenApi API
 

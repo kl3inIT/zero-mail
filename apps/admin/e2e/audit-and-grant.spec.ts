@@ -41,7 +41,7 @@ test.beforeEach(async ({ page }) => {
       json: {
         adminUserId: '00000000-0000-4000-8000-000000000002',
         enrollmentUrl:
-          'https://admin.zeromail.com/enroll?token=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          'https://admin.zeromail.vn/enroll?token=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
         expiresAt: '2026-05-20T00:10:00Z',
       },
     });

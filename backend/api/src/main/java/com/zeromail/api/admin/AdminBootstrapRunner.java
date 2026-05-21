@@ -18,7 +18,7 @@ public class AdminBootstrapRunner implements CommandLineRunner {
 
     private static final int USER_HANDLE_BYTES = 32;
     private static final String ADMIN_ENROLLMENT_BASE_URL =
-            "https://admin.zeromail.com/enroll?token=";
+            "https://admin.zeromail.vn/enroll?token=";
 
     private final ZeroMailCoreProperties zeroMailCoreProperties;
     private final AdminUserRepository adminUserRepository;

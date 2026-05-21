@@ -22,7 +22,7 @@ public class AdminRoleGrantService {
 
     private static final int USER_HANDLE_BYTES = 32;
     private static final String ADMIN_ENROLLMENT_BASE_URL =
-            "https://admin.zeromail.com/enroll?token=";
+            "https://admin.zeromail.vn/enroll?token=";
     private static final Pattern ADMIN_EMAIL_PATTERN =
             Pattern.compile("[A-Za-z0-9._%+-]{1,200}@[A-Za-z0-9.-]{1,119}\\.[A-Za-z]{2,20}");
 

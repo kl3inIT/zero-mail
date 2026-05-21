@@ -59,7 +59,7 @@ class AdminChainCookieIsolationTest {
         assertThat(adminBootstrapRunner)
                 .contains("implements CommandLineRunner")
                 .contains("System.out.println")
-                .contains("https://admin.zeromail.com/enroll?token=");
+                .contains("https://admin.zeromail.vn/enroll?token=");
         assertThat(adminBootstrapRunner).doesNotContain("LoggerFactory");
     }
 

@@ -27,12 +27,12 @@ export const options = {
   },
 };
 
-const adminBaseUrl = __ENV.ADMIN_BASE_URL || 'https://admin.zeromail.com';
-const sessionCookie = __ENV.SESSION_ADMIN;
+const adminBaseUrl = __ENV.ADMIN_BASE_URL || 'https://admin.zeromail.vn';
+const sessionCookie = __ENV.ZEROMAIL_ADMIN;
 
 export default function () {
   const headers = {
-    Cookie: `SESSION_ADMIN=${sessionCookie}`,
+    Cookie: `ZEROMAIL_ADMIN=${sessionCookie}`,
     Accept: 'application/json',
   };
 
@@ -51,7 +51,7 @@ export default function () {
 
 ```sh
 ADMIN_BASE_URL=https://admin-staging.zeromail.com \
-SESSION_ADMIN='<cookie value from staging login>' \
+ZEROMAIL_ADMIN='<cookie value from staging login>' \
 k6 run /tmp/admin-body-ban-probe.js
 ```
 
