@@ -11,11 +11,9 @@ import { SettingsClient } from './SettingsClient';
  * client component still uses TanStack Query (via `useCurrentUser`) for
  * refetch + mutation invalidation; `initialUser` only seeds the cache.
  *
- * Server-side fetches are mocked by MSW under `instrumentation.ts` when
- * `NEXT_PUBLIC_E2E_MSW=1` (Playwright runs). Production hits the real backend.
  * The try/catch keeps the page renderable when the RSC fetch fails (backend
- * down, MSW intercept misses, etc.) — TanStack Query on the client picks up
- * the refetch and the page degrades to a hydration flash instead of a 500.
+ * down, network unavailable, etc.) — TanStack Query on the client picks up the
+ * refetch and the page degrades to a hydration flash instead of a 500.
  */
 export default async function SettingsPage() {
   const cookieStore = await cookies();

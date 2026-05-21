@@ -15,11 +15,6 @@ const nextConfig: NextConfig = {
     root: workspaceRoot,
   },
   transpilePackages: ['next-mdx-remote'],
-  // `msw` and `@mswjs/interceptors` are Node-only and use deep subpath exports
-  // (`./ClientRequest`) that Next's bundler refuses to follow. They are imported
-  // dynamically by `instrumentation.ts` only when `NEXT_PUBLIC_E2E_MSW=1`.
-  // Externalizing makes Next leave them as runtime `require` calls.
-  serverExternalPackages: ['msw', '@mswjs/interceptors'],
   compiler: {
     removeConsole: { exclude: ['error', 'warn'] },
   },

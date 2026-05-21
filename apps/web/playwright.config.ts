@@ -47,10 +47,10 @@ export default defineConfig({
     url: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
-    // MSW node interception is intentionally OFF. It used to be wired via
-    // `NEXT_PUBLIC_E2E_MSW=1` (see instrumentation.ts) so RSC fetches like
-    // `getCurrentUserCached` in app/layout.tsx would not escape to the real
-    // backend. Two problems made that worse than it solved:
+    // MSW node interception is intentionally OFF. It used to be wired through
+    // Next instrumentation so RSC fetches like `getCurrentUserCached` in
+    // app/layout.tsx would not escape to the real backend. Two problems made
+    // that worse than it solved:
     //   1. The node handler hardcoded `preferredLanguage: 'en'`, which
     //      shadowed every per-test locale set via
     //      `seedAuthenticatedSession(page, 'vi')` — analytics + chat specs

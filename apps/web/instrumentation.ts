@@ -1,16 +1,11 @@
 /**
  * Next.js instrumentation hook — runs once per Node worker when the server boots.
  *
- * Activates MSW node interceptor for Playwright e2e ONLY when
- * `NEXT_PUBLIC_E2E_MSW=1`. In production and regular `pnpm dev` the MSW module
- * is never imported, so the bundle and runtime cost are zero.
- *
- * Edge runtime is excluded because `msw/node` depends on Node's `http` module.
- * App Router pages and proxy.ts run in the Node runtime by default in this app.
+ * Keep this hook intentionally empty. Playwright e2e uses browser-level route
+ * mocks now; importing `msw/node` from instrumentation makes Turbopack analyze
+ * MSW's Node interceptor graph during regular `pnpm dev` and can fail before
+ * any environment guard runs.
  */
 export async function register(): Promise<void> {
-  if (process.env.NEXT_PUBLIC_E2E_MSW !== '1') return;
-  if (process.env.NEXT_RUNTIME !== 'nodejs') return;
-  const { server } = await import('./__mocks__/server');
-  server.listen({ onUnhandledRequest: 'bypass' });
+  return;
 }
