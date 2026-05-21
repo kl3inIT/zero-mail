@@ -46,6 +46,7 @@ import { useSidebar } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
+import { useLogout } from '@/features/account/hooks/useLogout';
 import { useUpdateLanguage } from '@/features/account/hooks/useUpdateLanguage';
 import { useBillingBalance } from '@/features/billing/hooks/useBillingBalance';
 import { useTenantStatus } from '@/features/gmail/hooks/useTenantStatus';
@@ -249,6 +250,7 @@ function UserMenu() {
   const locale = useLocale();
   const currentUser = useCurrentUser();
   const updateLanguage = useUpdateLanguage();
+  const logout = useLogout();
   const currentLocale = (
     currentUser.data?.preferredLanguage === 'en' || locale === 'en' ? 'en' : 'vi'
   ) as AppLocale;
@@ -306,9 +308,8 @@ function UserMenu() {
           </DropdownMenuItem>
           <DropdownMenuItem
             variant="destructive"
-            onClick={() => {
-              window.location.href = getApiUrl('/logout');
-            }}
+            disabled={logout.isPending}
+            onClick={() => logout.mutate()}
           >
             <LogOut className="size-4" aria-hidden="true" />
             {t('shell.userMenu.signOut')}

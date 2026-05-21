@@ -169,6 +169,15 @@ public class SecurityConfig {
                                 exceptionHandling.defaultAuthenticationEntryPointFor(
                                         new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
                                         API_REQUEST_MATCHER))
+                .logout(
+                        logout ->
+                                logout.logoutRequestMatcher(
+                                                PathPatternRequestMatcher.withDefaults()
+                                                        .matcher(HttpMethod.POST, "/logout"))
+                                        .logoutSuccessHandler(
+                                                new HttpStatusReturningLogoutSuccessHandler())
+                                        .invalidateHttpSession(true)
+                                        .deleteCookies("ZEROMAIL_SESSION", "JSESSIONID"))
                 .sessionManagement(Customizer.withDefaults())
                 .addFilterAfter(tenantFilter, AuthorizationFilter.class);
         return http.build();
