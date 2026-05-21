@@ -26,12 +26,8 @@ import type {
   ByokSaveResult,
   ByokValidateResult,
 } from '@/features/llm/api/llm-api';
-import {
-  byokKeys,
-  useCurrentByok,
-  useSaveByok,
-  useValidateByok,
-} from '@/features/llm/hooks/use-byok';
+import { useCurrentByok, useSaveByok, useValidateByok } from '@/features/llm/hooks/use-byok';
+import { byokKeys } from '@/features/llm/query-keys';
 import { useLocalizedApiError, type ApiError } from '@/lib/api/errors';
 
 const DEFAULT_PRESET: ByokProviderPreset = 'openrouter';

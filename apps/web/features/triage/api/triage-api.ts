@@ -1,4 +1,4 @@
-import { api, xsrfHeader } from '@/lib/api/client';
+import { api } from '@/lib/api/client';
 import type { components } from '@/lib/api/schema';
 
 export type ProtectedSenderResponse = components['schemas']['ProtectedSenderResponse'];
@@ -43,14 +43,6 @@ export type AuditLogOptions = AuditLogFilters & {
   cursor?: string | null;
   limit?: number;
 };
-
-function jsonHeaders(): HeadersInit {
-  return { 'Content-Type': 'application/json', ...xsrfHeader() };
-}
-
-function unsafeHeaders(): HeadersInit {
-  return { ...xsrfHeader() };
-}
 
 function unwrap<T>(
   result: { data?: T; error?: unknown; response: Response },
@@ -107,7 +99,6 @@ function mapAuditEntry(row: components['schemas']['AuditEntryResponse']): AuditE
 export async function setTriagePaused(paused: boolean): Promise<void> {
   const { error, response } = await api.PUT('/api/tenant/triage-pause', {
     body: { paused },
-    headers: jsonHeaders(),
   });
   if (error || !response.ok)
     throw error ?? new Error(`/api/tenant/triage-pause failed: ${response.status}`);
@@ -137,7 +128,6 @@ export async function getAuditLog(options: AuditLogOptions = {}): Promise<AuditL
 export async function undoAuditEntry(auditId: string): Promise<UndoAuditResponse> {
   const result = await api.POST('/api/triage/audit/{auditId}/undo', {
     params: { path: { auditId } },
-    headers: unsafeHeaders(),
   });
   return unwrap(result, `/api/triage/audit/${auditId}/undo failed: ${result.response.status}`);
 }
@@ -150,7 +140,6 @@ export async function getProtectedSenders(): Promise<ProtectedSendersResponse> {
 export async function optInSender(senderEmail: string): Promise<SenderOptInResponse> {
   const result = await api.POST('/api/triage/sender-safety-net/{senderEmail}/opt-in', {
     params: { path: { senderEmail } },
-    headers: unsafeHeaders(),
   });
   return unwrap(
     result,

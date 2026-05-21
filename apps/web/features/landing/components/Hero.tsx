@@ -1,3 +1,4 @@
+import type { Route } from 'next';
 import { headers } from 'next/headers';
 import { getLocale, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -13,7 +14,7 @@ export default async function Hero() {
   const t = await getTranslations();
   const locale = (await getLocale()) as AppLocale;
 
-  let ctaHref = '#waitlist';
+  let ctaHref: Route = '#waitlist' as Route;
   let ctaKey: 'landing.waitlistCta' | 'landing.continueSetupCta' = 'landing.waitlistCta';
   try {
     const headerStore = await headers();

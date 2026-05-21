@@ -1,4 +1,4 @@
-import { api, xsrfHeader } from '@/lib/api/client';
+import { api } from '@/lib/api/client';
 import type { components } from '@/lib/api/schema';
 
 export type ByokValidatePayload = components['schemas']['ByokValidateRequest'];
@@ -12,7 +12,7 @@ export type ByokProvider = NonNullable<ByokCurrentResult['provider']>;
 export async function validateByok(payload: ByokValidatePayload): Promise<ByokValidateResult> {
   const { data, error, response } = await api.POST('/api/llm/byok/validate', {
     body: payload,
-    headers: { 'Content-Type': 'application/json', ...xsrfHeader() },
+    headers: { 'Content-Type': 'application/json' },
   });
   if (error || !response.ok || data === undefined)
     throw error ?? new Error(`/api/llm/byok/validate failed: ${response.status}`);
@@ -22,7 +22,7 @@ export async function validateByok(payload: ByokValidatePayload): Promise<ByokVa
 export async function saveByok(payload: ByokSavePayload): Promise<ByokSaveResult> {
   const { data, error, response } = await api.POST('/api/llm/byok', {
     body: payload,
-    headers: { 'Content-Type': 'application/json', ...xsrfHeader() },
+    headers: { 'Content-Type': 'application/json' },
   });
   if (error || !response.ok || data === undefined)
     throw error ?? new Error(`/api/llm/byok save failed: ${response.status}`);

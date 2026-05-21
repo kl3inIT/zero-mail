@@ -301,9 +301,7 @@ function SummaryChips({ items, action = false }: { items: string[]; action?: boo
           key={`${action ? 'action' : 'matcher'}-${item}`}
           className={cn(
             'max-w-full truncate rounded-sm px-2 py-1 text-xs font-medium',
-            action
-              ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
-              : 'bg-muted text-muted-foreground',
+            action ? 'bg-amber-soft text-amber' : 'bg-muted text-muted-foreground',
           )}
         >
           {item}

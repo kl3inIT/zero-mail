@@ -18,6 +18,9 @@ const nextConfig: NextConfig = {
   compiler: {
     removeConsole: { exclude: ['error', 'warn'] },
   },
+  // Statically type every <Link href>, router.push(), router.replace() against
+  // the actual app/ route tree. Build fails on typos.
+  typedRoutes: true,
   async headers() {
     // RFC 8288 Link headers for agent / crawler discovery. Pointing at the
     // RFC-9727 api-catalog under /.well-known/ + the public docs site.

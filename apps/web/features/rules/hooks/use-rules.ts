@@ -20,6 +20,7 @@ import {
   type RuleCustomPreviewRequest,
   type RuleDraftPreviewRequest,
   type RuleEnabledPreviewRequest,
+  type RuleListResponse,
   type RulePreviewRequest,
   type RuleUpdateRequest,
 } from '@/features/rules/api/rules-api';
@@ -74,29 +75,65 @@ export function useUpdateRule() {
   });
 }
 
+// Optimistic toggle: flip the `enabled` flag in the list cache immediately;
+// roll back on error. Rule-list is the only place this state is rendered,
+// so we only need to mutate that cache.
 export function useUpdateRuleEnabled() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ ruleId, enabled }: { ruleId: string; enabled: boolean }) =>
       updateRuleEnabled(ruleId, { enabled }),
-    onSuccess: async (rule, variables) => {
-      await queryClient.invalidateQueries({ queryKey: rulesKeys.list() });
-      await queryClient.invalidateQueries({
-        queryKey: rulesKeys.detail(rule.ruleId ?? variables.ruleId),
-      });
+    onMutate: async ({ ruleId, enabled }) => {
+      await queryClient.cancelQueries({ queryKey: rulesKeys.list() });
+      const previous = queryClient.getQueryData<RuleListResponse>(rulesKeys.list());
+      if (previous) {
+        queryClient.setQueryData<RuleListResponse>(rulesKeys.list(), {
+          ...previous,
+          rules: previous.rules.map((rule) =>
+            rule.ruleId === ruleId ? { ...rule, enabled } : rule,
+          ),
+        });
+      }
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(rulesKeys.list(), context.previous);
+      }
+    },
+    onSettled: (_data, _error, variables) => {
+      queryClient.invalidateQueries({ queryKey: rulesKeys.list() });
+      queryClient.invalidateQueries({ queryKey: rulesKeys.detail(variables.ruleId) });
     },
   });
 }
 
+// Optimistic delete: remove the rule from the list immediately; restore on error.
 export function useDeleteRule() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (ruleId: string) => deleteRule(ruleId),
-    onSuccess: async (_data, ruleId) => {
-      await queryClient.invalidateQueries({ queryKey: rulesKeys.list() });
-      await queryClient.invalidateQueries({ queryKey: rulesKeys.detail(ruleId) });
+    onMutate: async (ruleId) => {
+      await queryClient.cancelQueries({ queryKey: rulesKeys.list() });
+      const previous = queryClient.getQueryData<RuleListResponse>(rulesKeys.list());
+      if (previous) {
+        queryClient.setQueryData<RuleListResponse>(rulesKeys.list(), {
+          ...previous,
+          rules: previous.rules.filter((rule) => rule.ruleId !== ruleId),
+        });
+      }
+      return { previous };
+    },
+    onError: (_error, _ruleId, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(rulesKeys.list(), context.previous);
+      }
+    },
+    onSettled: (_data, _error, ruleId) => {
+      queryClient.invalidateQueries({ queryKey: rulesKeys.list() });
+      queryClient.invalidateQueries({ queryKey: rulesKeys.detail(ruleId) });
     },
   });
 }

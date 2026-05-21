@@ -30,6 +30,16 @@ All TanStack Query callbacks are wired centrally in `apps/admin/src/main.tsx`. F
 - Root-level fallbacks (`errorComponent`, `notFoundComponent`, `pendingComponent`) live in `apps/admin/src/components/RootShell.tsx` and are wired in `routes/__root.tsx`. Add per-route variants by setting the same props on individual `createFileRoute(...)` calls.
 - Protected routes nest under `_authenticated.tsx` which `beforeLoad`-ensures the session via `ensureQueryData(['admin-me'], getCurrentAdmin)` and redirects to `/login` on failure.
 
+### Loader prefetch vs in-component `useQuery`
+
+Default to **in-component `useQuery`** for admin routes — it keeps fetching co-located with the consumer, integrates with the global `MutationCache` toasts/error handling, and tolerates partial failures gracefully. Reach for the **loader / `beforeLoad` + `queryClient.ensureQueryData`** pattern (see `_authenticated.tsx`) only when:
+
+1. The route guard depends on the data (e.g. the admin session in `_authenticated.tsx` — must be present before child routes render).
+2. The data is render-blocking AND large enough that the in-component waterfall hurts perceived latency (a multi-second fetch that would otherwise show a skeleton).
+3. You want a typed parameter (route param → loader fetch → component reads `Route.useLoaderData()`).
+
+For everything else — list pages, secondary panels, anything that can render its own skeleton — `useQuery` inside the component is simpler and equally correct.
+
 ## No hardcoded color hex
 
 Consume design tokens — `bg-card`, `bg-background`, `bg-secondary`, `bg-accent`, `bg-primary/10`, `text-foreground`, `text-muted-foreground`, `text-accent-foreground`, `text-ink`, `text-ink-2`, `border`, `border-border`, `ring-border`, `bg-violet-soft`, `bg-amber-soft`, etc. Never write `bg-[#xxxxxx]` or `text-[#xxxxxx]`. Tokens are declared in `src/styles/globals.css` — palette pivots stay there. Tactical data-viz colors (e.g. `bg-emerald-500` for a status bar) are OK; brand colors are not.

@@ -1,6 +1,6 @@
 import { cache } from 'react';
 
-import { adaptFetchForOpenApi, api, xsrfHeader } from '@/lib/api/client';
+import { adaptFetchForOpenApi, api } from '@/lib/api/client';
 import type { components } from '@/lib/api/schema';
 
 type ApiError = components['schemas']['ApiError'];
@@ -73,9 +73,7 @@ export const getCurrentUserCached = cache(
 export const getCurrentUser = fetchCurrentUser;
 
 export async function deleteAccount(): Promise<void> {
-  const { error, response } = await api.DELETE('/api/me/account', {
-    headers: { ...xsrfHeader() },
-  });
+  const { error, response } = await api.DELETE('/api/me/account', {});
   if (error || !response.ok) {
     throw error ?? new Error(`/api/me/account DELETE failed: ${response.status}`);
   }
@@ -84,7 +82,7 @@ export async function deleteAccount(): Promise<void> {
 export async function updateLanguage(language: 'vi' | 'en') {
   const response = await api.PATCH('/api/me/language', {
     body: { language },
-    headers: { 'Content-Type': 'application/json', ...xsrfHeader() },
+    headers: { 'Content-Type': 'application/json' },
   });
   if (response.error) {
     throw response.error as ApiError;

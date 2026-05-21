@@ -1,3 +1,4 @@
+import type { Route } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { cookies, headers } from 'next/headers';
 import Link from 'next/link';
@@ -18,7 +19,7 @@ export default async function TopBar() {
   const cookieStore = await cookies();
   const theme: 'light' | 'dark' = cookieStore.get('zm-theme')?.value === 'dark' ? 'dark' : 'light';
 
-  let ctaHref = '/login';
+  let ctaHref: Route = '/login';
   let ctaKey: 'nav.signIn' | 'nav.continueSetup' | 'nav.openApp' = 'nav.signIn';
   try {
     const headerStore = await headers();

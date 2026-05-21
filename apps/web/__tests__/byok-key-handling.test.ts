@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 const WEB_ROOT = resolve(__dirname, '..');
 const BYOK_FORM_PATH = resolve(WEB_ROOT, 'features/llm/components/ByokForm.tsx');
 const BYOK_HOOK_PATH = resolve(WEB_ROOT, 'features/llm/hooks/use-byok.ts');
+const BYOK_QUERY_KEYS_PATH = resolve(WEB_ROOT, 'features/llm/query-keys.ts');
 const BYOK_FEATURE_ROOT = resolve(WEB_ROOT, 'features/llm');
 
 function readSource(path: string): string {
@@ -55,9 +56,10 @@ describe('BYOK key handling invariants', () => {
   });
 
   it('keeps TanStack query keys free of provider, endpoint, and apiKey material', () => {
-    const source = readSource(BYOK_HOOK_PATH);
-
-    expect(source).toContain("all: ['byok'] as const");
-    expect(source).not.toMatch(/queryKey:[\s\S]*(apiKey|endpoint|provider)/);
+    // Key factory lives in query-keys.ts (per CLAUDE.md convention #8); the hook
+    // file consumes it. Verify both: the factory shape AND that no queryKey
+    // anywhere in the feature mentions sensitive material.
+    expect(readSource(BYOK_QUERY_KEYS_PATH)).toContain("all: ['byok'] as const");
+    expect(readSource(BYOK_HOOK_PATH)).not.toMatch(/queryKey:[\s\S]*(apiKey|endpoint|provider)/);
   });
 });

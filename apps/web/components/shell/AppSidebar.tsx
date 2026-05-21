@@ -1,5 +1,6 @@
 'use client';
 
+import type { Route } from 'next';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -34,7 +35,7 @@ import { useHydrated } from '@/lib/use-hydrated';
 import { cn } from '@/lib/utils';
 
 type NavItem = {
-  href: string;
+  href: Route;
   labelKey:
     | 'nav.chat'
     | 'nav.ai'

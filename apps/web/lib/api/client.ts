@@ -19,6 +19,28 @@ export const api = createClient<paths>({
 // gets the same behavior without per-callsite checks. Skip when already
 // on a public auth surface to avoid redirect loops.
 const PUBLIC_AUTH_PATHS = ['/login', '/error', '/privacy', '/terms', '/docs'];
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+function readXsrfCookie(): string | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
+// Spring Security `csrf().spa()` issues an XSRF-TOKEN cookie (HttpOnly=false).
+// Mutating requests must echo it back as X-XSRF-TOKEN. Doing this at the fetch
+// boundary means feature API wrappers no longer need to plumb the header
+// per-endpoint — single source of truth, parity with admin app.
+const xsrfMiddleware: Middleware = {
+  async onRequest({ request }) {
+    if (!MUTATING_METHODS.has(request.method.toUpperCase())) return undefined;
+    if (request.headers.has('X-XSRF-TOKEN')) return undefined;
+    const token = readXsrfCookie();
+    if (!token) return undefined;
+    request.headers.set('X-XSRF-TOKEN', token);
+    return request;
+  },
+};
 
 const unauthorizedRedirectMiddleware: Middleware = {
   async onResponse({ response }) {
@@ -30,6 +52,7 @@ const unauthorizedRedirectMiddleware: Middleware = {
   },
 };
 
+api.use(xsrfMiddleware);
 api.use(unauthorizedRedirectMiddleware);
 
 export function adaptFetchForOpenApi(

@@ -27,14 +27,10 @@ export function AppShell({
           <ChromeHeader />
           <div className="bg-sidebar flex flex-1 overflow-hidden">
             <AppSidebar />
-            <SidebarInset className="bg-sidebar min-w-0 transition-all duration-300">
-              <div className="flex h-full w-full flex-col p-2 pr-4 pb-4">
-                <div className="bg-card flex flex-1 flex-col overflow-hidden rounded-2xl border">
-                  <PauseBanner />
-                  <div className="flex-1 overflow-auto p-6" data-testid="app-shell-content">
-                    {children}
-                  </div>
-                </div>
+            <SidebarInset className="bg-background min-w-0">
+              <PauseBanner />
+              <div className="flex-1 overflow-auto p-6" data-testid="app-shell-content">
+                {children}
               </div>
             </SidebarInset>
           </div>

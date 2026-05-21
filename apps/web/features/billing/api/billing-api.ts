@@ -1,4 +1,4 @@
-import { adaptFetchForOpenApi, api, xsrfHeader } from '@/lib/api/client';
+import { adaptFetchForOpenApi, api } from '@/lib/api/client';
 import type { components } from '@/lib/api/schema';
 
 /**
@@ -27,10 +27,6 @@ export interface BillingBalanceOptions {
   fetcher?: typeof fetch;
   signal?: AbortSignal;
   headers?: HeadersInit;
-}
-
-function jsonHeaders(): HeadersInit {
-  return { 'Content-Type': 'application/json', ...xsrfHeader() };
 }
 
 function unwrap<T>(
@@ -66,7 +62,6 @@ export async function createTopupIntent(packageCode: string): Promise<TopupInten
   const body: TopupIntentRequest = { packageCode };
   const result = await api.POST('/api/billing/topup/intent', {
     body,
-    headers: jsonHeaders(),
   });
   return unwrap(result, `/api/billing/topup/intent failed: ${result.response.status}`);
 }
