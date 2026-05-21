@@ -16,4 +16,13 @@ public record MasterKeyMaskedRow(
         String baseUrl,
         boolean featureDefaultProviderChat,
         boolean featureDefaultProviderTriage,
-        boolean featureDefaultProviderDraft) {}
+        boolean featureDefaultProviderDraft) {
+
+    /**
+     * Sentinel value for {@link #dependentsCount} used by the list-page projection. The list page
+     * does not compute per-row dependent counts (it would be one extra query per provider × tenant
+     * for a number the list view never renders); the detail page owns that lookup. Use this
+     * constant instead of a bare {@code 0L} so the intent ("not computed here") is obvious.
+     */
+    public static final long NO_DEPENDENTS = 0L;
+}

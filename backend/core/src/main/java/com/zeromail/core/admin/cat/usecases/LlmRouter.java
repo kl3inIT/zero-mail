@@ -15,9 +15,15 @@ import com.zeromail.core.admin.mkey.domain.MasterKeyStatus;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyEntity;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyRepository;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,10 +37,11 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>Inner: models in position 1 → 2 → ... → N order, all served by the same provider.
  * </ol>
  *
- * Within a (tier, model) cell the router picks the lowest-priority ACTIVE key of the provider —
- * key-level fallback within a single attempt is deliberately omitted; failover happens by advancing
- * to the next model or tier slot instead. Only VERIFIED and STALE models contribute to the chain
- * (FAILED / UNTESTED are skipped silently).
+ * Within a (tier, model) cell the router picks the highest-priority ACTIVE key of the provider
+ * (lowest priority number — {@code provider_key.priority ASC}). Key-level fallback within a single
+ * attempt is deliberately omitted; failover happens by advancing to the next model or tier slot
+ * instead. Only VERIFIED and STALE models contribute to the chain (FAILED / UNTESTED are skipped
+ * silently).
  *
  * <p>The router does not call any LLM — it only produces an ordered list of {@link ResolvedRoute}
  * steps. The chat adapter walks the list and stops on the first successful response.
@@ -74,9 +81,32 @@ public class LlmRouter {
         List<FeatureDefaultProviderEntity> tierBindings =
                 featureDefaultProviderRepository.findByFeatureOrderByTier(feature);
 
+        // Single batched lookup of every tier slot for the feature (one SELECT instead of one per
+        // tier) plus a single findAllById against the catalog. Walk order is still owned by the
+        // ORDER BY in findByFeatureOrderByTierAndPosition; the map is only used to test
+        // eligibility.
+        List<FeatureTierModelEntity> allTierSlots =
+                featureTierModelRepository.findByFeatureOrderByTierAndPosition(feature);
+        Map<RoutingTier, List<FeatureTierModelEntity>> slotsByTier =
+                allTierSlots.stream()
+                        .collect(
+                                Collectors.groupingBy(
+                                        FeatureTierModelEntity::getTier,
+                                        LinkedHashMap::new,
+                                        Collectors.toList()));
+        Map<String, ModelCatalogEntity> modelsById = loadModelCatalog(allTierSlots);
+
+        // Memoize the highest-priority ACTIVE key per provider for the lifetime of this resolve.
+        // When PRIMARY + FALLBACK + LAST_RESORT all share the same provider (common: all
+        // OpenRouter), this collapses three identical SELECTs into one.
+        Map<LlmProvider, Optional<LlmProviderMasterKeyEntity>> activeKeyByProvider =
+                new HashMap<>();
+
         List<ResolvedRoute> walk = new ArrayList<>();
         for (FeatureDefaultProviderEntity tierBinding : tierBindings) {
-            appendTierSteps(walk, feature, tierBinding);
+            List<FeatureTierModelEntity> tierSlots =
+                    slotsByTier.getOrDefault(tierBinding.getTier(), List.of());
+            appendTierSteps(walk, feature, tierBinding, tierSlots, modelsById, activeKeyByProvider);
         }
         return List.copyOf(walk);
     }
@@ -101,27 +131,44 @@ public class LlmRouter {
                 .findBinding(feature, tier)
                 .map(
                         binding -> {
+                            List<FeatureTierModelEntity> tierSlots =
+                                    featureTierModelRepository.findByFeatureAndTierOrderByPosition(
+                                            feature, tier);
+                            Map<String, ModelCatalogEntity> modelsById =
+                                    loadModelCatalog(tierSlots);
+                            Map<LlmProvider, Optional<LlmProviderMasterKeyEntity>>
+                                    activeKeyByProvider = new HashMap<>();
                             List<ResolvedRoute> walk = new ArrayList<>();
-                            appendTierSteps(walk, feature, binding);
+                            appendTierSteps(
+                                    walk,
+                                    feature,
+                                    binding,
+                                    tierSlots,
+                                    modelsById,
+                                    activeKeyByProvider);
                             return List.copyOf(walk);
                         })
                 .orElseGet(List::of);
     }
 
     private void appendTierSteps(
-            List<ResolvedRoute> walk, Feature feature, FeatureDefaultProviderEntity tierBinding) {
+            List<ResolvedRoute> walk,
+            Feature feature,
+            FeatureDefaultProviderEntity tierBinding,
+            List<FeatureTierModelEntity> tierSlots,
+            Map<String, ModelCatalogEntity> modelsById,
+            Map<LlmProvider, Optional<LlmProviderMasterKeyEntity>> activeKeyByProvider) {
         LlmProvider provider = tierBinding.getProvider();
-        Optional<LlmProviderMasterKeyEntity> activeKey = pickHighestPriorityActiveKey(provider);
+        Optional<LlmProviderMasterKeyEntity> activeKey =
+                activeKeyByProvider.computeIfAbsent(provider, this::pickHighestPriorityActiveKey);
         if (activeKey.isEmpty()) {
             return;
         }
         LlmProviderMasterKeyEntity key = activeKey.get();
 
-        List<FeatureTierModelEntity> models =
-                featureTierModelRepository.findByFeatureAndTierOrderByPosition(
-                        feature, tierBinding.getTier());
-        for (FeatureTierModelEntity modelSlot : models) {
-            if (!isModelRoutable(provider, modelSlot.getModelId())) {
+        // tierSlots is already ordered (tier then position) by the upstream query — preserve that.
+        for (FeatureTierModelEntity modelSlot : tierSlots) {
+            if (!isModelRoutable(provider, modelSlot.getModelId(), modelsById)) {
                 continue;
             }
             walk.add(
@@ -135,6 +182,19 @@ public class LlmRouter {
         }
     }
 
+    private Map<String, ModelCatalogEntity> loadModelCatalog(
+            List<FeatureTierModelEntity> tierSlots) {
+        if (tierSlots.isEmpty()) {
+            return Map.of();
+        }
+        Set<String> modelIds =
+                tierSlots.stream()
+                        .map(FeatureTierModelEntity::getModelId)
+                        .collect(Collectors.toCollection(LinkedHashSet::new));
+        return modelCatalogRepository.findAllById(modelIds).stream()
+                .collect(Collectors.toMap(ModelCatalogEntity::getModelId, model -> model));
+    }
+
     private Optional<LlmProviderMasterKeyEntity> pickHighestPriorityActiveKey(
             LlmProvider provider) {
         List<LlmProviderMasterKeyEntity> activeKeys =
@@ -143,10 +203,10 @@ public class LlmRouter {
         return activeKeys.isEmpty() ? Optional.empty() : Optional.of(activeKeys.get(0));
     }
 
-    private boolean isModelRoutable(LlmProvider provider, String modelId) {
-        Optional<ModelCatalogEntity> model = modelCatalogRepository.findById(modelId);
-        if (model.isEmpty()) return false;
-        ModelCatalogEntity modelRow = model.get();
+    private boolean isModelRoutable(
+            LlmProvider provider, String modelId, Map<String, ModelCatalogEntity> modelsById) {
+        ModelCatalogEntity modelRow = modelsById.get(modelId);
+        if (modelRow == null) return false;
         if (modelRow.getProvider() != provider) return false;
         if (modelRow.getDeprecatedAt() != null) return false;
         ModelVerificationStatus status = modelRow.getVerificationStatus();

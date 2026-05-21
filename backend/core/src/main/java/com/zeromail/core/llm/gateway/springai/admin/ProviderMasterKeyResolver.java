@@ -1,5 +1,7 @@
 package com.zeromail.core.llm.gateway.springai.admin;
 
+import static com.zeromail.core.admin.cat.persistence.lowlevel.ProviderCatalogLookupRepository.pairKey;
+
 import com.zeromail.core.admin.cat.persistence.lowlevel.ProviderCatalogLookupRepository;
 import com.zeromail.core.admin.mkey.domain.KeyFormat;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
@@ -183,33 +185,17 @@ public class ProviderMasterKeyResolver {
                 entity.getKekVersion(),
                 entity.getProviderSecretVersion(),
                 entity.getLastRotatedAt(),
-                0L,
+                MasterKeyMaskedRow.NO_DEPENDENTS,
                 rotationRecommended(entity.getLastRotatedAt()),
                 resolvedBaseUrl(entity),
-                featureDefaultPairs.contains(
-                        com.zeromail.core.admin.cat.persistence.lowlevel
-                                .ProviderCatalogLookupRepository.pairKey(
-                                entity.getProvider(), "CHAT")),
-                featureDefaultPairs.contains(
-                        com.zeromail.core.admin.cat.persistence.lowlevel
-                                .ProviderCatalogLookupRepository.pairKey(
-                                entity.getProvider(), "TRIAGE")),
-                featureDefaultPairs.contains(
-                        com.zeromail.core.admin.cat.persistence.lowlevel
-                                .ProviderCatalogLookupRepository.pairKey(
-                                entity.getProvider(), "DRAFT")));
+                featureDefaultPairs.contains(pairKey(entity.getProvider(), "CHAT")),
+                featureDefaultPairs.contains(pairKey(entity.getProvider(), "TRIAGE")),
+                featureDefaultPairs.contains(pairKey(entity.getProvider(), "DRAFT")));
     }
 
     private boolean rotationRecommended(Instant lastRotatedAt) {
         return lastRotatedAt != null
                 && lastRotatedAt.plus(ROTATION_RECOMMENDED_AFTER).isBefore(clock.instant());
-    }
-
-    private boolean isFeatureDefaultProvider(LlmProvider provider, String feature) {
-        if (providerCatalogLookupRepository == null) {
-            return false;
-        }
-        return providerCatalogLookupRepository.isFeatureDefaultProvider(provider, feature);
     }
 
     public static String associatedData(LlmProvider provider) {

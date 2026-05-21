@@ -26,6 +26,7 @@ import com.zeromail.core.shared.crypto.PlatformSecretCipher;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -86,10 +87,12 @@ public class MasterKeyAdminService {
     public List<MasterKeyMaskedRow> listMasked() {
         AdminContext.currentOrThrow();
         // Provider list page wants ONE card per provider. The resolver returns one row per
-        // (provider, key) — dedupe by provider, preferring an ACTIVE row over PENDING/REVOKED so
-        // the masked-key snippet on the card reflects a usable credential when one exists.
-        java.util.Map<com.zeromail.core.admin.mkey.domain.LlmProvider, MasterKeyMaskedRow>
-                byProvider = new java.util.LinkedHashMap<>();
+        // (provider, key) — dedupe by provider, preferring rows with a populated masked-key
+        // snippet (i.e. with stored key material — typically ACTIVE/PENDING) over rows whose
+        // masked_key is null (legacy pre-080 rows, or REVOKED rows persisted before the mask
+        // column was backfilled). The card's purpose is to surface a usable credential when one
+        // exists.
+        Map<LlmProvider, MasterKeyMaskedRow> byProvider = new LinkedHashMap<>();
         for (MasterKeyMaskedRow row : providerMasterKeyResolver.maskedRows()) {
             MasterKeyMaskedRow existing = byProvider.get(row.provider());
             if (existing == null) {
