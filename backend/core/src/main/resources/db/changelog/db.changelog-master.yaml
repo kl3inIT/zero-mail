@@ -188,3 +188,6 @@ databaseChangeLog:
   - include:
       file: changes/084-credit-reservation-grant.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/085-llm-call-audit-usage-metadata.yaml
+      relativeToChangelogFile: true
