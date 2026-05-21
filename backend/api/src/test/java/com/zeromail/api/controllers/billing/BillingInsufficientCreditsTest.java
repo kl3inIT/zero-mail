@@ -19,6 +19,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClient;
@@ -26,6 +27,10 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 @ActiveProfiles("test")
+// Beta auto-grant (300 credits/tenant/month) is on by default in application.yml and would
+// satisfy the reserve call, masking the insufficient-credit path this test pins. Disable it
+// at the class level so the seeded tenant truly starts with zero credits.
+@TestPropertySource(properties = "zero-mail.billing.beta.enabled=false")
 @Import({
     TestSessionSupport.class,
     BillingInsufficientCreditsTest.BillingReserveProbeController.class

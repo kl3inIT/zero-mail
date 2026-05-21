@@ -46,6 +46,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -55,6 +56,11 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 @ActiveProfiles("test")
+// Beta auto-grant (300 credits/tenant/month) is on by default in application.yml. The
+// `insufficient_credits_still_returns_402` test pins the no-balance failure path, which the
+// auto-grant would mask. Disable it at the class level — no other test in this file asserts
+// beta-grant behaviour, so disabling is safe.
+@TestPropertySource(properties = "zero-mail.billing.beta.enabled=false")
 @Import({
     TestSessionSupport.class,
     ByokControllerIntegrationTest.ByokExceptionProbeController.class,
