@@ -4,6 +4,8 @@ import com.zeromail.api.dto.admin.mkey.MasterKeyEditSessionResponse;
 import com.zeromail.api.dto.admin.mkey.MasterKeyListResponse;
 import com.zeromail.api.dto.admin.mkey.MasterKeyMaskedResponse;
 import com.zeromail.api.dto.admin.mkey.MasterKeySetRequest;
+import com.zeromail.api.dto.admin.mkey.ProviderKeyListResponse;
+import com.zeromail.api.dto.admin.mkey.ProviderKeyResponse;
 import com.zeromail.api.dto.admin.mkey.RotateMasterKeyRequest;
 import com.zeromail.api.dto.admin.mkey.RotationResponse;
 import com.zeromail.api.dto.admin.mkey.SetFeatureDefaultRequest;
@@ -54,6 +56,20 @@ public class AdminMasterKeyController {
     public MasterKeyMaskedResponse get(@PathVariable LlmProvider provider) {
         AdminContext.currentOrThrow();
         return MasterKeyMaskedResponse.from(masterKeyAdminService.getMasked(provider));
+    }
+
+    /**
+     * Returns every priority-ordered credential row for a provider, including REVOKED rows. The
+     * admin detail page consumes this to render the provider's failover chain.
+     */
+    @GetMapping("/{provider}/keys")
+    public ProviderKeyListResponse listKeys(@PathVariable LlmProvider provider) {
+        AdminContext.currentOrThrow();
+        return new ProviderKeyListResponse(
+                provider,
+                masterKeyAdminService.listKeys(provider).stream()
+                        .map(ProviderKeyResponse::from)
+                        .toList());
     }
 
     @PostMapping("/{provider}/edit-session")

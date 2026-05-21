@@ -9,16 +9,18 @@ import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.domain.MasterKeyFeature;
 import com.zeromail.core.admin.mkey.domain.MasterKeyStatus;
 import com.zeromail.core.admin.mkey.domain.event.MasterKeyRotatedEvent;
+import com.zeromail.core.admin.mkey.exception.EditSessionRequiredException;
+import com.zeromail.core.admin.mkey.exception.InvalidKeyFormatException;
+import com.zeromail.core.admin.mkey.exception.MasterKeyTestFailedException;
+import com.zeromail.core.admin.mkey.exception.MissingMasterKeyRowException;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyEntity;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyRepository;
 import com.zeromail.core.admin.mkey.persistence.lowlevel.LlmProviderMasterKeyWriteRepository;
 import com.zeromail.core.admin.mkey.projection.MasterKeyMaskedRow;
-import com.zeromail.core.admin.shared.AdminBusinessException;
 import com.zeromail.core.llm.gateway.springai.admin.MasterKeyTestResult;
 import com.zeromail.core.llm.gateway.springai.admin.ModelsProbeClient;
 import com.zeromail.core.llm.gateway.springai.admin.ProviderMasterKeyResolver;
 import com.zeromail.core.shared.crypto.PlatformSecretCipher;
-import com.zeromail.core.shared.exception.ErrorClass;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
@@ -82,6 +84,16 @@ public class MasterKeyAdminService {
     public List<MasterKeyMaskedRow> listMasked() {
         AdminContext.currentOrThrow();
         return providerMasterKeyResolver.maskedRows();
+    }
+
+    /**
+     * Every credential row for a single provider, priority-ordered (lowest priority first).
+     * Includes REVOKED rows so the admin can review the full failover chain.
+     */
+    @Transactional(readOnly = true)
+    public List<LlmProviderMasterKeyEntity> listKeys(LlmProvider provider) {
+        AdminContext.currentOrThrow();
+        return llmProviderMasterKeyRepository.findByProviderOrderByPriority(provider);
     }
 
     @Transactional(readOnly = true)
@@ -382,114 +394,4 @@ public class MasterKeyAdminService {
 
     private record StoredMasterKey(
             short kekVersion, long providerSecretVersion, Instant lastRotatedAt) {}
-
-    public static class EditSessionRequiredException extends AdminBusinessException {
-        @Override
-        public ErrorClass errorClass() {
-            return ErrorClass.BAD_REQUEST;
-        }
-
-        @Override
-        public String errorCode() {
-            return "error.admin.master_key_edit_session_required";
-        }
-
-        @Override
-        public String logEvent() {
-            return "admin_master_key_edit_session_required";
-        }
-
-        @Override
-        public String detail() {
-            return "An open master-key edit session is required before performing this action.";
-        }
-    }
-
-    public static class InvalidKeyFormatException extends AdminBusinessException {
-        @Override
-        public ErrorClass errorClass() {
-            return ErrorClass.BAD_REQUEST;
-        }
-
-        @Override
-        public String errorCode() {
-            return "error.admin.master_key_invalid_format";
-        }
-
-        @Override
-        public String logEvent() {
-            return "admin_master_key_invalid_format";
-        }
-
-        @Override
-        public String detail() {
-            return "The supplied master key does not match the required format.";
-        }
-    }
-
-    public static class MissingMasterKeyRowException extends AdminBusinessException {
-
-        public MissingMasterKeyRowException(LlmProvider provider) {
-            super("Missing master key row for provider " + provider.id());
-        }
-
-        @Override
-        public ErrorClass errorClass() {
-            return ErrorClass.NOT_FOUND;
-        }
-
-        @Override
-        public String errorCode() {
-            return "error.admin.master_key_missing";
-        }
-
-        @Override
-        public String logEvent() {
-            return "admin_master_key_missing";
-        }
-
-        @Override
-        public String detail() {
-            return "No master key has been configured for the requested provider.";
-        }
-    }
-
-    public static class MasterKeyTestFailedException extends AdminBusinessException {
-
-        private final MasterKeyTestResult result;
-
-        public MasterKeyTestFailedException(MasterKeyTestResult result) {
-            super("Master key test failed");
-            this.result = result;
-        }
-
-        public MasterKeyTestResult result() {
-            return result;
-        }
-
-        @Override
-        public ErrorClass errorClass() {
-            return ErrorClass.BAD_REQUEST;
-        }
-
-        @Override
-        public String errorCode() {
-            return "error.admin.master_key_test_failed";
-        }
-
-        @Override
-        public String logEvent() {
-            return "admin_master_key_test_failed";
-        }
-
-        @Override
-        public String detail() {
-            return "The master-key connectivity probe did not return OK.";
-        }
-
-        @Override
-        public Map<String, Object> params() {
-            return Map.of("result", result);
-        }
-    }
 }
