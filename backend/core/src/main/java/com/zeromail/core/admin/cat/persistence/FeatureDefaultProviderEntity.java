@@ -38,9 +38,6 @@ public class FeatureDefaultProviderEntity {
     @Column(name = "provider", nullable = false, length = 32)
     private LlmProvider provider;
 
-    @Column(name = "model_id", nullable = false, length = 128)
-    private String modelId;
-
     @Column(name = "updated_by_admin")
     private UUID updatedByAdmin;
 
@@ -55,13 +52,11 @@ public class FeatureDefaultProviderEntity {
             Feature feature,
             RoutingTier tier,
             LlmProvider provider,
-            String modelId,
             UUID updatedByAdmin,
             Instant updatedAt) {
         this.feature = feature;
         this.tier = tier;
         this.provider = provider;
-        this.modelId = modelId;
         this.updatedByAdmin = updatedByAdmin;
         this.updatedAt = updatedAt;
     }
@@ -78,10 +73,6 @@ public class FeatureDefaultProviderEntity {
         return provider;
     }
 
-    public String getModelId() {
-        return modelId;
-    }
-
     public UUID getUpdatedByAdmin() {
         return updatedByAdmin;
     }
@@ -94,9 +85,8 @@ public class FeatureDefaultProviderEntity {
         return new FeatureDefaultProviderId(feature, tier);
     }
 
-    public void assignTo(LlmProvider provider, String modelId, UUID updatedByAdmin, Instant now) {
+    public void assignTo(LlmProvider provider, UUID updatedByAdmin, Instant now) {
         this.provider = provider;
-        this.modelId = modelId;
         this.updatedByAdmin = updatedByAdmin;
         this.updatedAt = now;
     }

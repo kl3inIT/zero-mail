@@ -58,7 +58,9 @@ public class AdminCatalogController {
     @GetMapping("/feature-defaults")
     public FeatureDefaultMatrixResponse listFeatureDefaultMatrix() {
         AdminContext.currentOrThrow();
-        return FeatureDefaultMatrixResponse.from(featureDefaultTierService.listMatrix());
+        return FeatureDefaultMatrixResponse.from(
+                featureDefaultTierService.listMatrix(),
+                featureDefaultTierService.listAllTierModelsAcrossFeatures());
     }
 
     @PutMapping("/feature-defaults")
@@ -71,7 +73,7 @@ public class AdminCatalogController {
                 request.feature(),
                 request.tier(),
                 request.provider(),
-                request.modelId(),
+                request.modelIds(),
                 httpServletRequest.getRemoteAddr(),
                 UUID.randomUUID());
     }

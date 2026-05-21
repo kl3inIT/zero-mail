@@ -1,5 +1,6 @@
 import { ChevronRightIcon } from 'lucide-react';
 
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -15,18 +16,17 @@ const FEATURES: { id: RoutingFeature; label: string; description: string }[] = [
   { id: 'DRAFT', label: 'Soạn nháp', description: 'Soạn reply/forward theo template.' },
 ];
 
-const TIERS: { id: RoutingTier; label: string; tone: string }[] = [
-  { id: 'PRIMARY', label: 'Tier 1 — Primary', tone: 'bg-violet-soft text-primary' },
-  { id: 'FALLBACK', label: 'Tier 2 — Fallback', tone: 'bg-blue-soft text-blue' },
-  { id: 'LAST_RESORT', label: 'Tier 3 — Last Resort', tone: 'bg-amber-soft text-amber' },
+const TIERS: { id: RoutingTier; label: string }[] = [
+  { id: 'PRIMARY', label: 'Tier 1 — Primary' },
+  { id: 'FALLBACK', label: 'Tier 2 — Fallback' },
+  { id: 'LAST_RESORT', label: 'Tier 3 — Last Resort' },
 ];
 
 export type RoutingMatrixCardProps = {
   /**
-   * Click handler for a single (feature, tier) cell. Receives the cell
-   * coordinates plus the current binding (or `null` if unassigned). The
-   * picker modal lives outside this card — supply a callback that opens
-   * it with the right pre-filled fields.
+   * Click handler for a single (feature, tier) cell. Receives the coordinates plus the current
+   * binding (or `null` when unassigned). The picker modal lives outside this card — supply a
+   * callback that opens it with the right pre-filled fields.
    */
   onCellClick?: (
     feature: RoutingFeature,
@@ -39,9 +39,14 @@ export function RoutingMatrixCard({ onCellClick }: RoutingMatrixCardProps) {
   const matrixQuery = useFeatureDefaults();
   const bindings = matrixQuery.data?.bindings ?? [];
 
+  // Per LiteLLM / 2026 consensus: tier boundaries should favor cross-provider diversity to
+  // avoid correlated outages (shared moderation, regional outage). Warn (don't block) when
+  // two tiers of the same feature share a provider.
+  const featuresWithSameProviderTiers = detectFeaturesWithoutCrossProviderTiers(bindings);
+
   return (
     <Card>
-      <CardContent className="pt-6">
+      <CardContent className="space-y-3 pt-6">
         {matrixQuery.isPending ? (
           <Skeleton className="h-48 w-full" />
         ) : (
@@ -52,6 +57,7 @@ export function RoutingMatrixCard({ onCellClick }: RoutingMatrixCardProps) {
                 feature={feature}
                 bindings={bindings}
                 onCellClick={onCellClick}
+                warn={featuresWithSameProviderTiers.has(feature.id)}
               />
             ))}
           </div>
@@ -65,15 +71,24 @@ function FeatureColumn({
   feature,
   bindings,
   onCellClick,
+  warn,
 }: {
   feature: { id: RoutingFeature; label: string; description: string };
   bindings: FeatureDefaultBinding[];
   onCellClick?: RoutingMatrixCardProps['onCellClick'];
+  warn: boolean;
 }) {
   return (
     <div className="border-border bg-background rounded-md border p-3">
       <div className="mb-3">
-        <div className="text-ink font-semibold">{feature.label}</div>
+        <div className="flex items-center gap-2">
+          <div className="font-semibold">{feature.label}</div>
+          {warn && (
+            <Badge variant="outline" className="text-xs">
+              Trùng provider giữa tier
+            </Badge>
+          )}
+        </div>
         <div className="text-muted-foreground text-xs">{feature.description}</div>
       </div>
       <div className="space-y-2">
@@ -99,35 +114,63 @@ function TierCell({
   current,
   onClick,
 }: {
-  tier: { id: RoutingTier; label: string; tone: string };
+  tier: { id: RoutingTier; label: string };
   current: FeatureDefaultBinding | null;
   onClick: () => void;
 }) {
-  const isAssigned = Boolean(current?.modelId);
+  const modelIds = current?.modelIds ?? [];
+  const isAssigned = modelIds.length > 0;
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group border-border hover:border-primary/40 bg-card flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left transition-colors"
+      className="group border-border hover:border-primary/40 bg-card flex w-full items-start gap-3 rounded-md border px-3 py-2 text-left transition-colors"
     >
-      <span
-        className={`inline-flex shrink-0 items-center rounded-md px-2 py-0.5 font-mono text-[10px] tracking-wide uppercase ${tier.tone}`}
-      >
+      <Badge variant="secondary" className="shrink-0 font-mono">
         {tier.label}
-      </span>
-      <span className="min-w-0 flex-1">
+      </Badge>
+      <span className="min-w-0 flex-1 space-y-1">
         {isAssigned ? (
           <>
-            <span className="text-ink block truncate text-sm font-medium">{current!.modelId}</span>
-            <span className="text-muted-foreground block truncate font-mono text-[11px]">
+            <span className="text-muted-foreground block truncate font-mono text-xs">
               {current!.provider}
+            </span>
+            <span className="flex flex-wrap gap-1">
+              {modelIds.map((modelId, index) => (
+                <Badge key={modelId} variant="outline" className="font-mono text-[10px]">
+                  {index + 1}. {modelId}
+                </Badge>
+              ))}
             </span>
           </>
         ) : (
           <span className="text-muted-foreground text-sm italic">Chưa gán</span>
         )}
       </span>
-      <ChevronRightIcon className="text-muted-foreground group-hover:text-primary size-4 shrink-0" />
+      <ChevronRightIcon className="text-muted-foreground group-hover:text-primary mt-1 size-4 shrink-0" />
     </button>
   );
+}
+
+function detectFeaturesWithoutCrossProviderTiers(
+  bindings: FeatureDefaultBinding[],
+): Set<RoutingFeature> {
+  const tiersByFeature = new Map<RoutingFeature, Set<string>>();
+  const tierCount = new Map<RoutingFeature, number>();
+  for (const binding of bindings) {
+    if (!binding.feature || !binding.provider) continue;
+    const providerSet =
+      tiersByFeature.get(binding.feature) ?? new Set<string>();
+    providerSet.add(binding.provider);
+    tiersByFeature.set(binding.feature, providerSet);
+    tierCount.set(binding.feature, (tierCount.get(binding.feature) ?? 0) + 1);
+  }
+  const warned = new Set<RoutingFeature>();
+  for (const [feature, providers] of tiersByFeature.entries()) {
+    const count = tierCount.get(feature) ?? 0;
+    if (count > 1 && providers.size < count) {
+      warned.add(feature);
+    }
+  }
+  return warned;
 }

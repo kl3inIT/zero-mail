@@ -723,7 +723,8 @@ export interface components {
             tier: "PRIMARY" | "FALLBACK" | "LAST_RESORT";
             /** @enum {string} */
             provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
-            modelId: string;
+            /** @description Models in priority order. Position 0 is tried first, then 1, etc. Each id must reference a VERIFIED or STALE row for the chosen provider. */
+            modelIds: string[];
         };
         TenantActionRequest: {
             reason: string;
@@ -1124,7 +1125,8 @@ export interface components {
             tier?: "PRIMARY" | "FALLBACK" | "LAST_RESORT";
             /** @enum {string} */
             provider?: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
-            modelId?: string;
+            /** @description Models in priority order; position 1 is tried first. */
+            modelIds?: string[];
         };
         FeatureDefaultMatrixResponse: {
             /** @description All configured (feature, tier) bindings. */

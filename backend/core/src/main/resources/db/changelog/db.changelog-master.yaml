@@ -179,3 +179,6 @@ databaseChangeLog:
   - include:
       file: changes/081-master-keys-v2-multi-key-and-tiers.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/082-feature-tier-multi-model.yaml
+      relativeToChangelogFile: true
