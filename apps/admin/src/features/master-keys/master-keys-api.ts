@@ -30,11 +30,26 @@ export type EditSessionResponse = {
   expiresAt: string;
 };
 
+function readXsrfTokenCookie(): string | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
 async function adminFetch<T>(path: `/${string}`, init?: RequestInit): Promise<T> {
   // TODO: switch to typed openapi-fetch after admin-schema.d.ts is regenerated with 8B paths.
+  // Until then, mirror admin-client.ts's onRequest middleware: attach X-XSRF-TOKEN on mutating
+  // methods so Spring's csrf().spa() filter accepts the request instead of returning 403.
+  const method = (init?.method ?? 'GET').toUpperCase();
+  const isMutating = method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS';
+  const xsrfToken = isMutating ? readXsrfTokenCookie() : undefined;
   const response = await fetch(getAdminApiUrl(path), {
     credentials: 'include',
-    headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) },
+    headers: {
+      'content-type': 'application/json',
+      ...(xsrfToken ? { 'X-XSRF-TOKEN': xsrfToken } : {}),
+      ...(init?.headers ?? {}),
+    },
     ...init,
   });
   if (!response.ok) {
