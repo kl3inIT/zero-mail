@@ -191,7 +191,6 @@ class CreditLedgerService implements CreditLedger {
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRED)
     public CreditBalance balance(UUID tenantId) {
         grantService.grantCurrentBetaCredits(tenantId);
         int availableCredits =
