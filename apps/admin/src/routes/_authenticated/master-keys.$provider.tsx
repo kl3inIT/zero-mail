@@ -10,6 +10,7 @@ import {
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+import { AddCatalogModelDialog } from '@/components/AddCatalogModelDialog';
 import { AddProviderKeyDialog } from '@/components/AddProviderKeyDialog';
 import { EditProviderKeyDialog } from '@/components/EditProviderKeyDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -25,6 +26,7 @@ import {
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCatalog } from '@/features/catalog/use-catalog';
+import { useDisableModel } from '@/features/catalog/use-disable-model';
 import type { CatalogModel, CatalogProvider } from '@/features/catalog/catalog-api';
 import type {
   LlmProvider,
@@ -115,8 +117,10 @@ function MasterKeyProviderRoute() {
   const reorderMutation = useReorderProviderKeys(provider);
   const revokeMutation = useRevokeProviderKey(provider);
   const testKeyMutation = useTestProviderKey();
+  const disableModelMutation = useDisableModel();
   const [addKeyOpen, setAddKeyOpen] = useState(false);
   const [editingKey, setEditingKey] = useState<ProviderKey | null>(null);
+  const [addModelOpen, setAddModelOpen] = useState(false);
 
   const keys = keysQuery.data?.keys ?? [];
   const activeKeyCount = keys.filter((entry) => entry.status === 'ACTIVE').length;
@@ -160,6 +164,19 @@ function MasterKeyProviderRoute() {
     keys
       .filter((entry) => entry.status === 'ACTIVE')
       .forEach((entry) => testKey(entry));
+  }
+
+  function disableModel(model: CatalogModel) {
+    const reason = window.prompt(
+      `Vô hiệu model ${model.modelId}?\n\nNhập lý do (audit):`,
+    );
+    if (!reason || reason.trim().length === 0) return;
+    disableModelMutation.mutate({
+      modelId: model.modelId,
+      reason: reason.trim(),
+      confirmedPinned: model.pinnedTenantCount > 0,
+      pinnedCountAcknowledged: model.pinnedTenantCount,
+    });
   }
 
   const models = useMemo<CatalogModel[]>(() => {
@@ -212,7 +229,13 @@ function MasterKeyProviderRoute() {
         testKeyPendingId={testKeyMutation.isPending ? testKeyMutation.variables?.keyId : undefined}
       />
 
-      <ModelsCard models={models} pending={catalogQuery.isPending} />
+      <ModelsCard
+        models={models}
+        pending={catalogQuery.isPending}
+        onAddModel={() => setAddModelOpen(true)}
+        onDisableModel={disableModel}
+        disabling={disableModelMutation.isPending}
+      />
 
       <AddProviderKeyDialog
         provider={provider}
@@ -224,6 +247,12 @@ function MasterKeyProviderRoute() {
         provider={provider}
         entry={editingKey}
         onClose={() => setEditingKey(null)}
+      />
+
+      <AddCatalogModelDialog
+        provider={provider as CatalogProvider}
+        open={addModelOpen}
+        onOpenChange={setAddModelOpen}
       />
     </div>
   );
@@ -430,9 +459,15 @@ function ConnectionStatusBadge({ status }: { status: ProviderKeyStatus }) {
 function ModelsCard({
   models,
   pending,
+  onAddModel,
+  onDisableModel,
+  disabling,
 }: {
   models: CatalogModel[];
   pending: boolean;
+  onAddModel: () => void;
+  onDisableModel: (model: CatalogModel) => void;
+  disabling: boolean;
 }) {
   return (
     <Card>
@@ -441,20 +476,8 @@ function ModelsCard({
         <CardDescription>
           Chỉ model VERIFIED mới hiện trong dropdown tier routing.
         </CardDescription>
-        <CardAction className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={pending || models.length === 0}
-            onClick={() => toast.info('Test all models — đang chờ backend endpoint.')}
-          >
-            Test all
-          </Button>
-          <Button
-            size="sm"
-            disabled
-            onClick={() => toast.info('Add model — đang chờ backend endpoint.')}
-          >
+        <CardAction>
+          <Button size="sm" onClick={onAddModel} disabled={pending}>
             <PlusIcon className="size-3.5" />
             Thêm model
           </Button>
@@ -466,14 +489,29 @@ function ModelsCard({
         ) : models.length === 0 ? (
           <EmptyState message='Chưa có model — bấm "Thêm model" để bắt đầu.' />
         ) : (
-          models.map((model) => <ModelRow key={model.modelId} model={model} />)
+          models.map((model) => (
+            <ModelRow
+              key={model.modelId}
+              model={model}
+              onDisable={() => onDisableModel(model)}
+              disabling={disabling}
+            />
+          ))
         )}
       </CardContent>
     </Card>
   );
 }
 
-function ModelRow({ model }: { model: CatalogModel }) {
+function ModelRow({
+  model,
+  onDisable,
+  disabling,
+}: {
+  model: CatalogModel;
+  onDisable: () => void;
+  disabling: boolean;
+}) {
   const isDeprecated = Boolean(model.deprecatedAt);
   return (
     <div
@@ -494,21 +532,17 @@ function ModelRow({ model }: { model: CatalogModel }) {
       ) : (
         <Badge>VERIFIED</Badge>
       )}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => toast.info('Test model — đang chờ backend endpoint.')}
-      >
-        Test
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label="Vô hiệu model"
-        onClick={() => toast.info('Disable model — đang chờ backend endpoint.')}
-      >
-        <TrashIcon className="size-4" />
-      </Button>
+      {!isDeprecated && (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Vô hiệu model"
+          onClick={onDisable}
+          disabled={disabling}
+        >
+          <TrashIcon className="size-4" />
+        </Button>
+      )}
     </div>
   );
 }
