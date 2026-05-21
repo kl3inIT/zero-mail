@@ -53,7 +53,6 @@ function MasterKeyProviderRoute() {
   const [editSessionToken, setEditSessionToken] = useState<string | null>(null);
   const [keyFormat, setKeyFormat] = useState<KeyFormat>('OPENAI_FORMAT');
   const [baseUrl, setBaseUrl] = useState('');
-  const [reason, setReason] = useState('');
   const [testResult, setTestResult] = useState<TestConnectionResult | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const row = masterKey.data;
@@ -80,7 +79,7 @@ function MasterKeyProviderRoute() {
     setPlaintextLength(0);
   }
 
-  const canSave = editing && plaintextLength >= 10 && editSessionToken && testResult === 'OK' && reason.length >= 8;
+  const canSave = editing && plaintextLength >= 10 && editSessionToken && testResult === 'OK';
 
   async function startEditing() {
     const session = await editSession.mutateAsync();
@@ -116,7 +115,6 @@ function MasterKeyProviderRoute() {
       keyFormat,
       baseUrl: baseUrl || null,
       editSessionToken,
-      reason,
     });
     setSuccessMessage(`Đã lưu khóa ${row?.displayName ?? provider}`);
   }
@@ -133,7 +131,6 @@ function MasterKeyProviderRoute() {
       keyFormat,
       baseUrl: baseUrl || null,
       editSessionToken,
-      reason,
     });
   }
 
@@ -199,10 +196,6 @@ function MasterKeyProviderRoute() {
                   disabled={provider !== 'ROUTER_9R' && provider !== 'OPENROUTER'}
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="master-key-reason">Lý do</Label>
-              <Input id="master-key-reason" aria-label="Lý do" value={reason} onChange={(event) => setReason(event.target.value)} />
             </div>
             {successMessage && <div className="rounded-md border border-border bg-secondary px-3 py-2 text-sm">{successMessage}</div>}
             <div className="flex flex-wrap gap-2">

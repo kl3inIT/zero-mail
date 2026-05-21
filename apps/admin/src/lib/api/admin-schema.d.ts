@@ -606,14 +606,12 @@ export interface components {
             keyFormat: "OPENAI_FORMAT" | "ANTHROPIC_FORMAT" | "GOOGLE_FORMAT";
             baseUrl?: string;
             editSessionToken: string;
-            reason: string;
         };
         SetFeatureDefaultRequest: {
             /** @enum {string} */
             feature: "CHAT" | "TRIAGE" | "DRAFT";
             /** @enum {string} */
             provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
-            reason: string;
         };
         CatalogFeatureDefaultRequest: {
             modelId: string;
@@ -644,7 +642,6 @@ export interface components {
             keyFormat: "OPENAI_FORMAT" | "ANTHROPIC_FORMAT" | "GOOGLE_FORMAT";
             baseUrl?: string;
             editSessionToken: string;
-            reason: string;
         };
         RotationResponse: {
             /** @enum {string} */

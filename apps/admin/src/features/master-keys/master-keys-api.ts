@@ -72,7 +72,6 @@ export async function saveMasterKey(input: {
   keyFormat: KeyFormat;
   baseUrl?: string | null;
   editSessionToken: string;
-  reason: string;
 }): Promise<void> {
   const { error } = await api.PUT('/api/admin/master-keys/{provider}', {
     params: { path: { provider: input.provider as LlmProvider } },
@@ -81,7 +80,6 @@ export async function saveMasterKey(input: {
       keyFormat: input.keyFormat,
       baseUrl: input.baseUrl ?? undefined,
       editSessionToken: input.editSessionToken,
-      reason: input.reason,
     },
   });
   if (error) {
@@ -95,7 +93,6 @@ export async function rotateMasterKey(input: {
   keyFormat: KeyFormat;
   baseUrl?: string | null;
   editSessionToken: string;
-  reason: string;
 }) {
   const { data, error } = await api.POST('/api/admin/master-keys/{provider}/rotate', {
     params: { path: { provider: input.provider as LlmProvider } },
@@ -104,7 +101,6 @@ export async function rotateMasterKey(input: {
       keyFormat: input.keyFormat,
       baseUrl: input.baseUrl ?? undefined,
       editSessionToken: input.editSessionToken,
-      reason: input.reason,
     },
   });
   if (error || !data) {

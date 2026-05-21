@@ -101,7 +101,6 @@ function MasterKeysRoute() {
                   setFeatureDefault.mutate({
                     feature: feature.id,
                     provider: provider as LlmProvider,
-                    reason: `Đặt nhà cung cấp mặc định cho ${feature.label}`,
                   })
                 }
               >
