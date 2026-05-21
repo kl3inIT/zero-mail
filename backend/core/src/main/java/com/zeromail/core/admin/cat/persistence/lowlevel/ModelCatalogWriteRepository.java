@@ -194,22 +194,49 @@ public class ModelCatalogWriteRepository {
                 .findFirst();
     }
 
+    /**
+     * Legacy upsert — writes the PRIMARY tier row only. v2 admin code uses {@link
+     * #upsertFeatureDefaultTier(Feature, String, String, String, java.util.UUID)} to address a
+     * specific tier.
+     */
     public void upsertFeatureDefault(
             Feature feature, String modelId, String providerId, java.util.UUID adminId) {
+        upsertFeatureDefaultTier(feature, "PRIMARY", modelId, providerId, adminId);
+    }
+
+    /**
+     * Tier-aware upsert against the composite PK (feature, tier). Used by the 3-tier admin matrix
+     * and by legacy callers (via {@link #upsertFeatureDefault}) pinning to PRIMARY.
+     */
+    public void upsertFeatureDefaultTier(
+            Feature feature,
+            String tierId,
+            String modelId,
+            String providerId,
+            java.util.UUID adminId) {
         jdbcTemplate.update(
                 """
-                INSERT INTO feature_default_provider(feature, provider, model_id, updated_by_admin, updated_at)
-                VALUES (?, ?, ?, ?, NOW())
-                ON CONFLICT (feature) DO UPDATE
+                INSERT INTO feature_default_provider(feature, tier, provider, model_id, updated_by_admin, updated_at)
+                VALUES (?, ?, ?, ?, ?, NOW())
+                ON CONFLICT (feature, tier) DO UPDATE
                 SET provider = EXCLUDED.provider,
                     model_id = EXCLUDED.model_id,
                     updated_by_admin = EXCLUDED.updated_by_admin,
                     updated_at = NOW()
                 """,
                 feature.id(),
+                tierId,
                 providerId,
                 modelId,
                 adminId);
+    }
+
+    /** Clear a single tier slot. The router will skip the tier on the next walk. */
+    public int deleteFeatureDefaultTier(Feature feature, String tierId) {
+        return jdbcTemplate.update(
+                "DELETE FROM feature_default_provider WHERE feature = ? AND tier = ?",
+                feature.id(),
+                tierId);
     }
 
     public java.util.Map<String, String> findActiveModelDisplayNames(LlmProvider provider) {
