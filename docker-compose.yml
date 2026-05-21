@@ -17,9 +17,9 @@ services:
     container_name: zeromail-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: zeromail
-      POSTGRES_USER: zeromail
-      POSTGRES_PASSWORD: zeromail
+      POSTGRES_DB: ${POSTGRES_DB:-zeromail}
+      POSTGRES_USER: ${POSTGRES_USER:-zeromail}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
     # Mount custom init scripts (only run on fresh data volumes) + tuned config.
     # 10-create-dev-db.sql is also runnable manually via `docker exec psql` for
     # existing volumes — see scripts/ops/postgres/init/10-create-dev-db.sql.
@@ -64,24 +64,7 @@ services:
       retries: 5
     logging: *default-logging
 
-  # ── Operator infrastructure (proxy + LLM-router sidecar) ────────
-  9router:
-    image: decolua/9router:latest
-    container_name: zeromail-9router
-    restart: unless-stopped
-    environment:
-      REQUIRE_API_KEY: "true"
-      JWT_SECRET: ${ZEROMAIL_9ROUTER_JWT_SECRET}
-      INITIAL_PASSWORD: ${ZEROMAIL_9ROUTER_INITIAL_PASSWORD}
-      AUTH_COOKIE_SECURE: "true"
-    ports:
-      - "127.0.0.1:20128:8080"
-    volumes:
-      - /opt/zeromail/9router-data:/data
-    networks:
-      - zeromail-internal
-    logging: *default-logging
-
+  # ── Operator infrastructure (proxy) ─────────────────────────────
   nginx-proxy-manager:
     image: jc21/nginx-proxy-manager:latest
     container_name: zeromail-nginx-proxy-manager
@@ -106,11 +89,6 @@ services:
     container_name: zeromail-worker
     restart: unless-stopped
     env_file: .env
-    environment:
-      SPRING_PROFILES_ACTIVE: prod
-      DB_URL: jdbc:postgresql://zeromail-postgres:5432/zeromail
-      REDIS_HOST: zeromail-redis
-      SPRING_DOCKER_COMPOSE_ENABLED: "false"
     networks:
       - zeromail-internal
     depends_on:
@@ -136,9 +114,7 @@ services:
     image: ${ZEROMAIL_FRONTEND_IMAGE:-zeromail-frontend:latest}
     container_name: zeromail-frontend
     restart: unless-stopped
-    environment:
-      NODE_ENV: production
-      API_BASE_URL: http://zeromail-api:8080
+    env_file: .env
     networks:
       - proxy-network
     healthcheck:
@@ -178,11 +154,6 @@ services:
     container_name: zeromail-api
     restart: unless-stopped
     env_file: .env
-    environment:
-      SPRING_PROFILES_ACTIVE: prod
-      DB_URL: jdbc:postgresql://zeromail-postgres:5432/zeromail
-      REDIS_HOST: zeromail-redis
-      SPRING_DOCKER_COMPOSE_ENABLED: "false"
     networks:
       - proxy-network
       - zeromail-internal

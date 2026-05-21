@@ -153,9 +153,10 @@ The remaining fields have sane localhost defaults.
 ## 5. First boot
 
 ```sh
-# 1. Bring up local Redis (and optional local Postgres if you skip the tunnel).
-docker compose up -d redis
-docker compose up -d postgres    # optional, only if you want a local DB instead of the tunnel
+# 1. Bring up local Redis on host port 6379. Run natively or as a standalone
+#    container — the base docker-compose.yml does NOT expose Redis to the host
+#    (it stays on the zeromail-internal network for prod parity).
+docker run -d --name dev-redis -p 127.0.0.1:6379:6379 --restart unless-stopped redis:8.6.3
 
 # 2. Start the SSH tunnel to the shared dev DB.
 ssh -fN zeromail-db-tunnel        # uses the ~/.ssh/config entry from §3
@@ -225,22 +226,7 @@ docker exec -e PGPASSWORD=zeromail zeromail-postgres \
 # Now any teammate's worker boot re-runs Liquibase from a fresh DB.
 ```
 
-## 7. Going fully local (offline mode)
-
-If you're working offline or want to test destructive migrations:
-
-```sh
-# In .env.local, swap the tunnel pointers for the local compose stack:
-DB_URL=jdbc:postgresql://localhost:15432/zeromail
-DB_USER=zeromail
-DB_PASSWORD=zeromail
-
-# Then:
-docker compose up -d postgres redis
-./gradlew :backend:worker:bootRun    # applies migrations to your local DB
-```
-
-## 8. Troubleshooting
+## 7. Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|

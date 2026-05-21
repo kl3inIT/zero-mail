@@ -102,18 +102,21 @@ jobs:
             docker inspect --format='zeromail-api {{index .Image}}' zeromail-api 2>/dev/null | tee /apps/zero-mail/.last-deploy.txt || true
             docker inspect --format='zeromail-worker {{index .Image}}' zeromail-worker 2>/dev/null | tee -a /apps/zero-mail/.last-deploy.txt || true
             docker inspect --format='zeromail-frontend {{index .Image}}' zeromail-frontend 2>/dev/null | tee -a /apps/zero-mail/.last-deploy.txt || true
+            docker inspect --format='zeromail-admin {{index .Image}}' zeromail-admin 2>/dev/null | tee -a /apps/zero-mail/.last-deploy.txt || true
             echo "::endgroup::"
             echo "::group::Pull versioned images"
             ZEROMAIL_API_IMAGE="ghcr.io/kl3init/zero-mail-api:${DEPLOY_TAG}" \
             ZEROMAIL_WORKER_IMAGE="ghcr.io/kl3init/zero-mail-worker:${DEPLOY_TAG}" \
             ZEROMAIL_FRONTEND_IMAGE="ghcr.io/kl3init/zero-mail-frontend:${DEPLOY_TAG}" \
-              docker compose pull api worker frontend
+            ZEROMAIL_ADMIN_IMAGE="ghcr.io/kl3init/zero-mail-admin:${DEPLOY_TAG}" \
+              docker compose pull api worker frontend admin
             echo "::endgroup::"
             echo "::group::Recreate prod containers"
             ZEROMAIL_API_IMAGE="ghcr.io/kl3init/zero-mail-api:${DEPLOY_TAG}" \
             ZEROMAIL_WORKER_IMAGE="ghcr.io/kl3init/zero-mail-worker:${DEPLOY_TAG}" \
             ZEROMAIL_FRONTEND_IMAGE="ghcr.io/kl3init/zero-mail-frontend:${DEPLOY_TAG}" \
-              docker compose up -d --no-build api worker frontend
+            ZEROMAIL_ADMIN_IMAGE="ghcr.io/kl3init/zero-mail-admin:${DEPLOY_TAG}" \
+              docker compose up -d --no-build api worker frontend admin
             echo "::endgroup::"
             echo "::group::Wait for prod readiness"
             for attempt in {1..60}; do
@@ -123,7 +126,7 @@ jobs:
               fi
               if [[ $attempt -eq 60 ]]; then
                 echo "::error::api failed readiness within 120s — initiating rollback"
-                docker compose logs --tail=200 api worker
+                docker compose logs --tail=200 api worker admin
                 exit 1
               fi
               sleep 2
