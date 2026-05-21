@@ -85,7 +85,23 @@ public class MasterKeyAdminService {
     @Transactional(readOnly = true)
     public List<MasterKeyMaskedRow> listMasked() {
         AdminContext.currentOrThrow();
-        return providerMasterKeyResolver.maskedRows();
+        // Provider list page wants ONE card per provider. The resolver returns one row per
+        // (provider, key) — dedupe by provider, preferring an ACTIVE row over PENDING/REVOKED so
+        // the masked-key snippet on the card reflects a usable credential when one exists.
+        java.util.Map<com.zeromail.core.admin.mkey.domain.LlmProvider, MasterKeyMaskedRow>
+                byProvider = new java.util.LinkedHashMap<>();
+        for (MasterKeyMaskedRow row : providerMasterKeyResolver.maskedRows()) {
+            MasterKeyMaskedRow existing = byProvider.get(row.provider());
+            if (existing == null) {
+                byProvider.put(row.provider(), row);
+                continue;
+            }
+            // Prefer a row with a populated masked-key snippet (i.e. has encrypted material).
+            if (row.maskedKey() != null && existing.maskedKey() == null) {
+                byProvider.put(row.provider(), row);
+            }
+        }
+        return List.copyOf(byProvider.values());
     }
 
     /**
@@ -199,11 +215,13 @@ public class MasterKeyAdminService {
             throw new ProviderKeyReorderMismatchException(provider);
         }
 
-        // Two-pass shift to dodge the deferrable uq_priority constraint.
-        int offset = existing.size() + 1;
+        // Two-pass shift to dodge the deferrable uq_priority constraint. ck_priority_positive
+        // is NOT deferrable, so the intermediate values stay above the new max (offset start)
+        // instead of going negative.
+        int offset = existing.size() + 100;
         for (LlmProviderMasterKeyEntity row : existing) {
             llmProviderMasterKeyWriteRepository.setPriority(
-                    provider, row.getKeyId(), -(row.getPriority() + offset));
+                    provider, row.getKeyId(), row.getPriority() + offset);
         }
         for (int index = 0; index < orderedKeyIds.size(); index++) {
             llmProviderMasterKeyWriteRepository.setPriority(

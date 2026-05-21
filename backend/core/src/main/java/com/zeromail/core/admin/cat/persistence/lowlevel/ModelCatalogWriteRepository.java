@@ -29,13 +29,17 @@ public class ModelCatalogWriteRepository {
     }
 
     public List<ProviderModelRow> findProviderModelRows(LlmProvider provider) {
+        // The "default_model" flag now resolves against feature_tier_model position 1 of the
+        // PRIMARY tier — that's the model the router tries first. Joining feature_default_provider
+        // alone would NOT identify a specific model (after migration 082 the anchor row no longer
+        // carries model_id).
         return jdbcTemplate.query(
                 """
                 SELECT binding.feature,
                        model.provider,
                        model.model_id,
                        model.display_name,
-                       (defaults.model_id = model.model_id AND defaults.feature = binding.feature) AS default_model,
+                       (primary_default.model_id IS NOT NULL) AS default_model,
                        model.is_recommended,
                        model.cost_per_1k_input,
                        model.cost_per_1k_output,
@@ -49,7 +53,11 @@ public class ModelCatalogWriteRepository {
                        ) AS pinned_tenant_count
                 FROM model_catalog model
                 JOIN feature_binding binding ON binding.model_id = model.model_id
-                LEFT JOIN feature_default_provider defaults ON defaults.feature = binding.feature
+                LEFT JOIN feature_tier_model primary_default
+                       ON primary_default.feature = binding.feature
+                      AND primary_default.tier = 'PRIMARY'
+                      AND primary_default.position = 1
+                      AND primary_default.model_id = model.model_id
                 WHERE model.provider = ?
                 ORDER BY binding.feature, default_model DESC, model.is_recommended DESC, model.model_id
                 """,
