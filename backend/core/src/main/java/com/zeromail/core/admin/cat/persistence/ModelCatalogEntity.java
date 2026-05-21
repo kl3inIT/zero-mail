@@ -1,10 +1,13 @@
 package com.zeromail.core.admin.cat.persistence;
 
+import com.zeromail.core.admin.cat.domain.ModelVerificationStatus;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderAttributeConverter;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
@@ -42,6 +45,22 @@ public class ModelCatalogEntity {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "verification_status", nullable = false, length = 16)
+    private ModelVerificationStatus verificationStatus;
+
+    @Column(name = "last_test_at")
+    private Instant lastTestAt;
+
+    @Column(name = "last_test_latency_ms")
+    private Integer lastTestLatencyMs;
+
+    @Column(name = "last_test_cost_micros")
+    private Long lastTestCostMicros;
+
+    @Column(name = "last_test_error", length = 500)
+    private String lastTestError;
 
     protected ModelCatalogEntity() {
         // Hibernate
@@ -81,5 +100,39 @@ public class ModelCatalogEntity {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public ModelVerificationStatus getVerificationStatus() {
+        return verificationStatus;
+    }
+
+    public Instant getLastTestAt() {
+        return lastTestAt;
+    }
+
+    public Integer getLastTestLatencyMs() {
+        return lastTestLatencyMs;
+    }
+
+    public Long getLastTestCostMicros() {
+        return lastTestCostMicros;
+    }
+
+    public String getLastTestError() {
+        return lastTestError;
+    }
+
+    public void recordTestResult(
+            ModelVerificationStatus status,
+            Instant testedAt,
+            Integer latencyMs,
+            Long costMicros,
+            String error) {
+        this.verificationStatus = status;
+        this.lastTestAt = testedAt;
+        this.lastTestLatencyMs = latencyMs;
+        this.lastTestCostMicros = costMicros;
+        this.lastTestError = error;
+        this.updatedAt = testedAt;
     }
 }
