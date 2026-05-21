@@ -42,16 +42,26 @@ import { LOCALE_COOKIE_MAX_AGE, NEXT_LOCALE_COOKIE, routing } from './i18n/routi
  */
 function buildCsp(nonce: string): string {
   const isDev = process.env.NODE_ENV === 'development';
+  // Browser-side fetch destinations. Includes:
+  //  - the public API origin (NEXT_PUBLIC_API_BASE; defaults to localhost:8080 in dev/e2e),
+  //  - ws: in dev for Next.js HMR / Turbopack,
+  //  - http://localhost:* in dev/e2e so a backend on any local port is reachable
+  //    without rebuilding NEXT_PUBLIC_API_BASE into the bundle.
+  // Without these, queries fail in browser ("connect-src violated") even though
+  // Playwright-route mocks would otherwise intercept the request — CSP blocks
+  // BEFORE Playwright route handlers run.
   const apiOrigin = (() => {
     const raw = process.env.NEXT_PUBLIC_API_BASE?.trim();
-    if (!raw) return '';
+    if (!raw) return 'http://localhost:8080';
     try {
       return new URL(raw).origin;
     } catch {
       return '';
     }
   })();
-  const connectExtras = [apiOrigin, isDev ? 'ws:' : ''].filter(Boolean).join(' ');
+  const connectExtras = [apiOrigin, isDev ? 'ws:' : '', isDev ? 'http://localhost:*' : '']
+    .filter(Boolean)
+    .join(' ');
   const directives = [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
