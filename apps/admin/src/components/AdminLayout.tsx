@@ -16,6 +16,7 @@ import {
 import { logoutAdmin, type AdminMe } from '@/lib/admin-session';
 
 import { AdminModeBanner } from './AdminModeBanner';
+import { ThemeToggle } from './ThemeToggle';
 import { Button } from './ui/button';
 
 type AdminLayoutProps = {
@@ -107,19 +108,22 @@ export function AdminLayout({ admin }: AdminLayoutProps) {
               );
             })}
           </nav>
-          <Button
-            variant="ghost"
-            className="text-ink-2 mt-8 w-full justify-start"
-            disabled={logoutMutation.isPending}
-            onClick={() => logoutMutation.mutate()}
-          >
-            {logoutMutation.isPending ? (
-              <Loader2Icon className="size-4 animate-spin" />
-            ) : (
-              <LogOutIcon className="size-4" />
-            )}
-            Đăng xuất
-          </Button>
+          <div className="mt-8 flex items-center gap-1">
+            <Button
+              variant="ghost"
+              className="text-ink-2 flex-1 justify-start"
+              disabled={logoutMutation.isPending}
+              onClick={() => logoutMutation.mutate()}
+            >
+              {logoutMutation.isPending ? (
+                <Loader2Icon className="size-4 animate-spin" />
+              ) : (
+                <LogOutIcon className="size-4" />
+              )}
+              Đăng xuất
+            </Button>
+            <ThemeToggle className="text-ink-2 shrink-0" />
+          </div>
         </aside>
         <main className="min-w-0">
           <div className="mx-auto max-w-[1280px] px-8 py-8">
