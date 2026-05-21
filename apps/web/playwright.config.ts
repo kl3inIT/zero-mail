@@ -38,10 +38,16 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm dev',
+    // Force turbopack for the e2e dev server. `pnpm dev` is pinned to
+    // `next dev --webpack` for the local DX flow, but webpack's cold-start on
+    // CI runners blows past Playwright's webServer timeout (~2-3 min compile
+    // before first byte). Turbopack is the Next 16 default, starts in seconds,
+    // and MSW node interception still works because it hooks
+    // `instrumentation.ts` (bundler-independent).
+    command: 'pnpm dev:turbo',
     url: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 180_000,
     // Activate the MSW node interceptor in instrumentation.ts so RSC and
     // proxy.ts server-side fetches (e.g. /api/me from layouts) are mocked
     // BEFORE Playwright's browser-side route handlers run. Without this, the
