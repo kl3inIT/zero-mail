@@ -3,6 +3,7 @@ package com.zeromail.core.admin.mkey.persistence.lowlevel;
 import com.zeromail.core.admin.mkey.domain.KeyFormat;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.domain.MasterKeyStatus;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
@@ -46,6 +47,11 @@ public class LlmProviderMasterKeyWriteRepository {
             Instant createdAt,
             String baseUrl,
             String maskedKey) {
+        // PG JDBC driver cannot infer the SQL type from a bare java.time.Instant via setObject,
+        // so we marshal both timestamp columns to java.sql.Timestamp at the boundary. The column
+        // type is TIMESTAMPTZ; java.sql.Timestamp -> timestamptz round-trip preserves the instant.
+        Timestamp createdAtTimestamp = Timestamp.from(createdAt);
+        Timestamp lastRotatedAtTimestamp = encryptedKey == null ? null : createdAtTimestamp;
         jdbcTemplate.update(
                 """
                 INSERT INTO llm_provider_master_key
@@ -63,8 +69,8 @@ public class LlmProviderMasterKeyWriteRepository {
                 encryptedKey,
                 (short) kekVersion,
                 createdByUserId,
-                createdAt,
-                encryptedKey == null ? null : createdAt,
+                createdAtTimestamp,
+                lastRotatedAtTimestamp,
                 baseUrl,
                 maskedKey);
     }
@@ -104,7 +110,7 @@ public class LlmProviderMasterKeyWriteRepository {
                         encryptedKey,
                         kekVersion,
                         actorId,
-                        lastRotatedAt,
+                        Timestamp.from(lastRotatedAt),
                         baseUrl,
                         maskedKey,
                         provider.id(),
