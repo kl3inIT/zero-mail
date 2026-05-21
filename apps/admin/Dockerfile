@@ -47,8 +47,9 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/admin ./apps/admin
 
 # Bake the API base URL at build time. Override in compose when needed.
-ARG VITE_API_BASE=https://zeromail.vn
-ENV VITE_API_BASE=${VITE_API_BASE}
+# Same-origin by default → no CORS preflight; NPM proxies /api/ to zeromail-api.
+ARG VITE_ADMIN_API_BASE=https://admin.zeromail.vn
+ENV VITE_ADMIN_API_BASE=${VITE_ADMIN_API_BASE}
 
 RUN pnpm --filter @zeromail/admin run build
 

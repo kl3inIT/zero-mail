@@ -131,7 +131,7 @@ services:
       context: .
       dockerfile: apps/admin/Dockerfile
       args:
-        VITE_API_BASE: https://zeromail.vn
+        VITE_ADMIN_API_BASE: https://admin.zeromail.vn
     image: ${ZEROMAIL_ADMIN_IMAGE:-zeromail-admin:latest}
     container_name: zeromail-admin
     restart: unless-stopped
