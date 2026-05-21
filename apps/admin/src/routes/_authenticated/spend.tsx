@@ -302,10 +302,9 @@ function renderTenantLabel(row: TopTenantRowResponse) {
   );
 }
 
-function formatMoney(value: string): string {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return value;
-  return numeric.toFixed(2);
+function formatMoney(value: number): string {
+  if (!Number.isFinite(value)) return String(value);
+  return value.toFixed(2);
 }
 
 function KpiTiles({
