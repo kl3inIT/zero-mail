@@ -99,7 +99,6 @@ public class AdminMasterKeyController {
                     request.baseUrl(),
                     plaintextKey,
                     request.editSessionToken(),
-                    request.reason(),
                     httpServletRequest.getRemoteAddr(),
                     UUID.randomUUID());
         } finally {
@@ -122,7 +121,6 @@ public class AdminMasterKeyController {
                             request.baseUrl(),
                             plaintextKey,
                             request.editSessionToken(),
-                            request.reason(),
                             httpServletRequest.getRemoteAddr(),
                             UUID.randomUUID()));
         } finally {
@@ -139,7 +137,6 @@ public class AdminMasterKeyController {
         masterKeyAdminService.setFeatureDefault(
                 request.feature(),
                 request.provider(),
-                request.reason(),
                 httpServletRequest.getRemoteAddr(),
                 UUID.randomUUID());
     }

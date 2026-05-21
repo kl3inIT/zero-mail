@@ -124,7 +124,6 @@ public class MasterKeyAdminService {
             String baseUrl,
             byte[] plaintextKey,
             String editSessionToken,
-            String reason,
             String requestIp,
             UUID requestId) {
         AdminUser adminUser = AdminContext.currentOrThrow();
@@ -133,7 +132,7 @@ public class MasterKeyAdminService {
         masterKeyRateLimiter.checkEditAllowed(adminUser.id());
         MasterKeyTestResult testResult = probe(provider, keyFormat, baseUrl, plaintextKey);
         if (testResult != MasterKeyTestResult.OK) {
-            writeSetFailedAudit(provider, testResult, reason, requestIp, requestId);
+            writeSetFailedAudit(provider, testResult, requestIp, requestId);
             throw new MasterKeyTestFailedException(testResult);
         }
         String maskedKey = MasterKeyMasker.mask(plaintextKey, provider);
@@ -146,7 +145,6 @@ public class MasterKeyAdminService {
                 keyFormat,
                 storedMasterKey,
                 maskedKey,
-                reason,
                 requestIp,
                 requestId);
         applicationEventPublisher.publishEvent(
@@ -161,7 +159,6 @@ public class MasterKeyAdminService {
             String baseUrl,
             byte[] plaintextKey,
             String editSessionToken,
-            String reason,
             String requestIp,
             UUID requestId) {
         AdminUser adminUser = AdminContext.currentOrThrow();
@@ -176,7 +173,7 @@ public class MasterKeyAdminService {
                     null,
                     null,
                     Map.of("provider", provider.id(), "key_format", keyFormat.id()),
-                    reason,
+                    null,
                     requestIp,
                     requestId);
             return new MasterKeyRotationResult("TEST_FAILED", testResult, null);
@@ -191,7 +188,6 @@ public class MasterKeyAdminService {
                 keyFormat,
                 storedMasterKey,
                 maskedKey,
-                reason,
                 requestIp,
                 requestId);
         applicationEventPublisher.publishEvent(
@@ -202,11 +198,7 @@ public class MasterKeyAdminService {
 
     @Transactional
     public void setFeatureDefault(
-            MasterKeyFeature feature,
-            LlmProvider provider,
-            String reason,
-            String requestIp,
-            UUID requestId) {
+            MasterKeyFeature feature, LlmProvider provider, String requestIp, UUID requestId) {
         AdminContext.currentOrThrow();
         llmProviderMasterKeyWriteRepository.setFeatureDefault(feature, provider);
         adminAuditWriter.append(
@@ -215,7 +207,7 @@ public class MasterKeyAdminService {
                 null,
                 null,
                 Map.of("provider", provider.id(), "feature", feature.id()),
-                reason,
+                null,
                 requestIp,
                 requestId);
     }
@@ -272,7 +264,6 @@ public class MasterKeyAdminService {
             KeyFormat keyFormat,
             StoredMasterKey storedMasterKey,
             String maskedKey,
-            String reason,
             String requestIp,
             UUID requestId) {
         Map<String, Object> afterState = new java.util.LinkedHashMap<>();
@@ -292,7 +283,7 @@ public class MasterKeyAdminService {
                 null,
                 null,
                 afterState,
-                reason,
+                null,
                 requestIp,
                 requestId);
     }
@@ -300,7 +291,6 @@ public class MasterKeyAdminService {
     private void writeSetFailedAudit(
             LlmProvider provider,
             MasterKeyTestResult testResult,
-            String reason,
             String requestIp,
             UUID requestId) {
         // REQUIRES_NEW so the audit row survives the rollback caused by
@@ -312,7 +302,7 @@ public class MasterKeyAdminService {
                 null,
                 null,
                 Map.of("provider", provider.id(), "result_enum", testResult.name()),
-                reason,
+                null,
                 requestIp,
                 requestId);
     }
