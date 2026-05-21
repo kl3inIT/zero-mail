@@ -98,7 +98,7 @@ public class ProviderMasterKeyResolver {
 
     public long providerSecretVersionOrZero(LlmProvider provider) {
         return llmProviderMasterKeyRepository
-                .findById(provider)
+                .findPrimaryActive(provider)
                 .map(LlmProviderMasterKeyEntity::getProviderSecretVersion)
                 .orElse(0L);
     }
@@ -111,7 +111,7 @@ public class ProviderMasterKeyResolver {
     }
 
     public List<MasterKeyMaskedRow> maskedRows() {
-        return llmProviderMasterKeyRepository.findAllOrderedByProvider().stream()
+        return llmProviderMasterKeyRepository.findAllOrderedByProviderAndPriority().stream()
                 .map(this::toMaskedRow)
                 .toList();
     }
@@ -126,7 +126,7 @@ public class ProviderMasterKeyResolver {
     private CachedMasterKey load(LlmProvider provider) {
         LlmProviderMasterKeyEntity entity =
                 llmProviderMasterKeyRepository
-                        .findById(provider)
+                        .findPrimaryActive(provider)
                         .orElseThrow(() -> new MissingMasterKeyException(provider));
         if (!entity.hasEncryptedKey()
                 || entity.getKekVersion() == null

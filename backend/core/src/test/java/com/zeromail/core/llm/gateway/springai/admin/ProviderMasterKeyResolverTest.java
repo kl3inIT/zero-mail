@@ -31,11 +31,16 @@ class ProviderMasterKeyResolverTest {
                 cipher.encrypt(
                         "provider-key-value".getBytes(StandardCharsets.UTF_8),
                         "platform:master_key:OPENAI");
-        when(repository.findById(LlmProvider.OPENAI))
+        when(repository.findPrimaryActive(LlmProvider.OPENAI))
                 .thenReturn(
                         Optional.of(
                                 new LlmProviderMasterKeyEntity(
                                         LlmProvider.OPENAI,
+                                        java.util.UUID.fromString(
+                                                "00000000-0000-0000-0000-000000000001"),
+                                        1,
+                                        com.zeromail.core.admin.mkey.domain.MasterKeyStatus.ACTIVE,
+                                        "primary",
                                         KeyFormat.OPENAI_FORMAT,
                                         encryptedKey,
                                         (short) 7,
@@ -62,7 +67,7 @@ class ProviderMasterKeyResolverTest {
         assertThat(resolvedKey.providerCatalogVersion()).isEqualTo(1L);
         resolver.invalidate(LlmProvider.OPENAI);
         resolver.resolve(LlmProvider.OPENAI);
-        verify(repository, org.mockito.Mockito.times(2)).findById(LlmProvider.OPENAI);
+        verify(repository, org.mockito.Mockito.times(2)).findPrimaryActive(LlmProvider.OPENAI);
     }
 
     private static Clock fixedClock() {
