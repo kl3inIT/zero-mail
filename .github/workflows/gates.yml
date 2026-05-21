@@ -36,7 +36,22 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Run backend checks
-        run: ./gradlew --no-daemon check
+        run: ./gradlew --no-daemon check --stacktrace
+
+      - name: Upload backend test reports
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-test-reports
+          path: |
+            backend/core/build/reports/tests/test
+            backend/core/build/test-results/test
+            backend/api/build/reports/tests/test
+            backend/api/build/test-results/test
+            backend/worker/build/reports/tests/test
+            backend/worker/build/test-results/test
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Upload JaCoCo XML reports
         if: ${{ !cancelled() }}
