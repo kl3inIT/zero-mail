@@ -22,7 +22,14 @@ public abstract class PostgresContainerTest {
     protected static final PostgreSQLContainer<?> POSTGRES;
 
     static {
-        POSTGRES = new PostgreSQLContainer<>("postgres:18.4").withDatabaseName("zeromail_test");
+        POSTGRES =
+                new PostgreSQLContainer<>("postgres:18.4")
+                        .withDatabaseName("zeromail_test")
+                        // CI test suite caches many @SpringBootTest contexts in parallel — each
+                        // one holds a HikariCP pool of 5+ connections (see hikari override below).
+                        // The default Postgres max_connections=100 is enough for ~15 contexts,
+                        // which the suite now exceeds. Bump the cap to 300.
+                        .withCommand("postgres", "-c", "max_connections=300");
         POSTGRES.start();
     }
 
@@ -31,6 +38,11 @@ public abstract class PostgresContainerTest {
         r.add("spring.datasource.url", POSTGRES::getJdbcUrl);
         r.add("spring.datasource.username", POSTGRES::getUsername);
         r.add("spring.datasource.password", POSTGRES::getPassword);
+        // Cap HikariCP per-context so the test suite cache (many cached contexts) does not
+        // exhaust the shared container's connection pool. 5 is plenty for the read-mostly
+        // integration tests in this project.
+        r.add("spring.datasource.hikari.maximum-pool-size", () -> "5");
+        r.add("spring.datasource.hikari.minimum-idle", () -> "0");
         r.add("spring.liquibase.enabled", () -> "true");
         r.add(
                 "spring.liquibase.change-log",
