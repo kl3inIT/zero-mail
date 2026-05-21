@@ -1,0 +1,162 @@
+databaseChangeLog:
+  - changeSet:
+      id: 083-credit-grants
+      author: zeromail
+      changes:
+        - createTable:
+            tableName: credit_grant
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_credit_grant_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: category
+                  type: varchar(24)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount_credits
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: effective_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: timestamptz
+              - column:
+                  name: priority
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ref_type
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ref_id
+                  type: varchar(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: credit_grant
+            columnNames: tenant_id, category, ref_type, ref_id
+            constraintName: uq_credit_grant_tenant_category_ref
+        - sql:
+            comment: Check constraint for the allowed grant categories.
+            sql: ALTER TABLE credit_grant ADD CONSTRAINT ck_credit_grant_category CHECK (category IN ('BETA','MONTHLY_ALLOWANCE','PROMOTIONAL','PAID','ADMIN','SERVICE'))
+        - sql:
+            comment: Check constraint for the allowed grant statuses.
+            sql: ALTER TABLE credit_grant ADD CONSTRAINT ck_credit_grant_status CHECK (status IN ('ACTIVE','DEPLETED','EXPIRED','VOIDED'))
+        - sql:
+            comment: Grant amounts must be positive and expiry, when present, must be after the effective time.
+            sql: ALTER TABLE credit_grant ADD CONSTRAINT ck_credit_grant_bounds CHECK (amount_credits > 0 AND (expires_at IS NULL OR expires_at > effective_at))
+        - createIndex:
+            tableName: credit_grant
+            indexName: idx_credit_grant_tenant_status_priority
+            columns:
+              - column:
+                  name: tenant_id
+              - column:
+                  name: status
+              - column:
+                  name: priority
+              - column:
+                  name: expires_at
+        - addColumn:
+            tableName: credit_ledger_entry
+            columns:
+              - column:
+                  name: grant_id
+                  type: uuid
+        - addForeignKeyConstraint:
+            baseTableName: credit_ledger_entry
+            baseColumnNames: grant_id
+            constraintName: fk_credit_ledger_entry_grant
+            referencedTableName: credit_grant
+            referencedColumnNames: id
+            onDelete: RESTRICT
+        - createIndex:
+            tableName: credit_ledger_entry
+            indexName: idx_credit_ledger_entry_grant_created
+            columns:
+              - column:
+                  name: grant_id
+              - column:
+                  name: created_at
+        - sql:
+            comment: Expand ledger kinds for grant issuance, expiry, and support adjustments.
+            sql: >-
+              ALTER TABLE credit_ledger_entry
+              DROP CONSTRAINT ck_credit_ledger_entry_kind,
+              ADD CONSTRAINT ck_credit_ledger_entry_kind
+              CHECK (kind IN ('TOPUP','GRANT','RESERVE','SETTLE','RELEASE','EXPIRE','ADJUSTMENT'))
+        - sql:
+            comment: Ledger kind sign invariant.
+            sql: >-
+              ALTER TABLE credit_ledger_entry
+              ADD CONSTRAINT ck_credit_ledger_entry_kind_sign
+              CHECK (
+                (kind IN ('TOPUP','GRANT','RELEASE') AND amount_credits > 0)
+                OR (kind IN ('RESERVE','EXPIRE') AND amount_credits < 0)
+                OR (kind = 'SETTLE' AND amount_credits = 0)
+                OR (kind = 'ADJUSTMENT' AND amount_credits <> 0)
+              )
+      rollback:
+        - sql:
+            sql: ALTER TABLE credit_ledger_entry DROP CONSTRAINT ck_credit_ledger_entry_kind_sign
+        - sql:
+            sql: >-
+              ALTER TABLE credit_ledger_entry
+              DROP CONSTRAINT ck_credit_ledger_entry_kind,
+              ADD CONSTRAINT ck_credit_ledger_entry_kind
+              CHECK (kind IN ('TOPUP','RESERVE','SETTLE','RELEASE'))
+        - dropIndex:
+            tableName: credit_ledger_entry
+            indexName: idx_credit_ledger_entry_grant_created
+        - dropForeignKeyConstraint:
+            baseTableName: credit_ledger_entry
+            constraintName: fk_credit_ledger_entry_grant
+        - dropColumn:
+            tableName: credit_ledger_entry
+            columnName: grant_id
+        - dropTable:
+            tableName: credit_grant
