@@ -33,6 +33,7 @@ import type {
 import { useMasterKey, useProviderKeys } from '@/features/master-keys/use-master-keys';
 import { useReorderProviderKeys } from '@/features/master-keys/use-reorder-provider-keys';
 import { useRevokeProviderKey } from '@/features/master-keys/use-revoke-provider-key';
+import { useTestProviderKey } from '@/features/master-keys/use-test-provider-key';
 
 export const Route = createFileRoute('/_authenticated/master-keys/$provider')({
   component: MasterKeyProviderRoute,
@@ -112,6 +113,7 @@ function MasterKeyProviderRoute() {
   const catalogQuery = useCatalog(provider as CatalogProvider);
   const reorderMutation = useReorderProviderKeys(provider);
   const revokeMutation = useRevokeProviderKey(provider);
+  const testKeyMutation = useTestProviderKey();
   const [addKeyOpen, setAddKeyOpen] = useState(false);
 
   const keys = keysQuery.data?.keys ?? [];
@@ -131,6 +133,31 @@ function MasterKeyProviderRoute() {
   function revokeKey(entry: ProviderKey) {
     if (!window.confirm(`Xoá key ${entry.label ?? entry.maskedKey ?? entry.keyId}?`)) return;
     revokeMutation.mutate({ provider, keyId: entry.keyId });
+  }
+
+  function testKey(entry: ProviderKey) {
+    testKeyMutation.mutate(
+      { provider, keyId: entry.keyId },
+      {
+        onSuccess: (data) => {
+          if (data.result === 'OK') {
+            toast.success(
+              `${entry.label ?? entry.maskedKey ?? entry.keyId}: kết nối OK.`,
+            );
+          } else {
+            toast.error(
+              `${entry.label ?? entry.maskedKey ?? entry.keyId}: ${data.result}.`,
+            );
+          }
+        },
+      },
+    );
+  }
+
+  function testAllKeys() {
+    keys
+      .filter((entry) => entry.status === 'ACTIVE')
+      .forEach((entry) => testKey(entry));
   }
 
   const models = useMemo<CatalogModel[]>(() => {
@@ -176,7 +203,10 @@ function MasterKeyProviderRoute() {
         onAddKey={() => setAddKeyOpen(true)}
         onMoveKey={moveKey}
         onRevokeKey={revokeKey}
+        onTestKey={testKey}
+        onTestAll={testAllKeys}
         mutationPending={reorderMutation.isPending || revokeMutation.isPending}
+        testKeyPendingId={testKeyMutation.isPending ? testKeyMutation.variables?.keyId : undefined}
       />
 
       <ModelsCard models={models} pending={catalogQuery.isPending} />
@@ -228,14 +258,20 @@ function ConnectionsCard({
   onAddKey,
   onMoveKey,
   onRevokeKey,
+  onTestKey,
+  onTestAll,
   mutationPending,
+  testKeyPendingId,
 }: {
   keys: ProviderKey[];
   pending: boolean;
   onAddKey: () => void;
   onMoveKey: (index: number, direction: -1 | 1) => void;
   onRevokeKey: (entry: ProviderKey) => void;
+  onTestKey: (entry: ProviderKey) => void;
+  onTestAll: () => void;
   mutationPending: boolean;
+  testKeyPendingId?: string;
 }) {
   return (
     <Card>
@@ -249,7 +285,7 @@ function ConnectionsCard({
             variant="outline"
             size="sm"
             disabled={pending || keys.length === 0}
-            onClick={() => toast.info('Test all keys — chưa wire endpoint test-per-key.')}
+            onClick={onTestAll}
           >
             Test all
           </Button>
@@ -274,6 +310,8 @@ function ConnectionsCard({
               onMoveUp={() => onMoveKey(index, -1)}
               onMoveDown={() => onMoveKey(index, 1)}
               onRevoke={() => onRevokeKey(entry)}
+              onTest={() => onTestKey(entry)}
+              testing={testKeyPendingId === entry.keyId}
               disabled={mutationPending}
             />
           ))
@@ -290,6 +328,8 @@ function ConnectionRow({
   onMoveUp,
   onMoveDown,
   onRevoke,
+  onTest,
+  testing,
   disabled,
 }: {
   entry: ProviderKey;
@@ -298,6 +338,8 @@ function ConnectionRow({
   onMoveUp: () => void;
   onMoveDown: () => void;
   onRevoke: () => void;
+  onTest: () => void;
+  testing: boolean;
   disabled: boolean;
 }) {
   const isActive = entry.status === 'ACTIVE';
@@ -346,12 +388,8 @@ function ConnectionRow({
 
       <ConnectionStatusBadge status={entry.status} />
 
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => toast.info('Test key — chưa wire endpoint test-per-key.')}
-      >
-        Test
+      <Button variant="ghost" size="sm" onClick={onTest} disabled={testing}>
+        {testing ? 'Đang test…' : 'Test'}
       </Button>
       <Button
         variant="ghost"

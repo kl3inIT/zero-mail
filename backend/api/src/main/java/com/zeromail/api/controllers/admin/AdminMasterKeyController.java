@@ -194,6 +194,21 @@ public class AdminMasterKeyController {
                 UUID.randomUUID());
     }
 
+    /**
+     * Probes a stored key in-place — decrypts it server-side, runs the connectivity probe, returns
+     * the result. Does not require an edit session (read-only).
+     */
+    @PostMapping("/{provider}/keys/{keyId}/test")
+    public TestConnectionResponse testKey(
+            @PathVariable LlmProvider provider,
+            @PathVariable UUID keyId,
+            HttpServletRequest httpServletRequest) {
+        AdminContext.currentOrThrow();
+        return new TestConnectionResponse(
+                masterKeyAdminService.testKey(
+                        provider, keyId, httpServletRequest.getRemoteAddr(), UUID.randomUUID()));
+    }
+
     /** Marks a single key row REVOKED. Idempotent on the key-id level. */
     @DeleteMapping("/{provider}/keys/{keyId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

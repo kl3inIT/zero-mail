@@ -15,6 +15,7 @@ import com.zeromail.core.admin.mkey.exception.MasterKeyTestFailedException;
 import com.zeromail.core.admin.mkey.exception.MissingMasterKeyRowException;
 import com.zeromail.core.admin.mkey.exception.ProviderKeyReorderMismatchException;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyEntity;
+import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyId;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyRepository;
 import com.zeromail.core.admin.mkey.persistence.lowlevel.LlmProviderMasterKeyWriteRepository;
 import com.zeromail.core.admin.mkey.projection.MasterKeyMaskedRow;
@@ -221,6 +222,47 @@ public class MasterKeyAdminService {
                 "Reordered failover priorities",
                 requestIp,
                 requestId);
+    }
+
+    /**
+     * Probes a stored credential by decrypting it server-side, running it against the provider's
+     * /models endpoint, and zeroing the buffer. Used by the admin detail view's per-row "Test"
+     * button. Requires admin context but not an edit session (read-only test).
+     */
+    @Transactional
+    public MasterKeyTestResult testKey(
+            LlmProvider provider, UUID keyId, String requestIp, UUID requestId) {
+        AdminUser adminUser = AdminContext.currentOrThrow();
+        masterKeyRateLimiter.checkTestConnectionAllowed(adminUser.id());
+
+        LlmProviderMasterKeyEntity row =
+                llmProviderMasterKeyRepository
+                        .findById(new LlmProviderMasterKeyId(provider, keyId))
+                        .orElseThrow(() -> new MissingMasterKeyRowException(provider));
+
+        byte[] plaintextKey =
+                platformSecretCipher.decrypt(
+                        row.getEncryptedKey(), ProviderMasterKeyResolver.associatedData(provider));
+        MasterKeyTestResult result;
+        try {
+            result = probe(provider, row.getKeyFormat(), row.getBaseUrl(), plaintextKey);
+        } finally {
+            Arrays.fill(plaintextKey, (byte) 0);
+        }
+
+        adminAuditWriter.append(
+                AdminAuditAction.MASTER_KEY_TESTED,
+                "llm_provider_master_key",
+                null,
+                null,
+                Map.of(
+                        "provider", provider.id(),
+                        "key_id", keyId.toString(),
+                        "result_enum", result.name()),
+                "Per-key connection test",
+                requestIp,
+                requestId);
+        return result;
     }
 
     /** Marks a specific key row REVOKED. Idempotent. */

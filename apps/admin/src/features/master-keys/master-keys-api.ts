@@ -162,6 +162,24 @@ export async function reorderProviderKeys(input: {
   }
 }
 
+export async function testProviderKey(input: {
+  provider: string;
+  keyId: string;
+}): Promise<TestConnectionResponse> {
+  const { data, error } = await api.POST(
+    '/api/admin/master-keys/{provider}/keys/{keyId}/test',
+    {
+      params: {
+        path: { provider: input.provider as LlmProvider, keyId: input.keyId },
+      },
+    },
+  );
+  if (error || !data) {
+    throw new Error('Không thể test key.');
+  }
+  return data;
+}
+
 export async function revokeProviderKey(input: {
   provider: string;
   keyId: string;
