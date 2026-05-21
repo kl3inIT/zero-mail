@@ -1,5 +1,20 @@
-import { createRootRoute, Outlet } from '@tanstack/react-router';
+import { createRootRouteWithContext } from '@tanstack/react-router';
+import type { QueryClient } from '@tanstack/react-query';
 
-export const Route = createRootRoute({
-  component: () => <Outlet />,
+import {
+  RootErrorScreen,
+  RootNotFoundScreen,
+  RootPendingScreen,
+  RootShell,
+} from '@/components/RootShell';
+
+type RouterContext = {
+  queryClient: QueryClient;
+};
+
+export const Route = createRootRouteWithContext<RouterContext>()({
+  component: RootShell,
+  errorComponent: RootErrorScreen,
+  notFoundComponent: RootNotFoundScreen,
+  pendingComponent: RootPendingScreen,
 });

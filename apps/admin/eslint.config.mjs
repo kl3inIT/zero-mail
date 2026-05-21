@@ -28,12 +28,31 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': [
         'warn',
-        { allowConstantExport: true },
+        {
+          allowConstantExport: true,
+          // TanStack Router file-based routes co-locate `Route = createFileRoute(...)`
+          // with their component — required by the framework, not a refactor target.
+          allowExportNames: ['Route'],
+        },
       ],
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
+    },
+  },
+  // TanStack Router file-based routes are structurally incompatible with the
+  // react-refresh/only-export-components rule. Each route file MUST export
+  // `Route = createFileRoute(...)` AND co-locate its component (canonical pattern
+  // from TanStack Router official examples). Extracting components to separate
+  // files just to satisfy the rule fragments routing logic without real HMR gain
+  // — the route file would still be re-evaluated whole on edit. Disable the rule
+  // for `routes/**` only; everywhere else (components/, features/) the rule still
+  // enforces proper Fast Refresh boundaries.
+  {
+    files: ['src/routes/**/*.tsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
     },
   },
   prettier,

@@ -48,7 +48,7 @@ spring:
       namespace: zeromail:session
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
-    enabled: false
+    enabled: true
   jpa:
     open-in-view: false
     hibernate:

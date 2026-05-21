@@ -1,4 +1,4 @@
-import createClient from 'openapi-fetch';
+import createClient, { type Middleware } from 'openapi-fetch';
 
 import { getApiBase } from './base-url';
 import type { paths } from './schema';
@@ -13,6 +13,24 @@ export const api = createClient<paths>({
   baseUrl: getApiBase(),
   credentials: 'include',
 });
+
+// 401 → hard redirect to /login. Runs at fetch boundary so every caller
+// (queries, mutations, server actions invoking client.ts on the client)
+// gets the same behavior without per-callsite checks. Skip when already
+// on a public auth surface to avoid redirect loops.
+const PUBLIC_AUTH_PATHS = ['/login', '/error', '/privacy', '/terms', '/docs'];
+
+const unauthorizedRedirectMiddleware: Middleware = {
+  async onResponse({ response }) {
+    if (response.status !== 401 || typeof window === 'undefined') return undefined;
+    const path = window.location.pathname;
+    if (PUBLIC_AUTH_PATHS.some((publicPath) => path.startsWith(publicPath))) return undefined;
+    window.location.assign('/login');
+    return undefined;
+  },
+};
+
+api.use(unauthorizedRedirectMiddleware);
 
 export function adaptFetchForOpenApi(
   fetcher: typeof fetch | undefined,

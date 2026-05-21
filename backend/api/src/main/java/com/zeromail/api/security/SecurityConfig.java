@@ -17,6 +17,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.security.web.webauthn.api.AuthenticatorSelectionCriteria;
@@ -93,6 +94,17 @@ public class SecurityConfig {
                                 exceptionHandling.defaultAuthenticationEntryPointFor(
                                         new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
                                         ADMIN_REQUEST_MATCHER))
+                .logout(
+                        logout ->
+                                logout.logoutRequestMatcher(
+                                                PathPatternRequestMatcher.withDefaults()
+                                                        .matcher(
+                                                                HttpMethod.POST,
+                                                                "/api/admin/logout"))
+                                        .logoutSuccessHandler(
+                                                new HttpStatusReturningLogoutSuccessHandler())
+                                        .invalidateHttpSession(true)
+                                        .deleteCookies("JSESSIONID"))
                 .sessionManagement(Customizer.withDefaults())
                 .addFilterAfter(enrollmentSessionAuthFilter, AnonymousAuthenticationFilter.class)
                 .addFilterAfter(adminResponseBodyBanFilter, AuthorizationFilter.class)

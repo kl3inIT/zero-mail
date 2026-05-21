@@ -1,4 +1,5 @@
-import { Link, Outlet } from '@tanstack/react-router';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link, Outlet, useNavigate } from '@tanstack/react-router';
 import {
   ActivityIcon,
   BookOpenIcon,
@@ -7,11 +8,12 @@ import {
   DollarSignIcon,
   GaugeIcon,
   KeyRoundIcon,
+  Loader2Icon,
   LogOutIcon,
   UsersIcon,
 } from 'lucide-react';
 
-import type { AdminMe } from '@/lib/admin-session';
+import { logoutAdmin, type AdminMe } from '@/lib/admin-session';
 
 import { AdminModeBanner } from './AdminModeBanner';
 import { Button } from './ui/button';
@@ -46,6 +48,20 @@ const navigationItems: ReadonlyArray<NavigationItem> = [
 ];
 
 export function AdminLayout({ admin }: AdminLayoutProps) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const logoutMutation = useMutation({
+    mutationFn: logoutAdmin,
+    onSuccess: async () => {
+      queryClient.clear();
+      await navigate({ to: '/login' });
+    },
+    meta: {
+      successMessage: 'Đã đăng xuất.',
+      errorMessage: 'Không thể đăng xuất. Vui lòng thử lại.',
+    },
+  });
+
   return (
     <div className="bg-background text-foreground min-h-screen">
       <AdminModeBanner email={admin.email} env={resolveEnv()} />
@@ -91,8 +107,17 @@ export function AdminLayout({ admin }: AdminLayoutProps) {
               );
             })}
           </nav>
-          <Button variant="ghost" className="text-ink-2 mt-8 w-full justify-start">
-            <LogOutIcon className="size-4" />
+          <Button
+            variant="ghost"
+            className="text-ink-2 mt-8 w-full justify-start"
+            disabled={logoutMutation.isPending}
+            onClick={() => logoutMutation.mutate()}
+          >
+            {logoutMutation.isPending ? (
+              <Loader2Icon className="size-4 animate-spin" />
+            ) : (
+              <LogOutIcon className="size-4" />
+            )}
             Đăng xuất
           </Button>
         </aside>
