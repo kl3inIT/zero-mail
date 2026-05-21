@@ -265,6 +265,47 @@ public class MasterKeyAdminService {
         return result;
     }
 
+    /**
+     * Patches operator-facing metadata (label, baseUrl) on an existing key row. Does not touch the
+     * encrypted material, priority, or status.
+     */
+    @Transactional
+    public void updateKey(
+            LlmProvider provider,
+            UUID keyId,
+            String label,
+            String baseUrl,
+            String requestIp,
+            UUID requestId) {
+        AdminContext.currentOrThrow();
+        int rowsAffected =
+                llmProviderMasterKeyWriteRepository.updateLabelAndBaseUrl(
+                        provider, keyId, label, cleanBaseUrl(baseUrl));
+        if (rowsAffected == 0) {
+            throw new MissingMasterKeyRowException(provider);
+        }
+        providerMasterKeyResolver.invalidate(provider);
+        adminAuditWriter.append(
+                AdminAuditAction.MASTER_KEY_SET,
+                "llm_provider_master_key",
+                null,
+                null,
+                Map.of(
+                        "provider",
+                        provider.id(),
+                        "key_id",
+                        keyId.toString(),
+                        "label",
+                        label == null ? "" : label,
+                        "base_url",
+                        baseUrl == null ? "" : baseUrl,
+                        "action",
+                        "PATCH_METADATA"),
+                "Patched provider key metadata",
+                requestIp,
+                requestId);
+    }
+
     /** Marks a specific key row REVOKED. Idempotent. */
     @Transactional
     public void revokeKey(LlmProvider provider, UUID keyId, String requestIp, UUID requestId) {

@@ -11,6 +11,7 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { AddProviderKeyDialog } from '@/components/AddProviderKeyDialog';
+import { EditProviderKeyDialog } from '@/components/EditProviderKeyDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -115,6 +116,7 @@ function MasterKeyProviderRoute() {
   const revokeMutation = useRevokeProviderKey(provider);
   const testKeyMutation = useTestProviderKey();
   const [addKeyOpen, setAddKeyOpen] = useState(false);
+  const [editingKey, setEditingKey] = useState<ProviderKey | null>(null);
 
   const keys = keysQuery.data?.keys ?? [];
   const activeKeyCount = keys.filter((entry) => entry.status === 'ACTIVE').length;
@@ -205,6 +207,7 @@ function MasterKeyProviderRoute() {
         onRevokeKey={revokeKey}
         onTestKey={testKey}
         onTestAll={testAllKeys}
+        onEditKey={setEditingKey}
         mutationPending={reorderMutation.isPending || revokeMutation.isPending}
         testKeyPendingId={testKeyMutation.isPending ? testKeyMutation.variables?.keyId : undefined}
       />
@@ -215,6 +218,12 @@ function MasterKeyProviderRoute() {
         provider={provider}
         open={addKeyOpen}
         onOpenChange={setAddKeyOpen}
+      />
+
+      <EditProviderKeyDialog
+        provider={provider}
+        entry={editingKey}
+        onClose={() => setEditingKey(null)}
       />
     </div>
   );
@@ -260,6 +269,7 @@ function ConnectionsCard({
   onRevokeKey,
   onTestKey,
   onTestAll,
+  onEditKey,
   mutationPending,
   testKeyPendingId,
 }: {
@@ -270,6 +280,7 @@ function ConnectionsCard({
   onRevokeKey: (entry: ProviderKey) => void;
   onTestKey: (entry: ProviderKey) => void;
   onTestAll: () => void;
+  onEditKey: (entry: ProviderKey) => void;
   mutationPending: boolean;
   testKeyPendingId?: string;
 }) {
@@ -311,6 +322,7 @@ function ConnectionsCard({
               onMoveDown={() => onMoveKey(index, 1)}
               onRevoke={() => onRevokeKey(entry)}
               onTest={() => onTestKey(entry)}
+              onEdit={() => onEditKey(entry)}
               testing={testKeyPendingId === entry.keyId}
               disabled={mutationPending}
             />
@@ -329,6 +341,7 @@ function ConnectionRow({
   onMoveDown,
   onRevoke,
   onTest,
+  onEdit,
   testing,
   disabled,
 }: {
@@ -339,6 +352,7 @@ function ConnectionRow({
   onMoveDown: () => void;
   onRevoke: () => void;
   onTest: () => void;
+  onEdit: () => void;
   testing: boolean;
   disabled: boolean;
 }) {
@@ -391,12 +405,7 @@ function ConnectionRow({
       <Button variant="ghost" size="sm" onClick={onTest} disabled={testing}>
         {testing ? 'Đang test…' : 'Test'}
       </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label="Sửa key"
-        onClick={() => toast.info('Sửa key — chưa wire endpoint.')}
-      >
+      <Button variant="ghost" size="icon" aria-label="Sửa key" onClick={onEdit}>
         <PencilIcon className="size-4" />
       </Button>
       <Button

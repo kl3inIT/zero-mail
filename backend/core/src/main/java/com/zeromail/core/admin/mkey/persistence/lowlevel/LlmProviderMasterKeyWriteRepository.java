@@ -157,6 +157,17 @@ public class LlmProviderMasterKeyWriteRepository {
                 keyId);
     }
 
+    /** Updates label + baseUrl in a single statement. Either field may be null. */
+    public int updateLabelAndBaseUrl(
+            LlmProvider provider, UUID keyId, String label, String baseUrl) {
+        return jdbcTemplate.update(
+                "UPDATE llm_provider_master_key SET label = ?, base_url = ? WHERE provider = ? AND key_id = ?",
+                label,
+                baseUrl,
+                provider.id(),
+                keyId);
+    }
+
     /** Hard-deletes a key row. Use sparingly — usually prefer {@link #revokeKey}. */
     public int deleteKey(LlmProvider provider, UUID keyId) {
         return jdbcTemplate.update(

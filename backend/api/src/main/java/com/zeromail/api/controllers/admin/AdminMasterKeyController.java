@@ -13,6 +13,7 @@ import com.zeromail.api.dto.admin.mkey.RotationResponse;
 import com.zeromail.api.dto.admin.mkey.SetFeatureDefaultRequest;
 import com.zeromail.api.dto.admin.mkey.TestConnectionRequest;
 import com.zeromail.api.dto.admin.mkey.TestConnectionResponse;
+import com.zeromail.api.dto.admin.mkey.UpdateProviderKeyRequest;
 import com.zeromail.core.admin.auth.AdminContext;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.usecases.MasterKeyAdminService;
@@ -27,6 +28,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -207,6 +209,27 @@ public class AdminMasterKeyController {
         return new TestConnectionResponse(
                 masterKeyAdminService.testKey(
                         provider, keyId, httpServletRequest.getRemoteAddr(), UUID.randomUUID()));
+    }
+
+    /**
+     * Patches operator-facing metadata (label, baseUrl) on an existing key row. No effect on
+     * encrypted material, priority, or status.
+     */
+    @PatchMapping("/{provider}/keys/{keyId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateKey(
+            @PathVariable LlmProvider provider,
+            @PathVariable UUID keyId,
+            @Valid @RequestBody UpdateProviderKeyRequest request,
+            HttpServletRequest httpServletRequest) {
+        AdminContext.currentOrThrow();
+        masterKeyAdminService.updateKey(
+                provider,
+                keyId,
+                request.label(),
+                request.baseUrl(),
+                httpServletRequest.getRemoteAddr(),
+                UUID.randomUUID());
     }
 
     /** Marks a single key row REVOKED. Idempotent on the key-id level. */

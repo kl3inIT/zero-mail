@@ -13,6 +13,7 @@ export type ProviderKeyStatus = ProviderKey['status'];
 export type AddProviderKeyRequest = components['schemas']['AddProviderKeyRequest'];
 export type AddProviderKeyResponse = components['schemas']['AddProviderKeyResponse'];
 export type ReorderProviderKeysRequest = components['schemas']['ReorderProviderKeysRequest'];
+export type UpdateProviderKeyRequest = components['schemas']['UpdateProviderKeyRequest'];
 
 // MasterKeyMaskedResponse uses loose `string` for provider/keyFormat (no enum on
 // Response DTO). Derive the strict unions from the Request DTOs so callers get
@@ -178,6 +179,26 @@ export async function testProviderKey(input: {
     throw new Error('Không thể test key.');
   }
   return data;
+}
+
+export async function updateProviderKey(input: {
+  provider: string;
+  keyId: string;
+  label?: string | null;
+  baseUrl?: string | null;
+}): Promise<void> {
+  const { error } = await api.PATCH('/api/admin/master-keys/{provider}/keys/{keyId}', {
+    params: {
+      path: { provider: input.provider as LlmProvider, keyId: input.keyId },
+    },
+    body: {
+      label: input.label ?? undefined,
+      baseUrl: input.baseUrl ?? undefined,
+    },
+  });
+  if (error) {
+    throw new Error('Không thể cập nhật key.');
+  }
 }
 
 export async function revokeProviderKey(input: {
