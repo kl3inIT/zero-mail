@@ -185,7 +185,7 @@ function RuleTableRow({
     <TableRow
       className={cn(
         'cursor-pointer',
-        selected && 'bg-[#E7F0EF] hover:bg-[#E7F0EF]',
+        selected && 'bg-accent hover:bg-accent',
         !rule.enabled && 'text-foreground/80',
       )}
       onClick={() => onSelectRule(rule)}
@@ -258,7 +258,7 @@ function RuleMobileCard(props: RuleRowProps) {
 
   return (
     <article
-      className={cn('cursor-pointer p-4 transition-colors', selected && 'bg-[#E7F0EF]')}
+      className={cn('cursor-pointer p-4 transition-colors', selected && 'bg-accent')}
       onClick={() => onSelectRule(rule)}
     >
       <div className="flex items-start justify-between gap-3">

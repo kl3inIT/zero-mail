@@ -337,7 +337,7 @@ export function ByokForm() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="rounded-xl border border-[#0a3d3a]/20 bg-[#E7F0EF] p-3 text-xs text-[#0a3d3a]">
+          <div className="border-accent bg-accent text-accent-foreground rounded-xl border p-3 text-xs">
             {existingConfig ? (
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="font-bold">
@@ -374,7 +374,7 @@ export function ByokForm() {
           </div>
 
           <div className="space-y-3">
-            <Label className="px-1 text-[10px] font-bold tracking-wider text-[#0a3d3a]/70 uppercase">
+            <Label className="text-primary/70 px-1 text-[10px] font-bold tracking-wider uppercase">
               {t('llm.byok.provider.label')}
             </Label>
             <RadioGroup
@@ -394,7 +394,7 @@ export function ByokForm() {
                 <p className="text-muted-foreground px-1 text-[10px] font-bold tracking-wider uppercase">
                   {t('llm.byok.provider.officialGroup')}
                 </p>
-                <div className="grid gap-2 rounded-2xl border border-[#0a3d3a]/15 bg-[#0a3d3a]/[0.03] p-2.5 sm:grid-cols-2 lg:grid-cols-5">
+                <div className="bg-muted/50 grid gap-2 rounded-2xl border p-2.5 sm:grid-cols-2 lg:grid-cols-5">
                   {OFFICIAL_PROVIDER_OPTIONS.map((item) => (
                     <Label
                       key={item.id}
@@ -402,16 +402,16 @@ export function ByokForm() {
                       className={cn(
                         'flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-200',
                         preset === item.id
-                          ? 'border-[#0a3d3a] bg-white text-[#0a3d3a] shadow-sm'
-                          : 'text-muted-foreground border-transparent bg-transparent hover:bg-[#0a3d3a]/10',
+                          ? 'border-primary bg-card text-primary shadow-sm'
+                          : 'text-muted-foreground hover:bg-accent border-transparent bg-transparent',
                       )}
                     >
                       <RadioGroupItem
                         id={`byok-provider-${item.id}`}
                         value={item.id}
                         className={cn(
-                          'size-3.5 border-[#0a3d3a]/30',
-                          preset === item.id && 'border-[#0a3d3a] text-[#0a3d3a]',
+                          'border-border size-3.5',
+                          preset === item.id && 'border-primary text-primary',
                         )}
                       />
                       {t(item.labelKey)}
@@ -424,7 +424,7 @@ export function ByokForm() {
                 <p className="text-muted-foreground px-1 text-[10px] font-bold tracking-wider uppercase">
                   {t('llm.byok.provider.compatibleGroup')}
                 </p>
-                <div className="grid gap-2 rounded-2xl border border-[#0a3d3a]/15 bg-[#0a3d3a]/[0.03] p-2.5 sm:grid-cols-2">
+                <div className="bg-muted/50 grid gap-2 rounded-2xl border p-2.5 sm:grid-cols-2">
                   {COMPATIBLE_PROVIDER_OPTIONS.map((item) => (
                     <Label
                       key={item.id}
@@ -432,16 +432,16 @@ export function ByokForm() {
                       className={cn(
                         'flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-all duration-200',
                         preset === item.id
-                          ? 'border-[#0a3d3a] bg-white text-[#0a3d3a] shadow-sm'
-                          : 'text-muted-foreground border-transparent bg-transparent hover:bg-[#0a3d3a]/10',
+                          ? 'border-primary bg-card text-primary shadow-sm'
+                          : 'text-muted-foreground hover:bg-accent border-transparent bg-transparent',
                       )}
                     >
                       <RadioGroupItem
                         id={`byok-provider-${item.id}`}
                         value={item.id}
                         className={cn(
-                          'size-3.5 border-[#0a3d3a]/30',
-                          preset === item.id && 'border-[#0a3d3a] text-[#0a3d3a]',
+                          'border-border size-3.5',
+                          preset === item.id && 'border-primary text-primary',
                         )}
                       />
                       {t(item.labelKey)}

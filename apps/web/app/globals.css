@@ -78,51 +78,53 @@
 
 /* prettier-ignore */
 :root {
-    /* Paper-warm neutrals. Rebind shadcn names; hex values follow the reference token sheet. */
-    --background: #F9F8FD;
-    --foreground: #4F496B;
+    /* Purple palette lifted từ Jmix petclinic-2 Lumo. Surfaces stay neutral
+       (content trắng + sidebar tím-nhạt) để text giữ contrast cao và borders
+       hiện rõ — pattern Inbox Zero / Gmail / Linear cùng dùng. */
+    --background: #FFFFFF;
+    --foreground: #1C1D21;
     --card: #FFFFFF;
-    --card-foreground: #4F496B;
+    --card-foreground: #1C1D21;
     --popover: #FFFFFF;
-    --popover-foreground: #4F496B;
-    --primary: #0E5E5A;
+    --popover-foreground: #1C1D21;
+    --primary: #867AEB;
     --primary-foreground: #FFFFFF;
     --secondary: #F4F2F9;
-    --secondary-foreground: #4F496B;
+    --secondary-foreground: #1C1D21;
     --muted: #F4F2F9;
-    --muted-foreground: #625C78;
-    --accent: #0E5E5A;
-    --accent-foreground: #3D385A;
+    --muted-foreground: #6B7280;
+    --accent: #EAE8F7;
+    --accent-foreground: #5849C9;
     --destructive: #B0413E;
     --warning: #E3A023;
     --warning-foreground: #FFFFFF;
-    --border: transparent;
-    --input: #E6E3D8;
-    --ring: #0E5E5A;
+    --border: #E5E7EB;
+    --input: #E5E7EB;
+    --ring: rgba(134, 122, 235, 0.5);
 
     /* Charts stay neutral-but-branded until a later data-viz pass. */
-    --chart-1: #0E5E5A;
+    --chart-1: #867AEB;
     --chart-2: #2C5BA8;
     --chart-3: #5E4B8B;
     --chart-4: #2F7D5C;
     --chart-5: #E3A023;
 
-    /* Sidebar tokens — app interior chrome */
-    --sidebar: #F9F8FD;
-    --sidebar-foreground: #4F496B;
-    --sidebar-primary: #3D385A;
+    /* Sidebar tokens — app interior chrome (tím rất nhạt để recede) */
+    --sidebar: #F8F7FB;
+    --sidebar-foreground: #1C1D21;
+    --sidebar-primary: #867AEB;
     --sidebar-primary-foreground: #FFFFFF;
-    --sidebar-accent: #F4F2F9;
-    --sidebar-accent-foreground: #4F496B;
-    --sidebar-border: transparent;
-    --sidebar-ring: #0E5E5A;
+    --sidebar-accent: #EAE8F7;
+    --sidebar-accent-foreground: #5849C9;
+    --sidebar-border: #EBE9F2;
+    --sidebar-ring: rgba(134, 122, 235, 0.5);
 
     --radius: 7px;
 
     /* Phase 1.6 supplemental tokens. */
     --accent-soft: #EAE8F7;
-    --ink: #3D385A;
-    --ink-2: #4F496B;
+    --ink: #1C1D21;
+    --ink-2: #3D385A;
     --text: var(--foreground);
     --text-faint: #6F6883;
 
@@ -154,40 +156,40 @@
 /* prettier-ignore */
 .dark {
     --background: #191724;
-    --foreground: #D3CFE3;
+    --foreground: #E5E2EE;
     --card: #211E30;
-    --card-foreground: #D3CFE3;
+    --card-foreground: #E5E2EE;
     --popover: #211E30;
-    --popover-foreground: #D3CFE3;
-    --primary: #6FB3A8;
-    --primary-foreground: #FFFFFF;
+    --popover-foreground: #E5E2EE;
+    --primary: #A59CF0;
+    --primary-foreground: #191724;
     --secondary: #2A263D;
-    --secondary-foreground: #D3CFE3;
+    --secondary-foreground: #E5E2EE;
     --muted: #2A263D;
     --muted-foreground: #928DAA;
-    --accent: #6FB3A8;
-    --accent-foreground: #191724;
+    --accent: #2F2A4A;
+    --accent-foreground: #C7C0F5;
     --destructive: #DA8480;
     --warning: #F5CD7A;
     --warning-foreground: #131312;
-    --border: rgba(214, 213, 204, 0.12);
-    --input: rgba(214, 213, 204, 0.16);
-    --ring: #6FB3A8;
+    --border: rgba(214, 213, 230, 0.14);
+    --input: rgba(214, 213, 230, 0.18);
+    --ring: rgba(165, 156, 240, 0.6);
 
-    --chart-1: #6FB3A8;
+    --chart-1: #A59CF0;
     --chart-2: #8DA8E0;
     --chart-3: #B0A0DC;
     --chart-4: #6FB389;
     --chart-5: #F5CD7A;
 
-    --sidebar: #191724;
-    --sidebar-foreground: #D3CFE3;
-    --sidebar-primary: #A39CF4;
+    --sidebar: #1F1B2E;
+    --sidebar-foreground: #E5E2EE;
+    --sidebar-primary: #A59CF4;
     --sidebar-primary-foreground: #191724;
-    --sidebar-accent: #2A263D;
-    --sidebar-accent-foreground: #D3CFE3;
-    --sidebar-border: rgba(214, 213, 204, 0.12);
-    --sidebar-ring: #6fb3a8;
+    --sidebar-accent: #2F2A4A;
+    --sidebar-accent-foreground: #C7C0F5;
+    --sidebar-border: rgba(214, 213, 230, 0.14);
+    --sidebar-ring: rgba(165, 156, 240, 0.6);
 
     /* Supplemental tokens: dark variants. */
     --accent-soft: #1F3A37;
@@ -227,6 +229,11 @@
 
   body {
     @apply bg-background text-foreground;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1,
+      'cv11' 1,
+      'ss01' 1;
   }
 
   html {

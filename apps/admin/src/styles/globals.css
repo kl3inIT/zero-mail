@@ -37,6 +37,14 @@
   --color-blue-soft: var(--blue-soft);
   --color-violet: var(--violet);
   --color-violet-soft: var(--violet-soft);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
   --radius-sm: 5px;
   --radius-md: 7px;
   --radius-lg: 8px;
@@ -44,27 +52,29 @@
 }
 
 :root {
-  --background: #f9f8fd;
-  --foreground: #3d385a;
+  /* Purple palette, white content, visible borders. Khớp web để 2 apps cùng
+     design language. Primary đã purple sẵn — bump surface/border/text contrast. */
+  --background: #ffffff;
+  --foreground: #1c1d21;
   --card: #ffffff;
-  --card-foreground: #3d385a;
+  --card-foreground: #1c1d21;
   --popover: #ffffff;
-  --popover-foreground: #3d385a;
+  --popover-foreground: #1c1d21;
   --primary: #867aeb;
   --primary-hover: #7062df;
   --primary-foreground: #ffffff;
   --secondary: #f4f2f9;
-  --secondary-foreground: #3d385a;
+  --secondary-foreground: #1c1d21;
   --muted: #f4f2f9;
-  --muted-foreground: #625c78;
-  --accent: #867aeb;
-  --accent-hover: #7062df;
-  --accent-foreground: #ffffff;
+  --muted-foreground: #6b7280;
+  --accent: #eae8f7;
+  --accent-hover: #ddd9f1;
+  --accent-foreground: #5849c9;
   --destructive: #b0413e;
   --destructive-soft: #f5d7d2;
-  --border: #e6e3d8;
-  --input: #e6e3d8;
-  --ring: #867aeb;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: rgba(134, 122, 235, 0.5);
   --warning: #e3a023;
   --warning-soft: #fde8ba;
   --amber: #e3a023;
@@ -75,8 +85,19 @@
   --blue-soft: #d7e1f1;
   --violet: #5e4b8b;
   --violet-soft: #e0dbec;
-  --ink: #3d385a;
-  --ink-2: #4f496b;
+  --ink: #1c1d21;
+  --ink-2: #3d385a;
+
+  /* Sidebar tokens — admin chrome */
+  --sidebar: #f8f7fb;
+  --sidebar-foreground: #1c1d21;
+  --sidebar-primary: #867aeb;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eae8f7;
+  --sidebar-accent-foreground: #5849c9;
+  --sidebar-border: #ebe9f2;
+  --sidebar-ring: rgba(134, 122, 235, 0.5);
+
   --radius: 7px;
 }
 
@@ -94,6 +115,7 @@
   body {
     @apply bg-background text-foreground;
     min-width: 1024px;
+    font-feature-settings: 'rlig' 1, 'calt' 1, 'cv11' 1, 'ss01' 1;
   }
 }
 

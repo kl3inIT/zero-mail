@@ -104,7 +104,7 @@ function BalancePill() {
       <TooltipTrigger
         render={
           <div
-            className="bg-background hidden h-9 cursor-default items-center gap-1.5 rounded-full border border-[#0a3d3a]/20 px-3 min-[420px]:flex"
+            className="bg-background border-border hidden h-9 cursor-default items-center gap-1.5 rounded-full border px-3 min-[420px]:flex"
             aria-label={`${t('shell.balance.label')}: ${formattedBalance}`}
             data-testid="balance-pill"
           />
@@ -141,7 +141,7 @@ function ConnectionHealth() {
             <button
               type="button"
               className={cn(
-                'hover:bg-accent flex h-9 items-center gap-1.5 rounded-full border border-[#0a3d3a]/20 px-2 transition-colors sm:px-3',
+                'hover:bg-accent border-border flex h-9 items-center gap-1.5 rounded-full border px-2 transition-colors sm:px-3',
               )}
               aria-label={label}
               data-testid="connection-health-dot"
@@ -197,7 +197,7 @@ function PauseControl() {
           'flex h-9 items-center gap-1.5 rounded-full border px-2 transition-colors sm:px-3',
           paused
             ? 'border-warning/40 text-warning hover:bg-warning/10'
-            : 'text-muted-foreground hover:bg-muted hover:text-foreground border-[#0a3d3a]/20',
+            : 'text-muted-foreground hover:bg-muted hover:text-foreground border-border',
         )}
         aria-label={t('shell.pause.label')}
         disabled={pauseState.isLoading || togglePause.isPending}

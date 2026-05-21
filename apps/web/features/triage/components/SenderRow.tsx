@@ -24,7 +24,7 @@ export function SenderRow({ sender }: SenderRowProps) {
       <div className="min-w-0 space-y-1">
         <p className="text-foreground truncate text-sm font-medium">{senderEmail}</p>
         {optedIn ? (
-          <Badge variant="outline" className="border-[#0a3d3a]/20 bg-[#E7F0EF] text-[#0a3d3a]">
+          <Badge variant="outline" className="border-accent bg-accent text-accent-foreground">
             {t('triage.senders.optedIn')}
           </Badge>
         ) : null}

@@ -552,7 +552,7 @@ function ManualBuilder({
       </div>
 
       {builtRule && (
-        <div className="rounded-lg border bg-[#E7F0EF] p-4 text-[#0a3d3a]">
+        <div className="bg-accent text-accent-foreground rounded-lg border p-4">
           <div className="flex items-center gap-2 font-semibold">
             <CheckCircle2 className="size-4" aria-hidden="true" />
             {t('rules.manual.structuredPreview')}
