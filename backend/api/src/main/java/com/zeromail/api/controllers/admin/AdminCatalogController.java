@@ -8,11 +8,14 @@ import com.zeromail.api.dto.admin.cat.CatalogModelVerificationResponse;
 import com.zeromail.api.dto.admin.cat.CatalogSyncConfirmRequest;
 import com.zeromail.api.dto.admin.cat.CatalogSyncDiffResponse;
 import com.zeromail.api.dto.admin.cat.CatalogSyncFetchResponse;
+import com.zeromail.api.dto.admin.cat.FeatureDefaultMatrixResponse;
+import com.zeromail.api.dto.admin.cat.SetFeatureDefaultTierRequest;
 import com.zeromail.core.admin.auth.AdminContext;
 import com.zeromail.core.admin.cat.domain.Feature;
 import com.zeromail.core.admin.cat.domain.ModelVerificationStatus;
 import com.zeromail.core.admin.cat.usecases.CatalogAdminService;
 import com.zeromail.core.admin.cat.usecases.CatalogSyncOrchestrator;
+import com.zeromail.core.admin.cat.usecases.FeatureDefaultTierService;
 import com.zeromail.core.admin.cat.usecases.ModelVerificationService;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -39,14 +42,38 @@ public class AdminCatalogController {
     private final CatalogAdminService catalogAdminService;
     private final CatalogSyncOrchestrator catalogSyncOrchestrator;
     private final ModelVerificationService modelVerificationService;
+    private final FeatureDefaultTierService featureDefaultTierService;
 
     public AdminCatalogController(
             CatalogAdminService catalogAdminService,
             CatalogSyncOrchestrator catalogSyncOrchestrator,
-            ModelVerificationService modelVerificationService) {
+            ModelVerificationService modelVerificationService,
+            FeatureDefaultTierService featureDefaultTierService) {
         this.catalogAdminService = catalogAdminService;
         this.catalogSyncOrchestrator = catalogSyncOrchestrator;
         this.modelVerificationService = modelVerificationService;
+        this.featureDefaultTierService = featureDefaultTierService;
+    }
+
+    @GetMapping("/feature-defaults")
+    public FeatureDefaultMatrixResponse listFeatureDefaultMatrix() {
+        AdminContext.currentOrThrow();
+        return FeatureDefaultMatrixResponse.from(featureDefaultTierService.listMatrix());
+    }
+
+    @PutMapping("/feature-defaults")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void assignFeatureDefaultTier(
+            @Valid @RequestBody SetFeatureDefaultTierRequest request,
+            HttpServletRequest httpServletRequest) {
+        AdminContext.currentOrThrow();
+        featureDefaultTierService.assign(
+                request.feature(),
+                request.tier(),
+                request.provider(),
+                request.modelId(),
+                httpServletRequest.getRemoteAddr(),
+                UUID.randomUUID());
     }
 
     @GetMapping("/{provider}")
