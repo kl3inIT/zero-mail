@@ -1,0 +1,102 @@
+# One-click "deploy current main HEAD" — auto-bumps a semver tag from the latest
+# vX.Y.Z, pushes it (which triggers Build and Push), waits for images to be ready,
+# then dispatches Deploy Prod. The deploy still goes through the prod environment
+# wait_timer + reviewers gate.
+#
+# Usage:
+#   Actions → "Deploy Latest Main" → Run workflow → choose bump (default = patch)
+name: Deploy Latest Main
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Semver bump applied to the latest v*.*.* tag'
+        required: false
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write   # to create + push the new tag
+  actions: write    # to dispatch Deploy Prod
+
+concurrency:
+  group: deploy-latest-main
+  cancel-in-progress: false
+
+jobs:
+  tag-and-trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main (full history + tags)
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Compute next semver
+        id: next
+        run: |
+          latest=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+          if [[ -z "$latest" ]]; then
+            latest="v0.0.0"
+          fi
+          IFS='.' read -r major minor patch <<<"${latest#v}"
+          case "${{ inputs.bump }}" in
+            major) major=$((major+1)); minor=0; patch=0 ;;
+            minor) minor=$((minor+1)); patch=0 ;;
+            patch|*) patch=$((patch+1)) ;;
+          esac
+          tag="v${major}.${minor}.${patch}"
+          echo "Latest tag: $latest → New tag: $tag"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Create + push tag from main HEAD
+        env:
+          TAG: ${{ steps.next.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Auto-tag from main HEAD via Deploy Latest Main workflow"
+          git push origin "$TAG"
+
+      - name: Wait for Build and Push to publish images
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.next.outputs.tag }}
+        run: |
+          # Build is fairly long (Java + 3 docker images). Poll up to 30 min.
+          for attempt in $(seq 1 180); do
+            result=$(gh run list \
+              --repo "${{ github.repository }}" \
+              --workflow "Build and Push Images" \
+              --event push \
+              --branch "$TAG" \
+              --limit 1 \
+              --json status,conclusion \
+              --jq '.[0] | "\(.status)/\(.conclusion // "")"')
+            echo "attempt=$attempt status=$result"
+            case "$result" in
+              completed/success) echo "✓ images ready"; exit 0 ;;
+              completed/failure|completed/cancelled|completed/timed_out)
+                echo "::error::Build and Push for $TAG failed: $result"; exit 1 ;;
+            esac
+            sleep 10
+          done
+          echo "::error::Build and Push for $TAG did not finish within 30 minutes"; exit 1
+
+      - name: Dispatch Deploy Prod for new tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.next.outputs.tag }}
+        run: |
+          gh workflow run "Deploy Prod" \
+            --repo "${{ github.repository }}" \
+            --ref main \
+            -f version="$TAG"
+          echo "▶ Deploy Prod dispatched for $TAG (will go through 5-min wait + reviewers)"
