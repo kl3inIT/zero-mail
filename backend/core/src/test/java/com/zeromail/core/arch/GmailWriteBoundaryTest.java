@@ -31,7 +31,8 @@ class GmailWriteBoundaryTest {
     static final List<String> ALLOWED_GMAIL_WRITERS =
             List.of(
                     "com.zeromail.core.triage.usecases.TriageGmailWriter",
-                    "com.zeromail.core.cleanup.usecases.UnsubscribeMailtoSender");
+                    "com.zeromail.core.cleanup.usecases.UnsubscribeMailtoSender",
+                    "com.zeromail.core.chat.confirm.send.AssistantSendExecutor");
     private static final String GMAIL_MESSAGES_OWNER = "Gmail.Users.Messages";
     private static final String GMAIL_DRAFTS_OWNER = "Gmail.Users.Drafts";
 

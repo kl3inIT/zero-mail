@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 045-unsubscribe-attempt
+      id: 085-unsubscribe-attempt
       author: zeromail
       comment: >
         Per-sender attempt row within a campaign. campaign_id FK uses ON DELETE CASCADE so

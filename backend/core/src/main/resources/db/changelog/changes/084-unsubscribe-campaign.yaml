@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 044-unsubscribe-campaign
+      id: 084-unsubscribe-campaign
       author: zeromail
       comment: >
         Campaign aggregate root for bulk unsubscribe runs (Phase 8). One row per

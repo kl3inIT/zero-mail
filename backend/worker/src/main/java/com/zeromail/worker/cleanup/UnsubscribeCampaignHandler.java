@@ -35,7 +35,7 @@ import tools.jackson.databind.ObjectMapper;
  *
  * <ol>
  *   <li>{@link UnsubscribeDomainThrottle#acquire} per-tenant per-domain (D-20). Denied → re-queue
- *       the job ({@code status='QUEUED'} + {@code next_run_at = NOW() + 60s}) and throw {@link
+ *       the job ({@code status='PENDING'} + {@code next_run_at = NOW() + 60s}) and throw {@link
  *       ThrottleDeferredException} so the worker leaves the row QUEUED (M-2).
  *   <li>Perform the unsubscribe step: HTTP one-click via {@link UnsubscribeHttpClient} (RFC 8058)
  *       or Gmail send-as-self mailto via {@link UnsubscribeMailtoSender} (RFC 6068). Both use a
@@ -70,7 +70,7 @@ public class UnsubscribeCampaignHandler {
                     + "WHERE tenant_id = ? AND sender_email = ?";
     private static final String REQUEUE_JOB_SQL =
             "UPDATE processing_job "
-                    + "SET status = 'QUEUED', "
+                    + "SET status = 'PENDING', "
                     + "    next_run_at = NOW() + INTERVAL '60 seconds', "
                     + "    heartbeat_at = NULL, "
                     + "    updated_at = NOW() "

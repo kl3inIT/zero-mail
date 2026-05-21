@@ -1,6 +1,7 @@
 package com.zeromail.worker.cleanup;
 
 import com.zeromail.core.cleanup.exception.ThrottleDeferredException;
+import com.zeromail.core.queue.domain.JobFailureReason;
 import com.zeromail.core.tenant.TenantContext;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -22,17 +23,22 @@ import org.springframework.transaction.support.TransactionTemplate;
  *
  * <ol>
  *   <li>opens a short transaction, executes {@code SELECT ... FOR UPDATE SKIP LOCKED LIMIT 1}
- *       against {@code processing_job} and flips the chosen row to {@code status='RUNNING'} + sets
- *       {@code heartbeat_at=NOW()}. SKIP LOCKED makes the pickup safe across multiple workers
+ *       against {@code processing_job} and flips the chosen row to {@code status='PROCESSING'} +
+ *       sets {@code heartbeat_at=NOW()}. SKIP LOCKED makes the pickup safe across multiple workers
  *       without an external coordinator.
  *   <li>binds {@code TenantContext.TENANT} and dispatches to the {@code job_type}-specific handler
  *       outside the pickup transaction so the handler can manage its own DB writes (per-attempt
  *       updates, heartbeat refresh, throttle reschedule, etc.).
  *   <li>on success, marks the row {@code COMPLETED}; on {@link ThrottleDeferredException}, leaves
- *       the row {@code QUEUED} (the handler has already rescheduled it via {@code next_run_at +
- *       60s}); on any other {@link RuntimeException}, marks the row {@code FAILED} with a failure
- *       reason.
+ *       the row {@code PENDING} (the handler has already rescheduled it via {@code next_run_at +
+ *       60s}); on any other {@link RuntimeException}, marks the row {@code FAILED} with a {@link
+ *       JobFailureReason} enum id (never free-form exception text — see {@code
+ *       WorkerFailureReasonEnumOnlyTest}).
  * </ol>
+ *
+ * <p><b>Status vocabulary</b> matches main's existing CHECK constraint: {@code PENDING / PROCESSING
+ * / COMPLETED / FAILED / DEAD_LETTER}. Phase 8 never writes {@code QUEUED} or {@code RUNNING} —
+ * those map to {@code PENDING} and {@code PROCESSING} respectively.
  *
  * <p><b>Catch ordering (M-2):</b> {@code ThrottleDeferredException} catch <i>must</i> appear before
  * the generic {@code RuntimeException} catch — see {@code ProcessingJobWorkerThrottleDeferralTest}.
@@ -52,9 +58,9 @@ public class ProcessingJobWorker {
 
     private static final String CLAIM_SELECT_SQL =
             """
-            SELECT id, tenant_id, job_type, payload::text AS payload
+            SELECT id, tenant_id, job_type, payload_json::text AS payload
               FROM processing_job
-             WHERE status = 'QUEUED'
+             WHERE status = 'PENDING'
                AND next_run_at <= NOW()
              ORDER BY created_at
              LIMIT 1
@@ -63,7 +69,7 @@ public class ProcessingJobWorker {
     private static final String CLAIM_UPDATE_SQL =
             """
             UPDATE processing_job
-               SET status = 'RUNNING',
+               SET status = 'PROCESSING',
                    started_at = NOW(),
                    heartbeat_at = NOW(),
                    updated_at = NOW(),
@@ -74,7 +80,7 @@ public class ProcessingJobWorker {
             """
             UPDATE processing_job
                SET status = 'COMPLETED',
-                   finished_at = NOW(),
+                   completed_at = NOW(),
                    heartbeat_at = NULL,
                    updated_at = NOW()
              WHERE id = ?
@@ -83,9 +89,10 @@ public class ProcessingJobWorker {
             """
             UPDATE processing_job
                SET status = 'FAILED',
-                   finished_at = NOW(),
+                   completed_at = NOW(),
                    heartbeat_at = NULL,
-                   failure_reason = ?,
+                   last_failure_reason = ?,
+                   last_failed_at = NOW(),
                    updated_at = NOW()
              WHERE id = ?
             """;
@@ -175,8 +182,8 @@ public class ProcessingJobWorker {
                     .run(() -> invokeHandler(claimedJob));
             markCompleted(claimedJob.jobId());
         } catch (ThrottleDeferredException throttleDeferred) {
-            // M-2: handler has already re-queued the row (status='QUEUED', next_run_at=NOW()+60s).
-            // DO NOT mark FAILED — that would overwrite the QUEUED reschedule. Just log + exit.
+            // M-2: handler has already re-queued the row (status='PENDING', next_run_at=NOW()+60s).
+            // DO NOT mark FAILED — that would overwrite the PENDING reschedule. Just log + exit.
             log.info(
                     "event=processing_job_throttle_deferred tenantId={} jobId={} senderDomain={} reason={}",
                     throttleDeferred.tenantId(),
@@ -184,12 +191,14 @@ public class ProcessingJobWorker {
                     throttleDeferred.senderDomain(),
                     throttleDeferred.reason());
         } catch (RuntimeException handlerFailure) {
+            JobFailureReason mappedFailureReason = mapToFailureReason(handlerFailure);
             log.error(
-                    "event=processing_job_handler_failed tenantId={} jobId={}",
+                    "event=processing_job_handler_failed tenantId={} jobId={} failureReason={}",
                     claimedJob.tenantId(),
                     claimedJob.jobId(),
+                    mappedFailureReason.id(),
                     handlerFailure);
-            markFailed(claimedJob.jobId(), handlerFailure.getClass().getSimpleName());
+            markFailed(claimedJob.jobId(), mappedFailureReason);
         }
     }
 
@@ -204,12 +213,28 @@ public class ProcessingJobWorker {
         }
     }
 
+    /**
+     * Map a runtime exception to a {@link JobFailureReason} enum id. The mapping is intentionally
+     * conservative — anything we cannot classify lands in {@link JobFailureReason#UNKNOWN} so the
+     * DB CHECK constraint never rejects a worker write. Cleanup-specific exception classes are
+     * mapped to their dedicated codes; everything else falls through to {@code UNKNOWN}.
+     */
+    private static JobFailureReason mapToFailureReason(RuntimeException handlerFailure) {
+        String simpleName = handlerFailure.getClass().getSimpleName();
+        return switch (simpleName) {
+            case "SuppressedSenderException" -> JobFailureReason.VALIDATION_FAILED;
+            case "CampaignNotFoundException" -> JobFailureReason.VALIDATION_FAILED;
+            case "CampaignCapExceededException" -> JobFailureReason.VALIDATION_FAILED;
+            default -> JobFailureReason.UNKNOWN;
+        };
+    }
+
     private void markCompleted(UUID jobId) {
         jdbcTemplate.update(MARK_COMPLETED_SQL, jobId);
     }
 
-    private void markFailed(UUID jobId, String failureReason) {
-        jdbcTemplate.update(MARK_FAILED_SQL, failureReason, jobId);
+    private void markFailed(UUID jobId, JobFailureReason failureReason) {
+        jdbcTemplate.update(MARK_FAILED_SQL, failureReason.id(), jobId);
     }
 
     /** Pickup-loop projection of a single processing_job row claimed via SKIP LOCKED. */

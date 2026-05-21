@@ -219,8 +219,8 @@ class CampaignUndoServiceTest extends PostgresContainerTest {
         jdbcTemplate.update(
                 """
                 insert into processing_job(
-                    id, tenant_id, job_type, payload, status, attempts,
-                    next_run_at, created_at, finished_at, updated_at, version)
+                    id, tenant_id, job_type, payload_json, status, attempts,
+                    next_run_at, created_at, completed_at, updated_at, version)
                 values (?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 processingJobId,

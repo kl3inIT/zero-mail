@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 043-sender-suppression
+      id: 083-sender-suppression
       author: zeromail
       comment: >
         Per-tenant sender suppression list (D-09). Each row suppresses either a specific

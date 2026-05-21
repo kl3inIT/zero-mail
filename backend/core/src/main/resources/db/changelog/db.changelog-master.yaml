@@ -120,23 +120,6 @@ databaseChangeLog:
       file: changes/040-triage-audit-message-ref.yaml
       relativeToChangelogFile: true
   - include:
-      file: changes/041-mail-message-observed-list-unsubscribe.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/042-processing-job.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/043-sender-suppression.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/044-unsubscribe-campaign.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/045-unsubscribe-attempt.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/046-triage-audit-source.yaml\
-  - include:
       file: changes/041-chat.yaml
       relativeToChangelogFile: true
   - include:

@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: 041-mail-message-observed-list-unsubscribe
+      id: 082-mail-message-observed-list-unsubscribe
       author: zeromail
       comment: >
         Forward-only backfill (D-10). Rows ingested before Phase 8 keep NULL.

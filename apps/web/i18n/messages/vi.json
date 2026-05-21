@@ -417,6 +417,144 @@
       "title": "Người nhận có trong danh sách an toàn — vẫn gửi?"
     }
   },
+  "cleanup": {
+    "suppression": {
+      "add": "Thêm vào suppression",
+      "addOk": "Đã thêm vào suppression list.",
+      "col": {
+        "added": "Thêm lúc",
+        "source": "Nguồn",
+        "target": "Sender / Domain"
+      },
+      "empty": {
+        "body": "Thêm sender hoặc domain bạn không bao giờ muốn unsubscribe (ví dụ: sếp, đồng nghiệp, ngân hàng).",
+        "title": "Chưa có sender nào trong suppression list"
+      },
+      "err": {
+        "duplicate": "Entry này đã có trong suppression list.",
+        "generic": "Không thêm được. Hãy thử lại sau một chút.",
+        "invalid": "Email hoặc domain không hợp lệ."
+      },
+      "error": "Không tải được danh sách. Hãy thử lại sau một chút.",
+      "helper": "Mỗi entry chặn 1 sender hoặc cả 1 domain.",
+      "input": {
+        "label": "Email người gửi",
+        "placeholder": "Email hoặc domain (ví dụ: boss@example.com hoặc example.com)"
+      },
+      "lead": "Sender hoặc domain trong danh sách này sẽ không bao giờ hiển thị trong campaign unsubscribe.",
+      "remove": {
+        "aria": "Xóa khỏi suppression",
+        "cancel": "Quay lại",
+        "confirmBody": "Sau khi xóa, sender / domain này sẽ lại xuất hiện trong campaign ứng viên.",
+        "confirmCta": "Đồng ý xóa",
+        "confirmTitle": "Xóa entry này?"
+      },
+      "removeOk": "Đã xóa khỏi suppression list.",
+      "source": {
+        "auto": "Tự động",
+        "manual": "Thủ công",
+        "replied": "Đã reply"
+      },
+      "title": "Suppression list"
+    },
+    "unsubscribe": {
+      "list": {
+        "clear": "Bỏ chọn",
+        "col": {
+          "count": "Mail 30 ngày",
+          "domain": "Tên miền",
+          "method": "Phương thức",
+          "risk": "Trạng thái",
+          "sender": "Sender"
+        },
+        "counter": "{count} / 25 sender đã chọn",
+        "counterOver": "{count} / 25 sender — vượt giới hạn",
+        "empty": {
+          "body": "Zero Mail phát hiện newsletter qua header `List-Unsubscribe` từ ingest gần đây. Khi có dữ liệu mới, sender ứng viên sẽ xuất hiện ở đây.",
+          "link": "Tìm hiểu Zero Mail phát hiện newsletter thế nào →",
+          "title": "Chưa có newsletter nào trong 30 ngày qua"
+        },
+        "error": "Không tải được danh sách sender. Hãy thử lại sau một chút.",
+        "lead": "Chọn các newsletter bạn muốn dừng nhận. Zero Mail sẽ unsubscribe an toàn và archive lịch sử mail từ những sender đã chọn.",
+        "preview": "Xem trước campaign",
+        "retry": "Thử lại",
+        "suppressionLink": "Quản lý suppression list →",
+        "title": "Bulk unsubscribe"
+      },
+      "method": {
+        "mailto": "Mailto",
+        "none": "Không hỗ trợ",
+        "oneClick": "One-click (RFC 8058)"
+      },
+      "preview": {
+        "cancel": "Quay lại",
+        "capMessage": "Đã vượt giới hạn 2.000 mail lịch sử ({count}). Quay lại và bỏ chọn bớt.",
+        "capSender": "Đã vượt giới hạn 25 sender. Quay lại và bỏ chọn bớt.",
+        "confirm": "Execute campaign",
+        "description": "Kiểm tra lại danh sách trước khi execute. Campaign sẽ chạy nền và có thể undo trong 30 ngày.",
+        "errCapMessage": "Vượt giới hạn 2.000 mail lịch sử. Hãy bỏ chọn bớt.",
+        "errCapSender": "Vượt giới hạn 25 sender. Hãy bỏ chọn bớt.",
+        "errGeneric": "Không tạo được campaign. Hãy thử lại sau một chút.",
+        "submitOk": "Campaign đã được tạo. Đang theo dõi tiến độ…",
+        "submitting": "Đang tạo…",
+        "title": "Xem trước campaign",
+        "totalMail": "Tổng mail sẽ archive: {count}",
+        "totalSender": "Tổng sender: {count}",
+        "willArchive": "{count} mail sẽ archive",
+        "willNotArchive": "Không archive (thiếu header)"
+      },
+      "retry": {
+        "alreadyOk": "Sender này đã unsubscribe thành công, không cần thử lại.",
+        "generic": "Không thử lại được. Hãy thử lại sau một chút."
+      },
+      "risk": {
+        "noHeader": "Chưa hỗ trợ",
+        "noHeaderTooltip": "Sender này không có header `List-Unsubscribe` — chưa thể unsubscribe tự động.",
+        "safe": "Sẵn sàng",
+        "suppressed": "Đã chặn"
+      },
+      "status": {
+        "breadcrumb": "Cleanup / Unsubscribe / #{shortId}",
+        "col": {
+          "action": "Hành động",
+          "archived": "Mail đã archive",
+          "sender": "Sender",
+          "state": "Trạng thái"
+        },
+        "completed": "Hoàn tất",
+        "error": "Không tải được trạng thái campaign. Hãy thử lại sau một chút.",
+        "errorBanner": "Lỗi hệ thống — không hoàn tất. Liên hệ support nếu cần.",
+        "failed": "Lỗi — không hoàn tất",
+        "progress": "{percent}% ({okCount} OK / {failedCount} lỗi / {totalCount} sender)",
+        "queued": "Đang chờ worker pick",
+        "retry": "Thử lại",
+        "retryOk": "Đã enqueue thử lại cho {sender}.",
+        "running": "Đang chạy",
+        "state": {
+          "failed": "Thất bại",
+          "ok": "Thành công",
+          "pending": "Chờ",
+          "running": "Đang chạy"
+        },
+        "title": "Campaign #{shortId}",
+        "undo": {
+          "body": "Bạn có thể undo trong {daysLeft} ngày tới: restore mail về INBOX và remove label `Zero Mail/Unsubscribed`.",
+          "button": "Undo campaign",
+          "title": "Campaign đã hoàn tất"
+        }
+      },
+      "undo": {
+        "cancel": "Quay lại",
+        "confirmBody": "Sẽ restore {count} mail về INBOX và remove label `Zero Mail/Unsubscribed`. Hành động này không thể đảo ngược lần nữa.",
+        "confirmCta": "Đồng ý undo",
+        "confirmTitle": "Undo campaign?",
+        "generic": "Không undo được. Hãy thử lại sau một chút.",
+        "ok": "Đã restore {count} mail về INBOX.",
+        "windowExpired": "Đã quá 30 ngày kể từ khi campaign chạy — không undo được nữa.",
+        "windowExpiredToast": "Quá window 30 ngày — không undo được nữa."
+      }
+    }
+  },
   "common": {
     "app": {
       "description": "Dọn hộp thư về zero mà vẫn giữ quyền kiểm soát.",
@@ -515,6 +653,16 @@
       "body": "Vui lòng thử lại. Nếu lỗi tiếp tục xảy ra, hãy tải lại trang hoặc đăng nhập lại.",
       "reset": "Thử lại",
       "title": "Đã xảy ra lỗi"
+    },
+    "cleanup": {
+      "campaign": {
+        "not_found": "Không tìm thấy campaign. Hãy quay lại danh sách campaign.",
+        "retry_conflict": "Sender này đã unsubscribe thành công, không cần thử lại.",
+        "too_many_messages": "Vượt giới hạn 2.000 mail lịch sử. Hãy bỏ chọn bớt.",
+        "too_many_senders": "Vượt giới hạn 25 sender. Hãy bỏ chọn bớt.",
+        "undo_window_expired": "Quá window 30 ngày — không undo được nữa."
+      },
+      "sender_suppressed": "Sender này đang trong suppression list. Xóa khỏi suppression trước khi unsubscribe."
     },
     "conflict": "Dữ liệu đã thay đổi trước khi thao tác hoàn tất. Hãy tải lại trang rồi thử lại.",
     "dataIntegrity": "Không thể lưu thay đổi vì dữ liệu không hợp lệ.",
@@ -1010,6 +1158,9 @@
     "beta": "beta",
     "billing": "Thanh toán",
     "chat": "Trợ lý",
+    "cleanupGroup": "Cleanup",
+    "cleanupSuppression": "Suppression",
+    "cleanupUnsubscribe": "Unsubscribe",
     "continueSetup": "Tiếp tục cài đặt",
     "dashboard": "Tổng quan",
     "features": "Tính năng",
