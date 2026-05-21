@@ -48,7 +48,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 @Import(LlmGatewayCreditLifecycleTest.MeterRegistryTestConfiguration.class)
-@TestPropertySource(properties = "zero-mail.billing.beta.enabled=false")
+@TestPropertySource(
+        properties = {
+            "zero-mail.billing.beta.enabled=false",
+            "spring.datasource.hikari.maximum-pool-size=12"
+        })
 class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
 
     private static final int CONCURRENT_REQUESTS = 8;

@@ -17,7 +17,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
 
-@TestPropertySource(properties = "zero-mail.billing.beta.enabled=false")
+@TestPropertySource(
+        properties = {
+            "zero-mail.billing.beta.enabled=false",
+            "spring.datasource.hikari.maximum-pool-size=12"
+        })
 class CreditLedgerConcurrentReserveTest extends PostgresContainerTest {
 
     private static final int STARTING_CREDITS = 5;
