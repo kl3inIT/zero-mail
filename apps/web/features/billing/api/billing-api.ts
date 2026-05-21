@@ -1,5 +1,4 @@
-import { api, xsrfHeader } from '@/lib/api/client';
-import { getApiUrl } from '@/lib/api/base-url';
+import { adaptFetchForOpenApi, api } from '@/lib/api/client';
 import type { components } from '@/lib/api/schema';
 
 /**
@@ -30,10 +29,6 @@ export interface BillingBalanceOptions {
   headers?: HeadersInit;
 }
 
-function jsonHeaders(): HeadersInit {
-  return { 'Content-Type': 'application/json', ...xsrfHeader() };
-}
-
 function unwrap<T>(
   result: { data?: T; error?: unknown; response: Response },
   fallbackMessage: string,
@@ -49,19 +44,12 @@ export async function getBillingBalance({
   signal,
   headers,
 }: BillingBalanceOptions = {}): Promise<BillingBalanceResponse> {
-  if (fetcher || headers) {
-    const response = await (fetcher ?? fetch)(getApiUrl('/api/billing/balance'), {
-      headers,
-      cache: 'no-store',
-      signal,
-    });
-    if (!response.ok) {
-      throw new Error(`/api/billing/balance failed: ${response.status}`);
-    }
-    return response.json() as Promise<BillingBalanceResponse>;
-  }
-
-  const result = await api.GET('/api/billing/balance', { signal });
+  const result = await api.GET('/api/billing/balance', {
+    cache: fetcher || headers ? 'no-store' : undefined,
+    fetch: adaptFetchForOpenApi(fetcher ?? (headers ? fetch : undefined)),
+    headers,
+    signal,
+  });
   return unwrap(result, `/api/billing/balance failed: ${result.response.status}`);
 }
 
@@ -74,7 +62,6 @@ export async function createTopupIntent(packageCode: string): Promise<TopupInten
   const body: TopupIntentRequest = { packageCode };
   const result = await api.POST('/api/billing/topup/intent', {
     body,
-    headers: jsonHeaders(),
   });
   return unwrap(result, `/api/billing/topup/intent failed: ${result.response.status}`);
 }

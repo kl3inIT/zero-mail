@@ -1,9 +1,11 @@
 package com.zeromail.api.dto.rules;
 
 import com.zeromail.core.rules.usecases.RulePreviewResult;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.UUID;
 
+@Schema(requiredProperties = {"actionTypeId", "safeLabel", "contributingRuleIds", "evidenceIds"})
 public record ActionChipResponse(
         String actionTypeId,
         String safeLabel,

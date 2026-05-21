@@ -183,7 +183,7 @@ export function LanguageSwitcher({
           // even though the server preference was never persisted, producing a
           // client/server language split that masks the failure from the user.
           try {
-            const res = await api.PATCH('/me/language', {
+            const res = await api.PATCH('/api/me/language', {
               body: { language: selected },
               headers: { 'Content-Type': 'application/json', ...xsrfHeader() },
             });

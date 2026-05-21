@@ -235,7 +235,7 @@ class RulesControllerIntegrationTest extends ApiPostgresTestBase {
         assertThat(clarificationJson.path("status").asString()).isEqualTo("clarificationRequired");
         assertThat(clarificationJson.path("clarification").path("question").asString())
                 .isNotBlank();
-        assertThat(clarificationJson.path("compiled").isNull()).isTrue();
+        assertThat(clarificationJson.has("compiled")).isFalse();
 
         JsonNode clarificationCreateProblem =
                 postProblem(

@@ -94,5 +94,5 @@ async function openAuthenticatedPage(
   ]);
   await installChromeApiMock(page, createChromeMockState());
   await page.goto(path, { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 }

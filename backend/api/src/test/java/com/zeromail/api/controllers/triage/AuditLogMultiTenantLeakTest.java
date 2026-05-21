@@ -2,6 +2,7 @@ package com.zeromail.api.controllers.triage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.zeromail.core.triage.persistence.lowlevel.AuditLogReadRepository;
 import com.zeromail.core.triage.projection.AuditLogPageQuery;
 import com.zeromail.core.triage.usecases.AuditLogQueryService;
 import java.util.List;
@@ -15,7 +16,9 @@ class AuditLogMultiTenantLeakTest {
     @Test
     void audit_log_query_filters_every_page_by_current_tenant() {
         CapturingJdbcTemplate jdbcTemplate = new CapturingJdbcTemplate();
-        AuditLogQueryService auditLogQueryService = new AuditLogQueryService(jdbcTemplate);
+        AuditLogReadRepository auditLogReadRepository = new AuditLogReadRepository(jdbcTemplate);
+        AuditLogQueryService auditLogQueryService =
+                new AuditLogQueryService(auditLogReadRepository);
         UUID tenantId = UUID.randomUUID();
 
         auditLogQueryService.page(tenantId, new AuditLogPageQuery(50, null, null, null, null));

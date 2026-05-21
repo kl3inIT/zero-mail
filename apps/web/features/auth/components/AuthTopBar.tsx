@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { Route } from 'next';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
@@ -13,7 +14,7 @@ import { cn } from '@/lib/utils';
 import type { AppLocale } from '@/i18n/routing';
 
 type Props = {
-  backHref?: string;
+  backHref?: Route;
   children?: ReactNode;
   surface?: 'auth' | 'protected';
 };

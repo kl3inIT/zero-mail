@@ -15,7 +15,32 @@ const eslintConfig = defineConfig([
     'next-env.d.ts',
     'lib/api/schema.d.ts',
     'components/ui/**',
+    'components/ai/**',
   ]),
+  {
+    files: ['**/*.{ts,tsx,js,jsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '@zeromail/admin',
+                '@zeromail/admin/*',
+                '../../admin/**',
+                '../admin/**',
+                'apps/admin/**',
+                '**/admin-schema*',
+              ],
+              message:
+                'apps/web cannot import from apps/admin — admin schema types stay out of public bundle (ADMIN-06).',
+            },
+          ],
+        },
+      ],
+    },
+  },
   // eslint-config-prettier MUST be last to disable formatting-related rules
   // that would otherwise conflict with Prettier.
   prettier,

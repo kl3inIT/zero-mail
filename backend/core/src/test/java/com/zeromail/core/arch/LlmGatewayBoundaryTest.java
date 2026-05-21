@@ -15,7 +15,8 @@ class LlmGatewayBoundaryTest {
 
         noClasses()
                 .that()
-                .resideOutsideOfPackage("..core.llm.gateway.springai..")
+                .resideOutsideOfPackages(
+                        "..core.llm.gateway.springai..", "..core.chat.llm.springai..")
                 .should()
                 .dependOnClassesThat()
                 .resideInAnyPackage("org.springframework.ai..")
@@ -33,7 +34,8 @@ class LlmGatewayBoundaryTest {
 
         noClasses()
                 .that()
-                .resideOutsideOfPackage("..core.llm.gateway.springai..")
+                .resideOutsideOfPackages(
+                        "..core.llm.gateway.springai..", "..core.chat.llm.springai..")
                 .should()
                 .dependOnClassesThat()
                 .resideInAnyPackage("com.openai..", "com.anthropic..")

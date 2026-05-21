@@ -1,0 +1,166 @@
+# Build OCI images for api / worker / frontend and push to GHCR.
+#
+# Triggers:
+#   - push to main         -> tags: sha-<short>, dev
+#   - push tag v*.*.*      -> tags: sha-<short>, <version>, prod
+#   - workflow_dispatch    -> manual rebuild (handy for hotfix re-tag).
+#
+# Consumed by:
+#   - deploy-dev.yml  via workflow_run on completion (branch = main).
+#   - deploy-prod.yml manual dispatch using the published version tag.
+#
+# WARNING: this workflow uses `packages: write`. Token scope is intentionally narrow.
+name: Build and Push Images
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      tag-as-prod:
+        description: 'Also tag pushed images as `prod` (use after a manual hotfix rebuild from main).'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: build-and-push-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  meta:
+    name: Compute image tags
+    runs-on: ubuntu-latest
+    outputs:
+      sha-short: ${{ steps.compute.outputs.sha-short }}
+      version: ${{ steps.compute.outputs.version }}
+      is-tag: ${{ steps.compute.outputs.is-tag }}
+      is-main: ${{ steps.compute.outputs.is-main }}
+      tag-as-prod: ${{ steps.compute.outputs.tag-as-prod }}
+    steps:
+      - id: compute
+        run: |
+          SHA_SHORT="${GITHUB_SHA:0:7}"
+          echo "sha-short=${SHA_SHORT}" >> "$GITHUB_OUTPUT"
+
+          IS_TAG=false
+          IS_MAIN=false
+          VERSION=""
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            IS_TAG=true
+            VERSION="${GITHUB_REF#refs/tags/}"
+          elif [[ "${GITHUB_REF}" == refs/heads/main ]]; then
+            IS_MAIN=true
+          fi
+          echo "is-tag=${IS_TAG}" >> "$GITHUB_OUTPUT"
+          echo "is-main=${IS_MAIN}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+          TAG_AS_PROD=false
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.tag-as-prod }}" == "true" ]]; then
+            TAG_AS_PROD=true
+          fi
+          echo "tag-as-prod=${TAG_AS_PROD}" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.component }}
+    needs: meta
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: api
+            dockerfile: backend/api/Dockerfile
+            image: ghcr.io/kl3init/zero-mail-api
+            build-args: ''
+          - component: worker
+            dockerfile: backend/worker/Dockerfile
+            image: ghcr.io/kl3init/zero-mail-worker
+            build-args: ''
+          - component: frontend
+            dockerfile: apps/web/Dockerfile
+            image: ghcr.io/kl3init/zero-mail-frontend
+            build-args: |
+              NEXT_PUBLIC_API_BASE=https://zeromail.vn
+          - component: admin
+            dockerfile: apps/admin/Dockerfile
+            image: ghcr.io/kl3init/zero-mail-admin
+            build-args: |
+              VITE_ADMIN_API_BASE=https://admin.zeromail.vn
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags
+        id: tags
+        run: |
+          IMAGE="${{ matrix.image }}"
+          SHA="${{ needs.meta.outputs.sha-short }}"
+          VERSION="${{ needs.meta.outputs.version }}"
+          IS_TAG="${{ needs.meta.outputs.is-tag }}"
+          IS_MAIN="${{ needs.meta.outputs.is-main }}"
+          TAG_AS_PROD="${{ needs.meta.outputs.tag-as-prod }}"
+
+          tags=("${IMAGE}:sha-${SHA}")
+          if [[ "$IS_MAIN" == "true" ]]; then
+            tags+=("${IMAGE}:dev")
+          fi
+          if [[ "$IS_TAG" == "true" ]]; then
+            tags+=("${IMAGE}:${VERSION}" "${IMAGE}:prod")
+          fi
+          if [[ "$TAG_AS_PROD" == "true" ]]; then
+            tags+=("${IMAGE}:prod")
+          fi
+
+          { echo "tags<<EOF"; printf '%s\n' "${tags[@]}"; echo "EOF"; } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push ${{ matrix.component }}
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          # Pull base image fresh every build so OS-level CVE patches in the
+          # rolling tags (eclipse-temurin:25-jre-noble, nginx:1.30-alpine,
+          # node:24-alpine) land in our derived images without manual pin bumps.
+          pull: true
+          tags: ${{ steps.tags.outputs.tags }}
+          build-args: ${{ matrix.build-args }}
+          cache-from: type=gha,scope=${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.component }}
+          provenance: false
+          labels: |
+            org.opencontainers.image.source=https://github.com/kl3inIT/zero-mail
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ github.event.repository.updated_at }}
+
+  summary:
+    name: Build summary
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assert all images built
+        run: |
+          if [[ "${{ needs.build.result }}" != "success" ]]; then
+            echo "::error::One or more image builds failed (result=${{ needs.build.result }})"
+            exit 1
+          fi
+          echo "All three images (api, worker, frontend) built and pushed."

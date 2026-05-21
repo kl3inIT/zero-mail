@@ -15,7 +15,7 @@ public class DisconnectController {
         this.connectionService = connectionService;
     }
 
-    @PostMapping("/tenant/disconnect")
+    @PostMapping("/api/tenant/disconnect")
     public void disconnect() {
         UUID tenantId = TenantContext.currentTenantUuid();
         connectionService.disconnect(tenantId);

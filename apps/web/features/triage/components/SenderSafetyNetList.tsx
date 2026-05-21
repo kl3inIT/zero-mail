@@ -61,7 +61,7 @@ function SenderSafetyNetView({ senders }: { senders: ProtectedSenderResponse[] }
           />
         ) : (
           <div
-            className="divide-[#0a3d3a]/10 rounded-xl border border-[#0a3d3a]/15 bg-[#0a3d3a]/[0.02]"
+            className="divide-border bg-muted/40 divide-y rounded-xl border"
             data-testid="sender-safety-net-list"
           >
             {senders.map((sender, index) => (

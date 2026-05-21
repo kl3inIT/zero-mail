@@ -70,6 +70,17 @@ such as `RuleDtos`.
 
 Java 25 records cover all DTO and value-object use cases — immutable, `equals`/`hashCode`/`toString` for free, exhaustive deconstruction patterns. Entities stay `class` because Hibernate proxies require a no-args constructor and mutable fields. Lombok is banned project-wide because it lags JDK releases by 3–12 months and Java 25 features (flexible constructors, module imports) can trip it. If a builder is needed, write an explicit nested `Builder` class.
 
+Backend API DTO records are also the source for the frontend OpenAPI client. When adding or changing
+`backend/api/src/main/java/com/zeromail/api/dto/**` contracts, make the generated schema explicit:
+use Bean Validation for request invariants, `@Schema(requiredProperties = {...})` for response
+fields that are always present, and `@Schema(allowableValues = {...})` when a string field has a
+closed set that TypeScript should see as a literal union. Use `@Schema(nullable = true)` only for
+fields that are intentionally serialized as JSON `null`. For variant response payloads, prefer a
+required discriminator/status plus omitted null branches (`@JsonInclude(JsonInclude.Include.NON_NULL)`)
+instead of requiring every nullable branch; this keeps `openapi-typescript` output usable without
+frontend mirror DTOs. After backend DTO changes, run `./gradlew :backend:api:generateOpenApiDocs`
+and `pnpm --filter web generate:api`.
+
 **Example DTO:** `backend/api/src/main/java/com/zeromail/api/dto/account/MeResponse.java`
 
 ```java
@@ -118,6 +129,8 @@ public enum OnboardingStep implements OrderedEnum {
 
 Every log statement emits an opaque `event=` name plus structured fields — never raw email address, Google subject, OAuth refresh-token bytes, OAuth access-token bytes, message body, LLM prompt, or LLM completion. Tenant context is the only stable identifier and is logged as a UUID via `tenantId={}`. ArchUnit rules (Phase 1 FND-04) and a Logback scrub filter (FND-03) catch most violations at build/runtime, but the convention is the first line of defense.
 
+**DB persistence is separate from logging.** Rule-builder assistant chat (user-typed configuration messages + structured tool outputs) is allowed to persist in Postgres per the Privacy scope in `PROJECT.md` Constraints — chat content is UI input, not extracted email content. This convention bans *logging* any LLM exchange to application logs regardless of source; it does not ban DB storage of user-typed assistant chat.
+
 **Example:** `backend/api/src/main/java/com/zeromail/api/security/GoogleOAuthSuccessHandler.java`
 
 ```java
@@ -161,6 +174,7 @@ Treat `apps/web/components/ui/**` as copied shadcn primitive source. These files
 Feature code in `apps/web/features/<feature>/` uses explicit ownership:
 
 - `api/<feature>-api.ts` contains the feature's small HTTP functions. Split into multiple API files only when the feature grows into distinct resources or the file becomes hard to scan.
+- Backend request/response contracts that exist in `apps/web/lib/api/schema.d.ts` must be imported or derived from generated OpenAPI `components` / `paths` types. Do not hand-write mirror DTOs in feature API files, and do not add normalizers just to patch missing required/nullability information; fix the backend DTO/schema and regenerate instead. Use the typed `api.GET` / `api.POST` / `api.PUT` / `api.PATCH` / `api.DELETE` client for generated endpoints; use raw `fetch` only for transport shapes `openapi-fetch` cannot model well (for example SSE/streaming) or for endpoints not yet emitted, and leave a short TODO naming the missing generated schema. Normalization is allowed only when converting a backend DTO into a real UI view model (for example synthetic buckets, derived labels, local fallbacks, or display-only fields).
 - `query-keys.ts` contains TanStack Query key factories for cached server data. Keep this file outside `api/` because query keys describe cache identity, not transport.
 - `hooks/useX.ts` stays one hook per use case. Hooks own TanStack Query behavior such as `queryKey`, `queryFn`, mutation invalidation, optimistic updates, and error behavior.
 - Do not create a `query-keys.ts` file for mutation-only features unless the feature actually owns cached query data.
@@ -253,3 +267,23 @@ which is merged into the locale JSON bundles by `apps/web/scripts/merge-feature-
 - Putting feature-scoped strings into a global `apps/web/messages.ts` instead of
   `apps/web/features/<feature>/messages.ts`. The merge script walks per-feature files; centralized
   strings break the co-location convention and are easier to leave stale when a feature is deleted.
+
+---
+
+## 11. Chat LLM streaming and provider schema compatibility
+
+The chat assistant must use real backend streaming through the Spring AI adapter
+(`StreamingChatModel.stream(...)`) for OpenRouter/OpenAI-compatible models. Do not hide provider
+or SDK problems by replacing the chat path with a non-streaming `.call(...)` fallback. If streaming
+fails, debug the provider request shape, model options, SDK transport, and tool schema emitted by
+the adapter, then fix that boundary.
+
+Provider compatibility repairs are allowed only for technical schema correctness. For example,
+OpenRouter rejects an object tool input schema with no `properties` member, so the Spring AI tool
+schema translator may parse generated JSON Schema and add `properties: {}` for no-argument record
+tools. That is not semantic normalization. Do not use this pattern to infer user meaning, patch
+backend DTO nullability for the frontend, or rewrite natural-language tool arguments.
+
+Manual real-provider probes must stay opt-in and skipped in normal `./gradlew test` runs. Gate them
+with an environment variable and a manual tag, never log prompts/completions, API keys, message
+bodies, or Gmail content.

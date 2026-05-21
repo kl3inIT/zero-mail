@@ -1,5 +1,35 @@
 # Milestones
 
+## v1.1 Email assistant chat (Phase 7 only; Phase 8 deferred to v1.2) (Shipped: 2026-05-19)
+
+**Phases completed:** 1 phases, 6 plans, 31 tasks
+
+**Key accomplishments:**
+
+- Pre-production chat safety gates for Gmail send, privacy persistence, Reactor tenant context, Spring AI boundaries, and CI enforcement
+- Source-aware chat persistence schema, sanitizer, JSONB message parts, and repository tests for the assistant chat backend
+- Spring-AI-confined chat streaming infrastructure with tenant-safe read tools and a locked 24-tool catalog
+- Spring MVC chat SSE + history APIs with core.chat orchestration and API-side assistant action reconciliation
+- Confirmed-send backend execution with one Gmail send call site, durable pending actions, and atomic ARCH-01 gate flip
+- Next.js `/chat` workspace with AI SDK streaming, durable confirmation preview cards, Vietnamese chrome, and focused browser coverage
+
+### Known Gaps
+
+Phase 8 (Settings + Hardening + Eval + GA discipline) **deferred to v1.2** during spec-phase on 2026-05-19. 19 of 35 v1.1 requirements unchecked — all carried forward to v1.2 candidates:
+
+- **SET-AI-01..04 (4):** Per-feature AI provider/model picker, BYOK key entry, default-vs-BYOK toggle, test-connection
+- **SET-VOICE-01..06 (6):** Writing style, personal instructions, signature, knowledge base, tone preset, output language VI/EN
+- **SET-BEHV-01..05 (5):** Auto-draft master, confidence threshold, daily digest, sensitive-data protection, shadow-mode surface
+- **SET-SAFE-01..04 (4):** Safety-net view/add/remove, paste-import, per-entry mode, audit log VIP-blocked badge
+
+**v1.1 ships without GA tag discipline** — hostile-corpus eval (15 hostile emails + 10 hostile personal_instructions + VIP send refusal + VI/EN fidelity), Grafana dashboards (lease residuals, audit-vs-state mismatch, ordering violations, leak counters), CASA evidence refresh, README/CONTRIBUTING send-call-site doc, and LAUNCH-GO-NOGO checklist all move to v1.2.
+
+**v1.2 sequencing decision (2026-05-19):** Phase 1 = Admin console (SEED-011 / OPS-02) as foundation; Settings UI ships on top of admin-curated catalog. Visual refresh of user pages bundled with v1.2 to align with PR #40 brand palette shift (teal → purple).
+
+**Known deferred items at close:** 22 open artifacts (7 v1.1-period quick tasks + 3 todos + 12 seeds — SEED-011 activates as v1.2 Phase 1). See STATE.md `## Deferred Items` for full list.
+
+---
+
 ## v1.0 MVP (Shipped: 2026-05-15)
 
 **Phases completed:** 17 phases, 123 plans, 221 tasks

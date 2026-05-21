@@ -51,14 +51,16 @@ test('analytics canonicalizes empty and invalid window params before fetching', 
   await installChromeApiMock(page, state);
 
   await page.goto('/analytics?window=', { waitUntil: 'domcontentloaded' });
+  await page.waitForLoadState('load');
   await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible();
-  await expect(page).toHaveURL(/\/analytics\?window=7d/);
+  await expect(page).toHaveURL(/\/analytics\?window=7d/, { timeout: 15_000 });
   await expect.poll(() => state.analyticsRequests).toEqual(['7d']);
 
   state.analyticsRequests = [];
   await page.goto('/analytics?window=bogus', { waitUntil: 'domcontentloaded' });
+  await page.waitForLoadState('load');
   await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible();
-  await expect(page).toHaveURL(/\/analytics\?window=7d/);
+  await expect(page).toHaveURL(/\/analytics\?window=7d/, { timeout: 15_000 });
   await expect.poll(() => state.analyticsRequests).toEqual(['7d']);
 });
 

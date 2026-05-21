@@ -66,6 +66,16 @@ public class TestSessionSupport {
     OncePerRequestFilter testAuthFilter(UserRepository users) {
         return new OncePerRequestFilter() {
             @Override
+            protected boolean shouldNotFilterAsyncDispatch() {
+                return false;
+            }
+
+            @Override
+            protected boolean shouldNotFilterErrorDispatch() {
+                return false;
+            }
+
+            @Override
             protected void doFilterInternal(
                     @NonNull HttpServletRequest req,
                     @NonNull HttpServletResponse res,
@@ -126,11 +136,19 @@ public class TestSessionSupport {
      * ScopedValue are populated before any controller runs.
      */
     @Bean
-    @Order(2)
+    @Order(3)
     SecurityFilterChain testSecurityChain(HttpSecurity http, OncePerRequestFilter testAuthFilter) {
-        RequestMatcher nonPubSub =
-                request -> !request.getServletPath().startsWith("/internal/pubsub/");
-        return http.securityMatcher(nonPubSub)
+        // Must not overlap with PubSubSecurityConfig @Order(1) (/internal/pubsub/**) or
+        // BillingWebhookSecurityConfig @Order(2) (/api/billing/sepay/**) — Spring Security 7's
+        // WebSecurityFilterChainValidator throws UnreachableFilterChainException when an earlier
+        // chain's matcher is fully shadowed by a later one with the same order.
+        RequestMatcher userChainMatcher =
+                request -> {
+                    String path = request.getServletPath();
+                    return !path.startsWith("/internal/pubsub/")
+                            && !path.startsWith("/api/billing/sepay/");
+                };
+        return http.securityMatcher(userChainMatcher)
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(

@@ -14,44 +14,32 @@ function CheckIcon() {
 }
 
 export default async function Pricing() {
-  const t = await getTranslations('landing.pricing');
+  const t = await getTranslations('landingPricing');
 
-  const starterFeatures = [
-    t('plans.starter.features.f1'),
-    t('plans.starter.features.f2'),
-    t('plans.starter.features.f3'),
-    t('plans.starter.features.f4'),
-    t('plans.starter.features.f5'),
-    t('plans.starter.features.f6'),
+  const starterBullets = [
+    t('starter.b1'),
+    t('starter.b2'),
+    t('starter.b3'),
+    t('starter.b4'),
+    t('starter.b5'),
+    t('starter.b6'),
   ];
-
-  const plusFeatures = [
-    t('plans.plus.features.f1'),
-    t('plans.plus.features.f2'),
-    t('plans.plus.features.f3'),
-    t('plans.plus.features.f4'),
-    t('plans.plus.features.f5'),
-  ];
-
-  const proFeatures = [
-    t('plans.pro.features.f1'),
-    t('plans.pro.features.f2'),
-    t('plans.pro.features.f3'),
-  ];
+  const plusBullets = [t('plus.b1'), t('plus.b2'), t('plus.b3'), t('plus.b4'), t('plus.b5')];
+  const proBullets = [t('pro.b1'), t('pro.b2'), t('pro.b3')];
 
   return (
     <section className="zm-section bg-(--bg)" id="pricing">
       <div className="zm-container">
         <div className="mb-16 text-center">
           <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
-            {t('title')}
+            {t('header.title')}
           </h2>
           <p className="mx-auto mb-10 max-w-2xl text-xl leading-relaxed text-(--text-muted)">
-            {t('subtitle')}
+            {t('header.body')}
           </p>
 
           <p className="inline-flex items-center rounded-full border border-(--line-strong) bg-(--bg-elevated) px-5 py-2 text-sm font-semibold text-(--text-muted) shadow-sm">
-            {t('annualBadge')}
+            {t('header.badge')}
           </p>
         </div>
 
@@ -63,28 +51,26 @@ export default async function Pricing() {
                 💼
               </div>
             </div>
-            <h3 className="mb-3 text-2xl font-bold text-(--ink)">{t('plans.starter.name')}</h3>
+            <h3 className="mb-3 text-2xl font-bold text-(--ink)">{t('starter.title')}</h3>
             <p className="h-16 text-sm leading-relaxed text-(--text-muted)">
-              {t('plans.starter.description')}
+              {t('starter.description')}
             </p>
             <div className="mt-4 mb-8">
-              <span className="text-5xl font-extrabold tracking-tight text-(--ink)">
-                {t('plans.starter.price')}
-              </span>
-              <span className="text-sm text-(--text-muted)">{t('perUserPerMonth')}</span>
+              <span className="text-5xl font-extrabold tracking-tight text-(--ink)">$18</span>
+              <span className="text-sm text-(--text-muted)">{t('perPersonMonth')}</span>
             </div>
             <a
               href="#waitlist"
               className="mb-8 flex h-12 w-full items-center justify-center rounded-xl border border-(--line-strong) text-base font-semibold text-(--ink) hover:bg-(--bg-subtle)"
             >
-              {t('plans.starter.ctaText')}
+              {t('ctaTrial')}
             </a>
             <div className="flex-1">
               <ul className="space-y-4 text-[15px] text-(--text-muted)">
-                {starterFeatures.map((feature, index) => (
+                {starterBullets.map((text, index) => (
                   <li key={index} className="flex items-start gap-3">
                     <CheckIcon />
-                    {feature}
+                    {text}
                   </li>
                 ))}
               </ul>
@@ -100,35 +86,31 @@ export default async function Pricing() {
               </div>
               <div className="flex gap-2">
                 <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">
-                  {t('plans.plus.popularBadge')}
+                  {t('popular')}
                 </span>
               </div>
             </div>
-            <h3 className="mb-3 text-2xl font-bold text-(--ink)">{t('plans.plus.name')}</h3>
+            <h3 className="mb-3 text-2xl font-bold text-(--ink)">{t('plus.title')}</h3>
             <p className="h-16 text-sm leading-relaxed text-(--text-muted)">
-              {t('plans.plus.description')}
+              {t('plus.description')}
             </p>
             <div className="mt-4 mb-8">
-              <span className="text-5xl font-extrabold tracking-tight text-(--ink)">
-                {t('plans.plus.price')}
-              </span>
-              <span className="text-sm text-(--text-muted)">{t('perUserPerMonth')}</span>
+              <span className="text-5xl font-extrabold tracking-tight text-(--ink)">$28</span>
+              <span className="text-sm text-(--text-muted)">{t('perPersonMonth')}</span>
             </div>
             <a
               href="#waitlist"
               className="mb-8 flex h-12 w-full items-center justify-center rounded-xl bg-[#3367D6] text-base font-semibold text-white shadow-md transition-all hover:bg-[#2851A8] hover:shadow-lg"
             >
-              {t('plans.plus.ctaText')}
+              {t('ctaTrial')}
             </a>
             <div className="flex-1">
-              <p className="mb-4 text-sm font-semibold text-(--ink)">
-                {t('plans.plus.includesPrefix')}
-              </p>
+              <p className="mb-4 text-sm font-semibold text-(--ink)">{t('plus.includesIntro')}</p>
               <ul className="space-y-4 text-[15px] text-(--text-muted)">
-                {plusFeatures.map((feature, index) => (
+                {plusBullets.map((text, index) => (
                   <li key={index} className="flex items-start gap-3">
                     <CheckIcon />
-                    {feature}
+                    {text}
                   </li>
                 ))}
               </ul>
@@ -142,31 +124,27 @@ export default async function Pricing() {
                 ✨
               </div>
             </div>
-            <h3 className="mb-3 text-2xl font-bold text-(--ink)">{t('plans.pro.name')}</h3>
+            <h3 className="mb-3 text-2xl font-bold text-(--ink)">{t('pro.title')}</h3>
             <p className="h-16 text-sm leading-relaxed text-(--text-muted)">
-              {t('plans.pro.description')}
+              {t('pro.description')}
             </p>
             <div className="mt-4 mb-8">
-              <span className="text-5xl font-extrabold tracking-tight text-(--ink)">
-                {t('plans.pro.price')}
-              </span>
-              <span className="text-sm text-(--text-muted)">{t('perUserPerMonth')}</span>
+              <span className="text-5xl font-extrabold tracking-tight text-(--ink)">$42</span>
+              <span className="text-sm text-(--text-muted)">{t('perPersonMonth')}</span>
             </div>
             <a
               href="#waitlist"
               className="mb-8 flex h-12 w-full items-center justify-center rounded-xl border border-(--line-strong) text-base font-semibold text-(--ink) hover:bg-(--bg-subtle)"
             >
-              {t('plans.pro.ctaText')}
+              {t('ctaTrial')}
             </a>
             <div className="flex-1">
-              <p className="mb-4 text-sm font-semibold text-(--ink)">
-                {t('plans.pro.includesPrefix')}
-              </p>
+              <p className="mb-4 text-sm font-semibold text-(--ink)">{t('pro.includesIntro')}</p>
               <ul className="space-y-4 text-[15px] text-(--text-muted)">
-                {proFeatures.map((feature, index) => (
+                {proBullets.map((text, index) => (
                   <li key={index} className="flex items-start gap-3">
                     <CheckIcon />
-                    {feature}
+                    {text}
                   </li>
                 ))}
               </ul>

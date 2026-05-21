@@ -1,0 +1,96 @@
+# Test profile: minimal Spring context for fast, isolated integration tests.
+# Tests that need real infrastructure (Postgres, Redis) override via @DynamicPropertySource
+# from a Testcontainers base class (see ApiPostgresTestBase).
+#
+# Privacy invariant preserved: prompt/completion logging stays OFF regardless of profile.
+
+spring:
+  # Beans only instantiate when a test references them. Cuts startup memory ~60%
+  # vs eager init, which is what pushed CI into native-memory OOM during Phase 7.
+  main:
+    lazy-initialization: true
+
+  # Tests use Testcontainers, not docker-compose. Disable Boot's compose lifecycle
+  # so it doesn't try to start the repo-root compose file in test JVMs.
+  docker:
+    compose:
+      enabled: false
+
+  # Liquibase enabled by default in test; tests that don't touch DB will skip via lazy-init.
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        # Cap query-plan caches so metaspace doesn't grow unbounded across test classes.
+        query.plan_cache_max_size: 64
+        query.plan_parameter_metadata_max_size: 64
+
+  # In-memory session by default; ApiPostgresTestBase already routes to MapSessionRepository.
+  session:
+    store-type: none
+
+  # Spring AI: stub credentials so model auto-configuration's required-property checks pass.
+  # Real LLM calls are mocked at the ChatModel / StreamingChatModel boundary in tests.
+  ai:
+    openai:
+      api-key: test-openai-key
+    anthropic:
+      api-key: test-anthropic-key
+    chat:
+      client:
+        observations:
+          log-prompt: false
+          log-completion: false
+      observations:
+        log-prompt: false
+        log-completion: false
+    openai.chat.observations.include-completion: false
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-google-client
+            client-secret: test-google-secret
+
+# Stub secrets so Spring placeholder resolution doesn't fail at test context bootstrap.
+# Test-only AES-256 key = 32 zero bytes, base64-encoded.
+zero-mail:
+  scheduling:
+    enabled: false
+  crypto:
+    refresh-token-key-base64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+  api:
+    gmail:
+      pubsub:
+        push-audience-url: https://test.example/internal/pubsub/gmail
+        sa-principal-email: pubsub-sa@test-project.iam.gserviceaccount.com
+        oidc-certificates-url: https://www.googleapis.com/oauth2/v3/certs
+  billing:
+    sepay:
+      webhook-api-key: test-sepay-key-fixture
+    payment-account:
+      bank-code: VCB
+      bank-name: Vietcombank
+      account-number: "0123456789"
+      account-name: Zero Mail Test
+      qr-payload: ""
+    vnd-per-credit: 1000
+    max-pending-intents-per-tenant: 5
+    intent-expiry: PT24H
+  llm:
+    platform:
+      api-key: test-platform-llm-key
+
+logging:
+  level:
+    com.zeromail: INFO
+    org.testcontainers: WARN
+    org.springframework.boot.docker.compose: OFF

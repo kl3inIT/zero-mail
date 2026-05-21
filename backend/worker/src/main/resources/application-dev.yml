@@ -1,0 +1,65 @@
+# Dev profile: maximally verbose diagnostics for local worker debugging and the VPS dev slot.
+# Privacy invariant preserved: prompt/completion/body/token logging stays OFF — even in dev.
+
+logging:
+  level:
+    root: INFO
+
+    # Application packages — every layer verbose.
+    com.zeromail: DEBUG
+    com.zeromail.worker: DEBUG
+    com.zeromail.core: DEBUG
+    com.zeromail.core.chat: TRACE
+    com.zeromail.core.llm: TRACE
+    com.zeromail.core.rules: DEBUG
+    com.zeromail.core.triage: DEBUG
+    com.zeromail.core.billing: DEBUG
+    com.zeromail.core.gmail: DEBUG
+    com.zeromail.core.pubsub: DEBUG
+
+    # Spring AI — adapter + tool-call orchestration. Observations stay structural,
+    # not prompt content (log-prompt/log-completion remain false below).
+    org.springframework.ai: DEBUG
+
+    # Hibernate — emit and bind SQL on every query.
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+
+    # Shedlock — show scheduled job locking decisions (job concurrency debug).
+    net.javacrumbs.shedlock: DEBUG
+
+    # Liquibase — show every changeset application on boot (worker owns migrations).
+    liquibase: INFO
+
+  pattern:
+    console: "%clr(%d{HH:mm:ss.SSS}){faint} %clr(%5p) %clr([%X{tenantId:-tenant?},%X{traceId:-},%X{spanId:-}]){faint} %clr([%t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx"
+
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+        generate_statistics: true
+
+  ai:
+    chat:
+      client:
+        observations:
+          log-prompt: false
+          log-completion: false
+      observations:
+        log-prompt: false
+        log-completion: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+    loggers:
+      access: unrestricted

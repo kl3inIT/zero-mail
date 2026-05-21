@@ -1,0 +1,28 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://zeromail.vn",
+      "service-doc": [
+        {
+          "href": "https://github.com/kl3inIT/zero-mail",
+          "type": "text/html",
+          "title": "Zero Mail — Public README + Documentation"
+        }
+      ],
+      "service-meta": [
+        {
+          "href": "https://zeromail.vn/.well-known/api-catalog",
+          "type": "application/linkset+json",
+          "title": "This catalog"
+        }
+      ],
+      "describedby": [
+        {
+          "href": "https://zeromail.vn/privacy",
+          "type": "text/html",
+          "title": "Privacy Policy"
+        }
+      ]
+    }
+  ]
+}

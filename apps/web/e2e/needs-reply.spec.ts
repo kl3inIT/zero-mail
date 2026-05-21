@@ -14,7 +14,7 @@ test('needs-reply golden path saves a Gmail draft for review', async ({ page }) 
   await seedAuthenticatedSession(page);
   await installChromeApiMock(page, createChromeMockState());
   await page.goto('/needs-reply', { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 
   await expect(page.getByRole('heading', { name: 'Needs reply' })).toBeVisible();
   await expect(page.getByRole('tab', { name: /To reply/ })).toBeVisible();
@@ -23,6 +23,6 @@ test('needs-reply golden path saves a Gmail draft for review', async ({ page }) 
   await page.getByRole('button', { name: 'Draft reply' }).first().click();
 
   await expect(page.getByText('Draft saved in Gmail — review and send it there.')).toBeVisible();
-  await expect(page.getByTestId('needs-reply-row').getByText('Draft ready')).toBeVisible();
+  await expect(page.getByTestId('needs-reply-row').getByText('AI drafted')).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });

@@ -1,0 +1,103 @@
+# Root .dockerignore applied to every build context.
+#
+# Three Dockerfiles share this root context:
+#   - backend/api/Dockerfile     (Gradle bootJar)
+#   - backend/worker/Dockerfile  (Gradle bootJar)
+#   - apps/web/Dockerfile        (Next.js standalone)
+#
+# Goals:
+#   1. Never ship secrets, git history, IDE state, or local dev artifacts into images.
+#   2. Keep the build context small so docker layer cache stays warm.
+#   3. Preserve the files each Dockerfile actually COPYs (gradle, src, package.json, etc.).
+
+# ─── Git / VCS ───────────────────────────────────────────────────────────────
+.git
+.gitignore
+.gitattributes
+.github
+.gitleaks.toml
+
+# ─── Environment / secrets ──────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+!.env.dev.example
+!.env.prod.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.kdbx
+.ssh
+.netrc
+
+# ─── IDE / editor metadata ──────────────────────────────────────────────────
+.idea
+.vscode
+.fleet
+*.iml
+*.ipr
+*.iws
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ─── Build outputs ──────────────────────────────────────────────────────────
+build
+out
+target
+**/build
+**/out
+**/target
+**/bin
+.gradle
+**/.gradle
+buildSrc/build
+buildSrc/.gradle
+
+# ─── Node / Next.js ─────────────────────────────────────────────────────────
+node_modules
+**/node_modules
+**/.next
+**/.turbo
+**/.cache
+**/coverage
+**/playwright-report
+**/test-results
+**/.nyc_output
+pnpm-debug.log*
+npm-debug.log*
+yarn-error.log
+
+# ─── Test fixtures / loadtest / CI scaffolding ──────────────────────────────
+loadtest/run
+**/__snapshots__/**.snap.new
+e2e/playwright-report
+e2e/.cache
+.playwright-mcp
+.codex-runs
+.claude
+.cursor
+.agents
+
+# ─── Docs and planning (not needed at runtime) ──────────────────────────────
+docs
+.planning
+specs
+seed.spec.ts
+*.md
+!apps/web/i18n/messages/**/*.md
+
+# ─── Docker artifacts ───────────────────────────────────────────────────────
+.dockerignore
+Dockerfile.local
+Dockerfile.dev
+
+# ─── Misc local tooling ─────────────────────────────────────────────────────
+.husky
+lint-staged.config.mjs
+.editorconfig
+.eslintcache

@@ -1,9 +1,11 @@
 package com.zeromail.api.dto.rules;
 
 import com.zeromail.core.rules.usecases.RuleCustomPreviewResult;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.UUID;
 
+@Schema(requiredProperties = "entries")
 public record RuleCustomPreviewResponse(List<Entry> entries) {
 
     public static RuleCustomPreviewResponse from(RuleCustomPreviewResult previewResult) {
@@ -15,6 +17,17 @@ public record RuleCustomPreviewResponse(List<Entry> entries) {
         entries = List.copyOf(entries);
     }
 
+    @Schema(
+            requiredProperties = {
+                "ruleId",
+                "displayName",
+                "enabled",
+                "matched",
+                "deferred",
+                "proposedActionChips",
+                "matchedEvidenceChips",
+                "deferredEvidenceChips"
+            })
     public record Entry(
             UUID ruleId,
             String displayName,

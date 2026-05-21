@@ -28,6 +28,9 @@ public enum ErrorClass {
     /** Well-formed request that cannot be processed semantically — HTTP 422. */
     UNPROCESSABLE,
 
+    /** Rate-limit exceeded — HTTP 429. */
+    TOO_MANY_REQUESTS,
+
     /** Internal invariant violated or downstream programming error — HTTP 500. */
     INTERNAL,
 

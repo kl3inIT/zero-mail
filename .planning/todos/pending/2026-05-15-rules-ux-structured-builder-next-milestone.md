@@ -3,6 +3,7 @@ created: 2026-05-15T14:30:00+07:00
 title: Rules UX structured When/Then builder for next milestone
 area: product-ui
 recommended_milestone: v1.1
+resolves_phase: 7
 reference_repo: ../inbox-zero
 prototype: .planning/prototypes/rules-when-then-prototype.html
 ---

@@ -1,5 +1,4 @@
-import { api, xsrfHeader } from '@/lib/api/client';
-import { getApiUrl } from '@/lib/api/base-url';
+import { api } from '@/lib/api/client';
 import type { components } from '@/lib/api/schema';
 
 export type RuleResponse = components['schemas']['RuleResponse'];
@@ -38,14 +37,6 @@ export type RuleCompileResult =
   | RuleCompileCompiledResult
   | RuleCompileClarificationResult
   | RuleCompileInvalidResult;
-
-function jsonHeaders(): HeadersInit {
-  return { 'Content-Type': 'application/json', ...xsrfHeader() };
-}
-
-function unsafeHeaders(): HeadersInit {
-  return { ...xsrfHeader() };
-}
 
 /**
  * Narrow the discriminated `{ data, error, response }` shape returned by
@@ -113,7 +104,6 @@ export async function getRule(ruleId: string): Promise<RuleResponse> {
 export async function compileRule(payload: RuleCompileRequest): Promise<RuleCompileResult> {
   const result = await api.POST('/api/rules/compile', {
     body: payload,
-    headers: jsonHeaders(),
   });
   const data = unwrap(result, `/api/rules/compile failed: ${result.response.status}`);
   return toRuleCompileResult(data);
@@ -122,7 +112,6 @@ export async function compileRule(payload: RuleCompileRequest): Promise<RuleComp
 export async function createRule(payload: RuleCreateRequest): Promise<RuleResponse> {
   const result = await api.POST('/api/rules', {
     body: payload,
-    headers: jsonHeaders(),
   });
   return unwrap(result, `/api/rules create failed: ${result.response.status}`);
 }
@@ -134,7 +123,6 @@ export async function updateRule(
   const result = await api.PUT('/api/rules/{ruleId}', {
     params: { path: { ruleId } },
     body: payload,
-    headers: jsonHeaders(),
   });
   return unwrap(result, `/api/rules/${ruleId} update failed: ${result.response.status}`);
 }
@@ -146,7 +134,6 @@ export async function updateRuleEnabled(
   const result = await api.PATCH('/api/rules/{ruleId}/enabled', {
     params: { path: { ruleId } },
     body: payload,
-    headers: jsonHeaders(),
   });
   return unwrap(result, `/api/rules/${ruleId}/enabled failed: ${result.response.status}`);
 }
@@ -154,7 +141,6 @@ export async function updateRuleEnabled(
 export async function deleteRule(ruleId: string): Promise<void> {
   const result = await api.DELETE('/api/rules/{ruleId}', {
     params: { path: { ruleId } },
-    headers: unsafeHeaders(),
   });
   if (result.error || !result.response.ok) {
     throw (
@@ -170,7 +156,6 @@ export async function previewSavedRule(
   const result = await api.POST('/api/rules/{ruleId}/preview', {
     params: { path: { ruleId } },
     body: payload,
-    headers: jsonHeaders(),
   });
   return unwrap(result, `/api/rules/${ruleId}/preview failed: ${result.response.status}`);
 }
@@ -180,85 +165,33 @@ export async function previewDraftRule(
 ): Promise<RulePreviewResponse> {
   const result = await api.POST('/api/rules/preview', {
     body: payload,
-    headers: jsonHeaders(),
   });
   return unwrap(result, `/api/rules/preview failed: ${result.response.status}`);
 }
 
-export type RuleEnabledPreviewRequest = {
-  sampleSize?: number | null;
-  evaluateSemanticIntents?: boolean | null;
-};
+export type RuleEnabledPreviewRequest = components['schemas']['RuleEnabledPreviewRequest'];
 
 export async function previewAllEnabledRules(
   payload: RuleEnabledPreviewRequest,
 ): Promise<RulePreviewResponse> {
-  const response = await fetch(getApiUrl('/api/rules/preview-enabled'), {
-    method: 'POST',
-    credentials: 'include',
-    headers: jsonHeaders(),
-    body: JSON.stringify(payload),
+  const result = await api.POST('/api/rules/preview-enabled', {
+    body: payload,
   });
-  if (!response.ok) {
-    let apiErrorBody: unknown;
-    try {
-      apiErrorBody = await response.json();
-    } catch {
-      apiErrorBody = undefined;
-    }
-    throw apiErrorBody && typeof apiErrorBody === 'object'
-      ? apiErrorBody
-      : new Error(`/api/rules/preview-enabled failed: ${response.status}`);
-  }
-  return (await response.json()) as RulePreviewResponse;
+  return unwrap(result, `/api/rules/preview-enabled failed: ${result.response.status}`);
 }
 
-// Manual types for the custom-mail preview endpoint. These mirror the
-// backend DTOs in com.zeromail.api.dto.rules.RuleCustomPreview{Request,Response}.
-// Once the OpenAPI spec is regenerated against the new endpoint, swap these
-// for components['schemas']['RuleCustomPreview{Request,Response}'].
-export type RuleCustomPreviewRequest = {
-  subject?: string | null;
-  body?: string | null;
-  ruleIds?: string[] | null;
-};
-
-export type RuleCustomPreviewEntry = {
-  ruleId: string;
-  displayName: string;
-  enabled: boolean;
-  matched: boolean;
-  deferred: boolean;
-  proposedActionChips: components['schemas']['ActionChipResponse'][];
-  matchedEvidenceChips: components['schemas']['EvidenceChipResponse'][];
-  deferredEvidenceChips: components['schemas']['EvidenceChipResponse'][];
-};
-
-export type RuleCustomPreviewResponse = {
-  entries: RuleCustomPreviewEntry[];
-};
+export type RuleCustomPreviewRequest = components['schemas']['RuleCustomPreviewRequest'];
+export type RuleCustomPreviewEntry =
+  components['schemas']['RuleCustomPreviewResponse']['entries'][number];
+export type RuleCustomPreviewResponse = components['schemas']['RuleCustomPreviewResponse'];
 
 export async function previewCustomMail(
   payload: RuleCustomPreviewRequest,
 ): Promise<RuleCustomPreviewResponse> {
-  const response = await fetch(getApiUrl('/api/rules/preview-custom'), {
-    method: 'POST',
-    credentials: 'include',
-    headers: jsonHeaders(),
-    body: JSON.stringify(payload),
+  const result = await api.POST('/api/rules/preview-custom', {
+    body: payload,
   });
-  if (!response.ok) {
-    let apiErrorBody: unknown;
-    try {
-      apiErrorBody = await response.json();
-    } catch {
-      apiErrorBody = undefined;
-    }
-    throw apiErrorBody && typeof apiErrorBody === 'object'
-      ? apiErrorBody
-      : new Error(`/api/rules/preview-custom failed: ${response.status}`);
-  }
-  return (await response.json()) as RuleCustomPreviewResponse;
+  return unwrap(result, `/api/rules/preview-custom failed: ${result.response.status}`);
 }
 
 export async function listRuleTemplates(): Promise<RuleTemplateResponse[]> {
@@ -271,7 +204,6 @@ export async function materializeRuleTemplate(
 ): Promise<RuleTemplateMaterializationResponse> {
   const result = await api.POST('/api/rules/templates/{templateKey}/materialize', {
     params: { path: { templateKey } },
-    headers: unsafeHeaders(),
   });
   return unwrap(
     result,

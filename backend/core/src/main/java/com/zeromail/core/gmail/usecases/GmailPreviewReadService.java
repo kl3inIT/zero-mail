@@ -16,6 +16,8 @@ import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
+import com.zeromail.core.gmail.persistence.lowlevel.MailMessageObservedReadRepository;
+import com.zeromail.core.gmail.projection.ObservedPreviewMessage;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -37,7 +39,6 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -78,7 +79,7 @@ public class GmailPreviewReadService {
             "id,threadId,labelIds,internalDate,payload/headers,payload/body/size,"
                     + "payload/parts(filename,mimeType,body/size,parts)";
 
-    private final JdbcTemplate jdbcTemplate;
+    private final MailMessageObservedReadRepository mailMessageObservedReadRepository;
     private final GmailConnectionRepository gmailConnectionRepository;
     private final GmailApiClientFactory gmailApiClientFactory;
     private final RefreshTokenCipher refreshTokenCipher;
@@ -86,12 +87,12 @@ public class GmailPreviewReadService {
 
     @Autowired
     public GmailPreviewReadService(
-            JdbcTemplate jdbcTemplate,
+            MailMessageObservedReadRepository mailMessageObservedReadRepository,
             GmailConnectionRepository gmailConnectionRepository,
             GmailApiClientFactory gmailApiClientFactory,
             RefreshTokenCipher refreshTokenCipher) {
         this(
-                jdbcTemplate,
+                mailMessageObservedReadRepository,
                 gmailConnectionRepository,
                 gmailApiClientFactory,
                 refreshTokenCipher,
@@ -99,16 +100,24 @@ public class GmailPreviewReadService {
     }
 
     GmailPreviewReadService(
-            JdbcTemplate jdbcTemplate,
+            MailMessageObservedReadRepository mailMessageObservedReadRepository,
             GmailConnectionRepository gmailConnectionRepository,
             GmailApiClientFactory gmailApiClientFactory,
             RefreshTokenCipher refreshTokenCipher,
             Clock clock) {
-        this.jdbcTemplate = jdbcTemplate;
-        this.gmailConnectionRepository = gmailConnectionRepository;
-        this.gmailApiClientFactory = gmailApiClientFactory;
-        this.refreshTokenCipher = refreshTokenCipher;
-        this.clock = clock;
+        this.mailMessageObservedReadRepository =
+                Objects.requireNonNull(
+                        mailMessageObservedReadRepository,
+                        "mailMessageObservedReadRepository must not be null");
+        this.gmailConnectionRepository =
+                Objects.requireNonNull(
+                        gmailConnectionRepository, "gmailConnectionRepository must not be null");
+        this.gmailApiClientFactory =
+                Objects.requireNonNull(
+                        gmailApiClientFactory, "gmailApiClientFactory must not be null");
+        this.refreshTokenCipher =
+                Objects.requireNonNull(refreshTokenCipher, "refreshTokenCipher must not be null");
+        this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
 
     @Transactional(readOnly = true)
@@ -117,7 +126,7 @@ public class GmailPreviewReadService {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
         Objects.requireNonNull(fetchBudget, "fetchBudget must not be null");
         List<ObservedPreviewMessage> observedMessages =
-                findRecentObservedMessages(tenantId, sampleSize);
+                mailMessageObservedReadRepository.findRecentObservedMessages(tenantId, sampleSize);
         if (observedMessages.isEmpty()) {
             return List.of();
         }
@@ -331,37 +340,6 @@ public class GmailPreviewReadService {
                         .filter(participant -> !participant.equals(normalizedSelfEmail))
                         .toList();
         return participants.isEmpty() ? null : participants.getFirst();
-    }
-
-    private List<ObservedPreviewMessage> findRecentObservedMessages(UUID tenantId, int sampleSize) {
-        return jdbcTemplate.query(
-                """
-        select gmail_message_id, gmail_thread_id, label_ids, internal_date, observed_at
-        from mail_message_observed
-        where tenant_id = ?
-        order by internal_date desc nulls last, observed_at desc
-        limit ?
-        """,
-                (resultSet, _) -> {
-                    java.sql.Array labelIdsArray = resultSet.getArray("label_ids");
-                    String[] labelIds =
-                            labelIdsArray == null
-                                    ? new String[0]
-                                    : (String[]) labelIdsArray.getArray();
-                    java.sql.Timestamp observedAtTimestamp = resultSet.getTimestamp("observed_at");
-                    Instant observedAt =
-                            observedAtTimestamp == null
-                                    ? Instant.EPOCH
-                                    : observedAtTimestamp.toInstant();
-                    return new ObservedPreviewMessage(
-                            resultSet.getString("gmail_message_id"),
-                            resultSet.getString("gmail_thread_id"),
-                            labelIds,
-                            resultSet.getObject("internal_date", Long.class),
-                            observedAt);
-                },
-                tenantId,
-                sampleSize);
     }
 
     private List<GmailPreviewMessage> fetchMessagesWithinBudget(
@@ -790,13 +768,6 @@ public class GmailPreviewReadService {
             throw new GmailPreviewReadUnavailableException(UnavailableReason.FETCH_TIMEOUT);
         }
     }
-
-    private record ObservedPreviewMessage(
-            String gmailMessageId,
-            String gmailThreadId,
-            String[] labelIds,
-            Long internalDate,
-            Instant observedAt) {}
 
     public record GmailPreviewMessage(
             String gmailMessageId,

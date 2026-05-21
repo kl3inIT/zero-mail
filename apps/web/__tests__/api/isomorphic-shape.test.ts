@@ -57,6 +57,6 @@ describe('Account current-user API shape', () => {
     expect(src).not.toMatch(/next-intl\/middleware/);
     expect(src).not.toMatch(/createIntlMiddleware/);
     expect(src).not.toMatch(/as\s+unknown\s+as/);
-    expect(src).toMatch(/NextResponse\.next\(\)/);
+    expect(src).toMatch(/NextResponse\.next\(/);
   });
 });

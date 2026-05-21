@@ -36,17 +36,17 @@ import tools.jackson.databind.ObjectMapper;
  * <h2>Invariants asserted</h2>
  *
  * <ol>
- *   <li>{@code GET /me} surfaces {@code preferredLanguage} reflecting the DB row (default {@code
- *       "vi"} per Plan 01 changeset 006).
- *   <li>{@code PATCH /me/language} with {@code {"language":"en"}} returns 200, echoes the updated
- *       {@code MeResponse}, and persists the column so a follow-up {@code GET /me} sees the new
- *       value AND a direct JDBC SELECT confirms it.
- *   <li>{@code PATCH /me/language} with {@code {"language":"zz"}} returns 400 with the Phase 1.1
- *       ProblemDetail extension contract: {@code code == "error.validation"}, {@code
+ *   <li>{@code GET /api/me} surfaces {@code preferredLanguage} reflecting the DB row (default
+ *       {@code "vi"} per Plan 01 changeset 006).
+ *   <li>{@code PATCH /api/me/language} with {@code {"language":"en"}} returns 200, echoes the
+ *       updated {@code MeResponse}, and persists the column so a follow-up {@code GET /api/me} sees
+ *       the new value AND a direct JDBC SELECT confirms it.
+ *   <li>{@code PATCH /api/me/language} with {@code {"language":"zz"}} returns 400 with the Phase
+ *       1.1 ProblemDetail extension contract: {@code code == "error.validation"}, {@code
  *       fieldErrors[0].field == "language"}, dotted code matches {@code
  *       error.validation.field.language.Pattern}. Body must NOT contain Java exception class names
  *       or framework package prefixes (D-C1 / T-1.1.04-04).
- *   <li>{@code PATCH /me/language} is tenant-scoped — tenant A's PATCH leaves tenant B's {@code
+ *   <li>{@code PATCH /api/me/language} is tenant-scoped — tenant A's PATCH leaves tenant B's {@code
  *       preferred_language} row unchanged (T-1.1.04-02).
  * </ol>
  *
@@ -88,13 +88,13 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
     }
 
     @Test
-    @DisplayName("GET /me returns preferredLanguage defaulting to 'vi'")
+    @DisplayName("GET /api/me returns preferredLanguage defaulting to 'vi'")
     void getMe_returnsPreferredLanguageDefaultVi() throws Exception {
         Seed s = seedUser("getme-default-vi");
 
         ResponseEntity<String> res =
                 client().get()
-                        .uri("/me")
+                        .uri("/api/me")
                         .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
                         .header(TestSessionSupport.HEADER_EMAIL, s.email())
                         .retrieve()
@@ -107,13 +107,14 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
     }
 
     @Test
-    @DisplayName("PATCH /me/language persists to DB and the next GET /me returns the new value")
+    @DisplayName(
+            "PATCH /api/me/language persists to DB and the next GET /api/me returns the new value")
     void patchMeLanguage_persistsToDb_andReturnsUpdated() throws Exception {
         Seed s = seedUser("patch-persists");
 
         ResponseEntity<String> patchRes =
                 client().patch()
-                        .uri("/me/language")
+                        .uri("/api/me/language")
                         .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
                         .header(TestSessionSupport.HEADER_EMAIL, s.email())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -127,7 +128,7 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
 
         ResponseEntity<String> getRes =
                 client().get()
-                        .uri("/me")
+                        .uri("/api/me")
                         .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
                         .header(TestSessionSupport.HEADER_EMAIL, s.email())
                         .retrieve()
@@ -147,14 +148,14 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
 
     @Test
     @DisplayName(
-            "PATCH /me/language with disallowed value returns 400 ProblemDetail with safe shape")
+            "PATCH /api/me/language with disallowed value returns 400 ProblemDetail with safe shape")
     void patchMeLanguage_invalidValue_returns400_with_validation_code_and_fieldError()
             throws Exception {
         Seed s = seedUser("patch-invalid");
 
         ResponseEntity<String> res =
                 client().patch()
-                        .uri("/me/language")
+                        .uri("/api/me/language")
                         .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
                         .header(TestSessionSupport.HEADER_EMAIL, s.email())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -204,7 +205,7 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
     }
 
     @Test
-    @DisplayName("PATCH /me/language is tenant-scoped — does not mutate other tenants' rows")
+    @DisplayName("PATCH /api/me/language is tenant-scoped — does not mutate other tenants' rows")
     void patchMeLanguage_isTenantScoped_doesNotMutateOtherTenants() {
         Seed a = seedUser("tenant-a");
         Seed b = seedUser("tenant-b");
@@ -212,7 +213,7 @@ class MeLanguageIntegrationTest extends ApiPostgresTestBase {
         // Authenticate as tenant A only and PATCH.
         ResponseEntity<String> res =
                 client().patch()
-                        .uri("/me/language")
+                        .uri("/api/me/language")
                         .header(TestSessionSupport.HEADER_SUBJECT, a.googleSubject())
                         .header(TestSessionSupport.HEADER_EMAIL, a.email())
                         .contentType(MediaType.APPLICATION_JSON)

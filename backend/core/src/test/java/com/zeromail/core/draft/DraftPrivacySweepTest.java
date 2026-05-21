@@ -46,6 +46,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -72,17 +73,25 @@ class DraftPrivacySweepTest extends PostgresContainerTest {
     private static final String DRAFT_BODY_SENTINEL = "DRAFT_BODY_SENTINEL_05B_07";
     private static final String GOOGLE_SUBJECT_SENTINEL = "GOOGLE_SUBJECT_SENTINEL_05B_07";
     private static final String TOKEN_BYTES_SENTINEL = "TOKEN_BYTES_SENTINEL_05B_07";
-    private static final List<String> FORBIDDEN_CONTENT_TOKENS =
+    private static final List<String> FORBIDDEN_BODY_TOKENS =
             List.of(
-                    EMAIL_SUBJECT_SENTINEL,
                     EMAIL_BODY_SENTINEL,
                     SENT_MAIL_TONE_CONTEXT_SENTINEL,
                     LLM_PROMPT_SENTINEL,
                     LLM_COMPLETION_SENTINEL,
                     DRAFT_BODY_SENTINEL,
                     GOOGLE_SUBJECT_SENTINEL,
-                    TOKEN_BYTES_SENTINEL,
-                    RAW_SENDER_EMAIL);
+                    TOKEN_BYTES_SENTINEL);
+
+    // Header metadata (subject + sender email) is stored in triage_audit by design so the
+    // user-facing audit projection can show "what email did this triage act on". It must
+    // still never appear in logs, exceptions, or opaque persistence columns.
+    private static final List<String> FORBIDDEN_HEADER_TOKENS =
+            List.of(EMAIL_SUBJECT_SENTINEL, RAW_SENDER_EMAIL);
+
+    private static final List<String> FORBIDDEN_CONTENT_TOKENS =
+            Stream.concat(FORBIDDEN_BODY_TOKENS.stream(), FORBIDDEN_HEADER_TOKENS.stream())
+                    .toList();
 
     @Autowired JdbcTemplate jdbcTemplate;
     @Autowired TriageAuditWriter triageAuditWriter;
@@ -161,8 +170,8 @@ class DraftPrivacySweepTest extends PostgresContainerTest {
         assertThat(auditLogPage.items()).hasSize(1);
         assertThat(needsReplyPage.items()).hasSize(1);
         assertNoForbiddenContent("captured draft/classify logs", capturedLogSurface());
-        assertNoForbiddenContent("audit projection result", auditLogPage.toString());
-        assertNoForbiddenContent("needs-reply projection result", needsReplyPage.toString());
+        assertNoForbiddenBody("audit projection result", auditLogPage.toString());
+        assertNoForbiddenBody("needs-reply projection result", needsReplyPage.toString());
         assertDraftPersistenceIsContentFree(tenantId, GMAIL_MESSAGE_ID, GMAIL_THREAD_ID);
     }
 
@@ -395,6 +404,14 @@ class DraftPrivacySweepTest extends PostgresContainerTest {
             assertThat(surface)
                     .as("%s leaked forbidden token: %s", surfaceName, forbiddenContentToken)
                     .doesNotContain(forbiddenContentToken);
+        }
+    }
+
+    private static void assertNoForbiddenBody(String surfaceName, String surface) {
+        for (String forbiddenBodyToken : FORBIDDEN_BODY_TOKENS) {
+            assertThat(surface)
+                    .as("%s leaked forbidden body token: %s", surfaceName, forbiddenBodyToken)
+                    .doesNotContain(forbiddenBodyToken);
         }
     }
 

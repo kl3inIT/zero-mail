@@ -1,0 +1,36 @@
+# Production profile: concise structured events only.
+# Privacy invariants: prompt/completion logging OFF (also enforced by base application.yml).
+
+logging:
+  level:
+    root: INFO
+    com.zeromail: INFO
+    org.springframework.security: WARN
+    org.hibernate: WARN
+
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: false
+
+  ai:
+    chat:
+      client:
+        observations:
+          log-prompt: false
+          log-completion: false
+      observations:
+        log-prompt: false
+        log-completion: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true

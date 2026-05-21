@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "parts": [
+    {
+      "type": "tool-sendEmail",
+      "toolCallId": "toolcall_send_body_001",
+      "state": "input-available",
+      "input": {
+        "to": ["founder@example.com"],
+        "subject": "Báo cáo hôm nay",
+        "body": "Xin chào anh, em xin gửi báo cáo hôm nay để anh xem trước."
+      }
+    }
+  ]
+}

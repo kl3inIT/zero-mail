@@ -45,7 +45,7 @@ public class MeController {
         this.gmailConnectionService = gmailConnectionService;
     }
 
-    @GetMapping("/me")
+    @GetMapping("/api/me")
     public MeResponse me() {
         UUID tenantId = TenantContext.currentTenantUuid();
         CurrentUserProjection user = accountService.requireCurrentUser(tenantId);
@@ -61,7 +61,7 @@ public class MeController {
      * extension contract (top-level {@code code = error.validation} + {@code fieldErrors[]}). The
      * DB CHECK constraint added in Plan 01 is the second line of defense (D-B2).
      */
-    @PatchMapping("/me/language")
+    @PatchMapping("/api/me/language")
     public MeResponse updateLanguage(@Valid @RequestBody UpdateLanguageRequest request) {
         UUID tenantId = TenantContext.currentTenantUuid();
         CurrentUserProjection updated =

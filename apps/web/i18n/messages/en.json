@@ -342,142 +342,79 @@
       }
     }
   },
-  "cleanup": {
-    "suppression": {
-      "add": "Add to suppression",
-      "addOk": "Added to suppression list.",
-      "col": {
-        "added": "Added",
-        "source": "Source",
-        "target": "Sender / Domain"
-      },
-      "empty": {
-        "body": "Add senders or domains you never want to unsubscribe (e.g. boss, colleagues, bank).",
-        "title": "No senders in the suppression list yet"
-      },
-      "err": {
-        "duplicate": "This entry is already in the suppression list.",
-        "generic": "Could not add. Please try again shortly.",
-        "invalid": "Invalid email or domain."
-      },
-      "error": "Could not load the list. Please try again shortly.",
-      "helper": "Each entry blocks a single sender or an entire domain.",
-      "input": {
-        "label": "Sender email",
-        "placeholder": "Email or domain (e.g. boss@example.com or example.com)"
-      },
-      "lead": "Senders or domains on this list will never appear in an unsubscribe campaign.",
-      "remove": {
-        "aria": "Remove from suppression",
-        "cancel": "Cancel",
-        "confirmBody": "After removal, this sender or domain will reappear as a campaign candidate.",
-        "confirmCta": "Confirm remove",
-        "confirmTitle": "Remove this entry?"
-      },
-      "removeOk": "Removed from suppression list.",
-      "source": {
-        "auto": "Auto",
-        "manual": "Manual",
-        "replied": "Replied"
-      },
-      "title": "Suppression list"
+  "chat": {
+    "empty": {
+      "body": "Ask about your inbox, rules, or draft email — Zero Mail sends only after confirmation.",
+      "title": "Start a conversation with Zero Mail"
     },
-    "unsubscribe": {
-      "list": {
-        "clear": "Clear selection",
-        "col": {
-          "count": "Mail (30 days)",
-          "domain": "Domain",
-          "method": "Method",
-          "risk": "Status",
-          "sender": "Sender"
-        },
-        "counter": "{count} / 25 senders selected",
-        "counterOver": "{count} / 25 senders — over the limit",
-        "empty": {
-          "body": "Zero Mail detects newsletters via the `List-Unsubscribe` header from recent ingest. New candidate senders will appear here as data arrives.",
-          "link": "Learn how Zero Mail detects newsletters →",
-          "title": "No newsletters in the last 30 days"
-        },
-        "error": "Could not load the sender list. Please try again shortly.",
-        "lead": "Pick the newsletters you want to stop receiving. Zero Mail unsubscribes safely and archives the history from the selected senders.",
-        "preview": "Preview campaign",
-        "retry": "Retry",
-        "suppressionLink": "Manage suppression list →",
-        "title": "Bulk unsubscribe"
-      },
-      "method": {
-        "mailto": "Mailto",
-        "none": "Unsupported",
-        "oneClick": "One-click (RFC 8058)"
-      },
-      "preview": {
-        "cancel": "Back",
-        "capMessage": "History mail limit of 2,000 exceeded ({count}). Go back and deselect some.",
-        "capSender": "Sender limit of 25 exceeded. Go back and deselect some.",
-        "confirm": "Execute campaign",
-        "description": "Review the list before executing. The campaign runs in the background and is undoable for 30 days.",
-        "errCapMessage": "History mail limit of 2,000 exceeded. Please deselect some.",
-        "errCapSender": "Sender limit of 25 exceeded. Please deselect some.",
-        "errGeneric": "Could not create the campaign. Please try again shortly.",
-        "submitOk": "Campaign created. Tracking progress…",
-        "submitting": "Creating…",
-        "title": "Preview campaign",
-        "totalMail": "Total mail to archive: {count}",
-        "totalSender": "Total senders: {count}",
-        "willArchive": "{count} mail will be archived",
-        "willNotArchive": "No archive (missing header)"
-      },
-      "retry": {
-        "alreadyOk": "This sender has already unsubscribed — no retry needed.",
-        "generic": "Retry failed. Please try again shortly."
-      },
-      "risk": {
-        "noHeader": "Not supported",
-        "noHeaderTooltip": "This sender has no `List-Unsubscribe` header — automatic unsubscribe is unavailable.",
-        "safe": "Ready",
-        "suppressed": "Blocked"
-      },
-      "status": {
-        "breadcrumb": "Cleanup / Unsubscribe / #{shortId}",
-        "col": {
-          "action": "Action",
-          "archived": "Mail archived",
-          "sender": "Sender",
-          "state": "State"
-        },
-        "completed": "Completed",
-        "error": "Could not load campaign status. Please try again shortly.",
-        "errorBanner": "System error — did not complete. Contact support if needed.",
-        "failed": "Error — did not complete",
-        "progress": "{percent}% ({okCount} OK / {failedCount} failed / {totalCount} senders)",
-        "queued": "Waiting for worker",
-        "retry": "Retry",
-        "retryOk": "Retry enqueued for {sender}.",
-        "running": "Running",
-        "state": {
-          "failed": "Failed",
-          "ok": "OK",
-          "pending": "Pending",
-          "running": "Running"
-        },
-        "title": "Campaign #{shortId}",
-        "undo": {
-          "body": "You can undo within the next {daysLeft} days: restore mail to INBOX and remove the `Zero Mail/Unsubscribed` label.",
-          "button": "Undo campaign",
-          "title": "Campaign completed"
-        }
-      },
-      "undo": {
-        "cancel": "Cancel",
-        "confirmBody": "This will restore {count} mail to INBOX and remove the `Zero Mail/Unsubscribed` label. This action cannot be reversed again.",
-        "confirmCta": "Confirm undo",
-        "confirmTitle": "Undo campaign?",
-        "generic": "Undo failed. Please try again shortly.",
-        "ok": "Restored {count} mail to INBOX.",
-        "windowExpired": "More than 30 days have passed since the campaign — undo is no longer available.",
-        "windowExpiredToast": "Past the 30-day window — undo is no longer available."
-      }
+    "history": {
+      "actions": "Chat actions",
+      "delete": "Delete",
+      "deleted": "Conversation deleted",
+      "empty": "No conversations yet",
+      "new": "New message",
+      "title": "Chat history"
+    },
+    "page": {
+      "subtitle": "Ask about your inbox, rules, or drafts. Zero Mail sends only after your confirmation.",
+      "title": "Email assistant"
+    },
+    "preview": {
+      "actionError": "The action did not complete. Try again.",
+      "added": "Added",
+      "andMore": "and {count} more",
+      "bcc": "Bcc",
+      "body": "Body",
+      "bulkArchive": "Archive in bulk",
+      "cancel": "Cancel",
+      "cancelled": "Cancelled",
+      "cc": "Cc",
+      "confirm": "Confirm",
+      "confirmed": "Confirmed",
+      "createRule": "Create rule",
+      "deleteRule": "Delete rule",
+      "edit": "Edit",
+      "eyebrow": "Needs confirmation",
+      "failed": "Action failed",
+      "instructionsAfter": "After",
+      "instructionsBefore": "Before",
+      "memoryContent": "Will save",
+      "outsideSourceThread": "Added by AI · verify",
+      "overwriteNotice": "Will overwrite current instructions",
+      "removeSender": "Remove from safety net",
+      "ruleName": "Rule name",
+      "saveMemory": "Save memory",
+      "saving": "Saving...",
+      "send": "Send via Gmail",
+      "sender": "Sender",
+      "sent": "Sent",
+      "sourceThread": "Source thread",
+      "subject": "Subject",
+      "syncing": "Syncing — Send will enable shortly",
+      "then": "Then",
+      "threadCount": "{count} threads will be archived",
+      "title": "Review before sending",
+      "to": "To",
+      "updateInstructions": "Update instructions",
+      "when": "When"
+    },
+    "prompt": {
+      "placeholder": "Message Zero Mail...",
+      "send": "Send message",
+      "stop": "Stop response"
+    },
+    "stream": {
+      "cancelled": "Response stopped"
+    },
+    "suggestion": {
+      "draft": "Draft a polite decline",
+      "memory": "Save note: I am working on project X",
+      "rules": "List enabled rules",
+      "search": "Find email from Acme this week"
+    },
+    "vip": {
+      "acknowledge": "I've reviewed and want to send",
+      "title": "Recipient is on your safety net — confirm anyway?"
     }
   },
   "common": {
@@ -508,8 +445,6 @@
     "b2": "No card required",
     "b3": "Unsubscribe in one click",
     "button": "Register to experience",
-    "closeAria": "Close",
-    "closeCta": "Close",
     "desc": "Join the waitlist. We're onboarding 50 founders and operators a week, in order. You'll get an invite to set up Zero Mail with your real Gmail account.",
     "emailPlaceholder": "you@company.com",
     "eyebrow": "Early access",
@@ -517,17 +452,11 @@
       "body": "We're going deep on Gmail before adding Outlook or IMAP. If you live in another inbox, leave your email and we'll let you know when we expand.",
       "title": "Gmail-only · v1"
     },
-    "privacyNote": "We never store your email permanently and we don't spam.",
     "stats": {
       "s1": "on the waitlist",
       "s2": "invites going out",
       "s3": "avg inbox reduction",
       "s4": "emails auto-sent"
-    },
-    "submitting": "Registering...",
-    "success": {
-      "body": "Thank you! We've saved {email}.",
-      "title": "You're on the list!"
     },
     "title": {
       "a": "Register to experience Zero Mail",
@@ -586,16 +515,6 @@
       "body": "Please try again. If the problem persists, reload the page or sign in again.",
       "reset": "Try again",
       "title": "Something went wrong"
-    },
-    "cleanup": {
-      "campaign": {
-        "not_found": "Campaign not found. Please return to the campaign list.",
-        "retry_conflict": "This sender has already unsubscribed — no retry needed.",
-        "too_many_messages": "History mail limit of 2,000 exceeded. Please deselect some.",
-        "too_many_senders": "Sender limit of 25 exceeded. Please deselect some.",
-        "undo_window_expired": "Past the 30-day window — undo is no longer available."
-      },
-      "sender_suppressed": "This sender is in the suppression list. Remove from suppression before unsubscribing."
     },
     "conflict": "The data changed before the action finished. Reload the page and try again.",
     "dataIntegrity": "The change could not be saved because the data is invalid.",
@@ -818,120 +737,6 @@
     },
     "continueSetupCta": "Continue setup",
     "eyebrow": "Gmail · Private beta · v1",
-    "faq": {
-      "items": {
-        "i1": {
-          "a": "We support Gmail, Google Workspace and Microsoft Outlook email accounts.",
-          "q": "Which email providers does Zero Mail support?"
-        },
-        "i2": {
-          "a": "Send us an email — we love hearing what would make your email experience better.",
-          "q": "How can I request a new feature?"
-        },
-        "i3": {
-          "a": "No. Zero Mail is not a standalone email client. It runs alongside your existing email app — you still use Google or Outlook the way you always have.",
-          "q": "Does Zero Mail replace my current email app?"
-        },
-        "i4": {
-          "a": "Yes. If you feel we're not delivering value, email us within 14 days of upgrading and we'll refund you.",
-          "q": "Do you offer refunds?"
-        },
-        "i5": {
-          "a": "Absolutely — every plan includes a 7-day free trial, no credit card required.",
-          "q": "Can I try Zero Mail for free?"
-        }
-      },
-      "title": "Frequently asked questions"
-    },
-    "features": {
-      "autoOrganize": {
-        "afterLabel": "After",
-        "beforeLabel": "Before",
-        "description": "Drowning in email? Stop spending energy trying to prioritize. Our AI assistant labels everything automatically.",
-        "imageAlt": "Automatic triage feature",
-        "title": "Auto-triage. Never miss what matters."
-      },
-      "bulkUnsubscribe": {
-        "description": "See which emails you never open and unsubscribe + archive them in a single click.",
-        "imageAlt": "Bulk unsubscribe",
-        "title": "Bulk-unsubscribe from email you never read"
-      },
-      "designedAroundYou": {
-        "col1": {
-          "previewColAmount": "Count",
-          "previewColSender": "Sender",
-          "previewTitle": "Who emails you the most",
-          "summary": "See who emails you most and what's filling your inbox. Detailed analysis and follow-up.",
-          "title": "Inbox analytics. Understand to optimize."
-        },
-        "col2": {
-          "summary": "Connect to your calendar and CRM so drafts respect your schedule and customer data.",
-          "title": "Drafts that know your schedule"
-        },
-        "col3": {
-          "createRule": "+ Create new rule",
-          "rules": {
-            "r1": "Label email from @company.com as Internal",
-            "r2": "Archive every invoice and send to accounting",
-            "r3": "Send the newsletter digest on Sunday",
-            "r4": "If anyone wants to book a meeting, respond w"
-          },
-          "summary": "Your inbox, your rules. Configure everything in plain natural language.",
-          "title": "Customize with natural language",
-          "viewExamples": "↗ See examples"
-        },
-        "subtitle": "Flexible enough for any workflow. Simple enough to set up in minutes.",
-        "title": "Designed around how you work"
-      },
-      "draftsReady": {
-        "description": "When you check your inbox, every email that needs a reply already has a draft written in your voice, ready to send.",
-        "imageAlt": "Drafts waiting in your inbox",
-        "imageAltDark": "Drafts waiting in your inbox (Dark mode)",
-        "title": "Drafts waiting in your inbox"
-      },
-      "getStarted": {
-        "step1": {
-          "label": "STEP 1",
-          "summary": "Connect your Gmail in two clicks to get started.",
-          "title": "Connect your Google account"
-        },
-        "step2": {
-          "categories": {
-            "c1": "📧 Newsletters",
-            "c2": "↩️ Needs reply",
-            "c3": "📢 Marketing",
-            "c4": "📅 Meetings",
-            "c5": "🔔 Notifications",
-            "c6": "❄️ Cold email",
-            "c7": "👥 Internal",
-            "c8": "🔥 Urgent"
-          },
-          "label": "STEP 2",
-          "summary": "Smart categories ready out of the box. Use the defaults or build your own.",
-          "title": "Organize your inbox your way"
-        },
-        "step3": {
-          "draftLabel": "DRAFTED BY AI:",
-          "draftSample": "Happy to meet at 5pm next week!",
-          "label": "STEP 3",
-          "newMessage": "New Message",
-          "sendCta": "Send",
-          "summary": "Every email that needs a reply has a draft waiting on Send.",
-          "title": "Smart auto-drafts"
-        },
-        "subtitle": "One-click setup. Start triaging and drafting email within minutes.",
-        "title": "Get started in minutes"
-      },
-      "inboxAnywhere": {
-        "channels": {
-          "telegram": "Telegram",
-          "web": "Web",
-          "zalo": "Zalo"
-        },
-        "description": "Read email, draft replies, and manage your inbox from Zalo, Telegram, or the Web — no app-switching.",
-        "title": "Your inbox, wherever you work"
-      }
-    },
     "heading": {
       "accent": "the send button.",
       "line1": "Inbox zero,",
@@ -948,100 +753,180 @@
       "link": "Read the walkthrough",
       "title": "Three steps to reach inbox zero — connect, describe, review."
     },
-    "pricing": {
-      "annualBadge": "Annual pricing, 7-day free trial",
-      "perUserPerMonth": " /user /month",
-      "plans": {
-        "plus": {
-          "ctaText": "Try free for 7 days",
-          "description": "For power users who need deeper integrations with their stack.",
-          "features": {
-            "f1": "2 email accounts /user",
-            "f2": "Slack / Discord integrations",
-            "f3": "Weekly digest of your inbox",
-            "f4": "Auto-archive attachments",
-            "f5": "Unlimited knowledge store"
-          },
-          "includesPrefix": "Everything in Starter, plus:",
-          "name": "Plus",
-          "popularBadge": "Popular",
-          "price": "$28"
-        },
-        "pro": {
-          "ctaText": "Try free for 7 days",
-          "description": "For teams and businesses handling high email volume.",
-          "features": {
-            "f1": "Team-wide analytics dashboard",
-            "f2": "24/7 priority customer support",
-            "f3": "Dedicated onboarding specialist"
-          },
-          "includesPrefix": "Everything in Plus, plus:",
-          "name": "Professional",
-          "price": "$42"
-        },
-        "starter": {
-          "ctaText": "Try free for 7 days",
-          "description": "For individuals and founders who want their time back.",
-          "features": {
-            "f1": "Triage and label every email",
-            "f2": "Drafts written in your voice",
-            "f3": "Block promo emails and clutter",
-            "f4": "Bulk unsubscribe and archive",
-            "f5": "Email analytics",
-            "f6": "Pre-meeting summaries"
-          },
-          "name": "Starter",
-          "price": "$18"
-        }
-      },
-      "subtitle": "No hidden fees. Cancel anytime.",
-      "title": "Free trial, fair paid plans"
-    },
     "primaryCta": "Sign in",
     "secondaryCta": "See how it works",
     "tagline": "Zero Mail triages your Gmail with rules you write in plain English — labels what matters, archives what doesn't, drafts the easy replies. You stay in the loop on everything that goes out.",
-    "testimonials": {
-      "items": {
-        "r1": {
-          "author": "Tran Viet Anh",
-          "role": "CTO",
-          "text": "Love this brilliant email automation app: zeromail.com"
-        },
-        "r2": {
-          "author": "Nguyen Minh Tuan",
-          "role": "Director of Engineering",
-          "text": "Genuinely amazing — cleared out promo emails and newsletter clutter in minutes."
-        },
-        "r3": {
-          "author": "Nguyen Thi Mai Huong",
-          "role": "Head of Growth",
-          "text": "Wow. Got set up and unsubscribed from the worst offenders in 3 minutes flat. Thank you 🙏"
-        },
-        "r4": {
-          "author": "Nguyen Minh Ngoc",
-          "role": "Marketing Director",
-          "text": "This is the first tool I've tried that actually captures my voice in the reply drafts."
-        },
-        "r5": {
-          "author": "Nguyen Duc Huy",
-          "role": "Engineering Director",
-          "text": "I came to Zero Mail looking for a VA to manage email; after trying it, everything changed."
-        },
-        "r6": {
-          "author": "Pham Minh Hoang",
-          "role": "Executive Director",
-          "text": "I'm an executive drowning in hundreds of emails a day. What I love most about Zero Mail is how it fully replaces the manual triage work with smart automation."
-        },
-        "r7": {
-          "author": "Dang Tien Minh",
-          "role": "Startup",
-          "text": "Finally an 'unsubscribe' app that actually unsubscribes you and filters through Gmail filters (instead of relying on a third-party app forever)."
-        }
-      },
-      "subtitle": "Our customers love how much time Zero Mail gives them back.",
-      "title": "Join 20,000+ people already saving email time"
-    },
     "waitlistCta": "Register to experience Zero Mail"
+  },
+  "landingFaq": {
+    "header": {
+      "title": "Frequently asked questions"
+    },
+    "items": {
+      "a1": "We support Gmail, Google Workspace, and Microsoft Outlook accounts.",
+      "a2": "Email us. We're always listening to improve your email experience.",
+      "a3": "No! Zero Mail is not an email client. It runs alongside your existing email app. You still use Google or Outlook as normal.",
+      "a4": "Yes — if you feel we haven't delivered value, email us within 14 days of upgrading and we'll refund you.",
+      "a5": "Absolutely. We offer a 7-day free trial across all plans so you can experience it right away — no credit card required!",
+      "q1": "Which email providers does Zero Mail support?",
+      "q2": "How can I request a new feature?",
+      "q3": "Will Zero Mail replace my current email app?",
+      "q4": "Do you offer refunds?",
+      "q5": "Can I try Zero Mail for free?"
+    }
+  },
+  "landingFeatures": {
+    "sec1": {
+      "after": "After",
+      "before": "Before",
+      "body": "Drowning in email? Stop spending energy prioritizing them. Our AI assistant labels everything automatically.",
+      "title": {
+        "line1": "Auto-categorized.",
+        "line2": "Never miss an important email."
+      }
+    },
+    "sec2": {
+      "body": "When you check your inbox, every email that needs a reply has a draft already written in your voice, ready to send.",
+      "title": "Drafts waiting in your inbox"
+    },
+    "sec3": {
+      "body": "Read email, draft replies, and manage your inbox from Zalo, Telegram, or Web — no app switching.",
+      "title": "Your inbox, wherever you work"
+    },
+    "sec4": {
+      "body": "One-click install. Start organizing and drafting in minutes.",
+      "step1": {
+        "body": "Link your Gmail in two clicks to get started.",
+        "label": "STEP 1",
+        "title": "Connect your Google account"
+      },
+      "step2": {
+        "body": "Smart categories set up automatically. Use defaults or create your own.",
+        "chips": {
+          "calendar": "📅 Calendar",
+          "coldEmail": "❄️ Cold Email",
+          "internal": "👥 Internal",
+          "marketing": "📢 Marketing",
+          "needsReply": "↩️ Needs reply",
+          "newsletter": "📧 Newsletter",
+          "notifications": "🔔 Notifications",
+          "urgent": "🔥 Urgent"
+        },
+        "label": "STEP 2",
+        "title": "Organize your inbox your way"
+      },
+      "step3": {
+        "body": "Every email that needs a reply has a draft waiting for you to hit Send.",
+        "draftBody": "Happy to meet at 5pm next week!",
+        "draftedBy": "DRAFTED BY AI:",
+        "label": "STEP 3",
+        "mockHeader": "New Message",
+        "sendButton": "Send",
+        "title": "Smart auto-drafts"
+      },
+      "title": "Get started in minutes"
+    },
+    "sec5": {
+      "body": "See which emails you've never opened, then unsubscribe and archive them in one click.",
+      "title": "Bulk-unsubscribe from email you never read"
+    },
+    "sec6": {
+      "body": "Flexible enough for any workflow. Simple enough to set up in minutes.",
+      "col1": {
+        "body": "See who emails you most and what's filling your inbox. Detailed analytics and cleanup.",
+        "mockCountHeader": "Count",
+        "mockHeading": "Who emails you most",
+        "mockSenderHeader": "Sender",
+        "title": "Analyze your inbox. Understand to optimize"
+      },
+      "col2": {
+        "body": "Connect your calendar and CRM to draft based on your schedule and customer data.",
+        "title": "Drafts that know your schedule"
+      },
+      "col3": {
+        "body": "Your inbox, your rules. Configure everything in natural English.",
+        "examples": "↗ See examples",
+        "newRule": "+ New rule",
+        "rule1": "Label emails from @company.com as Internal",
+        "rule2": "Archive all invoices and forward to accounting",
+        "rule3": "Send newsletter digest on Sundays",
+        "rule4": "If someone wants to schedule a meeting, reply w",
+        "title": "Customize in natural language"
+      },
+      "title": "Designed around how you work"
+    }
+  },
+  "landingPricing": {
+    "ctaTrial": "Start 7-day free trial",
+    "header": {
+      "badge": "Annual pricing, 7-day free trial",
+      "body": "No hidden fees. Cancel anytime.",
+      "title": "Simple pricing, fair plans"
+    },
+    "perPersonMonth": " /user /month",
+    "plus": {
+      "b1": "2 email accounts /user",
+      "b2": "Slack / Discord integration",
+      "b3": "Weekly digest delivery",
+      "b4": "Auto-archive attachments",
+      "b5": "Unlimited knowledge base",
+      "description": "For power users who need system integrations.",
+      "includesIntro": "Everything in Starter, plus:",
+      "title": "Plus"
+    },
+    "popular": "Popular",
+    "pro": {
+      "b1": "Team-wide analytics",
+      "b2": "Priority 24/7 support",
+      "b3": "Dedicated onboarding specialist",
+      "description": "For teams and businesses handling high email volume.",
+      "includesIntro": "Everything in Plus, plus:",
+      "title": "Professional"
+    },
+    "starter": {
+      "b1": "Categorize and label all email",
+      "b2": "Draft replies in your voice",
+      "b3": "Block promotional and spam",
+      "b4": "Bulk unsubscribe and archive",
+      "b5": "Email analytics",
+      "b6": "Pre-meeting briefs",
+      "description": "For individuals and founders reclaiming their time.",
+      "title": "Starter"
+    }
+  },
+  "landingTestimonials": {
+    "header": {
+      "body": "Our customers love saving time with Zero Mail.",
+      "title": "Join 20,000+ saving time on email"
+    },
+    "r1": {
+      "role": "CTO",
+      "text": "Loving this awesome email automation app: zeromail.com"
+    },
+    "r2": {
+      "role": "Technical Director",
+      "text": "Genuinely amazing. Cleaned up promo emails and newsletter junk in a few minutes."
+    },
+    "r3": {
+      "role": "Head of Growth",
+      "text": "Wow. Set up and unsubscribed from the worst spammers in 3 minutes... thanks 🙏"
+    },
+    "r4": {
+      "role": "Legal Engineer",
+      "text": "This is the first tool I've tried that actually nails my voice in draft replies."
+    },
+    "r5": {
+      "role": "Founder",
+      "text": "I found Zero Mail while looking for a virtual assistant to manage email, but after trying it everything changed."
+    },
+    "r6": {
+      "role": "CEO",
+      "text": "I'm an executive drowning in hundreds of emails a day. What I love most about Zero Mail is how completely it replaces manual email triage — smart automation."
+    },
+    "r7": {
+      "role": "Founder",
+      "text": "Finally an \"unsubscribe\" app that *actually* unsubscribes you and filters through Gmail filters (instead of always depending on a 3rd-party app)."
+    }
   },
   "legal": {
     "googleApiPolicy": {
@@ -1124,9 +1009,7 @@
     "analytics": "Analytics",
     "beta": "beta",
     "billing": "Billing",
-    "cleanupGroup": "Cleanup",
-    "cleanupSuppression": "Suppression",
-    "cleanupUnsubscribe": "Unsubscribe",
+    "chat": "Assistant",
     "continueSetup": "Continue setup",
     "dashboard": "Dashboard",
     "features": "Features",

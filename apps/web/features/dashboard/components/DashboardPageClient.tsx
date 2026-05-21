@@ -110,9 +110,9 @@ export function DashboardPageClient() {
           <ListChecks className="size-4" aria-hidden="true" />
           {t('nav.rules')}
         </Link>
-        <Link href="/ai" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+        <Link href="/chat" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
           <Sparkles className="size-4" aria-hidden="true" />
-          {t('nav.ai')}
+          {t('nav.chat')}
         </Link>
       </div>
 

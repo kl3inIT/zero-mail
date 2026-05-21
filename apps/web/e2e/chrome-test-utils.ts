@@ -80,7 +80,7 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
     const request = route.request();
     const url = new URL(request.url());
 
-    if (url.pathname === '/me') {
+    if (url.pathname === '/api/me') {
       await fulfillJson(route, {
         userId: 'user-1',
         tenantId: 'tenant-1',
@@ -196,12 +196,12 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
       return;
     }
 
-    if (url.pathname === '/gmail/connection/status' && request.method() === 'GET') {
+    if (url.pathname === '/api/gmail/connection/status' && request.method() === 'GET') {
       await fulfillJson(route, { connectionStatus: state.connectionStatus });
       return;
     }
 
-    if (url.pathname === '/tenant/triage-pause' && request.method() === 'PUT') {
+    if (url.pathname === '/api/tenant/triage-pause' && request.method() === 'PUT') {
       const payload = request.postDataJSON() as { paused: boolean };
       expect(typeof payload.paused).toBe('boolean');
       state.pauseRequests.push(payload);
@@ -251,7 +251,7 @@ export async function openAuthenticatedRoute(
   await seedAuthenticatedSession(page, state.preferredLanguage);
   await installChromeApiMock(page, state);
   await page.goto(path, { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 }
 
 export async function expectNoHorizontalOverflow(page: Page) {

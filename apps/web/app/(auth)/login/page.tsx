@@ -7,7 +7,7 @@ import { LegalFooter } from '@/features/auth/components/LegalFooter';
 import AuthTopBar from '@/features/auth/components/AuthTopBar';
 import { TrustPanel } from '@/features/auth/components/TrustPanel';
 import { GoogleG, LockIcon, MailIcon } from '@/features/landing/components/PrototypeIcons';
-import { getApiUrl } from '@/lib/api/base-url';
+import { getPublicApiUrl } from '@/lib/api/base-url';
 import { cn } from '@/lib/utils';
 
 /**
@@ -75,7 +75,7 @@ export default async function LoginPage({
                 </Alert>
               )}
               <a
-                href={getApiUrl('/oauth2/authorization/google')}
+                href={getPublicApiUrl('/oauth2/authorization/google')}
                 className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'zm-google-btn')}
               >
                 <GoogleG size={18} />

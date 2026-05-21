@@ -28,7 +28,7 @@ export function AuditRow({ entry, now }: AuditRowProps) {
 
   return (
     <div
-      className="group flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-[#0a3d3a]/[0.03]"
+      className="group hover:bg-muted flex items-center gap-4 px-5 py-3.5 transition-colors"
       data-testid="audit-table-row"
     >
       <div
@@ -122,7 +122,7 @@ function avatarClassName(action: string): string {
     return 'bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-400';
   }
   if (normalized.includes('label')) {
-    return 'bg-[#E7F0EF] text-[#0a3d3a] dark:bg-[#0a3d3a]/20 dark:text-[#E7F0EF]';
+    return 'bg-accent text-accent-foreground';
   }
   if (normalized.includes('draft')) {
     return 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400';
@@ -212,7 +212,7 @@ function actionBadgeClassName(action: string): string {
     return 'bg-sky-500/15 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300';
   }
   if (normalizedAction.includes('label')) {
-    return 'bg-[#0a3d3a]/12 text-[#0a3d3a] dark:bg-[#0a3d3a]/30 dark:text-[#E7F0EF]';
+    return 'bg-primary/15 text-primary';
   }
   if (normalizedAction.includes('draft')) {
     return 'bg-amber-500/15 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300';

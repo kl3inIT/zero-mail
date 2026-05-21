@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 080-01-llm-provider-master-key-add-masked-key
+      author: zeromail
+      comment: |
+        WR-02: store the public mask alongside the encrypted blob so the list view never
+        triggers a full decrypt of every provider's master key. Writers populate this column
+        at insert/rotate time; readers prefer it and only fall back to decrypt when null
+        (legacy pre-080 rows). Mask format remains derived from MasterKeyMasker.mask().
+      changes:
+        - addColumn:
+            tableName: llm_provider_master_key
+            columns:
+              - column:
+                  name: masked_key
+                  type: varchar(64)
+                  constraints:
+                    nullable: true

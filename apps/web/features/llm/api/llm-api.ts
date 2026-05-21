@@ -1,4 +1,4 @@
-import { api, xsrfHeader } from '@/lib/api/client';
+import { api } from '@/lib/api/client';
 import type { components } from '@/lib/api/schema';
 
 export type ByokValidatePayload = components['schemas']['ByokValidateRequest'];
@@ -12,30 +12,29 @@ export type ByokProvider = NonNullable<ByokCurrentResult['provider']>;
 export async function validateByok(payload: ByokValidatePayload): Promise<ByokValidateResult> {
   const { data, error, response } = await api.POST('/api/llm/byok/validate', {
     body: payload,
-    headers: { 'Content-Type': 'application/json', ...xsrfHeader() },
+    headers: { 'Content-Type': 'application/json' },
   });
-  if (error || !response.ok)
+  if (error || !response.ok || data === undefined)
     throw error ?? new Error(`/api/llm/byok/validate failed: ${response.status}`);
-  return data as ByokValidateResult;
+  return data;
 }
 
 export async function saveByok(payload: ByokSavePayload): Promise<ByokSaveResult> {
   const { data, error, response } = await api.POST('/api/llm/byok', {
     body: payload,
-    headers: { 'Content-Type': 'application/json', ...xsrfHeader() },
+    headers: { 'Content-Type': 'application/json' },
   });
-  if (error || !response.ok)
+  if (error || !response.ok || data === undefined)
     throw error ?? new Error(`/api/llm/byok save failed: ${response.status}`);
-  return data as ByokSaveResult;
+  return data;
 }
 
 export async function getCurrentByok(): Promise<ByokCurrentResult | null> {
   const { data, error, response } = await api.GET('/api/llm/byok', {});
   if (response.status === 204 || data === null) return null;
-  if (error || !response.ok)
+  if (error || !response.ok || data === undefined)
     throw error ?? new Error(`/api/llm/byok current failed: ${response.status}`);
 
-  const current = data as ByokCurrentResult;
-  if (!current.provider || !current.savedAt) return null;
-  return current;
+  if (!data.provider || !data.savedAt) return null;
+  return data;
 }

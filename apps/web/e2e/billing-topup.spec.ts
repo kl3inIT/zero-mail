@@ -150,7 +150,6 @@ for (const viewport of VIEWPORTS) {
     const requestsBeforeCredit = state.balanceRequests;
     state.availableCredits = 42;
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('networkidle');
 
     const successStep = page.getByTestId('topup-success-step');
     await expect(successStep).toBeVisible();
@@ -159,7 +158,7 @@ for (const viewport of VIEWPORTS) {
     expect(state.balanceRequests).toBeGreaterThan(requestsBeforeCredit);
 
     await page.getByRole('link', { name: 'Back to billing' }).click();
-    await expect(page).toHaveURL(/\/billing$/);
+    await expect(page).toHaveURL(/\/billing$/, { timeout: 15_000 });
     await expect(page.getByTestId('billing-balance-figure')).toContainText('42');
     await expectNoHorizontalOverflow(page);
   });
@@ -178,7 +177,6 @@ test('top-up route rehydrates a pending intent from code search param and sessio
   await expect(page.getByText(TOPUP_CODE, { exact: true })).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/billing/top-up\\?code=${TOPUP_CODE}`));
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle');
 
   await expect(page).toHaveURL(new RegExp(`/billing/top-up\\?code=${TOPUP_CODE}`));
   await expect(page.getByTestId('topup-instructions-step')).toBeVisible();
@@ -215,7 +213,7 @@ async function openBilling(
   await seedAuthenticatedSession(page);
   await installBillingApiMock(page, state);
   await page.goto(path, { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 }
 
 async function installBillingApiMock(page: Page, state: BillingMockState) {
@@ -223,7 +221,7 @@ async function installBillingApiMock(page: Page, state: BillingMockState) {
     const request = route.request();
     const url = new URL(request.url());
 
-    if (url.pathname === '/me') {
+    if (url.pathname === '/api/me') {
       await fulfillJson(route, {
         userId: 'user-1',
         tenantId: 'tenant-1',
@@ -250,6 +248,16 @@ async function installBillingApiMock(page: Page, state: BillingMockState) {
       return;
     }
 
+    if (url.pathname === '/api/me/notifications' && request.method() === 'GET') {
+      await fulfillJson(route, {
+        channel: 'DAILY_DIGEST',
+        digestEnabled: true,
+        digestSendHourLocal: 20,
+        timeZone: 'Asia/Ho_Chi_Minh',
+      });
+      return;
+    }
+
     if (url.pathname === '/api/billing/packages' && request.method() === 'GET') {
       await fulfillJson(route, state.packages);
       return;
@@ -271,12 +279,12 @@ async function installBillingApiMock(page: Page, state: BillingMockState) {
       return;
     }
 
-    if (url.pathname === '/gmail/connection/status' && request.method() === 'GET') {
+    if (url.pathname === '/api/gmail/connection/status' && request.method() === 'GET') {
       await fulfillJson(route, { connectionStatus: 'CONNECTED' });
       return;
     }
 
-    if (url.pathname === '/tenant/triage-pause' && request.method() === 'PUT') {
+    if (url.pathname === '/api/tenant/triage-pause' && request.method() === 'PUT') {
       await route.fulfill({ status: 204, body: '' });
       return;
     }

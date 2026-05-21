@@ -110,7 +110,7 @@ class LogScrubSyntheticTrafficTest extends ApiPostgresTestBase {
         RestClient client = RestClient.create("http://localhost:" + port);
 
         client.get()
-                .uri("/me")
+                .uri("/api/me")
                 .header(TestSessionSupport.HEADER_SUBJECT, LEAK_PROBE_SUBJECT)
                 .header(TestSessionSupport.HEADER_EMAIL, LEAK_PROBE_EMAIL)
                 .retrieve()
@@ -121,14 +121,14 @@ class LogScrubSyntheticTrafficTest extends ApiPostgresTestBase {
                         })
                 .toBodilessEntity();
         client.get()
-                .uri("/gmail/connection/status")
+                .uri("/api/gmail/connection/status")
                 .header(TestSessionSupport.HEADER_SUBJECT, LEAK_PROBE_SUBJECT)
                 .header(TestSessionSupport.HEADER_EMAIL, LEAK_PROBE_EMAIL)
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, (req, resp) -> {})
                 .toBodilessEntity();
         client.post()
-                .uri("/onboarding/select-template")
+                .uri("/api/onboarding/select-template")
                 .header(TestSessionSupport.HEADER_SUBJECT, LEAK_PROBE_SUBJECT)
                 .header(TestSessionSupport.HEADER_EMAIL, LEAK_PROBE_EMAIL)
                 .contentType(MediaType.APPLICATION_JSON)

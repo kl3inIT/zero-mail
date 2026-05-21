@@ -126,7 +126,9 @@ class DraftSafetyEvalTest {
                         anyString(),
                         anyString(),
                         any(),
-                        anyString(),
+                        any(),
+                        any(),
+                        any(),
                         any(),
                         any(),
                         anyString());

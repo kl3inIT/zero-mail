@@ -38,6 +38,51 @@ jobs:
       - name: Run backend checks
         run: ./gradlew --no-daemon check
 
+      - name: Upload JaCoCo XML reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: jacoco-reports
+          path: |
+            backend/core/build/reports/jacoco/test/jacocoTestReport.xml
+            backend/api/build/reports/jacoco/test/jacocoTestReport.xml
+            backend/worker/build/reports/jacoco/test/jacocoTestReport.xml
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Enforce zero non-AssistantSendExecutor Gmail send call sites (ARCH-01)
+        run: |
+          chmod +x scripts/ci/count-gmail-send-call-sites.sh
+          COUNTS=$(scripts/ci/count-gmail-send-call-sites.sh)
+          echo "$COUNTS"
+          NON_EXECUTOR=$(echo "$COUNTS" | awk -F= '/^non_executor=/{print $2}')
+          EXECUTOR=$(echo "$COUNTS" | awk -F= '/^executor=/{print $2}')
+          if [ "$NON_EXECUTOR" != "0" ]; then
+            echo "::error::Non-AssistantSendExecutor Gmail send call site detected - ARCH-01 regression"
+            exit 1
+          fi
+          # Wave 4 [ATOMIC-GROUP: arch01-flip]: AssistantSendExecutor is the single allowed send call site.
+          if [ "$EXECUTOR" != "1" ]; then
+            echo "::error::AssistantSendExecutor send call site count drifted from exactly 1 - ARCH-01"
+            exit 1
+          fi
+
+      - name: Keep Gmail send ArchUnit gates atomic (ARCH-01)
+        run: |
+          git fetch --quiet origin main --depth=1 || true
+          BASE_REF="origin/main"
+          if ! git rev-parse --verify "$BASE_REF" >/dev/null 2>&1; then
+            BASE_REF="HEAD^"
+          fi
+          CHANGED_FILES=$(git diff --name-only "$BASE_REF"...HEAD || true)
+          echo "$CHANGED_FILES"
+          NO_GMAIL_SEND_CHANGED=$(echo "$CHANGED_FILES" | grep -c '^backend/core/src/test/java/com/zeromail/core/arch/NoGmailSendAllowedTest.java$' || true)
+          COUNT_GATE_CHANGED=$(echo "$CHANGED_FILES" | grep -c '^backend/core/src/test/java/com/zeromail/core/arch/OnlyOneGmailSendCallSiteTest.java$' || true)
+          if [ "$NO_GMAIL_SEND_CHANGED" != "0" ] && [ "$COUNT_GATE_CHANGED" = "0" ]; then
+            echo "::error::NoGmailSendAllowedTest changed without OnlyOneGmailSendCallSiteTest - keep ARCH-01 gates atomic"
+            exit 1
+          fi
+
   ai-eval:
     name: Backend AI Eval
     if: ${{ inputs.run-ai-eval }}
@@ -76,7 +121,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version: "24"
           check-latest: true
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
@@ -90,11 +135,69 @@ jobs:
       - name: Run frontend typecheck
         run: pnpm --filter web run typecheck
 
-      - name: Run frontend unit tests
-        run: pnpm --filter web run test
+      - name: Run frontend unit tests with coverage
+        run: pnpm --filter web run test:coverage
+
+      - name: Upload Vitest coverage
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: vitest-coverage
+          path: apps/web/coverage/
+          retention-days: 14
+          if-no-files-found: warn
 
       - name: Build frontend
         run: pnpm --filter web run build
+
+  admin:
+    name: Frontend Admin
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run admin lint
+        run: pnpm --filter @zeromail/admin run lint
+
+      # Build runs first so the TanStack Router Vite plugin can generate
+      # `routeTree.gen.ts`. Without that file, `tsc --noEmit` fails with
+      # `Argument of type '"/route"' is not assignable to parameter of type 'undefined'`.
+      - name: Build admin
+        run: pnpm --filter @zeromail/admin run build
+
+      - name: Run admin typecheck
+        run: pnpm --filter @zeromail/admin run typecheck
+
+      - name: Run admin unit tests
+        run: pnpm --filter @zeromail/admin run test
+
+      - name: Upload admin dist + route tree
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: admin-dist
+          path: |
+            apps/admin/dist/
+            apps/admin/src/routeTree.gen.ts
+          retention-days: 14
+          if-no-files-found: warn
 
   e2e:
     name: Playwright
@@ -111,7 +214,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version: "24"
           check-latest: true
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml

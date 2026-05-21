@@ -10,10 +10,34 @@ public final class TenantContext {
     private TenantContext() {}
 
     public static String currentOrThrow() {
+        if (adminContextBound()) {
+            throw new IllegalStateException(
+                    "TenantContext mutex violation: tenant access is forbidden inside admin scope");
+        }
         if (!TENANT.isBound()) {
-            throw new IllegalStateException("No tenant bound on this thread");
+            throw new IllegalStateException("No TenantContext tenant bound on this thread");
         }
         return TENANT.get();
+    }
+
+    public static void requireUnbound() {
+        if (TENANT.isBound()) {
+            throw new IllegalStateException("TenantContext cannot be bound inside AdminContext");
+        }
+    }
+
+    private static boolean adminContextBound() {
+        try {
+            Class<?> adminContextClass = Class.forName("com.zeromail.core.admin.auth.AdminContext");
+            ScopedValue<?> adminScopedValue =
+                    (ScopedValue<?>) adminContextClass.getField("ADMIN").get(null);
+            return adminScopedValue.isBound();
+        } catch (ClassNotFoundException adminContextNotPresent) {
+            return false;
+        } catch (ReflectiveOperationException reflectionException) {
+            throw new IllegalStateException(
+                    "Unable to inspect AdminContext binding", reflectionException);
+        }
     }
 
     /** Convenience for callers that immediately reify the bound tenant as a {@link UUID}. */

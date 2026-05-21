@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: Phase 08 ship-complete — bulk unsubscribe campaign + suppression list end-to-end GREEN
-stopped_at: Phase 08 Plan 09 (Wave 8) complete — frontend cleanup UI (2 feature folders, 4 routes, sidebar nav, 75+ i18n keys) + CleanupPrivacySweepTest UNS-09 GREEN + Playwright e2e golden path GREEN
-last_updated: "2026-05-20T19:16:00.000Z"
-last_activity: 2026-05-20
+milestone: v1.2
+milestone_name: Admin Console Foundation + Settings UI
+status: shipped
+stopped_at: Phase 8 shipped — PR #46
+last_updated: "2026-05-21T02:45:00.000Z"
+last_activity: 2026-05-21
 progress:
-  total_phases: 19
-  completed_phases: 0
+  total_phases: 2
+  completed_phases: 1
   total_plans: 6
-  completed_plans: 0
-  percent: 0
+  completed_plans: 6
+  percent: 50
 ---
 
 # Project State
@@ -21,22 +21,29 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 06 - polish-casa-verified-launch
+**Current focus:** Phase 08 — admin-console-operator-tooling
 
 ## Current Position
 
-Phase: 06 (polish-casa-verified-launch) - EXECUTING
-Plan: 5 of 5
-Status: Awaiting operator checkpoint for candidate gate URL, launch sign-off, final rc tag, and STATE closure
-Last activity: 2026-05-19 - Completed quick task 260519-lyj: Document Jmix Petclinic website colors
+Phase: 08 (admin-console-operator-tooling) — SHIPPED (PR #46)
+Plan: 6 of 6 (8A → 8B → 8C → 8D → 8E → 8F all complete)
+Status: Phase 8 shipped — PR #46 open against main (UAT 11/11 pass, audit-emission gap closed by fe5d2cf9)
+Last activity: 2026-05-21
 
-Progress: [██████████] 99%
+## Current Milestone Roadmap
+
+**v1.2 — Admin Console + User Settings UI** (2 phases, 61 requirements, all pending; merged 2026-05-19; WebAuthn pivot 2026-05-19)
+
+- **Phase 8** — Admin Console & Operator Tooling (WebAuthn admin auth + audit foundation + master keys + curated catalog + tenant inspection + queue + spend + OPS-INFRA; planning structure inside the phase: 8A foundation → 8B master keys → 8C tenant inspection → 8D catalog Sync → 8E queue health → 8F spend dashboard) — 42 requirements (OPS-INFRA-01..03, ADMIN-01..10, ARCH-08/09/10/11/12, MKEY-01..08, CAT-01..07, OPS-TENANT-01..05, OPS-QUEUE-01..02, OPS-SPEND-01..02)
+- **Phase 9** — User Settings UI on Curated Catalog (4-tab Settings: Personalization, Behavior, Safety Net, AI Provider/Model — AI tab consumes curated catalog from Phase 8) — 19 requirements (SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04, SET-AI-01..04)
+
+See `.planning/ROADMAP.md` for full phase details + success criteria, and `.planning/REQUIREMENTS.md` Traceability section for full REQ-ID → phase mapping.
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 56
+- Total plans completed: 67
 - Average duration: —
 - Total execution time: 0.0 hours
 
@@ -50,6 +57,7 @@ Progress: [██████████] 99%
 | 04 | 9 | - | - |
 | 05A | 6 | - | - |
 | 05B | 8 | - | - |
+| 07 | 6 | - | - |
 
 **Recent Trend:**
 
@@ -143,8 +151,17 @@ Progress: [██████████] 99%
 | Phase 06-polish-casa-verified-launch P02 | 21min | 5 tasks | 10 files |
 | Phase 06 P03 | 2h 47m | 2 tasks | 11 files |
 | Phase 06 P04 | 9 min | 3 tasks | 4 files |
-| Phase 08 P08 | 45min | 3 tasks | 21 files |
-| Phase 08 P09 | 1h 25min | 3 tasks | 36 created + 10 modified |
+| Phase 07 P01 | 21 min | 9 tasks | 12 files |
+| Phase 07 P02 | 1h 4m | 4 tasks | 51 files |
+| Phase 07 P03 | 44min | 3 tasks | 45 files |
+| Phase 07 P04 | 2h 6m | 3 tasks | 33 files |
+| Phase 07 P05 | 45min | 4 tasks | 28 files |
+| Phase 07 P06 | 7h | 8 tasks | 57 files |
+| Phase 08 P8A | multi-session | 8 tasks | 100+ files |
+| Phase 08 P8C | multi-session | 3 tasks | 71 files |
+| Phase 08 P8D | single-commit | 3 tasks | 71 files |
+| Phase 08 P8E | 00:45:00 | 2 tasks | 36 files |
+| Phase 08 P8F | 31min | 2 tasks | 31 files |
 
 ## Accumulated Context
 
@@ -314,9 +331,29 @@ Recent decisions affecting current work:
 - [Phase 06]: Plan 02 uses deterministic UUID loadtest tenants from 00000000-0000-4000-8000-1de57e570001 through 00000000-0000-4000-8000-1de57e570050.
 - [Phase 06]: Plan 02 seeds gmail_connections for each synthetic loadtest tenant so PubSubIngestionService resolves emailAddress to tenant_id during the k6 workload.
 - [Phase 06]: Plan 02 wires loadtestVerify as a Gradle Exec task that shells out to psql for invariant checks instead of using JDBC on the Gradle buildscript classpath.
-- [Phase 08]: Plan 08 (Wave 7) ships 4 thin cleanup controllers + 13 record DTOs + regenerates apps/web/lib/api/schema.d.ts. Controller-local @ExceptionHandler is used only to override two GlobalExceptionHandler defaults — CampaignCapExceededException → 400 (overrides UNPROCESSABLE/422) and UndoWindowExpiredException → 410 (overrides CONFLICT/409). Other cleanup exceptions keep their ErrorClass-driven mapping.
-- [Phase 08]: Plan 08 (Wave 7) undo endpoint resolves jobId → campaignId via CampaignStatusQueryService instead of injecting UnsubscribeCampaignRepository directly — keeps ArchUnit WR-01 controllers_do_not_touch_repositories rule passing.
-- [Phase 08]: Plan 08 (Wave 7) OpenAPI regen workaround — springdoc-openapi-gradle-plugin's forkedSpringBootRun ignores the Gradle JDK toolchain and uses JAVA_HOME directly, hitting UnsupportedClassVersionError when JAVA_HOME=jdk-21 and the project requires JDK 25. Workaround documented in 08-08-SUMMARY: start backend via standard bootRun with --spring.docker.compose.enabled=false --spring.jpa.hibernate.ddl-auto=none --spring.liquibase.enabled=true against the locally-running PG/Redis containers, then curl /v3/api-docs → openapi.json → pnpm exec openapi-typescript.
+- [Phase 07]: Plan 02 keeps chat_message.parts source-aware: email-read tool outputs reject body-shaped fields, while send/draft tool arguments may persist user-authored draft bodies per the privacy carve-out.
+- [Phase 07]: Plan 02 uses recursive PL/pgSQL JSONB traversal for the body-ban trigger and SQLSTATE 23514 so Spring maps trigger failures as data-integrity violations.
+- [Phase 07]: Plan 02 moves confirmation CAS to assistant_pending_action(parts_updated_at,state); chat_message remains append-only with no updated_at column.
+- [Phase 07]: Plan 03 locks the 24-tool authoritative list in ChatToolName/ChatToolCatalog: 8 read, 7 write-reversible, 6 confirm-required, 3 confirmed-send; createRule is confirm-required and searchMemories is a read tool.
+- [Phase 07]: VercelProtocolEmitter uses a core-local FrameWriter instead of SseEmitter so backend/core stays Spring-MVC-free; backend/api will adapt SseEmitter in Plan 04.
+- [Phase 07]: GetMessageToolHandler emits decoded message body as bodyText for in-memory LLM use, relying on SanitizingSink/ToolOutputSanitizer to strip it before chat_message persistence.
+- [Phase 07]: Plan 04 keeps ChatOrchestrator.stream non-transactional; prep, tool envelopes, and assistant text persistence happen through TransactionTemplate callbacks after stream lifecycle points.
+- [Phase 07]: Plan 04 places AssistantPendingActionReconciler in backend/api with API-side scheduling because v1.1 runs the chat surface in the API process, not worker-only schedulers.
+- [Phase 07]: Plan 04 ConfirmControllerShellIT is intentionally temporary and must be deleted in Plan 05 with the executor/state-machine atomic flip.
+- [Phase 08 8A]: /enroll remains SPA-only; backend enrollment token validation lives at POST /api/admin/enrollment/session.
+- [Phase 08 8A]: NPM admin UI port 81 is loopback-bound and reached through SSH tunneling, not public exposure.
+- [Phase 08 8A]: Task 8A-08 human-verify checkpoint auto-approved because workflow.auto_advance=true and it was not a package-legitimacy gate.
+- [Phase 08 8D]: feature_binding final shape (id, model_id, feature, enabled) with UNIQUE(model_id, feature) only — no is_default or provider columns. Per-feature default lives in feature_default_provider with feature as PRIMARY KEY; Postgres rejects subqueries in index expressions, so a partial UNIQUE is replaced by a 3-row dedicated table + INSERT ... ON CONFLICT(feature) DO UPDATE.
+- [Phase 08 8D]: Catalog Sync sub-steps live in processing_job.payload_json->>'step' (FETCH / FETCHING / DIFF_READY / CONFIRMING / CONFIRMED / CANCELLED / ABANDONED); existing processing_job.status CHECK constraint untouched. Worker filters CATALOG_SYNC jobs by step IN ('FETCH','DIFF_READY'); DIFF_READY rows wait for explicit operator Confirm rather than auto-apply.
+- [Phase 08 8D]: provider_catalog.catalog_version BIGINT bumped in the same @Transactional as catalog mutations and carried on CatalogChangedEvent. Extended SpringAiChatModelFactory.CacheKey + ProviderMasterKeyResolver.ResolvedKey with providerCatalogVersion so cache misses are request-bound; the async ChatModelCacheEvictionListener becomes a memory-reclaim optimization, not the correctness mechanism.
+- [Phase 08 8D]: ModelsProbeClient split — probeConnection(provider, key) -> ProbeResult enum (unchanged from 8B) + fetchModelCatalog(provider, key) -> List<RawModel> on the same RestClient + scrub interceptor. Sync Fetch consumes the typed list; 8B test-connection still consumes the enum.
+- [Phase 08 8D]: Any active admin can Confirm a DIFF_READY job (not only the initiator). Audit row records both payload_json.actorId (initiator) and AdminContext.currentOrThrow().id() (confirmer) to avoid UX dead-ends on session expiry.
+- [Phase 08 8D]: Liquibase changesets renamed per 8A R-H10 — 068-catalog-tables-prep (pre-FK NULL backfill of orphan assistant_settings.*_model_id), 068b-catalog-tables-fk (FKs to model_catalog), 069-feature-default-provider-migration (8B BOOLEAN columns -> table + drop), 070-anthropic-catalog-seed (3 Claude models via `<insert>` so rollback removes them).
+- [Phase 08 8D]: SettingsCatalogController is the first user-side controller mirroring admin-curated state; lives under api.controllers.settings.*, gated by @PreAuthorize("isAuthenticated()"), and joins the public GroupedOpenApi group. CuratedCatalogResponse excludes admin-only fields (sync_history, dependents_count); ETag derived from per-provider catalog_version map + SHA-256 of payload, key `catalog:etag:v1`, TTL 30s, 304 on If-None-Match.
+- [Phase ?]: 8E adds admin_requeue_count alongside attempts so manual interventions and worker retries don't conflict
+- [Phase ?]: 8E uses three-layer privacy gate against payload exposure: DTO field-name regex (compile), explicit SELECT lists (review), JDBC Connection JDK-proxy SQL spy (runtime)
+- [Phase ?]: Phase 8F shipped /admin/spend dashboard with row-level credential_source classification
+- [Phase ?]: Phase 8F created llm_call_audit table from scratch (Liquibase 079); plan and research described it as pre-existing but no changeset existed — Rule 3 deviation
 
 ### Roadmap Evolution
 
@@ -334,7 +371,6 @@ Recent decisions affecting current work:
 [From .planning/todos/pending/ — ideas captured during sessions]
 
 - WR-06: dedicated test-profile SecurityConfig slice (so OAuth filter chain is exercised under integration tests) — `.planning/todos/pending/2026-04-28-wr-06-test-profile-securityconfig-slice.md`
-- Apply `:?` fail-fast to `backend/worker/src/main/resources/application.yml:10` (CR-04 parity with api module) — `.planning/todos/pending/2026-04-28-worker-application-yml-fail-fast-parity.md`
 - Make backend/core context API surfaces explicit with Spring Modulith `@NamedInterface("api")` (+ low-pri: Spotless `ratchetFrom`, vertical-slice split of `rules`/`llm` if folders grow) — `.planning/todos/pending/2026-05-12-make-backend-core-context-api-surfaces-explicit-with-namedin.md`
 
 ### Blockers/Concerns
@@ -346,12 +382,12 @@ Recent decisions affecting current work:
 - Open decisions deferred to phase execution: credit unit economics (Phase 2B), tokenizer choice (Phase 2C), payment provider Stripe vs LemonSqueezy (Phase 2B), observability vendor (any), CASA tier (Phase 1/6).
 - **Refresh-token key rotation drill** (Phase 2C or dedicated security-ceremony phase) — verification protocol: deploy v2 key alongside v1 in the deployment secret source (current VPS baseline: Docker secrets / systemd credentials / locked-down env files; future production options may include GCP Secret Manager, AWS Secrets Manager, or HashiCorp Vault); verify multi-version decrypt path reads `key_version` byte from envelope and selects correct key; rotate v1 → v2 + re-encrypt all rows; verify v1 envelopes still decrypt during overlap window. Per CLAUDE.md TL;DR ("No GCP hosting baseline; do not add spring-cloud-gcp starters by default"), the drill must be deployment-source-agnostic.
 - **Production cookie `secure: true` profile override + `REFRESH_TOKEN_KEY_BASE64` deployment secret resolution** (Phase 6 launch hardening) — verification protocol: assert `application-prod.yml` overrides `server.servlet.session.cookie.secure: true`; assert `REFRESH_TOKEN_KEY_BASE64` resolves successfully from the configured deployment secret source in prod profile (Docker secret / systemd credential / env file mounted via the VPS deployment pipeline; possible future production options: GCP Secret Manager, AWS Secrets Manager, HashiCorp Vault); assert app fails-fast at boot if the secret is missing (no fallback to plain env-var in prod). Per CLAUDE.md TL;DR, no GCP-specific resolution is required by default.
+- Phase 08 8A final verification found pre-existing public API test drift from db38a7be: legacy tests still call /me and /tenant routes while production controllers map /api/**; admin gates pass, cleanup deferred in phase deferred-items.md.
 
 ### Quick Tasks Completed
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
-| 260519-lyj | Document Jmix Petclinic website colors | 2026-05-19 | pending | Complete | [260519-lyj-document-jmix-petclinic-color-block-ui-l](./quick/260519-lyj-document-jmix-petclinic-color-block-ui-l/) |
 | 260514-ta7 | Review PR #36 CodeRabbit and Copilot comments, apply warranted fixes, and recheck CI | 2026-05-14 | 4409e0e | Verified | [260514-ta7-review-pr-36-coderabbit-and-copilot-comm](./quick/260514-ta7-review-pr-36-coderabbit-and-copilot-comm/) |
 | 260514-j7v | PR #33 merge readiness and CI refresh while preserving PR UI | 2026-05-14 | e3e6639 | Verified | [260514-j7v-big-update-ui-33-check-pr-to-merge-into-](./quick/260514-j7v-big-update-ui-33-check-pr-to-merge-into-/) |
 | 260514-leb | Lighthouse mobile audit for apps/web landing — all 4 scores ≥ 90 (Perf 96, A11y 100, BP 100, SEO 100) | 2026-05-14 | 4917efd | — | [260514-leb-chay-lighthouse-audit-cho-apps-web-mobil](./quick/260514-leb-chay-lighthouse-audit-cho-apps-web-mobil/) |
@@ -378,14 +414,94 @@ Recent decisions affecting current work:
 
 ## Deferred Items
 
-Items acknowledged and carried forward from previous milestone close:
+Items acknowledged and deferred at v1.0 milestone close on 2026-05-15.
 
-| Category | Item | Status | Deferred At |
-|----------|------|--------|-------------|
-| *(none — project init)* | | | |
+**Summary:** 54 open items at close — 32 quick tasks + 5 UAT gaps + 2 verification gaps archived alongside v1.0 phases; 12 seeds + 3 todos kept in `.planning/` for next milestone.
+
+### Carried forward to next milestone (kept in .planning/)
+
+**Seeds (12 — future feature ideas):**
+
+| Slug | Notes |
+|------|-------|
+| SEED-001 | future-ai-email-workspace-features |
+| SEED-002 | ai-mailbox-search-and-answer-engine |
+| SEED-003 | screen-aware-ai-assistant-command-center |
+| SEED-004 | inbox-splits-bundles-delivery-schedules |
+| SEED-005 | team-collaboration-shared-email-workspace |
+| SEED-006 | calendar-scheduling-and-meeting-briefs |
+| SEED-007 | messaging-assistant-slack-telegram-zalo |
+| SEED-008 | tasklet-style-agentic-workflow-automation |
+| SEED-009 | bulk-cleanup-cold-blocker-smart-filing |
+| SEED-010 | sales-engagement-crm-and-read-tracking |
+| SEED-011 | admin-support-and-compliance-console |
+| SEED-012 | casa-restricted-scope-verification (dormant — production OAuth verification track) |
+
+**Todos (3 — pending work):**
+
+| Slug | Notes |
+|------|-------|
+| 2026-04-28-wr-06-test-profile-securityconfig-slice | Phase 1.5 deferred test improvement |
+| 2026-05-12-make-backend-core-context-api-surfaces-explicit-with-namedin | API surface explicitness |
+| 2026-05-15-rules-ux-structured-builder-next-milestone | Rules UX structured builder for next milestone |
+
+### Archived alongside v1.0 phases (moved to milestones/v1.0-*)
+
+**Quick tasks (32):** All directories under `.planning/quick/` moved to `.planning/milestones/v1.0-quick/`. None had completion SUMMARYs; they represent ad-hoc execution traces from the v1.0 development period (Phase 1.5 cleanup, frontend refactors, BYOK presets, CI work, content drafts, code review responses, etc.).
+
+**UAT gaps (5):** Inside phase VERIFICATION/UAT files — moved with phase dirs. Notable: 05C live Resend deliverability acknowledged for ship 2026-05-14.
+
+**Verification gaps (2):** 01.4 + 02A status `human_needed` (manual gates: live OAuth UX, live Pub/Sub, native VI copy, visual sweep) — moved with phase dirs. All automated tests PASS.
+
+---
+
+Items acknowledged and deferred at v1.1 milestone close on 2026-05-19.
+
+**Summary:** v1.1 ships Phase 7 only; Phase 8 deferred entirely to v1.2. 22 open artifacts at close = 7 v1.1-period quick tasks (archived alongside Phase 7) + 3 todos (carried forward, unchanged from v1.0 close) + 12 seeds (carried forward; **SEED-011 admin-support-and-compliance-console activates as v1.2 Phase 1**).
+
+### v1.1 — Carried forward to v1.2
+
+**Unchecked v1.1 requirements (19):** All four SET-* groups move to v1.2 candidates.
+
+| Group | Slugs | Notes |
+|-------|-------|-------|
+| SET-AI | SET-AI-01..04 | Per-feature picker, BYOK key, default-vs-BYOK toggle, test-connection — depends on v1.2 admin-curated catalog |
+| SET-VOICE | SET-VOICE-01..06 | Writing style, personal instructions, signature, knowledge base, tone preset, output language |
+| SET-BEHV | SET-BEHV-01..05 | Auto-draft master, confidence threshold, daily digest, sensitive-data protection, shadow-mode |
+| SET-SAFE | SET-SAFE-01..04 | Safety-net CRUD, paste-import, per-entry mode, VIP-blocked audit badge |
+
+**v1.2 hardening + GA discipline (deferred from Phase 8):**
+
+- Hostile-corpus `aiEval` suite (15 hostile emails + 10 hostile personal_instructions + VIP send refusal + VI/EN fidelity)
+- Grafana dashboards: lease residuals, audit-vs-state mismatch, ordering violations, leak counters, BUDGET_EXHAUSTED rate
+- CASA evidence refresh for chat surface
+- README/CONTRIBUTING send-call-site discipline doc
+- LAUNCH-GO-NOGO checklist + v1.2 GA tag
+
+**v1.2 sequencing decision:** Phase 1 = Admin console foundation (auth/role, /admin route, RBAC, catalog persistence, master key mgmt). Subsequent phases build Settings UI on top of admin-curated catalog, plus visual refresh aligned with PR #40 brand palette (teal → purple).
+
+### v1.1-period quick tasks (7 — archived alongside Phase 7)
+
+| Slug | Description |
+|------|-------------|
+| 260515-qru-implement-inbox-zero-inspired-rules-triage-ux | Pre-Phase 7 rules/triage UX work |
+| 260517-analytics-chart-layout | Analytics chart layout polish |
+| 260517-analytics-explanation-layout | Analytics explanation copy/layout |
+| 260517-analytics-legibility-polish | Analytics legibility pass |
+| 260517-dzk-improve-analytics-dashboard-visual-hiera | Analytics visual hierarchy |
+| 260517-global-zero-glyph | Global Zero glyph brand asset |
+| 260517-metadata-only-analytics | Metadata-only analytics path |
+| 260517-shadcn-analytics-polish | shadcn analytics polish |
+| 260518-wai-replace-manual-frontend-chat-api-dtos-wi | Replace manual frontend chat API DTOs with codegen (deferred mid-Phase-7) |
+
+(Note: 9 directories on disk; SDK audit shows 7 with no SUMMARY.md — all carried forward, none archived as completed.)
 
 ## Session Continuity
 
-Last session: 2026-05-20T19:16:00.000Z
-Stopped at: Phase 08 Plan 09 (Wave 8) complete — frontend cleanup UI (2 feature folders, 4 routes, sidebar nav, 75+ i18n keys) + CleanupPrivacySweepTest UNS-09 final assertion GREEN + Playwright e2e golden path GREEN (4 passing). 36 files created + 10 modified across 4 commits (1432f37f + 86a460dd + eb492f79 + b4653c45). Phase 08 ship-complete — all UNS-01..UNS-09 contracts on the GREEN side.
-Resume file: Phase 8 COMPLETE. Next phase entry point lives in the parent ROADMAP.md.
+Last session: 2026-05-20T08:49:56.382Z
+Stopped at: Completed 08-8D-PLAN.md
+Resume file: None
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

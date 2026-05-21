@@ -1,0 +1,1262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1280, initial-scale=1" />
+<title>Zero Mail · Admin Console (Phase 8 prototype)</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          background: '#F9F8FD',
+          ink: '#3D385A',
+          ink2: '#4F496B',
+          muted: '#625C78',
+          faint: '#6F6883',
+          card: '#FFFFFF',
+          surface: '#F4F2F9',
+          line: '#E6E3D8',
+          line2: '#E3DFF2',
+          accent: '#867AEB',
+          accentHover: '#7062DF',
+          accentSoft: '#EAE8F7',
+          green: '#2F7D5C',
+          greenSoft: '#D8EAD8',
+          amber: '#E3A023',
+          amberSoft: '#FDE8BA',
+          red: '#B0413E',
+          redSoft: '#F5D7D2',
+          blue: '#2C5BA8',
+          blueSoft: '#D7E1F1',
+          violet: '#5E4B8B',
+          violetSoft: '#E0DBEC',
+        },
+        fontFamily: {
+          sans: ['ui-sans-serif','system-ui','-apple-system','Segoe UI','sans-serif'],
+          mono: ['ui-monospace','SFMono-Regular','Menlo','Monaco','Consolas','monospace'],
+        },
+        boxShadow: {
+          card: '0 1px 2px rgba(20,20,18,0.05), 0 1px 0 rgba(20,20,18,0.02)',
+          cardLg: '0 4px 12px -2px rgba(20,20,18,0.06), 0 2px 4px -1px rgba(20,20,18,0.04)',
+        }
+      }
+    }
+  }
+</script>
+<style>
+  html, body { background: #F9F8FD; color: #3D385A; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .ring-accent:focus { outline: 2px solid #867AEB; outline-offset: 2px; }
+  .pulse-dot { animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(134,122,235,0.20); }
+    50% { box-shadow: 0 0 0 6px rgba(134,122,235,0.08); }
+  }
+  .grid-paper {
+    background-image: radial-gradient(circle at 1px 1px, rgba(61,56,90,0.06) 1px, transparent 0);
+    background-size: 24px 24px;
+  }
+  /* Stepper line */
+  .stepper-line { height: 1px; flex: 1; background: #E6E3D8; }
+  .stepper-line-active { background: #867AEB; }
+  /* SR-only */
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+</style>
+</head>
+<body class="font-sans antialiased text-[14px] leading-[1.5] grid-paper">
+
+<!-- ============================================================
+     LEGEND / TABLE OF CONTENTS — prototype index
+     ============================================================ -->
+<header class="bg-card border-b border-line/60 sticky top-0 z-50">
+  <div class="max-w-[1280px] mx-auto px-8 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-7 h-7 rounded-md bg-ink text-background grid place-items-center font-semibold">Z</div>
+      <div>
+        <div class="text-[13px] font-semibold text-ink">Zero Mail · Admin Console prototype</div>
+        <div class="text-[11.5px] font-mono text-faint tracking-wider uppercase">phase 08 · admin.zeromail.com · v1.2</div>
+      </div>
+    </div>
+    <nav class="hidden md:flex items-center gap-5 text-[12.5px] text-muted">
+      <a href="#enroll" class="hover:text-ink">Enroll</a>
+      <a href="#login" class="hover:text-ink">Login</a>
+      <a href="#dashboard" class="hover:text-ink">Dashboard</a>
+      <a href="#audit" class="hover:text-ink">Audit</a>
+      <a href="#grants" class="hover:text-ink">Grants</a>
+      <a href="#keys" class="hover:text-ink">Keys</a>
+      <a href="#catalog" class="hover:text-ink">Catalog</a>
+      <a href="#tenants" class="hover:text-ink">Tenants</a>
+      <a href="#tenant-detail" class="hover:text-ink">Detail</a>
+      <a href="#queue" class="hover:text-ink">Queue</a>
+      <a href="#spend" class="hover:text-ink">Spend</a>
+      <a href="#confirm" class="hover:text-ink">Confirm</a>
+    </nav>
+  </div>
+  <div class="bg-accentSoft border-b border-line/30 text-[11.5px] text-muted">
+    <div class="max-w-[1280px] mx-auto px-8 py-2">
+      Static mockup — no JS interactions wired. Each section below shows a single route at a time. The persistent <span class="font-semibold text-accent">ADMIN MODE</span> banner shown inside each screen is the real chrome.
+    </div>
+  </div>
+</header>
+
+<main class="max-w-[1280px] mx-auto px-8 py-12 space-y-24">
+
+<!-- ============================================================
+     1. ENROLL — first-time WebAuthn passkey registration
+     ============================================================ -->
+<section id="enroll" class="scroll-mt-32">
+  <h2 class="text-[13px] font-mono uppercase tracking-wider text-muted mb-3">01 · /enroll?token=…</h2>
+  <div class="rounded-xl bg-card border border-line shadow-cardLg overflow-hidden">
+    <div class="min-h-[560px] grid place-items-center bg-background p-12 grid-paper">
+      <div class="w-full max-w-[440px] bg-card border border-line rounded-xl shadow-card p-10">
+        <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-accentSoft text-accent text-[11px] font-mono uppercase tracking-wider">
+          <span class="w-1.5 h-1.5 rounded-full bg-accent"></span>
+          enrollment
+        </div>
+        <h1 class="mt-5 text-[28px] font-semibold leading-[1.2] text-ink tracking-tight">Register a passkey</h1>
+        <p class="mt-3 text-[14px] text-muted leading-[1.55]">
+          You are completing the one-time admin enrollment for <span class="font-semibold text-ink">kythuat@zeromail.com</span>. Your browser will prompt for a passkey (Touch ID, Windows Hello, or hardware key).
+        </p>
+        <div class="mt-6 p-4 rounded-md bg-surface border border-line text-[12.5px] text-ink2">
+          <div class="font-mono text-[11px] text-muted uppercase tracking-wider mb-1">Token expires in</div>
+          <div class="font-mono text-[18px] tabular text-ink">09:47</div>
+        </div>
+        <button class="mt-6 w-full h-11 rounded-md bg-accent text-white font-semibold text-[14px] hover:bg-accentHover ring-accent">
+          Register passkey
+        </button>
+        <p class="mt-4 text-[12px] text-faint">Once registered, sign in via <span class="font-mono">admin.zeromail.com/login</span>. This URL is single-use.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     2. LOGIN — passkey assertion
+     ============================================================ -->
+<section id="login" class="scroll-mt-32">
+  <h2 class="text-[13px] font-mono uppercase tracking-wider text-muted mb-3">02 · /login</h2>
+  <div class="rounded-xl bg-card border border-line shadow-cardLg overflow-hidden">
+    <div class="min-h-[560px] grid place-items-center bg-background p-12 grid-paper">
+      <div class="w-full max-w-[440px] bg-card border border-line rounded-xl shadow-card p-10 text-center">
+        <div class="mx-auto w-12 h-12 rounded-lg bg-accentSoft grid place-items-center">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#867AEB" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h1 class="mt-5 text-[28px] font-semibold leading-[1.2] text-ink tracking-tight">Admin sign-in</h1>
+        <p class="mt-3 text-[14px] text-muted">Authenticate with your passkey to enter the admin console.</p>
+        <button class="mt-6 w-full h-11 rounded-md bg-accent text-white font-semibold text-[14px] hover:bg-accentHover ring-accent inline-flex items-center justify-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9"/><circle cx="12" cy="12" r="3"/></svg>
+          Sign in with passkey
+        </button>
+        <div class="mt-6 pt-5 border-t border-dashed border-line text-[12px] text-faint flex items-center justify-between">
+          <span>Lost passkey?</span>
+          <a href="#" class="text-accent font-medium">Contact a co-admin</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     3. DASHBOARD — KPI landing
+     ============================================================ -->
+<section id="dashboard" class="scroll-mt-32">
+  <h2 class="text-[13px] font-mono uppercase tracking-wider text-muted mb-3">03 · / (Dashboard)</h2>
+  <div class="rounded-xl bg-card border border-line shadow-cardLg overflow-hidden">
+
+    <!-- ADMIN MODE banner -->
+    <div class="h-10 bg-amberSoft border-b border-amber/60 flex items-center px-6 text-[12.5px] text-ink2">
+      <div class="flex items-center gap-2">
+        <span class="font-mono uppercase tracking-wider text-[11px] font-semibold text-amber">⚠ ADMIN MODE</span>
+        <span class="text-faint">·</span>
+        <span>actions affect real tenants</span>
+        <span class="text-faint">·</span>
+        <span>signed in as <span class="font-mono">kythuat@zeromail.com</span></span>
+        <span class="text-faint">·</span>
+        <span class="font-mono text-amber">env=prod</span>
+      </div>
+      <button class="ml-auto h-7 px-3 text-[12px] font-medium text-ink2 hover:text-ink border border-amber/40 rounded">Sign out</button>
+    </div>
+
+    <!-- App shell: sidebar + content -->
+    <div class="grid grid-cols-[240px_1fr] min-h-[640px]">
+      <!-- Sidebar -->
+      <aside class="border-r border-line bg-surface p-4 flex flex-col gap-1 text-[13.5px]">
+        <div class="flex items-center gap-2 px-2 py-3 border-b border-line/60 mb-2">
+          <div class="w-7 h-7 rounded-md bg-ink text-background grid place-items-center font-semibold">Z</div>
+          <div>
+            <div class="font-semibold text-ink leading-tight">Zero Mail</div>
+            <div class="text-[10.5px] font-mono uppercase tracking-wider text-muted">admin</div>
+          </div>
+        </div>
+        <div class="text-[10.5px] font-mono uppercase tracking-wider text-faint px-2 mt-2 mb-1">Overview</div>
+        <a href="#dashboard" class="flex items-center gap-2 px-2 py-1.5 rounded-md bg-accentSoft text-accent font-semibold border-l-2 border-accent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </a>
+        <div class="text-[10.5px] font-mono uppercase tracking-wider text-faint px-2 mt-3 mb-1">Audit &amp; Access</div>
+        <a href="#audit" class="flex items-center gap-2 px-2 py-1.5 rounded-md text-ink2 hover:bg-card">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M5 8V5a2 2 0 0 1 2-2h7l5 5v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-4"/><circle cx="5" cy="14" r="3"/><path d="M5 17v4"/><path d="M3 19h4"/></svg>
+          Audit log
+        </a>
+        <a href="#grants" class="flex items-center gap-2 px-2 py-1.5 rounded-md text-ink2 hover:bg-card">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="m19 8 2 2-2 2"/></svg>
+          Role grants
+        </a>
+        <div class="text-[10.5px] font-mono uppercase tracking-wider text-faint px-2 mt-3 mb-1">LLM</div>
+        <a href="#keys" class="flex items-center gap-2 px-2 py-1.5 rounded-md text-ink2 hover:bg-card">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="15" r="4"/><path d="m10.85 12.15 9-9"/><path d="M16 7h3v3"/><path d="m18 9-1.5-1.5"/></svg>
+          Master keys
+        </a>
+        <a href="#catalog" class="flex items-center gap-2 px-2 py-1.5 rounded-md text-ink2 hover:bg-card">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 3h6a4 4 0 0 1 4 4v14"/><path d="M22 3h-6a4 4 0 0 0-4 4v14"/></svg>
+          Catalog
+        </a>
+        <div class="text-[10.5px] font-mono uppercase tracking-wider text-faint px-2 mt-3 mb-1">Operations</div>
+        <a href="#tenants" class="flex items-center gap-2 px-2 py-1.5 rounded-md text-ink2 hover:bg-card">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m22 11-3 3-2-2"/></svg>
+          Tenants
+        </a>
+        <a href="#queue" class="flex items-center gap-2 px-2 py-1.5 rounded-md text-ink2 hover:bg-card">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
+          Queue
+        </a>
+        <a href="#spend" class="flex items-center gap-2 px-2 py-1.5 rounded-md text-ink2 hover:bg-card">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Spend
+        </a>
+      </aside>
+
+      <!-- Content -->
+      <div class="bg-background p-8">
+        <div class="flex items-end justify-between mb-6">
+          <div>
+            <h1 class="text-[20px] font-semibold text-ink leading-[1.3]">Operations overview</h1>
+            <p class="text-[14px] text-muted mt-1">42 active tenants · last passkey login 4 minutes ago</p>
+          </div>
+          <div class="text-[12px] font-mono text-muted flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-accent pulse-dot"></span>
+            <span>Updated 7s ago</span>
+          </div>
+        </div>
+
+        <!-- KPI cards -->
+        <div class="grid grid-cols-4 gap-4 mb-8">
+          <div class="bg-card border border-line rounded-lg p-5 shadow-card">
+            <div class="text-[12px] font-semibold text-muted uppercase tracking-wider">Active tenants</div>
+            <div class="mt-2 text-[28px] font-semibold text-ink tabular leading-[1.2]">42</div>
+            <div class="mt-1 text-[12px] text-green font-medium">+3 this week</div>
+          </div>
+          <div class="bg-card border border-line rounded-lg p-5 shadow-card">
+            <div class="text-[12px] font-semibold text-muted uppercase tracking-wider">Spend today</div>
+            <div class="mt-2 text-[28px] font-semibold text-ink tabular leading-[1.2]">$18.42</div>
+            <div class="mt-1 text-[12px] text-muted">platform · BYOK separate</div>
+          </div>
+          <div class="bg-card border border-line rounded-lg p-5 shadow-card">
+            <div class="text-[12px] font-semibold text-muted uppercase tracking-wider">Queue depth</div>
+            <div class="mt-2 text-[28px] font-semibold text-ink tabular leading-[1.2]">17</div>
+            <div class="mt-1 text-[12px] text-amber">oldest 4m 12s</div>
+          </div>
+          <div class="bg-card border border-line rounded-lg p-5 shadow-card">
+            <div class="text-[12px] font-semibold text-muted uppercase tracking-wider">Last audit action</div>
+            <div class="mt-2 text-[14px] font-semibold text-ink leading-[1.3]">MASTER_KEY_ROTATED</div>
+            <div class="mt-1 text-[12px] font-mono text-muted">openai · 12m ago</div>
+          </div>
+        </div>
+
+        <!-- Recent audit list -->
+        <div class="bg-card border border-line rounded-lg shadow-card overflow-hidden">
+          <div class="px-5 py-3.5 border-b border-line flex items-center justify-between">
+            <h2 class="text-[14px] font-semibold text-ink">Recent audit events</h2>
+            <a href="#audit" class="text-[12px] font-medium text-accent">View all →</a>
+          </div>
+          <ul class="divide-y divide-line text-[13.5px]">
+            <li class="px-5 py-3 grid grid-cols-[140px_120px_1fr_120px] items-center gap-4">
+              <span class="font-mono text-[11.5px] text-muted">14:23:11Z</span>
+              <span class="inline-flex w-fit px-2 py-0.5 rounded text-[11px] font-semibold bg-blueSoft text-blue">MASTER_KEY_ROTATED</span>
+              <span class="text-ink2">kythuat@zeromail.com rotated <span class="font-mono">openai</span> master key</span>
+              <span class="font-mono text-[11.5px] text-faint text-right">a8f3…d211</span>
+            </li>
+            <li class="px-5 py-3 grid grid-cols-[140px_120px_1fr_120px] items-center gap-4">
+              <span class="font-mono text-[11.5px] text-muted">14:09:48Z</span>
+              <span class="inline-flex w-fit px-2 py-0.5 rounded text-[11px] font-semibold bg-violetSoft text-violet">TENANT_READ</span>
+              <span class="text-ink2">opened <span class="font-mono">tnt_a8f3</span> · tab=billing</span>
+              <span class="font-mono text-[11.5px] text-faint text-right">7e92…0c4a</span>
+            </li>
+            <li class="px-5 py-3 grid grid-cols-[140px_120px_1fr_120px] items-center gap-4">
+              <span class="font-mono text-[11.5px] text-muted">13:51:02Z</span>
+              <span class="inline-flex w-fit px-2 py-0.5 rounded text-[11px] font-semibold bg-greenSoft text-green">CATALOG_SYNC_CONFIRMED</span>
+              <span class="text-ink2">openrouter · 14 models added, 2 deprecated</span>
+              <span class="font-mono text-[11.5px] text-faint text-right">b104…ff31</span>
+            </li>
+            <li class="px-5 py-3 grid grid-cols-[140px_120px_1fr_120px] items-center gap-4">
+              <span class="font-mono text-[11.5px] text-muted">11:42:18Z</span>
+              <span class="inline-flex w-fit px-2 py-0.5 rounded text-[11px] font-semibold bg-redSoft text-red">TENANT_PAUSED</span>
+              <span class="text-ink2">paused <span class="font-mono">tnt_22e1</span> · reason: support ticket ZM-1284</span>
+              <span class="font-mono text-[11.5px] text-faint text-right">3a01…ab8d</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     4. AUDIT LOG — filters + table + inline JSON diff expansion
+     ============================================================ -->
+<section id="audit" class="scroll-mt-32">
+  <h2 class="text-[13px] font-mono uppercase tracking-wider text-muted mb-3">04 · /audit</h2>
+  <div class="rounded-xl bg-card border border-line shadow-cardLg overflow-hidden">
+    <div class="h-10 bg-amberSoft border-b border-amber/60 flex items-center px-6 text-[12.5px] text-ink2">
+      <span class="font-mono uppercase tracking-wider text-[11px] font-semibold text-amber">⚠ ADMIN MODE</span>
+      <span class="ml-3 text-faint">/audit</span>
+    </div>
+    <div class="p-8 bg-background">
+      <div class="flex items-end justify-between mb-6">
+        <div>
+          <h1 class="text-[20px] font-semibold text-ink">Audit log</h1>
+          <p class="text-[14px] text-muted mt-1">Append-only. Indefinite retention. HMAC-chained.</p>
+        </div>
+        <button class="h-9 px-4 rounded-md bg-accent text-white font-semibold text-[13px] hover:bg-accentHover inline-flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV
+        </button>
+      </div>
+      <!-- Filter bar -->
+      <div class="bg-card border border-line rounded-lg p-4 mb-4 grid grid-cols-[180px_180px_1fr_180px_auto] gap-3 items-end">
+        <div>
+          <label class="block text-[12px] font-semibold text-muted mb-1.5">Actor</label>
+          <div class="h-9 px-3 rounded-md border border-line bg-card text-[13px] flex items-center justify-between">kythuat@zeromail.com <span class="text-faint">▾</span></div>
+        </div>
+        <div>
+          <label class="block text-[12px] font-semibold text-muted mb-1.5">Action</label>
+          <div class="h-9 px-3 rounded-md border border-line bg-card text-[13px] flex items-center justify-between">All actions <span class="text-faint">▾</span></div>
+        </div>
+        <div>
+          <label class="block text-[12px] font-semibold text-muted mb-1.5">Target ID (UUID prefix)</label>
+          <input class="w-full h-9 px-3 rounded-md border border-line bg-card text-[13px] font-mono" placeholder="tnt_… or model_…" />
+        </div>
+        <div>
+          <label class="block text-[12px] font-semibold text-muted mb-1.5">Date range</label>
+          <div class="h-9 px-3 rounded-md border border-line bg-card text-[13px] flex items-center justify-between">Last 7 days <span class="text-faint">▾</span></div>
+        </div>
+        <button class="h-9 px-4 rounded-md border border-ink bg-ink text-white text-[13px] font-semibold">Apply filters</button>
+      </div>
+      <div class="flex gap-2 mb-4">
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accentSoft text-accent text-[11.5px] font-medium">actor: kythuat@zeromail.com <button>×</button></span>
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accentSoft text-accent text-[11.5px] font-medium">range: 2026-05-12 → 2026-05-19 <button>×</button></span>
+      </div>
+
+      <!-- Table -->
+      <div class="bg-card border border-line rounded-lg shadow-card overflow-hidden">
+        <table class="w-full text-[13px]">
+          <thead class="bg-surface text-[12px] font-semibold text-muted uppercase tracking-wider">
+            <tr>
+              <th class="text-left px-4 py-2.5 font-semibold w-[40px]"></th>
+              <th class="text-left px-4 py-2.5 font-semibold">Time (UTC)</th>
+              <th class="text-left px-4 py-2.5 font-semibold">Actor</th>
+              <th class="text-left px-4 py-2.5 font-semibold">Action</th>
+              <th class="text-left px-4 py-2.5 font-semibold">Target</th>
+              <th class="text-left px-4 py-2.5 font-semibold">Audit ID</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line">
+            <tr class="hover:bg-surface">
+              <td class="px-4 py-3"><span class="text-faint">▸</span></td>
+              <td class="px-4 py-3 font-mono text-[11.5px] text-muted">2026-05-19 14:23:11Z</td>
+              <td class="px-4 py-3">kythuat@zeromail.com</td>
+              <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-blueSoft text-blue">MASTER_KEY_ROTATED</span></td>
+              <td class="px-4 py-3 font-mono text-[12px]">provider:openai</td>
+              <td class="px-4 py-3 font-mono text-[11.5px] text-faint">a8f3…d211</td>
+            </tr>
+            <!-- Expanded row with JSON diff -->
+            <tr class="bg-surface/60">
+              <td class="px-4 py-3 align-top"><span class="text-accent">▾</span></td>
+              <td class="px-4 py-3 align-top font-mono text-[11.5px] text-muted">2026-05-19 14:09:48Z</td>
+              <td class="px-4 py-3 align-top">kythuat@zeromail.com</td>
+              <td class="px-4 py-3 align-top"><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-greenSoft text-green">CATALOG_SYNC_CONFIRMED</span></td>
+              <td class="px-4 py-3 align-top font-mono text-[12px]">provider:openrouter</td>
+              <td class="px-4 py-3 align-top font-mono text-[11.5px] text-faint">7e92…0c4a</td>
+            </tr>
+            <tr class="bg-surface/60">
+              <td></td>
+              <td colspan="5" class="px-4 pb-5">
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="rounded-md border border-line bg-card overflow-hidden">
+                    <div class="px-3 py-1.5 bg-surface text-[11px] font-mono uppercase tracking-wider text-muted">Before</div>
+                    <pre class="p-3 text-[12px] font-mono text-ink2 leading-[1.6] whitespace-pre-wrap">{
+  "models_count": 38,
+  "deprecated": ["x-ai/grok-2"]
+}</pre>
+                  </div>
+                  <div class="rounded-md border border-line bg-card overflow-hidden">
+                    <div class="px-3 py-1.5 bg-surface text-[11px] font-mono uppercase tracking-wider text-muted">After</div>
+                    <pre class="p-3 text-[12px] font-mono text-ink2 leading-[1.6] whitespace-pre-wrap">{
+  "models_count": <span class="text-green">52</span>,
+  "deprecated": [<span class="text-green">"x-ai/grok-2"</span>,
+                 <span class="text-green">"deepseek/deepseek-r1-distill"</span>]
+}</pre>
+                  </div>
+                </div>
+                <div class="mt-3 text-[12px] text-muted flex items-center gap-4">
+                  <span>chain hash: <span class="font-mono text-[11px] text-ink2">7e92a04c…0c4a</span></span>
+                  <span>prev: <span class="font-mono text-[11px] text-faint">a8f3…d211</span></span>
+                  <span class="ml-auto">
+                    <button class="text-accent font-medium">Copy as JSON</button>
+                  </span>
+                </div>
+              </td>
+            </tr>
+            <tr class="hover:bg-surface">
+              <td class="px-4 py-3"><span class="text-faint">▸</span></td>
+              <td class="px-4 py-3 font-mono text-[11.5px] text-muted">2026-05-19 11:42:18Z</td>
+              <td class="px-4 py-3">kythuat@zeromail.com</td>
+              <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-redSoft text-red">TENANT_PAUSED</span></td>
+              <td class="px-4 py-3 font-mono text-[12px]">tenant:tnt_22e1</td>
+              <td class="px-4 py-3 font-mono text-[11.5px] text-faint">3a01…ab8d</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="px-4 py-3 border-t border-line bg-surface/30 flex items-center justify-between text-[12px] text-muted">
+          <span>247 events · page 1 of 25</span>
+          <div class="flex items-center gap-2">
+            <button class="h-7 px-3 rounded border border-line bg-card">Previous</button>
+            <button class="h-7 px-3 rounded border border-line bg-card text-ink font-medium">Next</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     5. ROLE GRANTS — admin user list + grant flow
+     ============================================================ -->
+<section id="grants" class="scroll-mt-32">
+  <h2 class="text-[13px] font-mono uppercase tracking-wider text-muted mb-3">05 · /role-grants</h2>
+  <div class="rounded-xl bg-card border border-line shadow-cardLg overflow-hidden">
+    <div class="h-10 bg-amberSoft border-b border-amber/60 flex items-center px-6 text-[12.5px] text-ink2">
+      <span class="font-mono uppercase tracking-wider text-[11px] font-semibold text-amber">⚠ ADMIN MODE</span>
+      <span class="ml-3 text-faint">/role-grants</span>
+    </div>
+    <div class="p-8 bg-background">
+      <div class="flex items-end justify-between mb-6">
+        <div>
+          <h1 class="text-[20px] font-semibold text-ink">Admin role grants</h1>
+          <p class="text-[14px] text-muted mt-1">3 admins · 1 pending enrollment</p>
+        </div>
+        <button class="h-9 px-4 rounded-md bg-accent text-white font-semibold text-[13px] hover:bg-accentHover">Grant admin</button>
+      </div>
+
+      <div class="bg-card border border-line rounded-lg shadow-card overflow-hidden">
+        <table class="w-full text-[13px]">
+          <thead class="bg-surface text-[12px] font-semibold text-muted uppercase tracking-wider">
+            <tr>
+              <th class="text-left px-4 py-2.5">Email</th>
+              <th class="text-left px-4 py-2.5">Status</th>
+              <th class="text-left px-4 py-2.5">Credentials</th>
+              <th class="text-left px-4 py-2.5">Last used</th>
+              <th class="text-left px-4 py-2.5">Granted by</th>
+              <th class="text-right px-4 py-2.5">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line">
+            <tr>
+              <td class="px-4 py-3 font-medium text-ink">kythuat@zeromail.com</td>
+              <td class="px-4 py-3"><span class="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-greenSoft text-green">ACTIVE</span></td>
+              <td class="px-4 py-3 text-muted">1 passkey · Touch ID</td>
+              <td class="px-4 py-3 font-mono text-[11.5px] text-muted">4m ago</td>
+              <td class="px-4 py-3 text-faint italic">bootstrap seed</td>
+              <td class="px-4 py-3 text-right text-faint text-[12px]">(you)</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 font-medium text-ink">backup@zeromail.com</td>
+              <td class="px-4 py-3"><span class="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-greenSoft text-green">ACTIVE</span></td>
+              <td class="px-4 py-3 text-muted">1 passkey · YubiKey 5C</td>
+              <td class="px-4 py-3 font-mono text-[11.5px] text-muted">3d ago</td>
+              <td class="px-4 py-3 text-ink2">kythuat@zeromail.com</td>
+              <td class="px-4 py-3 text-right"><button class="text-red font-medium text-[12px]">Revoke</button></td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 font-medium text-ink">ops@zeromail.com</td>
+              <td class="px-4 py-3"><span class="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-amberSoft text-amber">PENDING_ENROLLMENT</span></td>
+              <td class="px-4 py-3 text-muted">none</td>
+              <td class="px-4 py-3 font-mono text-[11.5px] text-faint">—</td>
+              <td class="px-4 py-3 text-ink2">kythuat@zeromail.com</td>
+              <td class="px-4 py-3 text-right text-[12px]"><button class="text-accent font-medium mr-3">Copy enrollment URL</button><button class="text-red font-medium">Cancel</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Inline grant dialog mock -->
+      <div class="mt-6 bg-card border border-line rounded-lg shadow-cardLg p-6 max-w-[520px]">
+        <div class="text-[11px] font-mono uppercase tracking-wider text-faint mb-2">DIALOG · success state</div>
+        <h2 class="text-[16px] font-semibold text-ink mb-1">Admin granted</h2>
+        <p class="text-[13.5px] text-muted">Share this one-time enrollment URL with <span class="font-mono text-ink">ops@zeromail.com</span> via a secure channel (Signal, encrypted email, in-person). The link expires in 10 minutes.</p>
+        <div class="mt-4 bg-surface border border-line rounded p-3 flex items-center justify-between gap-3">
+          <code class="text-[11.5px] font-mono text-ink2 truncate">https://admin.zeromail.com/enroll?token=4f3c2a1e8d7b6c5a9f0e1d2c3b4a5968</code>
+          <button class="h-7 px-3 rounded bg-accent text-white text-[11.5px] font-semibold">Copy</button>
+        </div>
+        <p class="mt-3 text-[12px] text-faint">Audit row: <span class="font-mono text-muted">9c84…02f1</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     6. MASTER KEYS — provider list + edit form
+     ============================================================ -->
+<section id="keys" class="scroll-mt-32">
+  <h2 class="text-[13px] font-mono uppercase tracking-wider text-muted mb-3">06 · /master-keys</h2>
+  <div class="rounded-xl bg-card border border-line shadow-cardLg overflow-hidden">
+    <div class="h-10 bg-amberSoft border-b border-amber/60 flex items-center px-6 text-[12.5px] text-ink2">
+      <span class="font-mono uppercase tracking-wider text-[11px] font-semibold text-amber">⚠ ADMIN MODE</span>
+      <span class="ml-3 text-faint">/master-keys</span>
+    </div>
+    <div class="p-8 bg-background">
+      <h1 class="text-[20px] font-semibold text-ink mb-1">LLM provider master keys</h1>
+      <p class="text-[14px] text-muted mb-6">Platform-wide keys used when a tenant has not provided their own (BYOK).</p>
+
+      <div class="grid grid-cols-[1fr_440px] gap-6 items-start">
+        <!-- Provider list -->
+        <div class="bg-card border border-line rounded-lg shadow-card divide-y divide-line">
+          <!-- OpenAI -->
+          <div class="px-5 py-4 grid grid-cols-[36px_1fr_140px_120px_auto] items-center gap-4">
+            <div class="w-9 h-9 rounded-md bg-ink text-background grid place-items-center font-mono text-[12px]">AI</div>
+            <div>
+              <div class="font-semibold text-ink">OpenAI</div>
+              <div class="text-[12px] text-muted font-mono">sk-****<span class="text-ink">a4f2</span> · 23 tenants pinned</div>
+            </div>
+            <span class="inline-flex w-fit px-2 py-0.5 rounded text-[11px] font-semibold bg-greenSoft text-green">Connected</span>
+            <span class="text-[11.5px] font-mono text-muted">set 12d ago</span>
+            <div class="flex gap-2">
+              <button class="h-8 px-3 rounded-md border border-line bg-card text-[12.5px] font-medium text-ink">Test</button>
+              <button class="h-8 px-3 rounded-md bg-accent text-white text-[12.5px] font-semibold">Rotate</button>
+            </div>
+          </div>
+          <!-- Anthropic -->
+          <div class="px-5 py-4 grid grid-cols-[36px_1fr_140px_120px_auto] items-center gap-4">
+            <div class="w-9 h-9 rounded-md bg-amber/90 text-white grid place-items-center font-mono text-[12px]">AN</div>
+            <div>
+              <div class="font-semibold text-ink">Anthropic</div>
+              <div class="text-[12px] text-muted font-mono">sk-ant-****<span class="text-ink">9e21</span> · 18 tenants pinned</div>
+            </div>
+            <span class="inline-flex w-fit px-2 py-0.5 rounded text-[11px] font-semibold bg-greenSoft text-green">Connected</span>
+            <span class="text-[11.5px] font-mono text-amber">⚠ 94d ago — rotate</span>
+            <div class="flex gap-2">
+              <button class="h-8 px-3 rounded-md border border-line bg-card text-[12.5px] font-medium text-ink">Test</button>
+              <button class="h-8 px-3 rounded-md bg-accent text-white text-[12.5px] font-semibold">Rotate</button>
+            </div>
+          </div>
+          <!-- Google -->
+          <div class="px-5 py-4 grid grid-cols-[36px_1fr_140px_120px_auto] items-center gap-4">
+            <div class="w-9 h-9 rounded-md bg-blue text-white grid place-items-center font-mono text-[12px]">GO</div>
+            <div>
+              <div class="font-semibold text-ink">Google GenAI</div>
+              <div class="text-[12px] text-muted font-mono">AIza-****<span class="text-ink">7c80</span> · 6 tenants pinned</div>
+            </div>
+            <span class="inline-flex w-fit px-2 py-0.5 rounded text-[11px] font-semibold bg-greenSoft text-green">Connected</span>
+            <span class="text-[11.5px] font-mono text-muted">set 31d ago</span>
+            <div class="flex gap-2">
+              <button class="h-8 px-3 rounded-md border border-line bg-card text-[12.5px] font-medium text-ink">Test</button>
+              <button class="h-8 px-3 rounded-md bg-accent text-white text-[12.5px] font-semibold">Rotate</button>
+            </div>
+          </div>
+          <!-- DeepSeek -->
+          <div class="px-5 py-4 grid grid-cols-[36px_1fr_140px_120px_auto] items-center gap-4">
+            <div class="w-9 h-9 rounded-md bg-violet text-white grid place-items-center font-mono text-[12px]">DS</div>
+            <div>
+              <div class="font-semibold text-ink">DeepSeek</div>
+              <div class="text-[12px] text-muted">not configured · 0 tenants pinned</div>
+            </div>
+            <span class="inline-flex w-fit px-2 py-0.5 rounded text-[11px] font-semibold bg-surface text-muted">Not set</span>
+            <span class="text-[11.5px] font-mono text-faint">—</span>
+            <div class="flex gap-2">
+              <button class="h-8 px-3 rounded-md bg-ink text-white text-[12.5px] font-semibold">Set key</button>
+            </div>
+          </div>
+          <!-- OpenRouter -->
+          <div class="px-5 py-4 grid grid-cols-[36px_1fr_140px_120px_auto] items-center gap-4">
+            <div class="w-9 h-9 rounded-md bg-green text-white grid place-items-center font-mono text-[12px]">OR</div>
+            <div>
+              <div class="font-semibold text-ink">OpenRouter</div>
+              <div class="text-[12px] text-muted font-mono">sk-or-****<span class="text-ink">1100</span> · 14 tenants pinned (default route)</div>
+            </div>
+            <span class="inline-flex w-fit px-2 py-0.5 rounded text-[11px] font-semibold bg-greenSoft text-green">Connected</span>
+            <span class="text-[11.5px] font-mono text-muted">set 5d ago</span>
+            <div class="flex gap-2">
+              <button class="h-8 px-3 rounded-md border border-line bg-card text-[12.5px] font-medium text-ink">Test</button>
+              <button class="h-8 px-3 rounded-md bg-accent text-white text-[12.5px] font-semibold">Rotate</button>
+            </div>
+          </div>
+          <!-- 9Router with dual mode -->
+          <div class="px-5 py-4 grid grid-cols-[36px_1fr_140px_120px_auto] items-center gap-4">
+            <div class="w-9 h-9 rounded-md bg-red text-white grid place-items-center font-mono text-[12px]">9R</div>
+            <div>
+              <div class="flex items-center gap-2 font-semibold text-ink">9Router <span class="text-[10px] font-mono text-faint uppercase tracking-wider">sidecar</span></div>
+              <div class="text-[12px] text-muted font-mono">sk-****<span class="text-ink">aa01</span> · format: <span class="text-ink">OPENAI_FORMAT</span></div>
+              <div class="mt-1 inline-flex items-center text-[11px] gap-0 border border-line rounded overflow-hidden">
+                <button class="px-2 py-0.5 bg-accentSoft text-accent font-semibold">OPENAI_FORMAT</button>
+                <button class="px-2 py-0.5 text-muted">ANTHROPIC_FORMAT</button>
+              </div>
+            </div>
+            <span class="inline-flex w-fit px-2 py-0.5 rounded text-[11px] font-semibold bg-greenSoft text-green">Connected</span>
+            <span class="text-[11.5px] font-mono text-muted">set 2d ago</span>
+            <div class="flex gap-2">
+              <button class="h-8 px-3 rounded-md border border-line bg-card text-[12.5px] font-medium text-ink">Test</button>
+              <button class="h-8 px-3 rounded-md bg-accent text-white text-[12.5px] font-semibold">Rotate</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Edit panel -->
+        <aside class="bg-card border border-line rounded-lg shadow-card p-6 sticky top-8">
+          <div class="text-[11px] font-mono uppercase tracking-wider text-faint mb-1">EDIT · openai</div>
+          <h2 class="text-[16px] font-semibold text-ink">Rotate master key</h2>
+          <p class="text-[12.5px] text-muted mt-1">Edit session expires in <span class="font-mono text-ink">04:38</span>.</p>
+
+          <label class="mt-5 block text-[12px] font-semibold text-muted mb-1.5">New OpenAI master key</label>
+          <input type="password" class="w-full h-10 px-3 rounded-md border border-line bg-card text-[13px] font-mono" placeholder="sk-…" />
+          <p class="mt-1 text-[11.5px] text-faint">Stored AES-GCM encrypted via RefreshTokenCipher.</p>
+
+          <button class="mt-4 w-full h-10 rounded-md border border-line bg-card text-ink text-[13px] font-semibold">Test connection</button>
+          <div class="mt-3 px-3 py-2 rounded-md bg-greenSoft text-green text-[12px] font-medium flex items-center justify-between">
+            <span>✓ Test passed · 2s ago</span>
+            <span class="font-mono text-[11px]">gpt-4o · 200ms</span>
+          </div>
+
+          <button class="mt-4 w-full h-10 rounded-md bg-accent text-white text-[13px] font-semibold hover:bg-accentHover">Save &amp; rotate</button>
+          <p class="mt-3 text-[11.5px] text-faint">Successful rotation will evict 23 cached ChatModel instances.</p>
+        </aside>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     7. CATALOG SYNC — 3-step Fetch → Diff → Confirm
+     ============================================================ -->
+<section id="catalog" class="scroll-mt-32">
+  <h2 class="text-[13px] font-mono uppercase tracking-wider text-muted mb-3">07 · /catalog · Sync Diff (step 2 of 3)</h2>
+  <div class="rounded-xl bg-card border border-line shadow-cardLg overflow-hidden">
+    <div class="h-10 bg-amberSoft border-b border-amber/60 flex items-center px-6 text-[12.5px] text-ink2">
+      <span class="font-mono uppercase tracking-wider text-[11px] font-semibold text-amber">⚠ ADMIN MODE</span>
+      <span class="ml-3 text-faint">/catalog · openrouter</span>
+    </div>
+    <div class="p-8 bg-background">
+      <!-- Provider tabs -->
+      <div class="flex items-center border-b border-line mb-6">
+        <button class="px-4 py-2.5 text-[13px] font-semibold text-muted">OpenAI <span class="ml-1 text-faint">14</span></button>
+        <button class="px-4 py-2.5 text-[13px] font-semibold text-muted">Anthropic <span class="ml-1 text-faint">3</span></button>
+        <button class="px-4 py-2.5 text-[13px] font-semibold text-muted">Google <span class="ml-1 text-faint">7</span></button>
+        <button class="px-4 py-2.5 text-[13px] font-semibold text-muted">DeepSeek <span class="ml-1 text-faint">4</span></button>
+        <button class="px-4 py-2.5 text-[13px] font-semibold text-ink border-b-2 border-accent -mb-px">OpenRouter <span class="ml-1 text-accent">52</span></button>
+        <button class="px-4 py-2.5 text-[13px] font-semibold text-muted">9Router <span class="ml-1 text-faint">6</span></button>
+      </div>
+
+      <!-- Stepper -->
+      <div class="flex items-center gap-3 mb-6">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-full bg-accent text-white grid place-items-center text-[12px] font-semibold">✓</div>
+          <span class="text-[13px] font-semibold text-ink">Fetch</span>
+        </div>
+        <div class="stepper-line stepper-line-active w-12"></div>
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-full bg-accent text-white grid place-items-center text-[12px] font-semibold">2</div>
+          <span class="text-[13px] font-semibold text-ink">Diff</span>
+        </div>
+        <div class="stepper-line w-12"></div>
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-full border border-line text-muted grid place-items-center text-[12px] font-semibold">3</div>
+          <span class="text-[13px] font-medium text-muted">Confirm</span>
+        </div>
+        <div class="ml-auto text-[12px] font-mono text-muted">debounce lease · 47s remaining</div>
+      </div>
+
+      <!-- Diff table -->
+      <div class="bg-card border border-line rounded-lg shadow-card overflow-hidden mb-4">
+        <div class="px-5 py-3.5 border-b border-line flex items-center justify-between">
+          <h2 class="text-[14px] font-semibold text-ink">Changes vs. current catalog</h2>
+          <div class="flex items-center gap-4 text-[12px]">
+            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green"></span> 14 added</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red"></span> 2 removed</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber"></span> 3 changed</span>
+          </div>
+        </div>
+        <table class="w-full text-[13px]">
+          <thead class="bg-surface text-[12px] font-semibold text-muted uppercase tracking-wider">
+            <tr>
+              <th class="text-left px-4 py-2.5 w-[80px]">Change</th>
+              <th class="text-left px-4 py-2.5">Model ID</th>
+              <th class="text-left px-4 py-2.5">Features</th>
+              <th class="text-right px-4 py-2.5">Pinned tenants</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line">
+            <tr>
+              <td class="px-4 py-3"><span class="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-greenSoft text-green">+ added</span></td>
+              <td class="px-4 py-3 font-mono text-[12px]">openrouter/anthropic/claude-4.7-opus</td>
+              <td class="px-4 py-3 text-muted">chat · triage · draft</td>
+              <td class="px-4 py-3 text-right text-faint">—</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3"><span class="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-greenSoft text-green">+ added</span></td>
+              <td class="px-4 py-3 font-mono text-[12px]">openrouter/openai/gpt-5-turbo</td>
+              <td class="px-4 py-3 text-muted">chat · draft</td>
+              <td class="px-4 py-3 text-right text-faint">—</td>
+            </tr>
+            <tr class="bg-amberSoft/40">
+              <td class="px-4 py-3"><span class="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-amberSoft text-amber">~ changed</span></td>
+              <td class="px-4 py-3 font-mono text-[12px]">openrouter/x-ai/grok-3</td>
+              <td class="px-4 py-3 text-muted">chat → chat · triage</td>
+              <td class="px-4 py-3 text-right text-ink font-semibold tabular">4</td>
+            </tr>
+            <tr class="bg-redSoft/40">
+              <td class="px-4 py-3"><span class="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-redSoft text-red">− removed</span></td>
+              <td class="px-4 py-3 font-mono text-[12px]">openrouter/x-ai/grok-2</td>
+              <td class="px-4 py-3 text-muted">chat · triage</td>
+              <td class="px-4 py-3 text-right text-red font-semibold tabular">7 ⚠</td>
+            </tr>
+            <tr class="bg-redSoft/40">
+              <td class="px-4 py-3"><span class="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-redSoft text-red">− removed</span></td>
+              <td class="px-4 py-3 font-mono text-[12px]">openrouter/deepseek/deepseek-r1-distill</td>
+              <td class="px-4 py-3 text-muted">draft</td>
+              <td class="px-4 py-3 text-right text-faint">0</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Warning + Confirm -->
+      <div class="bg-redSoft/60 border border-red/30 rounded-lg p-4 mb-4 text-[13px] text-ink2">
+        <strong class="text-red">7 pinned tenants will keep using <span class="font-mono">grok-2</span> until they pick a new model.</strong>
+        Pinned tenants are not auto-migrated. The model will be soft-deleted (<span class="font-mono">deprecated_at</span> set).
+      </div>
+      <div class="flex items-center gap-3 justify-end">
+        <button class="h-10 px-4 rounded-md border border-line bg-card text-ink text-[13px] font-medium">Cancel sync</button>
+        <button class="h-10 px-4 rounded-md border border-line bg-card text-ink text-[13px] font-medium">← Re-fetch</button>
+        <button class="h-10 px-5 rounded-md bg-accent text-white text-[13px] font-semibold hover:bg-accentHover">Confirm sync (apply 14 + 3 + 2)</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     8. TENANTS LIST
+     ============================================================ -->
+<section id="tenants" class="scroll-mt-32">
+  <h2 class="text-[13px] font-mono uppercase tracking-wider text-muted mb-3">08 · /tenants</h2>
+  <div class="rounded-xl bg-card border border-line shadow-cardLg overflow-hidden">
+    <div class="h-10 bg-amberSoft border-b border-amber/60 flex items-center px-6 text-[12.5px] text-ink2">
+      <span class="font-mono uppercase tracking-wider text-[11px] font-semibold text-amber">⚠ ADMIN MODE</span>
+      <span class="ml-3 text-faint">/tenants</span>
+    </div>
+    <div class="p-8 bg-background">
+      <h1 class="text-[20px] font-semibold text-ink mb-1">Tenants</h1>
+      <p class="text-[14px] text-muted mb-6">Metadata only. No email content, no chat content, no prompts/completions.</p>
+      <div class="bg-card border border-line rounded-lg shadow-card overflow-hidden">
+        <table class="w-full text-[13px]">
+          <thead class="bg-surface text-[12px] font-semibold text-muted uppercase tracking-wider">
+            <tr>
+              <th class="text-left px-4 py-2.5">Tenant ID</th>
+              <th class="text-left px-4 py-2.5">Created</th>
+              <th class="text-left px-4 py-2.5">Email</th>
+              <th class="text-left px-4 py-2.5">Status</th>
+              <th class="text-right px-4 py-2.5">7d spend bucket</th>
+              <th class="text-right px-4 py-2.5"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line">
+            <tr class="hover:bg-surface cursor-pointer">
+              <td class="px-4 py-3 font-mono text-[12px] text-ink">tnt_a8f3</td>
+              <td class="px-4 py-3 text-muted">2026-04-12</td>
+              <td class="px-4 py-3">sarah@example.com</td>
+              <td class="px-4 py-3"><span class="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-greenSoft text-green">ACTIVE</span></td>
+              <td class="px-4 py-3 text-right font-mono tabular text-ink">$1.00 – $10</td>
+              <td class="px-4 py-3 text-right"><a class="text-accent text-[12.5px] font-medium">View details →</a></td>
+            </tr>
+            <tr class="hover:bg-surface cursor-pointer">
+              <td class="px-4 py-3 font-mono text-[12px] text-ink">tnt_22e1</td>
+              <td class="px-4 py-3 text-muted">2026-03-04</td>
+              <td class="px-4 py-3">paul@startup.io</td>
+              <td class="px-4 py-3"><span class="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-amberSoft text-amber">PAUSED</span></td>
+              <td class="px-4 py-3 text-right font-mono tabular text-muted">&lt; $1</td>
+              <td class="px-4 py-3 text-right"><a class="text-accent text-[12.5px] font-medium">View details →</a></td>
+            </tr>
+            <tr class="hover:bg-surface cursor-pointer">
+              <td class="px-4 py-3 font-mono text-[12px] text-ink">tnt_60c7</td>
+              <td class="px-4 py-3 text-muted">2026-05-01</td>
+              <td class="px-4 py-3">eng@acme.co</td>
+              <td class="px-4 py-3"><span class="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-greenSoft text-green">ACTIVE</span></td>
+              <td class="px-4 py-3 text-right font-mono tabular text-ink">$10 – $50</td>
+              <td class="px-4 py-3 text-right"><a class="text-accent text-[12.5px] font-medium">View details →</a></td>
+            </tr>
+            <tr class="hover:bg-surface cursor-pointer">
+              <td class="px-4 py-3 font-mono text-[12px] text-ink">tnt_fa19</td>
+              <td class="px-4 py-3 text-muted">2026-02-21</td>
+              <td class="px-4 py-3">team@growthlab.dev</td>
+              <td class="px-4 py-3"><span class="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-redSoft text-red">DISCONNECTED</span></td>
+              <td class="px-4 py-3 text-right font-mono tabular text-faint">—</td>
+              <td class="px-4 py-3 text-right"><a class="text-accent text-[12.5px] font-medium">View details →</a></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="px-4 py-3 border-t border-line bg-surface/30 text-[11.5px] text-faint">
+          7-day spend bucketed by k-anonymity (k ≥ 5). Exact per-tenant cost is not exposed.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     9. TENANT DETAIL — 5 tabs
+     ============================================================ -->
+<section id="tenant-detail" class="scroll-mt-32">
+  <h2 class="text-[13px] font-mono uppercase tracking-wider text-muted mb-3">09 · /tenants/tnt_a8f3?tab=health</h2>
+  <div class="rounded-xl bg-card border border-line shadow-cardLg overflow-hidden">
+    <div class="h-10 bg-amberSoft border-b border-amber/60 flex items-center px-6 text-[12.5px] text-ink2">
+      <span class="font-mono uppercase tracking-wider text-[11px] font-semibold text-amber">⚠ ADMIN MODE</span>
+      <span class="ml-3 text-faint">/tenants/tnt_a8f3</span>
+    </div>
+    <div class="p-8 bg-background">
+      <!-- Breadcrumb + title -->
+      <div class="text-[12px] text-muted mb-2">
+        <a class="hover:text-ink">Tenants</a> <span class="text-faint">/</span> <span class="font-mono text-ink">tnt_a8f3</span>
+      </div>
+      <div class="flex items-end justify-between mb-6">
+        <div>
+          <h1 class="text-[20px] font-semibold text-ink leading-[1.3]">sarah@example.com</h1>
+          <p class="text-[14px] text-muted mt-1">created 2026-04-12 · status <span class="text-green font-semibold">ACTIVE</span></p>
+        </div>
+        <div class="flex gap-2">
+          <button class="h-9 px-3 rounded-md border border-amber/60 bg-amberSoft text-amber text-[13px] font-semibold">Pause</button>
+          <button class="h-9 px-3 rounded-md border border-line bg-card text-ink text-[13px] font-medium">Disconnect Gmail</button>
+          <button class="h-9 px-3 rounded-md border border-red/40 bg-redSoft text-red text-[13px] font-semibold">Delete</button>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="flex items-center border-b border-line mb-6">
+        <button class="px-4 py-2.5 text-[13px] font-semibold text-muted">Overview</button>
+        <button class="px-4 py-2.5 text-[13px] font-semibold text-ink border-b-2 border-accent -mb-px">Health</button>
+        <button class="px-4 py-2.5 text-[13px] font-semibold text-muted">Billing</button>
+        <button class="px-4 py-2.5 text-[13px] font-semibold text-muted">Spend</button>
+        <button class="px-4 py-2.5 text-[13px] font-semibold text-muted">Activity</button>
+        <span class="ml-auto text-[11.5px] font-mono text-faint">URL: ?tab=health · 1 read event written</span>
+      </div>
+
+      <!-- Health tab content -->
+      <div class="grid grid-cols-2 gap-4">
+        <div class="bg-card border border-line rounded-lg p-5 shadow-card">
+          <div class="text-[12px] font-semibold text-muted uppercase tracking-wider">Gmail OAuth</div>
+          <div class="mt-2 flex items-center gap-2">
+            <span class="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-greenSoft text-green">Healthy</span>
+            <span class="text-[12.5px] text-muted">refresh token rotated 3d ago</span>
+          </div>
+        </div>
+        <div class="bg-card border border-line rounded-lg p-5 shadow-card">
+          <div class="text-[12px] font-semibold text-muted uppercase tracking-wider">Pub/Sub subscription</div>
+          <div class="mt-2 flex items-center gap-2">
+            <span class="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-greenSoft text-green">Active</span>
+            <span class="text-[12.5px] text-muted">last push 41s ago · history 1.2k msgs</span>
+          </div>
+        </div>
+        <div class="bg-card border border-line rounded-lg p-5 shadow-card">
+          <div class="text-[12px] font-semibold text-muted uppercase tracking-wider">Worker job stats (24h)</div>
+          <div class="mt-2 grid grid-cols-3 gap-3 text-[13px]">
+            <div><div class="font-mono tabular text-ink text-[18px] font-semibold">312</div><div class="text-faint text-[11.5px]">processed</div></div>
+            <div><div class="font-mono tabular text-ink text-[18px] font-semibold">4</div><div class="text-faint text-[11.5px]">retried</div></div>
+            <div><div class="font-mono tabular text-red text-[18px] font-semibold">0</div><div class="text-faint text-[11.5px]">dead-letter</div></div>
+          </div>
+        </div>
+        <div class="bg-card border border-line rounded-lg p-5 shadow-card">
+          <div class="text-[12px] font-semibold text-muted uppercase tracking-wider">Chat sessions</div>
+          <div class="mt-2 text-[13.5px] text-muted">12 sessions · last activity 2h ago</div>
+          <button class="mt-3 h-8 px-3 rounded border border-line bg-card text-faint text-[12.5px] font-medium cursor-not-allowed" disabled title="Inspection requires future tenant-bound support ticket grant (v1.3+).">Show details (locked)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     10. QUEUE HEALTH
+     ============================================================ -->
+<section id="queue" class="scroll-mt-32">
+  <h2 class="text-[13px] font-mono uppercase tracking-wider text-muted mb-3">10 · /queue</h2>
+  <div class="rounded-xl bg-card border border-line shadow-cardLg overflow-hidden">
+    <div class="h-10 bg-amberSoft border-b border-amber/60 flex items-center px-6 text-[12.5px] text-ink2">
+      <span class="font-mono uppercase tracking-wider text-[11px] font-semibold text-amber">⚠ ADMIN MODE</span>
+      <span class="ml-3 text-faint">/queue</span>
+    </div>
+    <div class="p-8 bg-background">
+      <div class="flex items-end justify-between mb-6">
+        <div>
+          <h1 class="text-[20px] font-semibold text-ink">Worker queue health</h1>
+          <p class="text-[14px] text-muted mt-1">PostgreSQL SKIP LOCKED · outbox + processing_job</p>
+        </div>
+        <div class="text-[12px] font-mono text-muted flex items-center gap-2">
+          <span class="w-1.5 h-1.5 rounded-full bg-accent pulse-dot"></span>
+          <span>Updated 3s ago</span>
+          <button class="ml-3 text-accent">Pause refresh</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-5 gap-4 mb-6">
+        <div class="bg-card border border-line rounded-lg p-5 shadow-card">
+          <div class="text-[12px] font-semibold text-muted uppercase tracking-wider">Outbox depth</div>
+          <div class="mt-2 text-[28px] font-semibold text-ink tabular">17</div>
+          <div class="mt-1 text-[12px] text-muted">pending</div>
+        </div>
+        <div class="bg-card border border-line rounded-lg p-5 shadow-card">
+          <div class="text-[12px] font-semibold text-muted uppercase tracking-wider">Oldest unleased</div>
+          <div class="mt-2 text-[28px] font-semibold text-amber tabular">4:12</div>
+          <div class="mt-1 text-[12px] text-amber">⚠ above 3m threshold</div>
+        </div>
+        <div class="bg-card border border-line rounded-lg p-5 shadow-card">
+          <div class="text-[12px] font-semibold text-muted uppercase tracking-wider">Retry rate (1h)</div>
+          <div class="mt-2 text-[28px] font-semibold text-ink tabular">1.7%</div>
+          <div class="mt-1 text-[12px] text-green">↓ 0.2pp vs 24h</div>
+        </div>
+        <div class="bg-card border border-line rounded-lg p-5 shadow-card">
+          <div class="text-[12px] font-semibold text-muted uppercase tracking-wider">Failure rate (1h)</div>
+          <div class="mt-2 text-[28px] font-semibold text-ink tabular">0.3%</div>
+          <div class="mt-1 text-[12px] text-muted">stable</div>
+        </div>
+        <div class="bg-card border border-line rounded-lg p-5 shadow-card">
+          <div class="text-[12px] font-semibold text-muted uppercase tracking-wider">Dead-letter</div>
+          <div class="mt-2 text-[28px] font-semibold text-red tabular">3</div>
+          <div class="mt-1 text-[12px] text-red">requires re-queue</div>
+        </div>
+      </div>
+
+      <!-- Sparkline -->
+      <div class="bg-card border border-line rounded-lg shadow-card p-5 mb-6">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-[14px] font-semibold text-ink">Queue depth · last 60 minutes</h2>
+          <div class="text-[11.5px] font-mono text-faint">10s sample</div>
+        </div>
+        <svg viewBox="0 0 600 80" class="w-full h-20">
+          <polyline fill="none" stroke="#867AEB" stroke-width="2"
+            points="0,40 30,38 60,42 90,30 120,28 150,35 180,40 210,55 240,52 270,46 300,42 330,38 360,30 390,25 420,28 450,32 480,40 510,52 540,58 570,50 600,45" />
+          <polyline fill="rgba(134,122,235,0.10)" stroke="none"
+            points="0,40 30,38 60,42 90,30 120,28 150,35 180,40 210,55 240,52 270,46 300,42 330,38 360,30 390,25 420,28 450,32 480,40 510,52 540,58 570,50 600,45 600,80 0,80" />
+        </svg>
+      </div>
+
+      <!-- Dead-letter table -->
+      <div class="bg-card border border-line rounded-lg shadow-card overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-line">
+          <h2 class="text-[14px] font-semibold text-ink">Dead-letter jobs</h2>
+        </div>
+        <table class="w-full text-[13px]">
+          <thead class="bg-surface text-[12px] font-semibold text-muted uppercase tracking-wider">
+            <tr>
+              <th class="text-left px-4 py-2.5">Job ID</th>
+              <th class="text-left px-4 py-2.5">Type</th>
+              <th class="text-left px-4 py-2.5">Tenant</th>
+              <th class="text-left px-4 py-2.5">Failed at</th>
+              <th class="text-left px-4 py-2.5">Attempts</th>
+              <th class="text-left px-4 py-2.5">Error category</th>
+              <th class="text-right px-4 py-2.5"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line">
+            <tr>
+              <td class="px-4 py-3 font-mono text-[12px]">job_3a01ab8d</td>
+              <td class="px-4 py-3 text-muted">triage_message</td>
+              <td class="px-4 py-3 font-mono text-[12px]">tnt_22e1</td>
+              <td class="px-4 py-3 font-mono text-[11.5px] text-muted">14:02:11Z</td>
+              <td class="px-4 py-3 text-amber font-semibold">5/5</td>
+              <td class="px-4 py-3 text-red text-[12.5px]">LLM_PROVIDER_TIMEOUT</td>
+              <td class="px-4 py-3 text-right"><button class="text-accent text-[12.5px] font-semibold">Re-queue</button></td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 font-mono text-[12px]">job_b104ff31</td>
+              <td class="px-4 py-3 text-muted">draft_reply</td>
+              <td class="px-4 py-3 font-mono text-[12px]">tnt_60c7</td>
+              <td class="px-4 py-3 font-mono text-[11.5px] text-muted">13:48:53Z</td>
+              <td class="px-4 py-3 text-amber font-semibold">5/5</td>
+              <td class="px-4 py-3 text-red text-[12.5px]">SCHEMA_VALIDATION</td>
+              <td class="px-4 py-3 text-right"><button class="text-accent text-[12.5px] font-semibold">Re-queue</button></td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 font-mono text-[12px]">job_9c8402f1</td>
+              <td class="px-4 py-3 text-muted">label_apply</td>
+              <td class="px-4 py-3 font-mono text-[12px]">tnt_a8f3</td>
+              <td class="px-4 py-3 font-mono text-[11.5px] text-muted">11:14:02Z</td>
+              <td class="px-4 py-3 text-amber font-semibold">5/5</td>
+              <td class="px-4 py-3 text-red text-[12.5px]">GMAIL_API_429</td>
+              <td class="px-4 py-3 text-right"><button class="text-accent text-[12.5px] font-semibold">Re-queue</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="px-5 py-3 border-t border-line bg-surface/30 text-[11.5px] text-faint">
+          Job payloads are never exposed in this view. Re-queue replays from the original DB row.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     11. SPEND DASHBOARD
+     ============================================================ -->
+<section id="spend" class="scroll-mt-32">
+  <h2 class="text-[13px] font-mono uppercase tracking-wider text-muted mb-3">11 · /spend</h2>
+  <div class="rounded-xl bg-card border border-line shadow-cardLg overflow-hidden">
+    <div class="h-10 bg-amberSoft border-b border-amber/60 flex items-center px-6 text-[12.5px] text-ink2">
+      <span class="font-mono uppercase tracking-wider text-[11px] font-semibold text-amber">⚠ ADMIN MODE</span>
+      <span class="ml-3 text-faint">/spend</span>
+    </div>
+    <div class="p-8 bg-background">
+      <div class="flex items-end justify-between mb-6">
+        <div>
+          <h1 class="text-[20px] font-semibold text-ink">Platform LLM spend</h1>
+          <p class="text-[14px] text-muted mt-1">Aggregates from <span class="font-mono">llm_call_audit</span>. Max date range 90 days. K-anonymized.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="h-9 px-3 rounded-md border border-line bg-card text-[13px] flex items-center">2026-04-19 → 2026-05-19 <span class="ml-3 text-faint">▾</span></div>
+          <button class="h-9 px-4 rounded-md bg-accent text-white text-[13px] font-semibold">Export CSV</button>
+        </div>
+      </div>
+
+      <!-- KPI: today / 7d / 30d, split platform vs BYOK -->
+      <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="bg-card border border-line rounded-lg p-5 shadow-card">
+          <div class="text-[12px] font-semibold text-muted uppercase tracking-wider">Today</div>
+          <div class="mt-2 text-[28px] font-semibold text-ink tabular">$18.42</div>
+          <div class="mt-2 grid grid-cols-2 text-[12px]">
+            <div><div class="text-faint">Platform</div><div class="font-mono tabular text-ink">$14.91</div></div>
+            <div><div class="text-faint">BYOK</div><div class="font-mono tabular text-muted">$3.51</div></div>
+          </div>
+        </div>
+        <div class="bg-card border border-line rounded-lg p-5 shadow-card">
+          <div class="text-[12px] font-semibold text-muted uppercase tracking-wider">Last 7 days</div>
+          <div class="mt-2 text-[28px] font-semibold text-ink tabular">$127.18</div>
+          <div class="mt-2 grid grid-cols-2 text-[12px]">
+            <div><div class="text-faint">Platform</div><div class="font-mono tabular text-ink">$102.40</div></div>
+            <div><div class="text-faint">BYOK</div><div class="font-mono tabular text-muted">$24.78</div></div>
+          </div>
+        </div>
+        <div class="bg-card border border-line rounded-lg p-5 shadow-card">
+          <div class="text-[12px] font-semibold text-muted uppercase tracking-wider">Last 30 days</div>
+          <div class="mt-2 text-[28px] font-semibold text-ink tabular">$534.06</div>
+          <div class="mt-2 grid grid-cols-2 text-[12px]">
+            <div><div class="text-faint">Platform</div><div class="font-mono tabular text-ink">$418.12</div></div>
+            <div><div class="text-faint">BYOK</div><div class="font-mono tabular text-muted">$115.94</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stacked bar by provider (mock with bars) -->
+      <div class="grid grid-cols-[1fr_360px] gap-4 mb-6">
+        <div class="bg-card border border-line rounded-lg p-5 shadow-card">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-[14px] font-semibold text-ink">By provider · daily</h2>
+            <div class="flex items-center gap-3 text-[11.5px]">
+              <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-accent"></span> OpenAI</span>
+              <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-blue"></span> Anthropic</span>
+              <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-violet"></span> Google</span>
+              <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-green"></span> DeepSeek</span>
+              <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-amber"></span> OpenRouter</span>
+            </div>
+          </div>
+          <div class="h-44 flex items-end gap-1.5">
+            <!-- 14 stacked bars -->
+            <div class="flex flex-col w-full">
+              <div style="height: 30px" class="bg-amber rounded-t-sm"></div>
+              <div style="height: 12px" class="bg-green"></div>
+              <div style="height: 18px" class="bg-violet"></div>
+              <div style="height: 24px" class="bg-blue"></div>
+              <div style="height: 42px" class="bg-accent rounded-b-sm"></div>
+            </div>
+            <div class="flex flex-col w-full">
+              <div style="height: 36px" class="bg-amber rounded-t-sm"></div>
+              <div style="height: 10px" class="bg-green"></div>
+              <div style="height: 14px" class="bg-violet"></div>
+              <div style="height: 28px" class="bg-blue"></div>
+              <div style="height: 50px" class="bg-accent rounded-b-sm"></div>
+            </div>
+            <div class="flex flex-col w-full">
+              <div style="height: 24px" class="bg-amber rounded-t-sm"></div>
+              <div style="height: 8px" class="bg-green"></div>
+              <div style="height: 22px" class="bg-violet"></div>
+              <div style="height: 30px" class="bg-blue"></div>
+              <div style="height: 44px" class="bg-accent rounded-b-sm"></div>
+            </div>
+            <div class="flex flex-col w-full">
+              <div style="height: 28px" class="bg-amber rounded-t-sm"></div>
+              <div style="height: 14px" class="bg-green"></div>
+              <div style="height: 20px" class="bg-violet"></div>
+              <div style="height: 30px" class="bg-blue"></div>
+              <div style="height: 48px" class="bg-accent rounded-b-sm"></div>
+            </div>
+            <div class="flex flex-col w-full">
+              <div style="height: 34px" class="bg-amber rounded-t-sm"></div>
+              <div style="height: 12px" class="bg-green"></div>
+              <div style="height: 26px" class="bg-violet"></div>
+              <div style="height: 36px" class="bg-blue"></div>
+              <div style="height: 56px" class="bg-accent rounded-b-sm"></div>
+            </div>
+            <div class="flex flex-col w-full">
+              <div style="height: 30px" class="bg-amber rounded-t-sm"></div>
+              <div style="height: 8px" class="bg-green"></div>
+              <div style="height: 18px" class="bg-violet"></div>
+              <div style="height: 24px" class="bg-blue"></div>
+              <div style="height: 48px" class="bg-accent rounded-b-sm"></div>
+            </div>
+            <div class="flex flex-col w-full">
+              <div style="height: 38px" class="bg-amber rounded-t-sm"></div>
+              <div style="height: 12px" class="bg-green"></div>
+              <div style="height: 22px" class="bg-violet"></div>
+              <div style="height: 30px" class="bg-blue"></div>
+              <div style="height: 60px" class="bg-accent rounded-b-sm"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Donut by feature (mock) -->
+        <div class="bg-card border border-line rounded-lg p-5 shadow-card">
+          <h2 class="text-[14px] font-semibold text-ink mb-3">By feature</h2>
+          <div class="flex items-center gap-4">
+            <svg viewBox="0 0 36 36" class="w-28 h-28">
+              <circle cx="18" cy="18" r="15.915" fill="none" stroke="#EAE8F7" stroke-width="6"></circle>
+              <circle cx="18" cy="18" r="15.915" fill="none" stroke="#867AEB" stroke-width="6" stroke-dasharray="42 58" stroke-dashoffset="25" transform="rotate(-90 18 18)"></circle>
+              <circle cx="18" cy="18" r="15.915" fill="none" stroke="#2C5BA8" stroke-width="6" stroke-dasharray="32 68" stroke-dashoffset="-17" transform="rotate(-90 18 18)"></circle>
+              <circle cx="18" cy="18" r="15.915" fill="none" stroke="#5E4B8B" stroke-width="6" stroke-dasharray="26 74" stroke-dashoffset="-49" transform="rotate(-90 18 18)"></circle>
+            </svg>
+            <ul class="text-[13px] space-y-2">
+              <li class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm bg-accent"></span> Chat <span class="ml-auto font-mono tabular text-ink">42%</span></li>
+              <li class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm bg-blue"></span> Triage <span class="ml-auto font-mono tabular text-ink">32%</span></li>
+              <li class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm bg-violet"></span> Draft <span class="ml-auto font-mono tabular text-ink">26%</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top tenants -->
+      <div class="bg-card border border-line rounded-lg shadow-card overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-line">
+          <h2 class="text-[14px] font-semibold text-ink">Top 20 tenants (30d, k-anonymized buckets)</h2>
+        </div>
+        <table class="w-full text-[13px]">
+          <thead class="bg-surface text-[12px] font-semibold text-muted uppercase tracking-wider">
+            <tr>
+              <th class="text-left px-4 py-2.5">Tenant ID</th>
+              <th class="text-left px-4 py-2.5">Email (hash)</th>
+              <th class="text-right px-4 py-2.5">Spend bucket</th>
+              <th class="text-right px-4 py-2.5">Call count</th>
+              <th class="text-right px-4 py-2.5">% of total</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line">
+            <tr>
+              <td class="px-4 py-3 font-mono text-[12px]">tnt_60c7</td>
+              <td class="px-4 py-3 font-mono text-[11.5px] text-muted">7e92…0c4a</td>
+              <td class="px-4 py-3 text-right font-mono tabular text-ink">$50 – $100</td>
+              <td class="px-4 py-3 text-right font-mono tabular text-ink">12.4k</td>
+              <td class="px-4 py-3 text-right font-mono tabular text-ink">14%</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 font-mono text-[12px]">tnt_a8f3</td>
+              <td class="px-4 py-3 font-mono text-[11.5px] text-muted">a8f3…d211</td>
+              <td class="px-4 py-3 text-right font-mono tabular text-ink">$10 – $50</td>
+              <td class="px-4 py-3 text-right font-mono tabular text-ink">4.1k</td>
+              <td class="px-4 py-3 text-right font-mono tabular text-ink">8%</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 font-mono text-[12px]">tnt_8e21</td>
+              <td class="px-4 py-3 font-mono text-[11.5px] text-muted">b104…ff31</td>
+              <td class="px-4 py-3 text-right font-mono tabular text-ink">$10 – $50</td>
+              <td class="px-4 py-3 text-right font-mono tabular text-ink">3.8k</td>
+              <td class="px-4 py-3 text-right font-mono tabular text-ink">7%</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="px-5 py-3 border-t border-line bg-surface/30 text-[11.5px] text-faint">
+          Per-tenant spend bucketed by 7-day k-anonymity (k ≥ 5). Exact per-tenant cost is not exposed.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     12. CONFIRM-TWICE MODAL EXAMPLE
+     ============================================================ -->
+<section id="confirm" class="scroll-mt-32">
+  <h2 class="text-[13px] font-mono uppercase tracking-wider text-muted mb-3">12 · Confirm-twice modal (delete tenant)</h2>
+  <div class="rounded-xl bg-card border border-line shadow-cardLg overflow-hidden">
+    <div class="min-h-[640px] grid place-items-center bg-[rgba(20,20,18,0.34)] p-12">
+      <div class="w-full max-w-[540px] bg-card border border-line rounded-xl shadow-cardLg overflow-hidden">
+        <!-- Red header strip -->
+        <div class="px-6 py-4 bg-redSoft border-b border-red/30 flex items-center gap-3">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B0413E" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div>
+            <div class="text-[15px] font-semibold text-red">Delete tenant — sarah@example.com</div>
+            <div class="text-[12px] text-ink2">This action is irreversible.</div>
+          </div>
+        </div>
+        <div class="px-6 py-5">
+          <p class="text-[13.5px] text-ink2 mb-3">Confirming will:</p>
+          <ul class="text-[13px] text-ink2 list-disc pl-5 space-y-1.5 mb-5">
+            <li>Revoke Gmail OAuth tokens for <span class="font-mono">tnt_a8f3</span></li>
+            <li>Delete the Pub/Sub subscription</li>
+            <li>Hard-delete 12 chat sessions (24 messages)</li>
+            <li>Erase user account row; audit history retained indefinitely</li>
+          </ul>
+
+          <label class="block text-[12px] font-semibold text-muted mb-1.5">Reason (recorded in audit log)</label>
+          <textarea rows="3" class="w-full p-3 rounded-md border border-line bg-card text-[13px] font-mono leading-[1.55]" placeholder="e.g. user-requested deletion per support ticket ZM-1284">user-requested deletion per support ticket ZM-1284</textarea>
+          <div class="text-right text-[11.5px] font-mono text-faint mt-1">52 / 500</div>
+
+          <div class="mt-5 pt-5 border-t border-line">
+            <label class="block text-[12px] font-semibold text-muted mb-1.5">
+              Type <code class="font-mono text-ink bg-surface px-1.5 py-0.5 rounded">sarah@example.com</code> to confirm
+            </label>
+            <input class="w-full h-10 px-3 rounded-md border border-line bg-card text-[13px] font-mono" placeholder="sarah@example.com" />
+          </div>
+
+          <div class="mt-6 flex items-center justify-end gap-3">
+            <button class="h-10 px-4 rounded-md border border-line bg-card text-ink text-[13px] font-medium">Cancel</button>
+            <button class="h-10 px-5 rounded-md bg-red text-white text-[13px] font-semibold">Delete tenant</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     FOOTER NOTE
+     ============================================================ -->
+<footer class="border-t border-line pt-8 pb-16 text-[12.5px] text-muted">
+  <div class="grid grid-cols-2 gap-8">
+    <div>
+      <div class="text-[11px] font-mono uppercase tracking-wider text-faint mb-2">About this prototype</div>
+      <p class="leading-[1.55]">Throwaway static mockup. Not wired to APIs. Generated by <code class="font-mono">/gsd-ui-phase 8</code> alongside <a href="08-UI-SPEC.md" class="text-accent font-medium">08-UI-SPEC.md</a>. Tokens, typography, spacing, and copy match the locked contract. Inline CSS via Tailwind CDN.</p>
+    </div>
+    <div>
+      <div class="text-[11px] font-mono uppercase tracking-wider text-faint mb-2">Out of scope</div>
+      <ul class="leading-[1.6] list-disc pl-5">
+        <li>Dark mode (deferred v1.3+)</li>
+        <li>Mobile responsive below 1024px</li>
+        <li>Internationalization (admin EN-only)</li>
+        <li>Live WebAuthn ceremony JS</li>
+        <li>Real chart library (recharts in real app)</li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+</main>
+
+</body>
+</html>

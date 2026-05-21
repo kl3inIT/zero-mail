@@ -1,0 +1,66 @@
+# Production profile: structured INFO logs, minimal actuator surface, secure cookies.
+# Privacy invariants enforced: prompt/completion logging OFF (defense-in-depth — also
+# enforced by base application.yml).
+
+logging:
+  level:
+    root: INFO
+    com.zeromail: INFO
+    com.zeromail.core.chat: INFO
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+    org.hibernate: WARN
+
+spring:
+  # Compose lifecycle always operator-driven on the VPS.
+  docker:
+    compose:
+      enabled: false
+
+  jpa:
+    properties:
+      hibernate:
+        format_sql: false
+
+  ai:
+    chat:
+      client:
+        observations:
+          log-prompt: false
+          log-completion: false
+      observations:
+        log-prompt: false
+        log-completion: false
+    openai:
+      chat:
+        observations:
+          include-completion: false
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: true
+
+# Actuator surface: only health + prometheus exposed. Prometheus is scrape-only over
+# the internal docker network; nginx-proxy-manager does not route /actuator/** publicly.
+# Health details hidden — readiness/liveness probes still return 200/503.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+
+# Disable Swagger UI in production to reduce info disclosure. The OpenAPI JSON endpoint
+# stays available for the build-time openapi-emit task and for admin tooling proxied
+# internally; nginx-proxy-manager does not route /v3/api-docs publicly.
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: true

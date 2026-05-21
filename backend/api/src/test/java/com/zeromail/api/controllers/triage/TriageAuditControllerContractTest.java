@@ -44,6 +44,8 @@ class TriageAuditControllerContractTest {
                         "auditId",
                         "gmailThreadId",
                         "gmailMessageId",
+                        "subject",
+                        "senderEmail",
                         "ruleName",
                         "action",
                         "reason",

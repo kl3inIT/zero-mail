@@ -1,7 +1,17 @@
 package com.zeromail.api.dto.rules;
 
 import com.zeromail.core.rules.usecases.RuleCompileResult;
+import io.swagger.v3.oas.annotations.media.Schema;
 
+@Schema(
+        requiredProperties = {
+            "status",
+            "sourceLanguage",
+            "displayName",
+            "schemaVersion",
+            "matcherAst",
+            "actionIntents"
+        })
 public record CompiledPayloadResponse(
         String status,
         String sourceLanguage,

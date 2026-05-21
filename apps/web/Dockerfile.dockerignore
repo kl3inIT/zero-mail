@@ -1,0 +1,28 @@
+# Frontend per-Dockerfile ignore (BuildKit auto-applies on top of root .dockerignore).
+# Frontend uses `COPY . .` in the builder stage, so this ignore is the main filter.
+
+# Backend Java modules — frontend never needs these.
+backend
+buildSrc
+build.gradle.kts
+settings.gradle.kts
+gradle.properties
+gradle
+gradlew
+gradlew.bat
+
+# Loadtest + ops — irrelevant for the Next.js build.
+loadtest
+ops
+
+# Backend-only scripts.
+scripts/ci
+
+# Test/e2e outputs.
+apps/web/playwright-report
+apps/web/test-results
+apps/web/coverage
+apps/web/.next/cache
+
+# Storybook / mockups not consumed by the production build.
+scripts/needs-reply-mockup.html

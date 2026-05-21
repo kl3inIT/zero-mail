@@ -2,7 +2,18 @@ package com.zeromail.api.dto.account;
 
 import com.zeromail.core.account.projection.CurrentUserProjection;
 import com.zeromail.core.gmail.projection.GmailConnectionProjection;
+import io.swagger.v3.oas.annotations.media.Schema;
 
+@Schema(
+        requiredProperties = {
+            "userId",
+            "tenantId",
+            "email",
+            "onboardingStep",
+            "preferredLanguage",
+            "triagePaused",
+            "gmailConnectionStatus"
+        })
 public record MeResponse(
         String userId,
         String tenantId,
@@ -12,8 +23,9 @@ public record MeResponse(
         boolean triagePaused,
         GmailConnectionStatusExtended gmailConnectionStatus) {
 
+    @Schema(requiredProperties = {"status", "ingestionHealth", "googleEmail"})
     public record GmailConnectionStatusExtended(
-            String status, String ingestionHealth, String googleEmail) {}
+            String status, String ingestionHealth, @Schema(nullable = true) String googleEmail) {}
 
     public static MeResponse from(
             CurrentUserProjection user,

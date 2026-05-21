@@ -6,13 +6,38 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 ## Current State
 
-**Shipped:** v1.0 MVP — `v1.0.0-rc1` tagged 2026-05-15.
+**Shipped:**
+- v1.0 MVP — `v1.0.0-rc1` tagged 2026-05-15.
+- v1.1 Email assistant chat — `v1.1` tagged 2026-05-19 (Phase 7 only; Phase 8 deferred to v1.2).
 
-- **Backend:** ~17 phases, Java 25 + Spring Boot 4.0.6 + Spring Modulith + Hibernate 7 + Liquibase 5 + Spring AI 2.0.0-M6.
-- **Frontend:** Next.js 16.2.4 + React 19.2.5 + Tailwind 4 + shadcn/ui + TanStack Query + typed OpenAPI client; Vietnamese-default with English secondary.
+- **Backend:** ~18 phases (v1.0 + Phase 7), Java 25 + Spring Boot 4.0.6 + Spring Modulith + Hibernate 7 + Liquibase 5 + Spring AI 2.0.0-M6.
+- **Frontend:** Next.js 16.2.4 + React 19.2.5 + Tailwind 4 + shadcn/ui + TanStack Query + typed OpenAPI client; Vietnamese-default with English secondary. Brand palette shifted teal `#0E5E5A` → purple `#867AEB` in PR #40 (2026-05-19) — user-page visual refresh queued for v1.2.
 - **Infra:** Single VPS — Postgres 17 + Redis 7 + reverse proxy + api + worker + web on one host. No GCP / Kafka / vector DB.
-- **Trust posture:** Auto-send architecturally blocked (ArchUnit + safety policy + repo-wide grep enforced); no long-term storage of email bodies, LLM prompts, completions, or embeddings; per-tenant Scoped Values + multi-tenant leak test green; @Sensitive Logback scrub end-to-end verified.
-- **Launch state:** OAuth Testing mode (production CASA verification deferred to dormant SEED-012); 50-tenant load test 4/4 invariants PASS; LAUNCH-GO-NOGO signed.
+- **Trust posture:** Auto-send architecturally blocked (ArchUnit + safety policy + repo-wide grep enforced; v1.1 Phase 7 flipped Gmail send call sites 0 → exactly 1 via `AssistantSendExecutor`); no long-term storage of raw email bodies, email-content LLM prompts/completions, or embeddings (rule-builder assistant chat excluded — see Privacy scope); per-tenant Scoped Values + multi-tenant leak test green; @Sensitive Logback scrub end-to-end verified; chat_message body-ban enforced 3-layer (sanitizer + ArchUnit + Postgres trigger).
+- **Launch state:** OAuth Testing mode (production CASA verification deferred to dormant SEED-012). v1.1 chat surface ships **without** hostile-corpus eval gate (deferred to v1.2 hardening); v1.0 LAUNCH-GO-NOGO still applies; v1.1 GA tag annotated with deferred-eval caveat.
+
+## Current Milestone: v1.2 — Admin Console Foundation + Settings UI (Slice 2 capability)
+
+**Goal:** Ship admin console as the foundation (Phase 8), then ship the user Settings UI on top of the admin-curated catalog (Phase 9). No GA tag this milestone — visual refresh, hostile-corpus eval, Grafana, CASA refresh, LAUNCH-GO-NOGO, and the formal GA tag are explicitly deferred to v1.3+.
+
+**Target features:**
+
+1. **Admin foundation (Phase 8)** — `/admin/*` routes + `ROLE_ADMIN` RBAC + admin action audit logs + per-provider/per-feature LLM catalog curation UI with Sync-from-`/models` flow + AES-GCM-encrypted master key management for OpenAI/Anthropic/Google/DeepSeek + test-connection + tenant read-only views + worker queue health (read-only) + promoted global LLM spend dashboard. Activates **SEED-011** (admin-support-and-compliance-console) and **OPS-02** (deferred from v1.1).
+2. **Settings UI on curated catalog (Phase 9)** — 4 tabs (Personalization, Behavior, Safety Net, AI Provider/Model) via shadcn `<Tabs>` query-param-driven; carries forward the 19 deferred v1.1 reqs (SET-AI-01..04, SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04). AI Provider/Model tab depends on the admin-curated catalog from Phase 8.
+
+**Seeds activating in v1.2:**
+
+- `SEED-011` — admin-support-and-compliance-console (promoted to v1.2 Phase 8)
+
+**Explicitly deferred to v1.3+:**
+
+- Visual refresh of user pages (purple brand palette alignment from PR #40)
+- Hostile-corpus `aiEval` suite (15 hostile emails + 10 hostile personal_instructions + VIP send refusal + VI/EN fidelity)
+- Grafana ops dashboards (lease residuals, audit-vs-state mismatch, ordering violations, leak counters, BUDGET_EXHAUSTED rate)
+- CASA evidence refresh for chat surface
+- LAUNCH-GO-NOGO checklist
+- Formal **v1.2 GA tag**
+- Provider expansion (Bedrock/Azure/Groq/Perplexity/native OpenRouter/OpenAI-compatible/Vertex), waitlist OAuth provisioning, learned patterns, multi-rule selection, browser extension sync, image attachments in chat, CASA production verification (SEED-012).
 
 ## Core Value
 
@@ -93,7 +118,9 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 <!-- Next milestone scope. Define via `/gsd:new-milestone`. -->
 
-*(Run `/gsd:new-milestone` to define v1.1 — typical candidates: rules UX structured builder (next-milestone TODO), CASA production verification (SEED-012), live Resend deliverability + payment-provider smoke tests, Outlook/Microsoft 365, Auto-send opt-in for narrow rules with per-rule approval flow, bulk unsubscribe, cold-email blocker, reply-tracker, attachment auto-filing, team/seat plans.)*
+**v1.2 in progress** (started 2026-05-19). Scope: Admin console foundation + Settings UI on curated catalog (see "Current Milestone" section above). Requirements: `.planning/REQUIREMENTS.md`. Roadmap: `.planning/ROADMAP.md`.
+
+*Deferred from v1.1 candidate list:* CASA production verification (SEED-012), live Resend deliverability + payment-provider smoke tests, Outlook/Microsoft 365, Auto-send opt-in for narrow rules with per-rule approval flow, bulk unsubscribe, cold-email blocker, reply-tracker, attachment auto-filing, team/seat plans, waitlist OAuth provisioning.
 
 ### Out of Scope
 
@@ -104,7 +131,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Generic IMAP/SMTP** — different auth/push/label model; doubles provider surface area.
 - **Self-hosted / open-source distribution** — Cloud SaaS only in v1; OSS is a separate strategic decision.
 - **Team / seat-based plans** — v1 targets individual prosumers; team features wait for SMB signal.
-- **Long-term storage of email bodies, LLM prompts/completions, or embeddings** — privacy constraint, permanent (not a deferred feature).
+- **Long-term storage of raw email bodies, email-content LLM prompts/completions, or embeddings** — privacy constraint, permanent (not a deferred feature). Rule-builder assistant chat is excluded — see Privacy scope in Constraints.
 - **RAG over user mail bodies** — requires persistent derived features; incompatible with privacy stance.
 - **Vector DB in v1 infra** — no embedding persistence → no vector DB need.
 - **Full in-app mail client UI** — Gmail remains primary client; we augment, not replace.
@@ -135,8 +162,8 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Distribution (v1)**: Self-hosted SaaS on a single VPS — locked.
 - **LLM routing**: Default OpenRouter behind Spring AI; BYOK supported — locked.
 - **Billing model**: Prepaid credits, pay-as-you-go. Vietnam beta uses SePay/VietQR + Postgres ledger + configurable VND-per-credit; global Merchant-of-Record/card provider deferred.
-- **Privacy**: No long-term storage of raw email bodies, LLM prompts/completions, or embeddings — locked.
-- **Write actions in v1**: label, archive, save Gmail draft. **Auto-send forbidden.**
+- **Privacy**: No long-term storage of raw email bodies, LLM prompts/completions, or embeddings — locked. **Scope:** the email-content processing pipeline (triage, draft generation). User-typed rule-builder assistant chat (chat messages + structured tool outputs) persists normally — it is UI configuration input, not extracted email content. Still forbidden inside chat: inlining email bodies into long-term assistant prompts (use short-lived in-memory cache) and embeddings of user mail.
+- **Write actions allowed**: (1) **Rules engine** (auto-triggered by incoming mail): label, archive (skip inbox), save Gmail draft only — **auto-send forbidden** (= rule firing → send without per-message user click). (2) **Chat assistant** (user-initiated): same as rules engine + (v1.1+) user-confirmed send/reply/forward via chat preview card. AI drafts message → chat UI renders preview with edit + send + cancel → send executes only on explicit per-message user click. Auto-send (rule-triggered, no per-message click) remains forbidden in all pathways.
 - **Primary datastore**: PostgreSQL 17 self-hosted on the VPS. Redis 7 same VPS for cache/session/rate-limit only; no vector DB.
 - **Schema migrations**: Liquibase YAML — locked.
 - **Timeline**: Exploratory / learning-oriented; favor architectural quality over speed.
@@ -183,4 +210,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-15 after v1.0 milestone close*
+*Last updated: 2026-05-19 — v1.2 milestone started (Admin Console Foundation + Settings UI)*

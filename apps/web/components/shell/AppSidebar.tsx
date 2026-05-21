@@ -1,5 +1,6 @@
 'use client';
 
+import type { Route } from 'next';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -40,8 +41,9 @@ import { useHydrated } from '@/lib/use-hydrated';
 import { cn } from '@/lib/utils';
 
 type NavItem = {
-  href: string;
+  href: Route;
   labelKey:
+    | 'nav.chat'
     | 'nav.ai'
     | 'nav.analytics'
     | 'nav.needsReply'
@@ -58,8 +60,8 @@ type NavItem = {
 };
 
 const MAIL_NAV: NavItem[] = [
+  { href: '/chat', labelKey: 'nav.chat', icon: Sparkles },
   { href: '/rules', labelKey: 'nav.rules', icon: ListChecks },
-  { href: '/ai', labelKey: 'nav.ai', icon: Sparkles },
   { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
   {
     href: '/cleanup',
@@ -78,6 +80,7 @@ const MAIL_NAV: NavItem[] = [
 ];
 
 const MANAGE_NAV: NavItem[] = [
+  { href: '/ai', labelKey: 'nav.ai', icon: Sparkles },
   { href: '/billing', labelKey: 'nav.billing', icon: CreditCard },
   { href: '/settings', labelKey: 'nav.settings', icon: Settings },
 ];
@@ -145,7 +148,7 @@ export function AppSidebar() {
               ? 'mx-auto h-9 w-9 justify-center rounded-full p-0'
               : 'w-full rounded-l-none rounded-r-full pr-4 pl-7',
             active
-              ? 'bg-[#E7F0EF]! font-bold text-[#0a3d3a]! hover:bg-[#E7F0EF]/80!'
+              ? 'bg-sidebar-accent! text-sidebar-accent-foreground! hover:bg-sidebar-accent/80! font-bold'
               : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground font-medium',
           )}
           render={<Link href={item.href} aria-label={label} />}

@@ -80,7 +80,7 @@ export function RulePreviewPanel({
                     className={cn(
                       'h-8 w-11 rounded-lg border text-sm font-medium transition-all',
                       isActive
-                        ? 'border-[#0a3d3a]/10 bg-[#E7F0EF] font-bold text-[#0a3d3a] shadow-sm'
+                        ? 'border-accent bg-accent text-accent-foreground font-bold shadow-sm'
                         : 'bg-background border-border text-muted-foreground hover:bg-muted hover:text-foreground',
                     )}
                     onClick={() => onSampleSizeChange(size)}

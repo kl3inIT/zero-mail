@@ -2,7 +2,7 @@ name: zeromail-loadtest
 
 services:
   postgres-loadtest:
-    image: postgres:17.6
+    image: postgres:18.4
     environment:
       POSTGRES_DB: zeromail
       POSTGRES_USER: zeromail

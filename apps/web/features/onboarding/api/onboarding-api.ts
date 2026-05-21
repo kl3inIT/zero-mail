@@ -1,23 +1,20 @@
-import { api, xsrfHeader } from '@/lib/api/client';
+import { api } from '@/lib/api/client';
+import type { components } from '@/lib/api/schema';
 
-export interface SelectTemplateBody {
-  templateKey: 'archive-receipts' | 'label-newsletters' | 'pin-calendar';
-}
+export type SelectTemplateBody = components['schemas']['SelectTemplateRequest'];
 
 export async function selectTemplate(body: SelectTemplateBody): Promise<void> {
-  const { error, response } = await api.POST('/onboarding/select-template', {
+  const { error, response } = await api.POST('/api/onboarding/select-template', {
     body,
-    headers: { 'Content-Type': 'application/json', ...xsrfHeader() },
+    headers: { 'Content-Type': 'application/json' },
   });
   if (error || !response.ok)
-    throw error ?? new Error(`/onboarding/select-template failed: ${response.status}`);
+    throw error ?? new Error(`/api/onboarding/select-template failed: ${response.status}`);
 }
 
 export async function completeOnboarding(): Promise<void> {
-  const { error, response } = await api.POST('/onboarding/complete', {
-    headers: { ...xsrfHeader() },
-  });
+  const { error, response } = await api.POST('/api/onboarding/complete', {});
   if (error || !response.ok) {
-    throw error ?? new Error(`/onboarding/complete failed: ${response.status}`);
+    throw error ?? new Error(`/api/onboarding/complete failed: ${response.status}`);
   }
 }

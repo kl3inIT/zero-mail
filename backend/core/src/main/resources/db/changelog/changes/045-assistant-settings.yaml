@@ -1,0 +1,64 @@
+databaseChangeLog:
+  - changeSet:
+      id: 045-assistant-settings
+      author: zeromail
+      comment: >
+        Tenant-scoped assistant settings are nullable at Phase 7 GA. Phase 8 ships the settings UI
+        that populates provider/model choice, personal instructions, and writing style.
+      changes:
+        - createTable:
+            tableName: assistant_settings
+            columns:
+              - column:
+                  name: assistant_settings_id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: ux_assistant_settings_tenant
+                    foreignKeyName: fk_assistant_settings_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: provider_id
+                  type: varchar(32)
+              - column:
+                  name: default_model
+                  type: varchar(64)
+              - column:
+                  name: ai_output_language
+                  type: varchar(8)
+              - column:
+                  name: personal_instructions
+                  type: text
+              - column:
+                  name: writing_style
+                  type: text
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropTable:
+            tableName: assistant_settings

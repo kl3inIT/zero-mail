@@ -1,14 +1,77 @@
+# Force LF line endings repo-wide so Windows checkouts don't break:
+#   - the gradlew shell script (CONTRIBUTING.md notes the Windows-checkout gotcha)
+#   - generated google-java-format / Spotless output
+#   - Liquibase YAML changesets
+#
+# `* text=auto eol=lf` tells git to normalize all detected-text files on
+# add/commit AND to materialize them with LF on checkout regardless of OS.
+
 * text=auto eol=lf
 
-*.bat text eol=crlf
-*.cmd text eol=crlf
-*.ps1 text eol=crlf
-*.sh text eol=lf
+# Explicit LF (force on Windows even if git misdetects as binary).
+*.java        text eol=lf
+*.kt          text eol=lf
+*.kts         text eol=lf
+*.gradle      text eol=lf
+*.properties  text eol=lf
+*.sh          text eol=lf
+*.bash        text eol=lf
+gradlew       text eol=lf
+*.yml         text eol=lf
+*.yaml        text eol=lf
+*.json        text eol=lf
+*.md          text eol=lf
+*.ts          text eol=lf
+*.tsx         text eol=lf
+*.js          text eol=lf
+*.jsx         text eol=lf
+*.css         text eol=lf
+*.html        text eol=lf
+*.sql         text eol=lf
+*.toml        text eol=lf
+*.env*        text eol=lf
+Dockerfile*   text eol=lf
+.gitignore    text eol=lf
+.dockerignore text eol=lf
 
-*.gif binary
-*.ico binary
-*.jpg binary
-*.jpeg binary
-*.pdf binary
-*.png binary
-*.webp binary
+# Windows-only stays CRLF.
+*.bat         text eol=crlf
+*.cmd         text eol=crlf
+*.ps1         text eol=crlf
+
+# Binary — never normalize, never diff as text.
+*.png         binary
+*.jpg         binary
+*.jpeg        binary
+*.gif         binary
+*.ico         binary
+*.webp        binary
+*.svg         text eol=lf
+*.woff        binary
+*.woff2       binary
+*.ttf         binary
+*.eot         binary
+*.pdf         binary
+*.zip         binary
+*.tar         binary
+*.tar.gz      binary
+*.jar         binary
+*.war         binary
+*.class       binary
+*.gpg         binary
+
+# Generated / vendored — exclude from diff stats + linguist language counts.
+apps/web/lib/api/schema.d.ts          linguist-generated
+apps/web/components/ui/**             linguist-vendored
+apps/web/i18n/generated/**            linguist-generated
+backend/*/build/**                    linguist-generated
+**/coverage/**                        linguist-generated
+
+# Lock files — diff only when an operator requests it (huge, mostly noise).
+pnpm-lock.yaml      -diff linguist-generated
+package-lock.json   -diff linguist-generated
+gradle/wrapper/**   -diff linguist-vendored
+
+# Force LF on shipped Liquibase changelogs — corrupt YAML on CRLF.
+backend/*/src/main/resources/db/changelog/**.yaml  text eol=lf
+backend/*/src/main/resources/db/changelog/**.sql   text eol=lf

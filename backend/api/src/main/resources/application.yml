@@ -6,10 +6,12 @@ spring:
       enabled: true
   docker:
     compose:
+      # Opt-in via env var so IntelliJ Run does not trigger Boot's compose
+      # lifecycle (which currently tries to build the app image and fails on
+      # Windows checkouts where gradlew lacks the executable bit).
+      # Bring infra up manually: `docker compose up -d postgres redis`.
+      enabled: ${SPRING_DOCKER_COMPOSE_ENABLED:false}
       lifecycle-management: start_only
-      # Resolve from the repo root. IntelliJ run configs use the
-      # repo root by default; backend:api bootRun is configured the same way.
-      # Override with -Dspring.docker.compose.file=... if needed.
       file: ${SPRING_DOCKER_COMPOSE_FILE:docker-compose.yml}
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/zeromail}
@@ -19,6 +21,7 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+      database: ${REDIS_DB:0}
   security:
     oauth2:
       client:
@@ -45,7 +48,7 @@ spring:
       namespace: zeromail:session
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
-    enabled: false
+    enabled: true
   jpa:
     open-in-view: false
     hibernate:
@@ -75,7 +78,22 @@ spring:
       observations:
         log-prompt: false
         log-completion: false
+    openai:
+      chat:
+        observations:
+          include-completion: false
+zeromail:
+  session:
+    cookie:
+      # Default in SecurityConfig is secure=true (prod). Dev runs on http://localhost,
+      # so the browser would drop a Secure cookie — override to false locally. Production
+      # leaves this unset to inherit the secure default. CR-04.
+      secure: ${ZEROMAIL_SESSION_COOKIE_SECURE:false}
 zero-mail:
+  admin:
+    bootstrap-emails: ${ZEROMAIL_ADMIN_BOOTSTRAP_EMAILS:}
+    audit:
+      hmac-kek-base64: ${ZEROMAIL_ADMIN_AUDIT_HMAC_KEK_BASE64:}
   api:
     web:
       base-url: ${ZEROMAIL_WEB_BASE_URL:http://localhost:3000}
@@ -128,8 +146,22 @@ zero-mail:
       allowed-extra-hosts: []
       connect-timeout: 5s
       read-timeout: 15s
+  chat:
+    heartbeat-interval-seconds: 15
+    sse-timeout-minutes: 30
+    default-model: openai/gpt-5.4-nano
+    # MEDIUM-7: token budget enforcement per AI-SPEC section 4b.
+    max-history-tokens: 24576
+    max-tool-output-tokens: 4000
+    history:
+      page-size: 50
+    # MEDIUM-8: reverse-proxy timeout doc note.
+    # NGINX site config for the /api/chat location MUST set: proxy_read_timeout 31m;
+    # The 30-minute SseEmitter timeout above plus 1 min headroom prevents nginx
+    # from severing the SSE connection mid-stream.
 server:
   port: 8080
+  forward-headers-strategy: framework
   servlet:
     session:
       cookie:

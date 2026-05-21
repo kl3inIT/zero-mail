@@ -1,0 +1,170 @@
+databaseChangeLog:
+  - changeSet:
+      id: 058-01-create-llm-provider-master-key
+      author: zeromail
+      changes:
+        - createTable:
+            tableName: llm_provider_master_key
+            columns:
+              - column:
+                  name: provider
+                  type: varchar(32)
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_llm_provider_master_key
+                    nullable: false
+              - column:
+                  name: key_format
+                  type: varchar(32)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: encrypted_key
+                  type: bytea
+                  constraints:
+                    nullable: true
+              - column:
+                  name: kek_version
+                  type: smallint
+                  constraints:
+                    nullable: true
+              - column:
+                  name: provider_secret_version
+                  type: bigint
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by_user_id
+                  type: uuid
+                  constraints:
+                    nullable: true
+                    foreignKeyName: fk_llm_provider_master_key_created_by
+                    references: admin_users(id)
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_rotated_at
+                  type: timestamptz
+                  constraints:
+                    nullable: true
+              - column:
+                  name: base_url
+                  type: varchar(500)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: feature_default_provider_chat
+                  type: boolean
+                  defaultValueBoolean: false
+                  remarks: DEPRECATED stub column pending Phase 8D feature_default_provider table migration.
+                  constraints:
+                    nullable: false
+              - column:
+                  name: feature_default_provider_triage
+                  type: boolean
+                  defaultValueBoolean: false
+                  remarks: DEPRECATED stub column pending Phase 8D feature_default_provider table migration.
+                  constraints:
+                    nullable: false
+              - column:
+                  name: feature_default_provider_draft
+                  type: boolean
+                  defaultValueBoolean: false
+                  remarks: DEPRECATED stub column pending Phase 8D feature_default_provider table migration.
+                  constraints:
+                    nullable: false
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE llm_provider_master_key
+                ADD CONSTRAINT ck_llm_provider_master_key_provider
+                CHECK (provider IN ('OPENAI','ANTHROPIC','GOOGLE','DEEPSEEK','OPENROUTER','ROUTER_9R'));
+
+              ALTER TABLE llm_provider_master_key
+                ADD CONSTRAINT ck_llm_provider_master_key_key_format
+                CHECK (key_format IS NULL OR key_format IN ('OPENAI_FORMAT','ANTHROPIC_FORMAT','GOOGLE_FORMAT'));
+
+              ALTER TABLE llm_provider_master_key
+                ADD CONSTRAINT ck_llm_provider_master_key_secret_pair
+                CHECK (
+                  (encrypted_key IS NULL AND kek_version IS NULL AND last_rotated_at IS NULL)
+                  OR (encrypted_key IS NOT NULL AND kek_version IS NOT NULL)
+                );
+
+              ALTER TABLE llm_provider_master_key
+                ADD CONSTRAINT ck_llm_provider_master_key_provider_format
+                CHECK (
+                  key_format IS NULL
+                  OR (provider IN ('OPENAI','DEEPSEEK','OPENROUTER') AND key_format = 'OPENAI_FORMAT')
+                  OR (provider = 'ANTHROPIC' AND key_format = 'ANTHROPIC_FORMAT')
+                  OR (provider = 'GOOGLE' AND key_format = 'GOOGLE_FORMAT')
+                  OR (provider = 'ROUTER_9R' AND key_format IN ('OPENAI_FORMAT','ANTHROPIC_FORMAT'))
+                );
+        - insert:
+            tableName: llm_provider_master_key
+            columns:
+              - column:
+                  name: provider
+                  value: OPENAI
+              - column:
+                  name: provider_secret_version
+                  valueNumeric: 1
+        - insert:
+            tableName: llm_provider_master_key
+            columns:
+              - column:
+                  name: provider
+                  value: ANTHROPIC
+              - column:
+                  name: provider_secret_version
+                  valueNumeric: 1
+        - insert:
+            tableName: llm_provider_master_key
+            columns:
+              - column:
+                  name: provider
+                  value: GOOGLE
+              - column:
+                  name: provider_secret_version
+                  valueNumeric: 1
+        - insert:
+            tableName: llm_provider_master_key
+            columns:
+              - column:
+                  name: provider
+                  value: DEEPSEEK
+              - column:
+                  name: provider_secret_version
+                  valueNumeric: 1
+        - insert:
+            tableName: llm_provider_master_key
+            columns:
+              - column:
+                  name: provider
+                  value: OPENROUTER
+              - column:
+                  name: provider_secret_version
+                  valueNumeric: 1
+              - column:
+                  name: feature_default_provider_chat
+                  valueBoolean: true
+              - column:
+                  name: feature_default_provider_triage
+                  valueBoolean: true
+              - column:
+                  name: feature_default_provider_draft
+                  valueBoolean: true
+        - insert:
+            tableName: llm_provider_master_key
+            columns:
+              - column:
+                  name: provider
+                  value: ROUTER_9R
+              - column:
+                  name: provider_secret_version
+                  valueNumeric: 1

@@ -1,0 +1,30 @@
+# Backend worker per-Dockerfile ignore (BuildKit auto-applies on top of root .dockerignore).
+# Goal: ship only gradle wrapper + manifests + backend/core + backend/worker source.
+
+# Frontend monorepo workspace — backend worker never needs this.
+apps
+content
+tools
+specs
+seed.spec.ts
+package.json
+package-lock.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+turbo.json
+
+# Loadtest fixtures + ops scripts.
+loadtest
+ops
+scripts
+
+# Sibling backend modules — only :backend:worker + :backend:core source is consumed.
+backend/api/src
+backend/api/build
+backend/api/.gradle
+
+# Backend test sources — bootJar build runs with -x test.
+backend/worker/src/test
+backend/core/src/test
+backend/worker/build
+backend/core/build

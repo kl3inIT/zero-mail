@@ -1,33 +1,31 @@
-import { getTranslations } from 'next-intl/server';
 import Image from 'next/image';
+import { getTranslations } from 'next-intl/server';
 
 export default async function Features() {
-  const t = await getTranslations('landing.features');
+  const t = await getTranslations('landingFeatures');
 
   return (
     <div className="flex flex-col gap-32 bg-(--bg) py-24" id="features">
       {/* 1. Automatically Organized */}
       <section className="zm-container text-center">
         <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
-          {t('autoOrganize.title')}
+          {t('sec1.title.line1')}
+          <br />
+          {t('sec1.title.line2')}
         </h2>
         <p className="mx-auto mb-16 max-w-3xl text-xl leading-relaxed text-(--text-muted)">
-          {t('autoOrganize.description')}
+          {t('sec1.body')}
         </p>
 
         <div className="mx-auto mb-8 grid w-full max-w-5xl grid-cols-2">
           <div className="flex items-center justify-center gap-2 text-center">
-            <span className="text-2xl font-bold text-(--text-muted)">
-              {t('autoOrganize.beforeLabel')}
-            </span>
+            <span className="text-2xl font-bold text-(--text-muted)">{t('sec1.before')}</span>
             <span className="relative -top-2 rounded-full bg-red-700 px-2 py-0.5 text-[11px] leading-none font-extrabold text-white shadow-sm">
               99+
             </span>
           </div>
           <div className="text-center">
-            <span className="text-2xl font-bold text-(--text-muted)">
-              {t('autoOrganize.afterLabel')}
-            </span>
+            <span className="text-2xl font-bold text-(--text-muted)">{t('sec1.after')}</span>
           </div>
         </div>
 
@@ -35,7 +33,7 @@ export default async function Features() {
           {/* Light Mode Image */}
           <Image
             src="/images/phan-loai-dark-v2.png"
-            alt={t('autoOrganize.imageAlt')}
+            alt={t('sec1.title.line1')}
             fill
             sizes="(max-width: 1024px) 100vw, 1024px"
             className="object-contain dark:hidden"
@@ -43,9 +41,8 @@ export default async function Features() {
           {/* Dark Mode Image */}
           <Image
             src="/images/phan-loai-light.png"
-            alt={t('autoOrganize.imageAlt')}
+            alt={t('sec1.title.line1')}
             fill
-            sizes="(max-width: 1024px) 100vw, 1024px"
             className="hidden object-contain dark:block"
           />
         </div>
@@ -54,16 +51,16 @@ export default async function Features() {
       {/* 2. Pre-written drafts */}
       <section className="zm-container text-center">
         <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
-          {t('draftsReady.title')}
+          {t('sec2.title')}
         </h2>
         <p className="mx-auto mb-16 max-w-3xl text-xl leading-relaxed text-(--text-muted)">
-          {t('draftsReady.description')}
+          {t('sec2.body')}
         </p>
         <div className="relative mx-auto aspect-[16/9] w-full max-w-5xl overflow-hidden rounded-2xl">
           {/* Light Mode Image */}
           <Image
             src="/images/ketnoi-light.png"
-            alt={t('draftsReady.imageAlt')}
+            alt={t('sec2.title')}
             fill
             sizes="(max-width: 1024px) 100vw, 1024px"
             className="object-contain dark:hidden"
@@ -71,9 +68,8 @@ export default async function Features() {
           {/* Dark Mode Image */}
           <Image
             src="/images/ketnoi-dark.png"
-            alt={t('draftsReady.imageAltDark')}
+            alt={t('sec2.title')}
             fill
-            sizes="(max-width: 1024px) 100vw, 1024px"
             className="hidden object-contain dark:block"
           />
         </div>
@@ -82,10 +78,10 @@ export default async function Features() {
       {/* 3. Your inbox, wherever you work */}
       <section className="zm-container text-center">
         <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
-          {t('inboxAnywhere.title')}
+          {t('sec3.title')}
         </h2>
         <p className="mx-auto mb-20 max-w-3xl text-xl leading-relaxed text-(--text-muted)">
-          {t('inboxAnywhere.description')}
+          {t('sec3.body')}
         </p>
 
         <div className="flex w-full max-w-full items-center justify-center gap-4 overflow-visible py-12 sm:gap-16 md:gap-32">
@@ -106,9 +102,7 @@ export default async function Features() {
                 />
               </div>
             </div>
-            <span className="text-base font-semibold text-(--text-muted) sm:text-lg">
-              {t('inboxAnywhere.channels.zalo')}
-            </span>
+            <span className="text-base font-semibold text-(--text-muted) sm:text-lg">Zalo</span>
           </div>
 
           {/* Telegram */}
@@ -128,9 +122,7 @@ export default async function Features() {
                 />
               </div>
             </div>
-            <span className="text-base font-semibold text-(--text-muted) sm:text-lg">
-              {t('inboxAnywhere.channels.telegram')}
-            </span>
+            <span className="text-base font-semibold text-(--text-muted) sm:text-lg">Telegram</span>
           </div>
 
           {/* Web */}
@@ -150,9 +142,7 @@ export default async function Features() {
                 />
               </div>
             </div>
-            <span className="text-base font-semibold text-(--text-muted) sm:text-lg">
-              {t('inboxAnywhere.channels.web')}
-            </span>
+            <span className="text-base font-semibold text-(--text-muted) sm:text-lg">Web</span>
           </div>
         </div>
       </section>
@@ -161,10 +151,10 @@ export default async function Features() {
       <section className="zm-container">
         <div className="mb-16 text-center">
           <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
-            {t('getStarted.title')}
+            {t('sec4.title')}
           </h2>
           <p className="mx-auto max-w-3xl text-xl leading-relaxed text-(--text-muted)">
-            {t('getStarted.subtitle')}
+            {t('sec4.body')}
           </p>
         </div>
 
@@ -187,13 +177,13 @@ export default async function Features() {
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  {t('getStarted.step1.label')}
+                  {t('sec4.step1.label')}
                 </div>
                 <h3 className="mb-3 text-2xl leading-tight font-bold text-(--ink)">
-                  {t('getStarted.step1.title')}
+                  {t('sec4.step1.title')}
                 </h3>
                 <p className="text-[15px] leading-relaxed text-(--text-muted)">
-                  {t('getStarted.step1.summary')}
+                  {t('sec4.step1.body')}
                 </p>
               </div>
               <div className="relative flex flex-1 items-end justify-center overflow-hidden pb-12">
@@ -257,43 +247,43 @@ export default async function Features() {
                       d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"
                     />
                   </svg>
-                  {t('getStarted.step2.label')}
+                  {t('sec4.step2.label')}
                 </div>
                 <h3 className="mb-3 text-2xl leading-tight font-bold text-(--ink)">
-                  {t('getStarted.step2.title')}
+                  {t('sec4.step2.title')}
                 </h3>
                 <p className="text-[15px] leading-relaxed text-(--text-muted)">
-                  {t('getStarted.step2.summary')}
+                  {t('sec4.step2.body')}
                 </p>
               </div>
               <div className="relative flex flex-1 items-end justify-center overflow-hidden pb-8">
                 <div className="flex w-[140%] scale-[1.1] -rotate-2 flex-col gap-3.5 transition-transform duration-700 hover:scale-[1.15] hover:-rotate-1">
                   <div className="flex translate-x-4 justify-center gap-3">
                     <span className="rounded-md border border-purple-200 bg-purple-100/50 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap text-purple-700">
-                      {t('getStarted.step2.categories.c1')}
+                      {t('sec4.step2.chips.newsletter')}
                     </span>
                     <span className="rounded-md border border-blue-200 bg-blue-100/50 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap text-blue-700 shadow-sm shadow-blue-500/10">
-                      {t('getStarted.step2.categories.c2')}
+                      {t('sec4.step2.chips.needsReply')}
                     </span>
                     <span className="rounded-md border border-green-200 bg-green-100/50 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap text-green-700">
-                      {t('getStarted.step2.categories.c3')}
+                      {t('sec4.step2.chips.marketing')}
                     </span>
                     <span className="rounded-md border border-yellow-200 bg-yellow-100/50 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap text-yellow-700">
-                      {t('getStarted.step2.categories.c4')}
+                      {t('sec4.step2.chips.calendar')}
                     </span>
                   </div>
                   <div className="flex -translate-x-6 justify-center gap-3">
                     <span className="rounded-md border border-red-200 bg-red-100/50 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap text-red-700">
-                      {t('getStarted.step2.categories.c5')}
+                      {t('sec4.step2.chips.notifications')}
                     </span>
                     <span className="rounded-md border border-cyan-200 bg-cyan-100/50 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap text-cyan-700 shadow-sm shadow-cyan-500/10">
-                      {t('getStarted.step2.categories.c6')}
+                      {t('sec4.step2.chips.coldEmail')}
                     </span>
                     <span className="rounded-md border border-orange-200 bg-orange-100/50 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap text-orange-700">
-                      {t('getStarted.step2.categories.c7')}
+                      {t('sec4.step2.chips.internal')}
                     </span>
                     <span className="rounded-md border border-pink-200 bg-pink-100/50 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap text-pink-700">
-                      {t('getStarted.step2.categories.c8')}
+                      {t('sec4.step2.chips.urgent')}
                     </span>
                   </div>
                 </div>
@@ -317,20 +307,20 @@ export default async function Features() {
                       d="M13 10V3L4 14h7v7l9-11h-7z"
                     />
                   </svg>
-                  {t('getStarted.step3.label')}
+                  {t('sec4.step3.label')}
                 </div>
                 <h3 className="mb-3 text-2xl leading-tight font-bold text-(--ink)">
-                  {t('getStarted.step3.title')}
+                  {t('sec4.step3.title')}
                 </h3>
                 <p className="text-[15px] leading-relaxed text-(--text-muted)">
-                  {t('getStarted.step3.summary')}
+                  {t('sec4.step3.body')}
                 </p>
               </div>
               <div className="relative flex flex-1 items-end justify-center pt-8">
                 <div className="w-[88%] translate-y-3 self-end overflow-hidden rounded-t-xl border border-gray-200 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.05)] transition-transform duration-500 hover:translate-y-1">
                   <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-5 py-3">
                     <span className="text-[12px] font-semibold text-gray-800">
-                      {t('getStarted.step3.newMessage')}
+                      {t('sec4.step3.mockHeader')}
                     </span>
                     <svg
                       className="h-3 w-3 text-gray-400"
@@ -348,15 +338,15 @@ export default async function Features() {
                   </div>
                   <div className="flex flex-col gap-3 p-5">
                     <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-[10px] font-black tracking-widest text-transparent">
-                      {t('getStarted.step3.draftLabel')}
+                      {t('sec4.step3.draftedBy')}
                     </span>
                     <p className="text-[18px] leading-snug font-medium text-gray-700">
-                      {t('getStarted.step3.draftSample')}
+                      {t('sec4.step3.draftBody')}
                     </p>
                     <div className="mt-4 flex items-center">
                       <button className="group relative cursor-pointer overflow-hidden rounded-full bg-[#0b57d0] px-6 py-2 text-sm font-semibold text-white shadow-md transition-all hover:bg-blue-700 hover:shadow-lg">
                         <span className="relative z-10 flex items-center gap-1.5">
-                          {t('getStarted.step3.sendCta')}
+                          {t('sec4.step3.sendButton')}
                         </span>
                         <div className="absolute inset-0 translate-y-full bg-white/20 transition-transform duration-300 group-hover:translate-y-0" />
                       </button>
@@ -384,24 +374,22 @@ export default async function Features() {
       {/* 5. Bulk unsubscribe */}
       <section className="zm-container mb-24 text-center">
         <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
-          {t('bulkUnsubscribe.title')}
+          {t('sec5.title')}
         </h2>
         <p className="mx-auto mb-16 max-w-3xl text-xl leading-relaxed text-(--text-muted)">
-          {t('bulkUnsubscribe.description')}
+          {t('sec5.body')}
         </p>
         <div className="relative mx-auto aspect-[16/9] w-full max-w-4xl overflow-hidden rounded-2xl border border-(--line-strong) bg-(--bg-elevated) shadow-[0_8px_30px_rgba(0,0,0,0.06)] md:aspect-[2/1]">
           <Image
             src="/images/huydangky-light.png"
-            alt={t('bulkUnsubscribe.imageAlt')}
+            alt={t('sec5.title')}
             fill
-            sizes="(max-width: 896px) 100vw, 896px"
             className="object-contain p-4 md:p-8 dark:hidden"
           />
           <Image
             src="/images/huydangky-dark.png"
-            alt={t('bulkUnsubscribe.imageAlt')}
+            alt={t('sec5.title')}
             fill
-            sizes="(max-width: 896px) 100vw, 896px"
             className="hidden object-contain p-4 md:p-8 dark:block"
           />
         </div>
@@ -411,10 +399,10 @@ export default async function Features() {
       <section className="zm-container mb-24">
         <div className="mb-16 text-center">
           <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
-            {t('designedAroundYou.title')}
+            {t('sec6.title')}
           </h2>
           <p className="mx-auto max-w-3xl text-xl leading-relaxed text-(--text-muted)">
-            {t('designedAroundYou.subtitle')}
+            {t('sec6.body')}
           </p>
         </div>
 
@@ -429,21 +417,21 @@ export default async function Features() {
                   </svg>
                 </div>
                 <h3 className="mb-3 pr-4 text-2xl leading-tight font-bold text-(--ink)">
-                  {t('designedAroundYou.col1.title')}
+                  {t('sec6.col1.title')}
                 </h3>
                 <p className="text-[15px] leading-relaxed text-(--text-muted)">
-                  {t('designedAroundYou.col1.summary')}
+                  {t('sec6.col1.body')}
                 </p>
               </div>
               <div className="relative flex flex-1 items-end justify-center px-6 pt-8 pb-0">
                 <div className="relative w-full translate-y-3 overflow-hidden rounded-t-[20px] border border-b-0 border-gray-200 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.04)] transition-transform duration-500 hover:translate-y-1">
                   <div className="p-5">
                     <h4 className="mb-4 text-[15px] font-semibold text-gray-600">
-                      {t('designedAroundYou.col1.previewTitle')}
+                      {t('sec6.col1.mockHeading')}
                     </h4>
                     <div className="mb-2 flex justify-between text-[11px] font-semibold tracking-wider text-gray-600 uppercase">
-                      <span>{t('designedAroundYou.col1.previewColSender')}</span>
-                      <span>{t('designedAroundYou.col1.previewColAmount')}</span>
+                      <span>{t('sec6.col1.mockSenderHeader')}</span>
+                      <span>{t('sec6.col1.mockCountHeader')}</span>
                     </div>
                     <div className="flex flex-col gap-2">
                       <div className="relative z-10 flex items-center justify-between text-sm">
@@ -506,10 +494,10 @@ export default async function Features() {
                   </svg>
                 </div>
                 <h3 className="mb-3 pr-4 text-2xl leading-tight font-bold text-(--ink)">
-                  {t('designedAroundYou.col2.title')}
+                  {t('sec6.col2.title')}
                 </h3>
                 <p className="text-[15px] leading-relaxed text-(--text-muted)">
-                  {t('designedAroundYou.col2.summary')}
+                  {t('sec6.col2.body')}
                 </p>
               </div>
               <div className="relative flex flex-1 items-center justify-center overflow-hidden p-8">
@@ -616,10 +604,10 @@ export default async function Features() {
                   </svg>
                 </div>
                 <h3 className="mb-3 pr-4 text-2xl leading-tight font-bold text-(--ink)">
-                  {t('designedAroundYou.col3.title')}
+                  {t('sec6.col3.title')}
                 </h3>
                 <p className="text-[15px] leading-relaxed text-(--text-muted)">
-                  {t('designedAroundYou.col3.summary')}
+                  {t('sec6.col3.body')}
                 </p>
               </div>
               <div className="relative flex flex-1 items-end justify-center px-6 pt-8 pb-6">
@@ -627,26 +615,20 @@ export default async function Features() {
                   <div className="relative flex flex-1 flex-col gap-3 p-5">
                     <div className="flex items-start gap-3 opacity-90">
                       <div className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400" />
-                      <p className="text-sm leading-snug text-gray-600">
-                        {t('designedAroundYou.col3.rules.r1')}
-                      </p>
+                      <p className="text-sm leading-snug text-gray-600">{t('sec6.col3.rule1')}</p>
                     </div>
                     <div className="flex items-start gap-3 opacity-80">
                       <div className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400" />
-                      <p className="text-sm leading-snug text-gray-600">
-                        {t('designedAroundYou.col3.rules.r2')}
-                      </p>
+                      <p className="text-sm leading-snug text-gray-600">{t('sec6.col3.rule2')}</p>
                     </div>
                     <div className="flex items-start gap-3 opacity-60">
                       <div className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400" />
-                      <p className="text-sm leading-snug text-gray-600">
-                        {t('designedAroundYou.col3.rules.r3')}
-                      </p>
+                      <p className="text-sm leading-snug text-gray-600">{t('sec6.col3.rule3')}</p>
                     </div>
                     <div className="flex items-start gap-3">
                       <div className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#0068FF]" />
                       <p className="text-sm leading-snug font-medium text-gray-800">
-                        {t('designedAroundYou.col3.rules.r4')}
+                        {t('sec6.col3.rule4')}
                         <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-[#0068FF] align-middle" />
                       </p>
                     </div>
@@ -657,10 +639,10 @@ export default async function Features() {
 
                   <div className="flex gap-2 overflow-x-hidden px-4 pt-1 pb-4">
                     <button className="rounded-md bg-[#0068FF]/10 px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-[#0068FF] transition-colors hover:bg-[#0068FF]/20">
-                      {t('designedAroundYou.col3.createRule')}
+                      {t('sec6.col3.newRule')}
                     </button>
                     <button className="rounded-md bg-gray-100 px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-gray-600 transition-colors hover:bg-gray-200">
-                      {t('designedAroundYou.col3.viewExamples')}
+                      {t('sec6.col3.examples')}
                     </button>
                   </div>
                 </div>

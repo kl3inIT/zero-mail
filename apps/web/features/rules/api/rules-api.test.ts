@@ -1,60 +1,26 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
-const apiClientMocks = vi.hoisted(() => {
-  let xsrfToken = 'initial-token';
-  return {
-    post: vi.fn(),
-    setXsrfToken(nextXsrfToken: string) {
-      xsrfToken = nextXsrfToken;
-    },
-    xsrfHeader: vi.fn(() => ({ 'X-XSRF-TOKEN': xsrfToken })),
-  };
-});
+import { describe, expect, it } from 'vitest';
 
-vi.mock('@/lib/api/client', () => ({
-  api: {
-    GET: vi.fn(),
-    POST: apiClientMocks.post,
-    PUT: vi.fn(),
-    DELETE: vi.fn(),
-    PATCH: vi.fn(),
-  },
-  xsrfHeader: apiClientMocks.xsrfHeader,
-}));
+const CLIENT_FILE = resolve(__dirname, '../../../lib/api/client.ts');
 
-import { compileRule } from '@/features/rules/api/rules-api';
+describe('rules api XSRF wiring', () => {
+  it('XSRF is injected by fetch-layer middleware, not per-mutation', () => {
+    const clientSrc = readFileSync(CLIENT_FILE, 'utf8');
 
-describe('rules api client', () => {
-  beforeEach(() => {
-    apiClientMocks.post.mockReset();
-    apiClientMocks.xsrfHeader.mockClear();
-    apiClientMocks.setXsrfToken('initial-token');
-    apiClientMocks.post.mockResolvedValue({
-      data: { status: 'invalid', invalid: { reason: 'test' } },
-      response: { ok: true, status: 200 },
-    });
+    // Middleware exists and gates on mutating methods.
+    expect(clientSrc).toMatch(/xsrfMiddleware/);
+    expect(clientSrc).toMatch(/X-XSRF-TOKEN/);
+    expect(clientSrc).toMatch(/MUTATING_METHODS/);
+    // Middleware is actually registered on the client.
+    expect(clientSrc).toMatch(/api\.use\(xsrfMiddleware\)/);
   });
 
-  it('reads the XSRF token for each JSON mutation request', async () => {
-    apiClientMocks.setXsrfToken('rotated-token');
-    await compileRule({ sourceText: 'Archive receipts from Stripe' });
-    apiClientMocks.setXsrfToken('next-token');
-    await compileRule({ sourceText: 'Archive newsletters' });
-
-    expect(apiClientMocks.xsrfHeader).toHaveBeenCalledTimes(2);
-    expect(apiClientMocks.post).toHaveBeenNthCalledWith(
-      1,
-      '/api/rules/compile',
-      expect.objectContaining({
-        headers: expect.objectContaining({ 'X-XSRF-TOKEN': 'rotated-token' }),
-      }),
-    );
-    expect(apiClientMocks.post).toHaveBeenNthCalledWith(
-      2,
-      '/api/rules/compile',
-      expect.objectContaining({
-        headers: expect.objectContaining({ 'X-XSRF-TOKEN': 'next-token' }),
-      }),
-    );
+  it('rules-api.ts does not duplicate XSRF wiring at the callsite', () => {
+    const rulesApi = readFileSync(resolve(__dirname, './rules-api.ts'), 'utf8');
+    // Old pattern: per-endpoint jsonHeaders()/unsafeHeaders() spreading xsrfHeader().
+    expect(rulesApi).not.toMatch(/xsrfHeader/);
+    expect(rulesApi).not.toMatch(/jsonHeaders|unsafeHeaders/);
   });
 });

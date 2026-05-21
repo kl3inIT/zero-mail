@@ -1,3 +1,9 @@
+# EditorConfig — https://editorconfig.org
+# Keeps every editor/IDE in sync on whitespace + line endings across the team.
+#
+# Spotless (backend) and Prettier (frontend) own the final formatting; this
+# file only governs the rules that run BEFORE those tools (raw editor save).
+
 root = true
 
 [*]
@@ -5,9 +11,40 @@ charset = utf-8
 end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
 
+# Java / Kotlin — google-java-format AOSP = 4 space indent, 8 continuation.
+[*.{java,kt,kts}]
+indent_size = 4
+continuation_indent_size = 8
+max_line_length = 100
+
+# Gradle Kotlin DSL stays at 4 to align with Spotless.
+[{build.gradle.kts,settings.gradle.kts,*.gradle.kts}]
+indent_size = 4
+
+# Properties / YAML — 2 spaces.
+[*.{properties,yml,yaml}]
+indent_size = 2
+
+# JSON / lockfiles — 2 spaces, trailing newline.
+[*.{json,jsonc}]
+indent_size = 2
+
+# Markdown — trailing whitespace can be intentional (line break).
 [*.md]
 trim_trailing_whitespace = false
 
+# Shell scripts — POSIX convention.
+[*.{sh,bash}]
+end_of_line = lf
+indent_size = 4
+
+# Windows batch / PowerShell — CRLF expected.
 [*.{bat,cmd,ps1}]
 end_of_line = crlf
+
+# Makefiles need TAB indentation.
+[Makefile]
+indent_style = tab

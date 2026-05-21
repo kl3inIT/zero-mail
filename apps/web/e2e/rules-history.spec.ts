@@ -18,8 +18,8 @@ for (const viewport of [
 
     await page.getByRole('tab', { name: 'History' }).click();
     await expect(page.getByRole('tab', { name: 'History' })).toHaveAttribute(
-      'data-state',
-      'active',
+      'aria-selected',
+      'true',
     );
     await expect(page.getByText('No email actions yet')).toBeVisible();
     await expectNoHorizontalOverflow(page);
@@ -32,9 +32,7 @@ for (const viewport of [
     await expect(
       page.getByRole('heading', { name: 'AI configuration', exact: true }),
     ).toBeVisible();
-    await expect(
-      page.getByRole('heading', { name: 'Protected senders', exact: true }),
-    ).toBeVisible();
+    await expect(page.getByText('Protected senders', { exact: true })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 }
@@ -43,14 +41,14 @@ async function openRules(page: Page) {
   await seedAuthenticatedSession(page);
   await installApiMock(page);
   await page.goto('/rules', { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 }
 
 async function openAi(page: Page) {
   await seedAuthenticatedSession(page);
   await installApiMock(page);
   await page.goto('/ai', { waitUntil: 'domcontentloaded' });
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('load');
 }
 
 async function installApiMock(page: Page) {
@@ -58,7 +56,7 @@ async function installApiMock(page: Page) {
     const request = route.request();
     const url = new URL(request.url());
 
-    if (url.pathname === '/me') {
+    if (url.pathname === '/api/me') {
       await fulfillJson(route, {
         userId: 'user-1',
         tenantId: 'tenant-1',
@@ -77,6 +75,16 @@ async function installApiMock(page: Page) {
 
     if (url.pathname === '/api/billing/balance' && request.method() === 'GET') {
       await fulfillJson(route, { availableCredits: 12, heldCredits: 0, currency: 'credits' });
+      return;
+    }
+
+    if (url.pathname === '/api/me/notifications' && request.method() === 'GET') {
+      await fulfillJson(route, {
+        channel: 'DAILY_DIGEST',
+        digestEnabled: true,
+        digestSendHourLocal: 20,
+        timeZone: 'Asia/Ho_Chi_Minh',
+      });
       return;
     }
 
@@ -105,12 +113,12 @@ async function installApiMock(page: Page) {
       return;
     }
 
-    if (url.pathname === '/gmail/connection/status' && request.method() === 'GET') {
+    if (url.pathname === '/api/gmail/connection/status' && request.method() === 'GET') {
       await fulfillJson(route, { connectionStatus: 'CONNECTED' });
       return;
     }
 
-    if (url.pathname === '/tenant/triage-pause' && request.method() === 'PUT') {
+    if (url.pathname === '/api/tenant/triage-pause' && request.method() === 'PUT') {
       await route.fulfill({ status: 204, body: '' });
       return;
     }
