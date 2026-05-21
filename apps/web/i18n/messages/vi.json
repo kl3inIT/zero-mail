@@ -199,6 +199,8 @@
   },
   "billing": {
     "balance": {
+      "betaCredits": "Tín dụng beta",
+      "betaNotice": "Miễn phí trong giai đoạn beta. Zero Mail sẽ báo trước khi cần chuyển sang gói trả phí.",
       "description": "Số dư dùng cho các tác vụ AI của Zero Mail.",
       "error": {
         "body": "Có lỗi khi lấy số dư tín dụng. Hãy thử lại.",
@@ -206,9 +208,15 @@
         "title": "Không tải được số dư"
       },
       "held": "Đang giữ",
+      "heldDetail": "Đã reserve cho tác vụ đang chạy",
       "label": "Tín dụng hiện có",
+      "monthlyGrant": "{credits} tín dụng / tháng",
+      "noExpiry": "Không reset theo kỳ beta",
+      "paidCredits": "Tín dụng đã nạp",
       "refreshLabel": "Tự cập nhật",
       "refreshValue": "Mỗi 45 giây",
+      "resetsAt": "Reset lúc",
+      "resetUnknown": "Chưa rõ",
       "topupCta": "Nạp tín dụng",
       "unit": "tín dụng"
     },
@@ -226,7 +234,7 @@
         "timestamp": "Thời gian",
         "type": "Loại"
       },
-      "description": "Các lượt nạp, giữ và trừ tín dụng sẽ được liệt kê ở đây.",
+      "description": "Các lượt cấp, nạp, giữ, trừ và hoàn tín dụng gần đây.",
       "empty": {
         "body": "Các lượt nạp và sử dụng tín dụng sẽ xuất hiện ở đây. Hãy nạp tín dụng để bắt đầu.",
         "heading": "Chưa có giao dịch"
@@ -239,6 +247,8 @@
       "title": "Lịch sử giao dịch",
       "type": {
         "adjustment": "Điều chỉnh",
+        "expire": "Hết hạn",
+        "grant": "Cấp",
         "release": "Hoàn giữ",
         "reserve": "Giữ",
         "settle": "Trừ",
@@ -251,7 +261,7 @@
       "valueMissing": "—"
     },
     "page": {
-      "description": "Theo dõi số dư tín dụng, tạo mã nạp VietQR và xem lịch sử giao dịch khi backend sẵn sàng.",
+      "description": "Theo dõi tín dụng beta miễn phí, tín dụng đã nạp và lịch sử sử dụng gần đây.",
       "title": "Thanh toán"
     },
     "topup": {

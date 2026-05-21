@@ -199,6 +199,8 @@
   },
   "billing": {
     "balance": {
+      "betaCredits": "Beta credits",
+      "betaNotice": "Free during beta. We'll notify you before paid plans are required.",
       "description": "Balance available for Zero Mail AI actions.",
       "error": {
         "body": "Something went wrong fetching your credit balance. Try again.",
@@ -206,9 +208,15 @@
         "title": "Couldn't load the balance"
       },
       "held": "Held credits",
+      "heldDetail": "Reserved by in-flight actions",
       "label": "Available credits",
+      "monthlyGrant": "{credits} credits / month",
+      "noExpiry": "Does not reset with beta",
+      "paidCredits": "Paid credits",
       "refreshLabel": "Refreshes",
       "refreshValue": "Every 45 seconds",
+      "resetsAt": "Resets at",
+      "resetUnknown": "Unknown",
       "topupCta": "Top up credits",
       "unit": "credits"
     },
@@ -226,7 +234,7 @@
         "timestamp": "Time",
         "type": "Type"
       },
-      "description": "Top-ups, holds, and credit usage will be listed here.",
+      "description": "Recent grants, top-ups, holds, spends, and releases.",
       "empty": {
         "body": "Your top-ups and credit usage will show up here. Add credits to get started.",
         "heading": "No transactions yet"
@@ -239,6 +247,8 @@
       "title": "Transaction history",
       "type": {
         "adjustment": "Adjustment",
+        "expire": "Expired",
+        "grant": "Grant",
         "release": "Release",
         "reserve": "Reserve",
         "settle": "Settle",
@@ -251,7 +261,7 @@
       "valueMissing": "—"
     },
     "page": {
-      "description": "Track your credit balance, create VietQR top-ups, and review transaction history when the backend is ready.",
+      "description": "Track free beta credits, paid credits, and recent usage activity.",
       "title": "Billing"
     },
     "topup": {

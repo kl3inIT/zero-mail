@@ -46,7 +46,19 @@ export const handlers = [
     HttpResponse.json({
       availableCredits: 12,
       heldCredits: 0,
-      currency: 'CREDIT',
+      currency: 'credits',
+      betaCredits: 12,
+      paidCredits: 0,
+      monthlyGrantCredits: 300,
+      resetsAt: '2026-06-01T00:00:00.000Z',
+      freeDuringBeta: true,
+    }),
+  ),
+
+  http.get('*/api/billing/ledger', () =>
+    HttpResponse.json({
+      entries: [],
+      nextCursor: null,
     }),
   ),
 

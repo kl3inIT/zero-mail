@@ -7,12 +7,15 @@ import { ErrorState } from '@/components/states/ErrorState';
 import { LoadingState } from '@/components/states/LoadingState';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLedgerHistory } from '@/features/billing/hooks/useLedgerHistory';
+import { LedgerTable } from '@/features/billing/components/LedgerTable';
+import { useHydrated } from '@/lib/use-hydrated';
 
 export function LedgerHistory() {
   const t = useTranslations();
+  const hydrated = useHydrated();
   const ledger = useLedgerHistory();
 
-  if (ledger.isPending) {
+  if (ledger.isPending || !hydrated) {
     return <LoadingState variant="rows" count={4} />;
   }
 
@@ -27,25 +30,7 @@ export function LedgerHistory() {
     );
   }
 
-  const unavailable = ledger.data?.pages.some((page) => page.unavailable) ?? false;
-
-  if (unavailable) {
-    return (
-      // GAP: no backend ledger-history endpoint as of 05A. This is a distinct
-      // unavailable state, not the available-but-empty ledger state.
-      <Card className="border-warning/40 bg-warning/5" data-testid="ledger-unavailable-panel">
-        <CardHeader>
-          <CardTitle>{t('billing.ledger.title')}</CardTitle>
-          <CardDescription>{t('billing.ledger.unavailable.heading')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground max-w-2xl text-sm leading-6">
-            {t('billing.ledger.unavailable.body')}
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const entries = ledger.data?.pages.flatMap((page) => page.entries) ?? [];
 
   return (
     <Card>
@@ -54,10 +39,14 @@ export function LedgerHistory() {
         <CardDescription>{t('billing.ledger.description')}</CardDescription>
       </CardHeader>
       <CardContent>
-        <EmptyState
-          heading={t('billing.ledger.empty.heading')}
-          body={t('billing.ledger.empty.body')}
-        />
+        {entries.length > 0 ? (
+          <LedgerTable rows={entries} />
+        ) : (
+          <EmptyState
+            heading={t('billing.ledger.empty.heading')}
+            body={t('billing.ledger.empty.body')}
+          />
+        )}
       </CardContent>
     </Card>
   );

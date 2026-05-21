@@ -74,7 +74,16 @@ async function installApiMock(page: Page) {
     }
 
     if (url.pathname === '/api/billing/balance' && request.method() === 'GET') {
-      await fulfillJson(route, { availableCredits: 12, heldCredits: 0, currency: 'credits' });
+      await fulfillJson(route, {
+        availableCredits: 12,
+        heldCredits: 0,
+        currency: 'credits',
+        betaCredits: 12,
+        paidCredits: 0,
+        monthlyGrantCredits: 300,
+        resetsAt: '2026-06-01T00:00:00.000Z',
+        freeDuringBeta: true,
+      });
       return;
     }
 

@@ -32,20 +32,34 @@ describe('LedgerTable', () => {
     expect(within(topupRow).getByText('+45')).toHaveClass('font-mono', 'text-green');
   });
 
-  it('renders the unavailable ledger panel separately from the empty state', () => {
+  it('renders ledger history rows from the backend endpoint', () => {
     ledgerHookMocks.useLedgerHistory.mockReturnValue({
       isPending: false,
       isError: false,
-      data: { pages: [{ unavailable: true, entries: [], nextCursor: null }] },
+      data: { pages: [{ entries: [topupEntry(), settleEntry()], nextCursor: null }] },
       refetch: vi.fn(),
     });
 
     renderWithIntl(<LedgerHistory />);
 
-    expect(screen.getByTestId('ledger-unavailable-panel')).toHaveTextContent(
-      "Transaction history isn't available yet",
-    );
+    expect(screen.getAllByTestId('ledger-row')).toHaveLength(2);
+    expect(screen.getByText('Top-up credited')).toBeInTheDocument();
+    expect(screen.getByText('Rule preview charge')).toBeInTheDocument();
     expect(screen.queryByText('No transactions yet')).not.toBeInTheDocument();
+  });
+
+  it('renders an empty state when the backend ledger is available but empty', () => {
+    ledgerHookMocks.useLedgerHistory.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: { pages: [{ entries: [], nextCursor: null }] },
+      refetch: vi.fn(),
+    });
+
+    renderWithIntl(<LedgerHistory />);
+
+    expect(screen.getByText('No transactions yet')).toBeInTheDocument();
+    expect(screen.queryByTestId('ledger-table')).not.toBeInTheDocument();
   });
 });
 
