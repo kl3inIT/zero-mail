@@ -28,6 +28,15 @@ const fixedFormats: Record<string, KeyFormat> = {
   OPENROUTER: 'OPENAI_FORMAT',
 };
 
+// MasterKeyMaskedResponse types `keyFormat` as loose `string` (no enum in the
+// response schema). Narrow it at the form boundary so the UI state stays
+// strictly typed against the TestConnectionRequest enum.
+function asKeyFormat(value: string | undefined): KeyFormat | undefined {
+  return value === 'OPENAI_FORMAT' || value === 'ANTHROPIC_FORMAT' || value === 'GOOGLE_FORMAT'
+    ? value
+    : undefined;
+}
+
 function MasterKeyProviderRoute() {
   const { provider } = Route.useParams();
   const masterKey = useMasterKey(provider);
@@ -57,7 +66,7 @@ function MasterKeyProviderRoute() {
   const [prevRow, setPrevRow] = useState(row);
   if (row && prevRow !== row) {
     setPrevRow(row);
-    setKeyFormat(row.keyFormat ?? fixedFormats[row.provider] ?? 'OPENAI_FORMAT');
+    setKeyFormat(asKeyFormat(row.keyFormat) ?? fixedFormats[row.provider] ?? 'OPENAI_FORMAT');
     setBaseUrl(row.baseUrl ?? '');
   }
 

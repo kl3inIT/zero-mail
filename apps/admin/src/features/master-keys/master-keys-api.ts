@@ -1,63 +1,47 @@
-import { getAdminApiUrl } from '@/lib/api/admin-base-url';
+import { api } from '@/lib/api/admin-client';
+import type { components } from '@/lib/api/admin-schema';
 
-export type KeyFormat = 'OPENAI_FORMAT' | 'ANTHROPIC_FORMAT' | 'GOOGLE_FORMAT';
-export type LlmProvider = 'OPENAI' | 'ANTHROPIC' | 'GOOGLE' | 'DEEPSEEK' | 'OPENROUTER' | 'ROUTER_9R';
-export type MasterKeyFeature = 'CHAT' | 'TRIAGE' | 'DRAFT';
-export type TestConnectionResult = 'OK' | 'INVALID_KEY' | 'RATE_LIMITED' | 'NETWORK_ERROR' | 'TIMEOUT';
+export type MasterKeyRow = components['schemas']['MasterKeyMaskedResponse'];
+export type MasterKeyListResponse = components['schemas']['MasterKeyListResponse'];
+export type EditSessionResponse = components['schemas']['MasterKeyEditSessionResponse'];
+export type TestConnectionRequest = components['schemas']['TestConnectionRequest'];
+export type TestConnectionResponse = components['schemas']['TestConnectionResponse'];
+export type SetFeatureDefaultRequest = components['schemas']['SetFeatureDefaultRequest'];
 
-export type MasterKeyRow = {
-  provider: LlmProvider;
-  displayName: string;
-  maskedKey: string | null;
-  keyFormat: KeyFormat | null;
-  kekVersion: number | null;
-  providerSecretVersion: number;
-  lastRotatedAt: string | null;
-  dependentsCount: number;
-  rotationRecommended: boolean;
-  baseUrl: string | null;
-  featureDefaultProviderChat: boolean;
-  featureDefaultProviderTriage: boolean;
-  featureDefaultProviderDraft: boolean;
-};
-
-export type MasterKeyListResponse = {
-  rows: MasterKeyRow[];
-};
-
-export type EditSessionResponse = {
-  token: string;
-  expiresAt: string;
-};
-
-async function adminFetch<T>(path: `/${string}`, init?: RequestInit): Promise<T> {
-  // TODO: switch to typed openapi-fetch after admin-schema.d.ts is regenerated with 8B paths.
-  const response = await fetch(getAdminApiUrl(path), {
-    credentials: 'include',
-    headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) },
-    ...init,
-  });
-  if (!response.ok) {
-    throw new Error(`Yêu cầu quản trị thất bại: ${response.status}`);
-  }
-  if (response.status === 204) {
-    return undefined as T;
-  }
-  return (await response.json()) as T;
-}
+// MasterKeyMaskedResponse uses loose `string` for provider/keyFormat (no enum on
+// Response DTO). Derive the strict unions from the Request DTOs so callers get
+// the same narrowed type the backend will enforce.
+export type KeyFormat = components['schemas']['TestConnectionRequest']['keyFormat'];
+export type LlmProvider = SetFeatureDefaultRequest['provider'];
+export type MasterKeyFeature = SetFeatureDefaultRequest['feature'];
+export type TestConnectionResult = TestConnectionResponse['result'];
 
 export async function fetchMasterKeys(): Promise<MasterKeyListResponse> {
-  return adminFetch<MasterKeyListResponse>('/api/admin/master-keys/');
+  const { data, error } = await api.GET('/api/admin/master-keys/');
+  if (error || !data) {
+    throw new Error('Không thể tải danh sách master key.');
+  }
+  return data;
 }
 
 export async function fetchMasterKey(provider: string): Promise<MasterKeyRow> {
-  return adminFetch<MasterKeyRow>(`/api/admin/master-keys/${provider}`);
+  const { data, error } = await api.GET('/api/admin/master-keys/{provider}', {
+    params: { path: { provider: provider as LlmProvider } },
+  });
+  if (error || !data) {
+    throw new Error('Không thể tải master key.');
+  }
+  return data;
 }
 
 export async function mintEditSession(provider: string): Promise<EditSessionResponse> {
-  return adminFetch<EditSessionResponse>(`/api/admin/master-keys/${provider}/edit-session`, {
-    method: 'POST',
+  const { data, error } = await api.POST('/api/admin/master-keys/{provider}/edit-session', {
+    params: { path: { provider: provider as LlmProvider } },
   });
+  if (error || !data) {
+    throw new Error('Không thể mở phiên chỉnh sửa master key.');
+  }
+  return data;
 }
 
 export async function testMasterKeyConnection(input: {
@@ -66,16 +50,20 @@ export async function testMasterKeyConnection(input: {
   keyFormat: KeyFormat;
   baseUrl?: string | null;
   editSessionToken: string;
-}): Promise<{ result: TestConnectionResult }> {
-  return adminFetch<{ result: TestConnectionResult }>(`/api/admin/master-keys/${input.provider}/test-connection`, {
-    method: 'POST',
-    body: JSON.stringify({
+}): Promise<TestConnectionResponse> {
+  const { data, error } = await api.POST('/api/admin/master-keys/{provider}/test-connection', {
+    params: { path: { provider: input.provider as LlmProvider } },
+    body: {
       plaintextKey: input.plaintextKey,
       keyFormat: input.keyFormat,
-      baseUrl: input.baseUrl,
+      baseUrl: input.baseUrl ?? undefined,
       editSessionToken: input.editSessionToken,
-    }),
+    },
   });
+  if (error || !data) {
+    throw new Error('Không thể kiểm tra kết nối master key.');
+  }
+  return data;
 }
 
 export async function saveMasterKey(input: {
@@ -86,16 +74,19 @@ export async function saveMasterKey(input: {
   editSessionToken: string;
   reason: string;
 }): Promise<void> {
-  await adminFetch<void>(`/api/admin/master-keys/${input.provider}`, {
-    method: 'PUT',
-    body: JSON.stringify({
+  const { error } = await api.PUT('/api/admin/master-keys/{provider}', {
+    params: { path: { provider: input.provider as LlmProvider } },
+    body: {
       plaintextKey: input.plaintextKey,
       keyFormat: input.keyFormat,
-      baseUrl: input.baseUrl,
+      baseUrl: input.baseUrl ?? undefined,
       editSessionToken: input.editSessionToken,
       reason: input.reason,
-    }),
+    },
   });
+  if (error) {
+    throw new Error('Không thể lưu master key.');
+  }
 }
 
 export async function rotateMasterKey(input: {
@@ -105,29 +96,28 @@ export async function rotateMasterKey(input: {
   baseUrl?: string | null;
   editSessionToken: string;
   reason: string;
-}): Promise<{ result: 'OK' | 'TEST_FAILED'; testResult?: TestConnectionResult }> {
-  return adminFetch<{ result: 'OK' | 'TEST_FAILED'; testResult?: TestConnectionResult }>(
-    `/api/admin/master-keys/${input.provider}/rotate`,
-    {
-      method: 'POST',
-      body: JSON.stringify({
-        plaintextKey: input.plaintextKey,
-        keyFormat: input.keyFormat,
-        baseUrl: input.baseUrl,
-        editSessionToken: input.editSessionToken,
-        reason: input.reason,
-      }),
+}) {
+  const { data, error } = await api.POST('/api/admin/master-keys/{provider}/rotate', {
+    params: { path: { provider: input.provider as LlmProvider } },
+    body: {
+      plaintextKey: input.plaintextKey,
+      keyFormat: input.keyFormat,
+      baseUrl: input.baseUrl ?? undefined,
+      editSessionToken: input.editSessionToken,
+      reason: input.reason,
     },
-  );
+  });
+  if (error || !data) {
+    throw new Error('Không thể xoay master key.');
+  }
+  return data;
 }
 
-export async function setFeatureDefault(input: {
-  feature: MasterKeyFeature;
-  provider: LlmProvider;
-  reason: string;
-}): Promise<void> {
-  await adminFetch<void>('/api/admin/master-keys/feature-default', {
-    method: 'PUT',
-    body: JSON.stringify(input),
+export async function setFeatureDefault(input: SetFeatureDefaultRequest): Promise<void> {
+  const { error } = await api.PUT('/api/admin/master-keys/feature-default', {
+    body: input,
   });
+  if (error) {
+    throw new Error('Không thể đặt provider mặc định cho feature.');
+  }
 }

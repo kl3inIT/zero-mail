@@ -6,6 +6,7 @@ import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
@@ -22,11 +23,28 @@ public class ModelsProbeClient {
     private static final String ANTHROPIC_VERSION = "2023-06-01";
 
     private final RestClient.Builder restClientBuilder;
+    private final RestClient.Builder cleartextRestClientBuilder;
     private final ObjectMapper objectMapper;
 
-    public ModelsProbeClient(RestClient.Builder restClientBuilder, ObjectMapper objectMapper) {
+    public ModelsProbeClient(
+            RestClient.Builder restClientBuilder,
+            @Qualifier("cleartextRestClientBuilder") RestClient.Builder cleartextRestClientBuilder,
+            ObjectMapper objectMapper) {
         this.restClientBuilder = restClientBuilder;
+        this.cleartextRestClientBuilder = cleartextRestClientBuilder;
         this.objectMapper = objectMapper;
+    }
+
+    /**
+     * Pick the HTTP client based on URL scheme. JDK HttpClient defaults to attempting h2c (HTTP/2
+     * cleartext) upgrade on plain {@code http://} URLs, which hangs against Node.js / Next.js
+     * backends that do not implement h2c (observed against 9router). Restrict cleartext targets to
+     * HTTP/1.1; HTTPS keeps HTTP/2 via ALPN.
+     */
+    private RestClient.Builder builderFor(String resolvedBaseUrl) {
+        return resolvedBaseUrl.regionMatches(true, 0, "http://", 0, 7)
+                ? cleartextRestClientBuilder
+                : restClientBuilder;
     }
 
     public MasterKeyTestResult probe(
@@ -36,12 +54,13 @@ public class ModelsProbeClient {
 
     public MasterKeyTestResult probeConnection(
             LlmProvider provider, KeyFormat keyFormat, String baseUrl, byte[] plaintextKey) {
+        String resolvedBaseUrl = baseUrlFor(provider, baseUrl);
         try {
             RestClient.RequestHeadersSpec<?> requestHeadersSpecification =
-                    restClientBuilder
+                    builderFor(resolvedBaseUrl)
                             .build()
                             .get()
-                            .uri(joinPath(baseUrlFor(provider, baseUrl), "models"));
+                            .uri(joinPath(resolvedBaseUrl, "models"));
             String apiKey = new String(plaintextKey, StandardCharsets.UTF_8);
             applyHeaders(requestHeadersSpecification, provider, keyFormat, apiKey);
             requestHeadersSpecification.retrieve().toBodilessEntity();
@@ -60,12 +79,13 @@ public class ModelsProbeClient {
 
     public List<RawModel> fetchModelCatalog(
             LlmProvider provider, KeyFormat keyFormat, String baseUrl, byte[] plaintextKey) {
+        String resolvedBaseUrl = baseUrlFor(provider, baseUrl);
         try {
             RestClient.RequestHeadersSpec<?> requestHeadersSpecification =
-                    restClientBuilder
+                    builderFor(resolvedBaseUrl)
                             .build()
                             .get()
-                            .uri(joinPath(baseUrlFor(provider, baseUrl), "models"));
+                            .uri(joinPath(resolvedBaseUrl, "models"));
             String apiKey = new String(plaintextKey, StandardCharsets.UTF_8);
             applyHeaders(requestHeadersSpecification, provider, keyFormat, apiKey);
             String responseBody = requestHeadersSpecification.retrieve().body(String.class);

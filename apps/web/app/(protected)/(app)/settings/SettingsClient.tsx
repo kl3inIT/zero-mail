@@ -42,7 +42,7 @@ function isGmailConnectionStatus(value: string | undefined): value is GmailConne
   );
 }
 
-export function SettingsClient({ initialUser }: { initialUser: CurrentUser }) {
+export function SettingsClient({ initialUser }: { initialUser?: CurrentUser } = {}) {
   const t = useTranslations();
   const me = useCurrentUser(initialUser);
   const status = useTenantStatus();
