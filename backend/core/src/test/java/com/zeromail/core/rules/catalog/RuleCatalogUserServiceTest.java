@@ -10,6 +10,8 @@ import com.zeromail.core.support.PostgresContainerTest;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -19,6 +21,12 @@ class RuleCatalogUserServiceTest extends PostgresContainerTest {
     @Autowired private RuleCatalogUserService ruleCatalogUserService;
 
     @Autowired private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    @AfterEach
+    void resetSeedCatalog() {
+        RuleCatalogTestFixtures.resetSeedCatalog(jdbcTemplate);
+    }
 
     @Test
     void example_catalog_filters_disabled_rows_and_uses_locale_fallback() {
@@ -66,7 +74,7 @@ class RuleCatalogUserServiceTest extends PostgresContainerTest {
                 .extracting(prompt -> prompt.sourceRef())
                 .doesNotContain("inbox-zero:founder:002");
         assertThat(founder.prompts())
-                .extracting(prompt -> prompt.prompt())
+                .extracting(prompt -> prompt.exampleText())
                 .contains("Label emails from @mycompany.com addresses as @[Team]");
     }
 

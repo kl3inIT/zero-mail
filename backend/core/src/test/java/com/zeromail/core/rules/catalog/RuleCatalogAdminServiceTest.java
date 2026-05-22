@@ -41,23 +41,8 @@ class RuleCatalogAdminServiceTest extends PostgresContainerTest {
 
     @BeforeEach
     void resetAdminState() {
-        jdbcTemplate.execute("DELETE FROM admin_read_event");
-        jdbcTemplate.execute(
-                "ALTER TABLE admin_audit_event DISABLE TRIGGER admin_audit_event_append_only");
-        jdbcTemplate.execute("DELETE FROM admin_audit_event");
-        jdbcTemplate.execute(
-                "ALTER TABLE admin_audit_event ENABLE TRIGGER admin_audit_event_append_only");
-        jdbcTemplate.execute("DELETE FROM rule_action_descriptor WHERE action_key = 'qa_action'");
-        jdbcTemplate.execute(
-                """
-                DELETE FROM rule_example_prompt
-                WHERE persona_id IN (
-                    SELECT persona_id
-                    FROM rule_example_persona
-                    WHERE persona_key = 'qa_persona'
-                )
-                """);
-        jdbcTemplate.execute("DELETE FROM rule_example_persona WHERE persona_key = 'qa_persona'");
+        RuleCatalogTestFixtures.resetSeedCatalog(jdbcTemplate);
+        RuleCatalogTestFixtures.resetAdminAudit(jdbcTemplate);
         jdbcTemplate.execute("DELETE FROM admin_users");
         adminUserRepository.save(
                 new AdminUserEntity(

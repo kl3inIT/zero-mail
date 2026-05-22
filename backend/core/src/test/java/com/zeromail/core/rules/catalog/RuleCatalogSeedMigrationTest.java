@@ -6,6 +6,7 @@ import com.zeromail.core.support.PostgresContainerTest;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -43,6 +44,11 @@ class RuleCatalogSeedMigrationTest extends PostgresContainerTest {
                     "send_email");
 
     @Autowired JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void resetSeedCatalog() {
+        RuleCatalogTestFixtures.resetSeedCatalog(jdbcTemplate);
+    }
 
     @Test
     void seed_contains_required_personas_examples_actions_and_default_auto_send_setting() {

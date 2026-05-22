@@ -5,6 +5,7 @@
             "config",
             "gmail",
             "gmail :: usecases",
+            "rules :: catalog.usecases",
             "shared :: crypto",
             "shared :: error",
             "shared :: exception",
