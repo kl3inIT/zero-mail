@@ -15,6 +15,9 @@ class AdminRuleCatalogControllerContractTest {
     private static final Path PERSONA_RESPONSE =
             Path.of(
                     "src/main/java/com/zeromail/api/dto/admin/rulecatalog/RuleCatalogPersonaAdminResponse.java");
+    private static final Path EXAMPLE_RESPONSE =
+            Path.of(
+                    "src/main/java/com/zeromail/api/dto/admin/rulecatalog/RuleCatalogExampleAdminResponse.java");
     private static final Path ACTION_RESPONSE =
             Path.of(
                     "src/main/java/com/zeromail/api/dto/admin/rulecatalog/RuleCatalogActionDescriptorAdminResponse.java");
@@ -47,13 +50,18 @@ class AdminRuleCatalogControllerContractTest {
     void admin_rule_catalog_dtos_expose_bilingual_fields_without_mail_content_shape()
             throws IOException {
         assertThat(Files.exists(PERSONA_RESPONSE)).isTrue();
+        assertThat(Files.exists(EXAMPLE_RESPONSE)).isTrue();
         assertThat(Files.exists(ACTION_RESPONSE)).isTrue();
 
         String personaResponse = Files.readString(PERSONA_RESPONSE);
+        String exampleResponse = Files.readString(EXAMPLE_RESPONSE);
         String actionResponse = Files.readString(ACTION_RESPONSE);
         assertThat(personaResponse)
                 .contains("displayNameEn")
                 .contains("displayNameVi")
+                .doesNotContain("body")
+                .doesNotContain("rawContent");
+        assertThat(exampleResponse)
                 .contains("exampleTextEn")
                 .contains("exampleTextVi")
                 .doesNotContain("body")
