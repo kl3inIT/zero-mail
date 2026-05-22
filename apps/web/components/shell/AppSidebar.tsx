@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/sidebar';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
 import { useToReplyCount } from '@/features/needs-reply/hooks/useToReplyCount';
+import { shouldShowBetaOnboarding } from '@/features/onboarding/config';
 import { useHydrated } from '@/lib/use-hydrated';
 import { cn } from '@/lib/utils';
 
@@ -76,7 +77,7 @@ export function AppSidebar() {
   const isCollapsed = state === 'collapsed';
   const visibleToReplyCount = hydrated ? (toReplyCount.data ?? 0) : 0;
   const onboardingStep = currentUser.data?.onboardingStep;
-  const showOnboarding = Boolean(onboardingStep && onboardingStep !== 'COMPLETE');
+  const showOnboarding = shouldShowBetaOnboarding(onboardingStep);
 
   const manageItems: NavItem[] = showOnboarding
     ? [
