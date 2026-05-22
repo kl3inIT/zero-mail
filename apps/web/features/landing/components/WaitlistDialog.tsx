@@ -13,7 +13,7 @@ type WaitlistDialogCopy = {
   submitting: string;
   privacyNote: string;
   successTitle: string;
-  successBody: (email: string) => string;
+  successBody: string;
 };
 
 function clearWaitlistHash() {
@@ -24,6 +24,10 @@ function clearWaitlistHash() {
       window.location.pathname + window.location.search,
     );
   }
+}
+
+function formatSuccessBody(template: string, email: string) {
+  return template.replace('{email}', email);
 }
 
 export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
@@ -147,7 +151,7 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
             {isSuccess ? copy.successTitle : copy.title}
           </h2>
           <p className="mt-2 max-w-sm text-[14px] leading-relaxed text-(--text-muted)">
-            {isSuccess ? copy.successBody(email) : copy.description}
+            {isSuccess ? formatSuccessBody(copy.successBody, email) : copy.description}
           </p>
         </div>
 

@@ -28,7 +28,7 @@ export default async function LandingPage() {
           submitting: t('submitting'),
           privacyNote: t('privacyNote'),
           successTitle: t('success.title'),
-          successBody: (email: string) => t('success.body', { email }),
+          successBody: t('success.body', { email: '{email}' }),
         }}
       />
     </>

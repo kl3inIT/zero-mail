@@ -13,12 +13,12 @@ import { createChromeMockState, openAuthenticatedRoute } from './chrome-test-uti
  * 9-step golden path (UNS-05 + UNS-06 + UNS-07):
  *   1. open `/cleanup/unsubscribe-campaign`
  *   2. assert 3 fixture candidate rows + 1 header row
- *   3. select 2 SAFE senders, counter shows `2 / 25 sender đã chọn`
- *   4. click "Xem trước campaign" → preview dialog opens
- *   5. dialog shows `2 mail sẽ archive`
- *   6. click "Execute campaign" → URL matches `/cleanup/unsubscribe-campaign/<uuid>`
+ *   3. select 2 SAFE senders, counter shows `2 / 25 người gửi đã chọn`
+ *   4. click "Xem trước chiến dịch" → preview dialog opens
+ *   5. dialog shows `Tổng email sẽ lưu trữ: 2`
+ *   6. click "Chạy chiến dịch" → URL matches `/cleanup/unsubscribe-campaign/<uuid>`
  *   7. polling status reaches "Hoàn tất"
- *   8. "Undo campaign" button is visible
+ *   8. "Hoàn tác chiến dịch" button is visible
  *   9. navigate to `/cleanup/suppression` (cross-link surface)
  */
 
@@ -41,18 +41,28 @@ for (const viewport of [
 
     // Step 2 — candidate list rows (3 fixture + 1 header = 4 rows).
     await expect(page.getByRole('row')).toHaveCount(4);
+    await expect(page.getByRole('combobox', { name: 'Lọc người gửi' })).toContainText(
+      'Tất cả người gửi',
+    );
+    await expect(page.getByRole('combobox', { name: 'Sắp xếp người gửi' })).toContainText(
+      'Nhiều email nhất',
+    );
+    await page.getByRole('combobox', { name: 'Lọc người gửi' }).click();
+    await expect(page.getByRole('option', { name: 'Có thể hủy đăng ký' })).toBeVisible();
+    await expect(page.getByRole('option', { name: 'Hủy bằng liên kết' })).toBeVisible();
+    await expect(page.getByRole('option', { name: 'Hủy bằng email' })).toBeVisible();
+    await page.keyboard.press('Escape');
 
     // Step 3 — select 2 SAFE senders → counter updates.
     await page.getByRole('row').nth(1).getByRole('checkbox').check();
     await page.getByRole('row').nth(2).getByRole('checkbox').check();
-    await expect(page.getByText(/2 \/ 25 sender đã chọn/)).toBeVisible();
+    await expect(page.getByText(/2 \/ 25 người gửi đã chọn/)).toBeVisible();
 
     // Step 4 — open preview dialog.
-    await page.getByRole('button', { name: 'Xem trước campaign' }).click();
+    await page.getByRole('button', { name: 'Xem trước chiến dịch' }).click();
 
-    // Step 5 — preview summary. The dialog shows `Tổng mail sẽ archive: 2` (UI-SPEC
-    // §Copywriting Contract — Vietnamese places the count at the end of the phrase).
-    await expect(page.getByText('Tổng mail sẽ archive: 2')).toBeVisible();
+    // Step 5 — preview summary.
+    await expect(page.getByText('Tổng email sẽ lưu trữ: 2')).toBeVisible();
 
     // Step 6 — execute campaign. The mutation onSuccess in useExecuteCampaign navigates to
     // `/cleanup/unsubscribe-campaign/{jobId}` via router.push after the POST resolves; wait
@@ -61,18 +71,18 @@ for (const viewport of [
       page.waitForResponse((response) =>
         response.url().includes('/api/unsubscribe/campaigns/execute'),
       ),
-      page.getByRole('button', { name: 'Execute campaign' }).click(),
+      page.getByRole('button', { name: 'Chạy chiến dịch' }).click(),
     ]);
     await expect(page).toHaveURL(/\/cleanup\/unsubscribe-campaign\/[0-9a-f-]{36}/, {
       timeout: 10_000,
     });
 
     // Step 7 — polling reaches "Hoàn tất" (exact match on the status label paragraph; the
-    // undo banner separately contains "Campaign đã hoàn tất" which would match a substring).
+    // undo banner separately contains "Chiến dịch đã hoàn tất" which would match a substring).
     await expect(page.getByText('Hoàn tất', { exact: true })).toBeVisible({ timeout: 10_000 });
 
     // Step 8 — undo button visible (within 30-day window).
-    await expect(page.getByRole('button', { name: 'Undo campaign' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Hoàn tác chiến dịch' })).toBeVisible();
 
     // Step 9 — navigate to suppression page.
     await page.goto('/cleanup/suppression', { waitUntil: 'domcontentloaded' });

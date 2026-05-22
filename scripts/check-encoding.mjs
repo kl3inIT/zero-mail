@@ -56,7 +56,7 @@ const mojibakePattern =
 
 function shouldSkipFile(filePath) {
   const fileName = basename(filePath);
-  return fileName === '.env' || fileName.startsWith('.env.');
+  return fileName === '.env.local' || fileName.startsWith('.env.local.');
 }
 
 function shouldScanFile(filePath) {

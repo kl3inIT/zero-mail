@@ -9,11 +9,13 @@ const CAMPAIGN_SENDER_CAP = 25;
 
 export function SelectionToolbar({
   selectedCount,
+  selectedMailCount,
   onClear,
   onPreview,
   isPreviewing,
 }: {
   selectedCount: number;
+  selectedMailCount?: number;
   onClear: () => void;
   onPreview: () => void;
   isPreviewing?: boolean;
@@ -25,17 +27,23 @@ export function SelectionToolbar({
 
   return (
     <div className="bg-muted/30 ring-foreground/10 sticky top-0 z-10 flex flex-col gap-2 rounded-lg px-3 py-2 ring-1 md:flex-row md:items-center md:justify-between">
-      <span
-        aria-live="polite"
-        className={cn(
-          'font-mono text-sm tabular-nums',
-          overCap ? 'text-destructive font-semibold' : 'text-foreground',
+      <div aria-live="polite" className="flex flex-col gap-0.5">
+        <span
+          className={cn(
+            'font-mono text-sm tabular-nums',
+            overCap ? 'text-destructive font-semibold' : 'text-foreground',
+          )}
+        >
+          {overCap
+            ? t('cleanup.unsubscribe.list.counterOver', { count: selectedCount })
+            : t('cleanup.unsubscribe.list.counter', { count: selectedCount })}
+        </span>
+        {selectedMailCount !== undefined && selectedCount > 0 && (
+          <span className="text-muted-foreground text-xs">
+            {t('cleanup.unsubscribe.list.selectedMail', { count: selectedMailCount })}
+          </span>
         )}
-      >
-        {overCap
-          ? t('cleanup.unsubscribe.list.counterOver', { count: selectedCount })
-          : t('cleanup.unsubscribe.list.counter', { count: selectedCount })}
-      </span>
+      </div>
       <div className="flex items-center gap-2">
         <Button type="button" variant="ghost" size="sm" disabled={clearDisabled} onClick={onClear}>
           {t('cleanup.unsubscribe.list.clear')}

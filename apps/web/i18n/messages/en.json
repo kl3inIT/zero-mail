@@ -175,11 +175,11 @@
     "everywhere": "End-to-end · SOC 2 Type II in progress",
     "help": "Help",
     "login": {
-      "body": "Zero Mail connects to Gmail with your permission. We never auto-send, and you can revoke access from Google in two clicks.",
+      "body": "Connect Gmail with Google. Zero Mail can label, archive, and draft only with the permissions you approve.",
       "divider": "or",
-      "googleButton": "Continue with Google",
+      "googleButton": "Sign in with Google",
       "googleNote": "We'll redirect you to Google to grant access.",
-      "headline": "Reach inbox zero without giving up control.",
+      "headline": "Sign in to Zero Mail",
       "headlineA": "Welcome back to",
       "headlineB": "your inbox.",
       "newUser": "First time here?",
@@ -193,7 +193,7 @@
       "termsAnd": "and",
       "termsPrefix": "By signing in you agree to our",
       "title": "Sign in",
-      "waitlist": "Register to experience Zero Mail →",
+      "waitlist": "Join the waitlist →",
       "workEmail": "Sign in with work email"
     }
   },
@@ -459,25 +459,63 @@
     },
     "unsubscribe": {
       "list": {
+        "action": {
+          "collapse": "Close sender details",
+          "details": "Open sender details",
+          "keep": "Keep",
+          "unsubscribe": "Unsubscribe + archive"
+        },
         "clear": "Clear selection",
         "col": {
+          "actions": "Actions",
           "count": "Mail (30 days)",
           "domain": "Domain",
+          "history": "History",
           "method": "Method",
           "risk": "Status",
           "sender": "Sender"
         },
         "counter": "{count} / 25 senders selected",
         "counterOver": "{count} / 25 senders — over the limit",
+        "detail": {
+          "archive": "History to process",
+          "archiveValue": "{count} mail will be archived after unsubscribe succeeds",
+          "disabled": "Missing the safe header required to run",
+          "lastSeen": "Last seen",
+          "safe": "Preview, background job, and 30-day undo",
+          "safety": "Safety"
+        },
         "empty": {
           "body": "Zero Mail detects newsletters via the `List-Unsubscribe` header from recent ingest. New candidate senders will appear here as data arrives.",
           "link": "Learn how Zero Mail detects newsletters →",
           "title": "No newsletters in the last 30 days"
         },
         "error": "Could not load the sender list. Please try again shortly.",
+        "filter": {
+          "all": "All senders",
+          "mailto": "Mailto",
+          "oneClick": "One-click",
+          "ready": "Ready to process"
+        },
+        "filterLabel": "Filter senders",
+        "historyCount": "{count} mail",
         "lead": "Pick the newsletters you want to stop receiving. Zero Mail unsubscribes safely and archives the history from the selected senders.",
         "preview": "Preview campaign",
         "retry": "Retry",
+        "searchPlaceholder": "Search sender or domain",
+        "selectedMail": "{count} history mail in selection",
+        "sort": {
+          "count": "Most mail",
+          "recent": "Recently seen",
+          "sender": "A-Z sender"
+        },
+        "sortLabel": "Sort senders",
+        "stats": {
+          "messages": "History mail",
+          "oneClick": "One-click",
+          "ready": "Actionable",
+          "total": "Detected senders"
+        },
         "suppressionLink": "Manage suppression list →",
         "title": "Bulk unsubscribe"
       },
@@ -583,6 +621,8 @@
     "b2": "No card required",
     "b3": "Unsubscribe in one click",
     "button": "Register to experience",
+    "closeAria": "Close waitlist dialog",
+    "closeCta": "Close",
     "desc": "Join the waitlist. We're onboarding 50 founders and operators a week, in order. You'll get an invite to set up Zero Mail with your real Gmail account.",
     "emailPlaceholder": "you@company.com",
     "eyebrow": "Early access",
@@ -590,11 +630,17 @@
       "body": "We're going deep on Gmail before adding Outlook or IMAP. If you live in another inbox, leave your email and we'll let you know when we expand.",
       "title": "Gmail-only · v1"
     },
+    "privacyNote": "We only use this email to send your Zero Mail invite.",
     "stats": {
       "s1": "on the waitlist",
       "s2": "invites going out",
       "s3": "avg inbox reduction",
       "s4": "emails auto-sent"
+    },
+    "submitting": "Joining...",
+    "success": {
+      "body": "You're on the list as {email}. We'll reach out when your invite is ready.",
+      "title": "You're on the waitlist"
     },
     "title": {
       "a": "Register to experience Zero Mail",
@@ -1779,6 +1825,23 @@
     }
   },
   "trust": {
+    "authCompact": {
+      "eyebrow": "Secure Gmail access",
+      "footnote": "Google shows the exact Gmail permissions before you approve.",
+      "p1": {
+        "body": "Zero Mail never sends mail on your behalf.",
+        "title": "No auto-send"
+      },
+      "p2": {
+        "body": "Email content is processed in memory, then discarded.",
+        "title": "No body storage"
+      },
+      "p3": {
+        "body": "Disconnect from Zero Mail or your Google Account.",
+        "title": "Revoke anytime"
+      },
+      "title": "What you keep control of"
+    },
     "authTitle": "Three promises, in writing.",
     "badges": {
       "casa": "Google CASA tier 2",

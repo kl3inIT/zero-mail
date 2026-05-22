@@ -175,11 +175,11 @@
     "everywhere": "Đầu-cuối · Đang xin SOC 2 Type II",
     "help": "Trợ giúp",
     "login": {
-      "body": "Zero Mail kết nối Gmail khi bạn đồng ý. Chúng tôi không bao giờ tự động gửi, và bạn có thể thu hồi quyền truy cập từ Google chỉ trong hai cú nhấp.",
+      "body": "Kết nối Gmail bằng Google. Zero Mail chỉ gắn nhãn, lưu trữ và soạn nháp theo các quyền bạn cấp.",
       "divider": "hoặc",
-      "googleButton": "Tiếp tục với Google",
+      "googleButton": "Đăng nhập với Google",
       "googleNote": "Bạn sẽ được chuyển sang Google để cấp quyền.",
-      "headline": "Dọn hộp thư về zero mà vẫn giữ quyền kiểm soát.",
+      "headline": "Đăng nhập Zero Mail",
       "headlineA": "Chào mừng bạn quay lại",
       "headlineB": "với hộp thư.",
       "newUser": "Lần đầu sử dụng?",
@@ -193,7 +193,7 @@
       "termsAnd": "và",
       "termsPrefix": "Khi đăng nhập, bạn đồng ý với",
       "title": "Đăng nhập",
-      "waitlist": "Đăng ký trải nghiệm Zero Mail →",
+      "waitlist": "Đăng ký dùng thử →",
       "workEmail": "Đăng nhập bằng email công ty"
     }
   },
@@ -419,116 +419,154 @@
   },
   "cleanup": {
     "suppression": {
-      "add": "Thêm vào suppression",
-      "addOk": "Đã thêm vào suppression list.",
+      "add": "Thêm vào danh sách bảo vệ",
+      "addOk": "Đã thêm vào danh sách bảo vệ.",
       "col": {
         "added": "Thêm lúc",
         "source": "Nguồn",
-        "target": "Sender / Domain"
+        "target": "Người gửi / Tên miền"
       },
       "empty": {
-        "body": "Thêm sender hoặc domain bạn không bao giờ muốn unsubscribe (ví dụ: sếp, đồng nghiệp, ngân hàng).",
-        "title": "Chưa có sender nào trong suppression list"
+        "body": "Thêm người gửi hoặc tên miền bạn không bao giờ muốn hủy đăng ký, ví dụ: sếp, đồng nghiệp hoặc ngân hàng.",
+        "title": "Chưa có người gửi nào trong danh sách bảo vệ"
       },
       "err": {
-        "duplicate": "Entry này đã có trong suppression list.",
+        "duplicate": "Mục này đã có trong danh sách bảo vệ.",
         "generic": "Không thêm được. Hãy thử lại sau một chút.",
-        "invalid": "Email hoặc domain không hợp lệ."
+        "invalid": "Email hoặc tên miền không hợp lệ."
       },
       "error": "Không tải được danh sách. Hãy thử lại sau một chút.",
-      "helper": "Mỗi entry chặn 1 sender hoặc cả 1 domain.",
+      "helper": "Mỗi mục bảo vệ một người gửi hoặc cả một tên miền.",
       "input": {
         "label": "Email người gửi",
-        "placeholder": "Email hoặc domain (ví dụ: boss@example.com hoặc example.com)"
+        "placeholder": "Email hoặc tên miền (ví dụ: boss@example.com hoặc example.com)"
       },
-      "lead": "Sender hoặc domain trong danh sách này sẽ không bao giờ hiển thị trong campaign unsubscribe.",
+      "lead": "Người gửi hoặc tên miền trong danh sách này sẽ không bao giờ hiển thị trong chiến dịch hủy đăng ký.",
       "remove": {
-        "aria": "Xóa khỏi suppression",
+        "aria": "Gỡ khỏi danh sách bảo vệ",
         "cancel": "Quay lại",
-        "confirmBody": "Sau khi xóa, sender / domain này sẽ lại xuất hiện trong campaign ứng viên.",
-        "confirmCta": "Đồng ý xóa",
-        "confirmTitle": "Xóa entry này?"
+        "confirmBody": "Sau khi gỡ, người gửi hoặc tên miền này sẽ xuất hiện lại trong danh sách ứng viên.",
+        "confirmCta": "Đồng ý gỡ",
+        "confirmTitle": "Gỡ mục này?"
       },
-      "removeOk": "Đã xóa khỏi suppression list.",
+      "removeOk": "Đã gỡ khỏi danh sách bảo vệ.",
       "source": {
         "auto": "Tự động",
         "manual": "Thủ công",
-        "replied": "Đã reply"
+        "replied": "Đã trả lời"
       },
-      "title": "Suppression list"
+      "title": "Danh sách bảo vệ"
     },
     "unsubscribe": {
       "list": {
+        "action": {
+          "collapse": "Đóng chi tiết người gửi",
+          "details": "Mở chi tiết người gửi",
+          "keep": "Giữ lại",
+          "unsubscribe": "Hủy đăng ký + lưu trữ"
+        },
         "clear": "Bỏ chọn",
         "col": {
-          "count": "Mail 30 ngày",
+          "actions": "Hành động",
+          "count": "Email 30 ngày",
           "domain": "Tên miền",
+          "history": "Lịch sử",
           "method": "Phương thức",
           "risk": "Trạng thái",
-          "sender": "Sender"
+          "sender": "Người gửi"
         },
-        "counter": "{count} / 25 sender đã chọn",
-        "counterOver": "{count} / 25 sender — vượt giới hạn",
+        "counter": "{count} / 25 người gửi đã chọn",
+        "counterOver": "{count} / 25 người gửi - vượt giới hạn",
+        "detail": {
+          "archive": "Lịch sử sẽ xử lý",
+          "archiveValue": "{count} email sẽ được lưu trữ sau khi hủy đăng ký thành công",
+          "disabled": "Chưa đủ header an toàn để chạy",
+          "lastSeen": "Lần thấy gần nhất",
+          "safe": "Có xem trước, chạy nền và hoàn tác trong 30 ngày",
+          "safety": "An toàn"
+        },
         "empty": {
-          "body": "Zero Mail phát hiện newsletter qua header `List-Unsubscribe` từ ingest gần đây. Khi có dữ liệu mới, sender ứng viên sẽ xuất hiện ở đây.",
-          "link": "Tìm hiểu Zero Mail phát hiện newsletter thế nào →",
-          "title": "Chưa có newsletter nào trong 30 ngày qua"
+          "body": "Zero Mail phát hiện bản tin qua header `List-Unsubscribe` từ lần đồng bộ gần đây. Khi có dữ liệu mới, người gửi ứng viên sẽ xuất hiện ở đây.",
+          "link": "Tìm hiểu cách Zero Mail phát hiện bản tin →",
+          "title": "Chưa có bản tin nào trong 30 ngày qua"
         },
-        "error": "Không tải được danh sách sender. Hãy thử lại sau một chút.",
-        "lead": "Chọn các newsletter bạn muốn dừng nhận. Zero Mail sẽ unsubscribe an toàn và archive lịch sử mail từ những sender đã chọn.",
-        "preview": "Xem trước campaign",
+        "error": "Không tải được danh sách người gửi. Hãy thử lại sau một chút.",
+        "filter": {
+          "all": "Tất cả người gửi",
+          "mailto": "Hủy bằng email",
+          "oneClick": "Hủy bằng liên kết",
+          "ready": "Có thể hủy đăng ký"
+        },
+        "filterLabel": "Lọc người gửi",
+        "historyCount": "{count} email",
+        "lead": "Chọn các bản tin bạn muốn dừng nhận. Zero Mail sẽ hủy đăng ký an toàn và lưu trữ email cũ từ những người gửi đã chọn.",
+        "preview": "Xem trước chiến dịch",
         "retry": "Thử lại",
-        "suppressionLink": "Quản lý suppression list →",
-        "title": "Bulk unsubscribe"
+        "searchPlaceholder": "Tìm người gửi hoặc tên miền",
+        "selectedMail": "{count} email lịch sử trong lựa chọn",
+        "sort": {
+          "count": "Nhiều email nhất",
+          "recent": "Mới thấy gần đây",
+          "sender": "A-Z theo người gửi"
+        },
+        "sortLabel": "Sắp xếp người gửi",
+        "stats": {
+          "messages": "Email lịch sử",
+          "oneClick": "Hủy bằng liên kết",
+          "ready": "Có thể hủy đăng ký",
+          "total": "Người gửi đã phát hiện"
+        },
+        "suppressionLink": "Quản lý danh sách bảo vệ →",
+        "title": "Hủy đăng ký hàng loạt"
       },
       "method": {
-        "mailto": "Mailto",
+        "mailto": "Hủy bằng email",
         "none": "Không hỗ trợ",
-        "oneClick": "One-click (RFC 8058)"
+        "oneClick": "Hủy bằng liên kết (RFC 8058)"
       },
       "preview": {
         "cancel": "Quay lại",
-        "capMessage": "Đã vượt giới hạn 2.000 mail lịch sử ({count}). Quay lại và bỏ chọn bớt.",
-        "capSender": "Đã vượt giới hạn 25 sender. Quay lại và bỏ chọn bớt.",
-        "confirm": "Execute campaign",
-        "description": "Kiểm tra lại danh sách trước khi execute. Campaign sẽ chạy nền và có thể undo trong 30 ngày.",
-        "errCapMessage": "Vượt giới hạn 2.000 mail lịch sử. Hãy bỏ chọn bớt.",
-        "errCapSender": "Vượt giới hạn 25 sender. Hãy bỏ chọn bớt.",
-        "errGeneric": "Không tạo được campaign. Hãy thử lại sau một chút.",
-        "submitOk": "Campaign đã được tạo. Đang theo dõi tiến độ…",
-        "submitting": "Đang tạo…",
-        "title": "Xem trước campaign",
-        "totalMail": "Tổng mail sẽ archive: {count}",
-        "totalSender": "Tổng sender: {count}",
-        "willArchive": "{count} mail sẽ archive",
-        "willNotArchive": "Không archive (thiếu header)"
+        "capMessage": "Đã vượt giới hạn 2.000 email lịch sử ({count}). Quay lại và bỏ chọn bớt.",
+        "capSender": "Đã vượt giới hạn 25 người gửi. Quay lại và bỏ chọn bớt.",
+        "confirm": "Chạy chiến dịch",
+        "description": "Kiểm tra lại danh sách trước khi chạy. Chiến dịch sẽ chạy nền và có thể hoàn tác trong 30 ngày.",
+        "errCapMessage": "Vượt giới hạn 2.000 email lịch sử. Hãy bỏ chọn bớt.",
+        "errCapSender": "Vượt giới hạn 25 người gửi. Hãy bỏ chọn bớt.",
+        "errGeneric": "Không tạo được chiến dịch. Hãy thử lại sau một chút.",
+        "submitOk": "Đã tạo chiến dịch. Đang theo dõi tiến độ...",
+        "submitting": "Đang tạo...",
+        "title": "Xem trước chiến dịch",
+        "totalMail": "Tổng email sẽ lưu trữ: {count}",
+        "totalSender": "Tổng người gửi: {count}",
+        "willArchive": "{count} email sẽ lưu trữ",
+        "willNotArchive": "Không lưu trữ (thiếu header)"
       },
       "retry": {
-        "alreadyOk": "Sender này đã unsubscribe thành công, không cần thử lại.",
+        "alreadyOk": "Người gửi này đã hủy đăng ký thành công, không cần thử lại.",
         "generic": "Không thử lại được. Hãy thử lại sau một chút."
       },
       "risk": {
         "noHeader": "Chưa hỗ trợ",
-        "noHeaderTooltip": "Sender này không có header `List-Unsubscribe` — chưa thể unsubscribe tự động.",
+        "noHeaderTooltip": "Người gửi này không có header `List-Unsubscribe` nên chưa thể hủy đăng ký tự động.",
         "safe": "Sẵn sàng",
-        "suppressed": "Đã chặn"
+        "suppressed": "Đã bảo vệ"
       },
       "status": {
-        "breadcrumb": "Cleanup / Unsubscribe / #{shortId}",
+        "breadcrumb": "Dọn hộp thư / Hủy đăng ký / #{shortId}",
         "col": {
           "action": "Hành động",
-          "archived": "Mail đã archive",
-          "sender": "Sender",
+          "archived": "Email đã lưu trữ",
+          "sender": "Người gửi",
           "state": "Trạng thái"
         },
         "completed": "Hoàn tất",
-        "error": "Không tải được trạng thái campaign. Hãy thử lại sau một chút.",
-        "errorBanner": "Lỗi hệ thống — không hoàn tất. Liên hệ support nếu cần.",
-        "failed": "Lỗi — không hoàn tất",
-        "progress": "{percent}% ({okCount} OK / {failedCount} lỗi / {totalCount} sender)",
-        "queued": "Đang chờ worker pick",
+        "error": "Không tải được trạng thái chiến dịch. Hãy thử lại sau một chút.",
+        "errorBanner": "Lỗi hệ thống - chưa hoàn tất. Liên hệ bộ phận hỗ trợ nếu cần.",
+        "failed": "Lỗi - chưa hoàn tất",
+        "progress": "{percent}% ({okCount} thành công / {failedCount} lỗi / {totalCount} người gửi)",
+        "queued": "Đang chờ tiến trình nền nhận việc",
         "retry": "Thử lại",
-        "retryOk": "Đã enqueue thử lại cho {sender}.",
+        "retryOk": "Đã đưa {sender} vào hàng đợi thử lại.",
         "running": "Đang chạy",
         "state": {
           "failed": "Thất bại",
@@ -536,22 +574,22 @@
           "pending": "Chờ",
           "running": "Đang chạy"
         },
-        "title": "Campaign #{shortId}",
+        "title": "Chiến dịch #{shortId}",
         "undo": {
-          "body": "Bạn có thể undo trong {daysLeft} ngày tới: restore mail về INBOX và remove label `Zero Mail/Unsubscribed`.",
-          "button": "Undo campaign",
-          "title": "Campaign đã hoàn tất"
+          "body": "Bạn có thể hoàn tác trong {daysLeft} ngày tới: khôi phục email về Hộp thư đến và gỡ nhãn `Zero Mail/Unsubscribed`.",
+          "button": "Hoàn tác chiến dịch",
+          "title": "Chiến dịch đã hoàn tất"
         }
       },
       "undo": {
         "cancel": "Quay lại",
-        "confirmBody": "Sẽ restore {count} mail về INBOX và remove label `Zero Mail/Unsubscribed`. Hành động này không thể đảo ngược lần nữa.",
-        "confirmCta": "Đồng ý undo",
-        "confirmTitle": "Undo campaign?",
-        "generic": "Không undo được. Hãy thử lại sau một chút.",
-        "ok": "Đã restore {count} mail về INBOX.",
-        "windowExpired": "Đã quá 30 ngày kể từ khi campaign chạy — không undo được nữa.",
-        "windowExpiredToast": "Quá window 30 ngày — không undo được nữa."
+        "confirmBody": "Sẽ khôi phục {count} email về Hộp thư đến và gỡ nhãn `Zero Mail/Unsubscribed`. Hành động này không thể đảo ngược thêm lần nữa.",
+        "confirmCta": "Đồng ý hoàn tác",
+        "confirmTitle": "Hoàn tác chiến dịch?",
+        "generic": "Không hoàn tác được. Hãy thử lại sau một chút.",
+        "ok": "Đã khôi phục {count} email về Hộp thư đến.",
+        "windowExpired": "Đã quá 30 ngày kể từ khi chiến dịch chạy nên không thể hoàn tác nữa.",
+        "windowExpiredToast": "Quá thời hạn 30 ngày nên không thể hoàn tác nữa."
       }
     }
   },
@@ -583,6 +621,8 @@
     "b2": "Không cần thẻ",
     "b3": "Hủy đăng ký bằng một cú nhấp",
     "button": "Đăng ký trải nghiệm",
+    "closeAria": "Đóng hộp thoại danh sách chờ",
+    "closeCta": "Đóng",
     "desc": "Hãy đăng ký chờ. Mỗi tuần chúng tôi đón thêm 50 nhà sáng lập và quản lý vận hành theo thứ tự. Bạn sẽ nhận lời mời để cài đặt Zero Mail với tài khoản Gmail thật của mình.",
     "emailPlaceholder": "ban@congty.com",
     "eyebrow": "Truy cập sớm",
@@ -590,11 +630,17 @@
       "body": "Chúng tôi đào sâu vào Gmail trước khi mở rộng sang Outlook hay IMAP. Nếu bạn dùng hộp thư khác, để lại email và chúng tôi sẽ báo khi có hỗ trợ.",
       "title": "Chỉ Gmail · v1"
     },
+    "privacyNote": "Chúng tôi chỉ dùng email này để gửi lời mời Zero Mail.",
     "stats": {
       "s1": "trong danh sách chờ",
       "s2": "lời mời mỗi tuần",
       "s3": "giảm hộp thư trung bình",
       "s4": "email tự động gửi"
+    },
+    "submitting": "Đang đăng ký...",
+    "success": {
+      "body": "Đã ghi nhận {email}. Chúng tôi sẽ liên hệ khi đến lượt bạn.",
+      "title": "Bạn đã vào danh sách chờ"
     },
     "title": {
       "a": "Đăng ký trải nghiệm Zero Mail",
@@ -656,13 +702,13 @@
     },
     "cleanup": {
       "campaign": {
-        "not_found": "Không tìm thấy campaign. Hãy quay lại danh sách campaign.",
-        "retry_conflict": "Sender này đã unsubscribe thành công, không cần thử lại.",
-        "too_many_messages": "Vượt giới hạn 2.000 mail lịch sử. Hãy bỏ chọn bớt.",
-        "too_many_senders": "Vượt giới hạn 25 sender. Hãy bỏ chọn bớt.",
-        "undo_window_expired": "Quá window 30 ngày — không undo được nữa."
+        "not_found": "Không tìm thấy chiến dịch. Hãy quay lại danh sách chiến dịch.",
+        "retry_conflict": "Người gửi này đã hủy đăng ký thành công, không cần thử lại.",
+        "too_many_messages": "Vượt giới hạn 2.000 email lịch sử. Hãy bỏ chọn bớt.",
+        "too_many_senders": "Vượt giới hạn 25 người gửi. Hãy bỏ chọn bớt.",
+        "undo_window_expired": "Quá thời hạn 30 ngày nên không thể hoàn tác nữa."
       },
-      "sender_suppressed": "Sender này đang trong suppression list. Xóa khỏi suppression trước khi unsubscribe."
+      "sender_suppressed": "Người gửi này đang nằm trong danh sách bảo vệ. Hãy gỡ khỏi danh sách bảo vệ trước khi hủy đăng ký."
     },
     "conflict": "Dữ liệu đã thay đổi trước khi thao tác hoàn tất. Hãy tải lại trang rồi thử lại.",
     "dataIntegrity": "Không thể lưu thay đổi vì dữ liệu không hợp lệ.",
@@ -1158,9 +1204,9 @@
     "beta": "beta",
     "billing": "Thanh toán",
     "chat": "Trợ lý",
-    "cleanupGroup": "Cleanup",
-    "cleanupSuppression": "Suppression",
-    "cleanupUnsubscribe": "Unsubscribe",
+    "cleanupGroup": "Dọn hộp thư",
+    "cleanupSuppression": "Bảo vệ người gửi",
+    "cleanupUnsubscribe": "Hủy đăng ký",
     "continueSetup": "Tiếp tục cài đặt",
     "dashboard": "Tổng quan",
     "features": "Tính năng",
@@ -1779,6 +1825,23 @@
     }
   },
   "trust": {
+    "authCompact": {
+      "eyebrow": "Quyền Gmail an toàn",
+      "footnote": "Google sẽ hiển thị đúng các quyền Gmail trước khi bạn đồng ý.",
+      "p1": {
+        "body": "Zero Mail không bao giờ gửi thư thay bạn.",
+        "title": "Không tự gửi"
+      },
+      "p2": {
+        "body": "Nội dung email chỉ xử lý trong bộ nhớ rồi bị xoá.",
+        "title": "Không lưu nội dung"
+      },
+      "p3": {
+        "body": "Ngắt kết nối từ Zero Mail hoặc Tài khoản Google.",
+        "title": "Thu hồi bất cứ lúc nào"
+      },
+      "title": "Bạn vẫn giữ quyền kiểm soát"
+    },
     "authTitle": "Ba cam kết, viết rõ ràng.",
     "badges": {
       "casa": "Google CASA tier 2",

@@ -11,7 +11,7 @@ export function ThemeToggle({ currentTheme, label }: Props) {
 
   return (
     <form action="/actions/theme" method="post">
-      <input type="hidden" name="theme" value={next} />
+      <input suppressHydrationWarning type="hidden" name="theme" value={next} />
       <Button
         type="submit"
         variant="outline"

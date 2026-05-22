@@ -10,6 +10,7 @@ import {
   type SuppressionEntryResponse,
 } from '@/features/cleanup/suppression/api/suppression-api';
 import { suppressionKeys } from '@/features/cleanup/suppression/query-keys';
+import { unsubscribeCampaignKeys } from '@/features/cleanup/unsubscribe-campaign/query-keys';
 
 type MutationContext = {
   previousEntries: SuppressionEntryResponse[] | undefined;
@@ -67,6 +68,7 @@ export function useAddSuppression() {
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: suppressionKeys.list() });
+      await queryClient.invalidateQueries({ queryKey: unsubscribeCampaignKeys.all });
     },
   });
 }

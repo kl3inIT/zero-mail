@@ -1,7 +1,17 @@
 'use client';
 
+import { Fragment, useMemo, useState } from 'react';
+import {
+  ArchiveIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  Clock3Icon,
+  MailXIcon,
+  ShieldIcon,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
@@ -30,74 +40,229 @@ export function CandidateListTable({
   candidates,
   selectedEmails,
   onToggleEmail,
+  onPreviewSender,
+  onKeepSender,
+  keepingSenderEmail,
 }: {
   candidates: CandidateRow[];
   selectedEmails: Set<string>;
   onToggleEmail: (senderEmail: string) => void;
+  onPreviewSender: (senderEmail: string) => void;
+  onKeepSender: (senderEmail: string) => void;
+  keepingSenderEmail?: string;
 }) {
   const t = useTranslations();
+  const [expandedSenderEmail, setExpandedSenderEmail] = useState<string | null>(null);
+  const maxMessageCount = useMemo(
+    () => Math.max(1, ...candidates.map((candidate) => candidate.messageCount ?? 0)),
+    [candidates],
+  );
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-10" aria-label="select" />
-          <TableHead>{t('cleanup.unsubscribe.list.col.sender')}</TableHead>
-          <TableHead>{t('cleanup.unsubscribe.list.col.domain')}</TableHead>
-          <TableHead className="tabular-nums">{t('cleanup.unsubscribe.list.col.count')}</TableHead>
-          <TableHead>{t('cleanup.unsubscribe.list.col.method')}</TableHead>
-          <TableHead>{t('cleanup.unsubscribe.list.col.risk')}</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {candidates.map((candidate) => {
-          const senderEmail = candidate.senderEmail ?? '';
-          const method = candidate.unsubscribeMethod ?? 'NONE';
-          const isDisabled = method === 'NONE' || candidate.suppressed === true;
-          const isChecked = selectedEmails.has(senderEmail);
-          const risk = deriveRiskBadge(candidate);
-          const showTooltip = risk === 'NO_HEADER_DISABLED';
+    <div className="border-foreground/10 bg-background overflow-hidden rounded-lg border">
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/40 hover:bg-muted/40">
+            <TableHead className="w-10" aria-label="select" />
+            <TableHead>{t('cleanup.unsubscribe.list.col.sender')}</TableHead>
+            <TableHead className="min-w-36">{t('cleanup.unsubscribe.list.col.history')}</TableHead>
+            <TableHead>{t('cleanup.unsubscribe.list.col.method')}</TableHead>
+            <TableHead>{t('cleanup.unsubscribe.list.col.risk')}</TableHead>
+            <TableHead className="text-right">
+              {t('cleanup.unsubscribe.list.col.actions')}
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {candidates.map((candidate) => {
+            const senderEmail = candidate.senderEmail ?? '';
+            const senderDomain = candidate.senderDomain ?? '';
+            const method = candidate.unsubscribeMethod ?? 'NONE';
+            const isDisabled = method === 'NONE' || candidate.suppressed === true;
+            const isChecked = selectedEmails.has(senderEmail);
+            const risk = deriveRiskBadge(candidate);
+            const showTooltip = risk === 'NO_HEADER_DISABLED';
+            const isExpanded = expandedSenderEmail === senderEmail;
+            const messageCount = candidate.messageCount ?? 0;
+            const messageShare = Math.max(6, Math.round((messageCount / maxMessageCount) * 100));
+            const isKeeping = keepingSenderEmail === senderEmail;
 
-          const rowContent = (
-            <TableRow
-              key={senderEmail}
-              className={cn(isDisabled && 'opacity-60')}
-              data-state={isChecked ? 'selected' : undefined}
-            >
-              <TableCell>
-                <Checkbox
-                  aria-label={senderEmail}
-                  checked={isChecked}
-                  disabled={isDisabled}
-                  onCheckedChange={() => {
-                    if (!isDisabled) onToggleEmail(senderEmail);
-                  }}
-                />
-              </TableCell>
-              <TableCell className="font-medium">{senderEmail}</TableCell>
-              <TableCell className="text-muted-foreground">
-                {candidate.senderDomain ?? ''}
-              </TableCell>
-              <TableCell className="tabular-nums">{candidate.messageCount ?? 0}</TableCell>
-              <TableCell>
-                <MethodBadge method={method} />
-              </TableCell>
-              <TableCell>
-                <RiskBadge risk={risk} />
-              </TableCell>
-            </TableRow>
-          );
+            const rowContent = (
+              <TableRow
+                key={senderEmail}
+                className={cn('align-middle', isDisabled && 'opacity-60')}
+                data-state={isChecked ? 'selected' : undefined}
+              >
+                <TableCell>
+                  <Checkbox
+                    aria-label={senderEmail}
+                    checked={isChecked}
+                    disabled={isDisabled}
+                    onCheckedChange={() => {
+                      if (!isDisabled) onToggleEmail(senderEmail);
+                    }}
+                  />
+                </TableCell>
+                <TableCell>
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 shrink-0"
+                        aria-label={
+                          isExpanded
+                            ? t('cleanup.unsubscribe.list.action.collapse')
+                            : t('cleanup.unsubscribe.list.action.details')
+                        }
+                        onClick={() =>
+                          setExpandedSenderEmail((current) =>
+                            current === senderEmail ? null : senderEmail,
+                          )
+                        }
+                      >
+                        {isExpanded ? (
+                          <ChevronDownIcon className="size-4" aria-hidden="true" />
+                        ) : (
+                          <ChevronRightIcon className="size-4" aria-hidden="true" />
+                        )}
+                      </Button>
+                      <span className="truncate font-medium">{senderEmail}</span>
+                    </div>
+                    <span className="text-muted-foreground truncate pl-9 text-xs">
+                      {senderDomain}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex min-w-32 flex-col gap-1.5">
+                    <span className="font-mono text-sm tabular-nums">
+                      {t('cleanup.unsubscribe.list.historyCount', { count: messageCount })}
+                    </span>
+                    <div className="bg-muted h-1.5 overflow-hidden rounded-full">
+                      <div className="bg-foreground h-full" style={{ width: `${messageShare}%` }} />
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <MethodBadge method={method} />
+                </TableCell>
+                <TableCell>
+                  <RiskBadge risk={risk} />
+                </TableCell>
+                <TableCell>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="default"
+                      size="sm"
+                      disabled={isDisabled}
+                      onClick={() => onPreviewSender(senderEmail)}
+                    >
+                      <MailXIcon className="size-4" aria-hidden="true" />
+                      <span className="hidden lg:inline">
+                        {t('cleanup.unsubscribe.list.action.unsubscribe')}
+                      </span>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={isKeeping}
+                      onClick={() => onKeepSender(senderEmail)}
+                    >
+                      <ShieldIcon className="size-4" aria-hidden="true" />
+                      <span className="hidden lg:inline">
+                        {t('cleanup.unsubscribe.list.action.keep')}
+                      </span>
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
 
-          if (!showTooltip) return rowContent;
+            const renderedRow = showTooltip ? (
+              <Tooltip key={senderEmail}>
+                <TooltipTrigger render={rowContent} />
+                <TooltipContent>{t('cleanup.unsubscribe.risk.noHeaderTooltip')}</TooltipContent>
+              </Tooltip>
+            ) : (
+              rowContent
+            );
 
-          return (
-            <Tooltip key={senderEmail}>
-              <TooltipTrigger render={rowContent} />
-              <TooltipContent>{t('cleanup.unsubscribe.risk.noHeaderTooltip')}</TooltipContent>
-            </Tooltip>
-          );
-        })}
-      </TableBody>
-    </Table>
+            return (
+              <Fragment key={senderEmail}>
+                {renderedRow}
+                {isExpanded && (
+                  <TableRow className="bg-muted/20 hover:bg-muted/20">
+                    <TableCell />
+                    <TableCell colSpan={5}>
+                      <div className="grid gap-3 py-3 text-sm md:grid-cols-3">
+                        <div className="flex items-start gap-2">
+                          <Clock3Icon
+                            className="text-muted-foreground mt-0.5 size-4"
+                            aria-hidden="true"
+                          />
+                          <div>
+                            <p className="text-muted-foreground text-xs">
+                              {t('cleanup.unsubscribe.list.detail.lastSeen')}
+                            </p>
+                            <p className="font-medium">{formatLastSeen(candidate.lastSeenAt)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <ArchiveIcon
+                            className="text-muted-foreground mt-0.5 size-4"
+                            aria-hidden="true"
+                          />
+                          <div>
+                            <p className="text-muted-foreground text-xs">
+                              {t('cleanup.unsubscribe.list.detail.archive')}
+                            </p>
+                            <p className="font-medium">
+                              {t('cleanup.unsubscribe.list.detail.archiveValue', {
+                                count: messageCount,
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <ShieldIcon
+                            className="text-muted-foreground mt-0.5 size-4"
+                            aria-hidden="true"
+                          />
+                          <div>
+                            <p className="text-muted-foreground text-xs">
+                              {t('cleanup.unsubscribe.list.detail.safety')}
+                            </p>
+                            <p className="font-medium">
+                              {isDisabled
+                                ? t('cleanup.unsubscribe.list.detail.disabled')
+                                : t('cleanup.unsubscribe.list.detail.safe')}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </Fragment>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
   );
+}
+
+function formatLastSeen(value: string | undefined): string {
+  if (!value) return '-';
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) return value;
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(new Date(timestamp));
 }

@@ -18,7 +18,7 @@
 .gitleaks.toml
 
 # ─── Environment / secrets ──────────────────────────────────────────────────
-.env
+.env.local
 .env.*
 !.env.example
 !.env.dev.example

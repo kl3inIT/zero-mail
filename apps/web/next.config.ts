@@ -7,6 +7,12 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 const appDir = dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = join(appDir, '../..');
 
+type WebpackExternalContext = {
+  request?: string;
+};
+
+type WebpackExternalCallback = (error?: Error | null, result?: string) => void;
+
 const nextConfig: NextConfig = {
   output: 'standalone',
   // Required for standalone output in pnpm monorepo: trace files from workspace root.
@@ -20,6 +26,28 @@ const nextConfig: NextConfig = {
   // dynamically by `instrumentation.ts` only when `NEXT_PUBLIC_E2E_MSW=1`.
   // Externalizing makes Next leave them as runtime `require` calls.
   serverExternalPackages: ['msw', '@mswjs/interceptors'],
+  webpack(configuration, { isServer }) {
+    if (!isServer) return configuration;
+
+    const existingExternals = Array.isArray(configuration.externals)
+      ? configuration.externals
+      : configuration.externals
+        ? [configuration.externals]
+        : [];
+
+    configuration.externals = [
+      ...existingExternals,
+      ({ request }: WebpackExternalContext, callback: WebpackExternalCallback) => {
+        if (request === 'msw/node' || request?.startsWith('@mswjs/interceptors')) {
+          return callback(null, `commonjs ${request}`);
+        }
+
+        return callback();
+      },
+    ];
+
+    return configuration;
+  },
   compiler: {
     removeConsole: { exclude: ['error', 'warn'] },
   },

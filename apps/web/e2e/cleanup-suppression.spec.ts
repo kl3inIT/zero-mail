@@ -10,9 +10,9 @@ import { createChromeMockState, openAuthenticatedRoute } from './chrome-test-uti
  * fails with "no element found" — expected RED state.
  *
  * Two scenarios (UNS-02 frontend half):
- *   - manual add: user types `boss@example.com` + clicks "Thêm vào suppression" → row appears
+ *   - manual add: user types `boss@example.com` + clicks "Thêm vào danh sách bảo vệ" → row appears
  *     with badge "Thủ công" → candidate page no longer lists the sender
- *   - auto-add visibility: a suppression entry with `source='replied'` displays the "Đã reply"
+ *   - auto-add visibility: a suppression entry with `source='replied'` displays the "Đã trả lời"
  *     badge
  */
 
@@ -29,7 +29,7 @@ test('addManualSuppressionEntry_excludesSenderFromCandidates', async ({ page }) 
   await page.reload({ waitUntil: 'networkidle' });
 
   await page.getByLabel('Email người gửi').fill('boss@example.com');
-  await page.getByRole('button', { name: 'Thêm vào suppression' }).click();
+  await page.getByRole('button', { name: 'Thêm vào danh sách bảo vệ' }).click();
 
   await expect(page.getByText('boss@example.com')).toBeVisible();
   await expect(page.getByText('Thủ công')).toBeVisible();
@@ -55,7 +55,7 @@ test('autoAddedSenderShowsRepliedBadge', async ({ page }) => {
   await page.reload({ waitUntil: 'networkidle' });
 
   await expect(page.getByText('replied@example.com')).toBeVisible();
-  await expect(page.getByText('Đã reply')).toBeVisible();
+  await expect(page.getByText('Đã trả lời')).toBeVisible();
 });
 
 type SuppressionEntry = {

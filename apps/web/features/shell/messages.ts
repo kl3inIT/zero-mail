@@ -124,15 +124,15 @@ export const shellMessages = {
     en: 'Dashboard',
   },
   'nav.cleanupGroup': {
-    vi: 'Cleanup',
+    vi: 'Dọn hộp thư',
     en: 'Cleanup',
   },
   'nav.cleanupUnsubscribe': {
-    vi: 'Unsubscribe',
+    vi: 'Hủy đăng ký',
     en: 'Unsubscribe',
   },
   'nav.cleanupSuppression': {
-    vi: 'Suppression',
+    vi: 'Bảo vệ người gửi',
     en: 'Suppression',
   },
 } as const;

@@ -1,14 +1,14 @@
 export const suppressionMessages = {
   'cleanup.suppression.title': {
-    vi: 'Suppression list',
+    vi: 'Danh sách bảo vệ',
     en: 'Suppression list',
   },
   'cleanup.suppression.lead': {
-    vi: 'Sender hoặc domain trong danh sách này sẽ không bao giờ hiển thị trong campaign unsubscribe.',
+    vi: 'Người gửi hoặc tên miền trong danh sách này sẽ không bao giờ hiển thị trong chiến dịch hủy đăng ký.',
     en: 'Senders or domains on this list will never appear in an unsubscribe campaign.',
   },
   'cleanup.suppression.input.placeholder': {
-    vi: 'Email hoặc domain (ví dụ: boss@example.com hoặc example.com)',
+    vi: 'Email hoặc tên miền (ví dụ: boss@example.com hoặc example.com)',
     en: 'Email or domain (e.g. boss@example.com or example.com)',
   },
   'cleanup.suppression.input.label': {
@@ -16,15 +16,15 @@ export const suppressionMessages = {
     en: 'Sender email',
   },
   'cleanup.suppression.add': {
-    vi: 'Thêm vào suppression',
+    vi: 'Thêm vào danh sách bảo vệ',
     en: 'Add to suppression',
   },
   'cleanup.suppression.helper': {
-    vi: 'Mỗi entry chặn 1 sender hoặc cả 1 domain.',
+    vi: 'Mỗi mục bảo vệ một người gửi hoặc cả một tên miền.',
     en: 'Each entry blocks a single sender or an entire domain.',
   },
   'cleanup.suppression.col.target': {
-    vi: 'Sender / Domain',
+    vi: 'Người gửi / Tên miền',
     en: 'Sender / Domain',
   },
   'cleanup.suppression.col.source': {
@@ -40,7 +40,7 @@ export const suppressionMessages = {
     en: 'Manual',
   },
   'cleanup.suppression.source.replied': {
-    vi: 'Đã reply',
+    vi: 'Đã trả lời',
     en: 'Replied',
   },
   'cleanup.suppression.source.auto': {
@@ -48,19 +48,19 @@ export const suppressionMessages = {
     en: 'Auto',
   },
   'cleanup.suppression.remove.aria': {
-    vi: 'Xóa khỏi suppression',
+    vi: 'Gỡ khỏi danh sách bảo vệ',
     en: 'Remove from suppression',
   },
   'cleanup.suppression.remove.confirmTitle': {
-    vi: 'Xóa entry này?',
+    vi: 'Gỡ mục này?',
     en: 'Remove this entry?',
   },
   'cleanup.suppression.remove.confirmBody': {
-    vi: 'Sau khi xóa, sender / domain này sẽ lại xuất hiện trong campaign ứng viên.',
+    vi: 'Sau khi gỡ, người gửi hoặc tên miền này sẽ xuất hiện lại trong danh sách ứng viên.',
     en: 'After removal, this sender or domain will reappear as a campaign candidate.',
   },
   'cleanup.suppression.remove.confirmCta': {
-    vi: 'Đồng ý xóa',
+    vi: 'Đồng ý gỡ',
     en: 'Confirm remove',
   },
   'cleanup.suppression.remove.cancel': {
@@ -68,11 +68,11 @@ export const suppressionMessages = {
     en: 'Cancel',
   },
   'cleanup.suppression.err.invalid': {
-    vi: 'Email hoặc domain không hợp lệ.',
+    vi: 'Email hoặc tên miền không hợp lệ.',
     en: 'Invalid email or domain.',
   },
   'cleanup.suppression.err.duplicate': {
-    vi: 'Entry này đã có trong suppression list.',
+    vi: 'Mục này đã có trong danh sách bảo vệ.',
     en: 'This entry is already in the suppression list.',
   },
   'cleanup.suppression.err.generic': {
@@ -80,19 +80,19 @@ export const suppressionMessages = {
     en: 'Could not add. Please try again shortly.',
   },
   'cleanup.suppression.removeOk': {
-    vi: 'Đã xóa khỏi suppression list.',
+    vi: 'Đã gỡ khỏi danh sách bảo vệ.',
     en: 'Removed from suppression list.',
   },
   'cleanup.suppression.addOk': {
-    vi: 'Đã thêm vào suppression list.',
+    vi: 'Đã thêm vào danh sách bảo vệ.',
     en: 'Added to suppression list.',
   },
   'cleanup.suppression.empty.title': {
-    vi: 'Chưa có sender nào trong suppression list',
+    vi: 'Chưa có người gửi nào trong danh sách bảo vệ',
     en: 'No senders in the suppression list yet',
   },
   'cleanup.suppression.empty.body': {
-    vi: 'Thêm sender hoặc domain bạn không bao giờ muốn unsubscribe (ví dụ: sếp, đồng nghiệp, ngân hàng).',
+    vi: 'Thêm người gửi hoặc tên miền bạn không bao giờ muốn hủy đăng ký, ví dụ: sếp, đồng nghiệp hoặc ngân hàng.',
     en: 'Add senders or domains you never want to unsubscribe (e.g. boss, colleagues, bank).',
   },
   'cleanup.suppression.error': {
