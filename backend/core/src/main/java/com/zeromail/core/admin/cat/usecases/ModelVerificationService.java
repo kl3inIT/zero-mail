@@ -3,7 +3,6 @@ package com.zeromail.core.admin.cat.usecases;
 import com.zeromail.core.admin.audit.domain.AdminAuditAction;
 import com.zeromail.core.admin.audit.usecases.AdminAuditWriter;
 import com.zeromail.core.admin.auth.AdminContext;
-import com.zeromail.core.admin.auth.AdminUser;
 import com.zeromail.core.admin.cat.domain.ModelVerificationStatus;
 import com.zeromail.core.admin.cat.persistence.ModelCatalogEntity;
 import com.zeromail.core.admin.cat.persistence.ModelCatalogRepository;
@@ -64,7 +63,7 @@ public class ModelVerificationService {
 
     @Transactional
     public ModelVerificationStatus verify(String modelId, String requestIp, UUID requestId) {
-        AdminUser adminUser = AdminContext.currentOrThrow();
+        AdminContext.currentOrThrow();
         ModelCatalogEntity modelRow =
                 modelCatalogRepository
                         .findById(modelId)
@@ -80,27 +79,21 @@ public class ModelVerificationService {
                     null,
                     null,
                     "Provider has no active master key",
-                    adminUser.id(),
                     requestIp,
                     requestId,
                     null);
         }
 
         Instant probeStartedAt = clock.instant();
-        MasterKeyTestResult probeResult;
-        try {
-            probeResult =
-                    modelsProbeClient.probe(
-                            modelRow.getProvider(),
-                            resolvedKey.keyFormat(),
-                            resolvedKey.baseUrl(),
-                            resolvedKey.plaintextKey());
-        } finally {
-            // We intentionally do not wipe the plaintext here — the resolver
-            // hands out a defensive copy in ResolvedMasterKey, and the cache
-            // manages its own lifetime. The plaintext goes out of scope when
-            // resolvedKey does.
-        }
+        // We intentionally do not wipe the plaintext here — the resolver hands out a defensive copy
+        // in ResolvedMasterKey, and the cache manages its own lifetime. The plaintext goes out of
+        // scope when resolvedKey does.
+        MasterKeyTestResult probeResult =
+                modelsProbeClient.probe(
+                        modelRow.getProvider(),
+                        resolvedKey.keyFormat(),
+                        resolvedKey.baseUrl(),
+                        resolvedKey.plaintextKey());
         Instant probeFinishedAt = clock.instant();
         int latencyMs = (int) Duration.between(probeStartedAt, probeFinishedAt).toMillis();
 
@@ -115,7 +108,6 @@ public class ModelVerificationService {
                 probeFinishedAt,
                 latencyMs,
                 errorMessage,
-                adminUser.id(),
                 requestIp,
                 requestId,
                 probeResult);
@@ -150,7 +142,6 @@ public class ModelVerificationService {
             Instant testedAt,
             Integer latencyMs,
             String error,
-            UUID actorId,
             String requestIp,
             UUID requestId,
             MasterKeyTestResult probeResult) {

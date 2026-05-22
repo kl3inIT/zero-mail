@@ -159,7 +159,7 @@ public class GenerateThreadDraftService {
             log.info(
                     "event=draft_generated tenantId={} gmailThreadId={} status={}",
                     command.tenantId(),
-                    command.gmailThreadId(),
+                    logSafeIdentifier(command.gmailThreadId()),
                     status);
             return new GenerateThreadDraftResult(
                     newDraftId,
@@ -212,12 +212,19 @@ public class GenerateThreadDraftService {
                         log.info(
                                 "event=draft_audit_pending_in_flight tenantId={} gmailThreadId={} auditId={}",
                                 tenantId,
-                                draftReplySource.gmailThreadId(),
+                                logSafeIdentifier(draftReplySource.gmailThreadId()),
                                 reservation.auditId());
                         throw new DraftGenerationInFlightException();
                     }
                     return reservation.auditId();
                 });
+    }
+
+    private static String logSafeIdentifier(String identifier) {
+        if (identifier == null) {
+            return "";
+        }
+        return identifier.replace('\r', '_').replace('\n', '_');
     }
 
     private Optional<String> currentDraftId(String gmailThreadId) {
@@ -236,7 +243,7 @@ public class GenerateThreadDraftService {
             log.warn(
                     "event=stale_draft_delete_failed tenantId={} gmailThreadId={}",
                     tenantId,
-                    gmailThreadId);
+                    logSafeIdentifier(gmailThreadId));
         }
     }
 
