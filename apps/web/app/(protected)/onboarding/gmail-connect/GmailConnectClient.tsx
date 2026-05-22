@@ -4,17 +4,9 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { LoadingState } from '@/components/states/LoadingState';
 import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
-import { ShieldIcon } from '@/features/landing/components/PrototypeIcons';
-
-type GmailConnectionStatus = 'CONNECTED' | 'DISCONNECTED' | 'NOT_CONNECTED' | 'PENDING' | string;
-type ConnectionLabelKey =
-  | 'connectionHealth.connected'
-  | 'connectionHealth.disconnected'
-  | 'connectionHealth.notConnected';
 
 export function GmailConnectClient() {
   const t = useTranslations();
@@ -38,57 +30,100 @@ export function GmailConnectClient() {
 
   const connectionStatus = me.data.gmailConnectionStatus?.status;
   const displayEmail = me.data.gmailConnectionStatus?.googleEmail ?? me.data.email;
+  const isConnected = connectionStatus === 'CONNECTED';
+  const previewRows = [
+    {
+      sender: t('onboarding.connect.preview.newsletter.sender'),
+      label: t('onboarding.connect.preview.newsletter.label'),
+      labelClassName: 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
+      subject: t('onboarding.connect.preview.newsletter.subject'),
+      excerpt: t('onboarding.connect.preview.newsletter.excerpt'),
+    },
+    {
+      sender: t('onboarding.connect.preview.reply.sender'),
+      label: t('onboarding.connect.preview.reply.label'),
+      labelClassName: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
+      subject: t('onboarding.connect.preview.reply.subject'),
+      excerpt: t('onboarding.connect.preview.reply.excerpt'),
+    },
+    {
+      sender: t('onboarding.connect.preview.receipt.sender'),
+      label: t('onboarding.connect.preview.receipt.label'),
+      labelClassName:
+        'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+      subject: t('onboarding.connect.preview.receipt.subject'),
+      excerpt: t('onboarding.connect.preview.receipt.excerpt'),
+    },
+  ];
 
   return (
-    <section className="bg-card w-full min-w-0 rounded-md border p-6 shadow-sm sm:p-8">
-      <span className="text-muted-foreground inline-flex items-center gap-2 font-mono text-xs font-medium uppercase">
-        <span className="bg-primary size-1.5 rounded-full" />
-        {t('onboarding.connect.eyebrow')}
-      </span>
-      <h1 className="text-foreground mt-4 text-[28px] leading-tight font-semibold">
-        <span>{t('onboarding.connect.heading')}</span>
-      </h1>
-      <p className="text-muted-foreground mt-4 max-w-xl text-sm leading-relaxed">
-        {t('onboarding.connect.body')}
-      </p>
-      <Card className="bg-card mt-7 gap-0 overflow-hidden rounded-md border p-0 shadow-none ring-0">
-        <div className="grid grid-cols-[44px_minmax(0,1fr)] items-center gap-3 border-b p-4 sm:grid-cols-[44px_minmax(0,1fr)_auto]">
-          <span className="bg-primary text-primary-foreground grid size-11 place-items-center rounded-full">
-            {displayEmail?.[0]?.toUpperCase() ?? 'Z'}
+    <section className="bg-card w-full min-w-0 rounded-md border p-5 shadow-sm sm:p-7">
+      <div className="grid gap-7 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)] lg:items-center">
+        <div className="bg-background overflow-hidden rounded-md border shadow-sm">
+          <div className="bg-secondary/70 flex items-center justify-between border-b px-4 py-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="bg-primary size-2 rounded-full" />
+              <span className="text-foreground truncate text-sm font-semibold">
+                {t('onboarding.connect.previewTitle')}
+              </span>
+            </div>
+            <span className="text-muted-foreground text-xs">
+              {t('onboarding.connect.previewMode')}
+            </span>
+          </div>
+          <div className="divide-y">
+            {previewRows.map((row) => (
+              <div
+                key={row.sender}
+                className="grid min-w-0 grid-cols-[18px_minmax(0,0.78fr)] gap-3 px-4 py-3 sm:grid-cols-[18px_minmax(120px,0.55fr)_auto_minmax(0,1fr)] sm:items-center"
+              >
+                <span
+                  className="border-border mt-1 size-3.5 rounded border sm:mt-0"
+                  aria-hidden="true"
+                />
+                <strong className="text-foreground min-w-0 truncate text-sm">{row.sender}</strong>
+                <span
+                  className={`${row.labelClassName} col-start-2 inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-medium sm:col-start-auto`}
+                >
+                  {row.label}
+                </span>
+                <p className="text-muted-foreground col-start-2 min-w-0 truncate text-sm sm:col-start-auto">
+                  <span className="text-foreground">{row.subject}</span>
+                  <span> - {row.excerpt}</span>
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="min-w-0">
+          <span className="text-muted-foreground inline-flex items-center gap-2 font-mono text-xs font-medium uppercase">
+            <span className="bg-primary size-1.5 rounded-full" />
+            {t('onboarding.connect.eyebrow')}
           </span>
-          <div className="min-w-0">
-            <div className="text-foreground truncate font-semibold">{displayEmail}</div>
-            <div className="text-muted-foreground text-sm">
-              {t(connectionLabelKey(connectionStatus))}
+          <h1 className="text-foreground mt-4 text-[28px] leading-tight font-semibold">
+            {t('onboarding.connect.heading')}
+          </h1>
+          <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
+            {t('onboarding.connect.body')}
+          </p>
+          <div className="border-border bg-secondary/50 mt-5 rounded-md border px-3 py-2 text-sm">
+            <div className="text-foreground truncate font-medium">{displayEmail}</div>
+            <div className={isConnected ? 'text-green' : 'text-warning'}>
+              {isConnected ? t('connectionHealth.connected') : t('connectionHealth.notConnected')}
             </div>
           </div>
-          <span
-            className={`${connectionBadgeClassName(
-              connectionStatus,
-            )} col-start-2 inline-flex min-h-6 w-fit items-center rounded-full px-2.5 text-xs font-medium sm:col-start-auto`}
+          <Button
+            type="button"
+            variant="accent"
+            size="lg"
+            className="mt-5 h-11 w-full"
+            onClick={() => router.push('/onboarding/template-select')}
           >
-            {t(connectionLabelKey(connectionStatus))}
-          </span>
+            {t('onboarding.connect.continueCta')}
+          </Button>
         </div>
-      </Card>
-      <Alert className="border-border bg-accent-soft text-accent mt-5 flex gap-2 p-3 text-sm">
-        <ShieldIcon size={14} className="mt-0.5 shrink-0" />
-        <AlertDescription className="text-accent">
-          {t('onboarding.connect.callout')}
-        </AlertDescription>
-      </Alert>
+      </div>
     </section>
   );
-}
-
-function connectionLabelKey(status: GmailConnectionStatus | undefined): ConnectionLabelKey {
-  if (status === 'CONNECTED') return 'connectionHealth.connected';
-  if (status === 'DISCONNECTED') return 'connectionHealth.disconnected';
-  return 'connectionHealth.notConnected';
-}
-
-function connectionBadgeClassName(status: GmailConnectionStatus | undefined): string {
-  if (status === 'CONNECTED') return 'bg-green-soft text-green';
-  if (status === 'DISCONNECTED') return 'bg-destructive/10 text-destructive';
-  return 'bg-warning-soft text-warning';
 }

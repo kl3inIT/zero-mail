@@ -1111,21 +1111,53 @@
   },
   "onboarding": {
     "completion": {
-      "body": "Zero Mail đang theo dõi hộp thư ở chế độ chỉ ghi nhận. Mở nhật ký bất cứ lúc nào để xem nó sẽ làm gì.",
-      "cta": "Mở cài đặt",
-      "heading": "Đã sẵn sàng. Mở phần Cài đặt để xem lại lựa chọn của bạn.",
-      "next1": "Chỉ ghi nhận trong 24 giờ — hành động được ghi, chưa áp.",
-      "next2": "Bạn sẽ nhận tóm tắt hằng ngày lúc 8h sáng.",
-      "next3": "Chuyển sang chế độ trực tiếp bất cứ lúc nào trong Cài đặt.",
-      "nextTitle": "Điều gì sẽ diễn ra"
+      "badgeReview": "Review",
+      "badgeSafe": "Safe",
+      "body": "Bắt đầu ở review mode trong beta: Zero Mail đề xuất nhãn, archive và draft; bạn kiểm tra trước khi bật tự động hóa.",
+      "cta": "Vào dashboard",
+      "draft": {
+        "body": "Hi Sarah,\n\nTomorrow at 2pm works for me. I can send an agenda before the call.\n\nBest,",
+        "incoming": "Hi, I wanted to follow up on the project timeline. When would be a good time?",
+        "sender": "Sarah Chen",
+        "status": "Chưa gửi",
+        "subject": "Project timeline",
+        "title": "Draft trong Gmail"
+      },
+      "heading": "Labels và drafts đã sẵn sàng.",
+      "next1": "Newsletters: rule đã lưu, chạy ở review mode.",
+      "next2": "Receipts: chỉ gắn nhãn, không rời inbox nếu chưa duyệt.",
+      "next3": "Draft replies: tạo nháp, bạn vẫn bấm Send.",
+      "nextTitle": "Bắt đầu thế nào"
     },
     "connect": {
-      "body": "Zero Mail cần quyền Gmail trước khi các giai đoạn sau có thể theo dõi, gắn nhãn, lưu trữ hoặc tạo bản nháp. Bạn có thể thu hồi quyền bất cứ lúc nào.",
-      "callout": "Chỉ soạn nháp, không tự gửi — phản hồi nằm trong Gmail Drafts cho đến khi bạn nhấn Gửi.",
+      "body": "Bước đầu tiên chỉ là xem Zero Mail sẽ phân loại inbox như thế nào. Gmail chưa bị thay đổi ở màn hình này.",
+      "continueCta": "Tiếp tục",
       "cta": "Kết nối Gmail",
-      "eyebrow": "Bước 1 — Kết nối",
-      "heading": "Đã kết nối Gmail.",
+      "eyebrow": "Bước 1 - Preview",
+      "heading": "Hộp thư của bạn, được phân loại trước.",
       "lastSync": "Đồng bộ · vừa xong",
+      "preview": {
+        "newsletter": {
+          "excerpt": "18 link đáng xem",
+          "label": "Newsletter",
+          "sender": "TechNews Daily",
+          "subject": "Weekly digest"
+        },
+        "receipt": {
+          "excerpt": "Gói tháng 4",
+          "label": "Receipt",
+          "sender": "Stripe",
+          "subject": "Invoice paid"
+        },
+        "reply": {
+          "excerpt": "Có thể sync hôm nay không?",
+          "label": "Needs reply",
+          "sender": "Sarah Chen",
+          "subject": "Project update"
+        }
+      },
+      "previewMode": "Preview",
+      "previewTitle": "Inbox preview",
       "scopes": "3 quyền đã cấp"
     },
     "loading": "Đang tải thiết lập...",
@@ -1134,18 +1166,57 @@
         "shortLabel": "Hoàn tất"
       },
       "gmailConnect": {
-        "shortLabel": "Kết nối Gmail"
+        "shortLabel": "Preview"
       },
       "progressLabel": "Bước {current} trên {total}",
       "templateSelect": {
-        "shortLabel": "Chọn template"
+        "shortLabel": "Rule đầu tiên"
       }
     },
     "template": {
-      "body": "Mẫu khởi đầu giúp Zero Mail hiểu cách bạn muốn xử lý hộp thư. Bạn có thể đổi mẫu sau trong phần Cài đặt.",
-      "eyebrow": "Bước 2 — Quy tắc khởi đầu",
-      "heading": "Chọn vài điểm khởi đầu.",
-      "saveCta": "Lưu mẫu khởi đầu"
+      "body": "Chọn một nhóm email gây nhiễu trước. Zero Mail sẽ cho xem trước email nào bị label, archive hoặc bỏ qua.",
+      "eyebrow": "Bước 2 - Rule đầu tiên",
+      "heading": "Bạn muốn dọn phần nào trước?",
+      "preview": {
+        "calendar": {
+          "row1Action": "Pin in Inbox",
+          "row1Clue": "lời mời họp",
+          "row1Sender": "Google Calendar",
+          "row2Action": "Pin in Inbox",
+          "row2Clue": "link cuộc gọi sắp tới",
+          "row2Sender": "Zoom",
+          "row3Action": "No action",
+          "row3Clue": "newsletter không liên quan lịch",
+          "row3Sender": "Morning Brew",
+          "title": "Preview: calendar invites"
+        },
+        "newsletters": {
+          "row1Action": "Label + archive",
+          "row1Clue": "newsletter, ít đọc",
+          "row1Sender": "Morning Brew",
+          "row2Action": "Label + archive",
+          "row2Clue": "digest marketing",
+          "row2Sender": "Product Hunt",
+          "row3Action": "No action",
+          "row3Clue": "cuộc hội thoại với người thật",
+          "row3Sender": "Sarah Chen",
+          "title": "Preview: newsletter cleanup"
+        },
+        "receipts": {
+          "row1Action": "Label Receipt",
+          "row1Clue": "biên lai thanh toán",
+          "row1Sender": "Stripe",
+          "row2Action": "Label Receipt",
+          "row2Clue": "hóa đơn hạ tầng",
+          "row2Sender": "AWS",
+          "row3Action": "No action",
+          "row3Clue": "email cá nhân",
+          "row3Sender": "Sarah Chen",
+          "title": "Preview: receipts"
+        },
+        "status": "Chưa thay đổi gì trong Gmail"
+      },
+      "saveCta": "Dùng rule này"
     }
   },
   "permissions": {

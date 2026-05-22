@@ -12,7 +12,7 @@ export default function OnboardingIndexPage() {
 
   useEffect(() => {
     if (!onboardingStep) return;
-    if (onboardingStep === 'GMAIL_CONNECTED') router.replace('/onboarding/template-select');
+    if (onboardingStep === 'GMAIL_CONNECTED') router.replace('/onboarding/gmail-connect');
     else if (onboardingStep === 'TEMPLATE_SELECTED') router.replace('/onboarding/complete');
     else if (onboardingStep === 'COMPLETE') router.replace('/settings');
     else router.replace('/rules');
