@@ -105,7 +105,7 @@ Plans:
 
 **Requirements (12)**: RACT-01, RACT-02, RACT-03, RACT-04, RACT-05, RACT-06, RACT-07, RACT-08, RACT-09, RACT-10, RACT-11, RACT-12
 **Depends on:** Phase 8
-**Plans:** 1/6 plans executed
+**Plans:** 2/6 plans executed
 
 **Source artifacts:**
 
@@ -131,7 +131,7 @@ Plans:
 **Wave 1**
 
 - [x] 08.1-01-PLAN.md — Contract and architecture boundary: reconcile stale docs/requirements, define shared outbound gateway contract, add Spring Modulith named interfaces, regenerate Modulith docs
-- [ ] 08.1-02-PLAN.md — DB-backed examples/personas/action descriptors: Liquibase seed EN+VI from Inbox Zero, user read APIs, admin CRUD APIs, OpenAPI codegen
+- [x] 08.1-02-PLAN.md — DB-backed examples/personas/action descriptors: Liquibase seed EN+VI from Inbox Zero, user read APIs, admin CRUD APIs, OpenAPI codegen
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -171,7 +171,7 @@ Plans:
 | 1-6 (collapsed) | v1.0 | 123/123 | Complete | 2026-05-15 |
 | 7. Chat Email Assistant | v1.1 | 6/6 | Complete | 2026-05-18 |
 | 8. Admin Console & Operator Tooling | v1.2 | 6/6 | Complete   | 2026-05-20 |
-| 08.1. Inbox Zero-style Rule Actions & Admin-managed Examples Catalog | v1.2 | 1/6 | In Progress | — |
+| 08.1. Inbox Zero-style Rule Actions & Admin-managed Examples Catalog | v1.2 | 2/6 | In Progress | — |
 | 9. User Settings UI on Curated Catalog | v1.2 | 0/0 | Not started | — |
 
 ---
