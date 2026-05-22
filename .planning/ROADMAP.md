@@ -31,7 +31,7 @@ Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
 **Phase numbering continues from v1.1.** v1.2 begins at Phase 8 (no reset to 1).
 
 - [x] **Phase 8: Admin Console & Operator Tooling** — Operators can log in to a hardened `/admin/*` console with RBAC + append-only audit, configure 6 LLM providers with master keys, curate the per-feature model catalog, inspect tenant health / worker queue / platform LLM spend, and deploy v1.2 infrastructure via the re-platformed reverse proxy (completed 2026-05-20)
-- [ ] **Phase 08.1: Inbox Zero-style Rule Actions & Admin-managed Examples Catalog** — Users can build rules from Inbox Zero-style examples/personas and enable expanded actions including send replies, forward, and send email only behind explicit settings, risk acknowledgement, runtime safety gates, and auditable send boundaries
+- [ ] **Phase 08.1: Inbox Zero-style Rule Actions & Admin-managed Examples Catalog** — Users can build rules from Inbox Zero-style examples/personas and enable expanded actions including send replies, forward, and send email behind one default-ON global auto-send setting, runtime safety gates, fallback-to-draft behavior, and auditable send boundaries
 - [ ] **Phase 9: User Settings UI on Curated Catalog** — Users can configure voice, behavior, safety net, and AI provider/model across four tabs backed by the admin-curated catalog
 
 ## Phase Details
@@ -101,11 +101,11 @@ Plans:
 
 ### Phase 08.1: Inbox Zero-style rule actions and admin-managed examples catalog (INSERTED)
 
-**Goal:** Bring the Inbox Zero rule-authoring UX into Zero Mail: copy the example/persona catalog as a seed, show an Available Actions panel, let admins manage examples/actions, and allow real automated outbound rule actions (`send_reply`, `forward_email`, `send_email`) only when the user has explicitly enabled the corresponding setting and the backend safety gates pass.
+**Goal:** Bring the Inbox Zero rule-authoring UX into Zero Mail: copy the example/persona catalog as a seed, show an Available Actions panel, let admins manage examples/actions, and allow real automated outbound rule actions (`send_reply`, `forward_email`, `send_email`) behind one default-ON global auto-send setting, backend safety gates, fallback-to-draft behavior, and a shared outbound gateway boundary.
 
 **Requirements (12)**: RACT-01, RACT-02, RACT-03, RACT-04, RACT-05, RACT-06, RACT-07, RACT-08, RACT-09, RACT-10, RACT-11, RACT-12
 **Depends on:** Phase 8
-**Plans:** 0 plans
+**Plans:** 6 plans in 3 waves
 
 **Source artifacts:**
 
@@ -118,17 +118,30 @@ Plans:
 2. The examples UI includes the copied Inbox Zero persona set (`Founder`, `Influencer`, `Realtor`, `Investor`, `Assistant`, `Developer`, `Designer`, `Sales`, `Marketer`, `Support`, `Recruiter`, `Student`, `Outreach`, `Other`) and the example prompt grid seeded from the copied source artifact
 3. Admin can create, edit, disable, reorder, and localize examples/personas/action descriptors without code changes; disabled examples do not appear in the user rule builder
 4. User-facing Available Actions includes `Label`, `Archive`, `Save draft`, `Mark read/unread`, `Star/unstar`, `Add to digest`, `Mark spam`, `Send reply`, `Forward`, and `Send email`, with unavailable actions visibly disabled and explained
-5. Settings expose account-level toggles for automated outbound rule actions plus per-action toggles for auto-send replies, auto-forward, and auto-send new emails; defaults are OFF for outbound actions
+5. Settings expose one account-level `Auto-send rules` toggle for automated outbound rule actions; it defaults ON and there are no per-action outbound toggles
 6. Manual editor and AI compiler both persist the same structured `When/Then` schema; natural language remains only `sourceText`/audit metadata
-7. Rule-triggered outbound actions execute only when account setting, per-action setting, rule-level acknowledgement, sender-risk guard, safety net, cap/rate-limit, idempotency, OAuth scope, and tenant checks all pass
-8. If an outbound gate fails, the rule result becomes `save_draft` or `needs_review` with an audit reason; it must not silently drop or send the email
+7. Rule-triggered outbound actions execute only when the global setting, sender-risk guard, safety net, cap/rate-limit, idempotency, OAuth scope, tenant checks, and audit reservation all pass
+8. If an outbound gate fails or the global setting is OFF, the rule result falls back to Gmail `save_draft` with an audit reason; it must not silently drop or send the email
 9. All Gmail send execution goes through one shared outbound gateway/send executor; ArchUnit/grep tests are updated to allow that boundary and fail any direct Gmail send call site elsewhere
 10. Privacy constraints remain intact: no long-term storage of Gmail-read email bodies, LLM prompts/completions, or embeddings; persisted draft bodies are allowed only when they are user-authored/action arguments under the existing draft-body carve-out
 11. Low-trust/static sender protections equivalent to Inbox Zero's example-risk guard prevent users from saving demo examples that would send to real people by accident
 12. UAT covers examples import, admin catalog management, outbound setting gates, downgrade-to-draft behavior, and the no-bypass architecture tests
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 08.1 to break down)
+**Wave 1**
+
+- [ ] 08.1-01-PLAN.md — Contract and architecture boundary: reconcile stale docs/requirements, define shared outbound gateway contract, add Spring Modulith named interfaces, regenerate Modulith docs
+- [ ] 08.1-02-PLAN.md — DB-backed examples/personas/action descriptors: Liquibase seed EN+VI from Inbox Zero, user read APIs, admin CRUD APIs, OpenAPI codegen
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 08.1-03-PLAN.md — Admin rule catalog UI: bilingual persona/example/action descriptor management in `apps/admin`
+- [ ] 08.1-04-PLAN.md — User rules UI: persona examples inside existing `RuleComposer`, Available Actions panel, default-ON global auto-send setting UI
+- [ ] 08.1-05-PLAN.md — Rule action schema/compiler/manual builder: expanded structured action intents for mark/read/star/digest/spam/reply/forward/send
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 08.1-06-PLAN.md — Runtime outbound execution: shared `OutboundSendGateway`, fallback-to-draft gates, ArchUnit/privacy tests, safe Gmail UAT
 
 ### Phase 9: User Settings UI on Curated Catalog
 
@@ -158,7 +171,7 @@ Plans:
 | 1-6 (collapsed) | v1.0 | 123/123 | Complete | 2026-05-15 |
 | 7. Chat Email Assistant | v1.1 | 6/6 | Complete | 2026-05-18 |
 | 8. Admin Console & Operator Tooling | v1.2 | 6/6 | Complete   | 2026-05-20 |
-| 08.1. Inbox Zero-style Rule Actions & Admin-managed Examples Catalog | v1.2 | 0/0 | Not started | — |
+| 08.1. Inbox Zero-style Rule Actions & Admin-managed Examples Catalog | v1.2 | 0/6 | Ready to execute | — |
 | 9. User Settings UI on Curated Catalog | v1.2 | 0/0 | Not started | — |
 
 ---
