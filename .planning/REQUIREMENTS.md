@@ -105,14 +105,14 @@
 - [ ] **RACT-02**: User examples UI includes the copied Inbox Zero persona set (`Founder`, `Influencer`, `Realtor`, `Investor`, `Assistant`, `Developer`, `Designer`, `Sales`, `Marketer`, `Support`, `Recruiter`, `Student`, `Outreach`, `Other`) and the example prompt grid seeded from `.planning/phases/08.1-inbox-zero-style-rule-actions-and-admin-managed-examples-cat/inbox-zero-examples.ts`
 - [ ] **RACT-03**: Admin can create, edit, disable, reorder, and localize examples/personas/action descriptors without code changes; disabled examples do not appear in the user rule builder
 - [ ] **RACT-04**: User-facing Available Actions panel includes `Label`, `Archive`, `Save draft`, `Mark read/unread`, `Star/unstar`, `Add to digest`, `Mark spam`, `Send reply`, `Forward`, and `Send email`, with unavailable actions visibly disabled and explained
-- [ ] **RACT-05**: Settings expose one account-level `Auto-send rules` toggle for automated outbound rule actions; it defaults ON for new users/tenants and there are no individual outbound action toggles
+- [x] **RACT-05**: Settings expose one account-level `Auto-send rules` toggle for automated outbound rule actions; it defaults ON for new users/tenants and there are no individual outbound action toggles
 - [ ] **RACT-06**: Manual editor and AI compiler both persist the same structured `When/Then` schema; natural language remains only `sourceText`/audit metadata
-- [ ] **RACT-07**: Rule-triggered outbound actions execute only when the global auto-send setting, sender-risk guard, safety net, cap/rate-limit, idempotency, OAuth scope, tenant checks, and audit reservation all pass
+- [x] **RACT-07**: Rule-triggered outbound actions execute only when the global auto-send setting, sender-risk guard, safety net, cap/rate-limit, idempotency, OAuth scope, tenant checks, and audit reservation all pass
 - [ ] **RACT-08**: If an outbound gate fails or the global auto-send setting is OFF, the rule result falls back to Gmail `save_draft` with an audit reason; the system must not silently drop or send the email
-- [ ] **RACT-09**: All Gmail send execution goes through one shared outbound gateway/send executor; ArchUnit/grep tests are updated to allow that boundary and fail any direct Gmail send call site elsewhere
-- [ ] **RACT-10**: Privacy constraints remain intact: no long-term storage of Gmail-read email bodies, LLM prompts/completions, or embeddings; persisted draft bodies are allowed only when they are user-authored/action arguments under the existing draft-body carve-out
+- [x] **RACT-09**: All Gmail send execution goes through one shared outbound gateway/send executor; ArchUnit/grep tests are updated to allow that boundary and fail any direct Gmail send call site elsewhere
+- [x] **RACT-10**: Privacy constraints remain intact: no long-term storage of Gmail-read email bodies, LLM prompts/completions, or embeddings; persisted draft bodies are allowed only when they are user-authored/action arguments under the existing draft-body carve-out
 - [ ] **RACT-11**: Low-trust/static sender protections equivalent to Inbox Zero's example-risk guard prevent users from saving demo examples that would send to real people by accident
-- [ ] **RACT-12**: UAT covers examples import, admin catalog management, outbound setting gates, downgrade-to-draft behavior, and no-bypass architecture tests
+- [x] **RACT-12**: UAT covers examples import, admin catalog management, outbound setting gates, downgrade-to-draft behavior, and no-bypass architecture tests
 
 ### Architecture Invariants — Phase 8 baseline, extended by Phase 08.1
 
@@ -251,14 +251,14 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 | RACT-02 | Phase 08.1 | Pending |
 | RACT-03 | Phase 08.1 | Pending |
 | RACT-04 | Phase 08.1 | Pending |
-| RACT-05 | Phase 08.1 | Pending |
+| RACT-05 | Phase 08.1 | Complete |
 | RACT-06 | Phase 08.1 | Pending |
-| RACT-07 | Phase 08.1 | Pending |
+| RACT-07 | Phase 08.1 | Complete |
 | RACT-08 | Phase 08.1 | Pending |
-| RACT-09 | Phase 08.1 | Pending |
-| RACT-10 | Phase 08.1 | Pending |
+| RACT-09 | Phase 08.1 | Complete |
+| RACT-10 | Phase 08.1 | Complete |
 | RACT-11 | Phase 08.1 | Pending |
-| RACT-12 | Phase 08.1 | Pending |
+| RACT-12 | Phase 08.1 | Complete |
 | SET-VOICE-01 | Phase 9 | Pending |
 | SET-VOICE-02 | Phase 9 | Pending |
 | SET-VOICE-03 | Phase 9 | Pending |
