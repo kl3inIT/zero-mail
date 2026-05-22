@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin Console Foundation + Settings UI
-status: shipped
-stopped_at: Phase 8 shipped — PR #46
-last_updated: "2026-05-21T02:45:00.000Z"
-last_activity: 2026-05-21
+status: Phase 08.1 inserted after Phase 8; policy/docs updated for user-enabled outbound rule automation
+stopped_at: Phase 08.1 context gathered
+last_updated: "2026-05-22T20:34:52.723Z"
+last_activity: 2026-05-23
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 1
   total_plans: 6
   completed_plans: 6
-  percent: 50
+  percent: 33
 ---
 
 # Project State
@@ -20,21 +20,22 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-05-11)
 
-**Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 08 — admin-console-operator-tooling
+**Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive, unsafe, or unaudited actions), and reliability are non-negotiable.
+**Current focus:** Phase 08.1 — inbox-zero-style-rule-actions-and-admin-managed-examples-catalog
 
 ## Current Position
 
-Phase: 08 (admin-console-operator-tooling) — SHIPPED (PR #46)
-Plan: 6 of 6 (8A → 8B → 8C → 8D → 8E → 8F all complete)
-Status: Phase 8 shipped — PR #46 open against main (UAT 11/11 pass, audit-emission gap closed by fe5d2cf9)
-Last activity: 2026-05-21
+Phase: 08.1 (inbox-zero-style-rule-actions-and-admin-managed-examples-catalog) — INSERTED
+Plan: 0 of 0 (run `/gsd-plan-phase 08.1` to break down implementation)
+Status: Phase 08.1 inserted after Phase 8; policy/docs updated for user-enabled outbound rule automation
+Last activity: 2026-05-23
 
 ## Current Milestone Roadmap
 
-**v1.2 — Admin Console + User Settings UI** (2 phases, 61 requirements, all pending; merged 2026-05-19; WebAuthn pivot 2026-05-19)
+**v1.2 — Admin Console + User Settings UI** (3 phases, 73 requirements; merged 2026-05-19; WebAuthn pivot 2026-05-19; Phase 08.1 inserted 2026-05-23)
 
 - **Phase 8** — Admin Console & Operator Tooling (WebAuthn admin auth + audit foundation + master keys + curated catalog + tenant inspection + queue + spend + OPS-INFRA; planning structure inside the phase: 8A foundation → 8B master keys → 8C tenant inspection → 8D catalog Sync → 8E queue health → 8F spend dashboard) — 42 requirements (OPS-INFRA-01..03, ADMIN-01..10, ARCH-08/09/10/11/12, MKEY-01..08, CAT-01..07, OPS-TENANT-01..05, OPS-QUEUE-01..02, OPS-SPEND-01..02)
+- **Phase 08.1** — Inbox Zero-style Rule Actions & Admin-managed Examples Catalog (examples/personas seed, admin-managed examples/actions, user settings for outbound automation, send/reply/forward runtime safety gates, and outbound gateway architecture tests) — 12 requirements (RACT-01..12)
 - **Phase 9** — User Settings UI on Curated Catalog (4-tab Settings: Personalization, Behavior, Safety Net, AI Provider/Model — AI tab consumes curated catalog from Phase 8) — 19 requirements (SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04, SET-AI-01..04)
 
 See `.planning/ROADMAP.md` for full phase details + success criteria, and `.planning/REQUIREMENTS.md` Traceability section for full REQ-ID → phase mapping.
@@ -365,6 +366,7 @@ Recent decisions affecting current work:
 - Phase 1.4 marked complete without `/gsd-ship` on 2026-04-27 because Phase 1.5 supersedes much of the remaining OAuth/UX cleanup value.
 - Phase 01.5 inserted after Phase 1.4: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep - Remaining heavy Phase 1.5 work: single Google OAuth upfront Gmail scope, remove google-gmail mismatch architecture, merge Gmail token provisioning, simplify onboarding/consent UX, deflate frontend primitives, polish landing/login/onboarding/settings/ReconnectPrompt, and close surviving REVIEW cleanup; excludes quick tasks already completed. (URGENT)
 - Phase 01.6 inserted after Phase 1: Brand Identity, Design Tokens, and Landing Page (URGENT)
+- Phase 08.1 inserted after Phase 8: Inbox Zero-style rule actions and admin-managed examples catalog (URGENT)
 
 ### Pending Todos
 
@@ -504,9 +506,9 @@ Items acknowledged and deferred at v1.1 milestone close on 2026-05-19.
 
 ## Session Continuity
 
-Last session: 2026-05-20T08:49:56.382Z
-Stopped at: Completed 08-8D-PLAN.md
-Resume file: None
+Last session: 2026-05-22T20:34:52.699Z
+Stopped at: Phase 08.1 context gathered
+Resume file: .planning/phases/08.1-inbox-zero-style-rule-actions-and-admin-managed-examples-cat/08.1-CONTEXT.md
 
 ## Operator Next Steps
 
