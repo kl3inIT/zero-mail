@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.StructuredTaskScope;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
@@ -233,6 +234,7 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
     @Test
     void multitenant_no_key_leak() throws Exception {
         int requestCount = 100;
+        Semaphore concurrentGatewayCalls = new Semaphore(16);
         List<UUID> tenantIds =
                 IntStream.range(0, requestCount).mapToObj(_ -> UUID.randomUUID()).toList();
         for (int tenantIndex = 0; tenantIndex < requestCount; tenantIndex++) {
@@ -270,8 +272,10 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
                             .map(
                                     tenantId ->
                                             scope.fork(
-                                                    () ->
-                                                            ScopedValue.where(
+                                                    () -> {
+                                                        concurrentGatewayCalls.acquire();
+                                                        try {
+                                                            return ScopedValue.where(
                                                                             TenantContext.TENANT,
                                                                             tenantId.toString())
                                                                     .call(
@@ -279,7 +283,11 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
                                                                                     llmGateway.chat(
                                                                                             CallSite
                                                                                                     .PREVIEW,
-                                                                                            "hello"))))
+                                                                                            "hello"));
+                                                        } finally {
+                                                            concurrentGatewayCalls.release();
+                                                        }
+                                                    }))
                             .toList();
             scope.join();
             for (int tenantIndex = 0; tenantIndex < requestCount; tenantIndex++) {
