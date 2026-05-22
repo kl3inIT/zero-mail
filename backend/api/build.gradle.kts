@@ -15,6 +15,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-websocket")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
+    implementation("org.springframework.security:spring-security-webauthn")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.session:spring-session-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -107,4 +108,8 @@ openApi {
     outputDir.set(rootProject.file("apps/web/openapi"))
     outputFileName.set("openapi.json")
     waitTimeInSeconds.set(180)
+}
+
+tasks.named("forkedSpringBootRun") {
+    dependsOn(":backend:core:jar")
 }

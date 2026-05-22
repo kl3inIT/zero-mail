@@ -11,19 +11,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import type { BillingLedgerEntryResponse } from '@/features/billing/api/billing-api';
 import { formatCredits, formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
-export type LedgerEntry = {
-  id: string;
-  timestamp: string;
-  type: 'topup' | 'reserve' | 'settle' | 'release' | 'adjustment';
-  description: string;
-  amountCredits: number;
-  balanceAfterCredits?: number;
-  amountVnd?: number;
-  reference?: string;
-};
+export type LedgerEntry = BillingLedgerEntryResponse;
 
 type LedgerTableProps = {
   rows?: LedgerEntry[];
@@ -34,9 +26,18 @@ export function LedgerTable({ rows = [], injectedRows }: LedgerTableProps) {
   const t = useTranslations();
   const locale = useLocale();
   const entries = injectedRows ?? rows;
+  const ledgerTypeLabels = {
+    topup: t('billing.ledger.type.topup'),
+    grant: t('billing.ledger.type.grant'),
+    reserve: t('billing.ledger.type.reserve'),
+    settle: t('billing.ledger.type.settle'),
+    release: t('billing.ledger.type.release'),
+    expire: t('billing.ledger.type.expire'),
+    adjustment: t('billing.ledger.type.adjustment'),
+  };
 
   return (
-    <div className="bg-card rounded-lg border" data-testid="ledger-table">
+    <div className="bg-card overflow-x-auto rounded-lg border" data-testid="ledger-table">
       <Table>
         <TableHeader>
           <TableRow>
@@ -51,6 +52,8 @@ export function LedgerTable({ rows = [], injectedRows }: LedgerTableProps) {
         <TableBody>
           {entries.map((entry) => {
             const topup = entry.type === 'topup' || entry.amountCredits > 0;
+            const ledgerTypeLabel =
+              ledgerTypeLabels[entry.type as keyof typeof ledgerTypeLabels] ?? entry.type;
             return (
               <TableRow
                 key={entry.id}
@@ -65,7 +68,7 @@ export function LedgerTable({ rows = [], injectedRows }: LedgerTableProps) {
                     variant="outline"
                     className={topup ? 'border-green/30 text-green' : undefined}
                   >
-                    {t(`billing.ledger.type.${entry.type}`)}
+                    {ledgerTypeLabel}
                   </Badge>
                 </TableCell>
                 <TableCell className="min-w-64 whitespace-normal">{entry.description}</TableCell>

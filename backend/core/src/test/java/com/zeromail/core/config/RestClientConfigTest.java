@@ -74,6 +74,7 @@ class RestClientConfigTest {
                         new BillingPaymentAccountProperties(
                                 "VCB", "Vietcombank", "0000000000", "ZERO MAIL", ""),
                         new BillingCostProperties(0),
+                        null,
                         1000,
                         5,
                         Duration.ofHours(24)),
@@ -88,6 +89,7 @@ class RestClientConfigTest {
                                 Duration.ofSeconds(5),
                                 Duration.ofSeconds(30)),
                         new ZeroMailLlmByokProperties(
-                                false, List.of(), Duration.ofSeconds(5), Duration.ofSeconds(15))));
+                                false, List.of(), Duration.ofSeconds(5), Duration.ofSeconds(15))),
+                null);
     }
 }

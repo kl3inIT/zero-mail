@@ -106,6 +106,7 @@ export function HistorySidebar({
                   <DropdownMenuContent>
                     <DropdownMenuItem
                       variant="destructive"
+                      disabled={deleteChat.isPending}
                       onClick={() => deleteChat.mutate(chat.id)}
                       data-testid="chat-delete"
                     >

@@ -71,6 +71,8 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
     void resetRows() {
         jdbcTemplate.update("delete from credit_ledger_entry where tenant_id = ?", TENANT_ID);
         jdbcTemplate.update("delete from credit_reservation where tenant_id = ?", TENANT_ID);
+        // changelog 084/085 added llm_call_audit with FK to tenants — clear it before tenant delete
+        jdbcTemplate.update("delete from llm_call_audit where tenant_id = ?", TENANT_ID);
         ScopedValue.where(TenantContext.TENANT, TENANT_ID.toString())
                 .run(
                         () ->

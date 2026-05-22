@@ -28,4 +28,5 @@ export default {
   ],
   'apps/web/!(messages)/**/*.{md,mdx,json,css}': ['pnpm --filter web exec prettier --write'],
   'apps/web/*.{md,json,css}': ['pnpm --filter web exec prettier --write'],
+  'apps/admin/**/*.{ts,tsx,js,jsx}': ['pnpm --filter @zeromail/admin exec eslint --fix'],
 };

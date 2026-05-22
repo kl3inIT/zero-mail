@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:run": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "e2e": "pnpm test:e2e",
     "test:e2e": "node ../../node_modules/@playwright/test/cli.js test",
@@ -21,7 +22,7 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.187",
-    "@base-ui/react": "^1.4.1",
+    "@base-ui/react": "^1.5.0",
     "@radix-ui/react-use-controllable-state": "^1.2.2",
     "@stomp/stompjs": "^7.3.0",
     "@streamdown/cjk": "^1.0.3",
@@ -46,7 +47,7 @@
     "react-dom": "19.2.6",
     "recharts": "3.8.1",
     "shadcn": "^4.7.0",
-    "shiki": "^4.0.2",
+    "shiki": "^4.1.0",
     "sonner": "^2.0.7",
     "streamdown": "^2.5.0",
     "tailwind-merge": "^3.6.0",
@@ -63,14 +64,16 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "6.0.2",
+    "@vitest/coverage-v8": "4.1.7",
     "eslint": "^9.39.4",
     "eslint-config-next": "16.2.6",
     "eslint-config-prettier": "10.1.8",
     "jsdom": "29.1.1",
+    "msw": "^2.14.6",
     "openapi-typescript": "7.13.0",
     "tailwindcss": "^4",
-    "tsx": "^4.22.2",
+    "tsx": "^4.22.3",
     "typescript": "^6",
-    "vitest": "4.1.6"
+    "vitest": "4.1.7"
   }
 }

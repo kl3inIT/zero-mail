@@ -1,4 +1,4 @@
-import { api, xsrfHeader } from '@/lib/api/client';
+import { api } from '@/lib/api/client';
 import { ErrorCode } from '@/lib/api/error-codes';
 import type { components } from '@/lib/api/schema';
 
@@ -55,10 +55,6 @@ export class NeedsReplyApiError extends Error {
     this.code = apiError?.code;
     this.apiError = apiError;
   }
-}
-
-function unsafeHeaders(): HeadersInit {
-  return { ...xsrfHeader() };
 }
 
 function maybeApiError(error: unknown): ApiError | undefined {
@@ -162,7 +158,6 @@ export async function getToReplyCount(): Promise<number> {
 export async function generateDraft(gmailThreadId: string): Promise<ThreadDraftResponse> {
   const result = await api.POST('/api/threads/{gmailThreadId}/draft', {
     params: { path: { gmailThreadId } },
-    headers: unsafeHeaders(),
   });
 
   if (result.error || !result.response.ok || result.data === undefined) {
@@ -175,7 +170,6 @@ export async function generateDraft(gmailThreadId: string): Promise<ThreadDraftR
 export async function markResolved(gmailThreadId: string): Promise<void> {
   const result = await api.POST('/api/threads/{gmailThreadId}/resolve', {
     params: { path: { gmailThreadId } },
-    headers: unsafeHeaders(),
   });
 
   if (result.error || !result.response.ok) {

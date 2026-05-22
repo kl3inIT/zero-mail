@@ -44,7 +44,7 @@ class OnboardingCsrfIntegrationTest extends ApiPostgresTestBase {
         Seed seed = seedTenant("csrf-reject");
 
         mvc.perform(
-                        post("/onboarding/select-template")
+                        post("/api/onboarding/select-template")
                                 .with(
                                         oidcLogin()
                                                 .idToken(
@@ -67,7 +67,7 @@ class OnboardingCsrfIntegrationTest extends ApiPostgresTestBase {
 
         MockHttpServletResponse tokenResponse =
                 mvc.perform(
-                                get("/me")
+                                get("/api/me")
                                         .with(
                                                 oidcLogin()
                                                         .idToken(
@@ -88,7 +88,7 @@ class OnboardingCsrfIntegrationTest extends ApiPostgresTestBase {
         assertThat(xsrfCookie).as("SPA CSRF GET must issue XSRF-TOKEN cookie").isNotNull();
 
         mvc.perform(
-                        post("/onboarding/select-template")
+                        post("/api/onboarding/select-template")
                                 .with(
                                         oidcLogin()
                                                 .idToken(

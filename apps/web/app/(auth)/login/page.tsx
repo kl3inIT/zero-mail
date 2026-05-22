@@ -5,8 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { LegalFooter } from '@/features/auth/components/LegalFooter';
 import AuthTopBar from '@/features/auth/components/AuthTopBar';
-import { TrustPanel } from '@/features/auth/components/TrustPanel';
-import { GoogleG, LockIcon, MailIcon } from '@/features/landing/components/PrototypeIcons';
+import { GoogleG, MailIcon } from '@/features/landing/components/PrototypeIcons';
 import { getPublicApiUrl } from '@/lib/api/base-url';
 import { cn } from '@/lib/utils';
 
@@ -54,13 +53,9 @@ export default async function LoginPage({
     <div className="zm-auth flex min-h-screen flex-col">
       <AuthTopBar />
       <main className="zm-auth-main flex-1">
-        <div className="zm-auth-grid">
-          <div className="zm-auth-panel">
+        <div className="zm-auth-grid zm-login-grid">
+          <div className="zm-auth-panel zm-login-panel">
             <div className="flex flex-col gap-1">
-              <span className="zm-eyebrow">
-                <span className="zm-dot" />
-                {tLogin('title')}
-              </span>
               <h1 className="zm-auth-title">
                 <span>{tLogin('headlineA')}</span>
                 <em>{tLogin('headlineB')}</em>
@@ -82,17 +77,12 @@ export default async function LoginPage({
                 {tLogin('googleButton')}
               </a>
               <p className="zm-signin-helper">
-                <LockIcon size={11} /> {tLogin('googleNote')}
+                <span>{tLogin('betaNote')}</span>
+                <span>{tLogin('noCard')}</span>
               </p>
-              <div className="zm-or-row">
-                <span>{tLogin('divider')}</span>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                className="h-10 w-full text-(--text-muted) hover:text-(--ink)"
-              >
-                <MailIcon size={14} /> {tLogin('workEmail')}
+              <Button type="button" variant="outline" className="zm-work-gmail-btn" disabled>
+                <MailIcon size={14} />
+                {tLogin('workEmail')}
               </Button>
               <LegalFooter className="zm-signin-terms text-left" />
             </div>
@@ -103,7 +93,6 @@ export default async function LoginPage({
               </Link>
             </div>
           </div>
-          <TrustPanel />
         </div>
       </main>
       <footer className="zm-auth-footer">

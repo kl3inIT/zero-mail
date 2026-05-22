@@ -1,6 +1,5 @@
 import AuthTopBar from '@/features/auth/components/AuthTopBar';
 import { StepIndicator } from '@/features/auth/components/StepIndicator';
-import { TrustPanel } from '@/features/auth/components/TrustPanel';
 import { CompleteClient } from './CompleteClient';
 
 export default function OnboardingCompletePage() {
@@ -9,10 +8,9 @@ export default function OnboardingCompletePage() {
       <AuthTopBar surface="protected">
         <StepIndicator currentStep="COMPLETE" />
       </AuthTopBar>
-      <main className="relative z-[1] mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
-        <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <main className="relative z-[1] mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+        <div className="grid min-w-0 gap-8">
           <CompleteClient />
-          <TrustPanel />
         </div>
       </main>
     </div>

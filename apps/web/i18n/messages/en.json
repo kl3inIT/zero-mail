@@ -175,30 +175,27 @@
     "everywhere": "End-to-end · SOC 2 Type II in progress",
     "help": "Help",
     "login": {
-      "body": "Zero Mail connects to Gmail with your permission. We never auto-send, and you can revoke access from Google in two clicks.",
-      "divider": "or",
+      "betaNote": "Free during beta",
+      "body": "We'll redirect you to Google so you can choose an account and grant Gmail access to Zero Mail.",
       "googleButton": "Continue with Google",
-      "googleNote": "We'll redirect you to Google to grant access.",
       "headline": "Reach inbox zero without giving up control.",
-      "headlineA": "Welcome back to",
-      "headlineB": "your inbox.",
+      "headlineA": "Sign in to start",
+      "headlineB": "clearing your inbox.",
       "newUser": "First time here?",
+      "noCard": "No card required",
       "privacy": "Privacy Policy",
-      "safety": {
-        "noAutoSend": "No auto-send",
-        "noLongTermStorage": "No long-term email body storage",
-        "revokeAnytime": "You can revoke access anytime"
-      },
       "terms": "Terms",
       "termsAnd": "and",
       "termsPrefix": "By signing in you agree to our",
       "title": "Sign in",
       "waitlist": "Register to experience Zero Mail →",
-      "workEmail": "Sign in with work email"
+      "workEmail": "Sign in with company Gmail"
     }
   },
   "billing": {
     "balance": {
+      "betaCredits": "Beta credits",
+      "betaNotice": "Free during beta. We'll notify you before paid plans are required.",
       "description": "Balance available for Zero Mail AI actions.",
       "error": {
         "body": "Something went wrong fetching your credit balance. Try again.",
@@ -206,9 +203,15 @@
         "title": "Couldn't load the balance"
       },
       "held": "Held credits",
+      "heldDetail": "Reserved by in-flight actions",
       "label": "Available credits",
+      "monthlyGrant": "{credits} credits / month",
+      "noExpiry": "Does not reset with beta",
+      "paidCredits": "Paid credits",
       "refreshLabel": "Refreshes",
       "refreshValue": "Every 45 seconds",
+      "resetsAt": "Resets at",
+      "resetUnknown": "Unknown",
       "topupCta": "Top up credits",
       "unit": "credits"
     },
@@ -226,7 +229,7 @@
         "timestamp": "Time",
         "type": "Type"
       },
-      "description": "Top-ups, holds, and credit usage will be listed here.",
+      "description": "Recent grants, top-ups, holds, spends, and releases.",
       "empty": {
         "body": "Your top-ups and credit usage will show up here. Add credits to get started.",
         "heading": "No transactions yet"
@@ -239,6 +242,8 @@
       "title": "Transaction history",
       "type": {
         "adjustment": "Adjustment",
+        "expire": "Expired",
+        "grant": "Grant",
         "release": "Release",
         "reserve": "Reserve",
         "settle": "Settle",
@@ -251,7 +256,7 @@
       "valueMissing": "—"
     },
     "page": {
-      "description": "Track your credit balance, create VietQR top-ups, and review transaction history when the backend is ready.",
+      "description": "Track free beta credits, paid credits, and recent usage activity.",
       "title": "Billing"
     },
     "topup": {
@@ -758,9 +763,179 @@
     "tagline": "Zero Mail triages your Gmail with rules you write in plain English — labels what matters, archives what doesn't, drafts the easy replies. You stay in the loop on everything that goes out.",
     "waitlistCta": "Register to experience Zero Mail"
   },
+  "landingFaq": {
+    "header": {
+      "title": "Frequently asked questions"
+    },
+    "items": {
+      "a1": "We support Gmail, Google Workspace, and Microsoft Outlook accounts.",
+      "a2": "Email us. We're always listening to improve your email experience.",
+      "a3": "No! Zero Mail is not an email client. It runs alongside your existing email app. You still use Google or Outlook as normal.",
+      "a4": "Yes — if you feel we haven't delivered value, email us within 14 days of upgrading and we'll refund you.",
+      "a5": "Absolutely. We offer a 7-day free trial across all plans so you can experience it right away — no credit card required!",
+      "q1": "Which email providers does Zero Mail support?",
+      "q2": "How can I request a new feature?",
+      "q3": "Will Zero Mail replace my current email app?",
+      "q4": "Do you offer refunds?",
+      "q5": "Can I try Zero Mail for free?"
+    }
+  },
+  "landingFeatures": {
+    "sec1": {
+      "after": "After",
+      "before": "Before",
+      "body": "Drowning in email? Stop spending energy prioritizing them. Our AI assistant labels everything automatically.",
+      "title": {
+        "line1": "Auto-categorized.",
+        "line2": "Never miss an important email."
+      }
+    },
+    "sec2": {
+      "body": "When you check your inbox, every email that needs a reply has a draft already written in your voice, ready to send.",
+      "title": "Drafts waiting in your inbox"
+    },
+    "sec3": {
+      "body": "Read email, draft replies, and manage your inbox from Zalo, Telegram, or Web — no app switching.",
+      "title": "Your inbox, wherever you work"
+    },
+    "sec4": {
+      "body": "One-click install. Start organizing and drafting in minutes.",
+      "step1": {
+        "body": "Link your Gmail in two clicks to get started.",
+        "label": "STEP 1",
+        "title": "Connect your Google account"
+      },
+      "step2": {
+        "body": "Smart categories set up automatically. Use defaults or create your own.",
+        "chips": {
+          "calendar": "📅 Calendar",
+          "coldEmail": "❄️ Cold Email",
+          "internal": "👥 Internal",
+          "marketing": "📢 Marketing",
+          "needsReply": "↩️ Needs reply",
+          "newsletter": "📧 Newsletter",
+          "notifications": "🔔 Notifications",
+          "urgent": "🔥 Urgent"
+        },
+        "label": "STEP 2",
+        "title": "Organize your inbox your way"
+      },
+      "step3": {
+        "body": "Every email that needs a reply has a draft waiting for you to hit Send.",
+        "draftBody": "Happy to meet at 5pm next week!",
+        "draftedBy": "DRAFTED BY AI:",
+        "label": "STEP 3",
+        "mockHeader": "New Message",
+        "sendButton": "Send",
+        "title": "Smart auto-drafts"
+      },
+      "title": "Get started in minutes"
+    },
+    "sec5": {
+      "body": "See which emails you've never opened, then unsubscribe and archive them in one click.",
+      "title": "Bulk-unsubscribe from email you never read"
+    },
+    "sec6": {
+      "body": "Flexible enough for any workflow. Simple enough to set up in minutes.",
+      "col1": {
+        "body": "See who emails you most and what's filling your inbox. Detailed analytics and cleanup.",
+        "mockCountHeader": "Count",
+        "mockHeading": "Who emails you most",
+        "mockSenderHeader": "Sender",
+        "title": "Analyze your inbox. Understand to optimize"
+      },
+      "col2": {
+        "body": "Connect your calendar and CRM to draft based on your schedule and customer data.",
+        "title": "Drafts that know your schedule"
+      },
+      "col3": {
+        "body": "Your inbox, your rules. Configure everything in natural English.",
+        "examples": "↗ See examples",
+        "newRule": "+ New rule",
+        "rule1": "Label emails from @company.com as Internal",
+        "rule2": "Archive all invoices and forward to accounting",
+        "rule3": "Send newsletter digest on Sundays",
+        "rule4": "If someone wants to schedule a meeting, reply w",
+        "title": "Customize in natural language"
+      },
+      "title": "Designed around how you work"
+    }
+  },
+  "landingPricing": {
+    "ctaTrial": "Start 7-day free trial",
+    "header": {
+      "badge": "Annual pricing, 7-day free trial",
+      "body": "No hidden fees. Cancel anytime.",
+      "title": "Simple pricing, fair plans"
+    },
+    "perPersonMonth": " /user /month",
+    "plus": {
+      "b1": "2 email accounts /user",
+      "b2": "Slack / Discord integration",
+      "b3": "Weekly digest delivery",
+      "b4": "Auto-archive attachments",
+      "b5": "Unlimited knowledge base",
+      "description": "For power users who need system integrations.",
+      "includesIntro": "Everything in Starter, plus:",
+      "title": "Plus"
+    },
+    "popular": "Popular",
+    "pro": {
+      "b1": "Team-wide analytics",
+      "b2": "Priority 24/7 support",
+      "b3": "Dedicated onboarding specialist",
+      "description": "For teams and businesses handling high email volume.",
+      "includesIntro": "Everything in Plus, plus:",
+      "title": "Professional"
+    },
+    "starter": {
+      "b1": "Categorize and label all email",
+      "b2": "Draft replies in your voice",
+      "b3": "Block promotional and spam",
+      "b4": "Bulk unsubscribe and archive",
+      "b5": "Email analytics",
+      "b6": "Pre-meeting briefs",
+      "description": "For individuals and founders reclaiming their time.",
+      "title": "Starter"
+    }
+  },
+  "landingTestimonials": {
+    "header": {
+      "body": "Our customers love saving time with Zero Mail.",
+      "title": "Join 20,000+ saving time on email"
+    },
+    "r1": {
+      "role": "CTO",
+      "text": "Loving this awesome email automation app: zeromail.com"
+    },
+    "r2": {
+      "role": "Technical Director",
+      "text": "Genuinely amazing. Cleaned up promo emails and newsletter junk in a few minutes."
+    },
+    "r3": {
+      "role": "Head of Growth",
+      "text": "Wow. Set up and unsubscribed from the worst spammers in 3 minutes... thanks 🙏"
+    },
+    "r4": {
+      "role": "Legal Engineer",
+      "text": "This is the first tool I've tried that actually nails my voice in draft replies."
+    },
+    "r5": {
+      "role": "Founder",
+      "text": "I found Zero Mail while looking for a virtual assistant to manage email, but after trying it everything changed."
+    },
+    "r6": {
+      "role": "CEO",
+      "text": "I'm an executive drowning in hundreds of emails a day. What I love most about Zero Mail is how completely it replaces manual email triage — smart automation."
+    },
+    "r7": {
+      "role": "Founder",
+      "text": "Finally an \"unsubscribe\" app that *actually* unsubscribes you and filters through Gmail filters (instead of always depending on a 3rd-party app)."
+    }
+  },
   "legal": {
     "googleApiPolicy": {
-      "body": "Zero Mail's use and transfer of information received from Google APIs to any other app will adhere to <link>Google API Services User Data</link> Policy, including the Limited Use requirements."
+      "body": "Google API data is handled under the <link>Google API User Data Policy</link> and Limited Use requirements."
     },
     "privacy": {
       "placeholderBody": "Real privacy policy content will land in Phase 6 launch hardening. PROJECT.md describes the binding privacy contract: no long-term storage of email content, prompts, completions, or embeddings.",

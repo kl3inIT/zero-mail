@@ -31,6 +31,31 @@ export default defineConfig({
     // not load them because Playwright's test() throws outside its runner.
     exclude: ['**/node_modules/**'],
     setupFiles: ['__tests__/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov', 'json-summary'],
+      reportsDirectory: './coverage',
+      include: ['features/**/*.{ts,tsx}', 'app/**/*.{ts,tsx}', 'lib/**/*.{ts,tsx}'],
+      exclude: [
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/.next/**',
+        'e2e/**',
+        '__tests__/**',
+        '**/*.d.ts',
+        '**/*.config.{ts,js,mjs,mts}',
+        'components/ui/**',
+        'lib/api/schema.d.ts',
+      ],
+      // Ratchet-up floors. Set just below current measured coverage so CI fails
+      // on regression. Raise these every time new tests land (NEVER lower).
+      thresholds: {
+        lines: 30,
+        functions: 25,
+        branches: 20,
+        statements: 30,
+      },
+    },
   },
   resolve: {
     alias: [

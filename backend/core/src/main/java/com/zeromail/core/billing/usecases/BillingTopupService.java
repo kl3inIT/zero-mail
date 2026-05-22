@@ -1,6 +1,8 @@
 package com.zeromail.core.billing.usecases;
 
 import com.zeromail.core.billing.domain.BillingTopupIntentStatus;
+import com.zeromail.core.billing.domain.CreditGrantCategory;
+import com.zeromail.core.billing.domain.CreditGrantStatus;
 import com.zeromail.core.billing.domain.TopupCodeGenerator;
 import com.zeromail.core.billing.event.BillingTopupCredited;
 import com.zeromail.core.billing.persistence.BillingPackageEntity;
@@ -8,6 +10,8 @@ import com.zeromail.core.billing.persistence.BillingPackageRepository;
 import com.zeromail.core.billing.persistence.BillingTopupIntentEntity;
 import com.zeromail.core.billing.persistence.BillingTopupIntentRepository;
 import com.zeromail.core.billing.persistence.BillingTopupIntentTenantLookup;
+import com.zeromail.core.billing.persistence.CreditGrantEntity;
+import com.zeromail.core.billing.persistence.CreditGrantRepository;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryEntity;
 import com.zeromail.core.billing.persistence.CreditLedgerEntryRepository;
 import com.zeromail.core.config.ZeroMailCoreProperties;
@@ -38,9 +42,12 @@ public class BillingTopupService {
     private static final Pattern CROCKFORD_EIGHT_CHARACTER_CODE =
             Pattern.compile("[0-9A-HJKMNPQRSTVWXYZ]{8}");
     private static final Pattern PACKAGE_CODE_TOKEN = Pattern.compile("PKG_[A-Z0-9_]{2,32}");
+    private static final String PAYMENT_SEPAY_REF_TYPE = "PAYMENT_SEPAY";
+    private static final int PAID_TOPUP_GRANT_PRIORITY = 100;
 
     private final BillingPackageRepository packageRepository;
     private final BillingTopupIntentRepository intentRepository;
+    private final CreditGrantRepository grantRepository;
     private final CreditLedgerEntryRepository entryRepository;
     private final TopupCodeGenerator topupCodeGenerator = new TopupCodeGenerator();
     private final ZeroMailCoreProperties.BillingProperties billingProperties;
@@ -50,12 +57,14 @@ public class BillingTopupService {
     public BillingTopupService(
             BillingPackageRepository packageRepository,
             BillingTopupIntentRepository intentRepository,
+            CreditGrantRepository grantRepository,
             CreditLedgerEntryRepository entryRepository,
             ZeroMailCoreProperties properties,
             TransactionTemplate transactionTemplate,
             ApplicationEventPublisher eventPublisher) {
         this.packageRepository = packageRepository;
         this.intentRepository = intentRepository;
+        this.grantRepository = grantRepository;
         this.entryRepository = entryRepository;
         this.billingProperties = properties.billing();
         this.transactionTemplate = transactionTemplate;
@@ -286,14 +295,29 @@ public class BillingTopupService {
         }
 
         try {
+            UUID grantId = UUID.randomUUID();
+            Instant creditedAt = Instant.now();
+            CreditGrantEntity paidTopupGrant =
+                    new CreditGrantEntity(
+                            grantId,
+                            intent.getTenantId(),
+                            CreditGrantCategory.PAID,
+                            CreditGrantStatus.ACTIVE,
+                            credits,
+                            creditedAt,
+                            null,
+                            PAID_TOPUP_GRANT_PRIORITY,
+                            PAYMENT_SEPAY_REF_TYPE,
+                            sepayTransactionIdString);
+            grantRepository.saveAndFlush(paidTopupGrant);
             CreditLedgerEntryEntity topupEntry =
                     CreditLedgerEntryEntity.topup(
                             UUID.randomUUID(),
                             intent.getTenantId(),
                             credits,
-                            sepayTransactionIdString);
+                            sepayTransactionIdString,
+                            grantId);
             entryRepository.saveAndFlush(topupEntry);
-            Instant creditedAt = Instant.now();
             eventPublisher.publishEvent(
                     new BillingTopupCredited(
                             intent.getTenantId(),

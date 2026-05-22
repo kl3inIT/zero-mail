@@ -6,10 +6,8 @@ import {
   seedAuthenticatedSession,
 } from './chrome-test-utils';
 
-// Phase 05A billing e2e contract:
-// - The backend has no ledger-history endpoint, so this covers the production
-//   "transaction history is not available yet" panel. Populated rows are covered
-//   by LedgerTable.test.tsx with injected fixture data.
+// Billing e2e contract:
+// - The billing page shows the beta-aware balance metadata and real ledger rows.
 // - The backend has no top-up intent-status endpoint; credited is inferred from
 //   /api/billing/balance rising during polling.
 // - PR #36 changes top-up creation from free-form VND amount entry to package
@@ -24,6 +22,7 @@ type BillingMockState = {
   balanceRequests: number;
   topupRequests: string[];
   packages: BillingPackageMock[];
+  ledgerEntries: BillingLedgerEntryMock[];
   nextIntent: TopupIntentMock;
 };
 
@@ -49,6 +48,16 @@ type TopupIntentMock = {
   accountName: string;
   transferContent: string;
   qrPayload: string;
+};
+
+type BillingLedgerEntryMock = {
+  id: string;
+  timestamp: string;
+  type: string;
+  description: string;
+  amountCredits: number;
+  balanceAfterCredits: number;
+  reference?: string;
 };
 
 const VIEWPORTS = [
@@ -89,7 +98,7 @@ const DEFAULT_PACKAGES: BillingPackageMock[] = [
 ];
 
 for (const viewport of VIEWPORTS) {
-  test(`billing page renders shell, balance, and unavailable ledger at ${viewport.name}`, async ({
+  test(`billing page renders shell, beta balance, and ledger at ${viewport.name}`, async ({
     page,
   }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
@@ -102,10 +111,11 @@ for (const viewport of VIEWPORTS) {
     await expect(page.getByTestId('balance-pill')).toContainText('12');
     await expect(page.getByRole('heading', { name: 'Billing' })).toBeVisible();
     await expect(page.getByTestId('billing-balance-figure')).toContainText('12');
+    await expect(page.getByTestId('billing-beta-notice')).toContainText('Free during beta');
+    await expect(page.getByTestId('billing-beta-credits')).toContainText('12');
     await expect(page.getByRole('link', { name: 'Top up credits' })).toBeVisible();
-    await expect(page.getByTestId('ledger-unavailable-panel')).toContainText(
-      "Transaction history isn't available yet",
-    );
+    await expect(page.getByTestId('ledger-table')).toBeVisible();
+    await expect(page.getByText('Monthly beta grant')).toBeVisible();
     await expect(page.getByText('No transactions yet')).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
 
@@ -221,7 +231,7 @@ async function installBillingApiMock(page: Page, state: BillingMockState) {
     const request = route.request();
     const url = new URL(request.url());
 
-    if (url.pathname === '/me') {
+    if (url.pathname === '/api/me') {
       await fulfillJson(route, {
         userId: 'user-1',
         tenantId: 'tenant-1',
@@ -244,6 +254,29 @@ async function installBillingApiMock(page: Page, state: BillingMockState) {
         availableCredits: state.availableCredits,
         heldCredits: state.heldCredits,
         currency: 'credits',
+        betaCredits: state.availableCredits,
+        paidCredits: 0,
+        monthlyGrantCredits: 300,
+        resetsAt: '2026-06-01T00:00:00.000Z',
+        freeDuringBeta: true,
+      });
+      return;
+    }
+
+    if (url.pathname === '/api/billing/ledger' && request.method() === 'GET') {
+      await fulfillJson(route, {
+        entries: state.ledgerEntries,
+        nextCursor: null,
+      });
+      return;
+    }
+
+    if (url.pathname === '/api/me/notifications' && request.method() === 'GET') {
+      await fulfillJson(route, {
+        channel: 'DAILY_DIGEST',
+        digestEnabled: true,
+        digestSendHourLocal: 20,
+        timeZone: 'Asia/Ho_Chi_Minh',
       });
       return;
     }
@@ -269,12 +302,12 @@ async function installBillingApiMock(page: Page, state: BillingMockState) {
       return;
     }
 
-    if (url.pathname === '/gmail/connection/status' && request.method() === 'GET') {
+    if (url.pathname === '/api/gmail/connection/status' && request.method() === 'GET') {
       await fulfillJson(route, { connectionStatus: 'CONNECTED' });
       return;
     }
 
-    if (url.pathname === '/tenant/triage-pause' && request.method() === 'PUT') {
+    if (url.pathname === '/api/tenant/triage-pause' && request.method() === 'PUT') {
       await route.fulfill({ status: 204, body: '' });
       return;
     }
@@ -290,6 +323,17 @@ function createBillingMockState(overrides: Partial<BillingMockState> = {}): Bill
     balanceRequests: 0,
     topupRequests: [],
     packages: DEFAULT_PACKAGES,
+    ledgerEntries: [
+      {
+        id: 'ledger-beta-grant',
+        timestamp: '2026-05-01T00:00:00.000Z',
+        type: 'grant',
+        description: 'Monthly beta grant',
+        amountCredits: 300,
+        balanceAfterCredits: 300,
+        reference: 'BETA_PERIOD',
+      },
+    ],
     nextIntent: createTopupIntentMock(),
     ...overrides,
   };

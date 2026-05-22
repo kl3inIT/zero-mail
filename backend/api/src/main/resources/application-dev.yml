@@ -1,16 +1,73 @@
-# Dev profile: verbose diagnostics for local debugging.
-# Keep privacy invariants: never enable prompt/completion/body/token logging.
+# Dev profile: maximally verbose diagnostics for local debugging and the VPS dev slot.
+# Privacy invariant preserved: prompt/completion/body/token logging stays OFF — even in dev.
+# Email bodies, OAuth tokens, and LLM prompt content MUST NOT be logged regardless of profile.
+
 logging:
   level:
-    com.zeromail.api.controllers.chat: DEBUG
-    com.zeromail.core.chat: DEBUG
-    com.zeromail.core.llm: DEBUG
-    org.springframework.security: INFO
+    root: INFO
+
+    # Application packages — every layer verbose.
+    com.zeromail: DEBUG
+    com.zeromail.api: DEBUG
+    com.zeromail.api.controllers: DEBUG
+    com.zeromail.api.controllers.chat: TRACE
+    com.zeromail.core: DEBUG
+    com.zeromail.core.chat: TRACE
+    com.zeromail.core.llm: TRACE
+    com.zeromail.core.rules: DEBUG
+    com.zeromail.core.triage: DEBUG
+    com.zeromail.core.billing: DEBUG
+
+    # Spring web stack — request mapping, security filter chain, MVC dispatch.
+    org.springframework.web: DEBUG
+    org.springframework.web.servlet.DispatcherServlet: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.security.web.FilterChainProxy: DEBUG
+    org.springframework.session: DEBUG
+
+    # Spring AI — adapter + tool-call orchestration. Observations stay structural,
+    # not prompt content (log-prompt/log-completion remain false below).
+    org.springframework.ai: DEBUG
+    org.springframework.ai.chat.model: DEBUG
+
+    # Hibernate — emit and bind SQL on every query.
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.hibernate.orm.jdbc.extract: TRACE
+
+    # HTTP clients — show outbound URLs (no bodies).
+    reactor.netty.http.client: DEBUG
+    org.apache.hc.client5.http.wire: INFO
+
+    # Liquibase — show every changeset application on boot.
+    liquibase: INFO
+
+  pattern:
+    # Add tenantId / traceId / spanId from MDC so chat / triage flows are followable.
+    console: "%clr(%d{HH:mm:ss.SSS}){faint} %clr(%5p) %clr([%X{tenantId:-tenant?},%X{traceId:-},%X{spanId:-}]){faint} %clr([%t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx"
+
 spring:
+  # Auto-bring-up the local docker compose stack when running via IntelliJ.
+  # VPS dev slot disables this (SPRING_DOCKER_COMPOSE_ENABLED=false in compose.dev.yml).
+  docker:
+    compose:
+      enabled: ${SPRING_DOCKER_COMPOSE_ENABLED:true}
+      lifecycle-management: start_only
+
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+        # Generate JPA query plans eagerly; helpful for spotting N+1 in dev logs.
+        generate_statistics: true
+
   ai:
     chat:
       client:
         observations:
+          # PRIVACY: do not flip these to true. Prompts contain sanitized but
+          # still sensitive user content; even in dev we forbid log capture.
           log-prompt: false
           log-completion: false
       observations:
@@ -21,3 +78,30 @@ spring:
         observations:
           include-completion: false
 
+# Full actuator exposure for dev debugging. On the VPS dev slot the nginx-proxy-manager
+# blocks /actuator/** from the public internet — exposure here is intra-network only.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+      probes:
+        enabled: true
+    loggers:
+      access: unrestricted
+    env:
+      show-values: when-authorized
+    configprops:
+      show-values: when-authorized
+
+springdoc:
+  swagger-ui:
+    enabled: true
+  api-docs:
+    enabled: true
+
+debug: false

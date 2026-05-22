@@ -25,6 +25,15 @@ public class AssistantSettingsEntity extends AbstractTenantOwnedEntity {
     @Column(name = "default_model", length = 64)
     private String defaultModel;
 
+    @Column(name = "chat_model_id", length = 128)
+    private String chatModelId;
+
+    @Column(name = "triage_model_id", length = 128)
+    private String triageModelId;
+
+    @Column(name = "draft_model_id", length = 128)
+    private String draftModelId;
+
     @Column(name = "ai_output_language", length = 8)
     private String aiOutputLanguage;
 
@@ -60,6 +69,18 @@ public class AssistantSettingsEntity extends AbstractTenantOwnedEntity {
 
     public String getDefaultModel() {
         return defaultModel;
+    }
+
+    public String getChatModelId() {
+        return chatModelId;
+    }
+
+    public String getTriageModelId() {
+        return triageModelId;
+    }
+
+    public String getDraftModelId() {
+        return draftModelId;
     }
 
     public String getAiOutputLanguage() {

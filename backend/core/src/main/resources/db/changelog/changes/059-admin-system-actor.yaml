@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: 059-admin-system-actor
+      author: zeromail
+      comment: >
+        System actor row for admin audit events emitted by failsafes and scheduled verification.
+        No WebAuthn credential is present, so this row cannot authenticate.
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO admin_users(id, email, display_name, user_handle, status, created_at)
+              VALUES (
+                '00000000-0000-0000-0000-000000000001',
+                '<system>',
+                'System',
+                decode('0000000000000000000000000000000000000000000000000000000000000001', 'hex'),
+                'ACTIVE',
+                now()
+              )
+              ON CONFLICT (id) DO NOTHING;
+      rollback:
+        - sql:
+            sql: DELETE FROM admin_users WHERE id = '00000000-0000-0000-0000-000000000001'

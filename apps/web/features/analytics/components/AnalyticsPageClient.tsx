@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
+import type { Route } from 'next';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
-import { AnalyticsSkeleton } from '@/features/analytics/components/AnalyticsSkeleton';
 import { InboxFlowPanel } from '@/features/analytics/components/InboxFlowPanel';
 import { MetadataControlPanel } from '@/features/analytics/components/MetadataControlPanel';
 import { MetadataLoadPanel } from '@/features/analytics/components/MetadataLoadPanel';
@@ -27,7 +27,7 @@ export function AnalyticsPageClient() {
   const canonicalHref = useMemo(() => {
     const nextSearchParams = new URLSearchParams(searchParams.toString());
     nextSearchParams.set('window', selectedWindow);
-    return `${pathname}?${nextSearchParams.toString()}`;
+    return `${pathname}?${nextSearchParams.toString()}` as Route;
   }, [pathname, searchParams, selectedWindow]);
 
   useEffect(() => {
@@ -36,13 +36,8 @@ export function AnalyticsPageClient() {
     }
   }, [canonicalHref, rawWindow, router, selectedWindow]);
 
-  if (summaryQuery.isPending) {
-    return <AnalyticsSkeleton />;
-  }
-
-  if (summaryQuery.isError) {
-    throw summaryQuery.error;
-  }
+  // Suspense + error boundaries handle pending/error states (see loading.tsx
+  // and error.tsx at the route segment). useSuspenseQuery throws → caught upstream.
 
   return (
     <div className="flex flex-col gap-5">
@@ -52,7 +47,9 @@ export function AnalyticsPageClient() {
           onChange={(nextWindow) => {
             const nextSearchParams = new URLSearchParams(searchParams.toString());
             nextSearchParams.set('window', nextWindow);
-            router.replace(`${pathname}?${nextSearchParams.toString()}`, { scroll: false });
+            router.replace(`${pathname}?${nextSearchParams.toString()}` as Route, {
+              scroll: false,
+            });
           }}
         />
         <p className="text-muted-foreground text-right text-xs tabular-nums">

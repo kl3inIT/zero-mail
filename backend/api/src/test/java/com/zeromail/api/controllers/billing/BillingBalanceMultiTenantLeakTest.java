@@ -54,9 +54,13 @@ class BillingBalanceMultiTenantLeakTest extends ApiPostgresTestBase {
             for (int seedIndex = 0; seedIndex < seeds.size(); seedIndex++) {
                 BillingBalanceResponse observedResponse = balanceTasks.get(seedIndex).get();
                 assertThat(observedResponse.availableCredits())
-                        .isEqualTo(seeds.get(seedIndex).expectedCredits());
+                        .isEqualTo(seeds.get(seedIndex).expectedCredits() + 300);
                 assertThat(observedResponse.heldCredits()).isZero();
                 assertThat(observedResponse.currency()).isEqualTo("credits");
+                assertThat(observedResponse.betaCredits()).isEqualTo(300);
+                assertThat(observedResponse.paidCredits())
+                        .isEqualTo(seeds.get(seedIndex).expectedCredits());
+                assertThat(observedResponse.freeDuringBeta()).isTrue();
             }
         }
     }

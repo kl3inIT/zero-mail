@@ -14,6 +14,7 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+      database: ${REDIS_DB:0}
   security:
     oauth2:
       client:
@@ -74,6 +75,10 @@ zero-mail:
     vnd-per-credit: 1000
     max-pending-intents-per-tenant: 5
     intent-expiry: PT24H
+    beta:
+      enabled: ${ZEROMAIL_BILLING_BETA_ENABLED:true}
+      monthly-credits: ${ZEROMAIL_BILLING_BETA_MONTHLY_CREDITS:300}
+      daily-hard-cap: ${ZEROMAIL_BILLING_BETA_DAILY_HARD_CAP:100}
   llm:
     platform:
       provider: openai

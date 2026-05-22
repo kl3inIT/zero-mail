@@ -1,0 +1,85 @@
+# Owner: 8E (per docs/ops/admin-shared-file-ownership.md)
+databaseChangeLog:
+  - changeSet:
+      id: 078-01-processing-job-extend
+      author: zeromail
+      comment: >
+        Queue health dashboard extensions. Adds admin_requeue_count and
+        last_failure_reason columns to processing_job so the operator can see
+        repeat-offender DLQ rows and short failure-class codes without ever
+        exposing the payload_json column.
+
+        admin_requeue_count is incremented (not reset) on every manual
+        dead-letter requeue (R-8E-H1); the existing attempts column is reset
+        to 0 so the worker gets a fresh retry budget.
+
+        last_failure_reason is a short enum-shaped code (JobFailureReason),
+        max 100 chars, NEVER raw exception text (R-8E-H3). A CHECK constraint
+        validates the value is one of the JobFailureReason names; the worker
+        ArchUnit WorkerFailureReasonEnumOnlyTest gates the call site.
+      changes:
+        - addColumn:
+            tableName: processing_job
+            columns:
+              - column:
+                  name: admin_requeue_count
+                  type: integer
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_failure_reason
+                  type: varchar(100)
+              - column:
+                  name: last_requeued_at
+                  type: timestamptz
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE processing_job
+                ADD CONSTRAINT ck_processing_job_admin_requeue_count_nonneg
+                CHECK (admin_requeue_count >= 0);
+
+              ALTER TABLE processing_job
+                ADD CONSTRAINT ck_processing_job_last_failure_reason
+                CHECK (
+                  last_failure_reason IS NULL
+                  OR last_failure_reason IN (
+                    'DOWNSTREAM_TIMEOUT',
+                    'GMAIL_API_RATE_LIMIT',
+                    'ENCRYPTION_KEY_MISSING',
+                    'VALIDATION_FAILED',
+                    'PROVIDER_HTTP_ERROR',
+                    'SERIALIZATION_FAILED',
+                    'UNKNOWN'
+                  )
+                );
+
+              CREATE INDEX idx_processing_job_dead_letter
+                ON processing_job (last_failed_at DESC)
+                WHERE status = 'DEAD_LETTER';
+
+              CREATE INDEX idx_processing_job_admin_requeued
+                ON processing_job (last_requeued_at DESC)
+                WHERE admin_requeue_count > 0;
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              DROP INDEX IF EXISTS idx_processing_job_admin_requeued;
+              DROP INDEX IF EXISTS idx_processing_job_dead_letter;
+
+              ALTER TABLE processing_job
+                DROP CONSTRAINT IF EXISTS ck_processing_job_last_failure_reason;
+
+              ALTER TABLE processing_job
+                DROP CONSTRAINT IF EXISTS ck_processing_job_admin_requeue_count_nonneg;
+        - dropColumn:
+            tableName: processing_job
+            columns:
+              - column:
+                  name: last_requeued_at
+              - column:
+                  name: last_failure_reason
+              - column:
+                  name: admin_requeue_count

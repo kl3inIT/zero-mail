@@ -1,5 +1,54 @@
 plugins {
     `java-library`
+    jacoco
+}
+
+jacoco {
+    // 0.8.14 published Dec 2024 added JDK 25 class-file reader support, but the
+    // runtime agent still cannot instrument classes compiled with --enable-preview
+    // (JEP 505 markers fail at Instrumenter#instrument). Coverage stays opt-in
+    // until the agent catches up — see comment on jacocoTestReport below.
+    toolVersion = "0.8.14"
+}
+
+tasks.withType<JacocoReport>().configureEach {
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(false)
+    }
+    classDirectories.setFrom(
+        files(
+            classDirectories.files.map {
+                fileTree(it) {
+                    // Exclude generated, DTOs (records), and Spring config glue from coverage stats.
+                    exclude(
+                        "**/dto/**",
+                        "**/config/**",
+                        "**/generated/**",
+                        "**/*Application.class",
+                        "**/*Configuration*.class",
+                    )
+                }
+            },
+        ),
+    )
+}
+
+tasks.withType<Test>().configureEach {
+    // Disable the JaCoCo Java agent on tests until JaCoCo officially supports
+    // --enable-preview JDK 25 bytecode. With the agent disabled, the test JVM
+    // boots cleanly and `gradle check` no longer fails on instrumentation.
+    extensions.findByType<JacocoTaskExtension>()?.isEnabled = false
+}
+
+tasks.named("jacocoTestReport") {
+    dependsOn(tasks.named("test"))
+    onlyIf {
+        // Skip cleanly when no execution data is present (the agent is disabled
+        // above — re-enable per-module to generate a real report locally).
+        fileTree(layout.buildDirectory.dir("jacoco")).matching { include("**/*.exec") }.any()
+    }
 }
 
 java {
@@ -15,7 +64,13 @@ repositories {
 }
 
 val utf8RuntimeJvmArgs =
-    listOf("--enable-preview", "-Dfile.encoding=UTF-8", "-Dsun.stdout.encoding=UTF-8", "-Dsun.stderr.encoding=UTF-8")
+    listOf(
+        "--enable-preview",
+        "-Dfile.encoding=UTF-8",
+        "-Dsun.stdout.encoding=UTF-8",
+        "-Dsun.stderr.encoding=UTF-8",
+        "-Duser.timezone=UTC",
+    )
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"

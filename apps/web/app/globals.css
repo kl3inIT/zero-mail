@@ -78,51 +78,53 @@
 
 /* prettier-ignore */
 :root {
-    /* Paper-warm neutrals. Rebind shadcn names; hex values follow the reference token sheet. */
-    --background: #F9F8FD;
-    --foreground: #4F496B;
+    /* Purple palette lifted từ Jmix petclinic-2 Lumo. Surfaces stay neutral
+       (content trắng + sidebar tím-nhạt) để text giữ contrast cao và borders
+       hiện rõ — pattern Inbox Zero / Gmail / Linear cùng dùng. */
+    --background: #FFFFFF;
+    --foreground: #1C1D21;
     --card: #FFFFFF;
-    --card-foreground: #4F496B;
+    --card-foreground: #1C1D21;
     --popover: #FFFFFF;
-    --popover-foreground: #4F496B;
-    --primary: #0E5E5A;
+    --popover-foreground: #1C1D21;
+    --primary: #867AEB;
     --primary-foreground: #FFFFFF;
     --secondary: #F4F2F9;
-    --secondary-foreground: #4F496B;
+    --secondary-foreground: #1C1D21;
     --muted: #F4F2F9;
-    --muted-foreground: #625C78;
-    --accent: #0E5E5A;
-    --accent-foreground: #3D385A;
+    --muted-foreground: #6B7280;
+    --accent: #EAE8F7;
+    --accent-foreground: #5849C9;
     --destructive: #B0413E;
     --warning: #E3A023;
     --warning-foreground: #FFFFFF;
-    --border: transparent;
-    --input: #E6E3D8;
-    --ring: #0E5E5A;
+    --border: #E5E7EB;
+    --input: #E5E7EB;
+    --ring: rgba(134, 122, 235, 0.5);
 
     /* Charts stay neutral-but-branded until a later data-viz pass. */
-    --chart-1: #0E5E5A;
+    --chart-1: #867AEB;
     --chart-2: #2C5BA8;
     --chart-3: #5E4B8B;
     --chart-4: #2F7D5C;
     --chart-5: #E3A023;
 
-    /* Sidebar tokens — app interior chrome */
-    --sidebar: #F9F8FD;
-    --sidebar-foreground: #4F496B;
-    --sidebar-primary: #3D385A;
+    /* Sidebar tokens — app interior chrome (tím rất nhạt để recede) */
+    --sidebar: #F8F7FB;
+    --sidebar-foreground: #1C1D21;
+    --sidebar-primary: #867AEB;
     --sidebar-primary-foreground: #FFFFFF;
-    --sidebar-accent: #F4F2F9;
-    --sidebar-accent-foreground: #4F496B;
-    --sidebar-border: transparent;
-    --sidebar-ring: #0E5E5A;
+    --sidebar-accent: #EAE8F7;
+    --sidebar-accent-foreground: #5849C9;
+    --sidebar-border: #EBE9F2;
+    --sidebar-ring: rgba(134, 122, 235, 0.5);
 
     --radius: 7px;
 
     /* Phase 1.6 supplemental tokens. */
     --accent-soft: #EAE8F7;
-    --ink: #3D385A;
-    --ink-2: #4F496B;
+    --ink: #1C1D21;
+    --ink-2: #3D385A;
     --text: var(--foreground);
     --text-faint: #6F6883;
 
@@ -154,40 +156,40 @@
 /* prettier-ignore */
 .dark {
     --background: #191724;
-    --foreground: #D3CFE3;
+    --foreground: #E5E2EE;
     --card: #211E30;
-    --card-foreground: #D3CFE3;
+    --card-foreground: #E5E2EE;
     --popover: #211E30;
-    --popover-foreground: #D3CFE3;
-    --primary: #6FB3A8;
-    --primary-foreground: #FFFFFF;
+    --popover-foreground: #E5E2EE;
+    --primary: #A59CF0;
+    --primary-foreground: #191724;
     --secondary: #2A263D;
-    --secondary-foreground: #D3CFE3;
+    --secondary-foreground: #E5E2EE;
     --muted: #2A263D;
     --muted-foreground: #928DAA;
-    --accent: #6FB3A8;
-    --accent-foreground: #191724;
+    --accent: #2F2A4A;
+    --accent-foreground: #C7C0F5;
     --destructive: #DA8480;
     --warning: #F5CD7A;
     --warning-foreground: #131312;
-    --border: rgba(214, 213, 204, 0.12);
-    --input: rgba(214, 213, 204, 0.16);
-    --ring: #6FB3A8;
+    --border: rgba(214, 213, 230, 0.14);
+    --input: rgba(214, 213, 230, 0.18);
+    --ring: rgba(165, 156, 240, 0.6);
 
-    --chart-1: #6FB3A8;
+    --chart-1: #A59CF0;
     --chart-2: #8DA8E0;
     --chart-3: #B0A0DC;
     --chart-4: #6FB389;
     --chart-5: #F5CD7A;
 
-    --sidebar: #191724;
-    --sidebar-foreground: #D3CFE3;
-    --sidebar-primary: #A39CF4;
+    --sidebar: #1F1B2E;
+    --sidebar-foreground: #E5E2EE;
+    --sidebar-primary: #A59CF4;
     --sidebar-primary-foreground: #191724;
-    --sidebar-accent: #2A263D;
-    --sidebar-accent-foreground: #D3CFE3;
-    --sidebar-border: rgba(214, 213, 204, 0.12);
-    --sidebar-ring: #6fb3a8;
+    --sidebar-accent: #2F2A4A;
+    --sidebar-accent-foreground: #C7C0F5;
+    --sidebar-border: rgba(214, 213, 230, 0.14);
+    --sidebar-ring: rgba(165, 156, 240, 0.6);
 
     /* Supplemental tokens: dark variants. */
     --accent-soft: #1F3A37;
@@ -227,6 +229,11 @@
 
   body {
     @apply bg-background text-foreground;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1,
+      'cv11' 1,
+      'ss01' 1;
   }
 
   html {
@@ -239,9 +246,9 @@
    prototype's clay accent, earnest copy tone, and subtle grid paper texture. */
 .zm-proto,
 .zm-auth {
-  --accent: #867aeb;
-  --accent-hover: #7062df;
-  --accent-soft: #e7e5fc;
+  --accent: #0a0a0a;
+  --accent-hover: #1f1f1f;
+  --accent-soft: #f4f4f5;
   --accent-fg: #ffffff;
   --accent-foreground: var(--accent-fg);
   --bg: var(--background);
@@ -250,11 +257,11 @@
   --bg-muted: var(--muted);
   --line: var(--border);
   --line-strong: #e3dff2;
-  --ink: #3d385a;
-  --ink-2: #4f496b;
+  --ink: #0a0a0a;
+  --ink-2: #3f3f3f;
   --text: var(--foreground);
-  --text-muted: var(--muted-foreground);
-  --text-faint: #6f6883;
+  --text-muted: #5f5b54;
+  --text-faint: #756f68;
   --green: #27694d;
   --green-soft: #e4f0e9;
   --amber: #7a4b0f;
@@ -274,14 +281,22 @@
 
 .dark .zm-proto,
 .dark .zm-auth {
-  --accent: #a39cf4;
-  --accent-hover: #b5b0f8;
-  --accent-soft: rgba(163, 156, 244, 0.16);
-  --accent-fg: #1e1a5a;
-  --line-strong: #3d385a;
-  --ink: #f2f0fa;
-  --ink-2: #e3dff2;
-  --text-faint: #a7a3c4;
+  /* Inverse-of-light surfaces — override interior navy with neutral grayscale */
+  --bg: #0a0a0a;
+  --bg-elevated: #1a1a1a;
+  --bg-subtle: #1f1f1f;
+  --bg-muted: #262626;
+  --line: #2a2a2a;
+  --line-strong: #3f3f3f;
+  --text: #f5f5f5;
+  --text-muted: #a3a3a3;
+  --text-faint: #737373;
+  --accent: #f5f5f5;
+  --accent-hover: #ffffff;
+  --accent-soft: rgba(245, 245, 245, 0.12);
+  --accent-fg: #0a0a0a;
+  --ink: #f5f5f5;
+  --ink-2: #d4d4d4;
   --green: #6fb389;
   --green-soft: rgba(111, 179, 137, 0.14);
   --amber: #d9a064;
@@ -1764,16 +1779,16 @@
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 1280px;
+  max-width: 760px;
   margin: 0 auto;
-  padding: 56px 32px 80px;
+  padding: 72px 32px 80px;
 }
 
 .zm-auth-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
-  align-items: start;
-  gap: 56px;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 0;
   min-width: 0;
 }
 
@@ -1797,10 +1812,14 @@
   margin-top: 14px;
   color: var(--ink);
   font-family: var(--font-sans);
-  font-size: clamp(32px, 4vw, 42px);
+  font-size: 42px;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   line-height: 1.05;
+}
+
+.zm-login-panel .zm-auth-title {
+  margin-top: 0;
 }
 
 .zm-auth-title em {
@@ -1815,7 +1834,7 @@
 }
 
 .zm-auth-sub {
-  max-width: 620px;
+  max-width: 560px;
   margin-top: 22px;
   color: var(--text-muted);
   font-size: 16px;
@@ -1825,7 +1844,7 @@
 .zm-google-btn {
   display: flex;
   width: 100%;
-  height: 50px;
+  height: 54px;
   align-items: center;
   justify-content: center;
   gap: 12px;
@@ -1834,8 +1853,8 @@
   background: #fff;
   color: #1f1f1f;
   font-size: 15px;
-  font-weight: 500;
-  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.08);
+  font-weight: 650;
+  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.12);
 }
 
 .zm-signin-card {
@@ -1846,7 +1865,6 @@
 }
 
 .zm-signin-helper,
-.zm-or-row,
 .zm-signin-terms,
 .zm-signin-foot,
 .zm-auth-footer {
@@ -1855,29 +1873,30 @@
 
 .zm-signin-helper {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  font-family: var(--font-mono);
-  font-size: 12.5px;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
-.zm-or-row {
+.zm-signin-helper span + span::before {
+  content: '·';
+  margin-right: 8px;
+  color: var(--text-faint);
+}
+
+.zm-work-gmail-btn {
   display: flex;
+  width: 100%;
+  height: 42px;
   align-items: center;
-  gap: 12px;
-  margin: 4px 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.zm-or-row::before,
-.zm-or-row::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--line);
+  justify-content: center;
+  gap: 8px;
+  border-color: var(--line);
+  border-radius: 10px;
+  color: var(--text-muted);
 }
 
 .zm-signin-foot {
@@ -1887,74 +1906,6 @@
   border-top: 1px dashed var(--line);
   padding-top: 18px;
   font-size: 13px;
-}
-
-.zm-trust-panel {
-  position: sticky;
-  top: 84px;
-}
-
-.zm-trust-panel-title {
-  margin-top: 18px;
-  color: var(--ink);
-  font-family: var(--font-sans);
-  font-size: 24px;
-  font-weight: 600;
-}
-
-.zm-trust-list {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  margin-top: 22px;
-}
-
-.zm-trust-item {
-  display: grid;
-  grid-template-columns: 32px 1fr;
-  gap: 12px;
-}
-
-.zm-trust-ic {
-  display: grid;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--bg-elevated);
-  color: var(--ink);
-}
-
-.zm-trust-item h3 {
-  margin-top: 4px;
-  color: var(--ink);
-  font-size: 14.5px;
-  font-weight: 600;
-}
-
-.zm-trust-item p {
-  margin-top: 4px;
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.zm-perm-card {
-  margin-top: 24px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--bg-subtle);
-  padding: 16px;
-}
-
-.zm-perm-card h4 {
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 12.5px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .zm-auth-footer {
@@ -1978,10 +1929,6 @@
   .zm-final-cta {
     grid-template-columns: 1fr;
   }
-
-  .zm-trust-panel {
-    position: static;
-  }
 }
 
 @media (max-width: 900px) {
@@ -2002,8 +1949,7 @@
 }
 
 @media (max-width: 760px) {
-  .zm-nav-links,
-  .zm-trust-panel {
+  .zm-nav-links {
     display: none;
   }
 
@@ -2020,7 +1966,7 @@
   }
 
   .zm-auth-title {
-    font-size: 30px;
+    font-size: 36px;
   }
 
   .zm-gmail-account-row {
@@ -2072,6 +2018,38 @@
     height: 23px;
     padding: 0 6px;
     font-size: 11px;
+  }
+
+  .zm-signin-card {
+    margin-top: 28px;
+  }
+
+  .zm-signin-helper {
+    display: grid;
+    gap: 6px;
+  }
+
+  .zm-signin-helper span + span::before {
+    content: none;
+  }
+
+  .zm-signin-terms {
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .zm-signin-terms p {
+    margin: 0;
+  }
+
+  .zm-signin-terms p + p {
+    margin-top: 8px;
+  }
+
+  .zm-signin-foot {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 
   .zm-hero {

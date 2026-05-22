@@ -175,30 +175,27 @@
     "everywhere": "Đầu-cuối · Đang xin SOC 2 Type II",
     "help": "Trợ giúp",
     "login": {
-      "body": "Zero Mail kết nối Gmail khi bạn đồng ý. Chúng tôi không bao giờ tự động gửi, và bạn có thể thu hồi quyền truy cập từ Google chỉ trong hai cú nhấp.",
-      "divider": "hoặc",
+      "betaNote": "Miễn phí trong beta",
+      "body": "Bạn sẽ được chuyển sang Google để chọn tài khoản và cấp quyền Gmail cho Zero Mail.",
       "googleButton": "Tiếp tục với Google",
-      "googleNote": "Bạn sẽ được chuyển sang Google để cấp quyền.",
       "headline": "Dọn hộp thư về zero mà vẫn giữ quyền kiểm soát.",
-      "headlineA": "Chào mừng bạn quay lại",
-      "headlineB": "với hộp thư.",
+      "headlineA": "Đăng nhập để bắt đầu",
+      "headlineB": "dọn hộp thư.",
       "newUser": "Lần đầu sử dụng?",
+      "noCard": "Không cần thẻ thanh toán",
       "privacy": "Chính sách bảo mật",
-      "safety": {
-        "noAutoSend": "Không tự động gửi email",
-        "noLongTermStorage": "Không lưu lâu dài nội dung email",
-        "revokeAnytime": "Bạn có thể thu hồi quyền truy cập bất cứ lúc nào"
-      },
       "terms": "Điều khoản",
       "termsAnd": "và",
       "termsPrefix": "Khi đăng nhập, bạn đồng ý với",
       "title": "Đăng nhập",
       "waitlist": "Đăng ký trải nghiệm Zero Mail →",
-      "workEmail": "Đăng nhập bằng email công ty"
+      "workEmail": "Đăng nhập bằng Gmail công ty"
     }
   },
   "billing": {
     "balance": {
+      "betaCredits": "Tín dụng beta",
+      "betaNotice": "Miễn phí trong giai đoạn beta. Zero Mail sẽ báo trước khi cần chuyển sang gói trả phí.",
       "description": "Số dư dùng cho các tác vụ AI của Zero Mail.",
       "error": {
         "body": "Có lỗi khi lấy số dư tín dụng. Hãy thử lại.",
@@ -206,9 +203,15 @@
         "title": "Không tải được số dư"
       },
       "held": "Đang giữ",
+      "heldDetail": "Đã reserve cho tác vụ đang chạy",
       "label": "Tín dụng hiện có",
+      "monthlyGrant": "{credits} tín dụng / tháng",
+      "noExpiry": "Không reset theo kỳ beta",
+      "paidCredits": "Tín dụng đã nạp",
       "refreshLabel": "Tự cập nhật",
       "refreshValue": "Mỗi 45 giây",
+      "resetsAt": "Reset lúc",
+      "resetUnknown": "Chưa rõ",
       "topupCta": "Nạp tín dụng",
       "unit": "tín dụng"
     },
@@ -226,7 +229,7 @@
         "timestamp": "Thời gian",
         "type": "Loại"
       },
-      "description": "Các lượt nạp, giữ và trừ tín dụng sẽ được liệt kê ở đây.",
+      "description": "Các lượt cấp, nạp, giữ, trừ và hoàn tín dụng gần đây.",
       "empty": {
         "body": "Các lượt nạp và sử dụng tín dụng sẽ xuất hiện ở đây. Hãy nạp tín dụng để bắt đầu.",
         "heading": "Chưa có giao dịch"
@@ -239,6 +242,8 @@
       "title": "Lịch sử giao dịch",
       "type": {
         "adjustment": "Điều chỉnh",
+        "expire": "Hết hạn",
+        "grant": "Cấp",
         "release": "Hoàn giữ",
         "reserve": "Giữ",
         "settle": "Trừ",
@@ -251,7 +256,7 @@
       "valueMissing": "—"
     },
     "page": {
-      "description": "Theo dõi số dư tín dụng, tạo mã nạp VietQR và xem lịch sử giao dịch khi backend sẵn sàng.",
+      "description": "Theo dõi tín dụng beta miễn phí, tín dụng đã nạp và lịch sử sử dụng gần đây.",
       "title": "Thanh toán"
     },
     "topup": {
@@ -758,9 +763,179 @@
     "tagline": "Zero Mail phân loại Gmail của bạn theo các quy tắc bạn viết bằng ngôn ngữ tự nhiên — gắn nhãn việc quan trọng, lưu trữ thư không cần thiết, và soạn sẵn những phản hồi đơn giản. Mọi thứ gửi đi đều phải qua bạn.",
     "waitlistCta": "Đăng ký trải nghiệm Zero Mail"
   },
+  "landingFaq": {
+    "header": {
+      "title": "Các câu hỏi thường gặp"
+    },
+    "items": {
+      "a1": "Chúng tôi hỗ trợ các tài khoản email Gmail, Google Workspace và Microsoft Outlook.",
+      "a2": "Hãy gửi email cho chúng tôi. Chúng tôi luôn sẵn sàng lắng nghe để cải thiện trải nghiệm email của bạn.",
+      "a3": "Không! Zero Mail không phải là một ứng dụng email khách (email client). Nó được sử dụng song song với ứng dụng email hiện tại của bạn. Bạn vẫn sử dụng Google hoặc Outlook như bình thường.",
+      "a4": "Có, nếu bạn cảm thấy chúng tôi không mang lại giá trị cho bạn, hãy gửi email cho chúng tôi trong vòng 14 ngày kể từ khi nâng cấp và chúng tôi sẽ hoàn tiền cho bạn.",
+      "a5": "Chắc chắn rồi, chúng tôi có bản dùng thử miễn phí 7 ngày cho tất cả các gói để bạn có thể trải nghiệm ngay lập tức, không cần thẻ tín dụng!",
+      "q1": "Zero Mail hỗ trợ các nhà cung cấp email nào?",
+      "q2": "Làm thế nào tôi có thể yêu cầu tính năng mới?",
+      "q3": "Zero Mail có thay thế ứng dụng email hiện tại của tôi không?",
+      "q4": "Bạn có cung cấp hoàn tiền không?",
+      "q5": "Tôi có thể dùng thử Zero Mail miễn phí không?"
+    }
+  },
+  "landingFeatures": {
+    "sec1": {
+      "after": "Sau",
+      "before": "Trước",
+      "body": "Đang chìm ngập trong email? Đừng lãng phí năng lượng cố gắng ưu tiên chúng nữa. Trợ lý AI của chúng tôi sẽ tự động dán nhãn mọi thứ.",
+      "title": {
+        "line1": "Tự động phân loại.",
+        "line2": "Không bao giờ bỏ lỡ email quan trọng."
+      }
+    },
+    "sec2": {
+      "body": "Khi bạn kiểm tra hộp thư, mọi email cần phản hồi sẽ có sẵn một bản nháp được soạn theo văn phong của bạn, sẵn sàng để gửi.",
+      "title": "Bản nháp chờ sẵn trong hộp thư"
+    },
+    "sec3": {
+      "body": "Đọc email, soạn phản hồi và quản lý hộp thư từ Zalo, Telegram hoặc Web — không cần chuyển đổi ứng dụng.",
+      "title": "Hộp thư của bạn, ở bất cứ đâu"
+    },
+    "sec4": {
+      "body": "Cài đặt chỉ với một click. Bắt đầu sắp xếp và soạn email trong vài phút.",
+      "step1": {
+        "body": "Liên kết Gmail của bạn chỉ với hai cú nhấp chuột để bắt đầu trải nghiệm.",
+        "label": "STEP 1",
+        "title": "Kết nối tài khoản Google"
+      },
+      "step2": {
+        "body": "Danh mục thông minh tự động thiết lập. Dùng danh mục mặc định hoặc tự tạo.",
+        "chips": {
+          "calendar": "📅 Lịch hẹn",
+          "coldEmail": "❄️ Cold Email",
+          "internal": "👥 Nội bộ",
+          "marketing": "📢 Marketing",
+          "needsReply": "↩️ Cần trả lời",
+          "newsletter": "📧 Bản tin",
+          "notifications": "🔔 Thông báo",
+          "urgent": "🔥 Khẩn cấp"
+        },
+        "label": "STEP 2",
+        "title": "Tổ chức hộp thư như ý muốn"
+      },
+      "step3": {
+        "body": "Mọi email cần phản hồi sẽ luôn có một bản nháp chờ bạn bấm Gửi.",
+        "draftBody": "Tôi rất sẵn lòng gặp bạn lúc 5h chiều tuần tới nhé!",
+        "draftedBy": "AI SOẠN:",
+        "label": "STEP 3",
+        "mockHeader": "Thư mới",
+        "sendButton": "Gửi",
+        "title": "Bản nháp tự động thông minh"
+      },
+      "title": "Bắt đầu chỉ trong vài phút"
+    },
+    "sec5": {
+      "body": "Xem những email nào bạn chưa bao giờ mở, và hủy đăng ký & lưu trữ chúng chỉ với một cú nhấp chuột.",
+      "title": "Hủy đăng ký hàng loạt email bạn không bao giờ đọc"
+    },
+    "sec6": {
+      "body": "Đủ linh hoạt cho mọi quy trình. Đủ đơn giản để cài đặt trong vài phút.",
+      "col1": {
+        "body": "Xem ai gửi email nhiều nhất và điều gì đang làm đầy hộp thư. Phân tích chi tiết và xử lý.",
+        "mockCountHeader": "Số lượng",
+        "mockHeading": "Ai gửi email cho bạn nhiều nhất",
+        "mockSenderHeader": "Người gửi",
+        "title": "Phân tích hộp thư. Hiểu rõ để tối ưu"
+      },
+      "col2": {
+        "body": "Kết nối với lịch và CRM của bạn để soạn email dựa trên thời gian biểu và dữ liệu khách hàng.",
+        "title": "Bản nháp nắm rõ lịch trình của bạn"
+      },
+      "col3": {
+        "body": "Hộp thư của bạn, luật của bạn. Cấu hình mọi thứ bằng tiếng Việt tự nhiên.",
+        "examples": "↗ Xem ví dụ",
+        "newRule": "+ Tạo luật mới",
+        "rule1": "Gắn nhãn email từ @congty.com là Nội bộ",
+        "rule2": "Lưu trữ mọi hóa đơn và gửi cho kế toán",
+        "rule3": "Gửi bản tổng hợp newsletter vào CN",
+        "rule4": "Nếu có ai muốn đặt lịch họp, hãy phản hồi k",
+        "title": "Tùy biến bằng ngôn ngữ tự nhiên"
+      },
+      "title": "Thiết kế xoay quanh cách bạn làm việc"
+    }
+  },
+  "landingPricing": {
+    "ctaTrial": "Dùng thử miễn phí 7 ngày",
+    "header": {
+      "badge": "Giá theo năm, dùng thử miễn phí 7 ngày",
+      "body": "Không có phí ẩn. Hủy bất cứ lúc nào.",
+      "title": "Dùng thử miễn phí, gói trả phí hợp lý"
+    },
+    "perPersonMonth": " /người /tháng",
+    "plus": {
+      "b1": "2 tài khoản email /người dùng",
+      "b2": "Tích hợp Slack / Discord",
+      "b3": "Gửi bản tin tổng hợp hàng tuần",
+      "b4": "Tự động lưu trữ tệp đính kèm",
+      "b5": "Kho lưu trữ kiến thức không giới hạn",
+      "description": "Dành cho người dùng chuyên sâu cần các tiện ích tích hợp hệ thống.",
+      "includesIntro": "Mọi thứ trong gói Starter, cộng thêm:",
+      "title": "Plus"
+    },
+    "popular": "Phổ biến",
+    "pro": {
+      "b1": "Bảng phân tích toàn nhóm",
+      "b2": "Hỗ trợ khách hàng ưu tiên 24/7",
+      "b3": "Chuyên viên hỗ trợ cài đặt riêng",
+      "description": "Dành cho đội ngũ và doanh nghiệp xử lý lượng lớn email.",
+      "includesIntro": "Mọi thứ trong gói Plus, cộng thêm:",
+      "title": "Professional"
+    },
+    "starter": {
+      "b1": "Sắp xếp và gắn nhãn mọi email",
+      "b2": "Soạn nháp theo văn phong của bạn",
+      "b3": "Chặn email quảng cáo, rác",
+      "b4": "Hủy đăng ký và lưu trữ hàng loạt",
+      "b5": "Phân tích dữ liệu email",
+      "b6": "Tóm tắt trước cuộc họp",
+      "description": "Dành cho cá nhân, doanh nhân muốn lấy lại thời gian của mình.",
+      "title": "Starter"
+    }
+  },
+  "landingTestimonials": {
+    "header": {
+      "body": "Khách hàng của chúng tôi yêu thích việc tiết kiệm thời gian với Zero Mail.",
+      "title": "Gia nhập cùng 20,000+ người đang tiết kiệm thời gian email"
+    },
+    "r1": {
+      "role": "CTO",
+      "text": "Yêu thích ứng dụng tự động hóa email tuyệt vời này: zeromail.com"
+    },
+    "r2": {
+      "role": "Giám đốc Kỹ thuật",
+      "text": "Thật sự tuyệt vời! Đã dọn dẹp các email quảng cáo và newsletter rác chỉ trong vài phút."
+    },
+    "r3": {
+      "role": "Trưởng phòng Growth",
+      "text": "Wow. Đã thiết lập xong và hủy đăng ký khỏi những kẻ gửi spam tồi tệ nhất chỉ trong 3 phút... Cảm ơn 🙏"
+    },
+    "r4": {
+      "role": "Kỹ sư Pháp chế",
+      "text": "Đây là công cụ đầu tiên tôi thử mà thực sự nắm bắt được văn phong của tôi trong các bản nháp phản hồi."
+    },
+    "r5": {
+      "role": "Nhà sáng lập",
+      "text": "Tôi tìm thấy Zero Mail khi đang tìm một trợ lý ảo để quản lý email, nhưng sau khi dùng thử công cụ này, mọi thứ đã thay đổi hoàn toàn."
+    },
+    "r6": {
+      "role": "Giám đốc Điều hành",
+      "text": "Tôi là một giám đốc điều hành đang chìm ngập trong hàng trăm email mỗi ngày. Điều tôi yêu thích nhất ở Zero Mail là cách nó thay thế hoàn toàn việc xử lý email thủ công—tự động hóa thông minh."
+    },
+    "r7": {
+      "role": "Nhà sáng lập",
+      "text": "Cuối cùng cũng có một ứng dụng 'hủy đăng ký' giúp bạn *thực sự* hủy đăng ký và lọc thông qua bộ lọc Gmail (thay vì luôn phụ thuộc vào ứng dụng bên thứ 3)."
+    }
+  },
   "legal": {
     "googleApiPolicy": {
-      "body": "Việc Zero Mail sử dụng và chuyển giao thông tin nhận được từ Google API sang bất kỳ ứng dụng nào khác sẽ tuân thủ <link>Chính sách bảo mật dữ liệu người dùng của Google API</link>, bao gồm các yêu cầu Sử dụng có giới hạn (Limited Use)."
+      "body": "Dữ liệu Google API được xử lý theo <link>Chính sách dữ liệu người dùng Google API</link> và yêu cầu Limited Use."
     },
     "privacy": {
       "placeholderBody": "Chính sách bảo mật đầy đủ sẽ có trong Phase 6 (giai đoạn hardening trước khi launch). PROJECT.md mô tả cam kết ràng buộc về bảo mật: không lưu trữ lâu dài nội dung email, prompt, câu trả lời, hay embedding.",

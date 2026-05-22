@@ -10,7 +10,7 @@ on:
       - 'apps/web/features/**'
       - 'apps/web/scripts/check-i18n.ts'
       - 'backend/api/src/main/java/com/zeromail/api/error/ErrorCodes.java'
-      - 'tools/i18n-key-coverage/**'
+      - 'scripts/ci/i18n-key-coverage/**'
       - '.github/workflows/i18n-check.yml'
   push:
     branches: [main]
@@ -35,7 +35,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version: "24"
           check-latest: true
           cache: pnpm
 
@@ -43,4 +43,4 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run i18n key coverage gate
-        run: node tools/i18n-key-coverage/index.mjs
+        run: node scripts/ci/i18n-key-coverage/index.mjs

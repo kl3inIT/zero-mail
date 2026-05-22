@@ -2,7 +2,6 @@ package com.zeromail.core.llm.usecases;
 
 import com.zeromail.core.billing.domain.CallSite;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Pure-Java seam for semantic-intent structured-output evaluation. Spring AI-specific
@@ -10,6 +9,6 @@ import java.util.Map;
  */
 public interface SemanticIntentEvaluator {
 
-    Map<String, Boolean> evaluate(
+    SemanticIntentEvaluationResult evaluate(
             CallSite callSite, String sanitizedMessageContent, List<SemanticIntentRequest> intents);
 }

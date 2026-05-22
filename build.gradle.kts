@@ -1,7 +1,15 @@
 plugins {
     base
     id("com.diffplug.spotless") version "8.5.1"
+    alias(libs.plugins.cyclonedxBom)
 }
+
+// CycloneDX 3.x defaults are fine for our use:
+//   - includeConfigs: runtimeClasspath
+//   - outputFormat: XML (OSV-Scanner reads XML + JSON)
+//   - schemaVersion: 1.5
+//   - destination: build/reports/
+// Override per-module only if a sub-module needs a custom scope.
 
 configure(
     listOf(

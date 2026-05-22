@@ -1,29 +1,31 @@
 import Image from 'next/image';
+import { getTranslations } from 'next-intl/server';
 
-export default function Features() {
+export default async function Features() {
+  const t = await getTranslations('landingFeatures');
+
   return (
     <div className="flex flex-col gap-32 bg-(--bg) py-24" id="features">
       {/* 1. Automatically Organized */}
       <section className="zm-container text-center">
         <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
-          Tự động phân loại.
+          {t('sec1.title.line1')}
           <br />
-          Không bao giờ bỏ lỡ email quan trọng.
+          {t('sec1.title.line2')}
         </h2>
         <p className="mx-auto mb-16 max-w-3xl text-xl leading-relaxed text-(--text-muted)">
-          Đang chìm ngập trong email? Đừng lãng phí năng lượng cố gắng ưu tiên chúng nữa. Trợ lý AI
-          của chúng tôi sẽ tự động dán nhãn mọi thứ.
+          {t('sec1.body')}
         </p>
 
         <div className="mx-auto mb-8 grid w-full max-w-5xl grid-cols-2">
           <div className="flex items-center justify-center gap-2 text-center">
-            <span className="text-2xl font-bold text-(--text-muted)">Trước</span>
+            <span className="text-2xl font-bold text-(--text-muted)">{t('sec1.before')}</span>
             <span className="relative -top-2 rounded-full bg-red-700 px-2 py-0.5 text-[11px] leading-none font-extrabold text-white shadow-sm">
               99+
             </span>
           </div>
           <div className="text-center">
-            <span className="text-2xl font-bold text-(--text-muted)">Sau</span>
+            <span className="text-2xl font-bold text-(--text-muted)">{t('sec1.after')}</span>
           </div>
         </div>
 
@@ -31,7 +33,7 @@ export default function Features() {
           {/* Light Mode Image */}
           <Image
             src="/images/phan-loai-dark-v2.png"
-            alt="Tính năng tự động phân loại"
+            alt={t('sec1.title.line1')}
             fill
             sizes="(max-width: 1024px) 100vw, 1024px"
             className="object-contain dark:hidden"
@@ -39,7 +41,7 @@ export default function Features() {
           {/* Dark Mode Image */}
           <Image
             src="/images/phan-loai-light.png"
-            alt="Tính năng tự động phân loại"
+            alt={t('sec1.title.line1')}
             fill
             className="hidden object-contain dark:block"
           />
@@ -49,17 +51,16 @@ export default function Features() {
       {/* 2. Pre-written drafts */}
       <section className="zm-container text-center">
         <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
-          Bản nháp chờ sẵn trong hộp thư
+          {t('sec2.title')}
         </h2>
         <p className="mx-auto mb-16 max-w-3xl text-xl leading-relaxed text-(--text-muted)">
-          Khi bạn kiểm tra hộp thư, mọi email cần phản hồi sẽ có sẵn một bản nháp được soạn theo văn
-          phong của bạn, sẵn sàng để gửi.
+          {t('sec2.body')}
         </p>
         <div className="relative mx-auto aspect-[16/9] w-full max-w-5xl overflow-hidden rounded-2xl">
           {/* Light Mode Image */}
           <Image
             src="/images/ketnoi-light.png"
-            alt="Bản nháp chờ sẵn"
+            alt={t('sec2.title')}
             fill
             sizes="(max-width: 1024px) 100vw, 1024px"
             className="object-contain dark:hidden"
@@ -67,7 +68,7 @@ export default function Features() {
           {/* Dark Mode Image */}
           <Image
             src="/images/ketnoi-dark.png"
-            alt="Bản nháp chờ sẵn (Dark Mode)"
+            alt={t('sec2.title')}
             fill
             className="hidden object-contain dark:block"
           />
@@ -77,11 +78,10 @@ export default function Features() {
       {/* 3. Your inbox, wherever you work */}
       <section className="zm-container text-center">
         <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
-          Hộp thư của bạn, ở bất cứ đâu
+          {t('sec3.title')}
         </h2>
         <p className="mx-auto mb-20 max-w-3xl text-xl leading-relaxed text-(--text-muted)">
-          Đọc email, soạn phản hồi và quản lý hộp thư từ Zalo, Telegram hoặc Web — không cần chuyển
-          đổi ứng dụng.
+          {t('sec3.body')}
         </p>
 
         <div className="flex w-full max-w-full items-center justify-center gap-4 overflow-visible py-12 sm:gap-16 md:gap-32">
@@ -151,10 +151,10 @@ export default function Features() {
       <section className="zm-container">
         <div className="mb-16 text-center">
           <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
-            Bắt đầu chỉ trong vài phút
+            {t('sec4.title')}
           </h2>
           <p className="mx-auto max-w-3xl text-xl leading-relaxed text-(--text-muted)">
-            Cài đặt chỉ với một click. Bắt đầu sắp xếp và soạn email trong vài phút.
+            {t('sec4.body')}
           </p>
         </div>
 
@@ -177,13 +177,13 @@ export default function Features() {
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  STEP 1
+                  {t('sec4.step1.label')}
                 </div>
                 <h3 className="mb-3 text-2xl leading-tight font-bold text-(--ink)">
-                  Kết nối tài khoản Google
+                  {t('sec4.step1.title')}
                 </h3>
                 <p className="text-[15px] leading-relaxed text-(--text-muted)">
-                  Liên kết Gmail của bạn chỉ với hai cú nhấp chuột để bắt đầu trải nghiệm.
+                  {t('sec4.step1.body')}
                 </p>
               </div>
               <div className="relative flex flex-1 items-end justify-center overflow-hidden pb-12">
@@ -247,43 +247,43 @@ export default function Features() {
                       d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"
                     />
                   </svg>
-                  STEP 2
+                  {t('sec4.step2.label')}
                 </div>
                 <h3 className="mb-3 text-2xl leading-tight font-bold text-(--ink)">
-                  Tổ chức hộp thư như ý muốn
+                  {t('sec4.step2.title')}
                 </h3>
                 <p className="text-[15px] leading-relaxed text-(--text-muted)">
-                  Danh mục thông minh tự động thiết lập. Dùng danh mục mặc định hoặc tự tạo.
+                  {t('sec4.step2.body')}
                 </p>
               </div>
               <div className="relative flex flex-1 items-end justify-center overflow-hidden pb-8">
                 <div className="flex w-[140%] scale-[1.1] -rotate-2 flex-col gap-3.5 transition-transform duration-700 hover:scale-[1.15] hover:-rotate-1">
                   <div className="flex translate-x-4 justify-center gap-3">
                     <span className="rounded-md border border-purple-200 bg-purple-100/50 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap text-purple-700">
-                      📧 Bản tin
+                      {t('sec4.step2.chips.newsletter')}
                     </span>
                     <span className="rounded-md border border-blue-200 bg-blue-100/50 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap text-blue-700 shadow-sm shadow-blue-500/10">
-                      ↩️ Cần trả lời
+                      {t('sec4.step2.chips.needsReply')}
                     </span>
                     <span className="rounded-md border border-green-200 bg-green-100/50 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap text-green-700">
-                      📢 Marketing
+                      {t('sec4.step2.chips.marketing')}
                     </span>
                     <span className="rounded-md border border-yellow-200 bg-yellow-100/50 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap text-yellow-700">
-                      📅 Lịch hẹn
+                      {t('sec4.step2.chips.calendar')}
                     </span>
                   </div>
                   <div className="flex -translate-x-6 justify-center gap-3">
                     <span className="rounded-md border border-red-200 bg-red-100/50 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap text-red-700">
-                      🔔 Thông báo
+                      {t('sec4.step2.chips.notifications')}
                     </span>
                     <span className="rounded-md border border-cyan-200 bg-cyan-100/50 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap text-cyan-700 shadow-sm shadow-cyan-500/10">
-                      ❄️ Cold Email
+                      {t('sec4.step2.chips.coldEmail')}
                     </span>
                     <span className="rounded-md border border-orange-200 bg-orange-100/50 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap text-orange-700">
-                      👥 Nội bộ
+                      {t('sec4.step2.chips.internal')}
                     </span>
                     <span className="rounded-md border border-pink-200 bg-pink-100/50 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap text-pink-700">
-                      🔥 Khẩn cấp
+                      {t('sec4.step2.chips.urgent')}
                     </span>
                   </div>
                 </div>
@@ -307,19 +307,21 @@ export default function Features() {
                       d="M13 10V3L4 14h7v7l9-11h-7z"
                     />
                   </svg>
-                  STEP 3
+                  {t('sec4.step3.label')}
                 </div>
                 <h3 className="mb-3 text-2xl leading-tight font-bold text-(--ink)">
-                  Bản nháp tự động thông minh
+                  {t('sec4.step3.title')}
                 </h3>
                 <p className="text-[15px] leading-relaxed text-(--text-muted)">
-                  Mọi email cần phản hồi sẽ luôn có một bản nháp chờ bạn bấm Gửi.
+                  {t('sec4.step3.body')}
                 </p>
               </div>
               <div className="relative flex flex-1 items-end justify-center pt-8">
                 <div className="w-[88%] translate-y-3 self-end overflow-hidden rounded-t-xl border border-gray-200 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.05)] transition-transform duration-500 hover:translate-y-1">
                   <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-5 py-3">
-                    <span className="text-[12px] font-semibold text-gray-800">New Message</span>
+                    <span className="text-[12px] font-semibold text-gray-800">
+                      {t('sec4.step3.mockHeader')}
+                    </span>
                     <svg
                       className="h-3 w-3 text-gray-400"
                       fill="none"
@@ -336,14 +338,16 @@ export default function Features() {
                   </div>
                   <div className="flex flex-col gap-3 p-5">
                     <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-[10px] font-black tracking-widest text-transparent">
-                      DRAFTED BY AI:
+                      {t('sec4.step3.draftedBy')}
                     </span>
                     <p className="text-[18px] leading-snug font-medium text-gray-700">
-                      Tôi rất sẵn lòng gặp bạn lúc 5h chiều tuần tới nhé!
+                      {t('sec4.step3.draftBody')}
                     </p>
                     <div className="mt-4 flex items-center">
                       <button className="group relative cursor-pointer overflow-hidden rounded-full bg-[#0b57d0] px-6 py-2 text-sm font-semibold text-white shadow-md transition-all hover:bg-blue-700 hover:shadow-lg">
-                        <span className="relative z-10 flex items-center gap-1.5">Send</span>
+                        <span className="relative z-10 flex items-center gap-1.5">
+                          {t('sec4.step3.sendButton')}
+                        </span>
                         <div className="absolute inset-0 translate-y-full bg-white/20 transition-transform duration-300 group-hover:translate-y-0" />
                       </button>
                       <svg
@@ -370,22 +374,21 @@ export default function Features() {
       {/* 5. Bulk unsubscribe */}
       <section className="zm-container mb-24 text-center">
         <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
-          Hủy đăng ký hàng loạt email bạn không bao giờ đọc
+          {t('sec5.title')}
         </h2>
         <p className="mx-auto mb-16 max-w-3xl text-xl leading-relaxed text-(--text-muted)">
-          Xem những email nào bạn chưa bao giờ mở, và hủy đăng ký & lưu trữ chúng chỉ với một cú
-          nhấp chuột.
+          {t('sec5.body')}
         </p>
         <div className="relative mx-auto aspect-[16/9] w-full max-w-4xl overflow-hidden rounded-2xl border border-(--line-strong) bg-(--bg-elevated) shadow-[0_8px_30px_rgba(0,0,0,0.06)] md:aspect-[2/1]">
           <Image
             src="/images/huydangky-light.png"
-            alt="Hủy đăng ký hàng loạt"
+            alt={t('sec5.title')}
             fill
             className="object-contain p-4 md:p-8 dark:hidden"
           />
           <Image
             src="/images/huydangky-dark.png"
-            alt="Hủy đăng ký hàng loạt"
+            alt={t('sec5.title')}
             fill
             className="hidden object-contain p-4 md:p-8 dark:block"
           />
@@ -396,10 +399,10 @@ export default function Features() {
       <section className="zm-container mb-24">
         <div className="mb-16 text-center">
           <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
-            Thiết kế xoay quanh cách bạn làm việc
+            {t('sec6.title')}
           </h2>
           <p className="mx-auto max-w-3xl text-xl leading-relaxed text-(--text-muted)">
-            Đủ linh hoạt cho mọi quy trình. Đủ đơn giản để cài đặt trong vài phút.
+            {t('sec6.body')}
           </p>
         </div>
 
@@ -414,22 +417,21 @@ export default function Features() {
                   </svg>
                 </div>
                 <h3 className="mb-3 pr-4 text-2xl leading-tight font-bold text-(--ink)">
-                  Phân tích hộp thư. Hiểu rõ để tối ưu
+                  {t('sec6.col1.title')}
                 </h3>
                 <p className="text-[15px] leading-relaxed text-(--text-muted)">
-                  Xem ai gửi email nhiều nhất và điều gì đang làm đầy hộp thư. Phân tích chi tiết và
-                  xử lý.
+                  {t('sec6.col1.body')}
                 </p>
               </div>
               <div className="relative flex flex-1 items-end justify-center px-6 pt-8 pb-0">
                 <div className="relative w-full translate-y-3 overflow-hidden rounded-t-[20px] border border-b-0 border-gray-200 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.04)] transition-transform duration-500 hover:translate-y-1">
                   <div className="p-5">
                     <h4 className="mb-4 text-[15px] font-semibold text-gray-600">
-                      Ai gửi email cho bạn nhiều nhất
+                      {t('sec6.col1.mockHeading')}
                     </h4>
                     <div className="mb-2 flex justify-between text-[11px] font-semibold tracking-wider text-gray-600 uppercase">
-                      <span>Người gửi</span>
-                      <span>Số lượng</span>
+                      <span>{t('sec6.col1.mockSenderHeader')}</span>
+                      <span>{t('sec6.col1.mockCountHeader')}</span>
                     </div>
                     <div className="flex flex-col gap-2">
                       <div className="relative z-10 flex items-center justify-between text-sm">
@@ -492,11 +494,10 @@ export default function Features() {
                   </svg>
                 </div>
                 <h3 className="mb-3 pr-4 text-2xl leading-tight font-bold text-(--ink)">
-                  Bản nháp nắm rõ lịch trình của bạn
+                  {t('sec6.col2.title')}
                 </h3>
                 <p className="text-[15px] leading-relaxed text-(--text-muted)">
-                  Kết nối với lịch và CRM của bạn để soạn email dựa trên thời gian biểu và dữ liệu
-                  khách hàng.
+                  {t('sec6.col2.body')}
                 </p>
               </div>
               <div className="relative flex flex-1 items-center justify-center overflow-hidden p-8">
@@ -603,10 +604,10 @@ export default function Features() {
                   </svg>
                 </div>
                 <h3 className="mb-3 pr-4 text-2xl leading-tight font-bold text-(--ink)">
-                  Tùy biến bằng ngôn ngữ tự nhiên
+                  {t('sec6.col3.title')}
                 </h3>
                 <p className="text-[15px] leading-relaxed text-(--text-muted)">
-                  Hộp thư của bạn, luật của bạn. Cấu hình mọi thứ bằng tiếng Việt tự nhiên.
+                  {t('sec6.col3.body')}
                 </p>
               </div>
               <div className="relative flex flex-1 items-end justify-center px-6 pt-8 pb-6">
@@ -614,26 +615,20 @@ export default function Features() {
                   <div className="relative flex flex-1 flex-col gap-3 p-5">
                     <div className="flex items-start gap-3 opacity-90">
                       <div className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400" />
-                      <p className="text-sm leading-snug text-gray-600">
-                        Gắn nhãn email từ @congty.com là Nội bộ
-                      </p>
+                      <p className="text-sm leading-snug text-gray-600">{t('sec6.col3.rule1')}</p>
                     </div>
                     <div className="flex items-start gap-3 opacity-80">
                       <div className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400" />
-                      <p className="text-sm leading-snug text-gray-600">
-                        Lưu trữ mọi hóa đơn và gửi cho kế toán
-                      </p>
+                      <p className="text-sm leading-snug text-gray-600">{t('sec6.col3.rule2')}</p>
                     </div>
                     <div className="flex items-start gap-3 opacity-60">
                       <div className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400" />
-                      <p className="text-sm leading-snug text-gray-600">
-                        Gửi bản tổng hợp newsletter vào CN
-                      </p>
+                      <p className="text-sm leading-snug text-gray-600">{t('sec6.col3.rule3')}</p>
                     </div>
                     <div className="flex items-start gap-3">
                       <div className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#0068FF]" />
                       <p className="text-sm leading-snug font-medium text-gray-800">
-                        Nếu có ai muốn đặt lịch họp, hãy phản hồi k
+                        {t('sec6.col3.rule4')}
                         <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-[#0068FF] align-middle" />
                       </p>
                     </div>
@@ -644,10 +639,10 @@ export default function Features() {
 
                   <div className="flex gap-2 overflow-x-hidden px-4 pt-1 pb-4">
                     <button className="rounded-md bg-[#0068FF]/10 px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-[#0068FF] transition-colors hover:bg-[#0068FF]/20">
-                      + Tạo luật mới
+                      {t('sec6.col3.newRule')}
                     </button>
                     <button className="rounded-md bg-gray-100 px-3 py-1.5 text-[11px] font-bold whitespace-nowrap text-gray-600 transition-colors hover:bg-gray-200">
-                      ↗ Xem ví dụ
+                      {t('sec6.col3.examples')}
                     </button>
                   </div>
                 </div>

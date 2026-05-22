@@ -3,26 +3,28 @@ package com.zeromail.api.chat;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
+import com.zeromail.core.chat.persistence.lowlevel.AssistantReconciliationRepository;
+import com.zeromail.core.chat.projection.ExpiredAssistantPendingAction;
+import com.zeromail.core.chat.projection.StaleAssistantSendAudit;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.tenant.TenantContext;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
-import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Reconciles assistant confirmation state after crashes.
+ * Reconciles assistant confirmation state after crashes. All SQL lives in {@link
+ * AssistantReconciliationRepository}; this scheduled component composes the sweep and decides
+ * terminal state from Gmail probes.
  *
  * <p>There is one permanent residual gap: Gmail can accept a generated message after the server has
  * failed to commit the SEND_IN_FLIGHT audit row to Postgres. Without a committed audit row,
@@ -30,14 +32,14 @@ import org.springframework.stereotype.Component;
  * inherent to coordinating Gmail and Postgres without two-phase commit.
  */
 @Component
-@SuppressWarnings("SqlResolve")
 public class AssistantPendingActionReconciler {
 
     private static final Logger log =
             LoggerFactory.getLogger(AssistantPendingActionReconciler.class);
     private static final int PAGE_SIZE = 100;
+    private static final long SEND_IN_FLIGHT_GRACE_SECONDS = 60;
 
-    private final JdbcTemplate jdbcTemplate;
+    private final AssistantReconciliationRepository assistantReconciliationRepository;
     private final GmailApiClientFactory gmailApiClientFactory;
     private final Clock clock;
     private final Counter residualLeasesCounter;
@@ -47,18 +49,22 @@ public class AssistantPendingActionReconciler {
 
     @Autowired
     public AssistantPendingActionReconciler(
-            JdbcTemplate jdbcTemplate,
+            AssistantReconciliationRepository assistantReconciliationRepository,
             GmailApiClientFactory gmailApiClientFactory,
             MeterRegistry meterRegistry) {
-        this(jdbcTemplate, gmailApiClientFactory, meterRegistry, Clock.systemUTC());
+        this(
+                assistantReconciliationRepository,
+                gmailApiClientFactory,
+                meterRegistry,
+                Clock.systemUTC());
     }
 
     AssistantPendingActionReconciler(
-            JdbcTemplate jdbcTemplate,
+            AssistantReconciliationRepository assistantReconciliationRepository,
             GmailApiClientFactory gmailApiClientFactory,
             MeterRegistry meterRegistry,
             Clock clock) {
-        this.jdbcTemplate = jdbcTemplate;
+        this.assistantReconciliationRepository = assistantReconciliationRepository;
         this.gmailApiClientFactory = gmailApiClientFactory;
         this.clock = clock;
         this.residualLeasesCounter =
@@ -91,8 +97,10 @@ public class AssistantPendingActionReconciler {
     }
 
     void reconcileExpiredLeases() {
-        List<ExpiredPendingAction> expiredPendingActions = findExpiredPendingActions();
-        for (ExpiredPendingAction expiredPendingAction : expiredPendingActions) {
+        List<ExpiredAssistantPendingAction> expiredPendingActions =
+                assistantReconciliationRepository.findExpiredPendingActions(
+                        clock.instant(), PAGE_SIZE);
+        for (ExpiredAssistantPendingAction expiredPendingAction : expiredPendingActions) {
             TenantContext.runWith(
                     expiredPendingAction.tenantId(),
                     () -> reconcileExpiredLease(expiredPendingAction));
@@ -100,51 +108,28 @@ public class AssistantPendingActionReconciler {
     }
 
     void reconcileStaleSendInFlight() {
-        List<StaleSendAudit> staleSendAudits = findStaleSendAudits();
-        for (StaleSendAudit staleSendAudit : staleSendAudits) {
+        List<StaleAssistantSendAudit> staleSendAudits =
+                assistantReconciliationRepository.findStaleSendAudits(
+                        clock.instant().minusSeconds(SEND_IN_FLIGHT_GRACE_SECONDS), PAGE_SIZE);
+        for (StaleAssistantSendAudit staleSendAudit : staleSendAudits) {
             TenantContext.runWith(
                     staleSendAudit.tenantId(), () -> reconcileStaleSendAudit(staleSendAudit));
         }
     }
 
-    private List<ExpiredPendingAction> findExpiredPendingActions() {
-        return jdbcTemplate.query(
-                """
-                SELECT id, tenant_id, chat_id, tool_call_id
-                  FROM assistant_pending_action
-                 WHERE state = 'PROCESSING'
-                   AND expires_at < ?
-                 ORDER BY expires_at, id
-                 LIMIT ?
-                """,
-                (resultSet, _) ->
-                        new ExpiredPendingAction(
-                                resultSet.getObject("id", UUID.class),
-                                resultSet.getObject("tenant_id", UUID.class),
-                                resultSet.getObject("chat_id", UUID.class),
-                                resultSet.getString("tool_call_id")),
-                Timestamp.from(clock.instant()),
-                PAGE_SIZE);
-    }
-
-    private void reconcileExpiredLease(ExpiredPendingAction expiredPendingAction) {
+    private void reconcileExpiredLease(ExpiredAssistantPendingAction expiredPendingAction) {
         residualLeasesCounter.increment();
-        boolean committedAuditExists = committedAuditExists(expiredPendingAction);
+        boolean committedAuditExists =
+                assistantReconciliationRepository.committedAuditExists(
+                        expiredPendingAction.tenantId(),
+                        expiredPendingAction.chatId(),
+                        expiredPendingAction.toolCallId());
         String targetState = committedAuditExists ? "CONFIRMED" : "FAILED";
         int changedRows =
-                jdbcTemplate.update(
-                        """
-                        UPDATE assistant_pending_action
-                           SET state = ?,
-                               updated_at = now(),
-                               version = version + 1
-                         WHERE id = ?
-                           AND tenant_id = ?
-                           AND state = 'PROCESSING'
-                        """,
-                        targetState,
+                assistantReconciliationRepository.sweepPendingActionToTerminalState(
                         expiredPendingAction.pendingActionId(),
-                        expiredPendingAction.tenantId());
+                        expiredPendingAction.tenantId(),
+                        targetState);
         if (changedRows == 0) {
             return;
         }
@@ -158,49 +143,7 @@ public class AssistantPendingActionReconciler {
                 committedAuditExists ? "confirmed" : "failed");
     }
 
-    private boolean committedAuditExists(ExpiredPendingAction expiredPendingAction) {
-        Boolean exists =
-                jdbcTemplate.queryForObject(
-                        """
-                        SELECT EXISTS (
-                            SELECT 1
-                              FROM assistant_action_audit
-                             WHERE tenant_id = ?
-                               AND chat_id = ?
-                               AND tool_call_id = ?
-                               AND state = 'COMMITTED'
-                        )
-                        """,
-                        Boolean.class,
-                        expiredPendingAction.tenantId(),
-                        expiredPendingAction.chatId(),
-                        expiredPendingAction.toolCallId());
-        return Boolean.TRUE.equals(exists);
-    }
-
-    private List<StaleSendAudit> findStaleSendAudits() {
-        return jdbcTemplate.query(
-                """
-                SELECT id, tenant_id, chat_id, tool_call_id, gmail_message_id
-                  FROM assistant_action_audit
-                 WHERE state = 'SEND_IN_FLIGHT'
-                   AND in_flight_at < ?
-                   AND gmail_message_id IS NOT NULL
-                 ORDER BY in_flight_at, id
-                 LIMIT ?
-                """,
-                (resultSet, _) ->
-                        new StaleSendAudit(
-                                resultSet.getObject("id", UUID.class),
-                                resultSet.getObject("tenant_id", UUID.class),
-                                resultSet.getObject("chat_id", UUID.class),
-                                resultSet.getString("tool_call_id"),
-                                resultSet.getString("gmail_message_id")),
-                Timestamp.from(clock.instant().minusSeconds(60)),
-                PAGE_SIZE);
-    }
-
-    private void reconcileStaleSendAudit(StaleSendAudit staleSendAudit) {
+    private void reconcileStaleSendAudit(StaleAssistantSendAudit staleSendAudit) {
         try {
             if (gmailHasMessage(staleSendAudit)) {
                 markSendCommitted(staleSendAudit);
@@ -216,7 +159,7 @@ public class AssistantPendingActionReconciler {
         }
     }
 
-    private boolean gmailHasMessage(StaleSendAudit staleSendAudit) throws IOException {
+    private boolean gmailHasMessage(StaleAssistantSendAudit staleSendAudit) throws IOException {
         Gmail gmail = gmailApiClientFactory.buildClientForTenant(staleSendAudit.tenantId());
         ListMessagesResponse response =
                 gmail.users()
@@ -228,27 +171,19 @@ public class AssistantPendingActionReconciler {
         return messages != null && !messages.isEmpty();
     }
 
-    private void markSendCommitted(StaleSendAudit staleSendAudit) {
+    private void markSendCommitted(StaleAssistantSendAudit staleSendAudit) {
         Instant sentAt = clock.instant();
         int changedRows =
-                jdbcTemplate.update(
-                        """
-                        UPDATE assistant_action_audit
-                           SET state = 'COMMITTED',
-                               sent_at = ?,
-                               updated_at = now(),
-                               version = version + 1
-                         WHERE id = ?
-                           AND tenant_id = ?
-                           AND state = 'SEND_IN_FLIGHT'
-                        """,
-                        Timestamp.from(sentAt),
-                        staleSendAudit.auditId(),
-                        staleSendAudit.tenantId());
+                assistantReconciliationRepository.markSendCommitted(
+                        staleSendAudit.auditId(), staleSendAudit.tenantId(), sentAt);
         if (changedRows == 0) {
             return;
         }
-        updatePendingActionState(staleSendAudit, "CONFIRMED");
+        assistantReconciliationRepository.updatePendingActionState(
+                staleSendAudit.tenantId(),
+                staleSendAudit.chatId(),
+                staleSendAudit.toolCallId(),
+                "CONFIRMED");
         sendRecoveredCounter.increment();
         log.info(
                 "event=chat_reconciliation_swept tenantId={} chatId={} sweep=send-in-flight action=committed",
@@ -256,53 +191,22 @@ public class AssistantPendingActionReconciler {
                 staleSendAudit.chatId());
     }
 
-    private void markSendFailed(StaleSendAudit staleSendAudit) {
+    private void markSendFailed(StaleAssistantSendAudit staleSendAudit) {
         int changedRows =
-                jdbcTemplate.update(
-                        """
-                        UPDATE assistant_action_audit
-                           SET state = 'FAILED',
-                               updated_at = now(),
-                               version = version + 1
-                         WHERE id = ?
-                           AND tenant_id = ?
-                           AND state = 'SEND_IN_FLIGHT'
-                        """,
-                        staleSendAudit.auditId(),
-                        staleSendAudit.tenantId());
+                assistantReconciliationRepository.markSendFailed(
+                        staleSendAudit.auditId(), staleSendAudit.tenantId());
         if (changedRows == 0) {
             return;
         }
-        updatePendingActionState(staleSendAudit, "FAILED");
+        assistantReconciliationRepository.updatePendingActionState(
+                staleSendAudit.tenantId(),
+                staleSendAudit.chatId(),
+                staleSendAudit.toolCallId(),
+                "FAILED");
         sendLostCounter.increment();
         log.info(
                 "event=chat_reconciliation_swept tenantId={} chatId={} sweep=send-in-flight action=failed",
                 staleSendAudit.tenantId(),
                 staleSendAudit.chatId());
     }
-
-    private void updatePendingActionState(StaleSendAudit staleSendAudit, String state) {
-        jdbcTemplate.update(
-                """
-                UPDATE assistant_pending_action
-                   SET state = ?,
-                       updated_at = now(),
-                       version = version + 1
-                 WHERE tenant_id = ?
-                   AND chat_id = ?
-                   AND tool_call_id = ?
-                   AND state <> ?
-                """,
-                state,
-                staleSendAudit.tenantId(),
-                staleSendAudit.chatId(),
-                staleSendAudit.toolCallId(),
-                state);
-    }
-
-    private record ExpiredPendingAction(
-            UUID pendingActionId, UUID tenantId, UUID chatId, String toolCallId) {}
-
-    private record StaleSendAudit(
-            UUID auditId, UUID tenantId, UUID chatId, String toolCallId, String gmailMessageId) {}
 }

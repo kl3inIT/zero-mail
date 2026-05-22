@@ -12,7 +12,7 @@ async function mockSettingsApis(page: Page) {
     const request = route.request();
     const url = new URL(request.url());
 
-    if (url.pathname === '/me') {
+    if (url.pathname === '/api/me') {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -33,11 +33,25 @@ async function mockSettingsApis(page: Page) {
       return;
     }
 
-    if (url.pathname === '/gmail/connection/status') {
+    if (url.pathname === '/api/gmail/connection/status') {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ connectionStatus: 'CONNECTED', googleEmail: 'founder@example.com' }),
+      });
+      return;
+    }
+
+    if (url.pathname === '/api/me/notifications' && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          channel: 'DAILY_DIGEST',
+          digestEnabled: true,
+          digestSendHourLocal: 20,
+          timeZone: 'Asia/Ho_Chi_Minh',
+        }),
       });
       return;
     }

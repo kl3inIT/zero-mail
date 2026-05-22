@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { Route } from 'next';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 
@@ -6,7 +7,7 @@ import { cn } from '@/lib/utils';
 
 type Step = 'GMAIL_CONNECTED' | 'TEMPLATE_SELECTED' | 'COMPLETE';
 
-const STEPS: { key: Step; href: string; labelKey: string }[] = [
+const STEPS: { key: Step; href: Route; labelKey: string }[] = [
   {
     key: 'GMAIL_CONNECTED',
     href: '/onboarding/gmail-connect',

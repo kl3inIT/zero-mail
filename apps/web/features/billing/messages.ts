@@ -4,8 +4,8 @@ export const billingMessages = {
     en: 'Billing',
   },
   'billing.page.description': {
-    vi: 'Theo dõi số dư tín dụng, tạo mã nạp VietQR và xem lịch sử giao dịch khi backend sẵn sàng.',
-    en: 'Track your credit balance, create VietQR top-ups, and review transaction history when the backend is ready.',
+    vi: 'Theo dõi tín dụng beta miễn phí, tín dụng đã nạp và lịch sử sử dụng gần đây.',
+    en: 'Track free beta credits, paid credits, and recent usage activity.',
   },
   'billing.balance.label': {
     vi: 'Tín dụng hiện có',
@@ -22,6 +22,38 @@ export const billingMessages = {
   'billing.balance.held': {
     vi: 'Đang giữ',
     en: 'Held credits',
+  },
+  'billing.balance.heldDetail': {
+    vi: 'Đã reserve cho tác vụ đang chạy',
+    en: 'Reserved by in-flight actions',
+  },
+  'billing.balance.betaCredits': {
+    vi: 'Tín dụng beta',
+    en: 'Beta credits',
+  },
+  'billing.balance.paidCredits': {
+    vi: 'Tín dụng đã nạp',
+    en: 'Paid credits',
+  },
+  'billing.balance.monthlyGrant': {
+    vi: '{credits} tín dụng / tháng',
+    en: '{credits} credits / month',
+  },
+  'billing.balance.noExpiry': {
+    vi: 'Không reset theo kỳ beta',
+    en: 'Does not reset with beta',
+  },
+  'billing.balance.resetsAt': {
+    vi: 'Reset lúc',
+    en: 'Resets at',
+  },
+  'billing.balance.resetUnknown': {
+    vi: 'Chưa rõ',
+    en: 'Unknown',
+  },
+  'billing.balance.betaNotice': {
+    vi: 'Miễn phí trong giai đoạn beta. Zero Mail sẽ báo trước khi cần chuyển sang gói trả phí.',
+    en: "Free during beta. We'll notify you before paid plans are required.",
   },
   'billing.balance.refreshLabel': {
     vi: 'Tự cập nhật',
@@ -52,8 +84,8 @@ export const billingMessages = {
     en: 'Transaction history',
   },
   'billing.ledger.description': {
-    vi: 'Các lượt nạp, giữ và trừ tín dụng sẽ được liệt kê ở đây.',
-    en: 'Top-ups, holds, and credit usage will be listed here.',
+    vi: 'Các lượt cấp, nạp, giữ, trừ và hoàn tín dụng gần đây.',
+    en: 'Recent grants, top-ups, holds, spends, and releases.',
   },
   'billing.ledger.empty.heading': {
     vi: 'Chưa có giao dịch',
@@ -111,6 +143,10 @@ export const billingMessages = {
     vi: 'Nạp',
     en: 'Top-up',
   },
+  'billing.ledger.type.grant': {
+    vi: 'Cấp',
+    en: 'Grant',
+  },
   'billing.ledger.type.reserve': {
     vi: 'Giữ',
     en: 'Reserve',
@@ -122,6 +158,10 @@ export const billingMessages = {
   'billing.ledger.type.release': {
     vi: 'Hoàn giữ',
     en: 'Release',
+  },
+  'billing.ledger.type.expire': {
+    vi: 'Hết hạn',
+    en: 'Expired',
   },
   'billing.ledger.type.adjustment': {
     vi: 'Điều chỉnh',

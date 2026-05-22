@@ -1,0 +1,34 @@
+# Backend API per-Dockerfile ignore (BuildKit auto-applies this on top of the root .dockerignore).
+# Goal: ship only gradle wrapper + manifests + backend/core + backend/api source.
+
+# Frontend monorepo workspace — backend api never needs this.
+apps
+content
+tools
+specs
+seed.spec.ts
+package.json
+package-lock.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+turbo.json
+
+# Loadtest fixtures + ops scripts.
+loadtest
+ops
+scripts
+
+# Sibling backend modules — only :backend:api + :backend:core source is consumed by this build.
+backend/worker/src
+backend/worker/build
+backend/worker/.gradle
+
+# Backend test sources — bootJar build runs with -x test.
+backend/api/src/test
+backend/core/src/test
+backend/api/build
+backend/core/build
+
+# OpenAPI snapshots committed to repo — not needed inside the runtime image.
+backend/api/src/main/resources/openapi
+backend/api/openapi

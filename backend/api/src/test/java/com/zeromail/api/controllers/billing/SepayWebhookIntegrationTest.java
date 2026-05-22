@@ -41,6 +41,7 @@ class SepayWebhookIntegrationTest extends ApiPostgresTestBase {
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getBody()).contains("\"success\":true");
         assertThat(countTopupEntries(tenantId)).isEqualTo(1L);
+        assertThat(countPaidGrants(tenantId)).isEqualTo(1L);
         assertThat(topupAmountCredits(tenantId, "999")).isEqualTo(100);
         BillingTopupIntentEntity paidIntent = findIntentByCode(tenantId, "ABC12345");
         assertThat(paidIntent.getStatus()).isEqualTo(BillingTopupIntentStatus.PAID);
@@ -59,6 +60,7 @@ class SepayWebhookIntegrationTest extends ApiPostgresTestBase {
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getBody()).contains("\"success\":true");
         assertThat(countTopupEntries(tenantId)).isEqualTo(1L);
+        assertThat(countPaidGrants(tenantId)).isEqualTo(1L);
         assertThat(topupAmountCredits(tenantId, "1999")).isEqualTo(100);
         BillingTopupIntentEntity paidIntent = findIntentByCode(tenantId, "MNP12345");
         assertThat(paidIntent.getStatus()).isEqualTo(BillingTopupIntentStatus.PAID);
@@ -123,6 +125,13 @@ class SepayWebhookIntegrationTest extends ApiPostgresTestBase {
     private Long countTopupEntries(UUID tenantId) {
         return jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM credit_ledger_entry WHERE tenant_id = ? AND kind = 'TOPUP'",
+                Long.class,
+                tenantId);
+    }
+
+    private Long countPaidGrants(UUID tenantId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM credit_grant WHERE tenant_id = ? AND category = 'PAID'",
                 Long.class,
                 tenantId);
     }

@@ -1,5 +1,6 @@
 'use client';
 
+import type { Route } from 'next';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -34,7 +35,7 @@ import { useHydrated } from '@/lib/use-hydrated';
 import { cn } from '@/lib/utils';
 
 type NavItem = {
-  href: string;
+  href: Route;
   labelKey:
     | 'nav.chat'
     | 'nav.ai'
@@ -106,7 +107,7 @@ export function AppSidebar() {
               ? 'mx-auto h-9 w-9 justify-center rounded-full p-0'
               : 'w-full rounded-l-none rounded-r-full pr-4 pl-7',
             active
-              ? 'bg-[#E7F0EF]! font-bold text-[#0a3d3a]! hover:bg-[#E7F0EF]/80!'
+              ? 'bg-sidebar-accent! text-sidebar-accent-foreground! hover:bg-sidebar-accent/80! font-bold'
               : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground font-medium',
           )}
           render={<Link href={item.href} aria-label={label} />}

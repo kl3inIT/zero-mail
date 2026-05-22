@@ -3,12 +3,12 @@
   "private": true,
   "packageManager": "pnpm@11.0.8",
   "engines": {
-    "node": ">=20.9.0",
+    "node": ">=24.0.0",
     "pnpm": "11.0.8"
   },
   "scripts": {
     "encoding:check": "node scripts/check-encoding.mjs",
-    "check": "pnpm encoding:check && pnpm --filter web i18n:check && pnpm --filter web typecheck",
+    "check": "pnpm encoding:check && pnpm --filter web i18n:check && pnpm --filter web typecheck && pnpm --filter web lint && pnpm --filter @zeromail/admin typecheck && pnpm --filter @zeromail/admin lint",
     "web:dev": "pnpm --filter web dev",
     "web:dev:tailscale": "pnpm run tailscale:serve:web && pnpm run web:dev",
     "web:build": "pnpm --filter web build",
@@ -33,10 +33,6 @@
     "turbo": "2.9.14"
   },
   "pnpm": {
-    "peerDependencyRules": {
-      "ignoreMissing": [
-        "@playwright/test"
-      ]
-    }
+    "_comment": "Overrides + peerDependencyRules moved to pnpm-workspace.yaml in pnpm v11. This block kept for older tooling compatibility only — pnpm itself reads pnpm-workspace.yaml."
   }
 }

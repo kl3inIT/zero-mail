@@ -48,6 +48,7 @@ class LlmGatewayImpl implements LlmGateway {
     private static final Logger log = LoggerFactory.getLogger(LlmGatewayImpl.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final CreditLedger NOOP_CREDIT_LEDGER = new NoopCreditLedger();
+    private static final LlmUsageRecorder NOOP_USAGE_RECORDER = _ -> {};
     private static final String DEFAULT_ANTHROPIC_BYOK_MODEL = "claude-3-haiku-20240307";
     private static final int SANITIZATION_TOKEN_CAP = JtokkitTruncateSanitizer.HARD_CAP_TOKENS;
     private static final int TOOL_SCHEMA_OVERHEAD_TOKENS = 600;
@@ -74,6 +75,7 @@ class LlmGatewayImpl implements LlmGateway {
     private final ByokLlmModelClient deepSeekByokModelClient;
     private final CreditLedger creditLedger;
     private final MeterRegistry meterRegistry;
+    private final LlmUsageRecorder usageRecorder;
 
     LlmGatewayImpl(
             LlmModelClient platformLlmModelClient,
@@ -97,7 +99,8 @@ class LlmGatewayImpl implements LlmGateway {
                 null,
                 null,
                 NOOP_CREDIT_LEDGER,
-                new SimpleMeterRegistry());
+                new SimpleMeterRegistry(),
+                NOOP_USAGE_RECORDER);
     }
 
     @Autowired
@@ -114,7 +117,8 @@ class LlmGatewayImpl implements LlmGateway {
             @Qualifier("googleGenAiByokModelClient") ByokLlmModelClient googleGenAiByokModelClient,
             @Qualifier("deepSeekByokModelClient") ByokLlmModelClient deepSeekByokModelClient,
             CreditLedger creditLedger,
-            ObjectProvider<MeterRegistry> meterRegistryProvider) {
+            ObjectProvider<MeterRegistry> meterRegistryProvider,
+            ObjectProvider<LlmUsageRecorder> usageRecorderProvider) {
         this(
                 platformLlmModelClient,
                 semanticIntentEvaluatorProvider.getIfAvailable(
@@ -132,7 +136,8 @@ class LlmGatewayImpl implements LlmGateway {
                 googleGenAiByokModelClient,
                 deepSeekByokModelClient,
                 creditLedger,
-                meterRegistryProvider.getIfAvailable(SimpleMeterRegistry::new));
+                meterRegistryProvider.getIfAvailable(SimpleMeterRegistry::new),
+                usageRecorderProvider.getIfAvailable(() -> NOOP_USAGE_RECORDER));
     }
 
     LlmGatewayImpl(
@@ -158,7 +163,8 @@ class LlmGatewayImpl implements LlmGateway {
                 null,
                 null,
                 NOOP_CREDIT_LEDGER,
-                new SimpleMeterRegistry());
+                new SimpleMeterRegistry(),
+                NOOP_USAGE_RECORDER);
     }
 
     private LlmGatewayImpl(
@@ -177,7 +183,8 @@ class LlmGatewayImpl implements LlmGateway {
             ByokLlmModelClient googleGenAiByokModelClient,
             ByokLlmModelClient deepSeekByokModelClient,
             CreditLedger creditLedger,
-            MeterRegistry meterRegistry) {
+            MeterRegistry meterRegistry,
+            LlmUsageRecorder usageRecorder) {
         this.platformLlmModelClient = platformLlmModelClient;
         this.semanticIntentEvaluator = semanticIntentEvaluator;
         this.sanitizationPipeline = sanitizationPipeline;
@@ -194,6 +201,7 @@ class LlmGatewayImpl implements LlmGateway {
         this.deepSeekByokModelClient = deepSeekByokModelClient;
         this.creditLedger = creditLedger;
         this.meterRegistry = meterRegistry;
+        this.usageRecorder = usageRecorder;
     }
 
     @Override
@@ -602,6 +610,7 @@ class LlmGatewayImpl implements LlmGateway {
                     settleFailure.getClass().getSimpleName());
             throw settleFailure;
         }
+        recordUsage(tenantId, callSite, provider, model, "PLATFORM", usage, callSite.cost());
         return gatewayResult;
     }
 
@@ -624,18 +633,21 @@ class LlmGatewayImpl implements LlmGateway {
             throw insufficientCreditsException;
         }
 
-        Map<String, Boolean> semanticIntentMatches;
+        SemanticIntentEvaluationResult semanticIntentEvaluationResult;
         try {
-            semanticIntentMatches =
+            semanticIntentEvaluationResult =
                     semanticIntentEvaluator.evaluate(callSite, sanitizedContext.content(), intents);
+            LlmUsage usage = semanticIntentEvaluationResult.usage();
             log.info(
-                    "event=llm_semantic_eval_succeeded tenantId={} callSite={} provider={} model={} latencyMs={} intentCount={} truncated={}",
+                    "event=llm_semantic_eval_succeeded tenantId={} callSite={} provider={} model={} latencyMs={} intentCount={} promptTokens={} completionTokens={} truncated={}",
                     tenantId,
                     callSite,
                     provider,
                     model,
                     latencyMs(startNanos),
                     intents.size(),
+                    usage.promptTokens(),
+                    usage.completionTokens(),
                     sanitizedContext.truncated());
         } catch (SafetyViolationException safetyViolation) {
             creditLedger.release(reservationId);
@@ -673,7 +685,15 @@ class LlmGatewayImpl implements LlmGateway {
                     settleFailure.getClass().getSimpleName());
             throw settleFailure;
         }
-        return semanticIntentMatches;
+        recordUsage(
+                tenantId,
+                callSite,
+                provider,
+                model,
+                "PLATFORM",
+                semanticIntentEvaluationResult.usage(),
+                callSite.cost());
+        return semanticIntentEvaluationResult.matches();
     }
 
     private void releaseAfterSettleFailure(
@@ -689,6 +709,34 @@ class LlmGatewayImpl implements LlmGateway {
         }
     }
 
+    private void recordUsage(
+            UUID tenantId,
+            CallSite callSite,
+            String provider,
+            String model,
+            String credentialSource,
+            LlmUsage usage,
+            int chargedCredits) {
+        try {
+            usageRecorder.record(
+                    new LlmUsageRecord(
+                            tenantId,
+                            callSite,
+                            provider,
+                            model,
+                            credentialSource,
+                            usage,
+                            chargedCredits));
+        } catch (RuntimeException usageRecordingFailure) {
+            log.warn(
+                    "event=llm_usage_record_failed tenantId={} callSite={} credentialSource={} reason={}",
+                    tenantId,
+                    callSite,
+                    credentialSource,
+                    usageRecordingFailure.getClass().getSimpleName());
+        }
+    }
+
     private Map<String, Boolean> evaluateSemanticIntentsWithoutCreditLedger(
             UUID tenantId,
             CallSite callSite,
@@ -698,18 +746,22 @@ class LlmGatewayImpl implements LlmGateway {
             List<SemanticIntentRequest> intents,
             long startNanos) {
         try {
-            Map<String, Boolean> semanticIntentMatches =
+            SemanticIntentEvaluationResult semanticIntentEvaluationResult =
                     semanticIntentEvaluator.evaluate(callSite, sanitizedContext.content(), intents);
+            LlmUsage usage = semanticIntentEvaluationResult.usage();
             log.info(
-                    "event=llm_semantic_eval_succeeded tenantId={} callSite={} provider={} model={} latencyMs={} intentCount={} truncated={}",
+                    "event=llm_semantic_eval_succeeded tenantId={} callSite={} provider={} model={} latencyMs={} intentCount={} promptTokens={} completionTokens={} truncated={}",
                     tenantId,
                     callSite,
                     provider,
                     model,
                     latencyMs(startNanos),
                     intents.size(),
+                    usage.promptTokens(),
+                    usage.completionTokens(),
                     sanitizedContext.truncated());
-            return semanticIntentMatches;
+            recordUsage(tenantId, callSite, provider, model, "PLATFORM", usage, 0);
+            return semanticIntentEvaluationResult.matches();
         } catch (SafetyViolationException safetyViolation) {
             log.error(
                     "event=llm_safety_violation tenantId={} callSite={} reason={}",
@@ -820,6 +872,7 @@ class LlmGatewayImpl implements LlmGateway {
                     usage.completionTokens(),
                     usage.finishReason(),
                     sanitizedContext.truncated());
+            recordUsage(tenantId, callSite, provider.id(), model, "BYOK", usage, 0);
             return gatewayResult;
         } finally {
             Arrays.fill(decryptedKey, (byte) 0);

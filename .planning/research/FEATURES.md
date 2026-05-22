@@ -1,527 +1,499 @@
-# Feature Research — v1.1: Chat Email Assistant + Settings Page
+# Feature Research — v1.2: Admin Console Foundation + Settings UI
 
-**Domain:** AI chat email assistant + assistant Settings UI (sidecar SaaS on top of Gmail)
-**Researched:** 2026-05-17
-**Overall confidence:** HIGH (Inbox Zero code inspected directly under `D:/study-materials-summer-2026/EXE202/inbox-zero/apps/web/`; Spring AI 2.0.0-M6 + Vercel AI SDK / ai-elements verified via Context7)
-**Scope:** **only the v1.1 milestone delta.** v1.0 shipped features (rules engine, triage hero, AI draft replies, BYOK, analytics, billing, web UI, onboarding) are described in `PROJECT.md` "Validated" and the previous `.planning/research/FEATURES.md` revision — **not re-researched here.**
+**Domain:** Internal admin/support/compliance console + curated LLM catalog + Settings UI rebuilt on the curated catalog (trust-first multi-tenant SaaS, solo-operator early stage)
+**Researched:** 2026-05-19
+**Overall confidence:** HIGH for admin RBAC + audit log + tenant inspection patterns (well-trodden SaaS territory; multiple independent sources agree); MEDIUM for curated LLM catalog UX (newer pattern — primary reference LiteLLM proxy admin UI + OpenClaw/OpenRouter ergonomics + internal v1.0 `LlmGateway` shape); HIGH for Settings UI deferred reqs (already specified in v1.1 deferred list).
+**Scope:** **Only the v1.2 milestone delta.** v1.0 + v1.1 features (auth, mail ingestion, billing, LLM gateway, rules engine, triage convergence, draft replies, analytics, chat assistant + confirmation cards, send executor) are described in `PROJECT.md` "Validated" and the prior `.planning/research/FEATURES.md` revisions — **not re-researched here.**
+
+> Inbox Zero reference: their admin (`apps/web/app/(app)/admin/page.tsx`) is a single page gated by `isAdmin({ email })` checking `env.ADMINS` (an env-var allowlist of emails). Tools shown: `AdminUpgradeUserForm`, `AdminUserControls`, `AdminUserInfo` (email-keyed user lookup), `AdminHashEmail`, `GmailUrlConverter`, `DebugLabels`, `RegisterSSOModal`, `AdminSyncStripe`, `AdminTopSpenders`. **No** model catalog UI, **no** master-key UX, **no** tenant-level read-only inspection, **no** worker-queue panel — Inbox Zero ships those as "log into Vercel / Stripe / Postgres directly". Zero Mail's admin must go further because we're VPS-self-hosted, BYOK-by-default, and own our own LLM gateway abstraction.
 
 ---
 
 ## Executive Summary
 
-v1.1 adds **two surfaces** on top of the shipped v1.0 backend:
+v1.2 adds **two surfaces** stacked on top of the shipped v1.0 + v1.1 backend:
 
-1. **Chat-based email assistant** at a new `/chat` route — a multi-turn, tool-calling agent that can answer "what's in my inbox?", create/edit rules, search/read/label/archive email, save user-typed memories, and (under explicit user click) send/reply/forward email. Streams via Spring AI 2.0.0-M6 (`ChatClient.stream()`) on the backend, rendered with `@ai-sdk/react` `useChat` + the `ai-elements` component package on the frontend, using the Vercel Data Stream Protocol over SSE.
-2. **Assistant Settings page** at `/settings` (or `/settings/ai`) — one screen that consolidates Provider/Model selection per feature (chat/triage/draft), Personalization (writing style + personal instructions + signature + knowledge base + tone + AI output language), Behavior toggles (auto-draft, draft confidence, follow-up reminders, daily digest, sensitive-data protection), and Sender Safety Net VIP management (UI surface for existing TRG-07..08).
+1. **Admin Console Foundation (Phase 8)** — a new `/admin/*` route tree gated by `ROLE_ADMIN`, with an append-only `admin_audit_event` log of every write the admin performs. The console exposes seven feature surfaces: (a) admin RBAC + audit; (b) curated LLM catalog with per-provider Sync-from-`/models` review flow; (c) AES-GCM-encrypted master-key management for the 4 platform providers; (d) tenant read-only inspection (connection state, watch expiry, pause, ledger holds/balance, spend timeline) **without any PII surface from email bodies / chat content / token bytes**; (e) worker queue health (Postgres outbox + `processing_job` stats); (f) promoted global LLM spend dashboard aggregating metadata-only across all tenants; (g) catalog/master-key plumbing that the user Settings AI tab consumes.
 
-The chat assistant is **not** a clone of Inbox Zero's full tool catalog (~30 tools). Zero Mail ports **~19 tools** chosen for v1.1: the ones that map onto v1.0 backend capabilities (rules engine, Gmail label/archive/draft writes, sender safety net) plus the **three user-confirmed send tools** (`sendEmail` / `replyEmail` / `forwardEmail`) — gated by a per-call UI preview card with an explicit Send button, audit-logged, and architecturally restricted to exactly one call site enforced by ArchUnit. We **do not** port sender categorization, learned patterns, calendar tools, attachment filing, browser-extension sync, hidden AI-draft links, or referral signatures — each has a specific reason called out in the Anti-Features section.
+2. **User Settings UI on curated catalog (Phase 9)** — `/settings` with 4 tabs (Personalization, Behavior, Safety Net, AI Provider/Model) carrying forward the 19 deferred v1.1 reqs (SET-AI-01..04, SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04). The AI Provider/Model tab is the dependency hinge: it can only list models the admin has approved in the catalog, scoped per feature (chat / triage / draft).
 
-The **highest-risk feature** is the user-confirmed send flow. Inbox Zero's pattern is a clean state machine (`requiresConfirmation: true` → `pending` → `processing` → `confirmed`) backed by a server-side reservation lease that prevents double-send on UI replay. Zero Mail must implement this exact state machine — anything looser breaks the v1 "no auto-send" trust contract and the architectural invariant enforced since TRG-03.
+**Highest-risk feature** is (c) master-key management: an AES-GCM key for OpenAI/Anthropic/Google/DeepSeek lives in app config (or a sealed `master_key` row); rotation must re-encrypt every dependent encrypted record (BYOK secrets, future webhook secrets); a botched rotate locks every BYOK user out of LLM calls. Inbox Zero does not own this problem (no app-layer encryption beyond Auth.js sessions); we own it because of v1.0 LLM-04 (`AES-GCM BYOK encryption + per-call zeroing`).
 
-The Settings page is the **lower-risk feature** but has dependencies on backend columns and config the v1.0 schema does not yet have. Personalization (writing style, personal instructions, signature, knowledge base, tone, output language) needs five new columns on `email_account` (or a dedicated `assistant_settings` aggregate); behavior toggles need three more booleans; sender safety net management exposes existing TRG-07..08 tables with no new schema. Provider/Model picker needs per-feature model overrides (chat-model, triage-model, draft-model) layered on top of the existing per-call model-pin mechanism in `LlmGateway`.
+**Highest-trust risk** is (d) tenant inspection: the temptation is to ship a "view-as-user" flow because it's quick. Don't. v1 trust posture forbids admin reads of email bodies, chat content, prompts/completions, token bytes, and OAuth refresh tokens. Tenant inspection must be **read-only metadata projections only** — connection state, watch expiry, pause flag, credit balance, spend buckets, audit row counts — never the underlying PII rows.
 
-**For roadmap:** plan three sub-phases — (a) backend chat infrastructure + tool catalog + audit + ArchUnit, (b) Next.js chat UI on `@ai-sdk/react` + ai-elements with Vercel Data Stream Protocol contract, (c) Settings page wiring personalization columns + per-feature model picker + safety-net surface. Ordering is forced: (a) and (c-backend) must precede (b) and (c-frontend) since the OpenAPI client is the only API surface for the frontend.
+**Lowest-risk feature** is (e) worker queue health: read-only SQL aggregates over the existing `outbox` + `processing_job` tables. Reuse Postgres MCP introspection patterns; no new schema.
+
+**Curated catalog** is the architectural keystone of v1.2: it inverts the v1.0/v1.1 default of "user types a model ID, LLM gateway accepts it if Spring AI does". Phase 8 introduces `llm_catalog_model` (per-provider, per-feature, admin-toggled) and `llm_catalog_sync_run` (record of each Sync-from-`/models` invocation + diff). Phase 9's AI Provider/Model picker reads `llm_catalog_model` filtered to `{provider, feature, enabled=true}`.
+
+**For roadmap:** Phase 8 has clear internal ordering — RBAC + audit framework first (everything else depends on it) → master-key + catalog schema → Sync-from-`/models` UI → tenant inspection → queue health → spend dashboard. Phase 9 can begin once `llm_catalog_model` queryable endpoints exist (does not need Sync UI complete).
 
 ---
 
-## Feature Categories Overview (v1.1 only)
+## Feature Categories Overview (v1.2 only)
 
 | Category | What it covers | Backend dep | Frontend dep | Risk |
 |----------|---------------|-------------|--------------|------|
-| **CHAT** | Streaming chat UI, tool-call cards, reasoning blocks, attachments, history sidebar | Spring AI ChatClient, `chat_session` + `chat_message` tables, SSE controller, Vercel Data Stream Protocol emitter | `@ai-sdk/react` v2 `useChat`, `ai-elements` package (`Conversation`, `Message`, `Reasoning`, `PromptInput`), tool-card components per-tool | HIGH (new streaming contract, new persistence) |
-| **TOOL_CATALOG** | The 19 callable tools the assistant can invoke (search, read, label, manage, rule CRUD, memory, capabilities, confirmed send/reply/forward, personal instructions) | All tools route through existing v1.0 services; only 3 are new (memory store + capabilities snapshot + confirmed-send executor); ArchUnit carve-out for exactly 1 send call site | Tool-call rendering, confirm/edit/cancel cards | HIGH for confirmed-send tools, MEDIUM for read tools, LOW for rule tools (already validated in RULE-01..07) |
-| **CONFIRMATION** | The state machine for risky tools: `requiresConfirmation` → preview card → user click → server action → audit row | New `assistant_send_audit` table, server-side reservation lease (Redis 5-min TTL), idempotency on `(chatId, toolCallId)`, ArchUnit single call-site grep | Preview card with Edit/Send/Cancel buttons, persisted-message check before allowing confirm | HIGH — trust contract surface |
-| **SETTINGS_PROVIDER** | Provider/Model picker (OpenAI, Anthropic, Google GenAI, DeepSeek) per feature (chat, triage, draft) | Per-feature model override columns on `email_account` (or `assistant_settings`); already-shipped BYOK keys in `byok_credential`; per-call pin in `LlmGateway` | Select component per feature, model list per provider (curated, not free-form) | MEDIUM |
-| **SETTINGS_PERSONALIZATION** | Writing style, personal instructions, signature, knowledge base, tone preset, AI output language (VI/EN) | New columns: `writing_style`, `personal_instructions`, `email_signature`, `tone_preset`, `ai_output_language`; new `assistant_knowledge_snippet` table; Liquibase YAML changeset | Textareas, language toggle, knowledge-snippet CRUD list | MEDIUM (mostly UI + schema) |
-| **SETTINGS_BEHAVIOR** | Auto-draft toggle, draft confidence threshold, follow-up reminders, daily digest, sensitive-data protection | 3 new booleans on `email_account` (auto_draft_enabled, follow_up_reminders_enabled, sensitive_data_protection_enabled); reuse existing daily-digest config; new `draft_confidence_threshold` numeric | Switches + threshold slider | LOW |
-| **SETTINGS_SAFETY** | Sender Safety Net VIP management UI (allow-list / never-archive / never-trash list) | Reuse existing TRG-07..08 tables (`sender_safety_entry`) — no new schema | List, add by email/domain, remove, search | LOW |
+| **ADMIN** | `/admin/*` route gate, `ROLE_ADMIN`, admin action audit log, admin navigation chrome | New `admin_audit_event` table; `user_account.role` column (enum {USER, ADMIN}); Spring Security `hasRole('ADMIN')` on `/admin/**` | New `/admin/*` layout + sidebar; admin-only nav surfaced only when role present | MEDIUM (well-trodden but role bootstrap on a fresh VPS is fiddly) |
+| **CAT** | Curated LLM catalog (per-provider × per-feature), Sync-from-`/models` flow with diff + approve, enable/disable toggles, default-model selection per feature | New `llm_catalog_model`, `llm_catalog_sync_run`, `llm_catalog_sync_diff_entry` tables; provider `/models` adapter inside the existing `LlmGateway` package | Catalog table UI per provider, model row toggle, Sync button → diff modal with checkboxes, "Set default for chat/triage/draft" per row | MEDIUM (Sync diff UX is the hard part) |
+| **MKEY** | AES-GCM master-key management for the 4 platform providers — set, rotate, test-connection, last-rotated-at; also surfaces "users on this key" count | New `provider_master_key` table (encrypted), key-rotation job (re-encrypts dependent BYOK rows under new master), `/admin/keys/{provider}/test` endpoint | Per-provider card: status pill, rotate button (with confirm dialog), test-connection button → result toast, last-rotated-at timestamp | HIGH (rotation is destructive; mistakes lock out BYOK callers) |
+| **OPS-TENANT** | Tenant read-only inspection: list/search tenants, view per-tenant connection state + watch expiry + pause + ledger balance/holds + spend-over-time + recent admin-relevant audit events | Read-side projections over existing v1.0 tables (`email_account`, `gmail_connection`, `credit_ledger_entry`, `triage_audit`, `chat_session` *counts only*); no new write tables | Tenant list table with filter, tenant detail page with health/billing/spend tabs (no email-body, no chat-content, no prompt-completion surfaces) | MEDIUM (must avoid leaking PII through analytics joins) |
+| **OPS-QUEUE** | Worker queue health: outbox lag, processing_job depth, oldest unleased age, retry distribution, failure-rate-by-job-type, dead-letter inspection | Read aggregates over existing `outbox` + `processing_job` tables (already exist from v1.0 Phase 4) | Stat cards + small charts; "oldest unleased" age in seconds; retry histogram; dead-letter table with re-queue button (with confirm) | LOW |
+| **OPS-SPEND** | Global LLM spend dashboard: aggregate metadata-only spend across all tenants, broken down by provider, feature (chat/triage/draft), and platform-vs-BYOK | Read aggregates over existing `llm_call_audit` (metadata only — never prompt/completion content) | Top-line spend cards (today / 7d / 30d), provider breakdown stacked bar, feature breakdown donut, top-N tenants table | LOW |
+| **SET-AI** | User Settings AI Provider/Model tab — picks chat / triage / draft model from admin-curated catalog; manages BYOK keys per provider; shows per-provider status | New `assistant_settings.chat_model_id / triage_model_id / draft_model_id` FK to `llm_catalog_model`; reuses v1.0 `byok_credential` | shadcn `<Select>` per feature (chat/triage/draft) populated from `/api/catalog/models?feature=...`; BYOK key management cards per provider | MEDIUM (depends on CAT) |
+| **SET-VOICE** | Personalization tab — writing style, personal instructions, signature, knowledge base CRUD, tone preset, AI output language | New columns on `assistant_settings`; new `assistant_knowledge_snippet` table (already specified in v1.1 deferred list) | Textareas + language toggle + knowledge-snippet CRUD list | LOW |
+| **SET-BEHV** | Behavior tab — auto-draft toggle, draft confidence threshold, follow-up reminders, daily digest opt-in, sensitive-data protection | 3 booleans + 1 numeric on `assistant_settings`; reuses existing daily-digest config | Switches + threshold slider | LOW |
+| **SET-SAFE** | Safety Net tab — sender VIP allow-list / never-archive / never-trash list management | Reuses existing v1.0 TRG-07..08 tables (`sender_safety_entry`) — no new schema | List, add by email/domain, remove, search | LOW |
 
 ---
 
-## CHAT Category
+## ADMIN Category — RBAC + Audit Log
 
-### Table Stakes — Chat UI (Users Expect These)
+### Table Stakes (Users — i.e., the admin operator — Expect These)
 
-| # | Feature | Why Expected | Complexity | Inbox-Zero Ref | Notes |
-|---|---------|-------------|------------|----------------|-------|
-| CHAT-T1 | Message bubbles with `user` and `assistant` roles, scrollable conversation, auto-scroll-to-bottom-on-new-message with manual scroll detection | Every chat UI since ChatGPT 2022 has these; missing = "broken" | **S** | `messages.tsx` → `Conversation` + `Message` from `ai-elements` | Use `@ai-sdk/react` `useChat` + `Conversation`/`ConversationContent`/`ConversationScrollButton` from `ai-elements` |
-| CHAT-T2 | Streaming text rendering (token-by-token append, animated cursor at end while streaming) | "Thinking..." → text appearing word-by-word is the AI-chat-app baseline | **M** | Vercel Data Stream Protocol over SSE | Backend emits Vercel Data Stream Protocol envelopes; frontend `useChat` v2 consumes natively |
-| CHAT-T3 | "Thinking..." indicator while the LLM is selected/loaded but no tokens have arrived yet | First-token latency is 200ms–2s for big models; users need feedback during that window | **S** | `messages.tsx` lines 79–90 (`status === "submitted"` branch) | Show `<Loader />` + "Đang nghĩ..." (VI) / "Thinking..." (EN) |
-| CHAT-T4 | Multi-turn history (assistant remembers context within a chat session) | A "chat" that forgets the previous message is not a chat | **M** | `chat_session` + `chat_message` tables; messages array passed to `ChatClient.prompt(...).messages(...)` | Need persistence (new tables) — see Dependencies |
-| CHAT-T5 | Stop/cancel generation button while streaming | When the assistant goes off-rails, user must be able to stop | **S** | `chat.tsx` line 11 (`SquareIcon` for stop) | `useChat` exposes `stop()`; backend needs to honor SSE cancel (close stream + cancel `Flux`) |
-| CHAT-T6 | Tool-call cards rendered inline in conversation (not hidden) — one card per tool call, with collapsed/expanded states | If the assistant ran `searchInbox` users want to *see* what it searched | **M** | `tools.tsx` (1992 lines) renders per-tool cards; `SubtleToolCollapsible` for read tools, `CollapsibleToolCard` for write tools | One React component per tool; share `CollapsibleToolCard` chrome |
-| CHAT-T7 | Tool input/output states: `input-available` (loading "Searching inbox...") → `output-available` (rendered result) → `error` (red banner) | The user needs to see progress for slow tools (inbox search can take 1–3s) | **S** | `message-part.tsx` lines 180–202 — `tool-searchInbox` state machine | Vercel SDK `part.state` is `input-streaming` → `input-available` → `output-available` |
-| CHAT-T8 | Composer textarea with Enter-to-send, Shift+Enter newline, autosize, character/token counter on long messages | Standard chat input UX | **S** | `chat.tsx` lines 26–30 (`PromptInput`, `PromptInputTextarea`, `PromptInputSubmit`) | Use `ai-elements` `PromptInput*` components |
-| CHAT-T9 | New chat button + chat history sidebar (list of previous sessions, click to load) | Without this, every refresh loses the conversation | **M** | `chat.tsx` line 8 (`HistoryIcon`, `PlusIcon`); `useChats` hook | Backend `chat_session` table; list endpoint paginated by `(emailAccountId, lastActivityAt)` |
-| CHAT-T10 | Error surfacing: when a tool fails, show inline error card, not a silent retry; when LLM call fails (quota / model error / network), show retryable banner | Silent failures = users distrust the assistant | **S** | `message-part.tsx` lines 47–56 (`ErrorToolCard`); `chat-response-guard.ts` for user-visible tool failure messages | Use existing v1.0 LLM error envelope; map provider error codes → user-friendly messages |
-| CHAT-T11 | Empty-state overview screen with example prompts ("Tìm email từ HR tuần này", "Tạo rule archive newsletter", "Reply email cuối cùng theo tone công việc") | Users do not know what to ask an AI without prompting | **S** | `overview.tsx` referenced in `messages.tsx` line 2 | 3–5 starter prompts, click to populate composer |
-| CHAT-T12 | Send button disabled while streaming; submit-on-empty no-op | Prevents double-fire and empty messages | **S** | `chat.tsx` submit flow | Standard form discipline |
-
-### Differentiators — Chat UI
-
-| # | Feature | Value Proposition | Complexity | Inbox-Zero Ref | Notes |
-|---|---------|-------------------|------------|----------------|-------|
-| CHAT-D1 | **Reasoning blocks** — when the model returns reasoning tokens (Anthropic extended thinking, OpenRouter `reasoning.max_tokens`), render as collapsible "Show reasoning" block separate from main answer | Power users want to see *why* the assistant chose to archive vs label vs trash | **M** | `message-part.tsx` lines 79–88 (`Reasoning`/`ReasoningTrigger`/`ReasoningContent` from `ai-elements`); `chat.ts` line 56 `ASSISTANT_CHAT_REASONING_MAX_TOKENS = 100` | Only Anthropic + some OpenRouter routes emit reasoning today; gracefully hide block if `part.text` empty or `[REDACTED]` (line 81) |
-| CHAT-D2 | **Inline email cards from search results** — when assistant returns `<email threadid="...">` or `<emails>` blocks in markdown, render as clickable email rows that deep-link to Gmail | Avoids dumping raw Gmail URLs into chat text | **M** | `assistant-inline-email-response.tsx`; `inline-email-card.tsx`; the `<emails>`/`<email>` parsing rule in system prompt (line 800–812) | Frontend parses assistant markdown; backend's system prompt instructs the LLM to emit this format |
-| CHAT-D3 | **Per-tool inline preview** for write tools (rule create preview, send-email preview, save-memory preview) with Edit + Confirm / Cancel | Confirmation pattern from Inbox Zero is best-in-class for AI-with-write-access products | **L** | See full state machine under CONFIRMATION category | Critical for "no auto-send" trust contract — see CHAT-D3 ↔ CONFIRMATION-T1 link |
-| CHAT-D4 | **Image attachments** (drag/drop or paste; max 5 files, 4MB each, image-only — JPEG/PNG/WebP/GIF) sent to multimodal models | "Help me reply to this screenshot of an invoice" workflow | **M** | `chat.tsx` lines 37–44 (MAX_FILES=5, MAX_FILE_SIZE=4MB, image-only); `preview-attachment.tsx` | Spring AI multimodal `Media` API; defer for v1.1 if scope tight (mark as **stretch goal**) |
-| CHAT-D5 | **Context-pack injection** — first message in a session automatically includes inbox stats ("210 emails, 47 unread") and freshest rule snapshot, hidden from the visible message but in the model context | Assistant feels "aware" without the user explaining their inbox state | **M** | `chat.ts` lines 176–183 (`inboxContextMessage`); `loadFreshRuleContext` lines 326–353 | Backend builds the synthetic system message; never persist into `chat_message` table |
-| CHAT-D6 | **Stale-rules detection** — assistant detects when shown rule state is older than current rule state, auto-refreshes via `getUserRulesAndSettings` instead of operating on stale view | Prevents the "I created the rule but you keep saying it doesn't exist" loop | **M** | `chat.ts` lines 100–104, 137–155; `chat-rule-state.ts` (RuleReadState pattern) | Optional for v1.1 if rule edits via chat are rare; **defer if scope tight** |
-| CHAT-D7 | **Vietnamese-default chat experience** — all assistant chrome (status labels, error messages, confirm buttons, empty-state prompts) in Vietnamese; assistant replies in Vietnamese unless user writes in English (locked by AI output language setting) | Target market is Vietnam beta first (locked in v1.0 i18n direction) | **S** | n/a (Inbox Zero is English-only) | Reuse v1.0 i18n infra; system prompt sets output language from `assistant_settings.ai_output_language` |
-
-### Anti-Features — Chat UI (Do NOT Port)
-
-| # | Feature | Why Inbox Zero Has It | Why Zero Mail Does NOT | Alternative |
-|---|---------|----------------------|------------------------|-------------|
-| CHAT-A1 | **Messaging-channel hint** ("This conversation is also visible in Slack/Telegram") | Inbox Zero ships a Slack/Telegram messaging bot integration | Out of scope for v1.1 (no messaging platform — SEED-007 deferred to v2) | Remove `MessagingChannelHint` import |
-| CHAT-A2 | **Calendar tools** (`getCalendarEvents`) | Inbox Zero has optional Google Calendar integration | Out of scope (PROJECT.md "no GCP starter"; calendar scope deferred per SEED-001 Track A; no Calendar OAuth scope in v1) | Remove `getCalendarEvents` from tool list |
-| CHAT-A3 | **Sender categorization tools** (`getAccountOverview`, `getSenderCategoryOverview`, `startSenderCategorization`, `getSenderCategorizationStatus`, `manageSenderCategory`) | Inbox Zero has a "categorize all senders" bulk feature | Defer to v1.2 — feature drawer is wide (UI list + backend job + state machine + redis progress); not a v1.1 differentiator | Note in PROJECT.md as deferred |
-| CHAT-A4 | **Attachment filing tools** (`readAttachment`, attachment-to-Drive automation) | Inbox Zero auto-files attachments to Google Drive | Out of scope (no Google Drive OAuth, no Drive integration in v1.1) | None |
-| CHAT-A5 | **`updateLearnedPatterns` + `getLearnedPatterns`** | Inbox Zero learns from user rule corrections to refine rule matching | No learning loop in v1.1 — would require persisting more user-mail metadata than the privacy posture allows; defer to v2 (see SEED-001 anti-feature list) | None — leave LearnedPatterns out of tool catalog |
-| CHAT-A6 | **Sync-to-extension setting / SyncToExtension tool** | Inbox Zero has a Chrome extension that mirrors rules into Gmail's native UI | No browser extension in v1.1 (scope: SaaS web app only) | None |
-| CHAT-A7 | **Hidden AI-draft links setting** (auto-inject tracking pixel into AI drafts) | Inbox Zero offers this for analytics | **Trust violation** — hidden links in user-drafted email is exactly the kind of "AI did something I didn't see" that breaks trust. Documented in `feedback_bundled_oauth_scopes.md` memory as a refused pattern. | None — never ship |
-| CHAT-A8 | **Referral signature toggle** (auto-append "Sent with Inbox Zero" to AI drafts) | Inbox Zero growth loop | **Marketing chrome, not user value** — users will not knowingly opt in; default-on is dishonest. Zero Mail growth is separate from product. | Don't include in Settings |
-| CHAT-A9 | **Multi-rule selection setting** (allow rules to act on N>1 matching message via LLM) | Inbox Zero has this as an advanced option | Defer to v1.2 (advanced feature, hard to evaluate quality, easy to defer) | Keep single-rule-per-message in v1.1 |
-| CHAT-A10 | **Two-way prompt-file ↔ database sync** for personal instructions (the source-of-truth tension Inbox Zero ARCHITECTURE.md flags as "messy") | Inbox Zero evolved this organically | Don't build it — Zero Mail's structured rule AST (validated in v1.0 RULE-01..07) is the source of truth. Chat `updatePersonalInstructions` writes to `assistant_settings.personal_instructions` only; nothing syncs back to rules. | One-way: chat → settings.personal_instructions only |
-| CHAT-A11 | **Inline file attachments other than images** (PDF, docx) | Inbox Zero hints at PDF attachments for multimodal models | Defer — image-only is enough for v1.1, PDF parsing adds 3–4 dependencies + a sanitization story | Image-only validation in upload flow |
-
----
-
-## TOOL_CATALOG Category
-
-The assistant's tool catalog is **the contract between the chat UI and v1.0 backend capabilities.** Each tool is one allowed action the assistant can request; the LLM never reaches a Gmail/DB call directly.
-
-### Must-Have Tools (Table Stakes) — 19 tools for v1.1
-
-| # | Tool name | Category | Confirm? | What it does | Maps to v1.0 backend | Complexity (new code) |
-|---|-----------|----------|---------|--------------|---------------------|----------------------|
-| TOOL-T1 | `getAssistantCapabilities` | Read | No | Returns "what tools/settings does this assistant support right now" so the model can answer "what can you do?" without hallucinating | New read-only service over a static capability map | **S** |
-| TOOL-T2 | `getUserRulesAndSettings` | Read | No | Returns the user's current rules (id, name, when, then, enabled) + settings snapshot | `RuleRepository.findByEmailAccountIdOrderByPriority` + `EmailAccount` row | **S** |
-| TOOL-T3 | `getRuleExecutionForMessage` | Read | No | Given a `messageId`, returns "which rule(s) matched, why, and what happened" | Existing v1.0 audit table (TRG-05) | **S** |
-| TOOL-T4 | `searchInbox` | Read | No | Gmail search by query (`from:`, `subject:`, `is:unread`, `after:`, etc.); returns max 20 results with `(messageId, threadId, subject, from, snippet, date, isUnread)` — bodies NOT returned to assistant | Gmail API `users.messages.list` + per-message metadata fetch; short-lived in-memory cache only (PROJECT.md privacy carve-out) | **M** |
-| TOOL-T5 | `readEmail` | Read | No | Given a `messageId` (from search), returns subject + from + to + date + content (sanitized + truncated to 4k tokens as in v1.0 LLM-05..08) | Gmail API `users.messages.get` + existing sanitization pipeline; content kept in-memory only | **M** |
-| TOOL-T6 | `listLabels` | Read | No | Returns Gmail labels available on this account | Gmail API `users.labels.list` | **S** |
-| TOOL-T7 | `createOrGetLabel` | Write (label) | No | Given a label name, returns labelId; creates if missing | Gmail API `users.labels.create` (idempotent on name) | **S** |
-| TOOL-T8 | `manageInbox` | Write (label/archive/read) | No (direct user-request execution) | Bulk operation: archive_threads, label_threads, mark_read_threads on a list of `threadIds`; also `bulk_archive_senders` (archive all threads from a sender list) | Gmail API batch; existing label/archive paths already audited under TRG-01..05 | **M** |
-| TOOL-T9 | `createRule` | Write (rule) | **Yes (preview card)** | Creates a new rule from NL → AST; emits `requiresConfirmation: true` + AST preview; only commits after user clicks "Create & enable" | Existing v1.0 NL→AST compiler (RULE-01..02) + `RuleService.create` | **M** |
-| TOOL-T10 | `updateRuleConditions` | Write (rule) | Direct (no preview) but bounded | Updates an existing rule's `when` clause | Existing v1.0 `RuleService.updateConditions` | **S** |
-| TOOL-T11 | `updateRuleActions` | Write (rule) | Direct (no preview) but bounded | Updates an existing rule's `then` clause | Existing v1.0 `RuleService.updateActions`; reject any action type outside {label, archive, save_draft} | **S** |
-| TOOL-T12 | `deleteRule` | Write (rule) | **Yes (single-button confirm — soft-confirm in card)** | Deletes a rule by id | Existing v1.0 `RuleService.delete` | **S** |
-| TOOL-T13 | `updatePersonalInstructions` | Write (settings) | No | Appends or replaces `assistant_settings.personal_instructions` (mode: `append` | `replace`) | New write on personalization column | **S** |
-| TOOL-T14 | `updateAssistantSettings` | Write (settings) | No | Generic key-path setter for supported settings (writing_style, signature, tone_preset, ai_output_language, behavior toggles, draft_confidence_threshold) | New write on `assistant_settings` (or `email_account` columns); schema-validated allowed-path list | **M** |
-| TOOL-T15 | `addToKnowledgeBase` | Write (knowledge) | No | Appends a titled snippet to the knowledge base | New `assistant_knowledge_snippet` table | **S** |
-| TOOL-T16 | `saveMemory` | Write (memory) | **Yes (preview card, deduplicated)** | Saves a fact the user asked to remember (e.g., "Tôi đang work với Acme Corp về dự án X") | New `assistant_memory` table; dedup on `content` hash within emailAccount | **M** |
-| TOOL-T17 | `searchMemories` | Read | No | Returns the assistant's memories matching a query string (substring + recency) | New read on `assistant_memory` | **S** |
-| TOOL-T18 | `sendEmail` | **Send (HIGH RISK)** | **Yes (preview card, edit + Send + Cancel)** | Composes a new email; returns `pendingAction` payload with `requiresConfirmation: true`; only sends on per-message user click | New `assistantSendExecutor` — the ONLY send call site in v1.1 codebase; ArchUnit enforced; audit row written before Gmail call | **L** |
-| TOOL-T19 | `replyEmail` | **Send (HIGH RISK)** | **Yes (preview card, edit + Send + Cancel)** | Composes a reply to a given `messageId`; same confirmation flow as sendEmail; uses Gmail thread headers (`In-Reply-To`, `References`) from referenced message | Same executor as sendEmail; reuses v1.0 DRFT-02 header-stamping | **L** |
-| TOOL-T20 | `forwardEmail` | **Send (HIGH RISK)** | **Yes (preview card, edit + Send + Cancel)** | Forwards a `messageId` to recipients with optional note; same confirmation flow | Same executor as sendEmail | **L** |
-
-**Tool count: 20 listed.** The PROJECT.md target of "~19 tools" matches if `deleteRule` is folded into `updateRuleActions` semantics (set actions to `[]` + disable). Recommended: keep `deleteRule` as a distinct tool with explicit confirm — it's a destructive operation users will phrase as "xóa rule X" and the model should not have to discover the trick of "edit actions to empty".
-
-### Nice-to-Have Tools (Differentiators, defer if scope tight)
-
-| # | Tool name | Why nice | Complexity | Recommendation |
-|---|-----------|---------|------------|----------------|
-| TOOL-D1 | `getInboxStats` | Lets assistant proactively summarize ("you have 47 unread; 12 are 'To Reply'") | **S** | Include — used in CHAT-D5 context-pack; backend already has the data |
-| TOOL-D2 | `previewRuleOnRecentInbox` | Lets assistant run the new rule against last 50 messages and show "this would archive 8" | **M** | Reuse v1.0 RULE-05 (side-effect-free preview) — high value, low new code |
-| TOOL-D3 | `pauseAllRules` / `resumeAllRules` | "Pause everything for the next 2 hours" via chat | **S** | Reuse v1.0 MAIL-06 global pause toggle; trivial |
-| TOOL-D4 | `addVipSender` / `removeVipSender` | Manage sender safety net via chat | **S** | Reuse v1.0 TRG-07..08 tables; expose what Settings UI exposes |
-
-### Anti-Feature Tools (Do NOT Port)
-
-| # | Tool name (in Inbox Zero) | Why NOT in Zero Mail v1.1 |
-|---|--------------------------|---------------------------|
-| TOOL-A1 | `getCalendarEvents` | No Calendar scope — see CHAT-A2 |
-| TOOL-A2 | `readAttachment` | No attachment support in v1.1 — see CHAT-A4 |
-| TOOL-A3 | `getLearnedPatterns` / `updateLearnedPatterns` | No learning loop in v1.1 — see CHAT-A5 |
-| TOOL-A4 | `manageSenderCategory` / `getSenderCategoryOverview` / `startSenderCategorization` / `getSenderCategorizationStatus` / `getAccountOverview` | Sender categorization deferred — see CHAT-A3 |
-| TOOL-A5 | `updateAssistantSettingsCompat` (fallback duplicate) | Inbox Zero has two settings tools because of schema-evolution churn; Zero Mail starts fresh with one strict schema, no need for compat fallback |
-| TOOL-A6 | Webhook action tool / webhook automations | Webhook actions are explicitly NOT in v1 write-allow-list (PROJECT.md: only label/archive/save_draft + chat-confirmed send/reply/forward) |
-
----
-
-## CONFIRMATION Category (the CRITICAL pattern)
-
-This is the v1.1 milestone's load-bearing safety mechanism. "User-confirmed send" is the only carve-out from v1.0's "no auto-send" architectural rule, and it must be unambiguously a per-message, per-click action — never a rule-firing-triggered send.
-
-### State Machine
-
-```
-LLM emits tool call (sendEmail / replyEmail / forwardEmail / createRule / saveMemory / deleteRule)
-   │
-   ▼
-Backend tool executor:
-   - Validates input schema
-   - Writes a `pending_action` row to `assistant_pending_action` with state=pending, leasedUntil=null
-   - Returns tool output:
-       {
-         requiresConfirmation: true,
-         confirmationState: "pending",
-         pendingAction: { to, subject, messageHtml | content, cc?, bcc? },
-         reference: { messageId?, threadId?, from? },  // for reply/forward
-         riskMessages: [ ... ]                          // for createRule
-       }
-   - DOES NOT call Gmail API yet
-   │
-   ▼
-Frontend chat UI renders preview card with:
-   - Edit button (opens textarea on body)
-   - Cancel button (calls a cancel action that marks pending_action row as canceled)
-   - Send / Confirm button (DISABLED until message is persisted to `chat_message` table — see "disableConfirm" reasoning below)
-   │
-   ▼ user clicks Send
-   │
-Frontend calls confirm action: confirmAssistantEmailAction({ chatId, toolCallId, actionType, contentOverride? })
-   │
-   ▼
-Backend confirm action:
-   1. RESERVATION: SELECT pending_action FOR UPDATE; if state=processing AND leasedUntil > now() → return error "already in progress"
-                   else SET state=processing, leasedUntil=now()+5min in same tx
-   2. EXECUTE: call Gmail API (send/reply/forward) — outside the tx
-   3. AUDIT: write `assistant_send_audit` row {emailAccountId, chatId, toolCallId, actionType, to, subject, messageId, threadId, sentAt}
-   4. PERSIST: update pending_action state=confirmed, confirmationResult={messageId, threadId, sentAt}
-   5. RETURN: { success: true, confirmationState: "confirmed", confirmationResult: { actionType, messageId, threadId, to, subject, confirmedAt } }
-   6. On Gmail-API failure: revert pending_action state to pending, clear leasedUntil, return error to UI
-   │
-   ▼
-Frontend renders "Sent ✓" state on card; subsequent UI replays of this tool-call rendering see confirmationState="confirmed" + confirmationResult, render in "already sent" mode (no Send button)
-```
-
-### Why `disableConfirm` and "isPersistedMessage" exist
-
-The Inbox Zero pattern (`message-part.tsx` lines 691–700, `tools.tsx` lines 720–789) **disables the Send button until the chat message containing this tool call has been persisted to the DB.** Reason: if the user clicks Send before the assistant turn finishes streaming and gets persisted, the toolCallId might not yet exist on the server, so the confirm endpoint would 404. The frontend tracks `persistedMessageIds` (a `Set<string>`) via the `ChatProvider`; only after the SSE stream completes and the message is saved does the Send button enable.
-
-**Zero Mail implementation note:** Same pattern is required. Backend persists `chat_message` rows after the SSE turn completes (`onStepFinish` / completion callback). Frontend tracks persisted IDs in a context and gates the Send button on `disableConfirm || !isPersistedMessage`.
-
-### Why a server-side lease
-
-If the user double-clicks Send (network slow, button feedback weak), without a server-side lease the same email gets sent twice. Inbox Zero uses a 5-minute lease (`CONFIRMATION_PROCESSING_LEASE_MS = 5 * 60 * 1000` in `assistant-chat.ts` line 38) — once leased, a second confirm call returns "already in progress" instead of re-sending. Zero Mail should use Redis for this lease (already in stack), keyed on `(emailAccountId, chatId, toolCallId)`.
-
-### ArchUnit Enforcement
-
-PROJECT.md line 157: "Auto-send forbidden" architecturally. v1.0 enforced this with `TRG-03` ArchUnit test + repo-wide grep that asserts **zero send call sites** in the codebase.
-
-v1.1 carve-out: **exactly one** send call site — the `assistantSendExecutor` inside the chat confirm path. ArchUnit rule must be updated to:
-
-```
-public static final ArchRule onlyOneSendCallSite = classes()
-    .that().areAnnotatedWith(GmailSendCallSite.class)
-    .should().haveSimpleName("AssistantSendExecutor")
-    .andShould().resideInAPackage("..chat.confirm..");
-// Plus a grep gate in CI: count of `gmailService.send(` must equal 1.
-```
-
-### State Machine — Confirmation Features
-
-| # | Feature | Why expected | Complexity | Inbox-Zero Ref |
-|---|---------|-------------|------------|----------------|
-| CONFIRM-T1 | `requiresConfirmation: true` flag on tool output for send/reply/forward/createRule/saveMemory/deleteRule | The single field that triggers preview-card rendering | **S** | `tools.tsx` line 540 (`getOutputField<boolean>(output, "requiresConfirmation") === true`) |
-| CONFIRM-T2 | Preview card with Edit + Send + Cancel buttons | Standard UX for "review before commit" | **M** | `tools.tsx` lines 511–793 (`EmailActionResult`) |
-| CONFIRM-T3 | Server-side reservation lease via Redis (5-min TTL) on `(chatId, toolCallId)`; second confirm returns 409 | Prevents double-send | **M** | `assistant-chat.ts` lines 34–44, 156–173 |
-| CONFIRM-T4 | Audit row written to `assistant_send_audit` before Gmail API call returns; row links `chatId` + `toolCallId` + resulting `messageId` | Compliance + undo + ArchUnit enforcement | **S** | New table; analogous to v1.0 TRG-05 |
-| CONFIRM-T5 | Send button disabled until chat message is persisted (`persistedMessageIds.has(messageId)` check) | Prevents 404 from clicking too fast | **S** | `tools.tsx` line 551; `messages.tsx` line 30, 67 |
-| CONFIRM-T6 | "Already sent" state on replay: card renders with green checkmark, no Send button, links to sent message in Gmail | Idempotent UI when chat history reloads | **S** | `tools.tsx` lines 552–556, 664–672 |
-| CONFIRM-T7 | `contentOverride` in confirm payload — if user edited the body via the Edit button, send the edited body, not the LLM's original | Edit-before-send is the whole point of the preview | **S** | `tools.tsx` lines 611–617 |
-| CONFIRM-T8 | Cancel action: marks pending_action canceled, removes preview card, allows assistant to acknowledge | User must be able to back out without sending anything | **S** | (Inbox Zero does not have an explicit Cancel action — Zero Mail should add one since it's expected) |
-| CONFIRM-T9 | Per-tool risk message ("This rule can send email automatically. Review it before enabling.") shown above preview when `riskMessages` non-empty | Explains why confirmation is required | **S** | `tools.tsx` lines 1080–1098 (`PendingCreateRuleCardContent`) |
-| CONFIRM-T10 | After confirmation, success toast + assistant text update ("Email sent.") | Closes the loop | **S** | `tools.tsx` lines 633–636, 1774–1777 |
-
-### Differentiators — Confirmation
-
-| # | Feature | Value | Complexity | Recommendation |
-|---|---------|-------|------------|----------------|
-| CONFIRM-D1 | **Soft 30-second undo** after a confirmed send (display "Đã gửi · Hoàn tác" link for 30s; if clicked within window, attempts to delete from sent + recall via Gmail draft) | Symmetry with v1.0 30-day undo on triage; reduces "oh no I sent the wrong one" panic | **L** | Defer to v1.2 — Gmail Send API does not support reliable unsend; would need to implement client-side delay-then-send pattern (Gmail's "Undo Send" feature is client-side delay). Out of scope for v1.1 backend. |
-| CONFIRM-D2 | **Diff view on rule edit** ("you changed: 'newsletter' → 'newsletter OR promotional' in conditions") | Helps users review before confirm | **S** | Already in Inbox Zero (`tools.tsx` lines 1531–1571 `ViewChangesCollapsible`) — easy port |
-| CONFIRM-D3 | **Suspicious-sender warning** — when chat is triggered by an email asking for setup/credentials/webhook from an unexpected sender, system prompt warns user before acting | Protects against prompt-injection / social-engineering via incoming mail | **S** | `chat.ts` line 720–723 (`Write and confirmation policy` system-prompt section); include in our system prompt |
-
-### Anti-Features — Confirmation
-
-| Anti-feature | Reason |
-|--------------|--------|
-| "Confirm send by typing 'yes'" or any text-based confirm | Confirm must be a deliberate UI click, not chat-text — text confirms can be triggered by prompt-injected email content the assistant reads |
-| Auto-confirm if confidence > 95% | Defeats the architectural invariant. Confirmation is a trust boundary, not a UX inconvenience to optimize away. |
-| Bulk-confirm multiple pending sends | Each send requires its own click. If user wants to send 10 emails, click 10 times. Prevents accidental fan-out. |
-| Skip-confirm for replies to threads the user originated | Sounds reasonable; in practice, "user originated this thread" is hard to verify and one bad assumption = trust loss. |
-
----
-
-## SETTINGS_PROVIDER Category
-
-### Table Stakes
-
-| # | Feature | Why expected | Complexity | Notes |
-|---|---------|-------------|------------|-------|
-| SET-P1 | Provider list: OpenAI, Anthropic, Google GenAI, DeepSeek (the 4 BYOK-supported providers from v1.0 LLM-03) | Users with existing API keys want to pick their preferred provider | **S** | Static enum; matches v1.0 BYOK starter list |
-| SET-P2 | Per-feature model picker — separate model selection for `chat`, `triage`, `draft` (so chat can use a fast/cheap model while triage uses higher-quality) | Cost vs quality is a per-task tradeoff | **M** | 3 columns `chat_model_id`, `triage_model_id`, `draft_model_id` on `assistant_settings` (or `email_account`); each is `(providerId, modelId)` pair |
-| SET-P3 | Curated model list per provider (e.g., for Anthropic: `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4`; for OpenAI: `gpt-5`, `gpt-5-mini`, `gpt-5-nano`) — not free-form text input | Prevents users typing typos and breaking AI features | **S** | Static catalog in code; backend rejects model ids not in catalog |
-| SET-P4 | BYOK key entry per provider with AES-GCM encryption at rest (already v1.0 LLM-04) — provider key field + "Test connection" button | Users need to know their key works before relying on it | **M** | Reuse v1.0 `byok_credential` table; "Test connection" hits provider `models` endpoint (lightweight, no token cost) |
-| SET-P5 | "Use Zero Mail default (OpenRouter)" toggle vs "Use my key" — explicit two-mode | Users mix platform credits + BYOK across features (e.g., chat = BYOK Anthropic, triage = platform OpenRouter) | **S** | Boolean `byok_enabled_for_feature` per feature |
-| SET-P6 | Per-feature cost estimate ("≈ 12 credits / 1000 messages for chat with sonnet-4-5") shown next to model picker | Cost transparency is a trust feature | **M** | Multiply v1.0 LLM cost table × default token estimates per feature |
+| # | Feature | Why Expected | Complexity | Notes |
+|---|---------|--------------|------------|-------|
+| ADMIN-T1 | Separate `/admin/*` route tree, hidden from non-admins (no nav link, route returns 403 not 404) | Standard internal-tool pattern; surfacing admin UI to normal users invites probing | **S** | Spring Security `.requestMatchers("/admin/**").hasRole("ADMIN")`; Next.js layout returns 403 page if `role !== 'ADMIN'` |
+| ADMIN-T2 | `ROLE_ADMIN` stored on the user, not derived from an env-var email allowlist | Inbox Zero uses an env-var allowlist (`env.ADMINS`); fine for a 1-developer hobby project, but blocks adding a non-developer support operator and breaks SOC2 evidence later | **S** | New `user_account.role ENUM('USER','ADMIN')` column; default `USER`; first admin bootstrapped via Liquibase changelog targeting the founder's email |
+| ADMIN-T3 | Admin action audit log — every write the admin does (rotate key, sync catalog, disable model, re-queue job, mark tenant paused-by-admin) writes an append-only `admin_audit_event` row with `(actor_user_id, action, target_tenant_id?, target_resource, before_value, after_value, ts)` | Audit immutability is the linchpin of trust + future SOC2/CASA evidence; every admin write must be reconstructable | **M** | New `admin_audit_event` table; `INSERT`-only (no `UPDATE`/`DELETE` grants); Postgres trigger refuses non-INSERT; 90+ day retention |
+| ADMIN-T4 | Tenant-aware audit — every audit event with a tenant target carries `target_tenant_id` so we can later answer "show me every admin action on tenant X" | Multi-tenant SaaS audit baseline; needed before a tenant says "did you touch our account?" | **S** | Foreign-keyed column on `admin_audit_event`; nullable for global actions like "rotate OpenAI master key" |
+| ADMIN-T5 | Read-action visibility — every admin **read** of a tenant page (tenant detail, ledger view, spend timeline) writes a `admin_read_event` row with `(actor, target_tenant_id, surface, ts)` | Reads of tenant data are not free in a trust-first SaaS; "who looked at my account?" matters | **S** | New `admin_read_event` table; lighter retention (30 days) than write audit |
+| ADMIN-T6 | Admin can see their own recent audit log (last 50 actions) on the `/admin` landing | Self-check before doing something destructive | **S** | Read from `admin_audit_event WHERE actor_user_id = current_admin` |
+| ADMIN-T7 | Admin session is the same Spring Session Redis cookie as user session — no separate admin login | Reduces credential surface; one auth path | **S** | Already in place from v1.0 AUTH-04 |
+| ADMIN-T8 | Admin nav lives in a separate `/admin` layout, not bolted into user chrome | Visual separation reduces "I thought I was in my own account" mistakes | **S** | Next.js parallel route segment |
 
 ### Differentiators
 
-| # | Feature | Value | Complexity |
-|---|---------|-------|------------|
-| SET-PD1 | Per-call model pin via chat ("dùng claude-opus cho câu này") — chat respects override for one turn | Power users want surgical control | **M** — already supported by v1.0 LLM-02 per-call pin; expose via chat UI hint |
-| SET-PD2 | Show last-30-days usage by model (which model used how many credits, which BYOK key sent how many tokens) | Cost analytics | **M** — link to v1.0 analytics page filtered by model |
+| # | Feature | Value Proposition | Complexity | Notes |
+|---|---------|-------------------|------------|-------|
+| ADMIN-D1 | Audit diff view — for any audit row with `before_value` / `after_value`, render a side-by-side JSON diff in the audit log UI | Lets admin verify "what exactly did I change?" without `psql` | **M** | Reuses any small JSON-diff React component |
+| ADMIN-D2 | Audit-event filter chips (action type, tenant, date range) on `/admin/audit` | Once the table is non-trivial size, ungrouped scroll is unusable | **S** | Standard table-filter UI |
+| ADMIN-D3 | Audit-event CSV export (admin-only, audit-logged itself — exporting the log is an auditable action) | SOC2/CASA evidence; auditor wants the rows on disk | **S** | Stream CSV via `/admin/audit/export.csv`; emits `audit.exported` audit row |
+| ADMIN-D4 | "Confirm twice" pattern for destructive admin actions (rotate key, re-queue dead-letter batch, pause tenant) — typed-confirm dialog like GitHub's `Type the repo name to delete` | Prevents accidental destructive clicks in a console used rarely | **S** | Standard pattern; use shadcn `<AlertDialog>` |
 
 ### Anti-Features
 
-| Anti-feature | Reason |
-|--------------|--------|
-| Free-text model id input | Typos → silent failures; LLM gateway rejects unknown ids anyway; bad UX |
-| Per-call provider switching via chat ("/openai gpt-5 please") | Inbox Zero allows this; Zero Mail's per-call pin is enough; slash commands add UI complexity |
-| Bedrock / Azure / Vertex / Groq / Perplexity providers in v1.1 | Out of scope (PROJECT.md `Deferred to v1.2: provider expansion`) |
-| Local LLM (Ollama) support | Out of scope; defer to v2 |
+| # | Feature | Why Requested | Why Problematic for Zero Mail | Alternative |
+|---|---------|---------------|-------------------------------|-------------|
+| ADMIN-A1 | **Admin impersonates user / "Sign in as user"** | Quick way to debug "their UI is broken" reports | **Trust violation** — impersonation grants the admin a session with the user's Gmail scope. Even if we audit it, the admin can read every email body. Cross-tenant impersonation is a recognized SaaS anti-pattern; the right pattern is to ship enough read-only diagnostics that impersonation is unnecessary | Tenant read-only inspection (OPS-TENANT-*) + better client-side error logs; revisit only if a real support load justifies it |
+| ADMIN-A2 | **Admin views tenant email bodies / chat content / prompts / completions** | "I can't help them debug their rule without seeing what email triggered it" | **Architecturally banned** by v1.0 privacy constraint (`@Sensitive` + Logback scrub + ArchUnit content-ban tests) and v1.1 chat body-ban (3-layer enforcement); any admin surface that breaks this collapses the whole privacy posture | Show metadata only — message-id, sender-domain-hashed, label transitions, audit row IDs; the user can opt-in to share a redacted reproducer separately |
+| ADMIN-A3 | **Free-form SQL console / `psql` proxy in admin UI** | "Just let me query directly when something weird happens" | Bypasses the audit log + the content-ban surface entirely; any read of the audit table itself bypasses `admin_read_event` enforcement; one accidental `SELECT body FROM ...` violates the privacy contract | Postgres MCP via JetBrains direct DB access for the solo operator (already in the dev workflow) — keeps the boundary tight |
+| ADMIN-A4 | **Editable env-var allowlist for admin emails** | Inbox Zero pattern | Tied to environment file reloads; doesn't survive multi-instance; no audit row when an admin is granted/revoked | Database-backed `user_account.role` + a separate "promote user to admin" admin action that itself emits an audit row |
+| ADMIN-A5 | **Separate admin password / 2FA layer** | "Admin should be harder to log into than user" | Adds friction without measurable gain when the solo operator's Google account already protects via 2FA; revisit when first non-developer joins | Rely on Google's 2FA; **enforce** admin role only via DB column; log admin session start |
+| ADMIN-A6 | **Generic "user management" surface (edit any tenant's name/email/etc.)** | Common in mature SaaS admin tools | We don't actually mutate tenant identity fields in v1.2 — Gmail is the source of truth for email + profile; mutating it would break sync | Keep tenant fields read-only; the only writes are admin-flagged pause / unpause / mark-for-deletion |
 
 ---
 
-## SETTINGS_PERSONALIZATION Category
+## CAT Category — Curated LLM Catalog + Sync-from-/models
 
 ### Table Stakes
 
-| # | Feature | Why expected | Complexity | Inbox-Zero Ref | Storage | Dependency on v1.0 |
-|---|---------|-------------|------------|----------------|---------|--------------------|
-| SET-P1 | **Writing style** — free-text "Describe how you write" (200–500 words; influences AI draft tone) | Drafts that sound like you require a style description | **S** | `WritingStyleSetting.tsx` | New column `assistant_settings.writing_style TEXT NULLABLE` | **Allowed** by privacy carve-out (user-typed input persists) |
-| SET-P2 | **Personal instructions** (a.k.a. "About") — free-text "Tell the AI about you" (role, company, current projects); injected into system prompt for chat + triage + draft | Context that doesn't fit in rules but shapes every AI decision | **S** | `AboutSetting.tsx`, `update-personal-instructions-tool.ts` | New column `assistant_settings.personal_instructions TEXT NULLABLE` | Allowed (user-typed) |
-| SET-P3 | **Email signature** — free-text signature appended to AI drafts (separate from Gmail's native signature, since Gmail signature doesn't always work via API) | Without a signature, AI drafts look unsigned | **S** | `PersonalSignatureSetting.tsx` | New column `assistant_settings.email_signature TEXT NULLABLE` | Allowed (user-typed) |
-| SET-P4 | **Knowledge base** — list of titled snippets (e.g., "Pricing for Acme deal", "Hours of operation", "Refund policy") the AI consults when drafting | Reusable reference material — "always include pricing when asked" | **M** | `DraftKnowledgeSetting.tsx`, `add-to-knowledge-base-tool.ts` | New table `assistant_knowledge_snippet (id, email_account_id, title, content, created_at)` | Allowed (user-typed) |
-| SET-P5 | **Tone preset** — picker among `professional` / `friendly` / `casual` / `formal` / `custom`; sets a default tone hint for AI drafts | Quick way to set baseline without writing 200 words of writing style | **S** | Inbox Zero doesn't have this as a discrete setting (relies on writing_style only); Zero Mail adds it | New column `assistant_settings.tone_preset VARCHAR(32)` | None |
-| SET-P6 | **AI output language** — toggle `VI` / `EN` (default VI for Vietnam beta); locks the language all AI features respond in | Zero Mail is Vietnamese-default; need an explicit override for English-speaking users | **S** | Inbox Zero is English-only — Zero Mail-specific | New column `assistant_settings.ai_output_language VARCHAR(8)` | Reuse v1.0 i18n locale infra |
+| # | Feature | Why Expected | Complexity | Notes |
+|---|---------|--------------|------------|-------|
+| CAT-T1 | Per-provider catalog table view (OpenAI, Anthropic, Google, DeepSeek as four tabs) listing every model the admin has curated, with `{name, providerModelId, enabled, allowedFeatures: [chat?, triage?, draft?], inputCostPer1k, outputCostPer1k, contextWindow, lastSyncedAt}` | Without a curated list, the Settings UI either hardcodes models (stale) or shows every model the provider has ever published (overwhelming + paid-tier-only models break BYOK) | **M** | New `llm_catalog_model` table (PK `(providerId, providerModelId)`); seeded with the existing v1.0 default list per provider |
+| CAT-T2 | Per-feature toggle per model — a single model row has 3 independent checkboxes (chat / triage / draft) so admin can allow `gpt-5-mini` for triage but not chat | Different features have different latency / cost / quality budgets; one global toggle is too coarse | **S** | 3 boolean columns or a `allowed_features` JSONB array on `llm_catalog_model` |
+| CAT-T3 | Per-feature default model — exactly one catalog row per `(provider, feature)` is the default; the Settings UI uses this default if the user has not picked one | Users land on Settings without an opinion; we need a sane default | **S** | `is_default_for_chat / is_default_for_triage / is_default_for_draft` booleans with a partial unique index |
+| CAT-T4 | "Sync from /models" button per provider — admin clicks, backend fetches that provider's `/models` endpoint with the master key, computes a diff against the current catalog, opens a modal listing `{added, removed, changed}` model entries with per-row checkboxes to approve | Manual entry of every new GPT/Claude/Gemini release is operator toil; auto-importing without admin review is bad (vendors ship preview / deprecated / unsuitable models constantly) | **M** | New `llm_catalog_sync_run` row per click; new `llm_catalog_sync_diff_entry` rows per diff line; admin approval commits selected entries to `llm_catalog_model` |
+| CAT-T5 | Sync run history — list past Sync runs per provider with `{startedAt, actor, addedCount, removedCount, approvedCount, skippedCount}` | Audit + "did we already sync GPT-5.1?" lookup | **S** | Query `llm_catalog_sync_run` ordered desc |
+| CAT-T6 | "Disable model" emits `model.disabled` audit row and surfaces "N users currently have this as their chat/triage/draft selection" before disabling | Prevents disabling a model 200 users depend on without realizing | **M** | Join count from `assistant_settings.{chat,triage,draft}_model_id`; require admin to acknowledge before disabling |
+| CAT-T7 | Provider status pill (green/amber/red) based on last successful `/models` fetch + last successful test-connection within 24h | At-a-glance ops signal | **S** | Derived from `llm_catalog_sync_run.lastSuccessAt` and `provider_master_key.lastTestConnectionAt` |
 
 ### Differentiators
 
-| # | Feature | Value | Complexity |
-|---|---------|-------|------------|
-| SET-PD1 | **Knowledge snippet auto-tagging** — when user adds a snippet, AI suggests when it should be used ("This looks like pricing info — apply when emails mention 'cost' or 'pricing'") | Reduces "AI never used my snippet" frustration | **M** — defer to v1.2 |
-| SET-PD2 | **Per-recipient tone** — "When emailing my-boss@acme.com use formal; when emailing friends use casual" | Real productivity win but recipe complexity climbs | **L** — defer to v2 (would need contact-rule table) |
-| SET-PD3 | **Voice import from past sent mail** — analyzes user's last N sent emails (in-memory only, immediate discard) to seed writing_style | One-time onboarding boost | **L** — defer; analyzing sent mail at scale needs careful privacy framing; v1.2 candidate |
+| # | Feature | Value Proposition | Complexity | Notes |
+|---|---------|-------------------|------------|-------|
+| CAT-D1 | Cost-per-1k tokens stored on each catalog row and shown in Settings AI tab next to model name (`gpt-5-mini · $0.25 / $2.00 per 1M tok`) | Users picking a model want to know cost before flipping; otherwise BYOK users overspend on Opus by accident | **M** | Pricing data is provider-published; we cache on Sync. Acknowledge it may go stale until next Sync (acceptable — pricing changes monthly at most) |
+| CAT-D2 | "Recommended for {chat/triage/draft}" badge on one model per feature per provider, distinct from "default" | Default is what we ship; recommended is editorial guidance ("for triage, we recommend gpt-5-mini for cost") | **S** | `recommended_for_{chat,triage,draft}` boolean column; admin curated |
+| CAT-D3 | Deprecation tag — if a Sync detects a model has been removed by the provider but tenants still reference it, surface as a banner "12 users on a deprecated model — pick a migration target" | Vendor model retirement causes silent failures; surfacing the count gives the admin time to migrate users | **M** | Diff entry of type `removed` + dependent count from `assistant_settings` |
+| CAT-D4 | Catalog state snapshot exposed as `/api/catalog/models?feature=chat&provider=openai` (and equivalent for triage/draft) — the **only** thing the Settings UI queries | Decouples admin curation from frontend; Settings doesn't need to know about disabled / deprecated / non-feature models | **S** | Read endpoint filtered to `enabled=true AND allowed_features ? :feature` |
 
 ### Anti-Features
 
-| Anti-feature | Reason |
-|--------------|--------|
-| Persistent embeddings of user's past sent mail | Locked OUT by PROJECT.md privacy constraint |
-| "Learned patterns" auto-updating tone per-recipient | Requires learning loop and persisted derived features (CHAT-A5); defer to v2 |
-| Hidden AI-draft tracking link toggle | CHAT-A7 — trust violation, never ship |
-| Referral signature toggle | CHAT-A8 — marketing chrome |
+| # | Feature | Why Requested | Why Problematic | Alternative |
+|---|---------|---------------|-----------------|-------------|
+| CAT-A1 | **Free-form "type any model ID" override in Settings UI** | "What if a user wants to try a brand-new model before admin syncs?" | Breaks the curated-catalog invariant; routes load through unknown-cost models; defeats the per-feature catalog | Users wait for admin Sync, or run BYOK with their own OpenRouter key (BYOK already supports per-call model pin via existing v1.0 LLM-02) |
+| CAT-A2 | **Auto-approve Sync diff (no admin review)** | "Save the operator a click" | Vendors ship deprecated, preview, internal-only, or paid-tier-only models in `/models` — auto-approve = silent breakage | Always require explicit admin approval of each added entry |
+| CAT-A3 | **Embedding-model curation in v1.2 catalog** | Symmetric with chat/triage/draft | Privacy constraint forbids embeddings of user mail in v1; no embedding feature exists to power | Defer to whenever embedding feature is approved (post v2) |
+| CAT-A4 | **Per-tenant model allowlist overrides ("tenant X can use Opus, tenant Y cannot")** | Enterprise-y feature | Adds a tenant-scoped layer over the catalog; multiplies UI complexity; we have no use case in v1 (solo prosumers, no enterprise sales) | Global catalog only; revisit when first enterprise customer signs |
+| CAT-A5 | **Live `/models` polling on every Settings page load** | "Always show the latest models" | Each tenant's Settings load → 4 outbound `/models` calls → rate-limit + cost; defeats catalog purpose | Catalog is the cache; admin-triggered Sync is the refresh |
 
 ---
 
-## SETTINGS_BEHAVIOR Category
+## MKEY Category — Master-Key Management
 
 ### Table Stakes
 
-| # | Feature | Why expected | Complexity | Inbox-Zero Ref | Storage | Dependency on v1.0 |
-|---|---------|-------------|------------|----------------|---------|--------------------|
-| SET-B1 | **Auto-draft replies enabled** — master switch for the v1.0 DRFT-01..04 AI draft feature; off = no AI drafts saved to Gmail | Some users want chat-only, no auto-drafts in their drafts folder | **S** | `DraftReplies.tsx` | New column `assistant_settings.auto_draft_enabled BOOLEAN DEFAULT true` | Wires to existing DRFT-04 |
-| SET-B2 | **Draft confidence threshold** — slider 0.0–1.0; AI only saves a draft if its self-reported confidence ≥ threshold | Users want to suppress low-quality drafts | **S** | `DraftConfidenceSetting.tsx` | New column `assistant_settings.draft_confidence_threshold NUMERIC(3,2) DEFAULT 0.50` | Requires DRFT pipeline to emit confidence (small new piece of v1.0 DRFT) |
-| SET-B3 | **Follow-up reminders** — for sent emails that don't get a reply within N days, surface a "Cần follow-up?" notification | Reply Zero parity (light) | **M** | `FollowUpRemindersSetting.tsx` | New column `assistant_settings.follow_up_reminders_enabled BOOLEAN DEFAULT false` + worker job that scans audit log | Defer to v1.2 if worker scope tight; **easy v1.1 stretch** |
-| SET-B4 | **Daily digest** — enable the v1.0 ANL-03 email digest from this Settings page (it's currently in Settings but scattered) | Single Settings page = single config surface | **S** | `DigestSetting.tsx` | Reuse v1.0 ANL-03 config | Just UI wiring |
-| SET-B5 | **Sensitive data protection** — when ON, AI redacts apparent emails/phone/credit-cards/SSNs from prompts before sending to provider (already in v1.0 LLM-05..08 but defaults to ON; setting lets user turn off for low-sensitivity accounts) | Compliance-conscious users want to see + control the redaction | **S** | (Inbox Zero doesn't expose this as a setting — Zero Mail adds for trust posture) | New column `assistant_settings.sensitive_data_protection_enabled BOOLEAN DEFAULT true` | Toggles existing v1.0 LLM-05 sanitizer behavior |
-| SET-B6 | **Shadow mode toggle** — exposes v1.0 TRG-07 tenant-wide opt-in shadow mode (rules simulate, don't write); already in Settings v1.0, surface here for one-stop config | Lets new users dry-run rules safely | **S** | (Zero Mail-specific; ported from v1.0 TRG-07) | Reuse v1.0 TRG-07 column | Just UI wiring |
+| # | Feature | Why Expected | Complexity | Notes |
+|---|---------|--------------|------------|-------|
+| MKEY-T1 | Per-provider master key set/view UI: 4 cards (OpenAI, Anthropic, Google, DeepSeek), each showing `{status: SET/UNSET, lastRotatedAt, lastTestedAt, encryptedKeyVersion}` — never showing the key bytes | Admin needs to verify "is OpenAI configured" without exposing the key | **S** | New `provider_master_key` table with encrypted-at-rest key blob + metadata columns |
+| MKEY-T2 | "Set / replace master key" form with masked input, submit encrypts under app-layer AES-GCM (reusing v1.0 LLM-04 crypto), writes encrypted blob + emits `master_key.set` audit row | Same crypto pattern as v1.0 BYOK; reuse don't duplicate | **M** | Same `AesGcmEncryptor` used for BYOK; new column `provider_master_key.encrypted_key BYTEA NOT NULL` |
+| MKEY-T3 | "Test connection" button per provider — backend issues a minimal `/models` GET (or `/v1/messages` ping) using the current master key, returns `{ok, latencyMs, modelsReturnedCount}`, updates `provider_master_key.lastTestedAt` | First sanity check before relying on a key; also surfaces "provider is down" vs "our key is wrong" | **S** | Already partially exists from CAT-T4 Sync flow; share the adapter |
+| MKEY-T4 | "Rotate master key" workflow: admin pastes new key → backend test-connects under new key → if pass, re-encrypts dependent rows (any platform-encrypted BYOK secrets if applicable) → swaps active key → marks old key version `RETIRED` → emits `master_key.rotated` audit row with old/new version | Rotation is the whole point of key management; without it, set-once-forever | **L** | Multi-step transactional flow; old key kept for read-only decrypt of historical encrypted columns until full re-encrypt sweep completes |
+| MKEY-T5 | Confirm-twice destructive-action dialog on rotate (typed-confirm pattern) | Botched rotate breaks every dependent LLM call | **S** | shadcn `<AlertDialog>` |
+| MKEY-T6 | Failed-rotation rollback — if any step of T4 fails (test-connect failed, re-encrypt failed mid-sweep), rollback to old active key, surface error toast, write `master_key.rotation_failed` audit row | Rotate is destructive; partial failure must not lock everyone out | **M** | Transactional rotation with explicit `RETIRED → ACTIVE` reversal step on error |
+
+### Differentiators
+
+| # | Feature | Value Proposition | Complexity | Notes |
+|---|---------|-------------------|------------|-------|
+| MKEY-D1 | "Dependents" count per master key — "12 BYOK rows / 4 webhook secrets encrypted under this key" surfaced before rotation | Tells admin the blast radius of rotation | **M** | Count via FK or per-table version column |
+| MKEY-D2 | Rotation cadence reminder — banner appears when `lastRotatedAt` > 90 days ago | Aligns with PCI/SOC2 90-day rotation guidance; opt-in not enforced in v1.2 | **S** | Frontend check on `provider_master_key.lastRotatedAt` |
+| MKEY-D3 | "Key history" mini-list per provider — last 5 versions with `{version, rotatedAt, actor}` (not key bytes) | Audit/forensics support | **S** | Reads `admin_audit_event WHERE action LIKE 'master_key.%'` |
 
 ### Anti-Features
 
-| Anti-feature | Reason |
-|--------------|--------|
-| "Auto-send replies if confidence ≥ X" toggle | **NEVER.** PROJECT.md line 122: auto-send is "single bad auto-send is trust-ending; opt-in narrow auto-send deferred to v2". |
-| "Pause AI for the weekend" scheduler | Defer — schedule-based pause is feature creep; users can use global pause manually |
-| "Snooze a specific email" | Inbox primitive that's not in v1.1 scope (SEED-004 deferred) |
-| "Set custom action types" (run JavaScript, call my webhook) | Not in v1 write-allow-list; defer to v2 |
+| # | Feature | Why Requested | Why Problematic | Alternative |
+|---|---------|---------------|-----------------|-------------|
+| MKEY-A1 | **Show the master key bytes in any admin UI surface ("reveal once")** | "I forgot what I pasted, let me check" | A revealed-once secret in a long-running page session leaks via DOM, screenshot, accidental screen share; never worth the convenience | Admin stores key in their own password manager; UI shows only "set / unset" + `lastRotatedAt` |
+| MKEY-A2 | **Automatic key rotation on a cron** | Best practice in PCI-aligned shops | v1.2 has no key-management infrastructure (no KMS, no HSM, no Vault); automatic rotation when re-encrypt sweep can partially fail = silent prod incident at 3am | Manual rotation with banner reminder (MKEY-D2); revisit when there's actual KMS infra |
+| MKEY-A3 | **Per-tenant master key (tenant brings their own platform key)** | Symmetric with BYOK | This conflates platform credentials with tenant credentials; BYOK already covers the "user brings their own" case | Master key is platform-scoped; BYOK is tenant-scoped; keep separate |
+| MKEY-A4 | **Storing keys in DB encrypted only with the DB-level pgcrypto** | "Simpler than app-layer AES-GCM" | Already explicitly banned in CLAUDE.md ("Hard do not use" list); key-in-DB → key-leak on DB leak | App-layer AES-GCM with master from env / sealed config (already the v1.0 pattern from LLM-04) |
 
 ---
 
-## SETTINGS_SAFETY Category (Sender Safety Net UI)
-
-### Background
-
-v1.0 shipped TRG-07..08:
-- **Shadow mode** — tenant-wide opt-in where all rules SIMULATE actions instead of executing; audit log records the simulated decision; no Gmail write happens.
-- **Sender safety net** — per-tenant list of senders/domains where automation is explicitly OPT-IN (default: rules do NOT auto-act on these senders even if they match). Used for VIPs ("never archive emails from my CEO automatically").
-
-v1.0 has the DB tables and the safety policy enforcement, but **no end-user UI for managing the sender safety net** — entries can only be set via internal admin tooling. v1.1 closes this gap.
+## OPS-TENANT Category — Tenant Read-Only Inspection
 
 ### Table Stakes
 
-| # | Feature | Why expected | Complexity | Storage | Dependency on v1.0 |
-|---|---------|-------------|------------|---------|--------------------|
-| SET-S1 | **Sender safety list** — view + add + remove entries (email or domain); shows count of "saves" (times this entry prevented an action) | Users need control over "who is sacred" | **M** | Existing v1.0 table `sender_safety_entry` | Reuse v1.0 TRG-08 |
-| SET-S2 | **Add-by-paste** — user pastes "vip@acme.com, ceo@startup.com, *@board.example" and gets a parsed preview before save | Bulk add is critical for VIPs at first setup | **S** | Same table | Same |
-| SET-S3 | **Per-entry mode** — `protect` (never auto-act) vs `escalate` (notify user when rule wanted to act, but don't act) | Two safety levels, two intents | **S** | Need new column `mode VARCHAR(16)` on `sender_safety_entry` (or already present in TRG-08?) | Verify v1.0 schema; backfill if needed |
-| SET-S4 | **Visual indicator in audit log** when a rule was blocked by safety net ("Was going to archive, blocked by VIP rule for ceo@acme.com") | Closes the loop — user sees the safety net working | **S** | Existing v1.0 audit log + new badge in `apps/web/triage` view | Reuse v1.0 TRG-05 + small frontend change |
+| # | Feature | Why Expected | Complexity | Notes |
+|---|---------|--------------|------------|-------|
+| OPS-TENANT-T1 | Tenant list page at `/admin/tenants` with search-by-email + filter chips (state: connected/disconnected/paused, has-balance, recently-active) + pagination | "Find tenant X" is the most common operator task | **M** | Read projection over `email_account` + `gmail_connection`; debounced search |
+| OPS-TENANT-T2 | Tenant detail page at `/admin/tenants/{tenantId}` with tabs: Overview, Health, Billing, Spend, Activity | Container for everything else | **S** | Tab layout reuses shadcn `<Tabs>` |
+| OPS-TENANT-T3 | Overview tab — tenant email (hashed for display? — decide), creation date, last sign-in, role, pause flag, watch expiry, watch renewal cadence; no identity-related write controls in v1.2 | The "is this account healthy" snapshot | **S** | Read from `user_account` + `gmail_connection` |
+| OPS-TENANT-T4 | Health tab — gmail connection state, last Pub/Sub event timestamp, watch expiry countdown, recent reconnect attempts, last sync errors (codes only, no payload bodies) | Most "my mail isn't being triaged" reports trace to connection/watch issues | **M** | Read from existing v1.0 connection-health tables |
+| OPS-TENANT-T5 | Billing tab — current credit balance, recent ledger holds (reservation ids + amounts only, never the underlying message ids), recent top-ups, stale-reservation count | Resolves "I topped up but balance didn't update" reports | **M** | Read from `credit_ledger_entry` + `credit_reservation` |
+| OPS-TENANT-T6 | Spend tab — LLM spend over the last 30 days, broken down by feature (chat/triage/draft) and provider; **metadata only** (token counts + dollar amounts; never prompts/completions) | Resolves "why did I burn $X this week" reports | **M** | Read aggregates over `llm_call_audit` (the v1.0 metadata-only audit) |
+| OPS-TENANT-T7 | Activity tab — last 50 admin actions on this tenant + last 100 triage audit row counts (counts by action: labeled/archived/drafted/sent-via-chat) | "What's been going on here recently" without exposing message contents | **M** | Read from `admin_audit_event WHERE target_tenant_id = ?` + counts from `triage_audit` |
+| OPS-TENANT-T8 | "Pause tenant" action — sets the existing v1.0 pause flag (`MAIL-06`) via an admin-side write; emits `tenant.paused_by_admin` audit row | Sometimes you need to pause a tenant whose mailbox is causing a runaway loop without waiting for them | **S** | Reuses existing pause infra; admin-action variant |
+| OPS-TENANT-T9 | "Disconnect Gmail" action — surfaces the user-side disconnect (existing AUTH-03/05 flow) on admin's behalf; explicit double-confirm | Emergency containment | **S** | Reuses existing disconnect; admin-action variant |
+| OPS-TENANT-T10 | "Delete tenant + all data" action — wraps the existing AUTH-03 cascade-delete with an admin-typed-confirm dialog + audit row | GDPR-like deletion request handled by support; reuses validated cascade | **M** | Reuses AUTH-03 cascade; admin-action variant |
+
+### Differentiators
+
+| # | Feature | Value Proposition | Complexity | Notes |
+|---|---------|-------------------|------------|-------|
+| OPS-TENANT-D1 | Spend-over-time sparkline on tenant Overview tab, plus comparison to that tenant's 30-day median | Visual anomaly detection | **S** | Reuses Spend tab data |
+| OPS-TENANT-D2 | "Replay last watch renewal" — admin-triggered retry of `users.watch` for a tenant whose watch expired without auto-renewal | Saves a support cycle; renewal is the common stuck state | **M** | Trigger via existing v1.0 worker job; emit audit row |
+| OPS-TENANT-D3 | Tenant deletion preview ("this will delete N rules, M audit rows, K ledger entries") before final confirm | Reduces "I clicked delete and didn't realize what would happen" | **S** | Count query before delete |
 
 ### Anti-Features
 
-| Anti-feature | Reason |
-|--------------|--------|
-| "Per-rule safety override" (this rule can act even on VIPs) | Defeats the safety net's purpose; if a rule should act, remove the sender from the safety list |
-| Automatic safety-list seeding from contacts | Privacy + scope creep — defer |
+| # | Feature | Why Requested | Why Problematic | Alternative |
+|---|---------|---------------|-----------------|-------------|
+| OPS-TENANT-A1 | **"View tenant inbox" / message-body access** | Quickest debugging path | Hard violation of v1 privacy posture (no body access) and CLAUDE.md "Privacy" constraint | Tenant exports their own redacted reproducer; admin works from metadata |
+| OPS-TENANT-A2 | **"View tenant chat history" / chat message content** | Symmetric with above | Hard violation of v1.1 chat body-ban (3-layer enforcement); even chat is user PII | Show counts only (chat sessions count, messages count); never content |
+| OPS-TENANT-A3 | **"View tenant prompts/completions"** | "I want to see what we sent to OpenAI on their behalf" | LLM-09 explicitly bans persistence beyond short-lived cache; nothing to view | Metadata-only LLM call audit (provider, model, tokens, latency, dollar cost) |
+| OPS-TENANT-A4 | **"View tenant OAuth refresh token / Google subject"** | "Their token must be expired" | AUTH-04 + FND-03 ban token-byte logging; refresh token is encrypted at rest under master key | Show only `{connectionState, lastSuccessfulRefreshAt, errorCode}` |
+| OPS-TENANT-A5 | **"Edit tenant settings on their behalf"** | "User asked me to change their personalization for them" | Admin writing to user-owned config is impersonation-adjacent; if needed, the user does it themselves over a support call | Read-only view + screen-share over support call |
+| OPS-TENANT-A6 | **Bulk tenant operations (bulk pause, bulk delete)** | Convenient | Multiplies blast radius; encourages "mass action" thinking | One tenant at a time in v1.2; revisit if a real ops scenario justifies |
+
+---
+
+## OPS-QUEUE Category — Worker Queue Health (Read-Only)
+
+### Table Stakes
+
+| # | Feature | Why Expected | Complexity | Notes |
+|---|---------|--------------|------------|-------|
+| OPS-QUEUE-T1 | Outbox lag stat — count of `outbox` rows with `processed_at IS NULL` + max age of oldest unprocessed | First indicator of "is the worker keeping up?" | **S** | Single SQL aggregate; PlanetScale postgres-queue article confirms "oldest unprocessed age" is the canonical lag metric |
+| OPS-QUEUE-T2 | `processing_job` queue depth by job type (mail-ingest, triage, draft, chat-tool, etc.) + max age of oldest unleased per type | Lets admin see which job type is starving | **S** | Group-by-type aggregate |
+| OPS-QUEUE-T3 | Retry distribution histogram per job type — "how many jobs at retry count 0/1/2/3+?" | Locates a job class stuck in a retry loop | **S** | Group-by-`retry_count` aggregate |
+| OPS-QUEUE-T4 | Failure rate per job type over the last 1h / 24h | Anomaly signal | **S** | Aggregate over `processing_job.completed_at` + `last_error_code` |
+| OPS-QUEUE-T5 | Dead-letter view — jobs at `status=FAILED_PERMANENT` (or retry exhausted) with `{jobId, type, tenantId, lastErrorCode, lastErrorAt, retryCount}` (no payload bodies) | Surfaces "we gave up on these" so admin can investigate or re-queue | **M** | Read from `processing_job` filtered to terminal failure |
+| OPS-QUEUE-T6 | Re-queue action on dead-letter row — admin-triggered reset of `retry_count` + `status` back to `READY`; emits `job.requeued` audit row; confirm-twice dialog | The only mutating action in the queue surface; gated by audit | **S** | Single `UPDATE` wrapped in audit |
+| OPS-QUEUE-T7 | Auto-refresh on the queue health page (every 10s) with a "live" indicator | The admin sits on this page during an incident; manual refresh defeats the purpose | **S** | SWR or TanStack Query `refetchInterval` |
+
+### Differentiators
+
+| # | Feature | Value Proposition | Complexity | Notes |
+|---|---------|-------------------|------------|-------|
+| OPS-QUEUE-D1 | Worker heartbeat — which worker processes are leasing jobs in the last 60s | Confirms the worker is alive vs just empty queue | **S** | Read distinct `leased_by_worker` from `processing_job` in last 60s |
+| OPS-QUEUE-D2 | Backpressure alert — banner appears at top of admin pages when oldest unleased > 5min | Surface the incident before the operator navigates to the queue page | **S** | Frontend check; can be enriched into Grafana alert in v1.3+ |
+
+### Anti-Features
+
+| # | Feature | Why Requested | Why Problematic | Alternative |
+|---|---------|---------------|-----------------|-------------|
+| OPS-QUEUE-A1 | **Worker stop/start/restart controls from the UI** | "Just let me restart the worker without SSH" | Tightly couples admin UI to deployment topology; one wrong click in prod kills ingest | Deployment surface is the right place; admin UI is read+limited-write |
+| OPS-QUEUE-A2 | **"View job payload" on a dead-letter row** | Debug a specific stuck job | Payloads carry message IDs / Gmail message refs / sometimes redacted bodies — opens the privacy can | Show error code + tenant + job type only; ask tenant for a reproducer if needed |
+| OPS-QUEUE-A3 | **Manually edit a job row** | Surgically fix a job that's stuck because of bad data | Audit + correctness nightmare; row schema is internal contract | Re-queue or delete (audit-logged); fix data via a proper migration |
+
+---
+
+## OPS-SPEND Category — Global LLM Spend Dashboard
+
+### Table Stakes
+
+| # | Feature | Why Expected | Complexity | Notes |
+|---|---------|--------------|------------|-------|
+| OPS-SPEND-T1 | Top-line spend cards: total $ today, 7d, 30d (across all tenants, all providers) | The "are we burning money" snapshot | **S** | Read aggregate over `llm_call_audit.cost_usd` |
+| OPS-SPEND-T2 | Stacked bar by provider — daily spend × {openai, anthropic, google, deepseek, openrouter} over last 30 days | Quickly tells admin "which provider is the cost center" | **M** | Aggregate group-by-day, group-by-provider |
+| OPS-SPEND-T3 | Donut by feature — spend split across {chat, triage, draft} over last 30 days | Surfaces "is chat eating the budget" vs "is triage" | **S** | Aggregate group-by-feature |
+| OPS-SPEND-T4 | Platform vs BYOK split — what % of LLM calls are paid by platform credits vs paid by user BYOK key | Unit-economics signal | **S** | Boolean column on `llm_call_audit` already exists per v1.0 BILL-07 |
+| OPS-SPEND-T5 | Top-N tenants by spend (last 7d / 30d) with each row click-through to tenant detail Spend tab | Identifies outlier accounts | **S** | Aggregate + join to email_account for display name |
+| OPS-SPEND-T6 | Date-range picker (last 24h / 7d / 30d / custom) | Standard analytics affordance | **S** | Use existing shadcn date-picker primitive |
+
+### Differentiators
+
+| # | Feature | Value Proposition | Complexity | Notes |
+|---|---------|-------------------|------------|-------|
+| OPS-SPEND-D1 | Spend forecast — "if today's burn continues, you'll spend $X this month" | Quick decision aid for whether to raise alarm | **S** | Simple linear extrapolation from MTD |
+| OPS-SPEND-D2 | Per-model cost-per-call median + p95 — surfaces "this model has a long-tail latency cost" | Helps decide which models to deprecate from catalog | **S** | Aggregate over `llm_call_audit.{tokens_in, tokens_out, cost_usd}` |
+| OPS-SPEND-D3 | Cap-vs-actual chart — shows the configured global daily cap (from v1.0 LLM-10) vs actual daily spend | Validates the cap is reasonable | **S** | Two-line chart |
+
+### Anti-Features
+
+| # | Feature | Why Requested | Why Problematic | Alternative |
+|---|---------|---------------|-----------------|-------------|
+| OPS-SPEND-A1 | **Drill-down to individual prompts/completions on the spend dashboard** | "I want to know what they were asking that cost $5" | Same v1 privacy ban as everywhere else | Stop at metadata (tokens, model, latency, feature, cost); the user can self-explain via their own activity |
+| OPS-SPEND-A2 | **Real-time spend streaming (websocket)** | Cool UI | Adds infra without value; 10s refetch is more than fast enough | TanStack Query `refetchInterval` |
+| OPS-SPEND-A3 | **Spend dashboard as a public marketing page ("see how much our users save")** | Growth surface | Even aggregated, exposes our cost structure to competitors and our top tenants' relative usage to each other | Internal admin only |
+
+---
+
+## SET-AI Category — Settings AI Provider/Model Tab (carries forward 4 deferred v1.1 reqs)
+
+> Reference: SET-AI-01..04 from v1.1 deferred list. All 4 carry forward unchanged in intent; v1.2 only adds the catalog dependency.
+
+### Table Stakes
+
+| # | Feature | Why Expected | Complexity | Notes |
+|---|---------|--------------|------------|-------|
+| SET-AI-T1 | (SET-AI-01) Per-feature provider+model picker — 3 separate selects: "Chat assistant model", "Triage model", "Draft replies model" | Each feature has different cost/quality tradeoff; one global model is too coarse | **S** | shadcn `<Select>` × 3, options from `/api/catalog/models?feature=...` |
+| SET-AI-T2 | (SET-AI-02) Provider picker drives the model dropdown — user picks "OpenAI" → model dropdown shows only OpenAI catalog models enabled for that feature | Reduces dropdown size; matches the BYOK keying model | **S** | Two-stage cascading select |
+| SET-AI-T3 | (SET-AI-03) BYOK key management cards per provider — paste/save/clear key, "Test connection" button, last-used timestamp, "currently in use for: [chat, triage]" | The "I want to pay with my own OpenAI key" path; already in v1.0 LLM-02..04, surface here | **M** | Reuses v1.0 `byok_credential` table + AES-GCM crypto |
+| SET-AI-T4 | (SET-AI-04) Per-feature "Use BYOK if available, otherwise platform credits" toggle — default `ON` when a BYOK key exists | The cost-control affordance users expect | **S** | Boolean on `assistant_settings` |
+| SET-AI-T5 | Cost-per-1k display next to each model name in dropdown | Pulled forward from CAT-D1 — users need cost signal at point of choice | **S** | Read from `llm_catalog_model.input_cost / output_cost` |
+| SET-AI-T6 | "Reset to recommended" button per feature — sets the picker back to the catalog's `recommended_for_{feature}` model | Lets users back out of a bad choice | **S** | Reads from CAT-D2 |
+
+### Differentiators
+
+| # | Feature | Value Proposition | Complexity | Notes |
+|---|---------|-------------------|------------|-------|
+| SET-AI-D1 | "Last 7d cost" hint under each picker showing what they actually spent on the current model | Real cost feedback beats theoretical pricing | **M** | Join `assistant_settings.{feature}_model_id` to per-feature spend from spend audit |
+| SET-AI-D2 | Inline deprecation banner — if the user's picked model was deprecated in CAT-D3 sync, show "this model is deprecated by the provider — please pick a new one" | Surface CAT-D3 deprecation to the user | **S** | Compare `assistant_settings.{feature}_model_id` to `llm_catalog_model.is_deprecated` |
+| SET-AI-D3 | Per-feature spend cap (daily) per user — independent of LLM-10 global cap | Cost-conscious users want to bound their own spend | **M** | New nullable column `daily_spend_cap_usd_{feature}` on `assistant_settings` |
+
+### Anti-Features
+
+| # | Feature | Why Requested | Why Problematic | Alternative |
+|---|---------|---------------|-----------------|-------------|
+| SET-AI-A1 | **Free-form model ID textbox** | "Let me type `gpt-5-pro-experimental` myself" | Defeats catalog (CAT-A1); routes unknown-cost calls | Wait for admin Sync |
+| SET-AI-A2 | **Per-rule model override in the rule editor UI** | Power-user feature | Multiplies UX surface; per-feature granularity already covers 95% of need | Defer to v2 |
+| SET-AI-A3 | **Show users the master-key bytes (or any provider-side credentials)** | "How do I know what key you're using?" | Same anti-pattern as MKEY-A1, at user surface | Show only "platform credits" vs "your BYOK key" |
+| SET-AI-A4 | **Allow user to "Sync" provider models from their own Settings page** | Symmetry with admin Sync | Outbound rate-limit + cost + every user can trigger Sync = DoS our master key | Admin-only Sync (CAT-T4) |
+
+---
+
+## SET-VOICE Category — Personalization Tab (carries forward 6 deferred v1.1 reqs)
+
+> Reference: SET-VOICE-01..06 from v1.1 deferred list. Specified in prior v1.1 FEATURES.md research; carries forward unchanged. Brief restatement below.
+
+### Table Stakes
+
+| # | Feature | Why Expected | Complexity | Notes |
+|---|---------|--------------|------------|-------|
+| SET-VOICE-T1 | (SET-VOICE-01) Writing-style free-text input ("formal, concise, prefer bullet points") | Drives draft + chat tone | **S** | Textarea, persisted to `assistant_settings.writing_style` |
+| SET-VOICE-T2 | (SET-VOICE-02) Personal instructions free-text input ("always sign off as 'best, Q.'") — explicit prompt-injection-hardened slot | Drives every assistant response | **M** | Textarea; sanitized + injection-hardened in the LLM gateway as v1.1 already requires |
+| SET-VOICE-T3 | (SET-VOICE-03) Email signature field with rich-text (or markdown) preview | Appended to AI drafts + chat-confirmed send | **S** | Textarea + preview |
+| SET-VOICE-T4 | (SET-VOICE-04) Knowledge-base snippet CRUD list — short user-authored facts the assistant may quote ("my work address is X", "my Zoom link is Y") | The "tell the assistant about me once, never again" affordance | **M** | New `assistant_knowledge_snippet` table; per-user list with add/edit/delete |
+| SET-VOICE-T5 | (SET-VOICE-05) Tone preset dropdown — Professional / Friendly / Direct / Custom | Quick mode-switch | **S** | Enum column |
+| SET-VOICE-T6 | (SET-VOICE-06) AI output language toggle — Vietnamese / English (Auto-detect from incoming email is the default) | Locked in v1.0 i18n direction | **S** | Enum column; respected in the LLM gateway prompt assembly |
+
+### Anti-Features
+
+| # | Feature | Why Requested | Why Problematic | Alternative |
+|---|---------|---------------|-----------------|-------------|
+| SET-VOICE-A1 | **Two-way sync between personalization fields and rule-builder system prompt** | Inbox Zero pattern (their ARCHITECTURE.md flags this as messy) | Already in v1.1 anti-feature list (CHAT-A10); structured rule AST is the source of truth | One-way: chat → settings only |
+| SET-VOICE-A2 | **AI-learned writing style from sent mail** | Better tone matching | Would require persisting derived features over user mail — privacy ban | In-request tone matching only (already v1.0 DRFT-03) |
+
+---
+
+## SET-BEHV Category — Behavior Tab (carries forward 5 deferred v1.1 reqs)
+
+> Reference: SET-BEHV-01..05 from v1.1 deferred list. Carries forward unchanged.
+
+### Table Stakes
+
+| # | Feature | Why Expected | Complexity | Notes |
+|---|---------|--------------|------------|-------|
+| SET-BEHV-T1 | (SET-BEHV-01) Auto-draft toggle — when on, draft is saved to Gmail automatically on incoming mail matching draft-eligible rules; when off, draft is only generated on-demand | Already a v1.0 capability surfaced as a setting | **S** | Boolean on `assistant_settings` |
+| SET-BEHV-T2 | (SET-BEHV-02) Draft confidence threshold slider — only generate draft if internal confidence > threshold | Cost-control + quality-control | **S** | Numeric `[0.0..1.0]` on `assistant_settings` |
+| SET-BEHV-T3 | (SET-BEHV-03) Follow-up reminders toggle — daily-digest mode reminds about un-replied threads | Engagement loop, opt-in | **S** | Boolean on `assistant_settings` |
+| SET-BEHV-T4 | (SET-BEHV-04) Daily digest opt-in toggle — reuses v1.0 ANL-03 | Already-shipped capability, surfaced as a setting | **S** | Reuses existing daily-digest config |
+| SET-BEHV-T5 | (SET-BEHV-05) Sensitive-data protection toggle — refuses to draft replies on messages flagged sensitive (e.g., legal/health), forces user to compose manually | Trust-aware default for high-stakes mail | **M** | Boolean on `assistant_settings`; classifier hook in v1.0 LLM-05 pipeline |
+
+### Anti-Features
+
+| # | Feature | Why Requested | Why Problematic | Alternative |
+|---|---------|---------------|-----------------|-------------|
+| SET-BEHV-A1 | **"Always auto-send on confidence > X" toggle** | Logical extension of the threshold slider | Hard ban — TRG-03 + ArchUnit + grep gate enforce zero auto-send; surfacing this toggle in the UI invites trust violation | Auto-send remains forbidden; chat-preview-confirm send is the only send path |
+
+---
+
+## SET-SAFE Category — Safety Net Tab (carries forward 4 deferred v1.1 reqs)
+
+> Reference: SET-SAFE-01..04 from v1.1 deferred list. Carries forward unchanged. All read/write existing v1.0 TRG-07..08 tables.
+
+### Table Stakes
+
+| # | Feature | Why Expected | Complexity | Notes |
+|---|---------|--------------|------------|-------|
+| SET-SAFE-T1 | (SET-SAFE-01) VIP allow-list — email/domain entries never archived/labeled by rules | Trust-saving "panic button" against an over-aggressive rule | **S** | Reuses `sender_safety_entry` table |
+| SET-SAFE-T2 | (SET-SAFE-02) Never-archive list — domain or address; even if a rule says archive, won't | Inbox Zero pattern; users want explicit safety overrides | **S** | Reuses safety table; type=NEVER_ARCHIVE |
+| SET-SAFE-T3 | (SET-SAFE-03) Never-trash list (n/a in v1 since rules can't trash, but ships future-proof) | Future-proofing | **S** | Reuses safety table; type=NEVER_TRASH (rule-engine guard) |
+| SET-SAFE-T4 | (SET-SAFE-04) Quick-add from triage audit — every audit row gets a "Add sender to VIP" inline action | Saves the trip back to Settings | **S** | Inline action in audit row UI |
+
+### Anti-Features
+
+| # | Feature | Why Requested | Why Problematic | Alternative |
+|---|---------|---------------|-----------------|-------------|
+| SET-SAFE-A1 | **Block-list (rules force-archive any sender matching)** | Symmetric with allow-list | Already expressible via a normal rule; first-class block-list adds a second UI surface for the same outcome | Use a rule |
 
 ---
 
 ## Feature Dependencies
 
 ```
-v1.0 (shipped)
-  ├── LLM gateway (LLM-01..11)
-  │     └──────────────── used by → CHAT (Spring AI ChatClient), TOOL_CATALOG (tool-call wrapper)
-  ├── Rules engine (RULE-01..07)
-  │     └──────────────── exposed by → TOOL-T2/T9/T10/T11/T12 (rule CRUD tools)
-  ├── Gmail label/archive/draft (TRG-01..04)
-  │     └──────────────── exposed by → TOOL-T7/T8 (label/manageInbox tools)
-  ├── Audit + undo (TRG-05..06)
-  │     └──────────────── exposed by → TOOL-T3 (getRuleExecutionForMessage), CONFIRM-T4 (assistant_send_audit reuses pattern)
-  ├── Sender safety net DB (TRG-07..08)
-  │     └──────────────── exposed by → SETTINGS_SAFETY (UI only — no new backend)
-  ├── BYOK credentials (LLM-03..04)
-  │     └──────────────── exposed by → SETTINGS_PROVIDER (per-feature key picker)
-  └── Per-call model pin (LLM-02)
-        └──────────────── exposed by → SETTINGS_PROVIDER SET-P2 (per-feature default model)
+ADMIN (RBAC + audit framework)
+    └──required-by──> CAT (audit + admin-gated mutations)
+                        └──required-by──> SET-AI (Settings AI tab reads catalog)
+    └──required-by──> MKEY (audit + admin-gated mutations)
+                        └──required-by──> CAT Sync flow (uses master key)
+    └──required-by──> OPS-TENANT (admin-only routes + read-audit)
+    └──required-by──> OPS-QUEUE (admin-only routes + audit for re-queue)
+    └──required-by──> OPS-SPEND (admin-only routes)
 
-v1.1 NEW
-  ├── chat_session + chat_message tables ──────── required by ──→ CHAT-T4 (multi-turn), CHAT-T9 (history sidebar)
-  ├── assistant_settings table (or columns on email_account) ── required by ──→ SETTINGS_PERSONALIZATION (T1..T6), SETTINGS_BEHAVIOR (B1..B6), SETTINGS_PROVIDER (P2 per-feature model)
-  ├── assistant_knowledge_snippet table ──────── required by ──→ SET-P4 + TOOL-T15
-  ├── assistant_memory table ──────────────────── required by ──→ TOOL-T16/T17 (save/search memory)
-  ├── assistant_pending_action table ─────────── required by ──→ CONFIRMATION (state machine persistence)
-  ├── assistant_send_audit table ──────────────── required by ──→ CONFIRM-T4 (mandatory before Gmail send)
-  ├── AssistantSendExecutor class (the ONLY new Gmail send call site; ArchUnit-bound) ── required by ──→ TOOL-T18/T19/T20
-  ├── Spring AI ChatClient adapter inside backend/core/llm/gateway/springai ── required by ──→ CHAT-T2 (streaming), TOOL-CATALOG (tool callbacks)
-  ├── SSE controller emitting Vercel Data Stream Protocol envelopes ── required by ──→ CHAT-T2 + frontend useChat() v2 compatibility
-  ├── apps/web `/chat` route + ChatProvider + useChat() v2 + ai-elements ── required by ──→ all CHAT-T* features
-  └── apps/web `/settings/ai` route + per-section forms ── required by ──→ all SETTINGS_* features
+CAT
+    └──required-by──> SET-AI (model picker reads catalog)
 
-Cross-feature
-  ── CHAT-D3 (per-tool preview cards) DEPENDS ON CONFIRMATION state machine
-  ── TOOL-T16 (saveMemory) DEPENDS ON CONFIRMATION (requires user confirm to persist memory)
-  ── TOOL-T14 (updateAssistantSettings) DEPENDS ON SETTINGS_PERSONALIZATION + SETTINGS_BEHAVIOR schema being live first
-  ── SET-PD1 (per-call model pin via chat) DEPENDS ON v1.0 LLM-02 (already shipped)
+MKEY
+    └──required-by──> CAT (Sync calls /models with master key)
+
+SET-VOICE / SET-BEHV / SET-SAFE
+    └── independent of CAT/MKEY/ADMIN — can ship in parallel once Settings page chrome exists
+
+SET-AI ──conflicts──> "user-types-any-model" anti-pattern (CAT-A1, SET-AI-A1) — must keep catalog as the only source
+
+OPS-TENANT.Spend tab ──reuses──> OPS-SPEND aggregate queries (one tenant filter)
 ```
+
+### Dependency Notes
+
+- **ADMIN → everything else in v1.2:** Every other v1.2 feature lives behind `/admin/*` (catalog, master key, tenant inspection, queue, spend). RBAC + audit framework must be in place before any of those write surfaces ship — otherwise audit gaps appear in the most security-sensitive code we have.
+- **MKEY → CAT:** Sync-from-`/models` calls each provider's API using the master key. Without master-key UX, Sync is admin-config-by-environment-variable, which works but doesn't match the curated-catalog story.
+- **CAT → SET-AI:** The AI Provider/Model tab can only list models the admin has approved. SET-AI ships any time after `/api/catalog/models?feature=...` exists; doesn't need Sync UI complete.
+- **OPS-TENANT.Spend ↔ OPS-SPEND:** Same aggregate query, just with/without a tenant filter — share the read-side service.
+- **SET-VOICE / SET-BEHV / SET-SAFE are independent:** Can ship without any Phase 8 work; they're pure user-Settings additions on existing v1.0 schema (+ a few new columns on `assistant_settings` + the existing safety table). Phase 9 sequencing can in principle start these in parallel with Phase 8.
 
 ---
 
-## MVP Definition for v1.1
+## MVP Definition (v1.2 launch scope)
 
-### Launch With (v1.1 GA)
+### Launch With (v1.2 Phase 8 + Phase 9)
 
-Minimum viable for the v1.1 milestone:
+Minimum viable admin + Settings for trust-first ops on a single-VPS deployment.
 
-- [ ] **CHAT-T1..T8, T10..T12** — core chat experience (history sidebar T9 can be a follow-up if scope tight, but strongly recommended at GA)
-- [ ] **TOOL-T1..T17, T18..T20** — all 19 must-have tools live (including the 3 confirmed-send tools)
-- [ ] **CONFIRM-T1..T7, T9, T10** — full confirmation state machine end-to-end (CONFIRM-T8 Cancel can be a v1.1.1 follow-up)
-- [ ] **SET-P1..P5** — provider/model picker for 4 providers, per-feature, with BYOK; SET-P6 cost estimate can be follow-up
-- [ ] **SET-P1..P5 (personalization)** — writing style, personal instructions, signature, knowledge base, tone preset, AI output language
-- [ ] **SET-B1, B2, B4, B5, B6** — behavior toggles (auto-draft, confidence threshold, daily digest enable, sensitive data, shadow mode surface)
-- [ ] **SET-S1..S4** — sender safety net UI
-- [ ] **CHAT-D7** — Vietnamese-default chat chrome (mandatory per v1.0 i18n direction)
-- [ ] **ArchUnit single send call site test** + repo-wide grep updated to allow exactly 1 (down from 0)
+**Phase 8 (Admin Console Foundation):**
+- [ ] **ADMIN-T1..T8** — RBAC + admin route gate + admin_audit_event + admin_read_event + first-admin bootstrap migration (essential foundation; everything depends on it)
+- [ ] **ADMIN-D4** — Confirm-twice pattern (cheap, hugely reduces accidental destructive clicks)
+- [ ] **CAT-T1..T7** — Curated catalog tables, per-provider × per-feature toggles, Sync-from-`/models` flow with diff modal, sync run history, disable-with-dependent-count, provider status pill
+- [ ] **MKEY-T1..T6** — Per-provider master-key set/view/test/rotate with full transactional rollback on failed rotation
+- [ ] **OPS-TENANT-T1..T10** — Tenant list + detail (Overview/Health/Billing/Spend/Activity) + pause/disconnect/delete admin actions, all read-only on PII (metadata only)
+- [ ] **OPS-QUEUE-T1..T7** — Read-only queue health stats + dead-letter view + re-queue action with confirm + 10s auto-refresh
+- [ ] **OPS-SPEND-T1..T6** — Global spend dashboard (cards + stacked bar + donut + platform/BYOK split + top-N tenants)
 
-### Add After Validation (v1.1.x patch releases)
+**Phase 9 (Settings UI on curated catalog):**
+- [ ] **SET-AI-T1..T6** — Per-feature provider+model picker reading from catalog + BYOK key cards + use-BYOK-if-available toggle + cost display + reset-to-recommended
+- [ ] **SET-VOICE-T1..T6** — All 6 personalization fields incl. knowledge-base CRUD
+- [ ] **SET-BEHV-T1..T5** — All 5 behavior toggles
+- [ ] **SET-SAFE-T1..T4** — All 4 safety net surfaces wired against existing TRG-07..08
 
-- [ ] CHAT-T9 chat history sidebar (if punted from GA)
-- [ ] CHAT-D1 reasoning blocks (works only with Anthropic + select OpenRouter routes)
-- [ ] CHAT-D2 inline email cards from `<email>` markdown
-- [ ] CHAT-D6 stale-rules detection (only matters once rule-edit-via-chat is a frequent flow)
-- [ ] CONFIRM-T8 Cancel action
-- [ ] CONFIRM-D2 rule edit diff view
-- [ ] CONFIRM-D3 suspicious-sender warning in system prompt
-- [ ] SET-PD1 per-call model pin via chat (UI already supports it server-side)
-- [ ] SET-PD2 last-30-days usage by model
-- [ ] SET-B3 follow-up reminders
-- [ ] TOOL-D1..D4 nice-to-have tools
+### Add After Validation (v1.2.x patch milestones)
 
-### Defer to v1.2+
+- [ ] **ADMIN-D1** Audit diff JSON view — once table is non-trivial
+- [ ] **ADMIN-D2** Audit-event filter chips — once volume justifies
+- [ ] **ADMIN-D3** Audit CSV export — first time SOC2/CASA evidence is requested
+- [ ] **CAT-D1** Cost-per-1k in catalog — first user-reported "I didn't know Opus was that expensive"
+- [ ] **CAT-D2** "Recommended for" badge — first time default ≠ recommended
+- [ ] **CAT-D3** Deprecation tag — first vendor model retirement
+- [ ] **MKEY-D1** Dependents count
+- [ ] **MKEY-D2** Rotation cadence reminder banner
+- [ ] **OPS-TENANT-D1** Spend sparkline
+- [ ] **OPS-TENANT-D2** Replay last watch renewal
+- [ ] **OPS-QUEUE-D2** Backpressure global banner
+- [ ] **OPS-SPEND-D1..D3** Forecast / per-model cost stats / cap-vs-actual chart
+- [ ] **SET-AI-D1..D3** Last-7d-cost hint / deprecation banner / per-feature spend cap
 
-- [ ] CHAT-D4 image attachments (multimodal)
-- [ ] CHAT-D5 context-pack injection (inbox stats + rule snapshot) — implement if assistant feels "blind" to inbox state in user testing
-- [ ] CONFIRM-D1 30-second soft undo on send
-- [ ] SET-PD1/D2/D3 personalization differentiators
-- [ ] All anti-features remain explicitly deferred or rejected
+### Future Consideration (v1.3+)
+
+- [ ] Grafana dashboards (separate observability surface — already deferred per PROJECT.md)
+- [ ] CASA refresh evidence pipeline (SEED-012 closure)
+- [ ] Per-tenant model allowlist overrides (CAT-A4) — wait for first enterprise customer
+- [ ] Automatic key rotation on cron (MKEY-A2) — wait for KMS/Vault infra
+- [ ] Bulk tenant operations (OPS-TENANT-A6) — wait for an ops scenario that requires them
+- [ ] Real-time spend streaming (OPS-SPEND-A2) — never; 10s refetch is enough
+- [ ] Auto-approve Sync (CAT-A2) — never; admin review is the point
 
 ---
 
 ## Feature Prioritization Matrix
 
-| Feature | User Value | Implementation Cost | Priority | Notes |
-|---------|------------|--------------------|----------|-------|
-| TOOL-T18/T19/T20 (send/reply/forward + CONFIRMATION) | HIGH | HIGH | **P1** | The defining v1.1 capability; high care budget required |
-| CHAT-T1..T8 (core chat UI + streaming) | HIGH | MEDIUM | **P1** | Without this no chat exists |
-| TOOL-T2/T9/T10/T11/T12 (rule CRUD via chat) | HIGH | LOW | **P1** | Backend already exists from v1.0 RULE-* |
-| TOOL-T4/T5/T6/T7/T8 (search/read/label/manage) | HIGH | MEDIUM | **P1** | Backend mostly exists; new is the privacy-bounded read pipeline |
-| SET-P1..P5 (provider picker + per-feature model) | HIGH | MEDIUM | **P1** | Differentiates Zero Mail from competitors who lock you in |
-| SET-P1..P5 (personalization columns) | HIGH | MEDIUM | **P1** | Drafts without personalization feel generic |
-| SET-S1..S4 (sender safety net UI) | MEDIUM | LOW | **P1** | Closes v1.0 UX gap on TRG-07..08 |
-| SET-B1, B2, B4, B5, B6 (behavior toggles) | MEDIUM | LOW | **P1** | Mostly UI on existing backend |
-| TOOL-T13/T14/T15/T16/T17 (settings + memory + knowledge tools) | MEDIUM | MEDIUM | **P1** | Required for chat to act as a config surface |
-| TOOL-T1/T3 (capabilities + rule execution lookup) | MEDIUM | LOW | **P1** | Cheap, makes assistant more honest |
-| CHAT-T9 (chat history sidebar) | MEDIUM | MEDIUM | **P2** | Important but cuttable if backend persistence slips |
-| CHAT-D7 (Vietnamese chrome) | HIGH (for target market) | LOW | **P1** | Locked by v1.0 i18n direction |
-| CHAT-D1 (reasoning blocks) | LOW (most models won't emit) | LOW | **P2** | Nice when available |
-| CHAT-D2 (inline email cards) | MEDIUM | MEDIUM | **P2** | Quality-of-life win |
-| CHAT-D3 (per-tool preview cards) | HIGH | covered by CONFIRMATION | **P1** | Same feature as CONFIRMATION-T1..T10 |
-| CHAT-D4 (image attachments) | LOW for v1.1 | MEDIUM | **P3** | Defer to v1.2 |
-| CHAT-D5 (context-pack injection) | MEDIUM | MEDIUM | **P2** | Add if assistant feels blind in user testing |
-| CHAT-D6 (stale-rules detection) | LOW (rare flow) | MEDIUM | **P3** | Defer |
-| TOOL-D1..D4 (nice-to-have tools) | LOW–MEDIUM | LOW | **P2** | Cheap adds; defer |
-| SET-PD1..PD3 (personalization differentiators) | MEDIUM | MEDIUM–HIGH | **P3** | Defer |
-| SET-B3 (follow-up reminders) | MEDIUM | MEDIUM | **P2** | Add as v1.1.x if worker capacity exists |
-| CONFIRM-D1 (30s soft undo) | LOW (Gmail Send API limitation) | HIGH | **P3** | Defer |
-| CONFIRM-D2 (rule edit diff view) | LOW–MEDIUM | LOW | **P2** | Cheap port from Inbox Zero |
-| CONFIRM-D3 (suspicious-sender warning) | MEDIUM | LOW | **P2** | Cheap; add to system prompt |
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| ADMIN-T1..T8 (RBAC + audit) | HIGH (everything else depends) | MEDIUM | **P1** |
+| MKEY-T1..T6 (master keys) | HIGH (platform credits depend) | HIGH (rotation rollback) | **P1** |
+| CAT-T1..T7 (curated catalog + Sync) | HIGH (Settings AI tab depends) | MEDIUM | **P1** |
+| OPS-TENANT-T1..T10 (tenant inspection) | HIGH (first support load arrives) | MEDIUM | **P1** |
+| OPS-QUEUE-T1..T7 (queue health) | MEDIUM (incidents are rare but expensive) | LOW | **P1** |
+| OPS-SPEND-T1..T6 (global spend) | HIGH (unit economics visibility) | LOW | **P1** |
+| SET-AI-T1..T6 (AI Provider/Model tab) | HIGH (carries forward deferred req) | LOW | **P1** |
+| SET-VOICE-T1..T6 (Personalization) | HIGH (carries forward deferred req) | LOW | **P1** |
+| SET-BEHV-T1..T5 (Behavior) | MEDIUM (carries forward deferred req) | LOW | **P1** |
+| SET-SAFE-T1..T4 (Safety Net) | HIGH (trust posture surface) | LOW | **P1** |
+| ADMIN-D1..D4 (audit polish) | MEDIUM | LOW | **P2** |
+| CAT-D1..D4 (catalog polish) | MEDIUM | LOW | **P2** |
+| MKEY-D1..D3 (key UX polish) | MEDIUM | LOW | **P2** |
+| OPS-TENANT-D1..D3 (tenant polish) | LOW | LOW | **P2** |
+| OPS-QUEUE-D1..D2 (queue polish) | LOW | LOW | **P2** |
+| OPS-SPEND-D1..D3 (spend polish) | LOW | LOW | **P2** |
+| SET-AI-D1..D3 (Settings AI polish) | MEDIUM | MEDIUM | **P2** |
+| Grafana / CASA / impersonation | — | HIGH | **P3** (deferred per PROJECT.md) |
 
 ---
 
-## Competitor Feature Analysis (v1.1-scope only)
+## Competitor Feature Analysis
 
-| Feature | Inbox Zero | Shortwave | Superhuman | Zero Mail v1.1 plan |
-|---------|------------|-----------|------------|---------------------|
-| Chat email assistant | Yes — ~30 tools, streaming, confirmation pattern on send | Yes — semantic search + chat over full mailbox history (requires full body storage) | Yes — Auto-Draft + Instant Reply via per-recipient learning (in-client) | **Port Inbox Zero's confirmation pattern + ~19-tool subset; no full-history semantic search (privacy)** |
-| Provider/Model picker | Yes — 8+ providers including Bedrock/Azure/Groq/Perplexity | Hidden (Shortwave hosts) | Hidden (Superhuman hosts) | **Yes — 4 providers (OpenAI/Anthropic/Google/DeepSeek) + per-feature model picker; expanded providers deferred to v1.2** |
-| User-confirmed send | Yes — `requiresConfirmation: true` state machine | Yes — explicit Send button in chat | Yes — Auto-Draft is review-then-send | **Yes — port Inbox Zero state machine exactly; ArchUnit-enforced single call site** |
-| Personal instructions / writing style | Yes (separate settings) | Implicit via chat memory | Implicit via Auto-Draft training | **Yes — both as discrete fields; "writing style" + "personal instructions" remain conceptually separate** |
-| Knowledge base | Yes (`DraftKnowledgeSetting`) | Implicit via mailbox semantic search | No | **Yes — explicit titled snippets table** |
-| Sender safety net UI | Partial (in advanced settings) | No (relies on AI judgment) | No | **Yes — dedicated section; surfaces existing TRG-07..08** |
-| Learned patterns / auto-tuning | Yes — `LearnedPatternsSetting` | Yes — semantic learning | Yes — per-recipient tone learning | **No — defer to v2 (privacy posture forbids the embeddings these need)** |
-| Browser extension sync | Yes — `SyncToExtensionSetting` | Yes — native client | Yes — native client | **No — Zero Mail is web SaaS only in v1.x** |
-| Calendar integration | Yes (`getCalendarEvents`) | Yes (deep) | Yes (Meeting Briefs) | **No — defer (SEED-006), no Calendar OAuth scope in v1** |
-| Hidden draft tracking links | Yes (`HiddenAiDraftLinksSetting`, opt-in) | No | No | **No — never (trust violation, anti-feature)** |
-| Multi-rule selection | Yes (advanced toggle) | Implicit (AI picks) | Implicit | **No — defer to v1.2 (single-rule-per-message in v1.1)** |
-| Vietnamese-language chat | No | No | No | **Yes — default; matches v1.0 i18n direction** |
+| Feature | Inbox Zero (`../inbox-zero`) | LiteLLM Proxy Admin UI | Zero Mail v1.2 Approach |
+|---------|------------------------------|------------------------|--------------------------|
+| Admin auth | Env-var email allowlist (`env.ADMINS`) | Master-key login + virtual-key system | DB-backed `user_account.role = ADMIN`; first admin bootstrapped via Liquibase changelog |
+| Audit log | Implicit (Vercel + Stripe + Postgres logs) | Per-key + per-team usage logs | Explicit `admin_audit_event` (append-only, Postgres-triggered) + `admin_read_event` |
+| User lookup | `AdminUserInfo` email lookup form, returns user JSON | Per-user/team detail page | Tenant list + detail page (Overview / Health / Billing / Spend / Activity) — strictly metadata-only |
+| LLM catalog curation | None (every user picks from a hardcoded list) | Yes — model allowlist + per-team enabled set | Per-provider × per-feature catalog with Sync-from-`/models` diff review |
+| Master-key management | None visible | Server-managed; UI shows key fingerprint + virtual keys | Per-provider master-key set/test/rotate with transactional rollback |
+| Tenant impersonation | Not visible | Not surfaced in OSS | **Not built** — explicitly anti-feature for trust posture |
+| Spend dashboard | `AdminTopSpenders` (single sortable table) | Top spenders + per-team budgets + cap | Top-line cards + provider/feature breakdowns + top-N tenants |
+| Worker queue panel | None (Vercel handles execution) | Health panel for proxy itself | Postgres outbox + processing_job stats + dead-letter re-queue |
+| Settings model picker | Free-form provider + model with curated suggestions | Models filtered by team allowlist | Picker reads `/api/catalog/models?feature=...` — no free-form ID |
 
 ---
 
 ## Sources
 
-**Primary (HIGH confidence — code inspected):**
-- Inbox Zero `apps/web/components/assistant-chat/chat.tsx`, `messages.tsx`, `message-part.tsx`, `tools.tsx`, `types.ts` — full chat UI implementation
-- Inbox Zero `apps/web/utils/ai/assistant/chat.ts` — system prompt + tool registration + caching + provider policies
-- Inbox Zero `apps/web/utils/ai/assistant/tools/rules/*` — rule tool implementations (createRule, updateRuleConditions, etc.)
-- Inbox Zero `apps/web/utils/ai/assistant/tools/settings/*` — settings tool implementations
-- Inbox Zero `apps/web/utils/ai/assistant/chat-inbox-tools.ts` — sendEmail/replyEmail/forwardEmail/searchInbox/readEmail/manageInbox schemas + zod input validation
-- Inbox Zero `apps/web/utils/actions/assistant-chat.ts` — server actions for the confirmation flow (reservation lease pattern, idempotency, error handling)
-- Inbox Zero `apps/web/app/(app)/[emailAccountId]/assistant/settings/SettingsTab.tsx` + all `*Setting.tsx` files — full reference for Settings categorization
-- Inbox Zero `ARCHITECTURE.md` — "AI Personal Assistant" section on prompt-file vs db-rules tradeoff
-- Zero Mail `.planning/PROJECT.md` lines 17–32 (Current Milestone v1.1) and lines 109–114 (Active scope)
-- Zero Mail `.planning/seeds/SEED-001-future-ai-email-workspace-features.md` (Track A privacy-preserving assistant features)
-- Zero Mail `.planning/seeds/SEED-003-screen-aware-ai-assistant-command-center.md` (chat UI / command center seed)
-- Zero Mail `CLAUDE.md` "Project / Constraints" (v1 trust posture, no auto-send, privacy carve-outs, locked tech stack)
-
-**Secondary (MEDIUM confidence — verified via library docs):**
-- Vercel AI SDK 5+ / ai-elements package — `Conversation`, `Message`, `Reasoning`, `PromptInput`, `Loader` components; Vercel Data Stream Protocol envelopes; `@ai-sdk/react` v2 `useChat` (Context7 `/vercel/ai` library id, multiple versions)
-- Spring AI 2.0.0-M6 — `ChatClient.stream()` returns `Flux<ChatResponse>`; tool callbacks via `@Tool` + `ToolCallbackProvider`; SSE emission via Spring MVC `produces=MediaType.TEXT_EVENT_STREAM_VALUE` (project's locked stack per `CLAUDE.md`)
-
-**Confidence by section:**
-- CHAT (UI features): HIGH (Inbox Zero code is direct evidence)
-- TOOL_CATALOG: HIGH (Inbox Zero code + Zero Mail v1.0 backend known)
-- CONFIRMATION: HIGH (Inbox Zero code is unambiguous; state machine lifted directly)
-- SETTINGS_PROVIDER: MEDIUM-HIGH (4 providers + per-feature picker is straightforward extension of v1.0 LLM-02..03; Zero-Mail-specific UI shape)
-- SETTINGS_PERSONALIZATION: HIGH (Inbox Zero `SettingsTab.tsx` gives exact categorization; Zero Mail-specific additions like AI output language are obvious)
-- SETTINGS_BEHAVIOR: HIGH (same)
-- SETTINGS_SAFETY: HIGH (Zero Mail v1.0 TRG-07..08 already shipped; this is pure UI work over known tables)
-- Anti-features: HIGH (each anti-feature has a documented reason in CLAUDE.md, PROJECT.md, or Inbox Zero ARCHITECTURE.md)
+- **Local Inbox Zero clone:** `D:/study-materials-summer-2026/EXE202/inbox-zero/apps/web/app/(app)/admin/*` (admin page + components); `apps/web/utils/admin.ts` (`isAdmin` allowlist pattern). HIGH confidence — direct source inspection.
+- **Zero Mail prior research:** `.planning/research/FEATURES.md` revision for v1.1 (deferred Settings reqs SET-*); `.planning/PROJECT.md` (validated v1.0/v1.1 features, Active v1.2 scope, "Out of Scope" privacy constraints); `CLAUDE.md` Privacy + write-action constraints; `.planning/seeds/SEED-011-admin-support-and-compliance-console.md`. HIGH confidence — internal repository.
+- **[WorkOS — How to design RBAC for multi-tenant SaaS](https://workos.com/blog/how-to-design-multi-tenant-rbac-saas)** — tenant-aware authorization decisions, role change auditability. MEDIUM confidence (one secondary source; principles are well-trodden).
+- **[Agnite Studio — Audit Logging Design in SaaS](https://agnitestudio.com/blog/audit-logging-saas/)** — immutability, append-only design, tenant filtering, retention strategies. MEDIUM confidence.
+- **[Microsoft Learn — Multitenant identity approaches](https://learn.microsoft.com/en-us/azure/architecture/guide/multitenant/approaches/identity)** — impersonation audit requirements (log both impersonator + impersonated user). HIGH confidence (vendor docs).
+- **[Idee — Cross-tenant impersonation](https://www.getidee.com/blog/what-is-cross-tenant-impersonation)** — impersonation as recognized attack surface in multi-tenant SaaS. MEDIUM confidence.
+- **[Google Cloud KMS — Key rotation](https://cloud.google.com/kms/docs/key-rotation)** — rotate-then-retire pattern, old key kept for decrypt of historical ciphertexts. HIGH confidence (vendor docs).
+- **[Ubiq Security — Key wrapping best practices](https://dev.ubiqsecurity.com/docs/key-mgmt-best-practices)** — envelope encryption (DEK + KEK); rotate KEK without re-encrypting all data. MEDIUM confidence.
+- **[NIST SP 800-38D / AES-GCM rotation limits](https://www.crypteron.com/blog/pci-dss-key-rotations-simplified/)** (secondary citation) — ~2^32 encryption operations safety limit per key; PCI 90-day rotation cadence. MEDIUM confidence.
+- **[PlanetScale — Keeping a Postgres queue healthy](https://planetscale.com/blog/keeping-a-postgres-queue-healthy)** — oldest-unprocessed-age as canonical lag metric; vacuum/bloat concerns for high-churn queues. HIGH confidence.
+- **[Neon — Queue System using SKIP LOCKED](https://neon.com/guides/queue-system)** — `FOR UPDATE SKIP LOCKED` semantics; worker death + lock release pattern. HIGH confidence.
+- **[LiteLLM — Model Management + Proxy UI](https://docs.litellm.ai/docs/proxy/model_management)** — closest peer for curated-catalog + per-team allowlist + virtual-key admin pattern. MEDIUM confidence (vendor docs; their UI is more enterprise-y than our v1.2 needs).
+- **[LiteLLM Enterprise — model allowlists, budgets](https://docs.litellm.ai/docs/enterprise)** — per-project budgets + rate limits + model allowlists as canonical features. MEDIUM confidence.
 
 ---
 
-*Feature research for: AI chat email assistant + Settings page (v1.1 milestone)*
-*Researched: 2026-05-17*
+*Feature research for: v1.2 — Admin Console Foundation + Settings UI on curated catalog*
+*Researched: 2026-05-19*

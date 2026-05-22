@@ -128,7 +128,7 @@ async function mockRulesApis(page: Page, mode: MockMode) {
     const request = route.request();
     const url = new URL(request.url());
 
-    if (url.pathname === '/me') {
+    if (url.pathname === '/api/me') {
       await fulfillJson(route, {
         userId: 'user-1',
         tenantId: 'tenant-1',
@@ -146,16 +146,25 @@ async function mockRulesApis(page: Page, mode: MockMode) {
     }
 
     if (url.pathname === '/api/billing/balance' && request.method() === 'GET') {
-      await fulfillJson(route, { availableCredits: 12, heldCredits: 0, currency: 'credits' });
+      await fulfillJson(route, {
+        availableCredits: 12,
+        heldCredits: 0,
+        currency: 'credits',
+        betaCredits: 12,
+        paidCredits: 0,
+        monthlyGrantCredits: 300,
+        resetsAt: '2026-06-01T00:00:00.000Z',
+        freeDuringBeta: true,
+      });
       return;
     }
 
-    if (url.pathname === '/gmail/connection/status' && request.method() === 'GET') {
+    if (url.pathname === '/api/gmail/connection/status' && request.method() === 'GET') {
       await fulfillJson(route, { connectionStatus: 'CONNECTED' });
       return;
     }
 
-    if (url.pathname === '/tenant/triage-pause' && request.method() === 'PUT') {
+    if (url.pathname === '/api/tenant/triage-pause' && request.method() === 'PUT') {
       await route.fulfill({ status: 204, body: '' });
       return;
     }

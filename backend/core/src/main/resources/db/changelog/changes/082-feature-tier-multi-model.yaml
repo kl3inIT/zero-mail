@@ -1,0 +1,129 @@
+# Owner: Phase B Master Keys v2 — A1 (multi-model per tier).
+# Each (feature, tier) now anchors to ONE provider plus an ORDERED list of models.
+# Routing iterates models inside the tier first; only after all models in the
+# current tier fail does the router advance to the next tier.
+#
+# Migration of existing data: the single (feature, tier, provider, model_id) row
+# becomes (feature, tier, provider) in feature_default_provider AND
+# (feature, tier, position=1, model_id) in feature_tier_model.
+databaseChangeLog:
+  - changeSet:
+      id: 082-01-feature-tier-model
+      author: zeromail
+      comment: >
+        Ordered list of models per (feature, tier). Position 1 is tried first,
+        position 2 on first failure, etc. (provider, model_id) is unique inside
+        the tier so a model never appears twice at the same level.
+      changes:
+        - createTable:
+            tableName: feature_tier_model
+            columns:
+              - column:
+                  name: feature
+                  type: varchar(16)
+                  constraints: { nullable: false }
+              - column:
+                  name: tier
+                  type: varchar(16)
+                  constraints: { nullable: false }
+              - column:
+                  name: position
+                  type: smallint
+                  constraints: { nullable: false }
+                  remarks: 1-based order within the tier. Lower = tried first.
+              - column:
+                  name: model_id
+                  type: varchar(128)
+                  constraints: { nullable: false }
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints: { nullable: false }
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE feature_tier_model
+                ADD CONSTRAINT pk_feature_tier_model
+                PRIMARY KEY (feature, tier, position);
+
+              ALTER TABLE feature_tier_model
+                ADD CONSTRAINT uq_feature_tier_model
+                UNIQUE (feature, tier, model_id);
+
+              ALTER TABLE feature_tier_model
+                ADD CONSTRAINT ck_feature_tier_model_tier
+                CHECK (tier IN ('PRIMARY','FALLBACK','LAST_RESORT'));
+
+              ALTER TABLE feature_tier_model
+                ADD CONSTRAINT ck_feature_tier_model_position_positive
+                CHECK (position >= 1);
+
+              ALTER TABLE feature_tier_model
+                ADD CONSTRAINT fk_ftm_tier
+                FOREIGN KEY (feature, tier)
+                REFERENCES feature_default_provider (feature, tier)
+                ON DELETE CASCADE;
+
+              ALTER TABLE feature_tier_model
+                ADD CONSTRAINT fk_ftm_model
+                FOREIGN KEY (model_id)
+                REFERENCES model_catalog (model_id)
+                ON DELETE RESTRICT;
+
+              -- Backfill: each existing (feature, tier) row becomes position=1.
+              INSERT INTO feature_tier_model (feature, tier, position, model_id, updated_at)
+              SELECT feature, tier, 1, model_id, COALESCE(updated_at, now())
+                FROM feature_default_provider;
+      rollback:
+        - dropTable:
+            tableName: feature_tier_model
+
+  - changeSet:
+      id: 082-02-feature-default-provider-drop-model-id
+      author: zeromail
+      comment: >
+        feature_default_provider is now ONLY about (feature, tier) -> provider.
+        Model ordering lives in feature_tier_model. Drop the now-unused
+        model_id column and its FKs.
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE feature_default_provider
+                DROP CONSTRAINT IF EXISTS fk_fdp_model;
+              ALTER TABLE feature_default_provider
+                DROP CONSTRAINT IF EXISTS fk_fdp_provider_model;
+        - dropColumn:
+            tableName: feature_default_provider
+            columnName: model_id
+      rollback:
+        - addColumn:
+            tableName: feature_default_provider
+            columns:
+              - column:
+                  name: model_id
+                  type: varchar(128)
+        - sql:
+            splitStatements: false
+            sql: |
+              -- Best-effort: restore model_id from position=1 of feature_tier_model.
+              UPDATE feature_default_provider fdp
+                 SET model_id = ftm.model_id
+                FROM feature_tier_model ftm
+               WHERE fdp.feature = ftm.feature
+                 AND fdp.tier    = ftm.tier
+                 AND ftm.position = 1;
+
+              ALTER TABLE feature_default_provider
+                ALTER COLUMN model_id SET NOT NULL;
+
+              ALTER TABLE feature_default_provider
+                ADD CONSTRAINT fk_fdp_model
+                FOREIGN KEY (model_id) REFERENCES model_catalog(model_id) ON DELETE RESTRICT;
+
+              ALTER TABLE feature_default_provider
+                ADD CONSTRAINT fk_fdp_provider_model
+                FOREIGN KEY (provider, model_id)
+                REFERENCES model_catalog(provider, model_id)
+                ON DELETE RESTRICT;

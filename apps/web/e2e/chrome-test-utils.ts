@@ -80,7 +80,7 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
     const request = route.request();
     const url = new URL(request.url());
 
-    if (url.pathname === '/me') {
+    if (url.pathname === '/api/me') {
       await fulfillJson(route, {
         userId: 'user-1',
         tenantId: 'tenant-1',
@@ -137,6 +137,11 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
         availableCredits: state.availableCredits,
         heldCredits: 0,
         currency: 'credits',
+        betaCredits: state.availableCredits,
+        paidCredits: 0,
+        monthlyGrantCredits: 300,
+        resetsAt: '2026-06-01T00:00:00.000Z',
+        freeDuringBeta: true,
       });
       return;
     }
@@ -196,12 +201,12 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
       return;
     }
 
-    if (url.pathname === '/gmail/connection/status' && request.method() === 'GET') {
+    if (url.pathname === '/api/gmail/connection/status' && request.method() === 'GET') {
       await fulfillJson(route, { connectionStatus: state.connectionStatus });
       return;
     }
 
-    if (url.pathname === '/tenant/triage-pause' && request.method() === 'PUT') {
+    if (url.pathname === '/api/tenant/triage-pause' && request.method() === 'PUT') {
       const payload = request.postDataJSON() as { paused: boolean };
       expect(typeof payload.paused).toBe('boolean');
       state.pauseRequests.push(payload);

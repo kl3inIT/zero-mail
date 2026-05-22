@@ -1,14 +1,10 @@
-import { api, xsrfHeader } from '@/lib/api/client';
+import { api } from '@/lib/api/client';
 import type { components } from '@/lib/api/schema';
 
 export type NotificationPreferencesResponse =
   components['schemas']['NotificationPreferencesResponse'];
 export type NotificationPreferencesUpdateRequest =
   components['schemas']['NotificationPreferencesUpdateRequest'];
-
-function jsonHeaders(): HeadersInit {
-  return { 'Content-Type': 'application/json', ...xsrfHeader() };
-}
 
 function unwrap<T>(
   result: { data?: T; error?: unknown; response: Response },
@@ -30,7 +26,6 @@ export async function updateNotificationPreferences(
 ): Promise<NotificationPreferencesResponse> {
   const result = await api.PATCH('/api/me/notifications', {
     body,
-    headers: jsonHeaders(),
   });
   return unwrap(result, `/api/me/notifications failed: ${result.response.status}`);
 }

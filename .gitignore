@@ -1,7 +1,11 @@
 .gradle/
 build/
+.kotlin/
+**/.kotlin/
 .env
 .env.local
+.env.dev
+.env.prod
 node_modules/
 .idea/
 *.iml
@@ -13,3 +17,5 @@ apps/web/node_modules/
 .playwright-mcp/
 loadtest/run/
 .codex-runs/
+.ssh/
+.last-deploy.txt

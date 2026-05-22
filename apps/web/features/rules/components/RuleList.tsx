@@ -185,7 +185,7 @@ function RuleTableRow({
     <TableRow
       className={cn(
         'cursor-pointer',
-        selected && 'bg-[#E7F0EF] hover:bg-[#E7F0EF]',
+        selected && 'bg-accent hover:bg-accent',
         !rule.enabled && 'text-foreground/80',
       )}
       onClick={() => onSelectRule(rule)}
@@ -258,7 +258,7 @@ function RuleMobileCard(props: RuleRowProps) {
 
   return (
     <article
-      className={cn('cursor-pointer p-4 transition-colors', selected && 'bg-[#E7F0EF]')}
+      className={cn('cursor-pointer p-4 transition-colors', selected && 'bg-accent')}
       onClick={() => onSelectRule(rule)}
     >
       <div className="flex items-start justify-between gap-3">
@@ -301,9 +301,7 @@ function SummaryChips({ items, action = false }: { items: string[]; action?: boo
           key={`${action ? 'action' : 'matcher'}-${item}`}
           className={cn(
             'max-w-full truncate rounded-sm px-2 py-1 text-xs font-medium',
-            action
-              ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
-              : 'bg-muted text-muted-foreground',
+            action ? 'bg-amber-soft text-amber' : 'bg-muted text-muted-foreground',
           )}
         >
           {item}

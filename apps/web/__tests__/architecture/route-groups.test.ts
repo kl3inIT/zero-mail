@@ -51,6 +51,6 @@ describe('Phase 1.3 — Route group architecture', () => {
     const proxy = readFileSync(resolve(APP_DIR, '../proxy.ts'), 'utf8');
     expect(proxy).not.toMatch(/next-intl\/middleware/);
     expect(proxy).not.toMatch(/createIntlMiddleware/);
-    expect(proxy).toMatch(/NextResponse\.next\(\)/);
+    expect(proxy).toMatch(/NextResponse\.next\(/);
   });
 });

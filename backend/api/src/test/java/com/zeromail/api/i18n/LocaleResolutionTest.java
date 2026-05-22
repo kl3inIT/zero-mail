@@ -27,7 +27,7 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * Wave-0 invariant lock for the locale-resolution backend half. Plan 04 turned this GREEN by wiring
  * {@code MeController.me} to expose {@code preferredLanguage} and adding {@code PATCH
- * /me/language}. The companion {@code MeLanguageIntegrationTest} carries the cross-tenant +
+ * /api/me/language}. The companion {@code MeLanguageIntegrationTest} carries the cross-tenant +
  * sentinel coverage; this class keeps the original three Wave-0 invariants in their own focused
  * asserts so anyone reading the i18n test package sees the locked contract at a glance.
  *
@@ -72,13 +72,13 @@ class LocaleResolutionTest extends ApiPostgresTestBase {
     }
 
     @Test
-    @DisplayName("PATCH /me/language { language: 'en' } persists to users.preferred_language")
+    @DisplayName("PATCH /api/me/language { language: 'en' } persists to users.preferred_language")
     void patch_me_language_persists_preferredLanguage_to_db() {
         Seed s = seed("locres-persist");
 
         ResponseEntity<String> res =
                 client().patch()
-                        .uri("/me/language")
+                        .uri("/api/me/language")
                         .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
                         .header(TestSessionSupport.HEADER_EMAIL, s.email())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -97,13 +97,13 @@ class LocaleResolutionTest extends ApiPostgresTestBase {
     }
 
     @Test
-    @DisplayName("GET /me returns preferred_language from the DB row (default 'vi')")
+    @DisplayName("GET /api/me returns preferred_language from the DB row (default 'vi')")
     void get_me_returns_preferred_language() throws Exception {
         Seed s = seed("locres-get");
 
         ResponseEntity<String> res =
                 client().get()
-                        .uri("/me")
+                        .uri("/api/me")
                         .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
                         .header(TestSessionSupport.HEADER_EMAIL, s.email())
                         .retrieve()
@@ -115,13 +115,13 @@ class LocaleResolutionTest extends ApiPostgresTestBase {
     }
 
     @Test
-    @DisplayName("PATCH /me/language { language: 'zz' } -> 400 with locked error contract")
+    @DisplayName("PATCH /api/me/language { language: 'zz' } -> 400 with locked error contract")
     void patch_me_language_rejects_value_outside_allow_list() throws Exception {
         Seed s = seed("locres-reject");
 
         ResponseEntity<String> res =
                 client().patch()
-                        .uri("/me/language")
+                        .uri("/api/me/language")
                         .header(TestSessionSupport.HEADER_SUBJECT, s.googleSubject())
                         .header(TestSessionSupport.HEADER_EMAIL, s.email())
                         .contentType(MediaType.APPLICATION_JSON)

@@ -1,0 +1,44 @@
+# Gitleaks configuration extending the default ruleset.
+# Run locally: gitleaks detect --config .gitleaks.toml --no-banner --redact
+#
+# Strategy:
+#   - inherit the upstream default ruleset (avoids re-listing every secret pattern)
+#   - allowlist known-safe paths: loadtest fixtures, ci scripts, env.example, etc.
+
+title = "Zero Mail Gitleaks Config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Project-wide allowlist for known-non-secret content"
+
+paths = [
+    '''(^|/)\.env\.example$''',
+    '''(^|/)\.env\.dev\.example$''',
+    '''(^|/)\.gitleaks\.toml$''',
+    '''(^|/)loadtest/scripts/.*''',
+    '''(^|/)loadtest/compose\.loadtest\.yml$''',
+    '''(^|/)apps/web/i18n/messages/.*''',
+    '''(^|/)apps/web/__tests__/.*''',
+    '''(^|/)backend/.*/src/test/.*''',
+    '''(^|/)docs/.*''',
+    '''(^|/)\.planning/.*''',
+    '''(^|/)scripts/needs-reply-mockup\.html$''',
+]
+
+regexes = [
+    # Test/fixture placeholders for AES-256 keys (32 zero bytes).
+    '''AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=''',
+    # Loadtest hardcoded "loadtest" credentials and dummy API keys.
+    '''test-(openai|anthropic|google|deepseek|sepay|resend|platform|webhook)-key''',
+    '''(client_id|client_secret|api_key)\s*[:=]\s*loadtest''',
+    # Documented sample SHA / OAuth client ID shapes in runbooks.
+    '''<vps-ip>''',
+    '''<32hex>''',
+]
+
+# Commits to skip during history scans (e.g., a secret was committed, then rotated and
+# revoked — add the original commit SHA here so gitleaks does not re-flag it forever).
+# Add string entries like: commits = ["abc123...", "def456..."]
+commits = []

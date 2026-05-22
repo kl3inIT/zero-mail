@@ -1,0 +1,28 @@
+# Per-Dockerfile ignore (BuildKit auto-applies on top of root .dockerignore).
+# Admin Vite SPA: needs apps/admin + workspace root pnpm files only.
+
+# Backend Java modules — never needed.
+backend
+buildSrc
+build.gradle.kts
+settings.gradle.kts
+gradle.properties
+gradle
+gradlew
+gradlew.bat
+
+# Loadtest + ops — irrelevant.
+loadtest
+ops
+scripts/ci
+
+# Other apps — sibling Next.js app not needed for admin SPA build.
+apps/web
+
+# Admin test/e2e outputs.
+apps/admin/dist
+apps/admin/playwright-report
+apps/admin/test-results
+apps/admin/coverage
+apps/admin/.vite-cache
+apps/admin/node_modules

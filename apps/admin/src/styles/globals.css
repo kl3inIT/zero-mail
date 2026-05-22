@@ -1,0 +1,182 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-green: var(--green);
+  --color-green-soft: var(--green-soft);
+  --color-blue: var(--blue);
+  --color-blue-soft: var(--blue-soft);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+}
+
+:root {
+  /* Purple palette, white content, visible borders. Khớp web để 2 apps cùng
+     design language. Primary đã purple sẵn — bump surface/border/text contrast. */
+  --background: #ffffff;
+  --foreground: #1c1d21;
+  --card: #ffffff;
+  --card-foreground: #1c1d21;
+  --popover: #ffffff;
+  --popover-foreground: #1c1d21;
+  --primary: #867aeb;
+  --primary-hover: #7062df;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f2f9;
+  --secondary-foreground: #1c1d21;
+  --muted: #f4f2f9;
+  --muted-foreground: #6b7280;
+  --accent: #eae8f7;
+  --accent-hover: #ddd9f1;
+  --accent-foreground: #5849c9;
+  --destructive: #b0413e;
+  --destructive-soft: #f5d7d2;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: rgba(134, 122, 235, 0.5);
+  --warning: #e3a023;
+  --warning-soft: #fde8ba;
+  --amber: #e3a023;
+  --amber-soft: #fde8ba;
+  --green: #2f7d5c;
+  --green-soft: #d8ead8;
+  --blue: #2c5ba8;
+  --blue-soft: #d7e1f1;
+  --violet: #5e4b8b;
+  --violet-soft: #e0dbec;
+  --ink: #1c1d21;
+  --ink-2: #3d385a;
+
+  /* Sidebar tokens — admin chrome */
+  --sidebar: #f8f7fb;
+  --sidebar-foreground: #1c1d21;
+  --sidebar-primary: #867aeb;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eae8f7;
+  --sidebar-accent-foreground: #5849c9;
+  --sidebar-border: #ebe9f2;
+  --sidebar-ring: rgba(134, 122, 235, 0.5);
+
+  --radius: 7px;
+}
+
+/* prettier-ignore */
+.dark {
+  /* Mirror apps/web purple dark palette (Rosé Pine-ish, neutral background tones) */
+  --background: #191724;
+  --foreground: #E5E2EE;
+  --card: #211E30;
+  --card-foreground: #E5E2EE;
+  --popover: #211E30;
+  --popover-foreground: #E5E2EE;
+  --primary: #A59CF0;
+  --primary-hover: #B7B0F4;
+  --primary-foreground: #191724;
+  --secondary: #2A263D;
+  --secondary-foreground: #E5E2EE;
+  --muted: #2A263D;
+  --muted-foreground: #928DAA;
+  --accent: #2F2A4A;
+  --accent-hover: #3A345A;
+  --accent-foreground: #C7C0F5;
+  --destructive: #DA8480;
+  --destructive-soft: #3A1F1D;
+  --border: rgba(214, 213, 230, 0.14);
+  --input: rgba(214, 213, 230, 0.18);
+  --ring: rgba(165, 156, 240, 0.6);
+  --warning: #F5CD7A;
+  --warning-soft: #3D3219;
+  --amber: #F5CD7A;
+  --amber-soft: #3D3219;
+  --green: #6FB389;
+  --green-soft: #1F3A28;
+  --blue: #8DA8E0;
+  --blue-soft: #1A2540;
+  --violet: #B0A0DC;
+  --violet-soft: #2A2240;
+  --ink: #F5F4EE;
+  --ink-2: #D6D5CC;
+
+  --sidebar: #1F1B2E;
+  --sidebar-foreground: #E5E2EE;
+  --sidebar-primary: #A59CF4;
+  --sidebar-primary-foreground: #191724;
+  --sidebar-accent: #2F2A4A;
+  --sidebar-accent-foreground: #C7C0F5;
+  --sidebar-border: rgba(214, 213, 230, 0.14);
+  --sidebar-ring: rgba(165, 156, 240, 0.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    background: var(--background);
+    color: var(--foreground);
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    min-width: 1024px;
+    font-feature-settings: 'rlig' 1, 'calt' 1, 'cv11' 1, 'ss01' 1;
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

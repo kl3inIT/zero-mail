@@ -1,36 +1,30 @@
-import { adaptFetchForOpenApi, api, xsrfHeader } from '@/lib/api/client';
+import { adaptFetchForOpenApi, api } from '@/lib/api/client';
 import type { components } from '@/lib/api/schema';
 
 /**
- * Billing API surface as of Phase 05A:
- * - GET /api/billing/balance exists.
- * - POST /api/billing/topup/intent exists.
- * - GAP: no backend ledger-history list endpoint as of 05A — see 05A-RESEARCH.md A4.
+ * Billing API surface:
+ * - GET /api/billing/balance returns beta-aware credit summary metadata.
+ * - GET /api/billing/ledger returns recent credit activity.
+ * - POST /api/billing/topup/intent creates a SePay top-up intent.
  * - GAP: no top-up intent-status endpoint or intentId as of 05A — see 05A-RESEARCH.md A6.
  * - GAP: TopupIntentResponse carries no separate bank account/name fields; qrPayload is authoritative.
  */
 
 export type BillingBalanceResponse = components['schemas']['BillingBalanceResponse'];
+export type BillingLedgerEntryResponse = components['schemas']['BillingLedgerEntryResponse'];
+export type BillingLedgerHistoryResponse = components['schemas']['BillingLedgerHistoryResponse'];
 export type BillingPackageResponse = components['schemas']['BillingPackageResponse'];
 export type TopupIntentRequest = components['schemas']['TopupIntentRequest'];
 export type TopupIntentResponse = components['schemas']['TopupIntentResponse'];
 
-export type LedgerHistoryUnavailablePage = {
-  unavailable: true;
-  entries: [];
-  nextCursor: null;
+export type LedgerHistoryPage = Omit<BillingLedgerHistoryResponse, 'nextCursor'> & {
+  nextCursor: string | null;
 };
-
-export type LedgerHistoryPage = LedgerHistoryUnavailablePage;
 
 export interface BillingBalanceOptions {
   fetcher?: typeof fetch;
   signal?: AbortSignal;
   headers?: HeadersInit;
-}
-
-function jsonHeaders(): HeadersInit {
-  return { 'Content-Type': 'application/json', ...xsrfHeader() };
 }
 
 function unwrap<T>(
@@ -66,13 +60,17 @@ export async function createTopupIntent(packageCode: string): Promise<TopupInten
   const body: TopupIntentRequest = { packageCode };
   const result = await api.POST('/api/billing/topup/intent', {
     body,
-    headers: jsonHeaders(),
   });
   return unwrap(result, `/api/billing/topup/intent failed: ${result.response.status}`);
 }
 
-export async function getLedgerHistory(): Promise<LedgerHistoryPage> {
-  // GAP: no backend ledger-history list endpoint as of 05A — see 05A-RESEARCH.md A4.
-  // Do NOT call a speculative endpoint or regenerate schema.d.ts here.
-  return { unavailable: true, entries: [], nextCursor: null };
+export async function getLedgerHistory(limit = 50): Promise<LedgerHistoryPage> {
+  const result = await api.GET('/api/billing/ledger', {
+    params: { query: { limit } },
+  });
+  const response = unwrap(result, `/api/billing/ledger failed: ${result.response.status}`);
+  return {
+    entries: response.entries,
+    nextCursor: response.nextCursor ?? null,
+  };
 }

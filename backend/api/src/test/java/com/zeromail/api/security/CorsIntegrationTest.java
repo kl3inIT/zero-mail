@@ -22,7 +22,7 @@ class CorsIntegrationTest extends ApiPostgresTestBase {
         var response =
                 corsRestClient()
                         .method(HttpMethod.OPTIONS)
-                        .uri("/me")
+                        .uri("/api/me")
                         .header(HttpHeaders.ORIGIN, "http://localhost:3000")
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET")
                         .retrieve()
@@ -41,7 +41,7 @@ class CorsIntegrationTest extends ApiPostgresTestBase {
         var response =
                 corsRestClient()
                         .get()
-                        .uri("/me")
+                        .uri("/api/me")
                         .header(HttpHeaders.ORIGIN, "http://localhost:3000")
                         .exchange(
                                 (ignoredRequest, clientResponse) ->

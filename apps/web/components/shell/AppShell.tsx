@@ -23,18 +23,14 @@ export function AppShell({
         data-testid="app-shell"
         className="flex-col"
       >
-        <div className="flex h-screen w-screen flex-col overflow-hidden bg-white">
+        <div className="bg-background flex h-screen w-screen flex-col overflow-hidden">
           <ChromeHeader />
-          <div className="flex flex-1 overflow-hidden bg-[#f6f8fc] dark:bg-zinc-950">
+          <div className="bg-sidebar flex flex-1 overflow-hidden">
             <AppSidebar />
-            <SidebarInset className="min-w-0 bg-[#f6f8fc] transition-all duration-300 dark:bg-zinc-950">
-              <div className="flex h-full w-full flex-col p-2 pr-4 pb-4">
-                <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-[#f6f8fc] bg-white dark:bg-zinc-900">
-                  <PauseBanner />
-                  <div className="flex-1 overflow-auto p-6" data-testid="app-shell-content">
-                    {children}
-                  </div>
-                </div>
+            <SidebarInset className="bg-background min-w-0">
+              <PauseBanner />
+              <div className="flex-1 overflow-auto p-6" data-testid="app-shell-content">
+                {children}
               </div>
             </SidebarInset>
           </div>

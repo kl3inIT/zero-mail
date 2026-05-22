@@ -1,60 +1,35 @@
 import Image from 'next/image';
+import { getTranslations } from 'next-intl/server';
 
-export default function Testimonials() {
-  const reviews = [
-    {
-      text: 'Yêu thích ứng dụng tự động hóa email tuyệt vời này: zeromail.com',
-      author: 'Trần Việt Anh',
-      role: 'CTO',
-      avatar: '/images/cus1.jpg',
-    },
-    {
-      text: 'Thật sự tuyệt vời! Đã dọn dẹp các email quảng cáo và newsletter rác chỉ trong vài phút.',
-      author: 'Nguyễn Minh Tuấn',
-      role: 'Giám đốc Kỹ thuật',
-      avatar: '/images/cus2.jpg',
-    },
-    {
-      text: 'Wow. Đã thiết lập xong và hủy đăng ký khỏi những kẻ gửi spam tồi tệ nhất chỉ trong 3 phút... Cảm ơn 🙏',
-      author: 'Phạm Minh Hoàng',
-      role: 'Trưởng phòng Growth',
-      avatar: '/images/cus3.jpg',
-    },
-    {
-      text: 'Đây là công cụ đầu tiên tôi thử mà thực sự nắm bắt được văn phong của tôi trong các bản nháp phản hồi.',
-      author: 'Lê Hoàng Long',
-      role: 'Kỹ sư Pháp chế',
-      avatar: '/images/cus4.jpg',
-    },
-    {
-      text: 'Tôi tìm thấy Zero Mail khi đang tìm một trợ lý ảo để quản lý email, nhưng sau khi dùng thử công cụ này, mọi thứ đã thay đổi hoàn toàn.',
-      author: 'Nguyễn Đức Huy',
-      role: 'Nhà sáng lập',
-      avatar: '/images/cus5.jpg',
-    },
-    {
-      text: 'Tôi là một giám đốc điều hành đang chìm ngập trong hàng trăm email mỗi ngày. Điều tôi yêu thích nhất ở Zero Mail là cách nó thay thế hoàn toàn việc xử lý email thủ công—tự động hóa thông minh.',
-      author: 'Nguyễn Thị Mai Hương',
-      role: 'Giám đốc Điều hành',
-      avatar: '/images/cus6.jpg',
-    },
-    {
-      text: "Cuối cùng cũng có một ứng dụng 'hủy đăng ký' giúp bạn *thực sự* hủy đăng ký và lọc thông qua bộ lọc Gmail (thay vì luôn phụ thuộc vào ứng dụng bên thứ 3).",
-      author: 'Đặng Tiến Minh',
-      role: 'Nhà sáng lập',
-      avatar: '/images/cus7.jpg',
-    },
-  ];
+const REVIEW_META = [
+  { id: 'r1', author: 'Trần Việt Anh', avatar: '/images/cus1.jpg' },
+  { id: 'r2', author: 'Nguyễn Minh Tuấn', avatar: '/images/cus2.jpg' },
+  { id: 'r3', author: 'Phạm Minh Hoàng', avatar: '/images/cus3.jpg' },
+  { id: 'r4', author: 'Lê Hoàng Long', avatar: '/images/cus4.jpg' },
+  { id: 'r5', author: 'Nguyễn Đức Huy', avatar: '/images/cus5.jpg' },
+  { id: 'r6', author: 'Nguyễn Thị Mai Hương', avatar: '/images/cus6.jpg' },
+  { id: 'r7', author: 'Đặng Tiến Minh', avatar: '/images/cus7.jpg' },
+] as const;
+
+export default async function Testimonials() {
+  const t = await getTranslations('landingTestimonials');
+
+  const reviews = REVIEW_META.map((meta) => ({
+    text: t(`${meta.id}.text`),
+    author: meta.author,
+    role: t(`${meta.id}.role`),
+    avatar: meta.avatar,
+  }));
 
   return (
     <section className="zm-section bg-(--bg) py-24" id="testimonials">
       <div className="zm-container">
         <div className="mb-16 text-center">
           <h2 className="mb-6 text-4xl leading-[1.2] font-extrabold tracking-tighter text-(--ink) md:text-5xl">
-            Gia nhập cùng 20,000+ người đang tiết kiệm thời gian email
+            {t('header.title')}
           </h2>
           <p className="mx-auto max-w-2xl text-xl leading-relaxed text-(--text-muted)">
-            Khách hàng của chúng tôi yêu thích việc tiết kiệm thời gian với Zero Mail.
+            {t('header.body')}
           </p>
         </div>
 

@@ -138,7 +138,6 @@ const EN_SCAN_FILES = [
   'features/landing/components/ThemeToggle.tsx',
   'features/landing/components/ZMLogoMark.tsx',
   'features/auth/components/AuthTopBar.tsx',
-  'features/auth/components/TrustPanel.tsx',
   'features/auth/components/LegalFooter.tsx',
   'features/auth/components/StepIndicator.tsx',
 ];

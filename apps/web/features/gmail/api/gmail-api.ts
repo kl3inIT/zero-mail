@@ -1,4 +1,4 @@
-import { adaptFetchForOpenApi, api, xsrfHeader } from '@/lib/api/client';
+import { adaptFetchForOpenApi, api } from '@/lib/api/client';
 import type { components } from '@/lib/api/schema';
 
 export type TenantStatus = components['schemas']['GmailConnectionStatusResponse'];
@@ -24,9 +24,7 @@ export async function getTenantStatus(opts: GetTenantStatusOptions = {}): Promis
 }
 
 export async function disconnectGmail(): Promise<void> {
-  const { error, response } = await api.POST('/api/tenant/disconnect', {
-    headers: { ...xsrfHeader() },
-  });
+  const { error, response } = await api.POST('/api/tenant/disconnect', {});
   if (error || !response.ok) {
     throw error ?? new Error(`/api/tenant/disconnect failed: ${response.status}`);
   }

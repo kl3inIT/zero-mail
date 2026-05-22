@@ -38,9 +38,30 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm dev',
+    // Force turbopack for the e2e dev server. `pnpm dev` is pinned to
+    // `next dev --webpack` for the local DX flow, but webpack's cold-start on
+    // CI runners blows past Playwright's webServer timeout (~2-3 min compile
+    // before first byte). Turbopack is the Next 16 default and starts in
+    // seconds.
+    command: 'pnpm dev:turbo',
     url: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 180_000,
+    // MSW node interception is intentionally OFF. It used to be wired through
+    // Next instrumentation so RSC fetches like `getCurrentUserCached` in
+    // app/layout.tsx would not escape to the real backend. Two problems made
+    // that worse than it solved:
+    //   1. The node handler hardcoded `preferredLanguage: 'en'`, which
+    //      shadowed every per-test locale set via
+    //      `seedAuthenticatedSession(page, 'vi')` — analytics + chat specs
+    //      that assert Vietnamese strings ("Phân tích", "Đã gửi") couldn't
+    //      pass while MSW was returning English.
+    //   2. The node mock conflicted with Playwright's `page.route()` browser
+    //      mocks that own the per-test state (balance bumps, send confirms,
+    //      etc.) — two layers, two sources of truth, race.
+    // Without MSW, RSC fetches fail with ECONNREFUSED on CI (no backend),
+    // root layout's try/catch falls back to the cookie locale, the page
+    // switches to client rendering, and Playwright's browser route handlers
+    // take over cleanly.
   },
 });

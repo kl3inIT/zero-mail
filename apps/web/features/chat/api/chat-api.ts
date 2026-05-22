@@ -1,6 +1,6 @@
 import type { UIMessage } from 'ai';
 
-import { api, xsrfHeader } from '@/lib/api/client';
+import { api } from '@/lib/api/client';
 import type { components } from '@/lib/api/schema';
 
 export type ChatHistoryListResponse = components['schemas']['ChatHistoryListResponseDto'];
@@ -13,14 +13,6 @@ export type ChatPart = components['schemas']['ChatPartDto'];
 export type ChatStreamRequest = components['schemas']['ChatStreamRequestDto'];
 export type ConfirmActionRequest = components['schemas']['ConfirmActionRequestDto'];
 export type ConfirmActionResponse = components['schemas']['ConfirmActionResponseDto'];
-
-function jsonHeaders(): HeadersInit {
-  return { 'Content-Type': 'application/json', ...xsrfHeader() };
-}
-
-function unsafeHeaders(): HeadersInit {
-  return { ...xsrfHeader() };
-}
 
 async function parseError(response: Response, fallbackMessage: string): Promise<unknown> {
   try {
@@ -58,7 +50,6 @@ export async function loadChat(chatId: string): Promise<ChatHistoryDetailRespons
 export async function softDeleteChat(chatId: string): Promise<void> {
   const result = await api.DELETE('/api/chat/{chatId}', {
     params: { path: { chatId } },
-    headers: unsafeHeaders(),
   });
   if (result.error || !result.response.ok) {
     throw (
@@ -77,7 +68,6 @@ export async function confirmAction(
 ): Promise<ConfirmActionResponse> {
   const result = await api.POST('/api/chat/{chatId}/confirm', {
     params: { path: { chatId } },
-    headers: jsonHeaders(),
     body,
   });
   return unwrap(result, `/api/chat/${chatId}/confirm failed: ${result.response.status}`);
@@ -89,7 +79,6 @@ export async function cancelAction(
 ): Promise<ConfirmActionResponse> {
   const result = await api.POST('/api/chat/{chatId}/cancel', {
     params: { path: { chatId } },
-    headers: jsonHeaders(),
     body,
   });
   return unwrap(result, `/api/chat/${chatId}/cancel failed: ${result.response.status}`);
