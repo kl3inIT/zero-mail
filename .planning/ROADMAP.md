@@ -105,7 +105,7 @@ Plans:
 
 **Requirements (12)**: RACT-01, RACT-02, RACT-03, RACT-04, RACT-05, RACT-06, RACT-07, RACT-08, RACT-09, RACT-10, RACT-11, RACT-12
 **Depends on:** Phase 8
-**Plans:** 2/6 plans executed
+**Plans:** 3/6 plans executed
 
 **Source artifacts:**
 
@@ -135,7 +135,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 08.1-03-PLAN.md — Admin rule catalog UI: bilingual persona/example/action descriptor management in `apps/admin`
+- [x] 08.1-03-PLAN.md — Admin rule catalog UI: bilingual persona/example/action descriptor management in `apps/admin`
 - [ ] 08.1-04-PLAN.md — User rules UI: persona examples inside existing `RuleComposer`, Available Actions panel, default-ON global auto-send setting UI
 - [ ] 08.1-05-PLAN.md — Rule action schema/compiler/manual builder: expanded structured action intents for mark/read/star/digest/spam/reply/forward/send
 
@@ -171,7 +171,7 @@ Plans:
 | 1-6 (collapsed) | v1.0 | 123/123 | Complete | 2026-05-15 |
 | 7. Chat Email Assistant | v1.1 | 6/6 | Complete | 2026-05-18 |
 | 8. Admin Console & Operator Tooling | v1.2 | 6/6 | Complete   | 2026-05-20 |
-| 08.1. Inbox Zero-style Rule Actions & Admin-managed Examples Catalog | v1.2 | 2/6 | In Progress | — |
+| 08.1. Inbox Zero-style Rule Actions & Admin-managed Examples Catalog | v1.2 | 3/6 | In Progress|  |
 | 9. User Settings UI on Curated Catalog | v1.2 | 0/0 | Not started | — |
 
 ---
