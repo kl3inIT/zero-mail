@@ -105,10 +105,10 @@
 - [ ] **RACT-02**: User examples UI includes the copied Inbox Zero persona set (`Founder`, `Influencer`, `Realtor`, `Investor`, `Assistant`, `Developer`, `Designer`, `Sales`, `Marketer`, `Support`, `Recruiter`, `Student`, `Outreach`, `Other`) and the example prompt grid seeded from `.planning/phases/08.1-inbox-zero-style-rule-actions-and-admin-managed-examples-cat/inbox-zero-examples.ts`
 - [ ] **RACT-03**: Admin can create, edit, disable, reorder, and localize examples/personas/action descriptors without code changes; disabled examples do not appear in the user rule builder
 - [ ] **RACT-04**: User-facing Available Actions panel includes `Label`, `Archive`, `Save draft`, `Mark read/unread`, `Star/unstar`, `Add to digest`, `Mark spam`, `Send reply`, `Forward`, and `Send email`, with unavailable actions visibly disabled and explained
-- [ ] **RACT-05**: Settings expose account-level automated outbound rule action toggles plus per-action toggles for auto-send replies, auto-forward, and auto-send new emails; all outbound toggles default OFF
+- [ ] **RACT-05**: Settings expose one account-level `Auto-send rules` toggle for automated outbound rule actions; it defaults ON for new users/tenants and there are no individual outbound action toggles
 - [ ] **RACT-06**: Manual editor and AI compiler both persist the same structured `When/Then` schema; natural language remains only `sourceText`/audit metadata
-- [ ] **RACT-07**: Rule-triggered outbound actions execute only when account setting, per-action setting, rule-level acknowledgement, sender-risk guard, safety net, cap/rate-limit, idempotency, OAuth scope, and tenant checks all pass
-- [ ] **RACT-08**: If an outbound gate fails, the rule result becomes `save_draft` or `needs_review` with an audit reason; the system must not silently drop or send the email
+- [ ] **RACT-07**: Rule-triggered outbound actions execute only when the global auto-send setting, sender-risk guard, safety net, cap/rate-limit, idempotency, OAuth scope, tenant checks, and audit reservation all pass
+- [ ] **RACT-08**: If an outbound gate fails or the global auto-send setting is OFF, the rule result falls back to Gmail `save_draft` with an audit reason; the system must not silently drop or send the email
 - [ ] **RACT-09**: All Gmail send execution goes through one shared outbound gateway/send executor; ArchUnit/grep tests are updated to allow that boundary and fail any direct Gmail send call site elsewhere
 - [ ] **RACT-10**: Privacy constraints remain intact: no long-term storage of Gmail-read email bodies, LLM prompts/completions, or embeddings; persisted draft bodies are allowed only when they are user-authored/action arguments under the existing draft-body carve-out
 - [ ] **RACT-11**: Low-trust/static sender protections equivalent to Inbox Zero's example-risk guard prevent users from saving demo examples that would send to real people by accident
@@ -183,7 +183,7 @@ Explicit exclusions for v1.2. Each row carries the reason so we don't silently r
 
 | Feature | Reason |
 |---------|--------|
-| Ungated outbound automation | Hard ban — rule-triggered send/reply/forward is allowed only behind Phase 08.1 account setting, per-action setting, rule acknowledgement, safety, cap, idempotency, OAuth, tenant, and audit gates |
+| Ungated outbound automation | Hard ban — rule-triggered send/reply/forward is allowed only behind Phase 08.1 global auto-send setting, sender-risk guard, safety net, cap/rate-limit, idempotency, OAuth, tenant, and audit gates; blocked sends fall back to Gmail draft |
 | Long-term persistence of raw email body, email-content LLM prompts/completions, or embeddings | Permanent privacy invariant from v1.0. Admin views are explicitly metadata-only (OPS-TENANT-04..05 enforces) |
 | Admin impersonation of a user (act-as-tenant) | Hard ban — violates trust posture; tenant authority cannot be borrowed by admin. ARCH-08 enforces |
 | Admin SQL console / arbitrary query UI on `/admin/*` | Hard ban — no ad-hoc DB access through the web; ops queries go through Postgres MCP / psql via SSH |

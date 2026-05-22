@@ -118,7 +118,7 @@ Plans:
 2. The examples UI includes the copied Inbox Zero persona set (`Founder`, `Influencer`, `Realtor`, `Investor`, `Assistant`, `Developer`, `Designer`, `Sales`, `Marketer`, `Support`, `Recruiter`, `Student`, `Outreach`, `Other`) and the example prompt grid seeded from the copied source artifact
 3. Admin can create, edit, disable, reorder, and localize examples/personas/action descriptors without code changes; disabled examples do not appear in the user rule builder
 4. User-facing Available Actions includes `Label`, `Archive`, `Save draft`, `Mark read/unread`, `Star/unstar`, `Add to digest`, `Mark spam`, `Send reply`, `Forward`, and `Send email`, with unavailable actions visibly disabled and explained
-5. Settings expose one account-level `Auto-send rules` toggle for automated outbound rule actions; it defaults ON and there are no per-action outbound toggles
+5. Settings expose one account-level `Auto-send rules` toggle for automated outbound rule actions; it defaults ON and there are no individual outbound action toggles
 6. Manual editor and AI compiler both persist the same structured `When/Then` schema; natural language remains only `sourceText`/audit metadata
 7. Rule-triggered outbound actions execute only when the global setting, sender-risk guard, safety net, cap/rate-limit, idempotency, OAuth scope, tenant checks, and audit reservation all pass
 8. If an outbound gate fails or the global setting is OFF, the rule result falls back to Gmail `save_draft` with an audit reason; it must not silently drop or send the email

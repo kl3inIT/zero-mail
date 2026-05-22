@@ -13,7 +13,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **Backend:** ~18 phases (v1.0 + Phase 7), Java 25 + Spring Boot 4.0.6 + Spring Modulith + Hibernate 7 + Liquibase 5 + Spring AI 2.0.0-M6.
 - **Frontend:** Next.js 16.2.4 + React 19.2.5 + Tailwind 4 + shadcn/ui + TanStack Query + typed OpenAPI client; Vietnamese-default with English secondary. Brand palette shifted teal `#0E5E5A` → purple `#867AEB` in PR #40 (2026-05-19) — user-page visual refresh queued for v1.2.
 - **Infra:** Single VPS — Postgres 17 + Redis 7 + reverse proxy + api + worker + web on one host. No GCP / Kafka / vector DB.
-- **Trust posture:** v1.0/v1.1 hard-blocked rule-triggered outbound sends; v1.2 Phase 08.1 replaces that hard ban with explicit user opt-in, rule-level acknowledgement, safety/rate/idempotency gates, audit, and a single outbound gateway boundary. No long-term storage of raw email bodies, email-content LLM prompts/completions, or embeddings (rule-builder assistant chat excluded — see Privacy scope); per-tenant Scoped Values + multi-tenant leak test green; @Sensitive Logback scrub end-to-end verified; chat_message body-ban enforced 3-layer (sanitizer + ArchUnit + Postgres trigger).
+- **Trust posture:** v1.0/v1.1 hard-blocked rule-triggered outbound sends; v1.2 Phase 08.1 replaces that hard ban with one default-ON global `Auto-send rules` setting, safety/rate/idempotency gates, draft fallback, audit, and a single outbound gateway boundary. No long-term storage of raw email bodies, email-content LLM prompts/completions, or embeddings (rule-builder assistant chat excluded — see Privacy scope); per-tenant Scoped Values + multi-tenant leak test green; @Sensitive Logback scrub end-to-end verified; chat_message body-ban enforced 3-layer (sanitizer + ArchUnit + Postgres trigger).
 - **Launch state:** OAuth Testing mode (production CASA verification deferred to dormant SEED-012). v1.1 chat surface ships **without** hostile-corpus eval gate (deferred to v1.2 hardening); v1.0 LAUNCH-GO-NOGO still applies; v1.1 GA tag annotated with deferred-eval caveat.
 
 ## Current Milestone: v1.2 — Admin Console Foundation + Settings UI (Slice 2 capability)
@@ -74,7 +74,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 **Billing (prepaid credits)** *(v1.0)*
 - ✓ SePay/VietQR top-up + signed webhook (BILL-01, v1.0)
 - ✓ Double-entry Postgres ledger with reserve/settle/release + concurrency safety (BILL-02..04, v1.0)
-- ✓ Real-time balance + per-action cost in UI; insufficient-credit blocks billable actions (BILL-05..06, v1.0)
+- ✓ Real-time balance + action-level cost in UI; insufficient-credit blocks billable actions (BILL-05..06, v1.0)
 - ✓ BYOK actions bypass platform credits (BILL-07, v1.0)
 
 **LLM gateway** *(v1.0)*
@@ -127,7 +127,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 <!-- Explicit boundaries. Reasoning included so we don't silently re-add them. -->
 
-- **Ungated outbound automation** — rule-triggered send/reply/forward is allowed only behind Phase 08.1 account setting, per-action setting, rule acknowledgement, safety, cap, idempotency, OAuth, tenant, and audit gates.
+- **Ungated outbound automation** — rule-triggered send/reply/forward is allowed only behind Phase 08.1 global auto-send setting, sender-risk guard, safety net, cap/rate-limit, idempotency, OAuth, tenant, and audit gates; blocked sends fall back to Gmail draft.
 - **Outlook / Microsoft 365** — Gmail-only in v1 to ship focused; v2 candidate.
 - **Generic IMAP/SMTP** — different auth/push/label model; doubles provider surface area.
 - **Self-hosted / open-source distribution** — Cloud SaaS only in v1; OSS is a separate strategic decision.
@@ -147,7 +147,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 
 **Runtime posture.** Multi-tenant cloud SaaS. Every request is tenant-scoped (Scoped Values, never ThreadLocal). Gmail Pub/Sub push arrives asynchronously and is processed with strong idempotency (`ON CONFLICT DO NOTHING`).
 
-**Safety posture.** App has write access to people's primary email. Every autonomous action leaves an audit trail; label/archive/draft remain reversible, and outbound sends require explicit user settings, rule-level acknowledgement, safety/rate/idempotency gates, and one ArchUnit-enforced outbound gateway.
+**Safety posture.** App has write access to people's primary email. Every autonomous action leaves an audit trail; label/archive/draft remain reversible, and outbound sends require the global auto-send setting plus safety/rate/idempotency gates and one ArchUnit-enforced outbound gateway.
 
 **v1.0 scale.** ~17 phases / 123 plans / 221 tasks, locked Vietnamese-default i18n + English secondary, single-VPS deployment baseline, OAuth Testing mode at launch (production OAuth gated by SEED-012 CASA closure).
 
@@ -164,7 +164,7 @@ Zero Mail is a multi-tenant SaaS that helps busy professionals and founders reac
 - **LLM routing**: Default OpenRouter behind Spring AI; BYOK supported — locked.
 - **Billing model**: Prepaid credits, pay-as-you-go. Vietnam beta uses SePay/VietQR + Postgres ledger + configurable VND-per-credit; global Merchant-of-Record/card provider deferred.
 - **Privacy**: No long-term storage of raw email bodies, LLM prompts/completions, or embeddings — locked. **Scope:** the email-content processing pipeline (triage, draft generation). User-typed rule-builder assistant chat (chat messages + structured tool outputs) persists normally — it is UI configuration input, not extracted email content. Still forbidden inside chat: inlining email bodies into long-term assistant prompts (use short-lived in-memory cache) and embeddings of user mail.
-- **Write actions allowed**: (1) **Rules engine** (auto-triggered by incoming mail): label, archive (skip inbox), save Gmail draft, mark read/unread, star/unstar, add to digest, mark spam, and user-enabled outbound actions `send_reply`, `forward_email`, and `send_email`. Outbound rule actions require explicit account-level opt-in, rule-level acknowledgement, safety-net checks, low-trust sender guards, rate/daily caps, idempotency, and append-only audit; if any gate fails, downgrade to draft/needs-review instead of sending. (2) **Chat assistant** (user-initiated): same action set plus user-confirmed send/reply/forward through a preview card. All Gmail send execution must go through the shared outbound gateway/send executor so architectural tests can enforce the boundary; direct Gmail send call sites outside that gateway are forbidden.
+- **Write actions allowed**: (1) **Rules engine** (auto-triggered by incoming mail): label, archive (skip inbox), save Gmail draft, mark read/unread, star/unstar, add to digest, mark spam, and user-enabled outbound actions `send_reply`, `forward_email`, and `send_email`. Outbound rule actions require the global `Auto-send rules` setting (default ON), safety-net checks, low-trust sender guards, rate/daily caps, idempotency, and append-only audit; if any gate fails or the global setting is OFF, downgrade to Gmail draft instead of sending. (2) **Chat assistant** (user-initiated): same action set plus user-confirmed send/reply/forward through a preview card. All Gmail send execution must go through the shared outbound gateway/send executor so architectural tests can enforce the boundary; direct Gmail send call sites outside that gateway are forbidden.
 - **Primary datastore**: PostgreSQL 17 self-hosted on the VPS. Redis 7 same VPS for cache/session/rate-limit only; no vector DB.
 - **Schema migrations**: Liquibase YAML — locked.
 - **Timeline**: Exploratory / learning-oriented; favor architectural quality over speed.
