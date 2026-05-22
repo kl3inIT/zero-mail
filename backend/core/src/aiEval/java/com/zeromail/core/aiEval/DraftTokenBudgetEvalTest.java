@@ -9,7 +9,6 @@ import com.zeromail.core.draft.usecases.ToneContextBuilder;
 import com.zeromail.core.llm.domain.Action;
 import com.zeromail.core.llm.domain.ActionValidator;
 import com.zeromail.core.llm.domain.AllowListedTools;
-import com.zeromail.core.llm.domain.BYOKProvider;
 import com.zeromail.core.llm.exception.TokenBudgetExceededException;
 import com.zeromail.core.llm.gateway.sanitization.SanitizationPipeline;
 import com.zeromail.core.llm.gateway.sanitization.Sanitizer;
@@ -200,7 +199,7 @@ class DraftTokenBudgetEvalTest {
                         recordingModelClient,
                         new SanitizationPipeline(List.of(new PassThroughSanitizer())),
                         new ZeroMailLlmProperties(
-                                BYOKProvider.OPENAI,
+                                "openai",
                                 "https://openrouter.ai/api/v1",
                                 "synthetic-platform-key",
                                 "openai/gpt-5.4-nano",
