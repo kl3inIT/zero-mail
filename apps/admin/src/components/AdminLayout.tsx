@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, Outlet, useNavigate } from '@tanstack/react-router';
 import {
   ActivityIcon,
+  BookOpenIcon,
   Building2Icon,
   ClipboardListIcon,
   DollarSignIcon,
@@ -35,6 +36,7 @@ const navigationItems: ReadonlyArray<NavigationItem> = [
   { to: '/audit', label: 'Nhật ký audit', icon: ClipboardListIcon },
   { to: '/role-grants', label: 'Phân quyền admin', icon: UsersIcon },
   { to: '/master-keys', label: 'Quản lý LLM', icon: KeyRoundIcon },
+  { to: '/rule-catalog', label: 'Rule Catalog', icon: BookOpenIcon },
   { to: '/tenants', label: 'Khách hàng', icon: Building2Icon },
   { to: '/queue', label: 'Hàng đợi', icon: ActivityIcon },
   { to: '/spend', label: 'Chi phí', icon: DollarSignIcon },
