@@ -101,8 +101,8 @@
 
 ### Rule Actions and Examples Catalog (NEW — Phase 08.1)
 
-- [ ] **RACT-01**: Rule creation offers three entry paths matching the Inbox Zero mental model: `Create rules`, `Choose from examples`, and `Add manually`
-- [ ] **RACT-02**: User examples UI includes the copied Inbox Zero persona set (`Founder`, `Influencer`, `Realtor`, `Investor`, `Assistant`, `Developer`, `Designer`, `Sales`, `Marketer`, `Support`, `Recruiter`, `Student`, `Outreach`, `Other`) and the example prompt grid seeded from `.planning/phases/08.1-inbox-zero-style-rule-actions-and-admin-managed-examples-cat/inbox-zero-examples.ts`
+- [x] **RACT-01**: Rule creation offers three entry paths matching the Inbox Zero mental model: `Create rules`, `Choose from examples`, and `Add manually`
+- [x] **RACT-02**: User examples UI includes the copied Inbox Zero persona set (`Founder`, `Influencer`, `Realtor`, `Investor`, `Assistant`, `Developer`, `Designer`, `Sales`, `Marketer`, `Support`, `Recruiter`, `Student`, `Outreach`, `Other`) and the example prompt grid seeded from `.planning/phases/08.1-inbox-zero-style-rule-actions-and-admin-managed-examples-cat/inbox-zero-examples.ts`
 - [x] **RACT-03**: Admin can create, edit, disable, reorder, and localize examples/personas/action descriptors without code changes; disabled examples do not appear in the user rule builder
 - [x] **RACT-04**: User-facing Available Actions panel includes `Label`, `Archive`, `Save draft`, `Mark read/unread`, `Star/unstar`, `Add to digest`, `Mark spam`, `Send reply`, `Forward`, and `Send email`, with unavailable actions visibly disabled and explained
 - [x] **RACT-05**: Settings expose one account-level `Auto-send rules` toggle for automated outbound rule actions; it defaults ON for new users/tenants and there are no individual outbound action toggles
@@ -247,8 +247,8 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 | OPS-QUEUE-02 | Phase 8 | Complete |
 | OPS-SPEND-01 | Phase 8 | Complete |
 | OPS-SPEND-02 | Phase 8 | Complete |
-| RACT-01 | Phase 08.1 | Pending |
-| RACT-02 | Phase 08.1 | Pending |
+| RACT-01 | Phase 08.1 | Complete |
+| RACT-02 | Phase 08.1 | Complete |
 | RACT-03 | Phase 08.1 | Complete |
 | RACT-04 | Phase 08.1 | Complete |
 | RACT-05 | Phase 08.1 | Complete |
