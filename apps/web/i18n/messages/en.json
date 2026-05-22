@@ -175,26 +175,21 @@
     "everywhere": "End-to-end · SOC 2 Type II in progress",
     "help": "Help",
     "login": {
-      "body": "Zero Mail connects to Gmail with your permission. We never auto-send, and you can revoke access from Google in two clicks.",
-      "divider": "or",
+      "betaNote": "Free during beta",
+      "body": "We'll redirect you to Google so you can choose an account and grant Gmail access to Zero Mail.",
       "googleButton": "Continue with Google",
-      "googleNote": "We'll redirect you to Google to grant access.",
       "headline": "Reach inbox zero without giving up control.",
-      "headlineA": "Welcome back to",
-      "headlineB": "your inbox.",
+      "headlineA": "Sign in to start",
+      "headlineB": "clearing your inbox.",
       "newUser": "First time here?",
+      "noCard": "No card required",
       "privacy": "Privacy Policy",
-      "safety": {
-        "noAutoSend": "No auto-send",
-        "noLongTermStorage": "No long-term email body storage",
-        "revokeAnytime": "You can revoke access anytime"
-      },
       "terms": "Terms",
       "termsAnd": "and",
       "termsPrefix": "By signing in you agree to our",
       "title": "Sign in",
       "waitlist": "Register to experience Zero Mail →",
-      "workEmail": "Sign in with work email"
+      "workEmail": "Sign in with company Gmail"
     }
   },
   "billing": {
@@ -940,7 +935,7 @@
   },
   "legal": {
     "googleApiPolicy": {
-      "body": "Zero Mail's use and transfer of information received from Google APIs to any other app will adhere to <link>Google API Services User Data</link> Policy, including the Limited Use requirements."
+      "body": "Google API data is handled under the <link>Google API User Data Policy</link> and Limited Use requirements."
     },
     "privacy": {
       "placeholderBody": "Real privacy policy content will land in Phase 6 launch hardening. PROJECT.md describes the binding privacy contract: no long-term storage of email content, prompts, completions, or embeddings.",

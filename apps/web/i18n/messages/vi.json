@@ -175,26 +175,21 @@
     "everywhere": "Đầu-cuối · Đang xin SOC 2 Type II",
     "help": "Trợ giúp",
     "login": {
-      "body": "Zero Mail kết nối Gmail khi bạn đồng ý. Chúng tôi không bao giờ tự động gửi, và bạn có thể thu hồi quyền truy cập từ Google chỉ trong hai cú nhấp.",
-      "divider": "hoặc",
+      "betaNote": "Miễn phí trong beta",
+      "body": "Bạn sẽ được chuyển sang Google để chọn tài khoản và cấp quyền Gmail cho Zero Mail.",
       "googleButton": "Tiếp tục với Google",
-      "googleNote": "Bạn sẽ được chuyển sang Google để cấp quyền.",
       "headline": "Dọn hộp thư về zero mà vẫn giữ quyền kiểm soát.",
-      "headlineA": "Chào mừng bạn quay lại",
-      "headlineB": "với hộp thư.",
+      "headlineA": "Đăng nhập để bắt đầu",
+      "headlineB": "dọn hộp thư.",
       "newUser": "Lần đầu sử dụng?",
+      "noCard": "Không cần thẻ thanh toán",
       "privacy": "Chính sách bảo mật",
-      "safety": {
-        "noAutoSend": "Không tự động gửi email",
-        "noLongTermStorage": "Không lưu lâu dài nội dung email",
-        "revokeAnytime": "Bạn có thể thu hồi quyền truy cập bất cứ lúc nào"
-      },
       "terms": "Điều khoản",
       "termsAnd": "và",
       "termsPrefix": "Khi đăng nhập, bạn đồng ý với",
       "title": "Đăng nhập",
       "waitlist": "Đăng ký trải nghiệm Zero Mail →",
-      "workEmail": "Đăng nhập bằng email công ty"
+      "workEmail": "Đăng nhập bằng Gmail công ty"
     }
   },
   "billing": {
@@ -940,7 +935,7 @@
   },
   "legal": {
     "googleApiPolicy": {
-      "body": "Việc Zero Mail sử dụng và chuyển giao thông tin nhận được từ Google API sang bất kỳ ứng dụng nào khác sẽ tuân thủ <link>Chính sách bảo mật dữ liệu người dùng của Google API</link>, bao gồm các yêu cầu Sử dụng có giới hạn (Limited Use)."
+      "body": "Dữ liệu Google API được xử lý theo <link>Chính sách dữ liệu người dùng Google API</link> và yêu cầu Limited Use."
     },
     "privacy": {
       "placeholderBody": "Chính sách bảo mật đầy đủ sẽ có trong Phase 6 (giai đoạn hardening trước khi launch). PROJECT.md mô tả cam kết ràng buộc về bảo mật: không lưu trữ lâu dài nội dung email, prompt, câu trả lời, hay embedding.",

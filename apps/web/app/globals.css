@@ -260,8 +260,8 @@
   --ink: #0a0a0a;
   --ink-2: #3f3f3f;
   --text: var(--foreground);
-  --text-muted: var(--muted-foreground);
-  --text-faint: #6f6883;
+  --text-muted: #5f5b54;
+  --text-faint: #756f68;
   --green: #27694d;
   --green-soft: #e4f0e9;
   --amber: #7a4b0f;
@@ -1779,16 +1779,16 @@
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 1280px;
+  max-width: 760px;
   margin: 0 auto;
-  padding: 56px 32px 80px;
+  padding: 72px 32px 80px;
 }
 
 .zm-auth-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
-  align-items: start;
-  gap: 56px;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 0;
   min-width: 0;
 }
 
@@ -1812,10 +1812,14 @@
   margin-top: 14px;
   color: var(--ink);
   font-family: var(--font-sans);
-  font-size: clamp(32px, 4vw, 42px);
+  font-size: 42px;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   line-height: 1.05;
+}
+
+.zm-login-panel .zm-auth-title {
+  margin-top: 0;
 }
 
 .zm-auth-title em {
@@ -1830,7 +1834,7 @@
 }
 
 .zm-auth-sub {
-  max-width: 620px;
+  max-width: 560px;
   margin-top: 22px;
   color: var(--text-muted);
   font-size: 16px;
@@ -1840,7 +1844,7 @@
 .zm-google-btn {
   display: flex;
   width: 100%;
-  height: 50px;
+  height: 54px;
   align-items: center;
   justify-content: center;
   gap: 12px;
@@ -1849,8 +1853,8 @@
   background: #fff;
   color: #1f1f1f;
   font-size: 15px;
-  font-weight: 500;
-  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.08);
+  font-weight: 650;
+  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.12);
 }
 
 .zm-signin-card {
@@ -1861,7 +1865,6 @@
 }
 
 .zm-signin-helper,
-.zm-or-row,
 .zm-signin-terms,
 .zm-signin-foot,
 .zm-auth-footer {
@@ -1870,29 +1873,30 @@
 
 .zm-signin-helper {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  font-family: var(--font-mono);
-  font-size: 12.5px;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
-.zm-or-row {
+.zm-signin-helper span + span::before {
+  content: '·';
+  margin-right: 8px;
+  color: var(--text-faint);
+}
+
+.zm-work-gmail-btn {
   display: flex;
+  width: 100%;
+  height: 42px;
   align-items: center;
-  gap: 12px;
-  margin: 4px 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.zm-or-row::before,
-.zm-or-row::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--line);
+  justify-content: center;
+  gap: 8px;
+  border-color: var(--line);
+  border-radius: 10px;
+  color: var(--text-muted);
 }
 
 .zm-signin-foot {
@@ -1902,74 +1906,6 @@
   border-top: 1px dashed var(--line);
   padding-top: 18px;
   font-size: 13px;
-}
-
-.zm-trust-panel {
-  position: sticky;
-  top: 84px;
-}
-
-.zm-trust-panel-title {
-  margin-top: 18px;
-  color: var(--ink);
-  font-family: var(--font-sans);
-  font-size: 24px;
-  font-weight: 600;
-}
-
-.zm-trust-list {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  margin-top: 22px;
-}
-
-.zm-trust-item {
-  display: grid;
-  grid-template-columns: 32px 1fr;
-  gap: 12px;
-}
-
-.zm-trust-ic {
-  display: grid;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--bg-elevated);
-  color: var(--ink);
-}
-
-.zm-trust-item h3 {
-  margin-top: 4px;
-  color: var(--ink);
-  font-size: 14.5px;
-  font-weight: 600;
-}
-
-.zm-trust-item p {
-  margin-top: 4px;
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.zm-perm-card {
-  margin-top: 24px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--bg-subtle);
-  padding: 16px;
-}
-
-.zm-perm-card h4 {
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 12.5px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .zm-auth-footer {
@@ -1993,10 +1929,6 @@
   .zm-final-cta {
     grid-template-columns: 1fr;
   }
-
-  .zm-trust-panel {
-    position: static;
-  }
 }
 
 @media (max-width: 900px) {
@@ -2017,8 +1949,7 @@
 }
 
 @media (max-width: 760px) {
-  .zm-nav-links,
-  .zm-trust-panel {
+  .zm-nav-links {
     display: none;
   }
 
@@ -2035,7 +1966,7 @@
   }
 
   .zm-auth-title {
-    font-size: 30px;
+    font-size: 36px;
   }
 
   .zm-gmail-account-row {
@@ -2087,6 +2018,38 @@
     height: 23px;
     padding: 0 6px;
     font-size: 11px;
+  }
+
+  .zm-signin-card {
+    margin-top: 28px;
+  }
+
+  .zm-signin-helper {
+    display: grid;
+    gap: 6px;
+  }
+
+  .zm-signin-helper span + span::before {
+    content: none;
+  }
+
+  .zm-signin-terms {
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .zm-signin-terms p {
+    margin: 0;
+  }
+
+  .zm-signin-terms p + p {
+    margin-top: 8px;
+  }
+
+  .zm-signin-foot {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 
   .zm-hero {

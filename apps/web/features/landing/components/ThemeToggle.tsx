@@ -19,7 +19,7 @@ export function ThemeToggle({ currentTheme, label }: Props) {
         aria-label={label}
         title={label}
         aria-pressed={currentTheme === 'dark'}
-        className="zm-icon-btn min-h-11 min-w-11 sm:min-h-8 sm:min-w-8"
+        className="zm-icon-btn min-h-8 min-w-8"
       >
         {currentTheme === 'dark' ? <SunIcon size={15} /> : <MoonIcon size={15} />}
       </Button>
