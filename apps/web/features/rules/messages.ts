@@ -152,8 +152,8 @@ export const rulesMessages = {
     en: 'Which emails should Zero Mail match, and what should it do?',
   },
   'rules.composer.sourcePlaceholder': {
-    vi: 'Ví dụ: Lưu trữ biên lai từ Stripe và gắn nhãn Finance',
-    en: 'Example: Archive receipts from Stripe and label them Finance',
+    vi: 'Mô tả email cần khớp và hành động Zero Mail nên làm',
+    en: 'Describe the emails to match and what Zero Mail should do',
   },
   'rules.composer.compileCta': {
     vi: 'Chuyển thành quy tắc',
@@ -192,28 +192,40 @@ export const rulesMessages = {
     en: 'Allowed actions',
   },
   'rules.composer.allowedActionsNote': {
-    vi: 'Ở v1, Zero Mail chỉ được gắn nhãn, lưu trữ khỏi Inbox và lưu bản nháp Gmail. Zero Mail không tự gửi, chuyển tiếp, xóa, đánh spam hoặc gọi webhook.',
-    en: 'v1 actions are limited to label, archive from Inbox, and save Gmail draft. Zero Mail does not auto-send, forward, delete, mark spam, or call webhooks.',
+    vi: 'Quy tắc được lưu dưới dạng điều kiện và hành động có cấu trúc. Hành động gửi outbound chạy qua cổng an toàn và cài đặt Auto-send rules.',
+    en: 'Rules are saved as structured criteria and actions. Outbound sends run through safety gates and the Auto-send rules setting.',
   },
   'rules.composer.invalid': {
     vi: 'Quy tắc này chưa thể lưu. Hãy sửa cách diễn đạt hoặc trả lời câu hỏi làm rõ.',
     en: 'This rule is not ready to save. Edit the wording or answer the clarification.',
   },
   'rules.composer.examplesHint': {
-    vi: 'Gợi ý — bấm để chèn nhanh:',
-    en: 'Suggestions — click to insert:',
+    vi: 'Gợi ý từ catalog',
+    en: 'Catalog examples',
   },
-  'rules.composer.example.receipts': {
-    vi: 'Lưu trữ biên lai từ Stripe và gắn nhãn Finance',
-    en: 'Archive receipts from Stripe and label them Finance',
+  'rules.composer.examples.title': {
+    vi: 'Chọn từ ví dụ',
+    en: 'Choose from examples',
   },
-  'rules.composer.example.calendar': {
-    vi: 'Gắn nhãn Calendar cho lời mời họp và cập nhật lịch',
-    en: 'Label calendar invitations and schedule updates as Calendar',
+  'rules.composer.examples.body': {
+    vi: 'Chọn nhóm phù hợp rồi bấm một ví dụ để thay toàn bộ nội dung ô mô tả.',
+    en: 'Choose a persona, then click an example to replace the whole description.',
   },
-  'rules.composer.example.newsletters': {
-    vi: 'Gắn nhãn Reading cho newsletter, nhưng không lưu trữ email từ khách hàng',
-    en: 'Label newsletters as Reading, but do not archive customer emails',
+  'rules.composer.examples.empty': {
+    vi: 'Chưa có ví dụ đang bật cho nhóm này.',
+    en: 'No enabled examples for this persona yet.',
+  },
+  'rules.composer.examples.error': {
+    vi: 'Chưa tải được ví dụ. Bạn vẫn có thể tự viết quy tắc.',
+    en: 'Examples are not available right now. You can still write your own rule.',
+  },
+  'rules.composer.personaLabel': {
+    vi: 'Nhóm ví dụ',
+    en: 'Example persona',
+  },
+  'rules.composer.personaFallback': {
+    vi: 'Chọn nhóm',
+    en: 'Choose persona',
   },
   'rules.composer.newRuleCta': {
     vi: 'Tạo quy tắc',
@@ -252,8 +264,8 @@ export const rulesMessages = {
     en: 'Allowed actions',
   },
   'rules.manual.thenBody': {
-    vi: 'Chỉ chọn các hành động an toàn được phép trong v1.',
-    en: 'Choose only the safe v1 actions Zero Mail may take.',
+    vi: 'Chọn hành động mà trình chỉnh sửa hiện hỗ trợ. Catalog bên dưới hiển thị toàn bộ hành động tự động hóa.',
+    en: 'Choose actions this editor supports today. The catalog below shows the full automation action set.',
   },
   'rules.manual.operator.all': {
     vi: 'Khớp tất cả',
@@ -288,16 +300,16 @@ export const rulesMessages = {
     en: 'Locked in v1',
   },
   'rules.manual.unsafe.autoSend': {
-    vi: 'Tự gửi',
-    en: 'Auto-send disabled',
+    vi: 'Auto-send rules',
+    en: 'Auto-send rules',
   },
   'rules.manual.unsafe.forward': {
-    vi: 'Chuyển tiếp',
-    en: 'Forward disabled',
+    vi: 'Chuyển tiếp qua cổng an toàn',
+    en: 'Forward through safety gates',
   },
   'rules.manual.unsafe.delete': {
-    vi: 'Xóa / spam',
-    en: 'Delete/spam disabled',
+    vi: 'Spam có audit trail',
+    en: 'Spam with audit trail',
   },
   'rules.manual.unsafe.webhook': {
     vi: 'Gọi webhook',
@@ -530,6 +542,82 @@ export const rulesMessages = {
   'rules.templates.browseCta': {
     vi: 'Xem mẫu có sẵn',
     en: 'Browse templates',
+  },
+  'rules.actions.title': {
+    vi: 'Hành động có thể dùng',
+    en: 'Available actions',
+  },
+  'rules.actions.available': {
+    vi: 'Đang dùng được',
+    en: 'Available',
+  },
+  'rules.actions.unavailableReason': {
+    vi: 'Trạng thái: {status}',
+    en: 'Status: {status}',
+  },
+  'rules.actions.willAutoSend': {
+    vi: 'Sẽ tự động gửi',
+    en: 'Will auto-send',
+  },
+  'rules.actions.saveDraftInstead': {
+    vi: 'Sẽ lưu bản nháp',
+    en: 'Will save draft',
+  },
+  'rules.actions.autoSendChecking': {
+    vi: 'Đang kiểm tra',
+    en: 'Checking',
+  },
+  'rules.actions.risk.low': {
+    vi: 'Rủi ro thấp',
+    en: 'Low risk',
+  },
+  'rules.actions.risk.medium': {
+    vi: 'Rủi ro vừa',
+    en: 'Medium risk',
+  },
+  'rules.actions.risk.high': {
+    vi: 'Rủi ro cao',
+    en: 'High risk',
+  },
+  'rules.actions.empty': {
+    vi: 'Chưa có hành động nào đang bật trong catalog.',
+    en: 'No enabled catalog actions yet.',
+  },
+  'rules.actions.error': {
+    vi: 'Chưa tải được danh sách hành động.',
+    en: 'Could not load available actions.',
+  },
+  'rules.settings.autoSend.title': {
+    vi: 'Auto-send rules',
+    en: 'Auto-send rules',
+  },
+  'rules.settings.autoSend.bodyOn': {
+    vi: 'Quy tắc outbound có thể gửi thật khi các cổng an toàn pass.',
+    en: 'Outbound rules can send when safety gates pass.',
+  },
+  'rules.settings.autoSend.bodyOff': {
+    vi: 'Quy tắc outbound vẫn lưu được, nhưng runtime sẽ lưu bản nháp Gmail thay vì gửi.',
+    en: 'Outbound rules still save, but runtime saves Gmail drafts instead of sending.',
+  },
+  'rules.settings.autoSend.toggleLabel': {
+    vi: 'Cho phép rule tự gửi',
+    en: 'Allow rules to auto-send',
+  },
+  'rules.settings.autoSend.footerOn': {
+    vi: 'Bạn vẫn thấy trạng thái "Sẽ tự động gửi" trong rule/action trước khi bật rule.',
+    en: 'You still see "Will auto-send" status in rule/action surfaces before enabling a rule.',
+  },
+  'rules.settings.autoSend.footerOff': {
+    vi: 'Tắt switch này không chặn lưu rule; nó đổi outbound runtime sang lưu bản nháp.',
+    en: 'Turning this off does not block saving rules; it changes outbound runtime to draft fallback.',
+  },
+  'settings.privacy.outboundControl': {
+    vi: 'Hành động gửi outbound được kiểm soát bằng cổng an toàn và switch Auto-send rules.',
+    en: 'Outbound sends are controlled by safety gates and the Auto-send rules switch.',
+  },
+  'settings.privacy.noAutoSend': {
+    vi: 'Hành động gửi outbound được kiểm soát bằng cổng an toàn và switch Auto-send rules.',
+    en: 'Outbound sends are controlled by safety gates and the Auto-send rules switch.',
   },
   'rules.delete.title': {
     vi: 'Xóa quy tắc này?',

@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import type { RuleCatalogPersonaResponse } from '@/features/rules/api/rule-catalog-api';
 import type {
   RuleCompiledPayloadResponse,
   RuleCompileResult,
@@ -64,6 +65,9 @@ type Props = {
   insufficientCreditError: string | null;
   isCompiling: boolean;
   isSaving: boolean;
+  examplePersonas?: RuleCatalogPersonaResponse[];
+  isLoadingExamples?: boolean;
+  examplesError?: boolean;
   onSourceTextChange: (sourceText: string) => void;
   onClarificationAnswerChange: (answer: string) => void;
   onCompile: () => void;
@@ -83,6 +87,9 @@ export function RuleComposer({
   insufficientCreditError,
   isCompiling,
   isSaving,
+  examplePersonas = [],
+  isLoadingExamples = false,
+  examplesError = false,
   onSourceTextChange,
   onClarificationAnswerChange,
   onCompile,
@@ -141,11 +148,17 @@ export function RuleComposer({
     t('rules.composer.actionReview'),
     structureCopy,
   );
-  const exampleRules = [
-    t('rules.composer.example.receipts'),
-    t('rules.composer.example.calendar'),
-    t('rules.composer.example.newsletters'),
-  ];
+  const orderedExamplePersonas = useMemo(
+    () => orderRuleExamplePersonas(examplePersonas),
+    [examplePersonas],
+  );
+  const [selectedPersonaKey, setSelectedPersonaKey] = useState<string>(
+    REQUIRED_RULE_PERSONA_KEYS[0],
+  );
+  const selectedPersona =
+    orderedExamplePersonas.find((persona) => persona.personaKey === selectedPersonaKey) ??
+    orderedExamplePersonas[0] ??
+    null;
 
   function updateCondition(conditionId: string, patch: Partial<ManualCondition>) {
     setManualDraft((current) => ({
@@ -220,25 +233,16 @@ export function RuleComposer({
                 className="min-h-32 resize-y"
                 onChange={(event) => onSourceTextChange(event.currentTarget.value)}
               />
-              <div className="space-y-2">
-                <p className="text-foreground text-xs font-medium">
-                  {t('rules.composer.examplesHint')}
-                </p>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {exampleRules.map((exampleRule) => (
-                    <button
-                      key={exampleRule}
-                      type="button"
-                      disabled={isCompiling}
-                      onClick={() => onSourceTextChange(exampleRule)}
-                      className="group border-primary/30 bg-primary/5 text-foreground hover:border-primary hover:bg-primary/10 focus-visible:ring-primary/60 flex items-start gap-2 rounded-md border px-3 py-2 text-left text-xs leading-relaxed whitespace-normal shadow-sm transition-colors hover:cursor-pointer focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <Wand2 className="text-primary mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-                      <span className="flex-1">{exampleRule}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <ExampleChooser
+                personas={orderedExamplePersonas}
+                selectedPersona={selectedPersona}
+                selectedPersonaKey={selectedPersona?.personaKey ?? selectedPersonaKey}
+                isLoading={isLoadingExamples}
+                isError={examplesError}
+                isDisabled={isCompiling}
+                onPersonaChange={setSelectedPersonaKey}
+                onExampleClick={onSourceTextChange}
+              />
             </div>
           </div>
 
@@ -332,6 +336,126 @@ export function RuleComposer({
           />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+const REQUIRED_RULE_PERSONA_KEYS = [
+  'founder',
+  'influencer',
+  'realtor',
+  'investor',
+  'assistant',
+  'developer',
+  'designer',
+  'sales',
+  'marketer',
+  'support',
+  'recruiter',
+  'student',
+  'outreach',
+  'other',
+] as const;
+
+const RULE_PERSONA_ORDER = new Map<string, number>(
+  REQUIRED_RULE_PERSONA_KEYS.map((personaKey, index) => [personaKey, index]),
+);
+
+function orderRuleExamplePersonas(personas: RuleCatalogPersonaResponse[]) {
+  return [...personas].sort((left, right) => {
+    const leftOrder = RULE_PERSONA_ORDER.get(left.personaKey) ?? 1_000;
+    const rightOrder = RULE_PERSONA_ORDER.get(right.personaKey) ?? 1_000;
+    if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+    return (left.displayOrder ?? 0) - (right.displayOrder ?? 0);
+  });
+}
+
+function ExampleChooser({
+  personas,
+  selectedPersona,
+  selectedPersonaKey,
+  isLoading,
+  isError,
+  isDisabled,
+  onPersonaChange,
+  onExampleClick,
+}: {
+  personas: RuleCatalogPersonaResponse[];
+  selectedPersona: RuleCatalogPersonaResponse | null;
+  selectedPersonaKey: string;
+  isLoading: boolean;
+  isError: boolean;
+  isDisabled: boolean;
+  onPersonaChange: (personaKey: string) => void;
+  onExampleClick: (exampleText: string) => void;
+}) {
+  const t = useTranslations();
+  const examples = selectedPersona?.examples ?? [];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-foreground text-xs font-semibold">
+            {t('rules.composer.examples.title')}
+          </p>
+          <p className="text-muted-foreground text-xs">{t('rules.composer.examples.body')}</p>
+        </div>
+        <Select
+          value={selectedPersonaKey}
+          onValueChange={(value) => {
+            if (value) onPersonaChange(value);
+          }}
+          disabled={isDisabled || isLoading || personas.length === 0}
+        >
+          <SelectTrigger className="w-full sm:w-56" aria-label={t('rules.composer.personaLabel')}>
+            <span className="truncate">
+              {selectedPersona?.displayName ?? t('rules.composer.personaFallback')}
+            </span>
+          </SelectTrigger>
+          <SelectContent>
+            {personas.map((persona) => (
+              <SelectItem key={persona.personaId} value={persona.personaKey}>
+                {persona.displayName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {isLoading ? (
+        <div className="grid min-h-24 gap-2 sm:grid-cols-2">
+          {[0, 1].map((index) => (
+            <div key={index} className="bg-muted/40 h-20 animate-pulse rounded-md border" />
+          ))}
+        </div>
+      ) : isError ? (
+        <Alert variant="warning" className="py-3">
+          <AlertCircle className="size-4" aria-hidden="true" />
+          <AlertDescription>{t('rules.composer.examples.error')}</AlertDescription>
+        </Alert>
+      ) : examples.length === 0 ? (
+        <div className="text-muted-foreground bg-muted/20 min-h-20 rounded-md border border-dashed p-3 text-xs">
+          {t('rules.composer.examples.empty')}
+        </div>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {examples.map((example) => (
+            <button
+              key={example.exampleId}
+              type="button"
+              disabled={isDisabled}
+              onClick={() => onExampleClick(example.exampleText)}
+              className="group border-primary/30 bg-primary/5 text-foreground hover:border-primary hover:bg-primary/10 focus-visible:ring-primary/60 min-h-20 rounded-md border px-3 py-2 text-left text-xs leading-relaxed whitespace-normal shadow-sm transition-colors hover:cursor-pointer focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <span className="flex items-start gap-2">
+                <Wand2 className="text-primary mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                <span className="flex-1">{example.exampleText}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

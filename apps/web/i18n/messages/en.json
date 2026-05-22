@@ -660,8 +660,8 @@
       "title": "Vietnamese-first"
     },
     "f5": {
-      "desc": "Zero Mail labels, archives, and saves drafts. It will never send a message without your review.",
-      "title": "No auto-send"
+      "desc": "Zero Mail labels, archives, drafts, and sends only through your Auto-send rules setting plus outbound safety gates.",
+      "title": "Safety-gated outbound"
     },
     "f6": {
       "desc": "Disconnect Gmail or delete your account from Settings. Tokens deleted immediately.",
@@ -729,36 +729,36 @@
       "title": "Write rules in plain English"
     },
     "step3": {
-      "desc": "Every action is logged and reversible. Approve drafts before they go out. Nothing is ever sent on your behalf.",
+      "desc": "Every action is logged and reversible. Outbound sends run only when your Auto-send rules setting and safety gates allow them.",
       "title": "Review the triage queue"
     },
     "title": "Three steps. No new inbox to learn."
   },
   "landing": {
     "bullets": {
-      "noAutoSend": "No auto-send",
+      "noAutoSend": "Safety-gated sends",
       "readOnlyPrompts": "Read-only AI prompts",
       "reversibleActions": "Reversible actions"
     },
     "continueSetupCta": "Continue setup",
     "eyebrow": "Gmail · Private beta · v1",
     "heading": {
-      "accent": "the send button.",
+      "accent": "the controls.",
       "line1": "Inbox zero,",
-      "line2": "without handing AI"
+      "line2": "without losing"
     },
     "metrics": {
-      "autoSendsEver": "auto-sends ever",
+      "autoSendsEver": "safety-gated sends",
       "emailsProcessed": "emails processed",
       "triageAccuracy": "triage accuracy",
       "triagePerEmail": "triage per email"
     },
+    "openAppCta": "Open app",
     "peek": {
       "eyebrow": "Next · How it works",
       "link": "Read the walkthrough",
       "title": "Three steps to reach inbox zero — connect, describe, review."
     },
-    "openAppCta": "Open app",
     "primaryCta": "Sign in",
     "secondaryCta": "See how it works",
     "tagline": "Zero Mail triages your Gmail with rules you write in plain English — labels what matters, archives what doesn't, drafts the easy replies. You stay in the loop on everything that goes out.",
@@ -1264,27 +1264,45 @@
     }
   },
   "rules": {
+    "actions": {
+      "autoSendChecking": "Checking",
+      "available": "Available",
+      "empty": "No enabled catalog actions yet.",
+      "error": "Could not load available actions.",
+      "risk": {
+        "high": "High risk",
+        "low": "Low risk",
+        "medium": "Medium risk"
+      },
+      "saveDraftInstead": "Will save draft",
+      "title": "Available actions",
+      "unavailableReason": "Status: {status}",
+      "willAutoSend": "Will auto-send"
+    },
     "composer": {
       "actionReview": "Allowed actions",
-      "allowedActionsNote": "v1 actions are limited to label, archive from Inbox, and save Gmail draft. Zero Mail does not auto-send, forward, delete, mark spam, or call webhooks.",
+      "allowedActionsNote": "Rules are saved as structured criteria and actions. Outbound sends run through safety gates and the Auto-send rules setting.",
       "answerClarification": "Send answer",
       "answerLabel": "Your answer",
       "compileCta": "Convert to rule",
       "compiledReview": "Rule to save",
       "compiling": "Checking...",
-      "example": {
-        "calendar": "Label calendar invitations and schedule updates as Calendar",
-        "newsletters": "Label newsletters as Reading, but do not archive customer emails",
-        "receipts": "Archive receipts from Stripe and label them Finance"
+      "examples": {
+        "body": "Choose a persona, then click an example to replace the whole description.",
+        "empty": "No enabled examples for this persona yet.",
+        "error": "Examples are not available right now. You can still write your own rule.",
+        "title": "Choose from examples"
       },
-      "examplesHint": "Suggestions — click to insert:",
+      "examplesHint": "Catalog examples",
       "invalid": "This rule is not ready to save. Edit the wording or answer the clarification.",
       "matcherReview": "Matched email",
       "newRuleCta": "Create rule",
+      "personaFallback": "Choose persona",
+      "personaLabel": "Example persona",
       "saveDisabledCta": "Save (stays off until preview)",
       "saving": "Saving...",
       "sourceLabel": "Which emails should Zero Mail match, and what should it do?",
-      "sourcePlaceholder": "Example: Archive receipts from Stripe and label them Finance",
+      "sourcePlaceholder": "Describe the emails to match and what Zero Mail should do",
       "tab": {
         "describe": "Describe",
         "manual": "Review & edit"
@@ -1375,12 +1393,12 @@
       "removeCondition": "Remove condition",
       "saveHint": "New or edited rules are saved off until you preview them.",
       "structuredPreview": "Rule to save",
-      "thenBody": "Choose only the safe v1 actions Zero Mail may take.",
+      "thenBody": "Choose actions this editor supports today. The catalog below shows the full automation action set.",
       "thenTitle": "Allowed actions",
       "unsafe": {
-        "autoSend": "Auto-send disabled",
-        "delete": "Delete/spam disabled",
-        "forward": "Forward disabled",
+        "autoSend": "Auto-send rules",
+        "delete": "Spam with audit trail",
+        "forward": "Forward through safety gates",
         "webhook": "Webhook disabled"
       },
       "whenBody": "Choose the signals Zero Mail checks before taking action.",
@@ -1442,6 +1460,16 @@
       "a4": "amex.com — refund notice"
     },
     "ruleN": "Rule 1 of 5",
+    "settings": {
+      "autoSend": {
+        "bodyOff": "Outbound rules still save, but runtime saves Gmail drafts instead of sending.",
+        "bodyOn": "Outbound rules can send when safety gates pass.",
+        "footerOff": "Turning this off does not block saving rules; it changes outbound runtime to draft fallback.",
+        "footerOn": "You still see \"Will auto-send\" status in rule/action surfaces before enabling a rule.",
+        "title": "Auto-send rules",
+        "toggleLabel": "Allow rules to auto-send"
+      }
+    },
     "tabs": {
       "calendar": "Calendar invites",
       "creditBadge": "Uses credits",
@@ -1550,8 +1578,9 @@
     "privacy": {
       "byokPlanned": "Coming soon: you can bring your own API key (BYOK)",
       "heading": "Privacy and safety",
-      "noAutoSend": "No auto-send",
+      "noAutoSend": "Outbound sends are controlled by safety gates and the Auto-send rules switch.",
       "noBodyStorage": "No long-term storage of email bodies, prompts, or AI completions",
+      "outboundControl": "Outbound sends are controlled by safety gates and the Auto-send rules switch.",
       "revokeAnytime": "You can revoke access anytime"
     },
     "title": "Settings",
@@ -1712,8 +1741,8 @@
       "soc": "SOC 2 in progress"
     },
     "c1": {
-      "body": "Drafts land in Gmail's drafts folder. You read, edit, and hit send. There is no setting that lets the AI deliver mail on your behalf.",
-      "title": "No auto-send. Ever."
+      "body": "Outbound rule sends require your Auto-send rules setting and safety gates. If either blocks, Zero Mail saves a Gmail draft instead.",
+      "title": "Outbound is gated."
     },
     "c2": {
       "body": "Raw email bodies, LLM prompts, completions, and embeddings are discarded after each triage run. Only metadata and your audit log persist.",
@@ -1730,8 +1759,8 @@
     "desc": "Auto-triage only works if you can fully trust it with a real inbox. We engineered Zero Mail around three hard guarantees — and made every one of them auditable.",
     "eyebrow": "Trust & safety",
     "p1": {
-      "body": "Zero Mail never sends a message on your behalf. Replies sit in your Gmail Drafts folder until you press Send.",
-      "title": "Drafts only — never auto-send"
+      "body": "Outbound automation is controlled by your Auto-send rules switch and safety gates. Blocked sends fall back to Gmail drafts.",
+      "title": "Outbound sends are gated"
     },
     "p2": {
       "body": "Your messages stay in Gmail. We process them in memory to apply your rules, then keep only the headers and an action log.",
