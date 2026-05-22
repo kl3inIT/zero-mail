@@ -61,6 +61,7 @@ class SepayConcurrentDeliveryTest extends ApiPostgresTestBase {
         }
 
         assertThat(countTopupEntries(tenantId)).isEqualTo(1L);
+        assertThat(countPaidGrants(tenantId)).isEqualTo(1L);
         BillingTopupIntentEntity paidIntent = findIntentByCode(tenantId, "CNX12345");
         assertThat(paidIntent.getStatus()).isEqualTo(BillingTopupIntentStatus.PAID);
     }
@@ -111,6 +112,13 @@ class SepayConcurrentDeliveryTest extends ApiPostgresTestBase {
     private Long countTopupEntries(UUID tenantId) {
         return jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM credit_ledger_entry WHERE tenant_id = ? AND kind = 'TOPUP'",
+                Long.class,
+                tenantId);
+    }
+
+    private Long countPaidGrants(UUID tenantId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM credit_grant WHERE tenant_id = ? AND category = 'PAID'",
                 Long.class,
                 tenantId);
     }

@@ -1,5 +1,7 @@
 package com.zeromail.core.llm.gateway.springai.admin;
 
+import static com.zeromail.core.admin.cat.persistence.lowlevel.ProviderCatalogLookupRepository.pairKey;
+
 import com.zeromail.core.admin.cat.persistence.lowlevel.ProviderCatalogLookupRepository;
 import com.zeromail.core.admin.mkey.domain.KeyFormat;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
@@ -15,6 +17,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -98,7 +101,7 @@ public class ProviderMasterKeyResolver {
 
     public long providerSecretVersionOrZero(LlmProvider provider) {
         return llmProviderMasterKeyRepository
-                .findById(provider)
+                .findPrimaryActive(provider)
                 .map(LlmProviderMasterKeyEntity::getProviderSecretVersion)
                 .orElse(0L);
     }
@@ -111,8 +114,15 @@ public class ProviderMasterKeyResolver {
     }
 
     public List<MasterKeyMaskedRow> maskedRows() {
-        return llmProviderMasterKeyRepository.findAllOrderedByProvider().stream()
-                .map(this::toMaskedRow)
+        // Batch the feature-default lookup ONCE so toMaskedRow doesn't fire 3 extra queries per
+        // row. With 6 providers × 1-2 keys × 3 features that was ~36 round-trips over the SSH
+        // tunnel = ~3s; the batched form is 1 query.
+        Set<String> featureDefaultPairs =
+                providerCatalogLookupRepository == null
+                        ? Set.of()
+                        : providerCatalogLookupRepository.findAllFeatureDefaultPairs();
+        return llmProviderMasterKeyRepository.findAllOrderedByProviderAndPriority().stream()
+                .map(entity -> toMaskedRow(entity, featureDefaultPairs))
                 .toList();
     }
 
@@ -126,7 +136,7 @@ public class ProviderMasterKeyResolver {
     private CachedMasterKey load(LlmProvider provider) {
         LlmProviderMasterKeyEntity entity =
                 llmProviderMasterKeyRepository
-                        .findById(provider)
+                        .findPrimaryActive(provider)
                         .orElseThrow(() -> new MissingMasterKeyException(provider));
         if (!entity.hasEncryptedKey()
                 || entity.getKekVersion() == null
@@ -147,7 +157,8 @@ public class ProviderMasterKeyResolver {
                 cacheTtl);
     }
 
-    private MasterKeyMaskedRow toMaskedRow(LlmProviderMasterKeyEntity entity) {
+    private MasterKeyMaskedRow toMaskedRow(
+            LlmProviderMasterKeyEntity entity, Set<String> featureDefaultPairs) {
         // WR-02: prefer the stored mask (populated at write time) to avoid decrypting the master
         // key just to render the list page. Legacy rows persisted before changelog 080 may still
         // have a null masked_key; in that case fall back to the decrypt path but only for that row.
@@ -174,24 +185,17 @@ public class ProviderMasterKeyResolver {
                 entity.getKekVersion(),
                 entity.getProviderSecretVersion(),
                 entity.getLastRotatedAt(),
-                0L,
+                MasterKeyMaskedRow.NO_DEPENDENTS,
                 rotationRecommended(entity.getLastRotatedAt()),
                 resolvedBaseUrl(entity),
-                isFeatureDefaultProvider(entity.getProvider(), "CHAT"),
-                isFeatureDefaultProvider(entity.getProvider(), "TRIAGE"),
-                isFeatureDefaultProvider(entity.getProvider(), "DRAFT"));
+                featureDefaultPairs.contains(pairKey(entity.getProvider(), "CHAT")),
+                featureDefaultPairs.contains(pairKey(entity.getProvider(), "TRIAGE")),
+                featureDefaultPairs.contains(pairKey(entity.getProvider(), "DRAFT")));
     }
 
     private boolean rotationRecommended(Instant lastRotatedAt) {
         return lastRotatedAt != null
                 && lastRotatedAt.plus(ROTATION_RECOMMENDED_AFTER).isBefore(clock.instant());
-    }
-
-    private boolean isFeatureDefaultProvider(LlmProvider provider, String feature) {
-        if (providerCatalogLookupRepository == null) {
-            return false;
-        }
-        return providerCatalogLookupRepository.isFeatureDefaultProvider(provider, feature);
     }
 
     public static String associatedData(LlmProvider provider) {

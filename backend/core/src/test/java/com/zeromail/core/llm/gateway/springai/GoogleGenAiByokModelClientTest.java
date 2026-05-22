@@ -51,6 +51,7 @@ class GoogleGenAiByokModelClientTest {
                         new BillingPaymentAccountProperties(
                                 "VCB", "Vietcombank", "0000000000", "ZERO MAIL", ""),
                         new BillingCostProperties(0),
+                        null,
                         1000,
                         5,
                         Duration.ofHours(24)),

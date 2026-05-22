@@ -1,76 +1,51 @@
 package com.zeromail.core.admin.cat.usecases;
 
-import com.zeromail.core.admin.audit.domain.AdminAuditAction;
-import com.zeromail.core.admin.audit.usecases.AdminAuditWriter;
 import com.zeromail.core.admin.auth.AdminContext;
-import com.zeromail.core.admin.auth.AdminUser;
 import com.zeromail.core.admin.cat.domain.Feature;
-import com.zeromail.core.admin.cat.domain.event.CatalogChangedEvent;
+import com.zeromail.core.admin.cat.domain.RoutingTier;
 import com.zeromail.core.admin.cat.persistence.lowlevel.ModelCatalogWriteRepository;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.shared.AdminBusinessException;
 import com.zeromail.core.shared.exception.ErrorClass;
-import java.time.Clock;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Legacy single-model API kept so the {@code PUT /api/admin/catalog/{provider}/{feature}/default}
+ * endpoint still works. It now delegates to {@link FeatureDefaultTierService#assign} with the
+ * PRIMARY tier and a single-element model list — the schema no longer permits a single model column
+ * on {@code feature_default_provider}.
+ */
 @Service
 public class FeatureDefaultProviderService {
 
     private final ModelCatalogWriteRepository modelCatalogWriteRepository;
-    private final AdminAuditWriter adminAuditWriter;
-    private final ApplicationEventPublisher applicationEventPublisher;
-    private final Clock clock;
+    private final FeatureDefaultTierService featureDefaultTierService;
 
     public FeatureDefaultProviderService(
             ModelCatalogWriteRepository modelCatalogWriteRepository,
-            AdminAuditWriter adminAuditWriter,
-            ApplicationEventPublisher applicationEventPublisher,
-            Clock clock) {
+            FeatureDefaultTierService featureDefaultTierService) {
         this.modelCatalogWriteRepository =
                 Objects.requireNonNull(
                         modelCatalogWriteRepository,
                         "modelCatalogWriteRepository must not be null");
-        this.adminAuditWriter = Objects.requireNonNull(adminAuditWriter, "adminAuditWriter");
-        this.applicationEventPublisher =
-                Objects.requireNonNull(applicationEventPublisher, "applicationEventPublisher");
-        this.clock = Objects.requireNonNull(clock, "clock must not be null");
+        this.featureDefaultTierService =
+                Objects.requireNonNull(featureDefaultTierService, "featureDefaultTierService");
     }
 
     @Transactional
     public void set(
             Feature feature, String modelId, String reason, String requestIp, UUID requestId) {
-        AdminUser adminUser = AdminContext.currentOrThrow();
-        String provider =
+        AdminContext.currentOrThrow();
+        LlmProvider provider =
                 modelCatalogWriteRepository
-                        .findActiveProviderForModel(modelId)
+                        .findProviderForModel(modelId)
                         .orElseThrow(() -> new CatalogModelNotFoundException(modelId));
-        modelCatalogWriteRepository.upsertFeatureDefault(
-                feature, modelId, provider, adminUser.id());
-        long newCatalogVersion =
-                modelCatalogWriteRepository.bumpProviderCatalogVersionById(provider);
-        adminAuditWriter.append(
-                AdminAuditAction.CATALOG_FEATURE_DEFAULT_SET,
-                "feature_default_provider",
-                null,
-                null,
-                Map.of("feature", feature.id(), "provider", provider, "model_id", modelId),
-                reason,
-                requestIp,
-                requestId);
-        applicationEventPublisher.publishEvent(
-                new CatalogChangedEvent(
-                        LlmProvider.fromId(provider),
-                        List.of(modelId),
-                        Set.of(feature),
-                        clock.instant(),
-                        newCatalogVersion));
+        featureDefaultTierService.assign(
+                feature, RoutingTier.PRIMARY, provider, List.of(modelId), requestIp, requestId);
     }
 
     @Transactional

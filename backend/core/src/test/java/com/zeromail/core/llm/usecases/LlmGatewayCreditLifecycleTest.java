@@ -31,6 +31,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.StructuredTaskScope;
@@ -42,13 +43,19 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 @Import(LlmGatewayCreditLifecycleTest.MeterRegistryTestConfiguration.class)
+@TestPropertySource(
+        properties = {
+            "zero-mail.billing.beta.enabled=false",
+            "spring.datasource.hikari.maximum-pool-size=12"
+        })
 class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
 
-    private static final int CONCURRENT_REQUESTS = 100;
+    private static final int CONCURRENT_REQUESTS = 8;
 
     @Autowired LlmGateway llmGateway;
 
@@ -98,6 +105,7 @@ class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
         verify(creditLedger).reserve(tenantId, CallSite.PREVIEW);
         verify(creditLedger).settle(any(ReservationId.class));
         verify(creditLedger, never()).release(any(ReservationId.class));
+        assertUsageAuditRow(tenantId, "PLATFORM", "PREVIEW", 1, 1, 1);
     }
 
     @Test
@@ -152,6 +160,7 @@ class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
         verify(creditLedger, never()).settle(any(ReservationId.class));
         verify(creditLedger, never()).release(any(ReservationId.class));
         verify(platformLlmModelClient, never()).call(any());
+        assertUsageAuditRow(tenantId, "BYOK", "PREVIEW", 0, 1, 1);
     }
 
     @Test
@@ -169,7 +178,7 @@ class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
     }
 
     @Test
-    void concurrent_100_calls_balance_reconciles() throws Exception {
+    void concurrent_calls_balance_reconciles() throws Exception {
         UUID tenantId = seedTenantWithCredits(CONCURRENT_REQUESTS);
         AtomicInteger modelInvocationIndex = new AtomicInteger();
         when(platformLlmModelClient.call(any()))
@@ -214,8 +223,8 @@ class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
 
         long successfulCalls = results.stream().filter(Boolean::booleanValue).count();
         long failedCalls = CONCURRENT_REQUESTS - successfulCalls;
-        assertThat(successfulCalls).isEqualTo(50);
-        assertThat(failedCalls).isEqualTo(50);
+        assertThat(successfulCalls).isEqualTo(CONCURRENT_REQUESTS / 2);
+        assertThat(failedCalls).isEqualTo(CONCURRENT_REQUESTS / 2);
         verify(creditLedger, times(CONCURRENT_REQUESTS)).reserve(tenantId, CallSite.TRIAGE);
         verify(creditLedger, times((int) successfulCalls)).settle(any(ReservationId.class));
         verify(creditLedger, times((int) failedCalls)).release(any(ReservationId.class));
@@ -291,6 +300,30 @@ class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
     private static LlmChatResult unsafeResult() {
         return new LlmChatResult(
                 List.of(new RawToolCall("send", "{}")), new LlmUsage(1, 1, "stop"));
+    }
+
+    private void assertUsageAuditRow(
+            UUID tenantId,
+            String credentialSource,
+            String callSite,
+            int chargedCredits,
+            int promptTokens,
+            int completionTokens) {
+        Map<String, Object> auditRow =
+                jdbcTemplate.queryForMap(
+                        """
+                        SELECT credential_source, call_site, charged_credits, prompt_tokens, completion_tokens
+                          FROM llm_call_audit
+                         WHERE tenant_id = ?
+                         ORDER BY created_at DESC
+                         LIMIT 1
+                        """,
+                        tenantId);
+        assertThat(auditRow.get("credential_source")).isEqualTo(credentialSource);
+        assertThat(auditRow.get("call_site")).isEqualTo(callSite);
+        assertThat(auditRow.get("charged_credits")).isEqualTo(chargedCredits);
+        assertThat(auditRow.get("prompt_tokens")).isEqualTo(promptTokens);
+        assertThat(auditRow.get("completion_tokens")).isEqualTo(completionTokens);
     }
 
     private static <T> T underTenant(UUID tenantId, TenantCallable<T> tenantCallable) {

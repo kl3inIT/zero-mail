@@ -1,24 +1,32 @@
-// Locks the login 2-col/1-col + legal footer e2e contract
+// Locks the simplified one-card login + legal footer e2e contract
 // (Phase 1.6 REQ-1.6-6 + REQ-1.6-8):
-//  - Desktop ≥768px renders 2-column shell with TrustPanel
-//  - Mobile <768px hides TrustPanel, shows single column
+//  - Desktop and mobile render one login panel without the old side panel
+//  - Company Gmail option is visible but disabled during beta
 //  - Legal footer always visible at every viewport width
 import { test, expect } from '@playwright/test';
 
 test.describe('/login shell', () => {
-  test('desktop ≥768px renders 2-column shell with TrustPanel', async ({ page }) => {
+  test('desktop renders one focused login panel', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await page.goto('/login');
-    // TrustPanel marker (aside with hidden md:flex visibility)
-    const trustPanel = page.locator('aside.zm-trust-panel');
-    await expect(trustPanel).toBeVisible();
+    await expect(page.locator('main aside')).toHaveCount(0);
+    await expect(
+      page.getByRole('heading', { name: /sign in to start|đăng nhập để bắt đầu/i }),
+    ).toBeVisible();
   });
 
-  test('mobile <768px hides TrustPanel, shows single column', async ({ page }) => {
+  test('mobile renders one focused login panel', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/login');
-    const trustPanel = page.locator('aside.zm-trust-panel');
-    await expect(trustPanel).not.toBeVisible();
+    await expect(page.locator('main aside')).toHaveCount(0);
+    await expect(
+      page.getByRole('heading', { name: /sign in to start|đăng nhập để bắt đầu/i }),
+    ).toBeVisible();
+  });
+
+  test('company Gmail sign-in is visible but disabled during beta', async ({ page }) => {
+    await page.goto('/login');
+    await expect(page.getByRole('button', { name: /company gmail|gmail công ty/i })).toBeDisabled();
   });
 
   test.describe('legal footer always visible', () => {
@@ -30,9 +38,7 @@ test.describe('/login shell', () => {
         await expect(footer.locator('a[href="/terms"]')).toBeVisible();
         await expect(footer.locator('a[href="/privacy"]')).toBeVisible();
         await expect(
-          page.getByText(
-            /Google API Services User Data|Chính sách bảo mật dữ liệu người dùng của Google API/i,
-          ),
+          page.getByText(/Google API User Data Policy|Chính sách dữ liệu người dùng Google API/i),
         ).toBeVisible();
       });
     }

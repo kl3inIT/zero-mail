@@ -36,13 +36,17 @@ class DeadLetterRequeueServiceTest extends PostgresContainerTest {
 
     @BeforeEach
     void setUp() {
-        jdbcTemplate.execute("DELETE FROM admin_read_event");
+        // Hard-delete admin_users is unsafe in a shared-container suite: other ITs leak rows into
+        // llm_provider_master_key / feature_default_provider whose FKs reference admin_users.id,
+        // so a blanket DELETE here hits 23503. Instead reset only what this test owns
+        // (admin_audit_event rows for our hermetic admin, plus the processing_job table) and
+        // upsert the admin user idempotently.
+        jdbcTemplate.update("DELETE FROM admin_read_event WHERE actor_user_id = ?", ADMIN_USER_ID);
         jdbcTemplate.execute(
                 "ALTER TABLE admin_audit_event DISABLE TRIGGER admin_audit_event_append_only");
-        jdbcTemplate.execute("DELETE FROM admin_audit_event");
+        jdbcTemplate.update("DELETE FROM admin_audit_event WHERE actor_user_id = ?", ADMIN_USER_ID);
         jdbcTemplate.execute(
                 "ALTER TABLE admin_audit_event ENABLE TRIGGER admin_audit_event_append_only");
-        jdbcTemplate.execute("DELETE FROM admin_users");
         jdbcTemplate.execute("DELETE FROM processing_job");
         adminUserRepository.save(
                 new AdminUserEntity(

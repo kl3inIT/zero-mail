@@ -20,6 +20,8 @@ export type CatalogSyncFetchResponse = components['schemas']['CatalogSyncFetchRe
 export type CatalogSyncDiffResponse = components['schemas']['CatalogSyncDiffResponse'];
 export type CatalogModelCreateRequest = components['schemas']['CatalogModelCreateRequest'];
 export type CatalogModelDisableRequest = components['schemas']['CatalogModelDisableRequest'];
+export type CatalogModelVerificationResponse =
+  components['schemas']['CatalogModelVerificationResponse'];
 
 export type CreateCatalogModelInput = {
   provider: CatalogProvider;
@@ -130,7 +132,11 @@ export async function cancelCatalogSync(jobId: string): Promise<void> {
   }
 }
 
-export async function createCatalogModel(input: CreateCatalogModelInput): Promise<void> {
+export type CreateCatalogModelOutcome = 'created' | 'already-exists';
+
+export async function createCatalogModel(
+  input: CreateCatalogModelInput,
+): Promise<CreateCatalogModelOutcome> {
   const request: CatalogModelCreateRequest = {
     modelId: input.modelId,
     displayName: input.displayName,
@@ -138,15 +144,17 @@ export async function createCatalogModel(input: CreateCatalogModelInput): Promis
     costPer1kOutput: input.costPer1kOutput,
     recommended: input.recommended,
   };
-  const { error } = await api.POST('/api/admin/catalog/{provider}/models', {
+  const { error, response } = await api.POST('/api/admin/catalog/{provider}/models', {
     params: {
       path: { provider: input.provider },
     },
     body: request,
   });
-  if (error) {
-    throw errorFor('tạo mô hình danh mục');
-  }
+  if (!error) return 'created';
+  // 409 = the row was inserted by a previous attempt whose verify probe failed
+  // and the user is retrying. Treat as success so the caller can re-run verify.
+  if (response?.status === 409) return 'already-exists';
+  throw errorFor('tạo mô hình danh mục');
 }
 
 export async function disableCatalogModel(input: DisableCatalogModelInput): Promise<void> {
@@ -162,6 +170,18 @@ export async function disableCatalogModel(input: DisableCatalogModelInput): Prom
   if (error) {
     throw errorFor('vô hiệu mô hình danh mục');
   }
+}
+
+export async function verifyCatalogModel(
+  modelId: string,
+): Promise<CatalogModelVerificationResponse> {
+  const { data, error } = await api.POST('/api/admin/catalog/models/verify', {
+    body: { modelId },
+  });
+  if (error || !data) {
+    throw errorFor('xác thực model');
+  }
+  return data;
 }
 
 export async function setCatalogDefault(input: SetCatalogDefaultInput): Promise<void> {

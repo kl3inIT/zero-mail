@@ -20,13 +20,14 @@ vi.mock('next-intl/server', () => ({
       'auth.error.gmail_scope_required.title': 'Gmail permission missing',
       'auth.error.gmail_scope_required.body':
         "Sign in worked, but Gmail access wasn't granted. Click Sign in with Google and approve the Gmail permission to continue.",
-      'auth.login.headline': 'Reach inbox zero without giving up control.',
+      'auth.login.headlineA': 'Sign in to start',
+      'auth.login.headlineB': 'clearing your inbox.',
       'auth.login.body':
-        'Zero Mail connects to Gmail so you can set safe, reviewable automation rules.',
+        "We'll redirect you to Google so you can choose an account and grant Gmail access to Zero Mail.",
+      'auth.login.betaNote': 'Free during beta',
       'auth.login.googleButton': 'Sign in with Google',
-      'auth.login.safety.noAutoSend': 'No auto-send',
-      'auth.login.safety.noLongTermStorage': 'No long-term email body storage',
-      'auth.login.safety.revokeAnytime': 'You can revoke access anytime',
+      'auth.login.noCard': 'No card required',
+      'auth.login.workEmail': 'Sign in with company Gmail',
     };
     return (key: string) => allMessages[namespace ? `${namespace}.${key}` : key] ?? key;
   }),
@@ -46,10 +47,6 @@ vi.mock('@/i18n/components/LanguageSwitcher', () => ({
 
 vi.mock('@/features/auth/components/AuthTopBar', () => ({
   default: ({ children }: { children?: React.ReactNode }) => <header>{children}</header>,
-}));
-
-vi.mock('@/features/auth/components/TrustPanel', () => ({
-  TrustPanel: () => <aside />,
 }));
 
 vi.mock('@/features/auth/components/LegalFooter', () => ({

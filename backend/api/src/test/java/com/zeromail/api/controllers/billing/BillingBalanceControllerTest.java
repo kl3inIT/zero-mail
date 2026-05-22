@@ -3,6 +3,7 @@ package com.zeromail.api.controllers.billing;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zeromail.api.dto.billing.BillingBalanceResponse;
+import com.zeromail.api.dto.billing.BillingLedgerHistoryResponse;
 import com.zeromail.api.security.TestSessionSupport;
 import com.zeromail.api.support.ApiPostgresTestBase;
 import com.zeromail.core.account.persistence.UserEntity;
@@ -44,9 +45,42 @@ class BillingBalanceControllerTest extends ApiPostgresTestBase {
                         .retrieve()
                         .body(BillingBalanceResponse.class);
 
-        assertThat(response.availableCredits()).isEqualTo(42);
+        assertThat(response.availableCredits()).isEqualTo(342);
         assertThat(response.heldCredits()).isZero();
         assertThat(response.currency()).isEqualTo("credits");
+        assertThat(response.betaCredits()).isEqualTo(300);
+        assertThat(response.paidCredits()).isEqualTo(42);
+        assertThat(response.monthlyGrantCredits()).isEqualTo(300);
+        assertThat(response.resetsAt()).isNotNull();
+        assertThat(response.freeDuringBeta()).isTrue();
+    }
+
+    @Test
+    void authenticated_ledger_returns_recent_credit_activity() {
+        Seed seed = seedUser("billing-ledger");
+        seedTopup(seed.tenantId(), 42);
+
+        BillingLedgerHistoryResponse response =
+                RestClient.create("http://localhost:" + port)
+                        .get()
+                        .uri("/api/billing/ledger?limit=10")
+                        .header(TestSessionSupport.HEADER_SUBJECT, seed.googleSubject())
+                        .header(TestSessionSupport.HEADER_EMAIL, seed.email())
+                        .retrieve()
+                        .body(BillingLedgerHistoryResponse.class);
+
+        assertThat(response.entries()).hasSizeGreaterThanOrEqualTo(2);
+        assertThat(response.entries())
+                .anySatisfy(
+                        ledgerEntry -> {
+                            assertThat(ledgerEntry.type()).isEqualTo("grant");
+                            assertThat(ledgerEntry.amountCredits()).isEqualTo(300);
+                        })
+                .anySatisfy(
+                        ledgerEntry -> {
+                            assertThat(ledgerEntry.type()).isEqualTo("topup");
+                            assertThat(ledgerEntry.amountCredits()).isEqualTo(42);
+                        });
     }
 
     private Seed seedUser(String label) {

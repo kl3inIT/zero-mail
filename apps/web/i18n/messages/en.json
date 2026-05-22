@@ -175,30 +175,27 @@
     "everywhere": "End-to-end · SOC 2 Type II in progress",
     "help": "Help",
     "login": {
-      "body": "Connect Gmail with Google. Zero Mail can label, archive, and draft only with the permissions you approve.",
-      "divider": "or",
-      "googleButton": "Sign in with Google",
-      "googleNote": "We'll redirect you to Google to grant access.",
-      "headline": "Sign in to Zero Mail",
-      "headlineA": "Welcome back to",
-      "headlineB": "your inbox.",
+      "betaNote": "Free during beta",
+      "body": "We'll redirect you to Google so you can choose an account and grant Gmail access to Zero Mail.",
+      "googleButton": "Continue with Google",
+      "headline": "Reach inbox zero without giving up control.",
+      "headlineA": "Sign in to start",
+      "headlineB": "clearing your inbox.",
       "newUser": "First time here?",
+      "noCard": "No card required",
       "privacy": "Privacy Policy",
-      "safety": {
-        "noAutoSend": "No auto-send",
-        "noLongTermStorage": "No long-term email body storage",
-        "revokeAnytime": "You can revoke access anytime"
-      },
       "terms": "Terms",
       "termsAnd": "and",
       "termsPrefix": "By signing in you agree to our",
       "title": "Sign in",
-      "waitlist": "Join the waitlist →",
-      "workEmail": "Sign in with work email"
+      "waitlist": "Register to experience Zero Mail →",
+      "workEmail": "Sign in with company Gmail"
     }
   },
   "billing": {
     "balance": {
+      "betaCredits": "Beta credits",
+      "betaNotice": "Free during beta. We'll notify you before paid plans are required.",
       "description": "Balance available for Zero Mail AI actions.",
       "error": {
         "body": "Something went wrong fetching your credit balance. Try again.",
@@ -206,9 +203,15 @@
         "title": "Couldn't load the balance"
       },
       "held": "Held credits",
+      "heldDetail": "Reserved by in-flight actions",
       "label": "Available credits",
+      "monthlyGrant": "{credits} credits / month",
+      "noExpiry": "Does not reset with beta",
+      "paidCredits": "Paid credits",
       "refreshLabel": "Refreshes",
       "refreshValue": "Every 45 seconds",
+      "resetsAt": "Resets at",
+      "resetUnknown": "Unknown",
       "topupCta": "Top up credits",
       "unit": "credits"
     },
@@ -226,7 +229,7 @@
         "timestamp": "Time",
         "type": "Type"
       },
-      "description": "Top-ups, holds, and credit usage will be listed here.",
+      "description": "Recent grants, top-ups, holds, spends, and releases.",
       "empty": {
         "body": "Your top-ups and credit usage will show up here. Add credits to get started.",
         "heading": "No transactions yet"
@@ -239,6 +242,8 @@
       "title": "Transaction history",
       "type": {
         "adjustment": "Adjustment",
+        "expire": "Expired",
+        "grant": "Grant",
         "release": "Release",
         "reserve": "Reserve",
         "settle": "Settle",
@@ -251,7 +256,7 @@
       "valueMissing": "—"
     },
     "page": {
-      "description": "Track your credit balance, create VietQR top-ups, and review transaction history when the backend is ready.",
+      "description": "Track free beta credits, paid credits, and recent usage activity.",
       "title": "Billing"
     },
     "topup": {
@@ -1124,7 +1129,7 @@
   },
   "legal": {
     "googleApiPolicy": {
-      "body": "Zero Mail's use and transfer of information received from Google APIs to any other app will adhere to <link>Google API Services User Data</link> Policy, including the Limited Use requirements."
+      "body": "Google API data is handled under the <link>Google API User Data Policy</link> and Limited Use requirements."
     },
     "privacy": {
       "placeholderBody": "Real privacy policy content will land in Phase 6 launch hardening. PROJECT.md describes the binding privacy contract: no long-term storage of email content, prompts, completions, or embeddings.",
@@ -1303,21 +1308,53 @@
   },
   "onboarding": {
     "completion": {
-      "body": "Zero Mail is now watching your inbox in audit-only mode. Open the audit log anytime to see what it would have done.",
-      "cta": "Continue to settings",
-      "heading": "You're ready. Open Settings to review your choices.",
-      "next1": "Audit-only for 24 hours — actions are logged, not applied.",
-      "next2": "You'll get a daily summary at 8am local time.",
-      "next3": "Switch to live mode any time from Settings.",
-      "nextTitle": "What happens next"
+      "badgeReview": "Review",
+      "badgeSafe": "Safe",
+      "body": "Start in review mode during beta: Zero Mail suggests labels, archives, and drafts; you check them before turning on automation.",
+      "cta": "Enter dashboard",
+      "draft": {
+        "body": "Hi Sarah,\n\nTomorrow at 2pm works for me. I can send an agenda before the call.\n\nBest,",
+        "incoming": "Hi, I wanted to follow up on the project timeline. When would be a good time?",
+        "sender": "Sarah Chen",
+        "status": "Not sent",
+        "subject": "Project timeline",
+        "title": "Draft in Gmail"
+      },
+      "heading": "Labels and drafts are ready.",
+      "next1": "Newsletters: rule saved, running in review mode.",
+      "next2": "Receipts: label only, no inbox move until reviewed.",
+      "next3": "Draft replies: drafts are created, you still press Send.",
+      "nextTitle": "How it starts"
     },
     "connect": {
-      "body": "Zero Mail needs a Gmail grant before later phases can watch, label, archive, or draft. You can revoke access anytime.",
-      "callout": "Drafts only, never auto-send — replies wait in Gmail Drafts until you press Send.",
+      "body": "The first step is only seeing how Zero Mail would classify your inbox. Gmail is not changed on this screen.",
+      "continueCta": "Continue",
       "cta": "Connect Gmail",
-      "eyebrow": "Step 1 — Connect",
-      "heading": "Gmail is connected.",
+      "eyebrow": "Step 1 - Preview",
+      "heading": "Your inbox, pre-classified.",
       "lastSync": "Last sync · just now",
+      "preview": {
+        "newsletter": {
+          "excerpt": "18 links worth scanning",
+          "label": "Newsletter",
+          "sender": "TechNews Daily",
+          "subject": "Weekly digest"
+        },
+        "receipt": {
+          "excerpt": "April subscription",
+          "label": "Receipt",
+          "sender": "Stripe",
+          "subject": "Invoice paid"
+        },
+        "reply": {
+          "excerpt": "Can we sync today?",
+          "label": "Needs reply",
+          "sender": "Sarah Chen",
+          "subject": "Project update"
+        }
+      },
+      "previewMode": "Preview",
+      "previewTitle": "Inbox preview",
       "scopes": "3 scopes granted"
     },
     "loading": "Loading setup...",
@@ -1326,18 +1363,57 @@
         "shortLabel": "Done"
       },
       "gmailConnect": {
-        "shortLabel": "Connect Gmail"
+        "shortLabel": "Preview"
       },
       "progressLabel": "Step {current} of {total}",
       "templateSelect": {
-        "shortLabel": "Pick template"
+        "shortLabel": "First rule"
       }
     },
     "template": {
-      "body": "A starter template helps Zero Mail understand how you want your inbox handled. You can change it later in Settings.",
-      "eyebrow": "Step 2 — Starter rules",
-      "heading": "Pick a few starting points.",
-      "saveCta": "Save starter template"
+      "body": "Pick one noisy email group first. Zero Mail will preview which emails get labeled, archived, or left alone.",
+      "eyebrow": "Step 2 - First rule",
+      "heading": "What should we clean up first?",
+      "preview": {
+        "calendar": {
+          "row1Action": "Pin in Inbox",
+          "row1Clue": "meeting invitation",
+          "row1Sender": "Google Calendar",
+          "row2Action": "Pin in Inbox",
+          "row2Clue": "upcoming call link",
+          "row2Sender": "Zoom",
+          "row3Action": "No action",
+          "row3Clue": "newsletter unrelated to calendar",
+          "row3Sender": "Morning Brew",
+          "title": "Preview: calendar invites"
+        },
+        "newsletters": {
+          "row1Action": "Label + archive",
+          "row1Clue": "newsletter, read rarely",
+          "row1Sender": "Morning Brew",
+          "row2Action": "Label + archive",
+          "row2Clue": "marketing digest",
+          "row2Sender": "Product Hunt",
+          "row3Action": "No action",
+          "row3Clue": "human conversation",
+          "row3Sender": "Sarah Chen",
+          "title": "Preview: newsletter cleanup"
+        },
+        "receipts": {
+          "row1Action": "Label Receipt",
+          "row1Clue": "payment receipt",
+          "row1Sender": "Stripe",
+          "row2Action": "Label Receipt",
+          "row2Clue": "infrastructure invoice",
+          "row2Sender": "AWS",
+          "row3Action": "No action",
+          "row3Clue": "personal email",
+          "row3Sender": "Sarah Chen",
+          "title": "Preview: receipts"
+        },
+        "status": "Nothing changed in Gmail"
+      },
+      "saveCta": "Use this rule"
     }
   },
   "permissions": {
@@ -1825,23 +1901,6 @@
     }
   },
   "trust": {
-    "authCompact": {
-      "eyebrow": "Secure Gmail access",
-      "footnote": "Google shows the exact Gmail permissions before you approve.",
-      "p1": {
-        "body": "Zero Mail never sends mail on your behalf.",
-        "title": "No auto-send"
-      },
-      "p2": {
-        "body": "Email content is processed in memory, then discarded.",
-        "title": "No body storage"
-      },
-      "p3": {
-        "body": "Disconnect from Zero Mail or your Google Account.",
-        "title": "Revoke anytime"
-      },
-      "title": "What you keep control of"
-    },
     "authTitle": "Three promises, in writing.",
     "badges": {
       "casa": "Google CASA tier 2",

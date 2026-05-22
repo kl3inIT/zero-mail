@@ -7,18 +7,26 @@ import com.zeromail.core.admin.auth.AdminUser;
 import com.zeromail.core.admin.mkey.domain.KeyFormat;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.domain.MasterKeyFeature;
+import com.zeromail.core.admin.mkey.domain.MasterKeyStatus;
 import com.zeromail.core.admin.mkey.domain.event.MasterKeyRotatedEvent;
+import com.zeromail.core.admin.mkey.exception.EditSessionRequiredException;
+import com.zeromail.core.admin.mkey.exception.InvalidKeyFormatException;
+import com.zeromail.core.admin.mkey.exception.MasterKeyTestFailedException;
+import com.zeromail.core.admin.mkey.exception.MissingMasterKeyRowException;
+import com.zeromail.core.admin.mkey.exception.ProviderKeyReorderMismatchException;
+import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyEntity;
+import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyId;
+import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyRepository;
 import com.zeromail.core.admin.mkey.persistence.lowlevel.LlmProviderMasterKeyWriteRepository;
 import com.zeromail.core.admin.mkey.projection.MasterKeyMaskedRow;
-import com.zeromail.core.admin.shared.AdminBusinessException;
 import com.zeromail.core.llm.gateway.springai.admin.MasterKeyTestResult;
 import com.zeromail.core.llm.gateway.springai.admin.ModelsProbeClient;
 import com.zeromail.core.llm.gateway.springai.admin.ProviderMasterKeyResolver;
 import com.zeromail.core.shared.crypto.PlatformSecretCipher;
-import com.zeromail.core.shared.exception.ErrorClass;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -30,6 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class MasterKeyAdminService {
 
+    private final LlmProviderMasterKeyRepository llmProviderMasterKeyRepository;
     private final LlmProviderMasterKeyWriteRepository llmProviderMasterKeyWriteRepository;
     private final ProviderMasterKeyResolver providerMasterKeyResolver;
     private final PlatformSecretCipher platformSecretCipher;
@@ -41,6 +50,7 @@ public class MasterKeyAdminService {
     private final Clock clock;
 
     public MasterKeyAdminService(
+            LlmProviderMasterKeyRepository llmProviderMasterKeyRepository,
             LlmProviderMasterKeyWriteRepository llmProviderMasterKeyWriteRepository,
             ProviderMasterKeyResolver providerMasterKeyResolver,
             PlatformSecretCipher platformSecretCipher,
@@ -50,6 +60,10 @@ public class MasterKeyAdminService {
             AdminAuditWriter adminAuditWriter,
             ApplicationEventPublisher applicationEventPublisher,
             Clock clock) {
+        this.llmProviderMasterKeyRepository =
+                Objects.requireNonNull(
+                        llmProviderMasterKeyRepository,
+                        "llmProviderMasterKeyRepository must not be null");
         this.llmProviderMasterKeyWriteRepository =
                 Objects.requireNonNull(
                         llmProviderMasterKeyWriteRepository,
@@ -72,8 +86,268 @@ public class MasterKeyAdminService {
     @Transactional(readOnly = true)
     public List<MasterKeyMaskedRow> listMasked() {
         AdminContext.currentOrThrow();
-        return providerMasterKeyResolver.maskedRows();
+        // Provider list page wants ONE card per provider. The resolver returns one row per
+        // (provider, key) — dedupe by provider, preferring rows with a populated masked-key
+        // snippet (i.e. with stored key material — typically ACTIVE/PENDING) over rows whose
+        // masked_key is null (legacy pre-080 rows, or REVOKED rows persisted before the mask
+        // column was backfilled). The card's purpose is to surface a usable credential when one
+        // exists.
+        Map<LlmProvider, MasterKeyMaskedRow> byProvider = new LinkedHashMap<>();
+        for (MasterKeyMaskedRow row : providerMasterKeyResolver.maskedRows()) {
+            MasterKeyMaskedRow existing = byProvider.get(row.provider());
+            if (existing == null) {
+                byProvider.put(row.provider(), row);
+                continue;
+            }
+            // Prefer a row with a populated masked-key snippet (i.e. has encrypted material).
+            if (row.maskedKey() != null && existing.maskedKey() == null) {
+                byProvider.put(row.provider(), row);
+            }
+        }
+        return List.copyOf(byProvider.values());
     }
+
+    /**
+     * Every credential row for a single provider, priority-ordered (lowest priority first).
+     * Includes REVOKED rows so the admin can review the full failover chain.
+     */
+    @Transactional(readOnly = true)
+    public List<LlmProviderMasterKeyEntity> listKeys(LlmProvider provider) {
+        AdminContext.currentOrThrow();
+        return llmProviderMasterKeyRepository.findByProviderOrderByPriority(provider);
+    }
+
+    /**
+     * Inserts a new credential row into a provider's failover chain. The key is probed first; only
+     * OK results are persisted. The new row's priority lands at the end of the existing ACTIVE
+     * chain.
+     */
+    @Transactional
+    public ProviderKeyAddResult addKey(
+            LlmProvider provider,
+            KeyFormat keyFormat,
+            String baseUrl,
+            byte[] plaintextKey,
+            String label,
+            String editSessionToken,
+            String requestIp,
+            UUID requestId) {
+        AdminUser adminUser = AdminContext.currentOrThrow();
+        requireValidKeyFormat(provider, keyFormat);
+        requireEditSession(adminUser.id(), provider, editSessionToken, true);
+        masterKeyRateLimiter.checkEditAllowed(adminUser.id());
+
+        MasterKeyTestResult testResult = probe(provider, keyFormat, baseUrl, plaintextKey);
+        if (testResult != MasterKeyTestResult.OK) {
+            writeSetFailedAudit(provider, testResult, requestIp, requestId);
+            throw new MasterKeyTestFailedException(testResult);
+        }
+
+        String maskedKey = MasterKeyMasker.mask(plaintextKey, provider);
+        byte[] encryptedKey;
+        try {
+            encryptedKey =
+                    platformSecretCipher.encrypt(
+                            plaintextKey, ProviderMasterKeyResolver.associatedData(provider));
+        } finally {
+            Arrays.fill(plaintextKey, (byte) 0);
+        }
+        short kekVersion = PlatformSecretCipher.keyVersionFromEnvelope(encryptedKey);
+        Instant now = clock.instant();
+        UUID keyId = UUID.randomUUID();
+
+        int nextPriority =
+                llmProviderMasterKeyRepository.findByProviderOrderByPriority(provider).stream()
+                                .mapToInt(LlmProviderMasterKeyEntity::getPriority)
+                                .max()
+                                .orElse(0)
+                        + 1;
+
+        llmProviderMasterKeyWriteRepository.insertKey(
+                provider,
+                keyId,
+                nextPriority,
+                MasterKeyStatus.ACTIVE,
+                label,
+                keyFormat,
+                encryptedKey,
+                kekVersion,
+                adminUser.id(),
+                now,
+                cleanBaseUrl(baseUrl),
+                maskedKey);
+        providerMasterKeyResolver.invalidate(provider);
+
+        adminAuditWriter.append(
+                AdminAuditAction.MASTER_KEY_SET,
+                "llm_provider_master_key",
+                null,
+                null,
+                Map.of(
+                        "provider",
+                        provider.id(),
+                        "key_id",
+                        keyId.toString(),
+                        "priority",
+                        nextPriority,
+                        "label",
+                        label == null ? "" : label),
+                null,
+                requestIp,
+                requestId);
+        return new ProviderKeyAddResult(keyId, nextPriority);
+    }
+
+    /**
+     * Reorders priorities atomically within a provider. Caller supplies the full desired ordering
+     * of key IDs; this method assigns sequential priorities 1..N.
+     */
+    @Transactional
+    public void reorderKeys(
+            LlmProvider provider, List<UUID> orderedKeyIds, String requestIp, UUID requestId) {
+        AdminContext.currentOrThrow();
+        Objects.requireNonNull(orderedKeyIds, "orderedKeyIds");
+
+        List<LlmProviderMasterKeyEntity> existing =
+                llmProviderMasterKeyRepository.findByProviderOrderByPriority(provider);
+        if (existing.size() != orderedKeyIds.size()
+                || !existing.stream()
+                        .map(LlmProviderMasterKeyEntity::getKeyId)
+                        .toList()
+                        .containsAll(orderedKeyIds)) {
+            throw new ProviderKeyReorderMismatchException(provider);
+        }
+
+        // Two-pass shift to dodge the deferrable uq_priority constraint. ck_priority_positive
+        // is NOT deferrable, so the intermediate values stay above the new max (offset start)
+        // instead of going negative.
+        int offset = existing.size() + 100;
+        for (LlmProviderMasterKeyEntity row : existing) {
+            llmProviderMasterKeyWriteRepository.setPriority(
+                    provider, row.getKeyId(), row.getPriority() + offset);
+        }
+        for (int index = 0; index < orderedKeyIds.size(); index++) {
+            llmProviderMasterKeyWriteRepository.setPriority(
+                    provider, orderedKeyIds.get(index), index + 1);
+        }
+        providerMasterKeyResolver.invalidate(provider);
+
+        adminAuditWriter.append(
+                AdminAuditAction.MASTER_KEY_FEATURE_DEFAULT_SET,
+                "llm_provider_master_key",
+                null,
+                null,
+                Map.of(
+                        "provider", provider.id(),
+                        "ordered_key_ids", orderedKeyIds.stream().map(UUID::toString).toList()),
+                "Reordered failover priorities",
+                requestIp,
+                requestId);
+    }
+
+    /**
+     * Probes a stored credential by decrypting it server-side, running it against the provider's
+     * /models endpoint, and zeroing the buffer. Used by the admin detail view's per-row "Test"
+     * button. Requires admin context but not an edit session (read-only test).
+     */
+    @Transactional
+    public MasterKeyTestResult testKey(
+            LlmProvider provider, UUID keyId, String requestIp, UUID requestId) {
+        AdminUser adminUser = AdminContext.currentOrThrow();
+        masterKeyRateLimiter.checkTestConnectionAllowed(adminUser.id());
+
+        LlmProviderMasterKeyEntity row =
+                llmProviderMasterKeyRepository
+                        .findById(new LlmProviderMasterKeyId(provider, keyId))
+                        .orElseThrow(() -> new MissingMasterKeyRowException(provider));
+
+        byte[] plaintextKey =
+                platformSecretCipher.decrypt(
+                        row.getEncryptedKey(), ProviderMasterKeyResolver.associatedData(provider));
+        MasterKeyTestResult result;
+        try {
+            result = probe(provider, row.getKeyFormat(), row.getBaseUrl(), plaintextKey);
+        } finally {
+            Arrays.fill(plaintextKey, (byte) 0);
+        }
+
+        adminAuditWriter.append(
+                AdminAuditAction.MASTER_KEY_TESTED,
+                "llm_provider_master_key",
+                null,
+                null,
+                Map.of(
+                        "provider", provider.id(),
+                        "key_id", keyId.toString(),
+                        "result_enum", result.name()),
+                "Per-key connection test",
+                requestIp,
+                requestId);
+        return result;
+    }
+
+    /**
+     * Patches operator-facing metadata (label, baseUrl) on an existing key row. Does not touch the
+     * encrypted material, priority, or status.
+     */
+    @Transactional
+    public void updateKey(
+            LlmProvider provider,
+            UUID keyId,
+            String label,
+            String baseUrl,
+            String requestIp,
+            UUID requestId) {
+        AdminContext.currentOrThrow();
+        int rowsAffected =
+                llmProviderMasterKeyWriteRepository.updateLabelAndBaseUrl(
+                        provider, keyId, label, cleanBaseUrl(baseUrl));
+        if (rowsAffected == 0) {
+            throw new MissingMasterKeyRowException(provider);
+        }
+        providerMasterKeyResolver.invalidate(provider);
+        adminAuditWriter.append(
+                AdminAuditAction.MASTER_KEY_SET,
+                "llm_provider_master_key",
+                null,
+                null,
+                Map.of(
+                        "provider",
+                        provider.id(),
+                        "key_id",
+                        keyId.toString(),
+                        "label",
+                        label == null ? "" : label,
+                        "base_url",
+                        baseUrl == null ? "" : baseUrl,
+                        "action",
+                        "PATCH_METADATA"),
+                "Patched provider key metadata",
+                requestIp,
+                requestId);
+    }
+
+    /** Marks a specific key row REVOKED. Idempotent. */
+    @Transactional
+    public void revokeKey(LlmProvider provider, UUID keyId, String requestIp, UUID requestId) {
+        AdminContext.currentOrThrow();
+        int rowsAffected = llmProviderMasterKeyWriteRepository.revokeKey(provider, keyId);
+        if (rowsAffected == 0) {
+            throw new MissingMasterKeyRowException(provider);
+        }
+        providerMasterKeyResolver.invalidate(provider);
+        adminAuditWriter.append(
+                AdminAuditAction.MASTER_KEY_ROTATED,
+                "llm_provider_master_key",
+                null,
+                null,
+                Map.of("provider", provider.id(), "key_id", keyId.toString(), "action", "REVOKE"),
+                null,
+                requestIp,
+                requestId);
+    }
+
+    public record ProviderKeyAddResult(UUID keyId, int priority) {}
 
     @Transactional(readOnly = true)
     public MasterKeyMaskedRow getMasked(LlmProvider provider) {
@@ -124,7 +398,6 @@ public class MasterKeyAdminService {
             String baseUrl,
             byte[] plaintextKey,
             String editSessionToken,
-            String reason,
             String requestIp,
             UUID requestId) {
         AdminUser adminUser = AdminContext.currentOrThrow();
@@ -133,7 +406,7 @@ public class MasterKeyAdminService {
         masterKeyRateLimiter.checkEditAllowed(adminUser.id());
         MasterKeyTestResult testResult = probe(provider, keyFormat, baseUrl, plaintextKey);
         if (testResult != MasterKeyTestResult.OK) {
-            writeSetFailedAudit(provider, testResult, reason, requestIp, requestId);
+            writeSetFailedAudit(provider, testResult, requestIp, requestId);
             throw new MasterKeyTestFailedException(testResult);
         }
         String maskedKey = MasterKeyMasker.mask(plaintextKey, provider);
@@ -146,7 +419,6 @@ public class MasterKeyAdminService {
                 keyFormat,
                 storedMasterKey,
                 maskedKey,
-                reason,
                 requestIp,
                 requestId);
         applicationEventPublisher.publishEvent(
@@ -161,7 +433,6 @@ public class MasterKeyAdminService {
             String baseUrl,
             byte[] plaintextKey,
             String editSessionToken,
-            String reason,
             String requestIp,
             UUID requestId) {
         AdminUser adminUser = AdminContext.currentOrThrow();
@@ -176,7 +447,7 @@ public class MasterKeyAdminService {
                     null,
                     null,
                     Map.of("provider", provider.id(), "key_format", keyFormat.id()),
-                    reason,
+                    null,
                     requestIp,
                     requestId);
             return new MasterKeyRotationResult("TEST_FAILED", testResult, null);
@@ -191,7 +462,6 @@ public class MasterKeyAdminService {
                 keyFormat,
                 storedMasterKey,
                 maskedKey,
-                reason,
                 requestIp,
                 requestId);
         applicationEventPublisher.publishEvent(
@@ -200,26 +470,31 @@ public class MasterKeyAdminService {
                 "OK", testResult, storedMasterKey.providerSecretVersion());
     }
 
+    /**
+     * Phase B v2 deprecates the boolean-column feature-default flow that the v1 admin UI drove
+     * through this method. The new admin surface writes to {@code feature_default_provider} via the
+     * tier matrix endpoints instead, so this method now throws — callers must migrate. Kept on the
+     * controller to surface a meaningful 410 response until the v2 routes ship.
+     */
     @Transactional
     public void setFeatureDefault(
-            MasterKeyFeature feature,
-            LlmProvider provider,
-            String reason,
-            String requestIp,
-            UUID requestId) {
+            MasterKeyFeature feature, LlmProvider provider, String requestIp, UUID requestId) {
         AdminContext.currentOrThrow();
-        llmProviderMasterKeyWriteRepository.setFeatureDefault(feature, provider);
-        adminAuditWriter.append(
-                AdminAuditAction.MASTER_KEY_FEATURE_DEFAULT_SET,
-                "llm_provider_master_key",
-                null,
-                null,
-                Map.of("provider", provider.id(), "feature", feature.id()),
-                reason,
-                requestIp,
-                requestId);
+        throw new UnsupportedOperationException(
+                "Legacy boolean-column feature-default flow removed in Phase B v2. "
+                        + "Use the tier matrix endpoint to set feature defaults.");
     }
 
+    /**
+     * Upserts the canonical (priority=1) key row for a provider. Bridges the v1 "one canonical key
+     * per provider" admin contract onto the v2 multi-key schema by:
+     *
+     * <ul>
+     *   <li>looking up an existing priority=1 row (regardless of status),
+     *   <li>REPLACEing its encrypted material + bumping {@code provider_secret_version} when found,
+     *   <li>INSERTing a fresh ACTIVE priority=1 row when no row exists.
+     * </ul>
+     */
     private StoredMasterKey storeMasterKey(
             LlmProvider provider,
             KeyFormat keyFormat,
@@ -237,18 +512,43 @@ public class MasterKeyAdminService {
         }
         short kekVersion = PlatformSecretCipher.keyVersionFromEnvelope(encryptedKey);
         Instant now = clock.instant();
-        Long providerSecretVersion =
-                llmProviderMasterKeyWriteRepository.storeEncryptedKeyAndReturnVersion(
-                        provider,
-                        keyFormat,
-                        encryptedKey,
-                        kekVersion,
-                        actorId,
-                        now,
-                        cleanBaseUrl(baseUrl),
-                        maskedKey);
-        if (providerSecretVersion == null) {
-            throw new MissingMasterKeyRowException(provider);
+        String cleanedBaseUrl = cleanBaseUrl(baseUrl);
+
+        LlmProviderMasterKeyEntity existingPrimary =
+                llmProviderMasterKeyRepository.findByProviderOrderByPriority(provider).stream()
+                        .filter(entity -> entity.getPriority() == 1)
+                        .findFirst()
+                        .orElse(null);
+
+        long providerSecretVersion;
+        if (existingPrimary != null) {
+            providerSecretVersion =
+                    llmProviderMasterKeyWriteRepository.replaceKeyAndReturnVersion(
+                            provider,
+                            existingPrimary.getKeyId(),
+                            keyFormat,
+                            encryptedKey,
+                            kekVersion,
+                            actorId,
+                            now,
+                            cleanedBaseUrl,
+                            maskedKey);
+        } else {
+            UUID newKeyId = UUID.randomUUID();
+            llmProviderMasterKeyWriteRepository.insertKey(
+                    provider,
+                    newKeyId,
+                    1,
+                    MasterKeyStatus.ACTIVE,
+                    "primary",
+                    keyFormat,
+                    encryptedKey,
+                    kekVersion,
+                    actorId,
+                    now,
+                    cleanedBaseUrl,
+                    maskedKey);
+            providerSecretVersion = 1L;
         }
         providerMasterKeyResolver.invalidate(provider);
         return new StoredMasterKey(kekVersion, providerSecretVersion, now);
@@ -272,7 +572,6 @@ public class MasterKeyAdminService {
             KeyFormat keyFormat,
             StoredMasterKey storedMasterKey,
             String maskedKey,
-            String reason,
             String requestIp,
             UUID requestId) {
         Map<String, Object> afterState = new java.util.LinkedHashMap<>();
@@ -292,7 +591,7 @@ public class MasterKeyAdminService {
                 null,
                 null,
                 afterState,
-                reason,
+                null,
                 requestIp,
                 requestId);
     }
@@ -300,7 +599,6 @@ public class MasterKeyAdminService {
     private void writeSetFailedAudit(
             LlmProvider provider,
             MasterKeyTestResult testResult,
-            String reason,
             String requestIp,
             UUID requestId) {
         // REQUIRES_NEW so the audit row survives the rollback caused by
@@ -312,7 +610,7 @@ public class MasterKeyAdminService {
                 null,
                 null,
                 Map.of("provider", provider.id(), "result_enum", testResult.name()),
-                reason,
+                null,
                 requestIp,
                 requestId);
     }
@@ -349,114 +647,4 @@ public class MasterKeyAdminService {
 
     private record StoredMasterKey(
             short kekVersion, long providerSecretVersion, Instant lastRotatedAt) {}
-
-    public static class EditSessionRequiredException extends AdminBusinessException {
-        @Override
-        public ErrorClass errorClass() {
-            return ErrorClass.BAD_REQUEST;
-        }
-
-        @Override
-        public String errorCode() {
-            return "error.admin.master_key_edit_session_required";
-        }
-
-        @Override
-        public String logEvent() {
-            return "admin_master_key_edit_session_required";
-        }
-
-        @Override
-        public String detail() {
-            return "An open master-key edit session is required before performing this action.";
-        }
-    }
-
-    public static class InvalidKeyFormatException extends AdminBusinessException {
-        @Override
-        public ErrorClass errorClass() {
-            return ErrorClass.BAD_REQUEST;
-        }
-
-        @Override
-        public String errorCode() {
-            return "error.admin.master_key_invalid_format";
-        }
-
-        @Override
-        public String logEvent() {
-            return "admin_master_key_invalid_format";
-        }
-
-        @Override
-        public String detail() {
-            return "The supplied master key does not match the required format.";
-        }
-    }
-
-    public static class MissingMasterKeyRowException extends AdminBusinessException {
-
-        public MissingMasterKeyRowException(LlmProvider provider) {
-            super("Missing master key row for provider " + provider.id());
-        }
-
-        @Override
-        public ErrorClass errorClass() {
-            return ErrorClass.NOT_FOUND;
-        }
-
-        @Override
-        public String errorCode() {
-            return "error.admin.master_key_missing";
-        }
-
-        @Override
-        public String logEvent() {
-            return "admin_master_key_missing";
-        }
-
-        @Override
-        public String detail() {
-            return "No master key has been configured for the requested provider.";
-        }
-    }
-
-    public static class MasterKeyTestFailedException extends AdminBusinessException {
-
-        private final MasterKeyTestResult result;
-
-        public MasterKeyTestFailedException(MasterKeyTestResult result) {
-            super("Master key test failed");
-            this.result = result;
-        }
-
-        public MasterKeyTestResult result() {
-            return result;
-        }
-
-        @Override
-        public ErrorClass errorClass() {
-            return ErrorClass.BAD_REQUEST;
-        }
-
-        @Override
-        public String errorCode() {
-            return "error.admin.master_key_test_failed";
-        }
-
-        @Override
-        public String logEvent() {
-            return "admin_master_key_test_failed";
-        }
-
-        @Override
-        public String detail() {
-            return "The master-key connectivity probe did not return OK.";
-        }
-
-        @Override
-        public Map<String, Object> params() {
-            return Map.of("result", result);
-        }
-    }
 }

@@ -30,7 +30,12 @@ public abstract class PostgresContainerTest {
 
     static {
         POSTGRES =
-                new PostgreSQLContainer<>("postgres:18.4").withDatabaseName("zeromail_worker_test");
+                new PostgreSQLContainer<>("postgres:18.4")
+                        .withDatabaseName("zeromail_worker_test")
+                        // Mirror backend/core: bump max_connections so cached @SpringBootTest
+                        // contexts don't exhaust the default cap of 100 (each context's
+                        // HikariCP pool is capped at 30 below).
+                        .withCommand("postgres", "-c", "max_connections=500");
         POSTGRES.start();
         GMAIL = new MockGmailHistoryServer();
         try {
@@ -45,6 +50,11 @@ public abstract class PostgresContainerTest {
         dynamicPropertyRegistry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
         dynamicPropertyRegistry.add("spring.datasource.username", POSTGRES::getUsername);
         dynamicPropertyRegistry.add("spring.datasource.password", POSTGRES::getPassword);
+        // Cap HikariCP per-context so the cached test-context graph doesn't exhaust the
+        // shared container's connection pool. 30 leaves headroom for concurrent-load tests
+        // while still letting ~15 cached contexts fit under max_connections=500.
+        dynamicPropertyRegistry.add("spring.datasource.hikari.maximum-pool-size", () -> "30");
+        dynamicPropertyRegistry.add("spring.datasource.hikari.minimum-idle", () -> "0");
         dynamicPropertyRegistry.add("spring.liquibase.enabled", () -> "true");
         dynamicPropertyRegistry.add(
                 "spring.liquibase.change-log",

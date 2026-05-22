@@ -177,20 +177,17 @@ databaseChangeLog:
       file: changes/080-llm-provider-master-key-masked-key.yaml
       relativeToChangelogFile: true
   - include:
-      file: changes/081-processing-job-tenant-scope.yaml
+      file: changes/081-master-keys-v2-multi-key-and-tiers.yaml
       relativeToChangelogFile: true
   - include:
-      file: changes/082-mail-message-observed-list-unsubscribe.yaml
+      file: changes/082-feature-tier-multi-model.yaml
       relativeToChangelogFile: true
   - include:
-      file: changes/083-sender-suppression.yaml
+      file: changes/083-credit-grants.yaml
       relativeToChangelogFile: true
   - include:
-      file: changes/084-unsubscribe-campaign.yaml
+      file: changes/084-credit-reservation-grant.yaml
       relativeToChangelogFile: true
   - include:
-      file: changes/085-unsubscribe-attempt.yaml
-      relativeToChangelogFile: true
-  - include:
-      file: changes/086-triage-audit-source.yaml
+      file: changes/085-llm-call-audit-usage-metadata.yaml
       relativeToChangelogFile: true

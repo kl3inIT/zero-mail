@@ -1,228 +1,553 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
-import { ArrowLeftIcon, RotateCwIcon } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { createFileRoute } from '@tanstack/react-router';
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  KeyRoundIcon,
+  PencilIcon,
+  PlusIcon,
+  TrashIcon,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
-import { MaskedSecretField } from '@/components/MaskedSecretField';
+import { AddCatalogModelDialog } from '@/components/AddCatalogModelDialog';
+import { AddProviderKeyDialog } from '@/components/AddProviderKeyDialog';
+import { EditProviderKeyDialog } from '@/components/EditProviderKeyDialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button, buttonVariants } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { KeyFormat, TestConnectionResult } from '@/features/master-keys/master-keys-api';
-import { useEditSession } from '@/features/master-keys/use-edit-session';
-import { useMasterKey } from '@/features/master-keys/use-master-keys';
-import { useRotateMasterKey } from '@/features/master-keys/use-rotate-master-key';
-import { useSaveMasterKey } from '@/features/master-keys/use-save-master-key';
-import { useTestConnection } from '@/features/master-keys/use-test-connection';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useCatalog } from '@/features/catalog/use-catalog';
+import { useDisableModel } from '@/features/catalog/use-disable-model';
+import type { CatalogModel, CatalogProvider } from '@/features/catalog/catalog-api';
+import type {
+  LlmProvider,
+  ProviderKey,
+  ProviderKeyStatus,
+} from '@/features/master-keys/master-keys-api';
+import { useMasterKey, useProviderKeys } from '@/features/master-keys/use-master-keys';
+import { useReorderProviderKeys } from '@/features/master-keys/use-reorder-provider-keys';
+import { useRevokeProviderKey } from '@/features/master-keys/use-revoke-provider-key';
+import { useTestProviderKey } from '@/features/master-keys/use-test-provider-key';
 
 export const Route = createFileRoute('/_authenticated/master-keys/$provider')({
   component: MasterKeyProviderRoute,
 });
 
-const fixedFormats: Record<string, KeyFormat> = {
-  OPENAI: 'OPENAI_FORMAT',
-  ANTHROPIC: 'ANTHROPIC_FORMAT',
-  GOOGLE: 'GOOGLE_FORMAT',
-  DEEPSEEK: 'OPENAI_FORMAT',
-  OPENROUTER: 'OPENAI_FORMAT',
+type ProviderMeta = {
+  initials: string;
+  displayName: string;
+  kindLabel: string;
+  defaultBaseUrl: string | null;
+  defaultKeyFormat: string;
+  avatarSrc?: string;
 };
 
-// MasterKeyMaskedResponse types `keyFormat` as loose `string` (no enum in the
-// response schema). Narrow it at the form boundary so the UI state stays
-// strictly typed against the TestConnectionRequest enum.
-function asKeyFormat(value: string | undefined): KeyFormat | undefined {
-  return value === 'OPENAI_FORMAT' || value === 'ANTHROPIC_FORMAT' || value === 'GOOGLE_FORMAT'
-    ? value
-    : undefined;
+const PROVIDER_META: Record<LlmProvider, ProviderMeta> = {
+  OPENROUTER: {
+    initials: 'OR',
+    displayName: 'OpenRouter',
+    kindLabel: 'OAuth bundle',
+    defaultBaseUrl: 'openrouter.ai/api/v1',
+    defaultKeyFormat: 'OPENAI_FORMAT',
+  },
+  ROUTER_9R: {
+    initials: '9R',
+    displayName: '9Router',
+    kindLabel: 'OAuth bundle',
+    defaultBaseUrl: null,
+    defaultKeyFormat: 'OPENAI_FORMAT',
+  },
+  OPENAI: {
+    initials: 'OA',
+    displayName: 'OpenAI',
+    kindLabel: 'API key',
+    defaultBaseUrl: 'api.openai.com/v1',
+    defaultKeyFormat: 'OPENAI_FORMAT',
+  },
+  ANTHROPIC: {
+    initials: 'AN',
+    displayName: 'Anthropic',
+    kindLabel: 'API key',
+    defaultBaseUrl: 'api.anthropic.com',
+    defaultKeyFormat: 'ANTHROPIC_FORMAT',
+  },
+  GOOGLE: {
+    initials: 'GO',
+    displayName: 'Google',
+    kindLabel: 'API key',
+    defaultBaseUrl: 'generativelanguage.googleapis.com',
+    defaultKeyFormat: 'GOOGLE_FORMAT',
+  },
+  DEEPSEEK: {
+    initials: 'DS',
+    displayName: 'DeepSeek',
+    kindLabel: 'API key',
+    defaultBaseUrl: 'api.deepseek.com',
+    defaultKeyFormat: 'OPENAI_FORMAT',
+  },
+};
+
+function metaFor(provider: string): ProviderMeta {
+  return (
+    PROVIDER_META[provider as LlmProvider] ?? {
+      initials: provider.slice(0, 2),
+      displayName: provider,
+      kindLabel: 'Provider',
+      defaultBaseUrl: null,
+      defaultKeyFormat: 'OPENAI_FORMAT',
+    }
+  );
 }
 
 function MasterKeyProviderRoute() {
   const { provider } = Route.useParams();
+  const meta = metaFor(provider);
   const masterKey = useMasterKey(provider);
-  const editSession = useEditSession(provider);
-  const testConnection = useTestConnection();
-  const saveMasterKey = useSaveMasterKey();
-  const rotateMasterKey = useRotateMasterKey();
-  const [editing, setEditing] = useState(false);
-  // CR-04: keep plaintext out of React fiber state. The ref is mutable, not snapshot-able by
-  // React DevTools/HMR, and is read imperatively at mutation time. Only the length is mirrored
-  // into state for UI gating (length is not secret).
-  const plaintextKeyRef = useRef<string>('');
-  const [plaintextLength, setPlaintextLength] = useState(0);
-  const [editSessionToken, setEditSessionToken] = useState<string | null>(null);
-  const [keyFormat, setKeyFormat] = useState<KeyFormat>('OPENAI_FORMAT');
-  const [baseUrl, setBaseUrl] = useState('');
-  const [reason, setReason] = useState('');
-  const [testResult, setTestResult] = useState<TestConnectionResult | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const row = masterKey.data;
+  const keysQuery = useProviderKeys(provider);
+  const catalogQuery = useCatalog(provider as CatalogProvider);
+  const reorderMutation = useReorderProviderKeys(provider);
+  const revokeMutation = useRevokeProviderKey(provider);
+  const testKeyMutation = useTestProviderKey();
+  const disableModelMutation = useDisableModel();
+  const [addKeyOpen, setAddKeyOpen] = useState(false);
+  const [editingKey, setEditingKey] = useState<ProviderKey | null>(null);
+  const [addModelOpen, setAddModelOpen] = useState(false);
 
-  // Mirror the loaded master-key row into the form draft when row changes (data
-  // arrives after suspense, refetch, provider switch). Uses React 19's "adjust
-  // state during render" pattern instead of useEffect so there is no cascading
-  // render and no setState-in-effect.
-  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
-  const [prevRow, setPrevRow] = useState(row);
-  if (row && prevRow !== row) {
-    setPrevRow(row);
-    setKeyFormat(asKeyFormat(row.keyFormat) ?? fixedFormats[row.provider] ?? 'OPENAI_FORMAT');
-    setBaseUrl(row.baseUrl ?? '');
-  }
+  const keys = keysQuery.data?.keys ?? [];
+  const activeKeyCount = keys.filter((entry) => entry.status === 'ACTIVE').length;
 
-  function setPlaintextKey(value: string) {
-    plaintextKeyRef.current = value;
-    setPlaintextLength(value.length);
-  }
-
-  function clearPlaintextKey() {
-    plaintextKeyRef.current = '';
-    setPlaintextLength(0);
-  }
-
-  const canSave = editing && plaintextLength >= 10 && editSessionToken && testResult === 'OK' && reason.length >= 8;
-
-  async function startEditing() {
-    const session = await editSession.mutateAsync();
-    setEditSessionToken(session.token);
-    setEditing(true);
-    setTestResult(null);
-    setSuccessMessage(null);
-  }
-
-  async function testCurrentKey() {
-    if (!editSessionToken) return;
-    const result = await testConnection.mutateAsync({
+  function moveKey(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= keys.length) return;
+    const reordered = keys.slice();
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    reorderMutation.mutate({
       provider,
-      plaintextKey: plaintextKeyRef.current,
-      keyFormat,
-      baseUrl: baseUrl || null,
-      editSessionToken,
-    });
-    setTestResult(result.result);
-  }
-
-  async function saveCurrentKey() {
-    if (!editSessionToken) return;
-    // Capture the secret locally, wipe the ref BEFORE awaiting so any error in the
-    // mutation cannot leave the secret reachable from React state during render.
-    const capturedKey = plaintextKeyRef.current;
-    clearPlaintextKey();
-    setEditing(false);
-    setTestResult(null);
-    await saveMasterKey.mutateAsync({
-      provider,
-      plaintextKey: capturedKey,
-      keyFormat,
-      baseUrl: baseUrl || null,
-      editSessionToken,
-      reason,
-    });
-    setSuccessMessage(`Đã lưu khóa ${row?.displayName ?? provider}`);
-  }
-
-  async function rotateCurrentKey() {
-    if (!editSessionToken) return;
-    const capturedKey = plaintextKeyRef.current;
-    clearPlaintextKey();
-    setEditing(false);
-    setTestResult(null);
-    await rotateMasterKey.mutateAsync({
-      provider,
-      plaintextKey: capturedKey,
-      keyFormat,
-      baseUrl: baseUrl || null,
-      editSessionToken,
-      reason,
+      orderedKeyIds: reordered.map((entry) => entry.keyId),
     });
   }
+
+  function revokeKey(entry: ProviderKey) {
+    if (!window.confirm(`Xoá key ${entry.label ?? entry.maskedKey ?? entry.keyId}?`)) return;
+    revokeMutation.mutate({ provider, keyId: entry.keyId });
+  }
+
+  function testKey(entry: ProviderKey) {
+    testKeyMutation.mutate(
+      { provider, keyId: entry.keyId },
+      {
+        onSuccess: (data) => {
+          if (data.result === 'OK') {
+            toast.success(
+              `${entry.label ?? entry.maskedKey ?? entry.keyId}: kết nối OK.`,
+            );
+          } else {
+            toast.error(
+              `${entry.label ?? entry.maskedKey ?? entry.keyId}: ${data.result}.`,
+            );
+          }
+        },
+      },
+    );
+  }
+
+  function testAllKeys() {
+    keys
+      .filter((entry) => entry.status === 'ACTIVE')
+      .forEach((entry) => testKey(entry));
+  }
+
+  function disableModel(model: CatalogModel) {
+    if (!window.confirm(`Vô hiệu model ${model.modelId}?`)) return;
+    disableModelMutation.mutate({
+      modelId: model.modelId,
+      reason: '',
+      confirmedPinned: model.pinnedTenantCount > 0,
+      pinnedCountAcknowledged: model.pinnedTenantCount,
+    });
+  }
+
+  const models = useMemo<CatalogModel[]>(() => {
+    const featureMap = catalogQuery.data?.features;
+    if (!featureMap) return [];
+    const seen = new Set<string>();
+    const flat: CatalogModel[] = [];
+    for (const block of Object.values(featureMap)) {
+      for (const model of block.models) {
+        if (seen.has(model.modelId)) continue;
+        seen.add(model.modelId);
+        flat.push(model);
+      }
+    }
+    return flat;
+  }, [catalogQuery.data]);
+
+  const baseUrl = masterKey.data?.baseUrl ?? meta.defaultBaseUrl ?? 'chưa cấu hình';
 
   return (
-    <div className="space-y-6">
-      <header className="flex items-end justify-between gap-4">
+    <div className="space-y-8">
+      <header className="flex items-center gap-4">
+        <Avatar size="lg">
+          {meta.avatarSrc && <AvatarImage src={meta.avatarSrc} alt={meta.displayName} />}
+          <AvatarFallback>{meta.initials}</AvatarFallback>
+        </Avatar>
         <div>
-          <Link to="/master-keys" className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'mb-2 px-0' })}>
-            <ArrowLeftIcon className="size-4" />
-            Khóa nền tảng
-          </Link>
-          <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">Vận hành LLM</p>
-          <h1 className="text-xl font-semibold text-ink">Khóa nền tảng {row?.displayName ?? provider}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{meta.displayName}</h1>
+          <p className="text-muted-foreground text-sm">{baseUrl}</p>
         </div>
-        {testResult && <Badge variant={testResult === 'OK' ? 'default' : 'destructive'}>Đã test {testResult}</Badge>}
       </header>
-      <Card>
-        <CardHeader>
-          <CardTitle>Thông tin xác thực</CardTitle>
-          <CardDescription>Phản hồi chỉ hiển thị bản che mặt nạ sau khi lưu.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form
-            className="space-y-5"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void saveCurrentKey();
-            }}
+
+      <KpiStrip
+        activeKeys={activeKeyCount}
+        totalKeys={keys.length}
+        modelCount={models.length}
+        pending={keysQuery.isPending || catalogQuery.isPending}
+      />
+
+      <ConnectionsCard
+        keys={keys}
+        pending={keysQuery.isPending}
+        onAddKey={() => setAddKeyOpen(true)}
+        onMoveKey={moveKey}
+        onRevokeKey={revokeKey}
+        onTestKey={testKey}
+        onTestAll={testAllKeys}
+        onEditKey={setEditingKey}
+        mutationPending={reorderMutation.isPending || revokeMutation.isPending}
+        testKeyPendingId={testKeyMutation.isPending ? testKeyMutation.variables?.keyId : undefined}
+      />
+
+      <ModelsCard
+        models={models}
+        pending={catalogQuery.isPending}
+        onAddModel={() => setAddModelOpen(true)}
+        onDisableModel={disableModel}
+        disabling={disableModelMutation.isPending}
+      />
+
+      <AddProviderKeyDialog
+        provider={provider}
+        open={addKeyOpen}
+        onOpenChange={setAddKeyOpen}
+      />
+
+      <EditProviderKeyDialog
+        provider={provider}
+        entry={editingKey}
+        onClose={() => setEditingKey(null)}
+      />
+
+      <AddCatalogModelDialog
+        provider={provider as CatalogProvider}
+        open={addModelOpen}
+        onOpenChange={setAddModelOpen}
+      />
+    </div>
+  );
+}
+
+function KpiStrip({
+  activeKeys,
+  totalKeys,
+  modelCount,
+  pending,
+}: {
+  activeKeys: number;
+  totalKeys: number;
+  modelCount: number;
+  pending: boolean;
+}) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <Kpi label="Keys hoạt động" value={pending ? '—' : `${activeKeys} / ${totalKeys}`} />
+      <Kpi label="Đang giới hạn" value="0" />
+      <Kpi label="Models đã lưu" value={pending ? '—' : String(modelCount)} />
+      <Kpi label="Last test" value="—" />
+    </div>
+  );
+}
+
+function Kpi({ label, value }: { label: string; value: string }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardDescription>{label}</CardDescription>
+        <CardTitle className="text-3xl font-semibold tabular-nums">{value}</CardTitle>
+      </CardHeader>
+    </Card>
+  );
+}
+
+function ConnectionsCard({
+  keys,
+  pending,
+  onAddKey,
+  onMoveKey,
+  onRevokeKey,
+  onTestKey,
+  onTestAll,
+  onEditKey,
+  mutationPending,
+  testKeyPendingId,
+}: {
+  keys: ProviderKey[];
+  pending: boolean;
+  onAddKey: () => void;
+  onMoveKey: (index: number, direction: -1 | 1) => void;
+  onRevokeKey: (entry: ProviderKey) => void;
+  onTestKey: (entry: ProviderKey) => void;
+  onTestAll: () => void;
+  onEditKey: (entry: ProviderKey) => void;
+  mutationPending: boolean;
+  testKeyPendingId?: string;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Kết nối</CardTitle>
+        <CardDescription>
+          Priority fallback khi 429/5xx. Không round-robin.
+        </CardDescription>
+        <CardAction className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pending || keys.length === 0}
+            onClick={onTestAll}
           >
-            <MaskedSecretField
-              maskedValue={row?.maskedKey ?? null}
-              editing={editing}
-              // Initial value when an edit session starts is always empty; the field
-              // is uncontrolled while editing — value lives in the input DOM + ref only.
-              defaultPlaintextValue=""
-              onPlaintextChange={(value) => {
-                setPlaintextKey(value);
-                setTestResult(null);
-              }}
-              onEdit={() => void startEditing()}
-              editDisabled={editSession.isPending}
+            Test all
+          </Button>
+          <Button size="sm" onClick={onAddKey} disabled={pending}>
+            <PlusIcon className="size-3.5" />
+            Thêm key
+          </Button>
+        </CardAction>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {pending ? (
+          <Skeleton className="h-32 w-full" />
+        ) : keys.length === 0 ? (
+          <EmptyState message='Chưa có key — bấm "Thêm key" để bắt đầu.' />
+        ) : (
+          keys.map((entry, index) => (
+            <ConnectionRow
+              key={entry.keyId}
+              entry={entry}
+              isFirst={index === 0}
+              isLast={index === keys.length - 1}
+              onMoveUp={() => onMoveKey(index, -1)}
+              onMoveDown={() => onMoveKey(index, 1)}
+              onRevoke={() => onRevokeKey(entry)}
+              onTest={() => onTestKey(entry)}
+              onEdit={() => onEditKey(entry)}
+              testing={testKeyPendingId === entry.keyId}
+              disabled={mutationPending}
             />
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Định dạng khóa</Label>
-                <Select value={keyFormat} onValueChange={(value) => setKeyFormat(value as KeyFormat)} disabled={provider !== 'ROUTER_9R'}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="OPENAI_FORMAT">Định dạng OpenAI</SelectItem>
-                    <SelectItem value="ANTHROPIC_FORMAT">Định dạng Anthropic</SelectItem>
-                    {provider === 'GOOGLE' && <SelectItem value="GOOGLE_FORMAT">Định dạng Google</SelectItem>}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="master-key-base-url">Base URL</Label>
-                <Input
-                  id="master-key-base-url"
-                  value={baseUrl}
-                  onChange={(event) => setBaseUrl(event.target.value)}
-                  disabled={provider !== 'ROUTER_9R' && provider !== 'OPENROUTER'}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="master-key-reason">Lý do</Label>
-              <Input id="master-key-reason" aria-label="Lý do" value={reason} onChange={(event) => setReason(event.target.value)} />
-            </div>
-            {successMessage && <div className="rounded-md border border-border bg-secondary px-3 py-2 text-sm">{successMessage}</div>}
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="secondary" disabled={!editing || plaintextLength < 10 || !editSessionToken} onClick={() => void testCurrentKey()}>
-                Kiểm tra kết nối
-              </Button>
-              <Button type="submit" disabled={!canSave}>
-                Lưu khóa
-              </Button>
-              <Button type="button" variant="destructive" disabled={!canSave} onClick={() => void rotateCurrentKey()}>
-                <RotateCwIcon className="size-4" />
-                Xoay khóa
-              </Button>
-            </div>
-            {!canSave && editing && (
-              <p className="text-sm text-muted-foreground">Không thể lưu — vui lòng chạy Kiểm tra kết nối và đợi kết quả PASS.</p>
-            )}
-          </form>
-        </CardContent>
-      </Card>
+          ))
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ConnectionRow({
+  entry,
+  isFirst,
+  isLast,
+  onMoveUp,
+  onMoveDown,
+  onRevoke,
+  onTest,
+  onEdit,
+  testing,
+  disabled,
+}: {
+  entry: ProviderKey;
+  isFirst: boolean;
+  isLast: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onRevoke: () => void;
+  onTest: () => void;
+  onEdit: () => void;
+  testing: boolean;
+  disabled: boolean;
+}) {
+  const isActive = entry.status === 'ACTIVE';
+  return (
+    <div
+      className={
+        'border-border bg-background flex items-center gap-3 rounded-md border px-3 py-2 ' +
+        (isActive ? '' : 'opacity-60')
+      }
+    >
+      <div className="flex flex-col">
+        <button
+          type="button"
+          aria-label="Lên ưu tiên"
+          disabled={isFirst || disabled}
+          onClick={onMoveUp}
+          className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+        >
+          <ChevronUpIcon className="size-4" />
+        </button>
+        <button
+          type="button"
+          aria-label="Xuống ưu tiên"
+          disabled={isLast || disabled}
+          onClick={onMoveDown}
+          className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+        >
+          <ChevronDownIcon className="size-4" />
+        </button>
+      </div>
+
+      <Avatar size="default">
+        <AvatarFallback>
+          <KeyRoundIcon className="size-4" />
+        </AvatarFallback>
+      </Avatar>
+
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-medium">
+          {entry.label ?? entry.maskedKey ?? `key #${entry.priority}`}
+        </div>
+        <div className="text-muted-foreground truncate font-mono text-xs">
+          {entry.maskedKey ?? '—'} · priority {entry.priority}
+        </div>
+      </div>
+
+      <ConnectionStatusBadge status={entry.status} />
+
+      <Button variant="ghost" size="sm" onClick={onTest} disabled={testing}>
+        {testing ? 'Đang test…' : 'Test'}
+      </Button>
+      <Button variant="ghost" size="icon" aria-label="Sửa key" onClick={onEdit}>
+        <PencilIcon className="size-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="Xoá key"
+        disabled={disabled}
+        onClick={onRevoke}
+      >
+        <TrashIcon className="size-4" />
+      </Button>
+    </div>
+  );
+}
+
+function ConnectionStatusBadge({ status }: { status: ProviderKeyStatus }) {
+  if (status === 'ACTIVE') return <Badge>ACTIVE</Badge>;
+  if (status === 'PENDING') return <Badge variant="secondary">PENDING</Badge>;
+  return <Badge variant="outline">REVOKED</Badge>;
+}
+
+function ModelsCard({
+  models,
+  pending,
+  onAddModel,
+  onDisableModel,
+  disabling,
+}: {
+  models: CatalogModel[];
+  pending: boolean;
+  onAddModel: () => void;
+  onDisableModel: (model: CatalogModel) => void;
+  disabling: boolean;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Models</CardTitle>
+        <CardDescription>
+          Chỉ model VERIFIED mới hiện trong dropdown tier routing.
+        </CardDescription>
+        <CardAction>
+          <Button size="sm" onClick={onAddModel} disabled={pending}>
+            <PlusIcon className="size-3.5" />
+            Thêm model
+          </Button>
+        </CardAction>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {pending ? (
+          <Skeleton className="h-32 w-full" />
+        ) : models.length === 0 ? (
+          <EmptyState message='Chưa có model — bấm "Thêm model" để bắt đầu.' />
+        ) : (
+          models.map((model) => (
+            <ModelRow
+              key={model.modelId}
+              model={model}
+              onDisable={() => onDisableModel(model)}
+              disabling={disabling}
+            />
+          ))
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ModelRow({
+  model,
+  onDisable,
+  disabling,
+}: {
+  model: CatalogModel;
+  onDisable: () => void;
+  disabling: boolean;
+}) {
+  const isDeprecated = Boolean(model.deprecatedAt);
+  return (
+    <div
+      className={
+        'border-border bg-background flex items-center gap-3 rounded-md border px-3 py-2 ' +
+        (isDeprecated ? 'opacity-60' : '')
+      }
+    >
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-medium">{model.displayName}</div>
+        <div className="text-muted-foreground truncate font-mono text-xs">
+          {model.modelId}
+        </div>
+      </div>
+      {model.recommended && <Badge variant="secondary">Đề xuất</Badge>}
+      {isDeprecated ? (
+        <Badge variant="outline">DEPRECATED</Badge>
+      ) : (
+        <Badge>VERIFIED</Badge>
+      )}
+      {!isDeprecated && (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Vô hiệu model"
+          onClick={onDisable}
+          disabled={disabling}
+        >
+          <TrashIcon className="size-4" />
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="text-muted-foreground flex items-center justify-center rounded-md py-10 text-sm">
+      {message}
     </div>
   );
 }

@@ -2,6 +2,8 @@ package com.zeromail.core.llm.gateway.springai;
 
 import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.llm.exception.SafetyViolationException;
+import com.zeromail.core.llm.usecases.LlmUsage;
+import com.zeromail.core.llm.usecases.SemanticIntentEvaluationResult;
 import com.zeromail.core.llm.usecases.SemanticIntentRequest;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -10,6 +12,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.openai.OpenAiChatModel.ResponseFormat;
@@ -52,7 +55,7 @@ public class SemanticIntentEvaluator
     }
 
     @Override
-    public Map<String, Boolean> evaluate(
+    public SemanticIntentEvaluationResult evaluate(
             CallSite callSite,
             String sanitizedMessageContent,
             List<SemanticIntentRequest> intents) {
@@ -94,7 +97,8 @@ public class SemanticIntentEvaluator
         if (parsed == null || parsed.nodeMatches() == null) {
             throw new SafetyViolationException();
         }
-        return validateNodeMatches(requestedNodeIds, parsed.nodeMatches());
+        return new SemanticIntentEvaluationResult(
+                validateNodeMatches(requestedNodeIds, parsed.nodeMatches()), usage(response));
     }
 
     private Set<String> requestedNodeIds(List<SemanticIntentRequest> intents) {
@@ -134,5 +138,17 @@ public class SemanticIntentEvaluator
             throw new SafetyViolationException();
         }
         return Map.copyOf(result);
+    }
+
+    private LlmUsage usage(ChatResponse response) {
+        Usage usage = response.getMetadata() == null ? null : response.getMetadata().getUsage();
+        return new LlmUsage(
+                tokenCount(usage == null ? null : usage.getPromptTokens()),
+                tokenCount(usage == null ? null : usage.getCompletionTokens()),
+                "unknown");
+    }
+
+    private int tokenCount(Integer tokens) {
+        return tokens == null ? 0 : tokens;
     }
 }

@@ -24,21 +24,22 @@ public class TenantDeletionRegistry {
                                 new TenantOwnedTable("tenant_byok_credentials", "tenant_id", 80),
                                 new TenantOwnedTable("credit_reservation", "tenant_id", 90),
                                 new TenantOwnedTable("credit_ledger_entry", "tenant_id", 100),
-                                new TenantOwnedTable("billing_topup_intent", "tenant_id", 110),
-                                new TenantOwnedTable("rules", "tenant_id", 120),
-                                new TenantOwnedTable("triage_audit", "tenant_id", 130),
-                                new TenantOwnedTable("mail_message_observed", "tenant_id", 140),
-                                new TenantOwnedTable("pubsub_delivery", "tenant_id", 150),
-                                new TenantOwnedTable("digest_delivery", "tenant_id", 160),
-                                new TenantOwnedTable("notification_preference", "tenant_id", 170),
-                                new TenantOwnedTable("thread_reply_status", "tenant_id", 180),
-                                new TenantOwnedTable("tenant_sender_opt_in", "tenant_id", 190),
+                                new TenantOwnedTable("credit_grant", "tenant_id", 110),
+                                new TenantOwnedTable("billing_topup_intent", "tenant_id", 120),
+                                new TenantOwnedTable("rules", "tenant_id", 130),
+                                new TenantOwnedTable("triage_audit", "tenant_id", 140),
+                                new TenantOwnedTable("mail_message_observed", "tenant_id", 150),
+                                new TenantOwnedTable("pubsub_delivery", "tenant_id", 160),
+                                new TenantOwnedTable("digest_delivery", "tenant_id", 170),
+                                new TenantOwnedTable("notification_preference", "tenant_id", 180),
+                                new TenantOwnedTable("thread_reply_status", "tenant_id", 190),
+                                new TenantOwnedTable("tenant_sender_opt_in", "tenant_id", 200),
                                 new TenantOwnedTable(
-                                        "tenant_protected_sender_observation", "tenant_id", 200),
-                                new TenantOwnedTable("onboarding_selections", "tenant_id", 210),
-                                new TenantOwnedTable("users", "tenant_id", 220),
-                                new TenantOwnedTable("gmail_connections", "tenant_id", 230),
-                                new TenantOwnedTable("tenants", "id", 240))
+                                        "tenant_protected_sender_observation", "tenant_id", 210),
+                                new TenantOwnedTable("onboarding_selections", "tenant_id", 220),
+                                new TenantOwnedTable("users", "tenant_id", 230),
+                                new TenantOwnedTable("gmail_connections", "tenant_id", 240),
+                                new TenantOwnedTable("tenants", "id", 250))
                         .stream()
                         .sorted(Comparator.comparingInt(TenantOwnedTable::deletionOrder))
                         .toList();

@@ -2,29 +2,48 @@ package com.zeromail.core.admin.mkey.persistence;
 
 import com.zeromail.core.admin.mkey.domain.KeyFormat;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.admin.mkey.domain.MasterKeyStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.UUID;
 
+/**
+ * One row per LLM provider master key. With Phase B v2 the table is keyed by {@code (provider,
+ * key_id)} so a provider can hold multiple priority-ordered keys (failover chain).
+ */
 @Entity
 @Table(name = "llm_provider_master_key")
+@IdClass(LlmProviderMasterKeyId.class)
 public class LlmProviderMasterKeyEntity {
 
-    // JPA forbids @Convert on @Id; sibling tables (FeatureDefaultProviderEntity,
-    // ModelCatalogEntity) use @Convert because their provider column is not the
-    // identifier. Keep @Enumerated(STRING) here — the underlying column is the
-    // same VARCHAR(32) so round-trip parity holds.
+    // JPA forbids @Convert on @Id; we keep @Enumerated(STRING). The underlying
+    // column is VARCHAR(32) so round-trip parity holds.
     @Id
     @Enumerated(EnumType.STRING)
     @Column(name = "provider", nullable = false, length = 32)
     private LlmProvider provider;
+
+    @Id
+    @Column(name = "key_id", nullable = false)
+    private UUID keyId;
+
+    @Column(name = "priority", nullable = false)
+    private int priority;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 16)
+    private MasterKeyStatus status;
+
+    @Column(name = "label", length = 64)
+    private String label;
 
     @Convert(converter = KeyFormatAttributeConverter.class)
     @Column(name = "key_format", length = 32)
@@ -60,6 +79,10 @@ public class LlmProviderMasterKeyEntity {
 
     public LlmProviderMasterKeyEntity(
             LlmProvider provider,
+            UUID keyId,
+            int priority,
+            MasterKeyStatus status,
+            String label,
             KeyFormat keyFormat,
             byte[] encryptedKey,
             Short kekVersion,
@@ -70,6 +93,10 @@ public class LlmProviderMasterKeyEntity {
             String baseUrl,
             String maskedKey) {
         this.provider = provider;
+        this.keyId = keyId;
+        this.priority = priority;
+        this.status = status;
+        this.label = label;
         this.keyFormat = keyFormat;
         this.encryptedKey = copyEncryptedKey(encryptedKey);
         this.kekVersion = kekVersion;
@@ -83,6 +110,38 @@ public class LlmProviderMasterKeyEntity {
 
     public LlmProvider getProvider() {
         return provider;
+    }
+
+    public UUID getKeyId() {
+        return keyId;
+    }
+
+    public LlmProviderMasterKeyId getId() {
+        return new LlmProviderMasterKeyId(provider, keyId);
+    }
+
+    public int getPriority() {
+        return priority;
+    }
+
+    public void setPriority(int priority) {
+        this.priority = priority;
+    }
+
+    public MasterKeyStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(MasterKeyStatus status) {
+        this.status = status;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public void setLabel(String label) {
+        this.label = label;
     }
 
     public KeyFormat getKeyFormat() {

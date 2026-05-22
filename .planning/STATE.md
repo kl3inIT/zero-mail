@@ -388,9 +388,8 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
-| 260521-wak | Làm rõ nhãn filter hủy đăng ký để người dùng hiểu logic | 2026-05-21 | pending | Verified | [260521-wak-l-m-r-nh-n-filter-h-y-ng-k-ng-i-d-ng-hi-](./quick/260521-wak-l-m-r-nh-n-filter-h-y-ng-k-ng-i-d-ng-hi-/) |
-| 260521-w6b | Sửa filter cleanup hiển thị nhãn tiếng Việt thay vì raw enum ALL/SENDER_ASC | 2026-05-21 | pending | Verified | [260521-w6b-s-a-filter-cleanup-hi-n-th-nh-n-ti-ng-vi](./quick/260521-w6b-s-a-filter-cleanup-hi-n-th-nh-n-ti-ng-vi/) |
-| 260521-ve6 | Dịch i18n Bulk Unsubscribe và ưu tiên tiếng Việt cho menu cleanup | 2026-05-21 | pending | Verified | [260521-ve6-d-ch-i18n-bulk-unsubscribe-v-u-ti-n-ti-n](./quick/260521-ve6-d-ch-i18n-bulk-unsubscribe-v-u-ti-n-ti-n/) |
+| 260522-onboarding-beta-prototype | Refactor beta onboarding from approved prototype into production: inbox preview, first-rule preview, and review-mode completion | 2026-05-22 | pending | Verified | [260522-onboarding-beta-prototype](./quick/260522-onboarding-beta-prototype/) |
+| 260522-37g | Review trang Quản lý LLM (master-keys + tier matrix) + 5 invariant tests (router walk, tier validation, reorder priorities, listMasked dedup, batch pairs perf) | 2026-05-22 | edb23805 | Verified | [260522-37g-review-trang-quan-ly-llm-targeted-tests](./quick/260522-37g-review-trang-quan-ly-llm-targeted-tests/) |
 | 260514-ta7 | Review PR #36 CodeRabbit and Copilot comments, apply warranted fixes, and recheck CI | 2026-05-14 | 4409e0e | Verified | [260514-ta7-review-pr-36-coderabbit-and-copilot-comm](./quick/260514-ta7-review-pr-36-coderabbit-and-copilot-comm/) |
 | 260514-j7v | PR #33 merge readiness and CI refresh while preserving PR UI | 2026-05-14 | e3e6639 | Verified | [260514-j7v-big-update-ui-33-check-pr-to-merge-into-](./quick/260514-j7v-big-update-ui-33-check-pr-to-merge-into-/) |
 | 260514-leb | Lighthouse mobile audit for apps/web landing — all 4 scores ≥ 90 (Perf 96, A11y 100, BP 100, SEO 100) | 2026-05-14 | 4917efd | — | [260514-leb-chay-lighthouse-audit-cho-apps-web-mobil](./quick/260514-leb-chay-lighthouse-audit-cho-apps-web-mobil/) |

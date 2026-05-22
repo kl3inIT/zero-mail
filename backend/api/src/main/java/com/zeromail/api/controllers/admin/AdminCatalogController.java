@@ -4,13 +4,20 @@ import com.zeromail.api.dto.admin.cat.CatalogFeatureDefaultRequest;
 import com.zeromail.api.dto.admin.cat.CatalogListResponse;
 import com.zeromail.api.dto.admin.cat.CatalogModelCreateRequest;
 import com.zeromail.api.dto.admin.cat.CatalogModelDisableRequest;
+import com.zeromail.api.dto.admin.cat.CatalogModelVerificationResponse;
+import com.zeromail.api.dto.admin.cat.CatalogModelVerifyRequest;
 import com.zeromail.api.dto.admin.cat.CatalogSyncConfirmRequest;
 import com.zeromail.api.dto.admin.cat.CatalogSyncDiffResponse;
 import com.zeromail.api.dto.admin.cat.CatalogSyncFetchResponse;
+import com.zeromail.api.dto.admin.cat.FeatureDefaultMatrixResponse;
+import com.zeromail.api.dto.admin.cat.SetFeatureDefaultTierRequest;
 import com.zeromail.core.admin.auth.AdminContext;
 import com.zeromail.core.admin.cat.domain.Feature;
+import com.zeromail.core.admin.cat.domain.ModelVerificationStatus;
 import com.zeromail.core.admin.cat.usecases.CatalogAdminService;
 import com.zeromail.core.admin.cat.usecases.CatalogSyncOrchestrator;
+import com.zeromail.core.admin.cat.usecases.FeatureDefaultTierService;
+import com.zeromail.core.admin.cat.usecases.ModelVerificationService;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,12 +42,41 @@ public class AdminCatalogController {
 
     private final CatalogAdminService catalogAdminService;
     private final CatalogSyncOrchestrator catalogSyncOrchestrator;
+    private final ModelVerificationService modelVerificationService;
+    private final FeatureDefaultTierService featureDefaultTierService;
 
     public AdminCatalogController(
             CatalogAdminService catalogAdminService,
-            CatalogSyncOrchestrator catalogSyncOrchestrator) {
+            CatalogSyncOrchestrator catalogSyncOrchestrator,
+            ModelVerificationService modelVerificationService,
+            FeatureDefaultTierService featureDefaultTierService) {
         this.catalogAdminService = catalogAdminService;
         this.catalogSyncOrchestrator = catalogSyncOrchestrator;
+        this.modelVerificationService = modelVerificationService;
+        this.featureDefaultTierService = featureDefaultTierService;
+    }
+
+    @GetMapping("/feature-defaults")
+    public FeatureDefaultMatrixResponse listFeatureDefaultMatrix() {
+        AdminContext.currentOrThrow();
+        return FeatureDefaultMatrixResponse.from(
+                featureDefaultTierService.listMatrix(),
+                featureDefaultTierService.listAllTierModelsAcrossFeatures());
+    }
+
+    @PutMapping("/feature-defaults")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void assignFeatureDefaultTier(
+            @Valid @RequestBody SetFeatureDefaultTierRequest request,
+            HttpServletRequest httpServletRequest) {
+        AdminContext.currentOrThrow();
+        featureDefaultTierService.assign(
+                request.feature(),
+                request.tier(),
+                request.provider(),
+                request.modelIds(),
+                httpServletRequest.getRemoteAddr(),
+                UUID.randomUUID());
     }
 
     @GetMapping("/{provider}")
@@ -117,6 +153,20 @@ public class AdminCatalogController {
                 request.pinnedCountAcknowledged(),
                 httpServletRequest.getRemoteAddr(),
                 UUID.randomUUID());
+    }
+
+    @PostMapping("/models/verify")
+    public CatalogModelVerificationResponse verifyModel(
+            @Valid @RequestBody CatalogModelVerifyRequest request,
+            HttpServletRequest httpServletRequest) {
+        AdminContext.currentOrThrow();
+        ModelVerificationStatus status =
+                modelVerificationService.verify(
+                        request.modelId(), httpServletRequest.getRemoteAddr(), UUID.randomUUID());
+        // The service has already persisted the latency + error onto the row;
+        // we re-read minimally by exposing only the status here. Callers that
+        // need richer detail can hit the read endpoint that lists models.
+        return CatalogModelVerificationResponse.from(status, null, null);
     }
 
     @PutMapping("/{provider}/{feature}/default")

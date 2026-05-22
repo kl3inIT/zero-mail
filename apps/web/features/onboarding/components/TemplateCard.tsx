@@ -1,6 +1,5 @@
 'use client';
 
-import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
@@ -9,6 +8,7 @@ type Props = {
   templateKey: 'archive-receipts' | 'label-newsletters' | 'pin-calendar';
   title: string;
   description: string;
+  badge: string;
   selected: boolean;
 };
 
@@ -19,24 +19,26 @@ type Props = {
  * Phase 01.5 D-D3: ring uses ring-primary token (brand-leaning), so Phase 5
  * brand swap propagates automatically to the selection indicator.
  */
-export function TemplateCard({ templateKey, title, description, selected }: Props) {
+export function TemplateCard({ templateKey, title, description, badge, selected }: Props) {
   return (
     <Label
       htmlFor={`template-${templateKey}`}
       className={cn(
-        'block w-full cursor-pointer rounded-[10px] text-left transition-colors',
-        selected ? 'ring-primary bg-accent-soft ring-2' : '',
+        'border-border bg-background grid w-full cursor-pointer grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-3 rounded-md border p-3 text-left transition-colors',
+        'hover:bg-secondary/60',
+        selected ? 'border-primary bg-accent-soft ring-primary/20 ring-2' : '',
       )}
     >
-      <Card className="border-border bg-card p-5">
-        <div className="grid grid-cols-[auto_1fr] gap-3">
-          <RadioGroupItem id={`template-${templateKey}`} value={templateKey} className="mt-1" />
-          <div>
-            <h3 className="text-xl font-semibold">{title}</h3>
-            <p className="text-muted-foreground mt-2 text-sm">{description}</p>
-          </div>
-        </div>
-      </Card>
+      <span className="bg-card text-foreground grid size-9 place-items-center rounded-md border text-xs font-semibold">
+        {badge}
+      </span>
+      <span className="min-w-0">
+        <span className="text-foreground block text-sm font-semibold">{title}</span>
+        <span className="text-muted-foreground mt-1 block text-xs leading-relaxed">
+          {description}
+        </span>
+      </span>
+      <RadioGroupItem id={`template-${templateKey}`} value={templateKey} />
     </Label>
   );
 }

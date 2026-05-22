@@ -1,0 +1,52 @@
+databaseChangeLog:
+  - changeSet:
+      id: 084-credit-reservation-grant
+      author: zeromail
+      changes:
+        - addColumn:
+            tableName: credit_reservation
+            columns:
+              - column:
+                  name: grant_id
+                  type: uuid
+        - addForeignKeyConstraint:
+            baseTableName: credit_reservation
+            baseColumnNames: grant_id
+            constraintName: fk_credit_reservation_grant
+            referencedTableName: credit_grant
+            referencedColumnNames: id
+            onDelete: RESTRICT
+        - modifyDataType:
+            tableName: credit_reservation
+            columnName: call_site
+            newDataType: varchar(32)
+        - sql:
+            comment: Replace the positive-only reservation amount check.
+            sql: ALTER TABLE credit_reservation DROP CONSTRAINT ck_credit_reservation_amount_positive
+        - sql:
+            comment: Zero-credit reservations are allowed for deterministic call sites.
+            sql: ALTER TABLE credit_reservation ADD CONSTRAINT ck_credit_reservation_amount_nonnegative CHECK (amount_credits >= 0)
+        - createIndex:
+            tableName: credit_reservation
+            indexName: idx_credit_reservation_grant
+            columns:
+              - column:
+                  name: grant_id
+      rollback:
+        - dropIndex:
+            tableName: credit_reservation
+            indexName: idx_credit_reservation_grant
+        - sql:
+            sql: ALTER TABLE credit_reservation DROP CONSTRAINT ck_credit_reservation_amount_nonnegative
+        - sql:
+            sql: ALTER TABLE credit_reservation ADD CONSTRAINT ck_credit_reservation_amount_positive CHECK (amount_credits > 0)
+        - modifyDataType:
+            tableName: credit_reservation
+            columnName: call_site
+            newDataType: varchar(16)
+        - dropForeignKeyConstraint:
+            baseTableName: credit_reservation
+            constraintName: fk_credit_reservation_grant
+        - dropColumn:
+            tableName: credit_reservation
+            columnName: grant_id

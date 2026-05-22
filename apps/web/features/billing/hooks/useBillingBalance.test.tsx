@@ -34,7 +34,16 @@ describe('useBillingBalance', () => {
   beforeEach(() => {
     vi.useRealTimers();
     mocks.getBillingBalance.mockReset();
-    mocks.getBillingBalance.mockResolvedValue({ availableCredits: 12, heldCredits: 0 });
+    mocks.getBillingBalance.mockResolvedValue({
+      availableCredits: 12,
+      heldCredits: 0,
+      currency: 'credits',
+      betaCredits: 300,
+      paidCredits: 0,
+      monthlyGrantCredits: 300,
+      resetsAt: '2026-06-01T00:00:00.000Z',
+      freeDuringBeta: true,
+    });
     mocks.useQuery.mockReset();
     mocks.useQuery.mockImplementation(() => ({ data: undefined }));
   });

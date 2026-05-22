@@ -1,7 +1,9 @@
 package com.zeromail.core.admin.cat.persistence.lowlevel;
 
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -51,5 +53,32 @@ public class ProviderCatalogLookupRepository {
         } catch (DataAccessException dataAccessException) {
             return false;
         }
+    }
+
+    /**
+     * Single-shot fetch of every (provider, feature) pair currently configured in {@code
+     * feature_default_provider}. Use this when rendering a multi-row view that would otherwise call
+     * {@link #isFeatureDefaultProvider} once per (row, feature) — the round-trip cost over a
+     * SSH-tunnelled connection adds up fast.
+     */
+    public Set<String> findAllFeatureDefaultPairs() {
+        try {
+            Set<String> pairs = new HashSet<>();
+            jdbcTemplate.query(
+                    "SELECT provider, feature FROM feature_default_provider",
+                    resultSet -> {
+                        pairs.add(
+                                resultSet.getString("provider")
+                                        + "|"
+                                        + resultSet.getString("feature"));
+                    });
+            return pairs;
+        } catch (DataAccessException dataAccessException) {
+            return Set.of();
+        }
+    }
+
+    public static String pairKey(LlmProvider provider, String feature) {
+        return provider.id() + "|" + feature;
     }
 }

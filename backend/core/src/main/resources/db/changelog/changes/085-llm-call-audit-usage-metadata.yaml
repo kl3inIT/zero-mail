@@ -1,0 +1,51 @@
+databaseChangeLog:
+  - changeSet:
+      id: 085-llm-call-audit-usage-metadata
+      author: zeromail
+      changes:
+        - addColumn:
+            tableName: llm_call_audit
+            columns:
+              - column:
+                  name: call_site
+                  type: varchar(32)
+                  defaultValue: UNKNOWN
+                  constraints:
+                    nullable: false
+              - column:
+                  name: charged_credits
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            comment: Allowed call-site ids plus UNKNOWN for rows predating this metadata column.
+            sql: >-
+              ALTER TABLE llm_call_audit
+              ADD CONSTRAINT ck_llm_call_audit_call_site
+              CHECK (call_site IN ('UNKNOWN','TRIAGE','DRAFT','PREVIEW','TRIAGE_PLATFORM_LLM','TRIAGE_DETERMINISTIC'))
+        - sql:
+            comment: Credit charge metadata is a non-negative count, not money.
+            sql: ALTER TABLE llm_call_audit ADD CONSTRAINT ck_llm_call_audit_charged_credits_nonnegative CHECK (charged_credits >= 0)
+        - createIndex:
+            tableName: llm_call_audit
+            indexName: idx_llm_call_audit_call_site_created
+            columns:
+              - column:
+                  name: call_site
+              - column:
+                  name: created_at
+      rollback:
+        - dropIndex:
+            tableName: llm_call_audit
+            indexName: idx_llm_call_audit_call_site_created
+        - sql:
+            sql: ALTER TABLE llm_call_audit DROP CONSTRAINT ck_llm_call_audit_charged_credits_nonnegative
+        - sql:
+            sql: ALTER TABLE llm_call_audit DROP CONSTRAINT ck_llm_call_audit_call_site
+        - dropColumn:
+            tableName: llm_call_audit
+            columnName: charged_credits
+        - dropColumn:
+            tableName: llm_call_audit
+            columnName: call_site

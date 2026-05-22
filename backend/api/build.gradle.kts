@@ -109,3 +109,7 @@ openApi {
     outputFileName.set("openapi.json")
     waitTimeInSeconds.set(180)
 }
+
+tasks.named("forkedSpringBootRun") {
+    dependsOn(":backend:core:jar")
+}

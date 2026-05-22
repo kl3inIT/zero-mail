@@ -1,0 +1,208 @@
+# Owner: Phase B Master Keys v2.
+# Three logical migrations bundled into one file because they form one indivisible
+# v2 design: multi-key per provider (priority-ordered failover), per-model
+# verification metadata, and 3-tier feature default routing
+# (PRIMARY → FALLBACK → LAST_RESORT). No foreign keys point into
+# llm_provider_master_key, so promoting (provider) to (provider, key_id) is safe.
+databaseChangeLog:
+  - changeSet:
+      id: 081-01-llm-provider-master-key-multi-key
+      author: zeromail
+      comment: >
+        Promote llm_provider_master_key PK from (provider) to (provider, key_id) so
+        admins can hold multiple keys per provider with explicit priority order.
+        Adds priority, status, and a free-form label for operators.
+      changes:
+        - addColumn:
+            tableName: llm_provider_master_key
+            columns:
+              - column:
+                  name: key_id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: priority
+                  type: integer
+                  defaultValueNumeric: 1
+                  remarks: >
+                    1-based explicit failover order within a provider. Lower priority
+                    is tried first. Unique within (provider).
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(16)
+                  defaultValue: PENDING
+                  remarks: >
+                    Lifecycle of the key. ACTIVE = ready for routing. REVOKED = kept for
+                    audit but never selected. PENDING = newly created, awaiting first
+                    successful test.
+                  constraints:
+                    nullable: false
+              - column:
+                  name: label
+                  type: varchar(64)
+                  remarks: Operator-friendly label (e.g. "primary", "backup", "team-A").
+        - sql:
+            splitStatements: false
+            sql: |
+              -- Pre-flight: backfill key_id/priority for existing rows so the new PK
+              -- and uniqueness constraints can be applied cleanly. Existing single
+              -- rows become priority 1, status ACTIVE if they have an encrypted_key.
+              UPDATE llm_provider_master_key
+              SET key_id = COALESCE(key_id, gen_random_uuid()),
+                  priority = 1,
+                  status = CASE WHEN encrypted_key IS NOT NULL THEN 'ACTIVE' ELSE 'PENDING' END;
+
+              ALTER TABLE llm_provider_master_key
+                DROP CONSTRAINT pk_llm_provider_master_key;
+
+              ALTER TABLE llm_provider_master_key
+                ADD CONSTRAINT pk_llm_provider_master_key
+                PRIMARY KEY (provider, key_id);
+
+              ALTER TABLE llm_provider_master_key
+                ADD CONSTRAINT uq_llm_provider_master_key_priority
+                UNIQUE (provider, priority) DEFERRABLE INITIALLY DEFERRED;
+
+              ALTER TABLE llm_provider_master_key
+                ADD CONSTRAINT ck_llm_provider_master_key_status
+                CHECK (status IN ('PENDING','ACTIVE','REVOKED'));
+
+              ALTER TABLE llm_provider_master_key
+                ADD CONSTRAINT ck_llm_provider_master_key_priority_positive
+                CHECK (priority >= 1);
+
+              CREATE INDEX idx_llm_provider_master_key_routing
+                ON llm_provider_master_key (provider, status, priority)
+                WHERE status = 'ACTIVE';
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE llm_provider_master_key
+                DROP CONSTRAINT IF EXISTS idx_llm_provider_master_key_routing;
+              ALTER TABLE llm_provider_master_key
+                DROP CONSTRAINT IF EXISTS ck_llm_provider_master_key_priority_positive;
+              ALTER TABLE llm_provider_master_key
+                DROP CONSTRAINT IF EXISTS ck_llm_provider_master_key_status;
+              ALTER TABLE llm_provider_master_key
+                DROP CONSTRAINT IF EXISTS uq_llm_provider_master_key_priority;
+              ALTER TABLE llm_provider_master_key
+                DROP CONSTRAINT pk_llm_provider_master_key;
+              ALTER TABLE llm_provider_master_key
+                ADD CONSTRAINT pk_llm_provider_master_key PRIMARY KEY (provider);
+        - dropColumn:
+            tableName: llm_provider_master_key
+            columns:
+              - column: { name: label }
+              - column: { name: status }
+              - column: { name: priority }
+              - column: { name: key_id }
+
+  - changeSet:
+      id: 081-02-model-catalog-verification
+      author: zeromail
+      comment: >
+        Per-model verification metadata. The admin "test" action probes the model with
+        a 1-token prompt and stores the outcome here. Only VERIFIED models are routable
+        through the 3-tier picker.
+      changes:
+        - addColumn:
+            tableName: model_catalog
+            columns:
+              - column:
+                  name: verification_status
+                  type: varchar(16)
+                  defaultValue: UNTESTED
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_test_at
+                  type: timestamptz
+              - column:
+                  name: last_test_latency_ms
+                  type: integer
+              - column:
+                  name: last_test_cost_micros
+                  type: bigint
+                  remarks: Cost of the last test call in USD micros (1e-6).
+              - column:
+                  name: last_test_error
+                  type: varchar(500)
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE model_catalog
+                ADD CONSTRAINT ck_model_catalog_verification_status
+                CHECK (verification_status IN ('UNTESTED','VERIFIED','STALE','FAILED'));
+
+              CREATE INDEX idx_model_catalog_verified
+                ON model_catalog (provider, model_id)
+                WHERE verification_status = 'VERIFIED' AND deprecated_at IS NULL;
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              DROP INDEX IF EXISTS idx_model_catalog_verified;
+              ALTER TABLE model_catalog
+                DROP CONSTRAINT IF EXISTS ck_model_catalog_verification_status;
+        - dropColumn:
+            tableName: model_catalog
+            columns:
+              - column: { name: last_test_error }
+              - column: { name: last_test_cost_micros }
+              - column: { name: last_test_latency_ms }
+              - column: { name: last_test_at }
+              - column: { name: verification_status }
+
+  - changeSet:
+      id: 081-03-feature-default-provider-tier
+      author: zeromail
+      comment: >
+        Extend feature_default_provider to carry a tier dimension so each feature
+        owns a 3-row PRIMARY/FALLBACK/LAST_RESORT chain. Existing single rows
+        migrate to PRIMARY. The composite PK is (feature, tier).
+      changes:
+        - addColumn:
+            tableName: feature_default_provider
+            columns:
+              - column:
+                  name: tier
+                  type: varchar(16)
+                  defaultValue: PRIMARY
+                  constraints:
+                    nullable: false
+        - sql:
+            splitStatements: false
+            sql: |
+              -- Existing rows: their default values for tier already gave us PRIMARY,
+              -- so no explicit UPDATE needed. Now reshape the PK.
+              ALTER TABLE feature_default_provider
+                DROP CONSTRAINT pk_feature_default_provider;
+
+              ALTER TABLE feature_default_provider
+                ADD CONSTRAINT pk_feature_default_provider
+                PRIMARY KEY (feature, tier);
+
+              ALTER TABLE feature_default_provider
+                ADD CONSTRAINT ck_feature_default_provider_tier
+                CHECK (tier IN ('PRIMARY','FALLBACK','LAST_RESORT'));
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE feature_default_provider
+                DROP CONSTRAINT IF EXISTS ck_feature_default_provider_tier;
+              -- Keep at most one row per feature on rollback (the PRIMARY one).
+              DELETE FROM feature_default_provider WHERE tier <> 'PRIMARY';
+              ALTER TABLE feature_default_provider
+                DROP CONSTRAINT pk_feature_default_provider;
+              ALTER TABLE feature_default_provider
+                ADD CONSTRAINT pk_feature_default_provider PRIMARY KEY (feature);
+        - dropColumn:
+            tableName: feature_default_provider
+            columns:
+              - column: { name: tier }
