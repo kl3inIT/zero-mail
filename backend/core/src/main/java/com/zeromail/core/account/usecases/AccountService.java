@@ -1,9 +1,9 @@
 package com.zeromail.core.account.usecases;
 
+import com.zeromail.core.account.domain.OnboardingStep;
 import com.zeromail.core.account.exception.CurrentUserNotFoundException;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.account.projection.CurrentUserProjection;
-import com.zeromail.core.onboarding.domain.OnboardingStep;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

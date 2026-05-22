@@ -1,12 +1,12 @@
 package com.zeromail.core.account.usecases;
 
+import com.zeromail.core.account.domain.OnboardingStep;
 import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.notification.domain.ChannelType;
 import com.zeromail.core.notification.usecases.NotificationPreferenceService;
-import com.zeromail.core.onboarding.domain.OnboardingStep;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.persistence.TenantEntity;
 import com.zeromail.core.tenant.usecases.TenantService;

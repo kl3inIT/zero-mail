@@ -1,13 +1,34 @@
 package com.zeromail.core.llm.domain;
 
 import com.zeromail.core.llm.usecases.LlmTool;
-import com.zeromail.core.rules.domain.MatcherType;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 public class AllowListedTools {
+
+    private static final List<String> RULE_MATCHER_TYPE_IDS =
+            List.of(
+                    "SENDER_EMAIL",
+                    "SENDER_DOMAIN",
+                    "RECIPIENT_TO",
+                    "RECIPIENT_CC",
+                    "SUBJECT_CONTAINS",
+                    "SUBJECT_EQUALS",
+                    "SUBJECT_REGEX",
+                    "GMAIL_LABEL_PRESENT",
+                    "GMAIL_LABEL_ABSENT",
+                    "GMAIL_CATEGORY_PRESENT",
+                    "GMAIL_CATEGORY_ABSENT",
+                    "HAS_ATTACHMENT",
+                    "LIST_UNSUBSCRIBE_PRESENT",
+                    "NEWSLETTER_INDICATOR",
+                    "MESSAGE_AGE",
+                    "MESSAGE_DATE",
+                    "ALL",
+                    "ANY",
+                    "NOT",
+                    "SEMANTIC_INTENT");
 
     private static final List<LlmTool> ALLOW_LISTED =
             List.of(
@@ -138,9 +159,7 @@ public class AllowListedTools {
                                                 "type",
                                                 "string",
                                                 "enum",
-                                                Arrays.stream(MatcherType.values())
-                                                        .map(MatcherType::id)
-                                                        .toList(),
+                                                RULE_MATCHER_TYPE_IDS,
                                                 "description",
                                                 "Matcher kind — exact UPPERCASE_UNDERSCORE id from rules.v1. Do NOT use AND/OR/&&/||.")),
                                 "required",

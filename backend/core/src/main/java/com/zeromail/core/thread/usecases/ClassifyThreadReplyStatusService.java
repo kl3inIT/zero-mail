@@ -63,6 +63,12 @@ public class ClassifyThreadReplyStatusService {
                 .call(() -> classifyInTransaction(classificationInput));
     }
 
+    public Optional<String> currentDraftId(String gmailThreadId) {
+        return threadReplyStatusRepository
+                .findByGmailThreadId(gmailThreadId)
+                .flatMap(threadReplyStatus -> Optional.ofNullable(threadReplyStatus.getDraftId()));
+    }
+
     @ApplicationModuleListener
     void on(MailOutboundObserved event) {
         classify(

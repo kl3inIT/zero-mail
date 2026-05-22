@@ -23,6 +23,7 @@ resend = "4.13.0"
 spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "springBoot" }
 spring-modulith-bom = { module = "org.springframework.modulith:spring-modulith-bom", version.ref = "springModulith" }
 spring-modulith-starter-jdbc = { module = "org.springframework.modulith:spring-modulith-starter-jdbc" }
+spring-modulith-actuator = { module = "org.springframework.modulith:spring-modulith-actuator" }
 archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
 logstash-logback-encoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstashLogback" }
 testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }

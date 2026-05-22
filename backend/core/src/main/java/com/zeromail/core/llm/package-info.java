@@ -12,7 +12,8 @@
  *   <li>{@code billing} - CreditLedger reserve/settle/release wiring (LLM-06)
  *   <li>{@code shared.persistence} - AbstractTenantOwnedEntity for TenantByokCredentialsEntity
  *   <li>{@code shared.lang} - IdentifiedEnum for Action and BYOKProvider
- *   <li>{@code gmail.persistence.crypto} - RefreshTokenCipher reuse for BYOK key encryption (D-A5)
+ *   <li>{@code gmail :: persistence.crypto} - RefreshTokenCipher reuse for BYOK key encryption
+ *       (D-A5)
  * </ul>
  *
  * <p><b>Sub-packages:</b>
@@ -33,10 +34,15 @@
         displayName = "LLM Gateway",
         allowedDependencies = {
             "tenant",
+            "config",
             "billing",
-            "shared.persistence",
-            "shared.lang",
-            "gmail.persistence.crypto"
+            "billing :: domain",
+            "billing :: usecases",
+            "shared :: error",
+            "shared :: exception",
+            "shared :: persistence",
+            "shared :: lang",
+            "gmail :: persistence.crypto"
         })
 package com.zeromail.core.llm;
 

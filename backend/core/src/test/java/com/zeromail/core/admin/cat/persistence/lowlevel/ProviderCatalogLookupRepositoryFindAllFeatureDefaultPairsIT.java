@@ -15,8 +15,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * Invariant: {@link ProviderCatalogLookupRepository#findAllFeatureDefaultPairs()} fetches every
  * {@code (provider, feature)} pair from {@code feature_default_provider} in a SINGLE round-trip.
  * The set returned uses {@code pairKey(provider, feature)} for membership testing so {@link
- * com.zeromail.core.llm.gateway.springai.admin.ProviderMasterKeyResolver#maskedRows()} can build
- * the per-row "is this the default for feature X?" flags without firing one extra query per (row,
+ * com.zeromail.core.admin.mkey.usecases.ProviderMasterKeyResolver#maskedRows()} can build the
+ * per-row "is this the default for feature X?" flags without firing one extra query per (row,
  * feature) pair.
  *
  * <p>Test slice: {@link PostgresContainerTest} (real Postgres 18 + Liquibase schema). Per project

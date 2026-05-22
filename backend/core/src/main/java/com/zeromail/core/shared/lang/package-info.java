@@ -40,16 +40,14 @@
  * orElseThrow(NoSuchElementException::new)}. Fail-loud (NOT {@code IllegalArgumentException}).
  *
  * <p><b>Spring Modulith naming form (CL-3 lock):</b> Cross-sibling modules MUST reference this
- * module as {@code "shared.lang"} in their {@code allowedDependencies} array. Plan 03 adds this
+ * module as {@code "shared :: lang"} in their {@code allowedDependencies} array. Plan 03 adds this
  * literal to {@code account/}, {@code onboarding/}, and {@code gmail/} package-info files when the
  * enums first import {@code IdentifiedEnum} / {@code OrderedEnum}.
  *
  * <p><b>Design rationale:</b> adapted from Jmix {@code EnumClass<T>} (we drop the framework
  * dependency and the generic id type). JHipster has no enum-side equivalent.
  */
-@ApplicationModule(
-        displayName = "Lang",
-        allowedDependencies = {})
+@NamedInterface("lang")
 package com.zeromail.core.shared.lang;
 
-import org.springframework.modulith.ApplicationModule;
+import org.springframework.modulith.NamedInterface;

@@ -388,6 +388,7 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260522-w9w | Add Spring Modulith docs/actuator support and fix core boundary verification violations | 2026-05-22 | pending | Verified | [260522-w9w-add-spring-modulith-docs-generation-dev-](./quick/260522-w9w-add-spring-modulith-docs-generation-dev-/) |
 | 260522-hide-beta-onboarding | Temporarily hide beta onboarding by redirecting onboarding routes to the app and suppressing onboarding entry points | 2026-05-22 | pending | Verified | [260522-hide-beta-onboarding](./quick/260522-hide-beta-onboarding/) |
 | 260522-onboarding-beta-prototype | Refactor beta onboarding from approved prototype into production: inbox preview, first-rule preview, and review-mode completion | 2026-05-22 | pending | Verified | [260522-onboarding-beta-prototype](./quick/260522-onboarding-beta-prototype/) |
 | 260522-37g | Review trang Quản lý LLM (master-keys + tier matrix) + 5 invariant tests (router walk, tier validation, reorder priorities, listMasked dedup, batch pairs perf) | 2026-05-22 | edb23805 | Verified | [260522-37g-review-trang-quan-ly-llm-targeted-tests](./quick/260522-37g-review-trang-quan-ly-llm-targeted-tests/) |

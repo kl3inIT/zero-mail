@@ -9,6 +9,7 @@ import com.zeromail.core.llm.usecases.LlmGateway;
 import com.zeromail.core.llm.usecases.SanitizationContext;
 import com.zeromail.core.llm.usecases.ToolCallResult;
 import com.zeromail.core.tenant.TenantContext;
+import com.zeromail.core.triage.usecases.TriageDraftBodyGenerator;
 import java.util.Objects;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -16,7 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
-public class DraftBodyGenerator {
+public class DraftBodyGenerator implements TriageDraftBodyGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(DraftBodyGenerator.class);
 
@@ -36,6 +37,7 @@ public class DraftBodyGenerator {
         this.llmGateway = Objects.requireNonNull(llmGateway, "llmGateway must not be null");
     }
 
+    @Override
     public String generate(
             UUID tenantId, String gmailThreadId, String inboundRawHtml, String inboundSubject) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");

@@ -3,9 +3,11 @@
         allowedDependencies = {
             "tenant",
             "account",
-            "shared.privacy",
-            "shared.persistence",
-            "shared.lang"
+            "account :: domain",
+            "account :: usecases",
+            "shared :: privacy",
+            "shared :: persistence",
+            "shared :: lang"
         })
 package com.zeromail.core.onboarding;
 

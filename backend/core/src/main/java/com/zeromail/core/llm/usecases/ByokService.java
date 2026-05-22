@@ -170,6 +170,27 @@ public class ByokService {
                                                 : credentials.getUpdatedAt()));
     }
 
+    @Transactional(readOnly = true)
+    public Optional<ByokChatCredential> chatCredential(UUID tenantId) {
+        return tenantByokCredentialsRepository
+                .findByTenantId(tenantId)
+                .map(
+                        credentials -> {
+                            byte[] decryptedKey =
+                                    refreshTokenCipher.decrypt(
+                                            credentials.getEncryptedKey(), tenantId.toString());
+                            try {
+                                return new ByokChatCredential(
+                                        credentials.getProvider(),
+                                        credentials.getEndpoint(),
+                                        credentials.getModel(),
+                                        decryptedKey);
+                            } finally {
+                                Arrays.fill(decryptedKey, (byte) 0);
+                            }
+                        });
+    }
+
     private ByokValidateResult probeUpstream(
             UUID tenantId,
             BYOKProvider provider,

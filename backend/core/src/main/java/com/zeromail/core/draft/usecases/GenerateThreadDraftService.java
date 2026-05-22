@@ -12,15 +12,13 @@ import com.zeromail.core.shared.lock.RedisDistributedLock;
 import com.zeromail.core.shared.lock.RedisDistributedLock.LockHandle;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.thread.event.ThreadDraftSaved;
-import com.zeromail.core.thread.persistence.ThreadReplyStatusRepository;
 import com.zeromail.core.thread.usecases.ClassifyThreadReplyStatusService;
 import com.zeromail.core.thread.usecases.ThreadReplyClassificationInput;
 import com.zeromail.core.triage.domain.TriageActionResult;
 import com.zeromail.core.triage.exception.MissingMessageIdException;
 import com.zeromail.core.triage.exception.ThreadingHeaderInvalidException;
-import com.zeromail.core.triage.persistence.TriageAuditRepository;
-import com.zeromail.core.triage.persistence.TriageAuditWriter;
-import com.zeromail.core.triage.usecases.TriageActionResultJsonValidator;
+import com.zeromail.core.triage.usecases.TriageDraftAuditService;
+import com.zeromail.core.triage.usecases.TriageDraftAuditService.TriageDraftAuditReservation;
 import com.zeromail.core.triage.usecases.TriageGmailWriter;
 import java.io.IOException;
 import java.time.Clock;
@@ -52,11 +50,8 @@ public class GenerateThreadDraftService {
     private final DraftReplySourceLoader draftReplySourceLoader;
     private final DraftBodyGenerator draftBodyGenerator;
     private final TriageGmailWriter triageGmailWriter;
-    private final ThreadReplyStatusRepository threadReplyStatusRepository;
     private final ClassifyThreadReplyStatusService classifyThreadReplyStatusService;
-    private final TriageAuditWriter triageAuditWriter;
-    private final TriageAuditRepository triageAuditRepository;
-    private final TriageActionResultJsonValidator actionResultJsonValidator;
+    private final TriageDraftAuditService triageDraftAuditService;
     private final ApplicationEventPublisher eventPublisher;
     private final TransactionOperations transactionOperations;
     private final Clock clock;
@@ -67,11 +62,8 @@ public class GenerateThreadDraftService {
             DraftReplySourceLoader draftReplySourceLoader,
             DraftBodyGenerator draftBodyGenerator,
             TriageGmailWriter triageGmailWriter,
-            ThreadReplyStatusRepository threadReplyStatusRepository,
             ClassifyThreadReplyStatusService classifyThreadReplyStatusService,
-            TriageAuditWriter triageAuditWriter,
-            TriageAuditRepository triageAuditRepository,
-            TriageActionResultJsonValidator actionResultJsonValidator,
+            TriageDraftAuditService triageDraftAuditService,
             ApplicationEventPublisher eventPublisher,
             PlatformTransactionManager transactionManager) {
         this(
@@ -79,11 +71,8 @@ public class GenerateThreadDraftService {
                 draftReplySourceLoader,
                 draftBodyGenerator,
                 triageGmailWriter,
-                threadReplyStatusRepository,
                 classifyThreadReplyStatusService,
-                triageAuditWriter,
-                triageAuditRepository,
-                actionResultJsonValidator,
+                triageDraftAuditService,
                 eventPublisher,
                 new TransactionTemplate(transactionManager),
                 Clock.systemUTC());
@@ -94,11 +83,8 @@ public class GenerateThreadDraftService {
             DraftReplySourceLoader draftReplySourceLoader,
             DraftBodyGenerator draftBodyGenerator,
             TriageGmailWriter triageGmailWriter,
-            ThreadReplyStatusRepository threadReplyStatusRepository,
             ClassifyThreadReplyStatusService classifyThreadReplyStatusService,
-            TriageAuditWriter triageAuditWriter,
-            TriageAuditRepository triageAuditRepository,
-            TriageActionResultJsonValidator actionResultJsonValidator,
+            TriageDraftAuditService triageDraftAuditService,
             ApplicationEventPublisher eventPublisher,
             TransactionOperations transactionOperations,
             Clock clock) {
@@ -112,22 +98,13 @@ public class GenerateThreadDraftService {
                 Objects.requireNonNull(draftBodyGenerator, "draftBodyGenerator must not be null");
         this.triageGmailWriter =
                 Objects.requireNonNull(triageGmailWriter, "triageGmailWriter must not be null");
-        this.threadReplyStatusRepository =
-                Objects.requireNonNull(
-                        threadReplyStatusRepository,
-                        "threadReplyStatusRepository must not be null");
         this.classifyThreadReplyStatusService =
                 Objects.requireNonNull(
                         classifyThreadReplyStatusService,
                         "classifyThreadReplyStatusService must not be null");
-        this.triageAuditWriter =
-                Objects.requireNonNull(triageAuditWriter, "triageAuditWriter must not be null");
-        this.triageAuditRepository =
+        this.triageDraftAuditService =
                 Objects.requireNonNull(
-                        triageAuditRepository, "triageAuditRepository must not be null");
-        this.actionResultJsonValidator =
-                Objects.requireNonNull(
-                        actionResultJsonValidator, "actionResultJsonValidator must not be null");
+                        triageDraftAuditService, "triageDraftAuditService must not be null");
         this.eventPublisher =
                 Objects.requireNonNull(eventPublisher, "eventPublisher must not be null");
         this.transactionOperations =
@@ -218,53 +195,34 @@ public class GenerateThreadDraftService {
         String leaseOwner = "on-demand-draft-" + UUID.randomUUID();
         return transactionOperations.execute(
                 _ -> {
-                    Optional<UUID> pendingAuditId =
-                            triageAuditWriter
-                                    .insertPending(
-                                            tenantId,
-                                            draftReplySource.gmailMessageId(),
-                                            draftReplySource.gmailThreadId(),
-                                            draftReplySource.inboundSubject(),
-                                            draftReplySource.replyHeaders().replyToAddress(),
-                                            ON_DEMAND_DRAFT_RULE_ID,
-                                            ON_DEMAND_DRAFT_RULE_NAME,
-                                            RuleActionType.SAVE_DRAFT,
-                                            preWriteIntent,
-                                            "on_demand_draft")
-                                    .or(
-                                            () ->
-                                                    triageAuditWriter.findPendingAuditId(
-                                                            tenantId,
-                                                            draftReplySource.gmailMessageId(),
-                                                            ON_DEMAND_DRAFT_RULE_ID,
-                                                            RuleActionType.SAVE_DRAFT,
-                                                            preWriteIntent));
-                    UUID auditId =
-                            pendingAuditId.orElseThrow(DraftGenerationInFlightException::new);
-                    int reclaimedRows =
-                            triageAuditRepository.reclaimStalePending(
-                                    auditId, tenantId, leaseOwner);
-                    if (reclaimedRows == 0) {
+                    TriageDraftAuditReservation reservation =
+                            triageDraftAuditService.reservePendingAudit(
+                                    tenantId,
+                                    draftReplySource.gmailMessageId(),
+                                    draftReplySource.gmailThreadId(),
+                                    draftReplySource.inboundSubject(),
+                                    draftReplySource.replyHeaders().replyToAddress(),
+                                    ON_DEMAND_DRAFT_RULE_ID,
+                                    ON_DEMAND_DRAFT_RULE_NAME,
+                                    RuleActionType.SAVE_DRAFT,
+                                    preWriteIntent,
+                                    "on_demand_draft",
+                                    leaseOwner);
+                    if (!reservation.reserved()) {
                         log.info(
                                 "event=draft_audit_pending_in_flight tenantId={} gmailThreadId={} auditId={}",
                                 tenantId,
                                 draftReplySource.gmailThreadId(),
-                                auditId);
+                                reservation.auditId());
                         throw new DraftGenerationInFlightException();
                     }
-                    return auditId;
+                    return reservation.auditId();
                 });
     }
 
     private Optional<String> currentDraftId(String gmailThreadId) {
         return transactionOperations.execute(
-                _ ->
-                        threadReplyStatusRepository
-                                .findByGmailThreadId(gmailThreadId)
-                                .flatMap(
-                                        threadReplyStatus ->
-                                                Optional.ofNullable(
-                                                        threadReplyStatus.getDraftId())));
+                _ -> classifyThreadReplyStatusService.currentDraftId(gmailThreadId));
     }
 
     private void deleteOldDraftIfNeeded(
@@ -295,12 +253,8 @@ public class GenerateThreadDraftService {
                                     preWriteIntent.instruction(),
                                     newDraftId,
                                     draftReplySource.gmailThreadId());
-                    triageAuditRepository.markApplied(
-                            auditId,
-                            tenantId,
-                            newDraftId,
-                            null,
-                            actionResultJsonValidator.toJson(resolvedIntent));
+                    triageDraftAuditService.markApplied(
+                            auditId, tenantId, newDraftId, resolvedIntent);
                     classifyThreadReplyStatusService.classify(
                             new ThreadReplyClassificationInput(
                                     tenantId,

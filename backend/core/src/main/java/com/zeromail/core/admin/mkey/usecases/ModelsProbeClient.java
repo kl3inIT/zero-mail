@@ -1,4 +1,4 @@
-package com.zeromail.core.llm.gateway.springai.admin;
+package com.zeromail.core.admin.mkey.usecases;
 
 import com.zeromail.core.admin.mkey.domain.KeyFormat;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;

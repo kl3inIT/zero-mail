@@ -1,8 +1,8 @@
 package com.zeromail.core.onboarding.usecases;
 
+import com.zeromail.core.account.domain.OnboardingStep;
 import com.zeromail.core.account.exception.CurrentUserNotFoundException;
 import com.zeromail.core.account.usecases.AccountService;
-import com.zeromail.core.onboarding.domain.OnboardingStep;
 import com.zeromail.core.onboarding.persistence.OnboardingSelectionEntity;
 import com.zeromail.core.onboarding.persistence.OnboardingSelectionRepository;
 import com.zeromail.core.tenant.TenantContext;
