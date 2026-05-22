@@ -7,8 +7,8 @@
 #   bash scripts/verify-codegen.sh
 #
 # Assumes:
-#   - docker compose services from ./docker-compose.yml are accessible
-#     (postgres on 5432, redis on 6379), or already running.
+#   - docker compose can start the isolated OpenAPI services from
+#     ./docker-compose.openapi.yml (postgres on 15432, redis on 16379).
 #   - pnpm 10.x is on PATH or accessible at $PNPM_BIN.
 #   - gradlew works from the repo root.
 
@@ -42,7 +42,7 @@ echo "[verify-codegen] Ensuring docker services (postgres, redis) are up..."
 # already local. An empty config short-circuits the helper lookup.
 DOCKER_CONFIG_TMP="$(mktemp -d)"
 echo '{"auths":{}}' > "$DOCKER_CONFIG_TMP/config.json"
-DOCKER_CONFIG="$DOCKER_CONFIG_TMP" "$DOCKER" compose up -d --no-recreate postgres redis >/dev/null
+DOCKER_CONFIG="$DOCKER_CONFIG_TMP" "$DOCKER" compose --project-name zeromail-openapi -f docker-compose.openapi.yml up -d --no-recreate postgres redis >/dev/null
 
 echo "[verify-codegen] Starting backend api (bootRun) in background..."
 # Phase 1 stub credentials so OAuth2 client autoconfig validates; the codegen path
@@ -50,7 +50,7 @@ echo "[verify-codegen] Starting backend api (bootRun) in background..."
 export GOOGLE_OAUTH_CLIENT_ID="${GOOGLE_OAUTH_CLIENT_ID:-verify-codegen-stub}"
 export GOOGLE_OAUTH_CLIENT_SECRET="${GOOGLE_OAUTH_CLIENT_SECRET:-verify-codegen-stub}"
 export REFRESH_TOKEN_KEY_BASE64="${REFRESH_TOKEN_KEY_BASE64:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}"
-./gradlew :backend:api:bootRun -q >/tmp/verify-codegen-api.log 2>&1 &
+./gradlew :backend:api:bootRun -q --args="--spring.datasource.url=jdbc:postgresql://localhost:15432/zeromail --spring.datasource.username=zeromail --spring.datasource.password=zeromail --spring.data.redis.host=localhost --spring.data.redis.port=16379" >/tmp/verify-codegen-api.log 2>&1 &
 API_PID=$!
 echo "[verify-codegen] api pid=$API_PID; tailing health at ${API_URL}/actuator/health"
 

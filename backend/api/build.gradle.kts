@@ -78,7 +78,14 @@ openApi {
         args.set(
             listOf(
                 "--server.port=59280",
-                "--spring.docker.compose.file=" + rootProject.file("docker-compose.yml").absolutePath,
+                "--spring.docker.compose.enabled=true",
+                "--spring.docker.compose.file=" + rootProject.file("docker-compose.openapi.yml").absolutePath,
+                "--spring.docker.compose.arguments[0]=--project-name=zeromail-openapi",
+                "--spring.datasource.url=jdbc:postgresql://localhost:15432/zeromail",
+                "--spring.datasource.username=zeromail",
+                "--spring.datasource.password=zeromail",
+                "--spring.data.redis.host=localhost",
+                "--spring.data.redis.port=16379",
                 // Dummy OAuth2 + crypto credentials so the boot succeeds without real env
                 // vars. The spec emit only needs the controllers/DTOs introspected — runtime
                 // OAuth and crypto are never exercised. These literals are NEVER committed
@@ -105,7 +112,7 @@ openApi {
             )
         )
     }
-    apiDocsUrl.set("http://localhost:59280/v3/api-docs")
+    apiDocsUrl.set("http://localhost:59280/v3/api-docs/public")
     outputDir.set(rootProject.file("apps/web/openapi"))
     outputFileName.set("openapi.json")
     waitTimeInSeconds.set(180)
