@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useReducer, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Plus, Sparkles } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -18,6 +18,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ErrorCode } from '@/lib/api/error-codes';
 import { useLocalizedApiError, type ApiError } from '@/lib/api/errors';
+import { AvailableActionsPanel } from '@/features/rules/components/AvailableActionsPanel';
 import { CustomMailTester } from '@/features/rules/components/CustomMailTester';
 import { RuleComposer } from '@/features/rules/components/RuleComposer';
 import { RuleList } from '@/features/rules/components/RuleList';
@@ -46,6 +47,9 @@ import {
   useUpdateRule,
   useUpdateRuleEnabled,
 } from '@/features/rules/hooks/use-rules';
+import { useRuleActionsCatalog } from '@/features/rules/hooks/use-rule-actions-catalog';
+import { useRuleAutomationSettings } from '@/features/rules/hooks/use-rule-automation-settings';
+import { useRuleExamples } from '@/features/rules/hooks/use-rule-examples';
 
 type SampleSize = 10 | 20;
 
@@ -272,9 +276,13 @@ function resetForFreshComposition(state: RulesWorkspaceState): RulesWorkspaceSta
 
 export function RulesWorkspace() {
   const t = useTranslations();
+  const locale = useLocale();
   const localizeApiError = useLocalizedApiError();
   const rulesQuery = useRules();
   const templatesQuery = useRuleTemplates();
+  const ruleExamplesQuery = useRuleExamples(locale);
+  const ruleActionsQuery = useRuleActionsCatalog(locale);
+  const automationSettingsQuery = useRuleAutomationSettings();
   const compileMutation = useCompileRule();
   const createRuleMutation = useCreateRule();
   const updateRuleMutation = useUpdateRule();
@@ -511,6 +519,7 @@ export function RulesWorkspace() {
 
   const enabledRulesCount = rules.filter((rule) => rule.enabled).length;
   const canPreview = enabledRulesCount > 0;
+  const autoSendRulesEnabled = automationSettingsQuery.data?.autoSendRulesEnabled ?? true;
 
   return (
     <Tabs
@@ -557,6 +566,13 @@ export function RulesWorkspace() {
               </Button>
             </div>
           }
+        />
+        <AvailableActionsPanel
+          actions={ruleActionsQuery.data?.actions ?? []}
+          autoSendRulesEnabled={autoSendRulesEnabled}
+          isLoadingActions={ruleActionsQuery.isLoading}
+          isActionsError={ruleActionsQuery.isError}
+          isLoadingAutomationSetting={automationSettingsQuery.isLoading}
         />
       </TabsContent>
 
@@ -644,6 +660,9 @@ export function RulesWorkspace() {
               insufficientCreditError={state.insufficientCreditError}
               isCompiling={compileMutation.isPending}
               isSaving={createRuleMutation.isPending || updateRuleMutation.isPending}
+              examplePersonas={ruleExamplesQuery.data?.personas ?? []}
+              isLoadingExamples={ruleExamplesQuery.isLoading}
+              examplesError={ruleExamplesQuery.isError}
               onSourceTextChange={(sourceText) =>
                 dispatch({ type: 'sourceTextChanged', sourceText })
               }
