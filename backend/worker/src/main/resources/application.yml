@@ -23,10 +23,10 @@ spring:
             client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
-    enabled: true
+    enabled: false
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     properties:
       hibernate:
         format_sql: false
