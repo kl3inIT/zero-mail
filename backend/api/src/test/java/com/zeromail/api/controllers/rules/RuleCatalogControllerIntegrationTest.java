@@ -9,6 +9,7 @@ import com.zeromail.core.account.persistence.UserRepository;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.persistence.TenantEntity;
 import com.zeromail.core.tenant.persistence.TenantRepository;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,6 +65,30 @@ class RuleCatalogControllerIntegrationTest extends ApiPostgresTestBase {
                 getJson(RestClient.create("http://localhost:" + serverPort), "/v3/api-docs");
         assertThat(openApiJson.path("paths").has("/api/rules/catalog/examples")).isTrue();
         assertThat(openApiJson.path("paths").has("/api/rules/catalog/actions")).isTrue();
+    }
+
+    @Test
+    void automation_settings_endpoint_defaults_on_and_persists_toggle() throws Exception {
+        SeedData seedData = seedUser("rule-automation-settings-api");
+        RestClient restClient = authenticatedClient(seedData);
+
+        JsonNode initialSettingsJson = getJson(restClient, "/api/rules/settings/automation");
+        assertThat(initialSettingsJson.path("autoSendRulesEnabled").asBoolean()).isTrue();
+
+        ResponseEntity<String> updateResponse =
+                restClient
+                        .put()
+                        .uri("/api/rules/settings/automation")
+                        .body(Map.of("autoSendRulesEnabled", false))
+                        .retrieve()
+                        .toEntity(String.class);
+        assertThat(updateResponse.getStatusCode().is2xxSuccessful()).isTrue();
+        JsonNode updatedSettingsJson = objectMapper.readTree(updateResponse.getBody());
+        assertThat(updatedSettingsJson.path("autoSendRulesEnabled").asBoolean()).isFalse();
+
+        JsonNode openApiJson =
+                getJson(RestClient.create("http://localhost:" + serverPort), "/v3/api-docs");
+        assertThat(openApiJson.path("paths").has("/api/rules/settings/automation")).isTrue();
     }
 
     private JsonNode getJson(RestClient restClient, String uri) throws Exception {
