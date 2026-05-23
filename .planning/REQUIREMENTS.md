@@ -106,7 +106,7 @@
 - [x] **RACT-03**: Admin can create, edit, disable, reorder, and localize examples/personas/action descriptors without code changes; disabled examples do not appear in the user rule builder
 - [x] **RACT-04**: User-facing Available Actions panel includes `Label`, `Archive`, `Save draft`, `Mark read/unread`, `Star/unstar`, `Add to digest`, `Mark spam`, `Send reply`, `Forward`, and `Send email`, with unavailable actions visibly disabled and explained
 - [x] **RACT-05**: Settings expose one account-level `Auto-send rules` toggle for automated outbound rule actions; it defaults ON for new users/tenants and there are no individual outbound action toggles
-- [ ] **RACT-06**: Manual editor and AI compiler both persist the same structured `When/Then` schema; natural language remains only `sourceText`/audit metadata
+- [x] **RACT-06**: Manual editor and AI compiler both persist the same structured `When/Then` schema; natural language remains only `sourceText`/audit metadata
 - [x] **RACT-07**: Rule-triggered outbound actions execute only when the global auto-send setting, sender-risk guard, safety net, cap/rate-limit, idempotency, OAuth scope, tenant checks, and audit reservation all pass
 - [ ] **RACT-08**: If an outbound gate fails or the global auto-send setting is OFF, the rule result falls back to Gmail `save_draft` with an audit reason; the system must not silently drop or send the email
 - [x] **RACT-09**: All Gmail send execution goes through one shared outbound gateway/send executor; ArchUnit/grep tests are updated to allow that boundary and fail any direct Gmail send call site elsewhere
@@ -252,7 +252,7 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 | RACT-03 | Phase 08.1 | Complete |
 | RACT-04 | Phase 08.1 | Complete |
 | RACT-05 | Phase 08.1 | Complete |
-| RACT-06 | Phase 08.1 | Pending |
+| RACT-06 | Phase 08.1 | Complete |
 | RACT-07 | Phase 08.1 | Complete |
 | RACT-08 | Phase 08.1 | Pending |
 | RACT-09 | Phase 08.1 | Complete |
