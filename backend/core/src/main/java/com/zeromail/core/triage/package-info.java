@@ -31,7 +31,8 @@
             "shared :: privacy",
             "shared :: persistence",
             "shared :: lang",
-            "shared :: pagination"
+            "shared :: pagination",
+            "shared :: validation"
         })
 package com.zeromail.core.triage;
 
