@@ -2,11 +2,11 @@ package com.zeromail.core.rules.usecases;
 
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.rules.exception.RuleValidationException;
+import com.zeromail.core.shared.validation.EmailRecipientValidator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.regex.Pattern;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -17,9 +17,6 @@ public class ActionIntentJsonValidator {
     private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder().build();
     private static final int MAX_ACTION_TEXT_LENGTH = 500;
     private static final int MAX_ACTION_BODY_LENGTH = 4000;
-    private static final int MAX_RECIPIENTS = 10;
-    private static final Pattern EMAIL_ADDRESS_PATTERN =
-            Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
     private static final Set<String> COMMON_FIELDS = Set.of("type", "action");
     private static final Set<String> GMAIL_READ_CONTENT_SOURCE_FIELDS =
             Set.of(
@@ -203,13 +200,10 @@ public class ActionIntentJsonValidator {
             return List.of();
         }
         if (recipientNode.isString()) {
-            return validateRecipients(List.of(recipientNode.asString()), primaryFieldName);
+            return validateRecipients(List.of(recipientNode.asString()), primaryFieldName, required);
         }
         if (!recipientNode.isArray()) {
             throw new IllegalArgumentException(primaryFieldName + " must be an array");
-        }
-        if (recipientNode.size() > MAX_RECIPIENTS) {
-            throw new IllegalArgumentException(primaryFieldName + " has too many recipients");
         }
         java.util.ArrayList<String> recipients = new java.util.ArrayList<>();
         for (JsonNode singleRecipientNode : recipientNode) {
@@ -218,21 +212,13 @@ public class ActionIntentJsonValidator {
             }
             recipients.add(singleRecipientNode.asString());
         }
-        return validateRecipients(recipients, primaryFieldName);
+        return validateRecipients(recipients, primaryFieldName, required);
     }
 
-    private static List<String> validateRecipients(List<String> recipients, String fieldName) {
-        java.util.ArrayList<String> normalizedRecipients = new java.util.ArrayList<>();
-        for (String recipient : recipients) {
-            String normalizedRecipient = recipient == null ? "" : recipient.trim();
-            if (normalizedRecipient.isBlank()) {
-                throw new IllegalArgumentException(fieldName + " must not contain blank values");
-            }
-            if (!EMAIL_ADDRESS_PATTERN.matcher(normalizedRecipient).matches()) {
-                throw new IllegalArgumentException(fieldName + " contains invalid email address");
-            }
-            normalizedRecipients.add(normalizedRecipient);
-        }
-        return List.copyOf(normalizedRecipients);
+    private static List<String> validateRecipients(
+            List<String> recipients, String fieldName, boolean required) {
+        return required
+                ? EmailRecipientValidator.required(recipients, fieldName)
+                : EmailRecipientValidator.optional(recipients, fieldName);
     }
 }

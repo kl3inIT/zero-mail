@@ -1,9 +1,8 @@
 package com.zeromail.core.rules.domain;
 
 import com.zeromail.core.llm.domain.Action;
+import com.zeromail.core.shared.validation.EmailRecipientValidator;
 import java.util.List;
-import java.util.Objects;
-import java.util.regex.Pattern;
 
 public sealed interface ActionIntent
         permits ActionIntent.Label,
@@ -17,10 +16,8 @@ public sealed interface ActionIntent
                 ActionIntent.ForwardEmail,
                 ActionIntent.SendEmail {
 
-    Pattern EMAIL_ADDRESS_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
     int MAX_ACTION_TEXT_LENGTH = 500;
     int MAX_ACTION_BODY_LENGTH = 4000;
-    int MAX_RECIPIENTS = 10;
 
     RuleActionType type();
 
@@ -165,31 +162,10 @@ public sealed interface ActionIntent
     }
 
     private static List<String> requiredRecipients(List<String> recipients, String fieldName) {
-        List<String> normalizedRecipients = optionalRecipients(recipients, fieldName);
-        if (normalizedRecipients.isEmpty()) {
-            throw new IllegalArgumentException(fieldName + " must not be empty");
-        }
-        return normalizedRecipients;
+        return EmailRecipientValidator.required(recipients, fieldName);
     }
 
     private static List<String> optionalRecipients(List<String> recipients, String fieldName) {
-        if (recipients == null) {
-            return List.of();
-        }
-        if (recipients.size() > MAX_RECIPIENTS) {
-            throw new IllegalArgumentException(fieldName + " has too many recipients");
-        }
-        return recipients.stream()
-                .map(recipient -> Objects.requireNonNull(recipient, fieldName + " contains null"))
-                .map(String::trim)
-                .filter(recipient -> !recipient.isBlank())
-                .peek(
-                        recipient -> {
-                            if (!EMAIL_ADDRESS_PATTERN.matcher(recipient).matches()) {
-                                throw new IllegalArgumentException(
-                                        fieldName + " contains invalid email address");
-                            }
-                        })
-                .toList();
+        return EmailRecipientValidator.optional(recipients, fieldName);
     }
 }

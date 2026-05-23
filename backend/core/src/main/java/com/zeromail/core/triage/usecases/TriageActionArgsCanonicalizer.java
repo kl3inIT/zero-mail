@@ -2,6 +2,7 @@ package com.zeromail.core.triage.usecases;
 
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.shared.crypto.Hashing;
+import com.zeromail.core.shared.validation.EmailRecipientValidator;
 import com.zeromail.core.triage.domain.TriageActionResult;
 import java.util.ArrayList;
 import java.util.List;
@@ -129,14 +130,14 @@ public class TriageActionArgsCanonicalizer {
     }
 
     private static List<String> recipients(JsonNode jsonNode, String fieldName) {
-        List<String> recipients = optionalRecipients(jsonNode, fieldName);
-        if (recipients.isEmpty()) {
-            throw new IllegalArgumentException(fieldName + " is required");
-        }
-        return recipients;
+        return EmailRecipientValidator.required(recipientValues(jsonNode, fieldName), fieldName);
     }
 
     private static List<String> optionalRecipients(JsonNode jsonNode, String fieldName) {
+        return EmailRecipientValidator.optional(recipientValues(jsonNode, fieldName), fieldName);
+    }
+
+    private static List<String> recipientValues(JsonNode jsonNode, String fieldName) {
         JsonNode fieldNode = jsonNode.path(fieldName);
         if (fieldNode.isMissingNode() || fieldNode.isNull()) {
             return List.of();
@@ -150,9 +151,7 @@ public class TriageActionArgsCanonicalizer {
                 throw new IllegalArgumentException(fieldName + " must contain strings");
             }
             String recipient = recipientNode.asString().trim();
-            if (!recipient.isBlank()) {
-                recipients.add(recipient);
-            }
+            recipients.add(recipient);
         }
         return List.copyOf(recipients);
     }

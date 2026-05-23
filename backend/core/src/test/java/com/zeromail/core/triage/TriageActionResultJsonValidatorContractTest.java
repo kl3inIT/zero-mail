@@ -11,6 +11,7 @@ import com.zeromail.core.triage.exception.TriageSafetyViolationException;
 import com.zeromail.core.triage.usecases.SenderEmailCanonicalizer;
 import com.zeromail.core.triage.usecases.TriageActionArgsCanonicalizer;
 import com.zeromail.core.triage.usecases.TriageActionResultJsonValidator;
+import java.util.List;
 import java.util.NoSuchElementException;
 import org.junit.jupiter.api.Test;
 
@@ -136,6 +137,68 @@ class TriageActionResultJsonValidatorContractTest {
                 """);
 
         assertThat(secondHash).isEqualTo(firstHash).hasSize(32);
+    }
+
+    @Test
+    void persisted_outbound_action_json_rejects_invalid_recipients_before_gmail_execution() {
+        TriageActionResultJsonValidator validator = new TriageActionResultJsonValidator();
+        TriageActionArgsCanonicalizer canonicalizer = new TriageActionArgsCanonicalizer();
+
+        assertThatThrownBy(
+                        () ->
+                                validator.validateActionArgsJson(
+                                        """
+                {"type":"forward_email","recipients":["not-an-email"],"body":"Body"}
+                """))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("invalid email address");
+        assertThatThrownBy(
+                        () ->
+                                validator.validateActionArgsJson(
+                                        """
+                {"type":"send_email","to":["safe@example.com"],"cc":["  "],"subject":"Status","body":"Body"}
+                """))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("blank values");
+        assertThatThrownBy(
+                        () ->
+                                validator.validateActionArgsJson(
+                                        """
+                {
+                  "type":"send_email",
+                  "to":[
+                    "one@example.com",
+                    "two@example.com",
+                    "three@example.com",
+                    "four@example.com",
+                    "five@example.com",
+                    "six@example.com",
+                    "seven@example.com",
+                    "eight@example.com",
+                    "nine@example.com",
+                    "ten@example.com",
+                    "eleven@example.com"
+                  ],
+                  "subject":"Status",
+                  "body":"Body"
+                }
+                """))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("too many recipients");
+        assertThatThrownBy(
+                        () ->
+                                canonicalizer.canonicalJson(
+                                        """
+                {"type":"send_email","to":["safe@example.com"],"bcc":["bad-recipient"],"subject":"Status","body":"Body"}
+                """))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("invalid email address");
+        assertThatThrownBy(
+                        () ->
+                                new TriageActionResult.ForwardEmail(
+                                        List.of("bad-recipient"), "Forward this"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("invalid email address");
     }
 
     @Test

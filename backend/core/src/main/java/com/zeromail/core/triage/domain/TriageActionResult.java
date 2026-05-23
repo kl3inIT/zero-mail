@@ -1,5 +1,6 @@
 package com.zeromail.core.triage.domain;
 
+import com.zeromail.core.shared.validation.EmailRecipientValidator;
 import java.util.List;
 
 /**
@@ -74,8 +75,8 @@ public sealed interface TriageActionResult
             implements TriageActionResult {
         public SendEmail {
             to = requireRecipients(to, "to");
-            cc = optionalRecipients(cc);
-            bcc = optionalRecipients(bcc);
+            cc = optionalRecipients(cc, "cc");
+            bcc = optionalRecipients(bcc, "bcc");
             requireText(subject, "subject");
             requireText(draftBody, "draftBody");
         }
@@ -88,20 +89,10 @@ public sealed interface TriageActionResult
     }
 
     private static List<String> requireRecipients(List<String> recipients, String fieldName) {
-        List<String> normalizedRecipients = optionalRecipients(recipients);
-        if (normalizedRecipients.isEmpty()) {
-            throw new IllegalArgumentException(fieldName + " must not be empty");
-        }
-        return normalizedRecipients;
+        return EmailRecipientValidator.required(recipients, fieldName);
     }
 
-    private static List<String> optionalRecipients(List<String> recipients) {
-        if (recipients == null) {
-            return List.of();
-        }
-        return recipients.stream()
-                .map(recipient -> recipient == null ? "" : recipient.trim())
-                .filter(recipient -> !recipient.isBlank())
-                .toList();
+    private static List<String> optionalRecipients(List<String> recipients, String fieldName) {
+        return EmailRecipientValidator.optional(recipients, fieldName);
     }
 }
