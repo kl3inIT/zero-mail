@@ -1,4 +1,4 @@
-package com.zeromail.core.llm.gateway.springai.admin;
+package com.zeromail.core.admin.mkey.usecases;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;

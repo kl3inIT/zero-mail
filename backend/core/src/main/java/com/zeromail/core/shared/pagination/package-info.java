@@ -1,7 +1,5 @@
 /** Shared keyset-pagination primitives. */
-@ApplicationModule(
-        displayName = "Pagination",
-        allowedDependencies = {})
+@NamedInterface("pagination")
 package com.zeromail.core.shared.pagination;
 
-import org.springframework.modulith.ApplicationModule;
+import org.springframework.modulith.NamedInterface;

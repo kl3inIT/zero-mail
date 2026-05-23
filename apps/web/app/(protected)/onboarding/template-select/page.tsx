@@ -1,8 +1,13 @@
+import { redirect } from 'next/navigation';
+
 import AuthTopBar from '@/features/auth/components/AuthTopBar';
 import { StepIndicator } from '@/features/auth/components/StepIndicator';
+import { BETA_ONBOARDING_ENABLED, ONBOARDING_BYPASS_ROUTE } from '@/features/onboarding/config';
 import { TemplateSelectClient } from './TemplateSelectClient';
 
 export default function OnboardingTemplateSelectPage() {
+  if (!BETA_ONBOARDING_ENABLED) redirect(ONBOARDING_BYPASS_ROUTE);
+
   return (
     <div className="bg-background text-foreground min-h-screen [--bg-elevated:var(--card)] [--bg-subtle:var(--secondary)] [--line-strong:var(--border)] [--line:var(--border)] [--text-faint:var(--muted-foreground)] [--text-muted:var(--muted-foreground)]">
       <AuthTopBar surface="protected">

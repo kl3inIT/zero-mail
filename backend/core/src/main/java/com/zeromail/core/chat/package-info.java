@@ -21,14 +21,29 @@
         displayName = "Chat (assistant streaming + confirmation)",
         allowedDependencies = {
             "llm",
+            "llm :: domain",
+            "llm :: usecases",
+            "admin",
+            "admin :: cat.events",
+            "admin :: cat.usecases",
+            "admin :: mkey.domain",
+            "admin :: mkey.events",
+            "admin :: mkey.usecases",
             "rules",
+            "rules :: domain",
+            "rules :: projection",
+            "rules :: usecases",
             "gmail",
+            "gmail :: gateway",
             "triage",
+            "triage :: domain",
+            "triage :: usecases",
             "tenant",
-            "shared.lock",
-            "shared.persistence",
-            "shared.lang",
-            "shared.privacy"
+            "config",
+            "shared :: lock",
+            "shared :: persistence",
+            "shared :: lang",
+            "shared :: privacy"
         })
 package com.zeromail.core.chat;
 

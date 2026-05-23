@@ -7,6 +7,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { getCurrentUserCached } from '@/features/account/api/account-api';
 import InboxPreview from '@/features/landing/components/InboxPreview';
 import { ArrowRightIcon, CheckIcon } from '@/features/landing/components/PrototypeIcons';
+import { ONBOARDING_BYPASS_ROUTE, shouldShowBetaOnboarding } from '@/features/onboarding/config';
 import type { AppLocale } from '@/i18n/routing';
 import { cn } from '@/lib/utils';
 
@@ -15,15 +16,19 @@ export default async function Hero() {
   const locale = (await getLocale()) as AppLocale;
 
   let ctaHref: Route = '#waitlist' as Route;
-  let ctaKey: 'landing.waitlistCta' | 'landing.continueSetupCta' = 'landing.waitlistCta';
+  let ctaKey: 'landing.waitlistCta' | 'landing.continueSetupCta' | 'landing.openAppCta' =
+    'landing.waitlistCta';
   try {
     const headerStore = await headers();
     const cookieHeader = headerStore.get('cookie') ?? '';
     if (cookieHeader) {
       const user = await getCurrentUserCached(cookieHeader);
-      if (user.onboardingStep && user.onboardingStep !== 'COMPLETE') {
+      if (shouldShowBetaOnboarding(user.onboardingStep)) {
         ctaHref = '/onboarding';
         ctaKey = 'landing.continueSetupCta';
+      } else {
+        ctaHref = ONBOARDING_BYPASS_ROUTE;
+        ctaKey = 'landing.openAppCta';
       }
     }
   } catch {

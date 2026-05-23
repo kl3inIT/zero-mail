@@ -388,6 +388,10 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260523-fix-deploy-latest-main-tag-build | Fix Deploy Latest Main tag-build automation and Deploy Prod gate for workflow_dispatch image builds | 2026-05-23 | 80f1b2c6 | Verified | [260523-fix-deploy-latest-main-tag-build](./quick/260523-fix-deploy-latest-main-tag-build/) |
+| 260522-w9w | Add Spring Modulith docs/actuator support and fix core boundary verification violations | 2026-05-22 | pending | Verified | [260522-w9w-add-spring-modulith-docs-generation-dev-](./quick/260522-w9w-add-spring-modulith-docs-generation-dev-/) |
+| 260523-security-alert-triage-fix | Triage GitHub Security alerts and fix CodeQL source findings plus API/worker runtime image OS package CVEs | 2026-05-23 | pending | Verified | [260523-security-alert-triage-fix](./quick/260523-security-alert-triage-fix/) |
+| 260522-hide-beta-onboarding | Temporarily hide beta onboarding by redirecting onboarding routes to the app and suppressing onboarding entry points | 2026-05-22 | pending | Verified | [260522-hide-beta-onboarding](./quick/260522-hide-beta-onboarding/) |
 | 260522-onboarding-beta-prototype | Refactor beta onboarding from approved prototype into production: inbox preview, first-rule preview, and review-mode completion | 2026-05-22 | pending | Verified | [260522-onboarding-beta-prototype](./quick/260522-onboarding-beta-prototype/) |
 | 260522-37g | Review trang Quản lý LLM (master-keys + tier matrix) + 5 invariant tests (router walk, tier validation, reorder priorities, listMasked dedup, batch pairs perf) | 2026-05-22 | edb23805 | Verified | [260522-37g-review-trang-quan-ly-llm-targeted-tests](./quick/260522-37g-review-trang-quan-ly-llm-targeted-tests/) |
 | 260514-ta7 | Review PR #36 CodeRabbit and Copilot comments, apply warranted fixes, and recheck CI | 2026-05-14 | 4409e0e | Verified | [260514-ta7-review-pr-36-coderabbit-and-copilot-comm](./quick/260514-ta7-review-pr-36-coderabbit-and-copilot-comm/) |

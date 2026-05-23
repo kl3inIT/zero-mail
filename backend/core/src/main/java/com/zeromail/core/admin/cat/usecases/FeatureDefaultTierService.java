@@ -109,6 +109,18 @@ public class FeatureDefaultTierService {
             List<String> orderedModelIds,
             String requestIp,
             UUID requestId) {
+        assign(feature, tier, provider, orderedModelIds, null, requestIp, requestId);
+    }
+
+    @Transactional
+    public void assign(
+            Feature feature,
+            RoutingTier tier,
+            LlmProvider provider,
+            List<String> orderedModelIds,
+            String reason,
+            String requestIp,
+            UUID requestId) {
         AdminUser adminUser = AdminContext.currentOrThrow();
         Objects.requireNonNull(orderedModelIds, "orderedModelIds");
         if (orderedModelIds.isEmpty()) {
@@ -174,7 +186,7 @@ public class FeatureDefaultTierService {
                         "tier", tier.id(),
                         "provider", provider.id(),
                         "model_ids", List.copyOf(uniqueModelIds)),
-                null,
+                reason,
                 requestIp,
                 requestId);
     }
@@ -219,7 +231,7 @@ public class FeatureDefaultTierService {
         Map<Feature, Integer> tierCountByFeature = new java.util.HashMap<>();
         for (FeatureDefaultProviderEntity row : matrix) {
             providersByFeature
-                    .computeIfAbsent(row.getFeature(), feature -> new HashSet<>())
+                    .computeIfAbsent(row.getFeature(), _ -> new HashSet<>())
                     .add(row.getProvider());
             tierCountByFeature.merge(row.getFeature(), 1, Integer::sum);
         }

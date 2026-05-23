@@ -1,7 +1,5 @@
 /** Shared distributed-lock helpers. */
-@ApplicationModule(
-        displayName = "Lock",
-        allowedDependencies = {})
+@NamedInterface("lock")
 package com.zeromail.core.shared.lock;
 
-import org.springframework.modulith.ApplicationModule;
+import org.springframework.modulith.NamedInterface;

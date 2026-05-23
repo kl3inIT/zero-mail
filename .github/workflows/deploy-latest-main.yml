@@ -1,7 +1,7 @@
 # One-click "deploy current main HEAD" — auto-bumps a semver tag from the latest
-# vX.Y.Z, pushes it (which triggers Build and Push), waits for images to be ready,
-# then dispatches Deploy Prod. The deploy still goes through the prod environment
-# wait_timer + reviewers gate.
+# vX.Y.Z, pushes it, dispatches Build and Push for that tag, waits for images to be
+# ready, then dispatches Deploy Prod. The deploy still goes through the prod
+# environment wait_timer + reviewers gate.
 #
 # Usage:
 #   Actions → "Deploy Latest Main" → Run workflow → choose bump (default = patch)
@@ -65,6 +65,26 @@ jobs:
           git tag -a "$TAG" -m "Auto-tag from main HEAD via Deploy Latest Main workflow"
           git push origin "$TAG"
 
+      - name: Dispatch Build and Push for new tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.next.outputs.tag }}
+        run: |
+          # Tag pushes created by GITHUB_TOKEN do not trigger push workflows.
+          # Dispatch the image build explicitly so this workflow can wait on it.
+          for attempt in $(seq 1 6); do
+            if gh workflow run "Build and Push Images" \
+              --repo "${{ github.repository }}" \
+              --ref "$TAG" \
+              -f tag-as-prod=true; then
+              exit 0
+            fi
+            echo "Build dispatch for $TAG not accepted yet; retrying (attempt=$attempt)"
+            sleep 5
+          done
+          echo "::error::Could not dispatch Build and Push Images for $TAG"
+          exit 1
+
       - name: Wait for Build and Push to publish images
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -75,7 +95,7 @@ jobs:
             result=$(gh run list \
               --repo "${{ github.repository }}" \
               --workflow "Build and Push Images" \
-              --event push \
+              --event workflow_dispatch \
               --branch "$TAG" \
               --limit 1 \
               --json status,conclusion \

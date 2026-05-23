@@ -9,8 +9,7 @@ import com.zeromail.core.chat.usecases.AssistantPersonalInstructionsService;
 import com.zeromail.core.rules.projection.RuleStatusProjection;
 import com.zeromail.core.rules.usecases.RuleCreateCommand;
 import com.zeromail.core.rules.usecases.RuleManagementService;
-import com.zeromail.core.triage.persistence.TenantProtectedSenderObservationRepository;
-import com.zeromail.core.triage.usecases.SenderEmailCanonicalizer;
+import com.zeromail.core.triage.usecases.SenderSafetyEntryService;
 import com.zeromail.core.triage.usecases.TriageGmailWriter;
 import java.io.IOException;
 import java.util.EnumMap;
@@ -26,8 +25,7 @@ public class ConfirmRequiredToolHandlers {
             RuleManagementService ruleManagementService,
             AssistantMemoryService assistantMemoryService,
             AssistantPersonalInstructionsService assistantPersonalInstructionsService,
-            TenantProtectedSenderObservationRepository protectedSenderObservationRepository,
-            SenderEmailCanonicalizer senderEmailCanonicalizer,
+            SenderSafetyEntryService senderSafetyEntryService,
             TriageGmailWriter triageGmailWriter) {
         EnumMap<ChatToolName, WriteToolHandler> handlerMap = new EnumMap<>(ChatToolName.class);
         handlerMap.put(
@@ -36,11 +34,7 @@ public class ConfirmRequiredToolHandlers {
                 ChatToolName.DELETE_RULE, command -> deleteRule(ruleManagementService, command));
         handlerMap.put(
                 ChatToolName.REMOVE_SENDER_FROM_SAFETY_NET,
-                command ->
-                        removeSenderFromSafetyNet(
-                                protectedSenderObservationRepository,
-                                senderEmailCanonicalizer,
-                                command));
+                command -> removeSenderFromSafetyNet(senderSafetyEntryService, command));
         handlerMap.put(
                 ChatToolName.BULK_ARCHIVE, command -> bulkArchive(triageGmailWriter, command));
         handlerMap.put(
@@ -77,20 +71,13 @@ public class ConfirmRequiredToolHandlers {
     }
 
     private static WriteToolResult removeSenderFromSafetyNet(
-            TenantProtectedSenderObservationRepository protectedSenderObservationRepository,
-            SenderEmailCanonicalizer senderEmailCanonicalizer,
-            AssistantWriteCommand command) {
-        String canonicalSenderEmail =
-                senderEmailCanonicalizer.canonicalize(
+            SenderSafetyEntryService senderSafetyEntryService, AssistantWriteCommand command) {
+        SenderSafetyEntryService.SenderSafetyRemoval removal =
+                senderSafetyEntryService.removeProtectedSender(
+                        command.tenantId(),
                         WriteToolArguments.text(command.inputJson(), "senderEmail"));
-        protectedSenderObservationRepository
-                .findByTenantIdAndSenderEmail(command.tenantId(), canonicalSenderEmail)
-                .ifPresent(protectedSenderObservationRepository::delete);
         return WriteReversibleToolHandlers.result(
-                "sender_email_hash",
-                senderEmailCanonicalizer.redisCacheKeyComponent(canonicalSenderEmail),
-                "removed",
-                true);
+                "sender_email_hash", removal.senderEmailHash(), "removed", removal.removed());
     }
 
     private static WriteToolResult bulkArchive(

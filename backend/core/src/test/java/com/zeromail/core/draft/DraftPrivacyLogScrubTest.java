@@ -16,12 +16,12 @@ import com.zeromail.core.draft.usecases.GenerateThreadDraftCommand;
 import com.zeromail.core.draft.usecases.GenerateThreadDraftService;
 import com.zeromail.core.shared.lock.RedisDistributedLock;
 import com.zeromail.core.shared.lock.RedisDistributedLock.LockHandle;
-import com.zeromail.core.thread.persistence.ThreadReplyStatusRepository;
 import com.zeromail.core.thread.usecases.ClassifyThreadReplyStatusService;
 import com.zeromail.core.triage.domain.ReplyHeaders;
 import com.zeromail.core.triage.persistence.TriageAuditRepository;
 import com.zeromail.core.triage.persistence.TriageAuditWriter;
 import com.zeromail.core.triage.usecases.TriageActionResultJsonValidator;
+import com.zeromail.core.triage.usecases.TriageDraftAuditService;
 import com.zeromail.core.triage.usecases.TriageGmailWriter;
 import java.time.Clock;
 import java.time.Instant;
@@ -46,17 +46,20 @@ class DraftPrivacyLogScrubTest {
         DraftReplySourceLoader draftReplySourceLoader = mock(DraftReplySourceLoader.class);
         DraftBodyGenerator draftBodyGenerator = mock(DraftBodyGenerator.class);
         TriageGmailWriter triageGmailWriter = mock(TriageGmailWriter.class);
-        ThreadReplyStatusRepository threadReplyStatusRepository =
-                mock(ThreadReplyStatusRepository.class);
         ClassifyThreadReplyStatusService classifyThreadReplyStatusService =
                 mock(ClassifyThreadReplyStatusService.class);
         TriageAuditWriter triageAuditWriter = mock(TriageAuditWriter.class);
         TriageAuditRepository triageAuditRepository = mock(TriageAuditRepository.class);
+        TriageDraftAuditService triageDraftAuditService =
+                new TriageDraftAuditService(
+                        triageAuditWriter,
+                        triageAuditRepository,
+                        new TriageActionResultJsonValidator());
         ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
         LockHandle lockHandle = mock(LockHandle.class);
         when(redisDistributedLock.tryAcquire(anyString(), any()))
                 .thenReturn(Optional.of(lockHandle));
-        when(threadReplyStatusRepository.findByGmailThreadId("thread-1"))
+        when(classifyThreadReplyStatusService.currentDraftId("thread-1"))
                 .thenReturn(Optional.empty());
         when(draftReplySourceLoader.load(TENANT_ID, "thread-1"))
                 .thenReturn(
@@ -103,11 +106,8 @@ class DraftPrivacyLogScrubTest {
                         draftReplySourceLoader,
                         draftBodyGenerator,
                         triageGmailWriter,
-                        threadReplyStatusRepository,
                         classifyThreadReplyStatusService,
-                        triageAuditWriter,
-                        triageAuditRepository,
-                        new TriageActionResultJsonValidator(),
+                        triageDraftAuditService,
                         eventPublisher,
                         immediateTransactions(),
                         Clock.fixed(Instant.parse("2026-05-12T10:00:00Z"), ZoneOffset.UTC));

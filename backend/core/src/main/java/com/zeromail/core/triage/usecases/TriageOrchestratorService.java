@@ -3,7 +3,6 @@ package com.zeromail.core.triage.usecases;
 import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.billing.domain.ReservationId;
 import com.zeromail.core.billing.usecases.CreditLedger;
-import com.zeromail.core.draft.usecases.DraftBodyGenerator;
 import com.zeromail.core.gmail.event.MailMessageObserved;
 import com.zeromail.core.llm.exception.LlmEvaluationFailedException;
 import com.zeromail.core.llm.exception.SafetyViolationException;
@@ -84,7 +83,7 @@ public class TriageOrchestratorService {
     private final TriageSafetyPolicy triageSafetyPolicy;
     private final SenderSafetyNetService senderSafetyNetService;
     private final TriageAuditSaga triageAuditSaga;
-    private final DraftBodyGenerator draftBodyGenerator;
+    private final TriageDraftBodyGenerator draftBodyGenerator;
     private final ClassifyThreadReplyStatusService classifyThreadReplyStatusService;
     private final MeterRegistry meterRegistry;
     private final TransactionTemplate tenantScopedOrchestrationTransaction;
@@ -97,7 +96,7 @@ public class TriageOrchestratorService {
             CreditLedger creditLedger,
             SenderSafetyNetService senderSafetyNetService,
             TriageAuditSaga triageAuditSaga,
-            DraftBodyGenerator draftBodyGenerator,
+            TriageDraftBodyGenerator draftBodyGenerator,
             ClassifyThreadReplyStatusService classifyThreadReplyStatusService,
             PlatformTransactionManager transactionManager,
             ObjectProvider<MeterRegistry> meterRegistryProvider) {

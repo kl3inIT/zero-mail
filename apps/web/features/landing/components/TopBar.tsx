@@ -8,6 +8,7 @@ import { getCurrentUserCached } from '@/features/account/api/account-api';
 import { SegmentedLanguageToggle } from '@/features/landing/components/SegmentedLanguageToggle';
 import { ThemeToggle } from '@/features/landing/components/ThemeToggle';
 import ZMLogoMark from '@/features/landing/components/ZMLogoMark';
+import { ONBOARDING_BYPASS_ROUTE, shouldShowBetaOnboarding } from '@/features/onboarding/config';
 import { cn } from '@/lib/utils';
 
 import type { AppLocale } from '@/i18n/routing';
@@ -26,11 +27,11 @@ export default async function TopBar() {
     const cookieHeader = headerStore.get('cookie') ?? '';
     if (cookieHeader) {
       const user = await getCurrentUserCached(cookieHeader);
-      if (user.onboardingStep && user.onboardingStep !== 'COMPLETE') {
+      if (shouldShowBetaOnboarding(user.onboardingStep)) {
         ctaHref = '/onboarding';
         ctaKey = 'nav.continueSetup';
       } else {
-        ctaHref = '/rules';
+        ctaHref = ONBOARDING_BYPASS_ROUTE;
         ctaKey = 'nav.openApp';
       }
     }

@@ -207,8 +207,8 @@ class LlmGatewayImpl implements LlmGateway {
     @Override
     public ToolCallResult chat(CallSite callSite, String rawHtml) {
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
-        String model = llmProperties.modelByCallSite().get(callSite);
-        String provider = llmProperties.provider().id();
+        String model = platformModelFor(callSite);
+        String provider = llmProperties.provider();
         long startNanos = System.nanoTime();
         return Observation.createNotStarted("zero_mail.llm.gateway", observationRegistry)
                 .lowCardinalityKeyValue("tenantId", tenantId.toString())
@@ -271,8 +271,8 @@ class LlmGatewayImpl implements LlmGateway {
         }
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
         SanitizationContext sanitizedContext = Objects.requireNonNull(inbound, "inbound");
-        String model = llmProperties.modelByCallSite().get(callSite);
-        String provider = llmProperties.provider().id();
+        String model = platformModelFor(callSite);
+        String provider = llmProperties.provider();
         String userMessage =
                 draftUserMessage(
                         sanitizedContext.content(),
@@ -343,8 +343,8 @@ class LlmGatewayImpl implements LlmGateway {
         }
 
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
-        String model = llmProperties.modelByCallSite().get(callSite);
-        String provider = llmProperties.provider().id();
+        String model = platformModelFor(callSite);
+        String provider = llmProperties.provider();
         long startNanos = System.nanoTime();
         return Observation.createNotStarted(
                         "zero_mail.llm.gateway.rule_compile", observationRegistry)
@@ -408,8 +408,8 @@ class LlmGatewayImpl implements LlmGateway {
     public Map<String, Boolean> evaluateSemanticIntents(
             CallSite callSite, String rawMessageContent, List<SemanticIntentRequest> intents) {
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
-        String model = llmProperties.modelByCallSite().get(callSite);
-        String provider = llmProperties.provider().id();
+        String model = platformModelFor(callSite);
+        String provider = llmProperties.provider();
         long startNanos = System.nanoTime();
         return Observation.createNotStarted(
                         "zero_mail.llm.gateway.semantic_intent", observationRegistry)
@@ -464,7 +464,7 @@ class LlmGatewayImpl implements LlmGateway {
     public ToolCallResult driftCheck(String rawEmailFixture) {
         UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
         String model = llmProperties.driftModel();
-        String provider = llmProperties.provider().id();
+        String provider = llmProperties.provider();
         long startNanos = System.nanoTime();
         return Observation.createNotStarted("zero_mail.llm.gateway.drift", observationRegistry)
                 .lowCardinalityKeyValue("tenantId", tenantId.toString())
@@ -972,7 +972,15 @@ class LlmGatewayImpl implements LlmGateway {
             case ANTHROPIC -> DEFAULT_ANTHROPIC_BYOK_MODEL;
             case DEEPSEEK -> "deepseek-chat";
             case GOOGLE_GENAI -> "gemini-2.0-flash";
-            case OPENAI -> llmProperties.modelByCallSite().get(callSite);
+            case OPENAI -> platformModelFor(callSite);
+        };
+    }
+
+    private String platformModelFor(CallSite callSite) {
+        return switch (callSite) {
+            case PREVIEW -> llmProperties.compileModel();
+            case TRIAGE, DRAFT, TRIAGE_PLATFORM_LLM, TRIAGE_DETERMINISTIC ->
+                    llmProperties.triageModel();
         };
     }
 

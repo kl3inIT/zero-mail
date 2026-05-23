@@ -2,16 +2,16 @@ package com.zeromail.core.chat.llm.springai;
 
 import com.zeromail.core.admin.mkey.domain.KeyFormat;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
+import com.zeromail.core.admin.mkey.usecases.ProviderMasterKeyResolver;
 import com.zeromail.core.chat.persistence.AssistantSettingsEntity;
 import com.zeromail.core.chat.persistence.AssistantSettingsJpaRepository;
 import com.zeromail.core.chat.usecases.ZeroMailChatProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties;
-import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.llm.domain.BYOKProvider;
-import com.zeromail.core.llm.gateway.springai.admin.ProviderMasterKeyResolver;
-import com.zeromail.core.llm.persistence.TenantByokCredentialsEntity;
-import com.zeromail.core.llm.persistence.TenantByokCredentialsRepository;
+import com.zeromail.core.llm.usecases.ByokChatCredential;
+import com.zeromail.core.llm.usecases.ByokService;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,8 +29,7 @@ public class SpringAiChatModelFactory {
     private final ZeroMailCoreProperties zeroMailCoreProperties;
     private final ZeroMailChatProperties chatProperties;
     private final AssistantSettingsJpaRepository assistantSettingsRepository;
-    private final TenantByokCredentialsRepository tenantByokCredentialsRepository;
-    private final RefreshTokenCipher refreshTokenCipher;
+    private final ByokService byokService;
     private final ProviderMasterKeyResolver providerMasterKeyResolver;
     private final ConcurrentMap<ChatModelCacheKey, StreamingChatModel> chatModelsByKey =
             new ConcurrentHashMap<>();
@@ -39,14 +38,12 @@ public class SpringAiChatModelFactory {
             ZeroMailCoreProperties zeroMailCoreProperties,
             ZeroMailChatProperties chatProperties,
             AssistantSettingsJpaRepository assistantSettingsRepository,
-            TenantByokCredentialsRepository tenantByokCredentialsRepository,
-            RefreshTokenCipher refreshTokenCipher,
+            ByokService byokService,
             ProviderMasterKeyResolver providerMasterKeyResolver) {
         this.zeroMailCoreProperties = zeroMailCoreProperties;
         this.chatProperties = chatProperties;
         this.assistantSettingsRepository = assistantSettingsRepository;
-        this.tenantByokCredentialsRepository = tenantByokCredentialsRepository;
-        this.refreshTokenCipher = refreshTokenCipher;
+        this.byokService = byokService;
         this.providerMasterKeyResolver = providerMasterKeyResolver;
     }
 
@@ -155,24 +152,24 @@ public class SpringAiChatModelFactory {
     }
 
     private StreamingChatModel byokModel(UUID tenantId, String providerId, String modelId) {
-        TenantByokCredentialsEntity credentials =
-                tenantByokCredentialsRepository
-                        .findByTenantId(tenantId)
+        ByokChatCredential credentials =
+                byokService
+                        .chatCredential(tenantId)
                         .orElseThrow(
                                 () ->
                                         new IllegalStateException(
                                                 "No BYOK credentials configured for tenant"));
-        if (credentials.getProvider() != BYOKProvider.OPENAI) {
+        if (credentials.provider() != BYOKProvider.OPENAI) {
             throw new IllegalStateException(
                     "Assistant streaming BYOK provider is not supported yet: " + providerId);
         }
         byte[] decryptedKey =
-                refreshTokenCipher.decrypt(credentials.getEncryptedKey(), tenantId.toString());
+                Objects.requireNonNull(credentials.decryptedKey(), "decryptedKey must not be null");
         String plaintextApiKey = new String(decryptedKey, StandardCharsets.UTF_8);
         String endpoint =
-                credentials.getEndpoint() == null || credentials.getEndpoint().isBlank()
+                credentials.endpoint() == null || credentials.endpoint().isBlank()
                         ? zeroMailCoreProperties.llm().platform().baseUrl()
-                        : credentials.getEndpoint();
+                        : credentials.endpoint();
         try {
             return OpenAiChatModel.builder()
                     .options(
@@ -204,14 +201,14 @@ public class SpringAiChatModelFactory {
         if (baseUrl != null && baseUrl.contains("openrouter.ai")) {
             return LlmProvider.OPENROUTER;
         }
-        BYOKProvider provider = zeroMailCoreProperties.llm().platform().provider();
-        if (provider == BYOKProvider.ANTHROPIC) {
+        String providerId = zeroMailCoreProperties.llm().platform().provider();
+        if (BYOKProvider.ANTHROPIC.id().equals(providerId)) {
             return LlmProvider.ANTHROPIC;
         }
-        if (provider == BYOKProvider.GOOGLE_GENAI) {
+        if (BYOKProvider.GOOGLE_GENAI.id().equals(providerId)) {
             return LlmProvider.GOOGLE;
         }
-        if (provider == BYOKProvider.DEEPSEEK) {
+        if (BYOKProvider.DEEPSEEK.id().equals(providerId)) {
             return LlmProvider.DEEPSEEK;
         }
         return LlmProvider.OPENAI;

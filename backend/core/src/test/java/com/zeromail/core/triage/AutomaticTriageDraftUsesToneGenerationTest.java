@@ -12,14 +12,14 @@ class AutomaticTriageDraftUsesToneGenerationTest {
 
     private static final String TRIAGE_ORCHESTRATOR_SERVICE =
             "com.zeromail.core.triage.usecases.TriageOrchestratorService";
-    private static final String DRAFT_BODY_GENERATOR =
-            "com.zeromail.core.draft.usecases.DraftBodyGenerator";
+    private static final String TRIAGE_DRAFT_BODY_GENERATOR =
+            "com.zeromail.core.triage.usecases.TriageDraftBodyGenerator";
 
     @Test
     void automatic_save_draft_uses_tone_matched_generation_not_raw_rule_instruction()
             throws Exception {
         Class<?> orchestratorType = futureType(TRIAGE_ORCHESTRATOR_SERVICE);
-        futureType(DRAFT_BODY_GENERATOR);
+        futureType(TRIAGE_DRAFT_BODY_GENERATOR);
 
         assertThat(orchestratorSource())
                 .contains("DraftBodyGenerator")
@@ -28,7 +28,7 @@ class AutomaticTriageDraftUsesToneGenerationTest {
                 .doesNotContain("chatForDraft(");
         assertThat(orchestratorType.getDeclaredFields())
                 .extracting(field -> field.getType().getName())
-                .contains(DRAFT_BODY_GENERATOR);
+                .contains(TRIAGE_DRAFT_BODY_GENERATOR);
     }
 
     private static Class<?> futureType(String futureTypeName) {

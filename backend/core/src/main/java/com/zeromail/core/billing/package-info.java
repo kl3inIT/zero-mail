@@ -23,7 +23,14 @@
  */
 @ApplicationModule(
         displayName = "Billing",
-        allowedDependencies = {"tenant", "shared.persistence", "shared.lang"})
+        allowedDependencies = {
+            "tenant",
+            "config",
+            "shared :: error",
+            "shared :: exception",
+            "shared :: persistence",
+            "shared :: lang"
+        })
 package com.zeromail.core.billing;
 
 import org.springframework.modulith.ApplicationModule;

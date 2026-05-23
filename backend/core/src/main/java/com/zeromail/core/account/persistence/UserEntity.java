@@ -1,6 +1,6 @@
 package com.zeromail.core.account.persistence;
 
-import com.zeromail.core.onboarding.domain.OnboardingStep;
+import com.zeromail.core.account.domain.OnboardingStep;
 import com.zeromail.core.shared.persistence.AbstractTenantOwnedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
