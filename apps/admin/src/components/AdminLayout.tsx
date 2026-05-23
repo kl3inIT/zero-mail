@@ -9,6 +9,7 @@ import {
   KeyRoundIcon,
   Loader2Icon,
   LogOutIcon,
+  MailIcon,
   UsersIcon,
 } from 'lucide-react';
 
@@ -36,6 +37,7 @@ const navigationItems: ReadonlyArray<NavigationItem> = [
   { to: '/role-grants', label: 'Phân quyền admin', icon: UsersIcon },
   { to: '/master-keys', label: 'Quản lý LLM', icon: KeyRoundIcon },
   { to: '/tenants', label: 'Khách hàng', icon: Building2Icon },
+  { to: '/waitlist', label: 'Đăng ký dùng thử', icon: MailIcon },
   { to: '/queue', label: 'Hàng đợi', icon: ActivityIcon },
   { to: '/spend', label: 'Chi phí', icon: DollarSignIcon },
 ];

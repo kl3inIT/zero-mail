@@ -88,6 +88,17 @@ public class AccountService {
     }
 
     /**
+     * Cross-tenant existence check exposed for the public waitlist module. Goes through this
+     * service (not {@code UserRepository} directly) so the {@code waitlist} module satisfies the
+     * {@code DomainBoundaryArchTests} rule that cross-domain reads route through the owning
+     * domain's application service.
+     */
+    @Transactional(readOnly = true)
+    public boolean isEmailRegistered(String email) {
+        return users.existsByEmailGlobal(email);
+    }
+
+    /**
      * Advances the onboarding state machine for the current tenant's user. Exposed so {@code
      * OnboardingService} (the {@code onboarding} domain) does NOT have to inject the cross-domain
      * {@link UserRepository} (D-D1 — enforced by {@code DomainBoundaryArchTests}). The

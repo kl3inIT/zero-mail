@@ -24,10 +24,10 @@ spring:
             client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
-    enabled: false
+    enabled: true
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
         format_sql: false
@@ -96,7 +96,7 @@ zero-mail:
   notification:
     app-base-url: ${APP_BASE_URL:http://localhost:3000}
     email:
-      from-address: notifications@zero-mail.app
+      from-address: notifications@zeromail.vn
       resend:
         api-key: ${RESEND_API_KEY:?RESEND_API_KEY env var is required}
 server:
