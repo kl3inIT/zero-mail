@@ -264,8 +264,8 @@ export const rulesMessages = {
     en: 'Allowed actions',
   },
   'rules.manual.thenBody': {
-    vi: 'Chọn hành động mà trình chỉnh sửa hiện hỗ trợ. Catalog bên dưới hiển thị toàn bộ hành động tự động hóa.',
-    en: 'Choose actions this editor supports today. The catalog below shows the full automation action set.',
+    vi: 'Chọn hành động có cấu trúc. Các hành động gửi outbound sẽ chạy qua cài đặt Auto-send rules và cổng an toàn.',
+    en: 'Choose structured actions. Outbound sends use the Auto-send rules setting and safety gateway.',
   },
   'rules.manual.operator.all': {
     vi: 'Khớp tất cả',
@@ -296,24 +296,24 @@ export const rulesMessages = {
     en: 'No value needed',
   },
   'rules.manual.advancedTitle': {
-    vi: 'Đang bị khóa trong v1',
-    en: 'Locked in v1',
+    vi: 'Cách gửi outbound',
+    en: 'Outbound behavior',
   },
-  'rules.manual.unsafe.autoSend': {
-    vi: 'Auto-send rules',
-    en: 'Auto-send rules',
+  'rules.manual.outbound.autoSend': {
+    vi: 'Auto-send rules bật thì gửi tự động',
+    en: 'Auto-send rules sends automatically',
   },
-  'rules.manual.unsafe.forward': {
-    vi: 'Chuyển tiếp qua cổng an toàn',
-    en: 'Forward through safety gates',
+  'rules.manual.outbound.fallbackDraft': {
+    vi: 'Không đạt gate thì lưu bản nháp',
+    en: 'Gate failures save a draft',
   },
-  'rules.manual.unsafe.delete': {
-    vi: 'Spam có audit trail',
-    en: 'Spam with audit trail',
+  'rules.manual.outbound.deleteDisabled': {
+    vi: 'Không tự động xóa vĩnh viễn',
+    en: 'Permanent delete is disabled',
   },
-  'rules.manual.unsafe.webhook': {
-    vi: 'Gọi webhook',
-    en: 'Webhook disabled',
+  'rules.manual.outbound.webhookDisabled': {
+    vi: 'Webhook chưa hỗ trợ',
+    en: 'Webhook is not supported',
   },
   'rules.manual.structuredPreview': {
     vi: 'Quy tắc sẽ được lưu',
@@ -399,6 +399,34 @@ export const rulesMessages = {
     vi: 'Lưu bản nháp',
     en: 'Save draft',
   },
+  'rules.manual.action.mark_read': {
+    vi: 'Đánh dấu đã đọc',
+    en: 'Mark read',
+  },
+  'rules.manual.action.star': {
+    vi: 'Gắn sao',
+    en: 'Star',
+  },
+  'rules.manual.action.add_to_digest': {
+    vi: 'Thêm vào digest',
+    en: 'Add to digest',
+  },
+  'rules.manual.action.mark_spam': {
+    vi: 'Đánh dấu spam',
+    en: 'Mark spam',
+  },
+  'rules.manual.action.send_reply': {
+    vi: 'Gửi trả lời',
+    en: 'Send reply',
+  },
+  'rules.manual.action.forward_email': {
+    vi: 'Chuyển tiếp',
+    en: 'Forward',
+  },
+  'rules.manual.action.send_email': {
+    vi: 'Gửi email',
+    en: 'Send email',
+  },
   'rules.manual.actionPlaceholder.label': {
     vi: 'Finance',
     en: 'Finance',
@@ -410,6 +438,82 @@ export const rulesMessages = {
   'rules.manual.actionPlaceholder.save_draft': {
     vi: 'Soạn bản nháp ngắn để xin file PDF hóa đơn',
     en: 'Draft a short reply asking for the invoice PDF',
+  },
+  'rules.manual.actionPlaceholder.mark_read': {
+    vi: 'Không cần nhập thêm',
+    en: 'No value needed',
+  },
+  'rules.manual.actionPlaceholder.star': {
+    vi: 'Không cần nhập thêm',
+    en: 'No value needed',
+  },
+  'rules.manual.actionPlaceholder.add_to_digest': {
+    vi: 'Không cần nhập thêm',
+    en: 'No value needed',
+  },
+  'rules.manual.actionPlaceholder.mark_spam': {
+    vi: 'Không cần nhập thêm',
+    en: 'No value needed',
+  },
+  'rules.manual.actionPlaceholder.send_reply': {
+    vi: 'Gửi lời cảm ơn ngắn và nói tôi sẽ phản hồi sau',
+    en: 'Send a short thank-you and say I will follow up',
+  },
+  'rules.manual.actionPlaceholder.forward_email': {
+    vi: 'ops@example.com',
+    en: 'ops@example.com',
+  },
+  'rules.manual.actionPlaceholder.forwardInstruction': {
+    vi: 'Chuyển tiếp kèm ghi chú ngắn',
+    en: 'Forward with a short note',
+  },
+  'rules.manual.actionPlaceholder.send_email': {
+    vi: 'founder@example.com',
+    en: 'founder@example.com',
+  },
+  'rules.manual.actionPlaceholder.cc': {
+    vi: 'cc@example.com',
+    en: 'cc@example.com',
+  },
+  'rules.manual.actionPlaceholder.bcc': {
+    vi: 'bcc@example.com',
+    en: 'bcc@example.com',
+  },
+  'rules.manual.actionPlaceholder.subject': {
+    vi: 'Cập nhật hôm nay',
+    en: 'Today update',
+  },
+  'rules.manual.actionPlaceholder.body': {
+    vi: 'Nội dung email do bạn muốn Zero Mail gửi.',
+    en: 'Email body you want Zero Mail to send.',
+  },
+  'rules.manual.actionField.recipients': {
+    vi: 'Người nhận',
+    en: 'Recipients',
+  },
+  'rules.manual.actionField.instruction': {
+    vi: 'Chỉ dẫn',
+    en: 'Instruction',
+  },
+  'rules.manual.actionField.to': {
+    vi: 'Gửi tới',
+    en: 'To',
+  },
+  'rules.manual.actionField.cc': {
+    vi: 'Cc',
+    en: 'Cc',
+  },
+  'rules.manual.actionField.bcc': {
+    vi: 'Bcc',
+    en: 'Bcc',
+  },
+  'rules.manual.actionField.subject': {
+    vi: 'Tiêu đề',
+    en: 'Subject',
+  },
+  'rules.manual.actionField.body': {
+    vi: 'Nội dung',
+    en: 'Body',
   },
   'rules.preview.title': {
     vi: 'Kiểm tra trên Gmail thật',

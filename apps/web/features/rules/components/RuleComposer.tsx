@@ -7,10 +7,15 @@ import {
   Archive,
   CheckCircle2,
   FileText,
+  Forward,
   HelpCircle,
   Loader2,
+  MailCheck,
   Plus,
+  Reply,
   Save,
+  Send,
+  Star,
   Tags,
   Trash2,
   Wand2,
@@ -659,10 +664,10 @@ function ManualBuilder({
         <h3 className="font-semibold">{t('rules.manual.advancedTitle')}</h3>
         <div className="mt-3 flex flex-wrap gap-2">
           {[
-            t('rules.manual.unsafe.autoSend'),
-            t('rules.manual.unsafe.forward'),
-            t('rules.manual.unsafe.delete'),
-            t('rules.manual.unsafe.webhook'),
+            t('rules.manual.outbound.autoSend'),
+            t('rules.manual.outbound.fallbackDraft'),
+            t('rules.manual.outbound.deleteDisabled'),
+            t('rules.manual.outbound.webhookDisabled'),
           ].map((label) => (
             <Badge
               key={label}
@@ -805,7 +810,7 @@ function ActionRow({
   const needsValue = actionRequiresValue(action.type);
 
   return (
-    <div className="bg-muted/20 grid gap-2 rounded-md border p-2 sm:grid-cols-[28px_190px_1fr_36px] sm:items-center">
+    <div className="bg-muted/20 grid gap-2 rounded-md border p-2 sm:grid-cols-[28px_210px_1fr_36px] sm:items-start">
       <div className="text-muted-foreground hidden text-center text-xs font-semibold sm:block">
         {index + 1}
       </div>
@@ -816,18 +821,17 @@ function ActionRow({
           onUpdate(action.id, {
             type: nextType,
             value: actionRequiresValue(nextType) ? action.value : '',
+            instruction: '',
+            cc: '',
+            bcc: '',
+            subject: '',
+            body: '',
           });
         }}
       >
         <SelectTrigger className="w-full">
           <span className="inline-flex items-center gap-2">
-            {action.type === 'archive' ? (
-              <Archive className="size-4" aria-hidden="true" />
-            ) : action.type === 'label' ? (
-              <Tags className="size-4" aria-hidden="true" />
-            ) : (
-              <FileText className="size-4" aria-hidden="true" />
-            )}
+            <ActionTypeIcon type={action.type} />
             {actionTypeLabel(action.type, translate)}
           </span>
         </SelectTrigger>
@@ -835,13 +839,7 @@ function ActionRow({
           {MANUAL_ACTION_TYPES.map((type) => (
             <SelectItem key={type} value={type}>
               <span className="inline-flex items-center gap-2">
-                {type === 'archive' ? (
-                  <Archive className="size-4" aria-hidden="true" />
-                ) : type === 'label' ? (
-                  <Tags className="size-4" aria-hidden="true" />
-                ) : (
-                  <FileText className="size-4" aria-hidden="true" />
-                )}
+                <ActionTypeIcon type={type} />
                 {actionTypeLabel(type, translate)}
               </span>
             </SelectItem>
@@ -849,13 +847,7 @@ function ActionRow({
         </SelectContent>
       </Select>
       {needsValue ? (
-        <Input
-          value={action.value}
-          maxLength={500}
-          aria-label={actionTypeLabel(action.type, translate)}
-          placeholder={actionPlaceholder(action.type, translate)}
-          onChange={(event) => onUpdate(action.id, { value: event.currentTarget.value })}
-        />
+        <ActionValueFields action={action} onUpdate={onUpdate} />
       ) : (
         <div className="text-muted-foreground bg-background rounded-md border px-3 py-2 text-sm">
           {t('rules.manual.noValueNeeded')}
@@ -873,6 +865,93 @@ function ActionRow({
         <Trash2 className="size-4" aria-hidden="true" />
       </Button>
     </div>
+  );
+}
+
+function ActionValueFields({
+  action,
+  onUpdate,
+}: {
+  action: ManualAction;
+  onUpdate: (actionId: string, patch: Partial<ManualAction>) => void;
+}) {
+  const t = useTranslations();
+  const translate = t as unknown as (key: string) => string;
+
+  if (action.type === 'forward_email') {
+    return (
+      <div className="grid gap-2 md:grid-cols-2">
+        <Input
+          value={action.value}
+          maxLength={500}
+          aria-label={t('rules.manual.actionField.recipients')}
+          placeholder={actionPlaceholder(action.type, translate)}
+          onChange={(event) => onUpdate(action.id, { value: event.currentTarget.value })}
+        />
+        <Input
+          value={action.instruction ?? ''}
+          maxLength={500}
+          aria-label={t('rules.manual.actionField.instruction')}
+          placeholder={t('rules.manual.actionPlaceholder.forwardInstruction')}
+          onChange={(event) => onUpdate(action.id, { instruction: event.currentTarget.value })}
+        />
+      </div>
+    );
+  }
+
+  if (action.type === 'send_email') {
+    return (
+      <div className="grid gap-2">
+        <Input
+          value={action.value}
+          maxLength={500}
+          aria-label={t('rules.manual.actionField.to')}
+          placeholder={actionPlaceholder(action.type, translate)}
+          onChange={(event) => onUpdate(action.id, { value: event.currentTarget.value })}
+        />
+        <div className="grid gap-2 md:grid-cols-2">
+          <Input
+            value={action.cc ?? ''}
+            maxLength={500}
+            aria-label={t('rules.manual.actionField.cc')}
+            placeholder={t('rules.manual.actionPlaceholder.cc')}
+            onChange={(event) => onUpdate(action.id, { cc: event.currentTarget.value })}
+          />
+          <Input
+            value={action.bcc ?? ''}
+            maxLength={500}
+            aria-label={t('rules.manual.actionField.bcc')}
+            placeholder={t('rules.manual.actionPlaceholder.bcc')}
+            onChange={(event) => onUpdate(action.id, { bcc: event.currentTarget.value })}
+          />
+        </div>
+        <Input
+          value={action.subject ?? ''}
+          maxLength={500}
+          aria-label={t('rules.manual.actionField.subject')}
+          placeholder={t('rules.manual.actionPlaceholder.subject')}
+          onChange={(event) => onUpdate(action.id, { subject: event.currentTarget.value })}
+        />
+        <Textarea
+          value={action.body ?? ''}
+          maxLength={4000}
+          aria-label={t('rules.manual.actionField.body')}
+          placeholder={t('rules.manual.actionPlaceholder.body')}
+          className="min-h-20 resize-y"
+          onChange={(event) => onUpdate(action.id, { body: event.currentTarget.value })}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <Input
+      value={action.value}
+      maxLength={500}
+      aria-label={actionTypeLabel(action.type, translate)}
+      placeholder={actionPlaceholder(action.type, translate)}
+      onChange={(event) => onUpdate(action.id, { value: event.currentTarget.value })}
+    />
   );
 }
 
@@ -1021,6 +1100,31 @@ function conditionPlaceholder(type: ManualConditionType, t: (key: string) => str
   }
 }
 
+function ActionTypeIcon({ type }: { type: ManualActionType }) {
+  switch (type) {
+    case 'label':
+      return <Tags className="size-4" aria-hidden="true" />;
+    case 'archive':
+      return <Archive className="size-4" aria-hidden="true" />;
+    case 'save_draft':
+      return <FileText className="size-4" aria-hidden="true" />;
+    case 'mark_read':
+      return <MailCheck className="size-4" aria-hidden="true" />;
+    case 'star':
+      return <Star className="size-4" aria-hidden="true" />;
+    case 'add_to_digest':
+      return <FileText className="size-4" aria-hidden="true" />;
+    case 'mark_spam':
+      return <AlertCircle className="size-4" aria-hidden="true" />;
+    case 'send_reply':
+      return <Reply className="size-4" aria-hidden="true" />;
+    case 'forward_email':
+      return <Forward className="size-4" aria-hidden="true" />;
+    case 'send_email':
+      return <Send className="size-4" aria-hidden="true" />;
+  }
+}
+
 function actionTypeLabel(type: ManualActionType, t: (key: string) => string) {
   switch (type) {
     case 'label':
@@ -1029,6 +1133,20 @@ function actionTypeLabel(type: ManualActionType, t: (key: string) => string) {
       return t('rules.manual.action.archive');
     case 'save_draft':
       return t('rules.manual.action.save_draft');
+    case 'mark_read':
+      return t('rules.manual.action.mark_read');
+    case 'star':
+      return t('rules.manual.action.star');
+    case 'add_to_digest':
+      return t('rules.manual.action.add_to_digest');
+    case 'mark_spam':
+      return t('rules.manual.action.mark_spam');
+    case 'send_reply':
+      return t('rules.manual.action.send_reply');
+    case 'forward_email':
+      return t('rules.manual.action.forward_email');
+    case 'send_email':
+      return t('rules.manual.action.send_email');
   }
 }
 
@@ -1040,5 +1158,19 @@ function actionPlaceholder(type: ManualActionType, t: (key: string) => string) {
       return t('rules.manual.actionPlaceholder.archive');
     case 'save_draft':
       return t('rules.manual.actionPlaceholder.save_draft');
+    case 'mark_read':
+      return t('rules.manual.actionPlaceholder.mark_read');
+    case 'star':
+      return t('rules.manual.actionPlaceholder.star');
+    case 'add_to_digest':
+      return t('rules.manual.actionPlaceholder.add_to_digest');
+    case 'mark_spam':
+      return t('rules.manual.actionPlaceholder.mark_spam');
+    case 'send_reply':
+      return t('rules.manual.actionPlaceholder.send_reply');
+    case 'forward_email':
+      return t('rules.manual.actionPlaceholder.forward_email');
+    case 'send_email':
+      return t('rules.manual.actionPlaceholder.send_email');
   }
 }

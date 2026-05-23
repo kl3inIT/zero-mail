@@ -1347,18 +1347,46 @@
     },
     "manual": {
       "action": {
+        "add_to_digest": "Thêm vào digest",
         "archive": "Lưu trữ",
+        "forward_email": "Chuyển tiếp",
         "label": "Gắn nhãn",
-        "save_draft": "Lưu bản nháp"
+        "mark_read": "Đánh dấu đã đọc",
+        "mark_spam": "Đánh dấu spam",
+        "save_draft": "Lưu bản nháp",
+        "send_email": "Gửi email",
+        "send_reply": "Gửi trả lời",
+        "star": "Gắn sao"
+      },
+      "actionField": {
+        "bcc": "Bcc",
+        "body": "Nội dung",
+        "cc": "Cc",
+        "instruction": "Chỉ dẫn",
+        "recipients": "Người nhận",
+        "subject": "Tiêu đề",
+        "to": "Gửi tới"
       },
       "actionPlaceholder": {
+        "add_to_digest": "Không cần nhập thêm",
         "archive": "Không cần nhập thêm",
+        "bcc": "bcc@example.com",
+        "body": "Nội dung email do bạn muốn Zero Mail gửi.",
+        "cc": "cc@example.com",
+        "forward_email": "ops@example.com",
+        "forwardInstruction": "Chuyển tiếp kèm ghi chú ngắn",
         "label": "Finance",
-        "save_draft": "Soạn bản nháp ngắn để xin file PDF hóa đơn"
+        "mark_read": "Không cần nhập thêm",
+        "mark_spam": "Không cần nhập thêm",
+        "save_draft": "Soạn bản nháp ngắn để xin file PDF hóa đơn",
+        "send_email": "founder@example.com",
+        "send_reply": "Gửi lời cảm ơn ngắn và nói tôi sẽ phản hồi sau",
+        "star": "Không cần nhập thêm",
+        "subject": "Cập nhật hôm nay"
       },
       "addAction": "Thêm hành động",
       "addCondition": "Thêm điều kiện",
-      "advancedTitle": "Đang bị khóa trong v1",
+      "advancedTitle": "Cách gửi outbound",
       "condition": {
         "GMAIL_LABEL_PRESENT": "Có nhãn Gmail",
         "HAS_ATTACHMENT": "Có tệp đính kèm",
@@ -1386,6 +1414,12 @@
         "all": "Khớp tất cả",
         "any": "Khớp bất kỳ"
       },
+      "outbound": {
+        "autoSend": "Auto-send rules bật thì gửi tự động",
+        "deleteDisabled": "Không tự động xóa vĩnh viễn",
+        "fallbackDraft": "Không đạt gate thì lưu bản nháp",
+        "webhookDisabled": "Webhook chưa hỗ trợ"
+      },
       "refineCta": "Cập nhật form",
       "refineLabel": "Muốn chỉnh thêm bằng mô tả?",
       "refinePlaceholder": "Ví dụ: trừ email quảng cáo khóa học, hoặc chỉ áp dụng cho deadline và bài tập",
@@ -1393,7 +1427,7 @@
       "removeCondition": "Xóa điều kiện",
       "saveHint": "Quy tắc mới hoặc vừa sửa luôn được lưu ở trạng thái tắt cho đến khi bạn chạy thử.",
       "structuredPreview": "Quy tắc sẽ được lưu",
-      "thenBody": "Chọn hành động mà trình chỉnh sửa hiện hỗ trợ. Catalog bên dưới hiển thị toàn bộ hành động tự động hóa.",
+      "thenBody": "Chọn hành động có cấu trúc. Các hành động gửi outbound sẽ chạy qua cài đặt Auto-send rules và cổng an toàn.",
       "thenTitle": "Zero Mail sẽ làm",
       "unsafe": {
         "autoSend": "Auto-send rules",

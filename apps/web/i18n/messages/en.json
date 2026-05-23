@@ -1347,18 +1347,46 @@
     },
     "manual": {
       "action": {
+        "add_to_digest": "Add to digest",
         "archive": "Archive",
+        "forward_email": "Forward",
         "label": "Label",
-        "save_draft": "Save draft"
+        "mark_read": "Mark read",
+        "mark_spam": "Mark spam",
+        "save_draft": "Save draft",
+        "send_email": "Send email",
+        "send_reply": "Send reply",
+        "star": "Star"
+      },
+      "actionField": {
+        "bcc": "Bcc",
+        "body": "Body",
+        "cc": "Cc",
+        "instruction": "Instruction",
+        "recipients": "Recipients",
+        "subject": "Subject",
+        "to": "To"
       },
       "actionPlaceholder": {
+        "add_to_digest": "No value needed",
         "archive": "No value needed",
+        "bcc": "bcc@example.com",
+        "body": "Email body you want Zero Mail to send.",
+        "cc": "cc@example.com",
+        "forward_email": "ops@example.com",
+        "forwardInstruction": "Forward with a short note",
         "label": "Finance",
-        "save_draft": "Draft a short reply asking for the invoice PDF"
+        "mark_read": "No value needed",
+        "mark_spam": "No value needed",
+        "save_draft": "Draft a short reply asking for the invoice PDF",
+        "send_email": "founder@example.com",
+        "send_reply": "Send a short thank-you and say I will follow up",
+        "star": "No value needed",
+        "subject": "Today update"
       },
       "addAction": "Add action",
       "addCondition": "Add condition",
-      "advancedTitle": "Locked in v1",
+      "advancedTitle": "Outbound behavior",
       "condition": {
         "GMAIL_LABEL_PRESENT": "Gmail label present",
         "HAS_ATTACHMENT": "Has attachment",
@@ -1386,6 +1414,12 @@
         "all": "Match all",
         "any": "Match any"
       },
+      "outbound": {
+        "autoSend": "Auto-send rules sends automatically",
+        "deleteDisabled": "Permanent delete is disabled",
+        "fallbackDraft": "Gate failures save a draft",
+        "webhookDisabled": "Webhook is not supported"
+      },
       "refineCta": "Update form",
       "refineLabel": "Refine with another instruction",
       "refinePlaceholder": "Example: exclude course ads, or only match deadlines and assignments",
@@ -1393,7 +1427,7 @@
       "removeCondition": "Remove condition",
       "saveHint": "New or edited rules are saved off until you preview them.",
       "structuredPreview": "Rule to save",
-      "thenBody": "Choose actions this editor supports today. The catalog below shows the full automation action set.",
+      "thenBody": "Choose structured actions. Outbound sends use the Auto-send rules setting and safety gateway.",
       "thenTitle": "Allowed actions",
       "unsafe": {
         "autoSend": "Auto-send rules",

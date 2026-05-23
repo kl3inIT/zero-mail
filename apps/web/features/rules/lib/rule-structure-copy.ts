@@ -3,6 +3,7 @@ import type {
   ManualConditionType,
   RuleStructureCopy,
 } from '@/features/rules/lib/rule-structure';
+import { MANUAL_ACTION_TYPES } from '@/features/rules/lib/rule-structure';
 
 type TranslationFunction = (key: string) => string;
 
@@ -17,7 +18,7 @@ const CONDITION_TYPES: ManualConditionType[] = [
   'SEMANTIC_INTENT',
 ];
 
-const ACTION_TYPES: ManualActionType[] = ['label', 'archive', 'save_draft'];
+const ACTION_TYPES: ManualActionType[] = [...MANUAL_ACTION_TYPES];
 
 export function createRuleStructureCopy(t: TranslationFunction): RuleStructureCopy {
   return {
