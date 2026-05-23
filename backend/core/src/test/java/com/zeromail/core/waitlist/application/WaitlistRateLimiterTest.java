@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
@@ -66,6 +67,21 @@ class WaitlistRateLimiterTest {
     @Test
     void redis_unavailable_throws_backend_unavailable_exception() {
         WaitlistRateLimiter rateLimiter = new WaitlistRateLimiter(() -> null, fixedClock());
+
+        assertThatThrownBy(() -> rateLimiter.checkAllowed(IP_HASH))
+                .isInstanceOf(WaitlistRateLimiter.RateLimitBackendUnavailableException.class);
+    }
+
+    @Test
+    void redis_access_failure_throws_backend_unavailable_exception() {
+        StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
+        @SuppressWarnings("unchecked")
+        ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.increment(any()))
+                .thenThrow(new DataAccessResourceFailureException("redis unavailable"));
+        WaitlistRateLimiter rateLimiter =
+                new WaitlistRateLimiter(() -> redisTemplate, fixedClock());
 
         assertThatThrownBy(() -> rateLimiter.checkAllowed(IP_HASH))
                 .isInstanceOf(WaitlistRateLimiter.RateLimitBackendUnavailableException.class);

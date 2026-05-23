@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface WaitlistEmailRepository extends JpaRepository<WaitlistEmailEntity, UUID> {
 
@@ -32,16 +33,17 @@ public interface WaitlistEmailRepository extends JpaRepository<WaitlistEmailEnti
     @Query(
             value =
                     """
-                    SELECT id
-                    FROM waitlist_email
-                    WHERE status = 'APPROVED'
-                      AND (invite_next_attempt_at IS NULL
-                           OR invite_next_attempt_at <= :referenceInstant)
-                    ORDER BY approved_at ASC
-                    LIMIT :limit
-                    FOR UPDATE SKIP LOCKED
-                    """,
+                            SELECT id
+                            FROM waitlist_email
+                            WHERE status = 'APPROVED'
+                              AND (invite_next_attempt_at IS NULL
+                                   OR invite_next_attempt_at <= :referenceInstant)
+                            ORDER BY approved_at ASC
+                            LIMIT :limit
+                            FOR UPDATE SKIP LOCKED
+                            """,
             nativeQuery = true)
+    @Transactional
     List<UUID> findDueInviteIds(
             @Param("referenceInstant") Instant referenceInstant, @Param("limit") int limit);
 }

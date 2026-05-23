@@ -7,7 +7,7 @@ import {
   RefreshCcwIcon,
   XCircleIcon,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { z } from 'zod';
 
 import { KpiCard } from '@/components/KpiCard';
@@ -23,13 +23,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -101,6 +95,15 @@ function WaitlistRoute() {
 
   const items = useMemo(() => listQuery.data?.items ?? [], [listQuery.data]);
 
+  useEffect(() => {
+    if (!listQuery.data || search.page === currentPage) return;
+    void navigate({
+      to: '/waitlist',
+      search: { status: search.status, page: currentPage, size: search.size },
+      replace: true,
+    });
+  }, [currentPage, listQuery.data, navigate, search.page, search.size, search.status]);
+
   function setStatus(nextStatus: typeof search.status) {
     void navigate({
       to: '/waitlist',
@@ -145,12 +148,13 @@ function WaitlistRoute() {
     <div className="space-y-6">
       <header className="flex items-end justify-between gap-4">
         <div>
-          <p className="font-mono text-[11px] tracking-wider text-muted-foreground uppercase">
+          <p className="text-muted-foreground font-mono text-[11px] tracking-wider uppercase">
             Hàng đợi đăng ký
           </p>
-          <h1 className="text-xl font-semibold text-ink">Danh sách email chờ duyệt</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Email người dùng gửi từ landing page. Duyệt sẽ kích hoạt worker gửi mail mời trong 1 phút.
+          <h1 className="text-ink text-xl font-semibold">Danh sách email chờ duyệt</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Email người dùng gửi từ landing page. Duyệt sẽ kích hoạt worker gửi mail mời trong 1
+            phút.
           </p>
         </div>
         <Button
@@ -204,8 +208,11 @@ function WaitlistRoute() {
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Trạng thái</span>
-                <Select value={search.status} onValueChange={(value) => setStatus(value as typeof search.status)}>
+                <span className="text-muted-foreground text-xs">Trạng thái</span>
+                <Select
+                  value={search.status}
+                  onValueChange={(value) => setStatus(value as typeof search.status)}
+                >
                   <SelectTrigger className="w-[180px]">
                     <SelectValue />
                   </SelectTrigger>
@@ -220,8 +227,11 @@ function WaitlistRoute() {
                 </Select>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Số dòng/trang</span>
-                <Select value={String(search.size)} onValueChange={(value) => setSize(Number(value))}>
+                <span className="text-muted-foreground text-xs">Số dòng/trang</span>
+                <Select
+                  value={String(search.size)}
+                  onValueChange={(value) => setSize(Number(value))}
+                >
                   <SelectTrigger className="w-[90px]">
                     <SelectValue />
                   </SelectTrigger>
@@ -238,11 +248,11 @@ function WaitlistRoute() {
         </CardHeader>
         <CardContent className="px-0">
           {listQuery.isError ? (
-            <div className="px-6 py-8 text-sm text-destructive">Không tải được danh sách.</div>
+            <div className="text-destructive px-6 py-8 text-sm">Không tải được danh sách.</div>
           ) : listQuery.isLoading ? (
-            <div className="px-6 py-8 text-sm text-muted-foreground">Đang tải...</div>
+            <div className="text-muted-foreground px-6 py-8 text-sm">Đang tải...</div>
           ) : items.length === 0 ? (
-            <div className="px-6 py-8 text-sm text-muted-foreground">
+            <div className="text-muted-foreground px-6 py-8 text-sm">
               Không có mục nào trong trạng thái này.
             </div>
           ) : (
@@ -264,14 +274,16 @@ function WaitlistRoute() {
                     <TableCell>
                       <StatusBadge status={entry.status} />
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="text-muted-foreground text-xs">
                       {entry.source ?? '-'}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">{formatDateTime(entry.createdAt)}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {formatDateTime(entry.createdAt)}
+                    </TableCell>
                     <TableCell className="font-mono text-xs">
                       {formatDateTime(entry.inviteSentAt ?? entry.approvedAt)}
                       {entry.inviteFailureReason && (
-                        <div className="mt-1 text-[11px] text-destructive">
+                        <div className="text-destructive mt-1 text-[11px]">
                           {entry.inviteFailureReason}
                         </div>
                       )}
@@ -285,7 +297,7 @@ function WaitlistRoute() {
                             disabled={approveMutation.isPending || rejectMutation.isPending}
                             onClick={() => setPendingDialog({ kind: 'approve', entry })}
                           >
-                            <CheckCircle2Icon className="size-4 text-green" />
+                            <CheckCircle2Icon className="text-green size-4" />
                             Duyệt
                           </Button>
                           <Button
@@ -294,12 +306,12 @@ function WaitlistRoute() {
                             disabled={approveMutation.isPending || rejectMutation.isPending}
                             onClick={() => setPendingDialog({ kind: 'reject', entry })}
                           >
-                            <XCircleIcon className="size-4 text-destructive" />
+                            <XCircleIcon className="text-destructive size-4" />
                             Từ chối
                           </Button>
                         </div>
                       ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
+                        <span className="text-muted-foreground text-xs">—</span>
                       )}
                     </TableCell>
                   </TableRow>
@@ -309,8 +321,8 @@ function WaitlistRoute() {
           )}
         </CardContent>
         {totalElements > 0 && (
-          <div className="flex items-center justify-between border-t border-border px-6 py-3">
-            <div className="text-xs text-muted-foreground">
+          <div className="border-border flex items-center justify-between border-t px-6 py-3">
+            <div className="text-muted-foreground text-xs">
               Trang {currentPage + 1} / {totalPages}
             </div>
             <div className="flex gap-2">
@@ -349,12 +361,14 @@ function WaitlistRoute() {
             <AlertDialogDescription>
               {pendingDialog?.kind === 'approve' ? (
                 <>
-                  Hệ thống sẽ gửi mail mời tới <span className="font-mono">{pendingDialog.entry.email}</span> trong vòng 1 phút.
+                  Hệ thống sẽ gửi mail mời tới{' '}
+                  <span className="font-mono">{pendingDialog.entry.email}</span> trong vòng 1 phút.
                   Thao tác này không thể hoàn tác.
                 </>
               ) : pendingDialog ? (
                 <>
-                  Đăng ký của <span className="font-mono">{pendingDialog.entry.email}</span> sẽ bị từ chối. Email người dùng KHÔNG được thông báo.
+                  Đăng ký của <span className="font-mono">{pendingDialog.entry.email}</span> sẽ bị
+                  từ chối. Email người dùng KHÔNG được thông báo.
                 </>
               ) : null}
             </AlertDialogDescription>
@@ -398,10 +412,19 @@ function statusLabel(status: WaitlistStatus): string {
 function StatusBadge({ status }: { status: WaitlistStatus }) {
   const config: Record<WaitlistStatus, { className: string; Icon: typeof ClockIcon }> = {
     PENDING: { className: 'bg-amber-soft text-amber border-amber/40', Icon: ClockIcon },
-    APPROVED: { className: 'bg-violet-soft text-primary border-primary/40', Icon: CheckCircle2Icon },
-    REJECTED: { className: 'bg-destructive-soft text-destructive border-destructive/40', Icon: XCircleIcon },
+    APPROVED: {
+      className: 'bg-violet-soft text-primary border-primary/40',
+      Icon: CheckCircle2Icon,
+    },
+    REJECTED: {
+      className: 'bg-destructive-soft text-destructive border-destructive/40',
+      Icon: XCircleIcon,
+    },
     INVITED: { className: 'bg-green-soft text-green border-green/40', Icon: MailCheckIcon },
-    INVITE_FAILED: { className: 'bg-destructive-soft text-destructive border-destructive/40', Icon: MailXIcon },
+    INVITE_FAILED: {
+      className: 'bg-destructive-soft text-destructive border-destructive/40',
+      Icon: MailXIcon,
+    },
   };
   const { className, Icon } = config[status];
   return (

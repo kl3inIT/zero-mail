@@ -57,15 +57,6 @@ public class WaitlistController {
     }
 
     private static String resolveClientIp(HttpServletRequest servletRequest) {
-        String forwardedFor = servletRequest.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            int comma = forwardedFor.indexOf(',');
-            String firstHop =
-                    (comma == -1 ? forwardedFor : forwardedFor.substring(0, comma)).trim();
-            if (!firstHop.isEmpty()) {
-                return firstHop;
-            }
-        }
         return servletRequest.getRemoteAddr();
     }
 

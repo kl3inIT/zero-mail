@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.function.Supplier;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -51,12 +52,16 @@ public class WaitlistRateLimiter {
         }
         String redisKey = "zeromail:waitlist:subscribe:" + ipHash + ":" + epochMinute();
         StringRedisTemplate stringRedisTemplate = stringRedisTemplate();
-        Long count = stringRedisTemplate.opsForValue().increment(redisKey);
-        if (count != null && count == 1L) {
-            stringRedisTemplate.expire(redisKey, Duration.ofMinutes(1));
-        }
-        if (count != null && count > LIMIT_PER_MINUTE) {
-            throw new WaitlistRateLimitExceededException();
+        try {
+            Long count = stringRedisTemplate.opsForValue().increment(redisKey);
+            if (count != null && count == 1L) {
+                stringRedisTemplate.expire(redisKey, Duration.ofMinutes(1));
+            }
+            if (count != null && count > LIMIT_PER_MINUTE) {
+                throw new WaitlistRateLimitExceededException();
+            }
+        } catch (DataAccessException redisAccessException) {
+            throw new RateLimitBackendUnavailableException(redisAccessException);
         }
     }
 
@@ -100,6 +105,14 @@ public class WaitlistRateLimiter {
     }
 
     public static class RateLimitBackendUnavailableException extends BusinessException {
+        public RateLimitBackendUnavailableException() {
+            super("Waitlist rate-limit backend is unavailable");
+        }
+
+        public RateLimitBackendUnavailableException(Throwable cause) {
+            super("Waitlist rate-limit backend is unavailable", cause);
+        }
+
         @Override
         public ErrorClass errorClass() {
             return ErrorClass.SERVICE_UNAVAILABLE;

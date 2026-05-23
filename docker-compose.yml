@@ -19,7 +19,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-zeromail}
       POSTGRES_USER: ${POSTGRES_USER:-zeromail}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zeropmail}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
     # Mount custom init scripts (only run on fresh data volumes) + tuned config.
     # 10-create-dev-db.sql is also runnable manually via `docker exec psql` for
     # existing volumes — see scripts/ops/postgres/init/10-create-dev-db.sql.

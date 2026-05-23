@@ -1,6 +1,7 @@
 package com.zeromail.worker.waitlist;
 
 import com.zeromail.core.notification.usecases.DispatchOutcome;
+import com.zeromail.core.waitlist.domain.WaitlistStatus;
 import com.zeromail.core.waitlist.persistence.WaitlistEmailEntity;
 import com.zeromail.core.waitlist.persistence.WaitlistEmailRepository;
 import com.zeromail.worker.notification.config.NotificationProperties;
@@ -128,7 +129,7 @@ public class WaitlistInviteDispatchWorker {
     }
 
     private boolean isDueForDispatch(WaitlistEmailEntity entity, Instant referenceInstant) {
-        if (entity.getStatus().name().equals("APPROVED")) {
+        if (entity.getStatus() == WaitlistStatus.APPROVED) {
             Instant nextAttemptAt = entity.getInviteNextAttemptAt();
             return nextAttemptAt == null || !nextAttemptAt.isAfter(referenceInstant);
         }
