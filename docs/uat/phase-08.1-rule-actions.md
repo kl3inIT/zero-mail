@@ -17,8 +17,8 @@ Gmail send boundary.
 ```powershell
 ./gradlew :backend:core:test --tests "*AssistantSend*" --tests "*Outbound*" --tests "*Triage*" --tests "*Arch*" --tests "*Privacy*"
 ./gradlew :backend:api:test
-pnpm --filter @zeromail/web typecheck
-pnpm --filter @zeromail/web e2e -- --grep "rules examples"
+pnpm --filter web typecheck
+pnpm --filter web e2e -- --grep "rules examples"
 rg -n "gmail\\.users\\(\\)\\.messages\\(\\)\\.send|messages\\(\\)\\.send\\(" backend/core/src/main/java
 ```
 
