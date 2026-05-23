@@ -159,6 +159,7 @@ public class ChatOrchestrator {
             ChatStreamSink streamSink,
             TrackingDisposable trackingDisposable) {
         int maxReadToolIterations = chatProperties.maxReadToolIterations();
+        Map<String, String> transientToolResponseJsonByCallId = new LinkedHashMap<>();
         for (int attempt = 0;
                 attempt < maxReadToolIterations && !trackingDisposable.isDisposed();
                 attempt++) {
@@ -172,14 +173,17 @@ public class ChatOrchestrator {
                                     : command.modelOverride(),
                             personalizationRenderer.render(tenantId.toString()),
                             chatToolCatalog,
-                            history(preparedTurn.chatId()));
+                            history(preparedTurn.chatId()),
+                            transientToolResponseJsonByCallId);
             trackingDisposable.add(chatLlmGateway.streamChat(streamRequest, interceptingSink));
             TurnOutcome outcome = awaitOutcome(interceptingSink, trackingDisposable);
             if (outcome == null) {
                 return;
             }
             if (outcome.toolName() != null && outcome.toolName().category() == ToolCategory.READ) {
-                executeReadTool(tenantId, preparedTurn.chatId(), outcome, streamSink);
+                String rawToolResponseJson =
+                        executeReadTool(tenantId, preparedTurn.chatId(), outcome, streamSink);
+                transientToolResponseJsonByCallId.put(outcome.toolCallId(), rawToolResponseJson);
                 continue;
             }
             if (outcome.toolName() != null) {
@@ -229,7 +233,7 @@ public class ChatOrchestrator {
                 chatProperties.maxHistoryTokens());
     }
 
-    private void executeReadTool(
+    private String executeReadTool(
             UUID tenantId, UUID chatId, TurnOutcome outcome, ChatStreamSink streamSink) {
         ChatReadToolHandler readToolHandler = readToolHandlers.get(outcome.toolName());
         if (readToolHandler == null) {
@@ -260,6 +264,7 @@ public class ChatOrchestrator {
                                         sanitizedOutput.outputJson(),
                                         sanitizedOutput.truncated()));
         streamSink.emitDataPersistence(toolOutputMessageId, "tool-output-saved");
+        return outputJson;
     }
 
     private TurnOutcome awaitOutcome(

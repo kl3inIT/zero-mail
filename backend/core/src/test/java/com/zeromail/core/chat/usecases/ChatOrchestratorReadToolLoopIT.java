@@ -12,6 +12,7 @@ import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
+import com.google.api.services.gmail.model.MessagePartBody;
 import com.google.api.services.gmail.model.MessagePartHeader;
 import com.zeromail.core.chat.domain.ChatMessage;
 import com.zeromail.core.chat.domain.ChatRole;
@@ -21,7 +22,9 @@ import com.zeromail.core.chat.persistence.ChatMessageJdbcRepository;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -34,6 +37,10 @@ import reactor.core.Disposable;
 
 @SuppressWarnings("SqlResolve")
 class ChatOrchestratorReadToolLoopIT extends PostgresContainerTest {
+
+    private static final String BODY_MESSAGE_ID = "body-message-08-1";
+    private static final String BODY_THREAD_ID = "body-thread-08-1";
+    private static final String BODY_SENTINEL = "EMAIL_BODY_TRANSIENT_ONLY_08_1";
 
     @Autowired ChatOrchestrator chatOrchestrator;
     @Autowired ChatMessageJdbcRepository chatMessageRepository;
@@ -121,6 +128,73 @@ class ChatOrchestratorReadToolLoopIT extends PostgresContainerTest {
                                         .contains("\"messageId\":\"unread-1\""));
     }
 
+    @Test
+    void get_message_body_is_available_to_next_model_call_but_not_persisted_or_streamed()
+            throws Exception {
+        UUID tenantId = seedTenant();
+        configureGmailGetMessage(tenantId);
+        AtomicInteger modelCallCount = new AtomicInteger();
+        AtomicReference<ChatStreamRequest> secondRequest = new AtomicReference<>();
+        RecordingChatStreamSink streamSink = new RecordingChatStreamSink();
+        when(chatLlmGateway.streamChat(any(ChatStreamRequest.class), any(ChatStreamSink.class)))
+                .thenAnswer(
+                        invocation -> {
+                            int callNumber = modelCallCount.incrementAndGet();
+                            ChatStreamSink modelSink = invocation.getArgument(1);
+                            if (callNumber == 1) {
+                                modelSink.emitToolInputStart("tool-read-message", "getMessage");
+                                modelSink.emitToolInputAvailable(
+                                        "tool-read-message",
+                                        "getMessage",
+                                        "{\"messageId\":\"" + BODY_MESSAGE_ID + "\"}");
+                                modelSink.emitFinish("stop");
+                            } else {
+                                secondRequest.set(invocation.getArgument(0));
+                                modelSink.emitTextStart("assistant-text");
+                                modelSink.emitTextDelta(
+                                        "assistant-text", "I can answer from the email body.");
+                                modelSink.emitTextEnd("assistant-text");
+                                modelSink.emitFinish("stop");
+                            }
+                            return (Disposable) () -> {};
+                        });
+
+        withTenant(
+                tenantId,
+                () ->
+                        chatOrchestrator.stream(
+                                new ChatStreamCommand(
+                                        tenantId.toString(),
+                                        null,
+                                        "Read the email body and summarize it",
+                                        null),
+                                streamSink));
+
+        assertThat(streamSink.awaitFinish()).isTrue();
+        assertThat(modelCallCount).hasValue(2);
+        assertThat(secondRequest.get().transientToolResponseJsonByCallId())
+                .containsKey("tool-read-message");
+        assertThat(secondRequest.get().transientToolResponseJsonByCallId().get("tool-read-message"))
+                .contains("\"bodyText\"", BODY_SENTINEL);
+        assertThat(streamSink.events())
+                .allSatisfy(event -> assertThat(event).doesNotContain(BODY_SENTINEL));
+
+        UUID chatId =
+                jdbcTemplate.queryForObject(
+                        "select id from chat where tenant_id = ?", UUID.class, tenantId);
+        String persistedPartsJson =
+                jdbcTemplate.queryForObject(
+                        """
+                        select string_agg(parts::text, E'\n')
+                        from chat_message
+                        where chat_id = ? and tenant_id = ?
+                        """,
+                        String.class,
+                        chatId,
+                        tenantId);
+        assertThat(persistedPartsJson).doesNotContain(BODY_SENTINEL, "bodyText");
+    }
+
     private UUID seedTenant() {
         UUID tenantId = UUID.randomUUID();
         jdbcTemplate.update(
@@ -157,6 +231,20 @@ class ChatOrchestratorReadToolLoopIT extends PostgresContainerTest {
                 .thenReturn(new ListMessagesResponse().setMessages(messageReferences));
     }
 
+    private void configureGmailGetMessage(UUID tenantId) throws Exception {
+        Gmail gmail = mock(Gmail.class);
+        Gmail.Users users = mock(Gmail.Users.class);
+        Gmail.Users.Messages messages = mock(Gmail.Users.Messages.class);
+        Gmail.Users.Messages.Get getRequest = mock(Gmail.Users.Messages.Get.class);
+        when(gmailApiClientFactory.buildClientForTenant(tenantId)).thenReturn(gmail);
+        when(gmail.users()).thenReturn(users);
+        when(users.messages()).thenReturn(messages);
+        when(messages.get("me", BODY_MESSAGE_ID)).thenReturn(getRequest);
+        when(getRequest.setFormat(anyString())).thenReturn(getRequest);
+        when(getRequest.setFields(anyString())).thenReturn(getRequest);
+        when(getRequest.execute()).thenReturn(gmailBodyMessage());
+    }
+
     private static Message gmailMessage(String messageId, int messageNumber) {
         return new Message()
                 .setId(messageId)
@@ -170,6 +258,36 @@ class ChatOrchestratorReadToolLoopIT extends PostgresContainerTest {
                                                 header("From", "Sender " + messageNumber),
                                                 header("To", "founder@example.test"),
                                                 header("Subject", "Unread " + messageNumber))));
+    }
+
+    private static Message gmailBodyMessage() {
+        return new Message()
+                .setId(BODY_MESSAGE_ID)
+                .setThreadId(BODY_THREAD_ID)
+                .setInternalDate(1_779_120_000_000L)
+                .setPayload(
+                        new MessagePart()
+                                .setMimeType("multipart/alternative")
+                                .setHeaders(
+                                        List.of(
+                                                header("From", "Sender <sender@example.test>"),
+                                                header("To", "founder@example.test"),
+                                                header("Subject", "Body summary request")))
+                                .setParts(
+                                        List.of(
+                                                new MessagePart()
+                                                        .setMimeType("text/plain")
+                                                        .setBody(
+                                                                new MessagePartBody()
+                                                                        .setData(encodedBody())))));
+    }
+
+    private static String encodedBody() {
+        return Base64.getUrlEncoder()
+                .withoutPadding()
+                .encodeToString(
+                        ("This is the email body the assistant needs. " + BODY_SENTINEL)
+                                .getBytes(StandardCharsets.UTF_8));
     }
 
     private static MessagePartHeader header(String name, String value) {

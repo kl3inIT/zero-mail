@@ -17,6 +17,7 @@ import com.zeromail.core.chat.usecases.RawToolCall;
 import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -134,11 +135,15 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
                         });
     }
 
-    private Prompt prompt(ChatStreamRequest streamRequest) {
+    Prompt prompt(ChatStreamRequest streamRequest) {
         List<Message> messages = new ArrayList<>();
         messages.add(new SystemMessage(streamRequest.systemPrompt()));
         streamRequest.conversationHistory().stream()
-                .map(this::toSpringAiMessage)
+                .map(
+                        chatMessage ->
+                                toSpringAiMessage(
+                                        chatMessage,
+                                        streamRequest.transientToolResponseJsonByCallId()))
                 .forEach(messages::add);
         return new Prompt(
                 messages,
@@ -153,7 +158,8 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
                         .build());
     }
 
-    private Message toSpringAiMessage(ChatMessage chatMessage) {
+    private Message toSpringAiMessage(
+            ChatMessage chatMessage, Map<String, String> transientToolResponseJsonByCallId) {
         if (chatMessage.role() == ChatRole.USER) {
             return new UserMessage(textContent(chatMessage));
         }
@@ -161,7 +167,7 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
             return new SystemMessage(textContent(chatMessage));
         }
         if (chatMessage.role() == ChatRole.TOOL) {
-            return toolResponseMessage(chatMessage);
+            return toolResponseMessage(chatMessage, transientToolResponseJsonByCallId);
         }
         return assistantMessage(chatMessage);
     }
@@ -185,7 +191,8 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
                 .build();
     }
 
-    private ToolResponseMessage toolResponseMessage(ChatMessage chatMessage) {
+    private ToolResponseMessage toolResponseMessage(
+            ChatMessage chatMessage, Map<String, String> transientToolResponseJsonByCallId) {
         List<ToolResponseMessage.ToolResponse> responses =
                 chatMessage.parts().parts().stream()
                         .filter(ToolOutputPart.class::isInstance)
@@ -195,7 +202,9 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
                                         new ToolResponseMessage.ToolResponse(
                                                 toolOutputPart.toolCallId(),
                                                 toolOutputPart.toolName(),
-                                                writeJson(toolOutputPart.outputJson())))
+                                                transientToolResponseJsonByCallId.getOrDefault(
+                                                        toolOutputPart.toolCallId(),
+                                                        writeJson(toolOutputPart.outputJson()))))
                         .toList();
         return ToolResponseMessage.builder().responses(responses).build();
     }
