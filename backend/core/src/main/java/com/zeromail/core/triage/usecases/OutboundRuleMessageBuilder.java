@@ -30,7 +30,12 @@ public class OutboundRuleMessageBuilder {
         Objects.requireNonNull(outboundIntent, "outboundIntent must not be null");
         return switch (outboundIntent) {
             case TriageActionResult.SendReply sendReply ->
-                    buildReply(replyHeaders, sendReply.draftBody(), sendReply.gmailThreadId());
+                    buildReply(
+                            replyHeaders,
+                            sendReply.draftBody(),
+                            sendReply.gmailThreadId(),
+                            tenantId,
+                            idempotencyKey);
             case TriageActionResult.ForwardEmail forwardEmail ->
                     buildNewEmail(
                             forwardEmail.recipients(),
@@ -56,11 +61,16 @@ public class OutboundRuleMessageBuilder {
     }
 
     private static Message buildReply(
-            ReplyHeaders replyHeaders, String draftBody, String gmailThreadId) throws IOException {
+            ReplyHeaders replyHeaders,
+            String draftBody,
+            String gmailThreadId,
+            UUID tenantId,
+            String idempotencyKey)
+            throws IOException {
         try {
-            String encodedMimeMessage =
-                    ReplyMimeBuilder.buildBase64UrlMime(replyHeaders, draftBody);
-            MimeMessage mimeMessage = ReplyMimeBuilder.parseBase64UrlMime(encodedMimeMessage);
+            MimeMessage mimeMessage = ReplyMimeBuilder.buildMimeMessage(replyHeaders, draftBody);
+            mimeMessage.setHeader("Message-ID", deterministicMessageId(tenantId, idempotencyKey));
+            String encodedMimeMessage = encodeMimeMessage(mimeMessage);
             Message gmailMessage =
                     new Message().setRaw(encodedMimeMessage).setThreadId(gmailThreadId);
             ThreadingHeaderValidator.validate(mimeMessage, gmailMessage, gmailThreadId);
@@ -96,22 +106,26 @@ public class OutboundRuleMessageBuilder {
             }
             mimeMessage.setSubject(requireText(subject, "subject"), StandardCharsets.UTF_8.name());
             mimeMessage.setText(requireText(draftBody, "draftBody"), StandardCharsets.UTF_8.name());
-            mimeMessage.setHeader(
-                    "Message-ID",
-                    "<%s.%s@zero-mail.invalid>"
-                            .formatted(tenantId, requireText(idempotencyKey, "idempotencyKey")));
             mimeMessage.saveChanges();
+            mimeMessage.setHeader("Message-ID", deterministicMessageId(tenantId, idempotencyKey));
 
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            mimeMessage.writeTo(outputStream);
-            return new Message()
-                    .setRaw(
-                            Base64.getUrlEncoder()
-                                    .withoutPadding()
-                                    .encodeToString(outputStream.toByteArray()));
+            return new Message().setRaw(encodeMimeMessage(mimeMessage));
         } catch (MessagingException messagingException) {
             throw new IOException("Unable to build outbound MIME message", messagingException);
         }
+    }
+
+    private static String encodeMimeMessage(MimeMessage mimeMessage)
+            throws IOException, MessagingException {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        mimeMessage.writeTo(outputStream);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(outputStream.toByteArray());
+    }
+
+    private static String deterministicMessageId(UUID tenantId, String idempotencyKey) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        return "<%s.%s@zero-mail.invalid>"
+                .formatted(tenantId, requireText(idempotencyKey, "idempotencyKey"));
     }
 
     private static String forwardSubject(String inboundSubject) {
