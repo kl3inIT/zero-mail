@@ -14,8 +14,7 @@ import org.junit.jupiter.api.Test;
 
 class OutboundRuleMessageBuilderTest {
 
-    private static final UUID TENANT_ID =
-            UUID.fromString("00000000-0000-0000-0000-000000008401");
+    private static final UUID TENANT_ID = UUID.fromString("00000000-0000-0000-0000-000000008401");
     private static final String IDEMPOTENCY_KEY = "triage-audit-8401";
     private static final String EXPECTED_MESSAGE_ID =
             "<00000000-0000-0000-0000-000000008401.triage-audit-8401@zero-mail.invalid>";

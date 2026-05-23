@@ -200,7 +200,8 @@ public class ActionIntentJsonValidator {
             return List.of();
         }
         if (recipientNode.isString()) {
-            return validateRecipients(List.of(recipientNode.asString()), primaryFieldName, required);
+            return validateRecipients(
+                    List.of(recipientNode.asString()), primaryFieldName, required);
         }
         if (!recipientNode.isArray()) {
             throw new IllegalArgumentException(primaryFieldName + " must be an array");
