@@ -17,9 +17,7 @@ class NoGmailSendAllowedTest {
     private static final String GMAIL_MESSAGES_OWNER = "Gmail.Users.Messages";
     private static final String GMAIL_DRAFTS_OWNER = "Gmail.Users.Drafts";
     private static final String ALLOWED_SEND_CALL_SITE =
-            "com.zeromail.core.chat.confirm.send.AllowedSendCallSite";
-    private static final String TRANSITIONAL_ASSISTANT_SEND_PACKAGE =
-            "com.zeromail.core.chat.confirm.send";
+            "com.zeromail.core.outbound.usecases.AllowedSendCallSite";
     private static final String OUTBOUND_GATEWAY_PACKAGE = "com.zeromail.core.outbound";
 
     @ArchTest
@@ -31,11 +29,7 @@ class NoGmailSendAllowedTest {
                                 @Override
                                 public void check(
                                         JavaClass javaClass, ConditionEvents conditionEvents) {
-                                    // Phase 08.1 transition: current chat confirmation executor is
-                                    // still the single direct call site until plan 08.1-06 extracts
-                                    // the shared outbound gateway implementation. No other package
-                                    // may call Gmail send directly.
-                                    if (isAllowedTransitionalSendOwner(javaClass)) {
+                                    if (isAllowedOutboundGatewaySendOwner(javaClass)) {
                                         return;
                                     }
                                     javaClass
@@ -69,10 +63,9 @@ class NoGmailSendAllowedTest {
                             "Phase 08.1 allows outbound automation only behind the shared outbound gateway boundary.")
                     .allowEmptyShould(false);
 
-    private static boolean isAllowedTransitionalSendOwner(JavaClass javaClass) {
+    private static boolean isAllowedOutboundGatewaySendOwner(JavaClass javaClass) {
         String className = javaClass.getName();
         return javaClass.isAnnotatedWith(ALLOWED_SEND_CALL_SITE)
-                && (className.startsWith(TRANSITIONAL_ASSISTANT_SEND_PACKAGE + ".")
-                        || className.startsWith(OUTBOUND_GATEWAY_PACKAGE + "."));
+                && className.startsWith(OUTBOUND_GATEWAY_PACKAGE + ".");
     }
 }

@@ -1,4 +1,4 @@
-package com.zeromail.core.chat.confirm.send;
+package com.zeromail.core.outbound.usecases;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
