@@ -2,16 +2,7 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import {
-  Check,
-  Globe,
-  Inbox,
-  Mail,
-  Send,
-  ShieldCheck,
-  TriangleAlert,
-  UserCircle,
-} from 'lucide-react';
+import { Check, Globe, Inbox, Mail, ShieldCheck, TriangleAlert, UserCircle } from 'lucide-react';
 
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
@@ -34,10 +25,6 @@ import { useDisconnectGmail } from '@/features/gmail/hooks/useDisconnectGmail';
 import { useTenantStatus } from '@/features/gmail/hooks/useTenantStatus';
 import { ByokForm } from '@/features/llm/components/ByokForm';
 import { NotificationsSection } from '@/features/notifications/components/NotificationsSection';
-import {
-  useRuleAutomationSettings,
-  useUpdateRuleAutomationSettings,
-} from '@/features/rules/hooks/use-rule-automation-settings';
 import { useToggleTriagePause } from '@/features/triage/hooks/useToggleTriagePause';
 import { useTriagePauseState } from '@/features/triage/hooks/useTriagePauseState';
 import { LanguageSwitcher } from '@/i18n/components/LanguageSwitcher';
@@ -63,8 +50,6 @@ export function SettingsClient({ initialUser }: { initialUser?: CurrentUser } = 
   const del = useDeleteAccount();
   const pauseState = useTriagePauseState();
   const togglePause = useToggleTriagePause();
-  const automationSettings = useRuleAutomationSettings();
-  const updateAutomationSettings = useUpdateRuleAutomationSettings();
 
   const gmailConnection = me.data?.gmailConnectionStatus;
   const tenantConnectionStatus = status.data?.connectionStatus;
@@ -75,7 +60,6 @@ export function SettingsClient({ initialUser }: { initialUser?: CurrentUser } = 
       : 'NOT_CONNECTED';
   const ingestionHealth = gmailConnection?.ingestionHealth ?? 'HEALTHY';
   const triagePaused = pauseState.data ?? false;
-  const autoSendRulesEnabled = automationSettings.data?.autoSendRulesEnabled ?? true;
   const preferredLanguage = (me.data?.preferredLanguage === 'en' ? 'en' : 'vi') as AppLocale;
   const reconnect = () => {
     window.location.href = getApiUrl('/api/tenant/connect-gmail');
@@ -120,8 +104,8 @@ export function SettingsClient({ initialUser }: { initialUser?: CurrentUser } = 
         </Card>
       </div>
 
-      {/* Row 2: Gmail connection + automation controls */}
-      <div className="grid gap-4 md:grid-cols-3">
+      {/* Row 2: Gmail connection + triage controls */}
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -176,40 +160,6 @@ export function SettingsClient({ initialUser }: { initialUser?: CurrentUser } = 
               data-testid="settings-pause-switch"
             />
           </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Send className="text-muted-foreground size-4" aria-hidden="true" />
-              {t('rules.settings.autoSend.title')}
-            </CardTitle>
-            <CardDescription>
-              {autoSendRulesEnabled
-                ? t('rules.settings.autoSend.bodyOn')
-                : t('rules.settings.autoSend.bodyOff')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between gap-4">
-            <span className="text-foreground text-sm font-medium">
-              {t('rules.settings.autoSend.toggleLabel')}
-            </span>
-            <Switch
-              checked={autoSendRulesEnabled}
-              aria-label={t('rules.settings.autoSend.toggleLabel')}
-              disabled={automationSettings.isLoading || updateAutomationSettings.isPending}
-              onCheckedChange={(enabled) => updateAutomationSettings.mutate(enabled)}
-              className="data-unchecked:bg-warning/80"
-              data-testid="settings-auto-send-rules-switch"
-            />
-          </CardContent>
-          <CardFooter>
-            <p className="text-muted-foreground text-xs">
-              {autoSendRulesEnabled
-                ? t('rules.settings.autoSend.footerOn')
-                : t('rules.settings.autoSend.footerOff')}
-            </p>
-          </CardFooter>
         </Card>
       </div>
 

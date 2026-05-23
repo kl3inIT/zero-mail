@@ -8,8 +8,8 @@ import { AvailableActionsPanel } from '@/features/rules/components/AvailableActi
 import type { RuleCatalogActionDescriptorResponse } from '@/features/rules/api/rule-catalog-api';
 
 describe('AvailableActionsPanel', () => {
-  it('lists the full rule action catalog and marks outbound actions as auto-send when enabled', () => {
-    renderWithMessages(<AvailableActionsPanel actions={actions} autoSendRulesEnabled={true} />);
+  it('lists the rule action catalog as a compact label-only reference', () => {
+    renderWithMessages(<AvailableActionsPanel actions={actions} />);
 
     for (const label of [
       'Label',
@@ -25,13 +25,7 @@ describe('AvailableActionsPanel', () => {
     ]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
-    expect(screen.getAllByText('Will auto-send')).toHaveLength(3);
-  });
-
-  it('shows draft fallback copy for outbound actions when auto-send is off', () => {
-    renderWithMessages(<AvailableActionsPanel actions={actions} autoSendRulesEnabled={false} />);
-
-    expect(screen.getAllByText('Will save draft')).toHaveLength(3);
+    expect(screen.queryByText('Apply a Gmail label.')).not.toBeInTheDocument();
     expect(screen.queryByText('Will auto-send')).not.toBeInTheDocument();
   });
 });

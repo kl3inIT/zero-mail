@@ -1265,8 +1265,11 @@
   },
   "rules": {
     "actions": {
+      "autoSendAllowed": "Có thể tự gửi",
       "autoSendChecking": "Đang kiểm tra",
       "available": "Đang dùng được",
+      "description": "Danh sách tham khảo để biết rule có thể yêu cầu AI làm gì.",
+      "draftFallback": "Sẽ lưu nháp",
       "empty": "Chưa có hành động nào đang bật trong catalog.",
       "error": "Chưa tải được danh sách hành động.",
       "risk": {
@@ -1274,23 +1277,30 @@
         "low": "Rủi ro thấp",
         "medium": "Rủi ro vừa"
       },
-      "saveDraftInstead": "Sẽ lưu bản nháp",
+      "saveDraftInstead": "Sẽ lưu nháp",
       "title": "Hành động có thể dùng",
       "unavailableReason": "Trạng thái: {status}",
-      "willAutoSend": "Sẽ tự động gửi"
+      "willAutoSend": "Có thể tự gửi"
     },
     "composer": {
       "actionReview": "Zero Mail sẽ làm",
-      "allowedActionsNote": "Quy tắc được lưu dưới dạng điều kiện và hành động có cấu trúc. Hành động gửi outbound chạy qua cổng an toàn và cài đặt Auto-send rules.",
+      "allowedActionsNote": "Quy tắc được lưu thành điều kiện và hành động rõ ràng. Hành động gửi email chỉ chạy khi qua kiểm tra an toàn và cài đặt tự gửi của bạn.",
       "answerClarification": "Gửi câu trả lời",
       "answerLabel": "Câu trả lời của bạn",
       "compileCta": "Chuyển thành quy tắc",
       "compiledReview": "Quy tắc sẽ được lưu",
       "compiling": "Đang kiểm tra...",
       "examples": {
-        "body": "Chọn nhóm phù hợp rồi bấm một ví dụ để thay toàn bộ nội dung ô mô tả.",
+        "addSelected": "Thêm đã chọn ({count})",
+        "backToPersonas": "Bỏ chọn persona",
+        "body": "Dùng ví dụ mẫu nếu bạn chưa muốn tự viết từ đầu.",
+        "changePersona": "Đổi persona",
+        "chooseExampleTitle": "Chọn ví dụ",
+        "choosePersonaTitle": "Chọn persona",
+        "count": "{count} ví dụ",
         "empty": "Chưa có ví dụ đang bật cho nhóm này.",
         "error": "Chưa tải được ví dụ. Bạn vẫn có thể tự viết quy tắc.",
+        "multiPromptPrefix": "Thêm các quy tắc sau:",
         "title": "Chọn từ ví dụ"
       },
       "examplesHint": "Gợi ý từ catalog",
@@ -1386,7 +1396,7 @@
       },
       "addAction": "Thêm hành động",
       "addCondition": "Thêm điều kiện",
-      "advancedTitle": "Cách gửi outbound",
+      "advancedTitle": "Cách AI gửi email",
       "condition": {
         "GMAIL_LABEL_PRESENT": "Có nhãn Gmail",
         "HAS_ATTACHMENT": "Có tệp đính kèm",
@@ -1415,9 +1425,9 @@
         "any": "Khớp bất kỳ"
       },
       "outbound": {
-        "autoSend": "Auto-send rules bật thì gửi tự động",
+        "autoSend": "Có thể gửi tự động khi an toàn",
         "deleteDisabled": "Không tự động xóa vĩnh viễn",
-        "fallbackDraft": "Không đạt gate thì lưu bản nháp",
+        "fallbackDraft": "Nếu chưa đủ an toàn, lưu nháp Gmail",
         "webhookDisabled": "Webhook chưa hỗ trợ"
       },
       "refineCta": "Cập nhật form",
@@ -1427,7 +1437,7 @@
       "removeCondition": "Xóa điều kiện",
       "saveHint": "Quy tắc mới hoặc vừa sửa luôn được lưu ở trạng thái tắt cho đến khi bạn chạy thử.",
       "structuredPreview": "Quy tắc sẽ được lưu",
-      "thenBody": "Chọn hành động có cấu trúc. Các hành động gửi outbound sẽ chạy qua cài đặt Auto-send rules và cổng an toàn.",
+      "thenBody": "Chọn Zero Mail sẽ làm gì khi email khớp. Nếu là gửi email, hệ thống vẫn kiểm tra an toàn trước khi gửi.",
       "thenTitle": "Zero Mail sẽ làm",
       "unsafe": {
         "autoSend": "Auto-send rules",
@@ -1496,12 +1506,12 @@
     "ruleN": "Quy tắc 1 / 5",
     "settings": {
       "autoSend": {
-        "bodyOff": "Quy tắc outbound vẫn lưu được, nhưng runtime sẽ lưu bản nháp Gmail thay vì gửi.",
-        "bodyOn": "Quy tắc outbound có thể gửi thật khi các cổng an toàn pass.",
-        "footerOff": "Tắt switch này không chặn lưu rule; nó đổi outbound runtime sang lưu bản nháp.",
-        "footerOn": "Bạn vẫn thấy trạng thái \"Sẽ tự động gửi\" trong rule/action trước khi bật rule.",
-        "title": "Auto-send rules",
-        "toggleLabel": "Cho phép rule tự gửi"
+        "bodyOff": "Rule vẫn lưu được, nhưng các hành động gửi email sẽ tạo bản nháp Gmail để bạn tự kiểm tra và gửi.",
+        "bodyOn": "Khi rule yêu cầu gửi trả lời, chuyển tiếp, hoặc gửi email mới, Zero Mail có thể gửi thật nếu qua kiểm tra an toàn.",
+        "footerOff": "Tắt switch này không chặn lưu rule; nó chỉ đổi hành động gửi email thành bản nháp Gmail.",
+        "footerOn": "Các rule gửi email vẫn phải qua kiểm tra an toàn, giới hạn số lần gửi và nhật ký audit.",
+        "title": "Tự gửi email bằng rule",
+        "toggleLabel": "Cho phép rule tự gửi email"
       }
     },
     "tabs": {
@@ -1612,9 +1622,9 @@
     "privacy": {
       "byokPlanned": "Sắp tới: bạn có thể tự cung cấp khóa API (BYOK)",
       "heading": "Quyền riêng tư và an toàn",
-      "noAutoSend": "Hành động gửi outbound được kiểm soát bằng cổng an toàn và switch Auto-send rules.",
+      "noAutoSend": "Hành động gửi email được kiểm soát bằng kiểm tra an toàn và switch tự gửi trong Cấu hình AI.",
       "noBodyStorage": "Không lưu lâu dài nội dung email, lời nhắc hay phản hồi từ AI",
-      "outboundControl": "Hành động gửi outbound được kiểm soát bằng cổng an toàn và switch Auto-send rules.",
+      "outboundControl": "Hành động gửi email được kiểm soát bằng kiểm tra an toàn và switch tự gửi trong Cấu hình AI.",
       "revokeAnytime": "Bạn có thể thu hồi quyền truy cập bất cứ lúc nào"
     },
     "title": "Cài đặt",

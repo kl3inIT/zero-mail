@@ -192,8 +192,8 @@ export const rulesMessages = {
     en: 'Allowed actions',
   },
   'rules.composer.allowedActionsNote': {
-    vi: 'Quy tắc được lưu dưới dạng điều kiện và hành động có cấu trúc. Hành động gửi outbound chạy qua cổng an toàn và cài đặt Auto-send rules.',
-    en: 'Rules are saved as structured criteria and actions. Outbound sends run through safety gates and the Auto-send rules setting.',
+    vi: 'Quy tắc được lưu thành điều kiện và hành động rõ ràng. Hành động gửi email chỉ chạy khi qua kiểm tra an toàn và cài đặt tự gửi của bạn.',
+    en: 'Rules are saved as clear criteria and actions. Email-sending actions run only when safety checks and your auto-send setting allow them.',
   },
   'rules.composer.invalid': {
     vi: 'Quy tắc này chưa thể lưu. Hãy sửa cách diễn đạt hoặc trả lời câu hỏi làm rõ.',
@@ -208,8 +208,36 @@ export const rulesMessages = {
     en: 'Choose from examples',
   },
   'rules.composer.examples.body': {
-    vi: 'Chọn nhóm phù hợp rồi bấm một ví dụ để thay toàn bộ nội dung ô mô tả.',
-    en: 'Choose a persona, then click an example to replace the whole description.',
+    vi: 'Dùng ví dụ mẫu nếu bạn chưa muốn tự viết từ đầu.',
+    en: 'Use a starter example if you do not want to write from scratch.',
+  },
+  'rules.composer.examples.choosePersonaTitle': {
+    vi: 'Chọn persona',
+    en: 'Choose persona',
+  },
+  'rules.composer.examples.chooseExampleTitle': {
+    vi: 'Chọn ví dụ',
+    en: 'Choose examples',
+  },
+  'rules.composer.examples.backToPersonas': {
+    vi: 'Bỏ chọn persona',
+    en: 'Clear persona',
+  },
+  'rules.composer.examples.changePersona': {
+    vi: 'Đổi persona',
+    en: 'Change persona',
+  },
+  'rules.composer.examples.count': {
+    vi: '{count} ví dụ',
+    en: '{count} examples',
+  },
+  'rules.composer.examples.addSelected': {
+    vi: 'Thêm đã chọn ({count})',
+    en: 'Add selected ({count})',
+  },
+  'rules.composer.examples.multiPromptPrefix': {
+    vi: 'Thêm các quy tắc sau:',
+    en: 'Add the following rules:',
   },
   'rules.composer.examples.empty': {
     vi: 'Chưa có ví dụ đang bật cho nhóm này.',
@@ -264,8 +292,8 @@ export const rulesMessages = {
     en: 'Allowed actions',
   },
   'rules.manual.thenBody': {
-    vi: 'Chọn hành động có cấu trúc. Các hành động gửi outbound sẽ chạy qua cài đặt Auto-send rules và cổng an toàn.',
-    en: 'Choose structured actions. Outbound sends use the Auto-send rules setting and safety gateway.',
+    vi: 'Chọn Zero Mail sẽ làm gì khi email khớp. Nếu là gửi email, hệ thống vẫn kiểm tra an toàn trước khi gửi.',
+    en: 'Choose what Zero Mail should do when an email matches. If the action sends email, safety checks still run before sending.',
   },
   'rules.manual.operator.all': {
     vi: 'Khớp tất cả',
@@ -296,16 +324,16 @@ export const rulesMessages = {
     en: 'No value needed',
   },
   'rules.manual.advancedTitle': {
-    vi: 'Cách gửi outbound',
-    en: 'Outbound behavior',
+    vi: 'Cách AI gửi email',
+    en: 'How AI sends email',
   },
   'rules.manual.outbound.autoSend': {
-    vi: 'Auto-send rules bật thì gửi tự động',
-    en: 'Auto-send rules sends automatically',
+    vi: 'Có thể gửi tự động khi an toàn',
+    en: 'Can send automatically when safe',
   },
   'rules.manual.outbound.fallbackDraft': {
-    vi: 'Không đạt gate thì lưu bản nháp',
-    en: 'Gate failures save a draft',
+    vi: 'Nếu chưa đủ an toàn, lưu nháp Gmail',
+    en: 'If not safe enough, save a Gmail draft',
   },
   'rules.manual.outbound.deleteDisabled': {
     vi: 'Không tự động xóa vĩnh viễn',
@@ -651,6 +679,10 @@ export const rulesMessages = {
     vi: 'Hành động có thể dùng',
     en: 'Available actions',
   },
+  'rules.actions.description': {
+    vi: 'Danh sách tham khảo để biết rule có thể yêu cầu AI làm gì.',
+    en: 'A quick reference for what a rule can ask the AI to do.',
+  },
   'rules.actions.available': {
     vi: 'Đang dùng được',
     en: 'Available',
@@ -660,12 +692,20 @@ export const rulesMessages = {
     en: 'Status: {status}',
   },
   'rules.actions.willAutoSend': {
-    vi: 'Sẽ tự động gửi',
-    en: 'Will auto-send',
+    vi: 'Có thể tự gửi',
+    en: 'Can auto-send',
   },
   'rules.actions.saveDraftInstead': {
-    vi: 'Sẽ lưu bản nháp',
-    en: 'Will save draft',
+    vi: 'Sẽ lưu nháp',
+    en: 'Saves draft',
+  },
+  'rules.actions.autoSendAllowed': {
+    vi: 'Có thể tự gửi',
+    en: 'Can auto-send',
+  },
+  'rules.actions.draftFallback': {
+    vi: 'Sẽ lưu nháp',
+    en: 'Saves draft',
   },
   'rules.actions.autoSendChecking': {
     vi: 'Đang kiểm tra',
@@ -692,36 +732,36 @@ export const rulesMessages = {
     en: 'Could not load available actions.',
   },
   'rules.settings.autoSend.title': {
-    vi: 'Auto-send rules',
-    en: 'Auto-send rules',
+    vi: 'Tự gửi email bằng rule',
+    en: 'Rule auto-send',
   },
   'rules.settings.autoSend.bodyOn': {
-    vi: 'Quy tắc outbound có thể gửi thật khi các cổng an toàn pass.',
-    en: 'Outbound rules can send when safety gates pass.',
+    vi: 'Khi rule yêu cầu gửi trả lời, chuyển tiếp, hoặc gửi email mới, Zero Mail có thể gửi thật nếu qua kiểm tra an toàn.',
+    en: 'When a rule asks to reply, forward, or send a new email, Zero Mail can send it if safety checks pass.',
   },
   'rules.settings.autoSend.bodyOff': {
-    vi: 'Quy tắc outbound vẫn lưu được, nhưng runtime sẽ lưu bản nháp Gmail thay vì gửi.',
-    en: 'Outbound rules still save, but runtime saves Gmail drafts instead of sending.',
+    vi: 'Rule vẫn lưu được, nhưng các hành động gửi email sẽ tạo bản nháp Gmail để bạn tự kiểm tra và gửi.',
+    en: 'Rules still save, but email-sending actions create Gmail drafts for you to review and send.',
   },
   'rules.settings.autoSend.toggleLabel': {
-    vi: 'Cho phép rule tự gửi',
-    en: 'Allow rules to auto-send',
+    vi: 'Cho phép rule tự gửi email',
+    en: 'Allow rules to send email',
   },
   'rules.settings.autoSend.footerOn': {
-    vi: 'Bạn vẫn thấy trạng thái "Sẽ tự động gửi" trong rule/action trước khi bật rule.',
-    en: 'You still see "Will auto-send" status in rule/action surfaces before enabling a rule.',
+    vi: 'Các rule gửi email vẫn phải qua kiểm tra an toàn, giới hạn số lần gửi và nhật ký audit.',
+    en: 'Email-sending rules still pass safety checks, send limits, and audit logging.',
   },
   'rules.settings.autoSend.footerOff': {
-    vi: 'Tắt switch này không chặn lưu rule; nó đổi outbound runtime sang lưu bản nháp.',
-    en: 'Turning this off does not block saving rules; it changes outbound runtime to draft fallback.',
+    vi: 'Tắt switch này không chặn lưu rule; nó chỉ đổi hành động gửi email thành bản nháp Gmail.',
+    en: 'Turning this off does not block saving rules; it changes email-sending actions to Gmail drafts.',
   },
   'settings.privacy.outboundControl': {
-    vi: 'Hành động gửi outbound được kiểm soát bằng cổng an toàn và switch Auto-send rules.',
-    en: 'Outbound sends are controlled by safety gates and the Auto-send rules switch.',
+    vi: 'Hành động gửi email được kiểm soát bằng kiểm tra an toàn và switch tự gửi trong Cấu hình AI.',
+    en: 'Email-sending actions are controlled by safety checks and the auto-send switch in AI configuration.',
   },
   'settings.privacy.noAutoSend': {
-    vi: 'Hành động gửi outbound được kiểm soát bằng cổng an toàn và switch Auto-send rules.',
-    en: 'Outbound sends are controlled by safety gates and the Auto-send rules switch.',
+    vi: 'Hành động gửi email được kiểm soát bằng kiểm tra an toàn và switch tự gửi trong Cấu hình AI.',
+    en: 'Email-sending actions are controlled by safety checks and the auto-send switch in AI configuration.',
   },
   'rules.delete.title': {
     vi: 'Xóa quy tắc này?',

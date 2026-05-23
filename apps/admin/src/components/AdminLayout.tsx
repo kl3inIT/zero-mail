@@ -120,7 +120,7 @@ export function AdminLayout({ admin: _admin }: AdminLayoutProps) {
             <AdminBreadcrumb />
             <ThemeToggle />
           </div>
-          <div className="max-w-[1280px] px-8 py-8">
+          <div className="w-full px-8 py-8">
             <Outlet />
           </div>
         </main>

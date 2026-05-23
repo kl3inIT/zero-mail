@@ -1,12 +1,14 @@
 import { expect, test } from '@playwright/test';
 
-const personaId = '10000000-0000-4000-8000-000000000001';
-const exampleId = '20000000-0000-4000-8000-000000000001';
+const founderPersonaId = '10000000-0000-4000-8000-000000000001';
+const studentPersonaId = '10000000-0000-4000-8000-000000000002';
+const founderExampleId = '20000000-0000-4000-8000-000000000001';
+const studentExampleId = '20000000-0000-4000-8000-000000000002';
 
 test.beforeEach(async ({ page }) => {
   const personas = [
     {
-      personaId,
+      personaId: founderPersonaId,
       personaKey: 'founder',
       displayNameEn: 'Founder',
       displayNameVi: 'Nhà sáng lập',
@@ -15,7 +17,7 @@ test.beforeEach(async ({ page }) => {
       enabled: true,
       examples: [
         {
-          exampleId,
+          exampleId: founderExampleId,
           exampleTextEn: 'Label investor emails as @[Investor]',
           exampleTextVi: 'Gắn nhãn email nhà đầu tư là @[Investor]',
           displayOrder: 10,
@@ -24,29 +26,24 @@ test.beforeEach(async ({ page }) => {
         },
       ],
     },
-  ];
-  const actions = [
     {
-      actionKey: 'archive',
-      labelEn: 'Archive',
-      labelVi: 'Lưu trữ',
-      descriptionEn: 'Remove the message from inbox.',
-      descriptionVi: 'Bỏ thư khỏi inbox.',
-      riskLevel: 'LOW',
-      availabilityStatus: 'AVAILABLE',
-      displayOrder: 10,
-      enabled: true,
-    },
-    {
-      actionKey: 'send_reply',
-      labelEn: 'Send reply',
-      labelVi: 'Gửi trả lời',
-      descriptionEn: 'Automatically send a reply.',
-      descriptionVi: 'Tự động gửi trả lời.',
-      riskLevel: 'HIGH',
-      availabilityStatus: 'AVAILABLE',
+      personaId: studentPersonaId,
+      personaKey: 'student',
+      displayNameEn: 'Student',
+      displayNameVi: 'Sinh viên',
+      icon: 'book',
       displayOrder: 20,
       enabled: true,
+      examples: [
+        {
+          exampleId: studentExampleId,
+          exampleTextEn: 'Label scholarship updates as School',
+          exampleTextVi: 'Gắn nhãn học bổng là Trường học',
+          displayOrder: 10,
+          enabled: true,
+          sourceRef: 'inbox-zero:student:001',
+        },
+      ],
     },
   ];
 
@@ -66,40 +63,16 @@ test.beforeEach(async ({ page }) => {
       return;
     }
 
-    if (method === 'GET' && path === '/api/admin/rule-catalog/actions') {
-      await route.fulfill({ json: { actions } });
-      return;
-    }
-
-    if (method === 'PUT' && path === `/api/admin/rule-catalog/examples/${exampleId}`) {
+    if (method === 'PUT' && path === `/api/admin/rule-catalog/examples/${founderExampleId}`) {
       const body = request.postDataJSON();
       personas[0].examples[0] = { ...personas[0].examples[0], ...body };
       await route.fulfill({ status: 204 });
       return;
     }
 
-    if (method === 'PATCH' && path === `/api/admin/rule-catalog/examples/${exampleId}/enabled`) {
+    if (method === 'PATCH' && path === `/api/admin/rule-catalog/examples/${founderExampleId}/enabled`) {
       const body = request.postDataJSON();
       personas[0].examples[0].enabled = body.enabled;
-      await route.fulfill({ status: 204 });
-      return;
-    }
-
-    if (method === 'PUT' && path === '/api/admin/rule-catalog/actions/send_reply') {
-      const body = request.postDataJSON();
-      const actionIndex = actions.findIndex((entry) => entry.actionKey === 'send_reply');
-      actions[actionIndex] = { ...actions[actionIndex], ...body };
-      await route.fulfill({ status: 204 });
-      return;
-    }
-
-    if (method === 'PUT' && path === '/api/admin/rule-catalog/actions/reorder') {
-      const body = request.postDataJSON();
-      for (const orderEntry of body.items) {
-        const action = actions.find((entry) => entry.actionKey === orderEntry.actionKey);
-        if (action) action.displayOrder = orderEntry.displayOrder;
-      }
-      actions.sort((left, right) => left.displayOrder - right.displayOrder);
       await route.fulfill({ status: 204 });
       return;
     }
@@ -108,9 +81,7 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('rule catalog edits bilingual examples, disables rows, and updates action descriptors', async ({
-  page,
-}) => {
+test('rule catalog manages examples through selected personas only', async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on('console', (message) => {
     if (message.type() === 'error') consoleErrors.push(message.text());
@@ -122,10 +93,13 @@ test('rule catalog edits bilingual examples, disables rows, and updates action d
   await expect(page.getByText('admin', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Rule Catalog' })).toBeVisible();
   await expect(page.getByRole('link', { name: /Rule Catalog/ })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Actions' })).toHaveCount(0);
 
-  await page.getByRole('tab', { name: 'Examples' }).click();
   await expect(page.getByText('Label investor emails as @[Investor]')).toBeVisible();
+  await page.getByRole('button', { name: 'Select persona Student' }).click();
+  await expect(page.getByText('Label scholarship updates as School')).toBeVisible();
 
+  await page.getByRole('button', { name: 'Select persona Founder' }).click();
   await page
     .getByRole('button', { name: 'Edit example inbox-zero:founder:001' })
     .click();
@@ -140,21 +114,10 @@ test('rule catalog edits bilingual examples, disables rows, and updates action d
   await expect(exampleSwitch).toHaveAttribute('aria-checked', 'false');
 
   await page.reload();
-  await page.getByRole('tab', { name: 'Examples' }).click();
   await expect(page.getByText('Gắn nhãn thư nhà đầu tư là Investor')).toBeVisible();
   await expect(
     page.getByRole('switch', { name: 'Enable example inbox-zero:founder:001' }),
   ).toHaveAttribute('aria-checked', 'false');
-
-  await page.getByRole('tab', { name: 'Actions' }).click();
-  const sendReplyRow = page.getByRole('row').filter({ hasText: 'send_reply' });
-  await sendReplyRow.getByRole('button', { name: 'Move up' }).click();
-  await expect(sendReplyRow).toContainText('10');
-
-  await sendReplyRow.getByRole('button', { name: 'Edit action send_reply' }).click();
-  await page.getByLabel('Label VI').fill('Gửi phản hồi');
-  await page.getByRole('button', { name: 'Lưu' }).click();
-  await expect(page.getByText('Gửi phản hồi')).toBeVisible();
 
   expect(consoleErrors).toEqual([]);
 });

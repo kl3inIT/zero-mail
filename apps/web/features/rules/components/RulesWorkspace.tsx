@@ -18,7 +18,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ErrorCode } from '@/lib/api/error-codes';
 import { useLocalizedApiError, type ApiError } from '@/lib/api/errors';
-import { AvailableActionsPanel } from '@/features/rules/components/AvailableActionsPanel';
 import { CustomMailTester } from '@/features/rules/components/CustomMailTester';
 import { RuleComposer } from '@/features/rules/components/RuleComposer';
 import { RuleList } from '@/features/rules/components/RuleList';
@@ -48,7 +47,6 @@ import {
   useUpdateRuleEnabled,
 } from '@/features/rules/hooks/use-rules';
 import { useRuleActionsCatalog } from '@/features/rules/hooks/use-rule-actions-catalog';
-import { useRuleAutomationSettings } from '@/features/rules/hooks/use-rule-automation-settings';
 import { useRuleExamples } from '@/features/rules/hooks/use-rule-examples';
 
 type SampleSize = 10 | 20;
@@ -282,7 +280,6 @@ export function RulesWorkspace() {
   const templatesQuery = useRuleTemplates();
   const ruleExamplesQuery = useRuleExamples(locale);
   const ruleActionsQuery = useRuleActionsCatalog(locale);
-  const automationSettingsQuery = useRuleAutomationSettings();
   const compileMutation = useCompileRule();
   const createRuleMutation = useCreateRule();
   const updateRuleMutation = useUpdateRule();
@@ -519,8 +516,6 @@ export function RulesWorkspace() {
 
   const enabledRulesCount = rules.filter((rule) => rule.enabled).length;
   const canPreview = enabledRulesCount > 0;
-  const autoSendRulesEnabled = automationSettingsQuery.data?.autoSendRulesEnabled ?? true;
-
   return (
     <Tabs
       value={activeTab}
@@ -566,13 +561,6 @@ export function RulesWorkspace() {
               </Button>
             </div>
           }
-        />
-        <AvailableActionsPanel
-          actions={ruleActionsQuery.data?.actions ?? []}
-          autoSendRulesEnabled={autoSendRulesEnabled}
-          isLoadingActions={ruleActionsQuery.isLoading}
-          isActionsError={ruleActionsQuery.isError}
-          isLoadingAutomationSetting={automationSettingsQuery.isLoading}
         />
       </TabsContent>
 
@@ -643,7 +631,7 @@ export function RulesWorkspace() {
         open={state.composerDialogOpen}
         onOpenChange={(open) => dispatch({ type: 'composerDialogToggled', open })}
       >
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-6xl">
           <DialogHeader className="sr-only">
             <DialogTitle>{t('rules.composer.title')}</DialogTitle>
             <DialogDescription>{t('rules.page.safetyNote')}</DialogDescription>
@@ -663,6 +651,9 @@ export function RulesWorkspace() {
               examplePersonas={ruleExamplesQuery.data?.personas ?? []}
               isLoadingExamples={ruleExamplesQuery.isLoading}
               examplesError={ruleExamplesQuery.isError}
+              actions={ruleActionsQuery.data?.actions ?? []}
+              isLoadingActions={ruleActionsQuery.isLoading}
+              isActionsError={ruleActionsQuery.isError}
               onSourceTextChange={(sourceText) =>
                 dispatch({ type: 'sourceTextChanged', sourceText })
               }

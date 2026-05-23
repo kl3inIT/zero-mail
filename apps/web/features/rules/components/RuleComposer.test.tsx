@@ -34,11 +34,20 @@ describe('RuleComposer catalog examples', () => {
     );
 
     expect(screen.getByText('Choose from examples')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Choose from examples' }));
+    expect(screen.getByRole('heading', { name: 'Choose persona' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Founder 1 examples/ }));
+    expect(
+      screen.getByRole('button', {
+        name: /Archive investor updates from portfolio companies/i,
+      }),
+    ).toBeInTheDocument();
     fireEvent.click(
       screen.getByRole('button', {
         name: /Archive investor updates from portfolio companies/i,
       }),
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Add selected (1)' }));
 
     expect(onSourceTextChange).toHaveBeenCalledWith(
       'Archive investor updates from portfolio companies',

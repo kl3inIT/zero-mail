@@ -1265,8 +1265,11 @@
   },
   "rules": {
     "actions": {
+      "autoSendAllowed": "Can auto-send",
       "autoSendChecking": "Checking",
       "available": "Available",
+      "description": "A quick reference for what a rule can ask the AI to do.",
+      "draftFallback": "Saves draft",
       "empty": "No enabled catalog actions yet.",
       "error": "Could not load available actions.",
       "risk": {
@@ -1274,23 +1277,30 @@
         "low": "Low risk",
         "medium": "Medium risk"
       },
-      "saveDraftInstead": "Will save draft",
+      "saveDraftInstead": "Saves draft",
       "title": "Available actions",
       "unavailableReason": "Status: {status}",
-      "willAutoSend": "Will auto-send"
+      "willAutoSend": "Can auto-send"
     },
     "composer": {
       "actionReview": "Allowed actions",
-      "allowedActionsNote": "Rules are saved as structured criteria and actions. Outbound sends run through safety gates and the Auto-send rules setting.",
+      "allowedActionsNote": "Rules are saved as clear criteria and actions. Email-sending actions run only when safety checks and your auto-send setting allow them.",
       "answerClarification": "Send answer",
       "answerLabel": "Your answer",
       "compileCta": "Convert to rule",
       "compiledReview": "Rule to save",
       "compiling": "Checking...",
       "examples": {
-        "body": "Choose a persona, then click an example to replace the whole description.",
+        "addSelected": "Add selected ({count})",
+        "backToPersonas": "Clear persona",
+        "body": "Use a starter example if you do not want to write from scratch.",
+        "changePersona": "Change persona",
+        "chooseExampleTitle": "Choose examples",
+        "choosePersonaTitle": "Choose persona",
+        "count": "{count} examples",
         "empty": "No enabled examples for this persona yet.",
         "error": "Examples are not available right now. You can still write your own rule.",
+        "multiPromptPrefix": "Add the following rules:",
         "title": "Choose from examples"
       },
       "examplesHint": "Catalog examples",
@@ -1386,7 +1396,7 @@
       },
       "addAction": "Add action",
       "addCondition": "Add condition",
-      "advancedTitle": "Outbound behavior",
+      "advancedTitle": "How AI sends email",
       "condition": {
         "GMAIL_LABEL_PRESENT": "Gmail label present",
         "HAS_ATTACHMENT": "Has attachment",
@@ -1415,9 +1425,9 @@
         "any": "Match any"
       },
       "outbound": {
-        "autoSend": "Auto-send rules sends automatically",
+        "autoSend": "Can send automatically when safe",
         "deleteDisabled": "Permanent delete is disabled",
-        "fallbackDraft": "Gate failures save a draft",
+        "fallbackDraft": "If not safe enough, save a Gmail draft",
         "webhookDisabled": "Webhook is not supported"
       },
       "refineCta": "Update form",
@@ -1427,7 +1437,7 @@
       "removeCondition": "Remove condition",
       "saveHint": "New or edited rules are saved off until you preview them.",
       "structuredPreview": "Rule to save",
-      "thenBody": "Choose structured actions. Outbound sends use the Auto-send rules setting and safety gateway.",
+      "thenBody": "Choose what Zero Mail should do when an email matches. If the action sends email, safety checks still run before sending.",
       "thenTitle": "Allowed actions",
       "unsafe": {
         "autoSend": "Auto-send rules",
@@ -1496,12 +1506,12 @@
     "ruleN": "Rule 1 of 5",
     "settings": {
       "autoSend": {
-        "bodyOff": "Outbound rules still save, but runtime saves Gmail drafts instead of sending.",
-        "bodyOn": "Outbound rules can send when safety gates pass.",
-        "footerOff": "Turning this off does not block saving rules; it changes outbound runtime to draft fallback.",
-        "footerOn": "You still see \"Will auto-send\" status in rule/action surfaces before enabling a rule.",
-        "title": "Auto-send rules",
-        "toggleLabel": "Allow rules to auto-send"
+        "bodyOff": "Rules still save, but email-sending actions create Gmail drafts for you to review and send.",
+        "bodyOn": "When a rule asks to reply, forward, or send a new email, Zero Mail can send it if safety checks pass.",
+        "footerOff": "Turning this off does not block saving rules; it changes email-sending actions to Gmail drafts.",
+        "footerOn": "Email-sending rules still pass safety checks, send limits, and audit logging.",
+        "title": "Rule auto-send",
+        "toggleLabel": "Allow rules to send email"
       }
     },
     "tabs": {
@@ -1612,9 +1622,9 @@
     "privacy": {
       "byokPlanned": "Coming soon: you can bring your own API key (BYOK)",
       "heading": "Privacy and safety",
-      "noAutoSend": "Outbound sends are controlled by safety gates and the Auto-send rules switch.",
+      "noAutoSend": "Email-sending actions are controlled by safety checks and the auto-send switch in AI configuration.",
       "noBodyStorage": "No long-term storage of email bodies, prompts, or AI completions",
-      "outboundControl": "Outbound sends are controlled by safety gates and the Auto-send rules switch.",
+      "outboundControl": "Email-sending actions are controlled by safety checks and the auto-send switch in AI configuration.",
       "revokeAnytime": "You can revoke access anytime"
     },
     "title": "Settings",

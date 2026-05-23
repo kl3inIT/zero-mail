@@ -17,16 +17,27 @@ test.describe('rules examples and auto-send setting', () => {
       await openWithRulesExamplesMock(page);
 
       await expect(page.getByRole('heading', { name: 'Automation rules' })).toBeVisible();
-      await expect(page.getByText('Available actions')).toBeVisible();
-      await expect(page.getByText('Will auto-send')).toHaveCount(3);
 
       await page.getByRole('button', { name: 'Create rule' }).click();
       await expect(page.getByText('Choose from examples')).toBeVisible();
+      await expect(page.getByText('Available actions')).toBeVisible();
+      await expect(page.getByText('Send reply')).toBeVisible();
+      await expect(page.getByText('Apply a Gmail label.')).toHaveCount(0);
+
+      await page.getByRole('button', { name: 'Choose from examples' }).click();
+      await expect(page.getByRole('heading', { name: 'Choose persona' })).toBeVisible();
+      await page.getByRole('button', { name: /Founder 1 examples/ }).click();
+      await expect(
+        page.getByRole('button', {
+          name: /Archive investor updates from portfolio companies/i,
+        }),
+      ).toBeVisible();
       await page
         .getByRole('button', {
           name: /Archive investor updates from portfolio companies/i,
         })
         .click();
+      await page.getByRole('button', { name: 'Add selected (1)' }).click();
 
       const sourceTextarea = page.getByLabel(
         'Which emails should Zero Mail match, and what should it do?',
@@ -43,18 +54,22 @@ test.describe('rules examples and auto-send setting', () => {
 
   test('rules examples settings toggle persists and changes outbound copy', async ({ page }) => {
     const consoleErrors = captureConsoleErrors(page);
-    const mockState = await openWithRulesExamplesMock(page, '/settings');
+    const mockState = await openWithRulesExamplesMock(page, '/ai');
 
-    await page.getByTestId('settings-auto-send-rules-switch').scrollIntoViewIfNeeded();
-    await expect(page.getByTestId('settings-auto-send-rules-switch')).toBeChecked();
-    await expect(page.getByText('Outbound rules can send when safety gates pass.')).toBeVisible();
-
-    await page.getByTestId('settings-auto-send-rules-switch').click();
-
-    await expect(page.getByTestId('settings-auto-send-rules-switch')).not.toBeChecked();
+    await page.getByTestId('ai-auto-send-rules-switch').scrollIntoViewIfNeeded();
+    await expect(page.getByTestId('ai-auto-send-rules-switch')).toBeChecked();
     await expect(
       page.getByText(
-        'Outbound rules still save, but runtime saves Gmail drafts instead of sending.',
+        'When a rule asks to reply, forward, or send a new email, Zero Mail can send it if safety checks pass.',
+      ),
+    ).toBeVisible();
+
+    await page.getByTestId('ai-auto-send-rules-switch').click();
+
+    await expect(page.getByTestId('ai-auto-send-rules-switch')).not.toBeChecked();
+    await expect(
+      page.getByText(
+        'Rules still save, but email-sending actions create Gmail drafts for you to review and send.',
       ),
     ).toBeVisible();
     expect(mockState.autoSendRulesEnabled).toBe(false);
@@ -68,7 +83,10 @@ type MockState = {
   automationSettingUpdates: Array<{ autoSendRulesEnabled: boolean }>;
 };
 
-async function openWithRulesExamplesMock(page: Page, path: '/rules' | '/settings' = '/rules') {
+async function openWithRulesExamplesMock(
+  page: Page,
+  path: '/rules' | '/settings' | '/ai' = '/rules',
+) {
   const mockState: MockState = {
     autoSendRulesEnabled: true,
     automationSettingUpdates: [],
@@ -116,6 +134,11 @@ async function openWithRulesExamplesMock(page: Page, path: '/rules' | '/settings
 
     if (url.pathname === '/api/tenant/triage-pause' && request.method() === 'PUT') {
       await route.fulfill({ status: 204, body: '' });
+      return;
+    }
+
+    if (url.pathname === '/api/triage/sender-safety-net' && request.method() === 'GET') {
+      await fulfillJson(route, { senders: [] });
       return;
     }
 

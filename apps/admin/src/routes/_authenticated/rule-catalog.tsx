@@ -8,11 +8,9 @@ import {
 } from 'lucide-react';
 import { type FormEvent, type ReactNode, useMemo, useState } from 'react';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -38,19 +36,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import type {
-  RuleCatalogActionDescriptor,
-  RuleCatalogActionDescriptorWriteRequest,
   RuleCatalogExample,
   RuleCatalogExampleWriteRequest,
   RuleCatalogPersona,
   RuleCatalogPersonaWriteRequest,
 } from '@/features/rule-catalog/rule-catalog-api';
 import { useReorderRuleCatalog } from '@/features/rule-catalog/use-reorder-rule-catalog';
-import { useRuleCatalogActions, useRuleCatalogPersonas } from '@/features/rule-catalog/use-rule-catalog';
-import { useSaveActionDescriptor, useSetRuleCatalogEnabled } from '@/features/rule-catalog/use-save-action-descriptor';
+import { useRuleCatalogPersonas } from '@/features/rule-catalog/use-rule-catalog';
+import { useSetRuleCatalogEnabled } from '@/features/rule-catalog/use-save-action-descriptor';
 import { useSaveExample } from '@/features/rule-catalog/use-save-example';
 import { useSavePersona } from '@/features/rule-catalog/use-save-persona';
 
@@ -59,8 +54,6 @@ export const Route = createFileRoute('/_authenticated/rule-catalog')({
 });
 
 const ADMIN_REASON = 'Admin rule catalog UI update';
-const RISK_OPTIONS = ['LOW', 'MEDIUM', 'HIGH'];
-const AVAILABILITY_OPTIONS = ['AVAILABLE', 'COMING_SOON', 'DISABLED'];
 
 type EditablePersona = RuleCatalogPersona | null;
 
@@ -82,47 +75,38 @@ function RuleCatalogRoute() {
 
 export function RuleCatalogPage() {
   const personasQuery = useRuleCatalogPersonas();
-  const actionsQuery = useRuleCatalogActions();
   const savePersona = useSavePersona();
   const saveExample = useSaveExample();
-  const saveActionDescriptor = useSaveActionDescriptor();
   const setEnabled = useSetRuleCatalogEnabled();
   const reorderCatalog = useReorderRuleCatalog();
 
-  const [activeTab, setActiveTab] = useState('personas');
+  const [selectedPersonaId, setSelectedPersonaId] = useState<string | null>(null);
   const [editingPersona, setEditingPersona] = useState<EditablePersona>(null);
   const [editingExample, setEditingExample] = useState<EditableExample | null>(null);
-  const [editingAction, setEditingAction] = useState<RuleCatalogActionDescriptor | null>(null);
   const [personaDialogOpen, setPersonaDialogOpen] = useState(false);
 
   const personas = useMemo(
     () => sortByOrder(personasQuery.data?.personas ?? []),
     [personasQuery.data],
   );
-  const examples = useMemo(
+  const selectedPersona =
+    personas.find((persona) => persona.personaId === selectedPersonaId) ?? personas[0] ?? null;
+  const selectedExamples = useMemo(
     () =>
-      personas.flatMap((persona) =>
-        sortByOrder(persona.examples).map((example) => ({
-          ...example,
-          personaId: persona.personaId,
-          personaKey: persona.personaKey,
-          personaNameEn: persona.displayNameEn,
-          personaNameVi: persona.displayNameVi,
-        })),
-      ),
-    [personas],
-  );
-  const actions = useMemo(
-    () => sortByOrder(actionsQuery.data?.actions ?? []),
-    [actionsQuery.data],
+      selectedPersona
+        ? sortByOrder(selectedPersona.examples).map((example) => ({
+            ...example,
+            personaId: selectedPersona.personaId,
+            personaKey: selectedPersona.personaKey,
+            personaNameEn: selectedPersona.displayNameEn,
+            personaNameVi: selectedPersona.displayNameVi,
+          }))
+        : [],
+    [selectedPersona],
   );
 
   const mutationPending =
-    savePersona.isPending ||
-    saveExample.isPending ||
-    saveActionDescriptor.isPending ||
-    setEnabled.isPending ||
-    reorderCatalog.isPending;
+    savePersona.isPending || saveExample.isPending || setEnabled.isPending || reorderCatalog.isPending;
 
   function openNewPersonaDialog() {
     setEditingPersona(null);
@@ -147,15 +131,6 @@ export function RuleCatalogPage() {
     setEnabled.mutate({
       target: 'example',
       targetId: example.exampleId,
-      enabled,
-      reason: ADMIN_REASON,
-    });
-  }
-
-  function setActionEnabled(action: RuleCatalogActionDescriptor, enabled: boolean) {
-    setEnabled.mutate({
-      target: 'action',
-      targetId: action.actionKey,
       enabled,
       reason: ADMIN_REASON,
     });
@@ -194,21 +169,6 @@ export function RuleCatalogPage() {
     });
   }
 
-  function reorderActions(action: RuleCatalogActionDescriptor, direction: -1 | 1) {
-    const reordered = moveInList(actions, action.actionKey, direction, 'actionKey');
-    if (!reordered) return;
-    reorderCatalog.mutate({
-      target: 'actions',
-      request: {
-        items: reordered.map((row, index) => ({
-          actionKey: row.actionKey,
-          displayOrder: orderForIndex(index),
-        })),
-        reason: ADMIN_REASON,
-      },
-    });
-  }
-
   return (
     <div className="space-y-6">
       <header className="flex items-end justify-between gap-4">
@@ -218,7 +178,7 @@ export function RuleCatalogPage() {
           </p>
           <h1 className="text-ink text-xl font-semibold">Rule Catalog</h1>
           <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-            Personas, bilingual examples, and rule action descriptors used by the user rule builder.
+            Personas and bilingual examples used by the user rule builder.
           </p>
         </div>
         <Button type="button" onClick={openNewPersonaDialog}>
@@ -227,85 +187,71 @@ export function RuleCatalogPage() {
         </Button>
       </header>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList variant="line" className="w-full justify-start">
-          <TabsTrigger value="personas">Personas</TabsTrigger>
-          <TabsTrigger value="examples">Examples</TabsTrigger>
-          <TabsTrigger value="actions">Actions</TabsTrigger>
-        </TabsList>
+      <div className="grid gap-4 xl:grid-cols-[390px_minmax(0,1fr)]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Personas</CardTitle>
+            <CardDescription>Chọn một nhóm để quản lý ví dụ bên phải.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PersonaList
+              personas={personas}
+              selectedPersonaId={selectedPersona?.personaId ?? null}
+              loading={personasQuery.isLoading}
+              mutationPending={mutationPending}
+              onSelect={setSelectedPersonaId}
+              onEdit={openEditPersonaDialog}
+              onEnabledChange={setPersonaEnabled}
+              onMove={reorderPersonas}
+            />
+          </CardContent>
+        </Card>
 
-        <TabsContent value="personas" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Personas</CardTitle>
-              <CardDescription>Nhóm ví dụ hiển thị trong chooser của rule prompt box.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PersonaTable
-                personas={personas}
-                loading={personasQuery.isLoading}
-                mutationPending={mutationPending}
-                onEdit={openEditPersonaDialog}
-                onEnabledChange={setPersonaEnabled}
-                onMove={reorderPersonas}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="examples" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Examples</CardTitle>
-              <CardDescription>Prompt mẫu EN/VI được seed từ Inbox Zero và lưu trong DB.</CardDescription>
-              <CardAction>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={personas.length === 0}
-                  onClick={() => setEditingExample({ persona: personas[0], example: null })}
-                >
-                  <PlusIcon className="size-3.5" />
-                  Thêm ví dụ
-                </Button>
-              </CardAction>
-            </CardHeader>
-            <CardContent>
-              <ExamplesTable
-                examples={examples}
-                loading={personasQuery.isLoading}
-                mutationPending={mutationPending}
-                onEdit={(example) => {
-                  const persona = personas.find((entry) => entry.personaId === example.personaId);
-                  if (persona) setEditingExample({ persona, example });
-                }}
-                onEnabledChange={setExampleEnabled}
-                onMove={reorderExamples}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="actions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Actions</CardTitle>
-              <CardDescription>Descriptor quản trị cho action mà rule compiler có thể đề xuất.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ActionTable
-                actions={actions}
-                loading={actionsQuery.isLoading}
-                mutationPending={mutationPending}
-                onEdit={setEditingAction}
-                onEnabledChange={setActionEnabled}
-                onMove={reorderActions}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <CardTitle>
+                  {selectedPersona
+                    ? `${selectedPersona.displayNameEn} examples`
+                    : 'Examples'}
+                </CardTitle>
+                <CardDescription>
+                  {selectedPersona
+                    ? `${selectedPersona.displayNameVi} - prompt mẫu EN/VI hiển thị khi user chọn persona này.`
+                    : 'Chọn một persona để quản lý ví dụ.'}
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={!selectedPersona}
+                onClick={() =>
+                  selectedPersona &&
+                  setEditingExample({ persona: selectedPersona, example: null })
+                }
+              >
+                <PlusIcon className="size-3.5" />
+                Thêm ví dụ
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ExamplesTable
+              examples={selectedExamples}
+              loading={personasQuery.isLoading}
+              mutationPending={mutationPending}
+              onEdit={(example) => {
+                const persona = personas.find((entry) => entry.personaId === example.personaId);
+                if (persona) setEditingExample({ persona, example });
+              }}
+              onEnabledChange={setExampleEnabled}
+              onMove={reorderExamples}
+            />
+          </CardContent>
+        </Card>
+      </div>
 
       <PersonaDialog
         open={personaDialogOpen}
@@ -333,63 +279,72 @@ export function RuleCatalogPage() {
           setEditingExample(null);
         }}
       />
-
-      <ActionDialog
-        action={editingAction}
-        pending={saveActionDescriptor.isPending}
-        onOpenChange={(open) => {
-          if (!open) setEditingAction(null);
-        }}
-        onSave={async (actionKey, request) => {
-          await saveActionDescriptor.mutateAsync({ actionKey, request });
-          setEditingAction(null);
-        }}
-      />
     </div>
   );
 }
 
-function PersonaTable({
+function PersonaList({
   personas,
+  selectedPersonaId,
   loading,
   mutationPending,
+  onSelect,
   onEdit,
   onEnabledChange,
   onMove,
 }: {
   personas: RuleCatalogPersona[];
+  selectedPersonaId: string | null;
   loading: boolean;
   mutationPending: boolean;
+  onSelect: (personaId: string) => void;
   onEdit: (persona: RuleCatalogPersona) => void;
   onEnabledChange: (persona: RuleCatalogPersona, enabled: boolean) => void;
   onMove: (persona: RuleCatalogPersona, direction: -1 | 1) => void;
 }) {
   if (loading) return <Skeleton className="h-40 w-full" />;
+  if (personas.length === 0) {
+    return (
+      <div className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+        Chưa có persona nào trong rule catalog.
+      </div>
+    );
+  }
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Key</TableHead>
-          <TableHead>Name EN</TableHead>
-          <TableHead>Name VI</TableHead>
-          <TableHead>Icon</TableHead>
-          <TableHead className="text-right">Order</TableHead>
-          <TableHead>Enabled</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {personas.length === 0 && (
-          <EmptyRow colSpan={7} message="Chưa có persona nào trong rule catalog." />
-        )}
-        {personas.map((persona, index) => (
-          <TableRow key={persona.personaId}>
-            <TableCell className="font-mono text-xs">{persona.personaKey}</TableCell>
-            <TableCell>{persona.displayNameEn}</TableCell>
-            <TableCell>{persona.displayNameVi}</TableCell>
-            <TableCell className="font-mono text-xs">{persona.icon ?? '-'}</TableCell>
-            <TableCell className="text-right tabular-nums">{persona.displayOrder}</TableCell>
-            <TableCell>
+    <div className="space-y-2">
+      {personas.map((persona, index) => {
+        const selected = persona.personaId === selectedPersonaId;
+        return (
+          <div
+            key={persona.personaId}
+            className={`rounded-lg border p-3 transition-colors ${
+              selected ? 'border-primary bg-violet-soft/70' : 'bg-background hover:bg-secondary'
+            }`}
+          >
+            <button
+              type="button"
+              className="w-full text-left"
+              aria-label={`Select persona ${persona.displayNameEn}`}
+              onClick={() => onSelect(persona.personaId)}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold">{persona.displayNameEn}</div>
+                  <div className="text-muted-foreground truncate text-xs">
+                    {persona.displayNameVi}
+                  </div>
+                </div>
+                <span className="text-muted-foreground rounded border px-1.5 py-0.5 font-mono text-[11px]">
+                  {persona.personaKey}
+                </span>
+              </div>
+              <div className="text-muted-foreground mt-2 flex items-center gap-2 text-xs">
+                <span>{persona.examples.length} examples</span>
+                <span>Order {persona.displayOrder}</span>
+                <span>{persona.icon ?? 'no icon'}</span>
+              </div>
+            </button>
+            <div className="mt-3 flex items-center justify-between gap-2 border-t pt-2">
               <Switch
                 size="sm"
                 checked={persona.enabled}
@@ -397,8 +352,6 @@ function PersonaTable({
                 aria-label={`Enable persona ${persona.displayNameEn}`}
                 onCheckedChange={(value) => onEnabledChange(persona, value === true)}
               />
-            </TableCell>
-            <TableCell>
               <RowActions
                 editLabel={`Edit persona ${persona.displayNameEn}`}
                 isFirst={index === 0}
@@ -408,11 +361,11 @@ function PersonaTable({
                 onMoveUp={() => onMove(persona, -1)}
                 onMoveDown={() => onMove(persona, 1)}
               />
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -436,7 +389,6 @@ function ExamplesTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Persona</TableHead>
           <TableHead>Prompt EN</TableHead>
           <TableHead>Prompt VI</TableHead>
           <TableHead className="text-right">Order</TableHead>
@@ -446,14 +398,10 @@ function ExamplesTable({
       </TableHeader>
       <TableBody>
         {examples.length === 0 && (
-          <EmptyRow colSpan={6} message="Chưa có ví dụ nào trong rule catalog." />
+          <EmptyRow colSpan={5} message="Chưa có ví dụ nào cho persona này." />
         )}
         {examples.map((example, index) => (
           <TableRow key={example.exampleId}>
-            <TableCell>
-              <div className="font-medium">{example.personaNameEn}</div>
-              <div className="text-muted-foreground text-xs">{example.personaNameVi}</div>
-            </TableCell>
             <TableCell className="max-w-[280px] truncate">{example.exampleTextEn}</TableCell>
             <TableCell className="max-w-[280px] truncate">{example.exampleTextVi}</TableCell>
             <TableCell className="text-right tabular-nums">{example.displayOrder}</TableCell>
@@ -469,93 +417,12 @@ function ExamplesTable({
             <TableCell>
               <RowActions
                 editLabel={`Edit example ${example.sourceRef}`}
-                isFirst={isFirstInPersona(examples, example, index)}
-                isLast={isLastInPersona(examples, example, index)}
+                isFirst={index === 0}
+                isLast={index === examples.length - 1}
                 disabled={mutationPending}
                 onEdit={() => onEdit(example)}
                 onMoveUp={() => onMove(example, -1)}
                 onMoveDown={() => onMove(example, 1)}
-              />
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
-}
-
-function ActionTable({
-  actions,
-  loading,
-  mutationPending,
-  onEdit,
-  onEnabledChange,
-  onMove,
-}: {
-  actions: RuleCatalogActionDescriptor[];
-  loading: boolean;
-  mutationPending: boolean;
-  onEdit: (action: RuleCatalogActionDescriptor) => void;
-  onEnabledChange: (action: RuleCatalogActionDescriptor, enabled: boolean) => void;
-  onMove: (action: RuleCatalogActionDescriptor, direction: -1 | 1) => void;
-}) {
-  if (loading) return <Skeleton className="h-40 w-full" />;
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Action key</TableHead>
-          <TableHead>Label EN/VI</TableHead>
-          <TableHead>Description EN/VI</TableHead>
-          <TableHead>Risk</TableHead>
-          <TableHead>Availability</TableHead>
-          <TableHead className="text-right">Order</TableHead>
-          <TableHead>Enabled</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {actions.length === 0 && (
-          <EmptyRow colSpan={8} message="Chưa có action descriptor nào trong rule catalog." />
-        )}
-        {actions.map((action, index) => (
-          <TableRow key={action.actionKey}>
-            <TableCell className="font-mono text-xs">{action.actionKey}</TableCell>
-            <TableCell>
-              <div className="font-medium">{action.labelEn}</div>
-              <div className="text-muted-foreground text-xs">{action.labelVi}</div>
-            </TableCell>
-            <TableCell className="max-w-[320px]">
-              <div className="truncate">{action.descriptionEn}</div>
-              <div className="text-muted-foreground truncate text-xs">{action.descriptionVi}</div>
-            </TableCell>
-            <TableCell>
-              <RiskBadge risk={action.riskLevel} />
-            </TableCell>
-            <TableCell>
-              <Badge variant={action.availabilityStatus === 'AVAILABLE' ? 'secondary' : 'outline'}>
-                {action.availabilityStatus}
-              </Badge>
-            </TableCell>
-            <TableCell className="text-right tabular-nums">{action.displayOrder}</TableCell>
-            <TableCell>
-              <Switch
-                size="sm"
-                checked={action.enabled}
-                disabled={mutationPending}
-                aria-label={`Enable action ${action.actionKey}`}
-                onCheckedChange={(value) => onEnabledChange(action, value === true)}
-              />
-            </TableCell>
-            <TableCell>
-              <RowActions
-                editLabel={`Edit action ${action.actionKey}`}
-                isFirst={index === 0}
-                isLast={index === actions.length - 1}
-                disabled={mutationPending}
-                onEdit={() => onEdit(action)}
-                onMoveUp={() => onMove(action, -1)}
-                onMoveDown={() => onMove(action, 1)}
               />
             </TableCell>
           </TableRow>
@@ -862,146 +729,6 @@ function ExampleDialog({
   );
 }
 
-function ActionDialog({
-  action,
-  pending,
-  onOpenChange,
-  onSave,
-}: {
-  action: RuleCatalogActionDescriptor | null;
-  pending: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSave: (actionKey: string, request: RuleCatalogActionDescriptorWriteRequest) => Promise<void>;
-}) {
-  const formKey = action?.actionKey ?? 'closed';
-  const [formState, setFormState] = useState(() => ({
-    key: formKey,
-    value: actionRequestFrom(action),
-  }));
-  const form = formState.key === formKey ? formState.value : actionRequestFrom(action);
-  const updateForm = (nextForm: RuleCatalogActionDescriptorWriteRequest) =>
-    setFormState({ key: formKey, value: nextForm });
-
-  if (!action) {
-    return <Dialog open={false} onOpenChange={onOpenChange} />;
-  }
-
-  const actionKey = action.actionKey;
-
-  async function submitForm(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    await onSave(actionKey, {
-      ...form,
-      labelEn: form.labelEn.trim(),
-      labelVi: form.labelVi.trim(),
-      descriptionEn: form.descriptionEn.trim(),
-      descriptionVi: form.descriptionVi.trim(),
-      riskLevel: form.riskLevel.trim().toUpperCase(),
-      availabilityStatus: form.availabilityStatus.trim().toUpperCase(),
-      reason: ADMIN_REASON,
-    });
-  }
-
-  return (
-    <Dialog open={Boolean(action)} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Sửa action {actionKey}</DialogTitle>
-          <DialogDescription>Label và mô tả hiển thị cho user rule builder.</DialogDescription>
-        </DialogHeader>
-
-        <form className="space-y-4" onSubmit={submitForm}>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Field label="Label EN" htmlFor="action-label-en">
-              <Input
-                id="action-label-en"
-                required
-                value={form.labelEn}
-                onChange={(event) => updateForm({ ...form, labelEn: event.target.value })}
-              />
-            </Field>
-            <Field label="Label VI" htmlFor="action-label-vi">
-              <Input
-                id="action-label-vi"
-                required
-                value={form.labelVi}
-                onChange={(event) => updateForm({ ...form, labelVi: event.target.value })}
-              />
-            </Field>
-          </div>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Field label="Description EN" htmlFor="action-description-en">
-              <Textarea
-                id="action-description-en"
-                required
-                rows={5}
-                value={form.descriptionEn}
-                onChange={(event) => updateForm({ ...form, descriptionEn: event.target.value })}
-              />
-            </Field>
-            <Field label="Description VI" htmlFor="action-description-vi">
-              <Textarea
-                id="action-description-vi"
-                required
-                rows={5}
-                value={form.descriptionVi}
-                onChange={(event) => updateForm({ ...form, descriptionVi: event.target.value })}
-              />
-            </Field>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-4">
-            <SelectField
-              label="Risk"
-              id="action-risk"
-              value={form.riskLevel}
-              options={RISK_OPTIONS}
-              onChange={(riskLevel) => updateForm({ ...form, riskLevel })}
-            />
-            <SelectField
-              label="Availability"
-              id="action-availability"
-              value={form.availabilityStatus}
-              options={AVAILABILITY_OPTIONS}
-              onChange={(availabilityStatus) => updateForm({ ...form, availabilityStatus })}
-            />
-            <Field label="Order" htmlFor="action-order">
-              <Input
-                id="action-order"
-                required
-                type="number"
-                value={form.displayOrder}
-                onChange={(event) =>
-                  updateForm({ ...form, displayOrder: Number(event.target.value) })
-                }
-              />
-            </Field>
-            <div className="flex items-end gap-2 pb-2">
-              <Switch
-                id="action-enabled"
-                checked={form.enabled}
-                onCheckedChange={(value) => updateForm({ ...form, enabled: value === true })}
-              />
-              <Label htmlFor="action-enabled" className="font-normal">
-                Enabled
-              </Label>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Hủy
-            </Button>
-            <Button type="submit" disabled={pending}>
-              <SaveIcon className="size-3.5" />
-              Lưu
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 function Field({
   label,
   htmlFor,
@@ -1019,39 +746,6 @@ function Field({
   );
 }
 
-function SelectField({
-  label,
-  id,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  id: string;
-  value: string;
-  options: string[];
-  onChange: (value: string) => void;
-}) {
-  const optionSet = new Set(options);
-  const renderedOptions = optionSet.has(value) ? options : [value, ...options];
-  return (
-    <Field label={label} htmlFor={id}>
-      <select
-        id={id}
-        className="border-input bg-background h-8 w-full rounded-lg border px-2 text-sm"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        {renderedOptions.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </Field>
-  );
-}
-
 function EmptyRow({ colSpan, message }: { colSpan: number; message: string }) {
   return (
     <TableRow>
@@ -1060,12 +754,6 @@ function EmptyRow({ colSpan, message }: { colSpan: number; message: string }) {
       </TableCell>
     </TableRow>
   );
-}
-
-function RiskBadge({ risk }: { risk: string }) {
-  if (risk === 'HIGH') return <Badge className="bg-destructive/10 text-destructive">{risk}</Badge>;
-  if (risk === 'MEDIUM') return <Badge className="bg-amber-soft text-amber">{risk}</Badge>;
-  return <Badge variant="secondary">{risk}</Badge>;
 }
 
 function sortByOrder<T extends { displayOrder: number }>(rows: T[]): T[] {
@@ -1090,16 +778,6 @@ function moveInList<T, K extends keyof T>(
   return reordered;
 }
 
-function isFirstInPersona(examples: ExampleRow[], example: ExampleRow, index: number): boolean {
-  const previous = examples[index - 1];
-  return !previous || previous.personaId !== example.personaId;
-}
-
-function isLastInPersona(examples: ExampleRow[], example: ExampleRow, index: number): boolean {
-  const next = examples[index + 1];
-  return !next || next.personaId !== example.personaId;
-}
-
 function personaRequestFrom(persona: EditablePersona): RuleCatalogPersonaWriteRequest {
   return {
     personaKey: persona?.personaKey ?? '',
@@ -1120,22 +798,6 @@ function exampleRequestFrom(state: EditableExample | null): RuleCatalogExampleWr
     displayOrder: state?.example?.displayOrder ?? 10,
     enabled: state?.example?.enabled ?? true,
     sourceRef: state?.example?.sourceRef ?? `admin:${personaKey}:custom`,
-    reason: ADMIN_REASON,
-  };
-}
-
-function actionRequestFrom(
-  action: RuleCatalogActionDescriptor | null,
-): RuleCatalogActionDescriptorWriteRequest {
-  return {
-    labelEn: action?.labelEn ?? '',
-    labelVi: action?.labelVi ?? '',
-    descriptionEn: action?.descriptionEn ?? '',
-    descriptionVi: action?.descriptionVi ?? '',
-    riskLevel: action?.riskLevel ?? 'LOW',
-    availabilityStatus: action?.availabilityStatus ?? 'AVAILABLE',
-    displayOrder: action?.displayOrder ?? 10,
-    enabled: action?.enabled ?? true,
     reason: ADMIN_REASON,
   };
 }
