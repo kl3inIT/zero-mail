@@ -275,12 +275,6 @@ public class TriageOrchestratorService {
             boolean outboundAction = isOutboundAction(actionType);
             String outboundFallbackReason =
                     outboundAction ? outboundFallbackReason(dispatchContext, actionProposal) : null;
-            if (dispatchContext.senderProtected() && !outboundAction) {
-                triageAuditSaga.recordTerminal(
-                        commandFor(dispatchContext, actionProposal, actionType, false),
-                        TriageDecision.REJECTED_BY_SAFETY_NET);
-                continue;
-            }
 
             TriageAuditCommand command =
                     commandFor(

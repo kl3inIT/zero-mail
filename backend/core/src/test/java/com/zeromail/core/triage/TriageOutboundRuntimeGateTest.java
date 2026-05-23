@@ -108,6 +108,25 @@ class TriageOutboundRuntimeGateTest {
     }
 
     @Test
+    void protected_sender_still_allows_safe_non_outbound_actions() throws Exception {
+        TriageOrchestratorService orchestratorService =
+                orchestratorService(true, true, senderDomainMatcher(), labelAction());
+        when(triageAuditSaga.reservePhase(any(TriageAuditCommand.class), any()))
+                .thenReturn(new ReservePhaseResult(Optional.of(AUDIT_ID), true));
+        when(triageAuditSaga.gmailWritePhase(any(TriageAuditCommand.class)))
+                .thenReturn(applied("label-applied"));
+
+        withTenant(TENANT_ID, () -> orchestratorService.processObservedEvent(observedEvent()));
+
+        verify(triageAuditSaga).gmailWritePhase(any(TriageAuditCommand.class));
+        verify(triageAuditSaga, never())
+                .outboundSendPhase(any(TriageAuditCommand.class), eq(AUDIT_ID));
+        verify(triageAuditSaga, never())
+                .outboundDraftFallbackPhase(any(TriageAuditCommand.class), eq(AUDIT_ID), any());
+        verifyFinalizedApplied();
+    }
+
+    @Test
     void low_trust_static_matcher_falls_back_to_draft_for_outbound_actions() throws Exception {
         TriageOrchestratorService orchestratorService =
                 orchestratorService(true, false, subjectMatcher(), sendEmailAction());
@@ -286,6 +305,12 @@ class TriageOutboundRuntimeGateTest {
     private static String sendEmailAction() {
         return """
                 [{"type":"send_email","to":["safe@example.com"],"subject":"Update","body":"Body"}]
+                """;
+    }
+
+    private static String labelAction() {
+        return """
+                [{"type":"label","labelName":"Needs review"}]
                 """;
     }
 
