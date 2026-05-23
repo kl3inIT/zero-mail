@@ -25,7 +25,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.StructuredTaskScope;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
@@ -274,20 +273,15 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
                                     tenantId ->
                                             scope.fork(
                                                     () -> {
-                                                        concurrentGatewayCalls.acquire();
-                                                        try {
-                                                            return ScopedValue.where(
-                                                                            TenantContext.TENANT,
-                                                                            tenantId.toString())
-                                                                    .call(
-                                                                            () ->
-                                                                                    llmGateway.chat(
-                                                                                            CallSite
-                                                                                                    .PREVIEW,
-                                                                                            "hello"));
-                                                        } finally {
-                                                            concurrentGatewayCalls.release();
-                                                        }
+                                                        return ScopedValue.where(
+                                                                        TenantContext.TENANT,
+                                                                        tenantId.toString())
+                                                                .call(
+                                                                        () ->
+                                                                                llmGateway.chat(
+                                                                                        CallSite
+                                                                                                .PREVIEW,
+                                                                                        "hello"));
                                                     }))
                             .toList();
             scope.join();
