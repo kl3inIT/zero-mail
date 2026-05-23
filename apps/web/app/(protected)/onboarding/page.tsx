@@ -1,22 +1,10 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-
-import { useCurrentUser } from '@/features/account/hooks/useCurrentUser';
+import { BETA_ONBOARDING_ENABLED, ONBOARDING_BYPASS_ROUTE } from '@/features/onboarding/config';
+import { OnboardingIndexClient } from './OnboardingIndexClient';
 
 export default function OnboardingIndexPage() {
-  const router = useRouter();
-  const me = useCurrentUser();
-  const onboardingStep = me.data?.onboardingStep;
+  if (!BETA_ONBOARDING_ENABLED) redirect(ONBOARDING_BYPASS_ROUTE);
 
-  useEffect(() => {
-    if (!onboardingStep) return;
-    if (onboardingStep === 'GMAIL_CONNECTED') router.replace('/onboarding/template-select');
-    else if (onboardingStep === 'TEMPLATE_SELECTED') router.replace('/onboarding/complete');
-    else if (onboardingStep === 'COMPLETE') router.replace('/settings');
-    else router.replace('/rules');
-  }, [onboardingStep, router]);
-
-  return null;
+  return <OnboardingIndexClient />;
 }

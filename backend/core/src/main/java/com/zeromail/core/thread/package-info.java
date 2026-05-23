@@ -3,10 +3,11 @@
         displayName = "Thread",
         allowedDependencies = {
             "gmail",
+            "gmail :: events",
             "tenant",
-            "shared.persistence",
-            "shared.lang",
-            "shared.pagination"
+            "shared :: persistence",
+            "shared :: lang",
+            "shared :: pagination"
         })
 package com.zeromail.core.thread;
 

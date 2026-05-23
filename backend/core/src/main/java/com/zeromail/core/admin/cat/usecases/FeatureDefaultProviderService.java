@@ -45,7 +45,13 @@ public class FeatureDefaultProviderService {
                         .findProviderForModel(modelId)
                         .orElseThrow(() -> new CatalogModelNotFoundException(modelId));
         featureDefaultTierService.assign(
-                feature, RoutingTier.PRIMARY, provider, List.of(modelId), requestIp, requestId);
+                feature,
+                RoutingTier.PRIMARY,
+                provider,
+                List.of(modelId),
+                reason,
+                requestIp,
+                requestId);
     }
 
     @Transactional

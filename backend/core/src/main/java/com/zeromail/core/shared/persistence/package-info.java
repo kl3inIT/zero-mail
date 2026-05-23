@@ -33,15 +33,13 @@
  * proper {@code AuditorAware<UUID>} bean reading from Spring Security.
  *
  * <p><b>Spring Modulith naming form (CL-3 lock):</b> Cross-sibling modules MUST reference this
- * module as {@code "shared.persistence"} in their {@code allowedDependencies} array.
+ * module as {@code "shared :: persistence"} in their {@code allowedDependencies} array.
  *
  * <p><b>Design rationale:</b> Adapted from JHipster {@code AbstractAuditingEntity<T>} (single
  * class, generic ID, includes {@code createdBy}/{@code lastModifiedBy}) — we split into 3 tiers and
  * dropped identity columns per the project privacy constraint.
  */
-@ApplicationModule(
-        displayName = "Persistence",
-        allowedDependencies = {})
+@NamedInterface("persistence")
 package com.zeromail.core.shared.persistence;
 
-import org.springframework.modulith.ApplicationModule;
+import org.springframework.modulith.NamedInterface;

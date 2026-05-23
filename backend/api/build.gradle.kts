@@ -19,6 +19,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.session:spring-session-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation(libs.spring.modulith.actuator)
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
     implementation(libs.google.auth.library.oauth2.http)
     compileOnly(platform(libs.spring.ai.bom))

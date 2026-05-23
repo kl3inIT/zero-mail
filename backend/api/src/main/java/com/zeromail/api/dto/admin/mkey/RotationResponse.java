@@ -2,7 +2,7 @@ package com.zeromail.api.dto.admin.mkey;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.zeromail.core.admin.mkey.usecases.MasterKeyAdminService;
-import com.zeromail.core.llm.gateway.springai.admin.MasterKeyTestResult;
+import com.zeromail.core.admin.mkey.usecases.MasterKeyTestResult;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)

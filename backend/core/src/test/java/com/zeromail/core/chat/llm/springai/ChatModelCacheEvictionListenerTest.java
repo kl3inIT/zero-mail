@@ -1,4 +1,4 @@
-package com.zeromail.core.llm.gateway.springai.admin;
+package com.zeromail.core.chat.llm.springai;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -8,7 +8,7 @@ import com.zeromail.core.admin.cat.domain.event.CatalogChangedEvent;
 import com.zeromail.core.admin.cat.usecases.CuratedCatalogQueryService;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.domain.event.MasterKeyRotatedEvent;
-import com.zeromail.core.chat.llm.springai.SpringAiChatModelFactory;
+import com.zeromail.core.admin.mkey.usecases.ProviderMasterKeyResolver;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;

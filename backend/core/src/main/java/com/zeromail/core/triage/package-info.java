@@ -6,16 +6,30 @@
         displayName = "Triage",
         allowedDependencies = {
             "rules",
+            "rules :: domain",
+            "rules :: projection",
+            "rules :: usecases",
             "gmail",
+            "gmail :: events",
+            "gmail :: gateway",
+            "gmail :: usecases",
             "llm",
+            "llm :: usecases",
             "draft",
             "thread",
+            "thread :: usecases",
             "billing",
+            "billing :: domain",
+            "billing :: usecases",
             "tenant",
-            "shared.privacy",
-            "shared.persistence",
-            "shared.lang",
-            "shared.pagination"
+            "tenant :: usecases",
+            "shared :: crypto",
+            "shared :: error",
+            "shared :: exception",
+            "shared :: privacy",
+            "shared :: persistence",
+            "shared :: lang",
+            "shared :: pagination"
         })
 package com.zeromail.core.triage;
 

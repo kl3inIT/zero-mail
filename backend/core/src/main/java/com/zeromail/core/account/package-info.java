@@ -2,12 +2,18 @@
         displayName = "Account",
         allowedDependencies = {
             "tenant",
-            "onboarding",
+            "tenant :: usecases",
             "gmail",
+            "gmail :: usecases",
+            "gmail :: persistence.crypto",
             "notification",
-            "shared.privacy",
-            "shared.persistence",
-            "shared.lang"
+            "notification :: domain",
+            "notification :: usecases",
+            "shared :: privacy",
+            "shared :: error",
+            "shared :: exception",
+            "shared :: persistence",
+            "shared :: lang"
         })
 package com.zeromail.core.account;
 

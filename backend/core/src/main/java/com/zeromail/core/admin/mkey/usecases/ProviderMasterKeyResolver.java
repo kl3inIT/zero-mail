@@ -1,4 +1,4 @@
-package com.zeromail.core.llm.gateway.springai.admin;
+package com.zeromail.core.admin.mkey.usecases;
 
 import static com.zeromail.core.admin.cat.persistence.lowlevel.ProviderCatalogLookupRepository.pairKey;
 
@@ -8,7 +8,6 @@ import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyEntity;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyRepository;
 import com.zeromail.core.admin.mkey.projection.MasterKeyMaskedRow;
-import com.zeromail.core.admin.mkey.usecases.MasterKeyMasker;
 import com.zeromail.core.shared.crypto.PlatformSecretCipher;
 import java.time.Clock;
 import java.time.Duration;

@@ -25,6 +25,8 @@ class DomainPurityArchTest {
         JavaClasses importedClasses =
                 new ClassFileImporter()
                         .withImportOption(new ImportOption.DoNotIncludeTests())
+                        .withImportOption(
+                                location -> !location.toString().contains("package-info.class"))
                         .importPackages("com.zeromail");
 
         noClasses()

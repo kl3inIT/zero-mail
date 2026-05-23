@@ -36,13 +36,13 @@ vi.mock('@/features/onboarding/hooks/useCompleteOnboarding', () => ({
   }),
 }));
 
-import OnboardingPage from '@/app/(protected)/onboarding/page';
+import { OnboardingIndexClient } from '@/app/(protected)/onboarding/OnboardingIndexClient';
 import { CompleteClient } from '@/app/(protected)/onboarding/complete/CompleteClient';
 
 describe('/onboarding completion redirect', () => {
   it('redirects completed users to settings instead of staying on loading copy', async () => {
     onboardingStep = 'COMPLETE';
-    render(<OnboardingPage />);
+    render(<OnboardingIndexClient />);
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/settings'));
   });

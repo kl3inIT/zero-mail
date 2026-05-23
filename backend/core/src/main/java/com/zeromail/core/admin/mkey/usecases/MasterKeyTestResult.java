@@ -1,4 +1,4 @@
-package com.zeromail.core.llm.gateway.springai.admin;
+package com.zeromail.core.admin.mkey.usecases;
 
 public enum MasterKeyTestResult {
     OK,

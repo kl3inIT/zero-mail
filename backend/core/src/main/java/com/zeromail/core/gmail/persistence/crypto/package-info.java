@@ -1,6 +1,7 @@
 /**
- * Refresh-token AES-GCM envelope cipher and its Spring configuration. Domain-internal: this stays
- * inside gmail/ until a second consumer materializes (per CONTEXT D-C2 — Phase 2C BYOK MAY promote
- * to {@code shared/crypto/}, but speculative shared infrastructure is forbidden in Phase 1.2).
+ * Refresh-token AES-GCM envelope cipher and its Spring configuration. Exposed as a narrow named
+ * interface so the LLM module can reuse the cipher for BYOK key encryption without opening the rest
+ * of Gmail persistence.
  */
+@org.springframework.modulith.NamedInterface("persistence.crypto")
 package com.zeromail.core.gmail.persistence.crypto;

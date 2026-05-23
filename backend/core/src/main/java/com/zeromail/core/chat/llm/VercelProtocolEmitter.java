@@ -148,6 +148,9 @@ public class VercelProtocolEmitter implements ChatStreamSink {
     }
 
     private static Map<String, Object> fields(Object... keyValues) {
+        if ((keyValues.length & 1) != 0) {
+            throw new IllegalArgumentException("keyValues must contain key/value pairs");
+        }
         Map<String, Object> fields = new LinkedHashMap<>();
         for (int index = 0; index < keyValues.length; index += 2) {
             fields.put((String) keyValues[index], keyValues[index + 1]);

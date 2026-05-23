@@ -3,13 +3,28 @@
         displayName = "Draft",
         allowedDependencies = {
             "llm",
+            "llm :: domain",
+            "llm :: exception",
+            "llm :: gateway.sanitization",
+            "llm :: usecases",
+            "billing",
+            "billing :: domain",
             "triage",
+            "triage :: domain",
+            "triage :: usecases",
+            "rules",
+            "rules :: domain",
             "gmail",
+            "gmail :: gateway",
             "thread",
+            "thread :: events",
+            "thread :: usecases",
             "tenant",
-            "shared.persistence",
-            "shared.lang",
-            "shared.lock"
+            "shared :: error",
+            "shared :: exception",
+            "shared :: persistence",
+            "shared :: lang",
+            "shared :: lock"
         })
 package com.zeromail.core.draft;
 

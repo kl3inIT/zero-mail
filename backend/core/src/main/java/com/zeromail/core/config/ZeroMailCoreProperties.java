@@ -1,7 +1,5 @@
 package com.zeromail.core.config;
 
-import com.zeromail.core.billing.domain.CallSite;
-import com.zeromail.core.llm.domain.BYOKProvider;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -10,7 +8,6 @@ import java.net.URI;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import org.jspecify.annotations.NonNull;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
@@ -153,7 +150,7 @@ public record ZeroMailCoreProperties(
     }
 
     public record ZeroMailLlmProperties(
-            BYOKProvider provider,
+            String provider,
             String baseUrl,
             @NotBlank String apiKey,
             String compileModel,
@@ -167,22 +164,13 @@ public record ZeroMailCoreProperties(
         }
 
         public ZeroMailLlmProperties {
-            provider = provider == null ? BYOKProvider.OPENAI : provider;
+            provider = provider == null || provider.isBlank() ? "openai" : provider;
             baseUrl = baseUrl == null ? "https://openrouter.ai/api/v1" : baseUrl;
             compileModel = compileModel == null ? "openai/gpt-5.4-nano" : compileModel;
             driftModel = driftModel == null ? "openai/gpt-5.4-nano" : driftModel;
             triageModel = triageModel == null ? "openai/gpt-5.4-nano" : triageModel;
             connectTimeout = connectTimeout == null ? Duration.ofSeconds(5) : connectTimeout;
             readTimeout = readTimeout == null ? Duration.ofSeconds(30) : readTimeout;
-        }
-
-        public Map<CallSite, String> modelByCallSite() {
-            return Map.of(
-                    CallSite.TRIAGE, triageModel,
-                    CallSite.DRAFT, triageModel,
-                    CallSite.PREVIEW, compileModel,
-                    CallSite.TRIAGE_PLATFORM_LLM, triageModel,
-                    CallSite.TRIAGE_DETERMINISTIC, triageModel);
         }
     }
 

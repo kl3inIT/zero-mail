@@ -153,6 +153,9 @@ public class WriteReversibleToolHandlers {
     }
 
     static WriteToolResult result(Object... keysAndValues) {
+        if ((keysAndValues.length & 1) != 0) {
+            throw new IllegalArgumentException("keysAndValues must contain key/value pairs");
+        }
         java.util.LinkedHashMap<String, Object> resultSummary = new java.util.LinkedHashMap<>();
         for (int valueIndex = 0; valueIndex < keysAndValues.length; valueIndex += 2) {
             resultSummary.put(

@@ -2,9 +2,9 @@ package com.zeromail.core.onboarding;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.zeromail.core.account.domain.OnboardingStep;
 import com.zeromail.core.account.persistence.UserEntity;
 import com.zeromail.core.account.persistence.UserRepository;
-import com.zeromail.core.onboarding.domain.OnboardingStep;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.tenant.TenantContext;
 import java.util.Map;

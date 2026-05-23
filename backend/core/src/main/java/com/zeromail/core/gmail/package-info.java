@@ -1,6 +1,13 @@
 @ApplicationModule(
         displayName = "Gmail",
-        allowedDependencies = {"tenant", "shared.privacy", "shared.persistence", "shared.lang"})
+        allowedDependencies = {
+            "tenant",
+            "config",
+            "shared :: crypto",
+            "shared :: privacy",
+            "shared :: persistence",
+            "shared :: lang"
+        })
 package com.zeromail.core.gmail;
 
 import org.springframework.modulith.ApplicationModule;

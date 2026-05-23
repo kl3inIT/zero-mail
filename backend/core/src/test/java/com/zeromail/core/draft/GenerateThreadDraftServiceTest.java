@@ -26,16 +26,14 @@ import com.zeromail.core.llm.exception.SafetyViolationException;
 import com.zeromail.core.shared.lock.LockBackendUnavailableException;
 import com.zeromail.core.shared.lock.RedisDistributedLock;
 import com.zeromail.core.shared.lock.RedisDistributedLock.LockHandle;
-import com.zeromail.core.thread.domain.ThreadReplyBucket;
 import com.zeromail.core.thread.event.ThreadDraftSaved;
-import com.zeromail.core.thread.persistence.ThreadReplyStatusEntity;
-import com.zeromail.core.thread.persistence.ThreadReplyStatusRepository;
 import com.zeromail.core.thread.usecases.ClassifyThreadReplyStatusService;
 import com.zeromail.core.thread.usecases.ThreadReplyClassificationInput;
 import com.zeromail.core.triage.domain.ReplyHeaders;
 import com.zeromail.core.triage.persistence.TriageAuditRepository;
 import com.zeromail.core.triage.persistence.TriageAuditWriter;
 import com.zeromail.core.triage.usecases.TriageActionResultJsonValidator;
+import com.zeromail.core.triage.usecases.TriageDraftAuditService;
 import com.zeromail.core.triage.usecases.TriageGmailWriter;
 import java.io.IOException;
 import java.time.Clock;
@@ -64,10 +62,10 @@ class GenerateThreadDraftServiceTest {
     private DraftReplySourceLoader draftReplySourceLoader;
     private DraftBodyGenerator draftBodyGenerator;
     private TriageGmailWriter triageGmailWriter;
-    private ThreadReplyStatusRepository threadReplyStatusRepository;
     private ClassifyThreadReplyStatusService classifyThreadReplyStatusService;
     private TriageAuditWriter triageAuditWriter;
     private TriageAuditRepository triageAuditRepository;
+    private TriageDraftAuditService triageDraftAuditService;
     private ApplicationEventPublisher eventPublisher;
     private LockHandle lockHandle;
     private GenerateThreadDraftService service;
@@ -78,10 +76,14 @@ class GenerateThreadDraftServiceTest {
         draftReplySourceLoader = mock(DraftReplySourceLoader.class);
         draftBodyGenerator = mock(DraftBodyGenerator.class);
         triageGmailWriter = mock(TriageGmailWriter.class);
-        threadReplyStatusRepository = mock(ThreadReplyStatusRepository.class);
         classifyThreadReplyStatusService = mock(ClassifyThreadReplyStatusService.class);
         triageAuditWriter = mock(TriageAuditWriter.class);
         triageAuditRepository = mock(TriageAuditRepository.class);
+        triageDraftAuditService =
+                new TriageDraftAuditService(
+                        triageAuditWriter,
+                        triageAuditRepository,
+                        new TriageActionResultJsonValidator());
         eventPublisher = mock(ApplicationEventPublisher.class);
         lockHandle = mock(LockHandle.class);
         when(triageAuditRepository.reclaimStalePending(eq(AUDIT_ID), eq(TENANT_ID), anyString()))
@@ -92,11 +94,8 @@ class GenerateThreadDraftServiceTest {
                         draftReplySourceLoader,
                         draftBodyGenerator,
                         triageGmailWriter,
-                        threadReplyStatusRepository,
                         classifyThreadReplyStatusService,
-                        triageAuditWriter,
-                        triageAuditRepository,
-                        new TriageActionResultJsonValidator(),
+                        triageDraftAuditService,
                         eventPublisher,
                         immediateTransactions(),
                         Clock.fixed(Instant.parse("2026-05-12T10:00:00Z"), ZoneOffset.UTC));
@@ -105,7 +104,7 @@ class GenerateThreadDraftServiceTest {
     @Test
     void service_generates_non_empty_body_and_persists_new_draft_state() throws Exception {
         arrangeLock();
-        when(threadReplyStatusRepository.findByGmailThreadId(THREAD_ID))
+        when(classifyThreadReplyStatusService.currentDraftId(THREAD_ID))
                 .thenReturn(Optional.empty());
         when(draftReplySourceLoader.load(TENANT_ID, THREAD_ID)).thenReturn(source());
         when(draftBodyGenerator.generate(TENANT_ID, THREAD_ID, "inbound body", "Inbound subject"))
@@ -181,7 +180,7 @@ class GenerateThreadDraftServiceTest {
     @Test
     void existing_pending_audit_without_lease_skips_gmail_write() throws Exception {
         arrangeLock();
-        when(threadReplyStatusRepository.findByGmailThreadId(THREAD_ID))
+        when(classifyThreadReplyStatusService.currentDraftId(THREAD_ID))
                 .thenReturn(Optional.empty());
         when(draftReplySourceLoader.load(TENANT_ID, THREAD_ID)).thenReturn(source());
         when(draftBodyGenerator.generate(TENANT_ID, THREAD_ID, "inbound body", "Inbound subject"))
@@ -250,8 +249,8 @@ class GenerateThreadDraftServiceTest {
     @Test
     void save_draft_failure_leaves_existing_draft_intact() throws Exception {
         arrangeLock();
-        when(threadReplyStatusRepository.findByGmailThreadId(THREAD_ID))
-                .thenReturn(Optional.of(existingStatus(OLD_DRAFT_ID)));
+        when(classifyThreadReplyStatusService.currentDraftId(THREAD_ID))
+                .thenReturn(Optional.of(OLD_DRAFT_ID));
         when(draftReplySourceLoader.load(TENANT_ID, THREAD_ID)).thenReturn(source());
         when(draftBodyGenerator.generate(TENANT_ID, THREAD_ID, "inbound body", "Inbound subject"))
                 .thenReturn("generated draft body");
@@ -289,7 +288,7 @@ class GenerateThreadDraftServiceTest {
     @Test
     void safety_violation_causes_zero_gmail_writes_or_persistence() throws Exception {
         arrangeLock();
-        when(threadReplyStatusRepository.findByGmailThreadId(THREAD_ID))
+        when(classifyThreadReplyStatusService.currentDraftId(THREAD_ID))
                 .thenReturn(Optional.empty());
         when(draftReplySourceLoader.load(TENANT_ID, THREAD_ID)).thenReturn(source());
         when(draftBodyGenerator.generate(TENANT_ID, THREAD_ID, "inbound body", "Inbound subject"))
@@ -331,8 +330,8 @@ class GenerateThreadDraftServiceTest {
 
     private void arrangeSuccessfulRegeneration() throws Exception {
         arrangeLock();
-        when(threadReplyStatusRepository.findByGmailThreadId(THREAD_ID))
-                .thenReturn(Optional.of(existingStatus(OLD_DRAFT_ID)));
+        when(classifyThreadReplyStatusService.currentDraftId(THREAD_ID))
+                .thenReturn(Optional.of(OLD_DRAFT_ID));
         when(draftReplySourceLoader.load(TENANT_ID, THREAD_ID)).thenReturn(source());
         when(draftBodyGenerator.generate(TENANT_ID, THREAD_ID, "inbound body", "Inbound subject"))
                 .thenReturn("generated draft body");
@@ -375,19 +374,6 @@ class GenerateThreadDraftServiceTest {
                 "Inbound subject",
                 false,
                 false,
-                false);
-    }
-
-    private static ThreadReplyStatusEntity existingStatus(String draftId) {
-        return new ThreadReplyStatusEntity(
-                UUID.randomUUID(),
-                TENANT_ID,
-                THREAD_ID,
-                ThreadReplyBucket.TO_REPLY,
-                MESSAGE_ID,
-                Instant.EPOCH,
-                true,
-                draftId,
                 false);
     }
 

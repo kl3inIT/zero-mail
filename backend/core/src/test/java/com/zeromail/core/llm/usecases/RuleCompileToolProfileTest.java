@@ -9,7 +9,6 @@ import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
 import com.zeromail.core.llm.domain.ActionValidator;
 import com.zeromail.core.llm.domain.AllowListedTools;
-import com.zeromail.core.llm.domain.BYOKProvider;
 import com.zeromail.core.llm.domain.LlmToolProfile;
 import com.zeromail.core.llm.domain.RuleCompileToolValidator;
 import com.zeromail.core.llm.exception.SafetyViolationException;
@@ -162,7 +161,7 @@ class RuleCompileToolProfileTest {
 
     private ZeroMailLlmProperties llmProperties() {
         return new ZeroMailLlmProperties(
-                BYOKProvider.OPENAI,
+                "openai",
                 "https://openrouter.ai/api/v1",
                 "test-platform-key",
                 "openai/gpt-5.4-nano",

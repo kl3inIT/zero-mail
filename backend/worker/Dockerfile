@@ -48,9 +48,12 @@ RUN java -Djarmode=layertools -jar /app/app.jar extract --destination /app/extra
 # ============================================================================
 FROM eclipse-temurin:25-jre-noble
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       tini \
       curl && \
+    apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -g 1654 appgroup && \

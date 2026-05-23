@@ -10,10 +10,20 @@
         allowedDependencies = {
             "tenant",
             "llm",
+            "llm :: domain",
+            "llm :: usecases",
+            "billing",
+            "billing :: domain",
             "gmail",
+            "gmail :: domain",
+            "gmail :: projection",
+            "gmail :: usecases",
             "onboarding",
-            "shared.persistence",
-            "shared.lang"
+            "onboarding :: usecases",
+            "shared :: error",
+            "shared :: exception",
+            "shared :: persistence",
+            "shared :: lang"
         })
 package com.zeromail.core.rules;
 

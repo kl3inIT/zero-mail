@@ -1,6 +1,5 @@
 package com.zeromail.core.llm.persistence;
 
-import com.zeromail.core.admin.cat.domain.Feature;
 import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.llm.usecases.LlmUsageRecord;
 import com.zeromail.core.llm.usecases.LlmUsageRecorder;
@@ -59,7 +58,7 @@ public class JdbcLlmUsageRecorder implements LlmUsageRecorder {
                 .addValue("id", UUID.randomUUID())
                 .addValue("tenantId", usageRecord.tenantId())
                 .addValue("provider", usageRecord.provider())
-                .addValue("feature", featureFor(usageRecord.callSite()).id())
+                .addValue("feature", featureIdFor(usageRecord.callSite()))
                 .addValue("modelId", usageRecord.modelId())
                 .addValue("credentialSource", usageRecord.credentialSource())
                 .addValue("promptTokens", Math.max(0, usageRecord.usage().promptTokens()))
@@ -69,11 +68,11 @@ public class JdbcLlmUsageRecorder implements LlmUsageRecorder {
                 .addValue("chargedCredits", usageRecord.chargedCredits());
     }
 
-    private Feature featureFor(CallSite callSite) {
+    private String featureIdFor(CallSite callSite) {
         return switch (callSite) {
-            case DRAFT -> Feature.DRAFT;
-            case TRIAGE, TRIAGE_PLATFORM_LLM, TRIAGE_DETERMINISTIC -> Feature.TRIAGE;
-            case PREVIEW -> Feature.CHAT;
+            case DRAFT -> "DRAFT";
+            case TRIAGE, TRIAGE_PLATFORM_LLM, TRIAGE_DETERMINISTIC -> "TRIAGE";
+            case PREVIEW -> "CHAT";
         };
     }
 }

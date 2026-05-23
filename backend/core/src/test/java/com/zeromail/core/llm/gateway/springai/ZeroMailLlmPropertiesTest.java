@@ -2,10 +2,8 @@ package com.zeromail.core.llm.gateway.springai;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.zeromail.core.billing.domain.CallSite;
 import com.zeromail.core.config.ZeroMailCoreProperties;
 import com.zeromail.core.config.ZeroMailCoreProperties.ZeroMailLlmProperties;
-import com.zeromail.core.llm.domain.BYOKProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -46,7 +44,7 @@ class ZeroMailLlmPropertiesTest {
                                             .llm()
                                             .platform();
 
-                            assertThat(llmProperties.provider()).isEqualTo(BYOKProvider.OPENAI);
+                            assertThat(llmProperties.provider()).isEqualTo("openai");
                             assertThat(llmProperties.baseUrl())
                                     .isEqualTo("https://openrouter.ai/api/v1");
                             assertThat(llmProperties.apiKey()).isEqualTo("test-platform-key");
@@ -55,16 +53,6 @@ class ZeroMailLlmPropertiesTest {
                             assertThat(llmProperties.driftModel()).isEqualTo("openai/gpt-5.4-nano");
                             assertThat(llmProperties.triageModel())
                                     .isEqualTo("anthropic/claude-3.5-sonnet");
-                            assertThat(llmProperties.modelByCallSite())
-                                    .containsEntry(CallSite.PREVIEW, "openai/gpt-5.4-nano")
-                                    .containsEntry(CallSite.DRAFT, "anthropic/claude-3.5-sonnet")
-                                    .containsEntry(CallSite.TRIAGE, "anthropic/claude-3.5-sonnet")
-                                    .containsEntry(
-                                            CallSite.TRIAGE_PLATFORM_LLM,
-                                            "anthropic/claude-3.5-sonnet")
-                                    .containsEntry(
-                                            CallSite.TRIAGE_DETERMINISTIC,
-                                            "anthropic/claude-3.5-sonnet");
                             assertThat(
                                             applicationContext
                                                     .getBean(ZeroMailCoreProperties.class)

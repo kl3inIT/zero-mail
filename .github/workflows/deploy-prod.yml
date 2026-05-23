@@ -55,15 +55,17 @@ jobs:
         run: |
           # --repo is required because this job runs without a checkout (gh run list
           # otherwise tries to inspect the cwd as a git repository).
-          conclusion=$(gh run list \
+          # Tag pushes created by GITHUB_TOKEN do not trigger push workflows, so
+          # Deploy Latest Main dispatches the image build manually on the tag ref.
+          read -r status conclusion event url < <(gh run list \
             --repo "${{ github.repository }}" \
             --workflow "Build and Push Images" \
-            --event push \
             --branch "${{ steps.check.outputs.tag }}" \
-            --limit 1 \
-            --json conclusion --jq '.[0].conclusion // "missing"')
-          if [[ "$conclusion" != "success" ]]; then
-            echo "::error::Build and Push for tag ${{ steps.check.outputs.tag }} concluded as: $conclusion"
+            --limit 20 \
+            --json status,conclusion,event,url \
+            --jq '([.[] | select(.event == "push" or .event == "workflow_dispatch")][0] // {status:"missing",conclusion:"",event:"",url:""}) | [.status, (.conclusion // ""), (.event // ""), (.url // "")] | @tsv')
+          if [[ "$status" != "completed" || "$conclusion" != "success" ]]; then
+            echo "::error::Build and Push for tag ${{ steps.check.outputs.tag }} did not complete successfully (status=${status}, conclusion=${conclusion}, event=${event}, url=${url})"
             exit 1
           fi
 

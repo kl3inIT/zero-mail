@@ -26,7 +26,6 @@ import com.zeromail.core.shared.lock.RedisDistributedLock.LockHandle;
 import com.zeromail.core.shared.privacy.SensitiveMarkerScrubFilter;
 import com.zeromail.core.support.PostgresContainerTest;
 import com.zeromail.core.thread.domain.ThreadReplyBucket;
-import com.zeromail.core.thread.persistence.ThreadReplyStatusRepository;
 import com.zeromail.core.thread.projection.NeedsReplyPage;
 import com.zeromail.core.thread.projection.NeedsReplyPageQuery;
 import com.zeromail.core.thread.usecases.ClassifyThreadReplyStatusService;
@@ -37,7 +36,7 @@ import com.zeromail.core.triage.persistence.TriageAuditWriter;
 import com.zeromail.core.triage.projection.AuditLogPage;
 import com.zeromail.core.triage.projection.AuditLogPageQuery;
 import com.zeromail.core.triage.usecases.AuditLogQueryService;
-import com.zeromail.core.triage.usecases.TriageActionResultJsonValidator;
+import com.zeromail.core.triage.usecases.TriageDraftAuditService;
 import com.zeromail.core.triage.usecases.TriageGmailWriter;
 import java.io.IOException;
 import java.time.Clock;
@@ -96,8 +95,8 @@ class DraftPrivacySweepTest extends PostgresContainerTest {
     @Autowired JdbcTemplate jdbcTemplate;
     @Autowired TriageAuditWriter triageAuditWriter;
     @Autowired TriageAuditRepository triageAuditRepository;
-    @Autowired ThreadReplyStatusRepository threadReplyStatusRepository;
     @Autowired ClassifyThreadReplyStatusService classifyThreadReplyStatusService;
+    @Autowired TriageDraftAuditService triageDraftAuditService;
     @Autowired AuditLogQueryService auditLogQueryService;
     @Autowired NeedsReplyInboxQueryService needsReplyInboxQueryService;
     @Autowired PlatformTransactionManager transactionManager;
@@ -263,11 +262,8 @@ class DraftPrivacySweepTest extends PostgresContainerTest {
                         threadReplySourceLoader,
                         draftBodyGenerator,
                         triageGmailWriter,
-                        threadReplyStatusRepository,
                         classifyThreadReplyStatusService,
-                        triageAuditWriter,
-                        triageAuditRepository,
-                        new TriageActionResultJsonValidator(),
+                        triageDraftAuditService,
                         eventPublisher,
                         new TransactionTemplate(transactionManager),
                         Clock.fixed(Instant.parse("2026-05-13T00:00:00Z"), ZoneOffset.UTC));
