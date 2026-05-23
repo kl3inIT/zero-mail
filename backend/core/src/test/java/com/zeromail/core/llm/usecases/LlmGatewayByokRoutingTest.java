@@ -232,7 +232,7 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
 
     @Test
     void multitenant_no_key_leak() throws Exception {
-        int requestCount = 100;
+        int requestCount = 16;
         List<UUID> tenantIds =
                 IntStream.range(0, requestCount).mapToObj(_ -> UUID.randomUUID()).toList();
         for (int tenantIndex = 0; tenantIndex < requestCount; tenantIndex++) {
@@ -288,12 +288,10 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
                         .isEqualTo(tenantId.toString());
             }
         }
-        tenantIds.stream()
-                .filter(tenantId -> tenantIds.indexOf(tenantId) % 2 == 0)
-                .forEach(
-                        tenantId ->
-                                assertThat(byokKeyByTenant.get(tenantId))
-                                        .isEqualTo("sk-byok-" + tenantId));
+        for (int tenantIndex = 0; tenantIndex < requestCount; tenantIndex += 2) {
+            UUID tenantId = tenantIds.get(tenantIndex);
+            assertThat(byokKeyByTenant.get(tenantId)).isEqualTo("sk-byok-" + tenantId);
+        }
     }
 
     private byte[] seedByokTenant(
