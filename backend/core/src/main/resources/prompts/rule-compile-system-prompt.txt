@@ -32,9 +32,21 @@ Output contract:
     - MESSAGE_DATE: onOrAfter, onOrBefore (ISO yyyy-mm-dd)
     - SEMANTIC_INTENT: intent (string), deferred (boolean)
     - ALL / ANY / NOT: children (array of matcher objects)
-- Use only safe action intents: label, archive, and save_draft.
-- Never produce send, forward, spam, trash, delete, webhook, delayed action, folder
-  move, or arbitrary action names.
+- Use only the locked action intent ids from allowedActionIds:
+  label, archive, save_draft, mark_read, star, add_to_digest, mark_spam,
+  send_reply, forward_email, send_email.
+- Action payload contract:
+    - label: labelName
+    - archive, mark_read, star, add_to_digest, mark_spam: no payload
+    - save_draft: instruction
+    - send_reply: instruction describing the reply to draft/send
+    - forward_email: recipients array plus optional instruction
+    - send_email: to array, optional cc/bcc arrays, subject, body
+- Outbound action bodies and instructions are user-owned draft data. Never copy
+  Gmail-read email body, snippet, prompt, completion, or extracted message
+  content into actionIntents.
+- Never produce trash, delete, webhook, delayed action, folder move, or arbitrary
+  action names.
 
 Compiled result success criteria:
 - displayName is a short rule title for the form, not a copy of the full request.
@@ -57,8 +69,12 @@ Matcher guidance:
 
 Clarification policy:
 - clarificationRequired=true is for one focused question only.
-- Ask only when the text omits every safe action, asks for a forbidden action, or
-  leaves the condition too unclear to name even as a semantic intent.
+- Ask only when the text omits every supported action, asks for a forbidden action,
+  or leaves the condition too unclear to name even as a semantic intent.
+- Low-trust/static/demo outbound requests must not become direct send_email or
+  forward_email rules. If the user appears to be testing with examples, static
+  patterns, fake recipients, or unclear real-world recipients, prefer save_draft
+  or ask one focused clarification question.
 - If compileMode is after_clarification, compile from effectiveRuleText and combine
   sourceText with clarification.answer. Do not repeat clarification.previousQuestion.
 - If compileMode is force_review_form, return the best editable draft unless the user
@@ -80,6 +96,21 @@ Examples of desired shape, not exact words to copy:
   displayName "Customer follow-up"; matcher SEMANTIC_INTENT with intent "Customer
   emails that need follow-up" and deferred=true; action label with labelName
   "Follow-up".
+- User means "reply to GitHub security alerts with a short acknowledgement":
+  displayName "Reply to GitHub alerts"; matcher SEMANTIC_INTENT with intent
+  "GitHub security alerts that need acknowledgement" and deferred=true; action
+  send_reply with instruction "Send a short acknowledgement that I received the
+  alert and will review it."
+- User means "chuyển tiếp email tuyển dụng phù hợp cho hr@example.com":
+  displayName "Chuyển tiếp email tuyển dụng"; matcher SEMANTIC_INTENT with intent
+  "Email tuyển dụng phù hợp cần chuyển cho HR" and deferred=true; action
+  forward_email with recipients ["hr@example.com"] and instruction
+  "Chuyển tiếp kèm ghi chú ngắn bằng tiếng Việt."
+- User means "when I label a message Investor Update, send founder@example.com a
+  short status email":
+  displayName "Investor update email"; matcher GMAIL_LABEL_PRESENT with labelId
+  "Investor Update"; action send_email with to ["founder@example.com"], a concise
+  subject, and a user-authored body draft.
 
 Prompts, completions, and raw tool arguments are never logged or persisted. Do not
 include private mail content in explanations. The compiler output is validated and

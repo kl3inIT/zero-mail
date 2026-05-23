@@ -3,8 +3,10 @@ package com.zeromail.core.rules.usecases;
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.rules.exception.RuleValidationException;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.regex.Pattern;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -14,7 +16,21 @@ public class ActionIntentJsonValidator {
 
     private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder().build();
     private static final int MAX_ACTION_TEXT_LENGTH = 500;
+    private static final int MAX_ACTION_BODY_LENGTH = 4000;
+    private static final int MAX_RECIPIENTS = 10;
+    private static final Pattern EMAIL_ADDRESS_PATTERN =
+            Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
     private static final Set<String> COMMON_FIELDS = Set.of("type", "action");
+    private static final Set<String> GMAIL_READ_CONTENT_SOURCE_FIELDS =
+            Set.of(
+                    "gmailReadBody",
+                    "gmailReadSnippet",
+                    "rawEmailBody",
+                    "rawMessageBody",
+                    "emailBody",
+                    "messageBody",
+                    "threadBody",
+                    "snippet");
 
     public void validateActionIntentsJson(String actionIntentsJson) {
         JsonNode actionIntentRoot = readJson(actionIntentsJson);
@@ -36,7 +52,8 @@ public class ActionIntentJsonValidator {
                     rejectUnknownFields(actionIntentNode, Set.of("labelName"));
                     requiredText(actionIntentNode, "labelName", MAX_ACTION_TEXT_LENGTH);
                 }
-                case ARCHIVE -> rejectUnknownFields(actionIntentNode, Set.of());
+                case ARCHIVE, MARK_READ, STAR, ADD_TO_DIGEST, MARK_SPAM ->
+                        rejectUnknownFields(actionIntentNode, Set.of());
                 case SAVE_DRAFT -> {
                     rejectUnknownFields(actionIntentNode, Set.of("instruction", "body", "value"));
                     requiredFirstText(
@@ -45,6 +62,32 @@ public class ActionIntentJsonValidator {
                             "instruction",
                             "body",
                             "value");
+                }
+                case SEND_REPLY -> {
+                    rejectUnknownFields(actionIntentNode, Set.of("instruction", "body", "value"));
+                    requiredFirstText(
+                            actionIntentNode,
+                            MAX_ACTION_TEXT_LENGTH,
+                            "instruction",
+                            "body",
+                            "value");
+                }
+                case FORWARD_EMAIL -> {
+                    rejectUnknownFields(
+                            actionIntentNode, Set.of("recipients", "to", "instruction", "note"));
+                    requiredRecipients(actionIntentNode, "recipients", "to");
+                    optionalText(actionIntentNode, "instruction", MAX_ACTION_TEXT_LENGTH);
+                    optionalText(actionIntentNode, "note", MAX_ACTION_TEXT_LENGTH);
+                }
+                case SEND_EMAIL -> {
+                    rejectUnknownFields(
+                            actionIntentNode,
+                            Set.of("to", "recipients", "cc", "bcc", "subject", "body"));
+                    requiredRecipients(actionIntentNode, "to", "recipients");
+                    optionalRecipients(actionIntentNode, "cc");
+                    optionalRecipients(actionIntentNode, "bcc");
+                    requiredText(actionIntentNode, "subject", MAX_ACTION_TEXT_LENGTH);
+                    requiredText(actionIntentNode, "body", MAX_ACTION_BODY_LENGTH);
                 }
             }
         }
@@ -80,6 +123,9 @@ public class ActionIntentJsonValidator {
         allowedFields.addAll(actionSpecificFields);
         for (var property : actionIntentNode.properties()) {
             String fieldName = property.getKey();
+            if (GMAIL_READ_CONTENT_SOURCE_FIELDS.contains(fieldName)) {
+                throw new IllegalArgumentException("gmail-read content source field is forbidden");
+            }
             if (!allowedFields.contains(fieldName)) {
                 throw new IllegalArgumentException("unknown action intent field");
             }
@@ -124,5 +170,69 @@ public class ActionIntentJsonValidator {
             throw new IllegalArgumentException(fieldName + " is too long");
         }
         return value;
+    }
+
+    private static List<String> requiredRecipients(
+            JsonNode actionIntentNode, String primaryFieldName, String fallbackFieldName) {
+        List<String> recipients =
+                recipients(actionIntentNode, primaryFieldName, fallbackFieldName, true);
+        if (recipients.isEmpty()) {
+            throw new IllegalArgumentException(primaryFieldName + " is required");
+        }
+        return recipients;
+    }
+
+    private static List<String> optionalRecipients(JsonNode actionIntentNode, String fieldName) {
+        return recipients(actionIntentNode, fieldName, fieldName, false);
+    }
+
+    private static List<String> recipients(
+            JsonNode actionIntentNode,
+            String primaryFieldName,
+            String fallbackFieldName,
+            boolean required) {
+        JsonNode recipientNode = actionIntentNode.path(primaryFieldName);
+        if ((recipientNode.isMissingNode() || recipientNode.isNull())
+                && !primaryFieldName.equals(fallbackFieldName)) {
+            recipientNode = actionIntentNode.path(fallbackFieldName);
+        }
+        if (recipientNode.isMissingNode() || recipientNode.isNull()) {
+            if (required) {
+                throw new IllegalArgumentException(primaryFieldName + " is required");
+            }
+            return List.of();
+        }
+        if (recipientNode.isString()) {
+            return validateRecipients(List.of(recipientNode.asString()), primaryFieldName);
+        }
+        if (!recipientNode.isArray()) {
+            throw new IllegalArgumentException(primaryFieldName + " must be an array");
+        }
+        if (recipientNode.size() > MAX_RECIPIENTS) {
+            throw new IllegalArgumentException(primaryFieldName + " has too many recipients");
+        }
+        java.util.ArrayList<String> recipients = new java.util.ArrayList<>();
+        for (JsonNode singleRecipientNode : recipientNode) {
+            if (!singleRecipientNode.isString()) {
+                throw new IllegalArgumentException(primaryFieldName + " must contain strings");
+            }
+            recipients.add(singleRecipientNode.asString());
+        }
+        return validateRecipients(recipients, primaryFieldName);
+    }
+
+    private static List<String> validateRecipients(List<String> recipients, String fieldName) {
+        java.util.ArrayList<String> normalizedRecipients = new java.util.ArrayList<>();
+        for (String recipient : recipients) {
+            String normalizedRecipient = recipient == null ? "" : recipient.trim();
+            if (normalizedRecipient.isBlank()) {
+                throw new IllegalArgumentException(fieldName + " must not contain blank values");
+            }
+            if (!EMAIL_ADDRESS_PATTERN.matcher(normalizedRecipient).matches()) {
+                throw new IllegalArgumentException(fieldName + " contains invalid email address");
+            }
+            normalizedRecipients.add(normalizedRecipient);
+        }
+        return List.copyOf(normalizedRecipients);
     }
 }

@@ -23,8 +23,18 @@ class ToolCallResultCompatibilityTest {
     }
 
     @Test
-    void action_enum_membership_remains_safe_gmail_actions_only() {
+    void action_enum_membership_covers_rule_compile_contract() {
         assertThat(Arrays.stream(Action.values()).map(Action::functionName))
-                .containsExactlyInAnyOrder("label", "archive", "save_draft");
+                .containsExactlyInAnyOrder(
+                        "label",
+                        "archive",
+                        "save_draft",
+                        "mark_read",
+                        "star",
+                        "add_to_digest",
+                        "mark_spam",
+                        "send_reply",
+                        "forward_email",
+                        "send_email");
     }
 }

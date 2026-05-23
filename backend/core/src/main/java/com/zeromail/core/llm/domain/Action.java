@@ -7,7 +7,14 @@ import java.util.stream.Stream;
 public enum Action implements IdentifiedEnum {
     LABEL("label"),
     ARCHIVE("archive"),
-    SAVE_DRAFT("save_draft");
+    SAVE_DRAFT("save_draft"),
+    MARK_READ("mark_read"),
+    STAR("star"),
+    ADD_TO_DIGEST("add_to_digest"),
+    MARK_SPAM("mark_spam"),
+    SEND_REPLY("send_reply"),
+    FORWARD_EMAIL("forward_email"),
+    SEND_EMAIL("send_email");
 
     private final String functionName;
 

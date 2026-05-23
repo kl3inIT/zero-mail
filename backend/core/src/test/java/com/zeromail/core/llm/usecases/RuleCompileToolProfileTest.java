@@ -62,7 +62,21 @@ class RuleCompileToolProfileTest {
                         "actionIntents",
                         "clarificationRequired",
                         "clarificationQuestion");
-        assertThat(actionType.get("enum")).isEqualTo(List.of("label", "archive", "save_draft"));
+        assertThat(actionType.get("enum"))
+                .isEqualTo(
+                        List.of(
+                                "label",
+                                "archive",
+                                "save_draft",
+                                "mark_read",
+                                "star",
+                                "add_to_digest",
+                                "mark_spam",
+                                "send_reply",
+                                "forward_email",
+                                "send_email"));
+        assertThat(actionIntentProperties)
+                .containsKeys("recipients", "to", "cc", "bcc", "subject", "body", "instruction");
     }
 
     @Test

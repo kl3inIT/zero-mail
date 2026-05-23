@@ -60,6 +60,9 @@ public class TriageActionArgsCanonicalizer {
                 // instruction, even when multiple messages in that thread trigger the same rule.
                 canonicalFields.put("threadId", requiredText(actionResultNode, "threadId"));
             }
+            case MARK_READ, STAR, ADD_TO_DIGEST, MARK_SPAM, SEND_REPLY, FORWARD_EMAIL, SEND_EMAIL ->
+                    throw new IllegalArgumentException(
+                            actionType.id() + " action result is not supported yet");
         }
         return TriageActionResultJsonValidator.writeJson(canonicalFields);
     }

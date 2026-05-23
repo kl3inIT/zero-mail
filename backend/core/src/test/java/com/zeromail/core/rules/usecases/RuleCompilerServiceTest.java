@@ -74,7 +74,71 @@ class RuleCompilerServiceTest {
         assertThat(gateway.lastCompilerPayload())
                 .contains("\"compileMode\":\"initial\"")
                 .contains("\"sourceLanguageHint\":\"en\"")
-                .contains("\"allowedActionIds\":[\"label\",\"archive\",\"save_draft\"]");
+                .contains(
+                        "\"allowedActionIds\":[\"label\",\"archive\",\"save_draft\",\"mark_read\",\"star\",\"add_to_digest\",\"mark_spam\",\"send_reply\",\"forward_email\",\"send_email\"]");
+    }
+
+    @Test
+    void outbound_fixture_compiles_into_structured_reply_forward_and_send_actions() {
+        RecordingLlmGateway gateway =
+                new RecordingLlmGateway(
+                        gatewayResult(
+                                Map.of(
+                                        "schemaVersion",
+                                        "rules.v1",
+                                        "sourceLanguage",
+                                        "en",
+                                        "displayName",
+                                        "Outbound investor updates",
+                                        "matcher",
+                                        Map.of(
+                                                "type",
+                                                "GMAIL_LABEL_PRESENT",
+                                                "labelId",
+                                                "Investor Update"),
+                                        "actionIntents",
+                                        List.of(
+                                                Map.of(
+                                                        "type",
+                                                        "send_reply",
+                                                        "instruction",
+                                                        "Send a short acknowledgement."),
+                                                Map.of(
+                                                        "type",
+                                                        "forward_email",
+                                                        "recipients",
+                                                        List.of("ops@example.com"),
+                                                        "instruction",
+                                                        "Forward with a short context note."),
+                                                Map.of(
+                                                        "type",
+                                                        "send_email",
+                                                        "to",
+                                                        List.of("founder@example.com"),
+                                                        "subject",
+                                                        "Investor update",
+                                                        "body",
+                                                        "Here is the investor update.")),
+                                        "clarificationRequired",
+                                        false)));
+        RuleCompilerService compilerService =
+                new RuleCompilerService(gateway, new RuleCompileResultValidator());
+
+        RuleCompileResult compileResult =
+                compilerService.compile(
+                        new RuleCompileCommand(
+                                TENANT_ID,
+                                "When I label mail Investor Update, reply, forward to ops@example.com, and send founder@example.com a status email"));
+
+        assertThat(compileResult.status()).isEqualTo(RuleCompileResult.Status.COMPILED);
+        assertThat(compileResult.actionIntents())
+                .contains(
+                        "\"send_reply\"",
+                        "\"forward_email\"",
+                        "\"ops@example.com\"",
+                        "\"send_email\"",
+                        "\"founder@example.com\"",
+                        "\"Investor update\"");
     }
 
     @Test
@@ -213,6 +277,46 @@ class RuleCompilerServiceTest {
 
         assertThat(compileResult.status()).isEqualTo(RuleCompileResult.Status.INVALID);
         assertThat(compileResult.clarificationQuestion()).isNull();
+    }
+
+    @Test
+    void static_demo_outbound_send_without_real_recipient_shape_is_invalid_compile_output() {
+        RuleCompileResultValidator validator = new RuleCompileResultValidator();
+
+        RuleCompileResult compileResult =
+                validator.validate(
+                        "Send a demo email",
+                        "rule_compile",
+                        Map.of(
+                                "schemaVersion",
+                                "rules.v1",
+                                "sourceLanguage",
+                                "en",
+                                "displayName",
+                                "Demo outbound",
+                                "matcher",
+                                Map.of(
+                                        "type",
+                                        "SEMANTIC_INTENT",
+                                        "intent",
+                                        "demo",
+                                        "deferred",
+                                        true),
+                                "actionIntents",
+                                List.of(
+                                        Map.of(
+                                                "type",
+                                                "send_email",
+                                                "to",
+                                                List.of("demo-recipient"),
+                                                "subject",
+                                                "Demo",
+                                                "body",
+                                                "Demo body")),
+                                "clarificationRequired",
+                                false));
+
+        assertThat(compileResult.status()).isEqualTo(RuleCompileResult.Status.INVALID);
     }
 
     @Test

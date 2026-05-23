@@ -20,14 +20,15 @@ class AllowListedToolsTest {
     }
 
     @Test
-    void tool_name_set_matches_action_enum() {
+    void safe_action_tool_name_set_stays_a_subset_of_action_enum() {
         Set<String> toolNames = toolNames();
         Set<String> actionFunctionNames =
                 Arrays.stream(Action.values())
                         .map(Action::functionName)
                         .collect(Collectors.toUnmodifiableSet());
 
-        assertThat(toolNames).isEqualTo(actionFunctionNames);
+        assertThat(actionFunctionNames).containsAll(toolNames);
+        assertThat(toolNames).doesNotContain("send_reply", "forward_email", "send_email");
     }
 
     private Set<String> toolNames() {

@@ -33,6 +33,9 @@ public class TriageActionResultJsonValidator {
             case LABEL -> parseLabel(actionResultNode);
             case ARCHIVE -> parseArchive(actionResultNode);
             case SAVE_DRAFT -> parseSaveDraft(actionResultNode);
+            case MARK_READ, STAR, ADD_TO_DIGEST, MARK_SPAM, SEND_REPLY, FORWARD_EMAIL, SEND_EMAIL ->
+                    throw new IllegalArgumentException(
+                            actionType.id() + " action result is not supported yet");
         };
     }
 
