@@ -51,6 +51,32 @@ class TriageSafetyPolicyContractTest {
                         safetyPolicy.gate(
                                 proposal(new ActionIntent.SaveDraft("Draft a reply for review"))))
                 .isEqualTo(RuleActionType.SAVE_DRAFT);
+        assertThat(safetyPolicy.gate(proposal(new ActionIntent.MarkRead())))
+                .isEqualTo(RuleActionType.MARK_READ);
+        assertThat(safetyPolicy.gate(proposal(new ActionIntent.Star())))
+                .isEqualTo(RuleActionType.STAR);
+        assertThat(safetyPolicy.gate(proposal(new ActionIntent.AddToDigest())))
+                .isEqualTo(RuleActionType.ADD_TO_DIGEST);
+        assertThat(safetyPolicy.gate(proposal(new ActionIntent.MarkSpam())))
+                .isEqualTo(RuleActionType.MARK_SPAM);
+        assertThat(safetyPolicy.gate(proposal(new ActionIntent.SendReply("Reply safely"))))
+                .isEqualTo(RuleActionType.SEND_REPLY);
+        assertThat(
+                        safetyPolicy.gate(
+                                proposal(
+                                        new ActionIntent.ForwardEmail(
+                                                List.of("ops@example.com"), "Forward safely"))))
+                .isEqualTo(RuleActionType.FORWARD_EMAIL);
+        assertThat(
+                        safetyPolicy.gate(
+                                proposal(
+                                        new ActionIntent.SendEmail(
+                                                List.of("ops@example.com"),
+                                                List.of(),
+                                                List.of(),
+                                                "Status",
+                                                "Body"))))
+                .isEqualTo(RuleActionType.SEND_EMAIL);
     }
 
     @Test

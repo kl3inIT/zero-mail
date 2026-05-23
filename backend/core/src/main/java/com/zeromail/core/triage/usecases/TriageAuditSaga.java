@@ -1,5 +1,8 @@
 package com.zeromail.core.triage.usecases;
 
+import com.zeromail.core.outbound.usecases.OutboundSendCommand;
+import com.zeromail.core.outbound.usecases.OutboundSendGateway;
+import com.zeromail.core.outbound.usecases.OutboundSendResult;
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.triage.domain.ReplyHeaders;
 import com.zeromail.core.triage.domain.TriageActionResult;
@@ -33,14 +36,20 @@ public class TriageAuditSaga {
     private final TriageAuditWriter triageAuditWriter;
     private final TriageAuditRepository triageAuditRepository;
     private final TriageGmailWriter triageGmailWriter;
+    private final OutboundSendGateway outboundSendGateway;
+    private final OutboundRuleMessageBuilder outboundRuleMessageBuilder;
 
     public TriageAuditSaga(
             TriageAuditWriter triageAuditWriter,
             TriageAuditRepository triageAuditRepository,
-            TriageGmailWriter triageGmailWriter) {
+            TriageGmailWriter triageGmailWriter,
+            OutboundSendGateway outboundSendGateway,
+            OutboundRuleMessageBuilder outboundRuleMessageBuilder) {
         this.triageAuditWriter = triageAuditWriter;
         this.triageAuditRepository = triageAuditRepository;
         this.triageGmailWriter = triageGmailWriter;
+        this.outboundSendGateway = outboundSendGateway;
+        this.outboundRuleMessageBuilder = outboundRuleMessageBuilder;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -142,7 +151,120 @@ public class TriageAuditSaga {
                     yield GmailWriteResult.failed("draft_threading_invalid");
                 }
             }
+            case TriageActionResult.MarkRead ignored -> {
+                triageGmailWriter.markRead(command.tenantId(), command.gmailMessageId());
+                yield GmailWriteResult.applied(
+                        command.gmailMessageId(),
+                        changeToken(Map.of("removedLabelIds", List.of("UNREAD"))),
+                        null);
+            }
+            case TriageActionResult.Star ignored -> {
+                triageGmailWriter.star(command.tenantId(), command.gmailMessageId());
+                yield GmailWriteResult.applied(
+                        command.gmailMessageId(),
+                        changeToken(Map.of("addedLabelIds", List.of("STARRED"))),
+                        null);
+            }
+            case TriageActionResult.AddToDigest ignored -> {
+                String digestLabelId =
+                        triageGmailWriter.addToDigest(command.tenantId(), command.gmailMessageId());
+                yield GmailWriteResult.applied(
+                        command.gmailMessageId(),
+                        changeToken(Map.of("addedLabelId", digestLabelId)),
+                        null);
+            }
+            case TriageActionResult.MarkSpam ignored -> {
+                triageGmailWriter.markSpam(command.tenantId(), command.gmailMessageId());
+                yield GmailWriteResult.applied(
+                        command.gmailMessageId(),
+                        changeToken(
+                                Map.of(
+                                        "addedLabelIds",
+                                        List.of("SPAM"),
+                                        "removedLabelIds",
+                                        List.of("INBOX"))),
+                        null);
+            }
+            case TriageActionResult.SendReply ignored ->
+                    throw new IllegalArgumentException("send_reply must use outbound send phase");
+            case TriageActionResult.ForwardEmail ignored ->
+                    throw new IllegalArgumentException(
+                            "forward_email must use outbound send phase");
+            case TriageActionResult.SendEmail ignored ->
+                    throw new IllegalArgumentException("send_email must use outbound send phase");
         };
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public GmailWriteResult outboundSendPhase(TriageAuditCommand command, UUID auditId)
+            throws IOException {
+        Objects.requireNonNull(command, "command must not be null");
+        Objects.requireNonNull(auditId, "auditId must not be null");
+        com.google.api.services.gmail.model.Message gmailMessage =
+                outboundRuleMessageBuilder.build(
+                        command.preWriteIntent(),
+                        command.replyHeaders(),
+                        command.sanitizedSubject(),
+                        command.tenantId(),
+                        auditId.toString());
+        OutboundSendResult sendResult =
+                outboundSendGateway.send(new OutboundSendCommand(command.tenantId(), gmailMessage));
+        String sentMessageId = sendResult == null ? "" : nullToEmpty(sendResult.gmailMessageId());
+        String sentThreadId = sendResult == null ? "" : nullToEmpty(sendResult.gmailThreadId());
+        return GmailWriteResult.applied(
+                externalRef(sendResult),
+                changeToken(Map.of("sentMessageId", sentMessageId, "sentThreadId", sentThreadId)),
+                actionArgsJson(command.preWriteIntent()));
+    }
+
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public GmailWriteResult outboundDraftFallbackPhase(
+            TriageAuditCommand command, UUID auditId, String fallbackReason) throws IOException {
+        Objects.requireNonNull(command, "command must not be null");
+        Objects.requireNonNull(auditId, "auditId must not be null");
+        requireText(fallbackReason, "fallbackReason");
+        try {
+            String draftId =
+                    switch (command.preWriteIntent()) {
+                        case TriageActionResult.SendReply sendReply ->
+                                triageGmailWriter.saveDraft(
+                                        command.tenantId(),
+                                        command.replyHeaders(),
+                                        sendReply.draftBody(),
+                                        sendReply.gmailThreadId());
+                        case TriageActionResult.ForwardEmail ignored -> {
+                            com.google.api.services.gmail.model.Message draftMessage =
+                                    outboundRuleMessageBuilder.build(
+                                            command.preWriteIntent(),
+                                            command.replyHeaders(),
+                                            command.sanitizedSubject(),
+                                            command.tenantId(),
+                                            auditId + "-draft");
+                            yield triageGmailWriter.saveDraftMessage(
+                                    command.tenantId(), draftMessage, command.gmailThreadId());
+                        }
+                        case TriageActionResult.SendEmail ignored -> {
+                            com.google.api.services.gmail.model.Message draftMessage =
+                                    outboundRuleMessageBuilder.build(
+                                            command.preWriteIntent(),
+                                            command.replyHeaders(),
+                                            command.sanitizedSubject(),
+                                            command.tenantId(),
+                                            auditId + "-draft");
+                            yield triageGmailWriter.saveDraftMessage(
+                                    command.tenantId(), draftMessage, command.gmailThreadId());
+                        }
+                        default ->
+                                throw new IllegalArgumentException(
+                                        "fallback requires an outbound action intent");
+                    };
+            return GmailWriteResult.applied(
+                    draftId,
+                    changeToken(Map.of("fallbackReason", fallbackReason)),
+                    actionArgsJson(command.preWriteIntent()));
+        } catch (MissingMessageIdException | ThreadingHeaderInvalidException threadingException) {
+            return GmailWriteResult.failed("draft_threading_invalid");
+        }
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -235,7 +357,8 @@ public class TriageAuditSaga {
             requireText(ruleNameSnapshot, "ruleNameSnapshot");
             Objects.requireNonNull(actionType, "actionType must not be null");
             Objects.requireNonNull(preWriteIntent, "preWriteIntent must not be null");
-            if (preWriteIntent instanceof TriageActionResult.SaveDraft) {
+            if (preWriteIntent instanceof TriageActionResult.SaveDraft
+                    || preWriteIntent instanceof TriageActionResult.SendReply) {
                 Objects.requireNonNull(replyHeaders, "replyHeaders must not be null");
             }
             requireText(reasonEvidence, "reasonEvidence");
@@ -274,5 +397,16 @@ public class TriageAuditSaga {
             return new GmailWriteResult(
                     false, null, null, null, requireText(failureReason, "failureReason"));
         }
+    }
+
+    private static String externalRef(OutboundSendResult sendResult) {
+        if (sendResult != null && sendResult.gmailMessageId() != null) {
+            return sendResult.gmailMessageId();
+        }
+        return "SENT";
+    }
+
+    private static String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 }

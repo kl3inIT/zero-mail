@@ -94,6 +94,51 @@ class TriageActionResultJsonValidatorContractTest {
     }
 
     @Test
+    void outbound_action_json_allows_user_authored_body_but_rejects_gmail_read_sources() {
+        TriageActionResultJsonValidator validator = new TriageActionResultJsonValidator();
+
+        String serializedJson =
+                validator.toJson(
+                        new TriageActionResult.SendEmail(
+                                java.util.List.of("safe@example.com"),
+                                java.util.List.of(),
+                                java.util.List.of(),
+                                "Status",
+                                "USER_AUTHORED_DRAFT_BODY"));
+
+        assertThat(serializedJson)
+                .contains("\"type\":\"send_email\"", "\"body\":\"USER_AUTHORED_DRAFT_BODY\"")
+                .doesNotContain("draftBody", "gmailReadBody", "snippet", "prompt", "completion");
+        assertThatCode(() -> validator.validateActionArgsJson(serializedJson))
+                .doesNotThrowAnyException();
+        assertThatThrownBy(
+                        () ->
+                                validator.validateActionArgsJson(
+                                        """
+                {"type":"send_email","to":["safe@example.com"],"subject":"Status","body":"ok","gmailReadBody":"PRIVATE"}
+                """))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void outbound_action_hash_is_stable_across_json_field_order() {
+        TriageActionArgsCanonicalizer canonicalizer = new TriageActionArgsCanonicalizer();
+
+        byte[] firstHash =
+                canonicalizer.canonicalHash(
+                        """
+                {"type":"send_email","to":["safe@example.com"],"cc":[],"bcc":[],"subject":"Status","body":"Body"}
+                """);
+        byte[] secondHash =
+                canonicalizer.canonicalHash(
+                        """
+                {"body":"Body","subject":"Status","bcc":[],"cc":[],"to":["safe@example.com"],"type":"send_email"}
+                """);
+
+        assertThat(secondHash).isEqualTo(firstHash).hasSize(32);
+    }
+
+    @Test
     void sender_email_canonicalizer_normalizes_hashes_and_quotes_sender_addresses() {
         SenderEmailCanonicalizer canonicalizer =
                 new SenderEmailCanonicalizer(new EmailAddressCanonicalizer());

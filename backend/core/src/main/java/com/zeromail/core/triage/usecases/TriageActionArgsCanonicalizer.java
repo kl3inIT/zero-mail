@@ -3,6 +3,8 @@ package com.zeromail.core.triage.usecases;
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.shared.crypto.Hashing;
 import com.zeromail.core.triage.domain.TriageActionResult;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.TreeMap;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
@@ -60,9 +62,27 @@ public class TriageActionArgsCanonicalizer {
                 // instruction, even when multiple messages in that thread trigger the same rule.
                 canonicalFields.put("threadId", requiredText(actionResultNode, "threadId"));
             }
-            case MARK_READ, STAR, ADD_TO_DIGEST, MARK_SPAM, SEND_REPLY, FORWARD_EMAIL, SEND_EMAIL ->
-                    throw new IllegalArgumentException(
-                            actionType.id() + " action result is not supported yet");
+            case MARK_READ, STAR, ADD_TO_DIGEST, MARK_SPAM -> {
+                // Type alone is the full canonical intent for no-argument Gmail write actions.
+            }
+            case SEND_REPLY -> {
+                canonicalFields.put("body", requiredText(actionResultNode, "body", "draftBody"));
+                canonicalFields.put(
+                        "gmailMessageId", requiredText(actionResultNode, "gmailMessageId"));
+                canonicalFields.put(
+                        "gmailThreadId", requiredText(actionResultNode, "gmailThreadId"));
+            }
+            case FORWARD_EMAIL -> {
+                canonicalFields.put("body", requiredText(actionResultNode, "body", "draftBody"));
+                canonicalFields.put("recipients", recipients(actionResultNode, "recipients"));
+            }
+            case SEND_EMAIL -> {
+                canonicalFields.put("bcc", optionalRecipients(actionResultNode, "bcc"));
+                canonicalFields.put("body", requiredText(actionResultNode, "body", "draftBody"));
+                canonicalFields.put("cc", optionalRecipients(actionResultNode, "cc"));
+                canonicalFields.put("subject", requiredText(actionResultNode, "subject"));
+                canonicalFields.put("to", recipients(actionResultNode, "to"));
+            }
         }
         return TriageActionResultJsonValidator.writeJson(canonicalFields);
     }
@@ -89,5 +109,51 @@ public class TriageActionArgsCanonicalizer {
             throw new IllegalArgumentException(fieldName + " must not be blank");
         }
         return value;
+    }
+
+    private static String requiredText(
+            JsonNode jsonNode, String primaryFieldName, String fallbackFieldName) {
+        JsonNode fieldNode = jsonNode.path(primaryFieldName);
+        if ((fieldNode.isMissingNode() || fieldNode.isNull())
+                && !primaryFieldName.equals(fallbackFieldName)) {
+            fieldNode = jsonNode.path(fallbackFieldName);
+        }
+        if (fieldNode.isMissingNode() || fieldNode.isNull() || !fieldNode.isString()) {
+            throw new IllegalArgumentException(primaryFieldName + " is required");
+        }
+        String value = fieldNode.asString().trim();
+        if (value.isBlank()) {
+            throw new IllegalArgumentException(primaryFieldName + " must not be blank");
+        }
+        return value;
+    }
+
+    private static List<String> recipients(JsonNode jsonNode, String fieldName) {
+        List<String> recipients = optionalRecipients(jsonNode, fieldName);
+        if (recipients.isEmpty()) {
+            throw new IllegalArgumentException(fieldName + " is required");
+        }
+        return recipients;
+    }
+
+    private static List<String> optionalRecipients(JsonNode jsonNode, String fieldName) {
+        JsonNode fieldNode = jsonNode.path(fieldName);
+        if (fieldNode.isMissingNode() || fieldNode.isNull()) {
+            return List.of();
+        }
+        if (!fieldNode.isArray()) {
+            throw new IllegalArgumentException(fieldName + " must be an array");
+        }
+        ArrayList<String> recipients = new ArrayList<>();
+        for (JsonNode recipientNode : fieldNode) {
+            if (!recipientNode.isString()) {
+                throw new IllegalArgumentException(fieldName + " must contain strings");
+            }
+            String recipient = recipientNode.asString().trim();
+            if (!recipient.isBlank()) {
+                recipients.add(recipient);
+            }
+        }
+        return List.copyOf(recipients);
     }
 }

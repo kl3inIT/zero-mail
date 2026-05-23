@@ -4,6 +4,7 @@ import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.triage.domain.TriageActionResult;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,7 @@ public class TriageActionResultJsonValidator {
 
     private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder().build();
     private static final int MAX_ACTION_TEXT_LENGTH = 500;
+    private static final int MAX_ACTION_BODY_LENGTH = 4000;
     private static final Set<String> COMMON_FIELDS = Set.of("type", "action");
 
     public void validateActionArgsJson(String actionArgsJson) {
@@ -33,9 +35,13 @@ public class TriageActionResultJsonValidator {
             case LABEL -> parseLabel(actionResultNode);
             case ARCHIVE -> parseArchive(actionResultNode);
             case SAVE_DRAFT -> parseSaveDraft(actionResultNode);
-            case MARK_READ, STAR, ADD_TO_DIGEST, MARK_SPAM, SEND_REPLY, FORWARD_EMAIL, SEND_EMAIL ->
-                    throw new IllegalArgumentException(
-                            actionType.id() + " action result is not supported yet");
+            case MARK_READ -> parseMarkRead(actionResultNode);
+            case STAR -> parseStar(actionResultNode);
+            case ADD_TO_DIGEST -> parseAddToDigest(actionResultNode);
+            case MARK_SPAM -> parseMarkSpam(actionResultNode);
+            case SEND_REPLY -> parseSendReply(actionResultNode);
+            case FORWARD_EMAIL -> parseForwardEmail(actionResultNode);
+            case SEND_EMAIL -> parseSendEmail(actionResultNode);
         };
     }
 
@@ -62,6 +68,33 @@ public class TriageActionResultJsonValidator {
                 jsonFields.put("instruction", saveDraft.instruction());
                 jsonFields.put("draftId", saveDraft.draftId());
                 jsonFields.put("threadId", saveDraft.threadId());
+            }
+            case TriageActionResult.MarkRead ignored ->
+                    jsonFields.put("type", RuleActionType.MARK_READ.id());
+            case TriageActionResult.Star ignored ->
+                    jsonFields.put("type", RuleActionType.STAR.id());
+            case TriageActionResult.AddToDigest ignored ->
+                    jsonFields.put("type", RuleActionType.ADD_TO_DIGEST.id());
+            case TriageActionResult.MarkSpam ignored ->
+                    jsonFields.put("type", RuleActionType.MARK_SPAM.id());
+            case TriageActionResult.SendReply sendReply -> {
+                jsonFields.put("type", RuleActionType.SEND_REPLY.id());
+                jsonFields.put("body", sendReply.draftBody());
+                jsonFields.put("gmailMessageId", sendReply.gmailMessageId());
+                jsonFields.put("gmailThreadId", sendReply.gmailThreadId());
+            }
+            case TriageActionResult.ForwardEmail forwardEmail -> {
+                jsonFields.put("type", RuleActionType.FORWARD_EMAIL.id());
+                jsonFields.put("recipients", forwardEmail.recipients());
+                jsonFields.put("body", forwardEmail.draftBody());
+            }
+            case TriageActionResult.SendEmail sendEmail -> {
+                jsonFields.put("type", RuleActionType.SEND_EMAIL.id());
+                jsonFields.put("to", sendEmail.to());
+                jsonFields.put("cc", sendEmail.cc());
+                jsonFields.put("bcc", sendEmail.bcc());
+                jsonFields.put("subject", sendEmail.subject());
+                jsonFields.put("body", sendEmail.draftBody());
             }
         }
         return writeJson(jsonFields);
@@ -90,6 +123,53 @@ public class TriageActionResultJsonValidator {
                 requiredText(actionResultNode, "instruction", MAX_ACTION_TEXT_LENGTH),
                 optionalText(actionResultNode, "draftId", MAX_ACTION_TEXT_LENGTH),
                 requiredText(actionResultNode, "threadId", MAX_ACTION_TEXT_LENGTH));
+    }
+
+    private static TriageActionResult.MarkRead parseMarkRead(JsonNode actionResultNode) {
+        rejectUnknownFields(actionResultNode, Set.of());
+        return new TriageActionResult.MarkRead();
+    }
+
+    private static TriageActionResult.Star parseStar(JsonNode actionResultNode) {
+        rejectUnknownFields(actionResultNode, Set.of());
+        return new TriageActionResult.Star();
+    }
+
+    private static TriageActionResult.AddToDigest parseAddToDigest(JsonNode actionResultNode) {
+        rejectUnknownFields(actionResultNode, Set.of());
+        return new TriageActionResult.AddToDigest();
+    }
+
+    private static TriageActionResult.MarkSpam parseMarkSpam(JsonNode actionResultNode) {
+        rejectUnknownFields(actionResultNode, Set.of());
+        return new TriageActionResult.MarkSpam();
+    }
+
+    private static TriageActionResult.SendReply parseSendReply(JsonNode actionResultNode) {
+        rejectUnknownFields(
+                actionResultNode, Set.of("body", "draftBody", "gmailMessageId", "gmailThreadId"));
+        return new TriageActionResult.SendReply(
+                requiredText(actionResultNode, "body", "draftBody", MAX_ACTION_BODY_LENGTH),
+                requiredText(actionResultNode, "gmailMessageId", MAX_ACTION_TEXT_LENGTH),
+                requiredText(actionResultNode, "gmailThreadId", MAX_ACTION_TEXT_LENGTH));
+    }
+
+    private static TriageActionResult.ForwardEmail parseForwardEmail(JsonNode actionResultNode) {
+        rejectUnknownFields(actionResultNode, Set.of("recipients", "body", "draftBody"));
+        return new TriageActionResult.ForwardEmail(
+                recipients(actionResultNode, "recipients"),
+                requiredText(actionResultNode, "body", "draftBody", MAX_ACTION_BODY_LENGTH));
+    }
+
+    private static TriageActionResult.SendEmail parseSendEmail(JsonNode actionResultNode) {
+        rejectUnknownFields(
+                actionResultNode, Set.of("to", "cc", "bcc", "subject", "body", "draftBody"));
+        return new TriageActionResult.SendEmail(
+                recipients(actionResultNode, "to"),
+                optionalRecipients(actionResultNode, "cc"),
+                optionalRecipients(actionResultNode, "bcc"),
+                requiredText(actionResultNode, "subject", MAX_ACTION_TEXT_LENGTH),
+                requiredText(actionResultNode, "body", "draftBody", MAX_ACTION_BODY_LENGTH));
     }
 
     static JsonNode readJson(String actionArgsJson) {
@@ -145,6 +225,18 @@ public class TriageActionResultJsonValidator {
         return value;
     }
 
+    private static String requiredText(
+            JsonNode jsonNode, String primaryFieldName, String fallbackFieldName, int maxLength) {
+        String value = optionalText(jsonNode, primaryFieldName, maxLength);
+        if (value == null && !primaryFieldName.equals(fallbackFieldName)) {
+            value = optionalText(jsonNode, fallbackFieldName, maxLength);
+        }
+        if (value == null) {
+            throw new IllegalArgumentException(primaryFieldName + " is required");
+        }
+        return value;
+    }
+
     private static String optionalText(JsonNode jsonNode, String fieldName, int maxLength) {
         JsonNode fieldNode = jsonNode.path(fieldName);
         if (fieldNode.isMissingNode() || fieldNode.isNull()) {
@@ -161,6 +253,32 @@ public class TriageActionResultJsonValidator {
             throw new IllegalArgumentException(fieldName + " is too long");
         }
         return value;
+    }
+
+    private static List<String> recipients(JsonNode jsonNode, String fieldName) {
+        List<String> recipients = optionalRecipients(jsonNode, fieldName);
+        if (recipients.isEmpty()) {
+            throw new IllegalArgumentException(fieldName + " is required");
+        }
+        return recipients;
+    }
+
+    private static List<String> optionalRecipients(JsonNode jsonNode, String fieldName) {
+        JsonNode fieldNode = jsonNode.path(fieldName);
+        if (fieldNode.isMissingNode() || fieldNode.isNull()) {
+            return List.of();
+        }
+        if (!fieldNode.isArray()) {
+            throw new IllegalArgumentException(fieldName + " must be an array");
+        }
+        java.util.ArrayList<String> recipients = new java.util.ArrayList<>();
+        for (JsonNode recipientNode : fieldNode) {
+            if (!recipientNode.isString()) {
+                throw new IllegalArgumentException(fieldName + " must contain strings");
+            }
+            recipients.add(recipientNode.asString());
+        }
+        return List.copyOf(recipients);
     }
 
     private static void validateNotNull(TriageActionResult actionResult) {
