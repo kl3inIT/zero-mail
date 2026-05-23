@@ -195,6 +195,68 @@ class ChatOrchestratorReadToolLoopIT extends PostgresContainerTest {
         assertThat(persistedPartsJson).doesNotContain(BODY_SENTINEL, "bodyText");
     }
 
+    @Test
+    void raw_get_message_body_is_one_shot_for_the_immediately_following_model_call()
+            throws Exception {
+        UUID tenantId = seedTenant();
+        configureGmailGetMessage(tenantId);
+        AtomicInteger modelCallCount = new AtomicInteger();
+        AtomicReference<ChatStreamRequest> secondRequest = new AtomicReference<>();
+        AtomicReference<ChatStreamRequest> thirdRequest = new AtomicReference<>();
+        RecordingChatStreamSink streamSink = new RecordingChatStreamSink();
+        when(chatLlmGateway.streamChat(any(ChatStreamRequest.class), any(ChatStreamSink.class)))
+                .thenAnswer(
+                        invocation -> {
+                            int callNumber = modelCallCount.incrementAndGet();
+                            ChatStreamSink modelSink = invocation.getArgument(1);
+                            if (callNumber == 1) {
+                                modelSink.emitToolInputStart("tool-read-message", "getMessage");
+                                modelSink.emitToolInputAvailable(
+                                        "tool-read-message",
+                                        "getMessage",
+                                        "{\"messageId\":\"" + BODY_MESSAGE_ID + "\"}");
+                                modelSink.emitFinish("stop");
+                            } else if (callNumber == 2) {
+                                secondRequest.set(invocation.getArgument(0));
+                                modelSink.emitToolInputStart(
+                                        "tool-read-message-again", "getMessage");
+                                modelSink.emitToolInputAvailable(
+                                        "tool-read-message-again",
+                                        "getMessage",
+                                        "{\"messageId\":\"" + BODY_MESSAGE_ID + "\"}");
+                                modelSink.emitFinish("stop");
+                            } else {
+                                thirdRequest.set(invocation.getArgument(0));
+                                modelSink.emitTextStart("assistant-text");
+                                modelSink.emitTextDelta("assistant-text", "Done.");
+                                modelSink.emitTextEnd("assistant-text");
+                                modelSink.emitFinish("stop");
+                            }
+                            return (Disposable) () -> {};
+                        });
+
+        withTenant(
+                tenantId,
+                () ->
+                        chatOrchestrator.stream(
+                                new ChatStreamCommand(
+                                        tenantId.toString(),
+                                        null,
+                                        "Read twice before answering",
+                                        null),
+                                streamSink));
+
+        assertThat(streamSink.awaitFinish()).isTrue();
+        assertThat(modelCallCount).hasValue(3);
+        assertThat(secondRequest.get().transientToolResponseJsonByCallId())
+                .containsKey("tool-read-message");
+        assertThat(secondRequest.get().transientToolResponseJsonByCallId().get("tool-read-message"))
+                .contains(BODY_SENTINEL);
+        assertThat(thirdRequest.get().transientToolResponseJsonByCallId())
+                .containsKey("tool-read-message-again")
+                .doesNotContainKey("tool-read-message");
+    }
+
     private UUID seedTenant() {
         UUID tenantId = UUID.randomUUID();
         jdbcTemplate.update(

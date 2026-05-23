@@ -164,6 +164,9 @@ public class ChatOrchestrator {
                 attempt < maxReadToolIterations && !trackingDisposable.isDisposed();
                 attempt++) {
             InterceptingSink interceptingSink = new InterceptingSink(streamSink);
+            Map<String, String> oneShotToolResponses =
+                    Map.copyOf(transientToolResponseJsonByCallId);
+            transientToolResponseJsonByCallId.clear();
             ChatStreamRequest streamRequest =
                     new ChatStreamRequest(
                             tenantId.toString(),
@@ -174,7 +177,7 @@ public class ChatOrchestrator {
                             personalizationRenderer.render(tenantId.toString()),
                             chatToolCatalog,
                             history(preparedTurn.chatId()),
-                            transientToolResponseJsonByCallId);
+                            oneShotToolResponses);
             trackingDisposable.add(chatLlmGateway.streamChat(streamRequest, interceptingSink));
             TurnOutcome outcome = awaitOutcome(interceptingSink, trackingDisposable);
             if (outcome == null) {
