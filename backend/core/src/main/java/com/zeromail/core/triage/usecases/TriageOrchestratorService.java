@@ -986,6 +986,11 @@ public class TriageOrchestratorService {
 
     private String outboundFallbackReason(
             TriageDispatchContext dispatchContext, ActionProposal actionProposal) {
+        Optional<String> currentTenant = TenantContext.currentOptional();
+        if (currentTenant.isEmpty()
+                || !currentTenant.get().equals(dispatchContext.tenantId().toString())) {
+            return TENANT_CONTEXT_MISMATCH;
+        }
         if (!dispatchContext.autoSendRulesEnabled()) {
             return AUTO_SEND_DISABLED;
         }
@@ -994,11 +999,6 @@ public class TriageOrchestratorService {
         }
         if (!allContributingRulesHaveSenderAnchor(dispatchContext, actionProposal)) {
             return LOW_TRUST_STATIC_FROM;
-        }
-        Optional<String> currentTenant = TenantContext.currentOptional();
-        if (currentTenant.isEmpty()
-                || !currentTenant.get().equals(dispatchContext.tenantId().toString())) {
-            return TENANT_CONTEXT_MISMATCH;
         }
         return null;
     }

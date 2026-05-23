@@ -165,22 +165,32 @@ class TriageOutboundRuntimeGateTest {
     void tenant_context_mismatch_fails_audit_before_any_gmail_send_or_draft() throws Exception {
         TriageOrchestratorService orchestratorService =
                 orchestratorService(true, false, senderDomainMatcher(), sendEmailAction());
-        when(triageAuditSaga.reservePhase(any(TriageAuditCommand.class), any()))
-                .thenReturn(new ReservePhaseResult(Optional.of(AUDIT_ID), true));
 
-        withTenant(
-                UUID.randomUUID(), () -> orchestratorService.processObservedEvent(observedEvent()));
+        verifyTenantMismatchBlocksGmailWrites(orchestratorService);
+    }
 
-        verify(triageAuditSaga, never())
-                .outboundSendPhase(any(TriageAuditCommand.class), eq(AUDIT_ID));
-        verify(triageAuditSaga, never())
-                .outboundDraftFallbackPhase(any(TriageAuditCommand.class), eq(AUDIT_ID), any());
-        ArgumentCaptor<GmailWriteResult> writeResultCaptor =
-                ArgumentCaptor.forClass(GmailWriteResult.class);
-        verify(triageAuditSaga)
-                .finalizePhase(eq(TENANT_ID), eq(AUDIT_ID), writeResultCaptor.capture());
-        org.assertj.core.api.Assertions.assertThat(writeResultCaptor.getValue().failureReason())
-                .isEqualTo("TENANT_CONTEXT_MISMATCH");
+    @Test
+    void tenant_context_mismatch_wins_when_auto_send_is_disabled() throws Exception {
+        TriageOrchestratorService orchestratorService =
+                orchestratorService(false, false, senderDomainMatcher(), sendEmailAction());
+
+        verifyTenantMismatchBlocksGmailWrites(orchestratorService);
+    }
+
+    @Test
+    void tenant_context_mismatch_wins_when_sender_is_protected() throws Exception {
+        TriageOrchestratorService orchestratorService =
+                orchestratorService(true, true, senderDomainMatcher(), sendEmailAction());
+
+        verifyTenantMismatchBlocksGmailWrites(orchestratorService);
+    }
+
+    @Test
+    void tenant_context_mismatch_wins_when_rule_is_low_trust() throws Exception {
+        TriageOrchestratorService orchestratorService =
+                orchestratorService(true, false, subjectMatcher(), sendEmailAction());
+
+        verifyTenantMismatchBlocksGmailWrites(orchestratorService);
     }
 
     private TriageOrchestratorService orchestratorService(
@@ -295,6 +305,26 @@ class TriageOutboundRuntimeGateTest {
         verify(triageAuditSaga)
                 .finalizePhase(eq(TENANT_ID), eq(AUDIT_ID), writeResultCaptor.capture());
         org.assertj.core.api.Assertions.assertThat(writeResultCaptor.getValue().applied()).isTrue();
+    }
+
+    private void verifyTenantMismatchBlocksGmailWrites(
+            TriageOrchestratorService orchestratorService) throws IOException {
+        when(triageAuditSaga.reservePhase(any(TriageAuditCommand.class), any()))
+                .thenReturn(new ReservePhaseResult(Optional.of(AUDIT_ID), true));
+
+        withTenant(
+                UUID.randomUUID(), () -> orchestratorService.processObservedEvent(observedEvent()));
+
+        verify(triageAuditSaga, never())
+                .outboundSendPhase(any(TriageAuditCommand.class), eq(AUDIT_ID));
+        verify(triageAuditSaga, never())
+                .outboundDraftFallbackPhase(any(TriageAuditCommand.class), eq(AUDIT_ID), any());
+        ArgumentCaptor<GmailWriteResult> writeResultCaptor =
+                ArgumentCaptor.forClass(GmailWriteResult.class);
+        verify(triageAuditSaga)
+                .finalizePhase(eq(TENANT_ID), eq(AUDIT_ID), writeResultCaptor.capture());
+        org.assertj.core.api.Assertions.assertThat(writeResultCaptor.getValue().failureReason())
+                .isEqualTo("TENANT_CONTEXT_MISMATCH");
     }
 
     private static void withTenant(UUID tenantId, TenantRunnable tenantRunnable) {
