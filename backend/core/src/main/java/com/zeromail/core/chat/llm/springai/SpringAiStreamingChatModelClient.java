@@ -111,10 +111,6 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
                                     streamRequest.tenantId(),
                                     rootCause.getClass().getSimpleName(),
                                     serviceExceptionSummary(rootCause));
-                            log.debug(
-                                    "event=chat_llm_stream_failed_stacktrace tenantId={}",
-                                    streamRequest.tenantId(),
-                                    chatStreamingFailure);
                             streamSink.emitError(
                                     "chat_stream_failed", "The assistant stream failed.");
                         },
@@ -254,13 +250,7 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
                 + " param="
                 + openAIServiceException.param().orElse("-")
                 + " type="
-                + openAIServiceException.type().orElse("-")
-                + " body="
-                + truncate(openAIServiceException.body().toString());
-    }
-
-    private static String truncate(String text) {
-        return text.length() <= 600 ? text : text.substring(0, 600);
+                + openAIServiceException.type().orElse("-");
     }
 
     private static final class TextEmissionState {
