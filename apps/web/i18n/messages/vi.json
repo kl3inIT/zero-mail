@@ -1309,7 +1309,7 @@
       "newRuleCta": "Tạo quy tắc",
       "personaFallback": "Chọn nhóm",
       "personaLabel": "Nhóm ví dụ",
-      "saveDisabledCta": "Lưu (giữ tắt cho đến khi chạy thử)",
+      "saveDisabledCta": "Lưu",
       "saving": "Đang lưu...",
       "sourceLabel": "Bạn muốn Zero Mail xử lý email nào và làm gì?",
       "sourcePlaceholder": "Mô tả email cần khớp và hành động Zero Mail nên làm",
@@ -1435,7 +1435,6 @@
       "refinePlaceholder": "Ví dụ: trừ email quảng cáo khóa học, hoặc chỉ áp dụng cho deadline và bài tập",
       "removeAction": "Xóa hành động",
       "removeCondition": "Xóa điều kiện",
-      "saveHint": "Quy tắc mới hoặc vừa sửa luôn được lưu ở trạng thái tắt cho đến khi bạn chạy thử.",
       "structuredPreview": "Quy tắc sẽ được lưu",
       "thenBody": "Chọn Zero Mail sẽ làm gì khi email khớp. Nếu là gửi email, hệ thống vẫn kiểm tra an toàn trước khi gửi.",
       "thenTitle": "Zero Mail sẽ làm",
@@ -1533,13 +1532,6 @@
       "testGmail": "Email Gmail thật",
       "testIntro": "Mặc định sẽ thử trên {count} quy tắc đang bật.",
       "testModeLabel": "Chế độ kiểm tra"
-    },
-    "templates": {
-      "browseCta": "Xem mẫu có sẵn",
-      "disabledByDefault": "Lưu ở trạng thái tắt cho đến khi chạy thử",
-      "materialized": "Đã tạo",
-      "title": "Mẫu khởi đầu",
-      "useStarter": "Dùng mẫu này"
     },
     "testCustom": {
       "bodyLabel": "Nội dung email",

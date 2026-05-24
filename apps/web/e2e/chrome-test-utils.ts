@@ -249,7 +249,6 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
             examples: [
               {
                 exampleId: '00000000-0000-0000-0000-000000000101',
-                sourceRef: 'seed:founder:1',
                 exampleText:
                   url.searchParams.get('locale') === 'vi'
                     ? 'Lưu trữ cập nhật từ nhà đầu tư'

@@ -22,7 +22,6 @@ test.beforeEach(async ({ page }) => {
           exampleTextVi: 'Gắn nhãn email nhà đầu tư là @[Investor]',
           displayOrder: 10,
           enabled: true,
-          sourceRef: 'inbox-zero:founder:001',
         },
       ],
     },
@@ -41,7 +40,6 @@ test.beforeEach(async ({ page }) => {
           exampleTextVi: 'Gắn nhãn học bổng là Trường học',
           displayOrder: 10,
           enabled: true,
-          sourceRef: 'inbox-zero:student:001',
         },
       ],
     },
@@ -91,24 +89,24 @@ test('rule catalog manages examples through selected personas only', async ({ pa
 
   await expect(page.getByText('Zero Mail')).toBeVisible();
   await expect(page.getByText('admin', { exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Rule Catalog' })).toBeVisible();
-  await expect(page.getByRole('link', { name: /Rule Catalog/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ví dụ tạo quy tắc' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Ví dụ tạo quy tắc/ })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Actions' })).toHaveCount(0);
 
   await expect(page.getByText('Label investor emails as @[Investor]')).toBeVisible();
-  await page.getByRole('button', { name: 'Select persona Student' }).click();
+  await page.getByRole('button', { name: 'Chọn nhóm Student' }).click();
   await expect(page.getByText('Label scholarship updates as School')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Select persona Founder' }).click();
+  await page.getByRole('button', { name: 'Chọn nhóm Founder' }).click();
   await page
-    .getByRole('button', { name: 'Edit example inbox-zero:founder:001' })
+    .getByRole('button', { name: 'Sửa ví dụ Label investor emails as @[Investor]' })
     .click();
-  await page.getByLabel('Prompt VI').fill('Gắn nhãn thư nhà đầu tư là Investor');
+  await page.getByLabel('Mẫu VI').fill('Gắn nhãn thư nhà đầu tư là Investor');
   await page.getByRole('button', { name: 'Lưu' }).click();
   await expect(page.getByText('Gắn nhãn thư nhà đầu tư là Investor')).toBeVisible();
 
   const exampleSwitch = page.getByRole('switch', {
-    name: 'Enable example inbox-zero:founder:001',
+    name: 'Bật ví dụ Label investor emails as @[Investor]',
   });
   await exampleSwitch.click();
   await expect(exampleSwitch).toHaveAttribute('aria-checked', 'false');
@@ -116,7 +114,7 @@ test('rule catalog manages examples through selected personas only', async ({ pa
   await page.reload();
   await expect(page.getByText('Gắn nhãn thư nhà đầu tư là Investor')).toBeVisible();
   await expect(
-    page.getByRole('switch', { name: 'Enable example inbox-zero:founder:001' }),
+    page.getByRole('switch', { name: 'Bật ví dụ Label investor emails as @[Investor]' }),
   ).toHaveAttribute('aria-checked', 'false');
 
   expect(consoleErrors).toEqual([]);

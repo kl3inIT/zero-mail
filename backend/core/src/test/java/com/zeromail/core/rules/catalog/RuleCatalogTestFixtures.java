@@ -22,12 +22,24 @@ final class RuleCatalogTestFixtures {
                 """
                 UPDATE rule_example_prompt
                 SET enabled = TRUE,
-                    prompt_vi = CASE source_ref
-                        WHEN 'inbox-zero:founder:001'
-                            THEN 'Gắn nhãn email từ địa chỉ @mycompany.com là @[Team]'
+                    prompt_vi = CASE
+                        WHEN persona_id = (
+                            SELECT persona_id
+                            FROM rule_example_persona
+                            WHERE persona_key = 'founder'
+                        )
+                        AND display_order = 10
+                        THEN 'Gắn nhãn email từ địa chỉ @mycompany.com là @[Team]'
                         ELSE prompt_vi
                     END
-                WHERE source_ref LIKE 'inbox-zero:%'
+                WHERE persona_id IN (
+                    SELECT persona_id
+                    FROM rule_example_persona
+                    WHERE persona_key IN (
+                        'founder','influencer','realtor','investor','assistant','developer',
+                        'designer','sales','marketer','support','recruiter','student','outreach','other'
+                    )
+                )
                 """);
         jdbcTemplate.execute(
                 """

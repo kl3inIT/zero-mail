@@ -9,10 +9,14 @@ import java.util.UUID;
  * Composite primary key for {@link LlmProviderMasterKeyEntity}. Pairs the LLM provider with an
  * internal per-key UUID so a single provider can hold multiple keys (priority-ordered failover).
  */
-public record LlmProviderMasterKeyId(LlmProvider provider, UUID keyId) implements Serializable {
+public record LlmProviderMasterKeyId(String provider, UUID keyId) implements Serializable {
 
     public LlmProviderMasterKeyId {
         Objects.requireNonNull(provider, "provider");
         Objects.requireNonNull(keyId, "keyId");
+    }
+
+    public LlmProviderMasterKeyId(LlmProvider provider, UUID keyId) {
+        this(Objects.requireNonNull(provider, "provider").id(), keyId);
     }
 }

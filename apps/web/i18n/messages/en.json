@@ -1309,7 +1309,7 @@
       "newRuleCta": "Create rule",
       "personaFallback": "Choose persona",
       "personaLabel": "Example persona",
-      "saveDisabledCta": "Save (stays off until preview)",
+      "saveDisabledCta": "Save",
       "saving": "Saving...",
       "sourceLabel": "Which emails should Zero Mail match, and what should it do?",
       "sourcePlaceholder": "Describe the emails to match and what Zero Mail should do",
@@ -1435,7 +1435,6 @@
       "refinePlaceholder": "Example: exclude course ads, or only match deadlines and assignments",
       "removeAction": "Remove action",
       "removeCondition": "Remove condition",
-      "saveHint": "New or edited rules are saved off until you preview them.",
       "structuredPreview": "Rule to save",
       "thenBody": "Choose what Zero Mail should do when an email matches. If the action sends email, safety checks still run before sending.",
       "thenTitle": "Allowed actions",
@@ -1533,13 +1532,6 @@
       "testGmail": "Real Gmail",
       "testIntro": "By default, testing runs on {count} enabled rules.",
       "testModeLabel": "Test mode"
-    },
-    "templates": {
-      "browseCta": "Browse templates",
-      "disabledByDefault": "Saved disabled until previewed",
-      "materialized": "Materialized",
-      "title": "Starter templates",
-      "useStarter": "Use starter rule"
     },
     "testCustom": {
       "bodyLabel": "Email body",

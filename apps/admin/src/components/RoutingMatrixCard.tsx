@@ -10,18 +10,39 @@ import {
 } from '@/features/feature-defaults/feature-defaults-api';
 import { useFeatureDefaults } from '@/features/feature-defaults/use-feature-defaults';
 
-const FEATURES: { id: RoutingFeature; label: string; description: string }[] = [
-  { id: 'CHAT', label: 'Chat trợ lý', description: 'Người dùng trò chuyện trực tiếp.' },
-  { id: 'TRIAGE', label: 'Phân loại email', description: 'Auto-triage cho hộp thư đến.' },
-  { id: 'DRAFT', label: 'Soạn nháp', description: 'Soạn reply/forward theo template.' },
+type RoutingFeatureMeta = { id: RoutingFeature; label: string };
+
+const ROUTING_GROUPS: { title: string; features: RoutingFeatureMeta[] }[] = [
+  {
+    title: 'Người dùng',
+    features: [
+      { id: 'CHAT', label: 'Chat trợ lý' },
+      { id: 'DRAFT', label: 'Soạn nội dung' },
+    ],
+  },
+  {
+    title: 'Quy tắc',
+    features: [
+      { id: 'RULE_AUTHORING', label: 'Tạo quy tắc' },
+      { id: 'RULE_PREVIEW_SEMANTIC', label: 'Test quy tắc' },
+      { id: 'TRIAGE_SEMANTIC', label: 'Chạy quy tắc' },
+    ],
+  },
+  {
+    title: 'Nâng cao',
+    features: [
+      { id: 'TRIAGE', label: 'Chọn hành động AI' },
+      { id: 'DRIFT_CHECK', label: 'Kiểm tra chất lượng' },
+    ],
+  },
 ];
 
 const TIERS: { id: RoutingTier; label: string; tone: string }[] = [
-  { id: 'PRIMARY', label: 'Tier 1 — Primary', tone: 'bg-green-soft text-green border-transparent' },
-  { id: 'FALLBACK', label: 'Tier 2 — Fallback', tone: 'bg-blue-soft text-blue border-transparent' },
+  { id: 'PRIMARY', label: 'Chính', tone: 'bg-green-soft text-green border-transparent' },
+  { id: 'FALLBACK', label: 'Dự phòng', tone: 'bg-blue-soft text-blue border-transparent' },
   {
     id: 'LAST_RESORT',
-    label: 'Tier 3 — Last Resort',
+    label: 'Cuối cùng',
     tone: 'bg-amber-soft text-amber border-transparent',
   },
 ];
@@ -50,65 +71,75 @@ export function RoutingMatrixCard({ onCellClick }: RoutingMatrixCardProps) {
 
   return (
     <Card>
-      <CardContent className="space-y-3 pt-6">
+      <CardContent className="space-y-5 pt-6">
         {matrixQuery.isPending ? (
           <Skeleton className="h-48 w-full" />
         ) : (
-          <div className="grid gap-3 md:grid-cols-3">
-            {FEATURES.map((feature) => (
-              <FeatureColumn
-                key={feature.id}
-                feature={feature}
-                bindings={bindings}
-                onCellClick={onCellClick}
-                warn={featuresWithSameProviderTiers.has(feature.id)}
-              />
+          <>
+            <div className="hidden grid-cols-[minmax(160px,1fr)_repeat(3,minmax(0,1fr))] gap-2 px-1 text-xs font-medium text-muted-foreground md:grid">
+              <div>Tác vụ</div>
+              {TIERS.map((tier) => (
+                <div key={tier.id}>{tier.label}</div>
+              ))}
+            </div>
+            {ROUTING_GROUPS.map((group) => (
+              <section key={group.title} className="space-y-2">
+                <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                  {group.title}
+                </h3>
+                <div className="space-y-2">
+                  {group.features.map((feature) => (
+                    <FeatureRow
+                      key={feature.id}
+                      feature={feature}
+                      bindings={bindings}
+                      onCellClick={onCellClick}
+                      warn={featuresWithSameProviderTiers.has(feature.id)}
+                    />
+                  ))}
+                </div>
+              </section>
             ))}
-          </div>
+          </>
         )}
       </CardContent>
     </Card>
   );
 }
 
-function FeatureColumn({
+function FeatureRow({
   feature,
   bindings,
   onCellClick,
   warn,
 }: {
-  feature: { id: RoutingFeature; label: string; description: string };
+  feature: RoutingFeatureMeta;
   bindings: FeatureDefaultBinding[];
   onCellClick?: RoutingMatrixCardProps['onCellClick'];
   warn: boolean;
 }) {
   return (
-    <div className="border-border bg-background rounded-md border p-3">
-      <div className="mb-3">
-        <div className="flex items-center gap-2">
-          <div className="font-semibold">{feature.label}</div>
-          {warn && (
-            <Badge className="bg-amber-soft text-amber border-transparent text-xs">
-              Trùng provider giữa tier
-            </Badge>
-          )}
-        </div>
-        <div className="text-muted-foreground text-xs">{feature.description}</div>
+    <div className="border-border bg-background grid gap-2 rounded-md border p-2 md:grid-cols-[minmax(160px,1fr)_repeat(3,minmax(0,1fr))]">
+      <div className="flex min-h-12 items-center gap-2 px-2">
+        <div className="font-medium">{feature.label}</div>
+        {warn && (
+          <Badge className="bg-amber-soft text-amber border-transparent text-xs">
+            Trùng provider
+          </Badge>
+        )}
       </div>
-      <div className="space-y-2">
-        {TIERS.map((tier) => {
-          const current =
-            bindings.find((row) => row.feature === feature.id && row.tier === tier.id) ?? null;
-          return (
-            <TierCell
-              key={tier.id}
-              tier={tier}
-              current={current}
-              onClick={() => onCellClick?.(feature.id, tier.id, current)}
-            />
-          );
-        })}
-      </div>
+      {TIERS.map((tier) => {
+        const current =
+          bindings.find((row) => row.feature === feature.id && row.tier === tier.id) ?? null;
+        return (
+          <TierCell
+            key={tier.id}
+            tier={tier}
+            current={current}
+            onClick={() => onCellClick?.(feature.id, tier.id, current)}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -124,35 +155,29 @@ function TierCell({
 }) {
   const modelIds = current?.modelIds ?? [];
   const isAssigned = modelIds.length > 0;
+  const primaryModel = modelIds[0];
+  const extraModelCount = Math.max(0, modelIds.length - 1);
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group border-border hover:border-primary/40 bg-card flex w-full items-start gap-3 rounded-md border px-3 py-2 text-left transition-colors"
+      className="group border-border hover:border-primary/40 bg-card flex min-h-12 w-full items-center gap-2 rounded-md border px-3 py-2 text-left transition-colors"
     >
-      <Badge className={`shrink-0 font-mono ${tier.tone}`}>{tier.label}</Badge>
-      <span className="min-w-0 flex-1 space-y-1">
+      <Badge className={`shrink-0 md:hidden ${tier.tone}`}>{tier.label}</Badge>
+      <span className="min-w-0 flex-1">
         {isAssigned ? (
-          <>
+          <span className="block min-w-0">
+            <span className="block truncate text-sm font-medium">{current!.provider}</span>
             <span className="text-muted-foreground block truncate font-mono text-xs">
-              {current!.provider}
+              {primaryModel}
+              {extraModelCount > 0 ? ` +${extraModelCount}` : ''}
             </span>
-            <span className="flex flex-wrap gap-1">
-              {modelIds.map((modelId, index) => (
-                <Badge
-                  key={modelId}
-                  className="bg-violet-soft text-primary border-transparent font-mono text-[10px]"
-                >
-                  {index + 1}. {modelId}
-                </Badge>
-              ))}
-            </span>
-          </>
+          </span>
         ) : (
-          <span className="text-muted-foreground text-sm italic">Chưa gán</span>
+          <span className="text-muted-foreground text-sm">Chưa gán</span>
         )}
       </span>
-      <ChevronRightIcon className="text-muted-foreground group-hover:text-primary mt-1 size-4 shrink-0" />
+      <ChevronRightIcon className="text-muted-foreground group-hover:text-primary size-4 shrink-0" />
     </button>
   );
 }

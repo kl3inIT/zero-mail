@@ -14,6 +14,7 @@ import com.zeromail.core.chat.usecases.ChatLlmGateway;
 import com.zeromail.core.chat.usecases.ChatStreamRequest;
 import com.zeromail.core.chat.usecases.ChatStreamSink;
 import com.zeromail.core.chat.usecases.RawToolCall;
+import com.zeromail.core.llm.gateway.springai.SpringAiRawToolCallSupport;
 import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,9 +27,7 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.Generation;
-import org.springframework.ai.chat.model.StreamingChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.stereotype.Component;
 import reactor.core.Disposable;
 import reactor.core.scheduler.Scheduler;
@@ -69,8 +68,8 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
 
     @Override
     public Disposable streamChat(ChatStreamRequest streamRequest, ChatStreamSink streamSink) {
-        StreamingChatModel streamingChatModel =
-                chatModelFactory.forTenant(streamRequest.tenantId());
+        SpringAiChatModelFactory.ResolvedChatClient resolvedChatClient =
+                chatModelFactory.forTenant(streamRequest.tenantId(), streamRequest.modelId());
         ChatToolCallRegistry chatToolCallRegistry = new ChatToolCallRegistry();
         Scheduler scheduler = tenantAwareReactorScheduler.scheduler();
         TextEmissionState textEmissionState = new TextEmissionState();
@@ -78,9 +77,20 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
         log.debug(
                 "event=chat_llm_stream_start tenantId={} modelId={}",
                 streamRequest.tenantId(),
-                streamRequest.modelId());
+                resolvedChatClient.modelId());
 
-        return streamingChatModel.stream(prompt)
+        return resolvedChatClient
+                .chatClient()
+                .prompt(prompt)
+                .tools(
+                        toolSpec ->
+                                toolSpec.callbacks(
+                                        toolCallbackTranslator.translate(
+                                                streamRequest.toolCatalog())))
+                .advisors(SpringAiRawToolCallSupport::preserveRawToolCalls)
+                .options(chatModelFactory.optionsFor(resolvedChatClient))
+                .stream()
+                .chatResponse()
                 .subscribeOn(scheduler)
                 .doFinally(ignoredSignal -> scheduler.dispose())
                 .subscribe(
@@ -141,17 +151,7 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
                                         chatMessage,
                                         streamRequest.transientToolResponseJsonByCallId()))
                 .forEach(messages::add);
-        return new Prompt(
-                messages,
-                OpenAiChatOptions.builder()
-                        .model(streamRequest.modelId())
-                        .temperature(0.2)
-                        .maxTokens(2048)
-                        .streamUsage(false)
-                        .internalToolExecutionEnabled(false)
-                        .toolCallbacks(
-                                toolCallbackTranslator.translate(streamRequest.toolCatalog()))
-                        .build());
+        return new Prompt(messages);
     }
 
     private Message toSpringAiMessage(

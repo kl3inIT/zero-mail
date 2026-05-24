@@ -110,6 +110,22 @@ export interface paths {
         get: operations["get"];
         put: operations["set"];
         post?: never;
+        delete: operations["deleteProvider"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/master-keys/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createProvider"];
         delete?: never;
         options?: never;
         head?: never;
@@ -914,7 +930,6 @@ export interface components {
             /** Format: int32 */
             displayOrder: number;
             enabled: boolean;
-            sourceRef: string;
             reason: string;
         };
         RuleCatalogActionDescriptorWriteRequest: {
@@ -938,6 +953,25 @@ export interface components {
             items: components["schemas"]["RuleCatalogActionOrderEntryRequest"][];
             reason: string;
         };
+        CreateProviderRequest: {
+            providerId: string;
+            displayName: string;
+            /** @enum {string} */
+            compatibleType: "OPENAI_FORMAT" | "ANTHROPIC_FORMAT" | "GOOGLE_FORMAT";
+            defaultBaseUrl: string;
+            plaintextKey: string;
+            label?: string;
+            editSessionToken: string;
+        };
+        CreateProviderResponse: {
+            provider: string;
+            /** Format: uuid */
+            keyId: string;
+            /** Format: int32 */
+            priority: number;
+            /** @enum {string} */
+            testResult: "OK" | "INVALID_KEY" | "RATE_LIMITED" | "NETWORK_ERROR" | "TIMEOUT";
+        };
         MasterKeySetRequest: {
             plaintextKey: string;
             /** @enum {string} */
@@ -952,7 +986,7 @@ export interface components {
             /** @enum {string} */
             feature: "CHAT" | "TRIAGE" | "DRAFT";
             /** @enum {string} */
-            provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
+            provider: string;
         };
         CatalogFeatureDefaultRequest: {
             modelId: string;
@@ -960,11 +994,11 @@ export interface components {
         };
         SetFeatureDefaultTierRequest: {
             /** @enum {string} */
-            feature: "CHAT" | "TRIAGE" | "DRAFT";
+            feature: "CHAT" | "TRIAGE" | "DRAFT" | "RULE_AUTHORING" | "RULE_PREVIEW_SEMANTIC" | "TRIAGE_SEMANTIC" | "DRIFT_CHECK";
             /** @enum {string} */
             tier: "PRIMARY" | "FALLBACK" | "LAST_RESORT";
             /** @enum {string} */
-            provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
+            provider: string;
             /** @description Models in priority order. Position 0 is tried first, then 1, etc. Each id must reference a VERIFIED or STALE row for the chosen provider. */
             modelIds: string[];
         };
@@ -1240,7 +1274,6 @@ export interface components {
             /** Format: int32 */
             displayOrder: number;
             enabled: boolean;
-            sourceRef: string;
         };
         RuleCatalogPersonaAdminResponse: {
             /** Format: uuid */
@@ -1334,6 +1367,9 @@ export interface components {
         MasterKeyMaskedResponse: {
             provider: string;
             displayName: string;
+            providerKind: string;
+            compatibleType?: string;
+            defaultBaseUrl?: string;
             maskedKey?: string;
             keyFormat?: string;
             /** Format: int32 */
@@ -1344,6 +1380,8 @@ export interface components {
             lastRotatedAt?: string;
             /** Format: int64 */
             dependentsCount: number;
+            /** Format: int64 */
+            activeKeyCount: number;
             rotationRecommended: boolean;
             baseUrl?: string;
             featureDefaultProviderChat: boolean;
@@ -1353,7 +1391,7 @@ export interface components {
         /** @description One platform credential row in a provider's failover chain */
         ProviderKey: {
             /** @enum {string} */
-            provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
+            provider: string;
             /** Format: uuid */
             keyId: string;
             /** Format: int32 */
@@ -1375,7 +1413,7 @@ export interface components {
         /** @description Priority-ordered failover chain for one provider */
         ProviderKeyList: {
             /** @enum {string} */
-            provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
+            provider: string;
             keys: components["schemas"]["ProviderKey"][];
         };
         MasterKeyListResponse: {
@@ -1395,6 +1433,8 @@ export interface components {
             recommended: boolean;
             costPer1kInput?: number;
             costPer1kOutput?: number;
+            /** @enum {string} */
+            verificationStatus: "UNTESTED" | "VERIFIED" | "STALE" | "FAILED";
             /** Format: date-time */
             deprecatedAt?: string;
             /** Format: int64 */
@@ -1415,11 +1455,11 @@ export interface components {
         };
         FeatureDefaultBinding: {
             /** @enum {string} */
-            feature?: "CHAT" | "TRIAGE" | "DRAFT";
+            feature?: "CHAT" | "TRIAGE" | "DRAFT" | "RULE_AUTHORING" | "RULE_PREVIEW_SEMANTIC" | "TRIAGE_SEMANTIC" | "DRIFT_CHECK";
             /** @enum {string} */
             tier?: "PRIMARY" | "FALLBACK" | "LAST_RESORT";
             /** @enum {string} */
-            provider?: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
+            provider?: string;
             /** @description Models in priority order; position 1 is tried first. */
             modelIds?: string[];
         };
@@ -1984,7 +2024,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
+                provider: string;
             };
             cookie?: never;
         };
@@ -2060,7 +2100,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
+                provider: string;
             };
             cookie?: never;
         };
@@ -2133,12 +2173,86 @@ export interface operations {
             };
         };
     };
+    deleteProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     reorderKeys: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
+                provider: string;
             };
             cookie?: never;
         };
@@ -2292,8 +2406,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
-                feature: "CHAT" | "TRIAGE" | "DRAFT";
+                provider: string;
+                feature: "CHAT" | "TRIAGE" | "DRAFT" | "RULE_AUTHORING" | "RULE_PREVIEW_SEMANTIC" | "TRIAGE_SEMANTIC" | "DRIFT_CHECK";
             };
             cookie?: never;
         };
@@ -3065,7 +3179,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
+                provider: string;
             };
             cookie?: never;
         };
@@ -3145,7 +3259,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
+                provider: string;
             };
             cookie?: never;
         };
@@ -3225,7 +3339,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
+                provider: string;
             };
             cookie?: never;
         };
@@ -3296,12 +3410,72 @@ export interface operations {
             };
         };
     };
+    createProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProviderRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreateProviderResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     addKey: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
+                provider: string;
             };
             cookie?: never;
         };
@@ -3381,7 +3555,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
+                provider: string;
                 keyId: string;
             };
             cookie?: never;
@@ -3458,7 +3632,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
+                provider: string;
             };
             cookie?: never;
         };
@@ -3612,7 +3786,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
+                provider: string;
             };
             cookie?: never;
         };
@@ -3688,7 +3862,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
+                provider: string;
             };
             cookie?: never;
         };
@@ -4384,7 +4558,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
+                provider: string;
                 keyId: string;
             };
             cookie?: never;
@@ -4459,7 +4633,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
+                provider: string;
                 keyId: string;
             };
             cookie?: never;
@@ -5154,8 +5328,8 @@ export interface operations {
             query: {
                 from: string;
                 to: string;
-                providers?: ("OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R")[];
-                features?: ("CHAT" | "TRIAGE" | "DRAFT")[];
+                providers?: (string)[];
+                features?: ("CHAT" | "TRIAGE" | "DRAFT" | "RULE_AUTHORING" | "RULE_PREVIEW_SEMANTIC" | "TRIAGE_SEMANTIC" | "DRIFT_CHECK")[];
             };
             header?: never;
             path?: never;
@@ -5233,8 +5407,8 @@ export interface operations {
             query: {
                 from: string;
                 to: string;
-                providers?: ("OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R")[];
-                features?: ("CHAT" | "TRIAGE" | "DRAFT")[];
+                providers?: (string)[];
+                features?: ("CHAT" | "TRIAGE" | "DRAFT" | "RULE_AUTHORING" | "RULE_PREVIEW_SEMANTIC" | "TRIAGE_SEMANTIC" | "DRIFT_CHECK")[];
             };
             header?: never;
             path?: never;
@@ -5759,7 +5933,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                provider: "OPENAI" | "ANTHROPIC" | "GOOGLE" | "DEEPSEEK" | "OPENROUTER" | "ROUTER_9R";
+                provider: string;
             };
             cookie?: never;
         };

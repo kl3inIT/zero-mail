@@ -52,7 +52,6 @@ public class RuleCatalogRepository {
                        persona.icon,
                        persona.display_order AS persona_display_order,
                        prompt.prompt_id,
-                       prompt.source_ref,
                        CASE
                          WHEN ? = 'vi' THEN COALESCE(NULLIF(BTRIM(prompt.prompt_vi), ''), prompt.prompt_en)
                          ELSE prompt.prompt_en
@@ -112,8 +111,7 @@ public class RuleCatalogRepository {
                        prompt.prompt_en,
                        prompt.prompt_vi,
                        prompt.display_order AS prompt_display_order,
-                       prompt.enabled AS prompt_enabled,
-                       prompt.source_ref
+                       prompt.enabled AS prompt_enabled
                 FROM rule_example_persona persona
                 LEFT JOIN rule_example_prompt prompt ON prompt.persona_id = persona.persona_id
                 ORDER BY persona.display_order, prompt.display_order NULLS LAST
@@ -240,10 +238,9 @@ public class RuleCatalogRepository {
                 jdbcTemplate.queryForObject(
                         """
                         INSERT INTO rule_example_prompt(
-                            persona_id, prompt_en, prompt_vi, display_order, enabled, source_ref,
-                            updated_at
+                            persona_id, prompt_en, prompt_vi, display_order, enabled, updated_at
                         )
-                        VALUES (?, ?, ?, ?, ?, ?, NOW())
+                        VALUES (?, ?, ?, ?, ?, NOW())
                         RETURNING prompt_id
                         """,
                         UUID.class,
@@ -251,8 +248,7 @@ public class RuleCatalogRepository {
                         command.exampleTextEn(),
                         command.exampleTextVi(),
                         command.displayOrder(),
-                        command.enabled(),
-                        command.sourceRef());
+                        command.enabled());
         return Objects.requireNonNull(promptId, "inserted promptId must not be null");
     }
 
@@ -265,7 +261,6 @@ public class RuleCatalogRepository {
                             prompt_vi = ?,
                             display_order = ?,
                             enabled = ?,
-                            source_ref = ?,
                             updated_at = NOW(),
                             version = version + 1
                         WHERE prompt_id = ?
@@ -274,7 +269,6 @@ public class RuleCatalogRepository {
                         command.exampleTextVi(),
                         command.displayOrder(),
                         command.enabled(),
-                        command.sourceRef(),
                         promptId);
         requireUpdated(updatedRows, "rule_example_prompt", promptId);
     }
@@ -441,8 +435,7 @@ public class RuleCatalogRepository {
                        prompt_en,
                        prompt_vi,
                        display_order,
-                       enabled,
-                       source_ref
+                       enabled
                 FROM rule_example_prompt
                 WHERE prompt_id = ?
                 """,
@@ -503,7 +496,7 @@ public class RuleCatalogRepository {
     public List<Map<String, Object>> findPromptOrderState(UUID personaId) {
         return jdbcTemplate.queryForList(
                 """
-                SELECT prompt_id, source_ref, display_order
+                SELECT prompt_id, display_order
                 FROM rule_example_prompt
                 WHERE persona_id = ?
                 ORDER BY display_order
@@ -541,7 +534,6 @@ public class RuleCatalogRepository {
         personaViewAccumulator.prompts.add(
                 new RuleExamplePromptView(
                         resultSet.getObject("prompt_id", UUID.class),
-                        resultSet.getString("source_ref"),
                         resultSet.getString("prompt_text"),
                         resultSet.getInt("prompt_display_order")));
     }
@@ -576,8 +568,7 @@ public class RuleCatalogRepository {
                             resultSet.getString("prompt_en"),
                             resultSet.getString("prompt_vi"),
                             resultSet.getInt("prompt_display_order"),
-                            resultSet.getBoolean("prompt_enabled"),
-                            resultSet.getString("source_ref")));
+                            resultSet.getBoolean("prompt_enabled")));
         }
     }
 

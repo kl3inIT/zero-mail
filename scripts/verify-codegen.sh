@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# FND-06 end-to-end verification: ensure docker services are up, boot backend api,
-# run codegen against the live /v3/api-docs, and grep the regenerated schema for
-# every Phase 1 path. Exits non-zero on any failure. Always tears down api.
+# FND-06 end-to-end verification: boot backend api against the shared dev DB
+# tunnel, run codegen against the live /v3/api-docs, and grep the regenerated
+# schema for every Phase 1 path. Exits non-zero on any failure. Always tears
+# down api.
 #
 # Usage:
 #   bash scripts/verify-codegen.sh
 #
 # Assumes:
-#   - docker compose can start the isolated OpenAPI services from
-#     ./docker-compose.openapi.yml (postgres on 15432, redis on 16379).
+#   - the SSH DB tunnel is up: localhost:5555 -> zeromail-postgres:5432
+#     on the VPS dev database.
+#   - local Redis is available on localhost:6379.
 #   - pnpm 10.x is on PATH or accessible at $PNPM_BIN.
 #   - gradlew works from the repo root.
 
@@ -18,14 +20,7 @@ API_URL="${API_URL:-http://localhost:8080}"
 SPEC_URL="${API_SPEC_URL:-${API_URL}/v3/api-docs}"
 SCHEMA_OUT="apps/web/lib/api/schema.d.ts"
 HEALTH_TIMEOUT_SEC="${HEALTH_TIMEOUT_SEC:-180}"
-DOCKER="${DOCKER:-docker}"
 PNPM="${PNPM:-pnpm}"
-
-if ! command -v "$DOCKER" >/dev/null 2>&1; then
-    if [[ -x "/c/Program Files/Docker/Docker/resources/bin/docker.exe" ]]; then
-        DOCKER="/c/Program Files/Docker/Docker/resources/bin/docker.exe"
-    fi
-fi
 
 cleanup() {
     if [[ -n "${API_PID:-}" ]] && kill -0 "$API_PID" 2>/dev/null; then
@@ -36,13 +31,21 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "[verify-codegen] Ensuring docker services (postgres, redis) are up..."
-# Bypass docker-credential-desktop helper if it's missing from PATH (common on
-# Git-Bash-on-Windows). Compose only needs auth to PULL — images are usually
-# already local. An empty config short-circuits the helper lookup.
-DOCKER_CONFIG_TMP="$(mktemp -d)"
-echo '{"auths":{}}' > "$DOCKER_CONFIG_TMP/config.json"
-DOCKER_CONFIG="$DOCKER_CONFIG_TMP" "$DOCKER" compose --project-name zeromail-openapi -f docker-compose.openapi.yml up -d --no-recreate postgres redis >/dev/null
+if [[ -f .env.local ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    source .env.local
+    set +a
+fi
+
+DB_URL="${DB_URL:-jdbc:postgresql://localhost:5555/zeromail_dev?sslmode=disable}"
+DB_USER="${DB_USER:-zeromail_dev}"
+REDIS_HOST="${REDIS_HOST:-localhost}"
+REDIS_PORT="${REDIS_PORT:-6379}"
+if [[ -z "${DB_PASSWORD:-}" ]]; then
+    echo "[verify-codegen] DB_PASSWORD is required. Put it in .env.local or export it." >&2
+    exit 1
+fi
 
 echo "[verify-codegen] Starting backend api (bootRun) in background..."
 # Phase 1 stub credentials so OAuth2 client autoconfig validates; the codegen path
@@ -50,7 +53,7 @@ echo "[verify-codegen] Starting backend api (bootRun) in background..."
 export GOOGLE_OAUTH_CLIENT_ID="${GOOGLE_OAUTH_CLIENT_ID:-verify-codegen-stub}"
 export GOOGLE_OAUTH_CLIENT_SECRET="${GOOGLE_OAUTH_CLIENT_SECRET:-verify-codegen-stub}"
 export REFRESH_TOKEN_KEY_BASE64="${REFRESH_TOKEN_KEY_BASE64:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}"
-./gradlew :backend:api:bootRun -q --args="--spring.datasource.url=jdbc:postgresql://localhost:15432/zeromail --spring.datasource.username=zeromail --spring.datasource.password=zeromail --spring.data.redis.host=localhost --spring.data.redis.port=16379" >/tmp/verify-codegen-api.log 2>&1 &
+./gradlew :backend:api:bootRun -q --args="--spring.datasource.url=${DB_URL} --spring.datasource.username=${DB_USER} --spring.datasource.password=${DB_PASSWORD} --spring.data.redis.host=${REDIS_HOST} --spring.data.redis.port=${REDIS_PORT}" >/tmp/verify-codegen-api.log 2>&1 &
 API_PID=$!
 echo "[verify-codegen] api pid=$API_PID; tailing health at ${API_URL}/actuator/health"
 

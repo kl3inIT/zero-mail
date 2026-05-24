@@ -7,5 +7,4 @@ public record RuleExamplePromptAdminView(
         String exampleTextEn,
         String exampleTextVi,
         int displayOrder,
-        boolean enabled,
-        String sourceRef) {}
+        boolean enabled) {}

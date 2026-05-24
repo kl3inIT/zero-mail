@@ -7,5 +7,6 @@ export function useCatalog(provider: CatalogProvider) {
   return useQuery({
     queryKey: catalogQueryKeys.provider(provider),
     queryFn: () => fetchCatalogProvider(provider),
+    enabled: provider.length > 0,
   });
 }

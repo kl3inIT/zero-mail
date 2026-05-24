@@ -1,0 +1,37 @@
+databaseChangeLog:
+  - changeSet:
+      id: 089-01-bind-existing-models-to-runtime-routing-features
+      author: zeromail
+      comment: >
+        Backfill feature bindings for runtime routing features added after the
+        original catalog seed. Existing provider catalog rows, including custom
+        9Router models, must be selectable in the admin routing picker.
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              INSERT INTO feature_binding (model_id, feature, enabled, created_at)
+              SELECT model.model_id, runtime_feature.feature, true, now()
+              FROM model_catalog model
+              CROSS JOIN (
+                VALUES
+                  ('RULE_AUTHORING'),
+                  ('RULE_PREVIEW_SEMANTIC'),
+                  ('TRIAGE_SEMANTIC'),
+                  ('DRIFT_CHECK')
+              ) AS runtime_feature(feature)
+              WHERE model.deprecated_at IS NULL
+              ON CONFLICT (model_id, feature)
+              DO UPDATE SET enabled = true;
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              DELETE FROM feature_binding
+              WHERE feature IN (
+                'RULE_AUTHORING',
+                'RULE_PREVIEW_SEMANTIC',
+                'TRIAGE_SEMANTIC',
+                'DRIFT_CHECK'
+              )
+              AND model_id <> 'openai/gpt-5.4-nano';

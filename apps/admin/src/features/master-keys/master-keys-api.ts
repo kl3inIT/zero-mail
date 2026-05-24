@@ -12,6 +12,8 @@ export type ProviderKeyList = components['schemas']['ProviderKeyList'];
 export type ProviderKeyStatus = ProviderKey['status'];
 export type AddProviderKeyRequest = components['schemas']['AddProviderKeyRequest'];
 export type AddProviderKeyResponse = components['schemas']['AddProviderKeyResponse'];
+export type CreateProviderRequest = components['schemas']['CreateProviderRequest'];
+export type CreateProviderResponse = components['schemas']['CreateProviderResponse'];
 export type ReorderProviderKeysRequest = components['schemas']['ReorderProviderKeysRequest'];
 export type UpdateProviderKeyRequest = components['schemas']['UpdateProviderKeyRequest'];
 
@@ -19,7 +21,7 @@ export type UpdateProviderKeyRequest = components['schemas']['UpdateProviderKeyR
 // Response DTO). Derive the strict unions from the Request DTOs so callers get
 // the same narrowed type the backend will enforce.
 export type KeyFormat = components['schemas']['TestConnectionRequest']['keyFormat'];
-export type LlmProvider = SetFeatureDefaultRequest['provider'];
+export type LlmProvider = string;
 export type MasterKeyFeature = SetFeatureDefaultRequest['feature'];
 export type TestConnectionResult = TestConnectionResponse['result'];
 
@@ -150,6 +152,32 @@ export async function addProviderKey(input: {
   return data;
 }
 
+export async function createProvider(input: {
+  providerId: string;
+  displayName: string;
+  compatibleType: KeyFormat;
+  defaultBaseUrl: string;
+  plaintextKey: string;
+  label?: string | null;
+  editSessionToken: string;
+}): Promise<CreateProviderResponse> {
+  const { data, error } = await api.POST('/api/admin/master-keys/providers', {
+    body: {
+      providerId: input.providerId,
+      displayName: input.displayName,
+      compatibleType: input.compatibleType,
+      defaultBaseUrl: input.defaultBaseUrl,
+      plaintextKey: input.plaintextKey,
+      label: input.label ?? undefined,
+      editSessionToken: input.editSessionToken,
+    },
+  });
+  if (error || !data) {
+    throw new Error('Không thể tạo provider.');
+  }
+  return data;
+}
+
 export async function reorderProviderKeys(input: {
   provider: string;
   orderedKeyIds: string[];
@@ -212,6 +240,17 @@ export async function revokeProviderKey(input: {
   });
   if (error) {
     throw new Error('Không thể xoá key.');
+  }
+}
+
+export async function deleteProvider(provider: string): Promise<void> {
+  const { error } = await api.DELETE('/api/admin/master-keys/{provider}', {
+    params: {
+      path: { provider: provider as LlmProvider },
+    },
+  });
+  if (error) {
+    throw new Error('Không thể xoá provider.');
   }
 }
 

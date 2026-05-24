@@ -37,7 +37,6 @@ test.describe('rules examples and auto-send setting', () => {
           name: /Archive investor updates from portfolio companies/i,
         })
         .click();
-      await page.getByRole('button', { name: 'Add selected (1)' }).click();
 
       const sourceTextarea = page.getByLabel(
         'Which emails should Zero Mail match, and what should it do?',
@@ -172,7 +171,6 @@ async function openWithRulesExamplesMock(
             examples: [
               {
                 exampleId: '00000000-0000-0000-0000-000000000101',
-                sourceRef: 'seed:founder:1',
                 exampleText: 'Archive investor updates from portfolio companies',
                 displayOrder: 10,
               },
@@ -187,7 +185,6 @@ async function openWithRulesExamplesMock(
             examples: [
               {
                 exampleId: '00000000-0000-0000-0000-000000000201',
-                sourceRef: 'seed:student:1',
                 exampleText: 'Label scholarships as School',
                 displayOrder: 10,
               },

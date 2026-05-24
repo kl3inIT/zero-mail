@@ -10,8 +10,10 @@ import java.time.Instant;
         requiredProperties = {
             "provider",
             "displayName",
+            "providerKind",
             "providerSecretVersion",
             "dependentsCount",
+            "activeKeyCount",
             "rotationRecommended",
             "featureDefaultProviderChat",
             "featureDefaultProviderTriage",
@@ -20,12 +22,16 @@ import java.time.Instant;
 public record MasterKeyMaskedResponse(
         String provider,
         String displayName,
+        String providerKind,
+        String compatibleType,
+        String defaultBaseUrl,
         String maskedKey,
         String keyFormat,
         Short kekVersion,
         long providerSecretVersion,
         Instant lastRotatedAt,
         long dependentsCount,
+        long activeKeyCount,
         boolean rotationRecommended,
         String baseUrl,
         boolean featureDefaultProviderChat,
@@ -35,29 +41,21 @@ public record MasterKeyMaskedResponse(
     public static MasterKeyMaskedResponse from(MasterKeyMaskedRow masterKeyMaskedRow) {
         return new MasterKeyMaskedResponse(
                 masterKeyMaskedRow.provider().id(),
-                displayName(masterKeyMaskedRow.provider().id()),
+                masterKeyMaskedRow.displayName(),
+                masterKeyMaskedRow.providerKind(),
+                masterKeyMaskedRow.compatibleType(),
+                masterKeyMaskedRow.defaultBaseUrl(),
                 masterKeyMaskedRow.maskedKey(),
                 masterKeyMaskedRow.keyFormat() == null ? null : masterKeyMaskedRow.keyFormat().id(),
                 masterKeyMaskedRow.kekVersion(),
                 masterKeyMaskedRow.providerSecretVersion(),
                 masterKeyMaskedRow.lastRotatedAt(),
                 masterKeyMaskedRow.dependentsCount(),
+                masterKeyMaskedRow.activeKeyCount(),
                 masterKeyMaskedRow.rotationRecommended(),
                 masterKeyMaskedRow.baseUrl(),
                 masterKeyMaskedRow.featureDefaultProviderChat(),
                 masterKeyMaskedRow.featureDefaultProviderTriage(),
                 masterKeyMaskedRow.featureDefaultProviderDraft());
-    }
-
-    private static String displayName(String provider) {
-        return switch (provider) {
-            case "OPENAI" -> "OpenAI";
-            case "ANTHROPIC" -> "Anthropic";
-            case "GOOGLE" -> "Google";
-            case "DEEPSEEK" -> "DeepSeek";
-            case "OPENROUTER" -> "OpenRouter";
-            case "ROUTER_9R" -> "9Router";
-            default -> provider;
-        };
     }
 }

@@ -185,7 +185,7 @@ public class AdminSpendController {
                         .map(
                                 set ->
                                         set.stream()
-                                                .map(Enum::name)
+                                                .map(LlmProvider::id)
                                                 .sorted()
                                                 .collect(Collectors.joining(",")))
                         .orElse("")

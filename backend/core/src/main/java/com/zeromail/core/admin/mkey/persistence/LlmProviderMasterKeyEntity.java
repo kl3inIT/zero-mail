@@ -24,12 +24,9 @@ import java.util.UUID;
 @IdClass(LlmProviderMasterKeyId.class)
 public class LlmProviderMasterKeyEntity {
 
-    // JPA forbids @Convert on @Id; we keep @Enumerated(STRING). The underlying
-    // column is VARCHAR(32) so round-trip parity holds.
     @Id
-    @Enumerated(EnumType.STRING)
     @Column(name = "provider", nullable = false, length = 32)
-    private LlmProvider provider;
+    private String provider;
 
     @Id
     @Column(name = "key_id", nullable = false)
@@ -92,7 +89,7 @@ public class LlmProviderMasterKeyEntity {
             Instant lastRotatedAt,
             String baseUrl,
             String maskedKey) {
-        this.provider = provider;
+        this.provider = provider.id();
         this.keyId = keyId;
         this.priority = priority;
         this.status = status;
@@ -109,6 +106,10 @@ public class LlmProviderMasterKeyEntity {
     }
 
     public LlmProvider getProvider() {
+        return LlmProvider.fromId(provider);
+    }
+
+    public String getProviderId() {
         return provider;
     }
 

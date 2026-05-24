@@ -52,8 +52,10 @@ class RuleCatalogUserServiceTest extends PostgresContainerTest {
                 """
                 UPDATE rule_example_prompt
                 SET enabled = FALSE
-                WHERE source_ref = 'inbox-zero:founder:002'
-                """);
+                WHERE persona_id = ?
+                  AND display_order = 20
+                """,
+                founderPersonaId);
         jdbcTemplate.update(
                 "UPDATE rule_example_persona SET enabled = FALSE WHERE persona_key = 'other'");
 
@@ -71,8 +73,8 @@ class RuleCatalogUserServiceTest extends PostgresContainerTest {
                         .orElseThrow();
         assertThat(founder.displayName()).isEqualTo("Nhà sáng lập");
         assertThat(founder.prompts())
-                .extracting(prompt -> prompt.sourceRef())
-                .doesNotContain("inbox-zero:founder:002");
+                .extracting(prompt -> prompt.displayOrder())
+                .doesNotContain(20);
         assertThat(founder.prompts())
                 .extracting(prompt -> prompt.exampleText())
                 .contains("Label emails from @mycompany.com addresses as @[Team]");

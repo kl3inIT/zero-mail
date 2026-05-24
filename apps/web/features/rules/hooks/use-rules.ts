@@ -8,8 +8,6 @@ import {
   deleteRule,
   getRule,
   listRules,
-  listRuleTemplates,
-  materializeRuleTemplate,
   previewAllEnabledRules,
   previewCustomMail,
   previewDraftRule,
@@ -36,10 +34,6 @@ export function useRule(ruleId: string | null | undefined) {
     queryFn: () => getRule(ruleId ?? ''),
     enabled: Boolean(ruleId),
   });
-}
-
-export function useRuleTemplates() {
-  return useQuery({ queryKey: rulesKeys.templates(), queryFn: listRuleTemplates });
 }
 
 export function useCompileRule() {
@@ -166,17 +160,5 @@ export function usePreviewCustomMail() {
 export function usePreviewAllEnabledRules() {
   return useMutation({
     mutationFn: (payload: RuleEnabledPreviewRequest) => previewAllEnabledRules(payload),
-  });
-}
-
-export function useMaterializeRuleTemplate() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (templateKey: string) => materializeRuleTemplate(templateKey),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: rulesKeys.list() });
-      await queryClient.invalidateQueries({ queryKey: rulesKeys.templates() });
-    },
   });
 }

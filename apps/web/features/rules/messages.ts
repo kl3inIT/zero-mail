@@ -164,8 +164,8 @@ export const rulesMessages = {
     en: 'Checking...',
   },
   'rules.composer.saveDisabledCta': {
-    vi: 'Lưu (giữ tắt cho đến khi chạy thử)',
-    en: 'Save (stays off until preview)',
+    vi: 'Lưu',
+    en: 'Save',
   },
   'rules.composer.saving': {
     vi: 'Đang lưu...',
@@ -230,14 +230,6 @@ export const rulesMessages = {
   'rules.composer.examples.count': {
     vi: '{count} ví dụ',
     en: '{count} examples',
-  },
-  'rules.composer.examples.addSelected': {
-    vi: 'Thêm đã chọn ({count})',
-    en: 'Add selected ({count})',
-  },
-  'rules.composer.examples.multiPromptPrefix': {
-    vi: 'Thêm các quy tắc sau:',
-    en: 'Add the following rules:',
   },
   'rules.composer.examples.empty': {
     vi: 'Chưa có ví dụ đang bật cho nhóm này.',
@@ -346,10 +338,6 @@ export const rulesMessages = {
   'rules.manual.structuredPreview': {
     vi: 'Quy tắc sẽ được lưu',
     en: 'Rule to save',
-  },
-  'rules.manual.saveHint': {
-    vi: 'Quy tắc mới hoặc vừa sửa luôn được lưu ở trạng thái tắt cho đến khi bạn chạy thử.',
-    en: 'New or edited rules are saved off until you preview them.',
   },
   'rules.manual.condition.SENDER_DOMAIN': {
     vi: 'Tên miền người gửi',
@@ -654,26 +642,6 @@ export const rulesMessages = {
   'rules.preview.stat.conflicts': {
     vi: 'Xung đột',
     en: 'Conflicts',
-  },
-  'rules.templates.title': {
-    vi: 'Mẫu khởi đầu',
-    en: 'Starter templates',
-  },
-  'rules.templates.useStarter': {
-    vi: 'Dùng mẫu này',
-    en: 'Use starter rule',
-  },
-  'rules.templates.materialized': {
-    vi: 'Đã tạo',
-    en: 'Materialized',
-  },
-  'rules.templates.disabledByDefault': {
-    vi: 'Lưu ở trạng thái tắt cho đến khi chạy thử',
-    en: 'Saved disabled until previewed',
-  },
-  'rules.templates.browseCta': {
-    vi: 'Xem mẫu có sẵn',
-    en: 'Browse templates',
   },
   'rules.actions.title': {
     vi: 'Hành động có thể dùng',

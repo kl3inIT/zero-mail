@@ -1,6 +1,7 @@
 package com.zeromail.core.admin.cat.persistence.lowlevel;
 
 import com.zeromail.core.admin.cat.domain.Feature;
+import com.zeromail.core.admin.cat.domain.ModelVerificationStatus;
 import com.zeromail.core.admin.cat.projection.CatalogModelRow;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import java.math.BigDecimal;
@@ -43,6 +44,7 @@ public class ModelCatalogWriteRepository {
                        model.is_recommended,
                        model.cost_per_1k_input,
                        model.cost_per_1k_output,
+                       model.verification_status,
                        model.deprecated_at,
                        (
                          SELECT COUNT(DISTINCT settings.tenant_id)
@@ -255,6 +257,7 @@ public class ModelCatalogWriteRepository {
                         resultSet.getBoolean("is_recommended"),
                         resultSet.getBigDecimal("cost_per_1k_input"),
                         resultSet.getBigDecimal("cost_per_1k_output"),
+                        ModelVerificationStatus.fromId(resultSet.getString("verification_status")),
                         nullableInstant(resultSet, "deprecated_at"),
                         resultSet.getLong("pinned_tenant_count"));
         return new ProviderModelRow(feature, catalogModelRow);

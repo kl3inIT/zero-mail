@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useReducer, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { Plus, Sparkles } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,6 @@ import { CustomMailTester } from '@/features/rules/components/CustomMailTester';
 import { RuleComposer } from '@/features/rules/components/RuleComposer';
 import { RuleList } from '@/features/rules/components/RuleList';
 import { RulePreviewPanel } from '@/features/rules/components/RulePreviewPanel';
-import { RuleTemplateGallery } from '@/features/rules/components/RuleTemplateGallery';
 import { AuditLog } from '@/features/triage/components/AuditLog';
 import {
   compiledResponseToRequest,
@@ -31,17 +30,14 @@ import {
   type RuleCustomPreviewResponse,
   type RulePreviewResponse,
   type RuleResponse,
-  type RuleTemplateResponse,
 } from '@/features/rules/api/rules-api';
 import type { BuiltManualRule } from '@/features/rules/lib/rule-structure';
 import {
   useCompileRule,
   useCreateRule,
   useDeleteRule,
-  useMaterializeRuleTemplate,
   usePreviewAllEnabledRules,
   usePreviewCustomMail,
-  useRuleTemplates,
   useRules,
   useUpdateRule,
   useUpdateRuleEnabled,
@@ -83,9 +79,7 @@ type RulesWorkspaceState = {
   gmailUnavailableError: string | null;
   sampleSize: SampleSize;
   pendingRuleId: string | null;
-  pendingTemplateKey: string | null;
   composerDialogOpen: boolean;
-  templateDialogOpen: boolean;
 };
 
 type RulesWorkspaceAction =
@@ -108,7 +102,6 @@ type RulesWorkspaceAction =
   | { type: 'saveStarted' }
   | { type: 'saveFailed'; message: string }
   | { type: 'composerDialogToggled'; open: boolean }
-  | { type: 'templateDialogToggled'; open: boolean }
   | { type: 'previewStarted' }
   | { type: 'previewSucceeded'; preview: RulePreviewResponse }
   | { type: 'previewFailed'; message: string }
@@ -116,8 +109,6 @@ type RulesWorkspaceAction =
   | { type: 'sampleSizeChanged'; sampleSize: SampleSize }
   | { type: 'ruleTogglePending'; ruleId: string }
   | { type: 'rulePendingCleared' }
-  | { type: 'templateMaterializePending'; templateKey: string }
-  | { type: 'templateMaterializeCleared' }
   | { type: 'ruleSavedAfterCompose'; savedRule: RuleResponse }
   | { type: 'selectedRuleDeleted' };
 
@@ -134,9 +125,7 @@ const initialState: RulesWorkspaceState = {
   gmailUnavailableError: null,
   sampleSize: 10,
   pendingRuleId: null,
-  pendingTemplateKey: null,
   composerDialogOpen: false,
-  templateDialogOpen: false,
 };
 
 function composerSessionKey(state: RulesWorkspaceState): string {
@@ -202,8 +191,6 @@ function rulesWorkspaceReducer(
       return { ...state, compileError: action.message };
     case 'composerDialogToggled':
       return { ...state, composerDialogOpen: action.open };
-    case 'templateDialogToggled':
-      return { ...state, templateDialogOpen: action.open };
     case 'previewStarted':
       return { ...state, previewError: null, gmailUnavailableError: null };
     case 'previewSucceeded':
@@ -218,10 +205,6 @@ function rulesWorkspaceReducer(
       return { ...state, pendingRuleId: action.ruleId };
     case 'rulePendingCleared':
       return { ...state, pendingRuleId: null };
-    case 'templateMaterializePending':
-      return { ...state, pendingTemplateKey: action.templateKey };
-    case 'templateMaterializeCleared':
-      return { ...state, pendingTemplateKey: null };
     case 'ruleSavedAfterCompose':
       return {
         ...applyRuleSelection(state, action.savedRule),
@@ -277,7 +260,6 @@ export function RulesWorkspace() {
   const locale = useLocale();
   const localizeApiError = useLocalizedApiError();
   const rulesQuery = useRules();
-  const templatesQuery = useRuleTemplates();
   const ruleExamplesQuery = useRuleExamples(locale);
   const ruleActionsQuery = useRuleActionsCatalog(locale);
   const compileMutation = useCompileRule();
@@ -286,7 +268,6 @@ export function RulesWorkspace() {
   const deleteRuleMutation = useDeleteRule();
   const previewAllEnabledMutation = usePreviewAllEnabledRules();
   const updateEnabledMutation = useUpdateRuleEnabled();
-  const materializeTemplateMutation = useMaterializeRuleTemplate();
   const previewCustomMailMutation = usePreviewCustomMail();
 
   const [state, dispatch] = useReducer(rulesWorkspaceReducer, initialState);
@@ -304,7 +285,6 @@ export function RulesWorkspace() {
     () => [...(rulesQuery.data?.rules ?? [])].sort(compareRulesByOrder),
     [rulesQuery.data?.rules],
   );
-  const templates = templatesQuery.data ?? rulesQuery.data?.templates ?? [];
 
   const selectedRule = rules.find((rule) => rule.ruleId === state.selectedRuleId) ?? null;
 
@@ -488,19 +468,6 @@ export function RulesWorkspace() {
     }
   }
 
-  async function handleUseTemplate(template: RuleTemplateResponse) {
-    if (!template.templateKey) return;
-    dispatch({ type: 'templateMaterializePending', templateKey: template.templateKey });
-    try {
-      const result = await materializeTemplateMutation.mutateAsync(template.templateKey);
-      const createdRule = result.createdRules?.[0];
-      if (createdRule) dispatch({ type: 'ruleSelected', rule: createdRule });
-      dispatch({ type: 'templateDialogToggled', open: false });
-    } finally {
-      dispatch({ type: 'templateMaterializeCleared' });
-    }
-  }
-
   async function handleRunCustomMailTest(input: { subject: string; body: string }) {
     setCustomMailError(null);
     try {
@@ -539,27 +506,15 @@ export function RulesWorkspace() {
           onToggleEnabled={handleToggleRule}
           onDeleteRule={handleDeleteRule}
           action={
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-1.5 rounded-md"
-                onClick={() => dispatch({ type: 'templateDialogToggled', open: true })}
-              >
-                <Sparkles className="size-3.5" />
-                {t('rules.templates.browseCta')}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                className="gap-1.5 rounded-md"
-                onClick={() => dispatch({ type: 'newRuleStarted' })}
-              >
-                <Plus className="size-3.5" />
-                {t('rules.composer.newRuleCta')}
-              </Button>
-            </div>
+            <Button
+              type="button"
+              size="sm"
+              className="gap-1.5 rounded-md"
+              onClick={() => dispatch({ type: 'newRuleStarted' })}
+            >
+              <Plus className="size-3.5" />
+              {t('rules.composer.newRuleCta')}
+            </Button>
           }
         />
       </TabsContent>
@@ -667,26 +622,6 @@ export function RulesWorkspace() {
               onRefineManualRule={handleRefineManualRule}
             />
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Template gallery dialog */}
-      <Dialog
-        open={state.templateDialogOpen}
-        onOpenChange={(open) => dispatch({ type: 'templateDialogToggled', open })}
-      >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{t('rules.templates.title')}</DialogTitle>
-            <DialogDescription>{t('rules.templates.disabledByDefault')}</DialogDescription>
-          </DialogHeader>
-          <RuleTemplateGallery
-            templates={templates}
-            isLoading={templatesQuery.isLoading}
-            pendingTemplateKey={state.pendingTemplateKey}
-            hideHeader
-            onUseTemplate={handleUseTemplate}
-          />
         </DialogContent>
       </Dialog>
     </Tabs>

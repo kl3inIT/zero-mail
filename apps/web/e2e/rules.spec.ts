@@ -344,8 +344,8 @@ async function openRules(page: Page, mode: MockMode = 'full-flow') {
 // TODO(rules-v2): rewrite end-to-end against the new two-tab flow
 // (Danh sách | Kiểm tra). The legacy single-rule preview shortcut, the
 // 3-dot dropdown menu (Edit/Delete are now icon buttons), and the
-// manual reorder feature have all been removed, and "Save (stays off
-// until preview)" copy + "Test selected rule" heading no longer exist.
+// manual reorder feature have all been removed, and the "Test selected
+// rule" heading no longer exists.
 test.skip('rules desktop flow compiles, clarifies, saves disabled, previews, toggles, reorders, edits, and deletes', async ({
   page,
 }) => {
@@ -367,7 +367,7 @@ test.skip('rules desktop flow compiles, clarifies, saves disabled, previews, tog
   await page.getByLabel('Your answer').fill('Only Stripe payment receipts');
   await page.getByRole('button', { name: 'Send answer' }).click();
   await expect(page.getByText('stripe.com')).toBeVisible();
-  await page.getByRole('button', { name: 'Save (stays off until preview)' }).click();
+  await page.getByRole('button', { name: 'Save' }).click();
 
   await page.getByRole('button', { name: 'Preview rule' }).click();
   await expect(
@@ -394,7 +394,7 @@ test.skip('rules desktop flow compiles, clarifies, saves disabled, previews, tog
   await page.getByRole('button', { name: 'Convert to rule', exact: true }).click();
   await page.getByLabel('Your answer').fill('Only Stripe payment receipts');
   await page.getByRole('button', { name: 'Send answer' }).click();
-  await page.getByRole('button', { name: 'Save (stays off until preview)' }).click();
+  await page.getByRole('button', { name: 'Save' }).click();
   await page.getByRole('button', { name: 'Preview rule' }).click();
   await expect(
     page.getByLabel('Which emails should Zero Mail match, and what should it do?'),

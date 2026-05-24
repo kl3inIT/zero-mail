@@ -1,0 +1,100 @@
+databaseChangeLog:
+  - changeSet:
+      id: 092-01-custom-llm-provider-catalog
+      author: zeromail
+      comment: >
+        Allow admin-created LLM compatibility providers. Provider identifiers are no longer an enum
+        at the database boundary; official Spring AI providers remain seeded catalog rows while
+        OpenAI/Anthropic-compatible gateways can be added by operators.
+      changes:
+        - addColumn:
+            tableName: provider_catalog
+            columns:
+              - column:
+                  name: default_base_url
+                  type: varchar(500)
+        - sql:
+            splitStatements: false
+            sql: |
+              UPDATE provider_catalog
+              SET default_base_url = CASE provider
+                    WHEN 'OPENAI' THEN 'https://api.openai.com/v1'
+                    WHEN 'ANTHROPIC' THEN 'https://api.anthropic.com/v1'
+                    WHEN 'GOOGLE' THEN 'https://generativelanguage.googleapis.com/v1beta'
+                    WHEN 'DEEPSEEK' THEN 'https://api.deepseek.com'
+                    WHEN 'OPENROUTER' THEN 'https://openrouter.ai/api/v1'
+                    ELSE default_base_url
+                  END
+              WHERE default_base_url IS NULL;
+
+              ALTER TABLE provider_catalog
+                DROP CONSTRAINT IF EXISTS ck_provider_catalog_provider;
+
+              ALTER TABLE provider_catalog
+                ADD CONSTRAINT ck_provider_catalog_provider
+                CHECK (provider ~ '^[A-Z0-9][A-Z0-9_:-]{1,31}$');
+
+              ALTER TABLE llm_provider_master_key
+                DROP CONSTRAINT IF EXISTS ck_llm_provider_master_key_provider;
+
+              ALTER TABLE llm_provider_master_key
+                ADD CONSTRAINT ck_llm_provider_master_key_provider
+                CHECK (provider ~ '^[A-Z0-9][A-Z0-9_:-]{1,31}$');
+
+              ALTER TABLE llm_provider_master_key
+                DROP CONSTRAINT IF EXISTS ck_llm_provider_master_key_provider_format;
+
+              ALTER TABLE llm_provider_master_key
+                ADD CONSTRAINT ck_llm_provider_master_key_provider_format
+                CHECK (
+                  key_format IS NULL
+                  OR (provider IN ('OPENAI','DEEPSEEK') AND key_format = 'OPENAI_FORMAT')
+                  OR (provider = 'ANTHROPIC' AND key_format = 'ANTHROPIC_FORMAT')
+                  OR (provider = 'GOOGLE' AND key_format = 'GOOGLE_FORMAT')
+                  OR (provider NOT IN ('OPENAI','ANTHROPIC','GOOGLE','DEEPSEEK')
+                      AND key_format IN ('OPENAI_FORMAT','ANTHROPIC_FORMAT'))
+                );
+
+              ALTER TABLE llm_provider_master_key
+                ADD CONSTRAINT fk_llm_provider_master_key_provider_catalog
+                FOREIGN KEY (provider)
+                REFERENCES provider_catalog(provider)
+                ON DELETE RESTRICT;
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE llm_provider_master_key
+                DROP CONSTRAINT IF EXISTS fk_llm_provider_master_key_provider_catalog;
+
+              ALTER TABLE provider_catalog
+                DROP CONSTRAINT IF EXISTS ck_provider_catalog_provider;
+
+              ALTER TABLE provider_catalog
+                ADD CONSTRAINT ck_provider_catalog_provider
+                CHECK (provider IN ('OPENAI','ANTHROPIC','GOOGLE','DEEPSEEK','OPENROUTER','ROUTER_9R'));
+
+              ALTER TABLE llm_provider_master_key
+                DROP CONSTRAINT IF EXISTS ck_llm_provider_master_key_provider;
+
+              ALTER TABLE llm_provider_master_key
+                ADD CONSTRAINT ck_llm_provider_master_key_provider
+                CHECK (provider IN ('OPENAI','ANTHROPIC','GOOGLE','DEEPSEEK','OPENROUTER','ROUTER_9R'));
+
+              ALTER TABLE llm_provider_master_key
+                DROP CONSTRAINT IF EXISTS ck_llm_provider_master_key_provider_format;
+
+              ALTER TABLE llm_provider_master_key
+                ADD CONSTRAINT ck_llm_provider_master_key_provider_format
+                CHECK (
+                  key_format IS NULL
+                  OR (provider IN ('OPENAI','DEEPSEEK') AND key_format = 'OPENAI_FORMAT')
+                  OR (provider = 'ANTHROPIC' AND key_format = 'ANTHROPIC_FORMAT')
+                  OR (provider = 'GOOGLE' AND key_format = 'GOOGLE_FORMAT')
+                  OR (provider IN ('OPENROUTER','ROUTER_9R')
+                      AND key_format IN ('OPENAI_FORMAT','ANTHROPIC_FORMAT'))
+                );
+        - dropColumn:
+            tableName: provider_catalog
+            columns:
+              - column: { name: default_base_url }

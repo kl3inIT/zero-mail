@@ -173,24 +173,21 @@ export function RuleCatalogPage() {
     <div className="space-y-6">
       <header className="flex items-end justify-between gap-4">
         <div>
-          <p className="text-muted-foreground font-mono text-[11px] tracking-wider uppercase">
-            Rule operations
-          </p>
-          <h1 className="text-ink text-xl font-semibold">Rule Catalog</h1>
+          <h1 className="text-ink text-xl font-semibold">Ví dụ tạo quy tắc</h1>
           <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-            Personas and bilingual examples used by the user rule builder.
+            Quản lý nhóm và ví dụ song ngữ hiển thị trong nút Chọn từ ví dụ.
           </p>
         </div>
         <Button type="button" onClick={openNewPersonaDialog}>
           <PlusIcon className="size-3.5" />
-          Thêm persona
+          Thêm nhóm
         </Button>
       </header>
 
       <div className="grid gap-4 xl:grid-cols-[390px_minmax(0,1fr)]">
         <Card>
           <CardHeader>
-            <CardTitle>Personas</CardTitle>
+            <CardTitle>Nhóm người dùng</CardTitle>
             <CardDescription>Chọn một nhóm để quản lý ví dụ bên phải.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -213,12 +210,12 @@ export function RuleCatalogPage() {
               <div>
                 <CardTitle>
                   {selectedPersona
-                    ? `${selectedPersona.displayNameEn} examples`
-                    : 'Examples'}
+                    ? `Ví dụ của ${selectedPersona.displayNameVi}`
+                    : 'Ví dụ'}
                 </CardTitle>
                 <CardDescription>
                   {selectedPersona
-                    ? `${selectedPersona.displayNameVi} - prompt mẫu EN/VI hiển thị khi user chọn persona này.`
+                    ? `Mẫu EN/VI hiển thị khi người dùng chọn nhóm ${selectedPersona.displayNameVi}.`
                     : 'Chọn một persona để quản lý ví dụ.'}
                 </CardDescription>
               </div>
@@ -306,7 +303,7 @@ function PersonaList({
   if (personas.length === 0) {
     return (
       <div className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
-        Chưa có persona nào trong rule catalog.
+        Chưa có nhóm ví dụ nào.
       </div>
     );
   }
@@ -317,43 +314,29 @@ function PersonaList({
         return (
           <div
             key={persona.personaId}
-            className={`rounded-lg border p-3 transition-colors ${
+            className={`rounded-md border px-3 py-2 transition-colors ${
               selected ? 'border-primary bg-violet-soft/70' : 'bg-background hover:bg-secondary'
             }`}
           >
-            <button
-              type="button"
-              className="w-full text-left"
-              aria-label={`Select persona ${persona.displayNameEn}`}
-              onClick={() => onSelect(persona.personaId)}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold">{persona.displayNameEn}</div>
-                  <div className="text-muted-foreground truncate text-xs">
-                    {persona.displayNameVi}
-                  </div>
-                </div>
-                <span className="text-muted-foreground rounded border px-1.5 py-0.5 font-mono text-[11px]">
-                  {persona.personaKey}
-                </span>
-              </div>
-              <div className="text-muted-foreground mt-2 flex items-center gap-2 text-xs">
-                <span>{persona.examples.length} examples</span>
-                <span>Order {persona.displayOrder}</span>
-                <span>{persona.icon ?? 'no icon'}</span>
-              </div>
-            </button>
-            <div className="mt-3 flex items-center justify-between gap-2 border-t pt-2">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="min-w-0 flex-1 text-left"
+                aria-label={`Chọn nhóm ${persona.displayNameEn}`}
+                onClick={() => onSelect(persona.personaId)}
+              >
+                <div className="truncate text-sm font-semibold">{persona.displayNameEn}</div>
+                <div className="text-muted-foreground truncate text-xs">{persona.displayNameVi}</div>
+              </button>
               <Switch
                 size="sm"
                 checked={persona.enabled}
                 disabled={mutationPending}
-                aria-label={`Enable persona ${persona.displayNameEn}`}
+                aria-label={`Bật nhóm ${persona.displayNameEn}`}
                 onCheckedChange={(value) => onEnabledChange(persona, value === true)}
               />
               <RowActions
-                editLabel={`Edit persona ${persona.displayNameEn}`}
+                editLabel={`Sửa nhóm ${persona.displayNameEn}`}
                 isFirst={index === 0}
                 isLast={index === personas.length - 1}
                 disabled={mutationPending}
@@ -389,11 +372,11 @@ function ExamplesTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Prompt EN</TableHead>
-          <TableHead>Prompt VI</TableHead>
-          <TableHead className="text-right">Order</TableHead>
-          <TableHead>Enabled</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
+          <TableHead>Mẫu EN</TableHead>
+          <TableHead>Mẫu VI</TableHead>
+          <TableHead className="text-right">Thứ tự</TableHead>
+          <TableHead>Bật</TableHead>
+          <TableHead className="text-right">Thao tác</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -410,13 +393,13 @@ function ExamplesTable({
                 size="sm"
                 checked={example.enabled}
                 disabled={mutationPending}
-                aria-label={`Enable example ${example.sourceRef}`}
+                aria-label={`Bật ví dụ ${example.exampleTextEn}`}
                 onCheckedChange={(value) => onEnabledChange(example, value === true)}
               />
             </TableCell>
             <TableCell>
               <RowActions
-                editLabel={`Edit example ${example.sourceRef}`}
+                editLabel={`Sửa ví dụ ${example.exampleTextEn}`}
                 isFirst={index === 0}
                 isLast={index === examples.length - 1}
                 disabled={mutationPending}
@@ -455,7 +438,7 @@ function RowActions({
         type="button"
         variant="ghost"
         size="icon-sm"
-        aria-label="Move up"
+        aria-label="Di chuyển lên"
         disabled={isFirst || disabled}
         onClick={onMoveUp}
       >
@@ -465,7 +448,7 @@ function RowActions({
         type="button"
         variant="ghost"
         size="icon-sm"
-        aria-label="Move down"
+        aria-label="Di chuyển xuống"
         disabled={isLast || disabled}
         onClick={onMoveDown}
       >
@@ -516,12 +499,12 @@ function PersonaDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>{persona ? 'Sửa persona' : 'Thêm persona'}</DialogTitle>
-          <DialogDescription>Persona là nhóm ví dụ hiển thị dưới prompt box của user.</DialogDescription>
+          <DialogTitle>{persona ? 'Sửa nhóm' : 'Thêm nhóm'}</DialogTitle>
+          <DialogDescription>Nhóm quyết định các ví dụ hiển thị dưới prompt box.</DialogDescription>
         </DialogHeader>
 
         <form className="space-y-4" onSubmit={submitForm}>
-          <Field label="Persona key" htmlFor="persona-key">
+          <Field label="Mã nhóm" htmlFor="persona-key">
             <Input
               id="persona-key"
               required
@@ -531,7 +514,7 @@ function PersonaDialog({
             />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Name EN" htmlFor="persona-name-en">
+            <Field label="Tên EN" htmlFor="persona-name-en">
               <Input
                 id="persona-name-en"
                 required
@@ -539,7 +522,7 @@ function PersonaDialog({
                 onChange={(event) => updateForm({ ...form, displayNameEn: event.target.value })}
               />
             </Field>
-            <Field label="Name VI" htmlFor="persona-name-vi">
+            <Field label="Tên VI" htmlFor="persona-name-vi">
               <Input
                 id="persona-name-vi"
                 required
@@ -556,7 +539,7 @@ function PersonaDialog({
                 onChange={(event) => updateForm({ ...form, icon: event.target.value })}
               />
             </Field>
-            <Field label="Order" htmlFor="persona-order">
+            <Field label="Thứ tự" htmlFor="persona-order">
               <Input
                 id="persona-order"
                 required
@@ -574,7 +557,7 @@ function PersonaDialog({
                 onCheckedChange={(value) => updateForm({ ...form, enabled: value === true })}
               />
               <Label htmlFor="persona-enabled" className="font-normal">
-                Enabled
+                Bật
               </Label>
             </div>
           </div>
@@ -633,7 +616,6 @@ function ExampleDialog({
       ...form,
       exampleTextEn: form.exampleTextEn.trim(),
       exampleTextVi: form.exampleTextVi.trim(),
-      sourceRef: form.sourceRef.trim(),
       reason: ADMIN_REASON,
     });
   }
@@ -643,11 +625,11 @@ function ExampleDialog({
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{state?.example ? 'Sửa ví dụ' : 'Thêm ví dụ'}</DialogTitle>
-          <DialogDescription>Ví dụ bilingual được user chọn bên dưới prompt box.</DialogDescription>
+          <DialogDescription>Ví dụ song ngữ được user chọn bên dưới prompt box.</DialogDescription>
         </DialogHeader>
 
         <form className="space-y-4" onSubmit={submitForm}>
-          <Field label="Persona" htmlFor="example-persona">
+          <Field label="Nhóm" htmlFor="example-persona">
             <select
               id="example-persona"
               className="border-input bg-background h-8 w-full rounded-lg border px-2 text-sm"
@@ -663,7 +645,7 @@ function ExampleDialog({
             </select>
           </Field>
           <div className="grid gap-4 lg:grid-cols-2">
-            <Field label="Prompt EN" htmlFor="example-text-en">
+            <Field label="Mẫu EN" htmlFor="example-text-en">
               <Textarea
                 id="example-text-en"
                 required
@@ -672,7 +654,7 @@ function ExampleDialog({
                 onChange={(event) => updateForm({ ...form, exampleTextEn: event.target.value })}
               />
             </Field>
-            <Field label="Prompt VI" htmlFor="example-text-vi">
+            <Field label="Mẫu VI" htmlFor="example-text-vi">
               <Textarea
                 id="example-text-vi"
                 required
@@ -682,16 +664,8 @@ function ExampleDialog({
               />
             </Field>
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Field label="Source ref" htmlFor="example-source-ref">
-              <Input
-                id="example-source-ref"
-                required
-                value={form.sourceRef}
-                onChange={(event) => updateForm({ ...form, sourceRef: event.target.value })}
-              />
-            </Field>
-            <Field label="Order" htmlFor="example-order">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Thứ tự" htmlFor="example-order">
               <Input
                 id="example-order"
                 required
@@ -709,7 +683,7 @@ function ExampleDialog({
                 onCheckedChange={(value) => updateForm({ ...form, enabled: value === true })}
               />
               <Label htmlFor="example-enabled" className="font-normal">
-                Enabled
+                Bật
               </Label>
             </div>
           </div>
@@ -791,13 +765,11 @@ function personaRequestFrom(persona: EditablePersona): RuleCatalogPersonaWriteRe
 }
 
 function exampleRequestFrom(state: EditableExample | null): RuleCatalogExampleWriteRequest {
-  const personaKey = state?.persona.personaKey ?? 'persona';
   return {
     exampleTextEn: state?.example?.exampleTextEn ?? '',
     exampleTextVi: state?.example?.exampleTextVi ?? '',
     displayOrder: state?.example?.displayOrder ?? 10,
     enabled: state?.example?.enabled ?? true,
-    sourceRef: state?.example?.sourceRef ?? `admin:${personaKey}:custom`,
     reason: ADMIN_REASON,
   };
 }

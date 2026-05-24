@@ -5,9 +5,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
 /**
- * Provider's full failover chain — every credential row, priority-ordered (lowest priority is
- * primary). Includes REVOKED rows so the admin detail page can render the audit-relevant set, not
- * just the routable ones.
+ * Provider's failover chain — every remaining credential row, priority-ordered (lowest priority is
+ * primary). Key deletion removes rows from this list; append-only admin audit records retain the
+ * operator trail.
  */
 @Schema(
         name = "ProviderKeyList",

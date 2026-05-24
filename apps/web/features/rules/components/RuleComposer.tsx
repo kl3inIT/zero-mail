@@ -405,55 +405,25 @@ function ExampleChooser({
   const t = useTranslations();
   const [personaDialogOpen, setPersonaDialogOpen] = useState(false);
   const [selectedPersonaKey, setSelectedPersonaKey] = useState<string | null>(null);
-  const [selectedExampleIds, setSelectedExampleIds] = useState<string[]>([]);
   const selectedPersona =
     personas.find((persona) => persona.personaKey === selectedPersonaKey) ?? null;
   const examples = selectedPersona?.examples ?? [];
 
   function clearSelectedPersona() {
     setSelectedPersonaKey(null);
-    setSelectedExampleIds([]);
   }
 
   function handlePersonaSelect(personaKey: string) {
     setSelectedPersonaKey(personaKey);
-    setSelectedExampleIds([]);
     setPersonaDialogOpen(false);
   }
 
   function openPersonaDialog() {
-    setSelectedExampleIds([]);
     setPersonaDialogOpen(true);
   }
 
   function handlePersonaDialogOpenChange(open: boolean) {
     setPersonaDialogOpen(open);
-    setSelectedExampleIds([]);
-  }
-
-  function toggleExample(exampleId: string) {
-    setSelectedExampleIds((current) =>
-      current.includes(exampleId)
-        ? current.filter((selectedExampleId) => selectedExampleId !== exampleId)
-        : [...current, exampleId],
-    );
-  }
-
-  function handleAddSelected() {
-    const selectedExamples = examples.filter((example) =>
-      selectedExampleIds.includes(example.exampleId),
-    );
-    if (selectedExamples.length === 0) return;
-    if (selectedExamples.length === 1) {
-      onExampleClick(selectedExamples[0].exampleText);
-    } else {
-      onExampleClick(
-        `${t('rules.composer.examples.multiPromptPrefix')}\n${selectedExamples
-          .map((example) => `- ${example.exampleText}`)
-          .join('\n')}`,
-      );
-    }
-    setSelectedExampleIds([]);
   }
 
   return (
@@ -536,51 +506,25 @@ function ExampleChooser({
               {t('rules.composer.examples.empty')}
             </div>
           ) : (
-            <>
-              <div className="grid gap-2 md:grid-cols-2" data-testid="rule-example-grid">
-                {examples.map((example) => {
-                  const isSelected = selectedExampleIds.includes(example.exampleId);
-                  return (
-                    <button
-                      key={example.exampleId}
-                      type="button"
-                      disabled={isDisabled}
-                      onClick={() => toggleExample(example.exampleId)}
-                      className={`group text-foreground focus-visible:ring-primary/60 w-full rounded-md border px-3 py-3 text-left text-sm leading-relaxed whitespace-normal transition-colors hover:cursor-pointer focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60 ${
-                        isSelected
-                          ? 'border-green bg-green/10'
-                          : 'border-input hover:border-primary hover:bg-muted/40'
-                      }`}
-                    >
-                      <span className="flex items-start gap-2">
-                        {isSelected ? (
-                          <CheckCircle2
-                            className="text-green mt-0.5 size-4 shrink-0"
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          <Wand2
-                            className="text-muted-foreground mt-0.5 size-3.5 shrink-0"
-                            aria-hidden="true"
-                          />
-                        )}
-                        <span className="flex-1">{example.exampleText}</span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              {selectedExampleIds.length > 0 && (
-                <div className="flex justify-end">
-                  <Button type="button" className="gap-2" onClick={handleAddSelected}>
-                    <Plus className="size-4" aria-hidden="true" />
-                    {t('rules.composer.examples.addSelected', {
-                      count: selectedExampleIds.length,
-                    })}
-                  </Button>
-                </div>
-              )}
-            </>
+            <div className="grid gap-2 md:grid-cols-2" data-testid="rule-example-grid">
+              {examples.map((example) => (
+                <button
+                  key={example.exampleId}
+                  type="button"
+                  disabled={isDisabled}
+                  onClick={() => onExampleClick(example.exampleText)}
+                  className="group text-foreground focus-visible:ring-primary/60 hover:border-primary hover:bg-muted/40 border-input w-full rounded-md border px-3 py-3 text-left text-sm leading-relaxed whitespace-normal transition-colors hover:cursor-pointer focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <span className="flex items-start gap-2">
+                    <Wand2
+                      className="text-muted-foreground mt-0.5 size-3.5 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <span className="flex-1">{example.exampleText}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -843,25 +787,6 @@ function ManualBuilder({
         </Button>
       </div>
 
-      <div className="bg-muted/20 rounded-lg border border-dashed p-4">
-        <h3 className="font-semibold">{t('rules.manual.advancedTitle')}</h3>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {[
-            t('rules.manual.outbound.autoSend'),
-            t('rules.manual.outbound.fallbackDraft'),
-            t('rules.manual.outbound.deleteDisabled'),
-          ].map((label) => (
-            <Badge
-              key={label}
-              variant="outline"
-              className="bg-background text-muted-foreground rounded-sm px-2 py-1"
-            >
-              {label}
-            </Badge>
-          ))}
-        </div>
-      </div>
-
       {builtRule && (
         <div className="bg-accent text-accent-foreground rounded-lg border p-4">
           <div className="flex items-center gap-2 font-semibold">
@@ -884,7 +809,6 @@ function ManualBuilder({
       )}
 
       <div className="flex flex-col items-stretch gap-2 border-t pt-4 sm:flex-row sm:items-center">
-        <p className="text-muted-foreground text-xs">{t('rules.manual.saveHint')}</p>
         <Button
           type="button"
           className="sm:ml-auto"

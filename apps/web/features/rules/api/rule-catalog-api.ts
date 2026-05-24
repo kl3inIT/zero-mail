@@ -1,9 +1,19 @@
 import { api } from '@/lib/api/client';
 import type { components, paths } from '@/lib/api/schema';
 
-export type RuleCatalogExamplesResponse = components['schemas']['RuleCatalogExamplesResponse'];
-export type RuleCatalogPersonaResponse = components['schemas']['RuleCatalogPersonaResponse'];
-export type RuleCatalogExampleResponse = components['schemas']['RuleCatalogExampleResponse'];
+type GeneratedRuleCatalogExamplesResponse = components['schemas']['RuleCatalogExamplesResponse'];
+type GeneratedRuleCatalogPersonaResponse = components['schemas']['RuleCatalogPersonaResponse'];
+type GeneratedRuleCatalogExampleResponse = components['schemas']['RuleCatalogExampleResponse'];
+
+export type RuleCatalogExampleResponse = Omit<GeneratedRuleCatalogExampleResponse, 'sourceRef'> & {
+  sourceRef?: string;
+};
+export type RuleCatalogPersonaResponse = Omit<GeneratedRuleCatalogPersonaResponse, 'examples'> & {
+  examples: RuleCatalogExampleResponse[];
+};
+export type RuleCatalogExamplesResponse = Omit<GeneratedRuleCatalogExamplesResponse, 'personas'> & {
+  personas: RuleCatalogPersonaResponse[];
+};
 export type RuleCatalogActionsResponse = components['schemas']['RuleCatalogActionsResponse'];
 export type RuleCatalogActionDescriptorResponse =
   components['schemas']['RuleCatalogActionDescriptorResponse'];

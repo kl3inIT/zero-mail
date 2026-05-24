@@ -5,6 +5,7 @@
             "config",
             "gmail",
             "gmail :: usecases",
+            "llm :: routing",
             "rules :: catalog.usecases",
             "shared :: crypto",
             "shared :: error",

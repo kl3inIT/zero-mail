@@ -1,0 +1,36 @@
+databaseChangeLog:
+  - changeSet:
+      id: 087-drop-rule-example-source-ref
+      author: zero-mail
+      preConditions:
+        - onFail: MARK_RAN
+        - columnExists:
+            tableName: rule_example_prompt
+            columnName: source_ref
+      changes:
+        - dropUniqueConstraint:
+            tableName: rule_example_prompt
+            constraintName: ux_rule_example_prompt_persona_source
+        - dropColumn:
+            tableName: rule_example_prompt
+            columnName: source_ref
+      rollback:
+        - addColumn:
+            tableName: rule_example_prompt
+            columns:
+              - column:
+                  name: source_ref
+                  type: varchar(128)
+        - sql:
+            sql: |
+              UPDATE rule_example_prompt
+              SET source_ref = 'admin:migrated:' || prompt_id::text
+              WHERE source_ref IS NULL OR btrim(source_ref) = '';
+        - addNotNullConstraint:
+            tableName: rule_example_prompt
+            columnName: source_ref
+            columnDataType: varchar(128)
+        - addUniqueConstraint:
+            tableName: rule_example_prompt
+            columnNames: persona_id, source_ref
+            constraintName: ux_rule_example_prompt_persona_source

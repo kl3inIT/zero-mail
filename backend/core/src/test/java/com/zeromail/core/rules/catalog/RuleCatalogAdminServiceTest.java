@@ -43,6 +43,7 @@ class RuleCatalogAdminServiceTest extends PostgresContainerTest {
     void resetAdminState() {
         RuleCatalogTestFixtures.resetSeedCatalog(jdbcTemplate);
         RuleCatalogTestFixtures.resetAdminAudit(jdbcTemplate);
+        jdbcTemplate.execute("UPDATE llm_provider_master_key SET created_by_user_id = NULL");
         jdbcTemplate.execute("DELETE FROM admin_users");
         adminUserRepository.save(
                 new AdminUserEntity(
@@ -90,8 +91,7 @@ class RuleCatalogAdminServiceTest extends PostgresContainerTest {
                                             "Label QA emails as @[QA]",
                                             "Gắn nhãn email QA là @[QA]",
                                             10,
-                                            true,
-                                            "test:qa:001"),
+                                            true),
                                     "create prompt",
                                     "127.0.0.1",
                                     requestId);
@@ -101,8 +101,7 @@ class RuleCatalogAdminServiceTest extends PostgresContainerTest {
                                     "Label QA emails as @[QA Updated]",
                                     "Gắn nhãn email QA là @[QA Updated]",
                                     20,
-                                    true,
-                                    "test:qa:001"),
+                                    true),
                             "update prompt",
                             "127.0.0.1",
                             requestId);
@@ -134,7 +133,11 @@ class RuleCatalogAdminServiceTest extends PostgresContainerTest {
                         Boolean.class);
         Boolean promptEnabled =
                 jdbcTemplate.queryForObject(
-                        "SELECT enabled FROM rule_example_prompt WHERE source_ref = 'test:qa:001'",
+                        """
+                        SELECT enabled
+                        FROM rule_example_prompt
+                        WHERE prompt_en = 'Label QA emails as @[QA Updated]'
+                        """,
                         Boolean.class);
         Boolean actionEnabled =
                 jdbcTemplate.queryForObject(

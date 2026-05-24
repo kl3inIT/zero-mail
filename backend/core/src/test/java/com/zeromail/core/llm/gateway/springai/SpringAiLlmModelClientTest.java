@@ -14,15 +14,16 @@ import com.zeromail.core.llm.usecases.LlmChatResult;
 import com.zeromail.core.llm.usecases.LlmTool;
 import com.zeromail.core.llm.usecases.SystemPrompts;
 import java.util.List;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.ChatClientAttributes;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.ai.tool.ToolCallback;
 
 class SpringAiLlmModelClientTest {
 
@@ -38,8 +39,11 @@ class SpringAiLlmModelClientTest {
                 .thenReturn(chatClientRequestSpecification);
         when(chatClientRequestSpecification.user(anyString()))
                 .thenReturn(chatClientRequestSpecification);
-        when(chatClientRequestSpecification.toolCallbacks(
-                        ArgumentMatchers.<List<ToolCallback>>any()))
+        when(chatClientRequestSpecification.tools(
+                        ArgumentMatchers.<Consumer<ChatClient.ToolSpec>>any()))
+                .thenReturn(chatClientRequestSpecification);
+        when(chatClientRequestSpecification.advisors(
+                        ArgumentMatchers.<Consumer<ChatClient.AdvisorSpec>>any()))
                 .thenReturn(chatClientRequestSpecification);
         when(chatClientRequestSpecification.options(any(OpenAiChatOptions.Builder.class)))
                 .thenReturn(chatClientRequestSpecification);
@@ -62,6 +66,7 @@ class SpringAiLlmModelClientTest {
                 ArgumentCaptor.forClass(OpenAiChatOptions.Builder.class);
         verify(chatClientRequestSpecification).system(SystemPrompts.TRIAGE_SYSTEM_PROMPT);
         verify(chatClientRequestSpecification).user("sanitized-user-message");
+        assertRawToolCallAdvisorAutoRegistrationDisabled(chatClientRequestSpecification);
         verify(chatClientRequestSpecification).options(openAiChatOptionsCaptor.capture());
         OpenAiChatOptions capturedOptions = openAiChatOptionsCaptor.getValue().build();
         assertThat(capturedOptions.getToolChoice())
@@ -95,8 +100,11 @@ class SpringAiLlmModelClientTest {
                 .thenReturn(chatClientRequestSpecification);
         when(chatClientRequestSpecification.user(anyString()))
                 .thenReturn(chatClientRequestSpecification);
-        when(chatClientRequestSpecification.toolCallbacks(
-                        ArgumentMatchers.<List<ToolCallback>>any()))
+        when(chatClientRequestSpecification.tools(
+                        ArgumentMatchers.<Consumer<ChatClient.ToolSpec>>any()))
+                .thenReturn(chatClientRequestSpecification);
+        when(chatClientRequestSpecification.advisors(
+                        ArgumentMatchers.<Consumer<ChatClient.AdvisorSpec>>any()))
                 .thenReturn(chatClientRequestSpecification);
         when(chatClientRequestSpecification.options(any(OpenAiChatOptions.Builder.class)))
                 .thenReturn(chatClientRequestSpecification);
@@ -108,6 +116,20 @@ class SpringAiLlmModelClientTest {
         LlmChatResult chatResult = modelClient.call(request());
 
         assertThat(chatResult.toolCalls()).isEmpty();
+    }
+
+    private void assertRawToolCallAdvisorAutoRegistrationDisabled(
+            ChatClient.ChatClientRequestSpec chatClientRequestSpecification) {
+        ArgumentCaptor<Consumer<ChatClient.AdvisorSpec>> advisorSpecConsumerCaptor =
+                ArgumentCaptor.forClass(Consumer.class);
+        verify(chatClientRequestSpecification).advisors(advisorSpecConsumerCaptor.capture());
+        ChatClient.AdvisorSpec advisorSpec = mock(ChatClient.AdvisorSpec.class);
+        when(advisorSpec.param(anyString(), any())).thenReturn(advisorSpec);
+
+        advisorSpecConsumerCaptor.getValue().accept(advisorSpec);
+
+        verify(advisorSpec)
+                .param(ChatClientAttributes.TOOL_CALL_ADVISOR_AUTO_REGISTER.getKey(), false);
     }
 
     private LlmChatRequest request() {

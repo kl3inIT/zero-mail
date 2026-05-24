@@ -1,6 +1,7 @@
 package com.zeromail.core.llm.usecases;
 
 import com.zeromail.core.billing.domain.CallSite;
+import com.zeromail.core.llm.routing.PlatformLlmRouteCredentials;
 import java.util.List;
 
 /**
@@ -10,5 +11,17 @@ import java.util.List;
 public interface SemanticIntentEvaluator {
 
     SemanticIntentEvaluationResult evaluate(
-            CallSite callSite, String sanitizedMessageContent, List<SemanticIntentRequest> intents);
+            CallSite callSite,
+            String modelId,
+            String sanitizedMessageContent,
+            List<SemanticIntentRequest> intents);
+
+    default SemanticIntentEvaluationResult evaluate(
+            CallSite callSite,
+            String modelId,
+            PlatformLlmRouteCredentials routeCredentials,
+            String sanitizedMessageContent,
+            List<SemanticIntentRequest> intents) {
+        return evaluate(callSite, modelId, sanitizedMessageContent, intents);
+    }
 }

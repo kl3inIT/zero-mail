@@ -4,13 +4,11 @@ import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import enMessages from '@/i18n/messages/en.json';
-import { RuleTemplateGallery } from '@/features/rules/components/RuleTemplateGallery';
 import { RuleComposer } from '@/features/rules/components/RuleComposer';
 import { RuleList } from '@/features/rules/components/RuleList';
 
 const rulesHooks = vi.hoisted(() => ({
   useRules: vi.fn(),
-  useRuleTemplates: vi.fn(),
   useCompileRule: vi.fn(),
   useCreateRule: vi.fn(),
   useUpdateRule: vi.fn(),
@@ -19,7 +17,6 @@ const rulesHooks = vi.hoisted(() => ({
   usePreviewDraftRule: vi.fn(),
   usePreviewCustomMail: vi.fn(),
   useUpdateRuleEnabled: vi.fn(),
-  useMaterializeRuleTemplate: vi.fn(),
 }));
 
 vi.mock('@/features/rules/hooks/use-rules', () => rulesHooks);
@@ -104,6 +101,43 @@ describe('RulesWorkspace Wave 0 contract', () => {
     expect(container.querySelector('img')).toBeNull();
   });
 
+  it('keeps template provenance out of the user-facing rule list', () => {
+    renderWithMessages(
+      <RuleList
+        rules={[
+          {
+            ruleId: 'rule-template',
+            displayName: 'Archive receipts',
+            sourceText: 'Archive receipts',
+            enabled: true,
+            orderIndex: 1,
+            sourceLanguage: 'en',
+            schemaVersion: 'v1',
+            matcherAst: '{}',
+            actionIntents: '[]',
+            entityVersion: 1,
+            lastPreviewedEntityVersion: null,
+            lastPreviewedAt: null,
+            templateKey: 'archive-receipts',
+            templateVersion: 1,
+            customized: false,
+          },
+        ]}
+        selectedRuleId="rule-template"
+        isLoading={false}
+        pendingRuleId={null}
+        onSelectRule={vi.fn()}
+        onEditRule={vi.fn()}
+        onToggleEnabled={vi.fn()}
+        onDeleteRule={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByText('Archive receipts').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Template')).not.toBeInTheDocument();
+    expect(screen.queryByText('archive-receipts · v1')).not.toBeInTheDocument();
+  });
+
   it('pins UI-SPEC visible copy for component tests', () => {
     expect(enMessages.rules.preview.noWriteNotice).toBe('No Gmail changes were made.');
     expect(enMessages.rules.composer.compileCta).toBe('Convert to rule');
@@ -116,32 +150,6 @@ describe('RulesWorkspace Wave 0 contract', () => {
   // Test tab moved to previewAllEnabledRules. The composer dialog no
   // longer has an inline preview path, so this test no longer applies.
   // Keep the rest of the suite asserting on the new flow.
-
-  it('keeps customized materialized templates disabled in the gallery', () => {
-    renderWithMessages(
-      <RuleTemplateGallery
-        templates={[
-          {
-            templateKey: 'archive-receipts',
-            templateVersion: 1,
-            displayName: 'Archive receipts',
-            localizedCopyKey: 'rules.templates.archive.receipts.sourceText',
-            sourceText: 'Archive receipts',
-            actionSummary: 'archive',
-            status: 'materializable',
-            sourcedFromOnboarding: true,
-            materialized: true,
-            customized: true,
-          },
-        ]}
-        isLoading={false}
-        pendingTemplateKey={null}
-        onUseTemplate={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByRole('button', { name: 'Use starter rule' })).toBeDisabled();
-  });
 });
 
 function renderWithMessages(children: ReactNode) {

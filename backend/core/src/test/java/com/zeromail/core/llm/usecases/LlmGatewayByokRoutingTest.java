@@ -2,7 +2,6 @@ package com.zeromail.core.llm.usecases;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -56,17 +55,7 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
 
     @MockitoBean LlmModelClient platformLlmModelClient;
 
-    @MockitoBean(name = "openAiByokModelClient")
-    ByokLlmModelClient openAiByokModelClient;
-
-    @MockitoBean(name = "anthropicByokModelClient")
-    ByokLlmModelClient anthropicByokModelClient;
-
-    @MockitoBean(name = "googleGenAiByokModelClient")
-    ByokLlmModelClient googleGenAiByokModelClient;
-
-    @MockitoBean(name = "deepSeekByokModelClient")
-    ByokLlmModelClient deepSeekByokModelClient;
+    @MockitoBean LlmProviderChatExecutor providerChatExecutor;
 
     @BeforeEach
     void resetRows() {
@@ -86,7 +75,7 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
     @Test
     void byok_row_routes_through_byok_client_not_platform() {
         seedByokTenant(TENANT_ID, BYOKProvider.ANTHROPIC, null, PLAINTEXT_KEY);
-        when(anthropicByokModelClient.call(any(byte[].class), any(), any()))
+        when(providerChatExecutor.call(any(LlmProviderCredential.class), any()))
                 .thenReturn(labelResult("{}"));
 
         ToolCallResult toolCallResult =
@@ -94,8 +83,11 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
                         .call(() -> llmGateway.chat(CallSite.PREVIEW, "<p>hello</p>"));
 
         assertThat(toolCallResult.action()).isEqualTo(Action.LABEL);
-        verify(anthropicByokModelClient)
-                .call(any(byte[].class), eq(null), any(LlmChatRequest.class));
+        ArgumentCaptor<LlmProviderCredential> credentialCaptor =
+                ArgumentCaptor.forClass(LlmProviderCredential.class);
+        verify(providerChatExecutor).call(credentialCaptor.capture(), any(LlmChatRequest.class));
+        assertThat(credentialCaptor.getValue().providerId()).isEqualTo("ANTHROPIC");
+        assertThat(credentialCaptor.getValue().source()).isEqualTo(LlmCredentialSource.BYOK);
         verify(platformLlmModelClient, never()).call(any());
     }
 
@@ -110,24 +102,27 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
 
         assertThat(toolCallResult.action()).isEqualTo(Action.LABEL);
         verify(platformLlmModelClient).call(any(LlmChatRequest.class));
-        verify(anthropicByokModelClient, never()).call(any(byte[].class), anyString(), any());
-        verify(openAiByokModelClient, never()).call(any(byte[].class), anyString(), any());
+        verify(providerChatExecutor, never()).call(any(), any());
     }
 
     @Test
     void openai_byok_routes_to_openai_client() {
-        String endpoint = "https://together.xyz/v1";
+        String endpoint = "https://openrouter.ai/api/v1";
         seedByokTenant(TENANT_ID, BYOKProvider.OPENAI, endpoint, PLAINTEXT_KEY);
-        when(openAiByokModelClient.call(any(byte[].class), anyString(), any()))
+        when(providerChatExecutor.call(any(LlmProviderCredential.class), any()))
                 .thenReturn(labelResult("{}"));
 
         ScopedValue.where(TenantContext.TENANT, TENANT_ID.toString())
                 .run(() -> llmGateway.chat(CallSite.PREVIEW, "<p>hello</p>"));
 
+        ArgumentCaptor<LlmProviderCredential> credentialCaptor =
+                ArgumentCaptor.forClass(LlmProviderCredential.class);
         ArgumentCaptor<LlmChatRequest> requestCaptor =
                 ArgumentCaptor.forClass(LlmChatRequest.class);
-        verify(openAiByokModelClient)
-                .call(any(byte[].class), eq(endpoint), requestCaptor.capture());
+        verify(providerChatExecutor).call(credentialCaptor.capture(), requestCaptor.capture());
+        assertThat(credentialCaptor.getValue().providerId()).isEqualTo("OPENAI");
+        assertThat(credentialCaptor.getValue().keyFormat()).isEqualTo("OPENAI_FORMAT");
+        assertThat(credentialCaptor.getValue().baseUrl()).isEqualTo(endpoint);
         assertThat(requestCaptor.getValue())
                 .satisfies(
                         request -> {
@@ -142,16 +137,19 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
     void google_genai_byok_routes_to_google_client() {
         String endpoint = "https://generativelanguage.googleapis.com/v1beta";
         seedByokTenant(TENANT_ID, BYOKProvider.GOOGLE_GENAI, endpoint, PLAINTEXT_KEY);
-        when(googleGenAiByokModelClient.call(any(byte[].class), anyString(), any()))
+        when(providerChatExecutor.call(any(LlmProviderCredential.class), any()))
                 .thenReturn(labelResult("{}"));
 
         ScopedValue.where(TenantContext.TENANT, TENANT_ID.toString())
                 .run(() -> llmGateway.chat(CallSite.PREVIEW, "<p>hello</p>"));
 
+        ArgumentCaptor<LlmProviderCredential> credentialCaptor =
+                ArgumentCaptor.forClass(LlmProviderCredential.class);
         ArgumentCaptor<LlmChatRequest> requestCaptor =
                 ArgumentCaptor.forClass(LlmChatRequest.class);
-        verify(googleGenAiByokModelClient)
-                .call(any(byte[].class), eq(endpoint), requestCaptor.capture());
+        verify(providerChatExecutor).call(credentialCaptor.capture(), requestCaptor.capture());
+        assertThat(credentialCaptor.getValue().providerId()).isEqualTo("GOOGLE");
+        assertThat(credentialCaptor.getValue().keyFormat()).isEqualTo("GOOGLE_FORMAT");
         assertThat(requestCaptor.getValue().model()).isEqualTo("gemini-2.0-flash");
         verify(platformLlmModelClient, never()).call(any());
     }
@@ -160,16 +158,19 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
     void deepseek_byok_routes_to_deepseek_client() {
         String endpoint = "https://api.deepseek.com";
         seedByokTenant(TENANT_ID, BYOKProvider.DEEPSEEK, endpoint, PLAINTEXT_KEY);
-        when(deepSeekByokModelClient.call(any(byte[].class), anyString(), any()))
+        when(providerChatExecutor.call(any(LlmProviderCredential.class), any()))
                 .thenReturn(labelResult("{}"));
 
         ScopedValue.where(TenantContext.TENANT, TENANT_ID.toString())
                 .run(() -> llmGateway.chat(CallSite.PREVIEW, "<p>hello</p>"));
 
+        ArgumentCaptor<LlmProviderCredential> credentialCaptor =
+                ArgumentCaptor.forClass(LlmProviderCredential.class);
         ArgumentCaptor<LlmChatRequest> requestCaptor =
                 ArgumentCaptor.forClass(LlmChatRequest.class);
-        verify(deepSeekByokModelClient)
-                .call(any(byte[].class), eq(endpoint), requestCaptor.capture());
+        verify(providerChatExecutor).call(credentialCaptor.capture(), requestCaptor.capture());
+        assertThat(credentialCaptor.getValue().providerId()).isEqualTo("DEEPSEEK");
+        assertThat(credentialCaptor.getValue().keyFormat()).isEqualTo("OPENAI_FORMAT");
         assertThat(requestCaptor.getValue().model()).isEqualTo("deepseek-chat");
         verify(platformLlmModelClient, never()).call(any());
     }
@@ -179,10 +180,12 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
         byte[] encryptedEnvelope =
                 seedByokTenant(TENANT_ID, BYOKProvider.ANTHROPIC, null, PLAINTEXT_KEY);
         AtomicReference<byte[]> copiedDecryptedKey = new AtomicReference<>();
-        when(anthropicByokModelClient.call(any(byte[].class), any(), any()))
+        when(providerChatExecutor.call(any(LlmProviderCredential.class), any()))
                 .thenAnswer(
                         invocation -> {
-                            byte[] decryptedKey = invocation.getArgument(0, byte[].class);
+                            LlmProviderCredential credential =
+                                    invocation.getArgument(0, LlmProviderCredential.class);
+                            byte[] decryptedKey = credential.plaintextKey();
                             copiedDecryptedKey.set(
                                     Arrays.copyOf(decryptedKey, decryptedKey.length));
                             return labelResult("{}");
@@ -192,8 +195,8 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
                 .run(() -> llmGateway.chat(CallSite.PREVIEW, "<p>hello</p>"));
 
         verify(refreshTokenCipher).decrypt(any(byte[].class), eq(TENANT_ID.toString()));
-        verify(anthropicByokModelClient)
-                .call(any(byte[].class), eq(null), any(LlmChatRequest.class));
+        verify(providerChatExecutor)
+                .call(any(LlmProviderCredential.class), any(LlmChatRequest.class));
         assertThat(copiedDecryptedKey.get()).containsExactly(PLAINTEXT_KEY);
         assertThat(encryptedEnvelope).isNotEmpty();
     }
@@ -201,7 +204,7 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
     @Test
     void byok_path_does_not_log_key_bytes() {
         seedByokTenant(TENANT_ID, BYOKProvider.ANTHROPIC, null, PLAINTEXT_KEY);
-        when(anthropicByokModelClient.call(any(byte[].class), any(), any()))
+        when(providerChatExecutor.call(any(LlmProviderCredential.class), any()))
                 .thenReturn(labelResult("{\"value\":\"Receipts\"}"));
         ch.qos.logback.classic.Logger gatewayLogger =
                 (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(LlmGatewayImpl.class);
@@ -250,11 +253,13 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
             }
         }
         ConcurrentHashMap<UUID, String> byokKeyByTenant = new ConcurrentHashMap<>();
-        when(anthropicByokModelClient.call(any(byte[].class), any(), any()))
+        when(providerChatExecutor.call(any(LlmProviderCredential.class), any()))
                 .thenAnswer(
                         invocation -> {
                             UUID tenantId = UUID.fromString(TenantContext.currentOrThrow());
-                            byte[] decryptedKey = invocation.getArgument(0, byte[].class);
+                            LlmProviderCredential credential =
+                                    invocation.getArgument(0, LlmProviderCredential.class);
+                            byte[] decryptedKey = credential.plaintextKey();
                             byokKeyByTenant.put(
                                     tenantId, new String(decryptedKey, StandardCharsets.UTF_8));
                             return labelResult("{\"boundTenantId\":\"" + tenantId + "\"}");

@@ -28,8 +28,12 @@ public interface LlmProviderMasterKeyRepository
             "select masterKey from LlmProviderMasterKeyEntity masterKey "
                     + "where masterKey.provider = :provider "
                     + "order by masterKey.priority")
-    List<LlmProviderMasterKeyEntity> findByProviderOrderByPriority(
-            @Param("provider") LlmProvider provider);
+    List<LlmProviderMasterKeyEntity> findByProviderIdOrderByPriority(
+            @Param("provider") String provider);
+
+    default List<LlmProviderMasterKeyEntity> findByProviderOrderByPriority(LlmProvider provider) {
+        return findByProviderIdOrderByPriority(provider.id());
+    }
 
     /**
      * Phase B v2: ordered failover chain — ACTIVE keys only. The router walks this list and tries
@@ -40,8 +44,13 @@ public interface LlmProviderMasterKeyRepository
                     + "where masterKey.provider = :provider "
                     + "and masterKey.status = :status "
                     + "order by masterKey.priority")
-    List<LlmProviderMasterKeyEntity> findActiveByProviderOrderByPriority(
-            @Param("provider") LlmProvider provider, @Param("status") MasterKeyStatus status);
+    List<LlmProviderMasterKeyEntity> findActiveByProviderIdOrderByPriority(
+            @Param("provider") String provider, @Param("status") MasterKeyStatus status);
+
+    default List<LlmProviderMasterKeyEntity> findActiveByProviderOrderByPriority(
+            LlmProvider provider, MasterKeyStatus status) {
+        return findActiveByProviderIdOrderByPriority(provider.id(), status);
+    }
 
     /**
      * Backwards-compat shim for existing call sites that expect "one canonical key per provider".
@@ -49,7 +58,7 @@ public interface LlmProviderMasterKeyRepository
      */
     default Optional<LlmProviderMasterKeyEntity> findPrimaryActive(LlmProvider provider) {
         List<LlmProviderMasterKeyEntity> activeKeys =
-                findActiveByProviderOrderByPriority(provider, MasterKeyStatus.ACTIVE);
+                findActiveByProviderIdOrderByPriority(provider.id(), MasterKeyStatus.ACTIVE);
         return activeKeys.isEmpty() ? Optional.empty() : Optional.of(activeKeys.get(0));
     }
 

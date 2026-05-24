@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Zero Mail - Current LLM, Chat, and Provider Routing Architecture</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f8fa;
+        --panel: #ffffff;
+        --panel-muted: #f1f4f8;
+        --text: #172033;
+        --muted: #5f6b7a;
+        --border: #d8dee8;
+        --strong: #0f5132;
+        --warn: #8a5a00;
+        --danger: #9f1239;
+        --blue: #175cd3;
+        --green-bg: #e8f5ee;
+        --yellow-bg: #fff6d9;
+        --red-bg: #ffe7ec;
+        --blue-bg: #eaf1ff;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.55;
+      }
+
+      main {
+        width: min(1180px, calc(100vw - 40px));
+        margin: 0 auto;
+        padding: 32px 0 48px;
+      }
+
+      header {
+        padding: 26px 0 20px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 24px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        line-height: 1.18;
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 34px;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        font-size: 22px;
+        margin-bottom: 14px;
+      }
+
+      h3 {
+        font-size: 16px;
+        margin-bottom: 8px;
+      }
+
+      p {
+        margin: 8px 0 0;
+      }
+
+      code {
+        background: #eef2f7;
+        border: 1px solid #dce3ee;
+        border-radius: 5px;
+        padding: 1px 5px;
+        font-family: "JetBrains Mono", Consolas, monospace;
+        font-size: 0.92em;
+      }
+
+      .lede {
+        max-width: 860px;
+        color: var(--muted);
+        font-size: 16px;
+        margin-top: 12px;
+      }
+
+      .meta {
+        margin-top: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 4px 10px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--panel);
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      section {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 18px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 14px;
+      }
+
+      .card.muted {
+        background: var(--panel-muted);
+      }
+
+      .status {
+        border-radius: 8px;
+        padding: 12px;
+        border: 1px solid var(--border);
+      }
+
+      .status.good {
+        background: var(--green-bg);
+        border-color: #b7dcc8;
+      }
+
+      .status.warn {
+        background: var(--yellow-bg);
+        border-color: #edd080;
+      }
+
+      .status.bad {
+        background: var(--red-bg);
+        border-color: #f3b3c0;
+      }
+
+      .status.info {
+        background: var(--blue-bg);
+        border-color: #b9ccf3;
+      }
+
+      .label {
+        display: inline-block;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+
+      .flow {
+        display: grid;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .step {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 12px;
+      }
+
+      .arrow {
+        color: var(--muted);
+        font-size: 13px;
+        padding-left: 12px;
+      }
+
+      ul,
+      ol {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+
+      li {
+        margin: 5px 0;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--border);
+        padding: 10px;
+        vertical-align: top;
+        text-align: left;
+      }
+
+      th {
+        background: var(--panel-muted);
+        font-weight: 700;
+      }
+
+      .mono-list li {
+        font-family: "JetBrains Mono", Consolas, monospace;
+        font-size: 13px;
+      }
+
+      .decision {
+        border-left: 4px solid var(--blue);
+        padding-left: 14px;
+      }
+
+      .small {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media (max-width: 860px) {
+        main {
+          width: min(100vw - 24px, 1180px);
+          padding-top: 20px;
+        }
+
+        h1 {
+          font-size: 27px;
+        }
+
+        .grid,
+        .two {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Current LLM, Chat, and Provider Routing Architecture</h1>
+        <p class="lede">
+          This note documents the architecture as it exists during the Phase 08.1 / quick-task
+          refactor, explains why <code>core.chat</code> and <code>core.llm</code> are separate
+          modules, and identifies the naming and execution boundaries that should be cleaned up
+          before the unified provider runtime is considered complete.
+        </p>
+        <div class="meta">
+          <span class="pill">Project: Zero Mail</span>
+          <span class="pill">Date: 2026-05-24</span>
+          <span class="pill">Spring AI: 2.0.0-M7</span>
+          <span class="pill">Scope: Architecture explanation, no Java code changes</span>
+        </div>
+      </header>
+
+      <section>
+        <h2>Executive Summary</h2>
+        <div class="grid">
+          <div class="status good">
+            <span class="label">Keep</span>
+            <h3>Separate chat product logic from generic LLM execution</h3>
+            <p>
+              <code>core.chat</code> owns assistant conversations, persisted chat messages, tool
+              UX, confirmation leases, and privacy sanitization for chat tool outputs.
+              <code>core.llm</code> owns model calls, provider adapters, routing, usage recording,
+              credit charging, BYOK credentials, and prompt/tool-call execution.
+            </p>
+          </div>
+          <div class="status warn">
+            <span class="label">Rename / reshape</span>
+            <h3><code>*ByokModelClient</code> names are now misleading</h3>
+            <p>
+              After introducing <code>LlmProviderCredential(source=PLATFORM|BYOK)</code>, provider
+              execution is no longer BYOK-specific. The old BYOK clients are becoming credential
+              adapters/wrappers, not the real execution layer.
+            </p>
+          </div>
+          <div class="status bad">
+            <span class="label">Fix</span>
+            <h3>Chat streaming still bypasses admin runtime routing</h3>
+            <p>
+              Non-streaming LLM calls are moving toward route credentials from admin master keys.
+              Chat assistant streaming still uses <code>SpringAiChatModelFactory</code> directly
+              and currently builds OpenAI-compatible models on a separate path.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Why Chat and LLM Are Separate Domains</h2>
+        <div class="grid two">
+          <div class="card">
+            <h3><code>core.chat</code> is a product workflow domain</h3>
+            <p>It should own everything that makes the assistant a user-facing workflow:</p>
+            <ul>
+              <li>chat threads, messages, parts, memory, and persistence;</li>
+              <li>tool catalogs and tool-call state emitted to the UI;</li>
+              <li>confirmation cards and pending user actions;</li>
+              <li>send/reply/forward preview flow;</li>
+              <li>chat-specific privacy rules such as stripping Gmail-read body output.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3><code>core.llm</code> is a platform capability domain</h3>
+            <p>It should own model execution regardless of who consumes it:</p>
+            <ul>
+              <li>provider credentials and credential-source policy;</li>
+              <li>model routing, fallback, and task-to-feature mapping;</li>
+              <li>Spring AI provider adapters;</li>
+              <li>tool schema conversion and result parsing primitives;</li>
+              <li>credit ledger integration, usage recording, and safety gates.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="status info" style="margin-top: 14px">
+          <span class="label">Decision</span>
+          <p class="decision">
+            The split itself is valid. The problem is not that chat and LLM are separate. The
+            problem is that chat currently owns a Spring AI model factory that duplicates provider
+            execution decisions. Chat should keep conversation orchestration, but provider model
+            construction should move behind the same LLM runtime used by rule, triage, draft, and
+            semantic calls.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Current Runtime Flows</h2>
+        <div class="grid">
+          <div class="card muted">
+            <h3>1. Non-streaming platform calls</h3>
+            <div class="flow">
+              <div class="step">Rule / triage / draft / semantic caller</div>
+              <div class="arrow">then</div>
+              <div class="step"><code>LlmGatewayImpl</code></div>
+              <div class="arrow">then</div>
+              <div class="step">
+                <code>LlmRouteResolver</code> via admin <code>LlmRouter</code>
+              </div>
+              <div class="arrow">then</div>
+              <div class="step">
+                <code>PlatformLlmRouteCredentialResolver</code> resolves platform master key
+              </div>
+              <div class="arrow">then</div>
+              <div class="step">
+                <code>SpringAiLlmModelClient</code> delegates route-aware calls to
+                <code>SpringAiProviderChatExecutor</code>
+              </div>
+            </div>
+          </div>
+
+          <div class="card muted">
+            <h3>2. Non-streaming BYOK calls</h3>
+            <div class="flow">
+              <div class="step"><code>LlmGatewayImpl</code> checks tenant BYOK credentials</div>
+              <div class="arrow">then</div>
+              <div class="step">
+                Selects old wrapper: <code>OpenAiByokModelClient</code>,
+                <code>AnthropicByokModelClient</code>, <code>GoogleGenAiByokModelClient</code>, or
+                <code>DeepSeekByokModelClient</code>
+              </div>
+              <div class="arrow">then</div>
+              <div class="step">
+                Most wrappers now create <code>LlmProviderCredential(source=BYOK)</code> and call
+                <code>SpringAiProviderChatExecutor</code>
+              </div>
+              <div class="arrow">then</div>
+              <div class="step">Usage is recorded with credential source <code>BYOK</code>; platform credits are skipped</div>
+            </div>
+          </div>
+
+          <div class="card muted">
+            <h3>3. Chat assistant streaming</h3>
+            <div class="flow">
+              <div class="step"><code>ChatOrchestrator</code> / chat use case</div>
+              <div class="arrow">then</div>
+              <div class="step"><code>ChatLlmGateway</code></div>
+              <div class="arrow">then</div>
+              <div class="step"><code>SpringAiStreamingChatModelClient</code></div>
+              <div class="arrow">then</div>
+              <div class="step"><code>SpringAiChatModelFactory.forTenant(...)</code></div>
+              <div class="arrow">then</div>
+              <div class="step">
+                Builds or reuses an <code>OpenAiChatModel</code> for platform or OpenAI BYOK
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Current Mismatches</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>What is happening now</th>
+              <th>Why it is a problem</th>
+              <th>Clean target</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Provider execution naming</td>
+              <td>
+                Classes named <code>*ByokModelClient</code> are still part of the call path even
+                after introducing <code>LlmProviderCredential</code>.
+              </td>
+              <td>
+                The name suggests the execution layer is BYOK-only, but the same executor should
+                serve platform/admin keys too.
+              </td>
+              <td>
+                Rename or replace them with tenant credential adapters/resolvers. Keep provider
+                execution in one <code>ProviderChatExecutor</code>.
+              </td>
+            </tr>
+            <tr>
+              <td>Platform fallback client</td>
+              <td>
+                <code>SpringAiLlmModelClient.call(request)</code> still uses fixed
+                <code>platformChatClient</code> when no route credential is supplied.
+              </td>
+              <td>
+                This is acceptable as a legacy fallback, but it must not be used when admin routing
+                selected a concrete provider/key/model.
+              </td>
+              <td>
+                Route-selected calls must require route credentials and fail over to the next route
+                if credential resolution fails.
+              </td>
+            </tr>
+            <tr>
+              <td>Chat assistant routing</td>
+              <td>
+                <code>SpringAiChatModelFactory</code> infers platform provider from config/base URL
+                and builds OpenAI-compatible streaming models itself.
+              </td>
+              <td>
+                Admin can configure routes for <code>CHAT_ASSISTANT</code>, but streaming chat does
+                not consistently consume the same route resolver/executor policy.
+              </td>
+              <td>
+                Chat should ask the LLM runtime for a streaming execution plan for
+                <code>LlmRuntimeTask.CHAT_ASSISTANT</code>.
+              </td>
+            </tr>
+            <tr>
+              <td>OpenRouter / 9router modeling</td>
+              <td>
+                They are represented like built-in providers in parts of the platform model.
+              </td>
+              <td>
+                They are custom OpenAI-compatible endpoints, not official provider SDK families.
+                Treating them as first-class SDK providers makes routing and UI harder to reason
+                about.
+              </td>
+              <td>
+                Store provider/gateway entries by execution protocol such as
+                <code>OPENAI_FORMAT</code> or <code>ANTHROPIC_FORMAT</code>, with custom base URL.
+              </td>
+            </tr>
+            <tr>
+              <td>Structured semantic output</td>
+              <td>
+                Semantic evaluation has a separate route-aware path and currently needs closer
+                alignment with the shared provider executor.
+              </td>
+              <td>
+                If structured-output calls do not share credential and protocol selection, future
+                model routing bugs can reappear in a different call site.
+              </td>
+              <td>
+                Add a shared structured-output executor or make semantic evaluation consume the
+                same provider credential abstraction explicitly.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Recommended Target Shape</h2>
+        <div class="grid two">
+          <div class="card">
+            <h3>Keep domain ownership stable</h3>
+            <ul>
+              <li><code>core.chat</code> keeps chat state, tools, UI protocol, and confirmation flow.</li>
+              <li><code>core.llm</code> keeps LLM runtime contracts and Spring AI adapters.</li>
+              <li><code>core.admin</code> owns admin catalog/master-key storage and implements LLM routing interfaces exposed by <code>core.llm.routing</code>.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Unify provider execution</h3>
+            <ul>
+              <li>Use one credential object for both <code>PLATFORM</code> and <code>BYOK</code>.</li>
+              <li>Use protocol/key format to select Spring AI adapter, not hard-coded gateway brand names.</li>
+              <li>Let billing/credits depend on credential source, not on the provider implementation class.</li>
+            </ul>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Proposed responsibility</th>
+              <th>Candidate package/class shape</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Common credential value</td>
+              <td><code>core.llm.usecases.LlmProviderCredential</code></td>
+            </tr>
+            <tr>
+              <td>Platform credential resolution contract</td>
+              <td><code>core.llm.routing.PlatformLlmRouteCredentialResolver</code></td>
+            </tr>
+            <tr>
+              <td>Admin implementation of platform credential resolution</td>
+              <td><code>core.admin.mkey.usecases.ProviderMasterKeyRouteCredentialResolver</code></td>
+            </tr>
+            <tr>
+              <td>Tenant BYOK credential resolution</td>
+              <td>
+                Replace provider-specific BYOK clients with a tenant credential resolver or adapter
+                that returns <code>LlmProviderCredential(source=BYOK)</code>.
+              </td>
+            </tr>
+            <tr>
+              <td>Non-streaming provider execution</td>
+              <td><code>core.llm.gateway.springai.SpringAiProviderChatExecutor</code></td>
+            </tr>
+            <tr>
+              <td>Streaming provider execution</td>
+              <td>
+                Add a streaming sibling that uses the same credential/protocol decision and is
+                consumed by <code>core.chat</code>.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Refactor Order That Minimizes Risk</h2>
+        <ol>
+          <li>
+            Finish the non-streaming shared executor and make platform route credentials mandatory
+            when admin routing returns a key ID.
+          </li>
+          <li>
+            Replace the <code>*ByokModelClient</code> naming with tenant credential adapters or a
+            tenant credential resolver. Keep behavior unchanged first.
+          </li>
+          <li>
+            Move chat streaming provider construction behind the same credential/protocol runtime
+            and route it via <code>LlmRuntimeTask.CHAT_ASSISTANT</code>.
+          </li>
+          <li>
+            Align semantic evaluation with the same credential abstraction, either through a shared
+            structured-output executor or explicit route-aware provider execution.
+          </li>
+          <li>
+            Only after runtime paths are stable, simplify the admin provider model so custom
+            gateways like OpenRouter and 9router are OpenAI-compatible endpoint entries rather than
+            hard-coded official providers.
+          </li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>Functional Impact</h2>
+        <div class="grid two">
+          <div class="status good">
+            <span class="label">Expected impact</span>
+            <p>
+              Most of this is architectural plumbing. If done in the order above, user-facing
+              behavior should stay the same: rule compilation, triage, draft generation, semantic
+              checks, and chat should still produce the same kinds of outputs.
+            </p>
+          </div>
+          <div class="status warn">
+            <span class="label">Risk areas</span>
+            <p>
+              The sensitive parts are streaming chat tool calls, provider-specific tool-choice
+              support, cache invalidation when admin keys change, credential zeroing, and Google /
+              Anthropic feature differences in Spring AI 2.0.0-M7.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Current Code References</h2>
+        <ul class="mono-list">
+          <li>backend/core/src/main/java/com/zeromail/core/chat/package-info.java</li>
+          <li>backend/core/src/main/java/com/zeromail/core/chat/llm/springai/SpringAiChatModelFactory.java</li>
+          <li>backend/core/src/main/java/com/zeromail/core/chat/llm/springai/SpringAiStreamingChatModelClient.java</li>
+          <li>backend/core/src/main/java/com/zeromail/core/llm/package-info.java</li>
+          <li>backend/core/src/main/java/com/zeromail/core/llm/usecases/LlmGatewayImpl.java</li>
+          <li>backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/SpringAiProviderChatExecutor.java</li>
+          <li>backend/core/src/main/java/com/zeromail/core/llm/gateway/springai/SpringAiLlmModelClient.java</li>
+          <li>backend/core/src/main/java/com/zeromail/core/admin/cat/usecases/LlmRouter.java</li>
+          <li>backend/core/src/main/java/com/zeromail/core/admin/mkey/usecases/ProviderMasterKeyRouteCredentialResolver.java</li>
+        </ul>
+        <p class="small">
+          This document intentionally describes the current architecture and target direction. It is
+          not a record that the refactor is already complete.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

@@ -10,16 +10,14 @@ import java.util.UUID;
             "exampleTextEn",
             "exampleTextVi",
             "displayOrder",
-            "enabled",
-            "sourceRef"
+            "enabled"
         })
 public record RuleCatalogExampleAdminResponse(
         UUID exampleId,
         String exampleTextEn,
         String exampleTextVi,
         int displayOrder,
-        boolean enabled,
-        String sourceRef) {
+        boolean enabled) {
 
     public static RuleCatalogExampleAdminResponse from(
             RuleExamplePromptAdminView ruleExamplePromptAdminView) {
@@ -28,7 +26,6 @@ public record RuleCatalogExampleAdminResponse(
                 ruleExamplePromptAdminView.exampleTextEn(),
                 ruleExamplePromptAdminView.exampleTextVi(),
                 ruleExamplePromptAdminView.displayOrder(),
-                ruleExamplePromptAdminView.enabled(),
-                ruleExamplePromptAdminView.sourceRef());
+                ruleExamplePromptAdminView.enabled());
     }
 }

@@ -194,3 +194,21 @@ databaseChangeLog:
   - include:
       file: changes/086-rule-personas-examples-actions.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/087-drop-rule-example-source-ref.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/088-llm-runtime-routing-tasks.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/089-bind-existing-models-to-runtime-routing-features.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/090-mark-current-routing-models-stale.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/091-compatible-gateway-key-formats.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/092-custom-llm-provider-catalog.yaml
+      relativeToChangelogFile: true

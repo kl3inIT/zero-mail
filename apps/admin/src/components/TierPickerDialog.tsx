@@ -16,7 +16,10 @@ import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -27,22 +30,28 @@ import {
 } from '@/features/feature-defaults/feature-defaults-api';
 import { useAssignTier } from '@/features/feature-defaults/use-assign-tier';
 import {
-  catalogProviders,
   providerLabel,
+  type CatalogModel,
   type CatalogProvider,
 } from '@/features/catalog/catalog-api';
 import { useCatalog } from '@/features/catalog/use-catalog';
+import type { MasterKeyRow } from '@/features/master-keys/master-keys-api';
+import { useMasterKeys } from '@/features/master-keys/use-master-keys';
 
 const FEATURE_LABELS: Record<RoutingFeature, string> = {
   CHAT: 'Chat trợ lý',
-  TRIAGE: 'Phân loại email',
-  DRAFT: 'Soạn nháp',
+  TRIAGE: 'Chọn hành động AI',
+  DRAFT: 'Soạn nội dung',
+  RULE_AUTHORING: 'Tạo quy tắc',
+  RULE_PREVIEW_SEMANTIC: 'Test quy tắc',
+  TRIAGE_SEMANTIC: 'Chạy quy tắc',
+  DRIFT_CHECK: 'Kiểm tra chất lượng',
 };
 
 const TIER_LABELS: Record<RoutingTier, string> = {
-  PRIMARY: 'Tier 1 — Primary',
-  FALLBACK: 'Tier 2 — Fallback',
-  LAST_RESORT: 'Tier 3 — Last Resort',
+  PRIMARY: 'Chính',
+  FALLBACK: 'Dự phòng',
+  LAST_RESORT: 'Cuối cùng',
 };
 
 export type TierPickerState = {
@@ -89,35 +98,53 @@ function PickerForm({
   onClose: () => void;
 }) {
   const assignMutation = useAssignTier();
+  const masterKeysQuery = useMasterKeys();
   const [provider, setProvider] = useState<CatalogProvider>(
-    (state.current?.provider as CatalogProvider) ?? 'OPENROUTER',
+    (state.current?.provider as CatalogProvider) ?? '',
   );
   const [selectedModelIds, setSelectedModelIds] = useState<string[]>(
     state.current?.modelIds ?? [],
   );
 
-  const catalogQuery = useCatalog(provider);
+  const providerRows = masterKeysQuery.data?.rows ?? [];
+  const providerGroups = useMemo(() => groupProviderRows(providerRows), [providerRows]);
+  const firstAvailableProvider =
+    providerGroups.springAi[0]?.provider ??
+    providerGroups.openAi[0]?.provider ??
+    providerGroups.anthropic[0]?.provider ??
+    providerGroups.other[0]?.provider ??
+    '';
+  const effectiveProvider = provider || firstAvailableProvider;
+  const catalogQuery = useCatalog(effectiveProvider);
   const availableModels = useMemo(() => {
     const featureMap = catalogQuery.data?.features;
     if (!featureMap) return [];
     const focusedBlock = featureMap[state.feature];
-    const pool = focusedBlock
+    const pool = focusedBlock && focusedBlock.models.length > 0
       ? focusedBlock.models
       : Object.values(featureMap).flatMap((block) => block.models);
     const seen = new Set<string>();
     return pool.filter((model) => {
-      if (model.deprecatedAt) return false;
+      if (!isRoutableModel(model)) return false;
       if (seen.has(model.modelId)) return false;
       seen.add(model.modelId);
       return true;
     });
   }, [catalogQuery.data, state.feature]);
 
+  const availableModelIds = new Set(availableModels.map((model) => model.modelId));
+  const selectedModelsAreEligible = selectedModelIds.every((modelId) =>
+    availableModelIds.has(modelId),
+  );
   const unselectedModels = availableModels.filter(
     (model) => !selectedModelIds.includes(model.modelId),
   );
 
-  const canSubmit = !assignMutation.isPending && provider && selectedModelIds.length > 0;
+  const canSubmit =
+    !assignMutation.isPending &&
+    Boolean(effectiveProvider) &&
+    selectedModelIds.length > 0 &&
+    selectedModelsAreEligible;
 
   function addModel(modelId: string) {
     if (!modelId || selectedModelIds.includes(modelId)) return;
@@ -147,10 +174,9 @@ function PickerForm({
   return (
     <DialogContent className="sm:max-w-2xl">
       <DialogHeader>
-        <DialogTitle>Gán mặc định — {FEATURE_LABELS[state.feature]}</DialogTitle>
+        <DialogTitle>{FEATURE_LABELS[state.feature]}</DialogTitle>
         <DialogDescription>
-          {TIER_LABELS[state.tier]}. Router thử models trong tier theo thứ tự, hết tier mới
-          sang tier kế tiếp.
+          {TIER_LABELS[state.tier]}. Model phía trên được thử trước.
         </DialogDescription>
       </DialogHeader>
 
@@ -158,30 +184,48 @@ function PickerForm({
         <div className="space-y-2">
           <Label htmlFor="tier-provider">Provider</Label>
           <Select
-            value={provider}
+            value={effectiveProvider}
             onValueChange={(next) => {
               setProvider(next as CatalogProvider);
               setSelectedModelIds([]);
             }}
+            disabled={masterKeysQuery.isPending || providerRows.length === 0}
           >
             <SelectTrigger id="tier-provider" className="h-11 w-full">
               <SelectValue placeholder="Chọn provider" />
             </SelectTrigger>
             <SelectContent>
-              {catalogProviders.map((entry) => (
-                <SelectItem key={entry} value={entry}>
-                  {providerLabel(entry)}
-                </SelectItem>
-              ))}
+              <ProviderSelectGroup label="Spring AI" rows={providerGroups.springAi}/>
+              {providerGroups.springAi.length > 0 &&
+                (providerGroups.openAi.length > 0 || providerGroups.anthropic.length > 0) && (
+                  <SelectSeparator/>
+                )}
+              <ProviderSelectGroup
+                label="OpenAI-compatible"
+                rows={providerGroups.openAi}
+              />
+              {providerGroups.openAi.length > 0 && providerGroups.anthropic.length > 0 && (
+                <SelectSeparator/>
+              )}
+              <ProviderSelectGroup
+                label="Anthropic-compatible"
+                rows={providerGroups.anthropic}
+              />
+              {providerGroups.other.length > 0 && (
+                <>
+                  <SelectSeparator/>
+                  <ProviderSelectGroup label="Khác" rows={providerGroups.other}/>
+                </>
+              )}
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
-          <Label>Models theo thứ tự ưu tiên</Label>
+          <Label>Model ưu tiên</Label>
           {selectedModelIds.length === 0 ? (
             <div className="border-border text-muted-foreground rounded-md border border-dashed px-3 py-6 text-center text-sm">
-              Chưa chọn model nào. Thêm model bên dưới — Tier 1 sẽ thử theo thứ tự.
+              Chưa chọn model nào.
             </div>
           ) : (
             <ol className="space-y-2">
@@ -250,7 +294,7 @@ function PickerForm({
                     ? 'Đang tải models…'
                     : unselectedModels.length === 0
                       ? 'Đã thêm hết models có sẵn'
-                      : 'Chọn model để thêm vào cuối list'
+                      : 'Chọn model'
                 }
               />
             </SelectTrigger>
@@ -268,9 +312,13 @@ function PickerForm({
             </SelectContent>
           </Select>
           <p className="text-muted-foreground text-xs">
-            Backend chỉ chấp nhận model đã <span className="font-medium">VERIFIED</span> hoặc
-            STALE.
+            Chỉ model VERIFIED hoặc STALE được dùng khi chạy thật.
           </p>
+          {!selectedModelsAreEligible && (
+            <p className="text-destructive text-xs">
+              Model đang chọn cần được test lại trước khi lưu.
+            </p>
+          )}
         </div>
       </div>
 
@@ -286,7 +334,7 @@ function PickerForm({
               {
                 feature: state.feature,
                 tier: state.tier,
-                provider: provider as CatalogProvider,
+                provider: effectiveProvider as CatalogProvider,
                 modelIds: selectedModelIds,
               },
               {
@@ -295,9 +343,56 @@ function PickerForm({
             )
           }
         >
-          {assignMutation.isPending ? 'Đang lưu…' : 'Lưu tier'}
+          {assignMutation.isPending ? 'Đang lưu…' : 'Lưu'}
         </Button>
       </DialogFooter>
     </DialogContent>
   );
+}
+
+function isRoutableModel(model: CatalogModel): boolean {
+  return (
+    !model.deprecatedAt &&
+    (model.verificationStatus === 'VERIFIED' || model.verificationStatus === 'STALE')
+  );
+}
+
+function ProviderSelectGroup({label, rows}: { label: string; rows: MasterKeyRow[] }) {
+  if (rows.length === 0) return null;
+  return (
+    <SelectGroup>
+      <SelectLabel>{label}</SelectLabel>
+      {rows.map((row) => (
+        <SelectItem key={row.provider} value={row.provider}>
+          {row.displayName || providerLabel(row.provider)}
+        </SelectItem>
+      ))}
+    </SelectGroup>
+  );
+}
+
+function groupProviderRows(rows: MasterKeyRow[]) {
+  return {
+    springAi: rows.filter((row) => row.providerKind === 'SPRING_AI_BUILT_IN'),
+    openAi: rows.filter(
+      (row) =>
+        row.providerKind !== 'SPRING_AI_BUILT_IN' &&
+        compatibleTypeFor(row) === 'OPENAI_FORMAT',
+    ),
+    anthropic: rows.filter(
+      (row) =>
+        row.providerKind !== 'SPRING_AI_BUILT_IN' &&
+        compatibleTypeFor(row) === 'ANTHROPIC_FORMAT',
+    ),
+    other: rows.filter(
+      (row) =>
+        row.providerKind !== 'SPRING_AI_BUILT_IN' &&
+        compatibleTypeFor(row) !== 'OPENAI_FORMAT' &&
+        compatibleTypeFor(row) !== 'ANTHROPIC_FORMAT',
+    ),
+  };
+}
+
+function compatibleTypeFor(row: MasterKeyRow) {
+  return row.compatibleType ?? row.keyFormat;
 }

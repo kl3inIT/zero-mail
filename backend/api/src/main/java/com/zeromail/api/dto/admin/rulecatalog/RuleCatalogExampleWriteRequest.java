@@ -11,7 +11,6 @@ import jakarta.validation.constraints.NotBlank;
             "exampleTextVi",
             "displayOrder",
             "enabled",
-            "sourceRef",
             "reason"
         })
 public record RuleCatalogExampleWriteRequest(
@@ -19,11 +18,9 @@ public record RuleCatalogExampleWriteRequest(
         @NotBlank String exampleTextVi,
         @Min(0) int displayOrder,
         boolean enabled,
-        @NotBlank String sourceRef,
         @NotBlank String reason) {
 
     public RulePromptWriteCommand toCommand() {
-        return new RulePromptWriteCommand(
-                exampleTextEn, exampleTextVi, displayOrder, enabled, sourceRef);
+        return new RulePromptWriteCommand(exampleTextEn, exampleTextVi, displayOrder, enabled);
     }
 }

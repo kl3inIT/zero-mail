@@ -22,6 +22,7 @@
         allowedDependencies = {
             "llm",
             "llm :: domain",
+            "llm :: routing",
             "llm :: usecases",
             "admin",
             "admin :: cat.events",

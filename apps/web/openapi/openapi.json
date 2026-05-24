@@ -5963,9 +5963,6 @@
             "type": "string",
             "format": "uuid"
           },
-          "sourceRef": {
-            "type": "string"
-          },
           "exampleText": {
             "type": "string"
           },
@@ -5974,7 +5971,7 @@
             "format": "int32"
           }
         },
-        "required": ["displayOrder", "exampleId", "exampleText", "sourceRef"]
+        "required": ["displayOrder", "exampleId", "exampleText"]
       },
       "RuleCatalogExamplesResponse": {
         "type": "object",

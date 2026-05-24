@@ -59,7 +59,6 @@ describe('RuleCatalogPage', () => {
                 exampleTextVi: 'Gắn nhãn email nhà đầu tư là @[Investor]',
                 displayOrder: 10,
                 enabled: true,
-                sourceRef: 'inbox-zero:founder:001',
               },
               {
                 exampleId: 'example-2',
@@ -67,7 +66,6 @@ describe('RuleCatalogPage', () => {
                 exampleTextVi: 'Tạo bản nháp trả lời kèm link lịch',
                 displayOrder: 20,
                 enabled: true,
-                sourceRef: 'inbox-zero:founder:002',
               },
             ],
           },
@@ -86,7 +84,6 @@ describe('RuleCatalogPage', () => {
                 exampleTextVi: 'Gắn nhãn học bổng là Trường học',
                 displayOrder: 10,
                 enabled: true,
-                sourceRef: 'inbox-zero:student:001',
               },
             ],
           },
@@ -109,16 +106,16 @@ describe('RuleCatalogPage', () => {
 
     render(<RuleCatalogPage />);
 
-    expect(screen.getByRole('heading', { name: 'Rule Catalog' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Ví dụ tạo quy tắc' })).toBeInTheDocument();
     expect(screen.getByText('Founder')).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'Actions' })).not.toBeInTheDocument();
 
     await user.click(
-      screen.getByRole('button', { name: 'Edit example inbox-zero:founder:001' }),
+      screen.getByRole('button', { name: 'Sửa ví dụ Label investor emails as @[Investor]' }),
     );
 
-    await user.clear(screen.getByLabelText('Prompt VI'));
-    await user.type(screen.getByLabelText('Prompt VI'), 'Gắn nhãn thư nhà đầu tư là Investor');
+    await user.clear(screen.getByLabelText('Mẫu VI'));
+    await user.type(screen.getByLabelText('Mẫu VI'), 'Gắn nhãn thư nhà đầu tư là Investor');
     await user.click(screen.getByRole('button', { name: 'Lưu' }));
 
     await waitFor(() =>
@@ -130,7 +127,6 @@ describe('RuleCatalogPage', () => {
           exampleTextVi: 'Gắn nhãn thư nhà đầu tư là Investor',
           displayOrder: 10,
           enabled: true,
-          sourceRef: 'inbox-zero:founder:001',
           reason: 'Admin rule catalog UI update',
         },
       }),
@@ -142,12 +138,14 @@ describe('RuleCatalogPage', () => {
 
     render(<RuleCatalogPage />);
 
-    await user.click(screen.getByRole('button', { name: 'Select persona Student' }));
+    await user.click(screen.getByRole('button', { name: 'Chọn nhóm Student' }));
     expect(screen.getByText('Label scholarship updates as School')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Edit example inbox-zero:student:001' }));
-    await user.clear(screen.getByLabelText('Prompt EN'));
-    await user.type(screen.getByLabelText('Prompt EN'), 'Archive scholarship newsletters');
+    await user.click(
+      screen.getByRole('button', { name: 'Sửa ví dụ Label scholarship updates as School' }),
+    );
+    await user.clear(screen.getByLabelText('Mẫu EN'));
+    await user.type(screen.getByLabelText('Mẫu EN'), 'Archive scholarship newsletters');
     await user.click(screen.getByRole('button', { name: 'Lưu' }));
 
     await waitFor(() =>
@@ -159,7 +157,6 @@ describe('RuleCatalogPage', () => {
           exampleTextVi: 'Gắn nhãn học bổng là Trường học',
           displayOrder: 10,
           enabled: true,
-          sourceRef: 'inbox-zero:student:001',
           reason: 'Admin rule catalog UI update',
         },
       }),

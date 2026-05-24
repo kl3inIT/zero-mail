@@ -48,11 +48,38 @@ describe('RuleComposer catalog examples', () => {
         name: /Archive investor updates from portfolio companies/i,
       }),
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Add selected (1)' }));
 
     expect(onSourceTextChange).toHaveBeenCalledWith(
       'Archive investor updates from portfolio companies',
     );
+  });
+
+  it('does not show outbound policy badges inside the manual builder', () => {
+    renderWithMessages(
+      <RuleComposer
+        sourceText=""
+        clarificationAnswer=""
+        compileResult={null}
+        lastCompiled={null}
+        compileError={null}
+        insufficientCreditError={null}
+        isCompiling={false}
+        isSaving={false}
+        onSourceTextChange={vi.fn()}
+        onClarificationAnswerChange={vi.fn()}
+        onCompile={vi.fn()}
+        onAnswerClarification={vi.fn()}
+        onSaveDisabledRule={vi.fn()}
+        onSaveManualRule={vi.fn()}
+        onRefineManualRule={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Review & edit' }));
+
+    expect(screen.queryByText('How AI sends email')).not.toBeInTheDocument();
+    expect(screen.queryByText('Can send automatically when safe')).not.toBeInTheDocument();
+    expect(screen.queryByText('If not safe enough, save a Gmail draft')).not.toBeInTheDocument();
   });
 });
 
@@ -66,7 +93,6 @@ const examplePersonas: RuleCatalogPersonaResponse[] = [
     examples: [
       {
         exampleId: '00000000-0000-0000-0000-000000000101',
-        sourceRef: 'seed:founder:1',
         exampleText: 'Archive investor updates from portfolio companies',
         displayOrder: 10,
       },
@@ -81,7 +107,6 @@ const examplePersonas: RuleCatalogPersonaResponse[] = [
     examples: [
       {
         exampleId: '00000000-0000-0000-0000-000000000201',
-        sourceRef: 'seed:student:1',
         exampleText: 'Label scholarship updates as School',
         displayOrder: 10,
       },
