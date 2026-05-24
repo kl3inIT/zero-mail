@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin Console Foundation + Settings UI
-status: executing
+status: "Phase 08.1 shipped — PR #60"
 stopped_at: Completed 08.1-05-PLAN.md
-last_updated: "2026-05-23T00:10:14.521Z"
-last_activity: 2026-05-23
+last_updated: "2026-05-24T20:07:02.180Z"
+last_activity: 2026-05-25
 progress:
   total_phases: 3
   completed_phases: 1
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 
 Phase: 08.1 (inbox-zero-style-rule-actions-and-admin-managed-examples-cat) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
-Last activity: 2026-05-23
+Status: Phase 08.1 shipped — PR #60
+Last activity: 2026-05-25
 
 ## Current Milestone Roadmap
 
