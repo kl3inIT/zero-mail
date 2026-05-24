@@ -537,7 +537,7 @@ function ExampleChooser({
             </div>
           ) : (
             <>
-              <div className="space-y-2">
+              <div className="grid gap-2 md:grid-cols-2" data-testid="rule-example-grid">
                 {examples.map((example) => {
                   const isSelected = selectedExampleIds.includes(example.exampleId);
                   return (

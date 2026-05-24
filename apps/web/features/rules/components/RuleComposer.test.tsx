@@ -42,6 +42,7 @@ describe('RuleComposer catalog examples', () => {
         name: /Archive investor updates from portfolio companies/i,
       }),
     ).toBeInTheDocument();
+    expect(screen.getByTestId('rule-example-grid')).toHaveClass('md:grid-cols-2');
     fireEvent.click(
       screen.getByRole('button', {
         name: /Archive investor updates from portfolio companies/i,
