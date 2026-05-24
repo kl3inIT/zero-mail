@@ -65,20 +65,20 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
 
-      - name: Enforce zero non-AssistantSendExecutor Gmail send call sites (ARCH-01)
+      - name: Enforce zero non-gateway Gmail send call sites (ARCH-01)
         run: |
           chmod +x scripts/ci/count-gmail-send-call-sites.sh
           COUNTS=$(scripts/ci/count-gmail-send-call-sites.sh)
           echo "$COUNTS"
-          NON_EXECUTOR=$(echo "$COUNTS" | awk -F= '/^non_executor=/{print $2}')
-          EXECUTOR=$(echo "$COUNTS" | awk -F= '/^executor=/{print $2}')
-          if [ "$NON_EXECUTOR" != "0" ]; then
-            echo "::error::Non-AssistantSendExecutor Gmail send call site detected - ARCH-01 regression"
+          NON_GATEWAY=$(echo "$COUNTS" | awk -F= '/^non_gateway=/{print $2}')
+          GATEWAY=$(echo "$COUNTS" | awk -F= '/^gateway=/{print $2}')
+          if [ "$NON_GATEWAY" != "0" ]; then
+            echo "::error::Non-outbound-gateway Gmail send call site detected - ARCH-01 regression"
             exit 1
           fi
-          # Wave 4 [ATOMIC-GROUP: arch01-flip]: AssistantSendExecutor is the single allowed send call site.
-          if [ "$EXECUTOR" != "1" ]; then
-            echo "::error::AssistantSendExecutor send call site count drifted from exactly 1 - ARCH-01"
+          # Phase 08.1: Gmail sends are allowed only behind the shared outbound gateway.
+          if [ "$GATEWAY" != "1" ]; then
+            echo "::error::GmailOutboundSendGateway send call site count drifted from exactly 1 - ARCH-01"
             exit 1
           fi
 

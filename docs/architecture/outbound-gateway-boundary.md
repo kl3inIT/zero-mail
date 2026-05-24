@@ -1,7 +1,7 @@
 # Outbound Gateway Boundary
 
 **Status:** Phase 08.1 contract  
-**Last updated:** 2026-05-23
+**Last updated:** 2026-05-24
 
 ## Purpose
 
@@ -57,12 +57,12 @@ Forbidden direct callers:
 
 ## Gmail API Ownership
 
-The only production class allowed to call `gmail.users().messages().send(...)` or Gmail draft-send equivalents is the shared outbound gateway implementation. During the Phase 08.1 transition, the legacy `AssistantSendExecutor` remains the single direct send call site until Plan 08.1-06 extracts it into the gateway.
+The only production class allowed to call `gmail.users().messages().send(...)` or Gmail draft-send equivalents is the shared outbound gateway implementation: `com.zeromail.core.outbound.usecases.GmailOutboundSendGateway`.
 
 Architecture tests must reject any additional direct Gmail send call site outside:
 
-- the current legacy assistant executor package before extraction, or
-- the final shared outbound gateway package after extraction.
+- the shared outbound gateway package, and
+- classes annotated with `@AllowedSendCallSite`.
 
 ## Privacy Contract
 
