@@ -84,6 +84,7 @@ public class TriageActionArgsCanonicalizer {
                 canonicalFields.put("subject", requiredText(actionResultNode, "subject"));
                 canonicalFields.put("to", recipients(actionResultNode, "to"));
             }
+            default -> throw new IllegalStateException("Unhandled rule action type: " + actionType);
         }
         return TriageActionResultJsonValidator.writeJson(canonicalFields);
     }

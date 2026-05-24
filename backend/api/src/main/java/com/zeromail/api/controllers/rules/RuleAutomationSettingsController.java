@@ -35,7 +35,7 @@ public class RuleAutomationSettingsController {
         UUID tenantId = TenantContext.currentTenantUuid();
         RuleAutomationSettingsResponse response =
                 RuleAutomationSettingsResponse.from(
-                        ruleAutomationSettingsService.getOrCreate(tenantId));
+                        ruleAutomationSettingsService.readOrDefault(tenantId));
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(response);
     }
 

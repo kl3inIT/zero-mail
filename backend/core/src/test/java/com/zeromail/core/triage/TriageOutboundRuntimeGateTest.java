@@ -231,7 +231,7 @@ class TriageOutboundRuntimeGateTest {
                                         10,
                                         matcherAstJson,
                                         actionIntentsJson)));
-        when(ruleAutomationSettingsService.getOrCreate(TENANT_ID))
+        when(ruleAutomationSettingsService.readOrDefault(TENANT_ID))
                 .thenReturn(new RuleAutomationSettingsView(autoSendRulesEnabled));
         when(senderSafetyNetService.isProtected(TENANT_ID, "sender@example.com"))
                 .thenReturn(senderProtected);

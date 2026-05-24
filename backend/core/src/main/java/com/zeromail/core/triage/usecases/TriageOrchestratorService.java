@@ -162,7 +162,7 @@ public class TriageOrchestratorService {
             return OrchestrationResult.empty();
         }
         boolean autoSendRulesEnabled =
-                ruleAutomationSettingsService.getOrCreate(tenantId).autoSendRulesEnabled();
+                ruleAutomationSettingsService.readOrDefault(tenantId).autoSendRulesEnabled();
         Map<UUID, Boolean> senderAnchoredByRuleId = senderAnchoredByRuleId(ruleExecutionCandidates);
 
         // semanticEvalContent is a sanitized subject excerpt plus content-free metadata flags only.

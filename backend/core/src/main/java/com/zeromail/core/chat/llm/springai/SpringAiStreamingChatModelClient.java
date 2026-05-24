@@ -76,8 +76,8 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
         Prompt prompt = prompt(streamRequest);
         log.debug(
                 "event=chat_llm_stream_start tenantId={} modelId={}",
-                streamRequest.tenantId(),
-                resolvedChatClient.modelId());
+                safeLogToken(streamRequest.tenantId()),
+                safeLogToken(resolvedChatClient.modelId()));
 
         return resolvedChatClient
                 .chatClient()
@@ -118,7 +118,7 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
                             Throwable rootCause = rootCause(chatStreamingFailure);
                             log.warn(
                                     "event=chat_llm_stream_failed tenantId={} errorClass={} {}",
-                                    streamRequest.tenantId(),
+                                    safeLogToken(streamRequest.tenantId()),
                                     rootCause.getClass().getSimpleName(),
                                     serviceExceptionSummary(rootCause));
                             streamSink.emitError(
@@ -246,11 +246,23 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
         return "statusCode="
                 + openAIServiceException.statusCode()
                 + " code="
-                + openAIServiceException.code().orElse("-")
+                + safeLogToken(openAIServiceException.code().orElse("-"))
                 + " param="
-                + openAIServiceException.param().orElse("-")
+                + safeLogToken(openAIServiceException.param().orElse("-"))
                 + " type="
-                + openAIServiceException.type().orElse("-");
+                + safeLogToken(openAIServiceException.type().orElse("-"));
+    }
+
+    private static String safeLogToken(String value) {
+        if (value == null || value.isBlank()) {
+            return "-";
+        }
+        StringBuilder sanitizedValue = new StringBuilder(Math.min(value.length(), 120));
+        for (int index = 0; index < value.length() && sanitizedValue.length() < 120; index++) {
+            char character = value.charAt(index);
+            sanitizedValue.append(Character.isISOControl(character) ? '_' : character);
+        }
+        return sanitizedValue.toString();
     }
 
     private static final class TextEmissionState {

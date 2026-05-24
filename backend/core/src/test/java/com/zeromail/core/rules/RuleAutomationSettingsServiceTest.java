@@ -20,18 +20,29 @@ class RuleAutomationSettingsServiceTest extends PostgresContainerTest {
         UUID firstTenantId = seedTenant("automation-settings-a");
         UUID secondTenantId = seedTenant("automation-settings-b");
 
-        assertThat(ruleAutomationSettingsService.getOrCreate(firstTenantId).autoSendRulesEnabled())
+        assertThat(
+                        ruleAutomationSettingsService
+                                .readOrDefault(firstTenantId)
+                                .autoSendRulesEnabled())
                 .isTrue();
+        assertThat(settingsRowCount(firstTenantId)).isZero();
         assertThat(
                         ruleAutomationSettingsService
                                 .update(firstTenantId, false)
                                 .autoSendRulesEnabled())
                 .isFalse();
 
-        assertThat(ruleAutomationSettingsService.getOrCreate(firstTenantId).autoSendRulesEnabled())
+        assertThat(
+                        ruleAutomationSettingsService
+                                .readOrDefault(firstTenantId)
+                                .autoSendRulesEnabled())
                 .isFalse();
-        assertThat(ruleAutomationSettingsService.getOrCreate(secondTenantId).autoSendRulesEnabled())
+        assertThat(
+                        ruleAutomationSettingsService
+                                .readOrDefault(secondTenantId)
+                                .autoSendRulesEnabled())
                 .isTrue();
+        assertThat(settingsRowCount(secondTenantId)).isZero();
     }
 
     private UUID seedTenant(String displayName) {
@@ -39,5 +50,14 @@ class RuleAutomationSettingsServiceTest extends PostgresContainerTest {
         jdbcTemplate.update(
                 "INSERT INTO tenants(id, display_name) VALUES (?, ?)", tenantId, displayName);
         return tenantId;
+    }
+
+    private int settingsRowCount(UUID tenantId) {
+        Integer rowCount =
+                jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM rule_automation_settings WHERE tenant_id = ?",
+                        Integer.class,
+                        tenantId);
+        return rowCount == null ? 0 : rowCount;
     }
 }

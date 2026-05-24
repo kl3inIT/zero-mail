@@ -24,6 +24,11 @@ public class RuleAutomationSettingsService {
         return ruleAutomationSettingsRepository.getOrCreate(tenantId);
     }
 
+    @Transactional(readOnly = true)
+    public RuleAutomationSettingsView readOrDefault(UUID tenantId) {
+        return ruleAutomationSettingsRepository.readOrDefault(tenantId);
+    }
+
     @Transactional
     public RuleAutomationSettingsView update(UUID tenantId, boolean autoSendRulesEnabled) {
         return ruleAutomationSettingsRepository.update(tenantId, autoSendRulesEnabled);

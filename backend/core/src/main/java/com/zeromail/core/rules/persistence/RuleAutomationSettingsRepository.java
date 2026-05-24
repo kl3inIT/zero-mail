@@ -40,6 +40,23 @@ public class RuleAutomationSettingsRepository {
         return new RuleAutomationSettingsView(values.getFirst());
     }
 
+    public RuleAutomationSettingsView readOrDefault(UUID tenantId) {
+        Objects.requireNonNull(tenantId, "tenantId");
+        List<Boolean> values =
+                jdbcTemplate.queryForList(
+                        """
+                        SELECT auto_send_rules_enabled
+                        FROM rule_automation_settings
+                        WHERE tenant_id = ?
+                        """,
+                        Boolean.class,
+                        tenantId);
+        if (values.isEmpty()) {
+            return new RuleAutomationSettingsView(true);
+        }
+        return new RuleAutomationSettingsView(values.getFirst());
+    }
+
     public RuleAutomationSettingsView update(UUID tenantId, boolean autoSendRulesEnabled) {
         Objects.requireNonNull(tenantId, "tenantId");
         jdbcTemplate.update(
@@ -55,6 +72,6 @@ public class RuleAutomationSettingsRepository {
                 """,
                 tenantId,
                 autoSendRulesEnabled);
-        return getOrCreate(tenantId);
+        return readOrDefault(tenantId);
     }
 }

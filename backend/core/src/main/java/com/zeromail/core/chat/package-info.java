@@ -22,6 +22,7 @@
         allowedDependencies = {
             "llm",
             "llm :: domain",
+            "llm :: gateway.springai",
             "llm :: routing",
             "llm :: usecases",
             "admin",

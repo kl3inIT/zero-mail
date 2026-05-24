@@ -86,6 +86,9 @@ public class ActionIntentJsonValidator {
                     requiredText(actionIntentNode, "subject", MAX_ACTION_TEXT_LENGTH);
                     requiredText(actionIntentNode, "body", MAX_ACTION_BODY_LENGTH);
                 }
+                default ->
+                        throw new IllegalStateException(
+                                "Unhandled rule action type: " + actionType);
             }
         }
     }
