@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+      id: 087-waitlist-invite-tracking
+      author: zeromail
+      changes:
+        - addColumn:
+            tableName: waitlist_email
+            columns:
+              - column: { name: invite_next_attempt_at, type: timestamptz }
+              - column: { name: invite_failure_reason, type: varchar(128) }
+        - createIndex:
+            indexName: idx_waitlist_email_invite_due
+            tableName: waitlist_email
+            columns:
+              - column: { name: status }
+              - column: { name: invite_next_attempt_at }

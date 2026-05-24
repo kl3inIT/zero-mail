@@ -104,7 +104,7 @@ zero-mail:
   notification:
     app-base-url: ${APP_BASE_URL:http://localhost:3000}
     email:
-      from-address: notifications@zero-mail.app
+      from-address: notifications@zeromail.vn
       resend:
         api-key: ${RESEND_API_KEY:?RESEND_API_KEY env var is required}
 server:

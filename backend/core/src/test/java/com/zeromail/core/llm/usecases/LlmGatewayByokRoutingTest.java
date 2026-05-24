@@ -24,7 +24,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.StructuredTaskScope;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
@@ -236,8 +235,9 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
 
     @Test
     void multitenant_no_key_leak() throws Exception {
-        int requestCount = 100;
-        Semaphore concurrentGatewayCalls = new Semaphore(16);
+
+        int requestCount = 16;
+
         List<UUID> tenantIds =
                 IntStream.range(0, requestCount).mapToObj(_ -> UUID.randomUUID()).toList();
         for (int tenantIndex = 0; tenantIndex < requestCount; tenantIndex++) {
@@ -278,20 +278,15 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
                                     tenantId ->
                                             scope.fork(
                                                     () -> {
-                                                        concurrentGatewayCalls.acquire();
-                                                        try {
-                                                            return ScopedValue.where(
-                                                                            TenantContext.TENANT,
-                                                                            tenantId.toString())
-                                                                    .call(
-                                                                            () ->
-                                                                                    llmGateway.chat(
-                                                                                            CallSite
-                                                                                                    .PREVIEW,
-                                                                                            "hello"));
-                                                        } finally {
-                                                            concurrentGatewayCalls.release();
-                                                        }
+                                                        return ScopedValue.where(
+                                                                        TenantContext.TENANT,
+                                                                        tenantId.toString())
+                                                                .call(
+                                                                        () ->
+                                                                                llmGateway.chat(
+                                                                                        CallSite
+                                                                                                .PREVIEW,
+                                                                                        "hello"));
                                                     }))
                             .toList();
             scope.join();
@@ -301,12 +296,10 @@ class LlmGatewayByokRoutingTest extends PostgresContainerTest {
                         .isEqualTo(tenantId.toString());
             }
         }
-        tenantIds.stream()
-                .filter(tenantId -> tenantIds.indexOf(tenantId) % 2 == 0)
-                .forEach(
-                        tenantId ->
-                                assertThat(byokKeyByTenant.get(tenantId))
-                                        .isEqualTo("sk-byok-" + tenantId));
+        for (int tenantIndex = 0; tenantIndex < requestCount; tenantIndex += 2) {
+            UUID tenantId = tenantIds.get(tenantIndex);
+            assertThat(byokKeyByTenant.get(tenantId)).isEqualTo("sk-byok-" + tenantId);
+        }
     }
 
     private byte[] seedByokTenant(

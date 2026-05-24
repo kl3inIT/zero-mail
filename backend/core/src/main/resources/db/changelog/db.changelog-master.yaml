@@ -192,6 +192,12 @@ databaseChangeLog:
       file: changes/085-llm-call-audit-usage-metadata.yaml
       relativeToChangelogFile: true
   - include:
+      file: changes/086-create-waitlist-email.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/087-waitlist-invite-tracking.yaml
+      relativeToChangelogFile: true
+  - include:
       file: changes/086-rule-personas-examples-actions.yaml
       relativeToChangelogFile: true
   - include:
