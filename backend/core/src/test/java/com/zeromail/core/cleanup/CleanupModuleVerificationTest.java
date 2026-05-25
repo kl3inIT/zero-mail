@@ -3,7 +3,7 @@ package com.zeromail.core.cleanup;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
-import com.zeromail.core.support.ZeroMailCoreTestApplication;
+import com.zeromail.core.ZeroMailCoreModuleTestApplication;
 import org.junit.jupiter.api.Test;
 import org.springframework.modulith.core.ApplicationModule;
 import org.springframework.modulith.core.ApplicationModules;
@@ -16,7 +16,7 @@ import org.springframework.modulith.core.ApplicationModules;
  * <p>Wave 0 RED: {@code com.zeromail.core.cleanup} package-info does not exist yet (Wave 2 ships
  * it). The lookup of the module by name fails when the package is missing, leaving the test RED
  * until the module is declared with the allowed-dependencies list locked at: {@code gmail, triage,
- * analytics, tenant, shared.privacy, shared.persistence, shared.lang}.
+ * analytics, tenant, shared :: privacy, shared :: persistence, shared :: lang}.
  */
 @SuppressWarnings("deprecation")
 class CleanupModuleVerificationTest {
@@ -24,7 +24,7 @@ class CleanupModuleVerificationTest {
     @Test
     void cleanupModuleIsDeclaredAndVerifies() {
         ApplicationModules applicationModules =
-                ApplicationModules.of(ZeroMailCoreTestApplication.class);
+                ApplicationModules.of(ZeroMailCoreModuleTestApplication.class);
 
         ApplicationModule cleanupModule =
                 applicationModules
@@ -37,8 +37,9 @@ class CleanupModuleVerificationTest {
                                                         + " core.cleanup.package-info.java with"
                                                         + " @ApplicationModule(allowedDependencies = "
                                                         + "{\"gmail\", \"triage\", \"analytics\","
-                                                        + " \"tenant\", \"shared.privacy\","
-                                                        + " \"shared.persistence\", \"shared.lang\"})"));
+                                                        + " \"tenant\", \"shared :: privacy\","
+                                                        + " \"shared :: persistence\","
+                                                        + " \"shared :: lang\"})"));
 
         assertThat(cleanupModule.getName())
                 .as("Module name must match 'cleanup'")
@@ -49,8 +50,8 @@ class CleanupModuleVerificationTest {
         assertThatCode(applicationModules::verify)
                 .as(
                         "core.cleanup must not access modules outside its allow-list:"
-                                + " gmail, triage, analytics, tenant, shared.privacy,"
-                                + " shared.persistence, shared.lang")
+                                + " gmail, triage, analytics, tenant, shared :: privacy,"
+                                + " shared :: persistence, shared :: lang")
                 .doesNotThrowAnyException();
     }
 }

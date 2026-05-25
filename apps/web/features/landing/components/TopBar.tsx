@@ -44,7 +44,7 @@ export default async function TopBar() {
       <nav className="zm-nav-inner">
         <Link href="/" className="zm-brand">
           <span className="zm-brand-mark">
-            <ZMLogoMark size={15} />
+            <ZMLogoMark size={40} />
           </span>
           <span className="zm-brand-wordmark">
             <span>zero</span>
@@ -55,10 +55,10 @@ export default async function TopBar() {
           </span>
         </Link>
         <div className="zm-nav-links">
-          <a href="#how">{t('nav.how')}</a>
-          <a href="#features">{t('nav.features')}</a>
-          <a href="#rules">{t('nav.rules')}</a>
-          <a href="#trust">{t('nav.trust')}</a>
+          <Link href="/#features">{t('nav.features')}</Link>
+          <Link href="/#pricing">{t('nav.pricing')}</Link>
+          <Link href="/#testimonials">{t('nav.testimonials')}</Link>
+          <Link href="/#faq">{t('nav.faq')}</Link>
         </div>
         <div className="zm-nav-cta">
           <SegmentedLanguageToggle currentLocale={locale} />

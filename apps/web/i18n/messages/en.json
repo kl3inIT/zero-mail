@@ -424,51 +424,51 @@
   },
   "cleanup": {
     "suppression": {
-      "add": "Add to suppression",
-      "addOk": "Added to suppression list.",
+      "add": "Add to safe list",
+      "addOk": "Added to safe list.",
       "col": {
         "added": "Added",
         "source": "Source",
         "target": "Sender / Domain"
       },
       "empty": {
-        "body": "Add senders or domains you never want to unsubscribe (e.g. boss, colleagues, bank).",
-        "title": "No senders in the suppression list yet"
+        "body": "Add senders or domains you do not want Zero Mail to suggest unsubscribing from, such as your boss, colleagues, or bank.",
+        "title": "No senders in the safe list yet"
       },
       "err": {
-        "duplicate": "This entry is already in the suppression list.",
+        "duplicate": "This entry is already in the safe list.",
         "generic": "Could not add. Please try again shortly.",
         "invalid": "Invalid email or domain."
       },
       "error": "Could not load the list. Please try again shortly.",
-      "helper": "Each entry blocks a single sender or an entire domain.",
+      "helper": "Each entry skips one sender or an entire domain.",
       "input": {
         "label": "Sender email",
         "placeholder": "Email or domain (e.g. boss@example.com or example.com)"
       },
-      "lead": "Senders or domains on this list will never appear in an unsubscribe campaign.",
+      "lead": "Senders or domains on this list will not appear in unsubscribe suggestions.",
       "remove": {
-        "aria": "Remove from suppression",
+        "aria": "Remove from safe list",
         "cancel": "Cancel",
-        "confirmBody": "After removal, this sender or domain will reappear as a campaign candidate.",
+        "confirmBody": "After removal, this sender or domain can reappear in unsubscribe suggestions.",
         "confirmCta": "Confirm remove",
         "confirmTitle": "Remove this entry?"
       },
-      "removeOk": "Removed from suppression list.",
+      "removeOk": "Removed from safe list.",
       "source": {
         "auto": "Auto",
         "manual": "Manual",
         "replied": "Replied"
       },
-      "title": "Suppression list"
+      "title": "Safe list"
     },
     "unsubscribe": {
       "list": {
         "action": {
           "collapse": "Close sender details",
           "details": "Open sender details",
-          "keep": "Keep",
-          "unsubscribe": "Unsubscribe + archive"
+          "keep": "Add to safe list",
+          "unsubscribe": "Preview"
         },
         "clear": "Clear selection",
         "col": {
@@ -476,38 +476,40 @@
           "count": "Mail (30 days)",
           "domain": "Domain",
           "history": "History",
-          "method": "Method",
           "risk": "Status",
           "sender": "Sender"
         },
         "counter": "{count} / 25 senders selected",
         "counterOver": "{count} / 25 senders — over the limit",
         "detail": {
-          "archive": "History to process",
-          "archiveValue": "{count} mail will be archived after unsubscribe succeeds",
-          "disabled": "Missing the safe header required to run",
+          "archive": "Mail to process",
+          "archiveValue": "If unsubscribe succeeds, Zero Mail will archive {count} recent mail.",
+          "disabled": "Gmail has not provided a safe unsubscribe method for this sender.",
           "lastSeen": "Last seen",
-          "safe": "Preview, background job, and 30-day undo",
-          "safety": "Safety"
+          "safe": "Does not delete mail. Archive can be undone for 30 days.",
+          "safety": "Safety",
+          "skip": "Add to safe list",
+          "skipDescription": "Hide it from future unsubscribe suggestions. Gmail is not changed."
         },
         "empty": {
-          "body": "Zero Mail detects newsletters via the `List-Unsubscribe` header from recent ingest. New candidate senders will appear here as data arrives.",
+          "body": "Zero Mail checks the 100 most recent Inbox emails and only shows senders with a safe unsubscribe method.",
           "link": "Learn how Zero Mail detects newsletters →",
-          "title": "No newsletters in the last 30 days"
+          "title": "No unsubscribe-ready senders found"
         },
         "error": "Could not load the sender list. Please try again shortly.",
         "filter": {
           "all": "All senders",
-          "mailto": "Mailto",
-          "oneClick": "One-click",
+          "mailto": "Unsubscribe by email",
+          "oneClick": "Safe unsubscribe",
           "ready": "Ready to process"
         },
         "filterLabel": "Filter senders",
         "historyCount": "{count} mail",
-        "lead": "Pick the newsletters you want to stop receiving. Zero Mail unsubscribes safely and archives the history from the selected senders.",
-        "preview": "Preview campaign",
+        "lead": "Zero Mail finds senders that support unsubscribe from Gmail. When you confirm, it sends a safe unsubscribe request and archives old mail only after that succeeds. It never deletes mail.",
+        "preview": "Preview",
         "retry": "Retry",
         "searchPlaceholder": "Search sender or domain",
+        "selectAll": "Select all visible senders",
         "selectedMail": "{count} history mail in selection",
         "sort": {
           "count": "Most mail",
@@ -516,35 +518,38 @@
         },
         "sortLabel": "Sort senders",
         "stats": {
-          "messages": "History mail",
-          "oneClick": "One-click",
+          "messages": "Mail to archive",
+          "oneClick": "Safe unsubscribe",
           "ready": "Actionable",
           "total": "Detected senders"
         },
-        "suppressionLink": "Manage suppression list →",
-        "title": "Bulk unsubscribe"
+        "suppressionLink": "Safe list",
+        "title": "Unsubscribe"
       },
       "method": {
-        "mailto": "Mailto",
+        "mailto": "Unsubscribe by email",
+        "mailtoTooltip": "Sends an unsubscribe email to the address declared in the Gmail header.",
         "none": "Unsupported",
-        "oneClick": "One-click (RFC 8058)"
+        "oneClick": "Safe unsubscribe",
+        "oneClickTooltip": "Uses the standard Gmail RFC 8058 header. Zero Mail sends a safe POST to the unsubscribe endpoint and does not open links from the email body."
       },
       "preview": {
         "cancel": "Back",
         "capMessage": "History mail limit of 2,000 exceeded ({count}). Go back and deselect some.",
         "capSender": "Sender limit of 25 exceeded. Go back and deselect some.",
-        "confirm": "Execute campaign",
-        "description": "Review the list before executing. The campaign runs in the background and is undoable for 30 days.",
+        "confirm": "Unsubscribe",
+        "description": "Review before confirming. Zero Mail archives old mail only after unsubscribe succeeds. It never deletes mail, and archive can be undone for 30 days.",
+        "empty": "No selected sender is eligible for unsubscribe.",
         "errCapMessage": "History mail limit of 2,000 exceeded. Please deselect some.",
         "errCapSender": "Sender limit of 25 exceeded. Please deselect some.",
-        "errGeneric": "Could not create the campaign. Please try again shortly.",
-        "submitOk": "Campaign created. Tracking progress…",
+        "errGeneric": "Could not create the unsubscribe task. Please try again shortly.",
+        "submitOk": "Unsubscribe task created. Tracking progress…",
         "submitting": "Creating…",
-        "title": "Preview campaign",
-        "totalMail": "Total mail to archive: {count}",
+        "title": "Preview unsubscribe",
+        "totalMail": "Mail to archive if successful: {count}",
         "totalSender": "Total senders: {count}",
-        "willArchive": "{count} mail will be archived",
-        "willNotArchive": "No archive (missing header)"
+        "willArchive": "{count} recent mail will be archived if unsubscribe succeeds",
+        "willNotArchive": "This sender will not be processed automatically"
       },
       "retry": {
         "alreadyOk": "This sender has already unsubscribed — no retry needed.",
@@ -552,12 +557,12 @@
       },
       "risk": {
         "noHeader": "Not supported",
-        "noHeaderTooltip": "This sender has no `List-Unsubscribe` header — automatic unsubscribe is unavailable.",
+        "noHeaderTooltip": "Gmail has no safe unsubscribe header for this sender.",
         "safe": "Ready",
-        "suppressed": "Blocked"
+        "suppressed": "Safe-listed"
       },
       "status": {
-        "breadcrumb": "Cleanup / Unsubscribe / #{shortId}",
+        "breadcrumb": "Unsubscribe / #{shortId}",
         "col": {
           "action": "Action",
           "archived": "Mail archived",
@@ -565,7 +570,7 @@
           "state": "State"
         },
         "completed": "Completed",
-        "error": "Could not load campaign status. Please try again shortly.",
+        "error": "Could not load unsubscribe status. Please try again shortly.",
         "errorBanner": "System error — did not complete. Contact support if needed.",
         "failed": "Error — did not complete",
         "progress": "{percent}% ({okCount} OK / {failedCount} failed / {totalCount} senders)",
@@ -579,21 +584,21 @@
           "pending": "Pending",
           "running": "Running"
         },
-        "title": "Campaign #{shortId}",
+        "title": "Unsubscribe #{shortId}",
         "undo": {
           "body": "You can undo within the next {daysLeft} days: restore mail to INBOX and remove the `Zero Mail/Unsubscribed` label.",
-          "button": "Undo campaign",
-          "title": "Campaign completed"
+          "button": "Undo archive",
+          "title": "Cleanup completed"
         }
       },
       "undo": {
         "cancel": "Cancel",
         "confirmBody": "This will restore {count} mail to INBOX and remove the `Zero Mail/Unsubscribed` label. This action cannot be reversed again.",
         "confirmCta": "Confirm undo",
-        "confirmTitle": "Undo campaign?",
+        "confirmTitle": "Undo archive?",
         "generic": "Undo failed. Please try again shortly.",
         "ok": "Restored {count} mail to INBOX.",
-        "windowExpired": "More than 30 days have passed since the campaign — undo is no longer available.",
+        "windowExpired": "More than 30 days have passed since the cleanup ran — undo is no longer available.",
         "windowExpiredToast": "Past the 30-day window — undo is no longer available."
       }
     }
@@ -707,13 +712,13 @@
     },
     "cleanup": {
       "campaign": {
-        "not_found": "Campaign not found. Please return to the campaign list.",
+        "not_found": "Unsubscribe task not found. Please return to the list.",
         "retry_conflict": "This sender has already unsubscribed — no retry needed.",
         "too_many_messages": "History mail limit of 2,000 exceeded. Please deselect some.",
         "too_many_senders": "Sender limit of 25 exceeded. Please deselect some.",
         "undo_window_expired": "Past the 30-day window — undo is no longer available."
       },
-      "sender_suppressed": "This sender is in the suppression list. Remove from suppression before unsubscribing."
+      "sender_suppressed": "This sender is in the safe list. Remove it before processing."
     },
     "conflict": "The data changed before the action finished. Reload the page and try again.",
     "dataIntegrity": "The change could not be saved because the data is invalid.",
@@ -753,6 +758,9 @@
       "invalid_cursor": "Something went wrong. Try again."
     },
     "rules": {
+      "applyLabels": {
+        "generic": "Could not apply labels in Gmail right now. Check the Gmail connection and try again."
+      },
       "compile": {
         "clarification_required": "This rule needs one clarification answer before it can be saved.",
         "invalid": "Zero Mail could not review this rule. Edit the wording or answer the clarification, then review again."
@@ -768,7 +776,7 @@
       "notFound": "This rule could not be found. Reload the rules list.",
       "preview": {
         "generic": "Preview could not finish. Check Gmail connection and credits, then preview the rule again.",
-        "invalid_sample_size": "Preview sample size must be 10, 25, or 50.",
+        "invalid_sample_size": "Preview sample size must be 10, 20, 50, or 100.",
         "required": "Preview the current rule version before enabling it."
       },
       "refine": {
@@ -928,6 +936,113 @@
     },
     "title": "Three steps. No new inbox to learn."
   },
+  "inbox": {
+    "action": {
+      "forward": "Forward",
+      "generate": "Write by AI",
+      "loadingMore": "Loading…",
+      "loadMore": "Load more",
+      "openInGmail": "Open Gmail",
+      "refresh": "Refresh",
+      "reply": "Reply",
+      "replyAll": "Reply all"
+    },
+    "assistantPrompt": {
+      "forward": "Draft a forward for this Gmail message. Ask me who to forward it to if I did not provide recipients. Gmail message id: {messageId}. Gmail thread id: {threadId}. Subject: {subject}. From: {from}. Use a confirmation preview before sending.",
+      "generate": "Generate a suitable reply draft for this Gmail message. Gmail message id: {messageId}. Gmail thread id: {threadId}. Subject: {subject}. From: {from}. To: {to}. Cc: {cc}. Do not send immediately; create a draft or preview for me to review and confirm.",
+      "reply": "Draft a reply to this Gmail message. Gmail message id: {messageId}. Gmail thread id: {threadId}. Subject: {subject}. From: {from}. To: {to}. Use replyEmail and show me a confirmation preview before sending.",
+      "replyAll": "Draft a reply-all to this Gmail message. Gmail message id: {messageId}. Gmail thread id: {threadId}. Subject: {subject}. From: {from}. To: {to}. Cc: {cc}. Use replyEmail and show me a confirmation preview before sending."
+    },
+    "badge": {
+      "attachment": "Attachment",
+      "unread": "Unread"
+    },
+    "composer": {
+      "attach": "Attach",
+      "attachmentMeta": "{type} · {size}",
+      "attachmentNotice": "The secure send flow does not support Inbox file upload yet.",
+      "attachmentsTitle": "{count} selected file(s)",
+      "bcc": "Bcc",
+      "bccPlaceholder": "Enter Bcc email",
+      "bodyCleared": "Body cleared.",
+      "bodyCopied": "Body copied.",
+      "bodyPlaceholder": "Write your reply...",
+      "bold": "Bold",
+      "cc": "Cc",
+      "ccPlaceholder": "Enter Cc email",
+      "clearAttachments": "Clear selected files",
+      "clearBody": "Clear body",
+      "close": "Close composer",
+      "confirmSendBody": "Have you carefully reviewed this email and are sure you want to send it? Once sent, this action cannot be undone.",
+      "confirmSendCancel": "Cancel",
+      "confirmSendConfirm": "Send",
+      "confirmSendTitle": "Confirm send",
+      "copyBody": "Copy body",
+      "copyUnavailable": "Couldn't copy body.",
+      "discard": "Discard composer",
+      "generateBody": "Write with AI",
+      "generateBodyError": "Couldn't write AI text. Try again in a moment.",
+      "generateBodyLoading": "Writing...",
+      "generateBodySuccess": "AI text was added to the composer.",
+      "generatedDraftReady": "AI text is ready in the composer.",
+      "generateDraft": "Generate draft",
+      "generateError": "Couldn't write text. Try again in a moment.",
+      "generateInFlight": "AI text is already being written for this thread.",
+      "generateLanguageEn": "English",
+      "generateLanguageLabel": "AI writing language",
+      "generateLanguageVi": "Vietnamese",
+      "generateSuccess": "AI text generated.",
+      "italic": "Italic",
+      "link": "Insert link",
+      "list": "List",
+      "more": "More options",
+      "openDraft": "Open",
+      "previewAttachment": "Preview",
+      "previewError": "Couldn't prepare the email for sending.",
+      "previewLoading": "Preparing to send...",
+      "removeAttachment": "Remove {name}",
+      "saveTemplate": "Templates",
+      "sendingNow": "Sending email...",
+      "sendPreview": "Send",
+      "subject": "Subject",
+      "subjectPlaceholder": "Email subject",
+      "templateComingSoon": "Templates coming soon",
+      "templateUnavailable": "Template saving is not wired for Inbox yet.",
+      "text": "text",
+      "to": "To",
+      "toPlaceholder": "Enter recipient email",
+      "unknownAttachmentType": "Unknown type"
+    },
+    "detail": {
+      "cc": "Cc",
+      "from": "From",
+      "to": "To",
+      "you": "You"
+    },
+    "error": {
+      "body": "Check your Gmail connection and try again.",
+      "title": "Couldn't load inbox"
+    },
+    "limit": {
+      "caption": "{loaded}/{max} messages"
+    },
+    "message": {
+      "noSubject": "(no subject)",
+      "unknownSender": "(unknown sender)"
+    },
+    "page": {
+      "description": "Your 100 most recent Gmail inbox messages. Content is fetched only when opened.",
+      "title": "Inbox"
+    },
+    "state": {
+      "empty": {
+        "body": "Gmail did not return any inbox messages for this account.",
+        "title": "No inbox mail"
+      },
+      "noBody": "This message has no readable content. Open Gmail for the full version.",
+      "unselected": "Select a message to read it."
+    }
+  },
   "landing": {
     "bullets": {
       "noAutoSend": "No auto-send",
@@ -947,14 +1062,14 @@
       "triageAccuracy": "triage accuracy",
       "triagePerEmail": "triage per email"
     },
+    "openAppCta": "Open app",
     "peek": {
       "eyebrow": "Next · How it works",
       "link": "Read the walkthrough",
       "title": "Three steps to reach inbox zero — connect, describe, review."
     },
-    "openAppCta": "Open app",
     "primaryCta": "Sign in",
-    "secondaryCta": "See how it works",
+    "secondaryCta": "See features",
     "tagline": "Zero Mail triages your Gmail with rules you write in plain English — labels what matters, archives what doesn't, drafts the easy replies. You stay in the loop on everything that goes out.",
     "waitlistCta": "Register to experience Zero Mail"
   },
@@ -1210,24 +1325,28 @@
     "beta": "beta",
     "billing": "Billing",
     "chat": "Assistant",
-    "cleanupGroup": "Cleanup",
-    "cleanupSuppression": "Suppression",
+    "cleanupGroup": "Unsubscribe",
+    "cleanupSuppression": "Safe list",
     "cleanupUnsubscribe": "Unsubscribe",
     "continueSetup": "Continue setup",
     "dashboard": "Dashboard",
+    "faq": "FAQ",
     "features": "Features",
     "how": "How it works",
+    "inbox": "Inbox",
     "languageSelector": "Language",
     "logoLabel": "Zero Mail home",
     "needsReply": "Needs reply",
     "onboardingProgress": "Onboarding progress",
     "openApp": "Open app",
+    "pricing": "Pricing",
     "privacy": "Privacy",
     "rules": "Rules",
     "sectionMail": "Mail",
     "sectionManage": "Manage",
     "settings": "Settings",
     "signIn": "Sign in",
+    "testimonials": "Reviews",
     "themeToDark": "Switch to dark mode",
     "themeToLight": "Switch to light mode",
     "trust": "Trust & safety",
@@ -1594,6 +1713,8 @@
       "title": "How it parses"
     },
     "preview": {
+      "applyingLabels": "Applying labels...",
+      "applyLabelsCta": "Apply labels",
       "conflicts": "{count} conflicts",
       "conflictWarning": "This preview found action conflicts. Review the matched rules before enabling.",
       "deferred": "{count} deferred",
@@ -1607,6 +1728,7 @@
       "enableCta": "Enable rule",
       "evidence": "Evidence",
       "gmailLabels": "Gmail labels",
+      "labelsApplied": "Applied {count} labels in Gmail. The system inbox shows these labels when the messages are in the 100 most recent emails.",
       "llmCta": "Run LLM confirmation (~{credits} credits)",
       "llmCtaBody": "Rules with semantic matchers are currently deferred. Run the LLM to confirm whether they match (~{credits} credits).",
       "llmCtaTitle": "{count} emails need LLM confirmation",

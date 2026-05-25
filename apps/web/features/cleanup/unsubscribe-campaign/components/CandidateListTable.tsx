@@ -23,7 +23,6 @@ import {
 } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { UnsubscribeCandidateResponse } from '@/features/cleanup/unsubscribe-campaign/api/unsubscribe-campaign-api';
-import { MethodBadge } from '@/features/cleanup/unsubscribe-campaign/components/MethodBadge';
 import { RiskBadge } from '@/features/cleanup/unsubscribe-campaign/components/RiskBadge';
 import { cn } from '@/lib/utils';
 
@@ -40,6 +39,7 @@ export function CandidateListTable({
   candidates,
   selectedEmails,
   onToggleEmail,
+  onToggleVisibleEmails,
   onPreviewSender,
   onKeepSender,
   keepingSenderEmail,
@@ -47,6 +47,7 @@ export function CandidateListTable({
   candidates: CandidateRow[];
   selectedEmails: Set<string>;
   onToggleEmail: (senderEmail: string) => void;
+  onToggleVisibleEmails: (senderEmails: string[], checked: boolean) => void;
   onPreviewSender: (senderEmail: string) => void;
   onKeepSender: (senderEmail: string) => void;
   keepingSenderEmail?: string;
@@ -57,16 +58,43 @@ export function CandidateListTable({
     () => Math.max(1, ...candidates.map((candidate) => candidate.messageCount ?? 0)),
     [candidates],
   );
+  const selectableVisibleEmails = useMemo(
+    () =>
+      candidates
+        .filter(
+          (candidate) =>
+            candidate.senderEmail &&
+            candidate.unsubscribeMethod !== 'NONE' &&
+            candidate.suppressed !== true,
+        )
+        .map((candidate) => candidate.senderEmail!),
+    [candidates],
+  );
+  const selectedVisibleCount = selectableVisibleEmails.filter((senderEmail) =>
+    selectedEmails.has(senderEmail),
+  ).length;
+  const allVisibleSelected =
+    selectableVisibleEmails.length > 0 && selectedVisibleCount === selectableVisibleEmails.length;
+  const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
 
   return (
     <div className="border-foreground/10 bg-background overflow-hidden rounded-lg border">
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/40 hover:bg-muted/40">
-            <TableHead className="w-10" aria-label="select" />
+            <TableHead className="w-10">
+              <Checkbox
+                aria-label={t('cleanup.unsubscribe.list.selectAll')}
+                checked={allVisibleSelected}
+                indeterminate={someVisibleSelected}
+                disabled={selectableVisibleEmails.length === 0}
+                onCheckedChange={(checked) =>
+                  onToggleVisibleEmails(selectableVisibleEmails, checked === true)
+                }
+              />
+            </TableHead>
             <TableHead>{t('cleanup.unsubscribe.list.col.sender')}</TableHead>
             <TableHead className="min-w-36">{t('cleanup.unsubscribe.list.col.history')}</TableHead>
-            <TableHead>{t('cleanup.unsubscribe.list.col.method')}</TableHead>
             <TableHead>{t('cleanup.unsubscribe.list.col.risk')}</TableHead>
             <TableHead className="text-right">
               {t('cleanup.unsubscribe.list.col.actions')}
@@ -146,35 +174,21 @@ export function CandidateListTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <MethodBadge method={method} />
-                </TableCell>
-                <TableCell>
                   <RiskBadge risk={risk} />
                 </TableCell>
                 <TableCell>
-                  <div className="flex justify-end gap-2">
+                  <div className="flex justify-end">
                     <Button
                       type="button"
                       variant="default"
                       size="sm"
                       disabled={isDisabled}
+                      aria-label={`${t('cleanup.unsubscribe.list.action.unsubscribe')} ${senderEmail}`}
                       onClick={() => onPreviewSender(senderEmail)}
                     >
                       <MailXIcon className="size-4" aria-hidden="true" />
                       <span className="hidden lg:inline">
                         {t('cleanup.unsubscribe.list.action.unsubscribe')}
-                      </span>
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={isKeeping}
-                      onClick={() => onKeepSender(senderEmail)}
-                    >
-                      <ShieldIcon className="size-4" aria-hidden="true" />
-                      <span className="hidden lg:inline">
-                        {t('cleanup.unsubscribe.list.action.keep')}
                       </span>
                     </Button>
                   </div>
@@ -197,8 +211,8 @@ export function CandidateListTable({
                 {isExpanded && (
                   <TableRow className="bg-muted/20 hover:bg-muted/20">
                     <TableCell />
-                    <TableCell colSpan={5}>
-                      <div className="grid gap-3 py-3 text-sm md:grid-cols-3">
+                    <TableCell colSpan={4}>
+                      <div className="grid gap-3 py-3 text-sm md:grid-cols-4">
                         <div className="flex items-start gap-2">
                           <Clock3Icon
                             className="text-muted-foreground mt-0.5 size-4"
@@ -241,6 +255,34 @@ export function CandidateListTable({
                                 ? t('cleanup.unsubscribe.list.detail.disabled')
                                 : t('cleanup.unsubscribe.list.detail.safe')}
                             </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <ShieldIcon
+                            className="text-muted-foreground mt-0.5 size-4"
+                            aria-hidden="true"
+                          />
+                          <div className="flex min-w-0 flex-col gap-2">
+                            <div>
+                              <p className="text-muted-foreground text-xs">
+                                {t('cleanup.unsubscribe.list.detail.skip')}
+                              </p>
+                              <p className="text-muted-foreground text-xs leading-5">
+                                {t('cleanup.unsubscribe.list.detail.skipDescription')}
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="w-fit"
+                              disabled={isKeeping}
+                              aria-label={`${t('cleanup.unsubscribe.list.action.keep')} ${senderEmail}`}
+                              onClick={() => onKeepSender(senderEmail)}
+                            >
+                              <ShieldIcon className="size-4" aria-hidden="true" />
+                              {t('cleanup.unsubscribe.list.action.keep')}
+                            </Button>
                           </div>
                         </div>
                       </div>

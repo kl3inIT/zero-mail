@@ -191,3 +191,21 @@ databaseChangeLog:
   - include:
       file: changes/085-llm-call-audit-usage-metadata.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/081-processing-job-tenant-scope.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/082-mail-message-observed-list-unsubscribe.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/083-sender-suppression.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/084-unsubscribe-campaign.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/085-unsubscribe-attempt.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changes/086-triage-audit-source.yaml
+      relativeToChangelogFile: true

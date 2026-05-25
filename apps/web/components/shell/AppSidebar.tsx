@@ -12,9 +12,7 @@ import {
   ListChecks,
   MailQuestion,
   MailX,
-  Recycle,
   Settings,
-  ShieldX,
   Sparkles,
 } from 'lucide-react';
 
@@ -28,9 +26,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarRail,
   SidebarSeparator,
   useSidebar,
@@ -45,6 +40,7 @@ type NavItem = {
   href: Route;
   labelKey:
     | 'nav.chat'
+    | 'nav.inbox'
     | 'nav.ai'
     | 'nav.analytics'
     | 'nav.needsReply'
@@ -52,31 +48,17 @@ type NavItem = {
     | 'nav.billing'
     | 'nav.settings'
     | 'nav.onboardingProgress'
-    | 'nav.cleanupGroup'
-    | 'nav.cleanupUnsubscribe'
-    | 'nav.cleanupSuppression';
+    | 'nav.cleanupUnsubscribe';
   icon: typeof Inbox;
   badge?: 'needs-reply';
-  children?: NavItem[];
 };
 
 const MAIL_NAV: NavItem[] = [
+  { href: '/inbox' as Route, labelKey: 'nav.inbox', icon: Inbox },
   { href: '/chat', labelKey: 'nav.chat', icon: Sparkles },
   { href: '/rules', labelKey: 'nav.rules', icon: ListChecks },
   { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
-  {
-    href: '/cleanup',
-    labelKey: 'nav.cleanupGroup',
-    icon: Recycle,
-    children: [
-      {
-        href: '/cleanup/unsubscribe-campaign',
-        labelKey: 'nav.cleanupUnsubscribe',
-        icon: MailX,
-      },
-      { href: '/cleanup/suppression', labelKey: 'nav.cleanupSuppression', icon: ShieldX },
-    ],
-  },
+  { href: '/cleanup/unsubscribe-campaign', labelKey: 'nav.cleanupUnsubscribe', icon: MailX },
   { href: '/needs-reply', labelKey: 'nav.needsReply', icon: MailQuestion, badge: 'needs-reply' },
 ];
 
@@ -117,28 +99,11 @@ export function AppSidebar() {
     currentUser.data?.gmailConnectionStatus?.googleEmail ?? currentUser.data?.email ?? '';
   const initial = email.charAt(0).toUpperCase();
 
-  function renderSubItem(subItem: NavItem) {
-    const SubIcon = subItem.icon;
-    const subLabel = t(subItem.labelKey);
-    const subActive = isActivePath(pathname, subItem.href);
-    return (
-      <SidebarMenuSubItem key={subItem.href}>
-        <SidebarMenuSubButton
-          isActive={subActive}
-          render={<Link href={subItem.href} aria-label={subLabel} />}
-        >
-          <SubIcon className="size-4 shrink-0" aria-hidden="true" />
-          <span className="truncate">{subLabel}</span>
-        </SidebarMenuSubButton>
-      </SidebarMenuSubItem>
-    );
-  }
-
   function renderNavItem(item: NavItem) {
     const Icon = item.icon;
     const label = t(item.labelKey);
     const active = isActivePath(pathname, item.href);
-    const hasChildren = Array.isArray(item.children) && item.children.length > 0;
+
     return (
       <SidebarMenuItem key={item.href}>
         <SidebarMenuButton
@@ -165,7 +130,6 @@ export function AppSidebar() {
             </span>
           )}
         </SidebarMenuButton>
-        {hasChildren && <SidebarMenuSub>{item.children!.map(renderSubItem)}</SidebarMenuSub>}
       </SidebarMenuItem>
     );
   }

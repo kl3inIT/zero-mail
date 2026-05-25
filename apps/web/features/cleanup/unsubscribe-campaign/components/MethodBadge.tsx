@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 type Method = 'ONE_CLICK' | 'MAILTO' | 'NONE';
 
@@ -12,16 +13,30 @@ export function MethodBadge({ method, className }: { method: string; className?:
 
   if (normalized === 'ONE_CLICK') {
     return (
-      <Badge variant="outline" className={className}>
-        {t('cleanup.unsubscribe.method.oneClick')}
-      </Badge>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Badge variant="outline" className={className}>
+              {t('cleanup.unsubscribe.method.oneClick')}
+            </Badge>
+          }
+        />
+        <TooltipContent>{t('cleanup.unsubscribe.method.oneClickTooltip')}</TooltipContent>
+      </Tooltip>
     );
   }
   if (normalized === 'MAILTO') {
     return (
-      <Badge variant="outline" className={className}>
-        {t('cleanup.unsubscribe.method.mailto')}
-      </Badge>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Badge variant="outline" className={className}>
+              {t('cleanup.unsubscribe.method.mailto')}
+            </Badge>
+          }
+        />
+        <TooltipContent>{t('cleanup.unsubscribe.method.mailtoTooltip')}</TooltipContent>
+      </Tooltip>
     );
   }
   return (

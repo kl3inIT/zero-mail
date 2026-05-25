@@ -1,11 +1,11 @@
 export const suppressionMessages = {
   'cleanup.suppression.title': {
-    vi: 'Danh sách bảo vệ',
-    en: 'Suppression list',
+    vi: 'Danh sách an toàn',
+    en: 'Safe list',
   },
   'cleanup.suppression.lead': {
-    vi: 'Người gửi hoặc tên miền trong danh sách này sẽ không bao giờ hiển thị trong chiến dịch hủy đăng ký.',
-    en: 'Senders or domains on this list will never appear in an unsubscribe campaign.',
+    vi: 'Người gửi hoặc tên miền trong danh sách này sẽ không xuất hiện trong gợi ý hủy đăng ký.',
+    en: 'Senders or domains on this list will not appear in unsubscribe suggestions.',
   },
   'cleanup.suppression.input.placeholder': {
     vi: 'Email hoặc tên miền (ví dụ: boss@example.com hoặc example.com)',
@@ -16,12 +16,12 @@ export const suppressionMessages = {
     en: 'Sender email',
   },
   'cleanup.suppression.add': {
-    vi: 'Thêm vào danh sách bảo vệ',
-    en: 'Add to suppression',
+    vi: 'Thêm vào danh sách an toàn',
+    en: 'Add to safe list',
   },
   'cleanup.suppression.helper': {
-    vi: 'Mỗi mục bảo vệ một người gửi hoặc cả một tên miền.',
-    en: 'Each entry blocks a single sender or an entire domain.',
+    vi: 'Mỗi mục bỏ qua một người gửi hoặc cả một tên miền.',
+    en: 'Each entry skips one sender or an entire domain.',
   },
   'cleanup.suppression.col.target': {
     vi: 'Người gửi / Tên miền',
@@ -48,16 +48,16 @@ export const suppressionMessages = {
     en: 'Auto',
   },
   'cleanup.suppression.remove.aria': {
-    vi: 'Gỡ khỏi danh sách bảo vệ',
-    en: 'Remove from suppression',
+    vi: 'Gỡ khỏi danh sách an toàn',
+    en: 'Remove from safe list',
   },
   'cleanup.suppression.remove.confirmTitle': {
     vi: 'Gỡ mục này?',
     en: 'Remove this entry?',
   },
   'cleanup.suppression.remove.confirmBody': {
-    vi: 'Sau khi gỡ, người gửi hoặc tên miền này sẽ xuất hiện lại trong danh sách ứng viên.',
-    en: 'After removal, this sender or domain will reappear as a campaign candidate.',
+    vi: 'Sau khi gỡ, người gửi hoặc tên miền này có thể xuất hiện lại trong gợi ý hủy đăng ký.',
+    en: 'After removal, this sender or domain can reappear in unsubscribe suggestions.',
   },
   'cleanup.suppression.remove.confirmCta': {
     vi: 'Đồng ý gỡ',
@@ -72,28 +72,28 @@ export const suppressionMessages = {
     en: 'Invalid email or domain.',
   },
   'cleanup.suppression.err.duplicate': {
-    vi: 'Mục này đã có trong danh sách bảo vệ.',
-    en: 'This entry is already in the suppression list.',
+    vi: 'Mục này đã có trong danh sách an toàn.',
+    en: 'This entry is already in the safe list.',
   },
   'cleanup.suppression.err.generic': {
     vi: 'Không thêm được. Hãy thử lại sau một chút.',
     en: 'Could not add. Please try again shortly.',
   },
   'cleanup.suppression.removeOk': {
-    vi: 'Đã gỡ khỏi danh sách bảo vệ.',
-    en: 'Removed from suppression list.',
+    vi: 'Đã gỡ khỏi danh sách an toàn.',
+    en: 'Removed from safe list.',
   },
   'cleanup.suppression.addOk': {
-    vi: 'Đã thêm vào danh sách bảo vệ.',
-    en: 'Added to suppression list.',
+    vi: 'Đã thêm vào danh sách an toàn.',
+    en: 'Added to safe list.',
   },
   'cleanup.suppression.empty.title': {
-    vi: 'Chưa có người gửi nào trong danh sách bảo vệ',
-    en: 'No senders in the suppression list yet',
+    vi: 'Chưa có người gửi nào trong danh sách an toàn',
+    en: 'No senders in the safe list yet',
   },
   'cleanup.suppression.empty.body': {
-    vi: 'Thêm người gửi hoặc tên miền bạn không bao giờ muốn hủy đăng ký, ví dụ: sếp, đồng nghiệp hoặc ngân hàng.',
-    en: 'Add senders or domains you never want to unsubscribe (e.g. boss, colleagues, bank).',
+    vi: 'Thêm người gửi hoặc tên miền bạn không muốn Zero Mail đề xuất hủy đăng ký, ví dụ: sếp, đồng nghiệp hoặc ngân hàng.',
+    en: 'Add senders or domains you do not want Zero Mail to suggest unsubscribing from, such as your boss, colleagues, or bank.',
   },
   'cleanup.suppression.error': {
     vi: 'Không tải được danh sách. Hãy thử lại sau một chút.',

@@ -9,11 +9,15 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.EnumSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * The validation seam for native triage-audit inserts.
@@ -32,7 +36,9 @@ public class TriageAuditWriter {
                     TriageDecision.REJECTED_BY_SAFETY_NET,
                     TriageDecision.REJECTED_BY_SAFETY_POLICY);
 
+    private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder().build();
     private static final String CLEANUP_ACTION_ARGS_JSON = "{\"type\":\"archive\"}";
+    private static final String RULE_TEST_APPLY_REASON = "rule_test_apply";
 
     private final TriageAuditRepository triageAuditRepository;
     private final TriageActionResultJsonValidator actionResultJsonValidator;
@@ -180,6 +186,55 @@ public class TriageAuditWriter {
         return insertedAuditId;
     }
 
+    public Optional<UUID> recordRuleTestAppliedLabel(
+            UUID tenantId,
+            String gmailMessageId,
+            String gmailThreadId,
+            String sanitizedSubject,
+            String sanitizedSenderEmail,
+            UUID ruleId,
+            String ruleNameSnapshot,
+            String labelName,
+            String gmailLabelId) {
+        requireText(gmailMessageId, "gmailMessageId");
+        requireText(gmailThreadId, "gmailThreadId");
+        requireText(labelName, "labelName");
+        requireText(gmailLabelId, "gmailLabelId");
+        requireText(ruleNameSnapshot, "ruleNameSnapshot");
+        if (tenantId == null) {
+            throw new IllegalArgumentException("tenantId must not be null");
+        }
+        if (ruleId == null) {
+            throw new IllegalArgumentException("ruleId must not be null");
+        }
+
+        TriageActionResult.Label resolvedLabel =
+                new TriageActionResult.Label(gmailLabelId, labelName);
+        String actionArgsJson = actionResultJsonValidator.toJson(resolvedLabel);
+        Optional<UUID> insertedAuditId =
+                triageAuditRepository.insertRuleTestAppliedLabelAudit(
+                        tenantId,
+                        gmailMessageId,
+                        gmailThreadId,
+                        blankToNull(sanitizedSubject),
+                        blankToNull(sanitizedSenderEmail),
+                        ruleId,
+                        ruleNameSnapshot,
+                        RuleActionType.LABEL.id(),
+                        canonicalHash(RuleActionType.LABEL, resolvedLabel),
+                        actionArgsJson,
+                        changeToken(Map.of("addedLabelId", gmailLabelId)),
+                        RULE_TEST_APPLY_REASON,
+                        gmailMessageId);
+
+        logger.info(
+                "event=triage_audit_rule_test_label_recorded tenantId={} gmailMessageId={} ruleId={}",
+                tenantId,
+                gmailMessageId,
+                ruleId);
+        return insertedAuditId;
+    }
+
     private static byte[] sha256OfCleanupKey(
             UUID campaignAttemptId, String labelId, String gmailMessageId) {
         try {
@@ -202,6 +257,19 @@ public class TriageAuditWriter {
             return "unknown";
         }
         return senderEmail.substring(atIndex + 1);
+    }
+
+    private static String changeToken(Map<String, ?> fields) {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(fields);
+        } catch (JacksonException jacksonException) {
+            throw new IllegalStateException(
+                    "Unable to serialize Gmail change token", jacksonException);
+        }
+    }
+
+    private static String blankToNull(String text) {
+        return text == null || text.isBlank() ? null : text;
     }
 
     private static String requireText(String text, String fieldName) {

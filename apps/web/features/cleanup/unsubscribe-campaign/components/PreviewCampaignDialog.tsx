@@ -37,38 +37,52 @@ export function PreviewCampaignDialog({
   senderEmails: string[];
 }) {
   const t = useTranslations();
-  const preview = usePreviewCampaign();
+  const {
+    data: previewData,
+    isPending: previewIsPending,
+    mutate: previewCampaign,
+    reset: resetPreview,
+  } = usePreviewCampaign();
   const execute = useExecuteCampaign();
 
-  // Trigger preview fetch when dialog opens with a non-empty selection.
   useEffect(() => {
-    if (open && senderEmails.length > 0 && !preview.isPending && !preview.data) {
-      preview.mutate({ senderEmails });
+    if (!open) return;
+    resetPreview();
+    if (senderEmails.length > 0) {
+      previewCampaign({ senderEmails });
     }
-    // We intentionally only react to `open` toggling; senderEmails are captured at open time.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, previewCampaign, resetPreview, senderEmails]);
 
-  // Reset when closing.
   useEffect(() => {
     if (!open) {
-      preview.reset();
+      resetPreview();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, resetPreview]);
 
-  const previewData: CampaignPreviewResponse | undefined = preview.data;
-  const perSender: PerSenderPreviewResponse[] = previewData?.perSender ?? [];
+  const typedPreviewData: CampaignPreviewResponse | undefined = previewData;
+  const perSender: PerSenderPreviewResponse[] = typedPreviewData?.perSender ?? [];
   const totalSenderCount = senderEmails.length;
-  const totalMailCount = previewData?.totalHistoryCount ?? 0;
+  const totalMailCount = typedPreviewData?.totalHistoryCount ?? 0;
   const overSenderCap = totalSenderCount > CAMPAIGN_SENDER_CAP;
   const overMessageCap = totalMailCount > CAMPAIGN_MESSAGE_CAP;
-  const executeDisabled = preview.isPending || execute.isPending || overSenderCap || overMessageCap;
+  const noPreviewableSenders =
+    !previewIsPending &&
+    senderEmails.length > 0 &&
+    typedPreviewData !== undefined &&
+    perSender.length === 0;
+  const executeDisabled =
+    senderEmails.length === 0 ||
+    previewIsPending ||
+    execute.isPending ||
+    !typedPreviewData ||
+    perSender.length === 0 ||
+    overSenderCap ||
+    overMessageCap;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="max-h-[calc(100vh-2rem)] max-w-2xl overflow-hidden sm:max-w-2xl">
+        <DialogHeader className="pr-8">
           <DialogTitle>{t('cleanup.unsubscribe.preview.title')}</DialogTitle>
           <DialogDescription>{t('cleanup.unsubscribe.preview.description')}</DialogDescription>
         </DialogHeader>
@@ -94,25 +108,35 @@ export function PreviewCampaignDialog({
             </AlertTitle>
           </Alert>
         )}
+        {noPreviewableSenders && (
+          <Alert>
+            <AlertTitle>{t('cleanup.unsubscribe.preview.empty')}</AlertTitle>
+          </Alert>
+        )}
 
-        <ScrollArea className="max-h-[60vh]">
+        <ScrollArea className="max-h-[min(56vh,420px)]">
           <div className="flex flex-col gap-2 pr-2">
-            {preview.isPending && (
+            {previewIsPending && (
               <>
                 {Array.from({ length: Math.min(senderEmails.length, 5) }).map((_, idx) => (
                   <Skeleton key={idx} className="h-12 w-full" />
                 ))}
               </>
             )}
-            {!preview.isPending &&
+            {!previewIsPending &&
               perSender.map((senderPreview) => (
                 <div
                   key={senderPreview.senderEmail}
-                  className="ring-foreground/10 flex flex-col gap-1 rounded-md p-2 ring-1"
+                  className="ring-foreground/10 flex min-w-0 flex-col gap-1 rounded-md p-2 ring-1"
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate font-medium">{senderPreview.senderEmail}</span>
-                    <RiskBadge risk={senderPreview.riskBadge ?? 'SAFE'} />
+                  <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <span className="min-w-0 font-medium break-all sm:truncate">
+                      {senderPreview.senderEmail}
+                    </span>
+                    <RiskBadge
+                      risk={senderPreview.riskBadge ?? 'SAFE'}
+                      className="w-fit shrink-0 whitespace-nowrap"
+                    />
                   </div>
                   <p className="text-muted-foreground text-xs tabular-nums">
                     {senderPreview.willArchive
@@ -126,10 +150,11 @@ export function PreviewCampaignDialog({
           </div>
         </ScrollArea>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2">
           <Button
             type="button"
             variant="outline"
+            className="w-full sm:w-auto"
             onClick={() => onOpenChange(false)}
             disabled={execute.isPending}
           >
@@ -138,6 +163,7 @@ export function PreviewCampaignDialog({
           <Button
             type="button"
             variant="default"
+            className="w-full sm:w-auto"
             disabled={executeDisabled}
             onClick={() => execute.mutate({ senderEmails })}
           >

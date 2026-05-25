@@ -4,6 +4,8 @@ import com.zeromail.core.cleanup.domain.UnsubscribeCampaignPolicy;
 import com.zeromail.core.cleanup.domain.UnsubscribeMethod;
 import com.zeromail.core.cleanup.exception.CampaignCapExceededException;
 import com.zeromail.core.cleanup.persistence.SenderSuppressionRepository;
+import com.zeromail.core.cleanup.usecases.CleanupRecentInboxWorkingSetService.SenderWorkingSet;
+import com.zeromail.core.cleanup.usecases.CleanupRecentInboxWorkingSetService.WorkingSet;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Duration;
@@ -13,6 +15,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,17 +62,23 @@ public class CampaignPreviewService {
 
     private final JdbcTemplate jdbcTemplate;
     private final SenderSuppressionRepository senderSuppressionRepository;
+    private final CleanupRecentInboxWorkingSetService cleanupRecentInboxWorkingSetService;
     private final Clock clock;
 
     public CampaignPreviewService(
             JdbcTemplate jdbcTemplate,
             SenderSuppressionRepository senderSuppressionRepository,
+            CleanupRecentInboxWorkingSetService cleanupRecentInboxWorkingSetService,
             Clock clock) {
         this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate, "jdbcTemplate must not be null");
         this.senderSuppressionRepository =
                 Objects.requireNonNull(
                         senderSuppressionRepository,
                         "senderSuppressionRepository must not be null");
+        this.cleanupRecentInboxWorkingSetService =
+                Objects.requireNonNull(
+                        cleanupRecentInboxWorkingSetService,
+                        "cleanupRecentInboxWorkingSetService must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
 
@@ -89,13 +98,18 @@ public class CampaignPreviewService {
                     UnsubscribeCampaignPolicy.MAX_SENDERS_PER_CAMPAIGN);
         }
 
+        Optional<WorkingSet> recentInboxWorkingSet =
+                cleanupRecentInboxWorkingSetService.findRecentInboxWorkingSet(
+                        tenantId, HISTORY_WINDOW);
+
         List<PerSenderPreview> perSender = new ArrayList<>(senderEmails.size());
         long archivableHistoryCount = 0L;
         for (String senderEmail : senderEmails) {
-            PerSenderPreview row = lookupPerSenderPreview(tenantId, senderEmail);
-            perSender.add(row);
-            if (row.willArchive()) {
-                archivableHistoryCount += row.messageCount();
+            PerSenderPreview senderPreview =
+                    lookupPerSenderPreview(tenantId, senderEmail, recentInboxWorkingSet);
+            perSender.add(senderPreview);
+            if (senderPreview.willArchive()) {
+                archivableHistoryCount += senderPreview.messageCount();
             }
         }
 
@@ -119,8 +133,16 @@ public class CampaignPreviewService {
         return new CampaignPreviewResult(perSender, (int) archivableHistoryCount);
     }
 
-    private PerSenderPreview lookupPerSenderPreview(UUID tenantId, String senderEmail) {
+    private PerSenderPreview lookupPerSenderPreview(
+            UUID tenantId, String senderEmail, Optional<WorkingSet> recentInboxWorkingSet) {
         String normalizedSenderEmail = requireText(senderEmail, "senderEmail");
+        Optional<SenderWorkingSet> senderWorkingSet =
+                recentInboxWorkingSet.flatMap(
+                        workingSet -> workingSet.findSender(normalizedSenderEmail));
+        if (senderWorkingSet.isPresent()) {
+            return fromWorkingSet(senderWorkingSet.orElseThrow());
+        }
+
         String senderDomain = extractDomain(normalizedSenderEmail);
 
         boolean suppressed =
@@ -168,6 +190,15 @@ public class CampaignPreviewService {
 
         return new PerSenderPreview(
                 normalizedSenderEmail, senderDomain, unsubscribeMethod, messageCount, suppressed);
+    }
+
+    private static PerSenderPreview fromWorkingSet(SenderWorkingSet senderWorkingSet) {
+        return new PerSenderPreview(
+                senderWorkingSet.senderEmail(),
+                senderWorkingSet.senderDomain(),
+                senderWorkingSet.unsubscribeMethod(),
+                senderWorkingSet.messageCount(),
+                false);
     }
 
     private static String extractDomain(String senderEmail) {

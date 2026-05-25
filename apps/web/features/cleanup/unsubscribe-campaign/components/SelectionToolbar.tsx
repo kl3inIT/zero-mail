@@ -26,7 +26,7 @@ export function SelectionToolbar({
   const clearDisabled = selectedCount === 0;
 
   return (
-    <div className="bg-muted/30 ring-foreground/10 sticky top-0 z-10 flex flex-col gap-2 rounded-lg px-3 py-2 ring-1 md:flex-row md:items-center md:justify-between">
+    <div className="bg-muted/30 ring-foreground/10 flex flex-col gap-2 rounded-lg px-3 py-2 ring-1 md:flex-row md:items-center md:justify-between">
       <div aria-live="polite" className="flex flex-col gap-0.5">
         <span
           className={cn(

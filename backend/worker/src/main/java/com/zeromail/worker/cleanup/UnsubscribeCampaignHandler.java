@@ -9,6 +9,9 @@ import com.zeromail.core.cleanup.persistence.UnsubscribeAttemptEntity;
 import com.zeromail.core.cleanup.persistence.UnsubscribeAttemptRepository;
 import com.zeromail.core.cleanup.persistence.UnsubscribeCampaignEntity;
 import com.zeromail.core.cleanup.persistence.UnsubscribeCampaignRepository;
+import com.zeromail.core.cleanup.usecases.CleanupRecentInboxWorkingSetService;
+import com.zeromail.core.cleanup.usecases.CleanupRecentInboxWorkingSetService.SenderWorkingSet;
+import com.zeromail.core.cleanup.usecases.CleanupRecentInboxWorkingSetService.WorkingSet;
 import com.zeromail.core.cleanup.usecases.UnsubscribeDomainThrottle;
 import com.zeromail.core.cleanup.usecases.UnsubscribeHttpClient;
 import com.zeromail.core.cleanup.usecases.UnsubscribeMailtoSender;
@@ -16,9 +19,11 @@ import com.zeromail.core.triage.persistence.TriageAuditWriter;
 import com.zeromail.core.triage.usecases.TriageGmailWriter;
 import java.io.IOException;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +62,7 @@ public class UnsubscribeCampaignHandler {
 
     private static final Logger log = LoggerFactory.getLogger(UnsubscribeCampaignHandler.class);
     private static final String UNKNOWN_DOMAIN = "unknown";
+    private static final Duration HISTORY_WINDOW = Duration.ofDays(30);
     private static final String LOOKUP_URL_SQL =
             "SELECT list_unsubscribe_url FROM mail_message_observed "
                     + "WHERE tenant_id = ? AND sender_email = ? AND list_unsubscribe_url IS NOT NULL "
@@ -83,6 +89,7 @@ public class UnsubscribeCampaignHandler {
     private final UnsubscribeHttpClient unsubscribeHttpClient;
     private final UnsubscribeMailtoSender unsubscribeMailtoSender;
     private final UnsubscribeDomainThrottle unsubscribeDomainThrottle;
+    private final CleanupRecentInboxWorkingSetService cleanupRecentInboxWorkingSetService;
     private final TriageGmailWriter triageGmailWriter;
     private final TriageAuditWriter triageAuditWriter;
     private final JdbcTemplate jdbcTemplate;
@@ -95,6 +102,7 @@ public class UnsubscribeCampaignHandler {
             UnsubscribeHttpClient unsubscribeHttpClient,
             UnsubscribeMailtoSender unsubscribeMailtoSender,
             UnsubscribeDomainThrottle unsubscribeDomainThrottle,
+            CleanupRecentInboxWorkingSetService cleanupRecentInboxWorkingSetService,
             TriageGmailWriter triageGmailWriter,
             TriageAuditWriter triageAuditWriter,
             JdbcTemplate jdbcTemplate,
@@ -117,6 +125,10 @@ public class UnsubscribeCampaignHandler {
         this.unsubscribeDomainThrottle =
                 Objects.requireNonNull(
                         unsubscribeDomainThrottle, "unsubscribeDomainThrottle must not be null");
+        this.cleanupRecentInboxWorkingSetService =
+                Objects.requireNonNull(
+                        cleanupRecentInboxWorkingSetService,
+                        "cleanupRecentInboxWorkingSetService must not be null");
         this.triageGmailWriter =
                 Objects.requireNonNull(triageGmailWriter, "triageGmailWriter must not be null");
         this.triageAuditWriter =
@@ -127,8 +139,8 @@ public class UnsubscribeCampaignHandler {
     }
 
     /**
-     * Entry point invoked by {@link ProcessingJobWorker#dispatchJob}. {@code TenantContext.TENANT}
-     * is already bound to {@code tenantId} when this method runs.
+     * Entry point invoked by {@link ProcessingJobWorker}. {@code TenantContext.TENANT} is already
+     * bound to {@code tenantId} when this method runs.
      */
     public void handle(UUID jobId, UUID tenantId, String payloadJson) {
         UnsubscribeCampaignPayload payload = parsePayload(payloadJson);
@@ -147,6 +159,9 @@ public class UnsubscribeCampaignHandler {
         List<UnsubscribeAttemptEntity> attempts =
                 unsubscribeAttemptRepository.findByCampaignIdOrderBySenderEmailAsc(
                         campaign.getCampaignId());
+        Optional<WorkingSet> recentInboxWorkingSet =
+                cleanupRecentInboxWorkingSetService.findRecentInboxWorkingSet(
+                        tenantId, HISTORY_WINDOW);
         for (UnsubscribeAttemptEntity attempt : attempts) {
             switch (attempt.getState()) {
                 case OK, FAILED -> {
@@ -158,7 +173,7 @@ public class UnsubscribeCampaignHandler {
                         attempt.resetToPending();
                         unsubscribeAttemptRepository.save(attempt);
                     }
-                    executeSingleAttempt(jobId, tenantId, attempt);
+                    executeSingleAttempt(jobId, tenantId, attempt, recentInboxWorkingSet);
                     updateHeartbeat(jobId);
                 }
             }
@@ -180,7 +195,11 @@ public class UnsubscribeCampaignHandler {
      * ThrottleDeferredException} when the throttle bucket refuses the attempt (after re-queueing
      * the job row + resetting the attempt to PENDING so the next pickup can retry it).
      */
-    private void executeSingleAttempt(UUID jobId, UUID tenantId, UnsubscribeAttemptEntity attempt) {
+    private void executeSingleAttempt(
+            UUID jobId,
+            UUID tenantId,
+            UnsubscribeAttemptEntity attempt,
+            Optional<WorkingSet> recentInboxWorkingSet) {
         // Throttle check FIRST — before flipping state. If denied, the attempt remains PENDING
         // and the job is re-queued for the next poll cycle.
         if (!unsubscribeDomainThrottle.acquire(tenantId, attempt.getSenderDomain())) {
@@ -196,7 +215,8 @@ public class UnsubscribeCampaignHandler {
         attempt.markRunning(clock.instant());
         unsubscribeAttemptRepository.save(attempt);
 
-        UnsubscribeResult result = invokeUnsubscribeTransport(tenantId, attempt);
+        UnsubscribeResult result =
+                invokeUnsubscribeTransport(tenantId, attempt, recentInboxWorkingSet);
 
         if (result instanceof UnsubscribeResult.Failed failed) {
             attempt.markFailed(failed.failureReason(), clock.instant());
@@ -210,7 +230,7 @@ public class UnsubscribeCampaignHandler {
         }
 
         // Per-sender atomic: label + archive ONLY when unsubscribe step succeeded.
-        int archivedCount = applyLabelAndArchiveHistory(tenantId, attempt);
+        int archivedCount = applyLabelAndArchiveHistory(tenantId, attempt, recentInboxWorkingSet);
         attempt.markOk(archivedCount, clock.instant());
         unsubscribeAttemptRepository.save(attempt);
         log.info(
@@ -221,19 +241,35 @@ public class UnsubscribeCampaignHandler {
     }
 
     private UnsubscribeResult invokeUnsubscribeTransport(
-            UUID tenantId, UnsubscribeAttemptEntity attempt) {
+            UUID tenantId,
+            UnsubscribeAttemptEntity attempt,
+            Optional<WorkingSet> recentInboxWorkingSet) {
+        Optional<SenderWorkingSet> senderWorkingSet =
+                findSenderWorkingSet(recentInboxWorkingSet, attempt.getSenderEmail());
         try {
             return switch (attempt.getUnsubscribeMethod()) {
                 case ONE_CLICK -> {
-                    String persistedUrl =
-                            lookupPersistedHttpsUrl(tenantId, attempt.getSenderEmail());
-                    yield unsubscribeHttpClient.postOneClick(tenantId, persistedUrl);
+                    String unsubscribeUrl =
+                            senderWorkingSet
+                                    .map(SenderWorkingSet::listUnsubscribeUrl)
+                                    .filter(value -> !value.isBlank())
+                                    .orElseGet(
+                                            () ->
+                                                    lookupPersistedHttpsUrl(
+                                                            tenantId, attempt.getSenderEmail()));
+                    yield unsubscribeHttpClient.postOneClick(tenantId, unsubscribeUrl);
                 }
                 case MAILTO -> {
                     String persistedMailto =
-                            lookupPersistedMailtoValue(tenantId, attempt.getSenderEmail());
+                            senderWorkingSet
+                                    .map(SenderWorkingSet::listUnsubscribeMailto)
+                                    .filter(value -> !value.isBlank())
+                                    .orElseGet(
+                                            () ->
+                                                    lookupPersistedMailtoValue(
+                                                            tenantId, attempt.getSenderEmail()));
                     yield unsubscribeMailtoSender.sendUnsubscribeMailto(
-                            tenantId, null, persistedMailto, persistedMailto);
+                            tenantId, persistedMailto, persistedMailto);
                 }
                 case NONE -> UnsubscribeResult.failed("NO_HEADER");
             };
@@ -244,6 +280,11 @@ public class UnsubscribeCampaignHandler {
                     attempt.getSenderDomain());
             return UnsubscribeResult.failed("INVALID_PERSISTED_HANDLE");
         }
+    }
+
+    private static Optional<SenderWorkingSet> findSenderWorkingSet(
+            Optional<WorkingSet> recentInboxWorkingSet, String senderEmail) {
+        return recentInboxWorkingSet.flatMap(workingSet -> workingSet.findSender(senderEmail));
     }
 
     /**
@@ -274,7 +315,10 @@ public class UnsubscribeCampaignHandler {
         return mailtos.get(0);
     }
 
-    private int applyLabelAndArchiveHistory(UUID tenantId, UnsubscribeAttemptEntity attempt) {
+    private int applyLabelAndArchiveHistory(
+            UUID tenantId,
+            UnsubscribeAttemptEntity attempt,
+            Optional<WorkingSet> recentInboxWorkingSet) {
         String labelId;
         try {
             labelId =
@@ -289,11 +333,16 @@ public class UnsubscribeCampaignHandler {
         }
 
         List<String> historyMessageIds =
-                jdbcTemplate.queryForList(
-                        LOOKUP_HISTORY_MESSAGE_IDS_SQL,
-                        String.class,
-                        tenantId,
-                        attempt.getSenderEmail());
+                findSenderWorkingSet(recentInboxWorkingSet, attempt.getSenderEmail())
+                        .map(SenderWorkingSet::gmailMessageIds)
+                        .filter(messageIds -> !messageIds.isEmpty())
+                        .orElseGet(
+                                () ->
+                                        jdbcTemplate.queryForList(
+                                                LOOKUP_HISTORY_MESSAGE_IDS_SQL,
+                                                String.class,
+                                                tenantId,
+                                                attempt.getSenderEmail()));
 
         int archivedCount = 0;
         for (String gmailMessageId : historyMessageIds) {

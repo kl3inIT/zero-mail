@@ -40,6 +40,7 @@
             "billing :: usecases",
             "shared :: error",
             "shared :: exception",
+            "shared :: html",
             "shared :: persistence",
             "shared :: lang",
             "gmail :: persistence.crypto"

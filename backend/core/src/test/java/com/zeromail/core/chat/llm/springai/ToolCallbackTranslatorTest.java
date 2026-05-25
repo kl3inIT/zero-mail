@@ -45,6 +45,23 @@ class ToolCallbackTranslatorTest {
         assertThat(getMessageSchema.get("properties").has("messageId")).isTrue();
     }
 
+    @Test
+    void confirmed_reply_and_forward_schemas_include_send_executor_fields()
+            throws JacksonException {
+        ToolCallbackTranslator toolCallbackTranslator = new ToolCallbackTranslator();
+        List<ToolCallback> callbacks = toolCallbackTranslator.translate(new ChatToolCatalog());
+
+        JsonNode replyEmailSchema = schemaFor(callbacks, ChatToolName.REPLY_EMAIL);
+        JsonNode forwardEmailSchema = schemaFor(callbacks, ChatToolName.FORWARD_EMAIL);
+
+        assertThat(replyEmailSchema.get("properties").has("subject")).isTrue();
+        assertThat(replyEmailSchema.get("properties").has("gmailThreadId")).isTrue();
+        assertThat(replyEmailSchema.get("properties").has("cc")).isTrue();
+        assertThat(forwardEmailSchema.get("properties").has("subject")).isTrue();
+        assertThat(forwardEmailSchema.get("properties").has("gmailThreadId")).isTrue();
+        assertThat(forwardEmailSchema.get("properties").has("cc")).isTrue();
+    }
+
     private JsonNode schemaFor(List<ToolCallback> toolCallbacks, ChatToolName chatToolName)
             throws JacksonException {
         String schema =

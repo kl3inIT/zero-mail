@@ -73,7 +73,6 @@ public class UnsubscribeMailtoSender {
      * Send a one-off RFC 6068 mailto unsubscribe message from the tenant's Gmail mailbox.
      *
      * @param tenantId tenant whose Gmail credentials are used (send-as-self).
-     * @param gmailMessageId Gmail messageId of the originating message — logged only.
      * @param persistedListUnsubscribeMailto the {@code list_unsubscribe_mailto} value persisted at
      *     ingest. Used as the byte-for-byte provenance reference (D-23).
      * @param mailtoUriToSend the {@code mailto:} URI to actually send. MUST match {@code
@@ -84,10 +83,7 @@ public class UnsubscribeMailtoSender {
      *     the byte-for-byte provenance check.
      */
     public UnsubscribeResult sendUnsubscribeMailto(
-            UUID tenantId,
-            String gmailMessageId,
-            String persistedListUnsubscribeMailto,
-            String mailtoUriToSend) {
+            UUID tenantId, String persistedListUnsubscribeMailto, String mailtoUriToSend) {
         if (tenantId == null) {
             throw new IllegalArgumentException("tenantId must not be null");
         }

@@ -2,16 +2,20 @@ import { expect, test } from '@playwright/test';
 
 import type { Page } from '@playwright/test';
 
-import { createChromeMockState, openAuthenticatedRoute } from './chrome-test-utils';
+import {
+  createChromeMockState,
+  installChromeApiMock,
+  seedAuthenticatedSession,
+} from './chrome-test-utils';
 
 /**
- * Phase 8 — Suppression list e2e (`/cleanup/suppression`). Wave 0 RED: the route + the page UI
- * + the suppression CRUD endpoints are introduced in Wave 5b (Plan 09). Until then this spec
- * fails with "no element found" — expected RED state.
+ * Phase 8 — Safe list e2e. The old `/cleanup/suppression` screen is folded into the
+ * `/cleanup/unsubscribe-campaign` flow as an in-page dialog.
  *
  * Two scenarios (UNS-02 frontend half):
- *   - manual add: user types `boss@example.com` + clicks "Thêm vào danh sách bảo vệ" → row appears
- *     with badge "Thủ công" → candidate page no longer lists the sender
+ *   - manual add: user opens "Danh sách an toàn", types `boss@example.com`, clicks
+ *     "Thêm vào danh sách an toàn" → row appears with badge "Thủ công" → candidate page
+ *     no longer lists the sender
  *   - auto-add visibility: a suppression entry with `source='replied'` displays the "Đã trả lời"
  *     badge
  */
@@ -21,27 +25,31 @@ test.describe.configure({ mode: 'serial' });
 test('addManualSuppressionEntry_excludesSenderFromCandidates', async ({ page }) => {
   const state = createChromeMockState({ preferredLanguage: 'vi' });
 
-  // openAuthenticatedRoute installs the chrome API mock (catch-all /api/* → 204), so
-  // cleanup-specific routes must be installed AFTER to take LIFO precedence.
-  await openAuthenticatedRoute(page, '/cleanup/suppression', state);
+  await seedAuthenticatedSession(page, state.preferredLanguage);
+  await installChromeApiMock(page, state);
   await installSuppressionMock(page, { initialEntries: [] });
   await installCandidatesMockWithEmail(page, 'boss@example.com');
-  await page.reload({ waitUntil: 'networkidle' });
-
-  await page.getByLabel('Email người gửi').fill('boss@example.com');
-  await page.getByRole('button', { name: 'Thêm vào danh sách bảo vệ' }).click();
-
-  await expect(page.getByText('boss@example.com')).toBeVisible();
-  await expect(page.getByText('Thủ công')).toBeVisible();
-
   await page.goto('/cleanup/unsubscribe-campaign', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('button', { name: 'Danh sách an toàn' })).toBeVisible();
+  await expect(page.getByRole('row')).toHaveCount(2);
+
+  await page.getByRole('button', { name: 'Danh sách an toàn' }).click();
+  await page.getByLabel('Email người gửi').fill('boss@example.com');
+  await page.getByRole('button', { name: 'Thêm vào danh sách an toàn' }).click();
+
+  await expect(page.getByRole('dialog')).toContainText('boss@example.com');
+  await expect(page.getByRole('dialog')).toContainText('Thủ công');
+
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toBeHidden();
   await expect(page.getByText('boss@example.com')).toHaveCount(0);
 });
 
 test('autoAddedSenderShowsRepliedBadge', async ({ page }) => {
   const state = createChromeMockState({ preferredLanguage: 'vi' });
 
-  await openAuthenticatedRoute(page, '/cleanup/suppression', state);
+  await seedAuthenticatedSession(page, state.preferredLanguage);
+  await installChromeApiMock(page, state);
   await installSuppressionMock(page, {
     initialEntries: [
       {
@@ -52,10 +60,14 @@ test('autoAddedSenderShowsRepliedBadge', async ({ page }) => {
       },
     ],
   });
-  await page.reload({ waitUntil: 'networkidle' });
+  await installCandidatesMockWithEmail(page, 'replied@example.com');
+  await page.goto('/cleanup/unsubscribe-campaign', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('button', { name: 'Danh sách an toàn' })).toBeVisible();
+  await expect(page.getByRole('row')).toHaveCount(2);
 
-  await expect(page.getByText('replied@example.com')).toBeVisible();
-  await expect(page.getByText('Đã trả lời')).toBeVisible();
+  await page.getByRole('button', { name: 'Danh sách an toàn' }).click();
+  await expect(page.getByRole('dialog')).toContainText('replied@example.com');
+  await expect(page.getByRole('dialog')).toContainText('Đã trả lời');
 });
 
 type SuppressionEntry = {

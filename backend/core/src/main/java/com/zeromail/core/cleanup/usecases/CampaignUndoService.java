@@ -160,21 +160,17 @@ public class CampaignUndoService {
                             tenantId, gmailMessageId, unsubscribedLabelIdOptional.get());
                 }
                 restoredCount++;
-                log.info(
-                        "event=cleanup_undo_restored tenantId={} gmailMessageId={}",
-                        tenantId,
-                        gmailMessageId);
             } catch (IOException gmailWriteFailure) {
                 // Partial undo is the documented outcome when Gmail rate-limits us mid-batch.
                 // The audit row keeps reverted_at NULL so a subsequent undo retry can restore
                 // the remaining messages without double-restoring the ones we already touched.
                 log.warn(
-                        "event=cleanup_undo_failed tenantId={} gmailMessageId={}",
+                        "event=cleanup_undo_failed tenantId={} campaignId={} restoredCount={}",
                         tenantId,
-                        gmailMessageId);
+                        campaignId,
+                        restoredCount);
                 throw new IllegalStateException(
-                        "Gmail write failed during undo for message " + gmailMessageId,
-                        gmailWriteFailure);
+                        "Gmail write failed during cleanup undo", gmailWriteFailure);
             }
         }
 

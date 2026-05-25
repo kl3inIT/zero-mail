@@ -424,51 +424,51 @@
   },
   "cleanup": {
     "suppression": {
-      "add": "Thêm vào danh sách bảo vệ",
-      "addOk": "Đã thêm vào danh sách bảo vệ.",
+      "add": "Thêm vào danh sách an toàn",
+      "addOk": "Đã thêm vào danh sách an toàn.",
       "col": {
         "added": "Thêm lúc",
         "source": "Nguồn",
         "target": "Người gửi / Tên miền"
       },
       "empty": {
-        "body": "Thêm người gửi hoặc tên miền bạn không bao giờ muốn hủy đăng ký, ví dụ: sếp, đồng nghiệp hoặc ngân hàng.",
-        "title": "Chưa có người gửi nào trong danh sách bảo vệ"
+        "body": "Thêm người gửi hoặc tên miền bạn không muốn Zero Mail đề xuất hủy đăng ký, ví dụ: sếp, đồng nghiệp hoặc ngân hàng.",
+        "title": "Chưa có người gửi nào trong danh sách an toàn"
       },
       "err": {
-        "duplicate": "Mục này đã có trong danh sách bảo vệ.",
+        "duplicate": "Mục này đã có trong danh sách an toàn.",
         "generic": "Không thêm được. Hãy thử lại sau một chút.",
         "invalid": "Email hoặc tên miền không hợp lệ."
       },
       "error": "Không tải được danh sách. Hãy thử lại sau một chút.",
-      "helper": "Mỗi mục bảo vệ một người gửi hoặc cả một tên miền.",
+      "helper": "Mỗi mục bỏ qua một người gửi hoặc cả một tên miền.",
       "input": {
         "label": "Email người gửi",
         "placeholder": "Email hoặc tên miền (ví dụ: boss@example.com hoặc example.com)"
       },
-      "lead": "Người gửi hoặc tên miền trong danh sách này sẽ không bao giờ hiển thị trong chiến dịch hủy đăng ký.",
+      "lead": "Người gửi hoặc tên miền trong danh sách này sẽ không xuất hiện trong gợi ý hủy đăng ký.",
       "remove": {
-        "aria": "Gỡ khỏi danh sách bảo vệ",
+        "aria": "Gỡ khỏi danh sách an toàn",
         "cancel": "Quay lại",
-        "confirmBody": "Sau khi gỡ, người gửi hoặc tên miền này sẽ xuất hiện lại trong danh sách ứng viên.",
+        "confirmBody": "Sau khi gỡ, người gửi hoặc tên miền này có thể xuất hiện lại trong gợi ý hủy đăng ký.",
         "confirmCta": "Đồng ý gỡ",
         "confirmTitle": "Gỡ mục này?"
       },
-      "removeOk": "Đã gỡ khỏi danh sách bảo vệ.",
+      "removeOk": "Đã gỡ khỏi danh sách an toàn.",
       "source": {
         "auto": "Tự động",
         "manual": "Thủ công",
         "replied": "Đã trả lời"
       },
-      "title": "Danh sách bảo vệ"
+      "title": "Danh sách an toàn"
     },
     "unsubscribe": {
       "list": {
         "action": {
           "collapse": "Đóng chi tiết người gửi",
           "details": "Mở chi tiết người gửi",
-          "keep": "Giữ lại",
-          "unsubscribe": "Hủy đăng ký + lưu trữ"
+          "keep": "Thêm vào danh sách an toàn",
+          "unsubscribe": "Xem trước"
         },
         "clear": "Bỏ chọn",
         "col": {
@@ -476,38 +476,40 @@
           "count": "Email 30 ngày",
           "domain": "Tên miền",
           "history": "Lịch sử",
-          "method": "Phương thức",
           "risk": "Trạng thái",
           "sender": "Người gửi"
         },
         "counter": "{count} / 25 người gửi đã chọn",
         "counterOver": "{count} / 25 người gửi - vượt giới hạn",
         "detail": {
-          "archive": "Lịch sử sẽ xử lý",
-          "archiveValue": "{count} email sẽ được lưu trữ sau khi hủy đăng ký thành công",
-          "disabled": "Chưa đủ header an toàn để chạy",
+          "archive": "Email sẽ xử lý",
+          "archiveValue": "Nếu hủy nhận thành công, Zero Mail sẽ lưu trữ {count} email gần đây.",
+          "disabled": "Gmail chưa cung cấp cách hủy nhận an toàn cho sender này.",
           "lastSeen": "Lần thấy gần nhất",
-          "safe": "Có xem trước, chạy nền và hoàn tác trong 30 ngày",
-          "safety": "An toàn"
+          "safe": "Không xóa email. Có thể hoàn tác lưu trữ trong 30 ngày.",
+          "safety": "An toàn",
+          "skip": "Đưa vào danh sách an toàn",
+          "skipDescription": "Ẩn khỏi các gợi ý hủy đăng ký sau này. Gmail không bị thay đổi."
         },
         "empty": {
-          "body": "Zero Mail phát hiện bản tin qua header `List-Unsubscribe` từ lần đồng bộ gần đây. Khi có dữ liệu mới, người gửi ứng viên sẽ xuất hiện ở đây.",
+          "body": "Zero Mail kiểm tra 100 email Inbox gần nhất và chỉ hiện người gửi có cách hủy nhận an toàn.",
           "link": "Tìm hiểu cách Zero Mail phát hiện bản tin →",
-          "title": "Chưa có bản tin nào trong 30 ngày qua"
+          "title": "Chưa tìm thấy người gửi có thể hủy đăng ký"
         },
         "error": "Không tải được danh sách người gửi. Hãy thử lại sau một chút.",
         "filter": {
           "all": "Tất cả người gửi",
-          "mailto": "Hủy bằng email",
-          "oneClick": "Hủy bằng liên kết",
-          "ready": "Có thể hủy đăng ký"
+          "mailto": "Gửi email hủy nhận",
+          "oneClick": "Hủy nhận an toàn",
+          "ready": "Có thể hủy nhận"
         },
         "filterLabel": "Lọc người gửi",
         "historyCount": "{count} email",
-        "lead": "Chọn các bản tin bạn muốn dừng nhận. Zero Mail sẽ hủy đăng ký an toàn và lưu trữ email cũ từ những người gửi đã chọn.",
-        "preview": "Xem trước chiến dịch",
+        "lead": "Zero Mail tìm các email có hỗ trợ hủy nhận từ Gmail. Khi bạn xác nhận, hệ thống gửi yêu cầu hủy nhận an toàn; nếu thành công mới lưu trữ email cũ. Không xóa email.",
+        "preview": "Xem trước",
         "retry": "Thử lại",
         "searchPlaceholder": "Tìm người gửi hoặc tên miền",
+        "selectAll": "Chọn tất cả người gửi đang hiển thị",
         "selectedMail": "{count} email lịch sử trong lựa chọn",
         "sort": {
           "count": "Nhiều email nhất",
@@ -516,48 +518,51 @@
         },
         "sortLabel": "Sắp xếp người gửi",
         "stats": {
-          "messages": "Email lịch sử",
-          "oneClick": "Hủy bằng liên kết",
-          "ready": "Có thể hủy đăng ký",
+          "messages": "Email sẽ lưu trữ",
+          "oneClick": "Hủy nhận an toàn",
+          "ready": "Có thể hủy nhận",
           "total": "Người gửi đã phát hiện"
         },
-        "suppressionLink": "Quản lý danh sách bảo vệ →",
-        "title": "Hủy đăng ký hàng loạt"
+        "suppressionLink": "Danh sách an toàn",
+        "title": "Hủy đăng ký"
       },
       "method": {
-        "mailto": "Hủy bằng email",
+        "mailto": "Gửi email hủy nhận",
+        "mailtoTooltip": "Gửi một email hủy nhận tới địa chỉ được khai báo trong header Gmail.",
         "none": "Không hỗ trợ",
-        "oneClick": "Hủy bằng liên kết (RFC 8058)"
+        "oneClick": "Hủy nhận an toàn",
+        "oneClickTooltip": "Dùng header Gmail chuẩn RFC 8058. Zero Mail gửi POST an toàn tới endpoint hủy nhận; không mở link trong nội dung email."
       },
       "preview": {
         "cancel": "Quay lại",
         "capMessage": "Đã vượt giới hạn 2.000 email lịch sử ({count}). Quay lại và bỏ chọn bớt.",
         "capSender": "Đã vượt giới hạn 25 người gửi. Quay lại và bỏ chọn bớt.",
-        "confirm": "Chạy chiến dịch",
-        "description": "Kiểm tra lại danh sách trước khi chạy. Chiến dịch sẽ chạy nền và có thể hoàn tác trong 30 ngày.",
+        "confirm": "Hủy đăng ký",
+        "description": "Kiểm tra trước khi xác nhận. Zero Mail chỉ lưu trữ email cũ sau khi hủy nhận thành công. Không xóa email và có thể hoàn tác lưu trữ trong 30 ngày.",
+        "empty": "Không có người gửi nào đủ điều kiện hủy đăng ký trong lựa chọn hiện tại.",
         "errCapMessage": "Vượt giới hạn 2.000 email lịch sử. Hãy bỏ chọn bớt.",
         "errCapSender": "Vượt giới hạn 25 người gửi. Hãy bỏ chọn bớt.",
-        "errGeneric": "Không tạo được chiến dịch. Hãy thử lại sau một chút.",
-        "submitOk": "Đã tạo chiến dịch. Đang theo dõi tiến độ...",
+        "errGeneric": "Không tạo được tác vụ hủy đăng ký. Hãy thử lại sau một chút.",
+        "submitOk": "Đã tạo tác vụ hủy đăng ký. Đang theo dõi tiến độ...",
         "submitting": "Đang tạo...",
-        "title": "Xem trước chiến dịch",
-        "totalMail": "Tổng email sẽ lưu trữ: {count}",
+        "title": "Xem trước hủy đăng ký",
+        "totalMail": "Email sẽ lưu trữ nếu thành công: {count}",
         "totalSender": "Tổng người gửi: {count}",
-        "willArchive": "{count} email sẽ lưu trữ",
-        "willNotArchive": "Không lưu trữ (thiếu header)"
+        "willArchive": "{count} email gần đây sẽ được lưu trữ nếu hủy nhận thành công",
+        "willNotArchive": "Không tự động xử lý sender này"
       },
       "retry": {
         "alreadyOk": "Người gửi này đã hủy đăng ký thành công, không cần thử lại.",
         "generic": "Không thử lại được. Hãy thử lại sau một chút."
       },
       "risk": {
-        "noHeader": "Chưa hỗ trợ",
-        "noHeaderTooltip": "Người gửi này không có header `List-Unsubscribe` nên chưa thể hủy đăng ký tự động.",
-        "safe": "Sẵn sàng",
-        "suppressed": "Đã bảo vệ"
+        "noHeader": "Không tự động",
+        "noHeaderTooltip": "Gmail không có header hủy nhận an toàn cho người gửi này.",
+        "safe": "Có thể hủy nhận",
+        "suppressed": "An toàn"
       },
       "status": {
-        "breadcrumb": "Dọn hộp thư / Hủy đăng ký / #{shortId}",
+        "breadcrumb": "Hủy đăng ký / #{shortId}",
         "col": {
           "action": "Hành động",
           "archived": "Email đã lưu trữ",
@@ -565,7 +570,7 @@
           "state": "Trạng thái"
         },
         "completed": "Hoàn tất",
-        "error": "Không tải được trạng thái chiến dịch. Hãy thử lại sau một chút.",
+        "error": "Không tải được trạng thái hủy đăng ký. Hãy thử lại sau một chút.",
         "errorBanner": "Lỗi hệ thống - chưa hoàn tất. Liên hệ bộ phận hỗ trợ nếu cần.",
         "failed": "Lỗi - chưa hoàn tất",
         "progress": "{percent}% ({okCount} thành công / {failedCount} lỗi / {totalCount} người gửi)",
@@ -579,21 +584,21 @@
           "pending": "Chờ",
           "running": "Đang chạy"
         },
-        "title": "Chiến dịch #{shortId}",
+        "title": "Hủy đăng ký #{shortId}",
         "undo": {
           "body": "Bạn có thể hoàn tác trong {daysLeft} ngày tới: khôi phục email về Hộp thư đến và gỡ nhãn `Zero Mail/Unsubscribed`.",
-          "button": "Hoàn tác chiến dịch",
-          "title": "Chiến dịch đã hoàn tất"
+          "button": "Hoàn tác lưu trữ",
+          "title": "Tác vụ đã hoàn tất"
         }
       },
       "undo": {
         "cancel": "Quay lại",
         "confirmBody": "Sẽ khôi phục {count} email về Hộp thư đến và gỡ nhãn `Zero Mail/Unsubscribed`. Hành động này không thể đảo ngược thêm lần nữa.",
         "confirmCta": "Đồng ý hoàn tác",
-        "confirmTitle": "Hoàn tác chiến dịch?",
+        "confirmTitle": "Hoàn tác lưu trữ?",
         "generic": "Không hoàn tác được. Hãy thử lại sau một chút.",
         "ok": "Đã khôi phục {count} email về Hộp thư đến.",
-        "windowExpired": "Đã quá 30 ngày kể từ khi chiến dịch chạy nên không thể hoàn tác nữa.",
+        "windowExpired": "Đã quá 30 ngày kể từ khi tác vụ chạy nên không thể hoàn tác nữa.",
         "windowExpiredToast": "Quá thời hạn 30 ngày nên không thể hoàn tác nữa."
       }
     }
@@ -707,13 +712,13 @@
     },
     "cleanup": {
       "campaign": {
-        "not_found": "Không tìm thấy chiến dịch. Hãy quay lại danh sách chiến dịch.",
+        "not_found": "Không tìm thấy tác vụ hủy đăng ký. Hãy quay lại danh sách.",
         "retry_conflict": "Người gửi này đã hủy đăng ký thành công, không cần thử lại.",
         "too_many_messages": "Vượt giới hạn 2.000 email lịch sử. Hãy bỏ chọn bớt.",
         "too_many_senders": "Vượt giới hạn 25 người gửi. Hãy bỏ chọn bớt.",
         "undo_window_expired": "Quá thời hạn 30 ngày nên không thể hoàn tác nữa."
       },
-      "sender_suppressed": "Người gửi này đang nằm trong danh sách bảo vệ. Hãy gỡ khỏi danh sách bảo vệ trước khi hủy đăng ký."
+      "sender_suppressed": "Người gửi này đang nằm trong danh sách an toàn. Hãy gỡ khỏi danh sách trước khi xử lý."
     },
     "conflict": "Dữ liệu đã thay đổi trước khi thao tác hoàn tất. Hãy tải lại trang rồi thử lại.",
     "dataIntegrity": "Không thể lưu thay đổi vì dữ liệu không hợp lệ.",
@@ -753,6 +758,9 @@
       "invalid_cursor": "Đã xảy ra lỗi. Hãy thử lại."
     },
     "rules": {
+      "applyLabels": {
+        "generic": "Không thể gắn nhãn lên Gmail lúc này. Kiểm tra kết nối Gmail rồi thử lại."
+      },
       "compile": {
         "clarification_required": "Quy tắc này cần một câu trả lời làm rõ trước khi có thể lưu.",
         "invalid": "Zero Mail chưa kiểm tra được quy tắc này. Hãy sửa cách diễn đạt hoặc trả lời câu hỏi làm rõ rồi kiểm tra lại."
@@ -768,7 +776,7 @@
       "notFound": "Không tìm thấy quy tắc này. Hãy tải lại danh sách quy tắc.",
       "preview": {
         "generic": "Không thể chạy thử. Kiểm tra kết nối Gmail và tín dụng, rồi chạy thử lại.",
-        "invalid_sample_size": "Cỡ mẫu chạy thử phải là 10, 25 hoặc 50.",
+        "invalid_sample_size": "Cỡ mẫu chạy thử phải là 10, 20, 50 hoặc 100.",
         "required": "Hãy chạy thử phiên bản quy tắc hiện tại trước khi bật."
       },
       "refine": {
@@ -928,6 +936,113 @@
     },
     "title": "Ba bước. Không cần học thêm hộp thư mới."
   },
+  "inbox": {
+    "action": {
+      "forward": "Chuyển tiếp",
+      "generate": "Soạn bằng AI",
+      "loadingMore": "Đang tải…",
+      "loadMore": "Tải thêm",
+      "openInGmail": "Mở Gmail",
+      "refresh": "Làm mới",
+      "reply": "Trả lời",
+      "replyAll": "Trả lời tất cả"
+    },
+    "assistantPrompt": {
+      "forward": "Soạn email chuyển tiếp cho Gmail này. Nếu tôi chưa đưa người nhận thì hãy hỏi tôi muốn chuyển tiếp cho ai. Gmail message id: {messageId}. Gmail thread id: {threadId}. Tiêu đề: {subject}. Người gửi: {from}. Luôn hiển thị preview xác nhận trước khi gửi.",
+      "generate": "Tự động viết một bản nháp trả lời phù hợp cho Gmail này. Gmail message id: {messageId}. Gmail thread id: {threadId}. Tiêu đề: {subject}. Người gửi: {from}. Người nhận: {to}. Cc: {cc}. Chưa gửi ngay; hãy tạo nháp/preview để tôi xem và xác nhận.",
+      "reply": "Soạn nháp trả lời Gmail này. Gmail message id: {messageId}. Gmail thread id: {threadId}. Tiêu đề: {subject}. Người gửi: {from}. Người nhận: {to}. Dùng replyEmail và hiển thị preview xác nhận trước khi gửi.",
+      "replyAll": "Soạn nháp trả lời tất cả cho Gmail này. Gmail message id: {messageId}. Gmail thread id: {threadId}. Tiêu đề: {subject}. Người gửi: {from}. Người nhận: {to}. Cc: {cc}. Dùng replyEmail và hiển thị preview xác nhận trước khi gửi."
+    },
+    "badge": {
+      "attachment": "Đính kèm",
+      "unread": "Chưa đọc"
+    },
+    "composer": {
+      "attach": "Đính kèm",
+      "attachmentMeta": "{type} · {size}",
+      "attachmentNotice": "Luồng gửi an toàn hiện chưa hỗ trợ upload file từ Inbox.",
+      "attachmentsTitle": "{count} file đã chọn",
+      "bcc": "Bcc",
+      "bccPlaceholder": "Nhập email Bcc",
+      "bodyCleared": "Đã xóa nội dung.",
+      "bodyCopied": "Đã sao chép nội dung.",
+      "bodyPlaceholder": "Viết nội dung trả lời...",
+      "bold": "In đậm",
+      "cc": "Cc",
+      "ccPlaceholder": "Nhập email Cc",
+      "clearAttachments": "Xóa tệp đã chọn",
+      "clearBody": "Xóa nội dung",
+      "close": "Đóng ô soạn",
+      "confirmSendBody": "Bạn đã đọc kỹ nội dung email và chắc chắn muốn gửi? Khi gửi email không thể hoàn tác.",
+      "confirmSendCancel": "Hủy",
+      "confirmSendConfirm": "Gửi",
+      "confirmSendTitle": "Xác nhận gửi email",
+      "copyBody": "Sao chép nội dung",
+      "copyUnavailable": "Không sao chép được nội dung.",
+      "discard": "Bỏ soạn thảo",
+      "generateBody": "Viết bằng AI",
+      "generateBodyError": "Không viết được nội dung AI. Thử lại sau.",
+      "generateBodyLoading": "Đang viết...",
+      "generateBodySuccess": "Đã đưa nội dung AI vào ô soạn.",
+      "generatedDraftReady": "Nội dung AI đã sẵn sàng trong ô soạn.",
+      "generateDraft": "Viết bằng AI",
+      "generateError": "Không viết được nội dung. Thử lại sau.",
+      "generateInFlight": "Đang viết nội dung cho thread này.",
+      "generateLanguageEn": "English",
+      "generateLanguageLabel": "Ngôn ngữ viết AI",
+      "generateLanguageVi": "Tiếng Việt",
+      "generateSuccess": "Đã tạo nội dung AI.",
+      "italic": "In nghiêng",
+      "link": "Chèn liên kết",
+      "list": "Danh sách",
+      "more": "Tùy chọn khác",
+      "openDraft": "Mở",
+      "previewAttachment": "Xem",
+      "previewError": "Không chuẩn bị được email để gửi.",
+      "previewLoading": "Đang chuẩn bị gửi...",
+      "removeAttachment": "Bỏ {name}",
+      "saveTemplate": "Mẫu trả lời",
+      "sendingNow": "Đang gửi email...",
+      "sendPreview": "Gửi",
+      "subject": "Tiêu đề",
+      "subjectPlaceholder": "Tiêu đề email",
+      "templateComingSoon": "Mẫu trả lời sắp có",
+      "templateUnavailable": "Mẫu trả lời chưa được nối backend cho Inbox.",
+      "text": "văn bản",
+      "to": "Đến",
+      "toPlaceholder": "Nhập email người nhận",
+      "unknownAttachmentType": "Không rõ loại"
+    },
+    "detail": {
+      "cc": "Cc",
+      "from": "Từ",
+      "to": "Đến",
+      "you": "Bạn"
+    },
+    "error": {
+      "body": "Kiểm tra kết nối Gmail rồi thử lại.",
+      "title": "Không tải được inbox"
+    },
+    "limit": {
+      "caption": "{loaded}/{max} email"
+    },
+    "message": {
+      "noSubject": "(không có chủ đề)",
+      "unknownSender": "(không rõ người gửi)"
+    },
+    "page": {
+      "description": "100 email gần nhất từ Gmail. Nội dung chỉ được đọc khi bạn mở từng email.",
+      "title": "Hộp thư"
+    },
+    "state": {
+      "empty": {
+        "body": "Gmail chưa trả về email nào trong inbox cho tài khoản này.",
+        "title": "Chưa có email inbox"
+      },
+      "noBody": "Email này không có nội dung đọc được. Mở Gmail để xem đầy đủ.",
+      "unselected": "Chọn một email để xem nội dung."
+    }
+  },
   "landing": {
     "bullets": {
       "noAutoSend": "Không tự gửi",
@@ -947,14 +1062,14 @@
       "triageAccuracy": "độ chính xác",
       "triagePerEmail": "xử lý mỗi email"
     },
+    "openAppCta": "Mở ứng dụng",
     "peek": {
       "eyebrow": "Tiếp theo · Cách hoạt động",
       "link": "Đọc walkthrough",
       "title": "Ba bước để đạt inbox zero — kết nối, mô tả, xem lại."
     },
-    "openAppCta": "Mở ứng dụng",
     "primaryCta": "Đăng nhập",
-    "secondaryCta": "Xem cách hoạt động",
+    "secondaryCta": "Xem tính năng",
     "tagline": "Zero Mail phân loại Gmail của bạn theo các quy tắc bạn viết bằng ngôn ngữ tự nhiên — gắn nhãn việc quan trọng, lưu trữ thư không cần thiết, và soạn sẵn những phản hồi đơn giản. Mọi thứ gửi đi đều phải qua bạn.",
     "waitlistCta": "Đăng ký trải nghiệm Zero Mail"
   },
@@ -1210,24 +1325,28 @@
     "beta": "beta",
     "billing": "Thanh toán",
     "chat": "Trợ lý",
-    "cleanupGroup": "Dọn hộp thư",
-    "cleanupSuppression": "Bảo vệ người gửi",
+    "cleanupGroup": "Hủy đăng ký",
+    "cleanupSuppression": "Danh sách an toàn",
     "cleanupUnsubscribe": "Hủy đăng ký",
     "continueSetup": "Tiếp tục cài đặt",
     "dashboard": "Tổng quan",
+    "faq": "FAQ",
     "features": "Tính năng",
     "how": "Cách hoạt động",
+    "inbox": "Hộp thư",
     "languageSelector": "Ngôn ngữ",
     "logoLabel": "Trang chủ Zero Mail",
     "needsReply": "Cần trả lời",
     "onboardingProgress": "Tiến trình cài đặt",
     "openApp": "Mở ứng dụng",
+    "pricing": "Bảng giá",
     "privacy": "Quyền riêng tư",
     "rules": "Quy tắc",
     "sectionMail": "Thư",
     "sectionManage": "Quản lý",
     "settings": "Cài đặt",
     "signIn": "Đăng nhập",
+    "testimonials": "Đánh giá",
     "themeToDark": "Chuyển sang chế độ tối",
     "themeToLight": "Chuyển sang chế độ sáng",
     "trust": "Tin cậy & an toàn",
@@ -1594,6 +1713,8 @@
       "title": "Cách phân tích"
     },
     "preview": {
+      "applyingLabels": "Đang gắn nhãn...",
+      "applyLabelsCta": "Áp dụng nhãn",
       "conflicts": "{count} xung đột",
       "conflictWarning": "Lượt chạy thử này có xung đột hành động. Hãy xem các quy tắc khớp trước khi bật.",
       "deferred": "{count} kiểm tra trì hoãn",
@@ -1607,6 +1728,7 @@
       "enableCta": "Bật quy tắc",
       "evidence": "Bằng chứng khớp",
       "gmailLabels": "Nhãn Gmail",
+      "labelsApplied": "Đã gắn {count} nhãn lên Gmail. Inbox trong hệ thống sẽ hiển thị nhãn này khi email nằm trong 100 email gần nhất.",
       "llmCta": "Chạy LLM xác nhận (~{credits} credit)",
       "llmCtaBody": "Các quy tắc có matcher ngữ nghĩa hiện đang để \"trì hoãn\". Chạy LLM để biết chắc rule có match hay không (~{credits} credit).",
       "llmCtaTitle": "{count} email cần LLM xác nhận",

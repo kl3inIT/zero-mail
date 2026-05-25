@@ -9,27 +9,28 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Read-side query for the bulk-unsubscribe candidate list (UNS-01).
  *
  * <p>CQRS-lite — direct {@link JdbcTemplate} over the {@code mail_message_observed} + {@code
- * sender_suppression} tables. Mirrors {@code AnalyticsSummaryQueryService} (same package shape,
- * same {@code @Transactional(readOnly = true)} discipline, same {@code @Service} stereotype). Lives
- * in {@code core.cleanup.usecases} so the analytics module never sees cleanup-specific column
- * shapes (D-17 module boundary).
+ * sender_suppression} tables. It intentionally suspends caller transactions before probing Gmail so
+ * a Gmail preview failure can fall back to the DB snapshot without marking the caller
+ * rollback-only. Lives in {@code core.cleanup.usecases} so the analytics module never sees
+ * cleanup-specific column shapes (D-17 module boundary).
  *
  * <p>Privacy invariant: this service never logs raw {@code senderEmail} values. Only count +
  * tenantId scoped to the {@code event=cleanup_candidates_queried} log line.
  */
 @Service
-@Transactional(readOnly = true)
 public class CandidateQueryService {
 
     private static final Logger log = LoggerFactory.getLogger(CandidateQueryService.class);
@@ -49,40 +50,48 @@ public class CandidateQueryService {
      */
     private static final String CANDIDATE_SQL =
             """
-            SELECT
-                mmo.sender_email,
-                split_part(mmo.sender_email, '@', 2) AS sender_domain,
-                COUNT(*) AS message_count,
-                MAX(mmo.observed_at) AS last_seen_at,
-                CASE
-                    WHEN BOOL_OR(mmo.list_unsubscribe_one_click) THEN 'ONE_CLICK'
-                    WHEN BOOL_OR(mmo.list_unsubscribe_mailto IS NOT NULL) THEN 'MAILTO'
-                    ELSE 'NONE'
-                END AS unsubscribe_method
-            FROM mail_message_observed mmo
-            WHERE mmo.tenant_id = ?
-              AND mmo.observed_at >= ?
-              AND mmo.observed_at < ?
-              AND mmo.sender_email IS NOT NULL
-              AND (mmo.list_unsubscribe_url IS NOT NULL OR mmo.list_unsubscribe_mailto IS NOT NULL)
-              AND NOT EXISTS (
-                  SELECT 1 FROM sender_suppression ss
-                  WHERE ss.tenant_id = mmo.tenant_id
-                    AND (
-                        ss.sender_email = mmo.sender_email
-                        OR ss.sender_domain = split_part(mmo.sender_email, '@', 2)
-                    )
-              )
-            GROUP BY mmo.sender_email
-            ORDER BY message_count DESC, mmo.sender_email ASC
-            LIMIT ?
-            """;
+                    SELECT
+                        mmo.sender_email,
+                        split_part(mmo.sender_email, '@', 2) AS sender_domain,
+                        COUNT(*) AS message_count,
+                        MAX(mmo.observed_at) AS last_seen_at,
+                        CASE
+                            WHEN BOOL_OR(mmo.list_unsubscribe_one_click) THEN 'ONE_CLICK'
+                            WHEN BOOL_OR(mmo.list_unsubscribe_mailto IS NOT NULL) THEN 'MAILTO'
+                            ELSE 'NONE'
+                        END AS unsubscribe_method
+                    FROM mail_message_observed mmo
+                    WHERE mmo.tenant_id = ?
+                      AND mmo.observed_at >= ?
+                      AND mmo.observed_at < ?
+                      AND mmo.sender_email IS NOT NULL
+                      AND (mmo.list_unsubscribe_url IS NOT NULL OR mmo.list_unsubscribe_mailto IS NOT NULL)
+                      AND NOT EXISTS (
+                          SELECT 1 FROM sender_suppression ss
+                          WHERE ss.tenant_id = mmo.tenant_id
+                            AND (
+                                ss.sender_email = mmo.sender_email
+                                OR ss.sender_domain = split_part(mmo.sender_email, '@', 2)
+                            )
+                      )
+                    GROUP BY mmo.sender_email
+                    ORDER BY message_count DESC, mmo.sender_email ASC
+                    LIMIT ?
+                    """;
 
     private final JdbcTemplate jdbcTemplate;
+    private final CleanupRecentInboxWorkingSetService cleanupRecentInboxWorkingSetService;
     private final Clock clock;
 
-    public CandidateQueryService(JdbcTemplate jdbcTemplate, Clock clock) {
+    public CandidateQueryService(
+            JdbcTemplate jdbcTemplate,
+            CleanupRecentInboxWorkingSetService cleanupRecentInboxWorkingSetService,
+            Clock clock) {
         this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate, "jdbcTemplate must not be null");
+        this.cleanupRecentInboxWorkingSetService =
+                Objects.requireNonNull(
+                        cleanupRecentInboxWorkingSetService,
+                        "cleanupRecentInboxWorkingSetService must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
 
@@ -94,6 +103,7 @@ public class CandidateQueryService {
      * <p>{@code limit} is hard-capped to {@link UnsubscribeCampaignPolicy#MAX_SENDERS_PER_CAMPAIGN}
      * so a runaway controller cap cannot exceed the campaign batch ceiling.
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public List<UnsubscribeCandidateProjection> findCandidates(
             UUID tenantId, Duration window, int limit) {
         Objects.requireNonNull(tenantId, "tenantId must not be null");
@@ -107,6 +117,20 @@ public class CandidateQueryService {
         int effectiveLimit = Math.min(limit, UnsubscribeCampaignPolicy.MAX_SENDERS_PER_CAMPAIGN);
         Instant now = clock.instant();
         Instant windowStartInclusive = now.minus(window);
+        Optional<CleanupRecentInboxWorkingSetService.WorkingSet> recentInboxWorkingSet =
+                cleanupRecentInboxWorkingSetService.findRecentInboxWorkingSet(tenantId, window);
+        if (recentInboxWorkingSet.isPresent()) {
+            List<UnsubscribeCandidateProjection> candidates =
+                    recentInboxWorkingSet.orElseThrow().toCandidateProjections(effectiveLimit);
+            log.info(
+                    "event=cleanup_candidates_queried tenantId={} window={} limit={} count={} source=recent_inbox",
+                    tenantId,
+                    window,
+                    effectiveLimit,
+                    candidates.size());
+            return candidates;
+        }
+
         Timestamp windowStartTimestamp = Timestamp.from(windowStartInclusive);
         Timestamp windowEndTimestamp = Timestamp.from(now);
 

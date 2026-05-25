@@ -38,6 +38,7 @@ import {
   useCompileRule,
   useCreateRule,
   useDeleteRule,
+  useApplyRuleTestLabels,
   useMaterializeRuleTemplate,
   usePreviewAllEnabledRules,
   usePreviewCustomMail,
@@ -47,7 +48,7 @@ import {
   useUpdateRuleEnabled,
 } from '@/features/rules/hooks/use-rules';
 
-type SampleSize = 10 | 20;
+type SampleSize = 20 | 50 | 100;
 
 type CompileOptions = {
   keepCurrentSourceText?: boolean;
@@ -130,7 +131,7 @@ const initialState: RulesWorkspaceState = {
   preview: null,
   previewError: null,
   gmailUnavailableError: null,
-  sampleSize: 10,
+  sampleSize: 100,
   pendingRuleId: null,
   pendingTemplateKey: null,
   composerDialogOpen: false,
@@ -211,7 +212,13 @@ function rulesWorkspaceReducer(
     case 'previewGmailUnavailable':
       return { ...state, gmailUnavailableError: action.message };
     case 'sampleSizeChanged':
-      return { ...state, sampleSize: action.sampleSize };
+      return {
+        ...state,
+        sampleSize: action.sampleSize,
+        preview: null,
+        previewError: null,
+        gmailUnavailableError: null,
+      };
     case 'ruleTogglePending':
       return { ...state, pendingRuleId: action.ruleId };
     case 'rulePendingCleared':
@@ -280,6 +287,7 @@ export function RulesWorkspace() {
   const updateRuleMutation = useUpdateRule();
   const deleteRuleMutation = useDeleteRule();
   const previewAllEnabledMutation = usePreviewAllEnabledRules();
+  const applyRuleTestLabelsMutation = useApplyRuleTestLabels();
   const updateEnabledMutation = useUpdateRuleEnabled();
   const materializeTemplateMutation = useMaterializeRuleTemplate();
   const previewCustomMailMutation = usePreviewCustomMail();
@@ -287,6 +295,9 @@ export function RulesWorkspace() {
   const [state, dispatch] = useReducer(rulesWorkspaceReducer, initialState);
   const [customMailResult, setCustomMailResult] = useState<RuleCustomPreviewResponse | null>(null);
   const [customMailError, setCustomMailError] = useState<string | null>(null);
+  const [labelApplyError, setLabelApplyError] = useState<string | null>(null);
+  const [appliedLabelCount, setAppliedLabelCount] = useState<number | null>(null);
+  const [currentPreviewEvaluatedSemantic, setCurrentPreviewEvaluatedSemantic] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -437,6 +448,9 @@ export function RulesWorkspace() {
   async function handlePreview(options: { evaluateSemanticIntents?: boolean } = {}) {
     const evaluateSemanticIntents = options.evaluateSemanticIntents ?? false;
     dispatch({ type: 'previewStarted' });
+    setLabelApplyError(null);
+    setAppliedLabelCount(null);
+    setCurrentPreviewEvaluatedSemantic(false);
 
     try {
       const result = await previewAllEnabledMutation.mutateAsync({
@@ -444,6 +458,7 @@ export function RulesWorkspace() {
         evaluateSemanticIntents,
       });
       dispatch({ type: 'previewSucceeded', preview: result });
+      setCurrentPreviewEvaluatedSemantic(evaluateSemanticIntents);
     } catch (error) {
       if (isGmailUnavailable(error)) {
         dispatch({
@@ -458,6 +473,27 @@ export function RulesWorkspace() {
 
   function handleEvaluateSemanticIntents() {
     void handlePreview({ evaluateSemanticIntents: true });
+  }
+
+  function handleSampleSizeChange(sampleSize: SampleSize) {
+    dispatch({ type: 'sampleSizeChanged', sampleSize });
+    setLabelApplyError(null);
+    setAppliedLabelCount(null);
+    setCurrentPreviewEvaluatedSemantic(false);
+  }
+
+  async function handleApplyLabels() {
+    setLabelApplyError(null);
+    try {
+      const result = await applyRuleTestLabelsMutation.mutateAsync({
+        sampleSize: state.sampleSize,
+        evaluateSemanticIntents: currentPreviewEvaluatedSemantic,
+      });
+      dispatch({ type: 'previewSucceeded', preview: result.preview });
+      setAppliedLabelCount(result.appliedLabelCount);
+    } catch {
+      setLabelApplyError(t('errors.rules.applyLabels.generic'));
+    }
   }
 
   async function handleToggleRule(rule: RuleResponse) {
@@ -602,15 +638,17 @@ export function RulesWorkspace() {
               previewError={state.previewError}
               gmailUnavailableError={state.gmailUnavailableError}
               isPreviewing={previewAllEnabledMutation.isPending}
+              isApplyingLabels={applyRuleTestLabelsMutation.isPending}
               canPreview={canPreview}
               sampleSize={state.sampleSize}
+              appliedLabelCount={appliedLabelCount}
+              labelApplyError={labelApplyError}
               isEvaluatingSemanticIntents={
                 previewAllEnabledMutation.isPending && Boolean(state.preview)
               }
-              onSampleSizeChange={(sampleSize) =>
-                dispatch({ type: 'sampleSizeChanged', sampleSize })
-              }
+              onSampleSizeChange={handleSampleSizeChange}
               onPreview={() => handlePreview()}
+              onApplyLabels={handleApplyLabels}
               onEvaluateSemanticIntents={handleEvaluateSemanticIntents}
             />
           </TabsContent>

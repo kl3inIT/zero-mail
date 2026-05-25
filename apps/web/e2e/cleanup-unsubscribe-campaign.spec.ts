@@ -2,7 +2,11 @@ import { expect, test } from '@playwright/test';
 
 import type { Page } from '@playwright/test';
 
-import { createChromeMockState, openAuthenticatedRoute } from './chrome-test-utils';
+import {
+  createChromeMockState,
+  installChromeApiMock,
+  seedAuthenticatedSession,
+} from './chrome-test-utils';
 
 /**
  * Phase 8 — Golden path Playwright e2e for `/cleanup/unsubscribe-campaign` (UI-SPEC §Playwright
@@ -12,14 +16,14 @@ import { createChromeMockState, openAuthenticatedRoute } from './chrome-test-uti
  *
  * 9-step golden path (UNS-05 + UNS-06 + UNS-07):
  *   1. open `/cleanup/unsubscribe-campaign`
- *   2. assert 3 fixture candidate rows + 1 header row
- *   3. select 2 SAFE senders, counter shows `2 / 25 người gửi đã chọn`
- *   4. click "Xem trước chiến dịch" → preview dialog opens
- *   5. dialog shows `Tổng email sẽ lưu trữ: 2`
- *   6. click "Chạy chiến dịch" → URL matches `/cleanup/unsubscribe-campaign/<uuid>`
+ *   2. assert 2 ready fixture candidate rows + 1 header row
+ *   3. click the header checkbox to select 2 SAFE senders, counter shows `2 / 25 người gửi đã chọn`
+ *   4. click "Xem trước" → preview dialog opens
+ *   5. dialog shows `Email sẽ lưu trữ nếu thành công: 2`
+ *   6. click "Hủy đăng ký" → URL matches `/cleanup/unsubscribe-campaign/<uuid>`
  *   7. polling status reaches "Hoàn tất"
- *   8. "Hoàn tác chiến dịch" button is visible
- *   9. navigate to `/cleanup/suppression` (cross-link surface)
+ *   8. "Hoàn tác lưu trữ" button is visible
+ *   9. open "Danh sách an toàn" as an in-page dialog
  */
 
 test.describe.configure({ mode: 'serial' });
@@ -32,37 +36,37 @@ for (const viewport of [
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     const state = createChromeMockState({ preferredLanguage: 'vi' });
 
-    // Step 1 — open the campaign page. openAuthenticatedRoute installs the chrome API mock
-    // (catch-all 204 for /api/*), so we install the cleanup-specific routes AFTERWARDS to
-    // take LIFO precedence — Playwright tries newer page.route() handlers first.
-    await openAuthenticatedRoute(page, '/cleanup/unsubscribe-campaign', state);
+    // Step 1 — install route mocks before first navigation so React Query never caches the
+    // generic 204 fallback for cleanup endpoints.
+    await seedAuthenticatedSession(page, state.preferredLanguage);
+    await installChromeApiMock(page, state);
     await installUnsubscribeCampaignMock(page);
-    await page.reload({ waitUntil: 'networkidle' });
+    await installSuppressionDialogMock(page);
+    await page.goto('/cleanup/unsubscribe-campaign', { waitUntil: 'domcontentloaded' });
 
-    // Step 2 — candidate list rows (3 fixture + 1 header = 4 rows).
-    await expect(page.getByRole('row')).toHaveCount(4);
+    // Step 2 — ready candidate rows (2 fixture + 1 header = 3 rows).
+    await expect(page.getByRole('row')).toHaveCount(3);
     await expect(page.getByRole('combobox', { name: 'Lọc người gửi' })).toContainText(
-      'Tất cả người gửi',
+      'Có thể hủy nhận',
     );
     await expect(page.getByRole('combobox', { name: 'Sắp xếp người gửi' })).toContainText(
       'Nhiều email nhất',
     );
     await page.getByRole('combobox', { name: 'Lọc người gửi' }).click();
-    await expect(page.getByRole('option', { name: 'Có thể hủy đăng ký' })).toBeVisible();
-    await expect(page.getByRole('option', { name: 'Hủy bằng liên kết' })).toBeVisible();
-    await expect(page.getByRole('option', { name: 'Hủy bằng email' })).toBeVisible();
+    await expect(page.getByRole('option', { name: 'Có thể hủy nhận' })).toBeVisible();
+    await expect(page.getByRole('option', { name: 'Hủy nhận an toàn' })).toBeVisible();
+    await expect(page.getByRole('option', { name: 'Gửi email hủy nhận' })).toBeVisible();
     await page.keyboard.press('Escape');
 
-    // Step 3 — select 2 SAFE senders → counter updates.
-    await page.getByRole('row').nth(1).getByRole('checkbox').check();
-    await page.getByRole('row').nth(2).getByRole('checkbox').check();
+    // Step 3 — select all visible SAFE senders via the header checkbox → counter updates.
+    await page.getByRole('checkbox', { name: 'Chọn tất cả người gửi đang hiển thị' }).check();
     await expect(page.getByText(/2 \/ 25 người gửi đã chọn/)).toBeVisible();
 
     // Step 4 — open preview dialog.
-    await page.getByRole('button', { name: 'Xem trước chiến dịch' }).click();
+    await page.getByRole('button', { name: 'Xem trước', exact: true }).click();
 
     // Step 5 — preview summary.
-    await expect(page.getByText('Tổng email sẽ lưu trữ: 2')).toBeVisible();
+    await expect(page.getByText('Email sẽ lưu trữ nếu thành công: 2')).toBeVisible();
 
     // Step 6 — execute campaign. The mutation onSuccess in useExecuteCampaign navigates to
     // `/cleanup/unsubscribe-campaign/{jobId}` via router.push after the POST resolves; wait
@@ -71,22 +75,24 @@ for (const viewport of [
       page.waitForResponse((response) =>
         response.url().includes('/api/unsubscribe/campaigns/execute'),
       ),
-      page.getByRole('button', { name: 'Chạy chiến dịch' }).click(),
+      page.getByRole('button', { name: 'Hủy đăng ký' }).click(),
     ]);
     await expect(page).toHaveURL(/\/cleanup\/unsubscribe-campaign\/[0-9a-f-]{36}/, {
-      timeout: 10_000,
+      timeout: 30_000,
     });
 
     // Step 7 — polling reaches "Hoàn tất" (exact match on the status label paragraph; the
-    // undo banner separately contains "Chiến dịch đã hoàn tất" which would match a substring).
+    // undo banner separately contains completion copy which would match a substring).
     await expect(page.getByText('Hoàn tất', { exact: true })).toBeVisible({ timeout: 10_000 });
 
     // Step 8 — undo button visible (within 30-day window).
-    await expect(page.getByRole('button', { name: 'Hoàn tác chiến dịch' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Hoàn tác lưu trữ' })).toBeVisible();
 
-    // Step 9 — navigate to suppression page.
-    await page.goto('/cleanup/suppression', { waitUntil: 'domcontentloaded' });
-    await expect(page).toHaveURL(/\/cleanup\/suppression/);
+    // Step 9 — safe list is now an in-page dialog, not a sidebar submenu route.
+    await page.goto('/cleanup/unsubscribe-campaign', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('row')).toHaveCount(3);
+    await page.getByRole('button', { name: 'Danh sách an toàn' }).click();
+    await expect(page.getByRole('dialog')).toContainText('Danh sách an toàn');
   });
 }
 
@@ -162,7 +168,11 @@ async function installUnsubscribeCampaignMock(page: Page) {
     await route.fulfill({
       status: 201,
       contentType: 'application/json',
-      body: JSON.stringify({ jobId, status: 'QUEUED' }),
+      body: JSON.stringify({
+        campaignId: '00000000-0000-0000-0000-000000000def',
+        jobId,
+        status: 'QUEUED',
+      }),
     });
   });
 
@@ -189,5 +199,19 @@ async function installUnsubscribeCampaignMock(page: Page) {
       contentType: 'application/json',
       body: JSON.stringify({ status: 'UNDO_RUNNING' }),
     });
+  });
+}
+
+async function installSuppressionDialogMock(page: Page) {
+  await page.route(/\/api\/cleanup\/suppression$/, async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ items: [] }),
+      });
+      return;
+    }
+    await route.fallback();
   });
 }

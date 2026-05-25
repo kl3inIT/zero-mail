@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
+  applyRuleTestLabels,
   compileRule,
   createRule,
   deleteRule,
@@ -22,8 +23,13 @@ import {
   type RuleEnabledPreviewRequest,
   type RuleListResponse,
   type RulePreviewRequest,
+  type RuleTestApplyLabelsRequest,
   type RuleUpdateRequest,
 } from '@/features/rules/api/rules-api';
+import { analyticsKeys } from '@/features/analytics/query-keys';
+import { unsubscribeCampaignKeys } from '@/features/cleanup/unsubscribe-campaign/query-keys';
+import { addAppliedLabelsToInboxCache } from '@/features/inbox/hooks/useInboxMessages';
+import { inboxKeys } from '@/features/inbox/query-keys';
 import { rulesKeys } from '@/features/rules/query-keys';
 
 export function useRules() {
@@ -166,6 +172,22 @@ export function usePreviewCustomMail() {
 export function usePreviewAllEnabledRules() {
   return useMutation({
     mutationFn: (payload: RuleEnabledPreviewRequest) => previewAllEnabledRules(payload),
+  });
+}
+
+export function useApplyRuleTestLabels() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: RuleTestApplyLabelsRequest) => applyRuleTestLabels(payload),
+    onSuccess: async (result) => {
+      addAppliedLabelsToInboxCache(queryClient, result.appliedLabels);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: inboxKeys.all }),
+        queryClient.invalidateQueries({ queryKey: analyticsKeys.all }),
+        queryClient.invalidateQueries({ queryKey: unsubscribeCampaignKeys.all }),
+      ]);
+    },
   });
 }
 

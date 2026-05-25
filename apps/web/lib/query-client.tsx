@@ -2,6 +2,7 @@
 
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -10,7 +11,7 @@ const THIRTY_MINUTES_MS = 30 * 60 * 1000;
 const FALLBACK_ERROR_MESSAGE = 'Có lỗi xảy ra. Vui lòng thử lại.';
 
 const ReactQueryDevtools =
-  process.env.NODE_ENV === 'development'
+  process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_ENABLE_QUERY_DEVTOOLS === 'true'
     ? dynamic(
         () => import('@tanstack/react-query-devtools').then((module) => module.ReactQueryDevtools),
         { ssr: false },
@@ -84,7 +85,7 @@ function createAppQueryClient(): QueryClient {
   });
 }
 
-export function QueryProvider({ children }: { children: React.ReactNode }) {
+export function QueryProvider({ children }: { children: ReactNode }) {
   const [client] = useState(createAppQueryClient);
   return (
     <QueryClientProvider client={client}>

@@ -9,6 +9,7 @@ import {
   type SuppressionEntryResponse,
 } from '@/features/cleanup/suppression/api/suppression-api';
 import { suppressionKeys } from '@/features/cleanup/suppression/query-keys';
+import { unsubscribeCampaignKeys } from '@/features/cleanup/unsubscribe-campaign/query-keys';
 
 type RemoveVariables = { id: string };
 
@@ -42,6 +43,7 @@ export function useRemoveSuppression() {
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: suppressionKeys.list() });
+      await queryClient.invalidateQueries({ queryKey: unsubscribeCampaignKeys.all });
     },
   });
 }

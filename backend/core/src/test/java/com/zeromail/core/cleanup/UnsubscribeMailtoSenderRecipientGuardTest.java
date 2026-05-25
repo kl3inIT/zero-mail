@@ -49,7 +49,6 @@ class UnsubscribeMailtoSenderRecipientGuardTest {
                                 invokeSendUnsubscribeMailto(
                                         unsubscribeMailtoSender,
                                         tenantId,
-                                        "gmail-message-1",
                                         persistedMailto,
                                         persistedMailto))
                 .doesNotThrowAnyException();
@@ -68,7 +67,6 @@ class UnsubscribeMailtoSenderRecipientGuardTest {
                                 invokeSendUnsubscribeMailto(
                                         unsubscribeMailtoSender,
                                         tenantId,
-                                        "gmail-message-2",
                                         persistedMailto,
                                         tamperedHttpsUri))
                 .as("non-mailto scheme must be rejected")
@@ -88,7 +86,6 @@ class UnsubscribeMailtoSenderRecipientGuardTest {
                                 invokeSendUnsubscribeMailto(
                                         unsubscribeMailtoSender,
                                         tenantId,
-                                        "gmail-message-3",
                                         persistedMailto,
                                         tamperedMailto))
                 .as("recipient mismatch vs persisted header must be rejected")
@@ -102,22 +99,15 @@ class UnsubscribeMailtoSenderRecipientGuardTest {
     private static Object invokeSendUnsubscribeMailto(
             Object unsubscribeMailtoSender,
             UUID tenantId,
-            String gmailMessageId,
             String persistedListUnsubscribeMailto,
             String mailtoUriToSend) {
         try {
             return unsubscribeMailtoSender
                     .getClass()
-                    .getMethod(
-                            "sendUnsubscribeMailto",
-                            UUID.class,
-                            String.class,
-                            String.class,
-                            String.class)
+                    .getMethod("sendUnsubscribeMailto", UUID.class, String.class, String.class)
                     .invoke(
                             unsubscribeMailtoSender,
                             tenantId,
-                            gmailMessageId,
                             persistedListUnsubscribeMailto,
                             mailtoUriToSend);
         } catch (ReflectiveOperationException reflectiveOperationException) {

@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ArchiveIcon, MailXIcon, SearchIcon, ShieldIcon } from 'lucide-react';
@@ -22,6 +21,7 @@ import { CandidateListTable } from '@/features/cleanup/unsubscribe-campaign/comp
 import { PreviewCampaignDialog } from '@/features/cleanup/unsubscribe-campaign/components/PreviewCampaignDialog';
 import { SelectionToolbar } from '@/features/cleanup/unsubscribe-campaign/components/SelectionToolbar';
 import { useCandidates } from '@/features/cleanup/unsubscribe-campaign/hooks/useCandidates';
+import { SuppressionDialog } from '@/features/cleanup/suppression/components/SuppressionDialog';
 import { useAddSuppression } from '@/features/cleanup/suppression/hooks/useAddSuppression';
 
 type MethodFilter = 'ALL' | 'READY' | 'ONE_CLICK' | 'MAILTO';
@@ -33,8 +33,9 @@ export function CandidateListPage() {
   const addSuppressionMutation = useAddSuppression();
   const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [suppressionDialogOpen, setSuppressionDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [methodFilter, setMethodFilter] = useState<MethodFilter>('ALL');
+  const [methodFilter, setMethodFilter] = useState<MethodFilter>('READY');
   const [sortMode, setSortMode] = useState<SortMode>('COUNT_DESC');
 
   const rawCandidates = useMemo(() => candidatesQuery.data ?? [], [candidatesQuery.data]);
@@ -106,6 +107,20 @@ export function CandidateListPage() {
     });
   }, []);
 
+  const toggleVisibleEmails = useCallback((senderEmails: string[], checked: boolean) => {
+    setSelectedEmails((current) => {
+      const next = new Set(current);
+      for (const senderEmail of senderEmails) {
+        if (checked) {
+          next.add(senderEmail);
+        } else {
+          next.delete(senderEmail);
+        }
+      }
+      return next;
+    });
+  }, []);
+
   const clearSelection = useCallback(() => {
     setSelectedEmails(new Set());
   }, []);
@@ -149,12 +164,16 @@ export function CandidateListPage() {
             {t('cleanup.unsubscribe.list.lead')}
           </p>
         </div>
-        <Link
-          href="/cleanup/suppression"
-          className="text-primary text-sm underline-offset-4 hover:underline"
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-fit"
+          onClick={() => setSuppressionDialogOpen(true)}
         >
+          <ShieldIcon className="size-4" aria-hidden="true" />
           {t('cleanup.unsubscribe.list.suppressionLink')}
-        </Link>
+        </Button>
       </div>
 
       <div className="grid gap-2 md:grid-cols-4">
@@ -276,6 +295,7 @@ export function CandidateListPage() {
             candidates={visibleCandidates}
             selectedEmails={selectedEmails}
             onToggleEmail={toggleEmail}
+            onToggleVisibleEmails={toggleVisibleEmails}
             onPreviewSender={previewSingleSender}
             onKeepSender={keepSender}
             keepingSenderEmail={
@@ -291,6 +311,7 @@ export function CandidateListPage() {
           />
         </>
       )}
+      <SuppressionDialog open={suppressionDialogOpen} onOpenChange={setSuppressionDialogOpen} />
     </div>
   );
 }

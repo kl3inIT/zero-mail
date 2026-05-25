@@ -267,10 +267,30 @@ public class E2eStubGmailApiClientFactory extends GmailApiClientFactory {
                                                 .setThreadId(seededMessage.threadId()))
                         .toList();
         Long maxResults = request.getMaxResults();
-        if (maxResults != null && maxResults < messages.size()) {
-            messages = messages.subList(0, Math.toIntExact(maxResults));
+        int pageOffset = pageOffset(request.getPageToken(), messages.size());
+        int pageSize =
+                maxResults == null
+                        ? messages.size()
+                        : Math.toIntExact(Math.min(Math.max(0L, maxResults), messages.size()));
+        int pageEnd = Math.min(messages.size(), pageOffset + pageSize);
+        List<Message> pageMessages = messages.subList(pageOffset, pageEnd);
+        String nextPageToken = pageEnd < messages.size() ? String.valueOf(pageEnd) : null;
+        return new ListMessagesResponse().setMessages(pageMessages).setNextPageToken(nextPageToken);
+    }
+
+    private static int pageOffset(String pageToken, int messageCount) {
+        if (pageToken == null || pageToken.isBlank()) {
+            return 0;
         }
-        return new ListMessagesResponse().setMessages(messages);
+        try {
+            int requestedOffset = Integer.parseInt(pageToken);
+            if (requestedOffset < 0) {
+                return 0;
+            }
+            return Math.min(requestedOffset, messageCount);
+        } catch (NumberFormatException invalidPageToken) {
+            return 0;
+        }
     }
 
     private boolean matchesMessageListRequest(

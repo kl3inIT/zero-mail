@@ -99,7 +99,7 @@ zero-mail:
       base-url: ${ZEROMAIL_WEB_BASE_URL:http://localhost:3000}
     cors:
       # JHipster-style dev CORS config for separated frontend/API ports.
-      allowed-origins: "${ZEROMAIL_CORS_ALLOWED_ORIGINS:http://localhost:3000}"
+      allowed-origins: "${ZEROMAIL_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5174}"
       allowed-origin-patterns: "${ZEROMAIL_CORS_ALLOWED_ORIGIN_PATTERNS:}"
       allowed-methods: "${ZEROMAIL_CORS_ALLOWED_METHODS:GET,POST,PUT,PATCH,DELETE,OPTIONS}"
       allowed-headers: "${ZEROMAIL_CORS_ALLOWED_HEADERS:*}"

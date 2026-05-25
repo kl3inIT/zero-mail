@@ -4,8 +4,8 @@ milestone: v1.2
 milestone_name: Admin Console Foundation + Settings UI
 status: shipped
 stopped_at: Phase 8 shipped — PR #46
-last_updated: "2026-05-21T02:45:00.000Z"
-last_activity: 2026-05-21
+last_updated: "2026-05-24T15:31:13.221Z"
+last_activity: 2026-05-24
 progress:
   total_phases: 2
   completed_phases: 1
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 Phase: 08 (admin-console-operator-tooling) — SHIPPED (PR #46)
 Plan: 6 of 6 (8A → 8B → 8C → 8D → 8E → 8F all complete)
 Status: Phase 8 shipped — PR #46 open against main (UAT 11/11 pass, audit-emission gap closed by fe5d2cf9)
-Last activity: 2026-05-21
+Last activity: 2026-05-24 - Completed quick task 260524-va0: Increase logo displayed size to match Gmail
 
 ## Current Milestone Roadmap
 
@@ -388,6 +388,11 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260524-va0 | Increase logo displayed size to match Gmail | 2026-05-24 | pending | Verified | [260524-va0-increase-logo-displayed-size-to-match-gm](./quick/260524-va0-increase-logo-displayed-size-to-match-gm/) |
+| 260524-u1t | Enlarge logo and remove colored logo backgrounds | 2026-05-24 | pending | Verified | [260524-u1t-enlarge-logo-and-remove-colored-logo-bac](./quick/260524-u1t-enlarge-logo-and-remove-colored-logo-bac/) |
+| 260524-sej | Replace Zero Mail logo and browser tab icon with provided image | 2026-05-24 | pending | Verified | [260524-sej-replace-zero-mail-logo-and-browser-tab-i](./quick/260524-sej-replace-zero-mail-logo-and-browser-tab-i/) |
+| 260523-v3b | Update header buttons and section links | 2026-05-23 | pending | Verified | [260523-v3b-update-header-buttons-and-section-links](./quick/260523-v3b-update-header-buttons-and-section-links/) |
+| 260523-m46 | Add Gmail recent inbox UI/API capped to 100 messages with lazy loading | 2026-05-23 | pending | Verified | [260523-m46-recent-inbox](./quick/260523-m46-recent-inbox/) |
 | 260523-fix-deploy-latest-main-tag-build | Fix Deploy Latest Main tag-build automation and Deploy Prod gate for workflow_dispatch image builds | 2026-05-23 | 80f1b2c6 | Verified | [260523-fix-deploy-latest-main-tag-build](./quick/260523-fix-deploy-latest-main-tag-build/) |
 | 260522-w9w | Add Spring Modulith docs/actuator support and fix core boundary verification violations | 2026-05-22 | pending | Verified | [260522-w9w-add-spring-modulith-docs-generation-dev-](./quick/260522-w9w-add-spring-modulith-docs-generation-dev-/) |
 | 260523-security-alert-triage-fix | Triage GitHub Security alerts and fix CodeQL source findings plus API/worker runtime image OS package CVEs | 2026-05-23 | pending | Verified | [260523-security-alert-triage-fix](./quick/260523-security-alert-triage-fix/) |

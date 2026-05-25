@@ -137,8 +137,7 @@ public class UnsubscribeHttpClient {
         try {
             parsedUri = new URI(unsubscribeUrl);
         } catch (URISyntaxException malformedUri) {
-            throw new IllegalArgumentException(
-                    "Malformed unsubscribe URL: " + malformedUri.getMessage(), malformedUri);
+            throw new IllegalArgumentException("Malformed unsubscribe HTTPS URI");
         }
         String scheme = parsedUri.getScheme();
         if (scheme == null || !HTTPS_SCHEME.equalsIgnoreCase(scheme)) {

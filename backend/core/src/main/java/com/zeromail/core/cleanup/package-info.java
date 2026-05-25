@@ -16,9 +16,9 @@
             "triage",
             "analytics",
             "tenant",
-            "shared.privacy",
-            "shared.persistence",
-            "shared.lang"
+            "shared :: privacy",
+            "shared :: persistence",
+            "shared :: lang"
         })
 package com.zeromail.core.cleanup;
 

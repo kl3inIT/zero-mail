@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, Archive, CheckCircle2, Loader2, Play, Sparkles } from 'lucide-react';
+import { AlertTriangle, Archive, CheckCircle2, Loader2, Play, Sparkles, Tag } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import type { RulePreviewResponse } from '@/features/rules/api/rules-api';
 import { cn } from '@/lib/utils';
 
-type SampleSize = 10 | 20;
+type SampleSize = 20 | 50 | 100;
 
 type Props = {
   enabledRulesCount: number;
@@ -27,15 +27,19 @@ type Props = {
   previewError: string | null;
   gmailUnavailableError: string | null;
   isPreviewing: boolean;
+  isApplyingLabels: boolean;
   canPreview: boolean;
   sampleSize: SampleSize;
+  appliedLabelCount: number | null;
+  labelApplyError: string | null;
   isEvaluatingSemanticIntents: boolean;
   onSampleSizeChange: (sampleSize: SampleSize) => void;
   onPreview: () => void;
+  onApplyLabels: () => void;
   onEvaluateSemanticIntents: () => void;
 };
 
-const SAMPLE_SIZES = [10, 20] as const;
+const SAMPLE_SIZES = [20, 50, 100] as const;
 
 export function RulePreviewPanel({
   enabledRulesCount,
@@ -43,11 +47,15 @@ export function RulePreviewPanel({
   previewError,
   gmailUnavailableError,
   isPreviewing,
+  isApplyingLabels,
   canPreview,
   sampleSize,
+  appliedLabelCount,
+  labelApplyError,
   isEvaluatingSemanticIntents,
   onSampleSizeChange,
   onPreview,
+  onApplyLabels,
   onEvaluateSemanticIntents,
 }: Props) {
   const t = useTranslations();
@@ -56,6 +64,13 @@ export function RulePreviewPanel({
   const actionCounts = Object.entries(summary?.proposedActionCounts ?? {});
   const hasConflicts =
     (summary?.conflictCount ?? 0) > 0 || rows.some((row) => row.conflictChips?.length);
+  const proposedLabelCount = rows.reduce(
+    (count, row) =>
+      count +
+      (row.proposedActionChips ?? []).filter((chip) => chip.actionTypeId === 'label').length,
+    0,
+  );
+  const canApplyLabels = Boolean(preview) && proposedLabelCount > 0 && !isPreviewing;
 
   return (
     <Card>
@@ -78,7 +93,7 @@ export function RulePreviewPanel({
                     variant={isActive ? 'default' : 'ghost'}
                     size="sm"
                     className={cn(
-                      'h-8 w-11 rounded-lg border text-sm font-medium transition-all',
+                      'h-8 w-12 rounded-lg border text-sm font-medium transition-all',
                       isActive
                         ? 'border-accent bg-accent text-accent-foreground font-bold shadow-sm'
                         : 'bg-background border-border text-muted-foreground hover:bg-muted hover:text-foreground',
@@ -91,14 +106,31 @@ export function RulePreviewPanel({
               })}
             </div>
           </div>
-          <Button type="button" disabled={!canPreview || isPreviewing} onClick={onPreview}>
-            {isPreviewing ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <Play className="size-4" aria-hidden="true" />
-            )}
-            {isPreviewing ? t('rules.preview.previewing') : t('rules.preview.previewCta')}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" disabled={!canPreview || isPreviewing} onClick={onPreview}>
+              {isPreviewing ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Play className="size-4" aria-hidden="true" />
+              )}
+              {isPreviewing ? t('rules.preview.previewing') : t('rules.preview.previewCta')}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!canApplyLabels || isApplyingLabels}
+              onClick={onApplyLabels}
+            >
+              {isApplyingLabels ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Tag className="size-4" aria-hidden="true" />
+              )}
+              {isApplyingLabels
+                ? t('rules.preview.applyingLabels')
+                : t('rules.preview.applyLabelsCta')}
+            </Button>
+          </div>
         </div>
 
         {gmailUnavailableError && (
@@ -113,6 +145,22 @@ export function RulePreviewPanel({
           <Alert variant="destructive">
             <AlertTriangle className="size-4" aria-hidden="true" />
             <AlertDescription>{previewError}</AlertDescription>
+          </Alert>
+        )}
+
+        {labelApplyError && (
+          <Alert variant="destructive">
+            <AlertTriangle className="size-4" aria-hidden="true" />
+            <AlertDescription>{labelApplyError}</AlertDescription>
+          </Alert>
+        )}
+
+        {appliedLabelCount !== null && (
+          <Alert>
+            <CheckCircle2 className="size-4" aria-hidden="true" />
+            <AlertDescription>
+              {t('rules.preview.labelsApplied', { count: appliedLabelCount })}
+            </AlertDescription>
           </Alert>
         )}
 
@@ -154,10 +202,12 @@ export function RulePreviewPanel({
                   ))}
                 </div>
               )}
-              <p className="text-green flex items-center gap-1.5 text-xs">
-                <CheckCircle2 className="size-3.5 shrink-0" aria-hidden="true" />
-                {t('rules.preview.noWriteNotice')}
-              </p>
+              {appliedLabelCount === null ? (
+                <p className="text-green flex items-center gap-1.5 text-xs">
+                  <CheckCircle2 className="size-3.5 shrink-0" aria-hidden="true" />
+                  {t('rules.preview.noWriteNotice')}
+                </p>
+              ) : null}
             </div>
 
             {hasConflicts && (
@@ -361,7 +411,7 @@ function humanizeLabelId(labelId: string): string {
 }
 
 function isVisibleLabel(labelId: string): boolean {
-  return labelId !== 'UNREAD';
+  return !['INBOX', 'UNREAD'].includes(labelId); // i18n-allow: Gmail system label IDs.
 }
 
 function senderDisplayName(emailOrDomain: string | undefined): string {

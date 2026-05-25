@@ -2,7 +2,7 @@
 
 import { Check, Loader2, Pencil, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -143,6 +143,20 @@ export function PreviewCard({ action }: { action: PreviewCardAction }) {
     } finally {
       confirmInFlightRef.current = false;
     }
+  }
+
+  useEffect(() => {
+    if (!action.autoConfirm) return;
+    if (confirmInFlightRef.current) return;
+    if (computed.status !== 'pending') return;
+    if (!computed.sendEnabled) return;
+    void handleConfirm();
+    // handleConfirm is intentionally not in the dep array — confirmInFlightRef and sendEnabled gate re-entry.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [action.autoConfirm, computed.status, computed.sendEnabled]);
+
+  if (action.autoConfirm && computed.status === 'pending') {
+    return null;
   }
 
   async function handleCancel() {
