@@ -529,6 +529,94 @@
         }
       }
     },
+    "/api/waitlist/subscribe": {
+      "post": {
+        "tags": ["waitlist-controller"],
+        "operationId": "subscribe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WaitlistSubscribeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistSubscribeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/triage/sender-safety-net/{senderEmail}/opt-in": {
       "post": {
         "tags": ["triage"],
@@ -4758,6 +4846,33 @@
         },
         "required": ["autoSendRulesEnabled"]
       },
+      "WaitlistSubscribeRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 320,
+            "minLength": 0
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 0
+          }
+        },
+        "required": ["email"]
+      },
+      "WaitlistSubscribeResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ADDED", "ALREADY_REGISTERED", "ALREADY_USER"]
+          }
+        },
+        "required": ["status"]
+      },
       "SenderOptInResponse": {
         "type": "object",
         "properties": {
@@ -6258,6 +6373,15 @@
             "type": "integer",
             "format": "int32"
           },
+          "includedFeatures": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "featured": {
+            "type": "boolean"
+          },
           "description": {
             "type": "string"
           },
@@ -6266,7 +6390,16 @@
             "format": "int32"
           }
         },
-        "required": ["code", "creditAmount", "description", "displayOrder", "name", "priceVnd"]
+        "required": [
+          "code",
+          "creditAmount",
+          "description",
+          "displayOrder",
+          "featured",
+          "includedFeatures",
+          "name",
+          "priceVnd"
+        ]
       },
       "BillingLedgerEntryResponse": {
         "type": "object",
