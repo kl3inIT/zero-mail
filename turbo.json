@@ -1,28 +1,53 @@
 {
   "$schema": "https://turborepo.com/schema.json",
+  "ui": "tui",
+  "globalDependencies": ["pnpm-lock.yaml", ".env"],
+  "globalEnv": ["NODE_ENV", "CI"],
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**"]
-    },
-    "@zeromail/admin#build": {
-      "dependsOn": [],
-      "outputs": ["dist/**"]
-    },
-    "@zeromail/admin#test": {
-      "dependsOn": [],
-      "outputs": []
-    },
-    "@zeromail/admin#e2e": {
-      "dependsOn": ["@zeromail/admin#build"],
-      "outputs": []
+      "dependsOn": ["^build", "generate:api"],
+      "inputs": ["$TURBO_DEFAULT$", "!**/*.md", "!**/*.test.*"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": ["NEXT_PUBLIC_*", "VITE_*"]
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "!**/*.md"],
+      "outputs": ["coverage/**"]
+    },
+    "e2e": {
+      "dependsOn": ["build"],
+      "inputs": ["$TURBO_DEFAULT$", "playwright.config.*", "e2e/**"],
+      "outputs": ["playwright-report/**", "test-results/**"],
+      "env": ["PLAYWRIGHT_*", "BASE_URL"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build", "generate:api"],
+      "outputs": []
+    },
+    "lint": {
+      "outputs": []
+    },
+    "lint:fix": {
+      "cache": false,
+      "outputs": []
     },
     "generate:api": {
-      "outputs": ["lib/api/schema.d.ts"]
+      "inputs": ["scripts/generate-api.ts"],
+      "outputs": ["lib/api/**/*.d.ts", "src/lib/api/**/*.d.ts", "**/*-spec.json"],
+      "env": ["BACKEND_URL", "API_DOCS_URL"]
+    },
+    "i18n:check": {
+      "outputs": []
+    },
+    "i18n:build": {
+      "inputs": ["features/**/messages/**", "messages/**"],
+      "outputs": ["messages/_built/**"]
     }
   }
 }
