@@ -255,17 +255,20 @@ export function ConversationPane({
               </div>
             </ConversationEmptyState>
           ) : (
-            messages.map((message) => (
-              <Message from={message.role} key={message.id}>
-                <MessageContent>
-                  <ChatMessageParts
-                    chatId={chatId}
-                    message={message}
-                    persistenceAckCount={chat.persistenceAckCount}
-                  />
-                </MessageContent>
-              </Message>
-            ))
+            messages.map((message) => {
+              const hasToolPart = message.parts.some((part) => part.type.startsWith('tool-'));
+              return (
+                <Message from={message.role} key={message.id}>
+                  <MessageContent className={hasToolPart ? 'w-full max-w-full' : undefined}>
+                    <ChatMessageParts
+                      chatId={chatId}
+                      message={message}
+                      persistenceAckCount={chat.persistenceAckCount}
+                    />
+                  </MessageContent>
+                </Message>
+              );
+            })
           )}
           {chat.status === 'submitted' && <Loader className="px-1 py-2" />}
           {stopped && (
