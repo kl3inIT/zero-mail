@@ -8,11 +8,11 @@ import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
 import com.google.api.services.gmail.model.MessagePartBody;
-import com.google.api.services.gmail.model.MessagePartHeader;
 import com.zeromail.core.config.ZeroMailCoreProperties;
 import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.exception.InvalidGrantException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.gmail.gateway.GmailMessageHeaders;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.shared.html.SafeHtmlSanitizer;
@@ -247,11 +247,13 @@ public class RecentInboxReadService {
         return new RecentInboxMessage(
                 gmailMessage.getId(),
                 gmailMessage.getThreadId(),
-                cap(headerValue(payload, "Subject"), SUBJECT_MAX_LENGTH),
+                cap(
+                        GmailMessageHeaders.firstValue(payload, "Subject").orElse(""),
+                        SUBJECT_MAX_LENGTH),
                 cap(gmailMessage.getSnippet(), SNIPPET_MAX_LENGTH),
-                cap(headerValue(payload, "From"), HEADER_MAX_LENGTH),
-                parseRecipients(headerValue(payload, "To")),
-                parseRecipients(headerValue(payload, "Cc")),
+                cap(GmailMessageHeaders.firstValue(payload, "From").orElse(""), HEADER_MAX_LENGTH),
+                parseRecipients(GmailMessageHeaders.firstValue(payload, "To").orElse("")),
+                parseRecipients(GmailMessageHeaders.firstValue(payload, "Cc").orElse("")),
                 internalDate(gmailMessage),
                 labelIds,
                 labelsFor(labelIds, labelNamesById),
@@ -272,18 +274,6 @@ public class RecentInboxReadService {
                             Objects.requireNonNullElse(labelNamesById.get(labelId), labelId)));
         }
         return List.copyOf(labels);
-    }
-
-    private static String headerValue(MessagePart payload, String headerName) {
-        if (payload == null || payload.getHeaders() == null) {
-            return "";
-        }
-        return payload.getHeaders().stream()
-                .filter(header -> headerName.equalsIgnoreCase(header.getName()))
-                .map(MessagePartHeader::getValue)
-                .filter(Objects::nonNull)
-                .findFirst()
-                .orElse("");
     }
 
     private static List<String> parseRecipients(String headerValue) {
@@ -430,7 +420,7 @@ public class RecentInboxReadService {
     }
 
     private static String contentId(MessagePart payload) {
-        String rawContentId = headerValue(payload, "Content-ID");
+        String rawContentId = GmailMessageHeaders.firstValue(payload, "Content-ID").orElse("");
         if (rawContentId.isBlank()) {
             return "";
         }
