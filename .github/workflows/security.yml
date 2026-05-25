@@ -25,8 +25,12 @@ permissions:
   packages: read
 
 concurrency:
+  # Cancel superseded PR runs only. For push:main and the weekly cron, let
+  # in-progress runs finish — otherwise a scheduled run that lands on top of
+  # a push will cancel its CodeQL upload and leave a stale "unsuccessful
+  # execution" SARIF that GitHub surfaces as a Code scanning configuration error.
   group: security-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   codeql:
@@ -90,6 +94,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: .gitleaks.toml
           # GITLEAKS_LICENSE only required for org-wide scanning; per-repo OSS use is free.
+          # v2.3.9 still bundles Node.js 20; runners force Node 24 from 2026-06-02.
+          # Opt in now so the deprecation warning clears and we surface any Node 24
+          # incompatibility before the forced cutover. Drop this when gitleaks
+          # publishes a Node 24 release.
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
   trivy-fs:
     name: Trivy filesystem scan
@@ -178,9 +187,14 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: sbom-backend
+          # cyclonedxBom plugin is applied at the root project (see
+          # build.gradle.kts), so it emits a single aggregated BOM at
+          # ./build/reports/ — not under each backend/* module. The old
+          # backend/**/build/reports/ path matched nothing and triggered a
+          # "no files found" warning on every run.
           path: |
-            backend/**/build/reports/bom*.json
-            backend/**/build/reports/bom*.xml
+            build/reports/bom*.json
+            build/reports/bom*.xml
           retention-days: 30
           if-no-files-found: warn
 
