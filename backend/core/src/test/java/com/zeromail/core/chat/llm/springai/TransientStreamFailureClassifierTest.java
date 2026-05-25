@@ -67,16 +67,48 @@ class TransientStreamFailureClassifierTest {
     }
 
     @Test
-    void exception_chain_with_self_cycle_does_not_loop() {
-        // Some libraries set exception.initCause(exception) defensively. The walk must terminate.
-        RuntimeException self = new RuntimeException("self");
-        try {
-            self.initCause(self);
-        } catch (IllegalStateException | IllegalArgumentException ignored) {
-            // Java's Throwable rejects self-cycles via initCause; the guard in the classifier is
-            // still validated by the next test (sentinel guard).
+    void exception_chain_with_two_step_cycle_terminates() {
+        // Java's Throwable.initCause rejects DIRECT self-cycles (cause == this) but NOT longer
+        // chains: initCause only verifies the receiver doesn't already have a cause. Two
+        // exceptions can therefore reference each other and produce an infinite walk if the
+        // classifier doesn't keep a visited-set or hop counter.
+        //
+        // We can't construct the cycle via initCause (Throwable rejects the second call once
+        // cause is set) and reflection into Throwable.cause is blocked under JDK 25 module
+        // boundaries. Instead, a tiny CyclicThrowable subclass overrides getCause() to return
+        // its sibling -- this is the exact "broken library" shape the classifier guards against.
+        CyclicThrowable nodeA = new CyclicThrowable("a");
+        CyclicThrowable nodeB = new CyclicThrowable("b");
+        nodeA.linkTo(nodeB);
+        nodeB.linkTo(nodeA);
+
+        // Sanity: the cycle is real -- after an even number of hops we return to nodeA.
+        Throwable cursor = nodeA;
+        for (int hop = 0; hop < 4; hop++) {
+            cursor = cursor.getCause();
         }
-        assertThat(TransientStreamFailureClassifier.isTransient(self)).isFalse();
+        assertThat(cursor).isSameAs(nodeA);
+
+        // None of the cycle nodes are transient transport errors, so the classifier must
+        // terminate via its hop-count guard and return false rather than loop forever.
+        assertThat(TransientStreamFailureClassifier.isTransient(nodeA)).isFalse();
+    }
+
+    private static final class CyclicThrowable extends RuntimeException {
+        private Throwable sibling;
+
+        private CyclicThrowable(String message) {
+            super(message);
+        }
+
+        private void linkTo(Throwable sibling) {
+            this.sibling = sibling;
+        }
+
+        @Override
+        public synchronized Throwable getCause() {
+            return sibling;
+        }
     }
 
     /**

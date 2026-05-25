@@ -487,7 +487,11 @@ export function renderToolResult({
   input: unknown;
   output: unknown;
 }): React.ReactNode | null {
-  const renderer = READ_RENDERERS[toolName] ?? WRITE_REVERSIBLE_RENDERERS[toolName];
+  const renderer = Object.hasOwn(READ_RENDERERS, toolName)
+    ? READ_RENDERERS[toolName]
+    : Object.hasOwn(WRITE_REVERSIBLE_RENDERERS, toolName)
+      ? WRITE_REVERSIBLE_RENDERERS[toolName]
+      : undefined;
   if (!renderer) return null;
   // Only render once we have output (otherwise let the caller show a loading state).
   // Some tools (e.g., searchInbox) still meaningfully render input-only while running.
@@ -495,5 +499,7 @@ export function renderToolResult({
 }
 
 export function hasToolResultRenderer(toolName: string): boolean {
-  return toolName in READ_RENDERERS || toolName in WRITE_REVERSIBLE_RENDERERS;
+  return (
+    Object.hasOwn(READ_RENDERERS, toolName) || Object.hasOwn(WRITE_REVERSIBLE_RENDERERS, toolName)
+  );
 }

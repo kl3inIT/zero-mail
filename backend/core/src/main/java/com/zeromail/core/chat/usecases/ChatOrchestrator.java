@@ -298,7 +298,8 @@ public class ChatOrchestrator {
             }
             boolean transientFailure = TRANSIENT_STREAM_ERROR_CODE.equals(outcome.errorCode());
             boolean retryBudgetRemaining = attempt < maxTransientRetries;
-            if (transientFailure && retryBudgetRemaining) {
+            boolean safeToRetry = !interceptingSink.hadOutput();
+            if (transientFailure && retryBudgetRemaining && safeToRetry) {
                 log.warn(
                         "event=chat_stream_retry_attempt tenantId={} chatId={} attempt={} maxRetries={} errorCode={}",
                         tenantId,
@@ -307,6 +308,17 @@ public class ChatOrchestrator {
                         maxTransientRetries,
                         outcome.errorCode());
                 continue;
+            }
+            if (transientFailure && retryBudgetRemaining) {
+                // Stream cancelled MID-RESPONSE (tokens/tool events already delivered to the FE).
+                // Retrying would re-emit those events from scratch and produce duplicates on the
+                // user's screen. Surface the error to the downstream sink instead and let the
+                // user retry manually with full context of what was partially shown.
+                log.warn(
+                        "event=chat_stream_retry_skipped_mid_response tenantId={} chatId={} errorCode={}",
+                        tenantId,
+                        preparedTurn.chatId(),
+                        outcome.errorCode());
             }
             return outcome;
         }
@@ -702,18 +714,32 @@ public class ChatOrchestrator {
         private String lastToolName;
         private String lastToolCallId;
         private String lastToolInputJson;
+        private volatile boolean hadOutput;
 
         private InterceptingSink(ChatStreamSink downstreamSink) {
             this.downstreamSink = downstreamSink;
         }
 
+        /**
+         * True once this iteration forwarded any user-visible token/tool-call event to the
+         * downstream sink. The orchestrator MUST NOT retry after this point -- a second iteration
+         * would emit duplicate tokens on top of the already-delivered ones. Only stream cancels
+         * that happen before the first token (the common case for 9router HTTP/2 RST_STREAM during
+         * connect/headers) are safely retriable.
+         */
+        boolean hadOutput() {
+            return hadOutput;
+        }
+
         @Override
         public void emitTextStart(String partId) {
+            hadOutput = true;
             downstreamSink.emitTextStart(partId);
         }
 
         @Override
         public void emitTextDelta(String partId, String tokenText) {
+            hadOutput = true;
             assistantText.append(tokenText == null ? "" : tokenText);
             downstreamSink.emitTextDelta(partId, tokenText);
         }
@@ -725,6 +751,7 @@ public class ChatOrchestrator {
 
         @Override
         public void emitToolInputStart(String toolCallId, String toolName) {
+            hadOutput = true;
             lastToolCallId = toolCallId;
             lastToolName = toolName;
             downstreamSink.emitToolInputStart(toolCallId, toolName);
@@ -732,6 +759,7 @@ public class ChatOrchestrator {
 
         @Override
         public void emitToolInputAvailable(String toolCallId, String toolName, String inputJson) {
+            hadOutput = true;
             lastToolCallId = toolCallId;
             lastToolName = toolName;
             lastToolInputJson = inputJson;
@@ -740,6 +768,7 @@ public class ChatOrchestrator {
 
         @Override
         public void emitToolOutputAvailable(String toolCallId, String outputJson) {
+            hadOutput = true;
             downstreamSink.emitToolOutputAvailable(toolCallId, outputJson);
         }
 

@@ -196,6 +196,54 @@ class ChatOrchestratorTransientStreamRetryIT extends PostgresContainerTest {
                 .anySatisfy(event -> assertThat(event).isEqualTo("error:chat_stream_transient"));
     }
 
+    @Test
+    void transient_cancel_after_first_token_does_not_retry_to_avoid_duplicate_output()
+            throws Exception {
+        UUID tenantId = seedTenant();
+        AtomicInteger modelCallCount = new AtomicInteger();
+        RecordingChatStreamSink streamSink = new RecordingChatStreamSink();
+        when(chatLlmGateway.streamChat(any(ChatStreamRequest.class), any(ChatStreamSink.class)))
+                .thenAnswer(
+                        invocation -> {
+                            int callNumber = modelCallCount.incrementAndGet();
+                            ChatStreamSink modelSink = invocation.getArgument(1);
+                            // Simulate the gateway streaming a few tokens to the FE BEFORE the
+                            // 9router HTTP/2 stream gets reset. Retrying would re-emit "Đây là "
+                            // on top of the already-delivered tokens, producing a duplicated
+                            // assistant turn on the user's screen. The orchestrator must instead
+                            // forward the transient error so the FE can surface "stream
+                            // interrupted, please retry" and the user keeps full context of what
+                            // was partially shown.
+                            modelSink.emitTextStart("assistant-text");
+                            modelSink.emitTextDelta("assistant-text", "Đây là ");
+                            modelSink.emitError(
+                                    "chat_stream_transient",
+                                    "The assistant stream was interrupted.");
+                            return (Disposable) () -> {};
+                        });
+
+        withTenant(
+                tenantId,
+                () ->
+                        chatOrchestrator.stream(
+                                new ChatStreamCommand(
+                                        tenantId.toString(),
+                                        null,
+                                        "Mid-response cancel must not retry",
+                                        null),
+                                streamSink));
+
+        assertThat(streamSink.awaitFinish()).isTrue();
+        assertThat(modelCallCount)
+                .as(
+                        "the orchestrator must NOT retry once output has been emitted, otherwise the FE would render duplicated tokens")
+                .hasValue(1);
+        assertThat(streamSink.events())
+                .as("the partial tokens and the terminal error must both reach the downstream sink")
+                .anySatisfy(event -> assertThat(event).isEqualTo("text-delta:Đây là "))
+                .anySatisfy(event -> assertThat(event).isEqualTo("error:chat_stream_transient"));
+    }
+
     private UUID seedTenant() {
         UUID tenantId = UUID.randomUUID();
         jdbcTemplate.update(

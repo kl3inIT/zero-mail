@@ -200,7 +200,12 @@ export function ConversationPane({
     if (!text) return;
     setStopped(false);
     setInput('');
-    await chat.sendMessage({ text });
+    try {
+      await chat.sendMessage({ text });
+    } catch (sendFailure) {
+      setInput(text);
+      throw sendFailure;
+    }
   }
 
   function handleStop() {
