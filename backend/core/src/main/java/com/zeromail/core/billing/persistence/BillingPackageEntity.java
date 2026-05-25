@@ -81,4 +81,31 @@ public class BillingPackageEntity extends AbstractAuditableEntity {
     public int getDisplayOrder() {
         return displayOrder;
     }
+
+    public void updateDetails(
+            String name,
+            long priceVnd,
+            int creditAmount,
+            String description,
+            boolean active,
+            int displayOrder) {
+        this.name = name;
+        this.priceVnd = priceVnd;
+        this.creditAmount = creditAmount;
+        this.description = description;
+        this.active = active;
+        this.displayOrder = displayOrder;
+    }
+
+    public void activate() {
+        active = true;
+    }
+
+    public void deactivate() {
+        active = false;
+    }
+
+    public void updateDisplayOrder(int displayOrder) {
+        this.displayOrder = displayOrder;
+    }
 }
