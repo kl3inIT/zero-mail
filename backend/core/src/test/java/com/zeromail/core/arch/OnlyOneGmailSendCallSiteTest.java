@@ -12,9 +12,8 @@ import org.junit.jupiter.api.Test;
 class OnlyOneGmailSendCallSiteTest {
 
     private static final String ALLOWED_SEND_CALL_SITE =
-            "com.zeromail.core.chat.confirm.send.AllowedSendCallSite";
-    private static final String ASSISTANT_SEND_EXECUTOR_PACKAGE =
-            "com.zeromail.core.chat.confirm.send";
+            "com.zeromail.core.outbound.usecases.AllowedSendCallSite";
+    private static final String OUTBOUND_GATEWAY_PACKAGE = "com.zeromail.core.outbound";
     private static final String GMAIL_MESSAGES_OWNER = "Gmail.Users.Messages";
     private static final String GMAIL_DRAFTS_OWNER = "Gmail.Users.Drafts";
 
@@ -28,13 +27,11 @@ class OnlyOneGmailSendCallSiteTest {
                         .filter(OnlyOneGmailSendCallSiteTest::isGmailSendCall)
                         .count();
 
-        // Count flipped 0->1 in Wave 4 [ATOMIC-GROUP: arch01-flip] with
-        // AssistantSendExecutor.
         assertThat(callSiteCount).isEqualTo(1L);
     }
 
     @Test
-    void future_gmail_send_call_site_must_live_in_assistant_executor_package() {
+    void gmail_send_call_site_must_live_in_outbound_gateway_package() {
         JavaClasses importedClasses = importProductionClasses();
 
         importedClasses.stream()
@@ -48,8 +45,14 @@ class OnlyOneGmailSendCallSiteTest {
                             String originOwnerName = sendCallSite.originOwner().getName();
                             assertThat(originOwnerName)
                                     .as(
-                                            "Gmail send call origin must be the assistant send executor")
-                                    .startsWith(ASSISTANT_SEND_EXECUTOR_PACKAGE + ".");
+                                            "Gmail send call origin must be the shared outbound gateway")
+                                    .satisfies(
+                                            originName ->
+                                                    assertThat(
+                                                                    originName.startsWith(
+                                                                            OUTBOUND_GATEWAY_PACKAGE
+                                                                                    + "."))
+                                                            .isTrue());
                             assertThat(
                                             sendCallSite
                                                     .originOwner()

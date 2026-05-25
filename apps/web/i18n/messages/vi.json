@@ -729,36 +729,36 @@
       "title": "Viết quy tắc bằng ngôn ngữ tự nhiên"
     },
     "step3": {
-      "desc": "Mọi thao tác đều được ghi lại và có thể hoàn tác. Duyệt thư nháp trước khi gửi đi. Không bao giờ có thư được gửi thay bạn.",
+      "desc": "Mọi thao tác đều được ghi lại và có thể hoàn tác. Hành động gửi outbound chỉ chạy khi switch Auto-send rules và cổng an toàn cho phép.",
       "title": "Duyệt hàng đợi xử lý"
     },
     "title": "Ba bước. Không cần học thêm hộp thư mới."
   },
   "landing": {
     "bullets": {
-      "noAutoSend": "Không tự gửi",
+      "noAutoSend": "Gửi qua cổng an toàn",
       "readOnlyPrompts": "Prompt AI chỉ đọc",
       "reversibleActions": "Hành động hoàn tác được"
     },
     "continueSetupCta": "Tiếp tục thiết lập",
     "eyebrow": "Gmail · Private beta · v1",
     "heading": {
-      "accent": "nút gửi.",
+      "accent": "quyền kiểm soát.",
       "line1": "Hộp thư gọn sạch,",
-      "line2": "không giao AI"
+      "line2": "không đánh mất"
     },
     "metrics": {
-      "autoSendsEver": "không tự gửi",
+      "autoSendsEver": "lượt gửi qua cổng an toàn",
       "emailsProcessed": "email đã xử lý",
       "triageAccuracy": "độ chính xác",
       "triagePerEmail": "xử lý mỗi email"
     },
+    "openAppCta": "Mở ứng dụng",
     "peek": {
       "eyebrow": "Tiếp theo · Cách hoạt động",
       "link": "Đọc walkthrough",
       "title": "Ba bước để đạt inbox zero — kết nối, mô tả, xem lại."
     },
-    "openAppCta": "Mở ứng dụng",
     "primaryCta": "Đăng nhập",
     "secondaryCta": "Xem cách hoạt động",
     "tagline": "Zero Mail phân loại Gmail của bạn theo các quy tắc bạn viết bằng ngôn ngữ tự nhiên — gắn nhãn việc quan trọng, lưu trữ thư không cần thiết, và soạn sẵn những phản hồi đơn giản. Mọi thứ gửi đi đều phải qua bạn.",
@@ -1264,27 +1264,55 @@
     }
   },
   "rules": {
+    "actions": {
+      "autoSendAllowed": "Có thể tự gửi",
+      "autoSendChecking": "Đang kiểm tra",
+      "available": "Đang dùng được",
+      "description": "Danh sách tham khảo để biết rule có thể yêu cầu AI làm gì.",
+      "draftFallback": "Sẽ lưu nháp",
+      "empty": "Chưa có hành động nào đang bật trong catalog.",
+      "error": "Chưa tải được danh sách hành động.",
+      "risk": {
+        "high": "Rủi ro cao",
+        "low": "Rủi ro thấp",
+        "medium": "Rủi ro vừa"
+      },
+      "saveDraftInstead": "Sẽ lưu nháp",
+      "title": "Hành động có thể dùng",
+      "unavailableReason": "Trạng thái: {status}",
+      "willAutoSend": "Có thể tự gửi"
+    },
     "composer": {
       "actionReview": "Zero Mail sẽ làm",
-      "allowedActionsNote": "Ở v1, Zero Mail chỉ được gắn nhãn, lưu trữ khỏi Inbox và lưu bản nháp Gmail. Zero Mail không tự gửi, chuyển tiếp, xóa, đánh spam hoặc gọi webhook.",
+      "allowedActionsNote": "Quy tắc được lưu thành điều kiện và hành động rõ ràng. Hành động gửi email chỉ chạy khi qua kiểm tra an toàn và cài đặt tự gửi của bạn.",
       "answerClarification": "Gửi câu trả lời",
       "answerLabel": "Câu trả lời của bạn",
       "compileCta": "Chuyển thành quy tắc",
       "compiledReview": "Quy tắc sẽ được lưu",
       "compiling": "Đang kiểm tra...",
-      "example": {
-        "calendar": "Gắn nhãn Calendar cho lời mời họp và cập nhật lịch",
-        "newsletters": "Gắn nhãn Reading cho newsletter, nhưng không lưu trữ email từ khách hàng",
-        "receipts": "Lưu trữ biên lai từ Stripe và gắn nhãn Finance"
+      "examples": {
+        "addSelected": "Thêm đã chọn ({count})",
+        "backToPersonas": "Bỏ chọn persona",
+        "body": "Dùng ví dụ mẫu nếu bạn chưa muốn tự viết từ đầu.",
+        "changePersona": "Đổi persona",
+        "chooseExampleTitle": "Chọn ví dụ",
+        "choosePersonaTitle": "Chọn persona",
+        "count": "{count} ví dụ",
+        "empty": "Chưa có ví dụ đang bật cho nhóm này.",
+        "error": "Chưa tải được ví dụ. Bạn vẫn có thể tự viết quy tắc.",
+        "multiPromptPrefix": "Thêm các quy tắc sau:",
+        "title": "Chọn từ ví dụ"
       },
-      "examplesHint": "Gợi ý — bấm để chèn nhanh:",
+      "examplesHint": "Gợi ý từ catalog",
       "invalid": "Quy tắc này chưa thể lưu. Hãy sửa cách diễn đạt hoặc trả lời câu hỏi làm rõ.",
       "matcherReview": "Email phù hợp",
       "newRuleCta": "Tạo quy tắc",
-      "saveDisabledCta": "Lưu (giữ tắt cho đến khi chạy thử)",
+      "personaFallback": "Chọn nhóm",
+      "personaLabel": "Nhóm ví dụ",
+      "saveDisabledCta": "Lưu",
       "saving": "Đang lưu...",
       "sourceLabel": "Bạn muốn Zero Mail xử lý email nào và làm gì?",
-      "sourcePlaceholder": "Ví dụ: Lưu trữ biên lai từ Stripe và gắn nhãn Finance",
+      "sourcePlaceholder": "Mô tả email cần khớp và hành động Zero Mail nên làm",
       "tab": {
         "describe": "Viết bằng mô tả",
         "manual": "Xem & sửa"
@@ -1329,18 +1357,46 @@
     },
     "manual": {
       "action": {
+        "add_to_digest": "Thêm vào digest",
         "archive": "Lưu trữ",
+        "forward_email": "Chuyển tiếp",
         "label": "Gắn nhãn",
-        "save_draft": "Lưu bản nháp"
+        "mark_read": "Đánh dấu đã đọc",
+        "mark_spam": "Đánh dấu spam",
+        "save_draft": "Lưu bản nháp",
+        "send_email": "Gửi email",
+        "send_reply": "Gửi trả lời",
+        "star": "Gắn sao"
+      },
+      "actionField": {
+        "bcc": "Bcc",
+        "body": "Nội dung",
+        "cc": "Cc",
+        "instruction": "Chỉ dẫn",
+        "recipients": "Người nhận",
+        "subject": "Tiêu đề",
+        "to": "Gửi tới"
       },
       "actionPlaceholder": {
+        "add_to_digest": "Không cần nhập thêm",
         "archive": "Không cần nhập thêm",
+        "bcc": "bcc@example.com",
+        "body": "Nội dung email do bạn muốn Zero Mail gửi.",
+        "cc": "cc@example.com",
+        "forward_email": "ops@example.com",
+        "forwardInstruction": "Chuyển tiếp kèm ghi chú ngắn",
         "label": "Finance",
-        "save_draft": "Soạn bản nháp ngắn để xin file PDF hóa đơn"
+        "mark_read": "Không cần nhập thêm",
+        "mark_spam": "Không cần nhập thêm",
+        "save_draft": "Soạn bản nháp ngắn để xin file PDF hóa đơn",
+        "send_email": "founder@example.com",
+        "send_reply": "Gửi lời cảm ơn ngắn và nói tôi sẽ phản hồi sau",
+        "star": "Không cần nhập thêm",
+        "subject": "Cập nhật hôm nay"
       },
       "addAction": "Thêm hành động",
       "addCondition": "Thêm điều kiện",
-      "advancedTitle": "Đang bị khóa trong v1",
+      "advancedTitle": "Cách AI gửi email",
       "condition": {
         "GMAIL_LABEL_PRESENT": "Có nhãn Gmail",
         "HAS_ATTACHMENT": "Có tệp đính kèm",
@@ -1368,19 +1424,24 @@
         "all": "Khớp tất cả",
         "any": "Khớp bất kỳ"
       },
+      "outbound": {
+        "autoSend": "Có thể gửi tự động khi an toàn",
+        "deleteDisabled": "Không tự động xóa vĩnh viễn",
+        "fallbackDraft": "Nếu chưa đủ an toàn, lưu nháp Gmail",
+        "webhookDisabled": "Webhook chưa hỗ trợ"
+      },
       "refineCta": "Cập nhật form",
       "refineLabel": "Muốn chỉnh thêm bằng mô tả?",
       "refinePlaceholder": "Ví dụ: trừ email quảng cáo khóa học, hoặc chỉ áp dụng cho deadline và bài tập",
       "removeAction": "Xóa hành động",
       "removeCondition": "Xóa điều kiện",
-      "saveHint": "Quy tắc mới hoặc vừa sửa luôn được lưu ở trạng thái tắt cho đến khi bạn chạy thử.",
       "structuredPreview": "Quy tắc sẽ được lưu",
-      "thenBody": "Chỉ chọn các hành động an toàn được phép trong v1.",
+      "thenBody": "Chọn Zero Mail sẽ làm gì khi email khớp. Nếu là gửi email, hệ thống vẫn kiểm tra an toàn trước khi gửi.",
       "thenTitle": "Zero Mail sẽ làm",
       "unsafe": {
-        "autoSend": "Tự gửi",
-        "delete": "Xóa / spam",
-        "forward": "Chuyển tiếp",
+        "autoSend": "Auto-send rules",
+        "delete": "Spam có audit trail",
+        "forward": "Chuyển tiếp qua cổng an toàn",
         "webhook": "Gọi webhook"
       },
       "whenBody": "Chọn dấu hiệu để Zero Mail nhận diện email trước khi hành động.",
@@ -1442,6 +1503,16 @@
       "a4": "amex.com — thông báo hoàn tiền"
     },
     "ruleN": "Quy tắc 1 / 5",
+    "settings": {
+      "autoSend": {
+        "bodyOff": "Rule vẫn lưu được, nhưng các hành động gửi email sẽ tạo bản nháp Gmail để bạn tự kiểm tra và gửi.",
+        "bodyOn": "Khi rule yêu cầu gửi trả lời, chuyển tiếp, hoặc gửi email mới, Zero Mail có thể gửi thật nếu qua kiểm tra an toàn.",
+        "footerOff": "Tắt switch này không chặn lưu rule; nó chỉ đổi hành động gửi email thành bản nháp Gmail.",
+        "footerOn": "Các rule gửi email vẫn phải qua kiểm tra an toàn, giới hạn số lần gửi và nhật ký audit.",
+        "title": "Tự gửi email bằng rule",
+        "toggleLabel": "Cho phép rule tự gửi email"
+      }
+    },
     "tabs": {
       "calendar": "Thư mời lịch họp",
       "creditBadge": "Tốn credit",
@@ -1461,13 +1532,6 @@
       "testGmail": "Email Gmail thật",
       "testIntro": "Mặc định sẽ thử trên {count} quy tắc đang bật.",
       "testModeLabel": "Chế độ kiểm tra"
-    },
-    "templates": {
-      "browseCta": "Xem mẫu có sẵn",
-      "disabledByDefault": "Lưu ở trạng thái tắt cho đến khi chạy thử",
-      "materialized": "Đã tạo",
-      "title": "Mẫu khởi đầu",
-      "useStarter": "Dùng mẫu này"
     },
     "testCustom": {
       "bodyLabel": "Nội dung email",
@@ -1550,8 +1614,9 @@
     "privacy": {
       "byokPlanned": "Sắp tới: bạn có thể tự cung cấp khóa API (BYOK)",
       "heading": "Quyền riêng tư và an toàn",
-      "noAutoSend": "Không tự động gửi email",
+      "noAutoSend": "Hành động gửi email được kiểm soát bằng kiểm tra an toàn và switch tự gửi trong Cấu hình AI.",
       "noBodyStorage": "Không lưu lâu dài nội dung email, lời nhắc hay phản hồi từ AI",
+      "outboundControl": "Hành động gửi email được kiểm soát bằng kiểm tra an toàn và switch tự gửi trong Cấu hình AI.",
       "revokeAnytime": "Bạn có thể thu hồi quyền truy cập bất cứ lúc nào"
     },
     "title": "Cài đặt",
@@ -1730,8 +1795,8 @@
     "desc": "Tự động phân loại chỉ thực sự hữu ích khi bạn có thể tin tưởng giao cả hộp thư thật. Chúng tôi xây dựng Zero Mail xoay quanh ba cam kết cứng — và mọi cam kết đều có thể kiểm tra.",
     "eyebrow": "Tin cậy & an toàn",
     "p1": {
-      "body": "Zero Mail không bao giờ gửi thư thay bạn. Phản hồi nằm trong thư mục Nháp của Gmail cho đến khi bạn nhấn Gửi.",
-      "title": "Chỉ soạn nháp — không bao giờ tự gửi"
+      "body": "Tự động gửi outbound được kiểm soát bằng switch Auto-send rules và cổng an toàn. Nếu bị chặn, Zero Mail lưu bản nháp Gmail.",
+      "title": "Gửi outbound có cổng an toàn"
     },
     "p2": {
       "body": "Thư của bạn ở lại Gmail. Chúng tôi xử lý chúng trong bộ nhớ để áp quy tắc, sau đó chỉ giữ header và nhật ký hành động.",
@@ -1748,7 +1813,7 @@
     },
     "title": {
       "a": "Hộp thư gọn sạch,",
-      "b": "không giao AI nút gửi."
+      "b": "không mất quyền kiểm soát."
     }
   }
 }

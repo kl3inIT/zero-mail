@@ -109,7 +109,7 @@ public class ModelsProbeClient {
         try {
             JsonNode rootNode = objectMapper.readTree(responseBody);
             JsonNode modelsNode =
-                    provider == LlmProvider.GOOGLE
+                    LlmProvider.GOOGLE.equals(provider)
                             ? rootNode.path("models")
                             : rootNode.path("data");
             if (!modelsNode.isArray()) {
@@ -118,7 +118,7 @@ public class ModelsProbeClient {
             List<RawModel> models = new ArrayList<>();
             for (JsonNode modelNode : modelsNode) {
                 String modelId =
-                        provider == LlmProvider.GOOGLE
+                        LlmProvider.GOOGLE.equals(provider)
                                 ? googleModelId(modelNode)
                                 : modelNode.path("id").asString();
                 if (modelId == null || modelId.isBlank()) {
@@ -157,11 +157,11 @@ public class ModelsProbeClient {
             LlmProvider provider,
             KeyFormat keyFormat,
             String apiKey) {
-        if (provider == LlmProvider.GOOGLE || keyFormat == KeyFormat.GOOGLE_FORMAT) {
+        if (LlmProvider.GOOGLE.equals(provider) || keyFormat == KeyFormat.GOOGLE_FORMAT) {
             requestHeadersSpecification.header("x-goog-api-key", apiKey);
             return;
         }
-        if (provider == LlmProvider.ANTHROPIC || keyFormat == KeyFormat.ANTHROPIC_FORMAT) {
+        if (LlmProvider.ANTHROPIC.equals(provider) || keyFormat == KeyFormat.ANTHROPIC_FORMAT) {
             requestHeadersSpecification
                     .header("x-api-key", apiKey)
                     .header("anthropic-version", ANTHROPIC_VERSION);

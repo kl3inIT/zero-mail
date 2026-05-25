@@ -22,6 +22,8 @@
         allowedDependencies = {
             "llm",
             "llm :: domain",
+            "llm :: gateway.springai",
+            "llm :: routing",
             "llm :: usecases",
             "admin",
             "admin :: cat.events",
@@ -35,6 +37,7 @@
             "rules :: usecases",
             "gmail",
             "gmail :: gateway",
+            "outbound :: api",
             "triage",
             "triage :: domain",
             "triage :: usecases",

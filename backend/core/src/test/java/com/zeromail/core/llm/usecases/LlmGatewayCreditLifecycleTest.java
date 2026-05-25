@@ -75,17 +75,7 @@ class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
 
     @MockitoBean SanitizationPipeline sanitizationPipeline;
 
-    @MockitoBean(name = "openAiByokModelClient")
-    ByokLlmModelClient openAiByokModelClient;
-
-    @MockitoBean(name = "anthropicByokModelClient")
-    ByokLlmModelClient anthropicByokModelClient;
-
-    @MockitoBean(name = "googleGenAiByokModelClient")
-    ByokLlmModelClient googleGenAiByokModelClient;
-
-    @MockitoBean(name = "deepSeekByokModelClient")
-    ByokLlmModelClient deepSeekByokModelClient;
+    @MockitoBean LlmProviderChatExecutor providerChatExecutor;
 
     @BeforeEach
     void setUpSanitizer() {
@@ -149,7 +139,7 @@ class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
     void byok_path_does_not_touch_ledger() {
         UUID tenantId = seedTenant();
         seedByokCredentials(tenantId);
-        when(openAiByokModelClient.call(any(byte[].class), anyString(), any()))
+        when(providerChatExecutor.call(any(LlmProviderCredential.class), any()))
                 .thenReturn(labelResult("{}"));
 
         ToolCallResult toolCallResult =
@@ -160,6 +150,8 @@ class LlmGatewayCreditLifecycleTest extends PostgresContainerTest {
         verify(creditLedger, never()).settle(any(ReservationId.class));
         verify(creditLedger, never()).release(any(ReservationId.class));
         verify(platformLlmModelClient, never()).call(any());
+        verify(providerChatExecutor)
+                .call(any(LlmProviderCredential.class), any(LlmChatRequest.class));
         assertUsageAuditRow(tenantId, "BYOK", "PREVIEW", 0, 1, 1);
     }
 

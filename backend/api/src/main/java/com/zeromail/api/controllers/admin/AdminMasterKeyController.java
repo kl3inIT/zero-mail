@@ -1,6 +1,8 @@
 package com.zeromail.api.controllers.admin;
 
 import com.zeromail.api.dto.admin.mkey.AddProviderKeyRequest;
+import com.zeromail.api.dto.admin.mkey.CreateProviderRequest;
+import com.zeromail.api.dto.admin.mkey.CreateProviderResponse;
 import com.zeromail.api.dto.admin.mkey.MasterKeyEditSessionResponse;
 import com.zeromail.api.dto.admin.mkey.MasterKeyListResponse;
 import com.zeromail.api.dto.admin.mkey.MasterKeyMaskedResponse;
@@ -82,6 +84,32 @@ public class AdminMasterKeyController {
     public MasterKeyEditSessionResponse editSession(@PathVariable LlmProvider provider) {
         AdminContext.currentOrThrow();
         return MasterKeyEditSessionResponse.from(masterKeyAdminService.mintEditSession(provider));
+    }
+
+    @PostMapping("/providers")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CreateProviderResponse createProvider(
+            @Valid @RequestBody CreateProviderRequest request,
+            HttpServletRequest httpServletRequest) {
+        AdminContext.currentOrThrow();
+        byte[] plaintextKey = request.plaintextKey().getBytes(StandardCharsets.UTF_8);
+        LlmProvider provider = LlmProvider.fromId(request.providerId());
+        try {
+            MasterKeyAdminService.ProviderKeyAddResult result =
+                    masterKeyAdminService.createCompatibleProvider(
+                            request.providerId(),
+                            request.displayName(),
+                            request.compatibleType(),
+                            request.defaultBaseUrl(),
+                            plaintextKey,
+                            request.label(),
+                            request.editSessionToken(),
+                            httpServletRequest.getRemoteAddr(),
+                            UUID.randomUUID());
+            return CreateProviderResponse.from(provider.id(), result);
+        } finally {
+            Arrays.fill(plaintextKey, (byte) 0);
+        }
     }
 
     @PostMapping("/{provider}/test-connection")
@@ -232,7 +260,7 @@ public class AdminMasterKeyController {
                 UUID.randomUUID());
     }
 
-    /** Marks a single key row REVOKED. Idempotent on the key-id level. */
+    /** Deletes a single key row from the provider failover chain. */
     @DeleteMapping("/{provider}/keys/{keyId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void revokeKey(
@@ -242,6 +270,18 @@ public class AdminMasterKeyController {
         AdminContext.currentOrThrow();
         masterKeyAdminService.revokeKey(
                 provider, keyId, httpServletRequest.getRemoteAddr(), UUID.randomUUID());
+    }
+
+    /**
+     * Deletes an unused admin-created compatible provider. Built-in Spring AI providers are fixed.
+     */
+    @DeleteMapping("/{provider}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteProvider(
+            @PathVariable LlmProvider provider, HttpServletRequest httpServletRequest) {
+        AdminContext.currentOrThrow();
+        masterKeyAdminService.deleteCompatibleProvider(
+                provider, httpServletRequest.getRemoteAddr(), UUID.randomUUID());
     }
 
     @Schema(

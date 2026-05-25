@@ -104,7 +104,7 @@ export function SettingsClient({ initialUser }: { initialUser?: CurrentUser } = 
         </Card>
       </div>
 
-      {/* Row 2: Gmail connection + Automated triage */}
+      {/* Row 2: Gmail connection + triage controls */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -184,7 +184,7 @@ export function SettingsClient({ initialUser }: { initialUser?: CurrentUser } = 
             </li>
             <li className="flex items-start gap-2">
               <Check className="text-primary mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-              <span>{t('settings.privacy.noAutoSend')}</span>
+              <span>{t('settings.privacy.outboundControl')}</span>
             </li>
             <li className="flex items-start gap-2">
               <Check className="text-primary mt-0.5 size-3.5 shrink-0" aria-hidden="true" />

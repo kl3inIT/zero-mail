@@ -24,7 +24,7 @@ This project favors **architectural quality and defensibility over speed** (see 
 - DTO shape, controller copy/path wording, framework behavior (Spring property binding, Jackson serialization, Hibernate cascade).
 - "Service A calls service B" — implementation detail. Test the observable outcome instead.
 - More than **one happy-path + one error-contract** integration test per controller endpoint. Privacy/tenant invariants belong in ArchUnit or use-case tests, not in 4 parallel controller test files.
-- Token counts, latency, model-version-specific phrasing — change between Spring AI M6 → GA and across providers.
+- Token counts, latency, model-version-specific phrasing — change between Spring AI M7 → GA and across providers.
 
 ---
 

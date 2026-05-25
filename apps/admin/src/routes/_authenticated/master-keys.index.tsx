@@ -1,10 +1,13 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useState } from 'react';
+import {createFileRoute, useNavigate} from '@tanstack/react-router';
+import {PlusIcon} from 'lucide-react';
+import {useState} from 'react';
 
-import { RoutingMatrixCard } from '@/components/RoutingMatrixCard';
-import { TierPickerDialog, type TierPickerState } from '@/components/TierPickerDialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+import {AddProviderDialog} from '@/components/AddProviderDialog';
+import {RoutingMatrixCard} from '@/components/RoutingMatrixCard';
+import {TierPickerDialog, type TierPickerState} from '@/components/TierPickerDialog';
+import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
+import {Badge} from '@/components/ui/badge';
+import {Button} from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -12,75 +15,138 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import type { LlmProvider, MasterKeyRow } from '@/features/master-keys/master-keys-api';
-import { useMasterKeys } from '@/features/master-keys/use-master-keys';
+import {Skeleton} from '@/components/ui/skeleton';
+import type {LlmProvider, MasterKeyRow} from '@/features/master-keys/master-keys-api';
+import {useMasterKeys} from '@/features/master-keys/use-master-keys';
 
 export const Route = createFileRoute('/_authenticated/master-keys/')({
   component: MasterKeysListRoute,
 });
 
-const PROVIDER_LABELS: Record<
-  LlmProvider,
-  { name: string; kind: string; initials: string; avatarSrc?: string }
+const PROVIDER_LABELS: Partial<
+  Record<
+    LlmProvider,
+    { name: string; kind: string; initials: string; avatarSrc?: string }
+  >
 > = {
-  OPENROUTER: { name: 'OpenRouter', kind: 'OAuth bundle', initials: 'OR' },
-  ROUTER_9R: { name: '9Router', kind: 'OAuth bundle', initials: '9R' },
-  OPENAI: { name: 'OpenAI', kind: 'API key', initials: 'OA' },
-  ANTHROPIC: { name: 'Anthropic', kind: 'API key', initials: 'AN' },
-  GOOGLE: { name: 'Google', kind: 'API key', initials: 'GO' },
-  DEEPSEEK: { name: 'DeepSeek', kind: 'API key', initials: 'DS' },
+  OPENAI: {name: 'OpenAI', kind: 'API key', initials: 'OA'},
+  ANTHROPIC: {name: 'Anthropic', kind: 'API key', initials: 'AN'},
+  GOOGLE: {name: 'Google', kind: 'API key', initials: 'GO'},
+  DEEPSEEK: {name: 'DeepSeek', kind: 'API key', initials: 'DS'},
 };
+
+const SPRING_AI_BUILT_IN_PROVIDERS = new Set<string>([
+  'OPENAI',
+  'ANTHROPIC',
+  'GOOGLE',
+  'DEEPSEEK',
+]);
 
 function MasterKeysListRoute() {
   const masterKeys = useMasterKeys();
   const [pickerState, setPickerState] = useState<TierPickerState>(null);
+  const [addProviderOpen, setAddProviderOpen] = useState(false);
 
   const rows = masterKeys.data?.rows ?? [];
+  const builtInRows = rows.filter(
+    (row) =>
+      row.providerKind === 'SPRING_AI_BUILT_IN' ||
+      (!row.providerKind && SPRING_AI_BUILT_IN_PROVIDERS.has(row.provider)),
+  );
+  const openAiCompatibleRows = rows.filter(
+    (row) => !builtInRows.includes(row) && compatibleTypeFor(row) === 'OPENAI_FORMAT',
+  );
+  const anthropicCompatibleRows = rows.filter(
+    (row) => !builtInRows.includes(row) && compatibleTypeFor(row) === 'ANTHROPIC_FORMAT',
+  );
+  const otherCompatibleRows = rows.filter(
+    (row) =>
+      !builtInRows.includes(row) &&
+      compatibleTypeFor(row) !== 'OPENAI_FORMAT' &&
+      compatibleTypeFor(row) !== 'ANTHROPIC_FORMAT',
+  );
 
   return (
     <div className="space-y-8">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Quản lý LLM</h1>
-        <p className="text-muted-foreground text-sm">
-          Provider, key và routing mặc định cho toàn hệ thống.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Quản lý LLM</h1>
+          <p className="text-muted-foreground text-sm">
+            Provider, key và routing mặc định cho toàn hệ thống.
+          </p>
+        </div>
+        <Button onClick={() => setAddProviderOpen(true)}>
+          <PlusIcon className="size-4"/>
+          Thêm provider
+        </Button>
       </div>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Nhà cung cấp</h2>
+        <h2 className="text-lg font-semibold">Spring AI</h2>
         {masterKeys.isPending ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <Skeleton key={index} className="h-32 w-full" />
+            {Array.from({length: 6}).map((_, index) => (
+              <Skeleton key={index} className="h-32 w-full"/>
             ))}
           </div>
         ) : (
-          <ProviderGrid rows={rows} />
+          <ProviderGrid rows={builtInRows} emptyMessage="Chưa có provider mặc định."/>
         )}
       </section>
 
+      {!masterKeys.isPending && openAiCompatibleRows.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">OpenAI-compatible</h2>
+          <ProviderGrid rows={openAiCompatibleRows} emptyMessage="Chưa có provider nào."/>
+        </section>
+      )}
+
+      {!masterKeys.isPending && anthropicCompatibleRows.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Anthropic-compatible</h2>
+          <ProviderGrid rows={anthropicCompatibleRows} emptyMessage="Chưa có provider nào."/>
+        </section>
+      )}
+
+      {!masterKeys.isPending && otherCompatibleRows.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Chưa phân loại</h2>
+          <ProviderGrid rows={otherCompatibleRows} emptyMessage="Chưa có provider nào."/>
+        </section>
+      )}
+
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Mặc định theo tính năng</h2>
+        <h2 className="text-lg font-semibold">Model cho tác vụ AI</h2>
         <RoutingMatrixCard
           onCellClick={(feature, tier, current) =>
-            setPickerState({ feature, tier, current })
+            setPickerState({feature, tier, current})
           }
         />
       </section>
 
-      <TierPickerDialog state={pickerState} onClose={() => setPickerState(null)} />
+      <TierPickerDialog state={pickerState} onClose={() => setPickerState(null)}/>
+      <AddProviderDialog open={addProviderOpen} onOpenChange={setAddProviderOpen}/>
     </div>
   );
 }
 
-function ProviderGrid({ rows }: { rows: MasterKeyRow[] }) {
+function compatibleTypeFor(row: MasterKeyRow) {
+  return row.compatibleType ?? row.keyFormat;
+}
+
+function ProviderGrid({
+                        rows,
+                        emptyMessage,
+                      }: {
+  rows: MasterKeyRow[];
+  emptyMessage: string;
+}) {
   const navigate = useNavigate();
   if (rows.length === 0) {
     return (
       <Card>
         <CardContent className="text-muted-foreground py-10 text-center text-sm">
-          Chưa có provider nào.
+          {emptyMessage}
         </CardContent>
       </Card>
     );
@@ -94,7 +160,7 @@ function ProviderGrid({ rows }: { rows: MasterKeyRow[] }) {
           onClick={() =>
             void navigate({
               to: '/master-keys/$provider',
-              params: { provider: row.provider },
+              params: {provider: row.provider},
             })
           }
         />
@@ -103,15 +169,19 @@ function ProviderGrid({ rows }: { rows: MasterKeyRow[] }) {
   );
 }
 
-function ProviderCard({ row, onClick }: { row: MasterKeyRow; onClick: () => void }) {
+function ProviderCard({row, onClick}: { row: MasterKeyRow; onClick: () => void }) {
   const meta = PROVIDER_LABELS[row.provider as LlmProvider] ?? {
     name: row.displayName,
-    kind: 'Provider',
-    initials: row.provider.slice(0, 2),
+    kind:
+      row.providerKind === 'SPRING_AI_BUILT_IN'
+        ? 'Spring AI'
+        : row.compatibleType === 'ANTHROPIC_FORMAT'
+          ? 'Anthropic-compatible'
+          : 'OpenAI-compatible',
+    initials: initialsFor(row.displayName || row.provider),
     avatarSrc: undefined,
   };
-  const hasKey = Boolean(row.maskedKey);
-  const activeKeyCount = hasKey ? 1 : 0;
+  const activeKeyCount = row.activeKeyCount ?? 0;
   return (
     <Card
       role="button"
@@ -128,7 +198,7 @@ function ProviderCard({ row, onClick }: { row: MasterKeyRow; onClick: () => void
       <CardHeader>
         <div className="flex items-center gap-3">
           <Avatar size="lg">
-            {meta.avatarSrc && <AvatarImage src={meta.avatarSrc} alt={meta.name} />}
+            {meta.avatarSrc && <AvatarImage src={meta.avatarSrc} alt={meta.name}/>}
             <AvatarFallback>{meta.initials}</AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
@@ -150,12 +220,16 @@ function ProviderCard({ row, onClick }: { row: MasterKeyRow; onClick: () => void
         {row.rotationRecommended && (
           <Badge className="bg-amber-soft text-amber border-transparent">Nên xoay khóa</Badge>
         )}
-        {row.dependentsCount > 0 && (
-          <Badge className="bg-blue-soft text-blue border-transparent">
-            {row.dependentsCount} dependents
-          </Badge>
-        )}
       </CardContent>
     </Card>
   );
+}
+
+function initialsFor(value: string) {
+  return value
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
 }

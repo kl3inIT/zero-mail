@@ -4,7 +4,7 @@
 **Researched:** 2026-05-19
 **Overall confidence:** HIGH on all additions/changes (verified via Context7 `/springdoc/springdoc-openapi`, Spring Security 7 docs, Spring Boot 4 reference, existing repo state, npm registry). Zero new "exotic" deps — every v1.2 capability is built from artifacts already on the v1.0/v1.1 classpath plus **one** new dev-time codegen output (a second OpenAPI group).
 
-> **Scope of this document.** This is the **v1.2 delta**. The v1.0 baseline and v1.1 chat additions (Java 25 / Spring Boot 4.0.6 / Spring AI 2.0.0-M6 / PostgreSQL 17 / Redis 7 / Next.js 16.2 / React 19.2 / Tailwind 4 / shadcn/ui / TanStack Query 5 / openapi-typescript 7.13 / openapi-fetch 0.17 / Liquibase 5 / springdoc-openapi 3.0.3 / Spring Session Redis / AES-GCM at app layer / virtual threads / Micrometer + OTel agent 2.16 / `ai` 6 + `@ai-sdk/react` 3 + AI Elements) are **locked and validated** — see git history of this file before 2026-05-19 for v1.0 and v1.1. This document only catalogs what v1.2 **adds** or **changes**.
+> **Scope of this document.** This is the **v1.2 delta**. The v1.0 baseline and v1.1 chat additions (Java 25 / Spring Boot 4.0.6 / Spring AI 2.0.0-M7 / PostgreSQL 17 / Redis 7 / Next.js 16.2 / React 19.2 / Tailwind 4 / shadcn/ui / TanStack Query 5 / openapi-typescript 7.13 / openapi-fetch 0.17 / Liquibase 5 / springdoc-openapi 3.0.3 / Spring Session Redis / AES-GCM at app layer / virtual threads / Micrometer + OTel agent 2.16 / `ai` 6 + `@ai-sdk/react` 3 + AI Elements) are **locked and validated** — see git history of this file before 2026-05-19 for v1.0 and v1.1. This document only catalogs what v1.2 **adds** or **changes**.
 
 > **What v1.2 does not add or change:** no new auth provider (still single Google OAuth bundled flow, no Keycloak/Auth0); no JWT (cookie session via Spring Session Redis stays); no new database; no new queue; no new observability tool; no new LLM provider SDK; no GCP starter; no Kafka/RabbitMQ; no embedding store; no `spring-boot-starter-webflux`. **Admin RBAC is layered on top of the existing `OAuth2User` principal — no second IdP.**
 
@@ -115,7 +115,7 @@ public class SecurityConfig { ... }
 
 ### Sync-from-`/models` per provider (no new SDK)
 
-Each Spring AI provider starter already on the classpath exposes a low-level client that can list models. **The rule "no raw HTTP LLM calls or vendor SDK usage outside the Spring AI adapter" remains in force** — the list-models call **must** live inside `core.llm.gateway.springai.admin`. Where the provider starter does not expose a `listModels()` method directly, a `RestClient` (Spring 7 built-in) call to `<base-url>/v1/models` with the master key is acceptable **only inside the locked adapter package**, guarded by the existing ArchUnit rule. **MEDIUM-HIGH** — confirmed by inspecting Spring AI 2.0.0-M6's `OpenAiApi` exposure in the existing v1.0 LLM gateway; verify the Anthropic/Google starters at implementation time.
+Each Spring AI provider starter already on the classpath exposes a low-level client that can list models. **The rule "no raw HTTP LLM calls or vendor SDK usage outside the Spring AI adapter" remains in force** — the list-models call **must** live inside `core.llm.gateway.springai.admin`. Where the provider starter does not expose a `listModels()` method directly, a `RestClient` (Spring 7 built-in) call to `<base-url>/v1/models` with the master key is acceptable **only inside the locked adapter package**, guarded by the existing ArchUnit rule. **MEDIUM-HIGH** — confirmed by inspecting Spring AI 2.0.0-M7's `OpenAiApi` exposure in the existing v1.0 LLM gateway; verify the Anthropic/Google starters at implementation time.
 
 | Provider | Endpoint shape | Notes |
 |---|---|---|
@@ -402,7 +402,7 @@ Six new Liquibase YAML changelogs. **No new database library.**
 - All listed shadcn primitives (`table`, `tabs`, `dialog`, `alert-dialog`, `select`, `command`, `popover`, `sidebar`, `sheet`, `chart`, etc.) are present in `apps/web/components/ui/**` on the working tree at 2026-05-19.
 
 **Existing repo (HIGH confidence — single source of truth for v1.0/v1.1 baseline):**
-- `gradle/libs.versions.toml` — `springdoc = "3.0.3"`, Spring Boot 4.0.6, Spring AI 2.0.0-M6.
+- `gradle/libs.versions.toml` — `springdoc = "3.0.3"`, Spring Boot 4.0.6, Spring AI 2.0.0-M7.
 - `backend/api/src/main/java/com/zeromail/api/security/SecurityConfig.java` — current `authorizeHttpRequests` chain; cookie session via `oauth2Login`; CSRF SPA mode; `@Order(3)` non-test profile.
 - `backend/api/src/main/java/com/zeromail/api/config/OpenApiConfig.java` — explicit use of `GlobalOpenApiCustomizer` to survive future `GroupedOpenApi` grouping (the doc comment in this file calls out v1.2 directly).
 - `apps/web/scripts/generate-api.ts` — current single-spec codegen pipeline; single-file extension is mechanically straightforward.

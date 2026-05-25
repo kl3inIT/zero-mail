@@ -156,11 +156,12 @@ public record ZeroMailCoreProperties(
             String compileModel,
             String driftModel,
             String triageModel,
+            String draftModel,
             Duration connectTimeout,
             Duration readTimeout) {
 
         static ZeroMailLlmProperties defaults() {
-            return new ZeroMailLlmProperties(null, null, null, null, null, null, null, null);
+            return new ZeroMailLlmProperties(null, null, null, null, null, null, null, null, null);
         }
 
         public ZeroMailLlmProperties {
@@ -169,6 +170,7 @@ public record ZeroMailCoreProperties(
             compileModel = compileModel == null ? "openai/gpt-5.4-nano" : compileModel;
             driftModel = driftModel == null ? "openai/gpt-5.4-nano" : driftModel;
             triageModel = triageModel == null ? "openai/gpt-5.4-nano" : triageModel;
+            draftModel = draftModel == null ? "openai/gpt-5.4-nano" : draftModel;
             connectTimeout = connectTimeout == null ? Duration.ofSeconds(5) : connectTimeout;
             readTimeout = readTimeout == null ? Duration.ofSeconds(30) : readTimeout;
         }

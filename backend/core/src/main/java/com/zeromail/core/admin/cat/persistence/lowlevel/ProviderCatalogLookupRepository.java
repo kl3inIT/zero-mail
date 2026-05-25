@@ -2,6 +2,8 @@ package com.zeromail.core.admin.cat.persistence.lowlevel;
 
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import org.springframework.dao.DataAccessException;
@@ -78,7 +80,73 @@ public class ProviderCatalogLookupRepository {
         }
     }
 
+    public Map<String, ProviderMetadata> findAllProviderMetadata() {
+        try {
+            Map<String, ProviderMetadata> providers = new LinkedHashMap<>();
+            jdbcTemplate.query(
+                    """
+                    SELECT provider,
+                           COALESCE(display_name, provider) AS display_name,
+                           COALESCE(provider_kind, 'COMPATIBLE_GATEWAY') AS provider_kind,
+                           compatible_type,
+                           default_base_url
+                    FROM provider_catalog
+                    ORDER BY provider
+                    """,
+                    resultSet -> {
+                        String providerId = resultSet.getString("provider");
+                        providers.put(
+                                providerId,
+                                new ProviderMetadata(
+                                        providerId,
+                                        resultSet.getString("display_name"),
+                                        resultSet.getString("provider_kind"),
+                                        resultSet.getString("compatible_type"),
+                                        resultSet.getString("default_base_url")));
+                    });
+            return providers;
+        } catch (DataAccessException dataAccessException) {
+            return Map.of();
+        }
+    }
+
+    public ProviderMetadata findProviderMetadataOrNull(LlmProvider provider) {
+        try {
+            return jdbcTemplate
+                    .query(
+                            """
+              SELECT provider,
+                     COALESCE(display_name, provider) AS display_name,
+                     COALESCE(provider_kind, 'COMPATIBLE_GATEWAY') AS provider_kind,
+                     compatible_type,
+                     default_base_url
+              FROM provider_catalog
+              WHERE provider = ?
+              """,
+                            (resultSet, _) ->
+                                    new ProviderMetadata(
+                                            resultSet.getString("provider"),
+                                            resultSet.getString("display_name"),
+                                            resultSet.getString("provider_kind"),
+                                            resultSet.getString("compatible_type"),
+                                            resultSet.getString("default_base_url")),
+                            provider.id())
+                    .stream()
+                    .findFirst()
+                    .orElse(null);
+        } catch (DataAccessException dataAccessException) {
+            return null;
+        }
+    }
+
     public static String pairKey(LlmProvider provider, String feature) {
         return provider.id() + "|" + feature;
     }
+
+    public record ProviderMetadata(
+            String providerId,
+            String displayName,
+            String providerKind,
+            String compatibleType,
+            String defaultBaseUrl) {}
 }

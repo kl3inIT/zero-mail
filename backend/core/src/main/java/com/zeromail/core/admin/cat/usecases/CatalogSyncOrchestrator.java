@@ -62,7 +62,7 @@ public class CatalogSyncOrchestrator {
     public CatalogSyncFetchResult startFetch(
             LlmProvider provider, String requestIp, UUID requestId) {
         AdminUser adminUser = AdminContext.currentOrThrow();
-        if (provider == LlmProvider.ANTHROPIC) {
+        if (LlmProvider.ANTHROPIC.equals(provider)) {
             throw new CatalogSyncAnthropicDisabledException();
         }
         UUID candidateJobId = UUID.randomUUID();

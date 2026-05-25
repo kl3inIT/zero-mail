@@ -139,7 +139,7 @@ public class FeatureDefaultTierService {
                     modelCatalogRepository
                             .findById(modelId)
                             .orElseThrow(() -> new ModelNotEligibleException(modelId));
-            if (modelRow.getProvider() != provider) {
+            if (!modelRow.getProvider().equals(provider)) {
                 throw new ModelProviderMismatchException(modelId, provider);
             }
             if (modelRow.getDeprecatedAt() != null) {

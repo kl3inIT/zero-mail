@@ -8,7 +8,12 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.modulith.Modulithic;
 
 @Modulithic(systemName = "zero-mail")
-@SpringBootApplication(scanBasePackages = {"com.zeromail.api", "com.zeromail.core"})
+@SpringBootApplication(
+        scanBasePackages = {"com.zeromail.api", "com.zeromail.core"},
+        excludeName = {
+            "org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiEmbeddingConnectionAutoConfiguration",
+            "org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiTextEmbeddingAutoConfiguration"
+        })
 @ConfigurationPropertiesScan(basePackages = "com.zeromail")
 @EntityScan(basePackages = "com.zeromail.core")
 @EnableJpaRepositories(basePackages = "com.zeromail.core")

@@ -81,7 +81,6 @@ const EN_SCAN_FILES = [
   'features/rules/components/RuleComposer.tsx',
   'features/rules/components/RuleList.tsx',
   'features/rules/components/RulePreviewPanel.tsx',
-  'features/rules/components/RuleTemplateGallery.tsx',
   'components/shell/AppShell.tsx',
   'components/shell/AppSidebar.tsx',
   'components/shell/ChromeHeader.tsx',

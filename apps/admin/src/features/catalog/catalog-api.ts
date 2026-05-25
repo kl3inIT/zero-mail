@@ -1,17 +1,17 @@
 import { api } from '@/lib/api/admin-client';
 import type { components } from '@/lib/api/admin-schema';
 
-export const catalogProviders = [
-  'OPENAI',
-  'ANTHROPIC',
-  'GOOGLE',
-  'DEEPSEEK',
-  'OPENROUTER',
-  'ROUTER_9R',
+export const catalogFeatures = [
+  'CHAT',
+  'TRIAGE',
+  'DRAFT',
+  'RULE_AUTHORING',
+  'RULE_PREVIEW_SEMANTIC',
+  'TRIAGE_SEMANTIC',
+  'DRIFT_CHECK',
 ] as const;
-export const catalogFeatures = ['CHAT', 'TRIAGE', 'DRAFT'] as const;
 
-export type CatalogProvider = (typeof catalogProviders)[number];
+export type CatalogProvider = string;
 export type CatalogFeature = (typeof catalogFeatures)[number];
 export type CatalogListResponse = components['schemas']['CatalogListResponse'];
 export type CatalogFeatureResponse = components['schemas']['FeatureCatalogResponse'];
@@ -56,16 +56,18 @@ export function providerLabel(provider: CatalogProvider): string {
     ANTHROPIC: 'Anthropic',
     GOOGLE: 'Google',
     DEEPSEEK: 'DeepSeek',
-    OPENROUTER: 'OpenRouter',
-    ROUTER_9R: '9Router',
-  }[provider];
+  }[provider] ?? provider;
 }
 
 export function featureLabel(feature: CatalogFeature): string {
   return {
     CHAT: 'Chat',
-    TRIAGE: 'Phân loại',
-    DRAFT: 'Soạn nháp',
+    TRIAGE: 'Chọn hành động AI',
+    DRAFT: 'Soạn nội dung',
+    RULE_AUTHORING: 'Tạo quy tắc',
+    RULE_PREVIEW_SEMANTIC: 'Test quy tắc',
+    TRIAGE_SEMANTIC: 'Chạy quy tắc',
+    DRIFT_CHECK: 'Kiểm tra chất lượng',
   }[feature];
 }
 

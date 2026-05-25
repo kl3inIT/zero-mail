@@ -174,6 +174,13 @@ public class RuleTemplateCatalogService {
             case LABEL -> "label " + optionalText(actionIntentNode, "labelName").orElse("message");
             case ARCHIVE -> "archive";
             case SAVE_DRAFT -> "save draft";
+            case MARK_READ -> "mark read";
+            case STAR -> "star";
+            case ADD_TO_DIGEST -> "add to digest";
+            case MARK_SPAM -> "mark spam";
+            case SEND_REPLY -> "send reply";
+            case FORWARD_EMAIL -> "forward email";
+            case SEND_EMAIL -> "send email";
         };
     }
 

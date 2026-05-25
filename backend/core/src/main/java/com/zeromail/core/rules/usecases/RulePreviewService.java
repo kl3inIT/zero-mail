@@ -332,6 +332,13 @@ public class RulePreviewService {
             case ActionIntent.Label ignored -> "label";
             case ActionIntent.Archive ignored -> "archive";
             case ActionIntent.SaveDraft ignored -> "save_draft";
+            case ActionIntent.MarkRead ignored -> "mark_read";
+            case ActionIntent.Star ignored -> "star";
+            case ActionIntent.AddToDigest ignored -> "add_to_digest";
+            case ActionIntent.MarkSpam ignored -> "mark_spam";
+            case ActionIntent.SendReply ignored -> "send_reply";
+            case ActionIntent.ForwardEmail ignored -> "forward_email";
+            case ActionIntent.SendEmail ignored -> "send_email";
         };
     }
 
@@ -634,6 +641,15 @@ public class RulePreviewService {
             case ActionIntent.Label label -> "label:" + label.labelName();
             case ActionIntent.Archive ignored -> "archive";
             case ActionIntent.SaveDraft ignored -> "save_draft";
+            case ActionIntent.MarkRead ignored -> "mark_read";
+            case ActionIntent.Star ignored -> "star";
+            case ActionIntent.AddToDigest ignored -> "add_to_digest";
+            case ActionIntent.MarkSpam ignored -> "mark_spam";
+            case ActionIntent.SendReply ignored -> "send_reply";
+            case ActionIntent.ForwardEmail forwardEmail ->
+                    "forward_email:" + String.join(",", forwardEmail.recipients());
+            case ActionIntent.SendEmail sendEmail ->
+                    "send_email:" + String.join(",", sendEmail.to());
         };
     }
 
@@ -741,6 +757,24 @@ public class RulePreviewService {
                             case SAVE_DRAFT ->
                                     new ActionIntent.SaveDraft(
                                             text(actionIntentNode, "instruction", "draftIntent"));
+                            case MARK_READ -> new ActionIntent.MarkRead();
+                            case STAR -> new ActionIntent.Star();
+                            case ADD_TO_DIGEST -> new ActionIntent.AddToDigest();
+                            case MARK_SPAM -> new ActionIntent.MarkSpam();
+                            case SEND_REPLY ->
+                                    new ActionIntent.SendReply(
+                                            text(actionIntentNode, "instruction", "body"));
+                            case FORWARD_EMAIL ->
+                                    new ActionIntent.ForwardEmail(
+                                            recipients(actionIntentNode, "recipients", "to"),
+                                            optionalText(actionIntentNode, "instruction", null));
+                            case SEND_EMAIL ->
+                                    new ActionIntent.SendEmail(
+                                            recipients(actionIntentNode, "to", "recipients"),
+                                            optionalRecipients(actionIntentNode, "cc"),
+                                            optionalRecipients(actionIntentNode, "bcc"),
+                                            text(actionIntentNode, "subject"),
+                                            text(actionIntentNode, "body"));
                         });
             }
             return List.copyOf(actionIntents);
@@ -773,6 +807,44 @@ public class RulePreviewService {
             throw new IllegalArgumentException(primaryFieldName + " is required");
         }
         return fieldNode.asString();
+    }
+
+    private static List<String> recipients(
+            JsonNode jsonNode, String primaryFieldName, String fallbackFieldName) {
+        JsonNode recipientNode = jsonNode.path(primaryFieldName);
+        if ((recipientNode.isMissingNode() || recipientNode.isNull())
+                && !primaryFieldName.equals(fallbackFieldName)) {
+            recipientNode = jsonNode.path(fallbackFieldName);
+        }
+        if (recipientNode.isMissingNode() || recipientNode.isNull()) {
+            throw new IllegalArgumentException(primaryFieldName + " is required");
+        }
+        return recipientArray(recipientNode, primaryFieldName);
+    }
+
+    private static List<String> optionalRecipients(JsonNode jsonNode, String fieldName) {
+        JsonNode recipientNode = jsonNode.path(fieldName);
+        if (recipientNode.isMissingNode() || recipientNode.isNull()) {
+            return List.of();
+        }
+        return recipientArray(recipientNode, fieldName);
+    }
+
+    private static List<String> recipientArray(JsonNode recipientNode, String fieldName) {
+        if (recipientNode.isString()) {
+            return List.of(recipientNode.asString());
+        }
+        if (!recipientNode.isArray()) {
+            throw new IllegalArgumentException(fieldName + " must be an array");
+        }
+        ArrayList<String> recipients = new ArrayList<>();
+        for (JsonNode singleRecipientNode : recipientNode) {
+            if (!singleRecipientNode.isString()) {
+                throw new IllegalArgumentException(fieldName + " must contain strings");
+            }
+            recipients.add(singleRecipientNode.asString());
+        }
+        return List.copyOf(recipients);
     }
 
     private static String optionalText(JsonNode jsonNode, String fieldName, String fallbackValue) {

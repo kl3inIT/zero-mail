@@ -56,7 +56,9 @@ public abstract class PostgresContainerTest {
                 "spring.autoconfigure.exclude",
                 () ->
                         "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,"
-                                + "org.springframework.boot.autoconfigure.session.SessionAutoConfiguration");
+                                + "org.springframework.boot.autoconfigure.session.SessionAutoConfiguration,"
+                                + "org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiEmbeddingConnectionAutoConfiguration,"
+                                + "org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiTextEmbeddingAutoConfiguration");
         // Test-only AES-256 key (32 zero bytes, base64-encoded). RefreshTokenCryptoConfig
         // requires this to construct the cipher bean during context boot.
         r.add(
@@ -89,6 +91,9 @@ public abstract class PostgresContainerTest {
         r.add("spring.ai.openai.api-key", () -> "test-openai-key");
         r.add("spring.ai.anthropic.api-key", () -> "test-anthropic-key");
         r.add("spring.ai.google.genai.api-key", () -> "test-google-genai-key");
+        r.add("spring.ai.model.embedding", () -> "none");
+        r.add("spring.ai.model.embedding.text", () -> "none");
+        r.add("spring.ai.model.embedding.multimodal", () -> "none");
         r.add("spring.ai.deepseek.api-key", () -> "test-deepseek-key");
         r.add("zero-mail.llm.platform.api-key", () -> "test-platform-llm-key");
     }
