@@ -79,7 +79,7 @@ function Pill({
       className={cn(
         'inline-flex min-h-8 items-center gap-1 rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap',
         state === 'active' && 'bg-accent text-accent-foreground',
-        state === 'completed' && 'bg-accent-soft text-accent',
+        state === 'completed' && 'bg-accent-soft text-accent-foreground',
         state === 'future' && 'border',
         state === 'future' && 'border-border text-muted-foreground',
       )}

@@ -42,6 +42,26 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
             LoggerFactory.getLogger(SpringAiStreamingChatModelClient.class);
     private static final String ASSISTANT_TEXT_PART_ID = "assistant-text";
 
+    /**
+     * Error code emitted when the upstream LLM gateway aborts the HTTP/2 stream in a way that is
+     * safe to retry once at the orchestrator layer (e.g. 9router server-initiated RST_STREAM
+     * surfaced through the OpenAI Java SDK as {@code OpenAIIoException} wrapping {@code
+     * java.io.InterruptedIOException: timeout} caused by {@code
+     * okhttp3.internal.http2.StreamResetException: stream was reset: CANCEL}).
+     *
+     * <p>Detection uses the root-cause class name rather than direct imports because OkHttp's
+     * stream reset type lives in an {@code internal} package; classifying by fully qualified name
+     * keeps the production code free of {@code internal} imports while still distinguishing the
+     * stream-cancel case from logical 4xx/5xx service failures, which must NOT be retried.
+     */
+    static final String TRANSIENT_STREAM_ERROR_CODE = "chat_stream_transient";
+
+    static final String TERMINAL_STREAM_ERROR_CODE = "chat_stream_failed";
+
+    static final String TRANSIENT_STREAM_USER_MESSAGE =
+            "The assistant stream was interrupted. Retrying.";
+    static final String TERMINAL_STREAM_USER_MESSAGE = "The assistant stream failed.";
+
     private final SpringAiChatModelFactory chatModelFactory;
     private final TenantAwareReactorScheduler tenantAwareReactorScheduler;
     private final ToolCallbackTranslator toolCallbackTranslator;
@@ -116,13 +136,23 @@ public class SpringAiStreamingChatModelClient implements ChatLlmGateway {
                         },
                         chatStreamingFailure -> {
                             Throwable rootCause = rootCause(chatStreamingFailure);
+                            boolean transient_ =
+                                    TransientStreamFailureClassifier.isTransient(
+                                            chatStreamingFailure);
                             log.warn(
-                                    "event=chat_llm_stream_failed tenantId={} errorClass={} {}",
+                                    "event=chat_llm_stream_failed tenantId={} errorClass={} rootClass={} transient={} {}",
                                     safeLogToken(streamRequest.tenantId()),
+                                    chatStreamingFailure.getClass().getSimpleName(),
                                     rootCause.getClass().getSimpleName(),
+                                    transient_,
                                     serviceExceptionSummary(rootCause));
-                            streamSink.emitError(
-                                    "chat_stream_failed", "The assistant stream failed.");
+                            if (transient_) {
+                                streamSink.emitError(
+                                        TRANSIENT_STREAM_ERROR_CODE, TRANSIENT_STREAM_USER_MESSAGE);
+                            } else {
+                                streamSink.emitError(
+                                        TERMINAL_STREAM_ERROR_CODE, TERMINAL_STREAM_USER_MESSAGE);
+                            }
                         },
                         () -> {
                             if (textEmissionState.started()) {

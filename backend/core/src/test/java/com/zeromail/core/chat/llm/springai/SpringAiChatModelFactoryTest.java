@@ -97,6 +97,7 @@ class SpringAiChatModelFactoryTest {
                                 4096,
                                 1024,
                                 4,
+                                1,
                                 new ZeroMailChatProperties.HistoryProperties(50),
                                 new ZeroMailChatProperties.TokenizerProperties(4)),
                         settingsRepository,

@@ -37,7 +37,7 @@ export function CompleteClient() {
         <div className="bg-background overflow-hidden rounded-md border shadow-sm">
           <div className="border-b p-4">
             <div className="flex items-center gap-3">
-              <span className="bg-accent-soft text-accent grid size-10 shrink-0 place-items-center rounded-full text-xs font-semibold">
+              <span className="bg-accent-soft text-accent-foreground grid size-10 shrink-0 place-items-center rounded-full text-xs font-semibold">
                 SC
               </span>
               <div className="min-w-0">
@@ -79,7 +79,7 @@ export function CompleteClient() {
         </div>
 
         <div className="min-w-0">
-          <div className="bg-accent-soft text-accent grid size-12 place-items-center rounded-full">
+          <div className="bg-accent-soft text-accent-foreground grid size-12 place-items-center rounded-full">
             <CheckIcon size={24} />
           </div>
           <h1 className="text-foreground mt-4 text-[28px] leading-tight font-semibold">
@@ -133,7 +133,7 @@ function ReadyRow({ title, badge }: { title: string; badge: string }) {
   return (
     <div className="grid gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
       <span className="text-foreground text-sm">{title}</span>
-      <span className="bg-accent-soft text-accent inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-medium">
+      <span className="bg-accent-soft text-accent-foreground inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-medium">
         {badge}
       </span>
     </div>

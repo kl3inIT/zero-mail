@@ -196,7 +196,7 @@ export function PreviewCard({ action }: { action: PreviewCardAction }) {
             </CardTitle>
           </div>
           {computed.status !== 'pending' && (
-            <span className="bg-accent-soft text-accent inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium">
+            <span className="bg-accent-soft text-accent-foreground inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium">
               <Check className="size-3" />
               {computed.status === 'sent'
                 ? t('sent')

@@ -31,13 +31,27 @@ public class SafetyContractArchTests {
     // allowEmptyShould(true): the deny-listed fields don't exist yet (they're introduced
     // in plan 04 as e.g. `Sensitive<String> refreshToken`). The rule's job is to fail the
     // build if any unwrapped variant is later added.
+    //
+    // Exempt: com.zeromail.core.chat.domain.sendaction. Per CLAUDE.md privacy scope
+    // "Draft-body carve-out", the body/additionalBody fields on the LLM-facing
+    // send/reply/forward tool args records carry user-authored draft data (the user
+    // owns it, reviews it on the preview card, decides whether to send). They are NOT
+    // extracted email content received from Gmail and are explicitly persistable. The
+    // internal AssistantSendCommand still wraps the body in Sensitive<T> so any
+    // logging path inside the command pipeline keeps the redaction guarantee.
     @ArchTest
     static final ArchRule sensitive_names_wrapped =
             fields().that()
                     .haveNameMatching(DENY_REGEX)
+                    .and()
+                    .areDeclaredInClassesThat()
+                    .resideOutsideOfPackage("com.zeromail.core.chat.domain.sendaction")
                     .should()
                     .haveRawType(SENSITIVE)
-                    .because("FND-03/04: deny-listed names must be Sensitive<T>")
+                    .because(
+                            "FND-03/04: deny-listed names must be Sensitive<T> "
+                                    + "(except draft-body carve-out in send-action tool args, "
+                                    + "see CLAUDE.md privacy scope)")
                     .allowEmptyShould(true);
 
     @ArchTest

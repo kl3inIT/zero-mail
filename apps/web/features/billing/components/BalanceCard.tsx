@@ -52,7 +52,7 @@ export function BalanceCard() {
             <CardTitle>{t('billing.balance.label')}</CardTitle>
             <CardDescription>{t('billing.balance.description')}</CardDescription>
           </div>
-          <div className="bg-accent-soft text-accent flex size-10 items-center justify-center rounded-lg">
+          <div className="bg-accent-soft text-accent-foreground flex size-10 items-center justify-center rounded-lg">
             <WalletCards className="size-5" aria-hidden="true" />
           </div>
         </div>
@@ -83,7 +83,7 @@ export function BalanceCard() {
 
             {freeDuringBeta ? (
               <div
-                className="border-accent/25 bg-accent-soft/60 text-accent flex gap-2 rounded-lg border px-3 py-2 text-sm leading-6"
+                className="border-accent/25 bg-accent-soft/60 text-accent-foreground flex gap-2 rounded-lg border px-3 py-2 text-sm leading-6"
                 data-testid="billing-beta-notice"
               >
                 <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
