@@ -35,6 +35,7 @@ import {
   parseMaybeJsonObject,
   type PreviewCardAction,
 } from './preview-card/preview-card-state';
+import { hasToolResultRenderer, renderToolResult } from './tool-results';
 
 type ToolLikePart = {
   type: string;
@@ -118,6 +119,18 @@ function ChatMessageParts({
                 key={`${message.id}-${toolPart.toolCallId ?? index}`}
                 action={previewAction}
               />
+            );
+          }
+
+          if (hasToolResultRenderer(toolName)) {
+            return (
+              <div key={`${message.id}-${toolPart.toolCallId ?? index}`} className="my-1">
+                {renderToolResult({
+                  toolName,
+                  input: parseMaybeJsonObject(toolPart.input),
+                  output: parseMaybeJsonObject(toolPart.output),
+                })}
+              </div>
             );
           }
 
