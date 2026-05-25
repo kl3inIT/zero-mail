@@ -15,8 +15,6 @@ import com.zeromail.api.dto.rules.RulePreviewResponse;
 import com.zeromail.api.dto.rules.RuleResponse;
 import com.zeromail.api.dto.rules.RuleTemplateMaterializationResponse;
 import com.zeromail.api.dto.rules.RuleTemplateResponse;
-import com.zeromail.api.dto.rules.RuleTestApplyLabelsRequest;
-import com.zeromail.api.dto.rules.RuleTestApplyLabelsResponse;
 import com.zeromail.api.dto.rules.RuleUpdateRequest;
 import com.zeromail.api.dto.rules.RulesListResponse;
 import com.zeromail.api.error.RuleApiException;
@@ -31,8 +29,6 @@ import com.zeromail.core.rules.usecases.RulePreviewService;
 import com.zeromail.core.rules.usecases.RuleTemplateCatalogService;
 import com.zeromail.core.rules.usecases.RuleTemplateMaterializationResult;
 import com.zeromail.core.rules.usecases.RuleTemplateMaterializationService;
-import com.zeromail.core.rules.usecases.RuleTestApplyService;
-import com.zeromail.core.rules.usecases.RuleTestApplyService.RuleTestApplyException;
 import com.zeromail.core.rules.usecases.RuleUpdateCommand;
 import com.zeromail.core.tenant.TenantContext;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -52,7 +48,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @Tag(name = "rules")
@@ -62,7 +57,6 @@ public class RulesController {
     private final RuleCompilerService ruleCompilerService;
     private final RuleManagementService ruleManagementService;
     private final RulePreviewService rulePreviewService;
-    private final RuleTestApplyService ruleTestApplyService;
     private final RuleTemplateCatalogService ruleTemplateCatalogService;
     private final RuleTemplateMaterializationService ruleTemplateMaterializationService;
 
@@ -70,13 +64,11 @@ public class RulesController {
             RuleCompilerService ruleCompilerService,
             RuleManagementService ruleManagementService,
             RulePreviewService rulePreviewService,
-            RuleTestApplyService ruleTestApplyService,
             RuleTemplateCatalogService ruleTemplateCatalogService,
             RuleTemplateMaterializationService ruleTemplateMaterializationService) {
         this.ruleCompilerService = ruleCompilerService;
         this.ruleManagementService = ruleManagementService;
         this.rulePreviewService = rulePreviewService;
-        this.ruleTestApplyService = ruleTestApplyService;
         this.ruleTemplateCatalogService = ruleTemplateCatalogService;
         this.ruleTemplateMaterializationService = ruleTemplateMaterializationService;
     }
@@ -204,25 +196,6 @@ public class RulesController {
         }
     }
 
-    @PostMapping("/test/apply-labels")
-    public RuleTestApplyLabelsResponse applyLabelsFromRuleTest(
-            @Valid @RequestBody RuleTestApplyLabelsRequest request) {
-        try {
-            return RuleTestApplyLabelsResponse.from(
-                    ruleTestApplyService.applyLabelsForEnabledRules(
-                            TenantContext.currentTenantUuid(),
-                            request.sampleSize(),
-                            request.evaluateSemanticIntentsFlag()));
-        } catch (IllegalArgumentException invalidSampleSize) {
-            throw RuleApiException.invalidSampleSize();
-        } catch (RuleTestApplyException ruleTestApplyException) {
-            throw new ResponseStatusException(
-                    statusFor(ruleTestApplyException),
-                    "Rule test apply failed",
-                    ruleTestApplyException);
-        }
-    }
-
     @PostMapping("/preview-custom")
     public RuleCustomPreviewResponse previewCustomMail(
             @Valid @RequestBody RuleCustomPreviewRequest request) {
@@ -278,13 +251,6 @@ public class RulesController {
         } catch (IllegalArgumentException invalidSampleSize) {
             throw RuleApiException.invalidSampleSize();
         }
-    }
-
-    private static HttpStatus statusFor(RuleTestApplyException ruleTestApplyException) {
-        return switch (ruleTestApplyException.reason()) {
-            case TOO_MANY_LABEL_WRITES -> HttpStatus.BAD_REQUEST;
-            case GMAIL_UNAVAILABLE -> HttpStatus.BAD_GATEWAY;
-        };
     }
 
     private static RuleCompileResult compiledPayloadOrThrow(

@@ -13,14 +13,19 @@
         displayName = "Cleanup",
         allowedDependencies = {
             "gmail",
+            "gmail :: usecases",
             "triage",
+            "triage :: usecases",
             "analytics",
             "tenant",
             "outbound",
+            "outbound :: api",
             "queue",
+            "queue :: domain",
             "shared :: privacy",
             "shared :: persistence",
-            "shared :: lang"
+            "shared :: lang",
+            "shared :: exception"
         })
 package com.zeromail.core.cleanup;
 
