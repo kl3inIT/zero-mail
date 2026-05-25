@@ -25,9 +25,9 @@ import org.springframework.stereotype.Component;
 
 /**
  * RFC 6068 mailto unsubscribe — Gmail send-as-self gateway. Sibling boundary class of {@code
- * TriageGmailWriter} (D-05 SRP: does NOT extend it). Delegates the Gmail {@code messages.send} call
- * through the shared {@link OutboundSendGateway} (Phase 08.1 invariant: exactly ONE direct {@code
- * Gmail.users().messages().send()} call site, owned by {@code GmailOutboundSendGateway}).
+ * TriageGmailWriter} (D-05 SRP: does NOT extend it). Delegates the Gmail message-send call through
+ * the shared {@link OutboundSendGateway} (Phase 08.1 invariant: exactly ONE direct Gmail
+ * message-send call site, owned by {@code GmailOutboundSendGateway}).
  *
  * <p>Per D-06: only recipient + subject extracted from the persisted {@code
  * list_unsubscribe_mailto} header value; body is the fixed RFC convention string {@code
