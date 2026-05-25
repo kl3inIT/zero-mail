@@ -26,10 +26,24 @@
     }
   },
   "analytics": {
+    "archiveChart": {
+      "archivedLegend": "Đã lưu trữ",
+      "deletedLegend": "Đã xóa",
+      "handledLegend": "Đã xử lý",
+      "revertedLegend": "Hoàn tác",
+      "title": "Email đã lưu trữ và xóa bằng Zero Mail"
+    },
     "error": {
       "body": "Có lỗi khi tải dữ liệu này. Kiểm tra kết nối và thử lại.",
       "retry": "Thử lại",
       "title": "Không tải được phần này"
+    },
+    "groupBy": {
+      "day": "Ngày",
+      "label": "Nhóm dữ liệu",
+      "month": "Tháng",
+      "week": "Tuần",
+      "year": "Năm"
     },
     "inboxFlow": {
       "automated": "Tự động",
@@ -104,6 +118,12 @@
       "lastRefreshed": "Cập nhật {age} trước",
       "title": "Phân tích"
     },
+    "range": {
+      "label": "Khoảng thời gian",
+      "lastMonth": "Tháng trước",
+      "lastThreeMonths": "3 tháng qua",
+      "lastWeek": "Tuần trước"
+    },
     "ruleHits": {
       "column": {
         "applied": "Đã áp dụng",
@@ -122,6 +142,17 @@
         "low": "Thấp",
         "medium": "Cần xem"
       }
+    },
+    "sources": {
+      "domain": "Tên miền",
+      "emailAddress": "Địa chỉ email",
+      "emptyBody": "Chọn một khoảng thời gian khác để xem thống kê.",
+      "emptyTitle": "Chưa có dữ liệu",
+      "modeLabel": "Kiểu thống kê nguồn email",
+      "received": "Đã nhận",
+      "sent": "Đã gửi",
+      "viewLess": "Thu gọn",
+      "viewMore": "Xem thêm"
     },
     "timeSaved": {
       "averagePerDay": "Mỗi ngày",
@@ -973,10 +1004,10 @@
       "clearAttachments": "Xóa tệp đã chọn",
       "clearBody": "Xóa nội dung",
       "close": "Đóng ô soạn",
-      "confirmSendBody": "Bạn đã đọc kỹ nội dung email và chắc chắn muốn gửi? Khi gửi email không thể hoàn tác.",
+      "confirmSendBody": "Bạn đã đọc kỹ nội dung email và chắc chắn muốn gửi?",
       "confirmSendCancel": "Hủy",
       "confirmSendConfirm": "Gửi",
-      "confirmSendTitle": "Xác nhận gửi email",
+      "confirmSendTitle": "Xác nhận gửi",
       "copyBody": "Sao chép nội dung",
       "copyUnavailable": "Không sao chép được nội dung.",
       "discard": "Bỏ soạn thảo",
@@ -1002,8 +1033,10 @@
       "previewLoading": "Đang chuẩn bị gửi...",
       "removeAttachment": "Bỏ {name}",
       "saveTemplate": "Mẫu trả lời",
+      "sendFailed": "Không gửi được email. Hãy thử lại.",
       "sendingNow": "Đang gửi email...",
       "sendPreview": "Gửi",
+      "sentSuccess": "Đã gửi email.",
       "subject": "Tiêu đề",
       "subjectPlaceholder": "Tiêu đề email",
       "templateComingSoon": "Mẫu trả lời sắp có",
@@ -1320,7 +1353,7 @@
     }
   },
   "nav": {
-    "ai": "AI",
+    "ai": "Cấu hình AI",
     "analytics": "Phân tích",
     "beta": "beta",
     "billing": "Thanh toán",
@@ -1887,12 +1920,21 @@
     "account": {
       "heading": "Tài khoản"
     },
+    "credit": {
+      "helper": "Số tín dụng còn lại để chạy AI triage và soạn thư."
+    },
     "dangerZone": {
       "heading": "Vùng nguy hiểm"
     },
     "deleteAccount": {
       "confirmPhrase": "delete my data",
       "cta": "Xóa tài khoản và dữ liệu"
+    },
+    "display": {
+      "dialogBody": "Đổi ngôn ngữ giao diện và chế độ hiển thị sáng/tối tại đây.",
+      "heading": "Hiển thị",
+      "helper": "Ngôn ngữ và giao diện sáng/tối.",
+      "openDialog": "Tùy chỉnh hiển thị"
     },
     "gmailConnection": {
       "disconnectCta": "Ngắt kết nối Gmail",
@@ -1938,6 +1980,12 @@
       "outboundControl": "Hành động gửi email được kiểm soát bằng kiểm tra an toàn và switch tự gửi trong Cấu hình AI.",
       "revokeAnytime": "Bạn có thể thu hồi quyền truy cập bất cứ lúc nào"
     },
+    "theme": {
+      "dark": "Tối",
+      "heading": "Giao diện",
+      "helper": "Chọn chế độ hiển thị sáng hoặc tối cho ứng dụng.",
+      "light": "Sáng"
+    },
     "title": "Cài đặt",
     "triage": {
       "pause": {
@@ -1960,7 +2008,10 @@
       "connected": "Gmail đã kết nối",
       "degraded": "Gmail cần chú ý",
       "disconnected": "Gmail đã ngắt kết nối",
-      "reconnect": "Kết nối lại"
+      "reconnect": "Kết nối lại",
+      "verified": "Đã xác minh",
+      "verifyFailed": "Cần xác minh lại",
+      "verifyPending": "Đang xác minh"
     },
     "pause": {
       "confirm": {

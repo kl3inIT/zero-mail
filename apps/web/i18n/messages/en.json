@@ -26,10 +26,24 @@
     }
   },
   "analytics": {
+    "archiveChart": {
+      "archivedLegend": "Archived",
+      "deletedLegend": "Deleted",
+      "handledLegend": "Handled",
+      "revertedLegend": "Reverted",
+      "title": "How many emails you've archived and deleted with Zero Mail"
+    },
     "error": {
       "body": "Something went wrong fetching this data. Check your connection and try again.",
       "retry": "Try again",
       "title": "Couldn't load this"
+    },
+    "groupBy": {
+      "day": "Day",
+      "label": "Group by",
+      "month": "Month",
+      "week": "Week",
+      "year": "Year"
     },
     "inboxFlow": {
       "automated": "Automated",
@@ -104,6 +118,12 @@
       "lastRefreshed": "Last refreshed {age} ago",
       "title": "Analytics"
     },
+    "range": {
+      "label": "Date range",
+      "lastMonth": "Last month",
+      "lastThreeMonths": "Last 3 months",
+      "lastWeek": "Last week"
+    },
     "ruleHits": {
       "column": {
         "applied": "Applied",
@@ -122,6 +142,17 @@
         "low": "Low",
         "medium": "Watch"
       }
+    },
+    "sources": {
+      "domain": "Domain",
+      "emailAddress": "Email address",
+      "emptyBody": "Select a different time period to view statistics",
+      "emptyTitle": "No data available",
+      "modeLabel": "Inbox source mode",
+      "received": "Received",
+      "sent": "Sent",
+      "viewLess": "View less",
+      "viewMore": "View more"
     },
     "timeSaved": {
       "averagePerDay": "Per day",
@@ -973,7 +1004,7 @@
       "clearAttachments": "Clear selected files",
       "clearBody": "Clear body",
       "close": "Close composer",
-      "confirmSendBody": "Have you carefully reviewed this email and are sure you want to send it? Once sent, this action cannot be undone.",
+      "confirmSendBody": "Have you carefully reviewed this email and are sure you want to send it?",
       "confirmSendCancel": "Cancel",
       "confirmSendConfirm": "Send",
       "confirmSendTitle": "Confirm send",
@@ -1002,8 +1033,10 @@
       "previewLoading": "Preparing to send...",
       "removeAttachment": "Remove {name}",
       "saveTemplate": "Templates",
+      "sendFailed": "Couldn't send the email. Try again.",
       "sendingNow": "Sending email...",
       "sendPreview": "Send",
+      "sentSuccess": "Email sent.",
       "subject": "Subject",
       "subjectPlaceholder": "Email subject",
       "templateComingSoon": "Templates coming soon",
@@ -1320,7 +1353,7 @@
     }
   },
   "nav": {
-    "ai": "AI",
+    "ai": "AI configuration",
     "analytics": "Analytics",
     "beta": "beta",
     "billing": "Billing",
@@ -1887,12 +1920,21 @@
     "account": {
       "heading": "Account"
     },
+    "credit": {
+      "helper": "Credits remaining for AI triage and drafting."
+    },
     "dangerZone": {
       "heading": "Danger zone"
     },
     "deleteAccount": {
       "confirmPhrase": "delete my data",
       "cta": "Delete account and data"
+    },
+    "display": {
+      "dialogBody": "Change the interface language and light/dark display mode here.",
+      "heading": "Display",
+      "helper": "Language and light/dark interface.",
+      "openDialog": "Customize display"
     },
     "gmailConnection": {
       "disconnectCta": "Disconnect Gmail",
@@ -1938,6 +1980,12 @@
       "outboundControl": "Email-sending actions are controlled by safety checks and the auto-send switch in AI configuration.",
       "revokeAnytime": "You can revoke access anytime"
     },
+    "theme": {
+      "dark": "Dark",
+      "heading": "Appearance",
+      "helper": "Choose a light or dark display mode.",
+      "light": "Light"
+    },
     "title": "Settings",
     "triage": {
       "pause": {
@@ -1960,7 +2008,10 @@
       "connected": "Gmail connected",
       "degraded": "Gmail needs attention",
       "disconnected": "Gmail disconnected",
-      "reconnect": "Reconnect"
+      "reconnect": "Reconnect",
+      "verified": "Verified",
+      "verifyFailed": "Verify again",
+      "verifyPending": "Verifying"
     },
     "pause": {
       "confirm": {
