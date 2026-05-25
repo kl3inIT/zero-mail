@@ -23,14 +23,10 @@ import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.MailMessageObservedRepository;
 import com.zeromail.core.gmail.persistence.PubSubDeliveryEntity;
 import com.zeromail.core.gmail.persistence.PubSubDeliveryRepository;
-import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.gmail.usecases.GmailConnectionService;
 import com.zeromail.core.gmail.usecases.GmailDeliveryProcessingService;
 import com.zeromail.core.shared.privacy.EmailAddressCanonicalizer;
-import com.zeromail.core.shared.privacy.Sensitive;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -57,7 +53,6 @@ class GmailDeliveryProcessingServiceTest {
         GmailConnectionService connectionService = mock(GmailConnectionService.class);
         GmailConnectionRepository connectionRepository = mock(GmailConnectionRepository.class);
         GmailApiClientFactory gmailApiClientFactory = mock(GmailApiClientFactory.class);
-        RefreshTokenCipher refreshTokenCipher = mock(RefreshTokenCipher.class);
         ApplicationEventPublisher applicationEventPublisher = mock(ApplicationEventPublisher.class);
         EmailAddressCanonicalizer emailAddressCanonicalizer = new EmailAddressCanonicalizer();
         PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
@@ -94,15 +89,8 @@ class GmailDeliveryProcessingServiceTest {
                         .setInternalDate(1_779_999_999_000L);
 
         when(connectionRepository.findByTenantId(TENANT_ID)).thenReturn(Optional.of(connection));
-        when(refreshTokenCipher.decrypt(
-                        connection.getRefreshTokenEncrypted(), TENANT_ID.toString()))
-                .thenReturn("refresh-token".getBytes(StandardCharsets.UTF_8));
-        when(gmailApiClientFactory.refreshAccessToken("refresh-token"))
-                .thenReturn(
-                        new GmailApiClientFactory.TokenRefreshResult(
-                                Sensitive.of("access-token"),
-                                Instant.parse("2026-05-12T12:00:00Z")));
-        when(gmailApiClientFactory.buildGmailClient("access-token")).thenReturn(gmail);
+        when(gmailApiClientFactory.buildClientForConnection(connection, TENANT_ID))
+                .thenReturn(gmail);
         when(gmail.users()).thenReturn(gmailUsers);
         when(gmailUsers.history()).thenReturn(gmailHistory);
         when(gmailHistory.list("me")).thenReturn(historyListRequest);
@@ -116,7 +104,9 @@ class GmailDeliveryProcessingServiceTest {
         when(gmailUsers.messages()).thenReturn(gmailMessages);
         when(gmailMessages.get("me", GMAIL_MESSAGE_ID)).thenReturn(messageGetRequest);
         when(messageGetRequest.setFormat("metadata")).thenReturn(messageGetRequest);
-        when(messageGetRequest.setMetadataHeaders(List.of("From"))).thenReturn(messageGetRequest);
+        when(messageGetRequest.setMetadataHeaders(
+                        List.of("From", "List-Unsubscribe", "List-Unsubscribe-Post")))
+                .thenReturn(messageGetRequest);
         when(messageGetRequest.setFields("id,threadId,labelIds,internalDate,payload/headers"))
                 .thenReturn(messageGetRequest);
         when(messageGetRequest.execute()).thenReturn(gmailMessage);
@@ -130,7 +120,10 @@ class GmailDeliveryProcessingServiceTest {
                         eq(101L),
                         any(String[].class),
                         eq(1_779_999_999_000L),
-                        eq(null)))
+                        eq(null),
+                        eq(null),
+                        eq(null),
+                        eq(false)))
                 .thenReturn(1);
 
         new GmailDeliveryProcessingService(
@@ -139,7 +132,6 @@ class GmailDeliveryProcessingServiceTest {
                         connectionService,
                         connectionRepository,
                         gmailApiClientFactory,
-                        refreshTokenCipher,
                         applicationEventPublisher,
                         emailAddressCanonicalizer,
                         transactionManager)
@@ -172,7 +164,6 @@ class GmailDeliveryProcessingServiceTest {
         GmailConnectionService connectionService = mock(GmailConnectionService.class);
         GmailConnectionRepository connectionRepository = mock(GmailConnectionRepository.class);
         GmailApiClientFactory gmailApiClientFactory = mock(GmailApiClientFactory.class);
-        RefreshTokenCipher refreshTokenCipher = mock(RefreshTokenCipher.class);
         ApplicationEventPublisher applicationEventPublisher = mock(ApplicationEventPublisher.class);
         EmailAddressCanonicalizer emailAddressCanonicalizer = new EmailAddressCanonicalizer();
         PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
@@ -200,7 +191,6 @@ class GmailDeliveryProcessingServiceTest {
                         connectionService,
                         connectionRepository,
                         gmailApiClientFactory,
-                        refreshTokenCipher,
                         applicationEventPublisher,
                         emailAddressCanonicalizer,
                         transactionManager)
@@ -208,7 +198,6 @@ class GmailDeliveryProcessingServiceTest {
 
         verify(deliveryRepository).updateStatus(DELIVERY_ID, "DEAD");
         verify(deliveryRepository, never()).releaseForRetry(eq(DELIVERY_ID), any());
-        verify(refreshTokenCipher, never()).decrypt(any(), any());
-        verify(gmailApiClientFactory, never()).refreshAccessToken(any());
+        verify(gmailApiClientFactory, never()).buildClientForConnection(any(), any());
     }
 }

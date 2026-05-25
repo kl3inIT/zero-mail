@@ -11,6 +11,7 @@ import {
   Inbox,
   ListChecks,
   MailQuestion,
+  MailX,
   Settings,
   Sparkles,
 } from 'lucide-react';
@@ -39,21 +40,25 @@ type NavItem = {
   href: Route;
   labelKey:
     | 'nav.chat'
+    | 'nav.inbox'
     | 'nav.ai'
     | 'nav.analytics'
     | 'nav.needsReply'
     | 'nav.rules'
     | 'nav.billing'
     | 'nav.settings'
-    | 'nav.onboardingProgress';
+    | 'nav.onboardingProgress'
+    | 'nav.cleanupUnsubscribe';
   icon: typeof Inbox;
   badge?: 'needs-reply';
 };
 
 const MAIL_NAV: NavItem[] = [
+  { href: '/inbox' as Route, labelKey: 'nav.inbox', icon: Inbox },
   { href: '/chat', labelKey: 'nav.chat', icon: Sparkles },
   { href: '/rules', labelKey: 'nav.rules', icon: ListChecks },
   { href: '/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
+  { href: '/cleanup/unsubscribe-campaign', labelKey: 'nav.cleanupUnsubscribe', icon: MailX },
   { href: '/needs-reply', labelKey: 'nav.needsReply', icon: MailQuestion, badge: 'needs-reply' },
 ];
 
@@ -98,6 +103,7 @@ export function AppSidebar() {
     const Icon = item.icon;
     const label = t(item.labelKey);
     const active = isActivePath(pathname, item.href);
+
     return (
       <SidebarMenuItem key={item.href}>
         <SidebarMenuButton

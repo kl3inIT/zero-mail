@@ -19,7 +19,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-zeromail}
       POSTGRES_USER: ${POSTGRES_USER:-zeromail}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be exported in the shell or set in .env (default) — Docker Compose variable interpolation does NOT read .env.local; use --env-file .env.local or symlink .env -> .env.local}
     # Mount custom init scripts (only run on fresh data volumes) + tuned config.
     # 10-create-dev-db.sql is also runnable manually via `docker exec psql` for
     # existing volumes — see scripts/ops/postgres/init/10-create-dev-db.sql.
@@ -88,7 +88,7 @@ services:
     image: ${ZEROMAIL_WORKER_IMAGE:-zeromail-worker:latest}
     container_name: zeromail-worker
     restart: unless-stopped
-    env_file: .env
+    env_file: .env.local
     networks:
       - zeromail-internal
     depends_on:
@@ -114,7 +114,7 @@ services:
     image: ${ZEROMAIL_FRONTEND_IMAGE:-zeromail-frontend:latest}
     container_name: zeromail-frontend
     restart: unless-stopped
-    env_file: .env
+    env_file: .env.local
     networks:
       - proxy-network
     healthcheck:
@@ -153,7 +153,7 @@ services:
     image: ${ZEROMAIL_API_IMAGE:-zeromail-api:latest}
     container_name: zeromail-api
     restart: unless-stopped
-    env_file: .env
+    env_file: .env.local
     networks:
       - proxy-network
       - zeromail-internal

@@ -16,9 +16,10 @@ export function ChatWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryChatId = searchParams.get('chat');
+  const initialPrompt = searchParams.get('prompt') ?? '';
   const [newChatId, setNewChatId] = useState(() => createChatId());
   const activeChatId = queryChatId ?? newChatId;
-  const paneKey = useMemo(() => activeChatId, [activeChatId]);
+  const paneKey = useMemo(() => `${activeChatId}:${initialPrompt}`, [activeChatId, initialPrompt]);
 
   function handleSelectChat(chatId: string) {
     router.push(`/chat?chat=${chatId}`);
@@ -51,6 +52,7 @@ export function ChatWorkspace() {
           key={paneKey}
           chatId={activeChatId}
           historyChatId={queryChatId}
+          initialPrompt={initialPrompt}
           onChatStarted={handleChatStarted}
         />
       </div>

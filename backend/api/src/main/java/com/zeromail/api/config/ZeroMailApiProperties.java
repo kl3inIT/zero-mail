@@ -41,7 +41,7 @@ public record ZeroMailApiProperties(
             var normalizedPatterns = nonBlank(allowedOriginPatterns);
             var normalizedOrigins = nonBlank(allowedOrigins);
             if (normalizedOrigins.isEmpty() && normalizedPatterns.isEmpty()) {
-                normalizedOrigins = List.of("http://localhost:3000");
+                normalizedOrigins = List.of("http://localhost:3000", "http://localhost:5174");
             }
             allowedOrigins = normalizedOrigins;
             allowedOriginPatterns = normalizedPatterns;

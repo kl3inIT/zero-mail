@@ -13,7 +13,7 @@ export default async function Footer() {
           <div className="max-w-72">
             <Link href="/" className="zm-brand mb-4">
               <span className="zm-brand-mark">
-                <ZMLogoMark size={15} />
+                <ZMLogoMark size={40} />
               </span>
               <span className="zm-brand-wordmark">
                 <span>zero</span>
@@ -25,10 +25,10 @@ export default async function Footer() {
           <div className="zm-footer-cols">
             <div className="zm-footer-col">
               <h2>{t('footer.product')}</h2>
-              <a href="#how">{t('nav.how')}</a>
-              <a href="#features">{t('nav.features')}</a>
-              <a href="#rules">{t('nav.rules')}</a>
-              <a href="#trust">{t('nav.trust')}</a>
+              <Link href="/#features">{t('nav.features')}</Link>
+              <Link href="/#pricing">{t('nav.pricing')}</Link>
+              <Link href="/#testimonials">{t('nav.testimonials')}</Link>
+              <Link href="/#faq">{t('nav.faq')}</Link>
             </div>
             <div className="zm-footer-col">
               <h2>{t('footer.company' as never)}</h2>
@@ -41,7 +41,7 @@ export default async function Footer() {
               <h2>{t('footer.legal')}</h2>
               <Link href="/privacy">{t('footer.privacy')}</Link>
               <Link href="/terms">{t('footer.terms')}</Link>
-              <a href="#trust">{t('footer.security')}</a>
+              <Link href="/privacy">{t('footer.security')}</Link>
               <a href="#">{t('footer.dpa' as never)}</a>
             </div>
           </div>

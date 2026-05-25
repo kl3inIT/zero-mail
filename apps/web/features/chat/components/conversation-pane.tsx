@@ -161,17 +161,19 @@ function useInitialMessages(detail?: ChatHistoryDetailResponse): UIMessage[] {
 export function ConversationPane({
   chatId,
   historyChatId,
+  initialPrompt,
   onChatStarted,
 }: {
   chatId: string;
   historyChatId: string | null;
+  initialPrompt?: string;
   onChatStarted: () => void;
 }) {
   const t = useTranslations('chat');
   const detail = useChatDetail(historyChatId);
   const initialMessages = useInitialMessages(detail.data);
   const chat = useChat({ chatId, initialMessages });
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState(initialPrompt ?? '');
   const [stopped, setStopped] = useState(false);
   const chatStartedNotifiedRef = useRef(false);
   const suggestions = [
@@ -198,7 +200,7 @@ export function ConversationPane({
   }
 
   function handleStop() {
-    chat.stop();
+    void chat.stop();
     setStopped(true);
   }
 

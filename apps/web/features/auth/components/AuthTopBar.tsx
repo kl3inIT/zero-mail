@@ -42,7 +42,7 @@ export default async function AuthTopBar({ backHref = '/', children, surface = '
       >
         <Link href={backHref} aria-label={`zeromail - ${t('nav.logoLabel')}`} className="zm-brand">
           <span className="zm-brand-mark">
-            <ZMLogoMark size={15} />
+            <ZMLogoMark size={40} />
           </span>
           <span className="zm-brand-wordmark">
             <span>zero</span>

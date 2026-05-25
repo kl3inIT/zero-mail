@@ -6,19 +6,20 @@ import com.google.api.client.googleapis.json.GoogleJsonError;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.HttpHeaders;
 import com.google.api.services.gmail.Gmail;
-import com.google.api.services.gmail.model.Message;
-import com.google.api.services.gmail.model.MessagePart;
-import com.google.api.services.gmail.model.MessagePartHeader;
+import com.google.api.services.gmail.model.*;
 import com.google.api.services.gmail.model.Thread;
 import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.exception.InvalidGrantException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.gmail.gateway.GmailMessageHeaders;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.gmail.persistence.lowlevel.MailMessageObservedReadRepository;
 import com.zeromail.core.gmail.projection.ObservedPreviewMessage;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
@@ -56,15 +57,22 @@ public class GmailPreviewReadService {
                     "In-Reply-To",
                     "Reply-To",
                     "List-Unsubscribe",
+                    "List-Unsubscribe-Post",
                     "List-Id",
                     "Precedence",
                     "Content-Type");
+    private static final int LIST_UNSUBSCRIBE_URL_MAX_LENGTH = 2048;
+    private static final int LIST_UNSUBSCRIBE_MAILTO_MAX_LENGTH = 512;
+    private static final String LIST_UNSUBSCRIBE_ONE_CLICK_TRIGGER = "List-Unsubscribe=One-Click";
     private static final int SUBJECT_EXCERPT_MAX_LENGTH = 120;
     private static final String METADATA_FIELDS =
             "id,threadId,labelIds,internalDate,payload/headers,payload/parts/filename,"
                     + "payload/parts/mimeType";
     private static final String TRIAGE_METADATA_FIELDS =
             "id,threadId,labelIds,internalDate,payload/headers";
+    private static final String RECENT_INBOX_LIST_FIELDS = "messages(id,threadId)";
+    private static final String INBOX_LABEL_ID = "INBOX";
+    private static final int RECENT_INBOX_MAX_MESSAGES = 100;
     private static final List<String> THREAD_DISPLAY_METADATA_HEADERS =
             List.of("From", "To", "Cc", "Subject");
     private static final String THREAD_DISPLAY_FIELDS =
@@ -140,14 +148,7 @@ public class GmailPreviewReadService {
         }
 
         try {
-            String decryptedRefreshToken =
-                    new String(
-                            refreshTokenCipher.decrypt(
-                                    connection.getRefreshTokenEncrypted(), tenantId.toString()),
-                            StandardCharsets.UTF_8);
-            GmailApiClientFactory.TokenRefreshResult tokenResult =
-                    gmailApiClientFactory.refreshAccessToken(decryptedRefreshToken);
-            Gmail gmail = gmailApiClientFactory.buildGmailClient(tokenResult.accessToken().value());
+            Gmail gmail = buildPreviewReadClient(connection, tenantId, fetchBudget);
             return fetchMessagesWithinBudget(
                     gmail, observedMessages, includeBodyEvidence, fetchBudget);
         } catch (InvalidGrantException invalidGrantException) {
@@ -161,6 +162,98 @@ public class GmailPreviewReadService {
         } catch (IOException ioException) {
             throw new GmailPreviewReadUnavailableException(UnavailableReason.GMAIL_UNAVAILABLE);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<GmailPreviewMessage> fetchRecentInboxMessages(
+            UUID tenantId, int sampleSize, boolean includeBodyEvidence, Duration fetchBudget) {
+        Objects.requireNonNull(tenantId, "tenantId must not be null");
+        Objects.requireNonNull(fetchBudget, "fetchBudget must not be null");
+
+        GmailConnectionEntity connection =
+                gmailConnectionRepository
+                        .findByTenantId(tenantId)
+                        .orElseThrow(
+                                () ->
+                                        new GmailPreviewReadUnavailableException(
+                                                UnavailableReason.NOT_CONNECTED));
+        if (connection.getStatus() != GmailConnectionStatus.CONNECTED) {
+            throw new GmailPreviewReadUnavailableException(UnavailableReason.DISCONNECTED);
+        }
+        if (connection.getRefreshTokenEncrypted() == null) {
+            throw new GmailPreviewReadUnavailableException(UnavailableReason.NO_READ_GRANT);
+        }
+
+        try {
+            Gmail gmail = buildPreviewReadClient(connection, tenantId, fetchBudget);
+            List<ObservedPreviewMessage> recentInboxMessages =
+                    fetchRecentInboxMessageReferences(gmail, sampleSize);
+            if (recentInboxMessages.isEmpty()) {
+                return List.of();
+            }
+            return fetchMessagesWithinBudget(
+                    gmail, recentInboxMessages, includeBodyEvidence, fetchBudget);
+        } catch (InvalidGrantException invalidGrantException) {
+            throw new GmailPreviewReadUnavailableException(UnavailableReason.REVOKED);
+        } catch (GoogleJsonResponseException googleResponseException) {
+            if (googleResponseException.getStatusCode() == 401
+                    || googleResponseException.getStatusCode() == 403) {
+                throw new GmailPreviewReadUnavailableException(UnavailableReason.NO_READ_GRANT);
+            }
+            throw new GmailPreviewReadUnavailableException(UnavailableReason.GMAIL_UNAVAILABLE);
+        } catch (IOException ioException) {
+            throw new GmailPreviewReadUnavailableException(UnavailableReason.GMAIL_UNAVAILABLE);
+        }
+    }
+
+    private Gmail buildPreviewReadClient(
+            GmailConnectionEntity connection, UUID tenantId, Duration requestTimeout)
+            throws IOException {
+        String decryptedRefreshToken =
+                new String(
+                        refreshTokenCipher.decrypt(
+                                connection.getRefreshTokenEncrypted(), tenantId.toString()),
+                        StandardCharsets.UTF_8);
+        GmailApiClientFactory.TokenRefreshResult tokenResult =
+                gmailApiClientFactory.refreshAccessToken(decryptedRefreshToken);
+        return gmailApiClientFactory.buildGmailClient(
+                tokenResult.accessToken().value(), requestTimeout);
+    }
+
+    private List<ObservedPreviewMessage> fetchRecentInboxMessageReferences(
+            Gmail gmail, int requestedSampleSize) throws IOException {
+        int sampleSize = Math.min(Math.max(requestedSampleSize, 0), RECENT_INBOX_MAX_MESSAGES);
+        if (sampleSize == 0) {
+            return List.of();
+        }
+        ListMessagesResponse listMessagesResponse =
+                gmail.users()
+                        .messages()
+                        .list("me")
+                        .setLabelIds(List.of(INBOX_LABEL_ID))
+                        .setMaxResults((long) sampleSize)
+                        .setFields(RECENT_INBOX_LIST_FIELDS)
+                        .execute();
+        List<Message> messageReferences =
+                listMessagesResponse.getMessages() == null
+                        ? List.of()
+                        : listMessagesResponse.getMessages();
+        Instant observedAt = clock.instant();
+        ArrayList<ObservedPreviewMessage> recentInboxMessages = new ArrayList<>();
+        for (Message messageReference : messageReferences) {
+            if (messageReference == null || messageReference.getId() == null) {
+                continue;
+            }
+            recentInboxMessages.add(
+                    new ObservedPreviewMessage(
+                            messageReference.getId(),
+                            Objects.requireNonNullElse(
+                                    messageReference.getThreadId(), messageReference.getId()),
+                            new String[] {INBOX_LABEL_ID},
+                            null,
+                            observedAt));
+        }
+        return List.copyOf(recentInboxMessages);
     }
 
     @Transactional(readOnly = true)
@@ -315,7 +408,7 @@ public class GmailPreviewReadService {
             return Optional.empty();
         }
         MessagePart payload = latestMessage.getPayload();
-        String subject = excerpt(headerValue(payload, "Subject").orElse(""));
+        String subject = excerpt(GmailMessageHeaders.firstValue(payload, "Subject").orElse(""));
         String otherParty = otherParty(payload, selfEmail);
         Instant lastActivityAt = toInstant(latestMessage.getInternalDate());
         return Optional.of(
@@ -326,9 +419,9 @@ public class GmailPreviewReadService {
         String normalizedSelfEmail = sanitizeEmail(selfEmail);
         List<String> participants =
                 Stream.of(
-                                headerValue(payload, "From").orElse(""),
-                                headerValue(payload, "To").orElse(""),
-                                headerValue(payload, "Cc").orElse(""))
+                                GmailMessageHeaders.firstValue(payload, "From").orElse(""),
+                                GmailMessageHeaders.firstValue(payload, "To").orElse(""),
+                                GmailMessageHeaders.firstValue(payload, "Cc").orElse(""))
                         .flatMap(header -> parseRecipients(header).stream())
                         .filter(participant -> !participant.isBlank())
                         .filter(participant -> !participant.equals(normalizedSelfEmail))
@@ -475,26 +568,51 @@ public class GmailPreviewReadService {
                 gmailMessage == null || gmailMessage.getLabelIds() == null
                         ? List.of(observedMessage.labelIds())
                         : List.copyOf(gmailMessage.getLabelIds());
-        String fromHeader = headerValue(payload, "From").orElse("");
-        String replyToHeader = headerValue(payload, "Reply-To").orElse(fromHeader);
+        String fromHeader = GmailMessageHeaders.firstValue(payload, "From").orElse("");
+        String replyToHeader =
+                GmailMessageHeaders.firstValue(payload, "Reply-To").orElse(fromHeader);
         String senderEmail = sanitizeEmail(extractEmailAddress(fromHeader));
         String replyToAddress = sanitizeEmail(extractEmailAddress(replyToHeader));
         String senderDomain =
                 senderEmail.contains("@")
                         ? senderEmail.substring(senderEmail.indexOf('@') + 1)
                         : "";
-        String subjectExcerpt = excerpt(headerValue(payload, "Subject").orElse(""));
-        String rfcMessageId = sanitizedText(headerValue(payload, "Message-ID").orElse(""));
-        String references = sanitizedText(headerValue(payload, "References").orElse(""));
-        String inReplyTo = sanitizedText(headerValue(payload, "In-Reply-To").orElse(""));
-        List<String> toRecipients = parseRecipients(headerValue(payload, "To").orElse(""));
-        List<String> ccRecipients = parseRecipients(headerValue(payload, "Cc").orElse(""));
+        String subjectExcerpt =
+                excerpt(GmailMessageHeaders.firstValue(payload, "Subject").orElse(""));
+        String rfcMessageId =
+                sanitizedText(GmailMessageHeaders.firstValue(payload, "Message-ID").orElse(""));
+        String references =
+                sanitizedText(GmailMessageHeaders.firstValue(payload, "References").orElse(""));
+        String inReplyTo =
+                sanitizedText(GmailMessageHeaders.firstValue(payload, "In-Reply-To").orElse(""));
+        List<String> toRecipients =
+                parseRecipients(GmailMessageHeaders.firstValue(payload, "To").orElse(""));
+        List<String> ccRecipients =
+                parseRecipients(GmailMessageHeaders.firstValue(payload, "Cc").orElse(""));
         boolean hasAttachment = hasAttachment(payload);
-        boolean listUnsubscribePresent = headerValue(payload, "List-Unsubscribe").isPresent();
+        String listUnsubscribeHeaderValue =
+                GmailMessageHeaders.firstValue(payload, "List-Unsubscribe").orElse(null);
+        String listUnsubscribePostHeaderValue =
+                GmailMessageHeaders.firstValue(payload, "List-Unsubscribe-Post").orElse(null);
+        ListUnsubscribeExtraction listUnsubscribeExtraction =
+                extractListUnsubscribe(listUnsubscribeHeaderValue, listUnsubscribePostHeaderValue);
+        String listUnsubscribeUrl = listUnsubscribeExtraction.url();
+        String listUnsubscribeMailto = listUnsubscribeExtraction.mailto();
+        boolean listUnsubscribeOneClick = listUnsubscribeExtraction.oneClick();
+        boolean listUnsubscribePresent =
+                listUnsubscribeUrl != null || listUnsubscribeMailto != null;
+        if (listUnsubscribeHeaderValue != null) {
+            log.info(
+                    "event=gmail_preview_list_unsubscribe_extracted gmailMessageId={} hasUrl={} hasMailto={} oneClick={}",
+                    observedMessage.gmailMessageId(),
+                    listUnsubscribeUrl != null,
+                    listUnsubscribeMailto != null,
+                    listUnsubscribeOneClick);
+        }
         boolean newsletterIndicatorPresent =
                 listUnsubscribePresent
-                        || headerValue(payload, "List-Id").isPresent()
-                        || headerValue(payload, "Precedence")
+                        || GmailMessageHeaders.firstValue(payload, "List-Id").isPresent()
+                        || GmailMessageHeaders.firstValue(payload, "Precedence")
                                 .map(
                                         value ->
                                                 Set.of("bulk", "list")
@@ -532,20 +650,108 @@ public class GmailPreviewReadService {
                 observedMessage.observedAt(),
                 hasAttachment,
                 listUnsubscribePresent,
+                listUnsubscribeUrl,
+                listUnsubscribeMailto,
+                listUnsubscribeOneClick,
                 newsletterIndicatorPresent,
                 sanitizedBodyEvidencePresent,
                 bodyDerivedFlags);
     }
 
-    private static Optional<String> headerValue(MessagePart payload, String headerName) {
-        if (payload == null || payload.getHeaders() == null) {
-            return Optional.empty();
+    /**
+     * Parse the RFC 2369 {@code List-Unsubscribe} header value into a structured (URL, mailto,
+     * one-click) triple persisted by the ingest path on {@code
+     * mail_message_observed.list_unsubscribe_url} / {@code list_unsubscribe_mailto} / {@code
+     * list_unsubscribe_one_click} (changelog 041).
+     *
+     * <p>D-11 parse-time guard: HTTPS-only — any {@code http://} URI is dropped silently to
+     * eliminate the downgrade attack surface at ingest time, so the DB never sees a plaintext
+     * unsubscribe endpoint. The DB column has no scheme check (forward-only D-10) — this guard is
+     * the only enforcement point.
+     *
+     * <p>RFC 8058 one-click flag: {@code listUnsubscribeOneClick} is {@code true} iff both the
+     * HTTPS URL is present AND the {@code List-Unsubscribe-Post: List-Unsubscribe=One-Click} header
+     * is present. A mailto-only sender with a {@code List-Unsubscribe-Post} header stays {@code
+     * MAILTO} (one-click semantics requires the URL leg per RFC 8058).
+     *
+     * <p>Privacy: callers MUST NOT log {@link ListUnsubscribeExtraction#url()} or {@link
+     * ListUnsubscribeExtraction#mailto()} values — they may carry the sender's canonical
+     * unsubscribe endpoint plus opaque per-user tokens. Log boolean presence flags only ({@code
+     * event=gmail_preview_list_unsubscribe_extracted}).
+     */
+    static ListUnsubscribeExtraction extractListUnsubscribe(
+            String listUnsubscribeHeaderValue, String listUnsubscribePostHeaderValue) {
+        if (listUnsubscribeHeaderValue == null || listUnsubscribeHeaderValue.isBlank()) {
+            return ListUnsubscribeExtraction.empty();
         }
-        return payload.getHeaders().stream()
-                .filter(header -> headerName.equalsIgnoreCase(header.getName()))
-                .map(MessagePartHeader::getValue)
-                .filter(Objects::nonNull)
-                .findFirst();
+        String listUnsubscribeUrl = null;
+        String listUnsubscribeMailto = null;
+        for (String rawCandidateUri : listUnsubscribeHeaderValue.split(",")) {
+            String candidateUri = stripAngleBrackets(rawCandidateUri.trim());
+            if (candidateUri.isBlank()) {
+                continue;
+            }
+            if (listUnsubscribeUrl == null && candidateUri.startsWith("https://")) {
+                if (candidateUri.length() <= LIST_UNSUBSCRIBE_URL_MAX_LENGTH) {
+                    listUnsubscribeUrl = candidateUri;
+                }
+                continue;
+            }
+            if (listUnsubscribeMailto == null && candidateUri.startsWith("mailto:")) {
+                String parsedMailto = parseMailtoUri(candidateUri);
+                if (parsedMailto != null
+                        && parsedMailto.length() <= LIST_UNSUBSCRIBE_MAILTO_MAX_LENGTH) {
+                    listUnsubscribeMailto = parsedMailto;
+                }
+                // D-11: http:// (and any other non-HTTPS, non-mailto scheme) is dropped silently.
+            }
+        }
+        boolean listUnsubscribeOneClick =
+                listUnsubscribeUrl != null
+                        && listUnsubscribePostHeaderValue != null
+                        && LIST_UNSUBSCRIBE_ONE_CLICK_TRIGGER.equalsIgnoreCase(
+                                listUnsubscribePostHeaderValue.trim());
+        return new ListUnsubscribeExtraction(
+                listUnsubscribeUrl, listUnsubscribeMailto, listUnsubscribeOneClick);
+    }
+
+    private static String stripAngleBrackets(String candidateUri) {
+        String stripped = candidateUri;
+        if (stripped.startsWith("<")) {
+            stripped = stripped.substring(1);
+        }
+        if (stripped.endsWith(">")) {
+            stripped = stripped.substring(0, stripped.length() - 1);
+        }
+        return stripped.trim();
+    }
+
+    private static String parseMailtoUri(String candidateUri) {
+        // D-23: use java.net.URI for structured parsing; reject malformed mailto: URIs so they
+        // never reach the DB. Preserves the full original URI (including ?subject= and &body=
+        // parameters) on success — downstream worker uses the parsed query string to populate
+        // the Gmail-sent unsubscribe message.
+        try {
+            URI mailtoUri = new URI(candidateUri);
+            if (!"mailto".equalsIgnoreCase(mailtoUri.getScheme())) {
+                return null;
+            }
+            return candidateUri;
+        } catch (URISyntaxException mailtoParseFailure) {
+            return null;
+        }
+    }
+
+    /**
+     * Structured output of {@link #extractListUnsubscribe(String, String)}. Three nullable fields
+     * map 1-to-1 to the {@code mail_message_observed.list_unsubscribe_*} columns shipped by
+     * changelog 041.
+     */
+    public record ListUnsubscribeExtraction(String url, String mailto, boolean oneClick) {
+
+        public static ListUnsubscribeExtraction empty() {
+            return new ListUnsubscribeExtraction(null, null, false);
+        }
     }
 
     private static List<String> parseRecipients(String headerValue) {
@@ -668,6 +874,9 @@ public class GmailPreviewReadService {
             Instant observedAt,
             boolean hasAttachment,
             boolean listUnsubscribePresent,
+            String listUnsubscribeUrl,
+            String listUnsubscribeMailto,
+            boolean listUnsubscribeOneClick,
             boolean newsletterIndicatorPresent,
             Optional<Boolean> sanitizedBodyEvidencePresent,
             Set<String> bodyDerivedFlags) {
@@ -682,6 +891,14 @@ public class GmailPreviewReadService {
             references = Objects.requireNonNullElse(references, "");
             inReplyTo = Objects.requireNonNullElse(inReplyTo, "");
             replyToAddress = Objects.requireNonNullElse(replyToAddress, "");
+            listUnsubscribeUrl =
+                    listUnsubscribeUrl == null || listUnsubscribeUrl.isBlank()
+                            ? null
+                            : listUnsubscribeUrl;
+            listUnsubscribeMailto =
+                    listUnsubscribeMailto == null || listUnsubscribeMailto.isBlank()
+                            ? null
+                            : listUnsubscribeMailto;
             sanitizedToRecipientEmails =
                     List.copyOf(
                             Objects.requireNonNull(

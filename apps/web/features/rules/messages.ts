@@ -579,6 +579,18 @@ export const rulesMessages = {
     vi: 'Đang chạy thử...',
     en: 'Previewing...',
   },
+  'rules.preview.applyLabelsCta': {
+    vi: 'Áp dụng nhãn',
+    en: 'Apply labels',
+  },
+  'rules.preview.applyingLabels': {
+    vi: 'Đang gắn nhãn...',
+    en: 'Applying labels...',
+  },
+  'rules.preview.labelsApplied': {
+    vi: 'Đã gắn {count} nhãn lên Gmail. Inbox trong hệ thống sẽ hiển thị nhãn này khi email nằm trong 100 email gần nhất.',
+    en: 'Applied {count} labels in Gmail. The system inbox shows these labels when the messages are in the 100 most recent emails.',
+  },
   'rules.preview.enableCta': {
     vi: 'Bật quy tắc',
     en: 'Enable rule',
@@ -864,12 +876,16 @@ export const rulesMessages = {
     en: 'Preview the current rule version before enabling it.',
   },
   'errors.rules.preview.invalid_sample_size': {
-    vi: 'Cỡ mẫu chạy thử phải là 10, 25 hoặc 50.',
-    en: 'Preview sample size must be 10, 25, or 50.',
+    vi: 'Cỡ mẫu chạy thử phải là 10, 20, 50 hoặc 100.',
+    en: 'Preview sample size must be 10, 20, 50, or 100.',
   },
   'errors.rules.preview.generic': {
     vi: 'Không thể chạy thử. Kiểm tra kết nối Gmail và tín dụng, rồi chạy thử lại.',
     en: 'Preview could not finish. Check Gmail connection and credits, then preview the rule again.',
+  },
+  'errors.rules.applyLabels.generic': {
+    vi: 'Không thể gắn nhãn lên Gmail lúc này. Kiểm tra kết nối Gmail rồi thử lại.',
+    en: 'Could not apply labels in Gmail right now. Check the Gmail connection and try again.',
   },
   'errors.rules.save.generic': {
     vi: 'Không thể lưu quy tắc lúc này. Hãy tải lại danh sách rồi thử lại.',

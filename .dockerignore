@@ -18,6 +18,9 @@
 .gitleaks.toml
 
 # ─── Environment / secrets ──────────────────────────────────────────────────
+# Plain .env is NOT matched by .env.* (glob requires extension), so list it
+# explicitly. Without this a developer's local .env would be sent in the
+# Docker build context — secrets exposure risk.
 .env
 .env.*
 !.env.example

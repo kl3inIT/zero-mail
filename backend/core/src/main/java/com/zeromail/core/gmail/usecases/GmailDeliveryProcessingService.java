@@ -6,23 +6,20 @@ import com.google.api.services.gmail.model.History;
 import com.google.api.services.gmail.model.HistoryMessageAdded;
 import com.google.api.services.gmail.model.ListHistoryResponse;
 import com.google.api.services.gmail.model.Message;
-import com.google.api.services.gmail.model.MessagePartHeader;
 import com.zeromail.core.gmail.event.MailMessageObserved;
 import com.zeromail.core.gmail.event.MailOutboundObserved;
 import com.zeromail.core.gmail.exception.InvalidGrantException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.gmail.gateway.GmailMessageHeaders;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.MailMessageObservedRepository;
 import com.zeromail.core.gmail.persistence.PubSubDeliveryEntity;
 import com.zeromail.core.gmail.persistence.PubSubDeliveryRepository;
-import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
 import com.zeromail.core.shared.privacy.EmailAddressCanonicalizer;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Semaphore;
@@ -53,7 +50,6 @@ public class GmailDeliveryProcessingService {
     private final GmailConnectionService connectionService;
     private final GmailConnectionRepository connectionRepository;
     private final GmailApiClientFactory gmailApiClientFactory;
-    private final RefreshTokenCipher refreshTokenCipher;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final EmailAddressCanonicalizer emailAddressCanonicalizer;
     private final TransactionTemplate observationTransaction;
@@ -64,7 +60,6 @@ public class GmailDeliveryProcessingService {
             GmailConnectionService connectionService,
             GmailConnectionRepository connectionRepository,
             GmailApiClientFactory gmailApiClientFactory,
-            RefreshTokenCipher refreshTokenCipher,
             ApplicationEventPublisher applicationEventPublisher,
             EmailAddressCanonicalizer emailAddressCanonicalizer,
             PlatformTransactionManager transactionManager) {
@@ -73,7 +68,6 @@ public class GmailDeliveryProcessingService {
         this.connectionService = connectionService;
         this.connectionRepository = connectionRepository;
         this.gmailApiClientFactory = gmailApiClientFactory;
-        this.refreshTokenCipher = refreshTokenCipher;
         this.applicationEventPublisher = applicationEventPublisher;
         this.emailAddressCanonicalizer = emailAddressCanonicalizer;
         this.observationTransaction = new TransactionTemplate(transactionManager);
@@ -93,11 +87,18 @@ public class GmailDeliveryProcessingService {
                                             new IllegalStateException(
                                                     "No connection for tenantId: " + tenantId));
 
-            String decryptedRefreshToken =
-                    decryptRefreshToken(connection.getRefreshTokenEncrypted(), tenantId);
-            GmailApiClientFactory.TokenRefreshResult tokenResult =
-                    gmailApiClientFactory.refreshAccessToken(decryptedRefreshToken);
-            Gmail gmail = gmailApiClientFactory.buildGmailClient(tokenResult.accessToken().value());
+            byte[] encryptedRefreshToken = connection.getRefreshTokenEncrypted();
+            if (encryptedRefreshToken == null || encryptedRefreshToken.length == 0) {
+                throw new NonRetryableGmailDeliveryException();
+            }
+            Gmail gmail;
+            try {
+                gmail = gmailApiClientFactory.buildClientForConnection(connection, tenantId);
+            } catch (IllegalArgumentException
+                    | IllegalStateException
+                    | NullPointerException tokenDecryptionFailure) {
+                throw new NonRetryableGmailDeliveryException(tokenDecryptionFailure);
+            }
 
             Long savedHistoryPointer = connection.getLastSyncedHistoryId();
             if (savedHistoryPointer == null) {
@@ -239,7 +240,8 @@ public class GmailDeliveryProcessingService {
                         .messages()
                         .get("me", gmailMessageId)
                         .setFormat("metadata")
-                        .setMetadataHeaders(List.of("From"))
+                        .setMetadataHeaders(
+                                List.of("From", "List-Unsubscribe", "List-Unsubscribe-Post"))
                         .setFields("id,threadId,labelIds,internalDate,payload/headers")
                         .execute();
         List<String> labelIds = gmailMessage.getLabelIds();
@@ -247,8 +249,18 @@ public class GmailDeliveryProcessingService {
             return 0;
         }
         String senderEmail = extractSanitizedSenderEmail(gmailMessage);
+        GmailPreviewReadService.ListUnsubscribeExtraction listUnsubscribeExtraction =
+                extractListUnsubscribeFromMessage(gmailMessage);
         return insertObservationAndPublishEvents(
-                tenantId, history, gmailMessage, labelIds, senderEmail);
+                tenantId, history, gmailMessage, labelIds, senderEmail, listUnsubscribeExtraction);
+    }
+
+    private static GmailPreviewReadService.ListUnsubscribeExtraction
+            extractListUnsubscribeFromMessage(Message gmailMessage) {
+        var payload = gmailMessage.getPayload();
+        return GmailPreviewReadService.extractListUnsubscribe(
+                GmailMessageHeaders.firstValue(payload, "List-Unsubscribe").orElse(null),
+                GmailMessageHeaders.firstValue(payload, "List-Unsubscribe-Post").orElse(null));
     }
 
     private record PendingFetch(History history, String gmailMessageId) {}
@@ -258,7 +270,8 @@ public class GmailDeliveryProcessingService {
             History history,
             Message gmailMessage,
             List<String> labelIds,
-            String senderEmail) {
+            String senderEmail,
+            GmailPreviewReadService.ListUnsubscribeExtraction listUnsubscribeExtraction) {
         Integer insertedCount =
                 observationTransaction.execute(
                         transactionStatus -> {
@@ -270,7 +283,10 @@ public class GmailDeliveryProcessingService {
                                             history.getId().longValueExact(),
                                             labelIds.toArray(new String[0]),
                                             gmailMessage.getInternalDate(),
-                                            senderEmail);
+                                            senderEmail,
+                                            listUnsubscribeExtraction.url(),
+                                            listUnsubscribeExtraction.mailto(),
+                                            listUnsubscribeExtraction.oneClick());
                             if (newRowCount == 1) {
                                 publishObservedEvents(tenantId, gmailMessage, labelIds);
                             }
@@ -303,13 +319,7 @@ public class GmailDeliveryProcessingService {
     }
 
     private String extractSanitizedSenderEmail(Message gmailMessage) {
-        if (gmailMessage.getPayload() == null || gmailMessage.getPayload().getHeaders() == null) {
-            return null;
-        }
-        return gmailMessage.getPayload().getHeaders().stream()
-                .filter(header -> "From".equalsIgnoreCase(header.getName()))
-                .map(MessagePartHeader::getValue)
-                .findFirst()
+        return GmailMessageHeaders.firstValue(gmailMessage.getPayload(), "From")
                 .flatMap(this::canonicalizeSenderEmail)
                 .orElse(null);
     }
@@ -319,34 +329,6 @@ public class GmailDeliveryProcessingService {
             return java.util.Optional.of(emailAddressCanonicalizer.canonicalize(rawSenderEmail));
         } catch (IllegalArgumentException senderEmailParseFailure) {
             return java.util.Optional.empty();
-        }
-    }
-
-    private String decryptRefreshToken(byte[] encryptedRefreshToken, UUID tenantId) {
-        if (encryptedRefreshToken == null || encryptedRefreshToken.length == 0) {
-            throw new NonRetryableGmailDeliveryException();
-        }
-        byte[] decryptedRefreshTokenBytes;
-        try {
-            decryptedRefreshTokenBytes =
-                    refreshTokenCipher.decrypt(encryptedRefreshToken, tenantId.toString());
-        } catch (IllegalArgumentException
-                | IllegalStateException
-                | NullPointerException tokenDecryptionFailure) {
-            throw new NonRetryableGmailDeliveryException(tokenDecryptionFailure);
-        }
-        if (decryptedRefreshTokenBytes == null || decryptedRefreshTokenBytes.length == 0) {
-            throw new NonRetryableGmailDeliveryException();
-        }
-        try {
-            String decryptedRefreshToken =
-                    new String(decryptedRefreshTokenBytes, StandardCharsets.UTF_8);
-            if (decryptedRefreshToken.isBlank()) {
-                throw new NonRetryableGmailDeliveryException();
-            }
-            return decryptedRefreshToken;
-        } finally {
-            Arrays.fill(decryptedRefreshTokenBytes, (byte) 0);
         }
     }
 

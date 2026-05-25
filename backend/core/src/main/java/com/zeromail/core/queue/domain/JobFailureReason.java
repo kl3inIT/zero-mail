@@ -39,6 +39,35 @@ public enum JobFailureReason implements IdentifiedEnum {
     /** Payload could not be serialized / deserialized — usually a bug, not a transient. */
     SERIALIZATION_FAILED,
 
+    /**
+     * Cleanup campaign step was deferred by the per-domain unsubscribe throttle (Phase 8 D-20).
+     * Workers re-queue the job with a delayed {@code next_run_at}; this value lands in {@code
+     * last_failure_reason} only when the deferral exhausts (campaign capped at max retries) and the
+     * job is finally failed, not on the deferral itself.
+     */
+    THROTTLE_DEFERRED,
+
+    /**
+     * Cleanup campaign sender attempted RFC 8058 one-click POST and settled to a terminal
+     * non-success (3xx redirect, 4xx, 5xx, timeout, network) after the success window was reached
+     * (Phase 8 D-08).
+     */
+    UNSUBSCRIBE_HTTP_FAILED,
+
+    /**
+     * Cleanup campaign sender attempted the {@code mailto:} unsubscribe fallback via Gmail
+     * send-as-self and Gmail returned an unrecoverable error (provenance mismatch, Gmail 5xx,
+     * etc.).
+     */
+    UNSUBSCRIBE_MAILTO_FAILED,
+
+    /**
+     * Cleanup campaign sender unsubscribed successfully but the post-step bulk archive of historic
+     * messages failed irrecoverably (Phase 8 D-04 per-sender atomicity — partial archive is
+     * surfaced as a campaign-level failure, not a partial success).
+     */
+    ARCHIVE_FAILED,
+
     /** Catch-all bucket for unmapped exceptions; treated as transient by default. */
     UNKNOWN;
 
