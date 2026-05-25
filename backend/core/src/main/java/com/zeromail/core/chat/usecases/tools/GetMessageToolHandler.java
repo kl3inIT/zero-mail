@@ -8,6 +8,7 @@ import com.google.api.services.gmail.model.MessagePartBody;
 import com.zeromail.core.chat.domain.ChatToolName;
 import com.zeromail.core.chat.usecases.ChatToolCatalog.GetMessageArgs;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.gmail.gateway.GmailMessageHeaders;
 import com.zeromail.core.tenant.TenantContext;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -77,12 +78,12 @@ public class GetMessageToolHandler implements ChatReadToolHandler {
         return new GetMessageOutput(
                 gmailMessage.getId(),
                 gmailMessage.getThreadId(),
-                SearchInboxToolHandler.headerValue(payload, "Subject"),
-                SearchInboxToolHandler.headerValue(payload, "From"),
+                GmailMessageHeaders.firstValue(payload, "Subject").orElse(""),
+                GmailMessageHeaders.firstValue(payload, "From").orElse(""),
                 SearchInboxToolHandler.parseRecipients(
-                        SearchInboxToolHandler.headerValue(payload, "To")),
+                        GmailMessageHeaders.firstValue(payload, "To").orElse("")),
                 SearchInboxToolHandler.parseRecipients(
-                        SearchInboxToolHandler.headerValue(payload, "Cc")),
+                        GmailMessageHeaders.firstValue(payload, "Cc").orElse("")),
                 SearchInboxToolHandler.internalDate(gmailMessage),
                 headers(payload),
                 decodedTextBody(payload));

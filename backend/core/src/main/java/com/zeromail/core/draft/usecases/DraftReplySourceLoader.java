@@ -4,6 +4,7 @@ import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.gmail.gateway.GmailMessageHeaders;
 import com.zeromail.core.shared.lang.Strings;
 import com.zeromail.core.triage.domain.ReplyHeaders;
 import java.io.IOException;
@@ -101,14 +102,9 @@ public class DraftReplySourceLoader {
     }
 
     private static Optional<String> headerValue(MessagePart payload, String headerName) {
-        if (payload == null || payload.getHeaders() == null) {
-            return Optional.empty();
-        }
-        return payload.getHeaders().stream()
-                .filter(header -> headerName.equalsIgnoreCase(header.getName()))
-                .map(header -> header.getValue() == null ? "" : header.getValue().trim())
-                .filter(value -> !value.isBlank())
-                .findFirst();
+        return GmailMessageHeaders.firstValue(payload, headerName)
+                .map(String::trim)
+                .filter(value -> !value.isBlank());
     }
 
     private static boolean isAutoReply(MessagePart payload) {

@@ -4,16 +4,15 @@ import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
-import com.google.api.services.gmail.model.MessagePartHeader;
 import com.zeromail.core.chat.domain.ChatToolName;
 import com.zeromail.core.chat.usecases.ChatToolCatalog.SearchInboxArgs;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.gmail.gateway.GmailMessageHeaders;
 import com.zeromail.core.tenant.TenantContext;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,24 +104,13 @@ public class SearchInboxToolHandler implements ChatReadToolHandler {
         return new SearchInboxMessage(
                 gmailMessage.getId(),
                 gmailMessage.getThreadId(),
-                ReadToolJson.cap(headerValue(payload, "Subject"), 120),
+                ReadToolJson.cap(
+                        GmailMessageHeaders.firstValue(payload, "Subject").orElse(""), 120),
                 ReadToolJson.cap(gmailMessage.getSnippet(), 80),
-                ReadToolJson.cap(headerValue(payload, "From"), 320),
-                parseRecipients(headerValue(payload, "To")),
+                ReadToolJson.cap(GmailMessageHeaders.firstValue(payload, "From").orElse(""), 320),
+                parseRecipients(GmailMessageHeaders.firstValue(payload, "To").orElse("")),
                 internalDate(gmailMessage),
                 hasAttachment(payload));
-    }
-
-    static String headerValue(MessagePart payload, String headerName) {
-        if (payload == null || payload.getHeaders() == null) {
-            return "";
-        }
-        return payload.getHeaders().stream()
-                .filter(header -> headerName.equalsIgnoreCase(header.getName()))
-                .map(MessagePartHeader::getValue)
-                .filter(Objects::nonNull)
-                .findFirst()
-                .orElse("");
     }
 
     static List<String> parseRecipients(String headerValue) {

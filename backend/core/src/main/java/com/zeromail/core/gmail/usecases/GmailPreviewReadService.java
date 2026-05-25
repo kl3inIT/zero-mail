@@ -11,6 +11,7 @@ import com.google.api.services.gmail.model.Thread;
 import com.zeromail.core.gmail.domain.GmailConnectionStatus;
 import com.zeromail.core.gmail.exception.InvalidGrantException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.gmail.gateway.GmailMessageHeaders;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.crypto.RefreshTokenCipher;
@@ -407,7 +408,7 @@ public class GmailPreviewReadService {
             return Optional.empty();
         }
         MessagePart payload = latestMessage.getPayload();
-        String subject = excerpt(headerValue(payload, "Subject").orElse(""));
+        String subject = excerpt(GmailMessageHeaders.firstValue(payload, "Subject").orElse(""));
         String otherParty = otherParty(payload, selfEmail);
         Instant lastActivityAt = toInstant(latestMessage.getInternalDate());
         return Optional.of(
@@ -418,9 +419,9 @@ public class GmailPreviewReadService {
         String normalizedSelfEmail = sanitizeEmail(selfEmail);
         List<String> participants =
                 Stream.of(
-                                headerValue(payload, "From").orElse(""),
-                                headerValue(payload, "To").orElse(""),
-                                headerValue(payload, "Cc").orElse(""))
+                                GmailMessageHeaders.firstValue(payload, "From").orElse(""),
+                                GmailMessageHeaders.firstValue(payload, "To").orElse(""),
+                                GmailMessageHeaders.firstValue(payload, "Cc").orElse(""))
                         .flatMap(header -> parseRecipients(header).stream())
                         .filter(participant -> !participant.isBlank())
                         .filter(participant -> !participant.equals(normalizedSelfEmail))
@@ -567,24 +568,32 @@ public class GmailPreviewReadService {
                 gmailMessage == null || gmailMessage.getLabelIds() == null
                         ? List.of(observedMessage.labelIds())
                         : List.copyOf(gmailMessage.getLabelIds());
-        String fromHeader = headerValue(payload, "From").orElse("");
-        String replyToHeader = headerValue(payload, "Reply-To").orElse(fromHeader);
+        String fromHeader = GmailMessageHeaders.firstValue(payload, "From").orElse("");
+        String replyToHeader =
+                GmailMessageHeaders.firstValue(payload, "Reply-To").orElse(fromHeader);
         String senderEmail = sanitizeEmail(extractEmailAddress(fromHeader));
         String replyToAddress = sanitizeEmail(extractEmailAddress(replyToHeader));
         String senderDomain =
                 senderEmail.contains("@")
                         ? senderEmail.substring(senderEmail.indexOf('@') + 1)
                         : "";
-        String subjectExcerpt = excerpt(headerValue(payload, "Subject").orElse(""));
-        String rfcMessageId = sanitizedText(headerValue(payload, "Message-ID").orElse(""));
-        String references = sanitizedText(headerValue(payload, "References").orElse(""));
-        String inReplyTo = sanitizedText(headerValue(payload, "In-Reply-To").orElse(""));
-        List<String> toRecipients = parseRecipients(headerValue(payload, "To").orElse(""));
-        List<String> ccRecipients = parseRecipients(headerValue(payload, "Cc").orElse(""));
+        String subjectExcerpt =
+                excerpt(GmailMessageHeaders.firstValue(payload, "Subject").orElse(""));
+        String rfcMessageId =
+                sanitizedText(GmailMessageHeaders.firstValue(payload, "Message-ID").orElse(""));
+        String references =
+                sanitizedText(GmailMessageHeaders.firstValue(payload, "References").orElse(""));
+        String inReplyTo =
+                sanitizedText(GmailMessageHeaders.firstValue(payload, "In-Reply-To").orElse(""));
+        List<String> toRecipients =
+                parseRecipients(GmailMessageHeaders.firstValue(payload, "To").orElse(""));
+        List<String> ccRecipients =
+                parseRecipients(GmailMessageHeaders.firstValue(payload, "Cc").orElse(""));
         boolean hasAttachment = hasAttachment(payload);
-        String listUnsubscribeHeaderValue = headerValue(payload, "List-Unsubscribe").orElse(null);
+        String listUnsubscribeHeaderValue =
+                GmailMessageHeaders.firstValue(payload, "List-Unsubscribe").orElse(null);
         String listUnsubscribePostHeaderValue =
-                headerValue(payload, "List-Unsubscribe-Post").orElse(null);
+                GmailMessageHeaders.firstValue(payload, "List-Unsubscribe-Post").orElse(null);
         ListUnsubscribeExtraction listUnsubscribeExtraction =
                 extractListUnsubscribe(listUnsubscribeHeaderValue, listUnsubscribePostHeaderValue);
         String listUnsubscribeUrl = listUnsubscribeExtraction.url();
@@ -602,8 +611,8 @@ public class GmailPreviewReadService {
         }
         boolean newsletterIndicatorPresent =
                 listUnsubscribePresent
-                        || headerValue(payload, "List-Id").isPresent()
-                        || headerValue(payload, "Precedence")
+                        || GmailMessageHeaders.firstValue(payload, "List-Id").isPresent()
+                        || GmailMessageHeaders.firstValue(payload, "Precedence")
                                 .map(
                                         value ->
                                                 Set.of("bulk", "list")
@@ -647,17 +656,6 @@ public class GmailPreviewReadService {
                 newsletterIndicatorPresent,
                 sanitizedBodyEvidencePresent,
                 bodyDerivedFlags);
-    }
-
-    private static Optional<String> headerValue(MessagePart payload, String headerName) {
-        if (payload == null || payload.getHeaders() == null) {
-            return Optional.empty();
-        }
-        return payload.getHeaders().stream()
-                .filter(header -> headerName.equalsIgnoreCase(header.getName()))
-                .map(MessagePartHeader::getValue)
-                .filter(Objects::nonNull)
-                .findFirst();
     }
 
     /**

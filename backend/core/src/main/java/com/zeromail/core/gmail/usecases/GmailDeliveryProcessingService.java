@@ -6,11 +6,11 @@ import com.google.api.services.gmail.model.History;
 import com.google.api.services.gmail.model.HistoryMessageAdded;
 import com.google.api.services.gmail.model.ListHistoryResponse;
 import com.google.api.services.gmail.model.Message;
-import com.google.api.services.gmail.model.MessagePartHeader;
 import com.zeromail.core.gmail.event.MailMessageObserved;
 import com.zeromail.core.gmail.event.MailOutboundObserved;
 import com.zeromail.core.gmail.exception.InvalidGrantException;
 import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.gmail.gateway.GmailMessageHeaders;
 import com.zeromail.core.gmail.persistence.GmailConnectionEntity;
 import com.zeromail.core.gmail.persistence.GmailConnectionRepository;
 import com.zeromail.core.gmail.persistence.MailMessageObservedRepository;
@@ -257,20 +257,10 @@ public class GmailDeliveryProcessingService {
 
     private static GmailPreviewReadService.ListUnsubscribeExtraction
             extractListUnsubscribeFromMessage(Message gmailMessage) {
-        if (gmailMessage.getPayload() == null || gmailMessage.getPayload().getHeaders() == null) {
-            return GmailPreviewReadService.ListUnsubscribeExtraction.empty();
-        }
-        String listUnsubscribeHeaderValue = null;
-        String listUnsubscribePostHeaderValue = null;
-        for (MessagePartHeader header : gmailMessage.getPayload().getHeaders()) {
-            if ("List-Unsubscribe".equalsIgnoreCase(header.getName())) {
-                listUnsubscribeHeaderValue = header.getValue();
-            } else if ("List-Unsubscribe-Post".equalsIgnoreCase(header.getName())) {
-                listUnsubscribePostHeaderValue = header.getValue();
-            }
-        }
+        var payload = gmailMessage.getPayload();
         return GmailPreviewReadService.extractListUnsubscribe(
-                listUnsubscribeHeaderValue, listUnsubscribePostHeaderValue);
+                GmailMessageHeaders.firstValue(payload, "List-Unsubscribe").orElse(null),
+                GmailMessageHeaders.firstValue(payload, "List-Unsubscribe-Post").orElse(null));
     }
 
     private record PendingFetch(History history, String gmailMessageId) {}
@@ -329,13 +319,7 @@ public class GmailDeliveryProcessingService {
     }
 
     private String extractSanitizedSenderEmail(Message gmailMessage) {
-        if (gmailMessage.getPayload() == null || gmailMessage.getPayload().getHeaders() == null) {
-            return null;
-        }
-        return gmailMessage.getPayload().getHeaders().stream()
-                .filter(header -> "From".equalsIgnoreCase(header.getName()))
-                .map(MessagePartHeader::getValue)
-                .findFirst()
+        return GmailMessageHeaders.firstValue(gmailMessage.getPayload(), "From")
                 .flatMap(this::canonicalizeSenderEmail)
                 .orElse(null);
     }
