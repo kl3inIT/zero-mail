@@ -2,6 +2,7 @@ package com.zeromail.core.admin.billing.projection;
 
 import com.zeromail.core.billing.persistence.BillingPackageEntity;
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -10,7 +11,10 @@ public record BillingPackageAdminRow(
         String code,
         String name,
         long priceVnd,
+        int creditAmount,
         String description,
+        List<String> includedFeatures,
+        boolean featured,
         boolean active,
         int displayOrder,
         Instant createdAt,
@@ -31,7 +35,10 @@ public record BillingPackageAdminRow(
                 packageEntity.getCode(),
                 packageEntity.getName(),
                 packageEntity.getPriceVnd(),
+                packageEntity.getCreditAmount(),
                 packageEntity.getDescription(),
+                List.of(packageEntity.getIncludedFeatures()),
+                packageEntity.isFeatured(),
                 packageEntity.isActive(),
                 packageEntity.getDisplayOrder(),
                 packageEntity.getCreatedAt(),

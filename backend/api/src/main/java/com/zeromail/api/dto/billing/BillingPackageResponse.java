@@ -2,6 +2,7 @@ package com.zeromail.api.dto.billing;
 
 import com.zeromail.core.billing.persistence.BillingPackageEntity;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
 
 @Schema(
         requiredProperties = {
@@ -9,6 +10,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
             "name",
             "priceVnd",
             "creditAmount",
+            "includedFeatures",
+            "featured",
             "description",
             "displayOrder"
         })
@@ -17,6 +20,8 @@ public record BillingPackageResponse(
         String name,
         long priceVnd,
         int creditAmount,
+        List<String> includedFeatures,
+        boolean featured,
         String description,
         int displayOrder) {
 
@@ -26,6 +31,8 @@ public record BillingPackageResponse(
                 billingPackage.getName(),
                 billingPackage.getPriceVnd(),
                 billingPackage.getCreditAmount(),
+                List.of(billingPackage.getIncludedFeatures()),
+                billingPackage.isFeatured(),
                 billingPackage.getDescription(),
                 billingPackage.getDisplayOrder());
     }
