@@ -173,7 +173,9 @@ test('inbox renders recent Gmail messages, fetches detail, and lazy-loads the ne
   await expect(page.getByRole('button', { name: 'Vietnamese' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'English', exact: true })).toBeVisible();
   await page.getByTestId('inbox-composer-body').fill('Thanks, I will review the ARR slide today.');
-  await page.getByRole('button', { name: 'Send' }).click();
+  await page.getByTestId('inbox-reply-composer').getByRole('button', { name: 'Send' }).click();
+  // Composer Send opens an AlertDialog confirm step — click its Send button to dispatch.
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Send' }).click();
   await expect(page.getByTestId('preview-card-replyEmail')).toBeVisible();
   await expect(
     page
