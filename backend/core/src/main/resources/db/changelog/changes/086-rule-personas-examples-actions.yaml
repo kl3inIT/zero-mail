@@ -1,0 +1,493 @@
+databaseChangeLog:
+  - changeSet:
+      id: 086-01-rule-catalog-tables
+      author: zeromail
+      comment: >
+        DB-backed bilingual rule examples/personas, action descriptors, and the global
+        auto-send rules setting used by Phase 08.1.
+      changes:
+        - createTable:
+            tableName: rule_example_persona
+            columns:
+              - column:
+                  name: persona_id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: persona_key
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: ux_rule_example_persona_key
+              - column:
+                  name: display_name_en
+                  type: varchar(96)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: display_name_vi
+                  type: varchar(96)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: icon
+                  type: varchar(64)
+              - column:
+                  name: display_order
+                  type: int
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: ux_rule_example_persona_order
+              - column:
+                  name: enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: rule_example_prompt
+            columns:
+              - column:
+                  name: prompt_id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: persona_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_rule_example_prompt_persona
+                    references: rule_example_persona(persona_id)
+                    deleteCascade: true
+              - column:
+                  name: prompt_en
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: prompt_vi
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: display_order
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: source_ref
+                  type: varchar(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: rule_example_prompt
+            columnNames: persona_id, display_order
+            constraintName: ux_rule_example_prompt_persona_order
+        - addUniqueConstraint:
+            tableName: rule_example_prompt
+            columnNames: persona_id, source_ref
+            constraintName: ux_rule_example_prompt_persona_source
+        - createTable:
+            tableName: rule_action_descriptor
+            columns:
+              - column:
+                  name: action_key
+                  type: varchar(48)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: label_en
+                  type: varchar(96)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: label_vi
+                  type: varchar(96)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description_en
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description_vi
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: risk_level
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: availability_status
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: display_order
+                  type: int
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: ux_rule_action_descriptor_order
+              - column:
+                  name: enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: rule_automation_settings
+            columns:
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+                    foreignKeyName: fk_rule_automation_settings_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: auto_send_rules_enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropTable:
+            tableName: rule_automation_settings
+        - dropTable:
+            tableName: rule_action_descriptor
+        - dropTable:
+            tableName: rule_example_prompt
+        - dropTable:
+            tableName: rule_example_persona
+
+  - changeSet:
+      id: 086-02-rule-catalog-seed
+      author: zeromail
+      comment: >
+        Seed Inbox Zero-style personas, bilingual prompts, and action descriptors. English prompt
+        text is copied from the Phase 08.1 Inbox Zero reference artifact; Vietnamese text is seeded
+        now so the catalog is useful before admin editing.
+      changes:
+        - sql:
+            splitStatements: false
+            stripComments: true
+            sql: |
+              INSERT INTO rule_example_persona(persona_key, display_name_en, display_name_vi, icon, display_order, enabled)
+              VALUES
+                ('founder', 'Founder', 'Nhà sáng lập', 'rocket', 10, TRUE),
+                ('influencer', 'Influencer', 'Người ảnh hưởng', 'camera', 20, TRUE),
+                ('realtor', 'Realtor', 'Môi giới bất động sản', 'home', 30, TRUE),
+                ('investor', 'Investor', 'Nhà đầu tư', 'money', 40, TRUE),
+                ('assistant', 'Assistant', 'Trợ lý', 'clipboard', 50, TRUE),
+                ('developer', 'Developer', 'Lập trình viên', 'code', 60, TRUE),
+                ('designer', 'Designer', 'Nhà thiết kế', 'palette', 70, TRUE),
+                ('sales', 'Sales', 'Bán hàng', 'handshake', 80, TRUE),
+                ('marketer', 'Marketer', 'Marketing', 'megaphone', 90, TRUE),
+                ('support', 'Support', 'Hỗ trợ khách hàng', 'support', 100, TRUE),
+                ('recruiter', 'Recruiter', 'Tuyển dụng', 'users', 110, TRUE),
+                ('student', 'Student', 'Sinh viên', 'graduation-cap', 120, TRUE),
+                ('outreach', 'Outreach', 'Tiếp cận', 'message-circle', 130, TRUE),
+                ('other', 'Other', 'Khác', 'bot', 140, TRUE)
+              ON CONFLICT (persona_key) DO NOTHING;
+
+              INSERT INTO rule_action_descriptor(action_key, label_en, label_vi, description_en, description_vi, risk_level, availability_status, display_order, enabled)
+              VALUES
+                ('label', 'Label', 'Gắn nhãn', 'Apply a Gmail label when the rule matches.', 'Gắn nhãn Gmail khi rule khớp.', 'LOW', 'AVAILABLE', 10, TRUE),
+                ('archive', 'Archive', 'Lưu trữ', 'Remove the message from the inbox without deleting it.', 'Bỏ thư khỏi inbox nhưng không xóa.', 'LOW', 'AVAILABLE', 20, TRUE),
+                ('save_draft', 'Save draft', 'Lưu bản nháp', 'Create a Gmail draft for user review.', 'Tạo bản nháp Gmail để người dùng xem lại.', 'LOW', 'AVAILABLE', 30, TRUE),
+                ('mark_read', 'Mark read', 'Đánh dấu đã đọc', 'Mark matching messages as read.', 'Đánh dấu thư khớp rule là đã đọc.', 'LOW', 'AVAILABLE', 40, TRUE),
+                ('star', 'Star', 'Gắn sao', 'Star matching messages.', 'Gắn sao cho thư khớp rule.', 'LOW', 'AVAILABLE', 50, TRUE),
+                ('add_to_digest', 'Add to digest', 'Đưa vào digest', 'Include matching messages in a digest instead of interrupting immediately.', 'Đưa thư khớp rule vào digest thay vì làm phiền ngay.', 'LOW', 'AVAILABLE', 60, TRUE),
+                ('mark_spam', 'Mark spam', 'Đánh dấu spam', 'Move matching messages to spam.', 'Chuyển thư khớp rule vào spam.', 'MEDIUM', 'AVAILABLE', 70, TRUE),
+                ('send_reply', 'Send reply', 'Gửi trả lời', 'Automatically send a reply when outbound safety gates pass.', 'Tự động gửi trả lời khi các cổng an toàn outbound đều pass.', 'HIGH', 'AVAILABLE', 80, TRUE),
+                ('forward_email', 'Forward email', 'Chuyển tiếp email', 'Automatically forward an email when outbound safety gates pass.', 'Tự động chuyển tiếp email khi các cổng an toàn outbound đều pass.', 'HIGH', 'AVAILABLE', 90, TRUE),
+                ('send_email', 'Send email', 'Gửi email mới', 'Automatically send a new email when outbound safety gates pass.', 'Tự động gửi email mới khi các cổng an toàn outbound đều pass.', 'HIGH', 'AVAILABLE', 100, TRUE)
+              ON CONFLICT (action_key) DO NOTHING;
+
+              WITH prompt_seed(persona_key, display_order, source_ref, prompt_en, prompt_vi) AS (
+                VALUES
+                  ('founder', 10, 'inbox-zero:founder:001', $$Label emails from @mycompany.com addresses as @[Team]$$, $$Gắn nhãn email từ địa chỉ @mycompany.com là @[Team]$$),
+                  ('founder', 20, 'inbox-zero:founder:002', $$Label urgent emails as @[Urgent]$$, $$Gắn nhãn email khẩn cấp là @[Urgent]$$),
+                  ('founder', 30, 'inbox-zero:founder:003', $$If someone asks to set up a call, draft a reply with my calendar link: https://cal.com/example$$, $$Nếu ai đó muốn đặt lịch gọi, tạo bản nháp trả lời kèm link lịch của tôi: https://cal.com/example$$),
+                  ('founder', 40, 'inbox-zero:founder:004', $$Label emails with feedback from customers about our product as @[Customer Feedback]$$, $$Gắn nhãn email có phản hồi của khách hàng về sản phẩm là @[Customer Feedback]$$),
+                  ('founder', 50, 'inbox-zero:founder:005', $$Label emails from customers who need our help and support as @[Customer Support]$$, $$Gắn nhãn email từ khách hàng cần trợ giúp và hỗ trợ là @[Customer Support]$$),
+                  ('founder', 60, 'inbox-zero:founder:006', $$Label emails from investors as @[Investor]$$, $$Gắn nhãn email từ nhà đầu tư là @[Investor]$$),
+                  ('founder', 70, 'inbox-zero:founder:007', $$Label legal documents as @[Legal]$$, $$Gắn nhãn tài liệu pháp lý là @[Legal]$$),
+                  ('founder', 80, 'inbox-zero:founder:008', $$Label emails about travel as @[Travel]$$, $$Gắn nhãn email về đi lại là @[Travel]$$),
+                  ('founder', 90, 'inbox-zero:founder:009', $$Label recruitment related emails as @[Hiring]$$, $$Gắn nhãn email liên quan tuyển dụng là @[Hiring]$$),
+
+                  ('influencer', 10, 'inbox-zero:influencer:001', $$Label emails from @mycompany.com addresses as @[Team]$$, $$Gắn nhãn email từ địa chỉ @mycompany.com là @[Team]$$),
+                  ('influencer', 20, 'inbox-zero:influencer:002', $$Label urgent emails as @[Urgent]$$, $$Gắn nhãn email khẩn cấp là @[Urgent]$$),
+                  ('influencer', 30, 'inbox-zero:influencer:003', $$Label sponsorship inquiries as @[Sponsorship] and draft a reply as follows:
+              > Hey NAME,
+              >
+              > I've attached my media kit and pricing$$, $$Gắn nhãn yêu cầu tài trợ là @[Sponsorship] và tạo bản nháp trả lời như sau:
+              > Chào NAME,
+              >
+              > Tôi đã đính kèm media kit và bảng giá của mình$$),
+                  ('influencer', 40, 'inbox-zero:influencer:004', $$Label emails about affiliate programs as @[Affiliate] and archive them$$, $$Gắn nhãn email về chương trình affiliate là @[Affiliate] và lưu trữ chúng$$),
+                  ('influencer', 50, 'inbox-zero:influencer:005', $$Label collaboration requests as @[Collab] and draft a reply asking about their audience size and engagement rates$$, $$Gắn nhãn yêu cầu hợp tác là @[Collab] và tạo bản nháp hỏi về quy mô khán giả cùng tỷ lệ tương tác$$),
+                  ('influencer', 60, 'inbox-zero:influencer:006', $$Label brand partnership emails as @[Brand Deal] and forward to manager@example.com$$, $$Gắn nhãn email hợp tác thương hiệu là @[Brand Deal] và chuyển tiếp tới manager@example.com$$),
+                  ('influencer', 70, 'inbox-zero:influencer:007', $$Label media inquiries to us as @[Press] and draft a polite reply$$, $$Gắn nhãn yêu cầu truyền thông gửi tới chúng tôi là @[Press] và tạo bản nháp trả lời lịch sự$$),
+
+                  ('realtor', 10, 'inbox-zero:realtor:001', $$Label emails from @mycompany.com addresses as @[Team]$$, $$Gắn nhãn email từ địa chỉ @mycompany.com là @[Team]$$),
+                  ('realtor', 20, 'inbox-zero:realtor:002', $$Label urgent emails as @[Urgent]$$, $$Gắn nhãn email khẩn cấp là @[Urgent]$$),
+                  ('realtor', 30, 'inbox-zero:realtor:003', $$Label emails from potential buyers as @[Buyer Lead] and draft a reply asking about their budget and preferred neighborhoods$$, $$Gắn nhãn email từ người mua tiềm năng là @[Buyer Lead] và tạo bản nháp hỏi về ngân sách cùng khu vực họ muốn$$),
+                  ('realtor', 40, 'inbox-zero:realtor:004', $$Label emails from potential sellers as @[Seller Lead] and draft a reply with my calendar link to schedule a home evaluation: https://cal.com/example$$, $$Gắn nhãn email từ người bán tiềm năng là @[Seller Lead] và tạo bản nháp kèm link lịch để hẹn đánh giá nhà: https://cal.com/example$$),
+                  ('realtor', 50, 'inbox-zero:realtor:005', $$If someone asks about home prices in a specific area, label as @[Market Inquiry] and draft a reply with recent comparable sales data$$, $$Nếu ai đó hỏi giá nhà ở một khu vực cụ thể, gắn nhãn @[Market Inquiry] và tạo bản nháp kèm dữ liệu giao dịch so sánh gần đây$$),
+                  ('realtor', 60, 'inbox-zero:realtor:006', $$Label emails from mortgage brokers and lenders as @[Lender] and archive them$$, $$Gắn nhãn email từ môi giới thế chấp và bên cho vay là @[Lender] rồi lưu trữ chúng$$),
+                  ('realtor', 70, 'inbox-zero:realtor:007', $$If someone asks to schedule a showing, label as @[Showing Request] and draft a reply with available time slots$$, $$Nếu ai đó muốn đặt lịch xem nhà, gắn nhãn @[Showing Request] và tạo bản nháp với các khung giờ còn trống$$),
+                  ('realtor', 80, 'inbox-zero:realtor:008', $$Label emails about closing documents as @[Closing] and forward to transactions@realty.com$$, $$Gắn nhãn email về hồ sơ chốt giao dịch là @[Closing] và chuyển tiếp tới transactions@realty.com$$),
+                  ('realtor', 90, 'inbox-zero:realtor:009', $$If someone asks about the home buying process, draft a reply with our buyer's guide link: https://realty.com/buyers-guide$$, $$Nếu ai đó hỏi quy trình mua nhà, tạo bản nháp trả lời kèm link hướng dẫn người mua: https://realty.com/buyers-guide$$),
+                  ('realtor', 100, 'inbox-zero:realtor:010', $$Label emails from home inspectors as @[Inspector] and forward to scheduling@realty.com$$, $$Gắn nhãn email từ thanh tra nhà là @[Inspector] và chuyển tiếp tới scheduling@realty.com$$),
+                  ('realtor', 110, 'inbox-zero:realtor:011', $$If someone refers a client to me, label as @[Referral] and draft a thank you reply with my calendar link to schedule a consultation$$, $$Nếu ai đó giới thiệu khách hàng cho tôi, gắn nhãn @[Referral] và tạo bản nháp cảm ơn kèm link lịch để đặt buổi tư vấn$$),
+
+                  ('investor', 10, 'inbox-zero:investor:001', $$Label emails from @mycompany.com addresses as @[Team]$$, $$Gắn nhãn email từ địa chỉ @mycompany.com là @[Team]$$),
+                  ('investor', 20, 'inbox-zero:investor:002', $$Label urgent emails as @[Urgent]$$, $$Gắn nhãn email khẩn cấp là @[Urgent]$$),
+                  ('investor', 30, 'inbox-zero:investor:003', $$If a founder asks to set up a call, draft a reply with my calendar link: https://cal.com/example$$, $$Nếu một founder muốn đặt lịch gọi, tạo bản nháp trả lời kèm link lịch của tôi: https://cal.com/example$$),
+                  ('investor', 40, 'inbox-zero:investor:004', $$If a founder sends me an investor update, label it @[Investor Update] and archive it$$, $$Nếu founder gửi investor update cho tôi, gắn nhãn @[Investor Update] và lưu trữ nó$$),
+                  ('investor', 50, 'inbox-zero:investor:005', $$Forward pitch decks to analyst@vc.com that asks them to review it and label them @[Pitch Deck]$$, $$Chuyển tiếp pitch deck tới analyst@vc.com để nhờ họ review và gắn nhãn @[Pitch Deck]$$),
+                  ('investor', 60, 'inbox-zero:investor:006', $$Label emails from LPs as @[LP]$$, $$Gắn nhãn email từ LP là @[LP]$$),
+                  ('investor', 70, 'inbox-zero:investor:007', $$Label legal documents as @[Legal]$$, $$Gắn nhãn tài liệu pháp lý là @[Legal]$$),
+                  ('investor', 80, 'inbox-zero:investor:008', $$Label emails about travel as @[Travel]$$, $$Gắn nhãn email về đi lại là @[Travel]$$),
+                  ('investor', 90, 'inbox-zero:investor:009', $$Label emails about portfolio company exits as @[Exit Opportunity]$$, $$Gắn nhãn email về exit của công ty trong danh mục là @[Exit Opportunity]$$),
+                  ('investor', 100, 'inbox-zero:investor:010', $$Label emails containing term sheets as @[Term Sheet]$$, $$Gắn nhãn email có term sheet là @[Term Sheet]$$),
+                  ('investor', 110, 'inbox-zero:investor:011', $$If a portfolio company reports bad news, label as @[Portfolio Alert] and draft a reply to schedule an emergency call$$, $$Nếu công ty trong danh mục báo tin xấu, gắn nhãn @[Portfolio Alert] và tạo bản nháp để đặt lịch gọi khẩn cấp$$),
+                  ('investor', 120, 'inbox-zero:investor:012', $$Label due diligence related emails as @[Due Diligence]$$, $$Gắn nhãn email liên quan thẩm định là @[Due Diligence]$$),
+                  ('investor', 130, 'inbox-zero:investor:013', $$Forward emails about industry research reports to research@vc.com$$, $$Chuyển tiếp email về báo cáo nghiên cứu ngành tới research@vc.com$$),
+                  ('investor', 140, 'inbox-zero:investor:014', $$If someone asks for a warm intro to a portfolio company, draft a reply asking for more context about why they want to connect$$, $$Nếu ai đó xin giới thiệu ấm tới công ty trong danh mục, tạo bản nháp hỏi thêm bối cảnh vì sao họ muốn kết nối$$),
+                  ('investor', 150, 'inbox-zero:investor:015', $$Label emails about fund administration as @[Fund Admin]$$, $$Gắn nhãn email về quản trị quỹ là @[Fund Admin]$$),
+                  ('investor', 160, 'inbox-zero:investor:016', $$Label emails about speaking at investment conferences as @[Speaking Opportunity]$$, $$Gắn nhãn email về phát biểu tại hội nghị đầu tư là @[Speaking Opportunity]$$),
+
+                  ('assistant', 10, 'inbox-zero:assistant:001', $$Label emails from @mycompany.com addresses as @[Team]$$, $$Gắn nhãn email từ địa chỉ @mycompany.com là @[Team]$$),
+                  ('assistant', 20, 'inbox-zero:assistant:002', $$Label urgent emails as @[Urgent]$$, $$Gắn nhãn email khẩn cấp là @[Urgent]$$),
+                  ('assistant', 30, 'inbox-zero:assistant:003', $$If someone asks to set up a call, draft a reply with my calendar link: https://cal.com/example$$, $$Nếu ai đó muốn đặt lịch gọi, tạo bản nháp trả lời kèm link lịch của tôi: https://cal.com/example$$),
+                  ('assistant', 40, 'inbox-zero:assistant:004', $$Label emails with feedback from customers about our product as @[Customer Feedback]$$, $$Gắn nhãn email có phản hồi của khách hàng về sản phẩm là @[Customer Feedback]$$),
+                  ('assistant', 50, 'inbox-zero:assistant:005', $$Label emails from customers who need our help and support as @[Customer Support]$$, $$Gắn nhãn email từ khách hàng cần trợ giúp và hỗ trợ là @[Customer Support]$$),
+                  ('assistant', 60, 'inbox-zero:assistant:006', $$Label emails from investors as @[Investor]$$, $$Gắn nhãn email từ nhà đầu tư là @[Investor]$$),
+                  ('assistant', 70, 'inbox-zero:assistant:007', $$Label legal documents as @[Legal]$$, $$Gắn nhãn tài liệu pháp lý là @[Legal]$$),
+                  ('assistant', 80, 'inbox-zero:assistant:008', $$Label emails about travel as @[Travel]$$, $$Gắn nhãn email về đi lại là @[Travel]$$),
+                  ('assistant', 90, 'inbox-zero:assistant:009', $$Label recruitment related emails as @[Hiring]$$, $$Gắn nhãn email liên quan tuyển dụng là @[Hiring]$$),
+
+                  ('developer', 10, 'inbox-zero:developer:001', $$Label emails from @mycompany.com addresses as @[Team]$$, $$Gắn nhãn email từ địa chỉ @mycompany.com là @[Team]$$),
+                  ('developer', 20, 'inbox-zero:developer:002', $$Label urgent emails as @[Urgent]$$, $$Gắn nhãn email khẩn cấp là @[Urgent]$$),
+                  ('developer', 30, 'inbox-zero:developer:003', $$Label server errors, deployment failures, and other server alerts as @[Alert] and forward to oncall@company.com$$, $$Gắn nhãn lỗi server, deploy fail và cảnh báo server khác là @[Alert] rồi chuyển tiếp tới oncall@company.com$$),
+                  ('developer', 40, 'inbox-zero:developer:004', $$Label emails from GitHub as @[GitHub] and archive them$$, $$Gắn nhãn email từ GitHub là @[GitHub] và lưu trữ chúng$$),
+                  ('developer', 50, 'inbox-zero:developer:005', $$Label emails from Figma as @[Design] and archive them$$, $$Gắn nhãn email từ Figma là @[Design] và lưu trữ chúng$$),
+                  ('developer', 60, 'inbox-zero:developer:006', $$Label emails from Stripe as @[Stripe] and archive them$$, $$Gắn nhãn email từ Stripe là @[Stripe] và lưu trữ chúng$$),
+                  ('developer', 70, 'inbox-zero:developer:007', $$Label emails from Slack as @[Slack] and archive them$$, $$Gắn nhãn email từ Slack là @[Slack] và lưu trữ chúng$$),
+                  ('developer', 80, 'inbox-zero:developer:008', $$Label emails about bug reports as @[Bug]$$, $$Gắn nhãn email về báo lỗi là @[Bug]$$),
+                  ('developer', 90, 'inbox-zero:developer:009', $$If someone reports a security vulnerability, label as @[Security] and forward to security@company.com$$, $$Nếu ai đó báo lỗ hổng bảo mật, gắn nhãn @[Security] và chuyển tiếp tới security@company.com$$),
+                  ('developer', 100, 'inbox-zero:developer:010', $$Label emails about job interviews as @[Job Search]$$, $$Gắn nhãn email về phỏng vấn việc làm là @[Job Search]$$),
+                  ('developer', 110, 'inbox-zero:developer:011', $$Label emails from recruiters as @[Recruiter] and archive them$$, $$Gắn nhãn email từ recruiter là @[Recruiter] và lưu trữ chúng$$),
+
+                  ('designer', 10, 'inbox-zero:designer:001', $$Label emails from @mycompany.com addresses as @[Team]$$, $$Gắn nhãn email từ địa chỉ @mycompany.com là @[Team]$$),
+                  ('designer', 20, 'inbox-zero:designer:002', $$Label urgent emails as @[Urgent]$$, $$Gắn nhãn email khẩn cấp là @[Urgent]$$),
+                  ('designer', 30, 'inbox-zero:designer:003', $$Label emails from Figma, Adobe, Sketch, and other design tools as @[Design] and archive them$$, $$Gắn nhãn email từ Figma, Adobe, Sketch và công cụ thiết kế khác là @[Design] rồi lưu trữ chúng$$),
+                  ('designer', 40, 'inbox-zero:designer:004', $$Label emails from clients as @[Client]$$, $$Gắn nhãn email từ khách hàng là @[Client]$$),
+                  ('designer', 50, 'inbox-zero:designer:005', $$If someone sends design assets, label as @[Design Assets] and forward to assets@company.com$$, $$Nếu ai đó gửi asset thiết kế, gắn nhãn @[Design Assets] và chuyển tiếp tới assets@company.com$$),
+                  ('designer', 60, 'inbox-zero:designer:006', $$Label emails from Dribbble, Behance, and other design inspiration sites as @[Inspiration] and archive them$$, $$Gắn nhãn email từ Dribbble, Behance và trang cảm hứng thiết kế khác là @[Inspiration] rồi lưu trữ chúng$$),
+                  ('designer', 70, 'inbox-zero:designer:007', $$Label emails about design conferences as @[Conference]$$, $$Gắn nhãn email về hội nghị thiết kế là @[Conference]$$),
+                  ('designer', 80, 'inbox-zero:designer:008', $$If someone requests brand assets, draft a reply with a link to our brand portal: https://brand.company.com$$, $$Nếu ai đó yêu cầu asset thương hiệu, tạo bản nháp trả lời kèm link brand portal: https://brand.company.com$$),
+                  ('designer', 90, 'inbox-zero:designer:009', $$Label emails about user research as @[Research]$$, $$Gắn nhãn email về nghiên cứu người dùng là @[Research]$$),
+                  ('designer', 100, 'inbox-zero:designer:010', $$Label emails about job interviews as @[Job Search]$$, $$Gắn nhãn email về phỏng vấn việc làm là @[Job Search]$$),
+                  ('designer', 110, 'inbox-zero:designer:011', $$Label emails from recruiters as @[Recruiter] and archive them$$, $$Gắn nhãn email từ recruiter là @[Recruiter] và lưu trữ chúng$$),
+
+                  ('sales', 10, 'inbox-zero:sales:001', $$Label emails from @mycompany.com addresses as @[Team]$$, $$Gắn nhãn email từ địa chỉ @mycompany.com là @[Team]$$),
+                  ('sales', 20, 'inbox-zero:sales:002', $$Label urgent emails as @[Urgent]$$, $$Gắn nhãn email khẩn cấp là @[Urgent]$$),
+                  ('sales', 30, 'inbox-zero:sales:003', $$Label emails from prospects as @[Prospect]$$, $$Gắn nhãn email từ prospect là @[Prospect]$$),
+                  ('sales', 40, 'inbox-zero:sales:004', $$Label emails from customers as @[Customer]$$, $$Gắn nhãn email từ khách hàng là @[Customer]$$),
+                  ('sales', 50, 'inbox-zero:sales:005', $$Label emails about deal negotiations as @[Deal Discussion]$$, $$Gắn nhãn email về đàm phán deal là @[Deal Discussion]$$),
+                  ('sales', 60, 'inbox-zero:sales:006', $$Label emails from sales tools as @[Sales Tool] and archive them$$, $$Gắn nhãn email từ công cụ sales là @[Sales Tool] và lưu trữ chúng$$),
+                  ('sales', 70, 'inbox-zero:sales:007', $$Label emails about sales opportunities as @[Sales Opportunity]$$, $$Gắn nhãn email về cơ hội bán hàng là @[Sales Opportunity]$$),
+                  ('sales', 80, 'inbox-zero:sales:008', $$If someone asks for pricing, draft a reply with our pricing page link: https://company.com/pricing$$, $$Nếu ai đó hỏi giá, tạo bản nháp trả lời kèm link trang giá: https://company.com/pricing$$),
+                  ('sales', 90, 'inbox-zero:sales:009', $$Label emails containing signed contracts as @[Signed Contract] and forward to legal@company.com$$, $$Gắn nhãn email có hợp đồng đã ký là @[Signed Contract] và chuyển tiếp tới legal@company.com$$),
+                  ('sales', 100, 'inbox-zero:sales:010', $$If someone requests a demo, draft a reply with my calendar link: https://cal.com/example$$, $$Nếu ai đó yêu cầu demo, tạo bản nháp trả lời kèm link lịch của tôi: https://cal.com/example$$),
+                  ('sales', 110, 'inbox-zero:sales:011', $$If someone asks about product features, draft a reply with relevant feature documentation links$$, $$Nếu ai đó hỏi về tính năng sản phẩm, tạo bản nháp trả lời kèm link tài liệu tính năng liên quan$$),
+                  ('sales', 120, 'inbox-zero:sales:012', $$If someone reports implementation issues, label as @[Support Need] and forward to support@company.com$$, $$Nếu ai đó báo vấn đề triển khai, gắn nhãn @[Support Need] và chuyển tiếp tới support@company.com$$),
+                  ('sales', 130, 'inbox-zero:sales:013', $$If someone asks about enterprise pricing, draft a reply asking about their company size and requirements$$, $$Nếu ai đó hỏi giá enterprise, tạo bản nháp hỏi về quy mô công ty và yêu cầu của họ$$),
+                  ('sales', 140, 'inbox-zero:sales:014', $$If a customer mentions churn risk, label as @[Churn Risk] and draft an urgent notification to the customer success team$$, $$Nếu khách hàng nhắc tới nguy cơ rời bỏ, gắn nhãn @[Churn Risk] và tạo thông báo khẩn cho đội customer success$$),
+
+                  ('marketer', 10, 'inbox-zero:marketer:001', $$Label emails from @mycompany.com addresses as @[Team]$$, $$Gắn nhãn email từ địa chỉ @mycompany.com là @[Team]$$),
+                  ('marketer', 20, 'inbox-zero:marketer:002', $$Label urgent emails as @[Urgent]$$, $$Gắn nhãn email khẩn cấp là @[Urgent]$$),
+                  ('marketer', 30, 'inbox-zero:marketer:003', $$Label emails from influencers as @[Influencer]$$, $$Gắn nhãn email từ influencer là @[Influencer]$$),
+                  ('marketer', 40, 'inbox-zero:marketer:004', $$Label emails from ad platforms (Google, Meta, LinkedIn) as @[Advertising]$$, $$Gắn nhãn email từ nền tảng quảng cáo (Google, Meta, LinkedIn) là @[Advertising]$$),
+                  ('marketer', 50, 'inbox-zero:marketer:005', $$Label press inquiries to us as @[Press] and forward to pr@company.com$$, $$Gắn nhãn yêu cầu báo chí gửi tới chúng tôi là @[Press] và chuyển tiếp tới pr@company.com$$),
+                  ('marketer', 60, 'inbox-zero:marketer:006', $$Label emails about content marketing as @[Content]$$, $$Gắn nhãn email về content marketing là @[Content]$$),
+                  ('marketer', 70, 'inbox-zero:marketer:007', $$If someone asks about sponsorship, label as @[Sponsorship] and draft a reply asking about their audience size$$, $$Nếu ai đó hỏi về tài trợ, gắn nhãn @[Sponsorship] và tạo bản nháp hỏi về quy mô khán giả của họ$$),
+                  ('marketer', 80, 'inbox-zero:marketer:008', $$If someone requests to guest post, label as @[Guest Post] and draft a reply with our guidelines$$, $$Nếu ai đó muốn guest post, gắn nhãn @[Guest Post] và tạo bản nháp kèm hướng dẫn của chúng tôi$$),
+                  ('marketer', 90, 'inbox-zero:marketer:009', $$If someone asks about partnership opportunities, label as @[Partnership] and draft a reply asking for their media kit$$, $$Nếu ai đó hỏi cơ hội hợp tác, gắn nhãn @[Partnership] và tạo bản nháp yêu cầu media kit của họ$$),
+                  ('marketer', 100, 'inbox-zero:marketer:010', $$If someone reports broken marketing links, label as @[Bug] and forward to tech@company.com$$, $$Nếu ai đó báo link marketing bị hỏng, gắn nhãn @[Bug] và chuyển tiếp tới tech@company.com$$),
+
+                  ('support', 10, 'inbox-zero:support:001', $$Label emails from @mycompany.com addresses as @[Team]$$, $$Gắn nhãn email từ địa chỉ @mycompany.com là @[Team]$$),
+                  ('support', 20, 'inbox-zero:support:002', $$Label urgent emails as @[Urgent]$$, $$Gắn nhãn email khẩn cấp là @[Urgent]$$),
+                  ('support', 30, 'inbox-zero:support:003', $$Label customer requests for help as @[Support Ticket]$$, $$Gắn nhãn yêu cầu trợ giúp từ khách hàng là @[Support Ticket]$$),
+                  ('support', 40, 'inbox-zero:support:004', $$If someone reports a critical issue, label as @[Urgent Support] and forward to urgent@company.com$$, $$Nếu ai đó báo lỗi nghiêm trọng, gắn nhãn @[Urgent Support] và chuyển tiếp tới urgent@company.com$$),
+                  ('support', 50, 'inbox-zero:support:005', $$Label bug reports as @[Bug] and forward to engineering@company.com$$, $$Gắn nhãn báo lỗi là @[Bug] và chuyển tiếp tới engineering@company.com$$),
+                  ('support', 60, 'inbox-zero:support:006', $$Label feature requests as @[Feature Request] and forward to product@company.com$$, $$Gắn nhãn yêu cầu tính năng là @[Feature Request] và chuyển tiếp tới product@company.com$$),
+                  ('support', 70, 'inbox-zero:support:007', $$If someone asks for refund, draft a reply with our refund policy link: https://company.com/refund-policy$$, $$Nếu ai đó yêu cầu hoàn tiền, tạo bản nháp trả lời kèm link chính sách hoàn tiền: https://company.com/refund-policy$$),
+                  ('support', 80, 'inbox-zero:support:008', $$Label emails about account access issues as @[Access Issue] and draft a reply asking for their account details$$, $$Gắn nhãn email về vấn đề truy cập tài khoản là @[Access Issue] và tạo bản nháp hỏi thông tin tài khoản của họ$$),
+                  ('support', 90, 'inbox-zero:support:009', $$If someone asks for product documentation, draft a reply with our help center link: https://help.company.com$$, $$Nếu ai đó hỏi tài liệu sản phẩm, tạo bản nháp trả lời kèm link trung tâm trợ giúp: https://help.company.com$$),
+                  ('support', 100, 'inbox-zero:support:010', $$Label emails about service outages as @[Service Issue] and forward to status@company.com$$, $$Gắn nhãn email về gián đoạn dịch vụ là @[Service Issue] và chuyển tiếp tới status@company.com$$),
+                  ('support', 110, 'inbox-zero:support:011', $$If someone needs technical assistance, draft a reply asking for their account details and specific error messages$$, $$Nếu ai đó cần hỗ trợ kỹ thuật, tạo bản nháp hỏi thông tin tài khoản và thông báo lỗi cụ thể$$),
+                  ('support', 120, 'inbox-zero:support:012', $$Label positive feedback as @[Testimonial] and forward to marketing@company.com$$, $$Gắn nhãn phản hồi tích cực là @[Testimonial] và chuyển tiếp tới marketing@company.com$$),
+                  ('support', 130, 'inbox-zero:support:013', $$Label emails about API integration issues as @[API Support]$$, $$Gắn nhãn email về vấn đề tích hợp API là @[API Support]$$),
+                  ('support', 140, 'inbox-zero:support:014', $$If someone reports data privacy concerns, label as @[Privacy], and draft a reply with our privacy policy link: https://company.com/privacy-policy$$, $$Nếu ai đó báo lo ngại về quyền riêng tư dữ liệu, gắn nhãn @[Privacy] và tạo bản nháp kèm link chính sách quyền riêng tư: https://company.com/privacy-policy$$),
+
+                  ('recruiter', 10, 'inbox-zero:recruiter:001', $$Label emails from @mycompany.com addresses as @[Team]$$, $$Gắn nhãn email từ địa chỉ @mycompany.com là @[Team]$$),
+                  ('recruiter', 20, 'inbox-zero:recruiter:002', $$Label urgent emails as @[Urgent]$$, $$Gắn nhãn email khẩn cấp là @[Urgent]$$),
+                  ('recruiter', 30, 'inbox-zero:recruiter:003', $$Label emails from candidates as @[Candidate]$$, $$Gắn nhãn email từ ứng viên là @[Candidate]$$),
+                  ('recruiter', 40, 'inbox-zero:recruiter:004', $$Label emails from hiring managers as @[Hiring Manager]$$, $$Gắn nhãn email từ hiring manager là @[Hiring Manager]$$),
+                  ('recruiter', 50, 'inbox-zero:recruiter:005', $$Label emails from recruiters as @[Recruiter] and draft a reply with our hiring process overview link: https://company.com/hiring-process$$, $$Gắn nhãn email từ recruiter là @[Recruiter] và tạo bản nháp kèm link tổng quan quy trình tuyển dụng: https://company.com/hiring-process$$),
+                  ('recruiter', 60, 'inbox-zero:recruiter:006', $$Label emails from job boards as @[Job Board] and archive them$$, $$Gắn nhãn email từ job board là @[Job Board] và lưu trữ chúng$$),
+                  ('recruiter', 70, 'inbox-zero:recruiter:007', $$Label emails from LinkedIn as @[LinkedIn] and archive them$$, $$Gắn nhãn email từ LinkedIn là @[LinkedIn] và lưu trữ chúng$$),
+                  ('recruiter', 80, 'inbox-zero:recruiter:008', $$If someone applies for a job, label as @[New Application] and draft a reply acknowledging their application$$, $$Nếu ai đó ứng tuyển, gắn nhãn @[New Application] và tạo bản nháp xác nhận đã nhận hồ sơ$$),
+                  ('recruiter', 90, 'inbox-zero:recruiter:009', $$Label emails containing resumes or CVs as @[Resume]$$, $$Gắn nhãn email có resume hoặc CV là @[Resume]$$),
+                  ('recruiter', 100, 'inbox-zero:recruiter:010', $$If a candidate asks about application status, label as @[Status Update] and draft a reply asking for their position and date applied$$, $$Nếu ứng viên hỏi trạng thái hồ sơ, gắn nhãn @[Status Update] và tạo bản nháp hỏi vị trí cùng ngày đã ứng tuyển$$),
+                  ('recruiter', 110, 'inbox-zero:recruiter:011', $$Label emails about interview scheduling as @[Interview Scheduling]$$, $$Gắn nhãn email về sắp lịch phỏng vấn là @[Interview Scheduling]$$),
+                  ('recruiter', 120, 'inbox-zero:recruiter:012', $$If someone accepts an interview invite, label as @[Interview Confirmed] and forward to calendar@company.com$$, $$Nếu ai đó nhận lời mời phỏng vấn, gắn nhãn @[Interview Confirmed] và chuyển tiếp tới calendar@company.com$$),
+                  ('recruiter', 130, 'inbox-zero:recruiter:013', $$If someone declines a job offer, label as @[Offer Declined] and forward to hiring-updates@company.com$$, $$Nếu ai đó từ chối offer, gắn nhãn @[Offer Declined] và chuyển tiếp tới hiring-updates@company.com$$),
+                  ('recruiter', 140, 'inbox-zero:recruiter:014', $$If someone accepts a job offer, label as @[Offer Accepted] and forward to onboarding@company.com$$, $$Nếu ai đó nhận offer, gắn nhãn @[Offer Accepted] và chuyển tiếp tới onboarding@company.com$$),
+                  ('recruiter', 150, 'inbox-zero:recruiter:015', $$Label emails about salary negotiations as @[Compensation]$$, $$Gắn nhãn email về đàm phán lương là @[Compensation]$$),
+                  ('recruiter', 160, 'inbox-zero:recruiter:016', $$Label emails about reference checks as @[References]$$, $$Gắn nhãn email về kiểm tra người tham chiếu là @[References]$$),
+                  ('recruiter', 170, 'inbox-zero:recruiter:017', $$If someone asks about benefits, draft a reply with our benefits overview link: https://company.com/benefits$$, $$Nếu ai đó hỏi về phúc lợi, tạo bản nháp kèm link tổng quan phúc lợi: https://company.com/benefits$$),
+                  ('recruiter', 180, 'inbox-zero:recruiter:018', $$Label emails about background checks as @[Background Check]$$, $$Gắn nhãn email về kiểm tra lý lịch là @[Background Check]$$),
+                  ('recruiter', 190, 'inbox-zero:recruiter:019', $$If an internal employee refers someone, label as @[Employee Referral]$$, $$Nếu nhân viên nội bộ giới thiệu ai đó, gắn nhãn @[Employee Referral]$$),
+                  ('recruiter', 200, 'inbox-zero:recruiter:020', $$Label emails about recruitment events or job fairs as @[Recruiting Event]$$, $$Gắn nhãn email về sự kiện tuyển dụng hoặc hội chợ việc làm là @[Recruiting Event]$$),
+                  ('recruiter', 210, 'inbox-zero:recruiter:021', $$If someone withdraws their application, label as @[Withdrawn]$$, $$Nếu ai đó rút hồ sơ ứng tuyển, gắn nhãn @[Withdrawn]$$),
+
+                  ('student', 10, 'inbox-zero:student:001', $$Label emails from professors and teaching assistants as @[School]$$, $$Gắn nhãn email từ giáo sư và trợ giảng là @[School]$$),
+                  ('student', 20, 'inbox-zero:student:002', $$Label emails about assignments and homework as @[Assignment]$$, $$Gắn nhãn email về bài tập và bài về nhà là @[Assignment]$$),
+                  ('student', 30, 'inbox-zero:student:003', $$If someone sends class notes or study materials, label as @[Study Materials]$$, $$Nếu ai đó gửi ghi chú lớp học hoặc tài liệu học tập, gắn nhãn @[Study Materials]$$),
+                  ('student', 40, 'inbox-zero:student:004', $$Label emails about internships as @[Internship] and forward to my personal email me@example.com$$, $$Gắn nhãn email về thực tập là @[Internship] và chuyển tiếp tới email cá nhân me@example.com$$),
+                  ('student', 50, 'inbox-zero:student:005', $$Label emails about exam schedules as @[Exam]$$, $$Gắn nhãn email về lịch thi là @[Exam]$$),
+                  ('student', 60, 'inbox-zero:student:006', $$Label emails about campus events as @[Event] and archive them$$, $$Gắn nhãn email về sự kiện trong khuôn viên là @[Event] và lưu trữ chúng$$),
+                  ('student', 70, 'inbox-zero:student:007', $$If someone asks for class notes, draft a reply with our shared Google Drive folder link: https://drive.google.com/drive/u/0/folders/1234567890$$, $$Nếu ai đó hỏi ghi chú lớp học, tạo bản nháp kèm link thư mục Google Drive dùng chung: https://drive.google.com/drive/u/0/folders/1234567890$$),
+                  ('student', 80, 'inbox-zero:student:008', $$Label emails about tutoring opportunities as @[Tutoring] and draft a reply with that my rate is $70/hour or $40/hour for group tutoring$$, $$Gắn nhãn email về cơ hội dạy kèm là @[Tutoring] và tạo bản nháp nói rằng mức phí của tôi là $70/giờ hoặc $40/giờ cho dạy nhóm$$),
+
+                  ('outreach', 10, 'inbox-zero:outreach:001', $$If someone replies to me that they're interested, label it @[Interested] and draft a reply with my calendar link: https://cal.com/example$$, $$Nếu ai đó trả lời rằng họ quan tâm, gắn nhãn @[Interested] và tạo bản nháp kèm link lịch của tôi: https://cal.com/example$$),
+
+                  ('other', 10, 'inbox-zero:other:001', $$Label emails from @mycompany.com addresses as @[Team]$$, $$Gắn nhãn email từ địa chỉ @mycompany.com là @[Team]$$),
+                  ('other', 20, 'inbox-zero:other:002', $$Label urgent emails as @[Urgent]$$, $$Gắn nhãn email khẩn cấp là @[Urgent]$$),
+                  ('other', 30, 'inbox-zero:other:003', $$Forward receipts to jane@accounting.com and label them @[Receipt]$$, $$Chuyển tiếp hóa đơn tới jane@accounting.com và gắn nhãn chúng là @[Receipt]$$),
+                  ('other', 40, 'inbox-zero:other:004', $$Forward pitch decks to john@investing.com and label them @[Pitch Deck]$$, $$Chuyển tiếp pitch deck tới john@investing.com và gắn nhãn chúng là @[Pitch Deck]$$),
+                  ('other', 50, 'inbox-zero:other:005', $$Reply to cold emails by telling them to check out Zero Mail. Then mark them as spam$$, $$Trả lời email lạnh bằng cách bảo họ xem Zero Mail. Sau đó đánh dấu chúng là spam$$),
+                  ('other', 60, 'inbox-zero:other:006', $$Label high priority emails as @[High Priority]$$, $$Gắn nhãn email ưu tiên cao là @[High Priority]$$),
+                  ('other', 70, 'inbox-zero:other:007', $$If a founder asks to set up a call, draft a reply with my calendar link: https://cal.com/example$$, $$Nếu founder muốn đặt lịch gọi, tạo bản nháp trả lời kèm link lịch của tôi: https://cal.com/example$$),
+                  ('other', 80, 'inbox-zero:other:008', $$If someone asks to cancel a plan, draft a reply with the cancellation link: https://company.com/cancel$$, $$Nếu ai đó muốn hủy gói, tạo bản nháp trả lời kèm link hủy: https://company.com/cancel$$),
+                  ('other', 90, 'inbox-zero:other:009', $$If a founder sends me an investor update, label it @[Investor Update] and archive it$$, $$Nếu founder gửi investor update cho tôi, gắn nhãn @[Investor Update] và lưu trữ nó$$),
+                  ('other', 100, 'inbox-zero:other:010', $$If someone pitches me their startup, label it as @[Investing], archive it, and draft a friendly reply that I no longer have time to look at the email but if they get a warm intro, that's their best bet to get funding from me$$, $$Nếu ai đó pitch startup cho tôi, gắn nhãn @[Investing], lưu trữ, và tạo bản nháp thân thiện rằng tôi không còn thời gian xem email nhưng nếu họ có warm intro thì đó là cơ hội tốt nhất để nhận funding từ tôi$$),
+                  ('other', 110, 'inbox-zero:other:011', $$If someone asks for a discount, reply with the discount code INBOX20$$, $$Nếu ai đó hỏi giảm giá, trả lời bằng mã giảm giá INBOX20$$),
+                  ('other', 120, 'inbox-zero:other:012', $$If someone asks for help with Product or Company, draft a reply telling them I no longer work there, but they should reach out to Company for support$$, $$Nếu ai đó cần hỗ trợ với Product hoặc Company, tạo bản nháp nói rằng tôi không còn làm ở đó và họ nên liên hệ Company để được hỗ trợ$$),
+                  ('other', 130, 'inbox-zero:other:013', $$Review any emails from questions@pr.com and see if any are about finance. If so, draft a friendly reply that answers the question$$, $$Xem email từ questions@pr.com và kiểm tra có email nào về tài chính không. Nếu có, tạo bản nháp trả lời thân thiện để trả lời câu hỏi$$),
+                  ('other', 140, 'inbox-zero:other:014', $$If people ask me to speak at an event, label the email @[Speaker Opportunity] and archive it$$, $$Nếu có người mời tôi phát biểu tại sự kiện, gắn nhãn email là @[Speaker Opportunity] và lưu trữ nó$$),
+                  ('other', 150, 'inbox-zero:other:015', $$Label emails from customers as @[Customer]$$, $$Gắn nhãn email từ khách hàng là @[Customer]$$),
+                  ('other', 160, 'inbox-zero:other:016', $$Label legal documents as @[Legal]$$, $$Gắn nhãn tài liệu pháp lý là @[Legal]$$),
+                  ('other', 170, 'inbox-zero:other:017', $$Label server errors as @[Error]$$, $$Gắn nhãn lỗi server là @[Error]$$),
+                  ('other', 180, 'inbox-zero:other:018', $$Label Stripe emails as @[Stripe]$$, $$Gắn nhãn email Stripe là @[Stripe]$$)
+              )
+              INSERT INTO rule_example_prompt(persona_id, prompt_en, prompt_vi, display_order, enabled, source_ref)
+              SELECT persona.persona_id, prompt_seed.prompt_en, prompt_seed.prompt_vi, prompt_seed.display_order, TRUE, prompt_seed.source_ref
+              FROM prompt_seed
+              JOIN rule_example_persona persona ON persona.persona_key = prompt_seed.persona_key
+              ON CONFLICT (persona_id, source_ref) DO NOTHING;
+      rollback:
+        - sql:
+            splitStatements: true
+            sql: |
+              DELETE FROM rule_example_prompt WHERE source_ref LIKE 'inbox-zero:%';
+              DELETE FROM rule_action_descriptor WHERE action_key IN ('label','archive','save_draft','mark_read','star','add_to_digest','mark_spam','send_reply','forward_email','send_email');
+              DELETE FROM rule_example_persona WHERE persona_key IN ('founder','influencer','realtor','investor','assistant','developer','designer','sales','marketer','support','recruiter','student','outreach','other');

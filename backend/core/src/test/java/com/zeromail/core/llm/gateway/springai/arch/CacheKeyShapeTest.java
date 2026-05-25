@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.zeromail.core.chat.llm.springai.SpringAiChatModelFactory;
 import java.util.Arrays;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class CacheKeyShapeTest {
@@ -14,13 +15,15 @@ class CacheKeyShapeTest {
                 Arrays.stream(SpringAiChatModelFactory.class.getDeclaredClasses())
                         .filter(
                                 declaredClass ->
-                                        declaredClass.getSimpleName().equals("ChatModelCacheKey"))
+                                        declaredClass.getSimpleName().equals("ChatClientCacheKey"))
                         .findFirst()
                         .orElseThrow();
 
-        assertThat(
-                        Arrays.stream(cacheKeyClass.getDeclaredFields())
-                                .map(java.lang.reflect.Field::getName))
+        Set<String> cacheKeyFieldNames =
+                Arrays.stream(cacheKeyClass.getDeclaredFields())
+                        .map(java.lang.reflect.Field::getName)
+                        .collect(java.util.stream.Collectors.toSet());
+        assertThat(cacheKeyFieldNames)
                 .contains("providerSecretVersion")
                 .doesNotContain("kekVersion");
     }

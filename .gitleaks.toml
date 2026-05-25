@@ -25,6 +25,8 @@ paths = [
     '''(^|/)docs/.*''',
     '''(^|/)\.planning/.*''',
     '''(^|/)scripts/needs-reply-mockup\.html$''',
+    # Generated deploy metadata: component name + image digest, not a credential.
+    '''(^|/)\.last-deploy\.txt$''',
 ]
 
 regexes = [

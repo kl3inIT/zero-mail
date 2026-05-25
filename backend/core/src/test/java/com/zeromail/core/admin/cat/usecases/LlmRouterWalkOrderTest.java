@@ -22,6 +22,7 @@ import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.domain.MasterKeyStatus;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyEntity;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyRepository;
+import com.zeromail.core.llm.routing.LlmRuntimeTask;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -47,6 +48,46 @@ class LlmRouterWalkOrderTest {
     private static final UUID KEY_ID = UUID.fromString("00000000-0000-0000-0000-0000000000a1");
     private static final UUID ACTOR_ID = UUID.fromString("00000000-0000-0000-0000-0000000000ff");
     private static final Instant FIXED_INSTANT = Instant.parse("2026-05-22T10:00:00Z");
+
+    @Test
+    void resolve_runtime_task_maps_to_catalog_feature() {
+        FeatureDefaultProviderRepository featureDefaultProviderRepository =
+                mock(FeatureDefaultProviderRepository.class);
+        FeatureTierModelRepository featureTierModelRepository =
+                mock(FeatureTierModelRepository.class);
+        LlmProviderMasterKeyRepository llmProviderMasterKeyRepository =
+                mock(LlmProviderMasterKeyRepository.class);
+        ModelCatalogRepository modelCatalogRepository = mock(ModelCatalogRepository.class);
+
+        when(featureDefaultProviderRepository.findByFeatureOrderByTier(any()))
+                .thenReturn(List.of());
+        when(featureTierModelRepository.findByFeatureOrderByTierAndPosition(any()))
+                .thenReturn(List.of());
+
+        LlmRouter router =
+                new LlmRouter(
+                        featureDefaultProviderRepository,
+                        featureTierModelRepository,
+                        llmProviderMasterKeyRepository,
+                        modelCatalogRepository);
+
+        router.resolve(LlmRuntimeTask.CHAT_ASSISTANT);
+        router.resolve(LlmRuntimeTask.TRIAGE_ACTION);
+        router.resolve(LlmRuntimeTask.DRAFT_GENERATION);
+        router.resolve(LlmRuntimeTask.RULE_AUTHORING);
+        router.resolve(LlmRuntimeTask.RULE_PREVIEW_SEMANTIC);
+        router.resolve(LlmRuntimeTask.TRIAGE_SEMANTIC);
+        router.resolve(LlmRuntimeTask.DRIFT_CHECK);
+
+        verify(featureDefaultProviderRepository).findByFeatureOrderByTier(Feature.CHAT);
+        verify(featureDefaultProviderRepository).findByFeatureOrderByTier(Feature.TRIAGE);
+        verify(featureDefaultProviderRepository).findByFeatureOrderByTier(Feature.DRAFT);
+        verify(featureDefaultProviderRepository).findByFeatureOrderByTier(Feature.RULE_AUTHORING);
+        verify(featureDefaultProviderRepository)
+                .findByFeatureOrderByTier(Feature.RULE_PREVIEW_SEMANTIC);
+        verify(featureDefaultProviderRepository).findByFeatureOrderByTier(Feature.TRIAGE_SEMANTIC);
+        verify(featureDefaultProviderRepository).findByFeatureOrderByTier(Feature.DRIFT_CHECK);
+    }
 
     @Test
     @DisplayName(

@@ -4,6 +4,9 @@ import com.zeromail.core.admin.audit.domain.AdminAuditAction;
 import com.zeromail.core.admin.audit.usecases.AdminAuditWriter;
 import com.zeromail.core.admin.auth.AdminContext;
 import com.zeromail.core.admin.auth.AdminUser;
+import com.zeromail.core.admin.cat.persistence.lowlevel.ProviderCatalogWriteRepository;
+import com.zeromail.core.admin.cat.persistence.lowlevel.ProviderCatalogWriteRepository.ProviderDeleteCandidate;
+import com.zeromail.core.admin.cat.persistence.lowlevel.ProviderCatalogWriteRepository.ProviderDeleteResult;
 import com.zeromail.core.admin.mkey.domain.KeyFormat;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.domain.MasterKeyFeature;
@@ -19,7 +22,11 @@ import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyId;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyRepository;
 import com.zeromail.core.admin.mkey.persistence.lowlevel.LlmProviderMasterKeyWriteRepository;
 import com.zeromail.core.admin.mkey.projection.MasterKeyMaskedRow;
+import com.zeromail.core.admin.shared.AdminBusinessException;
 import com.zeromail.core.shared.crypto.PlatformSecretCipher;
+import com.zeromail.core.shared.exception.ErrorClass;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
@@ -37,6 +44,7 @@ public class MasterKeyAdminService {
 
     private final LlmProviderMasterKeyRepository llmProviderMasterKeyRepository;
     private final LlmProviderMasterKeyWriteRepository llmProviderMasterKeyWriteRepository;
+    private final ProviderCatalogWriteRepository providerCatalogWriteRepository;
     private final ProviderMasterKeyResolver providerMasterKeyResolver;
     private final PlatformSecretCipher platformSecretCipher;
     private final MasterKeyEditSessionService masterKeyEditSessionService;
@@ -49,6 +57,7 @@ public class MasterKeyAdminService {
     public MasterKeyAdminService(
             LlmProviderMasterKeyRepository llmProviderMasterKeyRepository,
             LlmProviderMasterKeyWriteRepository llmProviderMasterKeyWriteRepository,
+            ProviderCatalogWriteRepository providerCatalogWriteRepository,
             ProviderMasterKeyResolver providerMasterKeyResolver,
             PlatformSecretCipher platformSecretCipher,
             MasterKeyEditSessionService masterKeyEditSessionService,
@@ -65,6 +74,9 @@ public class MasterKeyAdminService {
                 Objects.requireNonNull(
                         llmProviderMasterKeyWriteRepository,
                         "llmProviderMasterKeyWriteRepository must not be null");
+        this.providerCatalogWriteRepository =
+                Objects.requireNonNull(
+                        providerCatalogWriteRepository, "providerCatalogWriteRepository");
         this.providerMasterKeyResolver =
                 Objects.requireNonNull(providerMasterKeyResolver, "providerMasterKeyResolver");
         this.platformSecretCipher =
@@ -90,7 +102,9 @@ public class MasterKeyAdminService {
         // column was backfilled). The card's purpose is to surface a usable credential when one
         // exists.
         Map<LlmProvider, MasterKeyMaskedRow> byProvider = new LinkedHashMap<>();
+        Map<LlmProvider, Long> activeKeyCountByProvider = new LinkedHashMap<>();
         for (MasterKeyMaskedRow row : providerMasterKeyResolver.maskedRows()) {
+            activeKeyCountByProvider.merge(row.provider(), row.activeKeyCount(), Long::sum);
             MasterKeyMaskedRow existing = byProvider.get(row.provider());
             if (existing == null) {
                 byProvider.put(row.provider(), row);
@@ -101,7 +115,36 @@ public class MasterKeyAdminService {
                 byProvider.put(row.provider(), row);
             }
         }
-        return List.copyOf(byProvider.values());
+        return byProvider.values().stream()
+                .map(
+                        row ->
+                                withActiveKeyCount(
+                                        row,
+                                        activeKeyCountByProvider.getOrDefault(
+                                                row.provider(), row.activeKeyCount())))
+                .toList();
+    }
+
+    private static MasterKeyMaskedRow withActiveKeyCount(
+            MasterKeyMaskedRow row, long activeKeyCount) {
+        return new MasterKeyMaskedRow(
+                row.provider(),
+                row.displayName(),
+                row.providerKind(),
+                row.compatibleType(),
+                row.defaultBaseUrl(),
+                row.maskedKey(),
+                row.keyFormat(),
+                row.kekVersion(),
+                row.providerSecretVersion(),
+                row.lastRotatedAt(),
+                row.dependentsCount(),
+                activeKeyCount,
+                row.rotationRecommended(),
+                row.baseUrl(),
+                row.featureDefaultProviderChat(),
+                row.featureDefaultProviderTriage(),
+                row.featureDefaultProviderDraft());
     }
 
     /**
@@ -193,6 +236,91 @@ public class MasterKeyAdminService {
                 requestIp,
                 requestId);
         return new ProviderKeyAddResult(keyId, nextPriority);
+    }
+
+    /**
+     * Creates a DB-defined compatibility provider and its first ACTIVE key in one transaction. The
+     * key is probed before any row is persisted; the create API still re-runs this even when the UI
+     * already performed the explicit "Test connection" step, so direct API callers cannot bypass
+     * the safety gate.
+     */
+    @Transactional
+    public ProviderKeyAddResult createCompatibleProvider(
+            String providerId,
+            String displayName,
+            KeyFormat compatibleType,
+            String defaultBaseUrl,
+            byte[] plaintextKey,
+            String label,
+            String editSessionToken,
+            String requestIp,
+            UUID requestId) {
+        AdminUser adminUser = AdminContext.currentOrThrow();
+        LlmProvider provider = LlmProvider.fromId(providerId);
+        requireNewProvider(provider);
+        requireCompatibleGatewayFormat(compatibleType);
+        String cleanedDefaultBaseUrl = requireValidBaseUrl(defaultBaseUrl);
+        String cleanedDisplayName = requireDisplayName(displayName);
+        requireEditSession(adminUser.id(), provider, editSessionToken, true);
+        masterKeyRateLimiter.checkEditAllowed(adminUser.id());
+
+        MasterKeyTestResult testResult =
+                probe(provider, compatibleType, cleanedDefaultBaseUrl, plaintextKey);
+        if (testResult != MasterKeyTestResult.OK) {
+            writeSetFailedAudit(provider, testResult, requestIp, requestId);
+            throw new MasterKeyTestFailedException(testResult);
+        }
+
+        String maskedKey = MasterKeyMasker.mask(plaintextKey, provider);
+        byte[] encryptedKey;
+        try {
+            encryptedKey =
+                    platformSecretCipher.encrypt(
+                            plaintextKey, ProviderMasterKeyResolver.associatedData(provider));
+        } finally {
+            Arrays.fill(plaintextKey, (byte) 0);
+        }
+        short kekVersion = PlatformSecretCipher.keyVersionFromEnvelope(encryptedKey);
+        Instant now = clock.instant();
+        UUID keyId = UUID.randomUUID();
+
+        providerCatalogWriteRepository.insertCompatibleGateway(
+                provider, cleanedDisplayName, compatibleType, cleanedDefaultBaseUrl);
+        llmProviderMasterKeyWriteRepository.insertKey(
+                provider,
+                keyId,
+                1,
+                MasterKeyStatus.ACTIVE,
+                cleanLabel(label, "primary"),
+                compatibleType,
+                encryptedKey,
+                kekVersion,
+                adminUser.id(),
+                now,
+                cleanedDefaultBaseUrl,
+                maskedKey);
+        providerMasterKeyResolver.invalidate(provider);
+
+        adminAuditWriter.append(
+                AdminAuditAction.MASTER_KEY_SET,
+                "provider_catalog",
+                null,
+                null,
+                Map.of(
+                        "provider",
+                        provider.id(),
+                        "display_name",
+                        cleanedDisplayName,
+                        "provider_kind",
+                        ProviderCatalogWriteRepository.KIND_COMPATIBLE_GATEWAY,
+                        "compatible_type",
+                        compatibleType.id(),
+                        "key_id",
+                        keyId.toString()),
+                "Created compatible LLM provider",
+                requestIp,
+                requestId);
+        return new ProviderKeyAddResult(keyId, 1);
     }
 
     /**
@@ -324,11 +452,11 @@ public class MasterKeyAdminService {
                 requestId);
     }
 
-    /** Marks a specific key row REVOKED. Idempotent. */
+    /** Deletes a specific provider key row. Audit keeps the append-only operator trail. */
     @Transactional
     public void revokeKey(LlmProvider provider, UUID keyId, String requestIp, UUID requestId) {
         AdminContext.currentOrThrow();
-        int rowsAffected = llmProviderMasterKeyWriteRepository.revokeKey(provider, keyId);
+        int rowsAffected = llmProviderMasterKeyWriteRepository.deleteKey(provider, keyId);
         if (rowsAffected == 0) {
             throw new MissingMasterKeyRowException(provider);
         }
@@ -338,8 +466,56 @@ public class MasterKeyAdminService {
                 "llm_provider_master_key",
                 null,
                 null,
-                Map.of("provider", provider.id(), "key_id", keyId.toString(), "action", "REVOKE"),
+                Map.of("provider", provider.id(), "key_id", keyId.toString(), "action", "DELETE"),
                 null,
+                requestIp,
+                requestId);
+    }
+
+    /** Deletes an admin-created compatibility provider and its stored keys/models when unused. */
+    @Transactional
+    public void deleteCompatibleProvider(LlmProvider provider, String requestIp, UUID requestId) {
+        AdminContext.currentOrThrow();
+        ProviderDeleteCandidate candidate =
+                providerCatalogWriteRepository.findDeleteCandidateOrNull(provider);
+        if (candidate == null) {
+            throw new ProviderNotFoundException(provider);
+        }
+        if (!ProviderCatalogWriteRepository.KIND_COMPATIBLE_GATEWAY.equals(
+                candidate.providerKind())) {
+            throw new ProviderDeleteNotAllowedException(provider);
+        }
+
+        long routingReferenceCount =
+                providerCatalogWriteRepository.countRoutingReferences(provider);
+        long pinnedTenantCount = providerCatalogWriteRepository.countPinnedTenants(provider);
+        if (routingReferenceCount > 0 || pinnedTenantCount > 0) {
+            throw new ProviderDeleteBlockedException(
+                    provider, routingReferenceCount, pinnedTenantCount);
+        }
+
+        ProviderDeleteResult result =
+                providerCatalogWriteRepository.deleteCompatibleGateway(provider);
+        if (result.deletedProviders() == 0) {
+            throw new ProviderNotFoundException(provider);
+        }
+        providerMasterKeyResolver.invalidate(provider);
+
+        adminAuditWriter.append(
+                AdminAuditAction.MASTER_KEY_SET,
+                "provider_catalog",
+                null,
+                null,
+                Map.of(
+                        "provider",
+                        provider.id(),
+                        "action",
+                        "DELETE_COMPATIBLE_PROVIDER",
+                        "deleted_models",
+                        result.deletedModels(),
+                        "deleted_keys",
+                        result.deletedKeys()),
+                "Deleted compatible LLM provider",
                 requestIp,
                 requestId);
     }
@@ -350,7 +526,7 @@ public class MasterKeyAdminService {
     public MasterKeyMaskedRow getMasked(LlmProvider provider) {
         AdminContext.currentOrThrow();
         return providerMasterKeyResolver.maskedRows().stream()
-                .filter(masterKeyMaskedRow -> masterKeyMaskedRow.provider() == provider)
+                .filter(masterKeyMaskedRow -> masterKeyMaskedRow.provider().equals(provider))
                 .findFirst()
                 .orElseThrow(() -> new MissingMasterKeyRowException(provider));
     }
@@ -633,6 +809,52 @@ public class MasterKeyAdminService {
         }
     }
 
+    private void requireNewProvider(LlmProvider provider) {
+        if (LlmProvider.isSpringAiBuiltIn(provider)
+                || providerCatalogWriteRepository.exists(provider)) {
+            throw new ProviderAlreadyExistsException(provider);
+        }
+    }
+
+    private static void requireCompatibleGatewayFormat(KeyFormat compatibleType) {
+        if (compatibleType != KeyFormat.OPENAI_FORMAT
+                && compatibleType != KeyFormat.ANTHROPIC_FORMAT) {
+            throw new InvalidKeyFormatException();
+        }
+    }
+
+    private static String requireValidBaseUrl(String baseUrl) {
+        String cleanedBaseUrl = cleanBaseUrl(baseUrl);
+        if (cleanedBaseUrl == null) {
+            throw new ProviderBaseUrlInvalidException();
+        }
+        try {
+            URI uri = new URI(cleanedBaseUrl);
+            String scheme = uri.getScheme();
+            if (scheme == null
+                    || (!scheme.equalsIgnoreCase("https") && !scheme.equalsIgnoreCase("http"))
+                    || uri.getHost() == null
+                    || uri.getHost().isBlank()) {
+                throw new ProviderBaseUrlInvalidException();
+            }
+            return cleanedBaseUrl;
+        } catch (URISyntaxException uriSyntaxException) {
+            throw new ProviderBaseUrlInvalidException();
+        }
+    }
+
+    private static String requireDisplayName(String displayName) {
+        if (displayName == null || displayName.isBlank()) {
+            throw new ProviderDisplayNameInvalidException();
+        }
+        return displayName.trim();
+    }
+
+    private static String cleanLabel(String label, String fallback) {
+        String cleanedLabel = label == null || label.isBlank() ? fallback : label.trim();
+        return cleanedLabel.length() > 64 ? cleanedLabel.substring(0, 64) : cleanedLabel;
+    }
+
     private static String cleanBaseUrl(String baseUrl) {
         return baseUrl == null || baseUrl.isBlank() ? null : baseUrl.trim();
     }
@@ -644,4 +866,201 @@ public class MasterKeyAdminService {
 
     private record StoredMasterKey(
             short kekVersion, long providerSecretVersion, Instant lastRotatedAt) {}
+
+    public static class ProviderAlreadyExistsException extends AdminBusinessException {
+
+        private final LlmProvider provider;
+
+        public ProviderAlreadyExistsException(LlmProvider provider) {
+            super("LLM provider already exists");
+            this.provider = provider;
+        }
+
+        @Override
+        public ErrorClass errorClass() {
+            return ErrorClass.CONFLICT;
+        }
+
+        @Override
+        public String errorCode() {
+            return "error.admin.llm_provider_already_exists";
+        }
+
+        @Override
+        public String logEvent() {
+            return "admin_llm_provider_already_exists";
+        }
+
+        @Override
+        public String detail() {
+            return "The provider already exists in the LLM provider catalog.";
+        }
+
+        @Override
+        public Map<String, Object> params() {
+            return Map.of("provider", provider.id());
+        }
+    }
+
+    public static class ProviderNotFoundException extends AdminBusinessException {
+
+        private final LlmProvider provider;
+
+        public ProviderNotFoundException(LlmProvider provider) {
+            super("LLM provider not found");
+            this.provider = provider;
+        }
+
+        @Override
+        public ErrorClass errorClass() {
+            return ErrorClass.NOT_FOUND;
+        }
+
+        @Override
+        public String errorCode() {
+            return "error.admin.llm_provider_not_found";
+        }
+
+        @Override
+        public String logEvent() {
+            return "admin_llm_provider_not_found";
+        }
+
+        @Override
+        public String detail() {
+            return "The provider does not exist in the LLM provider catalog.";
+        }
+
+        @Override
+        public Map<String, Object> params() {
+            return Map.of("provider", provider.id());
+        }
+    }
+
+    public static class ProviderDeleteNotAllowedException extends AdminBusinessException {
+
+        private final LlmProvider provider;
+
+        public ProviderDeleteNotAllowedException(LlmProvider provider) {
+            super("LLM provider cannot be deleted");
+            this.provider = provider;
+        }
+
+        @Override
+        public ErrorClass errorClass() {
+            return ErrorClass.BAD_REQUEST;
+        }
+
+        @Override
+        public String errorCode() {
+            return "error.admin.llm_provider_delete_not_allowed";
+        }
+
+        @Override
+        public String logEvent() {
+            return "admin_llm_provider_delete_not_allowed";
+        }
+
+        @Override
+        public String detail() {
+            return "Only compatible gateway providers can be deleted.";
+        }
+
+        @Override
+        public Map<String, Object> params() {
+            return Map.of("provider", provider.id());
+        }
+    }
+
+    public static class ProviderDeleteBlockedException extends AdminBusinessException {
+
+        private final LlmProvider provider;
+        private final long routingReferenceCount;
+        private final long pinnedTenantCount;
+
+        public ProviderDeleteBlockedException(
+                LlmProvider provider, long routingReferenceCount, long pinnedTenantCount) {
+            super("LLM provider is still in use");
+            this.provider = provider;
+            this.routingReferenceCount = routingReferenceCount;
+            this.pinnedTenantCount = pinnedTenantCount;
+        }
+
+        @Override
+        public ErrorClass errorClass() {
+            return ErrorClass.CONFLICT;
+        }
+
+        @Override
+        public String errorCode() {
+            return "error.admin.llm_provider_delete_blocked";
+        }
+
+        @Override
+        public String logEvent() {
+            return "admin_llm_provider_delete_blocked";
+        }
+
+        @Override
+        public String detail() {
+            return "The provider is still referenced by routing or tenant model settings.";
+        }
+
+        @Override
+        public Map<String, Object> params() {
+            return Map.of(
+                    "provider",
+                    provider.id(),
+                    "routingReferenceCount",
+                    routingReferenceCount,
+                    "pinnedTenantCount",
+                    pinnedTenantCount);
+        }
+    }
+
+    public static class ProviderBaseUrlInvalidException extends AdminBusinessException {
+
+        @Override
+        public ErrorClass errorClass() {
+            return ErrorClass.BAD_REQUEST;
+        }
+
+        @Override
+        public String errorCode() {
+            return "error.admin.llm_provider_base_url_invalid";
+        }
+
+        @Override
+        public String logEvent() {
+            return "admin_llm_provider_base_url_invalid";
+        }
+
+        @Override
+        public String detail() {
+            return "The provider base URL must be an http or https URL.";
+        }
+    }
+
+    public static class ProviderDisplayNameInvalidException extends AdminBusinessException {
+
+        @Override
+        public ErrorClass errorClass() {
+            return ErrorClass.BAD_REQUEST;
+        }
+
+        @Override
+        public String errorCode() {
+            return "error.admin.llm_provider_display_name_invalid";
+        }
+
+        @Override
+        public String logEvent() {
+            return "admin_llm_provider_display_name_invalid";
+        }
+
+        @Override
+        public String detail() {
+            return "The provider display name is required.";
+        }
+    }
 }

@@ -2,7 +2,7 @@
 
 **Defined:** 2026-05-19
 **Milestone:** v1.2 — Admin Console Foundation + Settings UI on Curated Catalog
-**Core Value:** AI auto-triage that users trust with their real Gmail inbox. v1.2 adds an operator admin console + curated LLM catalog + 4-tab user Settings **without weakening v1.0's trust posture** (no auto-send, no email-body persistence, single ArchUnit-carved-out send call site, tenant isolation) and **without leaking new content surfaces** (no admin can read tenant email body, chat content, prompts, or completions).
+**Core Value:** AI auto-triage that users trust with their real Gmail inbox. v1.2 adds an operator admin console + curated LLM catalog + Inbox Zero-style rule examples/actions + 4-tab user Settings **without weakening the trust posture** (explicit user opt-in for outbound automation, no email-body persistence, send execution behind one audited gateway boundary, tenant isolation) and **without leaking new content surfaces** (no admin can read tenant email body, chat content, prompts, or completions).
 
 > v1.0 requirements (AUTH, FND, MAIL, BILL, LLM, RULE, TRG, DRFT, ANL, WEB) and v1.1 chat requirements (CHAT, ARCH-01..07, SET-SAFE-05) are SHIPPED and archived at `.planning/milestones/v1.0-REQUIREMENTS.md` and `.planning/milestones/v1.1-REQUIREMENTS.md`. This document covers v1.2 net-new requirements + the 19 v1.1-deferred SET-* requirements carried forward.
 
@@ -99,11 +99,26 @@
 - [ ] **SET-AI-03**: User can choose between "Use platform default" and "Use my key" independently per feature; per-feature cost estimate (last 7 days) visible next to the model picker. When "Use platform default" is selected, the resolved provider+model shows in subtle helper text (e.g. "Currently using: OpenRouter / openai/gpt-5")
 - [ ] **SET-AI-04**: User can test the BYOK connection (lightweight provider `/models` endpoint call) before relying on the key; the same enum-only error response shape applies as in MKEY-03
 
-### Architecture Invariants — must hold at v1.2 close
+### Rule Actions and Examples Catalog (NEW — Phase 08.1)
+
+- [x] **RACT-01**: Rule creation offers three entry paths matching the Inbox Zero mental model: `Create rules`, `Choose from examples`, and `Add manually`
+- [x] **RACT-02**: User examples UI includes the copied Inbox Zero persona set (`Founder`, `Influencer`, `Realtor`, `Investor`, `Assistant`, `Developer`, `Designer`, `Sales`, `Marketer`, `Support`, `Recruiter`, `Student`, `Outreach`, `Other`) and the example prompt grid seeded from `.planning/phases/08.1-inbox-zero-style-rule-actions-and-admin-managed-examples-cat/inbox-zero-examples.ts`
+- [x] **RACT-03**: Admin can create, edit, disable, reorder, and localize examples/personas/action descriptors without code changes; disabled examples do not appear in the user rule builder
+- [x] **RACT-04**: User-facing Available Actions panel includes `Label`, `Archive`, `Save draft`, `Mark read/unread`, `Star/unstar`, `Add to digest`, `Mark spam`, `Send reply`, `Forward`, and `Send email`, with unavailable actions visibly disabled and explained
+- [x] **RACT-05**: Settings expose one account-level `Auto-send rules` toggle for automated outbound rule actions; it defaults ON for new users/tenants and there are no individual outbound action toggles
+- [x] **RACT-06**: Manual editor and AI compiler both persist the same structured `When/Then` schema; natural language remains only `sourceText`/audit metadata
+- [x] **RACT-07**: Rule-triggered outbound actions execute only when the global auto-send setting, sender-risk guard, safety net, cap/rate-limit, idempotency, OAuth scope, tenant checks, and audit reservation all pass
+- [ ] **RACT-08**: If an outbound gate fails or the global auto-send setting is OFF, the rule result falls back to Gmail `save_draft` with an audit reason; the system must not silently drop or send the email
+- [x] **RACT-09**: All Gmail send execution goes through one shared outbound gateway/send executor; ArchUnit/grep tests are updated to allow that boundary and fail any direct Gmail send call site elsewhere
+- [x] **RACT-10**: Privacy constraints remain intact: no long-term storage of Gmail-read email bodies, LLM prompts/completions, or embeddings; persisted draft bodies are allowed only when they are user-authored/action arguments under the existing draft-body carve-out
+- [ ] **RACT-11**: Low-trust/static sender protections equivalent to Inbox Zero's example-risk guard prevent users from saving demo examples that would send to real people by accident
+- [x] **RACT-12**: UAT covers examples import, admin catalog management, outbound setting gates, downgrade-to-draft behavior, and no-bypass architecture tests
+
+### Architecture Invariants — Phase 8 baseline, extended by Phase 08.1
 
 - [x] **ARCH-08**: `AdminContext` is a `ScopedValue` mutually exclusive with `TenantContext` — entering admin scope clears the tenant binding and vice versa. Cross-tenant admin reads route through `AdminTenantAccess.readOnly(tenantId, supplier)` which writes one `admin_read_event` row before invoking the supplier. ArchUnit rule forbids admin packages from reading `TenantContext` directly
 - [x] **ARCH-09**: ArchUnit `AdminPathBodyBanTest` enforces that classes under `..controllers.admin..` and `..core.admin..projection..` cannot reference `GmailClient` body-exposing methods, `ChatMessageRepository.findContent*`, `LlmCallAudit.prompt*` / `.completion*` field accessors, or any field named per the forbidden regex `body|bodyHtml|snippet|payload|prompt|completion|content`. Test runs in CI
-- [x] **ARCH-10**: Single Gmail send call-site invariant from v1.1 ARCH-01 holds at v1.2 close — admin packages are forbidden by ArchUnit from referencing Gmail send methods entirely; the repo-wide grep gate continues to assert exactly 1 call site (the v1.1 `AssistantSendExecutor`). Master-key test-connection uses `GET /v1/models` (or per-provider equivalent), never a send method
+- [x] **ARCH-10**: Phase 8 baseline single Gmail send call-site invariant from v1.1 ARCH-01 holds until Phase 08.1 replaces it with the stricter gateway-boundary rule in RACT-09; admin packages are forbidden by ArchUnit from referencing Gmail send methods entirely. Master-key test-connection uses `GET /v1/models` (or per-provider equivalent), never a send method
 - [x] **ARCH-11**: A `MasterKeySentinelLeakTest` runs in CI and asserts that no log line, no admin response body, no exception message, no `application*.yml`, and no audit row contains any of the sentinel prefixes `sk-`, `sk-ant-`, `AIza`, `sk-or-` (or their masked-encoded forms). The test seeds dummy sentinel-prefixed master keys, exercises every admin endpoint that touches them, and greps the captured logs + responses
 - [x] **ARCH-12**: `admin_audit_event` is append-only at the database level — the application DB user has no `UPDATE` or `DELETE` privilege on the table; a Postgres `BEFORE UPDATE OR DELETE` trigger raises `EXCEPTION` regardless of role; per-row `hmac_chain_hash` chains to the previous row's hash; a nightly verification job re-derives the chain and alerts on mismatch
 
@@ -168,10 +183,12 @@ Explicit exclusions for v1.2. Each row carries the reason so we don't silently r
 
 | Feature | Reason |
 |---------|--------|
-| Auto-send (rule-triggered, no per-message user click) | Permanent — locked architectural invariant from v1.0; single bad auto-send is trust-ending. ARCH-10 reaffirms |
+| Ungated outbound automation | Hard ban — rule-triggered send/reply/forward is allowed only behind Phase 08.1 global auto-send setting, sender-risk guard, safety net, cap/rate-limit, idempotency, OAuth, tenant, and audit gates; blocked sends fall back to Gmail draft |
 | Long-term persistence of raw email body, email-content LLM prompts/completions, or embeddings | Permanent privacy invariant from v1.0. Admin views are explicitly metadata-only (OPS-TENANT-04..05 enforces) |
 | Admin impersonation of a user (act-as-tenant) | Hard ban — violates trust posture; tenant authority cannot be borrowed by admin. ARCH-08 enforces |
 | Admin SQL console / arbitrary query UI on `/admin/*` | Hard ban — no ad-hoc DB access through the web; ops queries go through Postgres MCP / psql via SSH |
+| Arbitrary webhook execution from rules | Deferred — needs separate admin/user allow-list, secret management, retry, and data-leak review |
+| Destructive delete automation from rules | Deferred — spam is allowed in Phase 08.1; permanent delete requires a separate safety review |
 | Reveal-master-key-once affordance | Hard ban — MKEY-07; rotation is the only path to recover from a lost key |
 | Free-text model-ID textbox in Settings AI tab | Typos → silent failures; curated catalog list only |
 | User BYOK for OpenRouter or 9Router | Admin-only platform tier; users cannot set their own NINEROUTER_KEY or OpenRouter sk-or-key |
@@ -230,6 +247,18 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 | OPS-QUEUE-02 | Phase 8 | Complete |
 | OPS-SPEND-01 | Phase 8 | Complete |
 | OPS-SPEND-02 | Phase 8 | Complete |
+| RACT-01 | Phase 08.1 | Complete |
+| RACT-02 | Phase 08.1 | Complete |
+| RACT-03 | Phase 08.1 | Complete |
+| RACT-04 | Phase 08.1 | Complete |
+| RACT-05 | Phase 08.1 | Complete |
+| RACT-06 | Phase 08.1 | Complete |
+| RACT-07 | Phase 08.1 | Complete |
+| RACT-08 | Phase 08.1 | Pending |
+| RACT-09 | Phase 08.1 | Complete |
+| RACT-10 | Phase 08.1 | Complete |
+| RACT-11 | Phase 08.1 | Pending |
+| RACT-12 | Phase 08.1 | Complete |
 | SET-VOICE-01 | Phase 9 | Pending |
 | SET-VOICE-02 | Phase 9 | Pending |
 | SET-VOICE-03 | Phase 9 | Pending |
@@ -256,8 +285,9 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 | ARCH-12 | Phase 8 | Complete |
 
 **Coverage (post-roadmap, post-pivot):**
-- v1.2 requirements: **61 total** (mapping confirmed 100% coverage, zero orphans)
+- v1.2 requirements: **73 total** (mapping confirmed 100% coverage, zero orphans)
   - Phase 8 (Admin Console & Operator Tooling, merged 2026-05-19 + WebAuthn pivot 2026-05-19): 42 reqs — 3 OPS-INFRA + 10 ADMIN (01-10) + 5 ARCH (08/09/10/11/12) + 8 MKEY + 7 CAT + 5 OPS-TENANT + 2 OPS-QUEUE + 2 OPS-SPEND
+  - Phase 08.1 (Inbox Zero-style Rule Actions & Admin-managed Examples Catalog, inserted 2026-05-23): 12 reqs — RACT-01..12
   - Phase 9 (User Settings UI on Curated Catalog): 19 reqs — 6 SET-VOICE + 5 SET-BEHV + 4 SET-SAFE + 4 SET-AI
 - Phase mapping: ✓ Complete
 - Merge note: original Phase 8 (foundation, 15 reqs) and original Phase 9 (operator surface, 25 reqs) merged into single Phase 8 mega (40 reqs) during spec-phase 2026-05-19; former Phase 10 renumbered → Phase 9. Phase 8 then gained ADMIN-09 (admin_users schema) + ADMIN-10 (WebAuthn ceremonies) during discuss-phase pivot 2026-05-19 — pre-pivot ADMIN-01/02/03/06 + ARCH-08 also rewritten to reflect the WebAuthn + separate-frontend shape.
@@ -267,4 +297,4 @@ Phase-to-requirement mapping (populated by gsd-roadmapper 2026-05-19).
 ---
 
 *Requirements defined: 2026-05-19*
-*Last updated: 2026-05-19 — roadmap mapping populated by gsd-roadmapper (3 phases, 100% coverage)*
+*Last updated: 2026-05-23 — Phase 08.1 inserted and RACT-01..12 mapped (3 phases, 100% coverage)*

@@ -6,12 +6,17 @@ import java.time.Instant;
 
 public record MasterKeyMaskedRow(
         LlmProvider provider,
+        String displayName,
+        String providerKind,
+        String compatibleType,
+        String defaultBaseUrl,
         String maskedKey,
         KeyFormat keyFormat,
         Short kekVersion,
         long providerSecretVersion,
         Instant lastRotatedAt,
         long dependentsCount,
+        long activeKeyCount,
         boolean rotationRecommended,
         String baseUrl,
         boolean featureDefaultProviderChat,

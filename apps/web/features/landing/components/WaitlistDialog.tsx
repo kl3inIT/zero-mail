@@ -3,17 +3,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CheckCircle2Icon, Loader2Icon, LockIcon, SparklesIcon, XIcon } from 'lucide-react';
 
+import {
+  submitWaitlist,
+  WaitlistSubscribeError,
+  type WaitlistSubscribeStatus,
+} from '@/features/landing/lib/waitlist-api';
+
 type WaitlistDialogCopy = {
   title: string;
   description: string;
   emailPlaceholder: string;
   button: string;
-  closeAria: string;
-  closeCta: string;
-  submitting: string;
-  privacyNote: string;
-  successTitle: string;
-  successBody: string;
+};
+
+type SuccessState = {
+  status: WaitlistSubscribeStatus;
+  email: string;
 };
 
 function clearWaitlistHash() {
@@ -26,26 +31,41 @@ function clearWaitlistHash() {
   }
 }
 
-function formatSuccessBody(template: string, email: string) {
-  return template.replace('{email}', email);
+function successHeading(status: WaitlistSubscribeStatus): string {
+  switch (status) {
+    case 'ADDED':
+      return 'Cảm ơn bạn!';
+    case 'ALREADY_REGISTERED':
+      return 'Bạn đã có trong danh sách';
+    case 'ALREADY_USER':
+      return 'Tài khoản đã sẵn sàng';
+  }
+}
+
+function successMessage(status: WaitlistSubscribeStatus, email: string): string {
+  switch (status) {
+    case 'ADDED':
+      return `Chúng tôi đã ghi nhận ${email}. Một email phản hồi sẽ được gửi tới bạn ngay khi đến lượt — vui lòng kiểm tra hộp thư và mục Spam sau vài ngày.`;
+    case 'ALREADY_REGISTERED':
+      return `Email ${email} đã có trong danh sách chờ trước đó. Chúng tôi sẽ liên hệ ngay khi đến lượt.`;
+    case 'ALREADY_USER':
+      return `Email ${email} đã có tài khoản Zero Mail. Bạn có thể đăng nhập trực tiếp.`;
+  }
 }
 
 export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
   const [isOpen, setIsOpen] = useState(false);
   const [email, setEmail] = useState('');
+  const [website, setWebsite] = useState(''); // honeypot
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [successState, setSuccessState] = useState<SuccessState | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const closeTimeoutRef = useRef<number | null>(null);
-  const submitTimeoutRef = useRef<number | null>(null);
 
   const clearDialogTimeouts = useCallback(() => {
     if (closeTimeoutRef.current !== null) {
       window.clearTimeout(closeTimeoutRef.current);
       closeTimeoutRef.current = null;
-    }
-    if (submitTimeoutRef.current !== null) {
-      window.clearTimeout(submitTimeoutRef.current);
-      submitTimeoutRef.current = null;
     }
   }, []);
 
@@ -92,7 +112,9 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
     clearDialogTimeouts();
     closeTimeoutRef.current = window.setTimeout(() => {
       setEmail('');
-      setIsSuccess(false);
+      setWebsite('');
+      setSuccessState(null);
+      setErrorMessage(null);
       setIsSubmitting(false);
       closeTimeoutRef.current = null;
     }, 150);
@@ -103,14 +125,23 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
     if (!email || isSubmitting) return;
 
     setIsSubmitting(true);
-    if (submitTimeoutRef.current !== null) {
-      window.clearTimeout(submitTimeoutRef.current);
-    }
-    submitTimeoutRef.current = window.setTimeout(() => {
+    setErrorMessage(null);
+    try {
+      const response = await submitWaitlist({
+        email,
+        source: 'landing_page',
+        website,
+      });
+      setSuccessState({ status: response.status, email });
+    } catch (caught) {
+      const message =
+        caught instanceof WaitlistSubscribeError
+          ? caught.message
+          : 'Có lỗi xảy ra. Vui lòng thử lại sau.';
+      setErrorMessage(message);
+    } finally {
       setIsSubmitting(false);
-      setIsSuccess(true);
-      submitTimeoutRef.current = null;
-    }, 350);
+    }
   }
 
   if (!isOpen) return null;
@@ -122,16 +153,11 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
       aria-labelledby="waitlist-title"
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 px-4 py-8 backdrop-blur-sm"
     >
-      <button
-        type="button"
-        aria-label={copy.closeAria}
-        className="absolute inset-0"
-        onClick={closeDialog}
-      />
+      <button type="button" aria-label="Đóng" className="absolute inset-0" onClick={closeDialog} />
       <div className="relative z-10 w-full max-w-[420px] overflow-hidden rounded-[24px] border border-(--line-strong) bg-(--bg-elevated) p-6 shadow-2xl">
         <button
           type="button"
-          aria-label={copy.closeAria}
+          aria-label="Đóng"
           onClick={closeDialog}
           className="absolute top-4 right-4 z-20 grid size-8 place-items-center rounded-full text-(--text-muted) hover:bg-(--bg-subtle) hover:text-(--ink)"
         >
@@ -148,14 +174,16 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
             id="waitlist-title"
             className="text-2xl leading-tight font-extrabold tracking-tight text-(--ink)"
           >
-            {isSuccess ? copy.successTitle : copy.title}
+            {successState ? successHeading(successState.status) : copy.title}
           </h2>
           <p className="mt-2 max-w-sm text-[14px] leading-relaxed text-(--text-muted)">
-            {isSuccess ? formatSuccessBody(copy.successBody, email) : copy.description}
+            {successState
+              ? successMessage(successState.status, successState.email)
+              : copy.description}
           </p>
         </div>
 
-        {isSuccess ? (
+        {successState ? (
           <div className="relative z-10 mt-6 space-y-4 text-center">
             <div className="mx-auto flex size-12 items-center justify-center rounded-full border border-(--green) bg-(--green-soft) text-(--green)">
               <CheckCircle2Icon className="size-6" aria-hidden="true" />
@@ -165,7 +193,7 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
               onClick={closeDialog}
               className="flex h-11 w-full items-center justify-center rounded-xl border border-(--line-strong) bg-(--bg) text-sm font-semibold text-(--ink) hover:bg-(--bg-subtle)"
             >
-              {copy.closeCta}
+              Đóng lại
             </button>
           </div>
         ) : (
@@ -177,19 +205,36 @@ export default function WaitlistDialog({ copy }: { copy: WaitlistDialogCopy }) {
               value={email}
               onChange={(event) => setEmail(event.currentTarget.value)}
               required
-              className="h-12 w-full rounded-xl border border-(--line-strong) bg-(--bg) px-4 text-base transition-all outline-none placeholder:text-(--text-faint) focus:border-(--accent) focus:ring-2 focus:ring-(--accent-soft)"
+              disabled={isSubmitting}
+              className="h-12 w-full rounded-xl border border-(--line-strong) bg-(--bg) px-4 text-base transition-all outline-none placeholder:text-(--text-faint) focus:border-(--accent) focus:ring-2 focus:ring-(--accent-soft) disabled:opacity-60"
             />
+            {/* Honeypot — real users leave blank; bots fill it. Hidden via CSS. */}
+            <input
+              type="text"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              value={website}
+              onChange={(event) => setWebsite(event.currentTarget.value)}
+              aria-hidden="true"
+              className="absolute top-[-9999px] left-[-9999px] h-0 w-0 opacity-0"
+            />
+            {errorMessage && (
+              <div className="rounded-lg border border-(--red) bg-(--red-soft) px-3 py-2 text-[13px] text-(--red)">
+                {errorMessage}
+              </div>
+            )}
             <button
               type="submit"
               disabled={!email || isSubmitting}
               className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-(--ink) text-[15px] font-bold text-(--bg) shadow-md transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting && <Loader2Icon className="size-4 animate-spin" aria-hidden="true" />}
-              {isSubmitting ? copy.submitting : copy.button}
+              {isSubmitting ? 'Đang đăng ký...' : copy.button}
             </button>
             <div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-(--text-faint)">
               <LockIcon className="size-3 text-(--green)" aria-hidden="true" />
-              <span>{copy.privacyNote}</span>
+              <span>Chúng tôi không lưu email của bạn vĩnh viễn và không spam.</span>
             </div>
           </form>
         )}

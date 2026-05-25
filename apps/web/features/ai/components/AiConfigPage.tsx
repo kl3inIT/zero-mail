@@ -2,11 +2,24 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Plus } from 'lucide-react';
+import { Plus, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import {
+  useRuleAutomationSettings,
+  useUpdateRuleAutomationSettings,
+} from '@/features/rules/hooks/use-rule-automation-settings';
 import { SenderSafetyNetList } from '@/features/triage/components/SenderSafetyNetList';
 import { useOptInSender } from '@/features/triage/hooks/useOptInSender';
 
@@ -16,6 +29,9 @@ export function AiConfigPage() {
   const t = useTranslations();
   const [senderEmail, setSenderEmail] = useState('');
   const optInMutation = useOptInSender();
+  const automationSettings = useRuleAutomationSettings();
+  const updateAutomationSettings = useUpdateRuleAutomationSettings();
+  const autoSendRulesEnabled = automationSettings.data?.autoSendRulesEnabled ?? true;
 
   function handleAddSender(formEvent: React.FormEvent<HTMLFormElement>) {
     formEvent.preventDefault();
@@ -43,6 +59,40 @@ export function AiConfigPage() {
           {t('ai.page.description')}
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Send className="text-muted-foreground size-4" aria-hidden="true" />
+            {t('rules.settings.autoSend.title')}
+          </CardTitle>
+          <CardDescription>
+            {autoSendRulesEnabled
+              ? t('rules.settings.autoSend.bodyOn')
+              : t('rules.settings.autoSend.bodyOff')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-between gap-4">
+          <span className="text-foreground text-sm font-medium">
+            {t('rules.settings.autoSend.toggleLabel')}
+          </span>
+          <Switch
+            checked={autoSendRulesEnabled}
+            aria-label={t('rules.settings.autoSend.toggleLabel')}
+            disabled={automationSettings.isLoading || updateAutomationSettings.isPending}
+            onCheckedChange={(enabled) => updateAutomationSettings.mutate(enabled)}
+            className="data-unchecked:bg-warning/80"
+            data-testid="ai-auto-send-rules-switch"
+          />
+        </CardContent>
+        <CardFooter>
+          <p className="text-muted-foreground text-xs">
+            {autoSendRulesEnabled
+              ? t('rules.settings.autoSend.footerOn')
+              : t('rules.settings.autoSend.footerOff')}
+          </p>
+        </CardFooter>
+      </Card>
 
       <form className="flex flex-col gap-2 sm:flex-row sm:items-center" onSubmit={handleAddSender}>
         <Input

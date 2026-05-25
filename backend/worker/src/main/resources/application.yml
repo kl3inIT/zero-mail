@@ -1,15 +1,22 @@
 spring:
   application:
     name: zeromail-worker
+  autoconfigure:
+    exclude:
+      # Spring AI M7 imports Google GenAI embedding connection auto-config even
+      # when Zero Mail disables embedding models. Exclude it until embeddings are
+      # explicitly introduced.
+      - org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiEmbeddingConnectionAutoConfiguration
+      - org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiTextEmbeddingAutoConfiguration
   main:
     keep-alive: true
   threads:
     virtual:
       enabled: true
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/zeromail}
-    username: ${DB_USER:zeromail}
-    password: ${DB_PASSWORD:zeromail}
+    url: ${DB_URL:jdbc:postgresql://localhost:5555/zeromail_dev?sslmode=disable}
+    username: ${DB_USER:zeromail_dev}
+    password: ${DB_PASSWORD:}
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -35,7 +42,7 @@ spring:
     model:
       # Zero Mail builds provider-specific Spring AI ChatModel instances inside
       # core.llm.gateway.springai so BYOK can vary apiKey/baseUrl/model safely.
-      # Disable starter auto-model beans for unused modalities; otherwise M5
+      # Disable starter auto-model beans for unused modalities; otherwise M7
       # eagerly creates OpenAI audio/image/embedding clients and requires extra credentials.
       chat: none
       embedding: none
@@ -87,6 +94,7 @@ zero-mail:
       compile-model: openai/gpt-5.4-nano
       drift-model: openai/gpt-5.4-nano
       triage-model: openai/gpt-5.4-nano
+      draft-model: openai/gpt-5.4-nano
       connect-timeout: 5s
       read-timeout: 30s
     drift:
@@ -96,7 +104,7 @@ zero-mail:
   notification:
     app-base-url: ${APP_BASE_URL:http://localhost:3000}
     email:
-      from-address: notifications@zero-mail.app
+      from-address: notifications@zeromail.vn
       resend:
         api-key: ${RESEND_API_KEY:?RESEND_API_KEY env var is required}
 server:

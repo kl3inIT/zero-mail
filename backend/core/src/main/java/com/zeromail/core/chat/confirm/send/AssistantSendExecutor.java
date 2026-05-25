@@ -1,14 +1,15 @@
 package com.zeromail.core.chat.confirm.send;
 
-import com.google.api.services.gmail.Gmail;
 import com.zeromail.core.chat.confirm.ConfirmationLeaseService;
 import com.zeromail.core.chat.confirm.ConfirmationStateMachine;
 import com.zeromail.core.chat.confirm.ConfirmationStateMachine.SendCommitCommand;
 import com.zeromail.core.chat.confirm.ConfirmationStateMachine.SendInFlightCommand;
 import com.zeromail.core.chat.exception.GmailSendFailedException;
 import com.zeromail.core.chat.exception.VipAcknowledgmentMissingException;
-import com.zeromail.core.gmail.exception.InvalidGrantException;
-import com.zeromail.core.gmail.gateway.GmailApiClientFactory;
+import com.zeromail.core.outbound.usecases.OutboundSendCommand;
+import com.zeromail.core.outbound.usecases.OutboundSendException;
+import com.zeromail.core.outbound.usecases.OutboundSendGateway;
+import com.zeromail.core.outbound.usecases.OutboundSendResult;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.triage.usecases.SenderEmailCanonicalizer;
 import com.zeromail.core.triage.usecases.SenderSafetyNetService;
@@ -29,10 +30,9 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 @Service
-@AllowedSendCallSite
 public class AssistantSendExecutor {
 
-    private final GmailApiClientFactory gmailApiClientFactory;
+    private final OutboundSendGateway outboundSendGateway;
     private final GmailMessageBuilder gmailMessageBuilder;
     private final ConfirmationStateMachine confirmationStateMachine;
     private final ConfirmationLeaseService confirmationLeaseService;
@@ -42,7 +42,7 @@ public class AssistantSendExecutor {
     private final ObjectMapper objectMapper;
 
     public AssistantSendExecutor(
-            GmailApiClientFactory gmailApiClientFactory,
+            OutboundSendGateway outboundSendGateway,
             GmailMessageBuilder gmailMessageBuilder,
             ConfirmationStateMachine confirmationStateMachine,
             ConfirmationLeaseService confirmationLeaseService,
@@ -50,7 +50,7 @@ public class AssistantSendExecutor {
             SenderEmailCanonicalizer senderEmailCanonicalizer,
             TransactionTemplate transactionTemplate,
             ObjectMapper objectMapper) {
-        this.gmailApiClientFactory = gmailApiClientFactory;
+        this.outboundSendGateway = outboundSendGateway;
         this.gmailMessageBuilder = gmailMessageBuilder;
         this.confirmationStateMachine = confirmationStateMachine;
         this.confirmationLeaseService = confirmationLeaseService;
@@ -93,11 +93,12 @@ public class AssistantSendExecutor {
                                                                     "tool",
                                                                     command.toolName().id())),
                                                     writeJson(command.previewSnapshot()))));
-            com.google.api.services.gmail.model.Message sendResult;
+            OutboundSendResult sendResult;
             try {
-                Gmail gmail = gmailApiClientFactory.buildClientForTenant(command.tenantId());
-                sendResult = gmail.users().messages().send("me", gmailMessage).execute();
-            } catch (IOException | InvalidGrantException | IllegalStateException gmailSendFailure) {
+                sendResult =
+                        outboundSendGateway.send(
+                                new OutboundSendCommand(command.tenantId(), gmailMessage));
+            } catch (IOException | OutboundSendException gmailSendFailure) {
                 transactionTemplate.executeWithoutResult(
                         _ ->
                                 confirmationStateMachine.commitSendFailed(
@@ -108,11 +109,11 @@ public class AssistantSendExecutor {
             }
             Map<String, Object> resultSummary = new LinkedHashMap<>();
             resultSummary.put("state", "committed");
-            if (sendResult != null && hasText(sendResult.getId())) {
-                resultSummary.put("gmail_api_message_id", sendResult.getId());
+            if (sendResult != null && hasText(sendResult.gmailMessageId())) {
+                resultSummary.put("gmail_api_message_id", sendResult.gmailMessageId());
             }
-            if (sendResult != null && hasText(sendResult.getThreadId())) {
-                resultSummary.put("gmail_thread_id", sendResult.getThreadId());
+            if (sendResult != null && hasText(sendResult.gmailThreadId())) {
+                resultSummary.put("gmail_thread_id", sendResult.gmailThreadId());
             }
             // commitSendCompleted runs the audit transition AND publishes
             // AssistantSendCompleted inside the same @Transactional method. Idempotent: if the

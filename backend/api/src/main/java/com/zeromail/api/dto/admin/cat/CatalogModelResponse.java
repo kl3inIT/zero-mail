@@ -1,6 +1,7 @@
 package com.zeromail.api.dto.admin.cat;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.zeromail.core.admin.cat.domain.ModelVerificationStatus;
 import com.zeromail.core.admin.cat.projection.CatalogModelRow;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
@@ -14,6 +15,7 @@ import java.time.Instant;
             "displayName",
             "defaultModel",
             "recommended",
+            "verificationStatus",
             "pinnedTenantCount"
         })
 public record CatalogModelResponse(
@@ -24,6 +26,8 @@ public record CatalogModelResponse(
         boolean recommended,
         BigDecimal costPer1kInput,
         BigDecimal costPer1kOutput,
+        @Schema(allowableValues = {"UNTESTED", "VERIFIED", "STALE", "FAILED"})
+                ModelVerificationStatus verificationStatus,
         Instant deprecatedAt,
         long pinnedTenantCount) {
 
@@ -36,6 +40,7 @@ public record CatalogModelResponse(
                 catalogModelRow.recommended(),
                 catalogModelRow.costPer1kInput(),
                 catalogModelRow.costPer1kOutput(),
+                catalogModelRow.verificationStatus(),
                 catalogModelRow.deprecatedAt(),
                 catalogModelRow.pinnedTenantCount());
     }

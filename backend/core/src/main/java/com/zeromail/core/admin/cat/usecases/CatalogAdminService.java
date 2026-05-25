@@ -175,7 +175,7 @@ public class CatalogAdminService {
                                 () ->
                                         new FeatureDefaultProviderService
                                                 .CatalogModelNotFoundException(modelId));
-        if (actualProvider != provider) {
+        if (!actualProvider.equals(provider)) {
             throw new FeatureDefaultProviderService.CatalogModelNotFoundException(modelId);
         }
         featureDefaultProviderService.set(feature, modelId, reason, requestIp, requestId);

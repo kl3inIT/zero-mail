@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: 086-create-waitlist-email
+      author: zeromail
+      changes:
+        - createTable:
+            tableName: waitlist_email
+            columns:
+              - column: { name: id, type: uuid, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: email, type: varchar(320), constraints: { nullable: false } }
+              - column: { name: status, type: varchar(32), constraints: { nullable: false }, defaultValue: "PENDING" }
+              - column: { name: source, type: varchar(64) }
+              - column: { name: ip_hash, type: varchar(64) }
+              - column: { name: user_agent, type: varchar(512) }
+              - column: { name: created_at, type: timestamptz, constraints: { nullable: false }, defaultValueComputed: now() }
+              - column: { name: approved_at, type: timestamptz }
+              - column: { name: approved_by_admin_id, type: uuid }
+              - column: { name: invite_sent_at, type: timestamptz }
+        - addUniqueConstraint:
+            tableName: waitlist_email
+            columnNames: email
+            constraintName: uq_waitlist_email_email
+        - createIndex:
+            indexName: idx_waitlist_email_status_created_at
+            tableName: waitlist_email
+            columns:
+              - column: { name: status }
+              - column: { name: created_at, descending: true }

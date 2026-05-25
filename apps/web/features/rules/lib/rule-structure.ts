@@ -15,7 +15,18 @@ export const MANUAL_CONDITION_TYPES = [
   'SEMANTIC_INTENT',
 ] as const;
 
-export const MANUAL_ACTION_TYPES = ['label', 'archive', 'save_draft'] as const;
+export const MANUAL_ACTION_TYPES = [
+  'label',
+  'archive',
+  'save_draft',
+  'mark_read',
+  'star',
+  'add_to_digest',
+  'mark_spam',
+  'send_reply',
+  'forward_email',
+  'send_email',
+] as const;
 
 const MAX_MANUAL_CONDITIONS = 24;
 const MAX_MANUAL_ACTIONS = 12;
@@ -23,6 +34,7 @@ const MAX_MANUAL_ROW_ID_LENGTH = 80;
 const MAX_DISPLAY_NAME_LENGTH = 160;
 const MAX_CONDITION_VALUE_LENGTH = 512;
 const MAX_ACTION_VALUE_LENGTH = 500;
+const MAX_ACTION_BODY_LENGTH = 4000;
 
 export const ManualConditionSchema = z.object({
   id: z.string().min(1).max(MAX_MANUAL_ROW_ID_LENGTH),
@@ -34,6 +46,11 @@ export const ManualActionSchema = z.object({
   id: z.string().min(1).max(MAX_MANUAL_ROW_ID_LENGTH),
   type: z.enum(MANUAL_ACTION_TYPES),
   value: z.string().max(MAX_ACTION_VALUE_LENGTH),
+  instruction: z.string().max(MAX_ACTION_VALUE_LENGTH).optional(),
+  cc: z.string().max(MAX_ACTION_VALUE_LENGTH).optional(),
+  bcc: z.string().max(MAX_ACTION_VALUE_LENGTH).optional(),
+  subject: z.string().max(MAX_ACTION_VALUE_LENGTH).optional(),
+  body: z.string().max(MAX_ACTION_BODY_LENGTH).optional(),
 });
 
 export const ManualRuleDraftSchema = z.object({
@@ -91,7 +108,7 @@ export function conditionRequiresValue(type: ManualConditionType): boolean {
 }
 
 export function actionRequiresValue(type: ManualActionType): boolean {
-  return type !== 'archive';
+  return !['archive', 'mark_read', 'star', 'add_to_digest', 'mark_spam'].includes(type);
 }
 
 export function manualDraftFromCompiledRule(input: {
@@ -120,9 +137,7 @@ export function buildManualRule(draft: ManualRuleDraft): BuiltManualRule | null 
   const completeConditions = validDraft.conditions
     .map((condition) => ({ ...condition, value: condition.value.trim() }))
     .filter((condition) => !conditionRequiresValue(condition.type) || condition.value.length > 0);
-  const completeActions = validDraft.actions
-    .map((action) => ({ ...action, value: action.value.trim() }))
-    .filter((action) => !actionRequiresValue(action.type) || action.value.length > 0);
+  const completeActions = validDraft.actions.map(normalizeManualAction).filter(actionIsComplete);
 
   if (completeConditions.length === 0 || completeActions.length === 0) {
     return null;
@@ -222,6 +237,24 @@ export function describeAction(action: ManualAction, copy?: RuleStructureCopy): 
       return 'archive';
     case 'save_draft':
       return value ? `save draft: ${value}` : 'save draft';
+    case 'mark_read':
+      return 'mark read';
+    case 'star':
+      return 'star';
+    case 'add_to_digest':
+      return 'add to digest';
+    case 'mark_spam':
+      return 'mark spam';
+    case 'send_reply':
+      return value ? `send reply: ${value}` : 'send reply';
+    case 'forward_email':
+      return value ? `forward to ${value}` : 'forward email';
+    case 'send_email':
+      return action.subject?.trim()
+        ? `send email to ${value}: ${action.subject.trim()}`
+        : value
+          ? `send email to ${value}`
+          : 'send email';
   }
 }
 
@@ -259,6 +292,69 @@ function actionToIntent(action: ManualAction) {
       return { type: action.type };
     case 'save_draft':
       return { type: action.type, instruction: value };
+    case 'mark_read':
+    case 'star':
+    case 'add_to_digest':
+    case 'mark_spam':
+      return { type: action.type };
+    case 'send_reply':
+      return { type: action.type, instruction: instructionValue(action) };
+    case 'forward_email': {
+      const forwardIntent: Record<string, unknown> = {
+        type: action.type,
+        recipients: recipientList(value),
+      };
+      const instruction = instructionValue(action);
+      if (instruction) forwardIntent.instruction = instruction;
+      return forwardIntent;
+    }
+    case 'send_email': {
+      const sendEmailIntent: Record<string, unknown> = {
+        type: action.type,
+        to: recipientList(value),
+        subject: action.subject?.trim() ?? '',
+        body: action.body?.trim() ?? '',
+      };
+      const cc = recipientList(action.cc ?? '');
+      const bcc = recipientList(action.bcc ?? '');
+      if (cc.length > 0) sendEmailIntent.cc = cc;
+      if (bcc.length > 0) sendEmailIntent.bcc = bcc;
+      return sendEmailIntent;
+    }
+  }
+}
+
+function normalizeManualAction(action: ManualAction): ManualAction {
+  return {
+    ...action,
+    value: action.value.trim(),
+    instruction: action.instruction?.trim() ?? '',
+    cc: action.cc?.trim() ?? '',
+    bcc: action.bcc?.trim() ?? '',
+    subject: action.subject?.trim() ?? '',
+    body: action.body?.trim() ?? '',
+  };
+}
+
+function actionIsComplete(action: ManualAction): boolean {
+  switch (action.type) {
+    case 'archive':
+    case 'mark_read':
+    case 'star':
+    case 'add_to_digest':
+    case 'mark_spam':
+      return true;
+    case 'label':
+    case 'save_draft':
+    case 'send_reply':
+    case 'forward_email':
+      return action.value.trim().length > 0;
+    case 'send_email':
+      return (
+        action.value.trim().length > 0 &&
+        Boolean(action.subject?.trim()) &&
+        Boolean(action.body?.trim())
+      );
   }
 }
 
@@ -344,6 +440,34 @@ function actionNodeToDraft(node: unknown, index: number): ManualAction | null {
         type,
         value: stringValue(node.instruction ?? node.body ?? node.value),
       };
+    case 'mark_read':
+    case 'star':
+    case 'add_to_digest':
+    case 'mark_spam':
+      return { id, type, value: '' };
+    case 'send_reply':
+      return {
+        id,
+        type,
+        value: stringValue(node.instruction ?? node.body ?? node.value),
+      };
+    case 'forward_email':
+      return {
+        id,
+        type,
+        value: stringArrayValue(node.recipients ?? node.to).join(', '),
+        instruction: stringValue(node.instruction ?? node.note),
+      };
+    case 'send_email':
+      return {
+        id,
+        type,
+        value: stringArrayValue(node.to ?? node.recipients).join(', '),
+        cc: stringArrayValue(node.cc).join(', '),
+        bcc: stringArrayValue(node.bcc).join(', '),
+        subject: stringValue(node.subject),
+        body: stringValue(node.body),
+      };
     default:
       return null;
   }
@@ -383,6 +507,24 @@ function arrayValue(value: unknown): unknown[] | null {
 
 function stringValue(value: unknown): string {
   return typeof value === 'string' ? value : '';
+}
+
+function stringArrayValue(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === 'string');
+  }
+  return typeof value === 'string' && value.trim() ? [value] : [];
+}
+
+function recipientList(value: string): string[] {
+  return value
+    .split(/[,\n;]/)
+    .map((recipient) => recipient.trim())
+    .filter(Boolean);
+}
+
+function instructionValue(action: ManualAction): string {
+  return (action.instruction?.trim() || action.value.trim()).trim();
 }
 
 function stripLabelPrefix(value: string): string {

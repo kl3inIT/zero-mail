@@ -21,7 +21,7 @@ const requiredRulesCopy = [
   'Automation rules',
   'Each rule defines which emails to match and what Zero Mail is allowed to do. New rules stay off until previewed.',
   'Convert to rule',
-  'Save (stays off until preview)',
+  'Save',
   'Preview rule',
   'Enable rule',
   'Send answer',

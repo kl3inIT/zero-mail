@@ -14,6 +14,10 @@ import com.zeromail.core.admin.mkey.domain.LlmProvider;
 import com.zeromail.core.admin.mkey.domain.MasterKeyStatus;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyEntity;
 import com.zeromail.core.admin.mkey.persistence.LlmProviderMasterKeyRepository;
+import com.zeromail.core.llm.routing.LlmRouteResolver;
+import com.zeromail.core.llm.routing.LlmRoutingTier;
+import com.zeromail.core.llm.routing.LlmRuntimeTask;
+import com.zeromail.core.llm.routing.ResolvedLlmRoute;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -47,7 +51,7 @@ import org.springframework.transaction.annotation.Transactional;
  * steps. The chat adapter walks the list and stops on the first successful response.
  */
 @Service
-public class LlmRouter {
+public class LlmRouter implements LlmRouteResolver {
 
     private final FeatureDefaultProviderRepository featureDefaultProviderRepository;
     private final FeatureTierModelRepository featureTierModelRepository;
@@ -119,6 +123,15 @@ public class LlmRouter {
     public Optional<ResolvedRoute> resolvePrimary(Feature feature) {
         List<ResolvedRoute> walk = resolve(feature);
         return walk.isEmpty() ? Optional.empty() : Optional.of(walk.get(0));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ResolvedLlmRoute> resolve(LlmRuntimeTask task) {
+        Objects.requireNonNull(task, "task");
+        return resolve(featureFor(task)).stream()
+                .map(route -> toRuntimeRoute(task, route))
+                .toList();
     }
 
     /**
@@ -207,12 +220,34 @@ public class LlmRouter {
             LlmProvider provider, String modelId, Map<String, ModelCatalogEntity> modelsById) {
         ModelCatalogEntity modelRow = modelsById.get(modelId);
         if (modelRow == null) return false;
-        if (modelRow.getProvider() != provider) return false;
+        if (!modelRow.getProvider().equals(provider)) return false;
         if (modelRow.getDeprecatedAt() != null) return false;
         ModelVerificationStatus status = modelRow.getVerificationStatus();
         // STALE is still routable — operators have been notified to re-test
         // but the model proved itself recently. FAILED / UNTESTED are not.
         return status == ModelVerificationStatus.VERIFIED
                 || status == ModelVerificationStatus.STALE;
+    }
+
+    private Feature featureFor(LlmRuntimeTask task) {
+        return switch (task) {
+            case CHAT_ASSISTANT -> Feature.CHAT;
+            case TRIAGE_ACTION -> Feature.TRIAGE;
+            case DRAFT_GENERATION -> Feature.DRAFT;
+            case RULE_AUTHORING -> Feature.RULE_AUTHORING;
+            case RULE_PREVIEW_SEMANTIC -> Feature.RULE_PREVIEW_SEMANTIC;
+            case TRIAGE_SEMANTIC -> Feature.TRIAGE_SEMANTIC;
+            case DRIFT_CHECK -> Feature.DRIFT_CHECK;
+        };
+    }
+
+    private ResolvedLlmRoute toRuntimeRoute(LlmRuntimeTask task, ResolvedRoute route) {
+        return new ResolvedLlmRoute(
+                task,
+                LlmRoutingTier.fromId(route.tier().id()),
+                route.provider().id(),
+                route.modelId(),
+                route.keyId(),
+                route.keyPriority());
     }
 }

@@ -8,12 +8,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.zeromail.core.outbound.usecases.OutboundSendGateway;
 import com.zeromail.core.rules.domain.RuleActionType;
 import com.zeromail.core.triage.domain.ReplyHeaders;
 import com.zeromail.core.triage.domain.TriageActionResult;
 import com.zeromail.core.triage.exception.MissingMessageIdException;
 import com.zeromail.core.triage.persistence.TriageAuditRepository;
 import com.zeromail.core.triage.persistence.TriageAuditWriter;
+import com.zeromail.core.triage.usecases.OutboundRuleMessageBuilder;
 import com.zeromail.core.triage.usecases.TriageAuditSaga;
 import com.zeromail.core.triage.usecases.TriageAuditSaga.GmailWriteResult;
 import com.zeromail.core.triage.usecases.TriageAuditSaga.TriageAuditCommand;
@@ -82,7 +84,9 @@ class TriageAuditSagaDraftThreadingTest {
         return new TriageAuditSaga(
                 mock(TriageAuditWriter.class),
                 mock(TriageAuditRepository.class),
-                triageGmailWriter);
+                triageGmailWriter,
+                mock(OutboundSendGateway.class),
+                mock(OutboundRuleMessageBuilder.class));
     }
 
     private static TriageAuditCommand saveDraftCommand(ReplyHeaders replyHeaders) {

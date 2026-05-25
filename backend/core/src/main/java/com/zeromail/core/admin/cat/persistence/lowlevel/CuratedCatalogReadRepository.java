@@ -1,6 +1,7 @@
 package com.zeromail.core.admin.cat.persistence.lowlevel;
 
 import com.zeromail.core.admin.cat.domain.Feature;
+import com.zeromail.core.admin.cat.domain.ModelVerificationStatus;
 import com.zeromail.core.admin.cat.projection.CatalogModelRow;
 import java.util.List;
 import java.util.Objects;
@@ -34,6 +35,7 @@ public class CuratedCatalogReadRepository {
                        model.is_recommended,
                        model.cost_per_1k_input,
                        model.cost_per_1k_output,
+                       model.verification_status,
                        model.deprecated_at
                 FROM model_catalog model
                 JOIN provider_catalog provider ON provider.provider = model.provider
@@ -59,6 +61,8 @@ public class CuratedCatalogReadRepository {
                                         resultSet.getBoolean("is_recommended"),
                                         resultSet.getBigDecimal("cost_per_1k_input"),
                                         resultSet.getBigDecimal("cost_per_1k_output"),
+                                        ModelVerificationStatus.fromId(
+                                                resultSet.getString("verification_status")),
                                         null,
                                         0L)));
     }

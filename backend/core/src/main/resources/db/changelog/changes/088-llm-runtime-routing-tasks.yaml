@@ -1,0 +1,119 @@
+databaseChangeLog:
+  - changeSet:
+      id: 088-01-llm-runtime-routing-tasks
+      author: zeromail
+      comment: >
+        Add runtime-owned LLM task routing features so admin model routing can
+        drive chat, triage actions, draft generation, rule authoring, semantic
+        evaluation, and drift checks without core.llm depending on admin packages.
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE feature_binding
+                ALTER COLUMN feature TYPE varchar(32);
+              ALTER TABLE feature_default_provider
+                ALTER COLUMN feature TYPE varchar(32);
+              ALTER TABLE feature_tier_model
+                ALTER COLUMN feature TYPE varchar(32);
+
+              ALTER TABLE feature_binding
+                DROP CONSTRAINT IF EXISTS ck_feature_binding_feature;
+              ALTER TABLE feature_binding
+                ADD CONSTRAINT ck_feature_binding_feature
+                CHECK (feature IN (
+                  'CHAT',
+                  'TRIAGE',
+                  'DRAFT',
+                  'RULE_AUTHORING',
+                  'RULE_PREVIEW_SEMANTIC',
+                  'TRIAGE_SEMANTIC',
+                  'DRIFT_CHECK'
+                ));
+
+              ALTER TABLE feature_default_provider
+                DROP CONSTRAINT IF EXISTS ck_fdp_feature;
+              ALTER TABLE feature_default_provider
+                ADD CONSTRAINT ck_fdp_feature
+                CHECK (feature IN (
+                  'CHAT',
+                  'TRIAGE',
+                  'DRAFT',
+                  'RULE_AUTHORING',
+                  'RULE_PREVIEW_SEMANTIC',
+                  'TRIAGE_SEMANTIC',
+                  'DRIFT_CHECK'
+                ));
+
+              INSERT INTO feature_binding (model_id, feature, enabled, created_at)
+              VALUES
+                ('openai/gpt-5.4-nano', 'RULE_AUTHORING', true, now()),
+                ('openai/gpt-5.4-nano', 'RULE_PREVIEW_SEMANTIC', true, now()),
+                ('openai/gpt-5.4-nano', 'TRIAGE_SEMANTIC', true, now()),
+                ('openai/gpt-5.4-nano', 'DRIFT_CHECK', true, now())
+              ON CONFLICT (model_id, feature)
+              DO UPDATE SET enabled = true;
+
+              INSERT INTO feature_default_provider (feature, provider, tier, updated_at)
+              VALUES
+                ('RULE_AUTHORING', 'OPENROUTER', 'PRIMARY', now()),
+                ('RULE_PREVIEW_SEMANTIC', 'OPENROUTER', 'PRIMARY', now()),
+                ('TRIAGE_SEMANTIC', 'OPENROUTER', 'PRIMARY', now()),
+                ('DRIFT_CHECK', 'OPENROUTER', 'PRIMARY', now())
+              ON CONFLICT (feature, tier)
+              DO UPDATE SET provider = EXCLUDED.provider, updated_at = now();
+
+              INSERT INTO feature_tier_model (feature, tier, position, model_id, updated_at)
+              VALUES
+                ('RULE_AUTHORING', 'PRIMARY', 1, 'openai/gpt-5.4-nano', now()),
+                ('RULE_PREVIEW_SEMANTIC', 'PRIMARY', 1, 'openai/gpt-5.4-nano', now()),
+                ('TRIAGE_SEMANTIC', 'PRIMARY', 1, 'openai/gpt-5.4-nano', now()),
+                ('DRIFT_CHECK', 'PRIMARY', 1, 'openai/gpt-5.4-nano', now())
+              ON CONFLICT (feature, tier, position)
+              DO UPDATE SET model_id = EXCLUDED.model_id, updated_at = now();
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              DELETE FROM feature_tier_model
+              WHERE feature IN (
+                'RULE_AUTHORING',
+                'RULE_PREVIEW_SEMANTIC',
+                'TRIAGE_SEMANTIC',
+                'DRIFT_CHECK'
+              );
+
+              DELETE FROM feature_default_provider
+              WHERE feature IN (
+                'RULE_AUTHORING',
+                'RULE_PREVIEW_SEMANTIC',
+                'TRIAGE_SEMANTIC',
+                'DRIFT_CHECK'
+              );
+
+              DELETE FROM feature_binding
+              WHERE feature IN (
+                'RULE_AUTHORING',
+                'RULE_PREVIEW_SEMANTIC',
+                'TRIAGE_SEMANTIC',
+                'DRIFT_CHECK'
+              );
+
+              ALTER TABLE feature_binding
+                DROP CONSTRAINT IF EXISTS ck_feature_binding_feature;
+              ALTER TABLE feature_binding
+                ADD CONSTRAINT ck_feature_binding_feature
+                CHECK (feature IN ('CHAT','TRIAGE','DRAFT'));
+
+              ALTER TABLE feature_default_provider
+                DROP CONSTRAINT IF EXISTS ck_fdp_feature;
+              ALTER TABLE feature_default_provider
+                ADD CONSTRAINT ck_fdp_feature
+                CHECK (feature IN ('CHAT','TRIAGE','DRAFT'));
+
+              ALTER TABLE feature_tier_model
+                ALTER COLUMN feature TYPE varchar(16);
+              ALTER TABLE feature_default_provider
+                ALTER COLUMN feature TYPE varchar(16);
+              ALTER TABLE feature_binding
+                ALTER COLUMN feature TYPE varchar(16);

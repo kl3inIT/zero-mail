@@ -3,16 +3,11 @@
 # See: https://github.com/openai/codex/blob/main/docs/config.md
 
 [mcp_servers.postgres]
-command = 'C:\Program Files\Docker\Docker\resources\bin\docker.exe'
+command = "powershell.exe"
 args = [
-  "run",
-  "-i",
-  "--rm",
-  "-e",
-  "DATABASE_URI",
-  "crystaldba/postgres-mcp",
-  "--access-mode=unrestricted",
+  "-NoProfile",
+  "-ExecutionPolicy",
+  "Bypass",
+  "-File",
+  "scripts/mcp/postgres-mcp.ps1",
 ]
-
-[mcp_servers.postgres.env]
-DATABASE_URI = "postgresql://zeromail:zeromail@host.docker.internal:15432/zeromail"

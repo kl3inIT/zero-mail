@@ -46,6 +46,22 @@ class LlmGatewayBoundaryTest {
     }
 
     @Test
+    void llm_runtime_routing_does_not_depend_on_admin_catalog() {
+        JavaClasses importedClasses = importProductionClasses();
+
+        noClasses()
+                .that()
+                .resideInAPackage("..core.llm..")
+                .should()
+                .dependOnClassesThat()
+                .resideInAnyPackage("..core.admin..")
+                .because(
+                        "runtime LLM routing is owned by core.llm.routing; admin may adapt to it, "
+                                + "but core.llm must not import admin catalog types.")
+                .check(importedClasses);
+    }
+
+    @Test
     void jsoup_and_jtokkit_only_in_gateway_sanitization() {
         JavaClasses importedClasses = importProductionClasses();
 

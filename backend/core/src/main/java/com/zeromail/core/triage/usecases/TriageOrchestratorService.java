@@ -20,6 +20,7 @@ import com.zeromail.core.rules.domain.RuleEvaluationInput;
 import com.zeromail.core.rules.domain.RuleEvaluationResult;
 import com.zeromail.core.rules.domain.RuleEvaluator;
 import com.zeromail.core.rules.domain.SemanticIntentMatcher;
+import com.zeromail.core.rules.usecases.RuleAutomationSettingsService;
 import com.zeromail.core.rules.usecases.RuleManagementService;
 import com.zeromail.core.tenant.TenantContext;
 import com.zeromail.core.tenant.usecases.TenantService;
@@ -72,10 +73,16 @@ public class TriageOrchestratorService {
     private static final Logger log = LoggerFactory.getLogger(TriageOrchestratorService.class);
     private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder().build();
     private static final int REASON_MAX_LENGTH = 512;
+    private static final String AUTO_SEND_DISABLED = "AUTO_SEND_DISABLED";
+    private static final String SENDER_SAFETY_NET = "SENDER_SAFETY_NET";
+    private static final String LOW_TRUST_STATIC_FROM = "LOW_TRUST_STATIC_FROM";
+    private static final String TENANT_CONTEXT_MISMATCH = "TENANT_CONTEXT_MISMATCH";
+    private static final String OUTBOUND_SEND_FAILED = "OUTBOUND_SEND_FAILED";
 
     private final TenantService tenantService;
     private final TriageRuleEvaluationInputFactory triageRuleEvaluationInputFactory;
     private final RuleManagementService ruleManagementService;
+    private final RuleAutomationSettingsService ruleAutomationSettingsService;
     private final LlmGateway llmGateway;
     private final CreditLedger creditLedger;
     private final ActionProposalMerger actionProposalMerger;
@@ -92,6 +99,7 @@ public class TriageOrchestratorService {
             TenantService tenantService,
             TriageRuleEvaluationInputFactory triageRuleEvaluationInputFactory,
             RuleManagementService ruleManagementService,
+            RuleAutomationSettingsService ruleAutomationSettingsService,
             LlmGateway llmGateway,
             CreditLedger creditLedger,
             SenderSafetyNetService senderSafetyNetService,
@@ -103,6 +111,7 @@ public class TriageOrchestratorService {
         this.tenantService = tenantService;
         this.triageRuleEvaluationInputFactory = triageRuleEvaluationInputFactory;
         this.ruleManagementService = ruleManagementService;
+        this.ruleAutomationSettingsService = ruleAutomationSettingsService;
         this.llmGateway = llmGateway;
         this.creditLedger = creditLedger;
         this.actionProposalMerger = new ActionProposalMerger();
@@ -152,6 +161,9 @@ public class TriageOrchestratorService {
         if (ruleExecutionCandidates.isEmpty()) {
             return OrchestrationResult.empty();
         }
+        boolean autoSendRulesEnabled =
+                ruleAutomationSettingsService.readOrDefault(tenantId).autoSendRulesEnabled();
+        Map<UUID, Boolean> senderAnchoredByRuleId = senderAnchoredByRuleId(ruleExecutionCandidates);
 
         // semanticEvalContent is a sanitized subject excerpt plus content-free metadata flags only.
         String semanticEvalContent = buildSemanticEvalContent(ruleEvaluationInput);
@@ -175,7 +187,11 @@ public class TriageOrchestratorService {
                         observedEvent.gmailMessageId(),
                         triageRuleEvaluationInput,
                         senderProtected(
-                                tenantId, triageInput.get().sanitizedSenderEmail(), observedEvent));
+                                tenantId,
+                                triageRuleEvaluationInput.sanitizedSenderEmail(),
+                                observedEvent),
+                        autoSendRulesEnabled,
+                        senderAnchoredByRuleId);
         int appliedActions = handleProposals(dispatchContext, mergeResult.proposals());
         return new OrchestrationResult(appliedActions);
     }
@@ -190,7 +206,13 @@ public class TriageOrchestratorService {
             UUID tenantId,
             String gmailMessageId,
             TriageRuleEvaluationInput triageRuleEvaluationInput,
-            boolean senderProtected) {
+            boolean senderProtected,
+            boolean autoSendRulesEnabled,
+            Map<UUID, Boolean> senderAnchoredByRuleId) {
+
+        private TriageDispatchContext {
+            senderAnchoredByRuleId = Map.copyOf(senderAnchoredByRuleId);
+        }
 
         String gmailThreadId() {
             return triageRuleEvaluationInput.gmailThreadId();
@@ -250,15 +272,17 @@ public class TriageOrchestratorService {
                 continue;
             }
 
-            if (dispatchContext.senderProtected()) {
-                triageAuditSaga.recordTerminal(
-                        commandFor(dispatchContext, actionProposal, actionType, false),
-                        TriageDecision.REJECTED_BY_SAFETY_NET);
-                continue;
-            }
+            boolean outboundAction = isOutboundAction(actionType);
+            String outboundFallbackReason =
+                    outboundAction ? outboundFallbackReason(dispatchContext, actionProposal) : null;
 
             TriageAuditCommand command =
-                    commandFor(dispatchContext, actionProposal, actionType, true);
+                    commandFor(
+                            dispatchContext,
+                            actionProposal,
+                            actionType,
+                            true,
+                            outboundFallbackReason);
             String leaseOwner = "triage-orchestrator-" + UUID.randomUUID();
             ReservePhaseResult reservePhaseResult =
                     triageAuditSaga.reservePhase(command, leaseOwner);
@@ -268,7 +292,8 @@ public class TriageOrchestratorService {
             }
             UUID auditId = reservePhaseResult.auditId().orElseThrow();
             try {
-                GmailWriteResult gmailWriteResult = triageAuditSaga.gmailWritePhase(command);
+                GmailWriteResult gmailWriteResult =
+                        executeGmailPhase(command, auditId, outboundAction, outboundFallbackReason);
                 triageAuditSaga.finalizePhase(
                         dispatchContext.tenantId(), auditId, gmailWriteResult);
                 if (gmailWriteResult.applied()
@@ -276,7 +301,7 @@ public class TriageOrchestratorService {
                     classifyAfterDraftSaved(dispatchContext, gmailWriteResult.externalRef());
                 }
                 appliedActions++;
-            } catch (IOException gmailWriteFailure) {
+            } catch (IOException | RuntimeException gmailWriteFailure) {
                 triageAuditSaga.finalizePhase(
                         dispatchContext.tenantId(),
                         auditId,
@@ -286,11 +311,50 @@ public class TriageOrchestratorService {
         return appliedActions;
     }
 
+    private GmailWriteResult executeGmailPhase(
+            TriageAuditCommand command,
+            UUID auditId,
+            boolean outboundAction,
+            String outboundFallbackReason)
+            throws IOException {
+        if (!outboundAction) {
+            return triageAuditSaga.gmailWritePhase(command);
+        }
+        if (TENANT_CONTEXT_MISMATCH.equals(outboundFallbackReason)) {
+            return GmailWriteResult.failed(TENANT_CONTEXT_MISMATCH);
+        }
+        if (outboundFallbackReason != null) {
+            return triageAuditSaga.outboundDraftFallbackPhase(
+                    command, auditId, outboundFallbackReason);
+        }
+        try {
+            return triageAuditSaga.outboundSendPhase(command, auditId);
+        } catch (IOException | RuntimeException outboundSendFailure) {
+            log.warn(
+                    "event=triage_outbound_send_fallback tenantId={} gmailMessageId={} actionType={} failureClass={}",
+                    command.tenantId(),
+                    command.gmailMessageId(),
+                    command.actionType(),
+                    outboundSendFailure.getClass().getSimpleName());
+            return triageAuditSaga.outboundDraftFallbackPhase(
+                    command, auditId, OUTBOUND_SEND_FAILED);
+        }
+    }
+
     private TriageAuditCommand commandFor(
             TriageDispatchContext dispatchContext,
             ActionProposal actionProposal,
             RuleActionType actionType,
             boolean generateDraftBody) {
+        return commandFor(dispatchContext, actionProposal, actionType, generateDraftBody, null);
+    }
+
+    private TriageAuditCommand commandFor(
+            TriageDispatchContext dispatchContext,
+            ActionProposal actionProposal,
+            RuleActionType actionType,
+            boolean generateDraftBody,
+            String fallbackReason) {
         TriageActionResult preWriteIntent =
                 preWriteIntent(dispatchContext, actionProposal.actionIntent(), generateDraftBody);
         TriageRuleEvaluationInput evaluationContext = dispatchContext.triageRuleEvaluationInput();
@@ -305,7 +369,7 @@ public class TriageOrchestratorService {
                 actionType,
                 preWriteIntent,
                 replyHeadersFor(preWriteIntent, evaluationContext),
-                reasonEvidence(actionProposal));
+                reasonEvidence(actionProposal, fallbackReason));
     }
 
     private TriageActionResult preWriteIntent(
@@ -332,6 +396,44 @@ public class TriageOrchestratorService {
                 yield new TriageActionResult.SaveDraft(
                         draftBody, null, dispatchContext.gmailThreadId());
             }
+            case ActionIntent.MarkRead ignored -> new TriageActionResult.MarkRead();
+            case ActionIntent.Star ignored -> new TriageActionResult.Star();
+            case ActionIntent.AddToDigest ignored -> new TriageActionResult.AddToDigest();
+            case ActionIntent.MarkSpam ignored -> new TriageActionResult.MarkSpam();
+            case ActionIntent.SendReply sendReply -> {
+                TriageRuleEvaluationInput triageRuleEvaluationInput =
+                        dispatchContext.triageRuleEvaluationInput();
+                String draftBody =
+                        generateDraftBody
+                                ? draftBodyGenerator.generate(
+                                        dispatchContext.tenantId(),
+                                        dispatchContext.gmailThreadId(),
+                                        draftGenerationSource(triageRuleEvaluationInput)
+                                                + "\nactionInstruction="
+                                                + sendReply.instruction(),
+                                        triageRuleEvaluationInput
+                                                .evaluationInput()
+                                                .sanitizedSubjectExcerpt())
+                                : sendReply.instruction();
+                yield new TriageActionResult.SendReply(
+                        draftBody,
+                        dispatchContext.gmailMessageId(),
+                        dispatchContext.gmailThreadId());
+            }
+            case ActionIntent.ForwardEmail forwardEmail -> {
+                String draftBody =
+                        forwardEmail.instruction() == null
+                                ? "Forwarding this email for review."
+                                : forwardEmail.instruction();
+                yield new TriageActionResult.ForwardEmail(forwardEmail.recipients(), draftBody);
+            }
+            case ActionIntent.SendEmail sendEmail ->
+                    new TriageActionResult.SendEmail(
+                            sendEmail.to(),
+                            sendEmail.cc(),
+                            sendEmail.bcc(),
+                            sendEmail.subject(),
+                            sendEmail.draftBody());
         };
     }
 
@@ -342,7 +444,8 @@ public class TriageOrchestratorService {
     private ReplyHeaders replyHeadersFor(
             TriageActionResult preWriteIntent,
             TriageRuleEvaluationInput triageRuleEvaluationInput) {
-        if (!(preWriteIntent instanceof TriageActionResult.SaveDraft)) {
+        if (!(preWriteIntent instanceof TriageActionResult.SaveDraft
+                || preWriteIntent instanceof TriageActionResult.SendReply)) {
             return null;
         }
         return ReplyHeaders.of(
@@ -732,6 +835,24 @@ public class TriageOrchestratorService {
                             case SAVE_DRAFT ->
                                     new ActionIntent.SaveDraft(
                                             text(actionIntentNode, "instruction", "draftIntent"));
+                            case MARK_READ -> new ActionIntent.MarkRead();
+                            case STAR -> new ActionIntent.Star();
+                            case ADD_TO_DIGEST -> new ActionIntent.AddToDigest();
+                            case MARK_SPAM -> new ActionIntent.MarkSpam();
+                            case SEND_REPLY ->
+                                    new ActionIntent.SendReply(
+                                            text(actionIntentNode, "instruction", "body"));
+                            case FORWARD_EMAIL ->
+                                    new ActionIntent.ForwardEmail(
+                                            recipients(actionIntentNode, "recipients", "to"),
+                                            optionalText(actionIntentNode, "instruction", null));
+                            case SEND_EMAIL ->
+                                    new ActionIntent.SendEmail(
+                                            recipients(actionIntentNode, "to", "recipients"),
+                                            optionalRecipients(actionIntentNode, "cc"),
+                                            optionalRecipients(actionIntentNode, "bcc"),
+                                            text(actionIntentNode, "subject"),
+                                            text(actionIntentNode, "body"));
                         });
             }
             return List.copyOf(actionIntents);
@@ -766,6 +887,44 @@ public class TriageOrchestratorService {
         return fieldNode.asString();
     }
 
+    private static List<String> recipients(
+            JsonNode jsonNode, String primaryFieldName, String fallbackFieldName) {
+        JsonNode recipientNode = jsonNode.path(primaryFieldName);
+        if ((recipientNode.isMissingNode() || recipientNode.isNull())
+                && !primaryFieldName.equals(fallbackFieldName)) {
+            recipientNode = jsonNode.path(fallbackFieldName);
+        }
+        if (recipientNode.isMissingNode() || recipientNode.isNull()) {
+            throw new IllegalArgumentException(primaryFieldName + " is required");
+        }
+        return recipientArray(recipientNode, primaryFieldName);
+    }
+
+    private static List<String> optionalRecipients(JsonNode jsonNode, String fieldName) {
+        JsonNode recipientNode = jsonNode.path(fieldName);
+        if (recipientNode.isMissingNode() || recipientNode.isNull()) {
+            return List.of();
+        }
+        return recipientArray(recipientNode, fieldName);
+    }
+
+    private static List<String> recipientArray(JsonNode recipientNode, String fieldName) {
+        if (recipientNode.isString()) {
+            return List.of(recipientNode.asString());
+        }
+        if (!recipientNode.isArray()) {
+            throw new IllegalArgumentException(fieldName + " must be an array");
+        }
+        ArrayList<String> recipients = new ArrayList<>();
+        for (JsonNode singleRecipientNode : recipientNode) {
+            if (!singleRecipientNode.isString()) {
+                throw new IllegalArgumentException(fieldName + " must contain strings");
+            }
+            recipients.add(singleRecipientNode.asString());
+        }
+        return List.copyOf(recipients);
+    }
+
     private static String optionalText(JsonNode jsonNode, String fieldName, String fallbackValue) {
         JsonNode fieldNode = jsonNode.path(fieldName);
         if (fieldNode.isMissingNode() || fieldNode.isNull() || !fieldNode.isValueNode()) {
@@ -798,15 +957,80 @@ public class TriageOrchestratorService {
         return actionProposal.contributingRuleNames().getFirst();
     }
 
-    private static String reasonEvidence(ActionProposal actionProposal) {
+    private static String reasonEvidence(ActionProposal actionProposal, String fallbackReason) {
         String reason =
                 "ruleIds="
                         + join(actionProposal.contributingRuleIds())
                         + ";evidenceIds="
                         + String.join(",", actionProposal.evidenceIds());
+        if (fallbackReason != null && !fallbackReason.isBlank()) {
+            reason = reason + ";outboundFallbackReason=" + fallbackReason;
+        }
         return reason.length() <= REASON_MAX_LENGTH
                 ? reason
                 : reason.substring(0, REASON_MAX_LENGTH);
+    }
+
+    private static boolean isOutboundAction(RuleActionType actionType) {
+        return switch (actionType) {
+            case SEND_REPLY, FORWARD_EMAIL, SEND_EMAIL -> true;
+            case LABEL, ARCHIVE, SAVE_DRAFT, MARK_READ, STAR, ADD_TO_DIGEST, MARK_SPAM -> false;
+        };
+    }
+
+    private String outboundFallbackReason(
+            TriageDispatchContext dispatchContext, ActionProposal actionProposal) {
+        Optional<String> currentTenant = TenantContext.currentOptional();
+        if (currentTenant.isEmpty()
+                || !currentTenant.get().equals(dispatchContext.tenantId().toString())) {
+            return TENANT_CONTEXT_MISMATCH;
+        }
+        if (!dispatchContext.autoSendRulesEnabled()) {
+            return AUTO_SEND_DISABLED;
+        }
+        if (dispatchContext.senderProtected()) {
+            return SENDER_SAFETY_NET;
+        }
+        if (!allContributingRulesHaveSenderAnchor(dispatchContext, actionProposal)) {
+            return LOW_TRUST_STATIC_FROM;
+        }
+        return null;
+    }
+
+    private static boolean allContributingRulesHaveSenderAnchor(
+            TriageDispatchContext dispatchContext, ActionProposal actionProposal) {
+        for (UUID ruleId : actionProposal.contributingRuleIds()) {
+            if (!dispatchContext.senderAnchoredByRuleId().getOrDefault(ruleId, false)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static Map<UUID, Boolean> senderAnchoredByRuleId(
+            List<RuleExecutionCandidate> ruleExecutionCandidates) {
+        LinkedHashMap<UUID, Boolean> senderAnchoredByRuleId = new LinkedHashMap<>();
+        for (RuleExecutionCandidate ruleExecutionCandidate : ruleExecutionCandidates) {
+            senderAnchoredByRuleId.put(
+                    ruleExecutionCandidate.ruleId(),
+                    matcherRequiresTrustedSender(ruleExecutionCandidate.matcherNode()));
+        }
+        return Map.copyOf(senderAnchoredByRuleId);
+    }
+
+    private static boolean matcherRequiresTrustedSender(MatcherNode matcherNode) {
+        return switch (matcherNode) {
+            case MatcherNode.SenderEmailMatcher ignored -> true;
+            case MatcherNode.SenderDomainMatcher ignored -> true;
+            case MatcherNode.AllMatcher allMatcher ->
+                    allMatcher.children().stream()
+                            .anyMatch(TriageOrchestratorService::matcherRequiresTrustedSender);
+            case MatcherNode.AnyMatcher anyMatcher ->
+                    anyMatcher.children().stream()
+                            .allMatch(TriageOrchestratorService::matcherRequiresTrustedSender);
+            case MatcherNode.NotMatcher ignored -> false;
+            default -> false;
+        };
     }
 
     private static String join(List<UUID> values) {

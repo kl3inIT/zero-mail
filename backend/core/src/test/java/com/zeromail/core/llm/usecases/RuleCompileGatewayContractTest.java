@@ -102,6 +102,7 @@ class RuleCompileGatewayContractTest {
                 "openai/gpt-5.4-nano",
                 "openai/gpt-5.4-nano",
                 "openai/gpt-5.4-nano",
+                "openai/gpt-5.4-nano",
                 null,
                 null);
     }

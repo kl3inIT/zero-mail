@@ -70,15 +70,33 @@ openApi {
     // Bind to an unusual port (59280) so the emit task never collides with a
     // dev `bootRun` (8080) or Windows Hyper-V's common excluded port ranges.
     customBootRun {
-        // Pass the docker-compose file as an absolute path so the working
-        // directory of the forked JVM does not matter (setting workingDir
-        // makes Gradle 9 try to hash the entire repo root as a task input,
-        // which fails on locked .gradle/ files). The path is resolved here
-        // at configuration time from the rootProject layout.
+        fun dotenvValue(name: String): String? =
+            rootProject.file(".env.local")
+                .takeIf { it.isFile }
+                ?.readLines()
+                ?.asSequence()
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() && !it.startsWith("#") && it.startsWith("$name=") }
+                ?.map { it.substringAfter("=").trim().trim('"', '\'') }
+                ?.firstOrNull()
+
+        val dbUrl =
+            System.getenv("DB_URL")
+                ?: dotenvValue("DB_URL")
+                ?: "jdbc:postgresql://localhost:5555/zeromail_dev?sslmode=disable"
+        val dbUser = System.getenv("DB_USER") ?: dotenvValue("DB_USER") ?: "zeromail_dev"
+        val dbPassword = System.getenv("DB_PASSWORD") ?: dotenvValue("DB_PASSWORD") ?: ""
+        val redisHost = System.getenv("REDIS_HOST") ?: dotenvValue("REDIS_HOST") ?: "localhost"
+        val redisPort = System.getenv("REDIS_PORT") ?: dotenvValue("REDIS_PORT") ?: "6379"
         args.set(
             listOf(
                 "--server.port=59280",
-                "--spring.docker.compose.file=" + rootProject.file("docker-compose.yml").absolutePath,
+                "--spring.docker.compose.enabled=false",
+                "--spring.datasource.url=$dbUrl",
+                "--spring.datasource.username=$dbUser",
+                "--spring.datasource.password=$dbPassword",
+                "--spring.data.redis.host=$redisHost",
+                "--spring.data.redis.port=$redisPort",
                 // Dummy OAuth2 + crypto credentials so the boot succeeds without real env
                 // vars. The spec emit only needs the controllers/DTOs introspected — runtime
                 // OAuth and crypto are never exercised. These literals are NEVER committed
@@ -105,7 +123,7 @@ openApi {
             )
         )
     }
-    apiDocsUrl.set("http://localhost:59280/v3/api-docs")
+    apiDocsUrl.set("http://localhost:59280/v3/api-docs/public")
     outputDir.set(rootProject.file("apps/web/openapi"))
     outputFileName.set("openapi.json")
     waitTimeInSeconds.set(180)

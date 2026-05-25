@@ -862,8 +862,8 @@
       "title": "Vietnamese-first"
     },
     "f5": {
-      "desc": "Zero Mail labels, archives, and saves drafts. It will never send a message without your review.",
-      "title": "No auto-send"
+      "desc": "Zero Mail labels, archives, drafts, and sends only through your Auto-send rules setting plus outbound safety gates.",
+      "title": "Safety-gated outbound"
     },
     "f6": {
       "desc": "Disconnect Gmail or delete your account from Settings. Tokens deleted immediately.",
@@ -931,7 +931,7 @@
       "title": "Write rules in plain English"
     },
     "step3": {
-      "desc": "Every action is logged and reversible. Approve drafts before they go out. Nothing is ever sent on your behalf.",
+      "desc": "Every action is logged and reversible. Outbound sends run only when your Auto-send rules setting and safety gates allow them.",
       "title": "Review the triage queue"
     },
     "title": "Three steps. No new inbox to learn."
@@ -1045,19 +1045,19 @@
   },
   "landing": {
     "bullets": {
-      "noAutoSend": "No auto-send",
+      "noAutoSend": "Safety-gated sends",
       "readOnlyPrompts": "Read-only AI prompts",
       "reversibleActions": "Reversible actions"
     },
     "continueSetupCta": "Continue setup",
     "eyebrow": "Gmail · Private beta · v1",
     "heading": {
-      "accent": "the send button.",
+      "accent": "the controls.",
       "line1": "Inbox zero,",
-      "line2": "without handing AI"
+      "line2": "without losing"
     },
     "metrics": {
-      "autoSendsEver": "auto-sends ever",
+      "autoSendsEver": "safety-gated sends",
       "emailsProcessed": "emails processed",
       "triageAccuracy": "triage accuracy",
       "triagePerEmail": "triage per email"
@@ -1580,27 +1580,55 @@
     }
   },
   "rules": {
+    "actions": {
+      "autoSendAllowed": "Can auto-send",
+      "autoSendChecking": "Checking",
+      "available": "Available",
+      "description": "A quick reference for what a rule can ask the AI to do.",
+      "draftFallback": "Saves draft",
+      "empty": "No enabled catalog actions yet.",
+      "error": "Could not load available actions.",
+      "risk": {
+        "high": "High risk",
+        "low": "Low risk",
+        "medium": "Medium risk"
+      },
+      "saveDraftInstead": "Saves draft",
+      "title": "Available actions",
+      "unavailableReason": "Status: {status}",
+      "willAutoSend": "Can auto-send"
+    },
     "composer": {
       "actionReview": "Allowed actions",
-      "allowedActionsNote": "v1 actions are limited to label, archive from Inbox, and save Gmail draft. Zero Mail does not auto-send, forward, delete, mark spam, or call webhooks.",
+      "allowedActionsNote": "Rules are saved as clear criteria and actions. Email-sending actions run only when safety checks and your auto-send setting allow them.",
       "answerClarification": "Send answer",
       "answerLabel": "Your answer",
       "compileCta": "Convert to rule",
       "compiledReview": "Rule to save",
       "compiling": "Checking...",
-      "example": {
-        "calendar": "Label calendar invitations and schedule updates as Calendar",
-        "newsletters": "Label newsletters as Reading, but do not archive customer emails",
-        "receipts": "Archive receipts from Stripe and label them Finance"
+      "examples": {
+        "addSelected": "Add selected ({count})",
+        "backToPersonas": "Clear persona",
+        "body": "Use a starter example if you do not want to write from scratch.",
+        "changePersona": "Change persona",
+        "chooseExampleTitle": "Choose examples",
+        "choosePersonaTitle": "Choose persona",
+        "count": "{count} examples",
+        "empty": "No enabled examples for this persona yet.",
+        "error": "Examples are not available right now. You can still write your own rule.",
+        "multiPromptPrefix": "Add the following rules:",
+        "title": "Choose from examples"
       },
-      "examplesHint": "Suggestions — click to insert:",
+      "examplesHint": "Catalog examples",
       "invalid": "This rule is not ready to save. Edit the wording or answer the clarification.",
       "matcherReview": "Matched email",
       "newRuleCta": "Create rule",
-      "saveDisabledCta": "Save (stays off until preview)",
+      "personaFallback": "Choose persona",
+      "personaLabel": "Example persona",
+      "saveDisabledCta": "Save",
       "saving": "Saving...",
       "sourceLabel": "Which emails should Zero Mail match, and what should it do?",
-      "sourcePlaceholder": "Example: Archive receipts from Stripe and label them Finance",
+      "sourcePlaceholder": "Describe the emails to match and what Zero Mail should do",
       "tab": {
         "describe": "Describe",
         "manual": "Review & edit"
@@ -1645,18 +1673,46 @@
     },
     "manual": {
       "action": {
+        "add_to_digest": "Add to digest",
         "archive": "Archive",
+        "forward_email": "Forward",
         "label": "Label",
-        "save_draft": "Save draft"
+        "mark_read": "Mark read",
+        "mark_spam": "Mark spam",
+        "save_draft": "Save draft",
+        "send_email": "Send email",
+        "send_reply": "Send reply",
+        "star": "Star"
+      },
+      "actionField": {
+        "bcc": "Bcc",
+        "body": "Body",
+        "cc": "Cc",
+        "instruction": "Instruction",
+        "recipients": "Recipients",
+        "subject": "Subject",
+        "to": "To"
       },
       "actionPlaceholder": {
+        "add_to_digest": "No value needed",
         "archive": "No value needed",
+        "bcc": "bcc@example.com",
+        "body": "Email body you want Zero Mail to send.",
+        "cc": "cc@example.com",
+        "forward_email": "ops@example.com",
+        "forwardInstruction": "Forward with a short note",
         "label": "Finance",
-        "save_draft": "Draft a short reply asking for the invoice PDF"
+        "mark_read": "No value needed",
+        "mark_spam": "No value needed",
+        "save_draft": "Draft a short reply asking for the invoice PDF",
+        "send_email": "founder@example.com",
+        "send_reply": "Send a short thank-you and say I will follow up",
+        "star": "No value needed",
+        "subject": "Today update"
       },
       "addAction": "Add action",
       "addCondition": "Add condition",
-      "advancedTitle": "Locked in v1",
+      "advancedTitle": "How AI sends email",
       "condition": {
         "GMAIL_LABEL_PRESENT": "Gmail label present",
         "HAS_ATTACHMENT": "Has attachment",
@@ -1684,19 +1740,24 @@
         "all": "Match all",
         "any": "Match any"
       },
+      "outbound": {
+        "autoSend": "Can send automatically when safe",
+        "deleteDisabled": "Permanent delete is disabled",
+        "fallbackDraft": "If not safe enough, save a Gmail draft",
+        "webhookDisabled": "Webhook is not supported"
+      },
       "refineCta": "Update form",
       "refineLabel": "Refine with another instruction",
       "refinePlaceholder": "Example: exclude course ads, or only match deadlines and assignments",
       "removeAction": "Remove action",
       "removeCondition": "Remove condition",
-      "saveHint": "New or edited rules are saved off until you preview them.",
       "structuredPreview": "Rule to save",
-      "thenBody": "Choose only the safe v1 actions Zero Mail may take.",
+      "thenBody": "Choose what Zero Mail should do when an email matches. If the action sends email, safety checks still run before sending.",
       "thenTitle": "Allowed actions",
       "unsafe": {
-        "autoSend": "Auto-send disabled",
-        "delete": "Delete/spam disabled",
-        "forward": "Forward disabled",
+        "autoSend": "Auto-send rules",
+        "delete": "Spam with audit trail",
+        "forward": "Forward through safety gates",
         "webhook": "Webhook disabled"
       },
       "whenBody": "Choose the signals Zero Mail checks before taking action.",
@@ -1761,6 +1822,16 @@
       "a4": "amex.com — refund notice"
     },
     "ruleN": "Rule 1 of 5",
+    "settings": {
+      "autoSend": {
+        "bodyOff": "Rules still save, but email-sending actions create Gmail drafts for you to review and send.",
+        "bodyOn": "When a rule asks to reply, forward, or send a new email, Zero Mail can send it if safety checks pass.",
+        "footerOff": "Turning this off does not block saving rules; it changes email-sending actions to Gmail drafts.",
+        "footerOn": "Email-sending rules still pass safety checks, send limits, and audit logging.",
+        "title": "Rule auto-send",
+        "toggleLabel": "Allow rules to send email"
+      }
+    },
     "tabs": {
       "calendar": "Calendar invites",
       "creditBadge": "Uses credits",
@@ -1780,13 +1851,6 @@
       "testGmail": "Real Gmail",
       "testIntro": "By default, testing runs on {count} enabled rules.",
       "testModeLabel": "Test mode"
-    },
-    "templates": {
-      "browseCta": "Browse templates",
-      "disabledByDefault": "Saved disabled until previewed",
-      "materialized": "Materialized",
-      "title": "Starter templates",
-      "useStarter": "Use starter rule"
     },
     "testCustom": {
       "bodyLabel": "Email body",
@@ -1869,8 +1933,9 @@
     "privacy": {
       "byokPlanned": "Coming soon: you can bring your own API key (BYOK)",
       "heading": "Privacy and safety",
-      "noAutoSend": "No auto-send",
+      "noAutoSend": "Email-sending actions are controlled by safety checks and the auto-send switch in AI configuration.",
       "noBodyStorage": "No long-term storage of email bodies, prompts, or AI completions",
+      "outboundControl": "Email-sending actions are controlled by safety checks and the auto-send switch in AI configuration.",
       "revokeAnytime": "You can revoke access anytime"
     },
     "title": "Settings",
@@ -2031,8 +2096,8 @@
       "soc": "SOC 2 in progress"
     },
     "c1": {
-      "body": "Drafts land in Gmail's drafts folder. You read, edit, and hit send. There is no setting that lets the AI deliver mail on your behalf.",
-      "title": "No auto-send. Ever."
+      "body": "Outbound rule sends require your Auto-send rules setting and safety gates. If either blocks, Zero Mail saves a Gmail draft instead.",
+      "title": "Outbound is gated."
     },
     "c2": {
       "body": "Raw email bodies, LLM prompts, completions, and embeddings are discarded after each triage run. Only metadata and your audit log persist.",
@@ -2049,8 +2114,8 @@
     "desc": "Auto-triage only works if you can fully trust it with a real inbox. We engineered Zero Mail around three hard guarantees — and made every one of them auditable.",
     "eyebrow": "Trust & safety",
     "p1": {
-      "body": "Zero Mail never sends a message on your behalf. Replies sit in your Gmail Drafts folder until you press Send.",
-      "title": "Drafts only — never auto-send"
+      "body": "Outbound automation is controlled by your Auto-send rules switch and safety gates. Blocked sends fall back to Gmail drafts.",
+      "title": "Outbound sends are gated"
     },
     "p2": {
       "body": "Your messages stay in Gmail. We process them in memory to apply your rules, then keep only the headers and an action log.",

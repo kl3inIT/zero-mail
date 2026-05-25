@@ -21,11 +21,13 @@ export type ChromeMockState = {
   availableCredits: number;
   needsReplyDraftStatus: DraftStatus;
   notificationPreferences: NotificationPreferences;
+  autoSendRulesEnabled: boolean;
   analyticsRequests: string[];
   notificationPreferenceUpdates: Array<{ digestEnabled: boolean; digestSendHourLocal: number }>;
   balanceRequests: number;
   draftRequests: string[];
   pauseRequests: Array<{ paused: boolean }>;
+  automationSettingUpdates: Array<{ autoSendRulesEnabled: boolean }>;
 };
 
 export const API_ROUTE_PATTERN = /^https?:\/\/[^/]+\/(?:me|api\/|gmail\/|tenant\/).*$/;
@@ -44,11 +46,13 @@ export function createChromeMockState(overrides: Partial<ChromeMockState> = {}):
       digestSendHourLocal: 20,
       timeZone: 'Asia/Ho_Chi_Minh',
     },
+    autoSendRulesEnabled: true,
     analyticsRequests: [],
     notificationPreferenceUpdates: [],
     balanceRequests: 0,
     draftRequests: [],
     pauseRequests: [],
+    automationSettingUpdates: [],
     ...overrides,
   };
 }
@@ -233,6 +237,50 @@ export async function installChromeApiMock(page: Page, state: ChromeMockState) {
       return;
     }
 
+    if (url.pathname === '/api/rules/catalog/examples' && request.method() === 'GET') {
+      await fulfillJson(route, {
+        personas: [
+          {
+            personaId: '00000000-0000-0000-0000-000000000001',
+            personaKey: 'founder',
+            displayName: url.searchParams.get('locale') === 'vi' ? 'Nhà sáng lập' : 'Founder',
+            icon: 'sparkles',
+            displayOrder: 10,
+            examples: [
+              {
+                exampleId: '00000000-0000-0000-0000-000000000101',
+                exampleText:
+                  url.searchParams.get('locale') === 'vi'
+                    ? 'Lưu trữ cập nhật từ nhà đầu tư'
+                    : 'Archive investor updates from portfolio companies',
+                displayOrder: 10,
+              },
+            ],
+          },
+        ],
+      });
+      return;
+    }
+
+    if (url.pathname === '/api/rules/catalog/actions' && request.method() === 'GET') {
+      await fulfillJson(route, { actions: ruleCatalogActions() });
+      return;
+    }
+
+    if (url.pathname === '/api/rules/settings/automation' && request.method() === 'GET') {
+      await fulfillJson(route, { autoSendRulesEnabled: state.autoSendRulesEnabled });
+      return;
+    }
+
+    if (url.pathname === '/api/rules/settings/automation' && request.method() === 'PUT') {
+      const payload = request.postDataJSON() as { autoSendRulesEnabled: boolean };
+      expect(typeof payload.autoSendRulesEnabled).toBe('boolean');
+      state.automationSettingUpdates.push(payload);
+      state.autoSendRulesEnabled = payload.autoSendRulesEnabled;
+      await fulfillJson(route, { autoSendRulesEnabled: state.autoSendRulesEnabled });
+      return;
+    }
+
     if (url.pathname === '/api/llm/byok' && request.method() === 'GET') {
       await route.fulfill({ status: 204, body: '' });
       return;
@@ -367,5 +415,43 @@ function analyticsSummary(window: AnalyticsWindow) {
         reverted: 0,
       },
     ],
+  };
+}
+
+function ruleCatalogActions() {
+  return [
+    ruleAction('label', 'Label', 'Apply a Gmail label.', 'LOW', 10),
+    ruleAction('archive', 'Archive', 'Remove matching messages from Inbox.', 'LOW', 20),
+    ruleAction('save_draft', 'Save draft', 'Create a Gmail draft.', 'MEDIUM', 30),
+    ruleAction('mark_read', 'Mark read', 'Mark matching messages as read.', 'LOW', 40),
+    ruleAction('star', 'Star', 'Star matching messages.', 'LOW', 50),
+    ruleAction(
+      'add_to_digest',
+      'Add to digest',
+      'Include matching messages in a digest.',
+      'LOW',
+      60,
+    ),
+    ruleAction('mark_spam', 'Mark spam', 'Move matching messages to spam.', 'MEDIUM', 70),
+    ruleAction('send_reply', 'Send reply', 'Automatically send a reply.', 'HIGH', 80),
+    ruleAction('forward_email', 'Forward', 'Automatically forward a message.', 'HIGH', 90),
+    ruleAction('send_email', 'Send email', 'Automatically send a new email.', 'HIGH', 100),
+  ];
+}
+
+function ruleAction(
+  actionKey: string,
+  label: string,
+  description: string,
+  riskLevel: string,
+  displayOrder: number,
+) {
+  return {
+    actionKey,
+    label,
+    description,
+    riskLevel,
+    availabilityStatus: 'AVAILABLE',
+    displayOrder,
   };
 }

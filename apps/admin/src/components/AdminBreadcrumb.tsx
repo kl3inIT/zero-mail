@@ -20,6 +20,7 @@ const ROUTE_LABELS: Record<string, string> = {
   '/audit': 'Nhật ký audit',
   '/role-grants': 'Phân quyền admin',
   '/master-keys': 'Quản lý LLM',
+  '/rule-catalog': 'Ví dụ tạo quy tắc',
   '/tenants': 'Khách hàng',
   '/queue': 'Hàng đợi',
   '/spend': 'Chi phí',

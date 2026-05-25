@@ -36,6 +36,10 @@ public class TriageGmailWriter {
     private static final Logger log = LoggerFactory.getLogger(TriageGmailWriter.class);
     private static final String USER_ID = "me";
     private static final String INBOX_LABEL_ID = "INBOX";
+    private static final String UNREAD_LABEL_ID = "UNREAD";
+    private static final String STARRED_LABEL_ID = "STARRED";
+    private static final String SPAM_LABEL_ID = "SPAM";
+    private static final String DIGEST_LABEL_NAME = "Zero Mail/Digest";
 
     private final GmailApiClientFactory gmailApiClientFactory;
 
@@ -81,6 +85,64 @@ public class TriageGmailWriter {
                 });
     }
 
+    public void markRead(UUID tenantId, String gmailMessageId) throws IOException {
+        removeSystemLabel(tenantId, gmailMessageId, UNREAD_LABEL_ID, "markRead");
+    }
+
+    public void markUnread(UUID tenantId, String gmailMessageId) throws IOException {
+        addSystemLabel(tenantId, gmailMessageId, UNREAD_LABEL_ID, "markUnread");
+    }
+
+    public void star(UUID tenantId, String gmailMessageId) throws IOException {
+        addSystemLabel(tenantId, gmailMessageId, STARRED_LABEL_ID, "star");
+    }
+
+    public void unstar(UUID tenantId, String gmailMessageId) throws IOException {
+        removeSystemLabel(tenantId, gmailMessageId, STARRED_LABEL_ID, "unstar");
+    }
+
+    public String addToDigest(UUID tenantId, String gmailMessageId) throws IOException {
+        return applyLabel(tenantId, gmailMessageId, DIGEST_LABEL_NAME);
+    }
+
+    public void markSpam(UUID tenantId, String gmailMessageId) throws IOException {
+        executeGmailWrite(
+                tenantId,
+                "markSpam",
+                gmail -> {
+                    gmail.users()
+                            .messages()
+                            .modify(
+                                    USER_ID,
+                                    gmailMessageId,
+                                    new ModifyMessageRequest()
+                                            .setAddLabelIds(List.of(SPAM_LABEL_ID))
+                                            .setRemoveLabelIds(List.of(INBOX_LABEL_ID)))
+                            .execute();
+                    logMessageWrite(tenantId, gmailMessageId, "markSpam");
+                    return null;
+                });
+    }
+
+    public void unmarkSpam(UUID tenantId, String gmailMessageId) throws IOException {
+        executeGmailWrite(
+                tenantId,
+                "unmarkSpam",
+                gmail -> {
+                    gmail.users()
+                            .messages()
+                            .modify(
+                                    USER_ID,
+                                    gmailMessageId,
+                                    new ModifyMessageRequest()
+                                            .setAddLabelIds(List.of(INBOX_LABEL_ID))
+                                            .setRemoveLabelIds(List.of(SPAM_LABEL_ID)))
+                            .execute();
+                    logMessageWrite(tenantId, gmailMessageId, "unmarkSpam");
+                    return null;
+                });
+    }
+
     public String saveDraft(
             UUID tenantId, ReplyHeaders replyHeaders, String body, String gmailThreadId)
             throws IOException {
@@ -110,6 +172,23 @@ public class TriageGmailWriter {
         return executeGmailWrite(
                 tenantId,
                 "saveDraft",
+                gmail -> {
+                    Draft createdDraft =
+                            gmail.users()
+                                    .drafts()
+                                    .create(USER_ID, new Draft().setMessage(draftMessage))
+                                    .execute();
+                    logThreadWrite(tenantId, gmailThreadId);
+                    return createdDraft.getId();
+                });
+    }
+
+    public String saveDraftMessage(UUID tenantId, Message draftMessage, String gmailThreadId)
+            throws IOException {
+        Objects.requireNonNull(draftMessage, "draftMessage must not be null");
+        return executeGmailWrite(
+                tenantId,
+                "saveDraftMessage",
                 gmail -> {
                     Draft createdDraft =
                             gmail.users()
@@ -233,6 +312,44 @@ public class TriageGmailWriter {
                             tenantId,
                             draftId,
                             "deleteDraft");
+                    return null;
+                });
+    }
+
+    private void addSystemLabel(
+            UUID tenantId, String gmailMessageId, String labelId, String operation)
+            throws IOException {
+        executeGmailWrite(
+                tenantId,
+                operation,
+                gmail -> {
+                    gmail.users()
+                            .messages()
+                            .modify(
+                                    USER_ID,
+                                    gmailMessageId,
+                                    new ModifyMessageRequest().setAddLabelIds(List.of(labelId)))
+                            .execute();
+                    logMessageWrite(tenantId, gmailMessageId, operation);
+                    return null;
+                });
+    }
+
+    private void removeSystemLabel(
+            UUID tenantId, String gmailMessageId, String labelId, String operation)
+            throws IOException {
+        executeGmailWrite(
+                tenantId,
+                operation,
+                gmail -> {
+                    gmail.users()
+                            .messages()
+                            .modify(
+                                    USER_ID,
+                                    gmailMessageId,
+                                    new ModifyMessageRequest().setRemoveLabelIds(List.of(labelId)))
+                            .execute();
+                    logMessageWrite(tenantId, gmailMessageId, operation);
                     return null;
                 });
     }

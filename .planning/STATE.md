@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Admin Console Foundation + Settings UI
-status: shipped
-stopped_at: Phase 8 shipped — PR #46
-last_updated: "2026-05-24T15:31:13.221Z"
-last_activity: 2026-05-24
+status: "Phase 08.1 shipped — PR #60"
+stopped_at: Completed 08.1-05-PLAN.md
+last_updated: "2026-05-24T20:07:02.180Z"
+last_activity: 2026-05-25
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
-  percent: 50
+  total_plans: 12
+  completed_plans: 11
+  percent: 33
 ---
 
 # Project State
@@ -20,21 +20,22 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-05-11)
 
-**Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive or silently-sent actions), and reliability are non-negotiable.
-**Current focus:** Phase 08 — admin-console-operator-tooling
+**Core value:** AI auto-triage that users trust with their real Gmail inbox — triage quality, safety (no destructive, unsafe, or unaudited actions), and reliability are non-negotiable.
+**Current focus:** Phase 08.1 — inbox-zero-style-rule-actions-and-admin-managed-examples-cat
 
 ## Current Position
 
-Phase: 08 (admin-console-operator-tooling) — SHIPPED (PR #46)
-Plan: 6 of 6 (8A → 8B → 8C → 8D → 8E → 8F all complete)
-Status: Phase 8 shipped — PR #46 open against main (UAT 11/11 pass, audit-emission gap closed by fe5d2cf9)
-Last activity: 2026-05-24 - Completed quick task 260524-va0: Increase logo displayed size to match Gmail
+Phase: 08.1 (inbox-zero-style-rule-actions-and-admin-managed-examples-cat) — EXECUTING
+Plan: 6 of 6
+Status: Phase 08.1 shipped — PR #60
+Last activity: 2026-05-25
 
 ## Current Milestone Roadmap
 
-**v1.2 — Admin Console + User Settings UI** (2 phases, 61 requirements, all pending; merged 2026-05-19; WebAuthn pivot 2026-05-19)
+**v1.2 — Admin Console + User Settings UI** (3 phases, 73 requirements; merged 2026-05-19; WebAuthn pivot 2026-05-19; Phase 08.1 inserted 2026-05-23; Phase 08.1 plan 02 completed 2026-05-23)
 
 - **Phase 8** — Admin Console & Operator Tooling (WebAuthn admin auth + audit foundation + master keys + curated catalog + tenant inspection + queue + spend + OPS-INFRA; planning structure inside the phase: 8A foundation → 8B master keys → 8C tenant inspection → 8D catalog Sync → 8E queue health → 8F spend dashboard) — 42 requirements (OPS-INFRA-01..03, ADMIN-01..10, ARCH-08/09/10/11/12, MKEY-01..08, CAT-01..07, OPS-TENANT-01..05, OPS-QUEUE-01..02, OPS-SPEND-01..02)
+- **Phase 08.1** — Inbox Zero-style Rule Actions & Admin-managed Examples Catalog (examples/personas seed, admin-managed examples/actions, user settings for outbound automation, send/reply/forward runtime safety gates, and outbound gateway architecture tests) — 12 requirements (RACT-01..12)
 - **Phase 9** — User Settings UI on Curated Catalog (4-tab Settings: Personalization, Behavior, Safety Net, AI Provider/Model — AI tab consumes curated catalog from Phase 8) — 19 requirements (SET-VOICE-01..06, SET-BEHV-01..05, SET-SAFE-01..04, SET-AI-01..04)
 
 See `.planning/ROADMAP.md` for full phase details + success criteria, and `.planning/REQUIREMENTS.md` Traceability section for full REQ-ID → phase mapping.
@@ -43,7 +44,7 @@ See `.planning/ROADMAP.md` for full phase details + success criteria, and `.plan
 
 **Velocity:**
 
-- Total plans completed: 67
+- Total plans completed: 68
 - Average duration: —
 - Total execution time: 0.0 hours
 
@@ -162,6 +163,11 @@ See `.planning/ROADMAP.md` for full phase details + success criteria, and `.plan
 | Phase 08 P8D | single-commit | 3 tasks | 71 files |
 | Phase 08 P8E | 00:45:00 | 2 tasks | 36 files |
 | Phase 08 P8F | 31min | 2 tasks | 31 files |
+| Phase 08.1 P01 | 16 min | 3 tasks | 13 files |
+| Phase 08.1 P02 | multi-session | 3 tasks | 65 files |
+| Phase 08.1 P03 | multi-session | 3 tasks | 12 files |
+| Phase 08.1 P04 | 19min | 4 tasks | 26 files |
+| Phase 08.1 P05 | 34min | 3 tasks | 27 files |
 
 ## Accumulated Context
 
@@ -253,7 +259,7 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 01.5 Plan 02: Loose translator cast (as unknown as string-to-string fn) for dynamic template-literal error key lookups under next-intl 4 strict bundle
 - [Phase ?]: Phase 01.5 Plan 02: Plain <a> with eslint-disable in not-found.tsx — next/link triggers vitest React-dedupe useContext null; mirrors lucide-react inline-SVG boundary
 - [Phase ?]: HIGH-2 fix: getCurrentUserCached uses primitive cookie header string as React cache() key for real RSC dedupe
-- [Phase 01.5]: Plan 04: frontend-design skill là sole invocation site trong Phase 01.5 (MED-5 review fix) — Plan 02 deflation không invoke skill; Plan 04 polish IS the visual-design pass
+- [Project UI]: Global UI/design skills are disabled by user directive; use repository UI conventions, existing screens, shadcn primitives, locked tokens, i18n rules, and Playwright/browser verification instead.
 - [Phase 01.5]: Plan 04: danger-zone settings dùng border-destructive token trên Card thay solid background fill — keeps visual hierarchy mà không alarmist
 - [Phase ?]: Race-loser drops second bundledTx entirely: winner thread committed atomically; re-encrypting loser token overwrites winner envelope (privacy + atomicity violation)
 - [Phase ?]: GET for /tenant/connect-gmail: idempotent OAuth redirect trigger; token rotation on callback; no CSRF needed per Spring Security safe-method defaults (CR-03)
@@ -361,10 +367,11 @@ Recent decisions affecting current work:
 - Phase 1.2 inserted after Phase 1.1: Domain-owned persistence restructuring — refactor `backend/core` into domain-owned service/persistence/model packages; add a small shared package for stable cross-cutting infrastructure; preserve schema and safety constraints; enforce boundaries with Modulith or ArchUnit (URGENT)
 - Phase 1.3 inserted after Phase 1.2: Frontend Architecture Refactor and Public Content Foundation — reorganize `apps/web` with Next.js route groups, feature folders (`api/`, `components/`, `hooks/`), typed OpenAPI boundaries, workspace cleanup, Prettier/Husky/lint-staged gates, and landing/docs scaffolding without final content design (URGENT)
 - Phase 1.2.1 inserted after Phase 1.2: Shared base entity hierarchy (`AbstractEntity`/`AbstractAuditableEntity`/`AbstractTenantOwnedEntity` in `core.shared.persistence`) + `IdentifiedEnum` standard (id/weight/labelKey, applied to `OnboardingStep` + `GmailConnectionStatus`) + `backend/api/dto/` group-by-domain (with `TenantStatusResponse` → `GmailConnectionStatusResponse` rename) + close code-review WR-01/WR-02/WR-03; closes structural-cleanup gaps Phase 1.2 intentionally deferred (URGENT)
-- Phase 1.4 inserted after Phase 1.3: Gmail Identity Semantics, Permission UX, and UI Consistency — align v1 auth so the Google login account IS the first managed Gmail account; treat initial Gmail access as incremental consent for that same account; reject mismatched initial Gmail OAuth callbacks; keep multi-account management as a later workspace-level capability (users add more Gmail accounts to a workspace); sweep UI consistency, visual polish, layout quality, copy, states, and reusable frontend patterns via the `frontend-design` skill (URGENT)
+- Phase 1.4 inserted after Phase 1.3: Gmail Identity Semantics, Permission UX, and UI Consistency — align v1 auth so the Google login account IS the first managed Gmail account; treat initial Gmail access as incremental consent for that same account; reject mismatched initial Gmail OAuth callbacks; keep multi-account management as a later workspace-level capability (users add more Gmail accounts to a workspace); sweep UI consistency, visual polish, layout quality, copy, states, and reusable frontend patterns using repository UI conventions only (URGENT)
 - Phase 1.4 marked complete without `/gsd-ship` on 2026-04-27 because Phase 1.5 supersedes much of the remaining OAuth/UX cleanup value.
 - Phase 01.5 inserted after Phase 1.4: Inbox-Zero Alignment: Bundled OAuth + UX Polish + Cleanup Sweep - Remaining heavy Phase 1.5 work: single Google OAuth upfront Gmail scope, remove google-gmail mismatch architecture, merge Gmail token provisioning, simplify onboarding/consent UX, deflate frontend primitives, polish landing/login/onboarding/settings/ReconnectPrompt, and close surviving REVIEW cleanup; excludes quick tasks already completed. (URGENT)
 - Phase 01.6 inserted after Phase 1: Brand Identity, Design Tokens, and Landing Page (URGENT)
+- Phase 08.1 inserted after Phase 8: Inbox Zero-style rule actions and admin-managed examples catalog (URGENT)
 
 ### Pending Todos
 
@@ -388,11 +395,8 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
-| 260524-va0 | Increase logo displayed size to match Gmail | 2026-05-24 | pending | Verified | [260524-va0-increase-logo-displayed-size-to-match-gm](./quick/260524-va0-increase-logo-displayed-size-to-match-gm/) |
-| 260524-u1t | Enlarge logo and remove colored logo backgrounds | 2026-05-24 | pending | Verified | [260524-u1t-enlarge-logo-and-remove-colored-logo-bac](./quick/260524-u1t-enlarge-logo-and-remove-colored-logo-bac/) |
-| 260524-sej | Replace Zero Mail logo and browser tab icon with provided image | 2026-05-24 | pending | Verified | [260524-sej-replace-zero-mail-logo-and-browser-tab-i](./quick/260524-sej-replace-zero-mail-logo-and-browser-tab-i/) |
-| 260523-v3b | Update header buttons and section links | 2026-05-23 | pending | Verified | [260523-v3b-update-header-buttons-and-section-links](./quick/260523-v3b-update-header-buttons-and-section-links/) |
-| 260523-m46 | Add Gmail recent inbox UI/API capped to 100 messages with lazy loading | 2026-05-23 | pending | Verified | [260523-m46-recent-inbox](./quick/260523-m46-recent-inbox/) |
+| 260524-hbp | Implement boundary-safe LLM runtime routing from admin-managed model defaults | 2026-05-24 | pending | Verified | [260524-hbp-implement-boundary-safe-llm-runtime-rout](./quick/260524-hbp-implement-boundary-safe-llm-runtime-rout/) |
+| 260524-hbk | Upgrade Spring AI to 2.0.0-M7 and adapt ChatClient tool registration/autoconfig | 2026-05-24 | pending | Verified | [260524-hbk-upgrade-spring-ai-to-2-0-0-m7-and-adapt-](./quick/260524-hbk-upgrade-spring-ai-to-2-0-0-m7-and-adapt-/) |
 | 260523-fix-deploy-latest-main-tag-build | Fix Deploy Latest Main tag-build automation and Deploy Prod gate for workflow_dispatch image builds | 2026-05-23 | 80f1b2c6 | Verified | [260523-fix-deploy-latest-main-tag-build](./quick/260523-fix-deploy-latest-main-tag-build/) |
 | 260522-w9w | Add Spring Modulith docs/actuator support and fix core boundary verification violations | 2026-05-22 | pending | Verified | [260522-w9w-add-spring-modulith-docs-generation-dev-](./quick/260522-w9w-add-spring-modulith-docs-generation-dev-/) |
 | 260523-security-alert-triage-fix | Triage GitHub Security alerts and fix CodeQL source findings plus API/worker runtime image OS package CVEs | 2026-05-23 | pending | Verified | [260523-security-alert-triage-fix](./quick/260523-security-alert-triage-fix/) |
@@ -509,8 +513,8 @@ Items acknowledged and deferred at v1.1 milestone close on 2026-05-19.
 
 ## Session Continuity
 
-Last session: 2026-05-20T08:49:56.382Z
-Stopped at: Completed 08-8D-PLAN.md
+Last session: 2026-05-23T00:10:14.505Z
+Stopped at: Completed 08.1-05-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

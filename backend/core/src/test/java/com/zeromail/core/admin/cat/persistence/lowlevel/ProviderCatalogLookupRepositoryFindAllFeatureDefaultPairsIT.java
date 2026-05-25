@@ -36,18 +36,18 @@ class ProviderCatalogLookupRepositoryFindAllFeatureDefaultPairsIT extends Postgr
                 "DELETE FROM feature_tier_model WHERE feature IN ('CHAT','TRIAGE','DRAFT')");
         jdbcTemplate.update(
                 "DELETE FROM feature_default_provider WHERE feature IN ('CHAT','TRIAGE','DRAFT')");
-        jdbcTemplate.update(
-                """
-                INSERT INTO provider_catalog (provider) VALUES (?)
-                ON CONFLICT (provider) DO NOTHING
-                """,
-                LlmProvider.OPENROUTER.id());
-        jdbcTemplate.update(
-                """
-                INSERT INTO provider_catalog (provider) VALUES (?)
-                ON CONFLICT (provider) DO NOTHING
-                """,
-                LlmProvider.OPENAI.id());
+        insertProvider(
+                LlmProvider.OPENROUTER,
+                "OpenRouter",
+                ProviderCatalogWriteRepository.KIND_COMPATIBLE_GATEWAY,
+                "OPENAI_FORMAT",
+                "https://openrouter.ai/api/v1");
+        insertProvider(
+                LlmProvider.OPENAI,
+                "OpenAI",
+                ProviderCatalogWriteRepository.KIND_SPRING_AI_BUILT_IN,
+                "OPENAI_FORMAT",
+                "https://api.openai.com/v1");
 
         // Seed exactly three pairs across the table — the assertion below uses the SAME three.
         // PK on feature_default_provider after changelog 081-04 is (feature, tier), so two rows
@@ -66,6 +66,31 @@ class ProviderCatalogLookupRepositoryFindAllFeatureDefaultPairsIT extends Postgr
                 """,
                 feature,
                 provider.id());
+    }
+
+    private void insertProvider(
+            LlmProvider provider,
+            String displayName,
+            String providerKind,
+            String compatibleType,
+            String defaultBaseUrl) {
+        jdbcTemplate.update(
+                """
+                INSERT INTO provider_catalog (
+                    provider, display_name, provider_kind, compatible_type, default_base_url
+                )
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT (provider) DO UPDATE
+                SET display_name = EXCLUDED.display_name,
+                    provider_kind = EXCLUDED.provider_kind,
+                    compatible_type = EXCLUDED.compatible_type,
+                    default_base_url = EXCLUDED.default_base_url
+                """,
+                provider.id(),
+                displayName,
+                providerKind,
+                compatibleType,
+                defaultBaseUrl);
     }
 
     @Test

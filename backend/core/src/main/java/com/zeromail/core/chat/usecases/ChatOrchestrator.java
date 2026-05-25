@@ -19,6 +19,8 @@ import com.zeromail.core.chat.persistence.lowlevel.ChatTurnRepository;
 import com.zeromail.core.chat.sanitize.ToolOutputSanitizer;
 import com.zeromail.core.chat.sanitize.XmlFencedPersonalizationRenderer;
 import com.zeromail.core.chat.usecases.tools.ChatReadToolHandler;
+import com.zeromail.core.llm.routing.LlmRouteResolver;
+import com.zeromail.core.llm.routing.LlmRuntimeTask;
 import com.zeromail.core.tenant.TenantContext;
 import java.time.Instant;
 import java.util.Collections;
@@ -33,6 +35,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import reactor.core.Disposable;
@@ -59,6 +62,7 @@ public class ChatOrchestrator {
     private final ChatTurnRepository chatTurnRepository;
     private final ObjectMapper objectMapper;
     private final Map<ChatToolName, ChatReadToolHandler> readToolHandlers;
+    private final LlmRouteResolver routeResolver;
 
     public ChatOrchestrator(
             ChatLlmGateway chatLlmGateway,
@@ -73,7 +77,8 @@ public class ChatOrchestrator {
             TransactionTemplate transactionTemplate,
             ChatTurnRepository chatTurnRepository,
             ObjectMapper objectMapper,
-            List<ChatReadToolHandler> readToolHandlers) {
+            List<ChatReadToolHandler> readToolHandlers,
+            ObjectProvider<LlmRouteResolver> routeResolverProvider) {
         this.chatLlmGateway = Objects.requireNonNull(chatLlmGateway, "chatLlmGateway");
         this.zeroMailChatMemory = Objects.requireNonNull(zeroMailChatMemory, "zeroMailChatMemory");
         this.toolOutputSanitizer =
@@ -93,6 +98,7 @@ public class ChatOrchestrator {
                 Objects.requireNonNull(chatTurnRepository, "chatTurnRepository must not be null");
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper");
         this.readToolHandlers = readToolHandlerMap(readToolHandlers);
+        this.routeResolver = routeResolverProvider.getIfAvailable();
     }
 
     public Disposable stream(ChatStreamCommand command, ChatStreamSink streamSink) {
@@ -159,27 +165,32 @@ public class ChatOrchestrator {
             ChatStreamSink streamSink,
             TrackingDisposable trackingDisposable) {
         int maxReadToolIterations = chatProperties.maxReadToolIterations();
+        Map<String, String> transientToolResponseJsonByCallId = new LinkedHashMap<>();
         for (int attempt = 0;
                 attempt < maxReadToolIterations && !trackingDisposable.isDisposed();
                 attempt++) {
             InterceptingSink interceptingSink = new InterceptingSink(streamSink);
+            Map<String, String> oneShotToolResponses =
+                    Map.copyOf(transientToolResponseJsonByCallId);
+            transientToolResponseJsonByCallId.clear();
             ChatStreamRequest streamRequest =
                     new ChatStreamRequest(
                             tenantId.toString(),
                             preparedTurn.chatId(),
-                            command.modelOverride() == null || command.modelOverride().isBlank()
-                                    ? chatProperties.defaultModel()
-                                    : command.modelOverride(),
+                            modelFor(command),
                             personalizationRenderer.render(tenantId.toString()),
                             chatToolCatalog,
-                            history(preparedTurn.chatId()));
+                            history(preparedTurn.chatId()),
+                            oneShotToolResponses);
             trackingDisposable.add(chatLlmGateway.streamChat(streamRequest, interceptingSink));
             TurnOutcome outcome = awaitOutcome(interceptingSink, trackingDisposable);
             if (outcome == null) {
                 return;
             }
             if (outcome.toolName() != null && outcome.toolName().category() == ToolCategory.READ) {
-                executeReadTool(tenantId, preparedTurn.chatId(), outcome, streamSink);
+                String rawToolResponseJson =
+                        executeReadTool(tenantId, preparedTurn.chatId(), outcome, streamSink);
+                transientToolResponseJsonByCallId.put(outcome.toolCallId(), rawToolResponseJson);
                 continue;
             }
             if (outcome.toolName() != null) {
@@ -222,6 +233,20 @@ public class ChatOrchestrator {
                 "The assistant requested too many tool calls. Please try again.");
     }
 
+    private String modelFor(ChatStreamCommand command) {
+        String modelOverride = command.modelOverride();
+        if (modelOverride != null && !modelOverride.isBlank()) {
+            return modelOverride;
+        }
+        if (routeResolver == null) {
+            return chatProperties.defaultModel();
+        }
+        return routeResolver
+                .resolvePrimary(LlmRuntimeTask.CHAT_ASSISTANT)
+                .map(resolvedRoute -> resolvedRoute.modelId())
+                .orElse(chatProperties.defaultModel());
+    }
+
     private List<ChatMessage> history(UUID chatId) {
         zeroMailChatMemory.get(chatId.toString(), chatProperties.maxHistoryTokens());
         return budgetHistory(
@@ -229,7 +254,7 @@ public class ChatOrchestrator {
                 chatProperties.maxHistoryTokens());
     }
 
-    private void executeReadTool(
+    private String executeReadTool(
             UUID tenantId, UUID chatId, TurnOutcome outcome, ChatStreamSink streamSink) {
         ChatReadToolHandler readToolHandler = readToolHandlers.get(outcome.toolName());
         if (readToolHandler == null) {
@@ -260,6 +285,7 @@ public class ChatOrchestrator {
                                         sanitizedOutput.outputJson(),
                                         sanitizedOutput.truncated()));
         streamSink.emitDataPersistence(toolOutputMessageId, "tool-output-saved");
+        return outputJson;
     }
 
     private TurnOutcome awaitOutcome(

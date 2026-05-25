@@ -3,9 +3,6 @@ import type { components } from '@/lib/api/schema';
 
 export type RuleResponse = components['schemas']['RuleResponse'];
 export type RuleListResponse = components['schemas']['RulesListResponse'];
-export type RuleTemplateResponse = components['schemas']['RuleTemplateResponse'];
-export type RuleTemplateMaterializationResponse =
-  components['schemas']['RuleTemplateMaterializationResponse'];
 export type RuleCompileRequest = components['schemas']['RuleCompileRequest'];
 export type RuleCompileResponse = components['schemas']['RuleCompileResponse'];
 export type RuleCompiledPayloadResponse = components['schemas']['CompiledPayloadResponse'];
@@ -220,21 +217,4 @@ export async function previewCustomMail(
     body: payload,
   });
   return unwrap(result, `/api/rules/preview-custom failed: ${result.response.status}`);
-}
-
-export async function listRuleTemplates(): Promise<RuleTemplateResponse[]> {
-  const result = await api.GET('/api/rules/templates', {});
-  return unwrap(result, `/api/rules/templates failed: ${result.response.status}`);
-}
-
-export async function materializeRuleTemplate(
-  templateKey: string,
-): Promise<RuleTemplateMaterializationResponse> {
-  const result = await api.POST('/api/rules/templates/{templateKey}/materialize', {
-    params: { path: { templateKey } },
-  });
-  return unwrap(
-    result,
-    `/api/rules/templates/${templateKey}/materialize failed: ${result.response.status}`,
-  );
 }

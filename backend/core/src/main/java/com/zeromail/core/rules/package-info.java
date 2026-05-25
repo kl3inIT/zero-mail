@@ -23,7 +23,8 @@
             "shared :: error",
             "shared :: exception",
             "shared :: persistence",
-            "shared :: lang"
+            "shared :: lang",
+            "shared :: validation"
         })
 package com.zeromail.core.rules;
 

@@ -1,0 +1,108 @@
+databaseChangeLog:
+  - changeSet:
+      id: 091-01-compatible-gateway-key-formats
+      author: zeromail
+      comment: >
+        Treat OpenRouter/9Router as compatibility gateways rather than Spring AI native
+        providers. Built-in providers keep one native key format; gateways may use an
+        OpenAI-compatible or Anthropic-compatible protocol depending on their endpoint.
+      changes:
+        - addColumn:
+            tableName: provider_catalog
+            columns:
+              - column:
+                  name: display_name
+                  type: varchar(120)
+              - column:
+                  name: provider_kind
+                  type: varchar(32)
+              - column:
+                  name: compatible_type
+                  type: varchar(32)
+        - sql:
+            splitStatements: false
+            sql: |
+              UPDATE provider_catalog
+              SET display_name = CASE provider
+                    WHEN 'OPENAI' THEN 'OpenAI'
+                    WHEN 'ANTHROPIC' THEN 'Anthropic'
+                    WHEN 'GOOGLE' THEN 'Google'
+                    WHEN 'DEEPSEEK' THEN 'DeepSeek'
+                    WHEN 'OPENROUTER' THEN 'OpenRouter'
+                    WHEN 'ROUTER_9R' THEN '9Router'
+                    ELSE provider
+                  END,
+                  provider_kind = CASE
+                    WHEN provider IN ('OPENAI','ANTHROPIC','GOOGLE','DEEPSEEK')
+                      THEN 'SPRING_AI_BUILT_IN'
+                    ELSE 'COMPATIBLE_GATEWAY'
+                  END,
+                  compatible_type = CASE provider
+                    WHEN 'OPENAI' THEN 'OPENAI_FORMAT'
+                    WHEN 'ANTHROPIC' THEN 'ANTHROPIC_FORMAT'
+                    WHEN 'GOOGLE' THEN 'GOOGLE_FORMAT'
+                    WHEN 'DEEPSEEK' THEN 'OPENAI_FORMAT'
+                    ELSE NULL
+                  END
+              WHERE display_name IS NULL
+                 OR provider_kind IS NULL
+                 OR compatible_type IS NULL;
+
+              ALTER TABLE provider_catalog
+                ALTER COLUMN display_name SET NOT NULL;
+
+              ALTER TABLE provider_catalog
+                ALTER COLUMN provider_kind SET NOT NULL;
+
+              ALTER TABLE provider_catalog
+                ADD CONSTRAINT ck_provider_catalog_kind
+                CHECK (provider_kind IN ('SPRING_AI_BUILT_IN','COMPATIBLE_GATEWAY'));
+
+              ALTER TABLE provider_catalog
+                ADD CONSTRAINT ck_provider_catalog_compatible_type
+                CHECK (
+                  compatible_type IS NULL
+                  OR compatible_type IN ('OPENAI_FORMAT','ANTHROPIC_FORMAT','GOOGLE_FORMAT')
+                );
+
+              ALTER TABLE llm_provider_master_key
+                DROP CONSTRAINT IF EXISTS ck_llm_provider_master_key_provider_format;
+
+              ALTER TABLE llm_provider_master_key
+                ADD CONSTRAINT ck_llm_provider_master_key_provider_format
+                CHECK (
+                  key_format IS NULL
+                  OR (provider IN ('OPENAI','DEEPSEEK') AND key_format = 'OPENAI_FORMAT')
+                  OR (provider = 'ANTHROPIC' AND key_format = 'ANTHROPIC_FORMAT')
+                  OR (provider = 'GOOGLE' AND key_format = 'GOOGLE_FORMAT')
+                  OR (provider IN ('OPENROUTER','ROUTER_9R')
+                      AND key_format IN ('OPENAI_FORMAT','ANTHROPIC_FORMAT'))
+                );
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE provider_catalog
+                DROP CONSTRAINT IF EXISTS ck_provider_catalog_compatible_type;
+
+              ALTER TABLE provider_catalog
+                DROP CONSTRAINT IF EXISTS ck_provider_catalog_kind;
+
+              ALTER TABLE llm_provider_master_key
+                DROP CONSTRAINT IF EXISTS ck_llm_provider_master_key_provider_format;
+
+              ALTER TABLE llm_provider_master_key
+                ADD CONSTRAINT ck_llm_provider_master_key_provider_format
+                CHECK (
+                  key_format IS NULL
+                  OR (provider IN ('OPENAI','DEEPSEEK','OPENROUTER') AND key_format = 'OPENAI_FORMAT')
+                  OR (provider = 'ANTHROPIC' AND key_format = 'ANTHROPIC_FORMAT')
+                  OR (provider = 'GOOGLE' AND key_format = 'GOOGLE_FORMAT')
+                  OR (provider = 'ROUTER_9R' AND key_format IN ('OPENAI_FORMAT','ANTHROPIC_FORMAT'))
+                );
+        - dropColumn:
+            tableName: provider_catalog
+            columns:
+              - column: { name: compatible_type }
+              - column: { name: provider_kind }
+              - column: { name: display_name }

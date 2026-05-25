@@ -16,8 +16,11 @@ class RuleCompileSystemPromptTest {
                 .contains("SENDER_DOMAIN")
                 .contains("SEMANTIC_INTENT")
                 .contains("Broad semantic conditions are valid review-form drafts")
-                .contains("safe action intents")
-                .contains("label, archive, and save_draft")
+                .contains("locked action intent ids")
+                .contains("send_reply")
+                .contains("forward_email")
+                .contains("send_email")
+                .contains("Low-trust/static/demo outbound requests")
                 .contains("clarificationRequired=true")
                 .contains("never logged or persisted");
     }

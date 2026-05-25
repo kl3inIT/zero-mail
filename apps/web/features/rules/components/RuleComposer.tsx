@@ -5,12 +5,18 @@ import { useTranslations } from 'next-intl';
 import {
   AlertCircle,
   Archive,
+  ArrowLeft,
   CheckCircle2,
   FileText,
+  Forward,
   HelpCircle,
   Loader2,
+  MailCheck,
   Plus,
+  Reply,
   Save,
+  Send,
+  Star,
   Tags,
   Trash2,
   Wand2,
@@ -20,11 +26,17 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { AvailableActionsPanel } from '@/features/rules/components/AvailableActionsPanel';
+import type {
+  RuleCatalogActionDescriptorResponse,
+  RuleCatalogPersonaResponse,
+} from '@/features/rules/api/rule-catalog-api';
 import type {
   RuleCompiledPayloadResponse,
   RuleCompileResult,
@@ -64,6 +76,12 @@ type Props = {
   insufficientCreditError: string | null;
   isCompiling: boolean;
   isSaving: boolean;
+  examplePersonas?: RuleCatalogPersonaResponse[];
+  isLoadingExamples?: boolean;
+  examplesError?: boolean;
+  actions?: RuleCatalogActionDescriptorResponse[];
+  isLoadingActions?: boolean;
+  isActionsError?: boolean;
   onSourceTextChange: (sourceText: string) => void;
   onClarificationAnswerChange: (answer: string) => void;
   onCompile: () => void;
@@ -83,6 +101,12 @@ export function RuleComposer({
   insufficientCreditError,
   isCompiling,
   isSaving,
+  examplePersonas = [],
+  isLoadingExamples = false,
+  examplesError = false,
+  actions = [],
+  isLoadingActions = false,
+  isActionsError = false,
   onSourceTextChange,
   onClarificationAnswerChange,
   onCompile,
@@ -141,11 +165,10 @@ export function RuleComposer({
     t('rules.composer.actionReview'),
     structureCopy,
   );
-  const exampleRules = [
-    t('rules.composer.example.receipts'),
-    t('rules.composer.example.calendar'),
-    t('rules.composer.example.newsletters'),
-  ];
+  const orderedExamplePersonas = useMemo(
+    () => orderRuleExamplePersonas(examplePersonas),
+    [examplePersonas],
+  );
 
   function updateCondition(conditionId: string, patch: Partial<ManualCondition>) {
     setManualDraft((current) => ({
@@ -192,147 +215,380 @@ export function RuleComposer({
         <p className="text-muted-foreground mt-1 text-sm">{t('rules.page.safetyNote')}</p>
       </div>
 
-      <Tabs
-        value={activeTab}
-        onValueChange={(value) => setActiveTab(value as 'describe' | 'manual')}
-      >
-        <TabsList variant="line" aria-label={t('rules.composer.tabsLabel')}>
-          <TabsTrigger value="describe" className="gap-2 px-3">
-            <Wand2 className="size-4" aria-hidden="true" />
-            {t('rules.composer.tab.describe')}
-          </TabsTrigger>
-          <TabsTrigger value="manual" className="gap-2 px-3">
-            <FileText className="size-4" aria-hidden="true" />
-            {t('rules.composer.tab.manual')}
-          </TabsTrigger>
-        </TabsList>
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0">
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value as 'describe' | 'manual')}
+          >
+            <TabsList variant="line" aria-label={t('rules.composer.tabsLabel')}>
+              <TabsTrigger value="describe" className="gap-2 px-3">
+                <Wand2 className="size-4" aria-hidden="true" />
+                {t('rules.composer.tab.describe')}
+              </TabsTrigger>
+              <TabsTrigger value="manual" className="gap-2 px-3">
+                <FileText className="size-4" aria-hidden="true" />
+                {t('rules.composer.tab.manual')}
+              </TabsTrigger>
+            </TabsList>
 
-        <TabsContent value="describe" className="mt-5 space-y-4">
-          <div className="bg-background rounded-lg border p-4">
-            <div className="space-y-2">
-              <Label htmlFor="rules-source-text">{t('rules.composer.sourceLabel')}</Label>
-              <Textarea
-                id="rules-source-text"
-                aria-label={t('rules.composer.sourceLabel')}
-                value={sourceText}
-                placeholder={t('rules.composer.sourcePlaceholder')}
-                disabled={isCompiling}
-                className="min-h-32 resize-y"
-                onChange={(event) => onSourceTextChange(event.currentTarget.value)}
-              />
-              <div className="space-y-2">
-                <p className="text-foreground text-xs font-medium">
-                  {t('rules.composer.examplesHint')}
-                </p>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {exampleRules.map((exampleRule) => (
-                    <button
-                      key={exampleRule}
-                      type="button"
-                      disabled={isCompiling}
-                      onClick={() => onSourceTextChange(exampleRule)}
-                      className="group border-primary/30 bg-primary/5 text-foreground hover:border-primary hover:bg-primary/10 focus-visible:ring-primary/60 flex items-start gap-2 rounded-md border px-3 py-2 text-left text-xs leading-relaxed whitespace-normal shadow-sm transition-colors hover:cursor-pointer focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <Wand2 className="text-primary mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-                      <span className="flex-1">{exampleRule}</span>
-                    </button>
-                  ))}
+            <TabsContent value="describe" className="mt-5 space-y-4">
+              <div className="bg-background rounded-lg border p-4">
+                <div className="space-y-2">
+                  <Label htmlFor="rules-source-text">{t('rules.composer.sourceLabel')}</Label>
+                  <Textarea
+                    id="rules-source-text"
+                    aria-label={t('rules.composer.sourceLabel')}
+                    value={sourceText}
+                    placeholder={t('rules.composer.sourcePlaceholder')}
+                    disabled={isCompiling}
+                    className="min-h-32 resize-y"
+                    onChange={(event) => onSourceTextChange(event.currentTarget.value)}
+                  />
+                  <ExampleChooser
+                    personas={orderedExamplePersonas}
+                    isLoading={isLoadingExamples}
+                    isError={examplesError}
+                    isDisabled={isCompiling}
+                    onExampleClick={onSourceTextChange}
+                  />
                 </div>
               </div>
-            </div>
-          </div>
 
-          {clarification?.question && (
-            <Alert className="border-warning/40 bg-warning-soft/50 text-warning">
-              <HelpCircle className="size-4" aria-hidden="true" />
-              <AlertTitle>{clarification.question}</AlertTitle>
-              <AlertDescription className="space-y-3 pt-2">
-                <Label htmlFor="rules-clarification-answer">
-                  {t('rules.composer.answerLabel')}
-                </Label>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Input
-                    id="rules-clarification-answer"
-                    value={clarificationAnswer}
-                    aria-label={t('rules.composer.answerLabel')}
-                    disabled={isCompiling}
-                    onChange={(event) => onClarificationAnswerChange(event.currentTarget.value)}
-                  />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={!clarificationAnswer.trim() || isCompiling}
-                    onClick={onAnswerClarification}
-                  >
-                    {isCompiling && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
-                    {t('rules.composer.answerClarification')}
-                  </Button>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {compiled && (
-            <CompiledReview
-              matcherReview={matcherReview}
-              actionReview={actionReview}
-              sourceLanguage={compiled.sourceLanguage}
-            />
-          )}
-
-          <ComposerErrors
-            insufficientCreditError={insufficientCreditError}
-            compileError={compileError}
-            invalidReason={invalid?.reason}
-          />
-
-          <div className="flex flex-col items-stretch gap-2 border-t pt-4 sm:flex-row">
-            <Button type="button" disabled={!hasSourceText || isCompiling} onClick={onCompile}>
-              {isCompiling ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <Wand2 className="size-4" aria-hidden="true" />
+              {clarification?.question && (
+                <Alert className="border-warning/40 bg-warning-soft/50 text-warning">
+                  <HelpCircle className="size-4" aria-hidden="true" />
+                  <AlertTitle>{clarification.question}</AlertTitle>
+                  <AlertDescription className="space-y-3 pt-2">
+                    <Label htmlFor="rules-clarification-answer">
+                      {t('rules.composer.answerLabel')}
+                    </Label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Input
+                        id="rules-clarification-answer"
+                        value={clarificationAnswer}
+                        aria-label={t('rules.composer.answerLabel')}
+                        disabled={isCompiling}
+                        onChange={(event) => onClarificationAnswerChange(event.currentTarget.value)}
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={!clarificationAnswer.trim() || isCompiling}
+                        onClick={onAnswerClarification}
+                      >
+                        {isCompiling && (
+                          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                        )}
+                        {t('rules.composer.answerClarification')}
+                      </Button>
+                    </div>
+                  </AlertDescription>
+                </Alert>
               )}
-              {isCompiling ? t('rules.composer.compiling') : t('rules.composer.compileCta')}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={!compiled || isSaving || isCompiling}
-              className="sm:ml-auto"
-              onClick={onSaveDisabledRule}
-            >
-              {isSaving ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <Save className="size-4" aria-hidden="true" />
-              )}
-              {isSaving ? t('rules.composer.saving') : t('rules.composer.saveDisabledCta')}
-            </Button>
-          </div>
-        </TabsContent>
 
-        <TabsContent value="manual" className="mt-5 space-y-4">
-          <ManualBuilder
-            draft={manualDraft}
-            builtRule={manualBuild}
-            isCompiling={isCompiling}
-            isSaving={isSaving}
-            insufficientCreditError={insufficientCreditError}
-            compileError={compileError}
-            invalidReason={invalid?.reason}
-            clarificationQuestion={clarification?.question ?? null}
-            onDraftChange={setManualDraft}
-            onUpdateCondition={updateCondition}
-            onRemoveCondition={removeCondition}
-            onUpdateAction={updateAction}
-            onRemoveAction={removeAction}
-            onSaveManualRule={onSaveManualRule}
-            onRefineManualRule={onRefineManualRule}
-          />
-        </TabsContent>
-      </Tabs>
+              {compiled && (
+                <CompiledReview
+                  matcherReview={matcherReview}
+                  actionReview={actionReview}
+                  sourceLanguage={compiled.sourceLanguage}
+                />
+              )}
+
+              <ComposerErrors
+                insufficientCreditError={insufficientCreditError}
+                compileError={compileError}
+                invalidReason={invalid?.reason}
+              />
+
+              <div className="flex flex-col items-stretch gap-2 border-t pt-4 sm:flex-row">
+                <Button type="button" disabled={!hasSourceText || isCompiling} onClick={onCompile}>
+                  {isCompiling ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Wand2 className="size-4" aria-hidden="true" />
+                  )}
+                  {isCompiling ? t('rules.composer.compiling') : t('rules.composer.compileCta')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={!compiled || isSaving || isCompiling}
+                  className="sm:ml-auto"
+                  onClick={onSaveDisabledRule}
+                >
+                  {isSaving ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Save className="size-4" aria-hidden="true" />
+                  )}
+                  {isSaving ? t('rules.composer.saving') : t('rules.composer.saveDisabledCta')}
+                </Button>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="manual" className="mt-5 space-y-4">
+              <ManualBuilder
+                draft={manualDraft}
+                builtRule={manualBuild}
+                isCompiling={isCompiling}
+                isSaving={isSaving}
+                insufficientCreditError={insufficientCreditError}
+                compileError={compileError}
+                invalidReason={invalid?.reason}
+                clarificationQuestion={clarification?.question ?? null}
+                onDraftChange={setManualDraft}
+                onUpdateCondition={updateCondition}
+                onRemoveCondition={removeCondition}
+                onUpdateAction={updateAction}
+                onRemoveAction={removeAction}
+                onSaveManualRule={onSaveManualRule}
+                onRefineManualRule={onRefineManualRule}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        <AvailableActionsPanel
+          actions={actions}
+          isLoadingActions={isLoadingActions}
+          isActionsError={isActionsError}
+        />
+      </div>
     </div>
+  );
+}
+
+const REQUIRED_RULE_PERSONA_KEYS = [
+  'founder',
+  'influencer',
+  'realtor',
+  'investor',
+  'assistant',
+  'developer',
+  'designer',
+  'sales',
+  'marketer',
+  'support',
+  'recruiter',
+  'student',
+  'outreach',
+  'other',
+] as const;
+
+const RULE_PERSONA_ORDER = new Map<string, number>(
+  REQUIRED_RULE_PERSONA_KEYS.map((personaKey, index) => [personaKey, index]),
+);
+
+function orderRuleExamplePersonas(personas: RuleCatalogPersonaResponse[]) {
+  return [...personas].sort((left, right) => {
+    const leftOrder = RULE_PERSONA_ORDER.get(left.personaKey) ?? 1_000;
+    const rightOrder = RULE_PERSONA_ORDER.get(right.personaKey) ?? 1_000;
+    if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+    return (left.displayOrder ?? 0) - (right.displayOrder ?? 0);
+  });
+}
+
+function ExampleChooser({
+  personas,
+  isLoading,
+  isError,
+  isDisabled,
+  onExampleClick,
+}: {
+  personas: RuleCatalogPersonaResponse[];
+  isLoading: boolean;
+  isError: boolean;
+  isDisabled: boolean;
+  onExampleClick: (exampleText: string) => void;
+}) {
+  const t = useTranslations();
+  const [personaDialogOpen, setPersonaDialogOpen] = useState(false);
+  const [selectedPersonaKey, setSelectedPersonaKey] = useState<string | null>(null);
+  const selectedPersona =
+    personas.find((persona) => persona.personaKey === selectedPersonaKey) ?? null;
+  const examples = selectedPersona?.examples ?? [];
+
+  function clearSelectedPersona() {
+    setSelectedPersonaKey(null);
+  }
+
+  function handlePersonaSelect(personaKey: string) {
+    setSelectedPersonaKey(personaKey);
+    setPersonaDialogOpen(false);
+  }
+
+  function openPersonaDialog() {
+    setPersonaDialogOpen(true);
+  }
+
+  function handlePersonaDialogOpenChange(open: boolean) {
+    setPersonaDialogOpen(open);
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-muted-foreground text-xs">{t('rules.composer.examples.body')}</p>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="w-full justify-center sm:w-auto"
+          disabled={isDisabled}
+          onClick={openPersonaDialog}
+        >
+          <Wand2 className="size-3.5" aria-hidden="true" />
+          {t('rules.composer.examples.title')}
+        </Button>
+      </div>
+
+      <Dialog open={personaDialogOpen} onOpenChange={handlePersonaDialogOpenChange}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t('rules.composer.examples.choosePersonaTitle')}</DialogTitle>
+          </DialogHeader>
+
+          {isLoading ? (
+            <div className="grid min-h-24 gap-2 sm:grid-cols-3">
+              {[0, 1, 2].map((index) => (
+                <div key={index} className="bg-muted/40 h-12 animate-pulse rounded-md border" />
+              ))}
+            </div>
+          ) : isError ? (
+            <Alert variant="warning" className="py-3">
+              <AlertCircle className="size-4" aria-hidden="true" />
+              <AlertDescription>{t('rules.composer.examples.error')}</AlertDescription>
+            </Alert>
+          ) : personas.length === 0 ? (
+            <div className="text-muted-foreground rounded-md border border-dashed p-4 text-sm">
+              {t('rules.composer.examples.empty')}
+            </div>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-3">
+              {personas.map((persona) => {
+                const countLabel = t('rules.composer.examples.count', {
+                  count: persona.examples.length,
+                });
+                return (
+                  <Button
+                    key={persona.personaId}
+                    type="button"
+                    variant={persona.personaKey === selectedPersonaKey ? 'default' : 'outline'}
+                    className="h-auto min-h-11 justify-start px-3 py-2 text-left whitespace-normal"
+                    aria-label={`${persona.displayName} ${countLabel}`}
+                    onClick={() => handlePersonaSelect(persona.personaKey)}
+                  >
+                    <span className="mr-2 shrink-0" aria-hidden="true">
+                      {personaDisplayIcon(persona)}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium">{persona.displayName}</span>
+                      <span className="text-muted-foreground block text-xs">{countLabel}</span>
+                    </span>
+                  </Button>
+                );
+              })}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {selectedPersona && (
+        <div className="space-y-3">
+          <InlineExamplesHeader
+            persona={selectedPersona}
+            onChangePersona={openPersonaDialog}
+            onClearPersona={clearSelectedPersona}
+          />
+          {examples.length === 0 ? (
+            <div className="text-muted-foreground rounded-md border border-dashed p-4 text-sm">
+              {t('rules.composer.examples.empty')}
+            </div>
+          ) : (
+            <div className="grid gap-2 md:grid-cols-2" data-testid="rule-example-grid">
+              {examples.map((example) => (
+                <button
+                  key={example.exampleId}
+                  type="button"
+                  disabled={isDisabled}
+                  onClick={() => onExampleClick(example.exampleText)}
+                  className="group text-foreground focus-visible:ring-primary/60 hover:border-primary hover:bg-muted/40 border-input w-full rounded-md border px-3 py-3 text-left text-sm leading-relaxed whitespace-normal transition-colors hover:cursor-pointer focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <span className="flex items-start gap-2">
+                    <Wand2
+                      className="text-muted-foreground mt-0.5 size-3.5 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <span className="flex-1">{example.exampleText}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InlineExamplesHeader({
+  persona,
+  onChangePersona,
+  onClearPersona,
+}: {
+  persona: RuleCatalogPersonaResponse;
+  onChangePersona: () => void;
+  onClearPersona: () => void;
+}) {
+  const t = useTranslations();
+
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-center gap-2">
+        <span aria-hidden="true">{personaDisplayIcon(persona)}</span>
+        <h3 className="truncate text-sm font-semibold">{persona.displayName}</h3>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <Button type="button" variant="ghost" size="sm" onClick={onChangePersona}>
+          {t('rules.composer.examples.changePersona')}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t('rules.composer.examples.backToPersonas')}
+          onClick={onClearPersona}
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+const INBOX_ZERO_PERSONA_ICONS: Record<string, string> = {
+  founder: '🚀',
+  influencer: '📹',
+  realtor: '🏠',
+  investor: '💰',
+  assistant: '📋',
+  developer: '👨‍💻',
+  designer: '🎨',
+  sales: '🤝',
+  marketer: '📢',
+  support: '🛠️',
+  recruiter: '👥',
+  student: '👩‍🎓',
+  outreach: '💬',
+  other: '🤖',
+};
+
+function personaDisplayIcon(persona: RuleCatalogPersonaResponse): string {
+  return (
+    INBOX_ZERO_PERSONA_ICONS[persona.personaKey] ??
+    (persona.icon ? INBOX_ZERO_PERSONA_ICONS[persona.icon] : undefined) ??
+    '🤖'
   );
 }
 
@@ -531,26 +787,6 @@ function ManualBuilder({
         </Button>
       </div>
 
-      <div className="bg-muted/20 rounded-lg border border-dashed p-4">
-        <h3 className="font-semibold">{t('rules.manual.advancedTitle')}</h3>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {[
-            t('rules.manual.unsafe.autoSend'),
-            t('rules.manual.unsafe.forward'),
-            t('rules.manual.unsafe.delete'),
-            t('rules.manual.unsafe.webhook'),
-          ].map((label) => (
-            <Badge
-              key={label}
-              variant="outline"
-              className="bg-background text-muted-foreground rounded-sm px-2 py-1"
-            >
-              {label}
-            </Badge>
-          ))}
-        </div>
-      </div>
-
       {builtRule && (
         <div className="bg-accent text-accent-foreground rounded-lg border p-4">
           <div className="flex items-center gap-2 font-semibold">
@@ -573,7 +809,6 @@ function ManualBuilder({
       )}
 
       <div className="flex flex-col items-stretch gap-2 border-t pt-4 sm:flex-row sm:items-center">
-        <p className="text-muted-foreground text-xs">{t('rules.manual.saveHint')}</p>
         <Button
           type="button"
           className="sm:ml-auto"
@@ -681,7 +916,7 @@ function ActionRow({
   const needsValue = actionRequiresValue(action.type);
 
   return (
-    <div className="bg-muted/20 grid gap-2 rounded-md border p-2 sm:grid-cols-[28px_190px_1fr_36px] sm:items-center">
+    <div className="bg-muted/20 grid gap-2 rounded-md border p-2 sm:grid-cols-[28px_210px_1fr_36px] sm:items-start">
       <div className="text-muted-foreground hidden text-center text-xs font-semibold sm:block">
         {index + 1}
       </div>
@@ -692,18 +927,17 @@ function ActionRow({
           onUpdate(action.id, {
             type: nextType,
             value: actionRequiresValue(nextType) ? action.value : '',
+            instruction: '',
+            cc: '',
+            bcc: '',
+            subject: '',
+            body: '',
           });
         }}
       >
         <SelectTrigger className="w-full">
           <span className="inline-flex items-center gap-2">
-            {action.type === 'archive' ? (
-              <Archive className="size-4" aria-hidden="true" />
-            ) : action.type === 'label' ? (
-              <Tags className="size-4" aria-hidden="true" />
-            ) : (
-              <FileText className="size-4" aria-hidden="true" />
-            )}
+            <ActionTypeIcon type={action.type} />
             {actionTypeLabel(action.type, translate)}
           </span>
         </SelectTrigger>
@@ -711,13 +945,7 @@ function ActionRow({
           {MANUAL_ACTION_TYPES.map((type) => (
             <SelectItem key={type} value={type}>
               <span className="inline-flex items-center gap-2">
-                {type === 'archive' ? (
-                  <Archive className="size-4" aria-hidden="true" />
-                ) : type === 'label' ? (
-                  <Tags className="size-4" aria-hidden="true" />
-                ) : (
-                  <FileText className="size-4" aria-hidden="true" />
-                )}
+                <ActionTypeIcon type={type} />
                 {actionTypeLabel(type, translate)}
               </span>
             </SelectItem>
@@ -725,13 +953,7 @@ function ActionRow({
         </SelectContent>
       </Select>
       {needsValue ? (
-        <Input
-          value={action.value}
-          maxLength={500}
-          aria-label={actionTypeLabel(action.type, translate)}
-          placeholder={actionPlaceholder(action.type, translate)}
-          onChange={(event) => onUpdate(action.id, { value: event.currentTarget.value })}
-        />
+        <ActionValueFields action={action} onUpdate={onUpdate} />
       ) : (
         <div className="text-muted-foreground bg-background rounded-md border px-3 py-2 text-sm">
           {t('rules.manual.noValueNeeded')}
@@ -749,6 +971,93 @@ function ActionRow({
         <Trash2 className="size-4" aria-hidden="true" />
       </Button>
     </div>
+  );
+}
+
+function ActionValueFields({
+  action,
+  onUpdate,
+}: {
+  action: ManualAction;
+  onUpdate: (actionId: string, patch: Partial<ManualAction>) => void;
+}) {
+  const t = useTranslations();
+  const translate = t as unknown as (key: string) => string;
+
+  if (action.type === 'forward_email') {
+    return (
+      <div className="grid gap-2 md:grid-cols-2">
+        <Input
+          value={action.value}
+          maxLength={500}
+          aria-label={t('rules.manual.actionField.recipients')}
+          placeholder={actionPlaceholder(action.type, translate)}
+          onChange={(event) => onUpdate(action.id, { value: event.currentTarget.value })}
+        />
+        <Input
+          value={action.instruction ?? ''}
+          maxLength={500}
+          aria-label={t('rules.manual.actionField.instruction')}
+          placeholder={t('rules.manual.actionPlaceholder.forwardInstruction')}
+          onChange={(event) => onUpdate(action.id, { instruction: event.currentTarget.value })}
+        />
+      </div>
+    );
+  }
+
+  if (action.type === 'send_email') {
+    return (
+      <div className="grid gap-2">
+        <Input
+          value={action.value}
+          maxLength={500}
+          aria-label={t('rules.manual.actionField.to')}
+          placeholder={actionPlaceholder(action.type, translate)}
+          onChange={(event) => onUpdate(action.id, { value: event.currentTarget.value })}
+        />
+        <div className="grid gap-2 md:grid-cols-2">
+          <Input
+            value={action.cc ?? ''}
+            maxLength={500}
+            aria-label={t('rules.manual.actionField.cc')}
+            placeholder={t('rules.manual.actionPlaceholder.cc')}
+            onChange={(event) => onUpdate(action.id, { cc: event.currentTarget.value })}
+          />
+          <Input
+            value={action.bcc ?? ''}
+            maxLength={500}
+            aria-label={t('rules.manual.actionField.bcc')}
+            placeholder={t('rules.manual.actionPlaceholder.bcc')}
+            onChange={(event) => onUpdate(action.id, { bcc: event.currentTarget.value })}
+          />
+        </div>
+        <Input
+          value={action.subject ?? ''}
+          maxLength={500}
+          aria-label={t('rules.manual.actionField.subject')}
+          placeholder={t('rules.manual.actionPlaceholder.subject')}
+          onChange={(event) => onUpdate(action.id, { subject: event.currentTarget.value })}
+        />
+        <Textarea
+          value={action.body ?? ''}
+          maxLength={4000}
+          aria-label={t('rules.manual.actionField.body')}
+          placeholder={t('rules.manual.actionPlaceholder.body')}
+          className="min-h-20 resize-y"
+          onChange={(event) => onUpdate(action.id, { body: event.currentTarget.value })}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <Input
+      value={action.value}
+      maxLength={500}
+      aria-label={actionTypeLabel(action.type, translate)}
+      placeholder={actionPlaceholder(action.type, translate)}
+      onChange={(event) => onUpdate(action.id, { value: event.currentTarget.value })}
+    />
   );
 }
 
@@ -897,6 +1206,31 @@ function conditionPlaceholder(type: ManualConditionType, t: (key: string) => str
   }
 }
 
+function ActionTypeIcon({ type }: { type: ManualActionType }) {
+  switch (type) {
+    case 'label':
+      return <Tags className="size-4" aria-hidden="true" />;
+    case 'archive':
+      return <Archive className="size-4" aria-hidden="true" />;
+    case 'save_draft':
+      return <FileText className="size-4" aria-hidden="true" />;
+    case 'mark_read':
+      return <MailCheck className="size-4" aria-hidden="true" />;
+    case 'star':
+      return <Star className="size-4" aria-hidden="true" />;
+    case 'add_to_digest':
+      return <FileText className="size-4" aria-hidden="true" />;
+    case 'mark_spam':
+      return <AlertCircle className="size-4" aria-hidden="true" />;
+    case 'send_reply':
+      return <Reply className="size-4" aria-hidden="true" />;
+    case 'forward_email':
+      return <Forward className="size-4" aria-hidden="true" />;
+    case 'send_email':
+      return <Send className="size-4" aria-hidden="true" />;
+  }
+}
+
 function actionTypeLabel(type: ManualActionType, t: (key: string) => string) {
   switch (type) {
     case 'label':
@@ -905,6 +1239,20 @@ function actionTypeLabel(type: ManualActionType, t: (key: string) => string) {
       return t('rules.manual.action.archive');
     case 'save_draft':
       return t('rules.manual.action.save_draft');
+    case 'mark_read':
+      return t('rules.manual.action.mark_read');
+    case 'star':
+      return t('rules.manual.action.star');
+    case 'add_to_digest':
+      return t('rules.manual.action.add_to_digest');
+    case 'mark_spam':
+      return t('rules.manual.action.mark_spam');
+    case 'send_reply':
+      return t('rules.manual.action.send_reply');
+    case 'forward_email':
+      return t('rules.manual.action.forward_email');
+    case 'send_email':
+      return t('rules.manual.action.send_email');
   }
 }
 
@@ -916,5 +1264,19 @@ function actionPlaceholder(type: ManualActionType, t: (key: string) => string) {
       return t('rules.manual.actionPlaceholder.archive');
     case 'save_draft':
       return t('rules.manual.actionPlaceholder.save_draft');
+    case 'mark_read':
+      return t('rules.manual.actionPlaceholder.mark_read');
+    case 'star':
+      return t('rules.manual.actionPlaceholder.star');
+    case 'add_to_digest':
+      return t('rules.manual.actionPlaceholder.add_to_digest');
+    case 'mark_spam':
+      return t('rules.manual.actionPlaceholder.mark_spam');
+    case 'send_reply':
+      return t('rules.manual.actionPlaceholder.send_reply');
+    case 'forward_email':
+      return t('rules.manual.actionPlaceholder.forward_email');
+    case 'send_email':
+      return t('rules.manual.actionPlaceholder.send_email');
   }
 }

@@ -1,24 +1,23 @@
 package com.zeromail.core.chat.llm.springai;
 
-import com.zeromail.core.admin.mkey.domain.KeyFormat;
 import com.zeromail.core.admin.mkey.domain.LlmProvider;
-import com.zeromail.core.admin.mkey.usecases.ProviderMasterKeyResolver;
 import com.zeromail.core.chat.persistence.AssistantSettingsEntity;
 import com.zeromail.core.chat.persistence.AssistantSettingsJpaRepository;
 import com.zeromail.core.chat.usecases.ZeroMailChatProperties;
-import com.zeromail.core.config.ZeroMailCoreProperties;
-import com.zeromail.core.llm.domain.BYOKProvider;
-import com.zeromail.core.llm.usecases.ByokChatCredential;
-import com.zeromail.core.llm.usecases.ByokService;
-import java.nio.charset.StandardCharsets;
-import java.util.Objects;
+import com.zeromail.core.llm.gateway.springai.SpringAiProviderChatClientFactory;
+import com.zeromail.core.llm.routing.LlmRuntimeTask;
+import com.zeromail.core.llm.usecases.LlmCredentialSource;
+import com.zeromail.core.llm.usecases.LlmProviderCredential;
+import com.zeromail.core.llm.usecases.PlatformLlmRuntimeRouter;
+import com.zeromail.core.llm.usecases.ResolvedLlmProviderCredential;
+import com.zeromail.core.llm.usecases.TenantByokProviderCredentialResolver;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import org.springframework.ai.chat.model.StreamingChatModel;
-import org.springframework.ai.openai.OpenAiChatModel;
-import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -26,164 +25,124 @@ public class SpringAiChatModelFactory {
 
     private static final String PLATFORM_PROVIDER_ID = "platform";
 
-    private final ZeroMailCoreProperties zeroMailCoreProperties;
     private final ZeroMailChatProperties chatProperties;
     private final AssistantSettingsJpaRepository assistantSettingsRepository;
-    private final ByokService byokService;
-    private final ProviderMasterKeyResolver providerMasterKeyResolver;
-    private final ConcurrentMap<ChatModelCacheKey, StreamingChatModel> chatModelsByKey =
+    private final PlatformLlmRuntimeRouter platformRuntimeRouter;
+    private final TenantByokProviderCredentialResolver tenantByokProviderCredentialResolver;
+    private final SpringAiProviderChatClientFactory chatClientFactory;
+    private final ConcurrentMap<ChatClientCacheKey, ResolvedChatClient> chatClientsByKey =
             new ConcurrentHashMap<>();
 
     public SpringAiChatModelFactory(
-            ZeroMailCoreProperties zeroMailCoreProperties,
             ZeroMailChatProperties chatProperties,
             AssistantSettingsJpaRepository assistantSettingsRepository,
-            ByokService byokService,
-            ProviderMasterKeyResolver providerMasterKeyResolver) {
-        this.zeroMailCoreProperties = zeroMailCoreProperties;
+            PlatformLlmRuntimeRouter platformRuntimeRouter,
+            TenantByokProviderCredentialResolver tenantByokProviderCredentialResolver,
+            SpringAiProviderChatClientFactory chatClientFactory) {
         this.chatProperties = chatProperties;
         this.assistantSettingsRepository = assistantSettingsRepository;
-        this.byokService = byokService;
-        this.providerMasterKeyResolver = providerMasterKeyResolver;
+        this.platformRuntimeRouter = platformRuntimeRouter;
+        this.tenantByokProviderCredentialResolver = tenantByokProviderCredentialResolver;
+        this.chatClientFactory = chatClientFactory;
     }
 
-    public StreamingChatModel forTenant(String tenantId) {
+    public ResolvedChatClient forTenant(String tenantId, String requestedModelId) {
         UUID tenantUuid = UUID.fromString(tenantId);
         AssistantSettingsEntity assistantSettings =
                 assistantSettingsRepository
                         .findByTenantId(tenantUuid)
                         .orElseGet(() -> AssistantSettingsEntity.defaults(tenantUuid));
-        String providerId = providerId(assistantSettings);
-        String modelId = modelId(assistantSettings);
-        LlmProvider platformProvider = platformProvider();
-        Optional<ProviderMasterKeyResolver.ResolvedMasterKey> platformMasterKey =
-                PLATFORM_PROVIDER_ID.equals(providerId)
-                        ? providerMasterKeyResolver.resolveOptional(platformProvider)
-                        : Optional.empty();
-        long providerSecretVersion =
-                platformMasterKey
-                        .map(ProviderMasterKeyResolver.ResolvedMasterKey::providerSecretVersion)
-                        .orElseGet(
-                                () ->
-                                        providerMasterKeyResolver.providerSecretVersionOrZero(
-                                                platformProvider));
-        long providerCatalogVersion =
-                platformMasterKey
-                        .map(ProviderMasterKeyResolver.ResolvedMasterKey::providerCatalogVersion)
-                        .orElseGet(
-                                () ->
-                                        providerMasterKeyResolver.providerCatalogVersionOrOne(
-                                                platformProvider));
-        ChatModelCacheKey cacheKey =
-                new ChatModelCacheKey(
-                        tenantId,
-                        "chat",
-                        PLATFORM_PROVIDER_ID.equals(providerId)
-                                ? platformProvider.id()
-                                : providerId,
-                        modelId,
-                        providerSecretVersion,
-                        providerCatalogVersion);
-        return chatModelsByKey.computeIfAbsent(
-                cacheKey,
-                ignored -> {
-                    if (PLATFORM_PROVIDER_ID.equals(providerId)) {
-                        return platformModel(modelId, platformMasterKey.orElse(null));
-                    }
-                    return byokModel(tenantUuid, providerId, modelId);
-                });
+        ResolvedLlmProviderCredential resolvedCredential =
+                PLATFORM_PROVIDER_ID.equals(providerId(assistantSettings))
+                        ? platformCredential(requestedModelId)
+                        : byokCredential(tenantUuid, requestedModelId);
+        ChatClientCacheKey cacheKey = cacheKey(tenantId, resolvedCredential);
+        try {
+            return chatClientsByKey.computeIfAbsent(
+                    cacheKey, ignored -> createResolvedChatClient(resolvedCredential));
+        } finally {
+            resolvedCredential.credential().wipe();
+        }
     }
 
     public void evictByProvider(LlmProvider provider) {
-        chatModelsByKey.keySet().removeIf(cacheKey -> cacheKey.providerId().equals(provider.id()));
+        chatClientsByKey.keySet().removeIf(cacheKey -> cacheKey.providerId().equals(provider.id()));
     }
 
-    public void evictByModelIds(java.util.Collection<String> modelIds) {
+    public void evictByModelIds(Collection<String> modelIds) {
         if (modelIds == null || modelIds.isEmpty()) {
             return;
         }
         java.util.Set<String> affectedModelIds = java.util.Set.copyOf(modelIds);
-        chatModelsByKey
+        chatClientsByKey
                 .keySet()
                 .removeIf(cacheKey -> affectedModelIds.contains(cacheKey.modelId()));
     }
 
-    private StreamingChatModel platformModel(
-            String modelId, ProviderMasterKeyResolver.ResolvedMasterKey resolvedMasterKey) {
-        ZeroMailCoreProperties.ZeroMailLlmProperties llmProperties =
-                zeroMailCoreProperties.llm().platform();
-        String baseUrl = llmProperties.baseUrl();
-        String apiKey = llmProperties.apiKey();
-        // WR-11: when sourcing the api key from a master-key row, take a local defensive
-        // byte[] copy, decode once into a String, then zero the local copy in a finally.
-        // The ResolvedMasterKey's own byte[] is owned by the resolver cache and is zeroed
-        // on cache eviction (see ProviderMasterKeyResolver.invalidate). The apiKey String
-        // itself remains long-lived inside the built ChatModel — this is the accepted
-        // trade-off for chat-model reuse and is documented in CLAUDE.md privacy notes.
-        byte[] localKeyCopy = null;
-        try {
-            if (resolvedMasterKey != null) {
-                if (resolvedMasterKey.keyFormat() != KeyFormat.OPENAI_FORMAT) {
-                    throw new IllegalStateException(
-                            "Assistant streaming platform provider requires OpenAI-compatible"
-                                    + " format");
-                }
-                baseUrl = resolvedMasterKey.baseUrl();
-                byte[] sourceKey = resolvedMasterKey.plaintextKey();
-                localKeyCopy = java.util.Arrays.copyOf(sourceKey, sourceKey.length);
-                apiKey = new String(localKeyCopy, StandardCharsets.UTF_8);
-            }
-            return OpenAiChatModel.builder()
-                    .options(
-                            OpenAiChatOptions.builder()
-                                    .baseUrl(baseUrl)
-                                    .apiKey(apiKey)
-                                    .model(modelId)
-                                    .temperature(0.2)
-                                    .timeout(llmProperties.readTimeout())
-                                    .internalToolExecutionEnabled(false)
-                                    .build())
-                    .build();
-        } finally {
-            if (localKeyCopy != null) {
-                java.util.Arrays.fill(localKeyCopy, (byte) 0);
-            }
-        }
+    public ChatOptions.Builder<?> optionsFor(ResolvedChatClient resolvedChatClient) {
+        return chatClientFactory.options(
+                resolvedChatClient.providerId(),
+                resolvedChatClient.keyFormat(),
+                resolvedChatClient.credentialSource(),
+                resolvedChatClient.modelId(),
+                0.2,
+                2048,
+                false);
     }
 
-    private StreamingChatModel byokModel(UUID tenantId, String providerId, String modelId) {
-        ByokChatCredential credentials =
-                byokService
-                        .chatCredential(tenantId)
-                        .orElseThrow(
-                                () ->
-                                        new IllegalStateException(
-                                                "No BYOK credentials configured for tenant"));
-        if (credentials.provider() != BYOKProvider.OPENAI) {
-            throw new IllegalStateException(
-                    "Assistant streaming BYOK provider is not supported yet: " + providerId);
+    private ResolvedLlmProviderCredential platformCredential(String requestedModelId) {
+        ResolvedLlmProviderCredential primaryCredential =
+                platformRuntimeRouter
+                        .resolveRoutes(
+                                LlmRuntimeTask.CHAT_ASSISTANT, modelIdOrDefault(requestedModelId))
+                        .getFirst();
+        String modelId = modelIdOrDefault(requestedModelId);
+        if (modelId.equals(primaryCredential.modelId())) {
+            return primaryCredential;
         }
-        byte[] decryptedKey =
-                Objects.requireNonNull(credentials.decryptedKey(), "decryptedKey must not be null");
-        String plaintextApiKey = new String(decryptedKey, StandardCharsets.UTF_8);
-        String endpoint =
-                credentials.endpoint() == null || credentials.endpoint().isBlank()
-                        ? zeroMailCoreProperties.llm().platform().baseUrl()
-                        : credentials.endpoint();
-        try {
-            return OpenAiChatModel.builder()
-                    .options(
-                            OpenAiChatOptions.builder()
-                                    .apiKey(plaintextApiKey)
-                                    .baseUrl(endpoint)
-                                    .model(modelId)
-                                    .temperature(0.2)
-                                    .internalToolExecutionEnabled(false)
-                                    .build())
-                    .build();
-        } finally {
-            java.util.Arrays.fill(decryptedKey, (byte) 0);
-        }
+        return new ResolvedLlmProviderCredential(
+                primaryCredential.providerId(),
+                modelId,
+                primaryCredential.credential(),
+                primaryCredential.providerSecretVersion(),
+                primaryCredential.providerCatalogVersion());
+    }
+
+    private ResolvedLlmProviderCredential byokCredential(UUID tenantId, String requestedModelId) {
+        Optional<ResolvedLlmProviderCredential> resolvedCredential =
+                tenantByokProviderCredentialResolver.resolveForChat(
+                        tenantId, modelIdOrDefault(requestedModelId));
+        return resolvedCredential.orElseThrow(
+                () -> new IllegalStateException("No BYOK credentials configured for tenant"));
+    }
+
+    private ResolvedChatClient createResolvedChatClient(
+            ResolvedLlmProviderCredential resolvedCredential) {
+        LlmProviderCredential credential = resolvedCredential.credential();
+        ChatClient chatClient =
+                chatClientFactory.create(
+                        credential, resolvedCredential.modelId(), 0.2, 2048, false);
+        return new ResolvedChatClient(
+                chatClient,
+                resolvedCredential.providerId(),
+                credential.keyFormat(),
+                credential.source(),
+                resolvedCredential.modelId());
+    }
+
+    private ChatClientCacheKey cacheKey(
+            String tenantId, ResolvedLlmProviderCredential resolvedCredential) {
+        LlmProviderCredential credential = resolvedCredential.credential();
+        return new ChatClientCacheKey(
+                tenantId,
+                "chat",
+                resolvedCredential.providerId(),
+                credential.keyFormat(),
+                credential.baseUrl(),
+                resolvedCredential.modelId(),
+                credential.source(),
+                resolvedCredential.providerSecretVersion(),
+                resolvedCredential.providerCatalogVersion());
     }
 
     private String providerId(AssistantSettingsEntity assistantSettings) {
@@ -191,34 +150,27 @@ public class SpringAiChatModelFactory {
         return providerId == null || providerId.isBlank() ? PLATFORM_PROVIDER_ID : providerId;
     }
 
-    private String modelId(AssistantSettingsEntity assistantSettings) {
-        String modelId = assistantSettings.getDefaultModel();
-        return modelId == null || modelId.isBlank() ? chatProperties.defaultModel() : modelId;
+    private String modelIdOrDefault(String requestedModelId) {
+        return requestedModelId == null || requestedModelId.isBlank()
+                ? chatProperties.defaultModel()
+                : requestedModelId;
     }
 
-    private LlmProvider platformProvider() {
-        String baseUrl = zeroMailCoreProperties.llm().platform().baseUrl();
-        if (baseUrl != null && baseUrl.contains("openrouter.ai")) {
-            return LlmProvider.OPENROUTER;
-        }
-        String providerId = zeroMailCoreProperties.llm().platform().provider();
-        if (BYOKProvider.ANTHROPIC.id().equals(providerId)) {
-            return LlmProvider.ANTHROPIC;
-        }
-        if (BYOKProvider.GOOGLE_GENAI.id().equals(providerId)) {
-            return LlmProvider.GOOGLE;
-        }
-        if (BYOKProvider.DEEPSEEK.id().equals(providerId)) {
-            return LlmProvider.DEEPSEEK;
-        }
-        return LlmProvider.OPENAI;
-    }
+    public record ResolvedChatClient(
+            ChatClient chatClient,
+            String providerId,
+            String keyFormat,
+            LlmCredentialSource credentialSource,
+            String modelId) {}
 
-    private record ChatModelCacheKey(
+    private record ChatClientCacheKey(
             String tenantId,
             String feature,
             String providerId,
+            String keyFormat,
+            String baseUrl,
             String modelId,
+            LlmCredentialSource credentialSource,
             long providerSecretVersion,
             long providerCatalogVersion) {}
 }

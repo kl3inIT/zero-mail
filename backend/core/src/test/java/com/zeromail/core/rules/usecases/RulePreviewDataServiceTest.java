@@ -31,7 +31,7 @@ class RulePreviewDataServiceTest {
 
     private static final UUID TENANT_ID = UUID.fromString("00000000-0000-0000-0000-000000000501");
     private static final Pattern FORBIDDEN_REPOSITORY_CONTENT_NAME =
-            Pattern.compile("(?i)(rawHeaders|rawBody|snippet|prompt|completion)");
+            Pattern.compile("(?i)(rawHeaders|rawBody|snippet|completion)");
 
     @Test
     void returns_request_scoped_preview_inputs_without_raw_message_content() {

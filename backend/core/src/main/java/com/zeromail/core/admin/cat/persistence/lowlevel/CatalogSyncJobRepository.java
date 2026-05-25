@@ -1,5 +1,6 @@
 package com.zeromail.core.admin.cat.persistence.lowlevel;
 
+import com.zeromail.core.admin.cat.domain.ModelVerificationStatus;
 import com.zeromail.core.admin.cat.projection.CatalogDiff;
 import com.zeromail.core.admin.cat.projection.CatalogModelRow;
 import com.zeromail.core.admin.cat.projection.CatalogSyncJob;
@@ -269,6 +270,7 @@ public class CatalogSyncJobRepository {
                             rowNode.path("recommended").asBoolean(false),
                             null,
                             null,
+                            ModelVerificationStatus.UNTESTED,
                             null,
                             rowNode.path("pinnedTenantCount").asLong(0)));
         }

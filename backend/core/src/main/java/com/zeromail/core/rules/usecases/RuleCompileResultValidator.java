@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -34,7 +35,11 @@ public class RuleCompileResultValidator {
     private static final int MAX_MATCHER_TEXT_LENGTH = 512;
     private static final int MAX_REGEX_LENGTH = 256;
     private static final int MAX_ACTION_TEXT_LENGTH = 500;
+    private static final int MAX_ACTION_BODY_LENGTH = 4000;
+    private static final int MAX_RECIPIENTS = 10;
     private static final int MAX_CHILDREN = 24;
+    private static final Pattern EMAIL_ADDRESS_PATTERN =
+            Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
     private static final Set<String> TOP_LEVEL_FIELDS =
             Set.of(
                     "schemaVersion",
@@ -48,7 +53,18 @@ public class RuleCompileResultValidator {
     private static final Set<String> COMMON_MATCHER_FIELDS =
             Set.of("schemaVersion", "type", "matcherType", "nodeId");
     private static final Set<String> ACTION_FIELDS =
-            Set.of("type", "value", "labelName", "body", "instruction");
+            Set.of(
+                    "type",
+                    "value",
+                    "labelName",
+                    "body",
+                    "instruction",
+                    "recipients",
+                    "to",
+                    "cc",
+                    "bcc",
+                    "subject",
+                    "note");
     private static final Set<String> QUESTION_LEAK_MARKERS =
             Set.of("prompt", "system", "tool", "argument", "completion", "{", "}", "<script");
 
@@ -471,6 +487,8 @@ public class RuleCompileResultValidator {
             ActionIntent typedAction =
                     switch (actionType) {
                         case LABEL -> {
+                            rejectUnknownFields(
+                                    actionMap, actionFields("labelName", "value"), "actionIntent");
                             String labelName =
                                     firstBoundedString(
                                             actionMap,
@@ -487,7 +505,27 @@ public class RuleCompileResultValidator {
                             }
                             yield new ActionIntent.Archive();
                         }
+                        case MARK_READ -> {
+                            rejectNoValueAction(actionMap, "mark_read");
+                            yield new ActionIntent.MarkRead();
+                        }
+                        case STAR -> {
+                            rejectNoValueAction(actionMap, "star");
+                            yield new ActionIntent.Star();
+                        }
+                        case ADD_TO_DIGEST -> {
+                            rejectNoValueAction(actionMap, "add_to_digest");
+                            yield new ActionIntent.AddToDigest();
+                        }
+                        case MARK_SPAM -> {
+                            rejectNoValueAction(actionMap, "mark_spam");
+                            yield new ActionIntent.MarkSpam();
+                        }
                         case SAVE_DRAFT -> {
+                            rejectUnknownFields(
+                                    actionMap,
+                                    actionFields("instruction", "body", "value"),
+                                    "actionIntent");
                             String instruction =
                                     firstBoundedString(
                                             actionMap,
@@ -498,11 +536,139 @@ public class RuleCompileResultValidator {
                             normalizedAction.put("instruction", instruction);
                             yield new ActionIntent.SaveDraft(instruction);
                         }
+                        case SEND_REPLY -> {
+                            rejectUnknownFields(
+                                    actionMap,
+                                    actionFields("instruction", "body", "value"),
+                                    "actionIntent");
+                            String instruction =
+                                    firstBoundedString(
+                                            actionMap,
+                                            MAX_ACTION_TEXT_LENGTH,
+                                            "instruction",
+                                            "body",
+                                            "value");
+                            normalizedAction.put("instruction", instruction);
+                            yield new ActionIntent.SendReply(instruction);
+                        }
+                        case FORWARD_EMAIL -> {
+                            rejectUnknownFields(
+                                    actionMap,
+                                    actionFields("recipients", "to", "instruction", "note"),
+                                    "actionIntent");
+                            List<String> recipients =
+                                    requiredRecipientList(actionMap, "recipients", "to");
+                            normalizedAction.put("recipients", recipients);
+                            String instruction = optionalString(actionMap, "instruction");
+                            if (instruction == null) {
+                                instruction = optionalString(actionMap, "note");
+                            }
+                            if (instruction != null) {
+                                if (instruction.length() > MAX_ACTION_TEXT_LENGTH) {
+                                    throw new IllegalArgumentException("instruction is too long");
+                                }
+                                normalizedAction.put("instruction", instruction);
+                            }
+                            yield new ActionIntent.ForwardEmail(recipients, instruction);
+                        }
+                        case SEND_EMAIL -> {
+                            rejectUnknownFields(
+                                    actionMap,
+                                    actionFields(
+                                            "to", "recipients", "cc", "bcc", "subject", "body"),
+                                    "actionIntent");
+                            List<String> to = requiredRecipientList(actionMap, "to", "recipients");
+                            List<String> cc = optionalRecipientList(actionMap, "cc");
+                            List<String> bcc = optionalRecipientList(actionMap, "bcc");
+                            String subject =
+                                    boundedStringField(
+                                            actionMap, "subject", MAX_ACTION_TEXT_LENGTH, false);
+                            String body =
+                                    boundedStringField(
+                                            actionMap, "body", MAX_ACTION_BODY_LENGTH, false);
+                            normalizedAction.put("to", to);
+                            if (!cc.isEmpty()) {
+                                normalizedAction.put("cc", cc);
+                            }
+                            if (!bcc.isEmpty()) {
+                                normalizedAction.put("bcc", bcc);
+                            }
+                            normalizedAction.put("subject", subject);
+                            normalizedAction.put("body", body);
+                            yield new ActionIntent.SendEmail(to, cc, bcc, subject, body);
+                        }
                     };
             Objects.requireNonNull(typedAction, "typedAction");
             normalizedActions.add(normalizedAction);
         }
         return List.copyOf(normalizedActions);
+    }
+
+    private static void rejectNoValueAction(Map<String, Object> actionMap, String actionType) {
+        if (actionMap.size() > 1) {
+            throw new IllegalArgumentException(actionType + " action cannot carry content");
+        }
+    }
+
+    private static List<String> requiredRecipientList(
+            Map<String, Object> values, String primaryFieldName, String fallbackFieldName) {
+        List<String> recipients = recipientList(values, primaryFieldName, fallbackFieldName, true);
+        if (recipients.isEmpty()) {
+            throw new IllegalArgumentException(primaryFieldName + " is required");
+        }
+        return recipients;
+    }
+
+    private static List<String> optionalRecipientList(
+            Map<String, Object> values, String fieldName) {
+        return recipientList(values, fieldName, fieldName, false);
+    }
+
+    private static List<String> recipientList(
+            Map<String, Object> values,
+            String primaryFieldName,
+            String fallbackFieldName,
+            boolean required) {
+        Object rawValue = values.get(primaryFieldName);
+        if (rawValue == null && !primaryFieldName.equals(fallbackFieldName)) {
+            rawValue = values.get(fallbackFieldName);
+        }
+        if (rawValue == null) {
+            if (required) {
+                throw new IllegalArgumentException(primaryFieldName + " is required");
+            }
+            return List.of();
+        }
+        List<String> recipientValues;
+        if (rawValue instanceof String stringValue) {
+            recipientValues = List.of(stringValue);
+        } else if (rawValue instanceof List<?> rawList) {
+            if (rawList.size() > MAX_RECIPIENTS) {
+                throw new IllegalArgumentException(primaryFieldName + " has too many recipients");
+            }
+            recipientValues = new ArrayList<>();
+            for (Object rawRecipient : rawList) {
+                if (!(rawRecipient instanceof String recipient)) {
+                    throw new IllegalArgumentException(primaryFieldName + " must contain strings");
+                }
+                recipientValues.add(recipient);
+            }
+        } else {
+            throw new IllegalArgumentException(primaryFieldName + " must be a list");
+        }
+        ArrayList<String> normalizedRecipients = new ArrayList<>();
+        for (String recipient : recipientValues) {
+            String normalizedRecipient = recipient == null ? "" : recipient.trim();
+            if (normalizedRecipient.isBlank()) {
+                throw new IllegalArgumentException(primaryFieldName + " contains blank recipient");
+            }
+            if (!EMAIL_ADDRESS_PATTERN.matcher(normalizedRecipient).matches()) {
+                throw new IllegalArgumentException(
+                        primaryFieldName + " contains invalid email address");
+            }
+            normalizedRecipients.add(normalizedRecipient);
+        }
+        return List.copyOf(normalizedRecipients);
     }
 
     private static boolean containsVietnameseSignal(String normalizedText) {
@@ -539,6 +705,12 @@ public class RuleCompileResultValidator {
 
     private static Set<String> fields(String... fieldNames) {
         Set<String> allowedFields = new java.util.LinkedHashSet<>(COMMON_MATCHER_FIELDS);
+        allowedFields.addAll(Arrays.asList(fieldNames));
+        return allowedFields;
+    }
+
+    private static Set<String> actionFields(String... fieldNames) {
+        Set<String> allowedFields = new java.util.LinkedHashSet<>(Set.of("type"));
         allowedFields.addAll(Arrays.asList(fieldNames));
         return allowedFields;
     }

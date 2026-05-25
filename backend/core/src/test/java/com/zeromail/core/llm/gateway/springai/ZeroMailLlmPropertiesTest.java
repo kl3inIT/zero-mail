@@ -35,7 +35,8 @@ class ZeroMailLlmPropertiesTest {
                         "zero-mail.llm.platform.api-key=test-platform-key",
                         "zero-mail.llm.platform.compile-model=openai/gpt-5.4-nano",
                         "zero-mail.llm.platform.drift-model=openai/gpt-5.4-nano",
-                        "zero-mail.llm.platform.triage-model=anthropic/claude-3.5-sonnet")
+                        "zero-mail.llm.platform.triage-model=anthropic/claude-3.5-sonnet",
+                        "zero-mail.llm.platform.draft-model=anthropic/claude-3-haiku")
                 .run(
                         applicationContext -> {
                             ZeroMailLlmProperties llmProperties =
@@ -53,6 +54,8 @@ class ZeroMailLlmPropertiesTest {
                             assertThat(llmProperties.driftModel()).isEqualTo("openai/gpt-5.4-nano");
                             assertThat(llmProperties.triageModel())
                                     .isEqualTo("anthropic/claude-3.5-sonnet");
+                            assertThat(llmProperties.draftModel())
+                                    .isEqualTo("anthropic/claude-3-haiku");
                             assertThat(
                                             applicationContext
                                                     .getBean(ZeroMailCoreProperties.class)

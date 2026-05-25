@@ -46,7 +46,7 @@ class RuleAstContractTest {
     }
 
     @Test
-    void safe_action_type_ids_match_the_existing_llm_action_allow_list() throws Exception {
+    void action_type_ids_match_the_phase_8_1_rule_action_contract() throws Exception {
         Class<?> ruleActionTypeClass =
                 Class.forName("com.zeromail.core.rules.domain.RuleActionType");
         Method valuesMethod = ruleActionTypeClass.getMethod("values");
@@ -55,8 +55,19 @@ class RuleAstContractTest {
         List<String> ruleActionIds =
                 Stream.of(ruleActionTypes).map(RuleAstContractTest::invokeId).toList();
 
-        assertThat(ruleActionIds).containsExactlyInAnyOrder("label", "archive", "save_draft");
-        assertThat(ruleActionIds).doesNotContain("send", "forward", "spam", "webhook");
+        assertThat(ruleActionIds)
+                .containsExactlyInAnyOrder(
+                        "label",
+                        "archive",
+                        "save_draft",
+                        "mark_read",
+                        "star",
+                        "add_to_digest",
+                        "mark_spam",
+                        "send_reply",
+                        "forward_email",
+                        "send_email");
+        assertThat(ruleActionIds).doesNotContain("send", "forward", "webhook", "delete", "trash");
     }
 
     @Test
