@@ -1,0 +1,291 @@
+package com.zeromail.core.cleanup.usecases;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import com.zeromail.core.cleanup.domain.UnsubscribeMethod;
+import com.zeromail.core.cleanup.projection.UnsubscribeCandidateProjection;
+import com.zeromail.core.gmail.usecases.GmailPreviewReadService;
+import com.zeromail.core.gmail.usecases.GmailPreviewReadService.GmailPreviewMessage;
+import com.zeromail.core.support.PostgresContainerTest;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+
+/**
+ * UNS-01 — Candidate query (Wave 2 / Plan 04, flipped from Wave 0 RED stub to GREEN).
+ *
+ * <p>Three sender fixture (1 one-click + 1 mailto + 1 no-header) plus 1 sender in suppression list.
+ * Expected behavior of {@link CandidateQueryService}:
+ *
+ * <ul>
+ *   <li>returns the two senders that have {@code list_unsubscribe_url IS NOT NULL OR
+ *       list_unsubscribe_mailto IS NOT NULL}
+ *   <li>excludes the no-header sender
+ *   <li>excludes the suppressed sender (both by sender_email and by sender_domain)
+ *   <li>maps {@code list_unsubscribe_one_click=true} → {@code unsubscribeMethod = ONE_CLICK},
+ *       mailto-only → {@code MAILTO}
+ * </ul>
+ */
+@SuppressWarnings("SqlResolve")
+class CandidateQueryServiceTest extends PostgresContainerTest {
+
+    private static final Duration WINDOW = Duration.ofDays(30);
+    private static final int LIMIT = 50;
+
+    @Autowired JdbcTemplate jdbcTemplate;
+
+    @Autowired CandidateQueryService candidateQueryService;
+
+    @Test
+    void future_candidate_query_service_type_is_present() {
+        assertThatCode(
+                        () ->
+                                Class.forName(
+                                        "com.zeromail.core.cleanup.usecases.CandidateQueryService"))
+                .as("Production type must exist")
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void returnsCandidatesWithOneClickAndMailto() {
+        UUID tenantId = seedTenant();
+        seedOneClickSender(tenantId, "newsletter-a@provider.test", "provider.test");
+        seedMailtoSender(tenantId, "newsletter-b@b.test", "b.test");
+        seedNoHeaderSender(tenantId, "newsletter-c@c.test", "c.test");
+
+        List<UnsubscribeCandidateProjection> candidates =
+                candidateQueryService.findCandidates(tenantId, WINDOW, LIMIT);
+
+        assertThat(candidates)
+                .as("two senders with List-Unsubscribe headers should be returned")
+                .hasSize(2)
+                .extracting(UnsubscribeCandidateProjection::senderEmail)
+                .containsExactlyInAnyOrder("newsletter-a@provider.test", "newsletter-b@b.test");
+        assertThat(candidates)
+                .filteredOn(c -> c.senderEmail().equals("newsletter-a@provider.test"))
+                .extracting(UnsubscribeCandidateProjection::unsubscribeMethod)
+                .containsExactly(UnsubscribeMethod.ONE_CLICK);
+        assertThat(candidates)
+                .filteredOn(c -> c.senderEmail().equals("newsletter-b@b.test"))
+                .extracting(UnsubscribeCandidateProjection::unsubscribeMethod)
+                .containsExactly(UnsubscribeMethod.MAILTO);
+    }
+
+    @Test
+    void prefersRecentGmailWorkingSetWhenAvailable() {
+        UUID tenantId = seedTenant();
+        seedSuppressedSenderEmail(tenantId, "blocked@example.test");
+        GmailPreviewReadService gmailPreviewReadService = mock(GmailPreviewReadService.class);
+        when(gmailPreviewReadService.fetchRecentInboxMessages(
+                        eq(tenantId), eq(100), eq(false), any(Duration.class)))
+                .thenReturn(
+                        List.of(
+                                previewMessage(
+                                        "gmail-1",
+                                        "newsletter@example.test",
+                                        "example.test",
+                                        Instant.parse("2026-05-23T08:00:00Z"),
+                                        "https://example.test/unsubscribe",
+                                        null,
+                                        true),
+                                previewMessage(
+                                        "gmail-2",
+                                        "newsletter@example.test",
+                                        "example.test",
+                                        Instant.parse("2026-05-23T09:00:00Z"),
+                                        null,
+                                        "mailto:unsubscribe@example.test",
+                                        false),
+                                previewMessage(
+                                        "gmail-3",
+                                        "offers@example.test",
+                                        "example.test",
+                                        Instant.parse("2026-05-22T09:00:00Z"),
+                                        null,
+                                        "mailto:unsubscribe-offers@example.test",
+                                        false),
+                                previewMessage(
+                                        "gmail-4",
+                                        "blocked@example.test",
+                                        "example.test",
+                                        Instant.parse("2026-05-23T10:00:00Z"),
+                                        null,
+                                        "mailto:blocked@example.test",
+                                        false)));
+        Clock fixedClock =
+                Clock.fixed(Instant.parse("2026-05-24T00:00:00Z"), java.time.ZoneOffset.UTC);
+        CleanupRecentInboxWorkingSetService cleanupRecentInboxWorkingSetService =
+                new CleanupRecentInboxWorkingSetService(
+                        gmailPreviewReadService, jdbcTemplate, fixedClock);
+        CandidateQueryService recentInboxCandidateQueryService =
+                new CandidateQueryService(
+                        jdbcTemplate, cleanupRecentInboxWorkingSetService, fixedClock);
+
+        List<UnsubscribeCandidateProjection> candidates =
+                recentInboxCandidateQueryService.findCandidates(tenantId, WINDOW, LIMIT);
+
+        assertThat(candidates)
+                .extracting(UnsubscribeCandidateProjection::senderEmail)
+                .containsExactly("newsletter@example.test", "offers@example.test");
+        assertThat(candidates.getFirst().messageCount()).isEqualTo(2);
+        assertThat(candidates.getFirst().unsubscribeMethod())
+                .isEqualTo(UnsubscribeMethod.ONE_CLICK);
+    }
+
+    @Test
+    void excludesSenderWithoutListUnsubscribeHeader() {
+        UUID tenantId = seedTenant();
+        seedNoHeaderSender(tenantId, "no-header@nh.test", "nh.test");
+
+        List<UnsubscribeCandidateProjection> candidates =
+                candidateQueryService.findCandidates(tenantId, WINDOW, LIMIT);
+
+        assertThat(candidates).as("no-header sender must be excluded").isEmpty();
+    }
+
+    @Test
+    void excludesSenderInSuppressionList() {
+        UUID tenantId = seedTenant();
+        seedOneClickSender(tenantId, "suppressed@d.test", "d.test");
+        seedSuppressedSenderEmail(tenantId, "suppressed@d.test");
+
+        List<UnsubscribeCandidateProjection> candidates =
+                candidateQueryService.findCandidates(tenantId, WINDOW, LIMIT);
+
+        assertThat(candidates).as("suppressed sender must be excluded").isEmpty();
+    }
+
+    @Test
+    void excludesSuppressedDomain() {
+        UUID tenantId = seedTenant();
+        seedOneClickSender(tenantId, "any-sender@blocked.test", "blocked.test");
+        seedSuppressedSenderDomain(tenantId, "blocked.test");
+
+        List<UnsubscribeCandidateProjection> candidates =
+                candidateQueryService.findCandidates(tenantId, WINDOW, LIMIT);
+
+        assertThat(candidates).as("suppressed domain must be excluded").isEmpty();
+    }
+
+    private UUID seedTenant() {
+        UUID tenantId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "insert into tenants(id, display_name) values (?, ?)",
+                tenantId,
+                "candidate-query-" + tenantId);
+        return tenantId;
+    }
+
+    private void seedOneClickSender(UUID tenantId, String senderEmail, String senderDomain) {
+        seedObservedRow(tenantId, senderEmail, "https://" + senderDomain + "/u/a1", null, true);
+    }
+
+    private void seedMailtoSender(UUID tenantId, String senderEmail, String senderDomain) {
+        seedObservedRow(tenantId, senderEmail, null, "mailto:unsub@" + senderDomain, false);
+    }
+
+    private void seedNoHeaderSender(UUID tenantId, String senderEmail, String senderDomain) {
+        seedObservedRow(tenantId, senderEmail, null, null, false);
+    }
+
+    private void seedObservedRow(
+            UUID tenantId,
+            String senderEmail,
+            String listUnsubscribeUrl,
+            String listUnsubscribeMailto,
+            boolean listUnsubscribeOneClick) {
+        jdbcTemplate.update(
+                """
+                        insert into mail_message_observed(
+                            tenant_id, gmail_message_id, gmail_thread_id, history_id, label_ids,
+                            sender_email, list_unsubscribe_url, list_unsubscribe_mailto,
+                            list_unsubscribe_one_click, observed_at)
+                        values (?, ?, ?, ?, ARRAY[]::text[], ?, ?, ?, ?, ?)
+                        """,
+                tenantId,
+                "gmail-msg-" + UUID.randomUUID(),
+                "gmail-thread-" + UUID.randomUUID(),
+                System.currentTimeMillis(),
+                senderEmail,
+                listUnsubscribeUrl,
+                listUnsubscribeMailto,
+                listUnsubscribeOneClick,
+                java.sql.Timestamp.from(Instant.now()));
+    }
+
+    private static GmailPreviewMessage previewMessage(
+            String gmailMessageId,
+            String senderEmail,
+            String senderDomain,
+            Instant internalDate,
+            String listUnsubscribeUrl,
+            String listUnsubscribeMailto,
+            boolean listUnsubscribeOneClick) {
+        return new GmailPreviewMessage(
+                gmailMessageId,
+                "thread-" + gmailMessageId,
+                senderEmail,
+                senderDomain,
+                List.of(),
+                List.of(),
+                "Subject",
+                "",
+                "",
+                "",
+                senderEmail,
+                List.of("INBOX"),
+                List.of(),
+                internalDate,
+                internalDate,
+                false,
+                listUnsubscribeUrl != null || listUnsubscribeMailto != null,
+                listUnsubscribeUrl,
+                listUnsubscribeMailto,
+                listUnsubscribeOneClick,
+                listUnsubscribeUrl != null || listUnsubscribeMailto != null,
+                Optional.empty(),
+                Set.of());
+    }
+
+    private void seedSuppressedSenderEmail(UUID tenantId, String senderEmail) {
+        jdbcTemplate.update(
+                """
+                        insert into sender_suppression(
+                            id, tenant_id, sender_email, sender_domain, reason, created_at)
+                        values (?, ?, ?, ?, ?, ?)
+                        """,
+                UUID.randomUUID(),
+                tenantId,
+                senderEmail,
+                null,
+                "manual",
+                java.sql.Timestamp.from(Instant.now()));
+    }
+
+    private void seedSuppressedSenderDomain(UUID tenantId, String senderDomain) {
+        jdbcTemplate.update(
+                """
+                        insert into sender_suppression(
+                            id, tenant_id, sender_email, sender_domain, reason, created_at)
+                        values (?, ?, ?, ?, ?, ?)
+                        """,
+                UUID.randomUUID(),
+                tenantId,
+                null,
+                senderDomain,
+                "manual",
+                java.sql.Timestamp.from(Instant.now()));
+    }
+}

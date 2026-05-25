@@ -123,4 +123,16 @@ export const shellMessages = {
     vi: 'Tổng quan',
     en: 'Dashboard',
   },
+  'nav.cleanupGroup': {
+    vi: 'Hủy đăng ký',
+    en: 'Unsubscribe',
+  },
+  'nav.cleanupUnsubscribe': {
+    vi: 'Hủy đăng ký',
+    en: 'Unsubscribe',
+  },
+  'nav.cleanupSuppression': {
+    vi: 'Danh sách an toàn',
+    en: 'Safe list',
+  },
 } as const;

@@ -239,7 +239,8 @@ public class GmailDeliveryProcessingService {
                         .messages()
                         .get("me", gmailMessageId)
                         .setFormat("metadata")
-                        .setMetadataHeaders(List.of("From"))
+                        .setMetadataHeaders(
+                                List.of("From", "List-Unsubscribe", "List-Unsubscribe-Post"))
                         .setFields("id,threadId,labelIds,internalDate,payload/headers")
                         .execute();
         List<String> labelIds = gmailMessage.getLabelIds();
@@ -247,8 +248,28 @@ public class GmailDeliveryProcessingService {
             return 0;
         }
         String senderEmail = extractSanitizedSenderEmail(gmailMessage);
+        GmailPreviewReadService.ListUnsubscribeExtraction listUnsubscribeExtraction =
+                extractListUnsubscribeFromMessage(gmailMessage);
         return insertObservationAndPublishEvents(
-                tenantId, history, gmailMessage, labelIds, senderEmail);
+                tenantId, history, gmailMessage, labelIds, senderEmail, listUnsubscribeExtraction);
+    }
+
+    private static GmailPreviewReadService.ListUnsubscribeExtraction
+            extractListUnsubscribeFromMessage(Message gmailMessage) {
+        if (gmailMessage.getPayload() == null || gmailMessage.getPayload().getHeaders() == null) {
+            return GmailPreviewReadService.ListUnsubscribeExtraction.empty();
+        }
+        String listUnsubscribeHeaderValue = null;
+        String listUnsubscribePostHeaderValue = null;
+        for (MessagePartHeader header : gmailMessage.getPayload().getHeaders()) {
+            if ("List-Unsubscribe".equalsIgnoreCase(header.getName())) {
+                listUnsubscribeHeaderValue = header.getValue();
+            } else if ("List-Unsubscribe-Post".equalsIgnoreCase(header.getName())) {
+                listUnsubscribePostHeaderValue = header.getValue();
+            }
+        }
+        return GmailPreviewReadService.extractListUnsubscribe(
+                listUnsubscribeHeaderValue, listUnsubscribePostHeaderValue);
     }
 
     private record PendingFetch(History history, String gmailMessageId) {}
@@ -258,7 +279,8 @@ public class GmailDeliveryProcessingService {
             History history,
             Message gmailMessage,
             List<String> labelIds,
-            String senderEmail) {
+            String senderEmail,
+            GmailPreviewReadService.ListUnsubscribeExtraction listUnsubscribeExtraction) {
         Integer insertedCount =
                 observationTransaction.execute(
                         transactionStatus -> {
@@ -270,7 +292,10 @@ public class GmailDeliveryProcessingService {
                                             history.getId().longValueExact(),
                                             labelIds.toArray(new String[0]),
                                             gmailMessage.getInternalDate(),
-                                            senderEmail);
+                                            senderEmail,
+                                            listUnsubscribeExtraction.url(),
+                                            listUnsubscribeExtraction.mailto(),
+                                            listUnsubscribeExtraction.oneClick());
                             if (newRowCount == 1) {
                                 publishObservedEvents(tenantId, gmailMessage, labelIds);
                             }

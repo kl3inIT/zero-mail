@@ -236,6 +236,42 @@ public class TriageGmailWriter {
                 });
     }
 
+    /**
+     * H-2 — Look up the Gmail-side label id for a known label name. Returns {@link
+     * Optional#empty()} when the label does not exist (e.g. user manually deleted the {@code "Zero
+     * Mail/Unsubscribed"} label between campaign apply + undo). Used by {@code CampaignUndoService}
+     * (Phase 8 Plan 07) to skip the {@code removeLabel} step gracefully instead of throwing.
+     *
+     * <p>Propagates {@link IOException} on Gmail API failure — matches the {@link #applyLabel}
+     * error-propagation convention so the caller's retry semantics are consistent.
+     */
+    public Optional<String> lookupLabelId(UUID tenantId, String labelName) throws IOException {
+        if (tenantId == null) {
+            throw new IOException("tenantId must not be null");
+        }
+        requireText(labelName, "labelName");
+        Gmail gmail = gmailApiClientFactory.buildClientForTenant(tenantId);
+        return findLabelIdByName(gmail, labelName);
+    }
+
+    /**
+     * H-2 — Resolve-or-create the Gmail-side label id for a known label name. Returns the opaque
+     * Gmail label id (e.g. {@code "Label_42"}) as a {@link String}. Idempotent: re-invoking with
+     * the same label name returns the same id without creating a duplicate Gmail label.
+     *
+     * <p>Used by {@code UnsubscribeCampaignHandler} (Phase 8 Plan 06) to capture the label id once
+     * per campaign so each archived message records the same id via {@code
+     * TriageAuditWriter.recordCleanupArchive}.
+     */
+    public String ensureLabelExists(UUID tenantId, String labelName) throws IOException {
+        if (tenantId == null) {
+            throw new IOException("tenantId must not be null");
+        }
+        requireText(labelName, "labelName");
+        return executeGmailWrite(
+                tenantId, "ensureLabelExists", gmail -> resolveOrCreateLabelId(gmail, labelName));
+    }
+
     public void deleteDraft(UUID tenantId, String draftId) throws IOException {
         executeGmailWrite(
                 tenantId,

@@ -41,8 +41,8 @@ class RulePreviewDataServiceTest {
                 .thenReturn(
                         new GmailConnectionProjection(
                                 "CONNECTED", "HEALTHY", "hidden@example.test"));
-        when(gmailPreviewReadService.fetchRecentMessages(
-                        eq(TENANT_ID), eq(10), eq(false), eq(Duration.ofSeconds(5))))
+        when(gmailPreviewReadService.fetchRecentInboxMessages(
+                        eq(TENANT_ID), eq(100), eq(false), eq(Duration.ofSeconds(5))))
                 .thenReturn(List.of(gmailPreviewMessage()));
 
         RulePreviewDataService dataService =
@@ -85,14 +85,14 @@ class RulePreviewDataServiceTest {
                 .extracting("reason")
                 .isEqualTo(GmailPreviewUnavailableException.Reason.DISCONNECTED);
         verify(gmailPreviewReadService, never())
-                .fetchRecentMessages(
+                .fetchRecentInboxMessages(
                         any(), org.mockito.ArgumentMatchers.anyInt(), any(Boolean.class), any());
 
         GmailConnectionService connectedConnectionService = mock(GmailConnectionService.class);
         GmailPreviewReadService revokedReadService = mock(GmailPreviewReadService.class);
         when(connectedConnectionService.currentStatus(TENANT_ID))
                 .thenReturn(new GmailConnectionProjection("CONNECTED", "HEALTHY", null));
-        when(revokedReadService.fetchRecentMessages(
+        when(revokedReadService.fetchRecentInboxMessages(
                         eq(TENANT_ID), eq(10), eq(false), eq(Duration.ofSeconds(5))))
                 .thenThrow(
                         new GmailPreviewReadService.GmailPreviewReadUnavailableException(
@@ -119,10 +119,10 @@ class RulePreviewDataServiceTest {
         GmailPreviewReadService gmailPreviewReadService = mock(GmailPreviewReadService.class);
         when(gmailConnectionService.currentStatus(TENANT_ID))
                 .thenReturn(new GmailConnectionProjection("CONNECTED", "HEALTHY", null));
-        when(gmailPreviewReadService.fetchRecentMessages(
+        when(gmailPreviewReadService.fetchRecentInboxMessages(
                         eq(TENANT_ID), eq(10), eq(false), eq(Duration.ofSeconds(5))))
                 .thenReturn(List.of(gmailPreviewMessage()));
-        when(gmailPreviewReadService.fetchRecentMessages(
+        when(gmailPreviewReadService.fetchRecentInboxMessages(
                         eq(TENANT_ID), eq(10), eq(true), eq(Duration.ofSeconds(5))))
                 .thenReturn(List.of(gmailPreviewMessage()));
         RulePreviewDataService dataService =
@@ -135,9 +135,9 @@ class RulePreviewDataServiceTest {
         dataService.fetchPreviewInputs(TENANT_ID, true, new PreviewSampleSize(10));
 
         verify(gmailPreviewReadService)
-                .fetchRecentMessages(TENANT_ID, 10, false, Duration.ofSeconds(5));
+                .fetchRecentInboxMessages(TENANT_ID, 10, false, Duration.ofSeconds(5));
         verify(gmailPreviewReadService)
-                .fetchRecentMessages(TENANT_ID, 10, true, Duration.ofSeconds(5));
+                .fetchRecentInboxMessages(TENANT_ID, 10, true, Duration.ofSeconds(5));
     }
 
     @Test
@@ -198,21 +198,24 @@ class RulePreviewDataServiceTest {
                 "billing@stripe.com",
                 "stripe.com",
                 List.of("founder@example.test"),
-                List.of(),
+                List.<String>of(),
                 "Receipt from Stripe",
                 "<receipt@stripe.com>",
                 "<thread-root@stripe.com>",
                 "",
                 "billing@stripe.com",
                 List.of("INBOX"),
-                List.of(),
+                List.<String>of(),
                 Instant.parse("2026-05-09T10:00:00Z"),
                 Instant.parse("2026-05-09T10:01:00Z"),
                 false,
                 false,
+                null,
+                null,
                 false,
-                Optional.empty(),
-                Set.of());
+                false,
+                Optional.<Boolean>empty(),
+                Set.<String>of());
     }
 
     private static Path findCoreProductionRoot() {

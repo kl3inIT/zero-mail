@@ -1,0 +1,1203 @@
+<!doctype html>
+<html lang="vi" class="">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Phase 8 Prototype — Bulk Unsubscribe Campaign (Zero Mail)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --background: #f9f8fd;
+        --foreground: #4f496b;
+        --card: #ffffff;
+        --card-foreground: #4f496b;
+        --popover: #ffffff;
+        --primary: #0e5e5a;
+        --primary-foreground: #ffffff;
+        --secondary: #f4f2f9;
+        --secondary-foreground: #4f496b;
+        --muted: #f4f2f9;
+        --muted-foreground: #625c78;
+        --accent: #0e5e5a;
+        --destructive: #b0413e;
+        --warning: #e3a023;
+        --warning-foreground: #ffffff;
+        --border: rgba(20, 20, 18, 0.08);
+        --input: #e6e3d8;
+        --ring: #0e5e5a;
+        --chart-1: #0e5e5a;
+        --sidebar: #f9f8fd;
+        --sidebar-foreground: #4f496b;
+        --sidebar-accent: #f4f2f9;
+        --ink: #3d385a;
+        --ink-2: #4f496b;
+        --text-faint: #6f6883;
+        --green: #2f7d5c;
+        --green-soft: #d8ead8;
+        --amber: #e3a023;
+        --amber-soft: #fde8ba;
+        --red: #b0413e;
+        --red-soft: #f5d7d2;
+        --blue: #2c5ba8;
+        --blue-soft: #d7e1f1;
+        --violet: #5e4b8b;
+        --violet-soft: #e0dbec;
+      }
+
+      html.dark {
+        --background: #191724;
+        --foreground: #d3cfe3;
+        --card: #211e30;
+        --card-foreground: #d3cfe3;
+        --popover: #211e30;
+        --primary: #6fb3a8;
+        --primary-foreground: #ffffff;
+        --secondary: #2a263d;
+        --secondary-foreground: #d3cfe3;
+        --muted: #2a263d;
+        --muted-foreground: #928daa;
+        --accent: #6fb3a8;
+        --destructive: #da8480;
+        --warning: #f5cd7a;
+        --border: rgba(214, 213, 204, 0.12);
+        --input: rgba(214, 213, 204, 0.16);
+        --ring: #6fb3a8;
+        --chart-1: #6fb3a8;
+        --sidebar: #191724;
+        --sidebar-foreground: #d3cfe3;
+        --sidebar-accent: #2a263d;
+        --ink: #f5f4ee;
+        --ink-2: #d6d5cc;
+        --text-faint: #6b6a63;
+        --green: #6fb389;
+        --green-soft: #1f3a28;
+        --amber: #f5cd7a;
+        --amber-soft: #3d3219;
+        --red: #da8480;
+        --red-soft: #3a1f1d;
+        --blue: #8da8e0;
+        --blue-soft: #1a2540;
+        --violet: #b0a0dc;
+        --violet-soft: #2a2240;
+      }
+
+      body {
+        font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+        background: var(--background);
+        color: var(--foreground);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .font-mono {
+        font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+      }
+      .text-ink {
+        color: var(--ink);
+      }
+      .text-faint {
+        color: var(--text-faint);
+      }
+      .bg-card {
+        background: var(--card);
+      }
+      .bg-muted {
+        background: var(--muted);
+      }
+      .bg-sidebar {
+        background: var(--sidebar);
+      }
+      .bg-background {
+        background: var(--background);
+      }
+      .text-muted-fg {
+        color: var(--muted-foreground);
+      }
+      .text-primary {
+        color: var(--primary);
+      }
+      .text-destructive {
+        color: var(--destructive);
+      }
+      .border-default {
+        border-color: var(--border);
+      }
+      .ring-default {
+        --tw-ring-color: var(--ring);
+      }
+
+      /* Badge palette */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 24px;
+        padding: 0 10px;
+        border-radius: 9999px;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1;
+      }
+      .badge-safe {
+        background: var(--green-soft);
+        color: var(--green);
+      }
+      .badge-disabled {
+        background: var(--muted);
+        color: var(--muted-foreground);
+      }
+      .badge-suppressed {
+        background: var(--red-soft);
+        color: var(--red);
+      }
+      .badge-pending {
+        background: var(--muted);
+        color: var(--muted-foreground);
+      }
+      .badge-running {
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+      .badge-ok {
+        background: var(--green-soft);
+        color: var(--green);
+      }
+      .badge-failed {
+        background: var(--red-soft);
+        color: var(--red);
+      }
+      .badge-method {
+        background: var(--secondary);
+        color: var(--ink-2);
+        border: 1px solid var(--border);
+      }
+      .badge-source-manual {
+        background: var(--secondary);
+        color: var(--ink-2);
+      }
+      .badge-source-replied {
+        background: var(--violet-soft);
+        color: var(--violet);
+      }
+      .badge-source-auto {
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+
+      /* Button */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        height: 36px;
+        padding: 0 16px;
+        font-size: 14px;
+        font-weight: 500;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: all 150ms ease;
+      }
+      .btn-sm {
+        height: 32px;
+        padding: 0 12px;
+        font-size: 13px;
+      }
+      .btn-default {
+        background: var(--primary);
+        color: var(--primary-foreground);
+      }
+      .btn-default:hover {
+        opacity: 0.92;
+      }
+      .btn-default:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .btn-outline {
+        background: transparent;
+        border-color: var(--border);
+        color: var(--ink);
+      }
+      .btn-outline:hover {
+        background: var(--muted);
+      }
+      .btn-ghost {
+        background: transparent;
+        color: var(--muted-foreground);
+      }
+      .btn-ghost:hover {
+        background: var(--muted);
+        color: var(--ink);
+      }
+      .btn-destructive {
+        background: var(--destructive);
+        color: white;
+      }
+      .btn-destructive:hover {
+        opacity: 0.9;
+      }
+
+      /* Card */
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+      }
+
+      /* Table */
+      .ztable {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+      }
+      .ztable thead th {
+        text-align: left;
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted-foreground);
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+        background: var(--card);
+      }
+      .ztable tbody td {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+        font-size: 14px;
+      }
+      .ztable tbody tr:last-child td {
+        border-bottom: 0;
+      }
+      .ztable tbody tr.disabled {
+        opacity: 0.55;
+      }
+      .ztable tbody tr.disabled td {
+        cursor: not-allowed;
+      }
+      .ztable tbody tr:hover:not(.disabled) {
+        background: color-mix(in oklab, var(--muted) 50%, transparent);
+      }
+
+      /* Checkbox */
+      .zcheck {
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border: 1.5px solid var(--input);
+        border-radius: 4px;
+        background: var(--card);
+        cursor: pointer;
+        position: relative;
+      }
+      .zcheck:checked {
+        background: var(--primary);
+        border-color: var(--primary);
+      }
+      .zcheck:checked::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3'><polyline points='20 6 9 17 4 12'/></svg>")
+          center / 12px no-repeat;
+      }
+      .zcheck:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .zcheck:focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+      }
+
+      /* Progress */
+      .zprogress {
+        width: 100%;
+        height: 8px;
+        background: var(--muted);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+      .zprogress > div {
+        height: 100%;
+        background: var(--chart-1);
+        border-radius: 999px;
+        transition: width 300ms ease;
+      }
+
+      /* Alert */
+      .alert {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+      }
+      .alert-warning {
+        background: var(--amber-soft);
+        border-color: color-mix(in oklab, var(--amber) 25%, transparent);
+        color: var(--amber);
+      }
+      .alert-destructive {
+        background: var(--red-soft);
+        border-color: color-mix(in oklab, var(--red) 25%, transparent);
+        color: var(--red);
+      }
+
+      /* Sidebar item */
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        height: 36px;
+        padding: 0 24px 0 28px;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--sidebar-foreground);
+        border-radius: 0 999px 999px 0;
+        margin-right: 12px;
+        cursor: pointer;
+      }
+      .nav-item:hover {
+        background: var(--sidebar-accent);
+      }
+      .nav-item.active {
+        background: #e7f0ef;
+        color: #0a3d3a;
+        font-weight: 700;
+      }
+      html.dark .nav-item.active {
+        background: rgba(111, 179, 168, 0.18);
+        color: var(--primary);
+      }
+      .nav-subitem {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+        padding: 0 24px 0 56px;
+        font-size: 13px;
+        color: var(--muted-foreground);
+        cursor: pointer;
+      }
+      .nav-subitem:hover {
+        color: var(--ink);
+      }
+      .nav-subitem.active {
+        color: var(--ink);
+        font-weight: 600;
+      }
+
+      /* Dialog */
+      .dialog-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(20, 20, 18, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px;
+      }
+      .dialog-content {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        width: 100%;
+        max-width: 672px;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow:
+          0 24px 48px -12px rgba(20, 20, 18, 0.14),
+          0 8px 16px -8px rgba(20, 20, 18, 0.08);
+      }
+
+      /* Skeleton */
+      .skel {
+        background: var(--muted);
+        border-radius: 6px;
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.6;
+        }
+      }
+
+      /* Spinner */
+      .spin {
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Page section divider */
+      .section-divider {
+        border-top: 1px dashed var(--border);
+        margin: 48px 0 32px;
+      }
+
+      /* Tab switcher (prototype only) */
+      .tabbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: color-mix(in oklab, var(--card) 92%, transparent);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid var(--border);
+        padding: 12px 24px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .tabbtn {
+        height: 32px;
+        padding: 0 12px;
+        border-radius: 7px;
+        font-size: 13px;
+        color: var(--muted-foreground);
+        background: transparent;
+        border: 1px solid var(--border);
+        cursor: pointer;
+      }
+      .tabbtn.active {
+        background: var(--primary);
+        color: var(--primary-foreground);
+        border-color: var(--primary);
+      }
+      .screen {
+        display: none;
+      }
+      .screen.active {
+        display: block;
+      }
+
+      /* Helper */
+      .breadcrumb {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        color: var(--text-faint);
+        letter-spacing: 0.02em;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen">
+    <!-- Prototype tab bar (debug-only) -->
+    <div class="tabbar">
+      <span class="text-xs font-mono text-faint mr-2">PROTOTYPE NAV →</span>
+      <button class="tabbtn active" data-screen="screen-list">Candidate List</button>
+      <button class="tabbtn" data-screen="screen-preview">Preview Dialog</button>
+      <button class="tabbtn" data-screen="screen-status">Status (RUNNING)</button>
+      <button class="tabbtn" data-screen="screen-suppression">Suppression</button>
+      <button class="tabbtn" data-screen="screen-states">All States</button>
+      <span class="flex-1"></span>
+      <button id="darkToggle" class="tabbtn">☾ Toggle dark</button>
+    </div>
+
+    <!-- ╭───────────────────────────────────────╮
+         │ SCREEN 1: Candidate List              │
+         ╰───────────────────────────────────────╯ -->
+    <section id="screen-list" class="screen active">
+      <div class="flex">
+        <!-- Sidebar -->
+        <aside class="bg-sidebar w-[240px] min-h-screen pt-4">
+          <div class="px-6 mb-6">
+            <div class="flex items-center gap-2">
+              <div
+                class="w-7 h-7 rounded-md bg-[color:var(--ink)] text-[color:var(--card)] grid place-items-center text-xs font-bold"
+              >
+                Z
+              </div>
+              <span class="text-sm font-semibold text-ink">Zero Mail</span>
+            </div>
+          </div>
+
+          <div class="text-xs text-faint px-6 mb-1 font-medium">MAIL</div>
+          <div class="nav-item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg>
+            Rules
+          </div>
+          <div class="nav-item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+            AI
+          </div>
+          <div class="nav-item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" x2="21" y1="6" y2="6"/><line x1="3" x2="21" y1="12" y2="12"/><line x1="3" x2="21" y1="18" y2="18"/></svg>
+            Analytics
+          </div>
+          <div class="nav-item active">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 19V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v14"/><path d="M3 12h18"/></svg>
+            Cleanup
+          </div>
+          <div class="nav-subitem active">Unsubscribe</div>
+          <div class="nav-subitem">Suppression</div>
+          <div class="nav-item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2z"/></svg>
+            Needs reply <span class="ml-auto bg-[color-mix(in_oklab,var(--primary)_15%,transparent)] text-primary text-xs font-semibold px-2 py-0.5 rounded-full font-mono">3</span>
+          </div>
+
+          <div class="border-t border-default mt-8 mx-4 mb-2"></div>
+          <div class="text-xs text-faint px-6 mb-1 font-medium">MANAGE</div>
+          <div class="nav-item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+            Billing
+          </div>
+          <div class="nav-item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Settings
+          </div>
+        </aside>
+
+        <!-- Main column -->
+        <main class="flex-1 px-8 py-8 max-w-[1100px]">
+          <div class="breadcrumb mb-3">CLEANUP / UNSUBSCRIBE</div>
+          <div class="flex items-start justify-between gap-6 mb-2">
+            <div>
+              <h1 class="text-2xl font-semibold text-ink leading-tight">Bulk unsubscribe</h1>
+              <p class="text-sm text-muted-fg mt-2 max-w-2xl">
+                Chọn các newsletter bạn muốn dừng nhận. Zero Mail sẽ unsubscribe an toàn và archive lịch sử mail từ những sender đã chọn.
+              </p>
+            </div>
+            <a class="text-sm text-primary font-medium hover:underline whitespace-nowrap" href="#">
+              Quản lý suppression list →
+            </a>
+          </div>
+
+          <!-- Sticky toolbar -->
+          <div class="card flex items-center justify-between px-6 py-3 mt-6 sticky top-[57px]">
+            <span class="font-mono text-xs tabular-nums text-muted-fg" id="counter">
+              <span class="font-semibold text-ink">2</span> / 25 sender đã chọn
+            </span>
+            <div class="flex items-center gap-2">
+              <button class="btn btn-ghost btn-sm">Bỏ chọn</button>
+              <button class="btn btn-default btn-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                Xem trước campaign
+              </button>
+            </div>
+          </div>
+
+          <!-- Candidate table -->
+          <div class="card mt-4 overflow-hidden">
+            <table class="ztable">
+              <thead>
+                <tr>
+                  <th class="w-12"><input type="checkbox" class="zcheck" /></th>
+                  <th>Sender</th>
+                  <th>Tên miền</th>
+                  <th class="w-32">Mail 30 ngày</th>
+                  <th class="w-44">Phương thức</th>
+                  <th class="w-32">Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><input type="checkbox" class="zcheck" checked /></td>
+                  <td>
+                    <div class="font-medium text-ink">newsletter@figma.com</div>
+                    <div class="text-xs text-faint">Figma Newsletter</div>
+                  </td>
+                  <td class="text-muted-fg">figma.com</td>
+                  <td class="font-mono tabular-nums">142</td>
+                  <td><span class="badge badge-method">One-click (RFC 8058)</span></td>
+                  <td>
+                    <span class="badge badge-safe">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                      Sẵn sàng
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" class="zcheck" checked /></td>
+                  <td>
+                    <div class="font-medium text-ink">hello@substack.com</div>
+                    <div class="text-xs text-faint">Substack — The Browser</div>
+                  </td>
+                  <td class="text-muted-fg">substack.com</td>
+                  <td class="font-mono tabular-nums">87</td>
+                  <td><span class="badge badge-method">One-click (RFC 8058)</span></td>
+                  <td>
+                    <span class="badge badge-safe">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                      Sẵn sàng
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" class="zcheck" /></td>
+                  <td>
+                    <div class="font-medium text-ink">noreply@medium.com</div>
+                    <div class="text-xs text-faint">Medium Daily Digest</div>
+                  </td>
+                  <td class="text-muted-fg">medium.com</td>
+                  <td class="font-mono tabular-nums">312</td>
+                  <td><span class="badge badge-method">Mailto</span></td>
+                  <td>
+                    <span class="badge badge-safe">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                      Sẵn sàng
+                    </span>
+                  </td>
+                </tr>
+                <tr class="disabled" title="Sender không có header List-Unsubscribe">
+                  <td><input type="checkbox" class="zcheck" disabled /></td>
+                  <td>
+                    <div class="font-medium text-ink">deals@shopee.vn</div>
+                    <div class="text-xs text-faint">Shopee Vietnam — Promotions</div>
+                  </td>
+                  <td class="text-muted-fg">shopee.vn</td>
+                  <td class="font-mono tabular-nums">28</td>
+                  <td><span class="text-xs text-faint">—</span></td>
+                  <td>
+                    <span class="badge badge-disabled">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" x2="19.07" y1="4.93" y2="19.07"/></svg>
+                      Chưa hỗ trợ
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox" class="zcheck" /></td>
+                  <td>
+                    <div class="font-medium text-ink">team@notion.so</div>
+                    <div class="text-xs text-faint">Notion product updates</div>
+                  </td>
+                  <td class="text-muted-fg">notion.so</td>
+                  <td class="font-mono tabular-nums">56</td>
+                  <td><span class="badge badge-method">One-click (RFC 8058)</span></td>
+                  <td>
+                    <span class="badge badge-safe">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                      Sẵn sàng
+                    </span>
+                  </td>
+                </tr>
+                <tr class="disabled" title="Sender đang trong suppression list">
+                  <td><input type="checkbox" class="zcheck" disabled /></td>
+                  <td>
+                    <div class="font-medium text-ink line-through">boss@example.com</div>
+                    <div class="text-xs text-faint">Daily 1:1</div>
+                  </td>
+                  <td class="text-muted-fg">example.com</td>
+                  <td class="font-mono tabular-nums">12</td>
+                  <td><span class="text-xs text-faint">—</span></td>
+                  <td>
+                    <span class="badge badge-suppressed">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/></svg>
+                      Đã chặn
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-xs text-faint mt-3">
+            Risk badges chỉ trạng thái sender: <strong class="text-[color:var(--green)]">Sẵn sàng</strong> = có thể unsubscribe;
+            <strong class="text-muted-fg">Chưa hỗ trợ</strong> = sender không có header `List-Unsubscribe`;
+            <strong class="text-[color:var(--red)]">Đã chặn</strong> = đang trong suppression list (chỉ hiển thị tham khảo).
+          </p>
+        </main>
+      </div>
+    </section>
+
+    <!-- ╭───────────────────────────────────────╮
+         │ SCREEN 2: Preview Dialog              │
+         ╰───────────────────────────────────────╯ -->
+    <section id="screen-preview" class="screen">
+      <div class="dialog-backdrop" style="position: relative; padding: 64px; min-height: calc(100vh - 56px);">
+        <div class="dialog-content">
+          <!-- Header -->
+          <div class="px-6 pt-6 pb-4 border-b border-default">
+            <h2 class="text-lg font-semibold text-ink">Xem trước campaign</h2>
+            <p class="text-sm text-muted-fg mt-1">
+              Kiểm tra lại danh sách trước khi execute. Campaign sẽ chạy nền và có thể undo trong 30 ngày.
+            </p>
+            <div class="flex gap-6 mt-4 text-sm">
+              <div>
+                <div class="text-xs text-faint font-mono">TỔNG SENDER</div>
+                <div class="font-mono tabular-nums font-semibold text-ink">3 / 25</div>
+              </div>
+              <div>
+                <div class="text-xs text-faint font-mono">TỔNG MAIL SẼ ARCHIVE</div>
+                <div class="font-mono tabular-nums font-semibold text-ink">541 / 2.000</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Body -->
+          <div class="px-6 py-4 overflow-y-auto flex-1" style="max-height: 50vh;">
+            <div class="flex flex-col gap-3">
+              <div class="card p-4 flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="text-sm font-medium text-ink truncate">newsletter@figma.com</div>
+                  <div class="text-xs text-faint mt-0.5">figma.com</div>
+                </div>
+                <span class="badge badge-method">One-click</span>
+                <span class="text-sm font-mono tabular-nums text-muted-fg w-32 text-right">142 mail sẽ archive</span>
+              </div>
+              <div class="card p-4 flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="text-sm font-medium text-ink truncate">hello@substack.com</div>
+                  <div class="text-xs text-faint mt-0.5">substack.com</div>
+                </div>
+                <span class="badge badge-method">One-click</span>
+                <span class="text-sm font-mono tabular-nums text-muted-fg w-32 text-right">87 mail sẽ archive</span>
+              </div>
+              <div class="card p-4 flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="text-sm font-medium text-ink truncate">noreply@medium.com</div>
+                  <div class="text-xs text-faint mt-0.5">medium.com</div>
+                </div>
+                <span class="badge badge-method">Mailto</span>
+                <span class="text-sm font-mono tabular-nums text-muted-fg w-32 text-right">312 mail sẽ archive</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="px-6 py-4 border-t border-default flex items-center justify-end gap-2">
+            <button class="btn btn-outline">Quay lại</button>
+            <button class="btn btn-default">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              Execute campaign
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ╭───────────────────────────────────────╮
+         │ SCREEN 3: Status Page (RUNNING)       │
+         ╰───────────────────────────────────────╯ -->
+    <section id="screen-status" class="screen">
+      <main class="px-8 py-8 max-w-[1100px] mx-auto">
+        <div class="breadcrumb mb-3">
+          CLEANUP / UNSUBSCRIBE / <span class="font-semibold">#a7c4b2</span>
+        </div>
+        <div class="flex items-center gap-3 mb-6">
+          <h1 class="text-2xl font-semibold text-ink leading-tight">Campaign #a7c4b2</h1>
+          <span class="badge badge-running">
+            <svg class="spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" x2="12" y1="2" y2="6"/><line x1="12" x2="12" y1="18" y2="22"/><line x1="4.93" x2="7.76" y1="4.93" y2="7.76"/><line x1="16.24" x2="19.07" y1="16.24" y2="19.07"/></svg>
+            Đang chạy
+          </span>
+        </div>
+
+        <!-- Overall card -->
+        <div class="card p-6 mb-6">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <div class="text-xs uppercase tracking-wide font-semibold text-muted-fg">Tổng tiến độ</div>
+              <div class="text-sm font-medium text-ink mt-1 font-mono tabular-nums">
+                60% (2 OK / 1 lỗi / 5 sender)
+              </div>
+            </div>
+            <div class="font-mono tabular-nums text-2xl font-semibold text-primary">60%</div>
+          </div>
+          <div class="zprogress"><div style="width: 60%"></div></div>
+        </div>
+
+        <!-- Per-sender table -->
+        <div class="card overflow-hidden">
+          <table class="ztable">
+            <thead>
+              <tr>
+                <th>Sender</th>
+                <th class="w-36">Trạng thái</th>
+                <th class="w-40">Mail đã archive</th>
+                <th class="w-24"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="font-medium text-ink">newsletter@figma.com</td>
+                <td><span class="badge badge-ok">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                  Thành công
+                </span></td>
+                <td class="font-mono tabular-nums">142 / 142</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td class="font-medium text-ink">hello@substack.com</td>
+                <td><span class="badge badge-ok">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                  Thành công
+                </span></td>
+                <td class="font-mono tabular-nums">87 / 87</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td class="font-medium text-ink">noreply@medium.com</td>
+                <td><span class="badge badge-running">
+                  <svg class="spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                  Đang chạy
+                </span></td>
+                <td class="font-mono tabular-nums text-faint">— / 312</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td class="font-medium text-ink">team@notion.so</td>
+                <td><span class="badge badge-failed">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/></svg>
+                  Thất bại
+                </span>
+                  <div class="text-xs text-faint mt-1 font-mono">HTTP_4XX_403</div>
+                </td>
+                <td class="font-mono tabular-nums text-faint">0 / 56</td>
+                <td>
+                  <button class="btn btn-outline btn-sm">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9"/><polyline points="3 4 3 12 11 12"/></svg>
+                    Thử lại
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td class="font-medium text-ink">digest@hackernews.com</td>
+                <td><span class="badge badge-pending">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  Chờ
+                </span></td>
+                <td class="font-mono tabular-nums text-faint">— / 44</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="text-xs text-faint mt-4 font-mono">
+          Auto-refresh mỗi 2s khi đang chạy · Dừng khi terminal · TanStack Query refetchInterval=2000
+        </p>
+      </main>
+    </section>
+
+    <!-- ╭───────────────────────────────────────╮
+         │ SCREEN 4: Suppression Page            │
+         ╰───────────────────────────────────────╯ -->
+    <section id="screen-suppression" class="screen">
+      <main class="px-8 py-8 max-w-[1100px] mx-auto">
+        <div class="breadcrumb mb-3">CLEANUP / SUPPRESSION</div>
+        <h1 class="text-2xl font-semibold text-ink leading-tight">Suppression list</h1>
+        <p class="text-sm text-muted-fg mt-2 max-w-2xl">
+          Sender hoặc domain trong danh sách này sẽ không bao giờ hiển thị trong campaign unsubscribe.
+        </p>
+
+        <!-- Add form -->
+        <div class="card p-4 mt-6 flex items-end gap-3">
+          <div class="flex-1">
+            <label class="text-xs uppercase tracking-wide font-medium text-muted-fg block mb-1.5">
+              Email hoặc domain
+            </label>
+            <input
+              type="text"
+              placeholder="boss@example.com hoặc example.com"
+              class="w-full h-10 px-3 rounded-lg border border-default bg-card text-sm focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
+            />
+          </div>
+          <button class="btn btn-default">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+            Thêm vào suppression
+          </button>
+        </div>
+        <p class="text-xs text-faint mt-2">Mỗi entry chặn 1 sender hoặc cả 1 domain.</p>
+
+        <!-- Table -->
+        <div class="card mt-6 overflow-hidden">
+          <table class="ztable">
+            <thead>
+              <tr>
+                <th>Sender / Domain</th>
+                <th class="w-40">Nguồn</th>
+                <th class="w-44">Thêm lúc</th>
+                <th class="w-16"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="font-medium text-ink">boss@example.com</td>
+                <td><span class="badge badge-source-manual">Thủ công</span></td>
+                <td class="font-mono tabular-nums text-faint">2026-05-10 09:14</td>
+                <td>
+                  <button class="btn btn-ghost btn-sm" aria-label="Xóa khỏi suppression">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="font-medium text-ink">alice@vendor.co</div>
+                  <div class="text-xs text-faint mt-0.5">Tự động: bạn đã reply 3 lần trong 90 ngày</div>
+                </td>
+                <td><span class="badge badge-source-replied">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                  Đã reply
+                </span></td>
+                <td class="font-mono tabular-nums text-faint">2026-05-12 14:02</td>
+                <td>
+                  <button class="btn btn-ghost btn-sm" aria-label="Xóa khỏi suppression">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td class="font-medium text-ink">bank.com.vn</td>
+                <td><span class="badge badge-source-manual">Thủ công</span></td>
+                <td class="font-mono tabular-nums text-faint">2026-05-08 11:48</td>
+                <td>
+                  <button class="btn btn-ghost btn-sm" aria-label="Xóa khỏi suppression">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </section>
+
+    <!-- ╭───────────────────────────────────────╮
+         │ SCREEN 5: All States demo             │
+         ╰───────────────────────────────────────╯ -->
+    <section id="screen-states" class="screen">
+      <main class="px-8 py-8 max-w-[1100px] mx-auto space-y-12">
+        <!-- Counter states -->
+        <div>
+          <h2 class="text-lg font-semibold text-ink mb-3">Counter states</h2>
+          <div class="card p-4 flex flex-col gap-3">
+            <div class="font-mono text-sm tabular-nums text-muted-fg">
+              <span class="font-semibold text-ink">0</span> / 25 sender đã chọn — CTA "Xem trước" disabled
+            </div>
+            <div class="font-mono text-sm tabular-nums text-muted-fg">
+              <span class="font-semibold text-ink">12</span> / 25 sender đã chọn — under cap, CTA active
+            </div>
+            <div class="font-mono text-sm tabular-nums text-destructive font-semibold">
+              26 / 25 sender — vượt giới hạn
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty state -->
+        <div>
+          <h2 class="text-lg font-semibold text-ink mb-3">Empty state — candidate list</h2>
+          <div class="card py-16 flex flex-col items-center text-center px-6">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted-fg mb-4"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+            <h3 class="text-lg font-semibold text-ink">Chưa có newsletter nào trong 30 ngày qua</h3>
+            <p class="text-sm text-muted-fg mt-2 max-w-md">
+              Zero Mail phát hiện newsletter qua header `List-Unsubscribe` từ ingest gần đây. Khi có dữ liệu mới, sender ứng viên sẽ xuất hiện ở đây.
+            </p>
+            <a href="#" class="text-sm text-primary font-medium mt-4 hover:underline">
+              Tìm hiểu Zero Mail phát hiện newsletter thế nào →
+            </a>
+          </div>
+        </div>
+
+        <!-- Loading skeleton -->
+        <div>
+          <h2 class="text-lg font-semibold text-ink mb-3">Loading skeleton — candidate list</h2>
+          <div class="card overflow-hidden">
+            <div class="border-b border-default p-4 flex gap-4 items-center">
+              <div class="skel w-4 h-4"></div>
+              <div class="skel h-3 w-32"></div>
+              <div class="skel h-3 w-24"></div>
+              <div class="skel h-3 w-16"></div>
+              <div class="skel h-3 w-28"></div>
+            </div>
+            <div class="p-4 flex gap-4 items-center">
+              <div class="skel w-4 h-4"></div>
+              <div class="flex-1">
+                <div class="skel h-4 w-48 mb-2"></div>
+                <div class="skel h-3 w-32"></div>
+              </div>
+              <div class="skel h-6 w-20"></div>
+              <div class="skel h-6 w-24"></div>
+            </div>
+            <div class="p-4 flex gap-4 items-center border-t border-default">
+              <div class="skel w-4 h-4"></div>
+              <div class="flex-1">
+                <div class="skel h-4 w-40 mb-2"></div>
+                <div class="skel h-3 w-28"></div>
+              </div>
+              <div class="skel h-6 w-20"></div>
+              <div class="skel h-6 w-24"></div>
+            </div>
+            <div class="p-4 flex gap-4 items-center border-t border-default">
+              <div class="skel w-4 h-4"></div>
+              <div class="flex-1">
+                <div class="skel h-4 w-56 mb-2"></div>
+                <div class="skel h-3 w-32"></div>
+              </div>
+              <div class="skel h-6 w-20"></div>
+              <div class="skel h-6 w-24"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Error state -->
+        <div>
+          <h2 class="text-lg font-semibold text-ink mb-3">Error state</h2>
+          <div class="alert alert-destructive">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+            <div class="flex-1">
+              <div class="font-medium">Không tải được danh sách sender</div>
+              <div class="text-sm opacity-90 mt-0.5">Hãy thử lại sau một chút.</div>
+            </div>
+            <button class="btn btn-outline btn-sm">Thử lại</button>
+          </div>
+        </div>
+
+        <!-- Cap exceeded warning in preview -->
+        <div>
+          <h2 class="text-lg font-semibold text-ink mb-3">Cap exceeded — preview dialog header</h2>
+          <div class="card p-6">
+            <div class="flex gap-6 text-sm mb-3">
+              <div>
+                <div class="text-xs text-faint font-mono">TỔNG SENDER</div>
+                <div class="font-mono tabular-nums font-semibold text-destructive">28 / 25</div>
+              </div>
+              <div>
+                <div class="text-xs text-faint font-mono">TỔNG MAIL SẼ ARCHIVE</div>
+                <div class="font-mono tabular-nums font-semibold text-ink">1.412 / 2.000</div>
+              </div>
+            </div>
+            <div class="alert alert-destructive">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+              <div class="flex-1">
+                <div class="font-medium">Đã vượt giới hạn 25 sender</div>
+                <div class="text-sm opacity-90 mt-0.5">Quay lại và bỏ chọn bớt.</div>
+              </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-4">
+              <button class="btn btn-outline">Quay lại</button>
+              <button class="btn btn-default" disabled>Execute campaign</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status COMPLETED + undo banner -->
+        <div>
+          <h2 class="text-lg font-semibold text-ink mb-3">Status COMPLETED + undo banner</h2>
+          <div class="alert alert-warning mb-4">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            <div class="flex-1">
+              <div class="font-medium">Campaign đã hoàn tất</div>
+              <div class="text-sm opacity-90 mt-0.5">
+                Bạn có thể undo trong <strong class="font-mono">28 ngày</strong> tới: restore mail về INBOX và remove label `Zero Mail/Unsubscribed`.
+              </div>
+            </div>
+            <button class="btn btn-outline btn-sm">Undo campaign</button>
+          </div>
+          <div class="card p-6 flex items-center justify-between">
+            <div>
+              <div class="text-xs uppercase tracking-wide font-semibold text-muted-fg">Tổng tiến độ</div>
+              <div class="text-sm font-medium text-ink mt-1 font-mono tabular-nums">
+                100% (4 OK / 1 lỗi / 5 sender)
+              </div>
+            </div>
+            <span class="badge badge-ok text-sm h-7 px-3">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              Hoàn tất
+            </span>
+          </div>
+        </div>
+
+        <!-- Undo window expired -->
+        <div>
+          <h2 class="text-lg font-semibold text-ink mb-3">Undo window expired (disabled state)</h2>
+          <div class="alert" style="background: var(--muted); color: var(--muted-foreground); border: none;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" x2="19.07" y1="4.93" y2="19.07"/></svg>
+            <div class="flex-1">
+              <div class="font-medium">Campaign đã hoàn tất</div>
+              <div class="text-sm opacity-90 mt-0.5">
+                Đã quá 30 ngày kể từ khi campaign chạy — không undo được nữa.
+              </div>
+            </div>
+            <button class="btn btn-outline btn-sm" disabled>Undo campaign</button>
+          </div>
+        </div>
+
+        <!-- Suppression empty -->
+        <div>
+          <h2 class="text-lg font-semibold text-ink mb-3">Empty state — suppression</h2>
+          <div class="card py-16 flex flex-col items-center text-center px-6">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-muted-fg mb-4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <h3 class="text-lg font-semibold text-ink">Chưa có sender nào trong suppression list</h3>
+            <p class="text-sm text-muted-fg mt-2 max-w-md">
+              Thêm sender hoặc domain bạn không bao giờ muốn unsubscribe (ví dụ: sếp, đồng nghiệp, ngân hàng).
+            </p>
+          </div>
+        </div>
+
+        <!-- Toast samples -->
+        <div>
+          <h2 class="text-lg font-semibold text-ink mb-3">Sonner toast samples</h2>
+          <div class="flex flex-col gap-2 max-w-md">
+            <div class="card px-4 py-3 flex items-start gap-3" style="border-left: 3px solid var(--green);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" class="mt-0.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <div class="text-sm">
+                <div class="font-medium text-ink">Campaign đã được tạo</div>
+                <div class="text-muted-fg text-xs mt-0.5">Đang theo dõi tiến độ…</div>
+              </div>
+            </div>
+            <div class="card px-4 py-3 flex items-start gap-3" style="border-left: 3px solid var(--red);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" class="mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/></svg>
+              <div class="text-sm">
+                <div class="font-medium text-ink">Vượt giới hạn 25 sender</div>
+                <div class="text-muted-fg text-xs mt-0.5">Hãy bỏ chọn bớt.</div>
+              </div>
+            </div>
+            <div class="card px-4 py-3 flex items-start gap-3" style="border-left: 3px solid var(--muted-foreground);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="2" class="mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/></svg>
+              <div class="text-sm">
+                <div class="font-medium text-ink">Sender đã unsubscribe thành công, không cần thử lại</div>
+                <div class="text-muted-fg text-xs mt-0.5">HTTP 409 retry-on-OK</div>
+              </div>
+            </div>
+            <div class="card px-4 py-3 flex items-start gap-3" style="border-left: 3px solid var(--amber);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" class="mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" x2="19.07" y1="4.93" y2="19.07"/></svg>
+              <div class="text-sm">
+                <div class="font-medium text-ink">Quá window 30 ngày — không undo được nữa</div>
+                <div class="text-muted-fg text-xs mt-0.5">HTTP 410 UNDO_WINDOW_EXPIRED</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </section>
+
+    <script>
+      // Screen switcher (prototype only)
+      const tabbtns = document.querySelectorAll('.tabbtn[data-screen]');
+      const screens = document.querySelectorAll('.screen');
+      tabbtns.forEach((b) => {
+        b.addEventListener('click', () => {
+          tabbtns.forEach((x) => x.classList.remove('active'));
+          screens.forEach((s) => s.classList.remove('active'));
+          b.classList.add('active');
+          document.getElementById(b.dataset.screen).classList.add('active');
+        });
+      });
+
+      // Dark mode toggle
+      document.getElementById('darkToggle').addEventListener('click', () => {
+        document.documentElement.classList.toggle('dark');
+      });
+    </script>
+  </body>
+</html>

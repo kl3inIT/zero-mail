@@ -66,7 +66,7 @@ class RulePreviewPrivacyTest extends PostgresContainerTest {
         when(rulePreviewDataService.fetchPreviewInputs(
                         eq(tenantId),
                         eq(false),
-                        eq(new com.zeromail.core.rules.domain.PreviewSampleSize(10))))
+                        eq(new com.zeromail.core.rules.domain.PreviewSampleSize(100))))
                 .thenReturn(List.of(previewInput()));
 
         RulePreviewResult previewResult =
@@ -88,10 +88,10 @@ class RulePreviewPrivacyTest extends PostgresContainerTest {
         String durableRuleState =
                 jdbcTemplate.queryForObject(
                         """
-            select coalesce(source_text, '') || coalesce(matcher_ast::text, '') || coalesce(action_intents::text, '')
-            from rules
-            where tenant_id = ? and id = ?
-            """,
+                                select coalesce(source_text, '') || coalesce(matcher_ast::text, '') || coalesce(action_intents::text, '')
+                                from rules
+                                where tenant_id = ? and id = ?
+                                """,
                         String.class,
                         tenantId,
                         rule.ruleId().value());

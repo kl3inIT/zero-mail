@@ -2,7 +2,7 @@
 build/
 .kotlin/
 **/.kotlin/
-.env
+.env.local
 .env.local
 .env.dev
 .env.prod

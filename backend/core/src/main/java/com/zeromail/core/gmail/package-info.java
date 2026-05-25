@@ -4,6 +4,7 @@
             "tenant",
             "config",
             "shared :: crypto",
+            "shared :: html",
             "shared :: privacy",
             "shared :: persistence",
             "shared :: lang"

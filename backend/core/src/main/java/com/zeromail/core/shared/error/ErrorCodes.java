@@ -58,6 +58,15 @@ public final class ErrorCodes {
     public static final String DRAFT_GENERATION_UNAVAILABLE = "error.draft.generation.unavailable";
     public static final String DRAFT_GENERATION_FAILED = "error.draft.generation.failed";
     public static final String INVALID_CURSOR = "error.pagination.invalid_cursor";
+    public static final String CAMPAIGN_TOO_MANY_SENDERS =
+            "error.cleanup.campaign.too_many_senders";
+    public static final String CAMPAIGN_TOO_MANY_MESSAGES =
+            "error.cleanup.campaign.too_many_messages";
+    public static final String CAMPAIGN_NOT_FOUND = "error.cleanup.campaign.not_found";
+    public static final String CAMPAIGN_UNDO_WINDOW_EXPIRED =
+            "error.cleanup.campaign.undo_window_expired";
+    public static final String CAMPAIGN_RETRY_CONFLICT = "error.cleanup.campaign.retry_conflict";
+    public static final String SENDER_SUPPRESSED = "error.cleanup.sender_suppressed";
 
     private ErrorCodes() {}
 }
