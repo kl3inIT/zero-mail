@@ -2,6 +2,7 @@ package com.zeromail.core.gmail;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -71,7 +72,8 @@ class GmailDeliveryProcessingSenderEmailTest {
 
         ArgumentCaptor<String> senderEmailCaptor = ArgumentCaptor.forClass(String.class);
         verify(scenario.messageGetRequest()).setFormat("metadata");
-        verify(scenario.messageGetRequest()).setMetadataHeaders(List.of("From"));
+        verify(scenario.messageGetRequest())
+                .setMetadataHeaders(List.of("From", "List-Unsubscribe", "List-Unsubscribe-Post"));
         verify(scenario.observedRepository())
                 .insertObservedIfAbsent(
                         eq(TENANT_ID),
@@ -80,7 +82,10 @@ class GmailDeliveryProcessingSenderEmailTest {
                         eq(301L),
                         any(String[].class),
                         eq(1_779_999_111_000L),
-                        senderEmailCaptor.capture());
+                        senderEmailCaptor.capture(),
+                        eq(null),
+                        eq(null),
+                        eq(false));
         assertThat(senderEmailCaptor.getValue()).isEqualTo("alice@example.com");
     }
 
@@ -106,7 +111,10 @@ class GmailDeliveryProcessingSenderEmailTest {
                         eq(301L),
                         any(String[].class),
                         eq(1_779_999_111_000L),
-                        eq(null));
+                        eq(null),
+                        eq(null),
+                        eq(null),
+                        eq(false));
     }
 
     private record Scenario(
@@ -180,7 +188,8 @@ class GmailDeliveryProcessingSenderEmailTest {
             when(gmailUsers.messages()).thenReturn(gmailMessages);
             when(gmailMessages.get("me", GMAIL_MESSAGE_ID)).thenReturn(messageGetRequest);
             when(messageGetRequest.setFormat("metadata")).thenReturn(messageGetRequest);
-            when(messageGetRequest.setMetadataHeaders(List.of("From")))
+            when(messageGetRequest.setMetadataHeaders(
+                            List.of("From", "List-Unsubscribe", "List-Unsubscribe-Post")))
                     .thenReturn(messageGetRequest);
             when(messageGetRequest.setFields("id,threadId,labelIds,internalDate,payload/headers"))
                     .thenReturn(messageGetRequest);
@@ -211,7 +220,10 @@ class GmailDeliveryProcessingSenderEmailTest {
                             eq(301L),
                             any(String[].class),
                             eq(1_779_999_111_000L),
-                            any()))
+                            any(),
+                            any(),
+                            any(),
+                            anyBoolean()))
                     .thenReturn(insertedCount);
         }
     }

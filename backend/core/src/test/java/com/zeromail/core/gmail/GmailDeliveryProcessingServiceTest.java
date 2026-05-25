@@ -116,7 +116,9 @@ class GmailDeliveryProcessingServiceTest {
         when(gmailUsers.messages()).thenReturn(gmailMessages);
         when(gmailMessages.get("me", GMAIL_MESSAGE_ID)).thenReturn(messageGetRequest);
         when(messageGetRequest.setFormat("metadata")).thenReturn(messageGetRequest);
-        when(messageGetRequest.setMetadataHeaders(List.of("From"))).thenReturn(messageGetRequest);
+        when(messageGetRequest.setMetadataHeaders(
+                        List.of("From", "List-Unsubscribe", "List-Unsubscribe-Post")))
+                .thenReturn(messageGetRequest);
         when(messageGetRequest.setFields("id,threadId,labelIds,internalDate,payload/headers"))
                 .thenReturn(messageGetRequest);
         when(messageGetRequest.execute()).thenReturn(gmailMessage);
@@ -130,7 +132,10 @@ class GmailDeliveryProcessingServiceTest {
                         eq(101L),
                         any(String[].class),
                         eq(1_779_999_999_000L),
-                        eq(null)))
+                        eq(null),
+                        eq(null),
+                        eq(null),
+                        eq(false)))
                 .thenReturn(1);
 
         new GmailDeliveryProcessingService(

@@ -60,15 +60,15 @@ export default async function Hero() {
               {t(ctaKey)}
               <ArrowRightIcon size={16} className="ml-2" />
             </Link>
-            <a
-              href="#how"
+            <Link
+              href="/#features"
               className={cn(
                 buttonVariants({ variant: 'outline', size: 'lg' }),
                 'h-[48px] rounded-full border-(--line-strong) bg-(--bg-elevated) px-8 text-[15px] font-medium text-(--ink) hover:border-(--text-faint) hover:bg-(--bg-subtle)',
               )}
             >
               {t('landing.secondaryCta')}
-            </a>
+            </Link>
           </div>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-[13px] text-(--text-faint)">
             <span className="flex items-center gap-2">

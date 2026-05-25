@@ -56,7 +56,7 @@ public class RulePreviewDataService {
 
         try {
             return gmailPreviewReadService
-                    .fetchRecentMessages(
+                    .fetchRecentInboxMessages(
                             tenantId,
                             sampleSize.value(),
                             requiresBodyEvidence,

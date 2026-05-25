@@ -63,6 +63,7 @@ export type PreviewCardAction = {
   output?: Record<string, unknown>;
   confirmation?: Record<string, unknown>;
   persistenceConfirmed: boolean;
+  autoConfirm?: boolean;
 };
 
 export type PreviewCardStatus = 'pending' | 'confirmed' | 'sent' | 'cancelled' | 'failed';

@@ -1,0 +1,147 @@
+databaseChangeLog:
+  - changeSet:
+      id: 081-01-processing-job-tenant-scope
+      author: zeromail
+      comment: >
+        Extend the baseline processing_job table (Liquibase 068, owner 8D catalog sync;
+        Liquibase 078 owner 8E queue health) with the multi-tenant scoping + scheduling
+        columns Phase 8 (`core.cleanup` bulk unsubscribe campaign) needs.
+
+        Why extension instead of new table: Phase 8 was originally planned with its own
+        processing_job (createTable 042 on the unmerged branch), but main shipped the
+        table first via 068 with a lease-based lock pattern (locked_at/locked_until) and
+        operator dead-letter visibility (078 admin_requeue_count + last_failure_reason).
+        Re-using the same table keeps the generic outbox vision intact and unblocks
+        SEED-009 phases without two parallel queue stacks.
+
+        Backfill: tenant_id NULL is allowed because main's catalog-sync rows are
+        operator-triggered system jobs that legitimately have no tenant. Phase 8 and
+        future tenant-scoped job types enforce NOT NULL at the JPA / service layer
+        (ProcessingJobEntity inherits AbstractTenantOwnedEntity → constructor requires
+        tenantId; DB tolerates legacy NULL rows).
+      changes:
+        - addColumn:
+            tableName: processing_job
+            columns:
+              - column:
+                  name: tenant_id
+                  type: uuid
+                  constraints:
+                    nullable: true
+                    foreignKeyName: fk_processing_job_tenant
+                    references: tenants(id)
+                    deleteCascade: true
+              - column:
+                  name: next_run_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: heartbeat_at
+                  type: timestamptz
+              - column:
+                  name: started_at
+                  type: timestamptz
+              - column:
+                  name: version
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            comment: Partial index supports SKIP LOCKED pickup (Phase 8 D-02). Status uses main's PENDING vocabulary.
+            sql: CREATE INDEX idx_processing_job_pickup ON processing_job (status, next_run_at, created_at) WHERE status = 'PENDING'
+        - sql:
+            comment: Partial index for reaper crash-recovery scan (Phase 8 D-03). PROCESSING = main's RUNNING vocabulary.
+            sql: CREATE INDEX idx_processing_job_running_heartbeat ON processing_job (heartbeat_at) WHERE status = 'PROCESSING'
+        - sql:
+            comment: Partial index for tenant-scoped queries; excludes catalog-sync system rows where tenant_id IS NULL.
+            sql: CREATE INDEX idx_processing_job_tenant_type ON processing_job (tenant_id, job_type) WHERE tenant_id IS NOT NULL
+        - sql:
+            comment: Partial index supports purge batch for terminal jobs older than 90d (Phase 8 D-25). Re-uses main's completed_at column.
+            sql: CREATE INDEX idx_processing_job_completed_at_purge ON processing_job (completed_at) WHERE status IN ('COMPLETED','FAILED','DEAD_LETTER')
+      rollback:
+        - sql:
+            sql: |
+              DROP INDEX IF EXISTS idx_processing_job_completed_at_purge;
+              DROP INDEX IF EXISTS idx_processing_job_tenant_type;
+              DROP INDEX IF EXISTS idx_processing_job_running_heartbeat;
+              DROP INDEX IF EXISTS idx_processing_job_pickup;
+        - dropColumn:
+            tableName: processing_job
+            columns:
+              - column:
+                  name: version
+              - column:
+                  name: started_at
+              - column:
+                  name: heartbeat_at
+              - column:
+                  name: next_run_at
+              - column:
+                  name: tenant_id
+
+  - changeSet:
+      id: 081-02-extend-job-failure-reason-enum
+      author: zeromail
+      comment: >
+        Extend `JobFailureReason` enum (core.queue.domain) with Phase 8 cleanup-specific
+        terminal failure codes. The DB CHECK constraint stays aligned with the Java enum
+        per the contract documented on JobFailureReason.java. New values:
+          - THROTTLE_DEFERRED  → job re-queued due to per-domain throttle (D-20). NOT
+            written into last_failure_reason on the deferral path itself (status stays
+            PENDING), only when the deferral exhausts and the job is finally failed.
+          - UNSUBSCRIBE_HTTP_FAILED → RFC 8058 one-click POST returned non-2xx after
+            retries exhausted, or network/timeout class settled to a terminal classification.
+          - UNSUBSCRIBE_MAILTO_FAILED → Gmail send-as-self mailto path failed (provenance
+            mismatch, Gmail 5xx, etc.).
+          - ARCHIVE_FAILED → unsubscribe call succeeded but post-step archive bulk-modify
+            failed irrecoverably (D-04 per-sender atomicity).
+        Worker code maps Throwable → JobFailureReason BEFORE writing the column; ArchUnit
+        `WorkerFailureReasonEnumOnlyTest` keeps that gate enforced.
+      changes:
+        - sql:
+            comment: Drop and recreate CHECK constraint with extended enum values.
+            sql: |
+              ALTER TABLE processing_job
+                DROP CONSTRAINT IF EXISTS ck_processing_job_last_failure_reason;
+
+              ALTER TABLE processing_job
+                ADD CONSTRAINT ck_processing_job_last_failure_reason
+                CHECK (
+                  last_failure_reason IS NULL
+                  OR last_failure_reason IN (
+                    'DOWNSTREAM_TIMEOUT',
+                    'GMAIL_API_RATE_LIMIT',
+                    'ENCRYPTION_KEY_MISSING',
+                    'VALIDATION_FAILED',
+                    'PROVIDER_HTTP_ERROR',
+                    'SERIALIZATION_FAILED',
+                    'THROTTLE_DEFERRED',
+                    'UNSUBSCRIBE_HTTP_FAILED',
+                    'UNSUBSCRIBE_MAILTO_FAILED',
+                    'ARCHIVE_FAILED',
+                    'UNKNOWN'
+                  )
+                );
+      rollback:
+        - sql:
+            sql: |
+              ALTER TABLE processing_job
+                DROP CONSTRAINT IF EXISTS ck_processing_job_last_failure_reason;
+
+              ALTER TABLE processing_job
+                ADD CONSTRAINT ck_processing_job_last_failure_reason
+                CHECK (
+                  last_failure_reason IS NULL
+                  OR last_failure_reason IN (
+                    'DOWNSTREAM_TIMEOUT',
+                    'GMAIL_API_RATE_LIMIT',
+                    'ENCRYPTION_KEY_MISSING',
+                    'VALIDATION_FAILED',
+                    'PROVIDER_HTTP_ERROR',
+                    'SERIALIZATION_FAILED',
+                    'UNKNOWN'
+                  )
+                );

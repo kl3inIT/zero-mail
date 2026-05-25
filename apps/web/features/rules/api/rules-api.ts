@@ -13,6 +13,22 @@ export type RuleEnabledRequest = components['schemas']['RuleEnabledRequest'];
 export type RulePreviewRequest = components['schemas']['RulePreviewRequest'];
 export type RuleDraftPreviewRequest = components['schemas']['RuleDraftPreviewRequest'];
 export type RulePreviewResponse = components['schemas']['RulePreviewResponse'];
+export type RuleTestApplyLabelsRequest = {
+  sampleSize?: number;
+  evaluateSemanticIntents?: boolean;
+};
+export type AppliedRuleLabelResponse = {
+  gmailMessageId: string;
+  gmailThreadId: string;
+  labelName: string;
+  gmailLabelId: string;
+};
+export type RuleTestApplyLabelsResponse = {
+  preview: RulePreviewResponse;
+  appliedLabelCount: number;
+  affectedMessageCount: number;
+  appliedLabels: AppliedRuleLabelResponse[];
+};
 
 export type RuleCompileCompiledResult = {
   status: 'compiled';
@@ -175,6 +191,18 @@ export async function previewAllEnabledRules(
     body: payload,
   });
   return unwrap(result, `/api/rules/preview-enabled failed: ${result.response.status}`);
+}
+
+export async function applyRuleTestLabels(
+  payload: RuleTestApplyLabelsRequest,
+): Promise<RuleTestApplyLabelsResponse> {
+  type PendingSchemaPost = (
+    path: '/api/rules/test/apply-labels',
+    options: { body: RuleTestApplyLabelsRequest },
+  ) => Promise<{ data?: RuleTestApplyLabelsResponse; error?: unknown; response: Response }>;
+  const postRuleTestApplyLabels = api.POST as unknown as PendingSchemaPost;
+  const result = await postRuleTestApplyLabels('/api/rules/test/apply-labels', { body: payload });
+  return unwrap(result, `/api/rules/test/apply-labels failed: ${result.response.status}`);
 }
 
 export type RuleCustomPreviewRequest = components['schemas']['RuleCustomPreviewRequest'];

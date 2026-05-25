@@ -339,8 +339,8 @@ export function ChromeHeader() {
           <Menu className="size-5" />
         </button>
         <Link href="/rules" className="flex items-center gap-2 focus-visible:outline-none sm:gap-4">
-          <span className="bg-sidebar-primary text-sidebar-primary-foreground grid size-8 shrink-0 place-items-center rounded-full shadow-sm">
-            <ZMLogoMark size={16} />
+          <span className="grid size-11 shrink-0 place-items-center overflow-visible">
+            <ZMLogoMark size={42} />
           </span>
           <span className="text-foreground hidden text-xl font-bold tracking-tight whitespace-nowrap sm:inline">
             Zero Mail

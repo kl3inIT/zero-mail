@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 Phase: 08.1 (inbox-zero-style-rule-actions-and-admin-managed-examples-cat) — EXECUTING
 Plan: 6 of 6
 Status: Phase 08.1 shipped — PR #60
-Last activity: 2026-05-25
+Last activity: 2026-05-25 - Completed quick task 260525-gf6: monorepo config consistency + Turborepo 2.9 best practices
 
 ## Current Milestone Roadmap
 
@@ -395,6 +395,7 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260525-gf6 | Monorepo config consistency: rename admin generate-api → generate:api, add lint:fix to web, rewrite turbo.json with 2026 best practices, route root multi-target scripts through turbo run | 2026-05-25 | 366a1c45 | — | [260525-gf6-monorepo-config-consistency-rename-admin](./quick/260525-gf6-monorepo-config-consistency-rename-admin/) |
 | 260524-hbp | Implement boundary-safe LLM runtime routing from admin-managed model defaults | 2026-05-24 | pending | Verified | [260524-hbp-implement-boundary-safe-llm-runtime-rout](./quick/260524-hbp-implement-boundary-safe-llm-runtime-rout/) |
 | 260524-hbk | Upgrade Spring AI to 2.0.0-M7 and adapt ChatClient tool registration/autoconfig | 2026-05-24 | pending | Verified | [260524-hbk-upgrade-spring-ai-to-2-0-0-m7-and-adapt-](./quick/260524-hbk-upgrade-spring-ai-to-2-0-0-m7-and-adapt-/) |
 | 260523-fix-deploy-latest-main-tag-build | Fix Deploy Latest Main tag-build automation and Deploy Prod gate for workflow_dispatch image builds | 2026-05-23 | 80f1b2c6 | Verified | [260523-fix-deploy-latest-main-tag-build](./quick/260523-fix-deploy-latest-main-tag-build/) |

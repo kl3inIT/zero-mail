@@ -39,7 +39,7 @@ export default async function HowItWorks() {
             <div className="zm-how-visual">
               <div className="flex items-center gap-3 rounded-xl border border-(--line) bg-(--bg) p-4">
                 <span className="zm-brand-mark">
-                  <ZMLogoMark size={14} />
+                  <ZMLogoMark size={40} />
                 </span>
                 <span className="h-px flex-1 bg-[repeating-linear-gradient(90deg,var(--accent),var(--accent)_4px,transparent_4px,transparent_8px)]" />
                 <span className="grid size-8 place-items-center rounded-lg border border-(--line) bg-white text-xs font-semibold text-[#555]">
