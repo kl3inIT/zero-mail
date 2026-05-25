@@ -49,6 +49,14 @@ public class ChatOrchestrator {
     private static final Logger log = LoggerFactory.getLogger(ChatOrchestrator.class);
     private static final int TITLE_MAX_LENGTH = 40;
 
+    /**
+     * Mirrors {@code SpringAiStreamingChatModelClient.TRANSIENT_STREAM_ERROR_CODE}. Duplicated as a
+     * private constant here to avoid a {@code core.chat.usecases → core.chat.llm.springai} coupling
+     * at the use-case layer; the gateway emits this code through the {@link
+     * ChatStreamSink#emitError} contract and the orchestrator's retry policy reads it back.
+     */
+    private static final String TRANSIENT_STREAM_ERROR_CODE = "chat_stream_transient";
+
     private final ChatLlmGateway chatLlmGateway;
     private final ZeroMailChatMemory zeroMailChatMemory;
     private final ToolOutputSanitizer toolOutputSanitizer;
@@ -165,26 +173,31 @@ public class ChatOrchestrator {
             ChatStreamSink streamSink,
             TrackingDisposable trackingDisposable) {
         int maxReadToolIterations = chatProperties.maxReadToolIterations();
+        int maxTransientRetries = chatProperties.transientStreamRetryMaxAttempts();
         Map<String, String> transientToolResponseJsonByCallId = new LinkedHashMap<>();
         for (int attempt = 0;
                 attempt < maxReadToolIterations && !trackingDisposable.isDisposed();
                 attempt++) {
-            InterceptingSink interceptingSink = new InterceptingSink(streamSink);
             Map<String, String> oneShotToolResponses =
                     Map.copyOf(transientToolResponseJsonByCallId);
             transientToolResponseJsonByCallId.clear();
-            ChatStreamRequest streamRequest =
-                    new ChatStreamRequest(
-                            tenantId.toString(),
-                            preparedTurn.chatId(),
-                            modelFor(command),
-                            personalizationRenderer.render(tenantId.toString()),
-                            chatToolCatalog,
-                            history(preparedTurn.chatId()),
-                            oneShotToolResponses);
-            trackingDisposable.add(chatLlmGateway.streamChat(streamRequest, interceptingSink));
-            TurnOutcome outcome = awaitOutcome(interceptingSink, trackingDisposable);
+            TurnOutcome outcome =
+                    streamOneIteration(
+                            tenantId,
+                            preparedTurn,
+                            command,
+                            streamSink,
+                            trackingDisposable,
+                            oneShotToolResponses,
+                            maxTransientRetries);
             if (outcome == null) {
+                return;
+            }
+            if (outcome.isError()) {
+                // Either the failure is non-transient, or the transient retry budget was exhausted.
+                // Surface the error to the downstream sink (it was suppressed by InterceptingSink
+                // during retry attempts to avoid emitting an interim error to the FE).
+                streamSink.emitError(outcome.errorCode(), outcome.errorMessage());
                 return;
             }
             if (outcome.toolName() != null && outcome.toolName().category() == ToolCategory.READ) {
@@ -231,6 +244,73 @@ public class ChatOrchestrator {
         streamSink.emitError(
                 "chat_too_many_tool_calls",
                 "The assistant requested too many tool calls. Please try again.");
+    }
+
+    /**
+     * Drives one read-tool-loop iteration through the LLM gateway, retrying transient stream
+     * cancels up to {@code maxTransientRetries} times. The InterceptingSink buffers {@link
+     * ChatStreamSink#emitError} during retry attempts so the FE never sees a mid-flight error; the
+     * orchestrator decides whether to flush the error to the downstream sink after the retry budget
+     * is exhausted or the failure is classified as non-transient.
+     *
+     * <p>Returns {@code null} if the surrounding turn was externally disposed (e.g. user navigated
+     * away). Returns an outcome whose {@link TurnOutcome#isError()} is {@code true} when the stream
+     * failed terminally.
+     */
+    private TurnOutcome streamOneIteration(
+            UUID tenantId,
+            PreparedTurn preparedTurn,
+            ChatStreamCommand command,
+            ChatStreamSink streamSink,
+            TrackingDisposable trackingDisposable,
+            Map<String, String> oneShotToolResponses,
+            int maxTransientRetries) {
+        TurnOutcome lastOutcome = null;
+        for (int attempt = 0; attempt <= maxTransientRetries; attempt++) {
+            if (trackingDisposable.isDisposed()) {
+                return null;
+            }
+            InterceptingSink interceptingSink = new InterceptingSink(streamSink);
+            ChatStreamRequest streamRequest =
+                    new ChatStreamRequest(
+                            tenantId.toString(),
+                            preparedTurn.chatId(),
+                            modelFor(command),
+                            personalizationRenderer.render(tenantId.toString()),
+                            chatToolCatalog,
+                            history(preparedTurn.chatId()),
+                            oneShotToolResponses);
+            trackingDisposable.add(chatLlmGateway.streamChat(streamRequest, interceptingSink));
+            TurnOutcome outcome = awaitOutcome(interceptingSink, trackingDisposable);
+            if (outcome == null) {
+                return null;
+            }
+            lastOutcome = outcome;
+            if (!outcome.isError()) {
+                if (attempt > 0) {
+                    log.info(
+                            "event=chat_stream_retry_succeeded tenantId={} chatId={} attempt={}",
+                            tenantId,
+                            preparedTurn.chatId(),
+                            attempt);
+                }
+                return outcome;
+            }
+            boolean transientFailure = TRANSIENT_STREAM_ERROR_CODE.equals(outcome.errorCode());
+            boolean retryBudgetRemaining = attempt < maxTransientRetries;
+            if (transientFailure && retryBudgetRemaining) {
+                log.warn(
+                        "event=chat_stream_retry_attempt tenantId={} chatId={} attempt={} maxRetries={} errorCode={}",
+                        tenantId,
+                        preparedTurn.chatId(),
+                        attempt + 1,
+                        maxTransientRetries,
+                        outcome.errorCode());
+                continue;
+            }
+            return outcome;
+        }
+        return lastOutcome;
     }
 
     private String modelFor(ChatStreamCommand command) {
@@ -556,11 +636,29 @@ public class ChatOrchestrator {
 
     private record PreparedTurn(UUID chatId, UUID userMessageId) {}
 
+    /**
+     * Outcome of a single LLM gateway iteration. Variants:
+     *
+     * <ul>
+     *   <li>Assistant text: {@code assistantText} non-null, {@code toolName} null, {@code
+     *       errorCode} null.
+     *   <li>Tool call: {@code toolName} non-null, {@code errorCode} null.
+     *   <li>Error: {@code errorCode} non-null; signals that the gateway invoked {@link
+     *       ChatStreamSink#emitError} during the iteration. The orchestrator decides whether to
+     *       retry (transient) or flush the error to the downstream sink (terminal).
+     * </ul>
+     */
     private record TurnOutcome(
-            String assistantText, ChatToolName toolName, String toolCallId, String toolInputJson) {
+            String assistantText,
+            ChatToolName toolName,
+            String toolCallId,
+            String toolInputJson,
+            String errorCode,
+            String errorMessage) {
 
         static TurnOutcome assistant(String assistantText) {
-            return new TurnOutcome(assistantText == null ? "" : assistantText, null, null, "{}");
+            return new TurnOutcome(
+                    assistantText == null ? "" : assistantText, null, null, "{}", null, null);
         }
 
         static TurnOutcome tool(String toolName, String toolCallId, String toolInputJson) {
@@ -568,10 +666,34 @@ public class ChatOrchestrator {
                     "",
                     ChatToolName.fromId(toolName),
                     toolCallId,
-                    toolInputJson == null || toolInputJson.isBlank() ? "{}" : toolInputJson);
+                    toolInputJson == null || toolInputJson.isBlank() ? "{}" : toolInputJson,
+                    null,
+                    null);
+        }
+
+        static TurnOutcome error(String errorCode, String errorMessage) {
+            return new TurnOutcome(
+                    "",
+                    null,
+                    null,
+                    "{}",
+                    errorCode == null ? "chat_stream_failed" : errorCode,
+                    errorMessage == null ? "The assistant stream failed." : errorMessage);
+        }
+
+        boolean isError() {
+            return errorCode != null;
         }
     }
 
+    /**
+     * Per-iteration sink wrapper. Forwards normal SSE events to the downstream sink for live
+     * rendering, accumulates assistant text + tool-call shape into a single {@link TurnOutcome}
+     * completed on {@code emitFinish}, and BUFFERS {@code emitError} so the downstream sink does
+     * not see an interim transient error during a retried iteration. The orchestrator flushes the
+     * buffered error to the downstream sink only after the retry budget is exhausted or the failure
+     * is classified as non-transient.
+     */
     private static final class InterceptingSink implements ChatStreamSink {
 
         private final ChatStreamSink downstreamSink;
@@ -633,9 +755,9 @@ public class ChatOrchestrator {
 
         @Override
         public void emitError(String code, String userFacingMessage) {
-            downstreamSink.emitError(code, userFacingMessage);
-            outcomeFuture.completeExceptionally(
-                    new IllegalStateException(code == null ? "chat_stream_failed" : code));
+            // Buffer instead of forwarding: the orchestrator decides whether to retry the
+            // iteration (transient gateway errors) or flush the error downstream.
+            outcomeFuture.complete(TurnOutcome.error(code, userFacingMessage));
         }
 
         @Override
