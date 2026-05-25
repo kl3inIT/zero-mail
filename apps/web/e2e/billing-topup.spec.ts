@@ -31,6 +31,8 @@ type BillingPackageMock = {
   name: string;
   priceVnd: number;
   creditAmount: number;
+  includedFeatures: string[];
+  featured: boolean;
   description: string;
   displayOrder: number;
 };
@@ -76,6 +78,8 @@ const DEFAULT_PACKAGES: BillingPackageMock[] = [
     name: 'Starter 10K',
     priceVnd: 10_000,
     creditAmount: 10,
+    includedFeatures: ['Create transfer code instantly'],
+    featured: false,
     description: 'Starter credit package',
     displayOrder: 10,
   },
@@ -84,6 +88,8 @@ const DEFAULT_PACKAGES: BillingPackageMock[] = [
     name: 'Growth 20K',
     priceVnd: 20_000,
     creditAmount: 20,
+    includedFeatures: ['Create transfer code instantly', 'Automatic crediting'],
+    featured: false,
     description: 'Growth credit package',
     displayOrder: 20,
   },
@@ -92,6 +98,12 @@ const DEFAULT_PACKAGES: BillingPackageMock[] = [
     name: 'Scale 50K',
     priceVnd: 50_000,
     creditAmount: 50,
+    includedFeatures: [
+      'Create transfer code instantly',
+      'Automatic crediting',
+      'Safe payment expiry window',
+    ],
+    featured: true,
     description: 'Scale credit package',
     displayOrder: 50,
   },

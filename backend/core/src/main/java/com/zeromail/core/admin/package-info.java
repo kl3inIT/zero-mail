@@ -3,6 +3,7 @@
         allowedDependencies = {
             "tenant",
             "config",
+            "billing :: persistence",
             "gmail",
             "gmail :: usecases",
             "llm :: routing",
