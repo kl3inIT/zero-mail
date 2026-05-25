@@ -218,3 +218,6 @@ databaseChangeLog:
   - include:
       file: changes/092-custom-llm-provider-catalog.yaml
       relativeToChangelogFile: true
+  - include:
+      file: changes/093-billing-package-presentation-fields.yaml
+      relativeToChangelogFile: true

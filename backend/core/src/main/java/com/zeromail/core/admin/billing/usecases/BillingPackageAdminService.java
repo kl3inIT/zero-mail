@@ -9,14 +9,16 @@ import com.zeromail.core.admin.billing.projection.BillingPackageAdminStats;
 import com.zeromail.core.admin.shared.AdminBusinessException;
 import com.zeromail.core.billing.persistence.BillingPackageEntity;
 import com.zeromail.core.billing.persistence.BillingPackageRepository;
-import com.zeromail.core.config.ZeroMailCoreProperties;
 import com.zeromail.core.shared.exception.ErrorClass;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,17 +28,18 @@ public class BillingPackageAdminService {
     private static final int MAX_CODE_LENGTH = 64;
     private static final int MAX_NAME_LENGTH = 120;
     private static final int MAX_DESCRIPTION_LENGTH = 512;
+    private static final int MAX_INCLUDED_FEATURES = 8;
+    private static final int MAX_INCLUDED_FEATURE_LENGTH = 120;
+    private static final Pattern PACKAGE_CODE_PATTERN = Pattern.compile("^PKG_[A-Z0-9_]{1,60}$");
 
     private final BillingPackageRepository billingPackageRepository;
     private final BillingPackageAdminReadRepository billingPackageAdminReadRepository;
     private final AdminAuditWriter adminAuditWriter;
-    private final long vndPerCredit;
 
     public BillingPackageAdminService(
             BillingPackageRepository billingPackageRepository,
             BillingPackageAdminReadRepository billingPackageAdminReadRepository,
-            AdminAuditWriter adminAuditWriter,
-            ZeroMailCoreProperties coreProperties) {
+            AdminAuditWriter adminAuditWriter) {
         this.billingPackageRepository =
                 Objects.requireNonNull(
                         billingPackageRepository, "billingPackageRepository must not be null");
@@ -45,10 +48,6 @@ public class BillingPackageAdminService {
                         billingPackageAdminReadRepository,
                         "billingPackageAdminReadRepository must not be null");
         this.adminAuditWriter = Objects.requireNonNull(adminAuditWriter, "adminAuditWriter");
-        this.vndPerCredit =
-                Objects.requireNonNull(coreProperties, "coreProperties must not be null")
-                        .billing()
-                        .vndPerCredit();
     }
 
     @Transactional(readOnly = true)
@@ -82,7 +81,10 @@ public class BillingPackageAdminService {
             String code,
             String name,
             long priceVnd,
+            int creditAmount,
             String description,
+            List<String> includedFeatures,
+            Boolean featured,
             Boolean active,
             int displayOrder,
             String requestIp,
@@ -94,7 +96,9 @@ public class BillingPackageAdminService {
         }
         String normalizedName = normalizeName(name);
         String normalizedDescription = normalizeDescription(description);
+        String[] normalizedIncludedFeatures = normalizeIncludedFeatures(includedFeatures);
         validatePrice(priceVnd);
+        validateCreditAmount(creditAmount);
         validateDisplayOrder(displayOrder);
         BillingPackageEntity billingPackage =
                 new BillingPackageEntity(
@@ -102,8 +106,10 @@ public class BillingPackageAdminService {
                         normalizedCode,
                         normalizedName,
                         priceVnd,
-                        deriveCreditAmount(priceVnd),
+                        creditAmount,
                         normalizedDescription,
+                        normalizedIncludedFeatures,
+                        Boolean.TRUE.equals(featured),
                         active == null || active,
                         displayOrder);
         billingPackageRepository.saveAndFlush(billingPackage);
@@ -125,7 +131,10 @@ public class BillingPackageAdminService {
             UUID packageId,
             String name,
             long priceVnd,
+            int creditAmount,
             String description,
+            List<String> includedFeatures,
+            boolean featured,
             boolean active,
             int displayOrder,
             String requestIp,
@@ -135,13 +144,17 @@ public class BillingPackageAdminService {
         Map<String, ?> beforeState = stateOf(billingPackage);
         String normalizedName = normalizeName(name);
         String normalizedDescription = normalizeDescription(description);
+        String[] normalizedIncludedFeatures = normalizeIncludedFeatures(includedFeatures);
         validatePrice(priceVnd);
+        validateCreditAmount(creditAmount);
         validateDisplayOrder(displayOrder);
         billingPackage.updateDetails(
                 normalizedName,
                 priceVnd,
-                deriveCreditAmount(priceVnd),
+                creditAmount,
                 normalizedDescription,
+                normalizedIncludedFeatures,
+                featured,
                 active,
                 displayOrder);
         billingPackageRepository.saveAndFlush(billingPackage);
@@ -270,17 +283,13 @@ public class BillingPackageAdminService {
                 .orElseThrow(() -> new BillingPackageNotFoundException(targetPackageId));
     }
 
-    private int deriveCreditAmount(long priceVnd) {
-        long calculatedCreditAmount = Math.max(1, priceVnd / vndPerCredit);
-        if (calculatedCreditAmount > Integer.MAX_VALUE) {
-            throw new InvalidBillingPackageRequestException("Package price maps to too many units");
-        }
-        return (int) calculatedCreditAmount;
-    }
-
     private static String normalizeCode(String code) {
         String normalizedCode = requireText(code, "code", MAX_CODE_LENGTH);
         rejectControlCharacters(normalizedCode);
+        if (!PACKAGE_CODE_PATTERN.matcher(normalizedCode).matches()) {
+            throw new InvalidBillingPackageRequestException(
+                    "code must match ^PKG_[A-Z0-9_]{1,60}$");
+        }
         return normalizedCode;
     }
 
@@ -297,6 +306,24 @@ public class BillingPackageAdminService {
             throw new InvalidBillingPackageRequestException("description is too long");
         }
         return normalizedDescription;
+    }
+
+    private static String[] normalizeIncludedFeatures(List<String> includedFeatures) {
+        if (includedFeatures == null || includedFeatures.isEmpty()) {
+            throw new InvalidBillingPackageRequestException(
+                    "includedFeatures must contain at least one item");
+        }
+        if (includedFeatures.size() > MAX_INCLUDED_FEATURES) {
+            throw new InvalidBillingPackageRequestException("includedFeatures has too many items");
+        }
+        Set<String> normalizedIncludedFeatures = new LinkedHashSet<>();
+        for (String includedFeature : includedFeatures) {
+            String normalizedIncludedFeature =
+                    requireText(includedFeature, "includedFeatures", MAX_INCLUDED_FEATURE_LENGTH);
+            rejectControlCharacters(normalizedIncludedFeature);
+            normalizedIncludedFeatures.add(normalizedIncludedFeature);
+        }
+        return normalizedIncludedFeatures.toArray(String[]::new);
     }
 
     private static String requireText(String value, String parameterName, int maxLength) {
@@ -323,6 +350,12 @@ public class BillingPackageAdminService {
         }
     }
 
+    private static void validateCreditAmount(int creditAmount) {
+        if (creditAmount <= 0) {
+            throw new InvalidBillingPackageRequestException("creditAmount must be positive");
+        }
+    }
+
     private static void validateDisplayOrder(int displayOrder) {
         if (displayOrder < 0) {
             throw new InvalidBillingPackageRequestException("displayOrder must not be negative");
@@ -335,7 +368,10 @@ public class BillingPackageAdminService {
         state.put("code", billingPackage.getCode());
         state.put("name", billingPackage.getName());
         state.put("price_vnd", billingPackage.getPriceVnd());
+        state.put("credit_amount", billingPackage.getCreditAmount());
         state.put("description", billingPackage.getDescription());
+        state.put("included_features", List.of(billingPackage.getIncludedFeatures()));
+        state.put("featured", billingPackage.isFeatured());
         state.put("active", billingPackage.isActive());
         state.put("display_order", billingPackage.getDisplayOrder());
         return state;

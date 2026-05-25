@@ -52,6 +52,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/waitlist/subscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["subscribe"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/triage/sender-safety-net/{senderEmail}/opt-in": {
         parameters: {
             query?: never;
@@ -793,6 +809,15 @@ export interface components {
         RuleAutomationSettingsResponse: {
             autoSendRulesEnabled: boolean;
         };
+        WaitlistSubscribeRequest: {
+            /** Format: email */
+            email: string;
+            source?: string;
+        };
+        WaitlistSubscribeResponse: {
+            /** @enum {string} */
+            status: "ADDED" | "ALREADY_REGISTERED" | "ALREADY_USER";
+        };
         SenderOptInResponse: {
             senderEmail: string;
             optedIn: boolean;
@@ -1154,7 +1179,6 @@ export interface components {
         RuleCatalogExampleResponse: {
             /** Format: uuid */
             exampleId: string;
-            sourceRef: string;
             exampleText: string;
             /** Format: int32 */
             displayOrder: number;
@@ -1264,6 +1288,8 @@ export interface components {
             priceVnd: number;
             /** Format: int32 */
             creditAmount: number;
+            includedFeatures: string[];
+            featured: boolean;
             description: string;
             /** Format: int32 */
             displayOrder: number;
@@ -1832,6 +1858,84 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RuleAutomationSettingsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    subscribe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WaitlistSubscribeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WaitlistSubscribeResponse"];
                 };
             };
             /** @description Bad Request */

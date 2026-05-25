@@ -3,6 +3,7 @@ package com.zeromail.api.dto.admin.billing;
 import com.zeromail.core.admin.billing.projection.BillingPackageAdminRow;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Schema(
@@ -11,6 +12,9 @@ import java.util.UUID;
             "code",
             "name",
             "priceVnd",
+            "creditAmount",
+            "includedFeatures",
+            "featured",
             "active",
             "displayOrder",
             "purchaseCount",
@@ -22,7 +26,10 @@ public record BillingPackageAdminResponse(
         String code,
         String name,
         long priceVnd,
+        int creditAmount,
         String description,
+        List<String> includedFeatures,
+        boolean featured,
         boolean active,
         int displayOrder,
         Instant createdAt,
@@ -38,7 +45,10 @@ public record BillingPackageAdminResponse(
                 row.code(),
                 row.name(),
                 row.priceVnd(),
+                row.creditAmount(),
                 row.description(),
+                row.includedFeatures(),
+                row.featured(),
                 row.active(),
                 row.displayOrder(),
                 row.createdAt(),
