@@ -96,10 +96,10 @@ public class TriageAuditEntity extends AbstractTenantOwnedEntity {
     private String leaseOwner;
 
     /**
-     * H-3 Path A discriminator (changelog 046). Defaults to {@link CleanupAuditSource#TRIAGE} for
-     * every existing rule-driven write site; cleanup-campaign writes go through {@link
-     * TriageAuditWriter#recordCleanupArchive(java.util.UUID, String, java.util.UUID, String,
-     * String)} which sets {@link CleanupAuditSource#CLEANUP_CAMPAIGN}.
+     * H-3 Path A discriminator (changelog 086-triage-audit-source.yaml). Defaults to {@link
+     * CleanupAuditSource#TRIAGE} for every existing rule-driven write site; cleanup-campaign writes
+     * go through {@link TriageAuditWriter#recordCleanupArchive(java.util.UUID, String,
+     * java.util.UUID, String, String)} which sets {@link CleanupAuditSource#CLEANUP_CAMPAIGN}.
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "source", nullable = false, length = 32)

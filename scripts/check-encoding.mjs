@@ -56,7 +56,10 @@ const mojibakePattern =
 
 function shouldSkipFile(filePath) {
   const fileName = basename(filePath);
-  return fileName === '.env.local' || fileName.startsWith('.env.local.');
+  // Skip all env files (operator secrets) regardless of suffix: .env, .env.local,
+  // .env.local.*, .env.production, etc. Their content is operator-controlled and may
+  // legitimately contain non-UTF-8 characters in secrets — encoding policy doesn't apply.
+  return fileName === '.env' || fileName.startsWith('.env.');
 }
 
 function shouldScanFile(filePath) {

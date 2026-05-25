@@ -45,9 +45,9 @@ export function useExecuteCampaign(window: string = '30d') {
     },
     onError: (mutationError) => {
       const { status, errorCode } = extractStatusAndCode(mutationError);
-      if (status === 400 && errorCode === 'CAMPAIGN_TOO_MANY_SENDERS') {
+      if (status === 400 && errorCode === 'error.cleanup.campaign.too_many_senders') {
         toast.error(t('cleanup.unsubscribe.preview.errCapSender'));
-      } else if (status === 400 && errorCode === 'CAMPAIGN_TOO_MANY_MESSAGES') {
+      } else if (status === 400 && errorCode === 'error.cleanup.campaign.too_many_messages') {
         toast.error(t('cleanup.unsubscribe.preview.errCapMessage'));
       } else {
         toast.error(t('cleanup.unsubscribe.preview.errGeneric'));

@@ -5,8 +5,8 @@ import java.util.UUID;
 /**
  * Signal exception thrown by {@code UnsubscribeCampaignHandler} when the per-tenant per-domain
  * throttle bucket (D-20) refuses an unsubscribe attempt. The handler MUST first re-queue the
- * underlying {@code processing_job} row (set {@code status='QUEUED'} + {@code next_run_at = NOW() +
- * 60s}) so that on the next poll cycle the job is re-picked up by {@code ProcessingJobWorker}.
+ * underlying {@code processing_job} row (set {@code status='PENDING'} + {@code next_run_at = NOW()
+ * + 60s}) so that on the next poll cycle the job is re-picked up by {@code ProcessingJobWorker}.
  *
  * <p>{@code ProcessingJobWorker.dispatchJob} catches this exception <b>before</b> the generic
  * {@code RuntimeException} branch so the row is NOT overwritten with {@code status='FAILED'} — see
